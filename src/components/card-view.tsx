@@ -220,7 +220,8 @@ export function CardView({
                                 onExtractMultipleImages(p.$path);
                             }
 
-                            // Trigger GIF animation
+                            // Reset to first image and trigger GIF animation
+                            setHoveredImageIndex(0);
                             setIsCardHovered(true);
                         }}
                         onMouseLeave={() => {

@@ -430,28 +430,49 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                         const descFromProp = p.value(settings.descriptionProperty);
                         const hasValidDesc = descFromProp && String(descFromProp).trim().length > 0;
 
-                        // Check if image property contains valid image link
+                        // Check if image property contains valid image link(s)
                         const imgFromProp = p.value(settings.imageProperty);
-                        let imgStr = '';
+                        console.log('[DynamicViews] Image property raw value for', p.$path, ':', imgFromProp, 'Type:', typeof imgFromProp, 'IsArray:', Array.isArray(imgFromProp));
 
-                        // Handle different property value types (Link objects or strings)
+                        // Extract ALL property image paths (handle arrays)
+                        const propertyImagePaths: string[] = [];
                         if (imgFromProp) {
-                            // If it's a Link object with a path property, extract the path
-                            if (typeof imgFromProp === 'object' && imgFromProp !== null && 'path' in imgFromProp) {
-                                imgStr = String(imgFromProp.path).trim();
-                            } else {
-                                imgStr = String(imgFromProp).trim();
+                            // Handle array values (process ALL elements)
+                            const propValues = Array.isArray(imgFromProp) ? imgFromProp : [imgFromProp];
+                            console.log('[DynamicViews] Processing', propValues.length, 'property value(s)');
+
+                            for (const propValue of propValues) {
+                                let imgStr = '';
+
+                                // If it's a Link object with a path property, extract the path
+                                if (typeof propValue === 'object' && propValue !== null && 'path' in propValue) {
+                                    imgStr = String(propValue.path).trim();
+                                    console.log('[DynamicViews] Extracted from Link object:', imgStr);
+                                } else {
+                                    imgStr = String(propValue).trim();
+                                    console.log('[DynamicViews] Converted to string:', imgStr);
+                                }
+
+                                // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
+                                const wikilinkMatch = imgStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
+                                if (wikilinkMatch) {
+                                    imgStr = wikilinkMatch[1].trim();
+                                    console.log('[DynamicViews] After wikilink stripping:', imgStr);
+                                }
+
+                                // Validate image extension
+                                const imageExtensions = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
+                                const hasValidImg = imgStr.length > 0 && imageExtensions.test(imgStr);
+                                console.log('[DynamicViews] Final imgStr:', imgStr, 'hasValidImg:', hasValidImg);
+
+                                if (hasValidImg) {
+                                    propertyImagePaths.push(imgStr);
+                                }
                             }
                         }
 
-                        // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
-                        const wikilinkMatch = imgStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-                        if (wikilinkMatch) {
-                            imgStr = wikilinkMatch[1].trim();
-                        }
-
-                        const imageExtensions = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
-                        const hasValidImg = imgStr.length > 0 && imageExtensions.test(imgStr);
+                        console.log('[DynamicViews] Total property images extracted:', propertyImagePaths.length);
+                        const hasValidImg = propertyImagePaths.length > 0;
 
                         // Only read file if we need snippets or images from content
                         const needsFileRead =
@@ -503,87 +524,75 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
                         // Process thumbnails only if enabled
                         if (settings.showThumbnails) {
-                            let imagePath: string | null = null;
+                            const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 
-                            // Try to get image from property first
-                            if (hasValidImg) {
-                                // Use stripped version (imgStr) without wikilink syntax
-                                const propImagePath = imgStr;
-
-                                // Verify the property image actually resolves to a valid image file
-                                if (propImagePath) {
-                                    const propImageFile = app.metadataCache.getFirstLinkpathDest(propImagePath, p.$path);
-                                    const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
-                                    if (propImageFile && validImageExtensions.includes(propImageFile.extension)) {
-                                        imagePath = propImagePath;
-                                    }
-                                }
-                            }
-
-                            // Fallback: Extract from content if property didn't provide valid image
-                            if (!imagePath) {
-                                // Read file if we haven't already
-                                const contentText = text || await app.vault.read(file);
-
-                                if (contentText) {
-                                    // Extract first image from content - support all wikilink and markdown formats
-                                    // Wikilink: [[img.png]], ![[img.png]], [[img.png|caption]], ![[img.png|caption]]
-                                    const wikiImageMatch = contentText.match(/!?\[\[([^\]|]+\.(avif|bmp|gif|jpe?g|png|svg|webp))(?:\|[^\]]*)?\]\]/i);
-                                    // Markdown: ![alt](img.png)
-                                    const mdImageMatch = contentText.match(/!\[([^\]]*)\]\(([^\)]+\.(avif|bmp|gif|jpe?g|png|svg|webp))\)/i);
-
-                                    if (wikiImageMatch && wikiImageMatch[1]) {
-                                        imagePath = wikiImageMatch[1];
-                                    } else if (mdImageMatch && mdImageMatch[2]) {
-                                        imagePath = mdImageMatch[2];
-                                    }
-
-                                    // Check for multiple images
-                                    if (imagePath) {
-                                        const isFirstGif = imagePath.toLowerCase().endsWith('.gif');
-                                        const metadata = app.metadataCache.getFileCache(file);
-                                        const imageEmbeds = metadata?.embeds?.filter((embed: any) => {
-                                            const targetFile = app.metadataCache.getFirstLinkpathDest(embed.link, p.$path);
-                                            return targetFile && ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'].includes(targetFile.extension);
-                                        }) || [];
-
-                                        const imageCount = imageEmbeds.length;
-                                        if (isFirstGif || (!isFirstGif && imageCount > 1)) {
-                                            newHasMultipleImages[p.$path] = true;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (imagePath && typeof imagePath === 'string') {
-                                const imageFile = app.metadataCache.getFirstLinkpathDest(imagePath, p.$path);
-                                // Verify file exists AND has valid image extension
-                                const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
+                            // Phase A: Convert property image paths to resource paths
+                            const propertyResourcePaths: string[] = [];
+                            for (const propPath of propertyImagePaths) {
+                                const imageFile = app.metadataCache.getFirstLinkpathDest(propPath, p.$path);
                                 if (imageFile && validImageExtensions.includes(imageFile.extension)) {
                                     const resourcePath = app.vault.getResourcePath(imageFile);
-                                    newImages[p.$path] = resourcePath;
-                                    newHasImageAvailable[p.$path] = true;
+                                    propertyResourcePaths.push(resourcePath);
+                                }
+                            }
+                            console.log('[DynamicViews] Property resource paths:', propertyResourcePaths.length);
 
-                                    // Handle GIFs (static frame extraction)
-                                    const isGif = imageFile.extension === 'gif';
-                                    if (isGif && resourcePath) {
-                                        const cachedFrame = staticGifs[p.$path];
-                                        if (!cachedFrame) {
-                                            const img = new Image();
-                                            img.crossOrigin = "anonymous";
-                                            img.onload = () => {
-                                                const canvas = document.createElement('canvas');
-                                                canvas.width = img.width;
-                                                canvas.height = img.height;
-                                                const ctx = canvas.getContext('2d', { alpha: false });
-                                                if (ctx) {
-                                                    ctx.drawImage(img, 0, 0);
-                                                    const staticFrame = canvas.toDataURL('image/png');
-                                                    setStaticGifs(prev => ({...prev, [p.$path]: staticFrame}));
-                                                }
-                                            };
-                                            img.src = resourcePath;
-                                        }
+                            // Phase B: Extract body embed resource paths
+                            const metadata = app.metadataCache.getFileCache(file);
+                            const imageEmbeds = metadata?.embeds?.filter((embed: any) => {
+                                const targetFile = app.metadataCache.getFirstLinkpathDest(embed.link, p.$path);
+                                return targetFile && validImageExtensions.includes(targetFile.extension);
+                            }) || [];
+
+                            const bodyResourcePaths: string[] = [];
+                            for (const embed of imageEmbeds) {
+                                const imageFile = app.metadataCache.getFirstLinkpathDest(embed.link, p.$path);
+                                if (imageFile && validImageExtensions.includes(imageFile.extension)) {
+                                    const resourcePath = app.vault.getResourcePath(imageFile);
+                                    bodyResourcePaths.push(resourcePath);
+                                }
+                            }
+                            console.log('[DynamicViews] Body resource paths:', bodyResourcePaths.length);
+
+                            // Phase C: Merge property images first, then body embeds
+                            const allResourcePaths = [...propertyResourcePaths, ...bodyResourcePaths];
+                            console.log('[DynamicViews] Combined resource paths:', allResourcePaths.length);
+
+                            // Phase D: Store combined result
+                            if (allResourcePaths.length > 0) {
+                                // Store as array if multiple, string if single
+                                newImages[p.$path] = allResourcePaths.length > 1 ? allResourcePaths : allResourcePaths[0];
+                                newHasImageAvailable[p.$path] = true;
+
+                                // Check for multiple images
+                                const firstPath = allResourcePaths[0];
+                                const isFirstGif = firstPath.toLowerCase().endsWith('.gif');
+                                if (isFirstGif || allResourcePaths.length > 1) {
+                                    newHasMultipleImages[p.$path] = true;
+                                    // Mark multiple images as loaded since we loaded them all upfront
+                                    if (allResourcePaths.length > 1) {
+                                        setMultiImagesLoaded(prev => ({...prev, [p.$path]: true}));
+                                    }
+                                }
+
+                                // Handle GIFs (static frame extraction for first image)
+                                if (isFirstGif) {
+                                    const cachedFrame = staticGifs[p.$path];
+                                    if (!cachedFrame) {
+                                        const img = new Image();
+                                        img.crossOrigin = "anonymous";
+                                        img.onload = () => {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = img.width;
+                                            canvas.height = img.height;
+                                            const ctx = canvas.getContext('2d', { alpha: false });
+                                            if (ctx) {
+                                                ctx.drawImage(img, 0, 0);
+                                                const staticFrame = canvas.toDataURL('image/png');
+                                                setStaticGifs(prev => ({...prev, [p.$path]: staticFrame}));
+                                            }
+                                        };
+                                        img.src = firstPath;
                                     }
                                 }
                             }
@@ -1062,7 +1071,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             onCardClick: handleCardClick,
             onFocusChange: setFocusableCardIndex,
             onExtractMultipleImages: (path: string) => {
-                // TODO: Implement multiple image extraction
+                // Images already loaded in initial pass, so this is a no-op
+                // Kept for compatibility with card-view.tsx hover logic
             }
         };
 

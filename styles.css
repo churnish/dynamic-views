@@ -1450,7 +1450,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 @container (max-width: 700px) {
     .dynamic-views .controls-wrapper {
-        padding: 3px 8px;
+        padding: 3px 8px 8px;
     }
 
     .dynamic-views .width-toggle-btn {

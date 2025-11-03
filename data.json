@@ -4,16 +4,16 @@
     "descriptionProperty": "description",
     "imageProperty": "cover",
     "alwaysOmitFirstLine": false,
-    "showTextPreview": true,
+    "showTextPreview": false,
     "showThumbnails": true,
-    "cardBottomDisplay": "tags",
+    "cardBottomDisplay": "none",
     "listMarker": "bullet",
-    "showTimestamp": true,
+    "showTimestamp": false,
     "showTimestampIcon": false,
     "minMasonryColumns": 1,
     "randomizeAction": "shuffle",
     "thumbnailCacheSize": "balanced",
-    "queryHeight": 300,
+    "queryHeight": 0,
     "openFileAction": "title",
     "addCardBackground": false
   },
@@ -77,7 +77,7 @@
     "1762122189077": {
       "sortMethod": "mtime-desc",
       "viewMode": "masonry",
-      "searchQuery": "",
+      "searchQuery": "img_",
       "resultLimit": "",
       "widthMode": "normal"
     },
@@ -203,6 +203,90 @@
     "1762182895413": {
       "sortMethod": "ctime-desc",
       "viewMode": "list",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762187473628": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "img_",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762189142842": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1761684787659": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193200723": {
+      "sortMethod": "mtime-asc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193283199": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193304212": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193304421": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193304614": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193304826": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193305302": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193305554": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762193305068": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
       "searchQuery": "",
       "resultLimit": "",
       "widthMode": "normal"
