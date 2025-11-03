@@ -843,6 +843,13 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
             console.log(`[InfiniteScroll:LoadMore] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
 
+            // Guard: Don't load if container isn't actually scrollable yet
+            // This prevents infinite loading when queryHeight=0 and container expands to fit content
+            if (scrollHeight === editorHeight) {
+                console.log('[InfiniteScroll:LoadMore] Guard: Container not scrollable (scrollHeight === clientHeight), returning false');
+                return false;
+            }
+
             // Check if we should load
             if (distanceFromBottom > threshold) {
                 console.log(`[InfiniteScroll:LoadMore] Distance (${distanceFromBottom.toFixed(0)}px) > threshold (${threshold.toFixed(0)}px), returning false`);
