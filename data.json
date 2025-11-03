@@ -6,7 +6,7 @@
     "alwaysOmitFirstLine": false,
     "showTextPreview": false,
     "showThumbnails": true,
-    "cardBottomDisplay": "none",
+    "cardBottomDisplay": "tags",
     "listMarker": "bullet",
     "showTimestamp": false,
     "showTimestampIcon": false,
@@ -77,7 +77,7 @@
     "1762122189077": {
       "sortMethod": "mtime-desc",
       "viewMode": "masonry",
-      "searchQuery": "img_",
+      "searchQuery": "original",
       "resultLimit": "",
       "widthMode": "normal"
     },
@@ -286,7 +286,7 @@
     },
     "1762193305068": {
       "sortMethod": "mtime-desc",
-      "viewMode": "masonry",
+      "viewMode": "card",
       "searchQuery": "",
       "resultLimit": "",
       "widthMode": "normal"

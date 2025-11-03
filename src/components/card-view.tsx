@@ -277,7 +277,15 @@ export function CardView({
                                 )}
                             </div>
                         )}
-                        {(settings.showTimestamp && date) || settings.cardBottomDisplay !== 'none' ? (
+                        {(() => {
+                            const hasTimestamp = settings.showTimestamp && date;
+                            const hasMetadata = settings.cardBottomDisplay === 'tags'
+                                ? tags.length > 0
+                                : settings.cardBottomDisplay === 'path'
+                                ? folderPath.length > 0
+                                : false;
+                            return hasTimestamp || hasMetadata;
+                        })() ? (
                         <div className={`writing-meta${!settings.showTimestamp || !date ? ' no-timestamp' : ''}`}>
                             <span className="meta-left">
                                 {settings.showTimestamp && date ? (
