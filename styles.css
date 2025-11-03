@@ -183,15 +183,6 @@ body {
     box-sizing: border-box;
     min-height: 270px;
     overflow: visible;
-    margin-bottom: 0;
-}
-
-/* Remove extra margin from code block wrappers containing dynamic-views */
-.markdown-preview-view .el-pre:has(.dynamic-views),
-.markdown-reading-view .el-pre:has(.dynamic-views),
-.markdown-source-view .cm-preview-code-block:has(.dynamic-views),
-.markdown-source-view .cm-embed-block:has(.dynamic-views) {
-    margin-bottom: var(--p-spacing);
 }
 
 
@@ -1083,7 +1074,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     flex-direction: column;
     max-width: 100%;
     overflow-x: hidden;
-    gap: 8px;
 }
 
 /* Card grid: multiple columns in wide/max modes */
