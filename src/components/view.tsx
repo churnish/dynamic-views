@@ -973,14 +973,12 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     }, []);
 
     const handleCreateNote = dc.useCallback(async (event: MouseEvent) => {
-        const activeFile = app.workspace.getActiveFile();
-        const sourcePath = activeFile?.path || '';
-        const folder = app.fileManager.getNewFileParent(sourcePath);
-        const filePath = getAvailablePath(app, folder.path, 'Untitled');
+        const folderPath = currentFile?.parent?.path || '';
+        const filePath = getAvailablePath(app, folderPath, 'Untitled');
         const file = await app.vault.create(filePath, '');
         const newLeaf = Keymap.isModEvent(event);
         app.workspace.getLeaf(newLeaf).openFile(file);
-    }, [app]);
+    }, [app, currentFile]);
 
     const handleCardClick = dc.useCallback((path: string, newLeaf: boolean) => {
         const file = app.vault.getAbstractFileByPath(path);

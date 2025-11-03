@@ -92,7 +92,8 @@ return dv.createView(dc, USER_QUERY);
 	async createExplorerFile() {
 		try {
 			const activeFile = this.app.workspace.getActiveFile();
-			const folderPath = activeFile?.parent?.path || '';
+			const folderPath = activeFile?.parent?.path
+				?? this.app.fileManager.getNewFileParent('').path;
 			const filePath = getAvailablePath(this.app, folderPath, 'Dynamic view');
 			const template = this.getQueryTemplate();
 
