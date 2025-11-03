@@ -172,6 +172,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     const loadMoreRef = dc.useRef(null);
     const isLoadingRef = dc.useRef(false);
     const loadAttemptsRef = dc.useRef(0);
+    const columnCountRef = dc.useRef(null);
+    const displayedCountRef = dc.useRef(displayedCount);
     const settingsTimeoutRef = dc.useRef(null);
     const initialToolbarOffset = dc.useRef(0);
     const isSyncing = dc.useRef(false);
@@ -737,6 +739,15 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         };
     }, [sorted, viewMode, settings.minMasonryColumns, dc]);
 
+    // Sync refs for callback access in infinite scroll
+    dc.useEffect(() => {
+        columnCountRef.current = columnCount;
+    }, [columnCount, dc]);
+
+    dc.useEffect(() => {
+        displayedCountRef.current = displayedCount;
+    }, [displayedCount, dc]);
+
     // Track scroll position for toolbar shadow and fade effect
     dc.useEffect(() => {
         const container = containerRef.current;
@@ -756,6 +767,130 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         container.addEventListener('scroll', handleScroll);
         return () => container.removeEventListener('scroll', handleScroll);
     }, [settings.queryHeight, displayedCount, sorted.length, viewMode]);
+
+    // Infinite scroll: ResizeObserver + scroll + window resize
+    dc.useEffect(() => {
+        if (!containerRef.current) {
+            return;
+        }
+
+        // Configuration: preload distance multipliers
+        const DESKTOP_VIEWPORT_MULTIPLIER = 2; // Load when within 2x viewport height from bottom
+        const MOBILE_VIEWPORT_MULTIPLIER = Math.max(1, DESKTOP_VIEWPORT_MULTIPLIER * 0.5); // Mobile: 0.5x of desktop, minimum 1x
+
+        // Find scrollable element (walk DOM tree)
+        let scrollableElement: any = null;
+        let element: any = containerRef.current;
+        while (element && element !== document.body) {
+            const style = getComputedStyle(element);
+            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                scrollableElement = element;
+                break;
+            }
+            element = element.parentElement;
+        }
+
+        if (!scrollableElement) {
+            scrollableElement = window;
+        }
+
+        // Core batch loading function
+        const loadMoreItems = (trigger = 'unknown') => {
+            // Guard: already loading or no container
+            if (isLoadingRef.current) {
+                return false;
+            }
+            if (!containerRef.current) {
+                return false;
+            }
+
+            // Get current count from ref (captures latest value)
+            const currentCount = displayedCountRef.current;
+            if (currentCount >= sorted.length) {
+                return false; // All items loaded
+            }
+
+            // Calculate distance from bottom using the scrollable element we already found
+            let scrollTop, editorHeight, scrollHeight, distanceFromBottom;
+
+            if (scrollableElement === window) {
+                scrollTop = window.scrollY;
+                editorHeight = window.innerHeight;
+                scrollHeight = document.documentElement.scrollHeight;
+            } else {
+                scrollTop = scrollableElement.scrollTop;
+                editorHeight = scrollableElement.clientHeight;
+                scrollHeight = scrollableElement.scrollHeight;
+            }
+
+            distanceFromBottom = scrollHeight - (scrollTop + editorHeight);
+
+            // Calculate threshold
+            const threshold = editorHeight * ((app as any).isMobile ? MOBILE_VIEWPORT_MULTIPLIER : DESKTOP_VIEWPORT_MULTIPLIER);
+
+            // Check if we should load
+            if (distanceFromBottom > threshold) {
+                return false;
+            }
+
+            // Load batch
+            isLoadingRef.current = true;
+
+            const currentCols = columnCountRef.current || columnCount || 2;
+            const rowsPerColumn = 10;
+            const batchSize = Math.min(currentCols * rowsPerColumn, 7 * rowsPerColumn);
+            const newCount = Math.min(currentCount + batchSize, sorted.length);
+
+            displayedCountRef.current = newCount;
+            setDisplayedCount(newCount);
+
+            return true; // Batch loaded
+        };
+
+        // Setup ResizeObserver (watches masonry container)
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                // Masonry just completed layout, clear loading flag
+                isLoadingRef.current = false;
+
+                // Check if need more items
+                loadMoreItems('ResizeObserver');
+            }
+        });
+        resizeObserver.observe(containerRef.current);
+
+        // Setup window resize listener (handles viewport height changes)
+        const handleWindowResize = () => {
+            loadMoreItems('window.resize');
+        };
+        window.addEventListener('resize', handleWindowResize);
+
+        // Setup scroll listener with leading-edge throttle
+        let scrollTimer: any = null;
+        const handleScroll = () => {
+            if (scrollTimer) {
+                // Cooldown active, ignore
+                return;
+            }
+
+            // Check immediately (leading edge)
+            loadMoreItems('scroll');
+
+            // Start cooldown
+            scrollTimer = setTimeout(() => {
+                scrollTimer = null;
+            }, 100);
+        };
+        scrollableElement.addEventListener('scroll', handleScroll, { passive: true });
+
+        // Cleanup
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', handleWindowResize);
+            scrollableElement.removeEventListener('scroll', handleScroll);
+            if (scrollTimer) clearTimeout(scrollTimer);
+        };
+    }, [sorted.length, columnCount, displayedCount, app, dc]);
 
     // Auto-reload: Watch for USER_QUERY prop changes (Datacore re-renders on code block edits)
     dc.useEffect(() => {
