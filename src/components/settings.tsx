@@ -253,25 +253,37 @@ export function Settings({
                 </select>
             </div>
 
-            {/* Explorer Height */}
+            {/* View Height */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">
-                    <label>Explorer height</label>
+                    <label>View height</label>
                     <div className="setting-desc">Set maximum height of results area in pixels. Set to 0 for unlimited.</div>
                 </div>
-                <input
-                    type="number"
-                    min="0"
-                    placeholder="500"
-                    value={settings.queryHeight}
-                    onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val >= 0) {
-                            onSettingsChange({ queryHeight: val });
-                        }
-                    }}
-                    style={{ width: '80px' }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                        className="clickable-icon"
+                        aria-label="Reset to default (0)"
+                        onClick={() => onSettingsChange({ queryHeight: 0 })}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                    </button>
+                    <input
+                        type="number"
+                        min="0"
+                        placeholder="500"
+                        value={settings.queryHeight}
+                        onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val >= 0) {
+                                onSettingsChange({ queryHeight: val });
+                            }
+                        }}
+                        style={{ width: '80px' }}
+                    />
+                </div>
             </div>
 
             {/* Open File Action */}

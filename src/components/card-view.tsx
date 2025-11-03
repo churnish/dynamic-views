@@ -257,7 +257,11 @@ export function CardView({
                                             onMouseLeave={!app.isMobile ? (() => setHoveredImageIndex(0)) : undefined}
                                         >
                                             <img
-                                                src={isCardHovered ? imageArray[hoveredImageIndex] : (staticFrameArray[hoveredImageIndex] || imageArray[hoveredImageIndex])}
+                                                src={
+                                                    isCardHovered
+                                                        ? (imageArray[hoveredImageIndex] || imageArray[0] || '')
+                                                        : (staticFrameArray[hoveredImageIndex] || imageArray[hoveredImageIndex] || imageArray[0] || '')
+                                                }
                                                 alt=""
                                                 onLoad={() => {
                                                     // Trigger layout recalculation when image loads
