@@ -1598,7 +1598,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
    ============================================ */
 
 @media (hover: hover) {
-    .markdown-source-view.mod-cm6 .cm-embed-block:not(.cm-table-widget, .cm-lang-base):has(.block-language-datacorejsx):hover {
+    .markdown-source-view.mod-cm6 .cm-embed-block:not(.cm-table-widget, .cm-lang-base):has(.dynamic-views):hover {
         box-shadow: none;
     }
 }
