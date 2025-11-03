@@ -788,7 +788,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         let element: any = containerRef.current;
         while (element && element !== document.body) {
             const style = getComputedStyle(element);
-            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+            // Only use elements with overflow AND non-zero height (skip collapsed containers)
+            if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && element.clientHeight > 0) {
                 scrollableElement = element;
                 break;
             }
@@ -843,10 +844,11 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
             console.log(`[InfiniteScroll:LoadMore] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
 
-            // Guard: Don't load if container isn't actually scrollable yet
+            // Guard: Don't load if container isn't scrollable AND triggered by ResizeObserver (not user scroll)
             // This prevents infinite loading when queryHeight=0 and container expands to fit content
-            if (scrollHeight === editorHeight) {
-                console.log('[InfiniteScroll:LoadMore] Guard: Container not scrollable (scrollHeight === clientHeight), returning false');
+            // But allows scroll/resize events to still load when user takes action
+            if (scrollHeight === editorHeight && trigger === 'ResizeObserver') {
+                console.log('[InfiniteScroll:LoadMore] Guard: Container not scrollable, ResizeObserver trigger, returning false');
                 return false;
             }
 

@@ -4,11 +4,11 @@
     "descriptionProperty": "description",
     "imageProperty": "cover",
     "alwaysOmitFirstLine": false,
-    "showTextPreview": true,
-    "showThumbnails": true,
-    "cardBottomDisplay": "path",
+    "showTextPreview": false,
+    "showThumbnails": false,
+    "cardBottomDisplay": "none",
     "listMarker": "number",
-    "showTimestamp": true,
+    "showTimestamp": false,
     "showTimestampIcon": true,
     "minMasonryColumns": 1,
     "randomizeAction": "shuffle",
@@ -76,11 +76,11 @@
       "widthMode": "normal"
     },
     "1762122189077": {
-      "sortMethod": "name-asc",
+      "sortMethod": "mtime-desc",
       "viewMode": "card",
       "searchQuery": "",
       "resultLimit": "",
-      "widthMode": "normal"
+      "widthMode": "wide"
     },
     "1762122799975": {
       "sortMethod": "mtime-desc",
@@ -361,6 +361,69 @@
       "searchQuery": "",
       "resultLimit": "",
       "widthMode": "max"
+    },
+    "1762209841158": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762209974534": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762209977176": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762209981249": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762209982931": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762209996333": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762210009235": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762214031179": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762214056228": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
     }
   }
 }
