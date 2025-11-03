@@ -741,10 +741,12 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
     // Sync refs for callback access in infinite scroll
     dc.useEffect(() => {
+        console.log('[InfiniteScroll:RefSync] columnCountRef updated:', columnCountRef.current, '→', columnCount);
         columnCountRef.current = columnCount;
     }, [columnCount, dc]);
 
     dc.useEffect(() => {
+        console.log('[InfiniteScroll:RefSync] displayedCountRef updated:', displayedCountRef.current, '→', displayedCount);
         displayedCountRef.current = displayedCount;
     }, [displayedCount, dc]);
 
@@ -770,7 +772,10 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
     // Infinite scroll: ResizeObserver + scroll + window resize
     dc.useEffect(() => {
+        console.log('[InfiniteScroll:Setup] Effect running, initial displayedCount:', displayedCount, 'sorted.length:', sorted.length);
+
         if (!containerRef.current) {
+            console.log('[InfiniteScroll:Setup] No containerRef, aborting setup');
             return;
         }
 
@@ -792,21 +797,29 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
         if (!scrollableElement) {
             scrollableElement = window;
+            console.log('[InfiniteScroll:Setup] Using window as scroll container');
+        } else {
+            console.log('[InfiniteScroll:Setup] Using element as scroll container:', scrollableElement.className);
         }
 
         // Core batch loading function
         const loadMoreItems = (trigger = 'unknown') => {
+            console.log(`[InfiniteScroll:LoadMore] Called by: ${trigger}, isLoadingRef: ${isLoadingRef.current}, displayedCountRef: ${displayedCountRef.current}`);
+
             // Guard: already loading or no container
             if (isLoadingRef.current) {
+                console.log('[InfiniteScroll:LoadMore] Guard: Already loading, returning false');
                 return false;
             }
             if (!containerRef.current) {
+                console.log('[InfiniteScroll:LoadMore] Guard: No container, returning false');
                 return false;
             }
 
             // Get current count from ref (captures latest value)
             const currentCount = displayedCountRef.current;
             if (currentCount >= sorted.length) {
+                console.log(`[InfiniteScroll:LoadMore] Guard: All items loaded (${currentCount}/${sorted.length}), returning false`);
                 return false; // All items loaded
             }
 
@@ -828,8 +841,11 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             // Calculate threshold
             const threshold = editorHeight * ((app as any).isMobile ? MOBILE_VIEWPORT_MULTIPLIER : DESKTOP_VIEWPORT_MULTIPLIER);
 
+            console.log(`[InfiniteScroll:LoadMore] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
+
             // Check if we should load
             if (distanceFromBottom > threshold) {
+                console.log(`[InfiniteScroll:LoadMore] Distance (${distanceFromBottom.toFixed(0)}px) > threshold (${threshold.toFixed(0)}px), returning false`);
                 return false;
             }
 
@@ -841,9 +857,13 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             const batchSize = Math.min(currentCols * rowsPerColumn, 7 * rowsPerColumn);
             const newCount = Math.min(currentCount + batchSize, sorted.length);
 
+            console.log(`[InfiniteScroll:LoadMore] Loading batch: ${currentCount} → ${newCount} (${batchSize} items, ${currentCols} cols × ${rowsPerColumn} rows)`);
+            console.log(`[InfiniteScroll:LoadMore] columnCountRef: ${columnCountRef.current}, columnCount state: ${columnCount}, used: ${currentCols}`);
+
             displayedCountRef.current = newCount;
             setDisplayedCount(newCount);
 
+            console.log('[InfiniteScroll:LoadMore] Batch loaded, returning true');
             return true; // Batch loaded
         };
 
@@ -851,23 +871,33 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         let resizeTimer: any = null;
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
+                const height = entry.contentRect.height;
+                console.log(`[InfiniteScroll:ResizeObserver] Container height changed to ${height}px, clearing isLoadingRef`);
+
                 // Masonry just completed layout, clear loading flag
                 isLoadingRef.current = false;
 
                 // Debounce loadMoreItems check to prevent rapid-fire loading during initial render
-                if (resizeTimer) clearTimeout(resizeTimer);
+                if (resizeTimer) {
+                    console.log('[InfiniteScroll:ResizeObserver] Debounce timer active, clearing and restarting');
+                    clearTimeout(resizeTimer);
+                }
                 resizeTimer = setTimeout(() => {
+                    console.log('[InfiniteScroll:ResizeObserver] Debounce complete (150ms), calling loadMoreItems');
                     loadMoreItems('ResizeObserver');
                 }, 150);
             }
         });
         resizeObserver.observe(containerRef.current);
+        console.log('[InfiniteScroll:Setup] ResizeObserver attached');
 
         // Setup window resize listener (handles viewport height changes)
         const handleWindowResize = () => {
+            console.log('[InfiniteScroll:WindowResize] Window resized');
             loadMoreItems('window.resize');
         };
         window.addEventListener('resize', handleWindowResize);
+        console.log('[InfiniteScroll:Setup] Window resize listener attached');
 
         // Setup scroll listener with leading-edge throttle
         let scrollTimer: any = null;
@@ -877,18 +907,23 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                 return;
             }
 
+            console.log('[InfiniteScroll:Scroll] Scroll event (cooldown started)');
+
             // Check immediately (leading edge)
             loadMoreItems('scroll');
 
             // Start cooldown
             scrollTimer = setTimeout(() => {
+                console.log('[InfiniteScroll:Scroll] Cooldown ended');
                 scrollTimer = null;
             }, 100);
         };
         scrollableElement.addEventListener('scroll', handleScroll, { passive: true });
+        console.log('[InfiniteScroll:Setup] Scroll listener attached, setup complete');
 
         // Cleanup
         return () => {
+            console.log('[InfiniteScroll:Cleanup] Cleaning up all listeners');
             resizeObserver.disconnect();
             window.removeEventListener('resize', handleWindowResize);
             scrollableElement.removeEventListener('scroll', handleScroll);
