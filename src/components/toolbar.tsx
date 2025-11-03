@@ -53,7 +53,7 @@ interface ToolbarProps {
     copyMenuItem: any;
 
     // Create note
-    onCreateNote: () => void;
+    onCreateNote: (event: MouseEvent) => void;
 
     // Toolbar controls
     isPinned: boolean;
@@ -441,8 +441,8 @@ export function Toolbar({
             <button
                 className="create-note-button"
                 tabIndex={0}
-                onClick={onCreateNote}
-                aria-label="Create new note"
+                onClick={(e) => onCreateNote(e as any)}
+                aria-label="Create new note (Ctrl/Cmd+Click for new tab)"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"/>
@@ -770,8 +770,8 @@ export function Toolbar({
                 <button
                     className="create-note-button-compact"
                     tabIndex={0}
-                    onClick={onCreateNote}
-                    aria-label="Create new note"
+                    onClick={(e) => onCreateNote(e as any)}
+                    aria-label="Create new note (Ctrl/Cmd+Click for new tab)"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"/>

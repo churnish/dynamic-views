@@ -1,4 +1,4 @@
-import { App, TFile, Plugin } from 'obsidian';
+import { App, TFile, Plugin, Keymap } from 'obsidian';
 import { Settings, UIState, ViewMode, WidthMode } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
 import { PersistenceManager } from '../persistence';
@@ -859,9 +859,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         const randomPath = sorted[randomIndex].$path;
         const file = app.vault.getAbstractFileByPath(randomPath);
         if (file) {
-            // Open in new tab if Ctrl (Win/Linux) or Cmd (Mac) is held
-            const newTab = event.ctrlKey || event.metaKey;
-            app.workspace.getLeaf(newTab).openFile(file as TFile);
+            const newLeaf = Keymap.isModEvent(event);
+            app.workspace.getLeaf(newLeaf).openFile(file as TFile);
         }
     }, [sorted, app]);
 
@@ -936,11 +935,12 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         setShowLimitDropdown(false);
     }, []);
 
-    const handleCreateNote = dc.useCallback(async () => {
+    const handleCreateNote = dc.useCallback(async (event: MouseEvent) => {
         // TODO: Implement note creation
         const fileName = `Untitled ${Date.now()}.md`;
         const file = await app.vault.create(fileName, '');
-        app.workspace.getLeaf(false).openFile(file);
+        const newLeaf = Keymap.isModEvent(event);
+        app.workspace.getLeaf(newLeaf).openFile(file);
     }, [app]);
 
     const handleCardClick = dc.useCallback((path: string, newLeaf: boolean) => {
