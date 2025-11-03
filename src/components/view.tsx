@@ -717,6 +717,20 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             resizeObserver.disconnect();
             window.removeEventListener('resize', handleResize);
             clearTimeout(layoutTimeout);
+
+            // Clean up inline styles when leaving masonry view
+            const container = containerRef.current;
+            if (container) {
+                const cards = container.querySelectorAll('.writing-card');
+                cards.forEach((card: any) => {
+                    card.style.position = '';
+                    card.style.left = '';
+                    card.style.top = '';
+                    card.style.width = '';
+                    card.style.transition = '';
+                });
+                container.style.height = '';
+            }
         };
     }, [sorted, viewMode, settings.minMasonryColumns, dc]);
 
