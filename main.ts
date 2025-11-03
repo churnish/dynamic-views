@@ -103,7 +103,7 @@ return dv.createView(dc, USER_QUERY);
 		try {
 			const activeFile = this.app.workspace.getActiveFile();
 			const folderPath = activeFile?.parent?.path || '';
-			const filePath = this.getAvailablePath(folderPath, 'Dynamic View');
+			const filePath = this.getAvailablePath(folderPath, 'Dynamic view');
 			const template = this.getQueryTemplate();
 
 			await this.app.vault.create(filePath, template);
@@ -129,7 +129,7 @@ return dv.createView(dc, USER_QUERY);
 		try {
 			// Use empty folder path for vault root
 			const folderPath = '';
-			const filePath = this.getAvailablePath(folderPath, 'Dynamic Views');
+			const filePath = this.getAvailablePath(folderPath, 'Dynamic view');
 			const template = this.getQueryTemplate();
 
 			await this.app.vault.create(filePath, template);
