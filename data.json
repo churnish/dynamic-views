@@ -9,11 +9,11 @@
     "cardBottomDisplay": "tags",
     "listMarker": "bullet",
     "showTimestamp": true,
-    "showTimestampIcon": true,
+    "showTimestampIcon": false,
     "minMasonryColumns": 1,
     "randomizeAction": "shuffle",
     "thumbnailCacheSize": "balanced",
-    "queryHeight": 0,
+    "queryHeight": 300,
     "openFileAction": "title",
     "addCardBackground": false
   },
@@ -75,11 +75,11 @@
       "widthMode": "normal"
     },
     "1762122189077": {
-      "sortMethod": "name-asc",
-      "viewMode": "card",
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
       "searchQuery": "",
       "resultLimit": "",
-      "widthMode": "max"
+      "widthMode": "normal"
     },
     "1762122799975": {
       "sortMethod": "mtime-desc",
@@ -107,7 +107,7 @@
       "viewMode": "masonry",
       "searchQuery": "",
       "resultLimit": "",
-      "widthMode": "max"
+      "widthMode": "normal"
     },
     "1761684489551": {
       "sortMethod": "mtime-desc",
@@ -163,7 +163,7 @@
       "viewMode": "masonry",
       "searchQuery": "",
       "resultLimit": "",
-      "widthMode": "max"
+      "widthMode": "normal"
     },
     "1762172510389": {
       "sortMethod": "mtime-desc",
@@ -173,11 +173,11 @@
       "widthMode": "max"
     },
     "1762174517200": {
-      "sortMethod": "name-asc",
-      "viewMode": "card",
+      "sortMethod": "mtime-desc",
+      "viewMode": "masonry",
       "searchQuery": "",
       "resultLimit": "",
-      "widthMode": "max"
+      "widthMode": "normal"
     },
     "1762175100405": {
       "sortMethod": "mtime-desc",
@@ -185,6 +185,27 @@
       "searchQuery": "",
       "resultLimit": "",
       "widthMode": "max"
+    },
+    "1762177564906": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762092098342": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
+    },
+    "1762182895413": {
+      "sortMethod": "ctime-desc",
+      "viewMode": "list",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
     }
   }
 }

@@ -18,8 +18,13 @@ interface ViewProps {
 }
 
 export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: ViewProps) {
-    // Get current file for persistence
-    const currentFile = getCurrentFile(app);
+    // Get file containing this query (memoized to prevent re-fetching on every render)
+    // This is used to exclude the query note itself from results
+    const currentFile = dc.useMemo(() => {
+        const file = getCurrentFile(app);
+        return file;
+    }, [app]);
+
     const currentFilePath = currentFile?.path;
     const ctime = getFileCtime(currentFile);
 
@@ -270,7 +275,31 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         return ensurePageSelector(q);
     }, [appliedQuery]);
 
-    // Execute query
+    // Workaround: Direct Datacore event subscription (fires AFTER reindexing completes)
+    const [indexRevision, setIndexRevision] = dc.useState(0);
+
+    dc.useEffect(() => {
+        // Access Datacore core directly
+        const core = (window as any).datacore?.core;
+        if (!core) {
+            return;
+        }
+
+        // Subscribe to update event (fires AFTER index changes complete)
+        const updateRef = core.on("update", (revision: number) => {
+            setIndexRevision(revision);
+        });
+
+        // Set initial revision
+        const initialRevision = core.revision || 0;
+        setIndexRevision(initialRevision);
+
+        return () => {
+            core.offref(updateRef);
+        };
+    }, [app, dc]);
+
+    // Execute query - indexRevision ensures re-execution AFTER Datacore reindexes
     let pages: any[] = [];
     try {
         pages = dc.useQuery(validatedQuery) || [];
