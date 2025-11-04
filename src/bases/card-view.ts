@@ -42,28 +42,41 @@ export class DynamicViewsCardView extends BasesView {
     }
 
     async onDataUpdated(): Promise<void> {
+        console.log('// DEBUG: card-view onDataUpdated() CALLED');
         const { app } = this;
         const entries = this.data.data;
 
         // Read settings from Bases config
         const settings = readBasesSettings(this.config);
 
+        console.log('// DEBUG: Metadata winner tracking');
+        console.log('//   viewId:', this.viewId);
+        console.log('//   Current settings - left:', settings.metadataDisplayLeft, 'right:', settings.metadataDisplayRight);
+        console.log('//   Previous settings:', this.previousSettings);
+        console.log('//   Current winner:', this.metadataDisplayWinner);
+
         // Track previous settings to determine winner when both match
         if (this.previousSettings) {
             const leftChanged = settings.metadataDisplayLeft !== this.previousSettings.metadataDisplayLeft;
             const rightChanged = settings.metadataDisplayRight !== this.previousSettings.metadataDisplayRight;
 
+            console.log('//   Changes detected - leftChanged:', leftChanged, 'rightChanged:', rightChanged);
+
             // Check if both are now the same non-none value
             if (settings.metadataDisplayLeft !== 'none' &&
                 settings.metadataDisplayLeft === settings.metadataDisplayRight) {
+                console.log('//   DUPLICATE DETECTED');
                 // Determine which one changed (the one that changed loses, the one that stayed wins)
                 if (leftChanged && !rightChanged) {
+                    console.log('//   Left changed, right stayed → RIGHT WINS');
                     this.metadataDisplayWinner = 'right'; // Right had it first
                     await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'right');
                 } else if (rightChanged && !leftChanged) {
+                    console.log('//   Right changed, left stayed → LEFT WINS');
                     this.metadataDisplayWinner = 'left'; // Left had it first
                     await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'left');
                 } else {
+                    console.log('//   Both changed or neither changed → KEEP EXISTING or default to LEFT');
                     // Both changed simultaneously - shouldn't happen in normal use
                     // Keep existing winner if set
                     if (this.metadataDisplayWinner === null) {
@@ -71,22 +84,30 @@ export class DynamicViewsCardView extends BasesView {
                         await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'left');
                     }
                 }
+                console.log('//   Winner set to:', this.metadataDisplayWinner);
             } else {
+                console.log('//   No duplicate');
                 // No duplicate, clear winner
                 if (this.metadataDisplayWinner !== null) {
+                    console.log('//   Clearing winner');
                     this.metadataDisplayWinner = null;
                     await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, null);
                 }
             }
         } else {
+            console.log('//   FIRST LOAD (no previous settings)');
             // First load - load saved winner or default to left if duplicate exists
             if (settings.metadataDisplayLeft !== 'none' &&
                 settings.metadataDisplayLeft === settings.metadataDisplayRight) {
+                console.log('//   Duplicate exists on first load');
                 // Try to load saved winner
                 const savedWinner = this.plugin.persistenceManager.getBasesViewMetadataWinner(this.viewId);
+                console.log('//   Saved winner from persistence:', savedWinner);
                 this.metadataDisplayWinner = savedWinner || 'left';
+                console.log('//   Winner set to:', this.metadataDisplayWinner);
                 // Save if we used default
                 if (!savedWinner) {
+                    console.log('//   No saved winner, saving default (left)');
                     await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'left');
                 }
             }

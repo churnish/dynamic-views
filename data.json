@@ -8,9 +8,9 @@
     "alwaysOmitFirstLine": false,
     "showTextPreview": true,
     "showThumbnails": true,
-    "metadataDisplayLeft": "timestamp",
-    "metadataDisplayRight": "tags",
-    "metadataDisplayWinner": null,
+    "metadataDisplayLeft": "path",
+    "metadataDisplayRight": "path",
+    "metadataDisplayWinner": "right",
     "listMarker": "number",
     "showTimestampIcon": false,
     "minMasonryColumns": 1,
@@ -452,6 +452,7 @@
     "1762293719392:dynamic-views-masonry": "right",
     "1762293743370:dynamic-views-masonry": "left",
     "1762293980566:dynamic-views-card": "right",
-    "1762293996502:dynamic-views-card": "left"
+    "1762293996502:dynamic-views-card": "left",
+    "1762294029843:dynamic-views-card": "left"
   }
 }
