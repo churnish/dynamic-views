@@ -35,34 +35,34 @@ export const DEFAULT_SETTINGS: Settings = {
 export function getBasesViewOptions(): any[] {
     return [
         {
-            type: 'property',
+            type: 'text',
             displayName: 'Title property',
             key: 'titleProperty',
-            placeholder: 'Property name for card title'
+            placeholder: 'Comma-separated if multiple'
         },
         {
-            type: 'property',
+            type: 'text',
             displayName: 'Description property',
             key: 'descriptionProperty',
-            placeholder: 'Property name for description'
+            placeholder: 'Comma-separated if multiple'
         },
         {
-            type: 'property',
+            type: 'text',
             displayName: 'Image property',
             key: 'imageProperty',
-            placeholder: 'Property name for cover image'
+            placeholder: 'Comma-separated if multiple'
         },
         {
-            type: 'property',
+            type: 'text',
             displayName: 'Created time property',
             key: 'createdProperty',
-            placeholder: 'Property name for created timestamp'
+            placeholder: 'Comma-separated if multiple'
         },
         {
-            type: 'property',
+            type: 'text',
             displayName: 'Modified time property',
             key: 'modifiedProperty',
-            placeholder: 'Property name for modified timestamp'
+            placeholder: 'Comma-separated if multiple'
         },
         {
             type: 'toggle',

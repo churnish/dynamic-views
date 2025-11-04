@@ -264,9 +264,13 @@ export class DynamicViewsMasonryView extends BasesView {
             if (customProperty) {
                 const value = entry.getValue(customProperty as any);
 
-                // Check if property exists on note (not null/empty)
-                const propertyExists = value &&
-                    !(typeof value === 'object' && 'isEmpty' in value && value.isEmpty());
+                // Check if property exists on note
+                // When property doesn't exist, Bases returns {icon: 'lucide-file-question'} with no data/date field
+                // When property exists, it has additional fields like 'data' (for text) or 'date' (for dates)
+                const propertyExists = value && (
+                    ('date' in value && value.date instanceof Date) ||
+                    ('data' in value)
+                );
 
                 if (!propertyExists) {
                     // Property not set on this note - fall back to file metadata

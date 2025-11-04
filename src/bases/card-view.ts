@@ -177,23 +177,13 @@ export class DynamicViewsCardView extends BasesView {
             if (customProperty) {
                 const value = entry.getValue(customProperty as any);
 
-                // DEBUG: Log property value details
-                console.log('// DEBUG timestamp property check');
-                console.log('//   Note:', card.title);
-                console.log('//   Property name:', customProperty);
-                console.log('//   Raw value:', value);
-                console.log('//   Value type:', typeof value);
-                console.log('//   Value constructor:', value?.constructor?.name);
-                console.log('//   Has isEmpty:', 'isEmpty' in (value || {}));
-                if (value && 'isEmpty' in value) {
-                    console.log('//   isEmpty():', value.isEmpty());
-                }
-
-                // Check if property exists on note (not null/empty)
-                const propertyExists = value &&
-                    !(typeof value === 'object' && 'isEmpty' in value && value.isEmpty());
-
-                console.log('//   propertyExists:', propertyExists);
+                // Check if property exists on note
+                // When property doesn't exist, Bases returns {icon: 'lucide-file-question'} with no data/date field
+                // When property exists, it has additional fields like 'data' (for text) or 'date' (for dates)
+                const propertyExists = value && (
+                    ('date' in value && value.date instanceof Date) ||
+                    ('data' in value)
+                );
 
                 if (!propertyExists) {
                     // Property not set on this note - fall back to file metadata

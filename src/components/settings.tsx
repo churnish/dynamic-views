@@ -137,7 +137,7 @@ export function Settings({
                         type="text"
                         value={settings.createdProperty}
                         onChange={(e) => onSettingsChange({ createdProperty: e.target.value })}
-                        placeholder="created"
+                        placeholder="Comma-separated if multiple"
                         className="setting-text-input"
                     />
                 </div>
@@ -154,7 +154,7 @@ export function Settings({
                         type="text"
                         value={settings.modifiedProperty}
                         onChange={(e) => onSettingsChange({ modifiedProperty: e.target.value })}
-                        placeholder="updated"
+                        placeholder="Comma-separated if multiple"
                         className="setting-text-input"
                     />
                 </div>
@@ -362,7 +362,7 @@ export function Settings({
                     type="text"
                     value={settings.titleProperty}
                     onChange={(e) => onSettingsChange({ titleProperty: e.target.value })}
-                    placeholder="title"
+                    placeholder="Comma-separated if multiple"
                     className="setting-text-input"
                 />
             </div>
@@ -378,7 +378,7 @@ export function Settings({
                         type="text"
                         value={settings.descriptionProperty}
                         onChange={(e) => onSettingsChange({ descriptionProperty: e.target.value })}
-                        placeholder="description"
+                        placeholder="Comma-separated if multiple"
                         className="setting-text-input"
                     />
                 </div>
@@ -395,7 +395,7 @@ export function Settings({
                         type="text"
                         value={settings.imageProperty}
                         onChange={(e) => onSettingsChange({ imageProperty: e.target.value })}
-                        placeholder="cover"
+                        placeholder="Comma-separated if multiple"
                         className="setting-text-input"
                     />
                 </div>
