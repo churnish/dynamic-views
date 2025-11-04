@@ -21,9 +21,10 @@ export class DynamicViewsCardView extends BasesView {
     private updateLayoutRef: { current: (() => void) | null } = { current: null };
     private focusableCardIndex: number = 0;
 
-    constructor(controller: any, parentEl: HTMLElement) {
+    constructor(controller: any, containerEl: HTMLElement) {
         super(controller);
-        this.containerEl = parentEl.createDiv('dynamic-views-bases-container');
+        this.containerEl = containerEl;
+        this.containerEl.addClass('dynamic-views-bases-container');
     }
 
     async onDataUpdated(): Promise<void> {

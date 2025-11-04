@@ -22,9 +22,10 @@ export class DynamicViewsMasonryView extends BasesView {
     private focusableCardIndex: number = 0;
     private masonryContainer: HTMLElement | null = null;
 
-    constructor(controller: any, parentEl: HTMLElement) {
+    constructor(controller: any, containerEl: HTMLElement) {
         super(controller);
-        this.containerEl = parentEl.createDiv('dynamic-views-bases-container');
+        this.containerEl = containerEl;
+        this.containerEl.addClass('dynamic-views-bases-container');
     }
 
     async onDataUpdated(): Promise<void> {
