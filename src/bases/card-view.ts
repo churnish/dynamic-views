@@ -101,9 +101,17 @@ export class DynamicViewsCardView extends BasesView {
         // Load snippets and images for visible entries
         await this.loadContentForEntries(entries, settings);
 
+        // DEBUG: Always log to diagnose
+        console.log('// DEBUG: onDataUpdated called');
+        console.log('//   Entries count:', entries.length);
+        console.log('//   createdProperty setting:', settings.createdProperty);
+        console.log('//   modifiedProperty setting:', settings.modifiedProperty);
+
         // DEBUG: Test date property format
-        if (entries.length > 0 && (settings.createdProperty || settings.modifiedProperty)) {
+        if (entries.length > 0) {
             const testEntry = entries[0];
+            console.log('//   Test entry exists:', !!testEntry);
+
             if (settings.createdProperty) {
                 const createdValue = testEntry.getValue(settings.createdProperty as any);
                 console.log('// DEBUG: Created property test');
@@ -115,6 +123,9 @@ export class DynamicViewsCardView extends BasesView {
                 console.log('//   Value.type:', (createdValue as any)?.type);
                 console.log('//   Value.toString():', createdValue?.toString());
                 console.log('//   Has isEmpty():', typeof (createdValue as any)?.isEmpty === 'function');
+                if (typeof (createdValue as any)?.isEmpty === 'function') {
+                    console.log('//   isEmpty() result:', (createdValue as any).isEmpty());
+                }
             }
             if (settings.modifiedProperty) {
                 const modifiedValue = testEntry.getValue(settings.modifiedProperty as any);
@@ -127,6 +138,9 @@ export class DynamicViewsCardView extends BasesView {
                 console.log('//   Value.type:', (modifiedValue as any)?.type);
                 console.log('//   Value.toString():', modifiedValue?.toString());
                 console.log('//   Has isEmpty():', typeof (modifiedValue as any)?.isEmpty === 'function');
+                if (typeof (modifiedValue as any)?.isEmpty === 'function') {
+                    console.log('//   isEmpty() result:', (modifiedValue as any).isEmpty());
+                }
             }
         }
 
