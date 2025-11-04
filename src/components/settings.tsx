@@ -174,21 +174,13 @@ export function Settings({
                 </div>
                 <select
                     value={settings.metadataDisplayLeft}
-                    onChange={(e) => {
-                        const newValue = e.target.value as 'none' | 'timestamp' | 'tags' | 'path';
-                        // If selecting same as right, clear right
-                        if (newValue !== 'none' && newValue === settings.metadataDisplayRight) {
-                            onSettingsChange({ metadataDisplayLeft: newValue, metadataDisplayRight: 'none' });
-                        } else {
-                            onSettingsChange({ metadataDisplayLeft: newValue });
-                        }
-                    }}
+                    onChange={(e) => onSettingsChange({ metadataDisplayLeft: e.target.value as 'none' | 'timestamp' | 'tags' | 'path' })}
                     className="dropdown"
                 >
                     <option value="none">None</option>
-                    {(settings.metadataDisplayRight !== 'timestamp' || settings.metadataDisplayLeft === 'timestamp') && <option value="timestamp">Timestamp</option>}
-                    {(settings.metadataDisplayRight !== 'tags' || settings.metadataDisplayLeft === 'tags') && <option value="tags">File tags</option>}
-                    {(settings.metadataDisplayRight !== 'path' || settings.metadataDisplayLeft === 'path') && <option value="path">File path</option>}
+                    <option value="timestamp">Timestamp</option>
+                    <option value="tags">File tags</option>
+                    <option value="path">File path</option>
                 </select>
             </div>
 
@@ -200,21 +192,13 @@ export function Settings({
                 </div>
                 <select
                     value={settings.metadataDisplayRight}
-                    onChange={(e) => {
-                        const newValue = e.target.value as 'none' | 'timestamp' | 'tags' | 'path';
-                        // If selecting same as left, clear left
-                        if (newValue !== 'none' && newValue === settings.metadataDisplayLeft) {
-                            onSettingsChange({ metadataDisplayRight: newValue, metadataDisplayLeft: 'none' });
-                        } else {
-                            onSettingsChange({ metadataDisplayRight: newValue });
-                        }
-                    }}
+                    onChange={(e) => onSettingsChange({ metadataDisplayRight: e.target.value as 'none' | 'timestamp' | 'tags' | 'path' })}
                     className="dropdown"
                 >
                     <option value="none">None</option>
-                    {(settings.metadataDisplayLeft !== 'timestamp' || settings.metadataDisplayRight === 'timestamp') && <option value="timestamp">Timestamp</option>}
-                    {(settings.metadataDisplayLeft !== 'tags' || settings.metadataDisplayRight === 'tags') && <option value="tags">File tags</option>}
-                    {(settings.metadataDisplayLeft !== 'path' || settings.metadataDisplayRight === 'path') && <option value="path">File path</option>}
+                    <option value="timestamp">Timestamp</option>
+                    <option value="tags">File tags</option>
+                    <option value="path">File path</option>
                 </select>
             </div>
 

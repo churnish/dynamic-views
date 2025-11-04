@@ -64,54 +64,61 @@ export function ListView({
                             {titleValue}
                         </a>
                         {/* Metadata - show both left and right inline */}
-                        {(settings.metadataDisplayLeft !== 'none' || settings.metadataDisplayRight !== 'none') && (
-                            <span className="list-meta">
-                                {settings.metadataDisplayLeft === 'tags' && p.$tags && p.$tags.length > 0 ? (
-                                    <>
-                                        {p.$tags.map((tag: string) => (
-                                            <a
-                                                key={tag}
-                                                href="#"
-                                                className="tag"
-                                                onClick={(e: MouseEvent) => {
-                                                    e.preventDefault();
-                                                    const searchPlugin = app.internalPlugins.plugins["global-search"];
-                                                    if (searchPlugin && searchPlugin.instance) {
-                                                        searchPlugin.instance.openGlobalSearch("tag:" + tag);
-                                                    }
-                                                }}
-                                            >
-                                                {tag.replace(/^#/, '')}
-                                            </a>
-                                        ))}
-                                    </>
-                                ) : settings.metadataDisplayLeft === 'path' && folderPath ? (
-                                    <span className="list-path">{folderPath}</span>
-                                ) : null}
-                                {settings.metadataDisplayRight === 'tags' && p.$tags && p.$tags.length > 0 ? (
-                                    <>
-                                        {p.$tags.map((tag: string) => (
-                                            <a
-                                                key={tag}
-                                                href="#"
-                                                className="tag"
-                                                onClick={(e: MouseEvent) => {
-                                                    e.preventDefault();
-                                                    const searchPlugin = app.internalPlugins.plugins["global-search"];
-                                                    if (searchPlugin && searchPlugin.instance) {
-                                                        searchPlugin.instance.openGlobalSearch("tag:" + tag);
-                                                    }
-                                                }}
-                                            >
-                                                {tag.replace(/^#/, '')}
-                                            </a>
-                                        ))}
-                                    </>
-                                ) : settings.metadataDisplayRight === 'path' && folderPath ? (
-                                    <span className="list-path">{folderPath}</span>
-                                ) : null}
-                            </span>
-                        )}
+                        {(() => {
+                            // Duplicate detection: treat right as 'none' if both match
+                            const effectiveRight = settings.metadataDisplayLeft !== 'none' && settings.metadataDisplayLeft === settings.metadataDisplayRight
+                                ? 'none'
+                                : settings.metadataDisplayRight;
+
+                            return (settings.metadataDisplayLeft !== 'none' || effectiveRight !== 'none') && (
+                                <span className="list-meta">
+                                    {settings.metadataDisplayLeft === 'tags' && p.$tags && p.$tags.length > 0 ? (
+                                        <>
+                                            {p.$tags.map((tag: string) => (
+                                                <a
+                                                    key={tag}
+                                                    href="#"
+                                                    className="tag"
+                                                    onClick={(e: MouseEvent) => {
+                                                        e.preventDefault();
+                                                        const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                                        if (searchPlugin && searchPlugin.instance) {
+                                                            searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag.replace(/^#/, '')}
+                                                </a>
+                                            ))}
+                                        </>
+                                    ) : settings.metadataDisplayLeft === 'path' && folderPath ? (
+                                        <span className="list-path">{folderPath}</span>
+                                    ) : null}
+                                    {effectiveRight === 'tags' && p.$tags && p.$tags.length > 0 ? (
+                                        <>
+                                            {p.$tags.map((tag: string) => (
+                                                <a
+                                                    key={tag}
+                                                    href="#"
+                                                    className="tag"
+                                                    onClick={(e: MouseEvent) => {
+                                                        e.preventDefault();
+                                                        const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                                        if (searchPlugin && searchPlugin.instance) {
+                                                            searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag.replace(/^#/, '')}
+                                                </a>
+                                            ))}
+                                        </>
+                                    ) : effectiveRight === 'path' && folderPath ? (
+                                        <span className="list-path">{folderPath}</span>
+                                    ) : null}
+                                </span>
+                            );
+                        })()}
                     </li>
                 );
             })}

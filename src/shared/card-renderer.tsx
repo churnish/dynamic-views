@@ -332,19 +332,26 @@ function Card({
             )}
 
             {/* Metadata */}
-            {(settings.metadataDisplayLeft !== 'none' || settings.metadataDisplayRight !== 'none') && (
-                <div className={`writing-meta${
-                    settings.metadataDisplayLeft === 'none' && settings.metadataDisplayRight !== 'none' ? ' meta-right-only' :
-                    settings.metadataDisplayLeft !== 'none' && settings.metadataDisplayRight === 'none' ? ' meta-left-only' : ''
-                }`}>
-                    <div className="meta-left">
-                        {renderMetadataContent(settings.metadataDisplayLeft, card, date, timeIcon, settings, app)}
+            {(() => {
+                // Duplicate detection: treat right as 'none' if both match
+                const effectiveRight = settings.metadataDisplayLeft !== 'none' && settings.metadataDisplayLeft === settings.metadataDisplayRight
+                    ? 'none'
+                    : settings.metadataDisplayRight;
+
+                return (settings.metadataDisplayLeft !== 'none' || effectiveRight !== 'none') && (
+                    <div className={`writing-meta${
+                        settings.metadataDisplayLeft === 'none' && effectiveRight !== 'none' ? ' meta-right-only' :
+                        settings.metadataDisplayLeft !== 'none' && effectiveRight === 'none' ? ' meta-left-only' : ''
+                    }`}>
+                        <div className="meta-left">
+                            {renderMetadataContent(settings.metadataDisplayLeft, card, date, timeIcon, settings, app)}
+                        </div>
+                        <div className="meta-right">
+                            {renderMetadataContent(effectiveRight, card, date, timeIcon, settings, app)}
+                        </div>
                     </div>
-                    <div className="meta-right">
-                        {renderMetadataContent(settings.metadataDisplayRight, card, date, timeIcon, settings, app)}
-                    </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }

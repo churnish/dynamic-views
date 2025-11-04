@@ -255,13 +255,19 @@ export function CardView({
                             </div>
                         )}
                         {/* Metadata */}
-                        {(settings.metadataDisplayLeft !== 'none' || settings.metadataDisplayRight !== 'none') && (
-                            <div className={`writing-meta${
-                                settings.metadataDisplayLeft === 'none' && settings.metadataDisplayRight !== 'none' ? ' meta-right-only' :
-                                settings.metadataDisplayLeft !== 'none' && settings.metadataDisplayRight === 'none' ? ' meta-left-only' : ''
-                            }`}>
-                                <div className="meta-left">
-                                    {settings.metadataDisplayLeft === 'timestamp' && date ? (
+                        {(() => {
+                            // Duplicate detection: treat right as 'none' if both match
+                            const effectiveRight = settings.metadataDisplayLeft !== 'none' && settings.metadataDisplayLeft === settings.metadataDisplayRight
+                                ? 'none'
+                                : settings.metadataDisplayRight;
+
+                            return (settings.metadataDisplayLeft !== 'none' || effectiveRight !== 'none') && (
+                                <div className={`writing-meta${
+                                    settings.metadataDisplayLeft === 'none' && effectiveRight !== 'none' ? ' meta-right-only' :
+                                    settings.metadataDisplayLeft !== 'none' && effectiveRight === 'none' ? ' meta-left-only' : ''
+                                }`}>
+                                    <div className="meta-left">
+                                        {settings.metadataDisplayLeft === 'timestamp' && date ? (
                                         <>
                                             {settings.showTimestampIcon && (
                                                 <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -331,7 +337,7 @@ export function CardView({
                                     ) : null}
                                 </div>
                                 <div className="meta-right">
-                                    {settings.metadataDisplayRight === 'timestamp' && date ? (
+                                    {effectiveRight === 'timestamp' && date ? (
                                         <>
                                             {settings.showTimestampIcon && (
                                                 <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -352,7 +358,7 @@ export function CardView({
                                             )}
                                             {date}
                                         </>
-                                    ) : settings.metadataDisplayRight === 'tags' && tags.length > 0 ? (
+                                    ) : effectiveRight === 'tags' && tags.length > 0 ? (
                                         <div className="tags-wrapper">
                                             {tags.map(tag => (
                                                 <a
@@ -371,7 +377,7 @@ export function CardView({
                                                 </a>
                                             ))}
                                         </div>
-                                    ) : settings.metadataDisplayRight === 'path' && folderPath.length > 0 ? (
+                                    ) : effectiveRight === 'path' && folderPath.length > 0 ? (
                                         <div className="path-wrapper">
                                             {folderPath.split('/').filter(f => f).map((folder, index, array) => {
                                                 const allParts = folderPath.split('/').filter(f => f);
@@ -401,7 +407,8 @@ export function CardView({
                                     ) : null}
                                 </div>
                             </div>
-                        )}
+                            );
+                        })()}
                     </div>
                 );
             })}
