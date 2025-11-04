@@ -3,6 +3,17 @@
    ============================================ */
 
 /* ============================================
+   BASES VIEW PADDING
+   Match built-in Bases Cards view padding
+   ============================================ */
+
+.bases-view[data-view-type="dynamic-views-card"],
+.bases-view[data-view-type="dynamic-views-masonry"] {
+    --bases-view-padding: var(--size-4-3);
+    --bases-embed-padding: var(--size-4-1) 1px;
+}
+
+/* ============================================
    FOCUS & ACCESSIBILITY STYLES
    ============================================ */
 
