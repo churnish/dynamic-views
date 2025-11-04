@@ -59,29 +59,30 @@ export function basesEntryToCardData(
     imageUrl?: string | string[],
     hasImageAvailable?: boolean
 ): CardData {
-    // Get file base name from Bases file property
-    const fileBaseName = entry.getValue('file base name');
-    const fileName = fileBaseName != null && fileBaseName !== ''
-        ? String(fileBaseName)
-        : entry.file.name;
+    // Use file.basename directly (file name without extension)
+    const fileName = entry.file.basename || entry.file.name;
 
     // Get title from property or fallback to filename
+    // getValue returns an object with 'data' property when value exists
     const titleValue = entry.getValue(settings.titleProperty);
-    const title = titleValue != null && titleValue !== ''
-        ? String(titleValue)
+    const title = (titleValue && titleValue.data != null && titleValue.data !== '')
+        ? String(titleValue.data)
         : fileName;
 
     // Get folder path (without filename)
     const path = entry.file.path;
     const folderPath = path.split('/').slice(0, -1).join('/');
 
-    // Get tags from Bases file property
-    const tagsValue = entry.getValue('file tags');
-    const tags = Array.isArray(tagsValue)
-        ? tagsValue.map((t: any) => String(t))
-        : tagsValue != null && tagsValue !== ''
-        ? [String(tagsValue)]
-        : [];
+    // Get tags from entry.file or frontmatter
+    // Check if tags exist in frontmatter first
+    const tagsValue = entry.getValue('tags');
+    let tags: string[] = [];
+    if (tagsValue && tagsValue.data != null) {
+        const tagData = tagsValue.data;
+        tags = Array.isArray(tagData)
+            ? tagData.map((t: any) => String(t))
+            : [String(tagData)];
+    }
 
     // Get timestamps
     const ctime = entry.file.stat.ctime;
