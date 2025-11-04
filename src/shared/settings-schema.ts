@@ -7,9 +7,9 @@ import type { Settings } from '../types';
 
 /** Default settings used by both Bases and Datacore */
 export const DEFAULT_SETTINGS: Settings = {
-    titleProperty: "title",
-    descriptionProperty: "description",
-    imageProperty: "cover",
+    titleProperty: "",
+    descriptionProperty: "",
+    imageProperty: "",
     alwaysOmitFirstLine: false,
     showTextPreview: true,
     showThumbnails: true,
@@ -36,21 +36,18 @@ export function getBasesViewOptions(): any[] {
             type: 'property',
             displayName: 'Title property',
             key: 'titleProperty',
-            default: 'title',
             placeholder: 'Property name for card title'
         },
         {
             type: 'property',
             displayName: 'Description property',
             key: 'descriptionProperty',
-            default: 'description',
             placeholder: 'Property name for description'
         },
         {
             type: 'property',
             displayName: 'Image property',
             key: 'imageProperty',
-            default: 'cover',
             placeholder: 'Property name for cover image'
         },
         {

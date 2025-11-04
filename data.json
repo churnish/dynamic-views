@@ -6,9 +6,10 @@
     "alwaysOmitFirstLine": false,
     "showTextPreview": true,
     "showThumbnails": true,
-    "cardBottomDisplay": "tags",
+    "metadataDisplayLeft": "timestamp",
+    "metadataDisplayRight": "tags",
+    "metadataDisplayWinner": null,
     "listMarker": "number",
-    "showTimestamp": true,
     "showTimestampIcon": false,
     "minMasonryColumns": 1,
     "randomizeAction": "shuffle",
@@ -16,6 +17,8 @@
     "queryHeight": 0,
     "openFileAction": "title",
     "addCardBackground": true,
+    "cardBottomDisplay": "tags",
+    "showTimestamp": true,
     "hasCreatedWelcomeNote": true
   },
   "queryStates": {
@@ -432,5 +435,9 @@
       "resultLimit": "",
       "widthMode": "normal"
     }
+  },
+  "basesViewMetadataWinners": {
+    "1762288933013:dynamic-views-masonry": "left",
+    "1762289000511:dynamic-views-masonry": "left"
   }
 }

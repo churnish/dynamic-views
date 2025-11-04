@@ -1,9 +1,9 @@
 import { Settings } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
-    titleProperty: "title",
-    descriptionProperty: "description",
-    imageProperty: "cover",
+    titleProperty: "",
+    descriptionProperty: "",
+    imageProperty: "",
     alwaysOmitFirstLine: false,
     showTextPreview: true,
     showThumbnails: true,
