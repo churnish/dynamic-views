@@ -88,7 +88,6 @@ export function ListView({
                                 ) : settings.metadataDisplayLeft === 'path' && folderPath ? (
                                     <span className="list-path">{folderPath}</span>
                                 ) : null}
-                                {settings.metadataDisplayLeft !== 'none' && settings.metadataDisplayRight !== 'none' && ' · '}
                                 {settings.metadataDisplayRight === 'tags' && p.$tags && p.$tags.length > 0 ? (
                                     <>
                                         {p.$tags.map((tag: string) => (

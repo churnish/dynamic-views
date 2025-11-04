@@ -150,37 +150,10 @@ export function getMasonryViewOptions(): any[] {
 /**
  * Read settings from Bases config
  * Maps Bases config values to Settings object
- * Handles migration from old format and duplicate detection
  */
 export function readBasesSettings(config: any): Settings {
-    // Try to read new format first
-    let metadataDisplayLeft = config.get('metadataDisplayLeft');
-    let metadataDisplayRight = config.get('metadataDisplayRight');
-
-    // Migration: If new format doesn't exist, migrate from old format
-    if (metadataDisplayLeft === undefined && metadataDisplayRight === undefined) {
-        const oldCardBottomDisplay = config.get('cardBottomDisplay');
-        const oldShowTimestamp = config.get('showTimestamp');
-
-        // Migrate based on old settings
-        if (oldShowTimestamp !== false) {
-            metadataDisplayLeft = 'timestamp';
-        } else {
-            metadataDisplayLeft = 'none';
-        }
-
-        if (oldCardBottomDisplay === 'tags') {
-            metadataDisplayRight = 'tags';
-        } else if (oldCardBottomDisplay === 'path') {
-            metadataDisplayRight = 'path';
-        } else {
-            metadataDisplayRight = 'none';
-        }
-    }
-
-    // Apply defaults if still undefined
-    metadataDisplayLeft = metadataDisplayLeft || DEFAULT_SETTINGS.metadataDisplayLeft;
-    metadataDisplayRight = metadataDisplayRight || DEFAULT_SETTINGS.metadataDisplayRight;
+    let metadataDisplayLeft = config.get('metadataDisplayLeft') || DEFAULT_SETTINGS.metadataDisplayLeft;
+    let metadataDisplayRight = config.get('metadataDisplayRight') || DEFAULT_SETTINGS.metadataDisplayRight;
 
     // Duplicate detection: If both are set to same non-none value, fix it
     if (metadataDisplayLeft !== 'none' && metadataDisplayLeft === metadataDisplayRight) {
