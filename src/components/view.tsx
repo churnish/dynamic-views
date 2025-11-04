@@ -8,6 +8,7 @@ import { ListView } from './list-view';
 import { Toolbar } from './toolbar';
 import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
+import { isExternalUrl, hasValidImageExtension, validateImageUrl } from '../utils/image';
 
 interface ViewProps {
     plugin: Plugin;
@@ -434,7 +435,10 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                         const imgFromProp = p.value(settings.imageProperty);
 
                         // Extract ALL property image paths (handle arrays)
+                        // Separate external URLs from internal paths
                         const propertyImagePaths: string[] = [];
+                        const propertyExternalUrls: string[] = [];
+
                         if (imgFromProp) {
                             // Handle array values (process ALL elements)
                             const propValues = Array.isArray(imgFromProp) ? imgFromProp : [imgFromProp];
@@ -455,17 +459,24 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                                     imgStr = wikilinkMatch[1].trim();
                                 }
 
-                                // Validate image extension
-                                const imageExtensions = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
-                                const hasValidImg = imgStr.length > 0 && imageExtensions.test(imgStr);
-
-                                if (hasValidImg) {
-                                    propertyImagePaths.push(imgStr);
+                                // Check if it's an external URL or internal path
+                                if (imgStr.length > 0) {
+                                    if (isExternalUrl(imgStr)) {
+                                        // External URL - validate extension if present
+                                        if (hasValidImageExtension(imgStr) || !imgStr.includes('.')) {
+                                            propertyExternalUrls.push(imgStr);
+                                        }
+                                    } else {
+                                        // Internal path - validate extension
+                                        if (hasValidImageExtension(imgStr)) {
+                                            propertyImagePaths.push(imgStr);
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        const hasValidImg = propertyImagePaths.length > 0;
+                        const hasValidImg = propertyImagePaths.length > 0 || propertyExternalUrls.length > 0;
 
                         // Only read file if we need snippets or images from content
                         const needsFileRead =
@@ -519,6 +530,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                         if (settings.showThumbnails) {
                             // Phase A: Convert property image paths to resource paths
                             const propertyResourcePaths: string[] = [];
+
+                            // Process internal paths
                             for (const propPath of propertyImagePaths) {
                                 const imageFile = app.metadataCache.getFirstLinkpathDest(propPath, p.$path);
                                 if (imageFile && validImageExtensions.includes(imageFile.extension)) {
@@ -527,26 +540,54 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                                 }
                             }
 
+                            // Process external URLs with async validation
+                            for (const externalUrl of propertyExternalUrls) {
+                                // Validate URL asynchronously
+                                const isValid = await validateImageUrl(externalUrl);
+                                if (isValid) {
+                                    propertyResourcePaths.push(externalUrl);
+                                }
+                            }
+
                             // Phase B: Extract body embed resource paths
                             const metadata = app.metadataCache.getFileCache(file);
                             if (!metadata) continue;
 
-                            const imageEmbeds = metadata.embeds?.filter((embed: any) => {
-                                const targetFile = app.metadataCache.getFirstLinkpathDest(embed.link, p.$path);
-                                return targetFile && validImageExtensions.includes(targetFile.extension);
-                            }) || [];
-
                             const bodyResourcePaths: string[] = [];
-                            for (const embed of imageEmbeds) {
-                                const imageFile = app.metadataCache.getFirstLinkpathDest(embed.link, p.$path);
-                                if (imageFile && validImageExtensions.includes(imageFile.extension)) {
-                                    const resourcePath = app.vault.getResourcePath(imageFile);
-                                    bodyResourcePaths.push(resourcePath);
+                            const bodyExternalUrls: string[] = [];
+
+                            // Process embeds - separate external URLs from internal paths
+                            if (metadata.embeds) {
+                                for (const embed of metadata.embeds) {
+                                    const embedLink = embed.link;
+                                    if (isExternalUrl(embedLink)) {
+                                        // External URL embed
+                                        if (hasValidImageExtension(embedLink) || !embedLink.includes('.')) {
+                                            bodyExternalUrls.push(embedLink);
+                                        }
+                                    } else {
+                                        // Internal path embed
+                                        const targetFile = app.metadataCache.getFirstLinkpathDest(embedLink, p.$path);
+                                        if (targetFile && validImageExtensions.includes(targetFile.extension)) {
+                                            const resourcePath = app.vault.getResourcePath(targetFile);
+                                            bodyResourcePaths.push(resourcePath);
+                                        }
+                                    }
                                 }
                             }
 
-                            // Phase C: Merge property images first, then body embeds
-                            const allResourcePaths = [...propertyResourcePaths, ...bodyResourcePaths];
+                            // Validate external URLs from body
+                            for (const externalUrl of bodyExternalUrls) {
+                                const isValid = await validateImageUrl(externalUrl);
+                                if (isValid) {
+                                    bodyResourcePaths.push(externalUrl);
+                                }
+                            }
+
+                            // Phase C: Merge with fallback: property images first, then body embeds
+                            const allResourcePaths = propertyResourcePaths.length > 0
+                                ? propertyResourcePaths
+                                : bodyResourcePaths;
 
                             // Phase D: Store combined result
                             if (allResourcePaths.length > 0) {
