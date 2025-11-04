@@ -357,7 +357,7 @@ export function Toolbar({
                         if (limit > 0 && totalCount > limit) {
                             return `${limit} result${limit === 1 ? '' : 's'}`;
                         }
-                        return `${displayedCount} result${displayedCount === 1 ? '' : 's'}`;
+                        return `${totalCount} result${totalCount === 1 ? '' : 's'}`;
                     })()}
                 </span>
                 <svg
@@ -687,7 +687,7 @@ export function Toolbar({
                             if (limit > 0 && totalCount > limit) {
                                 return `${limit} result${limit === 1 ? '' : 's'}`;
                             }
-                            return `${displayedCount} result${displayedCount === 1 ? '' : 's'}`;
+                            return `${totalCount} result${totalCount === 1 ? '' : 's'}`;
                         })()}
                     </span>
                     <svg

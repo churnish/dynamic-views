@@ -5,7 +5,7 @@
     "imageProperty": "cover",
     "alwaysOmitFirstLine": false,
     "showTextPreview": false,
-    "showThumbnails": false,
+    "showThumbnails": true,
     "cardBottomDisplay": "none",
     "listMarker": "number",
     "showTimestamp": false,
