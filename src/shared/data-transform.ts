@@ -73,30 +73,20 @@ export function basesEntryToCardData(
     const path = entry.file.path;
     const folderPath = path.split('/').slice(0, -1).join('/');
 
-    // Get tags - check both file object and frontmatter
-    console.log('//TAGS DEBUG - path:', entry.file.path);
-    console.log('//TAGS DEBUG - entry.file:', entry.file);
-    console.log('//TAGS DEBUG - entry.file.tags:', entry.file.tags);
-
+    // Get tags from frontmatter
+    // Note: Bases API only exposes YAML frontmatter tags, not inline body tags
     const tagsValue = entry.getValue('tags');
-    console.log('//TAGS DEBUG - getValue("tags"):', tagsValue);
-    console.log('//TAGS DEBUG - getValue("tags").data:', tagsValue?.data);
-
     let tags: string[] = [];
 
-    // Try to get tags from file object first
-    if (entry.file.tags && Array.isArray(entry.file.tags)) {
-        tags = entry.file.tags.map((t: any) => String(t));
-    }
-    // Fallback to frontmatter tags
-    else if (tagsValue && tagsValue.data != null) {
+    if (tagsValue && tagsValue.data != null) {
         const tagData = tagsValue.data;
-        tags = Array.isArray(tagData)
+        const rawTags = Array.isArray(tagData)
             ? tagData.map((t: any) => String(t))
             : [String(tagData)];
-    }
 
-    console.log('//TAGS DEBUG - final tags array:', tags);
+        // Strip leading # from tags if present
+        tags = rawTags.map(tag => tag.replace(/^#/, ''));
+    }
 
     // Get timestamps
     const ctime = entry.file.stat.ctime;
