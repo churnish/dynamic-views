@@ -49,7 +49,7 @@ export default class DynamicViewsPlugin extends Plugin {
 
 		this.registerBasesView('dynamic-views-masonry', {
 			name: 'Masonry',
-			icon: 'layout-dashboard',
+			icon: 'panels-right-bottom',
 			factory: (controller: any, containerEl: HTMLElement) => {
 				return new DynamicViewsMasonryView(controller, containerEl, this);
 			},
