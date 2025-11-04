@@ -40,7 +40,7 @@ export default class DynamicViewsPlugin extends Plugin {
 		console.log('Registering Bases views...');
 		this.registerBasesView('dynamic-views-card', {
 			name: 'Cards',
-			icon: 'rows',  // Lucide icon: 2 stacked horizontal rectangles
+			icon: 'rows-2',
 			factory: (controller: any, containerEl: HTMLElement) => {
 				console.log('Card view factory called', { controller, containerEl });
 				return new DynamicViewsCardView(controller, containerEl);
@@ -50,7 +50,7 @@ export default class DynamicViewsPlugin extends Plugin {
 
 		this.registerBasesView('dynamic-views-masonry', {
 			name: 'Masonry',
-			icon: 'layout-grid',  // Lucide icon: Pinterest-style masonry grid
+			icon: 'layout-dashboard',
 			factory: (controller: any, containerEl: HTMLElement) => {
 				console.log('Masonry view factory called', { controller, containerEl });
 				return new DynamicViewsMasonryView(controller, containerEl);
