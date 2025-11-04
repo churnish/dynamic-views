@@ -11,7 +11,8 @@ export class PersistenceManager {
         this.plugin = plugin;
         this.data = {
             globalSettings: { ...DEFAULT_SETTINGS },
-            queryStates: {}
+            queryStates: {},
+            basesViewMetadataWinners: {}
         };
     }
 
@@ -20,7 +21,8 @@ export class PersistenceManager {
         if (loadedData) {
             this.data = {
                 globalSettings: { ...DEFAULT_SETTINGS, ...loadedData.globalSettings },
-                queryStates: loadedData.queryStates || {}
+                queryStates: loadedData.queryStates || {},
+                basesViewMetadataWinners: loadedData.basesViewMetadataWinners || {}
             };
         }
     }
@@ -66,6 +68,19 @@ export class PersistenceManager {
 
     async clearUIState(ctime: number): Promise<void> {
         delete this.data.queryStates[ctime.toString()];
+        await this.save();
+    }
+
+    getBasesViewMetadataWinner(viewId: string): 'left' | 'right' | null {
+        return this.data.basesViewMetadataWinners[viewId] ?? null;
+    }
+
+    async setBasesViewMetadataWinner(viewId: string, winner: 'left' | 'right' | null): Promise<void> {
+        if (winner === null) {
+            delete this.data.basesViewMetadataWinners[viewId];
+        } else {
+            this.data.basesViewMetadataWinners[viewId] = winner;
+        }
         await this.save();
     }
 }

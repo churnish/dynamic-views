@@ -9,11 +9,14 @@ import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getMasonryViewOptions } from '../shared/settings-schema';
 import { loadImageForFile, isExternalUrl, validateImageUrl } from '../utils/image';
 import { sanitizeForPreview } from '../utils/preview';
+import type DynamicViewsPlugin from '../../main';
 
 export const MASONRY_VIEW_TYPE = 'dynamic-views-masonry';
 
 export class DynamicViewsMasonryView extends BasesView {
     readonly type = MASONRY_VIEW_TYPE;
+    private plugin: DynamicViewsPlugin;
+    private viewId: string;
     private containerEl: HTMLElement;
     private snippets: Record<string, string> = {};
     private images: Record<string, string | string[]> = {};
@@ -24,8 +27,12 @@ export class DynamicViewsMasonryView extends BasesView {
     private previousSettings: { metadataDisplayLeft: string; metadataDisplayRight: string } | null = null;
     private metadataDisplayWinner: 'left' | 'right' | null = null;
 
-    constructor(controller: any, containerEl: HTMLElement) {
+    constructor(controller: any, containerEl: HTMLElement, plugin: DynamicViewsPlugin) {
         super(controller);
+        this.plugin = plugin;
+        // Generate unique view ID from source path and view type
+        const sourcePath = controller.source?.path || 'unknown';
+        this.viewId = `${sourcePath}:${MASONRY_VIEW_TYPE}`;
         this.containerEl = containerEl;
         // Add both classes - 'dynamic-views' for CSS styling, 'dynamic-views-bases-container' for identification
         this.containerEl.addClass('dynamic-views');
@@ -53,21 +60,36 @@ export class DynamicViewsMasonryView extends BasesView {
                 // Determine which one changed (the one that changed loses, the one that stayed wins)
                 if (leftChanged && !rightChanged) {
                     this.metadataDisplayWinner = 'right'; // Right had it first
+                    await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'right');
                 } else if (rightChanged && !leftChanged) {
                     this.metadataDisplayWinner = 'left'; // Left had it first
+                    await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'left');
                 } else {
-                    // Both changed or initial load with duplicates - default to left wins
-                    this.metadataDisplayWinner = 'left';
+                    // Both changed simultaneously - shouldn't happen in normal use
+                    // Keep existing winner if set
+                    if (this.metadataDisplayWinner === null) {
+                        this.metadataDisplayWinner = 'left';
+                        await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'left');
+                    }
                 }
             } else {
                 // No duplicate, clear winner
-                this.metadataDisplayWinner = null;
+                if (this.metadataDisplayWinner !== null) {
+                    this.metadataDisplayWinner = null;
+                    await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, null);
+                }
             }
         } else {
-            // First load - check if there's already a duplicate
+            // First load - load saved winner or default to left if duplicate exists
             if (settings.metadataDisplayLeft !== 'none' &&
                 settings.metadataDisplayLeft === settings.metadataDisplayRight) {
-                this.metadataDisplayWinner = 'left'; // Default to left on initial load
+                // Try to load saved winner
+                const savedWinner = this.plugin.persistenceManager.getBasesViewMetadataWinner(this.viewId);
+                this.metadataDisplayWinner = savedWinner || 'left';
+                // Save if we used default
+                if (!savedWinner) {
+                    await this.plugin.persistenceManager.setBasesViewMetadataWinner(this.viewId, 'left');
+                }
             }
         }
 

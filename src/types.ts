@@ -29,6 +29,7 @@ export interface UIState {
 export interface PluginData {
     globalSettings: Settings;
     queryStates: Record<string, UIState>;
+    basesViewMetadataWinners: Record<string, 'left' | 'right' | null>;
 }
 
 export type ViewMode = 'card' | 'masonry' | 'list';

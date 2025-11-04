@@ -42,7 +42,7 @@ export default class DynamicViewsPlugin extends Plugin {
 			name: 'Grid',
 			icon: 'rows-2',
 			factory: (controller: any, containerEl: HTMLElement) => {
-				return new DynamicViewsCardView(controller, containerEl);
+				return new DynamicViewsCardView(controller, containerEl, this);
 			},
 			options: cardViewOptions,
 		});
@@ -51,7 +51,7 @@ export default class DynamicViewsPlugin extends Plugin {
 			name: 'Masonry',
 			icon: 'layout-dashboard',
 			factory: (controller: any, containerEl: HTMLElement) => {
-				return new DynamicViewsMasonryView(controller, containerEl);
+				return new DynamicViewsMasonryView(controller, containerEl, this);
 			},
 			options: masonryViewOptions,
 		});
