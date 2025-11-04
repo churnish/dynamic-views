@@ -424,6 +424,13 @@
       "searchQuery": "",
       "resultLimit": "",
       "widthMode": "normal"
+    },
+    "1762266777296": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
     }
   }
 }
