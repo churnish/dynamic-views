@@ -37,9 +37,10 @@ export default class DynamicViewsPlugin extends Plugin {
 		await this.persistenceManager.load();
 
 		// Register Bases views
+		// Note: Named "Grid" to differentiate from built-in Bases "Cards" view
 		console.log('Registering Bases views...');
 		this.registerBasesView('dynamic-views-card', {
-			name: 'Cards',
+			name: 'Grid',
 			icon: 'rows-2',
 			factory: (controller: any, containerEl: HTMLElement) => {
 				console.log('Card view factory called', { controller, containerEl });
