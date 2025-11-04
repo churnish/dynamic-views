@@ -33,21 +33,21 @@ export const DEFAULT_SETTINGS: Settings = {
 export function getBasesViewOptions(): any[] {
     return [
         {
-            type: 'text',
+            type: 'property',
             displayName: 'Title property',
             key: 'titleProperty',
             default: 'title',
             placeholder: 'Property name for card title'
         },
         {
-            type: 'text',
+            type: 'property',
             displayName: 'Description property',
             key: 'descriptionProperty',
             default: 'description',
             placeholder: 'Property name for description'
         },
         {
-            type: 'text',
+            type: 'property',
             displayName: 'Image property',
             key: 'imageProperty',
             default: 'cover',

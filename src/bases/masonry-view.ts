@@ -30,9 +30,9 @@ export class DynamicViewsMasonryView extends BasesView {
     constructor(controller: any, containerEl: HTMLElement, plugin: DynamicViewsPlugin) {
         super(controller);
         this.plugin = plugin;
-        // Generate unique view ID from source path and view type
-        const sourcePath = controller.source?.path || 'unknown';
-        this.viewId = `${sourcePath}:${MASONRY_VIEW_TYPE}`;
+        // Generate stable view ID from source file ctime (survives renames/moves) and view type
+        const ctime = controller.source?.stat?.ctime || Date.now();
+        this.viewId = `${ctime}:${MASONRY_VIEW_TYPE}`;
         this.containerEl = containerEl;
         // Add both classes - 'dynamic-views' for CSS styling, 'dynamic-views-bases-container' for identification
         this.containerEl.addClass('dynamic-views');
