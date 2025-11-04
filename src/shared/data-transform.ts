@@ -73,9 +73,8 @@ export function basesEntryToCardData(
     const path = entry.file.path;
     const folderPath = path.split('/').slice(0, -1).join('/');
 
-    // Get tags from frontmatter
-    // Note: Bases API only exposes YAML frontmatter tags, not inline body tags
-    const tagsValue = entry.getValue('tags');
+    // Get tags from file.tags property (includes both YAML and inline body tags)
+    const tagsValue = entry.getValue('file.tags');
     let tags: string[] = [];
 
     if (tagsValue && tagsValue.data != null) {
