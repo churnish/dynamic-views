@@ -24,6 +24,9 @@ export class DynamicViewsMasonryView extends BasesView {
     private updateLayoutRef: { current: (() => void) | null } = { current: null };
     private focusableCardIndex: number = 0;
     private masonryContainer: HTMLElement | null = null;
+    private displayedCount: number = 50;
+    private isLoading: boolean = false;
+    private scrollListener: (() => void) | null = null;
 
     constructor(controller: any, containerEl: HTMLElement, plugin: DynamicViewsPlugin) {
         super(controller);
@@ -43,13 +46,19 @@ export class DynamicViewsMasonryView extends BasesView {
         // Read settings from Bases config
         const settings = readBasesSettings(this.config);
 
-        // Load snippets and images for visible entries
+        // Save scroll position before re-rendering
+        const savedScrollTop = this.containerEl.scrollTop;
+
+        // Load snippets and images for ALL entries (PoC: skip optimization)
         await this.loadContentForEntries(entries, settings);
 
-        // Transform to CardData
+        // Slice to displayed count for rendering
+        const visibleEntries = entries.slice(0, this.displayedCount);
+
+        // Transform to CardData (only visible entries)
         const sortMethod = this.getSortMethod();
         const cards = transformBasesEntries(
-            entries,
+            visibleEntries,
             settings,
             sortMethod,
             false, // Bases views don't shuffle
@@ -70,7 +79,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Render each card
         for (let i = 0; i < cards.length; i++) {
             const card = cards[i];
-            const entry = entries[i];
+            const entry = visibleEntries[i];
             this.renderCard(this.masonryContainer, card, entry, i, settings);
         }
 
@@ -81,8 +90,23 @@ export class DynamicViewsMasonryView extends BasesView {
                 if (this.updateLayoutRef.current) {
                     this.updateLayoutRef.current();
                 }
+
+                // Restore scroll position AFTER masonry layout completes
+                if (savedScrollTop > 0) {
+                    requestAnimationFrame(() => {
+                        this.containerEl.scrollTop = savedScrollTop;
+                    });
+                }
             }, 50);
+        } else {
+            // No masonry layout, restore immediately
+            if (savedScrollTop > 0) {
+                this.containerEl.scrollTop = savedScrollTop;
+            }
         }
+
+        // Setup infinite scroll
+        this.setupInfiniteScroll(entries.length);
     }
 
     private setupMasonryLayout(settings: any): void {
@@ -302,29 +326,23 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     private getSortMethod(): string{
-        // Get sort from Bases config if available
-        const sort = this.config.getOrder();
+        // Get sort configuration from Bases
+        const sortConfigs = this.config.getSort();
 
-        console.log('// [Bases Sort Debug - Masonry View] getOrder() returned:', sort);
-        console.log('// [Bases Sort Debug - Masonry View] Array length:', sort?.length);
+        if (sortConfigs && sortConfigs.length > 0) {
+            const firstSort = sortConfigs[0];
+            const property = firstSort.property;
+            const direction = firstSort.direction.toLowerCase();
 
-        if (sort && sort.length > 0) {
-            const firstSort = sort[0];
-            console.log('// [Bases Sort Debug - Masonry View] First element (sort[0]):', firstSort);
-
-            // Simple mapping - extend as needed
-            if (firstSort.includes('ctime')) {
-                console.log('// [Bases Sort Debug - Masonry View] Detected: ctime-desc');
-                return 'ctime-desc';
+            // Check for ctime/mtime in property
+            if (property.includes('ctime')) {
+                return `ctime-${direction}`;
             }
-            if (firstSort.includes('mtime')) {
-                console.log('// [Bases Sort Debug - Masonry View] Detected: mtime-desc');
-                return 'mtime-desc';
+            if (property.includes('mtime')) {
+                return `mtime-${direction}`;
             }
-            console.log('// [Bases Sort Debug - Masonry View] No match, falling back to mtime-desc');
-        } else {
-            console.log('// [Bases Sort Debug - Masonry View] No sort config, using default mtime-desc');
         }
+        // Default to mtime-desc if no sort config or unrecognized property
         return 'mtime-desc';
     }
 
@@ -417,6 +435,59 @@ export class DynamicViewsMasonryView extends BasesView {
                 })
             );
         }
+    }
+
+    private setupInfiniteScroll(totalEntries: number): void {
+        // Clean up existing listener
+        if (this.scrollListener) {
+            this.containerEl.removeEventListener('scroll', this.scrollListener);
+            this.scrollListener = null;
+        }
+
+        // Skip if all items already displayed
+        if (this.displayedCount >= totalEntries) {
+            return;
+        }
+
+        // Create scroll handler
+        this.scrollListener = () => {
+            // Skip if already loading
+            if (this.isLoading) {
+                return;
+            }
+
+            // Calculate distance from bottom
+            const scrollTop = this.containerEl.scrollTop;
+            const scrollHeight = this.containerEl.scrollHeight;
+            const clientHeight = this.containerEl.clientHeight;
+            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+            // Threshold: 500px from bottom
+            const threshold = 500;
+
+            // Check if should load more
+            if (distanceFromBottom < threshold && this.displayedCount < totalEntries) {
+                this.isLoading = true;
+
+                // Increment batch
+                this.displayedCount = Math.min(this.displayedCount + 50, totalEntries);
+
+                // Re-render (this will call setupInfiniteScroll again)
+                this.onDataUpdated().then(() => {
+                    this.isLoading = false;
+                });
+            }
+        };
+
+        // Attach listener
+        this.containerEl.addEventListener('scroll', this.scrollListener);
+
+        // Register cleanup
+        this.register(() => {
+            if (this.scrollListener) {
+                this.containerEl.removeEventListener('scroll', this.scrollListener);
+            }
+        });
     }
 }
 
