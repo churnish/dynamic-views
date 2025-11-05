@@ -349,9 +349,9 @@ export function Toolbar({
                     {(() => {
                         const limit = parseInt(resultLimit);
                         if (limit > 0 && totalCount > limit) {
-                            return `${limit} result${limit === 1 ? '' : 's'}`;
+                            return `${limit.toLocaleString()} result${limit === 1 ? '' : 's'}`;
                         }
-                        return `${totalCount} result${totalCount === 1 ? '' : 's'}`;
+                        return `${totalCount.toLocaleString()} result${totalCount === 1 ? '' : 's'}`;
                     })()}
                 </span>
                 <svg
@@ -677,9 +677,9 @@ export function Toolbar({
                         {(() => {
                             const limit = parseInt(resultLimit);
                             if (limit > 0 && totalCount > limit) {
-                                return `${limit} result${limit === 1 ? '' : 's'}`;
+                                return `${limit.toLocaleString()} result${limit === 1 ? '' : 's'}`;
                             }
-                            return `${totalCount} result${totalCount === 1 ? '' : 's'}`;
+                            return `${totalCount.toLocaleString()} result${totalCount === 1 ? '' : 's'}`;
                         })()}
                     </span>
                     <svg
