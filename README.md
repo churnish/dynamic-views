@@ -3,7 +3,7 @@
 > [!NOTE]  
 > Currently in early stages of development.
 
-Elegant card layouts for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
+Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
 
 #### Masonry
 
