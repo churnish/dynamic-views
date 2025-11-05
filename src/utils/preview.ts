@@ -23,7 +23,7 @@ const markdownPatterns = [
     /\[\[[^\]]+\]\]/g,                           // Wikilinks
     /#[a-zA-Z0-9_\-/]+/g,                        // Tags
     /^[-*+]\s*\[[ xX]\]\s+/gm,                   // Task list markers (bullet-style)
-    /^\d+\.\s*\[[ xX]\]\s+/gm,                   // Task list markers (numbered)
+    /^(\d+\.\s*)\[[ xX]\]\s+/gm,                 // Task list markers (numbered) - preserves number
     /^[-*+]\s+/gm,                               // Bullet list markers
     /^\d+\.\s+/gm,                               // Numbered list markers
     /^#{1,6}\s+.+$/gm,                           // Heading lines (full removal)
