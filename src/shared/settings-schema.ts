@@ -16,6 +16,10 @@ export const DEFAULT_SETTINGS: Settings = {
     showTextPreview: true,
     showThumbnails: true,
     thumbnailPosition: "right",
+    fallbackToContent: true,
+    fallbackToEmbeds: true,
+    fallbackToCtime: true,
+    fallbackToMtime: true,
     metadataDisplayLeft: "timestamp",
     metadataDisplayRight: "tags",
     metadataDisplayWinner: null,
@@ -60,10 +64,22 @@ export function getBasesViewOptions(): any[] {
             placeholder: 'Comma-separated if multiple'
         },
         {
+            type: 'toggle',
+            displayName: 'Use file metadata if property unavailable',
+            key: 'fallbackToCtime',
+            default: true
+        },
+        {
             type: 'text',
             displayName: 'Modified time property',
             key: 'modifiedProperty',
             placeholder: 'Comma-separated if multiple'
+        },
+        {
+            type: 'toggle',
+            displayName: 'Use file metadata if property unavailable',
+            key: 'fallbackToMtime',
+            default: true
         },
         {
             type: 'toggle',
@@ -73,8 +89,20 @@ export function getBasesViewOptions(): any[] {
         },
         {
             type: 'toggle',
+            displayName: 'Fall back to note content if unavailable',
+            key: 'fallbackToContent',
+            default: true
+        },
+        {
+            type: 'toggle',
             displayName: 'Show thumbnails',
             key: 'showThumbnails',
+            default: true
+        },
+        {
+            type: 'toggle',
+            displayName: 'Fall back to image embeds if unavailable',
+            key: 'fallbackToEmbeds',
             default: true
         },
         {
@@ -185,6 +213,10 @@ export function readBasesSettings(config: any): Settings {
         showTextPreview: Boolean(config.get('showTextPreview') ?? DEFAULT_SETTINGS.showTextPreview),
         showThumbnails: Boolean(config.get('showThumbnails') ?? DEFAULT_SETTINGS.showThumbnails),
         thumbnailPosition: String(config.get('thumbnailPosition') || DEFAULT_SETTINGS.thumbnailPosition) as 'left' | 'right',
+        fallbackToContent: Boolean(config.get('fallbackToContent') ?? DEFAULT_SETTINGS.fallbackToContent),
+        fallbackToEmbeds: Boolean(config.get('fallbackToEmbeds') ?? DEFAULT_SETTINGS.fallbackToEmbeds),
+        fallbackToCtime: Boolean(config.get('fallbackToCtime') ?? DEFAULT_SETTINGS.fallbackToCtime),
+        fallbackToMtime: Boolean(config.get('fallbackToMtime') ?? DEFAULT_SETTINGS.fallbackToMtime),
         metadataDisplayLeft: String(config.get('metadataDisplayLeft') || DEFAULT_SETTINGS.metadataDisplayLeft) as 'none' | 'timestamp' | 'tags' | 'path',
         metadataDisplayRight: String(config.get('metadataDisplayRight') || DEFAULT_SETTINGS.metadataDisplayRight) as 'none' | 'timestamp' | 'tags' | 'path',
         metadataDisplayWinner: null, // Computed at runtime by view instances

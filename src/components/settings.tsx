@@ -59,6 +59,27 @@ export function Settings({
                 />
             </div>
 
+            {/* Fall back to note content Toggle */}
+            <div className="setting-item setting-item-toggle">
+                <div className="setting-item-info">
+                    <label>Fall back to note content if unavailable</label>
+                    <div className="setting-desc">Use note content when text preview property is not set or empty.</div>
+                </div>
+                <div
+                    className={`checkbox-container ${settings.fallbackToContent ? 'is-enabled' : ''}`}
+                    onClick={() => onSettingsChange({ fallbackToContent: !settings.fallbackToContent })}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onSettingsChange({ fallbackToContent: !settings.fallbackToContent });
+                        }
+                    }}
+                    tabIndex={0}
+                    role="checkbox"
+                    aria-checked={settings.fallbackToContent}
+                />
+            </div>
+
             {/* Omit First Line Toggle (conditional) */}
             {settings.showTextPreview && (
                 <div className="setting-item setting-item-toggle">
@@ -100,6 +121,27 @@ export function Settings({
                     tabIndex={0}
                     role="checkbox"
                     aria-checked={settings.showThumbnails}
+                />
+            </div>
+
+            {/* Fall back to image embeds Toggle */}
+            <div className="setting-item setting-item-toggle">
+                <div className="setting-item-info">
+                    <label>Fall back to image embeds if unavailable</label>
+                    <div className="setting-desc">Use image embeds from note content when image property is not set or empty.</div>
+                </div>
+                <div
+                    className={`checkbox-container ${settings.fallbackToEmbeds ? 'is-enabled' : ''}`}
+                    onClick={() => onSettingsChange({ fallbackToEmbeds: !settings.fallbackToEmbeds })}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onSettingsChange({ fallbackToEmbeds: !settings.fallbackToEmbeds });
+                        }
+                    }}
+                    tabIndex={0}
+                    role="checkbox"
+                    aria-checked={settings.fallbackToEmbeds}
                 />
             </div>
 
@@ -159,6 +201,29 @@ export function Settings({
                 </div>
             )}
 
+            {/* Fall back to file created time Toggle (conditional) */}
+            {(settings.metadataDisplayLeft === 'timestamp' || settings.metadataDisplayRight === 'timestamp') && (
+                <div className="setting-item setting-item-toggle">
+                    <div className="setting-item-info">
+                        <label>Use file metadata if property unavailable</label>
+                        <div className="setting-desc">Fall back to file created time when created time property is not set or invalid.</div>
+                    </div>
+                    <div
+                        className={`checkbox-container ${settings.fallbackToCtime ? 'is-enabled' : ''}`}
+                        onClick={() => onSettingsChange({ fallbackToCtime: !settings.fallbackToCtime })}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onSettingsChange({ fallbackToCtime: !settings.fallbackToCtime });
+                            }
+                        }}
+                        tabIndex={0}
+                        role="checkbox"
+                        aria-checked={settings.fallbackToCtime}
+                    />
+                </div>
+            )}
+
             {/* Modified Time Property (conditional) */}
             {(settings.metadataDisplayLeft === 'timestamp' || settings.metadataDisplayRight === 'timestamp') && (
                 <div className="setting-item setting-item-text">
@@ -172,6 +237,29 @@ export function Settings({
                         onChange={(e) => onSettingsChange({ modifiedProperty: e.target.value })}
                         placeholder="Comma-separated if multiple"
                         className="setting-text-input"
+                    />
+                </div>
+            )}
+
+            {/* Fall back to file modified time Toggle (conditional) */}
+            {(settings.metadataDisplayLeft === 'timestamp' || settings.metadataDisplayRight === 'timestamp') && (
+                <div className="setting-item setting-item-toggle">
+                    <div className="setting-item-info">
+                        <label>Use file metadata if property unavailable</label>
+                        <div className="setting-desc">Fall back to file modified time when modified time property is not set or invalid.</div>
+                    </div>
+                    <div
+                        className={`checkbox-container ${settings.fallbackToMtime ? 'is-enabled' : ''}`}
+                        onClick={() => onSettingsChange({ fallbackToMtime: !settings.fallbackToMtime })}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onSettingsChange({ fallbackToMtime: !settings.fallbackToMtime });
+                            }
+                        }}
+                        tabIndex={0}
+                        role="checkbox"
+                        aria-checked={settings.fallbackToMtime}
                     />
                 </div>
             )}

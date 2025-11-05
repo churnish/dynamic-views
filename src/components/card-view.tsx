@@ -1,4 +1,5 @@
 import type { Settings } from '../types';
+import { getFirstDatacorePropertyValue, getFirstDatacoreDatePropertyValue } from '../utils/property';
 
 interface CardViewProps {
     results: any[];
@@ -44,49 +45,42 @@ export function CardView({
             style={settings.queryHeight > 0 ? { maxHeight: `${settings.queryHeight}px`, overflowY: 'auto' } : {}}
         >
             {results.slice(0, displayedCount).filter(p => p.$path).map((p, index) => {
-                // Get title from property or fallback to filename - coerce to string to handle Literal objects
-                let rawTitle = p.value(settings.titleProperty);
+                // Get title from property (first available from comma-separated list) or fallback to filename
+                let rawTitle = getFirstDatacorePropertyValue(p, settings.titleProperty);
                 if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
                 const titleValue = dc.coerce.string(rawTitle || p.$name);
 
                 // Determine which timestamp to show: ctime for Created sort, mtime for others (including shuffle)
                 const useCreatedTime = sortMethod.startsWith('ctime') && !isShuffled;
                 const customProperty = useCreatedTime ? settings.createdProperty : settings.modifiedProperty;
+                const fallbackEnabled = useCreatedTime ? settings.fallbackToCtime : settings.fallbackToMtime;
 
                 let timestamp;
                 let timestampMillis;
                 let date = "";
-                let isInvalid = false;
 
                 if (customProperty) {
-                    const propValue = p.value(customProperty);
+                    // Try to get first valid date from comma-separated properties
+                    const propValue = getFirstDatacoreDatePropertyValue(p, customProperty);
 
-                    // Check if property exists on note
-                    // For Datacore: null/undefined means doesn't exist
-                    // DateTime objects have toMillis() method
-                    const propertyExists = propValue !== null && propValue !== undefined;
-
-                    if (!propertyExists) {
-                        // Property not set on this note - fall back to file metadata
-                        timestamp = useCreatedTime ? p.$ctime : p.$mtime;
-                        timestampMillis = timestamp?.toMillis() || 0;
-                        const now = Date.now();
-                        const isRecent = now - timestampMillis < 86400000;
-                        date = timestamp ? (isRecent ? timestamp.toFormat("yyyy-MM-dd HH:mm") : timestamp.toFormat("yyyy-MM-dd")) : "";
-                    } else if (propValue && typeof propValue === 'object' && 'toMillis' in propValue) {
-                        // Property exists and is valid date/datetime (Datacore DateTime object)
+                    if (propValue && typeof propValue === 'object' && 'toMillis' in propValue) {
+                        // Found valid date property
                         timestamp = propValue;
                         timestampMillis = propValue.toMillis();
                         const now = Date.now();
                         const isRecent = now - timestampMillis < 86400000;
                         date = isRecent ? propValue.toFormat("yyyy-MM-dd HH:mm") : propValue.toFormat("yyyy-MM-dd");
-                    } else {
-                        // Property exists but is wrong type
-                        isInvalid = true;
-                        date = "Invalid";
+                    } else if (fallbackEnabled) {
+                        // No valid property date found - fall back to file metadata if enabled
+                        timestamp = useCreatedTime ? p.$ctime : p.$mtime;
+                        timestampMillis = timestamp?.toMillis() || 0;
+                        const now = Date.now();
+                        const isRecent = now - timestampMillis < 86400000;
+                        date = timestamp ? (isRecent ? timestamp.toFormat("yyyy-MM-dd HH:mm") : timestamp.toFormat("yyyy-MM-dd")) : "";
                     }
-                } else {
-                    // No custom property configured - use file metadata
+                    // If no valid property and fallback disabled, date remains empty
+                } else if (fallbackEnabled) {
+                    // No custom property configured - use file metadata if fallback enabled
                     timestamp = useCreatedTime ? p.$ctime : p.$mtime;
                     timestampMillis = timestamp?.toMillis() || 0;
                     const now = Date.now();

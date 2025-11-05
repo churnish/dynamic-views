@@ -1209,11 +1209,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 /* Thumbnail positioning */
 .dynamic-views .snippet-container.thumbnail-left {
-    flex-direction: row;
+    flex-direction: row-reverse;
 }
 
 .dynamic-views .snippet-container.thumbnail-right {
-    flex-direction: row-reverse;
+    flex-direction: row;
 }
 
 .dynamic-views .writing-snippet {

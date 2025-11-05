@@ -9,6 +9,7 @@ import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getMasonryViewOptions } from '../shared/settings-schema';
 import { loadImageForFile, isExternalUrl, validateImageUrl } from '../utils/image';
 import { sanitizeForPreview } from '../utils/preview';
+import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues, getFirstBasesDatePropertyValue } from '../utils/property';
 import type DynamicViewsPlugin from '../../main';
 
 export const MASONRY_VIEW_TYPE = 'dynamic-views-masonry';
@@ -258,39 +259,28 @@ export class DynamicViewsMasonryView extends BasesView {
         if (displayType === 'timestamp') {
             const useCreatedTime = this.getSortMethod().startsWith('ctime');
             const customProperty = useCreatedTime ? settings.createdProperty : settings.modifiedProperty;
+            const fallbackEnabled = useCreatedTime ? settings.fallbackToCtime : settings.fallbackToMtime;
 
             let timestamp: number | null = null;
-            let isInvalid = false;
 
             if (customProperty) {
-                const value = entry.getValue(customProperty as any);
+                // Try to get first valid date from comma-separated properties
+                const value = getFirstBasesDatePropertyValue(entry, customProperty);
 
-                // Check if property exists on note
-                // When property doesn't exist, Bases returns {icon: 'lucide-file-question'} with no data/date field
-                // When property exists, it has additional fields like 'data' (for text) or 'date' (for dates)
-                const propertyExists = value && (
-                    ('date' in value && value.date instanceof Date) ||
-                    ('data' in value)
-                );
-
-                if (!propertyExists) {
-                    // Property not set on this note - fall back to file metadata
-                    timestamp = useCreatedTime ? card.ctime : card.mtime;
-                } else if (this.isDateValue(value)) {
-                    // Property exists and is valid date/datetime
+                if (value && this.isDateValue(value)) {
+                    // Found valid date property
                     timestamp = this.extractTimestamp(value);
-                } else {
-                    // Property exists but is wrong type
-                    isInvalid = true;
+                } else if (fallbackEnabled) {
+                    // No valid property date found - fall back to file metadata if enabled
+                    timestamp = useCreatedTime ? card.ctime : card.mtime;
                 }
-            } else {
-                // No custom property configured - use file metadata
+                // If no valid property and fallback disabled, timestamp remains null
+            } else if (fallbackEnabled) {
+                // No custom property configured - use file metadata if fallback enabled
                 timestamp = useCreatedTime ? card.ctime : card.mtime;
             }
 
-            if (isInvalid) {
-                container.appendText('Invalid');
-            } else if (timestamp) {
+            if (timestamp) {
                 const date = this.formatTimestamp(timestamp);
                 if (settings.showTimestampIcon) {
                     const iconName = useCreatedTime ? 'calendar' : 'clock';
@@ -375,14 +365,27 @@ export class DynamicViewsMasonryView extends BasesView {
                     const path = entry.file.path;
                     if (!(path in this.snippets)) {
                         try {
-                            const file = this.app.vault.getAbstractFileByPath(path);
-                            if (file instanceof TFile && file.extension === 'md') {
-                                const content = await this.app.vault.cachedRead(file);
-                                const snippet = sanitizeForPreview(
-                                    content,
-                                    settings.alwaysOmitFirstLine
-                                );
-                                this.snippets[path] = snippet;
+                            // Try to get text preview from property first
+                            const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty);
+                            const hasValidDesc = descValue && descValue.data != null && String(descValue.data).trim().length > 0;
+
+                            if (hasValidDesc) {
+                                // Use property value
+                                this.snippets[path] = String(descValue.data).trim();
+                            } else if (settings.fallbackToContent) {
+                                // Fallback to note content
+                                const file = this.app.vault.getAbstractFileByPath(path);
+                                if (file instanceof TFile && file.extension === 'md') {
+                                    const content = await this.app.vault.cachedRead(file);
+                                    const snippet = sanitizeForPreview(
+                                        content,
+                                        settings.alwaysOmitFirstLine
+                                    );
+                                    this.snippets[path] = snippet;
+                                }
+                            } else {
+                                // No property and fallback disabled
+                                this.snippets[path] = '';
                             }
                         } catch (error) {
                             console.error(`Failed to load snippet for ${path}:`, error);
@@ -400,18 +403,16 @@ export class DynamicViewsMasonryView extends BasesView {
                     const path = entry.file.path;
                     if (!(path in this.images)) {
                         try {
-                            // Get image from property
-                            const imageValue = entry.getValue(settings.imageProperty);
+                            // Get ALL images from ALL comma-separated properties
+                            const imageValues = getAllBasesImagePropertyValues(entry, settings.imageProperty);
+                            const validImages: string[] = [];
 
-                            if (imageValue != null && imageValue !== '') {
-                                const imageStr = String(imageValue);
-
+                            for (const imageStr of imageValues) {
                                 // Handle external URLs
                                 if (isExternalUrl(imageStr)) {
                                     const isValid = await validateImageUrl(imageStr);
                                     if (isValid) {
-                                        this.images[path] = imageStr;
-                                        this.hasImageAvailable[path] = true;
+                                        validImages.push(imageStr);
                                     }
                                 } else {
                                     // Handle internal file paths
@@ -423,10 +424,20 @@ export class DynamicViewsMasonryView extends BasesView {
                                     );
 
                                     if (result) {
-                                        this.images[path] = result;
-                                        this.hasImageAvailable[path] = true;
+                                        // loadImageForFile can return string or string[]
+                                        if (Array.isArray(result)) {
+                                            validImages.push(...result);
+                                        } else {
+                                            validImages.push(result);
+                                        }
                                     }
                                 }
+                            }
+
+                            if (validImages.length > 0) {
+                                // Store as array if multiple, string if single
+                                this.images[path] = validImages.length > 1 ? validImages : validImages[0];
+                                this.hasImageAvailable[path] = true;
                             }
                         } catch (error) {
                             console.error(`Failed to load image for ${path}:`, error);

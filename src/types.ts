@@ -8,6 +8,10 @@ export interface Settings {
     showTextPreview: boolean;
     showThumbnails: boolean;
     thumbnailPosition: 'left' | 'right';
+    fallbackToContent: boolean;
+    fallbackToEmbeds: boolean;
+    fallbackToCtime: boolean;
+    fallbackToMtime: boolean;
     metadataDisplayLeft: 'none' | 'timestamp' | 'tags' | 'path';
     metadataDisplayRight: 'none' | 'timestamp' | 'tags' | 'path';
     metadataDisplayWinner: 'left' | 'right' | null;

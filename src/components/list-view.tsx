@@ -1,4 +1,5 @@
 import type { Settings } from '../types';
+import { getFirstDatacorePropertyValue } from '../utils/property';
 
 interface ListViewProps {
     results: any[];
@@ -26,8 +27,8 @@ export function ListView({
             style={settings.queryHeight > 0 ? { maxHeight: `${settings.queryHeight}px`, overflowY: 'auto' } : {}}
         >
             {results.slice(0, displayedCount).filter(p => p.$path).map((p, index) => {
-                // Get title from property or fallback to filename - coerce to string to handle Literal objects
-                let rawTitle = p.value(settings.titleProperty);
+                // Get title from property (first available from comma-separated list) or fallback to filename
+                let rawTitle = getFirstDatacorePropertyValue(p, settings.titleProperty);
                 if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
                 const titleValue = dc.coerce.string(rawTitle || p.$name);
                 // Get folder path

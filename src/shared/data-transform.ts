@@ -5,6 +5,7 @@
 
 import type { CardData } from './card-renderer';
 import type { Settings } from '../types';
+import { getFirstDatacorePropertyValue, getFirstBasesPropertyValue } from '../utils/property';
 
 /**
  * Transform Datacore result into CardData
@@ -18,8 +19,8 @@ export function datacoreResultToCardData(
     imageUrl?: string | string[],
     hasImageAvailable?: boolean
 ): CardData {
-    // Get title from property or fallback to filename
-    let rawTitle = result.value(settings.titleProperty);
+    // Get title from property (first available from comma-separated list) or fallback to filename
+    let rawTitle = getFirstDatacorePropertyValue(result, settings.titleProperty);
     if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
     const title = dc.coerce.string(rawTitle || result.$name || '');
 
@@ -62,9 +63,8 @@ export function basesEntryToCardData(
     // Use file.basename directly (file name without extension)
     const fileName = entry.file.basename || entry.file.name;
 
-    // Get title from property or fallback to filename
-    // getValue returns an object with 'data' property when value exists
-    const titleValue = entry.getValue(settings.titleProperty);
+    // Get title from property (first available from comma-separated list) or fallback to filename
+    const titleValue = getFirstBasesPropertyValue(entry, settings.titleProperty);
     const title = (titleValue && titleValue.data != null && titleValue.data !== '')
         ? String(titleValue.data)
         : fileName;

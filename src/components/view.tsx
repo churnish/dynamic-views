@@ -9,6 +9,7 @@ import { Toolbar } from './toolbar';
 import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
 import { isExternalUrl, hasValidImageExtension, validateImageUrl } from '../utils/image';
+import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
 
 interface ViewProps {
     plugin: Plugin;
@@ -428,49 +429,36 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                     const file = app.vault.getAbstractFileByPath(p.$path) as any;
                     if (file) {
                         // Check if property values are actually useful (not empty/whitespace)
-                        const descFromProp = p.value(settings.descriptionProperty);
+                        const descFromProp = getFirstDatacorePropertyValue(p, settings.descriptionProperty);
                         const hasValidDesc = descFromProp && String(descFromProp).trim().length > 0;
 
-                        // Check if image property contains valid image link(s)
-                        const imgFromProp = p.value(settings.imageProperty);
+                        // Get ALL image values from ALL comma-separated properties
+                        const propertyImageValues = getAllDatacoreImagePropertyValues(p, settings.imageProperty);
 
-                        // Extract ALL property image paths (handle arrays)
                         // Separate external URLs from internal paths
                         const propertyImagePaths: string[] = [];
                         const propertyExternalUrls: string[] = [];
 
-                        if (imgFromProp) {
-                            // Handle array values (process ALL elements)
-                            const propValues = Array.isArray(imgFromProp) ? imgFromProp : [imgFromProp];
+                        for (const imgValue of propertyImageValues) {
+                            let imgStr = imgValue;
 
-                            for (const propValue of propValues) {
-                                let imgStr = '';
+                            // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
+                            const wikilinkMatch = imgStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
+                            if (wikilinkMatch) {
+                                imgStr = wikilinkMatch[1].trim();
+                            }
 
-                                // If it's a Link object with a path property, extract the path
-                                if (typeof propValue === 'object' && propValue !== null && 'path' in propValue) {
-                                    imgStr = String(propValue.path).trim();
+                            // Check if it's an external URL or internal path
+                            if (imgStr.length > 0) {
+                                if (isExternalUrl(imgStr)) {
+                                    // External URL - validate extension if present
+                                    if (hasValidImageExtension(imgStr) || !imgStr.includes('.')) {
+                                        propertyExternalUrls.push(imgStr);
+                                    }
                                 } else {
-                                    imgStr = String(propValue).trim();
-                                }
-
-                                // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
-                                const wikilinkMatch = imgStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-                                if (wikilinkMatch) {
-                                    imgStr = wikilinkMatch[1].trim();
-                                }
-
-                                // Check if it's an external URL or internal path
-                                if (imgStr.length > 0) {
-                                    if (isExternalUrl(imgStr)) {
-                                        // External URL - validate extension if present
-                                        if (hasValidImageExtension(imgStr) || !imgStr.includes('.')) {
-                                            propertyExternalUrls.push(imgStr);
-                                        }
-                                    } else {
-                                        // Internal path - validate extension
-                                        if (hasValidImageExtension(imgStr)) {
-                                            propertyImagePaths.push(imgStr);
-                                        }
+                                    // Internal path - validate extension
+                                    if (hasValidImageExtension(imgStr)) {
+                                        propertyImagePaths.push(imgStr);
                                     }
                                 }
                             }
@@ -480,8 +468,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
                         // Only read file if we need snippets or images from content
                         const needsFileRead =
-                            (settings.showTextPreview && !hasValidDesc) ||
-                            (settings.showThumbnails && !hasValidImg);
+                            (settings.showTextPreview && !hasValidDesc && settings.fallbackToContent) ||
+                            (settings.showThumbnails && !hasValidImg && settings.fallbackToEmbeds);
 
                         const text = needsFileRead ? await app.vault.read(file) : '';
 
@@ -489,7 +477,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                         if (settings.showTextPreview) {
                             // Try to get description from property first
                             let description = hasValidDesc ? descFromProp : null;
-                            if (!description && text) {
+                            if (!description && text && settings.fallbackToContent) {
                                 // Fallback: extract from file content
                                 const cleaned = text.replace(/^---[\s\S]*?---/, "").trim();
                                 let stripped = stripMarkdownSyntax(cleaned);
@@ -584,10 +572,10 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                                 }
                             }
 
-                            // Phase C: Merge with fallback: property images first, then body embeds
+                            // Phase C: Merge with fallback: property images first, then body embeds (if enabled)
                             const allResourcePaths = propertyResourcePaths.length > 0
                                 ? propertyResourcePaths
-                                : bodyResourcePaths;
+                                : (settings.fallbackToEmbeds ? bodyResourcePaths : []);
 
                             // Phase D: Store combined result
                             if (allResourcePaths.length > 0) {
