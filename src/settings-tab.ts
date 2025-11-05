@@ -100,9 +100,9 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			.setDesc('Which timestamp to display in card metadata')
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption('sort-based', 'Sort method')
-					.addOption('ctime', 'Created time')
 					.addOption('mtime', 'Modified time')
+					.addOption('ctime', 'Created time')
+					.addOption('sort-based', 'Sort method')
 					.setValue(settings.timestampDisplay)
 					.onChange(async (value: 'ctime' | 'mtime' | 'sort-based') => {
 						await this.plugin.persistenceManager.setGlobalSettings({ timestampDisplay: value });

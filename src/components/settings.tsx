@@ -210,7 +210,7 @@ export function Settings({
             {settings.showThumbnails && (
                 <div className="setting-item setting-item-toggle">
                     <div className="setting-item-info">
-                        <label>Use images in note if property unavailable</label>
+                        <label>Use in-note images if image property unavailable</label>
                         <div className="setting-desc">Fall back to image embeds from note content when image property is not set or empty.</div>
                     </div>
                     <div
@@ -226,25 +226,6 @@ export function Settings({
                         role="checkbox"
                         aria-checked={settings.fallbackToEmbeds}
                     />
-                </div>
-            )}
-
-            {/* Timestamp Reflects - Only show if timestamp is displayed */}
-            {(settings.metadataDisplayLeft === 'timestamp' || settings.metadataDisplayRight === 'timestamp') && (
-                <div className="setting-item setting-item-text">
-                    <div className="setting-item-info">
-                        <label>Timestamp reflects</label>
-                        <div className="setting-desc">Which timestamp to display in card metadata.</div>
-                    </div>
-                    <select
-                        value={settings.timestampDisplay}
-                        onChange={(e) => onSettingsChange({ timestampDisplay: e.target.value as 'ctime' | 'mtime' | 'sort-based' })}
-                        className="dropdown"
-                    >
-                        <option value="ctime">Created time</option>
-                        <option value="mtime">Modified time</option>
-                        <option value="sort-based">Sort method</option>
-                    </select>
                 </div>
             )}
 

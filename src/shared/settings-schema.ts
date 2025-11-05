@@ -102,7 +102,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
             type: 'toggle',
-            displayName: 'Use images in note if property unavailable',
+            displayName: 'Use in-note images if image property unavailable',
             key: 'fallbackToEmbeds',
             default: true
         },
