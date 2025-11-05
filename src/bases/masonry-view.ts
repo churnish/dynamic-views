@@ -452,7 +452,9 @@ export class DynamicViewsMasonryView extends BasesView {
                                         this.app,
                                         path,
                                         imageStr,
-                                        settings.thumbnailCacheSize
+                                        settings.thumbnailCacheSize,
+                                        settings.fallbackToEmbeds,
+                                        settings.imageProperty
                                     );
 
                                     if (result) {

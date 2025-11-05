@@ -18,15 +18,14 @@ export function setPluginInstance(plugin: any): void {
  * These options appear in the Bases view configuration menu
  */
 export function getBasesViewOptions(): any[] {
-    // Get template settings if available
-    const template = pluginInstance?.persistenceManager?.getDefaultViewSettings() || DEFAULT_VIEW_SETTINGS;
-
+    // Use static defaults from DEFAULT_VIEW_SETTINGS
+    // The template values will be used as fallbacks in readBasesSettings() instead
     return [
         {
             type: 'dropdown',
             displayName: 'Metadata display (left)',
             key: 'metadataDisplayLeft',
-            default: template.metadataDisplayLeft,
+            default: DEFAULT_VIEW_SETTINGS.metadataDisplayLeft,
             options: {
                 'timestamp': 'Timestamp',
                 'path': 'File path',
@@ -38,7 +37,7 @@ export function getBasesViewOptions(): any[] {
             type: 'dropdown',
             displayName: 'Metadata display (right)',
             key: 'metadataDisplayRight',
-            default: template.metadataDisplayRight,
+            default: DEFAULT_VIEW_SETTINGS.metadataDisplayRight,
             options: {
                 'timestamp': 'Timestamp',
                 'path': 'File path',
@@ -51,45 +50,45 @@ export function getBasesViewOptions(): any[] {
             displayName: 'Title property',
             key: 'titleProperty',
             placeholder: 'Comma-separated if multiple',
-            default: template.titleProperty
+            default: DEFAULT_VIEW_SETTINGS.titleProperty
         },
         {
             type: 'toggle',
             displayName: 'Show text preview',
             key: 'showTextPreview',
-            default: template.showTextPreview
+            default: DEFAULT_VIEW_SETTINGS.showTextPreview
         },
         {
             type: 'text',
             displayName: 'Text preview property',
             key: 'descriptionProperty',
             placeholder: 'Comma-separated if multiple',
-            default: template.descriptionProperty
+            default: DEFAULT_VIEW_SETTINGS.descriptionProperty
         },
         {
             type: 'toggle',
             displayName: 'Use note content if text preview property unavailable',
             key: 'fallbackToContent',
-            default: template.fallbackToContent
+            default: DEFAULT_VIEW_SETTINGS.fallbackToContent
         },
         {
             type: 'toggle',
             displayName: 'Show thumbnails',
             key: 'showThumbnails',
-            default: template.showThumbnails
+            default: DEFAULT_VIEW_SETTINGS.showThumbnails
         },
         {
             type: 'text',
             displayName: 'Image property',
             key: 'imageProperty',
             placeholder: 'Comma-separated if multiple',
-            default: template.imageProperty
+            default: DEFAULT_VIEW_SETTINGS.imageProperty
         },
         {
             type: 'toggle',
             displayName: 'Use in-note images if image property unavailable',
             key: 'fallbackToEmbeds',
-            default: template.fallbackToEmbeds
+            default: DEFAULT_VIEW_SETTINGS.fallbackToEmbeds
         },
     ];
 }

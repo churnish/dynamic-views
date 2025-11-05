@@ -39,13 +39,17 @@ export function validateImageUrl(url: string): Promise<boolean> {
  * @param filePath - Path of the file to load image for
  * @param imagePropertyValue - Value from image property (if any)
  * @param cacheSize - Thumbnail cache size setting
+ * @param fallbackToEmbeds - Whether to fall back to in-note images when property has no value
+ * @param imagePropertyName - The image property name (empty string means no property configured)
  * @returns Promise resolving to image URL(s) or null
  */
 export async function loadImageForFile(
     app: any,
     filePath: string,
     imagePropertyValue: string,
-    cacheSize: 'small' | 'balanced' | 'large'
+    cacheSize: 'small' | 'balanced' | 'large',
+    fallbackToEmbeds: boolean = true,
+    imagePropertyName: string = ''
 ): Promise<string | string[] | null> {
     const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 
@@ -125,10 +129,28 @@ export async function loadImageForFile(
         }
     }
 
-    // Phase C: Merge with fallback: property images first, then body embeds
-    const allResourcePaths = propertyResourcePaths.length > 0
-        ? propertyResourcePaths
-        : bodyResourcePaths;
+    // Phase C: Determine which images to use based on settings
+    let allResourcePaths: string[] = [];
+
+    // If no image property is configured, always use in-note images
+    if (!imagePropertyName || imagePropertyName.trim() === '') {
+        allResourcePaths = bodyResourcePaths;
+    }
+    // If image property is configured
+    else {
+        // If property has values, use them (no fallback)
+        if (propertyResourcePaths.length > 0) {
+            allResourcePaths = propertyResourcePaths;
+        }
+        // If property has no values and fallback is enabled, use body embeds
+        else if (fallbackToEmbeds) {
+            allResourcePaths = bodyResourcePaths;
+        }
+        // Otherwise, no images
+        else {
+            allResourcePaths = [];
+        }
+    }
 
     // Return result
     if (allResourcePaths.length === 0) return null;
