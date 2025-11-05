@@ -84,7 +84,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
             type: 'toggle',
-            displayName: 'Use note content if text preview property unavailable',
+            displayName: 'Use note content\nif text preview property unavailable',
             key: 'fallbackToContent',
             default: true
         },
@@ -102,7 +102,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
             type: 'toggle',
-            displayName: 'Use in-note images if image property unavailable',
+            displayName: 'Use in-note images<br>if image property unavailable',
             key: 'fallbackToEmbeds',
             default: true
         },
