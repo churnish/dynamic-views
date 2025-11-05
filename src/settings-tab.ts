@@ -17,6 +17,19 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 		const settings = this.plugin.persistenceManager.getGlobalSettings();
 
 		new Setting(containerEl)
+			.setName('Minimum card width')
+			.setDesc('Minimum width of cards in pixels')
+			.addSlider((slider) =>
+				slider
+					.setLimits(50, 800, 10)
+					.setValue(settings.minCardWidth)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setGlobalSettings({ minCardWidth: value });
+					})
+			);
+
+		new Setting(containerEl)
 			.setName('Open file action')
 			.setDesc('How files should open when clicked')
 			.addDropdown((dropdown) =>
@@ -55,6 +68,19 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 					.setValue(String(settings.minMasonryColumns))
 					.onChange(async (value: string) => {
 						await this.plugin.persistenceManager.setGlobalSettings({ minMasonryColumns: Number(value) });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Minimum grid columns')
+			.setDesc('Minimum number of columns in grid view')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('1', 'One')
+					.addOption('2', 'Two')
+					.setValue(String(settings.minGridColumns))
+					.onChange(async (value: string) => {
+						await this.plugin.persistenceManager.setGlobalSettings({ minGridColumns: Number(value) });
 					})
 			);
 
@@ -141,6 +167,150 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 					.setValue(settings.modifiedProperty)
 					.onChange(async (value) => {
 						await this.plugin.persistenceManager.setGlobalSettings({ modifiedProperty: value });
+					})
+			);
+
+		// Default settings for new views section
+		containerEl.createEl('h2', { text: 'Default settings for new views' });
+
+		const defaultViewSettings = this.plugin.persistenceManager.getDefaultViewSettings();
+
+		new Setting(containerEl)
+			.setName('Metadata display (left)')
+			.setDesc('Default metadata to show on left side of cards')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('timestamp', 'Timestamp')
+					.addOption('path', 'File path')
+					.addOption('tags', 'File tags')
+					.addOption('none', 'None')
+					.setValue(defaultViewSettings.metadataDisplayLeft)
+					.onChange(async (value: 'none' | 'timestamp' | 'tags' | 'path') => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ metadataDisplayLeft: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Metadata display (right)')
+			.setDesc('Default metadata to show on right side of cards')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('timestamp', 'Timestamp')
+					.addOption('path', 'File path')
+					.addOption('tags', 'File tags')
+					.addOption('none', 'None')
+					.setValue(defaultViewSettings.metadataDisplayRight)
+					.onChange(async (value: 'none' | 'timestamp' | 'tags' | 'path') => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ metadataDisplayRight: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Title property')
+			.setDesc('Default property to show as file title')
+			.addText((text) =>
+				text
+					.setPlaceholder('Comma-separated if multiple')
+					.setValue(defaultViewSettings.titleProperty)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ titleProperty: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Show text preview')
+			.setDesc('Show text preview by default')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(defaultViewSettings.showTextPreview)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ showTextPreview: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Text preview property')
+			.setDesc('Default property to show as text preview')
+			.addText((text) =>
+				text
+					.setPlaceholder('Comma-separated if multiple')
+					.setValue(defaultViewSettings.descriptionProperty)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ descriptionProperty: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Use note content if text preview property unavailable')
+			.setDesc('Fall back to note content when text preview property is not set')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(defaultViewSettings.fallbackToContent)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ fallbackToContent: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Show thumbnails')
+			.setDesc('Show thumbnails by default')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(defaultViewSettings.showThumbnails)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ showThumbnails: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Image property')
+			.setDesc('Default property to show as thumbnail')
+			.addText((text) =>
+				text
+					.setPlaceholder('Comma-separated if multiple')
+					.setValue(defaultViewSettings.imageProperty)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ imageProperty: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Use in-note images if image property unavailable')
+			.setDesc('Fall back to image embeds from note content')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(defaultViewSettings.fallbackToEmbeds)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ fallbackToEmbeds: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('List marker')
+			.setDesc('Default marker style for list view')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('bullet', 'Bullet')
+					.addOption('number', 'Number')
+					.addOption('none', 'None')
+					.setValue(defaultViewSettings.listMarker)
+					.onChange(async (value: string) => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ listMarker: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('View height')
+			.setDesc('Default maximum height of results area in pixels. Set to 0 for unlimited.')
+			.addText((text) =>
+				text
+					.setPlaceholder('500')
+					.setValue(String(defaultViewSettings.queryHeight))
+					.onChange(async (value) => {
+						const num = parseInt(value);
+						if (!isNaN(num) && num >= 0) {
+							await this.plugin.persistenceManager.setDefaultViewSettings({ queryHeight: num });
+						}
 					})
 			);
 	}

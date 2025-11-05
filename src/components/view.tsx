@@ -102,13 +102,50 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     const getPersistedSettings = dc.useCallback((): Settings => {
         if (!ctime || !persistenceManager) return { ...DEFAULT_SETTINGS, ...USER_SETTINGS };
 
-        const uiState = persistenceManager.getUIState(ctime);
         const globalSettings = persistenceManager.getGlobalSettings();
+        const defaultViewSettings = persistenceManager.getDefaultViewSettings();
 
-        // Check if settings should be localized
-        // Note: localizeSettings is stored in the UI state, not settings
-        // For now, we'll use global settings merged with USER_SETTINGS
-        return { ...globalSettings, ...USER_SETTINGS };
+        // Start with global settings as base
+        const baseSettings = { ...globalSettings };
+
+        // For template properties (those that appear in view settings),
+        // use defaultViewSettings if USER_SETTINGS doesn't have them
+        if (USER_SETTINGS.titleProperty === undefined) {
+            baseSettings.titleProperty = defaultViewSettings.titleProperty;
+        }
+        if (USER_SETTINGS.descriptionProperty === undefined) {
+            baseSettings.descriptionProperty = defaultViewSettings.descriptionProperty;
+        }
+        if (USER_SETTINGS.imageProperty === undefined) {
+            baseSettings.imageProperty = defaultViewSettings.imageProperty;
+        }
+        if (USER_SETTINGS.metadataDisplayLeft === undefined) {
+            baseSettings.metadataDisplayLeft = defaultViewSettings.metadataDisplayLeft;
+        }
+        if (USER_SETTINGS.metadataDisplayRight === undefined) {
+            baseSettings.metadataDisplayRight = defaultViewSettings.metadataDisplayRight;
+        }
+        if (USER_SETTINGS.showTextPreview === undefined) {
+            baseSettings.showTextPreview = defaultViewSettings.showTextPreview;
+        }
+        if (USER_SETTINGS.fallbackToContent === undefined) {
+            baseSettings.fallbackToContent = defaultViewSettings.fallbackToContent;
+        }
+        if (USER_SETTINGS.showThumbnails === undefined) {
+            baseSettings.showThumbnails = defaultViewSettings.showThumbnails;
+        }
+        if (USER_SETTINGS.fallbackToEmbeds === undefined) {
+            baseSettings.fallbackToEmbeds = defaultViewSettings.fallbackToEmbeds;
+        }
+        if (USER_SETTINGS.queryHeight === undefined) {
+            baseSettings.queryHeight = defaultViewSettings.queryHeight;
+        }
+        if (USER_SETTINGS.listMarker === undefined) {
+            baseSettings.listMarker = defaultViewSettings.listMarker;
+        }
+
+        // Finally, apply any USER_SETTINGS overrides
+        return { ...baseSettings, ...USER_SETTINGS };
     }, [ctime, persistenceManager, USER_SETTINGS]);
 
     // Helper: get persisted UI state value
@@ -161,7 +198,6 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     const [focusableCardIndex, setFocusableCardIndex] = dc.useState(0);
     const [isResultsScrolled, setIsResultsScrolled] = dc.useState(false);
     const [isScrolledToBottom, setIsScrolledToBottom] = dc.useState(true);
-    const [localizeSettings, setLocalizeSettings] = dc.useState(false);
 
     // Settings state
     const [settings, setSettings] = dc.useState(getPersistedSettings());
@@ -216,24 +252,17 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
     // Persist settings changes
     dc.useEffect(() => {
-        if (localizeSettings) {
-            // TODO: Write settings to USER_SETTINGS in file (requires file modification)
-            // For now, just save to global settings
-            if (settingsTimeoutRef.current) {
-                clearTimeout(settingsTimeoutRef.current);
-            }
-            settingsTimeoutRef.current = setTimeout(() => {
-                if (persistenceManager) {
-                    persistenceManager.setGlobalSettings(settings);
-                }
-            }, 300);
-        } else {
-            // Save to global settings immediately
+        // TODO: Write settings to USER_SETTINGS in file (requires file modification)
+        // For now, save to global settings
+        if (settingsTimeoutRef.current) {
+            clearTimeout(settingsTimeoutRef.current);
+        }
+        settingsTimeoutRef.current = setTimeout(() => {
             if (persistenceManager) {
                 persistenceManager.setGlobalSettings(settings);
             }
-        }
-    }, [settings, localizeSettings, persistenceManager]);
+        }, 300);
+    }, [settings, persistenceManager]);
 
     // Calculate sticky toolbar positioning
     dc.useEffect(() => {
@@ -650,7 +679,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             // Skip if container not visible
             if (containerWidth < 100) return;
 
-            const cardMinWidth = 320;
+            const cardMinWidth = settings.minCardWidth;
             const gap = 8;
 
             // Calculate columns
@@ -766,7 +795,36 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             window.removeEventListener('resize', handleResize);
             clearTimeout(layoutTimeout);
         };
-    }, [sorted, viewMode, settings.minMasonryColumns, dc]);
+    }, [sorted, viewMode, settings.minMasonryColumns, settings.minCardWidth, dc]);
+
+    // Apply dynamic grid layout (all width modes)
+    dc.useEffect(() => {
+        if (viewMode !== 'card') return;
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        const updateGrid = () => {
+            const containerWidth = container.clientWidth;
+            const cardMinWidth = settings.minCardWidth;
+            const minColumns = settings.minGridColumns;
+            const gap = 8;
+            const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+            const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
+
+            container.style.setProperty('--card-min-width', `${cardWidth}px`);
+            container.style.setProperty('--grid-columns', String(cols));
+        };
+
+        updateGrid();
+
+        const resizeObserver = new ResizeObserver(updateGrid);
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [viewMode, settings.minCardWidth, settings.minGridColumns, dc]);
 
     // Sync refs for callback access in infinite scroll
     dc.useEffect(() => {
@@ -1186,10 +1244,6 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         setSettings(prev => ({ ...prev, ...newSettings }));
     }, []);
 
-    const handleLocalizeSettingsToggle = dc.useCallback(() => {
-        setLocalizeSettings(!localizeSettings);
-    }, [localizeSettings]);
-
     // Copy menu item for Toolbar
     const copyMenuItem = dc.useMemo(() => (
         <div
@@ -1311,8 +1365,6 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                     onToggleWidth={handleToggleWidth}
                     onToggleSettings={handleToggleSettings}
                     showSettings={showSettings}
-                    localizeSettings={localizeSettings}
-                    onLocalizeSettingsChange={handleLocalizeSettingsToggle}
                     onSettingsChange={handleSettingsChange}
                 />
             </div>

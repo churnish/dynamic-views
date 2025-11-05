@@ -7,6 +7,7 @@ import './src/jsx-runtime'; // Ensure h and Fragment are globally available
 import { DynamicViewsCardView, cardViewOptions } from './src/bases/card-view';
 import { DynamicViewsMasonryView, masonryViewOptions } from './src/bases/masonry-view';
 import { DynamicViewsSettingTab } from './src/settings-tab';
+import { setPluginInstance } from './src/shared/settings-schema';
 
 export default class DynamicViewsPlugin extends Plugin {
 	persistenceManager: PersistenceManager;
@@ -36,6 +37,9 @@ export default class DynamicViewsPlugin extends Plugin {
 	async onload() {
 		this.persistenceManager = new PersistenceManager(this);
 		await this.persistenceManager.load();
+
+		// Set plugin instance for Bases view options to access template settings
+		setPluginInstance(this);
 
 		// Register settings tab
 		this.addSettingTab(new DynamicViewsSettingTab(this.app, this));

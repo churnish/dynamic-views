@@ -1,4 +1,5 @@
 export interface Settings {
+    minCardWidth: number;
     titleProperty: string;
     descriptionProperty: string;
     imageProperty: string;
@@ -19,6 +20,7 @@ export interface Settings {
     listMarker: string;
     showTimestampIcon: boolean;
     minMasonryColumns: number;
+    minGridColumns: number;
     randomizeAction: string;
     thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
     queryHeight: number;
@@ -34,8 +36,23 @@ export interface UIState {
     widthMode: string;
 }
 
+export interface DefaultViewSettings {
+    titleProperty: string;
+    descriptionProperty: string;
+    imageProperty: string;
+    metadataDisplayLeft: 'none' | 'timestamp' | 'tags' | 'path';
+    metadataDisplayRight: 'none' | 'timestamp' | 'tags' | 'path';
+    showTextPreview: boolean;
+    fallbackToContent: boolean;
+    showThumbnails: boolean;
+    fallbackToEmbeds: boolean;
+    queryHeight: number;
+    listMarker: string;
+}
+
 export interface PluginData {
     globalSettings: Settings;
+    defaultViewSettings: DefaultViewSettings;
     queryStates: Record<string, UIState>;
     basesViewMetadataWinners: Record<string, 'left' | 'right' | null>;
 }

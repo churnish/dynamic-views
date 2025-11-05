@@ -51,7 +51,7 @@ function renderMetadataContent(
         return (
             <>
                 {settings.showTimestampIcon && (
-                    <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         {timeIcon === "calendar" ? (
                             <>
                                 <path d="M8 2v4"/>
@@ -67,7 +67,7 @@ function renderMetadataContent(
                         )}
                     </svg>
                 )}
-                {date}
+                <span>{date}</span>
             </>
         );
     } else if (displayType === 'tags' && card.tags.length > 0) {
@@ -335,14 +335,9 @@ function Card({
 
             {/* Metadata */}
             {(() => {
-                // Apply winner logic: if both match and there's a winner, treat loser as 'none'
-                const effectiveLeft = settings.metadataDisplayWinner === 'right' &&
-                    settings.metadataDisplayLeft !== 'none' &&
-                    settings.metadataDisplayLeft === settings.metadataDisplayRight
-                        ? 'none'
-                        : settings.metadataDisplayLeft;
-
-                const effectiveRight = settings.metadataDisplayWinner === 'left' &&
+                // Left always wins: if both match and are non-none, suppress right
+                const effectiveLeft = settings.metadataDisplayLeft;
+                const effectiveRight = settings.metadataDisplayLeft !== 'none' &&
                     settings.metadataDisplayRight !== 'none' &&
                     settings.metadataDisplayLeft === settings.metadataDisplayRight
                         ? 'none'

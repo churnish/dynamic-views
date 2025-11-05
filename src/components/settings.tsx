@@ -3,41 +3,16 @@ import { Settings as SettingsType } from '../types';
 interface SettingsProps {
     dc: any;
     settings: SettingsType;
-    localizeSettings: boolean;
     onSettingsChange: (settings: Partial<SettingsType>) => void;
-    onLocalizeSettingsChange: (value: boolean) => void;
 }
 
 export function Settings({
     dc,
     settings,
-    localizeSettings,
     onSettingsChange,
-    onLocalizeSettingsChange,
 }: SettingsProps) {
     return (
         <div className="settings-dropdown-menu">
-            {/* Localize Settings Toggle */}
-            <div className="setting-item setting-item-toggle">
-                <div className="setting-item-info">
-                    <label>Store settings in this query</label>
-                    <div className="setting-desc">Apply the settings below to this query only rather than to all queries on this device.</div>
-                </div>
-                <div
-                    className={`checkbox-container ${localizeSettings ? 'is-enabled' : ''}`}
-                    onClick={() => onLocalizeSettingsChange(!localizeSettings)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onLocalizeSettingsChange(!localizeSettings);
-                        }
-                    }}
-                    tabIndex={0}
-                    role="checkbox"
-                    aria-checked={localizeSettings}
-                />
-            </div>
-
             {/* Metadata Display (Left) */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">
@@ -48,13 +23,7 @@ export function Settings({
                     value={settings.metadataDisplayLeft}
                     onChange={(e) => {
                         const newValue = e.target.value as 'none' | 'timestamp' | 'tags' | 'path';
-                        // Check if this creates a duplicate
-                        const isDuplicate = newValue !== 'none' && newValue === settings.metadataDisplayRight;
-                        onSettingsChange({
-                            metadataDisplayLeft: newValue,
-                            // If duplicate, right was first (it wins), left loses
-                            metadataDisplayWinner: isDuplicate ? 'right' : null
-                        });
+                        onSettingsChange({ metadataDisplayLeft: newValue });
                     }}
                     className="dropdown"
                 >
@@ -75,13 +44,7 @@ export function Settings({
                     value={settings.metadataDisplayRight}
                     onChange={(e) => {
                         const newValue = e.target.value as 'none' | 'timestamp' | 'tags' | 'path';
-                        // Check if this creates a duplicate
-                        const isDuplicate = newValue !== 'none' && newValue === settings.metadataDisplayLeft;
-                        onSettingsChange({
-                            metadataDisplayRight: newValue,
-                            // If duplicate, left was first (it wins), right loses
-                            metadataDisplayWinner: isDuplicate ? 'left' : null
-                        });
+                        onSettingsChange({ metadataDisplayRight: newValue });
                     }}
                     className="dropdown"
                 >

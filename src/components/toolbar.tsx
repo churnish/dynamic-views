@@ -65,8 +65,6 @@ interface ToolbarProps {
 
     // Settings panel
     showSettings: boolean;
-    localizeSettings: boolean;
-    onLocalizeSettingsChange: (value: boolean) => void;
     onSettingsChange: (settings: Partial<Settings>) => void;
 }
 
@@ -117,8 +115,6 @@ export function Toolbar({
     onToggleWidth,
     onToggleSettings,
     showSettings,
-    localizeSettings,
-    onLocalizeSettingsChange,
     onSettingsChange,
 }: ToolbarProps) {
     return (
@@ -582,9 +578,7 @@ export function Toolbar({
                         <SettingsPanel
                             dc={dc}
                             settings={settings}
-                            localizeSettings={localizeSettings}
                             onSettingsChange={onSettingsChange}
-                            onLocalizeSettingsChange={onLocalizeSettingsChange}
                         />
                     ) : null}
                 </div>

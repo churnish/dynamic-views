@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
-import { PluginData, Settings, UIState } from './types';
-import { DEFAULT_SETTINGS, DEFAULT_UI_STATE } from './constants';
+import { PluginData, Settings, UIState, DefaultViewSettings } from './types';
+import { DEFAULT_SETTINGS, DEFAULT_UI_STATE, DEFAULT_VIEW_SETTINGS } from './constants';
 import { sanitizeObject, sanitizeString } from './utils/sanitize';
 
 export class PersistenceManager {
@@ -11,6 +11,7 @@ export class PersistenceManager {
         this.plugin = plugin;
         this.data = {
             globalSettings: { ...DEFAULT_SETTINGS },
+            defaultViewSettings: { ...DEFAULT_VIEW_SETTINGS },
             queryStates: {},
             basesViewMetadataWinners: {}
         };
@@ -21,6 +22,7 @@ export class PersistenceManager {
         if (loadedData) {
             this.data = {
                 globalSettings: { ...DEFAULT_SETTINGS, ...loadedData.globalSettings },
+                defaultViewSettings: { ...DEFAULT_VIEW_SETTINGS, ...loadedData.defaultViewSettings },
                 queryStates: loadedData.queryStates || {},
                 basesViewMetadataWinners: loadedData.basesViewMetadataWinners || {}
             };
@@ -38,6 +40,16 @@ export class PersistenceManager {
     async setGlobalSettings(settings: Partial<Settings>): Promise<void> {
         const sanitized = sanitizeObject(settings);
         this.data.globalSettings = { ...this.data.globalSettings, ...sanitized };
+        await this.save();
+    }
+
+    getDefaultViewSettings(): DefaultViewSettings {
+        return { ...this.data.defaultViewSettings };
+    }
+
+    async setDefaultViewSettings(settings: Partial<DefaultViewSettings>): Promise<void> {
+        const sanitized = sanitizeObject(settings);
+        this.data.defaultViewSettings = { ...this.data.defaultViewSettings, ...sanitized };
         await this.save();
     }
 

@@ -50,7 +50,11 @@ export class DynamicViewsMasonryView extends BasesView {
         const entries = this.data.data;
 
         // Read settings from Bases config
-        const settings = readBasesSettings(this.config, this.plugin.persistenceManager.getGlobalSettings());
+        const settings = readBasesSettings(
+            this.config,
+            this.plugin.persistenceManager.getGlobalSettings(),
+            this.plugin.persistenceManager.getDefaultViewSettings()
+        );
 
         // Save scroll position before re-rendering
         const savedScrollTop = this.containerEl.scrollTop;
@@ -143,7 +147,7 @@ export class DynamicViewsMasonryView extends BasesView {
     private setupMasonryLayout(settings: any): void {
         if (!this.masonryContainer) return;
 
-        const minColumns = settings.minMasonryColumns || 1;
+        const minColumns = settings.minMasonryColumns;
 
         // Setup update function
         this.updateLayoutRef.current = () => {
@@ -153,17 +157,17 @@ export class DynamicViewsMasonryView extends BasesView {
             if (cards.length === 0) return;
 
             const containerWidth = this.masonryContainer.clientWidth;
-            const cardWidth = 346;  // Base card width
-            const gap = 8;  // Gap between cards
+            const cardMinWidth = settings.minCardWidth;
+            const gap = 8;
 
             // Calculate number of columns
             const columns = Math.max(
                 minColumns,
-                Math.floor((containerWidth + gap) / (cardWidth + gap))
+                Math.floor((containerWidth + gap) / (cardMinWidth + gap))
             );
 
-            // Calculate actual card width accounting for gaps
-            const actualCardWidth = (containerWidth - (gap * (columns - 1))) / columns;
+            // Calculate actual card width based on columns
+            const cardWidth = (containerWidth - (gap * (columns - 1))) / columns;
 
             // Initialize column heights
             const columnHeights = new Array(columns).fill(0);
@@ -174,11 +178,11 @@ export class DynamicViewsMasonryView extends BasesView {
                 const shortestColumn = columnHeights.indexOf(Math.min(...columnHeights));
 
                 // Calculate position
-                const left = shortestColumn * (actualCardWidth + gap);
+                const left = shortestColumn * (cardWidth + gap);
                 const top = columnHeights[shortestColumn];
 
                 // Apply positioning
-                card.style.width = `${actualCardWidth}px`;
+                card.style.width = `${cardWidth}px`;
                 card.style.position = 'absolute';
                 card.style.left = `${left}px`;
                 card.style.top = `${top}px`;
@@ -326,11 +330,6 @@ export class DynamicViewsMasonryView extends BasesView {
                     const iconName = getTimestampIcon(sortMethod);
                     const iconEl = container.createSpan('timestamp-icon');
                     setIcon(iconEl, iconName);
-                    iconEl.style.display = 'inline-block';
-                    iconEl.style.width = '14px';
-                    iconEl.style.height = '14px';
-                    iconEl.style.verticalAlign = 'middle';
-                    iconEl.style.marginRight = '4px';
                 }
                 container.appendText(date);
             }

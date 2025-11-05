@@ -1117,17 +1117,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     margin-top: 0;
 }
 
-/* Card grid: multiple columns in wide/max modes */
-.dc-wide .dynamic-views .cards-feed {
+/* Unified grid layout for all grid views (all width modes) */
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed,
+.dynamic-views .cards-feed {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 8px;
-    align-items: start;
-}
-
-.dc-max .dynamic-views .cards-feed {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(var(--grid-columns, 1), 1fr);
     gap: 8px;
     align-items: start;
 }
@@ -1279,8 +1273,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     margin-top: 4px;
     color: var(--text-faint);
     min-height: 24px;
-    max-height: 24px;
-    overflow: hidden;
+    line-height: 1.4;
 }
 
 .dynamic-views .meta-left {
@@ -1289,14 +1282,20 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     display: flex;
     align-items: center;
     gap: 4px;
-    line-height: 1;
 }
 
 .dynamic-views .timestamp-icon {
     flex-shrink: 0;
     opacity: 0.7;
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+}
+
+.dynamic-views .timestamp-icon svg {
+    width: 100%;
+    height: 100%;
     display: block;
-    margin-bottom: 1px;
 }
 
 .dynamic-views .meta-right {
@@ -1305,7 +1304,10 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     min-width: 0;
     margin-left: 6px;
     scrollbar-width: none;
-    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
 }
 
 .dynamic-views .meta-right::-webkit-scrollbar {
@@ -1334,7 +1336,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .writing-meta.no-timestamp .meta-right {
     margin-left: 0;
-    text-align: left;
+    justify-content: flex-start;
 }
 
 .dynamic-views .writing-meta.no-timestamp .tags-wrapper,

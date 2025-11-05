@@ -28,6 +28,7 @@ export class DynamicViewsCardView extends BasesView {
     private isLoading: boolean = false;
     private scrollListener: (() => void) | null = null;
     private scrollThrottleTimeout: number | null = null;
+    private resizeObserver: ResizeObserver | null = null;
 
     constructor(controller: any, containerEl: HTMLElement, plugin: DynamicViewsPlugin) {
         super(controller);
@@ -49,7 +50,23 @@ export class DynamicViewsCardView extends BasesView {
         const entries = this.data.data;
 
         // Read settings from Bases config
-        const settings = readBasesSettings(this.config, this.plugin.persistenceManager.getGlobalSettings());
+        const settings = readBasesSettings(
+            this.config,
+            this.plugin.persistenceManager.getGlobalSettings(),
+            this.plugin.persistenceManager.getDefaultViewSettings()
+        );
+
+        // Calculate grid columns
+        const containerWidth = this.containerEl.clientWidth;
+        const cardMinWidth = settings.minCardWidth;
+        const minColumns = settings.minGridColumns;
+        const gap = 8;
+        const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+        const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
+
+        // Set CSS variables for grid layout
+        this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
+        this.containerEl.style.setProperty('--grid-columns', String(cols));
 
         // Save scroll position before re-rendering
         const savedScrollTop = this.containerEl.scrollTop;
@@ -92,6 +109,29 @@ export class DynamicViewsCardView extends BasesView {
 
         // Setup infinite scroll
         this.setupInfiniteScroll(entries.length);
+
+        // Setup ResizeObserver for dynamic grid updates
+        if (!this.resizeObserver) {
+            this.resizeObserver = new ResizeObserver(() => {
+                // Re-read settings to get current values
+                const settings = readBasesSettings(
+                    this.config,
+                    this.plugin.persistenceManager.getGlobalSettings(),
+                    this.plugin.persistenceManager.getDefaultViewSettings()
+                );
+
+                const containerWidth = this.containerEl.clientWidth;
+                const cardMinWidth = settings.minCardWidth;
+                const minColumns = settings.minGridColumns;
+                const gap = 8;
+                const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+                const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
+
+                this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
+                this.containerEl.style.setProperty('--grid-columns', String(cols));
+            });
+            this.resizeObserver.observe(this.containerEl);
+        }
     }
 
     private renderCard(
@@ -206,11 +246,6 @@ export class DynamicViewsCardView extends BasesView {
                     const iconName = getTimestampIcon(sortMethod);
                     const iconEl = container.createSpan('timestamp-icon');
                     setIcon(iconEl, iconName);
-                    iconEl.style.display = 'inline-block';
-                    iconEl.style.width = '14px';
-                    iconEl.style.height = '14px';
-                    iconEl.style.verticalAlign = 'middle';
-                    iconEl.style.marginRight = '4px';
                 }
                 container.appendText(date);
             }
@@ -433,6 +468,12 @@ export class DynamicViewsCardView extends BasesView {
                 window.clearTimeout(this.scrollThrottleTimeout);
             }
         });
+    }
+
+    onClose(): void {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
     }
 }
 

@@ -1,6 +1,21 @@
-import { Settings } from './types';
+import { Settings, DefaultViewSettings } from './types';
+
+export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
+    titleProperty: "",
+    descriptionProperty: "",
+    imageProperty: "",
+    metadataDisplayLeft: "timestamp",
+    metadataDisplayRight: "path",
+    showTextPreview: true,
+    fallbackToContent: true,
+    showThumbnails: true,
+    fallbackToEmbeds: true,
+    queryHeight: 0,
+    listMarker: "bullet"
+};
 
 export const DEFAULT_SETTINGS: Settings = {
+    minCardWidth: 400,
     titleProperty: "",
     descriptionProperty: "",
     imageProperty: "",
@@ -21,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
     listMarker: "bullet",
     showTimestampIcon: true,
     minMasonryColumns: 2,
+    minGridColumns: 1,
     randomizeAction: "shuffle",
     thumbnailCacheSize: "balanced",
     queryHeight: 0,
