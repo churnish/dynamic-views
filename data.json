@@ -46,7 +46,7 @@
   "queryStates": {
     "1762122189077": {
       "sortMethod": "mtime-desc",
-      "viewMode": "masonry",
+      "viewMode": "card",
       "searchQuery": "",
       "resultLimit": "10",
       "widthMode": "normal"

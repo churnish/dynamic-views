@@ -1322,9 +1322,10 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .meta-right {
     overflow-x: auto;
-    flex: 1;
+    flex-shrink: 1;
     min-width: 0;
-    margin-left: 6px;
+    margin-left: auto;
+    padding-left: 6px;
     scrollbar-width: none;
     display: flex;
     align-items: center;
