@@ -248,40 +248,6 @@ export function Settings({
                 </div>
             )}
 
-            {/* Created Time Property (conditional) */}
-            {(settings.metadataDisplayLeft === 'timestamp' || settings.metadataDisplayRight === 'timestamp') && (
-                <div className="setting-item setting-item-text">
-                    <div className="setting-item-info">
-                        <label>Date created property</label>
-                        <div className="setting-desc">Set property to show as created timestamp. Will use file created time if unavailable. Must be a date or datetime property.</div>
-                    </div>
-                    <input
-                        type="text"
-                        value={settings.createdProperty}
-                        onChange={(e) => onSettingsChange({ createdProperty: e.target.value })}
-                        placeholder="Comma-separated if multiple"
-                        className="setting-text-input"
-                    />
-                </div>
-            )}
-
-            {/* Modified Time Property (conditional) */}
-            {(settings.metadataDisplayLeft === 'timestamp' || settings.metadataDisplayRight === 'timestamp') && (
-                <div className="setting-item setting-item-text">
-                    <div className="setting-item-info">
-                        <label>Date modified property</label>
-                        <div className="setting-desc">Set property to show as modified timestamp. Will use file modified time if unavailable. Must be a date or datetime property.</div>
-                    </div>
-                    <input
-                        type="text"
-                        value={settings.modifiedProperty}
-                        onChange={(e) => onSettingsChange({ modifiedProperty: e.target.value })}
-                        placeholder="Comma-separated if multiple"
-                        className="setting-text-input"
-                    />
-                </div>
-            )}
-
             {/* List Marker */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">

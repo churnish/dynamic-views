@@ -119,5 +119,29 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 						await this.plugin.persistenceManager.setGlobalSettings({ omitFirstLine: value });
 					})
 			);
+
+		new Setting(containerEl)
+			.setName('Date created property')
+			.setDesc('Set property to show as created timestamp. Will use file created time if unavailable. Must be a date or datetime property.')
+			.addText((text) =>
+				text
+					.setPlaceholder('Comma-separated if multiple')
+					.setValue(settings.createdProperty)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setGlobalSettings({ createdProperty: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Date modified property')
+			.setDesc('Set property to show as modified timestamp. Will use file modified time if unavailable. Must be a date or datetime property.')
+			.addText((text) =>
+				text
+					.setPlaceholder('Comma-separated if multiple')
+					.setValue(settings.modifiedProperty)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setGlobalSettings({ modifiedProperty: value });
+					})
+			);
 	}
 }

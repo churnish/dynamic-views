@@ -106,18 +106,6 @@ export function getBasesViewOptions(): any[] {
             key: 'fallbackToEmbeds',
             default: true
         },
-        {
-            type: 'text',
-            displayName: 'Date created property',
-            key: 'createdProperty',
-            placeholder: 'Comma-separated if multiple'
-        },
-        {
-            type: 'text',
-            displayName: 'Date modified property',
-            key: 'modifiedProperty',
-            placeholder: 'Comma-separated if multiple'
-        },
     ];
 }
 
@@ -137,8 +125,8 @@ export function readBasesSettings(config: any, globalSettings: Settings): Settin
         titleProperty: String(config.get('titleProperty') || DEFAULT_SETTINGS.titleProperty),
         descriptionProperty: String(config.get('descriptionProperty') || DEFAULT_SETTINGS.descriptionProperty),
         imageProperty: String(config.get('imageProperty') || DEFAULT_SETTINGS.imageProperty),
-        createdProperty: String(config.get('createdProperty') || DEFAULT_SETTINGS.createdProperty),
-        modifiedProperty: String(config.get('modifiedProperty') || DEFAULT_SETTINGS.modifiedProperty),
+        createdProperty: globalSettings.createdProperty, // From global settings
+        modifiedProperty: globalSettings.modifiedProperty, // From global settings
         omitFirstLine: globalSettings.omitFirstLine, // From global settings
         showTextPreview: Boolean(config.get('showTextPreview') ?? DEFAULT_SETTINGS.showTextPreview),
         showThumbnails: Boolean(config.get('showThumbnails') ?? DEFAULT_SETTINGS.showThumbnails),

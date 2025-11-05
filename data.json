@@ -32,7 +32,7 @@
       "sortMethod": "mtime-desc",
       "viewMode": "card",
       "searchQuery": "",
-      "resultLimit": "",
+      "resultLimit": "10",
       "widthMode": "normal"
     }
   },
