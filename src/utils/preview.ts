@@ -5,10 +5,9 @@
 
 /**
  * Markdown patterns for syntax stripping
- * Note: Code blocks are handled separately before these patterns
+ * Note: Code blocks and escaped characters are handled separately before these patterns
  */
 const markdownPatterns = [
-    /\\(.)/g,                                    // Escaped characters - strip backslash, keep char
     /`([^`]+)`/g,                                // Inline code
     /\*\*\*((?:(?!\*\*\*).)+)\*\*\*/g,          // Bold + italic asterisks
     /___((?:(?!___).)+)___/g,                    // Bold + italic underscores
@@ -36,6 +35,41 @@ const markdownPatterns = [
     /<([a-z][a-z0-9]*)\b[^>]*>(.*?)<\/\1>/gi,    // HTML tag pairs
     /<[^>]+>/g                                   // Remaining HTML tags
 ];
+
+/**
+ * Placeholder for escaped characters to prevent them from being processed as markdown
+ */
+const ESCAPED_CHAR_PLACEHOLDER = '\x00ESCAPED_';
+const ESCAPED_CHAR_END = '\x00';
+
+/**
+ * Replace escaped characters with placeholders to protect from markdown processing
+ * Returns the text with placeholders and a map to restore them later
+ */
+function protectEscapedChars(text: string): { text: string; map: Map<string, string> } {
+    const map = new Map<string, string>();
+    let counter = 0;
+
+    const result = text.replace(/\\(.)/g, (match, char) => {
+        const placeholder = `${ESCAPED_CHAR_PLACEHOLDER}${counter}${ESCAPED_CHAR_END}`;
+        map.set(placeholder, char);
+        counter++;
+        return placeholder;
+    });
+
+    return { text: result, map };
+}
+
+/**
+ * Restore escaped characters from placeholders
+ */
+function restoreEscapedChars(text: string, map: Map<string, string>): string {
+    let result = text;
+    map.forEach((char, placeholder) => {
+        result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), char);
+    });
+    return result;
+}
 
 /**
  * Remove code blocks (fenced with backticks or tildes) with matching fence counts
@@ -101,8 +135,11 @@ function stripMarkdownSyntax(text: string): string {
     // Second pass: strip > prefix from remaining blockquote lines
     text = text.replace(/^>\s?/gm, '');
 
+    // Protect escaped characters before processing markdown
+    const { text: protectedText, map: escapedCharsMap } = protectEscapedChars(text);
+
     // Remove code blocks before other processing (important for tildes before strikethrough)
-    let result = removeCodeBlocks(text);
+    let result = removeCodeBlocks(protectedText);
 
     // Apply each pattern
     markdownPatterns.forEach((pattern) => {
@@ -125,6 +162,9 @@ function stripMarkdownSyntax(text: string): string {
             return '';
         });
     });
+
+    // Restore escaped characters
+    result = restoreEscapedChars(result, escapedCharsMap);
 
     return result;
 }
@@ -161,7 +201,6 @@ export function sanitizeForPreview(
     // Normalize whitespace and special characters
     const normalized = stripped
         .replace(/\^[a-zA-Z0-9-]+/g, '') // Remove block IDs
-        .replace(/\\/g, '') // Remove any remaining backslashes
         .split(/\s+/)
         .filter(word => word)
         .join(' ')
