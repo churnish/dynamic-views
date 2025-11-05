@@ -1,6 +1,6 @@
 {
   "globalSettings": {
-    "minCardWidth": 400,
+    "minCardWidth": 50,
     "titleProperty": "hello",
     "descriptionProperty": "there",
     "imageProperty": "how",
@@ -15,12 +15,13 @@
     "fallbackToCtime": true,
     "fallbackToMtime": true,
     "metadataDisplayLeft": "timestamp",
-    "metadataDisplayRight": "path",
+    "metadataDisplayRight": "timestamp",
     "metadataDisplayWinner": "right",
     "timestampDisplay": "mtime",
     "listMarker": "bullet",
     "showTimestampIcon": true,
     "minMasonryColumns": 2,
+    "minGridColumns": 2,
     "randomizeAction": "shuffle",
     "thumbnailCacheSize": "balanced",
     "queryHeight": 0,

@@ -1106,32 +1106,23 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
    VIEW-SPECIFIC STYLES: CARD VIEW
    ============================================ */
 
-.dynamic-views .cards-feed {
-    display: flex;
-    flex-direction: column;
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
-.dynamic-views .cards-feed .writing-card:first-child {
-    margin-top: 0;
-}
-
 /* Unified grid layout for all grid views (all width modes) */
 .bases-view[data-view-type="dynamic-views-card"] .cards-feed,
 .dynamic-views .cards-feed {
     display: grid;
     grid-template-columns: repeat(var(--grid-columns, 1), 1fr);
     gap: 8px;
-    align-items: start;
+    align-items: stretch;
+    max-width: 100%;
 }
 
 /* Grid mode: remove margins (gap handles spacing) and set flexbox layout */
-.dc-wide .dynamic-views .cards-feed .writing-card,
-.dc-max .dynamic-views .cards-feed .writing-card {
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed .writing-card,
+.dynamic-views .cards-feed .writing-card {
     margin: 0 !important;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .dynamic-views .writing-card {
