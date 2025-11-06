@@ -1316,10 +1316,8 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 .dynamic-views .meta-left {
-    overflow-x: auto;
     min-width: 0;
     white-space: nowrap;
-    scrollbar-width: none;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -1366,7 +1364,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 /* Right column: always right-aligned */
 .dynamic-views .writing-meta:not(.meta-left-only):not(.meta-right-only) .meta-right {
-    justify-content: flex-end;  /* Align content to right within flex container */
+    justify-content: flex-start;  /* Let inner containers handle alignment */
     padding-left: 6px;
 }
 
@@ -1385,9 +1383,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 .dynamic-views .meta-right {
-    overflow-x: auto;
     min-width: 0;
-    scrollbar-width: none;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -1426,7 +1422,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     display: flex;
     gap: 4px;
     white-space: nowrap;
-    flex-shrink: 1;
+    flex-shrink: 0;
     min-width: 0;
 }
 
@@ -1434,6 +1430,34 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     display: flex;
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+/* Constrain inner containers to grid item width and handle overflow */
+.dynamic-views .meta-left .tags-wrapper,
+.dynamic-views .meta-left .path-wrapper,
+.dynamic-views .meta-left > span {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.dynamic-views .meta-left .tags-wrapper::-webkit-scrollbar,
+.dynamic-views .meta-left .path-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.dynamic-views .meta-right .tags-wrapper,
+.dynamic-views .meta-right .path-wrapper,
+.dynamic-views .meta-right > span {
+    max-width: 100%;
+    margin-left: auto;  /* Push content to the right */
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.dynamic-views .meta-right .tags-wrapper::-webkit-scrollbar,
+.dynamic-views .meta-right .path-wrapper::-webkit-scrollbar {
+    display: none;
 }
 
 .dynamic-views .writing-meta .tag {

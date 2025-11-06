@@ -200,6 +200,21 @@ export class DynamicViewsCardView extends BasesView {
         console.log('// [MetadataLayout] Strategy:', strategy);
         console.log('// [MetadataLayout] Set widths:', leftWidth, rightWidth);
         console.log('// [MetadataLayout] New grid template:', getComputedStyle(metaEl).gridTemplateColumns);
+
+        // Step 6: Verify layout after applying measured widths
+        requestAnimationFrame(() => {
+            console.log('// [MetadataLayout] Grid item actual widths:', metaLeft.clientWidth, metaRight.clientWidth);
+            console.log('// [MetadataLayout] Inner container widths:', leftInner?.clientWidth, rightInner?.clientWidth);
+            console.log('// [MetadataLayout] Overflow detected:',
+                leftInner && leftInner.scrollWidth > leftInner.clientWidth,
+                rightInner && rightInner.scrollWidth > rightInner.clientWidth);
+
+            // Step 7: For right column with overflow, scroll to show rightmost content (e.g., filename)
+            if (rightInner && rightInner.scrollWidth > rightInner.clientWidth) {
+                rightInner.scrollLeft = rightInner.scrollWidth - rightInner.clientWidth;
+                console.log('// [MetadataLayout] Set right column scroll position to:', rightInner.scrollLeft);
+            }
+        });
     }
 
     private renderCard(
