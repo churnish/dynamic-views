@@ -153,7 +153,7 @@ export class DynamicViewsMasonryView extends BasesView {
         this.updateLayoutRef.current = () => {
             if (!this.masonryContainer) return;
 
-            const cards = Array.from(this.masonryContainer.querySelectorAll('.writing-card')) as HTMLElement[];
+            const cards = Array.from(this.masonryContainer.querySelectorAll<HTMLElement>('.writing-card'));
             if (cards.length === 0) return;
 
             const containerWidth = this.masonryContainer.clientWidth;
@@ -195,8 +195,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
             // Set container height
             const maxHeight = Math.max(...columnHeights);
-            this.masonryContainer!.style.height = `${maxHeight}px`;
-            this.masonryContainer!.style.position = 'relative';
+            this.masonryContainer.style.height = `${maxHeight}px`;
+            this.masonryContainer.style.position = 'relative';
         };
 
         // Setup resize observer

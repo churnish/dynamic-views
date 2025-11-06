@@ -3,6 +3,17 @@ import tseslint from "typescript-eslint";
 import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default [
+  // Ignore generated files and configs
+  {
+    ignores: [
+      "main.js",
+      "*.js.map",
+      "*.map",
+      "esbuild.config.mjs",
+      "eslint.config.js"
+    ]
+  },
+
   // Base JavaScript recommended rules
   js.configs.recommended,
 

@@ -445,7 +445,7 @@ export function Toolbar({
             <button
                 className="create-note-button"
                 tabIndex={0}
-                onClick={(e) => onCreateNote(e as any)}
+                onClick={(e) => onCreateNote(e)}
                 aria-label="Create new note"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -472,7 +472,7 @@ export function Toolbar({
                 </button>
                 <button
                     className="open-random-btn"
-                    onClick={(e) => onOpenRandom(e as any)}
+                    onClick={(e) => onOpenRandom(e)}
                     aria-label="Open random file"
                     tabIndex={0}
                 >
@@ -782,7 +782,7 @@ export function Toolbar({
                 <button
                     className="create-note-button-compact"
                     tabIndex={0}
-                    onClick={(e) => onCreateNote(e as any)}
+                    onClick={(e) => onCreateNote(e)}
                     aria-label="Create new note"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

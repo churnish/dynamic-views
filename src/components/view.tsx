@@ -1240,7 +1240,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    handleCopyToClipboard(e as any);
+                    handleCopyToClipboard(e);
                 }
             }}
             tabIndex={0}
