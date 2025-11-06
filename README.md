@@ -24,3 +24,11 @@ Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](ht
 - In case of errors, edit your query at top of code block in Source view.
 - Explore settings to configure things to your liking.
 - Cards can be keyboard navigated with arrows keys.
+
+## ⭐️ Support
+
+- [Report bugs](https://github.com/greetclammy/dynamic-views/issues)
+- [Request features](https://github.com/greetclammy/dynamic-views/issues)
+- [Contribute improvements](https://github.com/greetclammy/dynamic-views/pulls)
+- Discuss on:
+  - [GitHub discussions](https://github.com/greetclammy/dynamic-views/discussions)
