@@ -1274,7 +1274,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .writing-meta {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: fit-content(50%) 1fr;
     align-items: center;
     font-size: 0.8em;
     margin-top: 4px;
