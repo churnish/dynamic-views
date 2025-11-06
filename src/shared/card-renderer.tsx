@@ -35,46 +35,6 @@ export interface CardRendererProps {
 }
 
 /**
- * Helper function to update scroll fade classes
- */
-function updateScrollFade(element: HTMLElement) {
-    const canScrollLeft = element.scrollLeft > 0;
-    const canScrollRight = element.scrollLeft < (element.scrollWidth - element.clientWidth);
-
-    // Toggle classes based on scroll position
-    if (canScrollLeft) {
-        element.classList.add('can-scroll-left');
-    } else {
-        element.classList.remove('can-scroll-left');
-    }
-
-    if (canScrollRight) {
-        element.classList.add('can-scroll-right');
-    } else {
-        element.classList.remove('can-scroll-right');
-    }
-}
-
-/**
- * Ref callback for metadata containers to set up scroll detection
- */
-function setupScrollDetection(element: HTMLElement | null) {
-    if (!element) return;
-
-    // Initial check
-    updateScrollFade(element);
-
-    // Set up scroll listener
-    const scrollHandler = () => updateScrollFade(element);
-    element.addEventListener('scroll', scrollHandler);
-
-    // Store cleanup function on the element
-    (element as any).__scrollCleanup = () => {
-        element.removeEventListener('scroll', scrollHandler);
-    };
-}
-
-/**
  * Helper function to render metadata content based on display type
  */
 function renderMetadataContent(
@@ -388,10 +348,10 @@ function Card({
                         effectiveLeft === 'none' && effectiveRight !== 'none' ? ' meta-right-only' :
                         effectiveLeft !== 'none' && effectiveRight === 'none' ? ' meta-left-only' : ''
                     }`}>
-                        <div className="meta-left" ref={setupScrollDetection}>
+                        <div className="meta-left">
                             {renderMetadataContent(effectiveLeft, card, date, timeIcon, settings, app)}
                         </div>
-                        <div className="meta-right" ref={setupScrollDetection}>
+                        <div className="meta-right">
                             {renderMetadataContent(effectiveRight, card, date, timeIcon, settings, app)}
                         </div>
                     </div>
