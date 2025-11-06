@@ -1302,9 +1302,9 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     flex: 0 0 auto !important;  /* Don't grow/shrink, use content width */
 }
 
-/* Disable ::before spacer during measurement */
-.dynamic-views .writing-meta.meta-measuring .meta-right::before {
-    display: none !important;
+/* Disable direction: rtl during measurement to get accurate widths */
+.dynamic-views .writing-meta.meta-measuring .meta-right {
+    direction: ltr !important;
 }
 
 .dynamic-views .meta-left {
@@ -1355,16 +1355,16 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     justify-content: flex-start;
 }
 
-/* Right column: always right-aligned using margin-left: auto */
+/* Right column: always right-aligned using direction: rtl */
 .dynamic-views .writing-meta:not(.meta-left-only):not(.meta-right-only) .meta-right {
     margin-left: auto;  /* Pushes to the right within grid column */
     padding-left: 6px;
+    direction: rtl;  /* Flip coordinate system for right-alignment with proper scrolling */
 }
 
-/* Right column content: create inner wrapper effect for right-alignment with left-to-right scroll */
-.dynamic-views .meta-right::before {
-    content: '';
-    flex-grow: 1;  /* Pushes content to the right, maintains left-to-right overflow */
+/* Reset direction for children to preserve normal text flow */
+.dynamic-views .meta-right > * {
+    direction: ltr;
 }
 
 .dynamic-views .timestamp-icon {
