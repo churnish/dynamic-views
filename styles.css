@@ -1344,9 +1344,14 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     max-width: none;
 }
 
-/* Right alignment for content within right grid cell */
+/* Left column: always left-aligned */
+.dynamic-views .meta-left {
+    justify-content: flex-start;
+}
+
+/* Right column: always right-aligned via justify-self on grid level */
 .dynamic-views .writing-meta:not(.meta-left-only):not(.meta-right-only) .meta-right {
-    justify-content: flex-end;
+    justify-self: end;  /* Aligns the grid item to the right within its column */
     padding-left: 6px;
 }
 
@@ -1377,10 +1382,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     display: none;
 }
 
-/* Single-side metadata layout */
+/* Single-side metadata layout - always left-aligned */
 .dynamic-views .writing-meta.meta-left-only .meta-left {
     width: 100%;
     flex: 1;
+    justify-content: flex-start;
 }
 
 .dynamic-views .writing-meta.meta-left-only .meta-right {
@@ -1395,6 +1401,8 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     width: 100%;
     flex: 1;
     margin-left: 0;
+    justify-content: flex-start;  /* Left-align when only one side present */
+    justify-self: start;  /* Override justify-self: end when only one side */
 }
 
 .dynamic-views .writing-meta.no-timestamp .meta-right {
