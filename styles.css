@@ -1365,7 +1365,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 /* Right column: always right-aligned */
 .dynamic-views .writing-meta:not(.meta-left-only):not(.meta-right-only) .meta-right {
     justify-content: flex-start;  /* Let inner containers handle alignment */
-    padding-left: 6px;
 }
 
 .dynamic-views .timestamp-icon {
