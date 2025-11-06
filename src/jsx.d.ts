@@ -1,4 +1,5 @@
 // JSX type definitions for datacorejsx context (non-React)
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare namespace JSX {
     interface IntrinsicElements {
         [elemName: string]: any;

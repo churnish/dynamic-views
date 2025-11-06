@@ -12,6 +12,13 @@ import { isExternalUrl, hasValidImageExtension, validateImageUrl } from '../util
 import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
 import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
 
+// Extend App type to include isMobile property
+declare module 'obsidian' {
+    interface App {
+        isMobile: boolean;
+    }
+}
+
 interface DynamicViewsPlugin extends Plugin {
     persistenceManager: PersistenceManager;
 }
@@ -175,7 +182,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
     const [showViewDropdown, setShowViewDropdown] = dc.useState(false);
     const [isPinned, setIsPinned] = dc.useState(false);
     const [queryError, setQueryError] = dc.useState<string | null>(null);
-    const [displayedCount, setDisplayedCount] = dc.useState((app as any).isMobile ? 25 : 50);
+    const [displayedCount, setDisplayedCount] = dc.useState(app.isMobile ? 25 : 50);
     const [focusableCardIndex, setFocusableCardIndex] = dc.useState(0);
     const [isResultsScrolled, setIsResultsScrolled] = dc.useState(false);
     const [isScrolledToBottom, setIsScrolledToBottom] = dc.useState(true);

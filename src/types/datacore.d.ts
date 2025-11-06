@@ -7,6 +7,8 @@
  * Documentation: https://github.com/blacksmithgu/datacore
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * Preact component type
  */
