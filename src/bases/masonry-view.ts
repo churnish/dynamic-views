@@ -359,14 +359,14 @@ export class DynamicViewsMasonryView extends BasesView {
         // Get sort configuration from Bases
         const sortConfigs = this.config.getSort();
 
-        console.log('// [Bases Sort Debug - Masonry View] getSort() returned:', sortConfigs);
-        console.log('// [Bases Sort Debug - Masonry View] Array length:', sortConfigs?.length);
+        // console.log('// [Bases Sort Debug - Masonry View] getSort() returned:', sortConfigs);
+        // console.log('// [Bases Sort Debug - Masonry View] Array length:', sortConfigs?.length);
 
         if (sortConfigs && sortConfigs.length > 0) {
             const firstSort = sortConfigs[0];
-            console.log('// [Bases Sort Debug - Masonry View] First sort config:', firstSort);
-            console.log('// [Bases Sort Debug - Masonry View] Property:', firstSort.property);
-            console.log('// [Bases Sort Debug - Masonry View] Direction:', firstSort.direction);
+            // console.log('// [Bases Sort Debug - Masonry View] First sort config:', firstSort);
+            // console.log('// [Bases Sort Debug - Masonry View] Property:', firstSort.property);
+            // console.log('// [Bases Sort Debug - Masonry View] Direction:', firstSort.direction);
 
             const property = firstSort.property;
             const direction = firstSort.direction.toLowerCase();
@@ -374,17 +374,17 @@ export class DynamicViewsMasonryView extends BasesView {
             // Check for ctime/mtime in property
             if (property.includes('ctime')) {
                 const result = `ctime-${direction}`;
-                console.log('// [Bases Sort Debug - Masonry View] Detected:', result);
+                // console.log('// [Bases Sort Debug - Masonry View] Detected:', result);
                 return result;
             }
             if (property.includes('mtime')) {
                 const result = `mtime-${direction}`;
-                console.log('// [Bases Sort Debug - Masonry View] Detected:', result);
+                // console.log('// [Bases Sort Debug - Masonry View] Detected:', result);
                 return result;
             }
-            console.log('// [Bases Sort Debug - Masonry View] Custom property sort, falling back to mtime-desc');
+            // console.log('// [Bases Sort Debug - Masonry View] Custom property sort, falling back to mtime-desc');
         } else {
-            console.log('// [Bases Sort Debug - Masonry View] No sort config, using default mtime-desc');
+            // console.log('// [Bases Sort Debug - Masonry View] No sort config, using default mtime-desc');
         }
         return 'mtime-desc';
     }
@@ -495,11 +495,11 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Skip if all items already displayed
         if (this.displayedCount >= totalEntries) {
-            console.log('// [InfiniteScroll] All items displayed, skipping setup');
+            // console.log('// [InfiniteScroll] All items displayed, skipping setup');
             return;
         }
 
-        console.log(`// [InfiniteScroll] Setting up scroll listener (${this.displayedCount}/${totalEntries} items)`);
+        // console.log(`// [InfiniteScroll] Setting up scroll listener (${this.displayedCount}/${totalEntries} items)`);
 
         // Shared load check function
         const checkAndLoad = (trigger: string) => {
@@ -521,13 +521,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
             // Check if should load more
             if (distanceFromBottom < threshold && this.displayedCount < totalEntries) {
-                console.log(`// [InfiniteScroll] Loading more items [${trigger}] (distance: ${distanceFromBottom.toFixed(0)}px, threshold: ${threshold.toFixed(0)}px)`);
+                // console.log(`// [InfiniteScroll] Loading more items [${trigger}] (distance: ${distanceFromBottom.toFixed(0)}px, threshold: ${threshold.toFixed(0)}px)`);
                 this.isLoading = true;
 
                 // Dynamic batch size based on masonry columns (estimate 3 columns avg, 10 rows per column)
                 const batchSize = Math.min(30, 70);
                 this.displayedCount = Math.min(this.displayedCount + batchSize, totalEntries);
-                console.log(`// [InfiniteScroll] New displayedCount: ${this.displayedCount}/${totalEntries}`);
+                // console.log(`// [InfiniteScroll] New displayedCount: ${this.displayedCount}/${totalEntries}`);
 
                 // Re-render (this will call setupInfiniteScroll again)
                 this.onDataUpdated().then(() => {
