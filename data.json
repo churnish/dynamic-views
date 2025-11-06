@@ -56,10 +56,10 @@
       "descriptionProperty": "",
       "imageProperty": "",
       "metadataDisplayLeft": "tags",
-      "metadataDisplayRight": "timestamp",
-      "showTextPreview": true,
+      "metadataDisplayRight": "path",
+      "showTextPreview": false,
       "fallbackToContent": true,
-      "showThumbnails": true,
+      "showThumbnails": false,
       "fallbackToEmbeds": true,
       "queryHeight": 0,
       "listMarker": "bullet"
