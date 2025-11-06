@@ -199,31 +199,31 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
     // Persist UI state changes
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { sortMethod });
+            void persistenceManager.setUIState(ctime, { sortMethod });
         }
     }, [sortMethod, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { viewMode });
+            void persistenceManager.setUIState(ctime, { viewMode });
         }
     }, [viewMode, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { widthMode });
+            void persistenceManager.setUIState(ctime, { widthMode });
         }
     }, [widthMode, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { searchQuery });
+            void persistenceManager.setUIState(ctime, { searchQuery });
         }
     }, [searchQuery, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { resultLimit });
+            void persistenceManager.setUIState(ctime, { resultLimit });
         }
     }, [resultLimit, ctime, persistenceManager]);
 
@@ -248,7 +248,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
                     queryHeight: settings.queryHeight,
                     listMarker: settings.listMarker
                 };
-                persistenceManager.setViewSettings(ctime, viewSettings);
+                void persistenceManager.setViewSettings(ctime, viewSettings);
             }
         }, 300);
     }, [settings, ctime, persistenceManager]);
@@ -620,7 +620,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
             setHasImageAvailable(newHasImageAvailable);
         };
 
-        loadSnippets();
+        void loadSnippets();
     }, [sorted, displayedCount, stripMarkdownSyntax, settings.showTextPreview, settings.showThumbnails, settings, app, dc]);
 
     // Masonry layout
@@ -1119,7 +1119,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
         const file = app.vault.getAbstractFileByPath(randomPath);
         if (file) {
             const newLeaf = Keymap.isModEvent(event);
-            app.workspace.getLeaf(newLeaf).openFile(file as TFile);
+            void app.workspace.getLeaf(newLeaf).openFile(file as TFile);
         }
     }, [sorted, app]);
 
@@ -1199,14 +1199,14 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
         const filePath = getAvailablePath(app, folderPath, 'Untitled');
         const file = await app.vault.create(filePath, '');
         const newLeaf = Keymap.isModEvent(event);
-        app.workspace.getLeaf(newLeaf).openFile(file);
+        void app.workspace.getLeaf(newLeaf).openFile(file);
     }, [app, currentFile]);
 
     const handleCardClick = dc.useCallback((path: string, newLeaf: boolean) => {
         const file = app.vault.getAbstractFileByPath(path);
         if (file) {
             if (settings.openFileAction === 'card') {
-                app.workspace.getLeaf(newLeaf).openFile(file as TFile);
+                void app.workspace.getLeaf(newLeaf).openFile(file as TFile);
             } else if (settings.openFileAction === 'title') {
                 // Only open on title click (handled in CardView)
             }
@@ -1223,7 +1223,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps) {
             .map(p => `[[${p.$name}]]`)
             .join('\n');
 
-        navigator.clipboard.writeText(links);
+        void navigator.clipboard.writeText(links);
 
         // TODO: Show notification
         console.log(text);

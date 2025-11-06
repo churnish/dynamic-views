@@ -238,7 +238,7 @@ export class DynamicViewsCardView extends BasesView {
                 !(e.target as HTMLElement).closest('a') &&
                 (e.target as HTMLElement).tagName !== 'IMG') {
                 const newLeaf = e.metaKey || e.ctrlKey;
-                app.workspace.openLinkText(card.path, '', newLeaf);
+                void app.workspace.openLinkText(card.path, '', newLeaf);
             }
         });
 
@@ -553,7 +553,7 @@ export class DynamicViewsCardView extends BasesView {
                 // console.log(`// [InfiniteScroll] New displayedCount: ${this.displayedCount}/${totalEntries}`);
 
                 // Re-render (this will call setupInfiniteScroll again)
-                this.onDataUpdated().then(() => {
+                void this.onDataUpdated().then(() => {
                     this.isLoading = false;
                 });
             }
