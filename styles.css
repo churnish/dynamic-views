@@ -1287,6 +1287,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 /* Dynamic layout using CSS variables for explicit pixel values */
 .dynamic-views .writing-meta.meta-measured {
     grid-template-columns: var(--meta-left-width, auto) var(--meta-right-width, auto);
+    overflow: hidden;  /* Clip content at card boundaries */
 }
 
 /* Temporary state for measuring unconstrained content widths */
@@ -1297,9 +1298,16 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .writing-meta.meta-measuring .meta-left,
 .dynamic-views .writing-meta.meta-measuring .meta-right {
+    display: inline-block !important;  /* Sidestep flex min-content constraint */
     max-width: none !important;
     width: auto !important;
-    flex: 0 0 auto !important;  /* Don't grow/shrink, use content width */
+    flex: none !important;  /* Remove flex sizing */
+}
+
+/* Apply inline-block to nested flex containers for accurate measurement */
+.dynamic-views .writing-meta.meta-measuring .tags-wrapper,
+.dynamic-views .writing-meta.meta-measuring .path-wrapper {
+    display: inline-block !important;
 }
 
 /* Disable direction: rtl during measurement to get accurate widths */
