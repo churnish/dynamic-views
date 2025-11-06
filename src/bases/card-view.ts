@@ -142,11 +142,18 @@ export class DynamicViewsCardView extends BasesView {
     }
 
     private measureMetadataLayout(metaEl: HTMLElement, metaLeft: HTMLElement, metaRight: HTMLElement): void {
+        // First, temporarily remove the measured class to get unconstrained measurements
+        const hadMeasuredClass = metaEl.hasClass('meta-measured');
+        if (hadMeasuredClass) {
+            metaEl.removeClass('meta-measured');
+        }
+
+        // Force a reflow to get accurate unconstrained measurements
+        void metaEl.offsetWidth;
+
         const leftScrollWidth = metaLeft.scrollWidth;
         const rightScrollWidth = metaRight.scrollWidth;
         const containerWidth = metaEl.clientWidth;
-        const leftClientWidth = metaLeft.clientWidth;
-        const rightClientWidth = metaRight.clientWidth;
 
         const leftPercent = (leftScrollWidth / containerWidth) * 100;
         const rightPercent = (rightScrollWidth / containerWidth) * 100;
@@ -155,34 +162,45 @@ export class DynamicViewsCardView extends BasesView {
             containerWidth,
             leftScrollWidth,
             rightScrollWidth,
-            leftClientWidth,
-            rightClientWidth,
             leftPercent: leftPercent.toFixed(1) + '%',
-            rightPercent: rightPercent.toFixed(1) + '%',
-            currentClasses: metaEl.className,
-            gridTemplateColumns: getComputedStyle(metaEl).gridTemplateColumns
+            rightPercent: rightPercent.toFixed(1) + '%'
         });
 
-        // Remove all layout classes
-        metaEl.removeClass('meta-both-fit', 'meta-left-small', 'meta-right-small');
+        // Calculate optimal widths based on conditional logic
+        let leftWidth: string;
+        let rightWidth: string;
+        let strategy: string;
 
-        // Apply conditional logic
-        let appliedClass = 'none (50-50 default)';
         if (leftPercent <= 50 && rightPercent <= 50) {
             // Both content fits: give exact sizes
-            metaEl.addClass('meta-both-fit');
-            appliedClass = 'meta-both-fit';
+            leftWidth = `${leftScrollWidth}px`;
+            rightWidth = `${rightScrollWidth}px`;
+            strategy = 'both-fit';
         } else if (leftPercent <= 50 && rightPercent > 50) {
-            // Left small, right needs more: left gets exact size, right fills
-            metaEl.addClass('meta-left-small');
-            appliedClass = 'meta-left-small';
+            // Left small, right needs more: left gets exact size, right fills remainder
+            leftWidth = `${leftScrollWidth}px`;
+            rightWidth = `${containerWidth - leftScrollWidth}px`;
+            strategy = 'left-small';
         } else if (leftPercent > 50 && rightPercent <= 50) {
-            // Right small, left needs more: right gets exact size, left fills
-            metaEl.addClass('meta-right-small');
-            appliedClass = 'meta-right-small';
+            // Right small, left needs more: right gets exact size, left fills remainder
+            leftWidth = `${containerWidth - rightScrollWidth}px`;
+            rightWidth = `${rightScrollWidth}px`;
+            strategy = 'right-small';
+        } else {
+            // Both >50%: split 50-50
+            const half = containerWidth / 2;
+            leftWidth = `${half}px`;
+            rightWidth = `${half}px`;
+            strategy = '50-50';
         }
 
-        console.log('// [MetadataLayout] Applied class:', appliedClass);
+        // Set CSS variables
+        metaEl.style.setProperty('--meta-left-width', leftWidth);
+        metaEl.style.setProperty('--meta-right-width', rightWidth);
+        metaEl.addClass('meta-measured');
+
+        console.log('// [MetadataLayout] Strategy:', strategy);
+        console.log('// [MetadataLayout] Set widths:', leftWidth, rightWidth);
         console.log('// [MetadataLayout] New grid template:', getComputedStyle(metaEl).gridTemplateColumns);
     }
 

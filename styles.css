@@ -1284,19 +1284,9 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     white-space: nowrap;
 }
 
-/* Dynamic layout: both content fits in container */
-.dynamic-views .writing-meta.meta-both-fit {
-    grid-template-columns: auto auto;
-}
-
-/* Dynamic layout: left small, right gets remainder */
-.dynamic-views .writing-meta.meta-left-small {
-    grid-template-columns: auto 1fr;
-}
-
-/* Dynamic layout: right small, left gets remainder */
-.dynamic-views .writing-meta.meta-right-small {
-    grid-template-columns: 1fr auto;
+/* Dynamic layout using CSS variables for explicit pixel values */
+.dynamic-views .writing-meta.meta-measured {
+    grid-template-columns: var(--meta-left-width, auto) var(--meta-right-width, auto);
 }
 
 .dynamic-views .meta-left {
