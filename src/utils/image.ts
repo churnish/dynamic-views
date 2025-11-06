@@ -1,3 +1,5 @@
+import { App, TFile } from 'obsidian';
+
 /**
  * Check if a URL is an external HTTP/HTTPS URL
  * @param url - The URL to check
@@ -44,7 +46,7 @@ export function validateImageUrl(url: string): Promise<boolean> {
  * @returns Promise resolving to image URL(s) or null
  */
 export async function loadImageForFile(
-    app: any,
+    app: App,
     filePath: string,
     imagePropertyValue: string,
     cacheSize: 'small' | 'balanced' | 'large',
@@ -93,7 +95,7 @@ export async function loadImageForFile(
 
     // Phase B: Extract body embed resource paths (fallback if no property images)
     const file = app.vault.getAbstractFileByPath(filePath);
-    if (!file) return null;
+    if (!file || !(file instanceof TFile)) return null;
 
     const metadata = app.metadataCache.getFileCache(file);
     if (!metadata) return null;
