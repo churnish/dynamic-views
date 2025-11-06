@@ -1311,6 +1311,18 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     flex-shrink: 0;
 }
 
+/* Equal width distribution for tags/path (when no timestamp) */
+.dynamic-views .meta-left:not(:has(> span)),
+.dynamic-views .meta-right:not(:has(> span)) {
+    flex: 1 1 auto;
+    max-width: 50%;
+}
+
+/* Remove auto margin when both sides present for equal distribution */
+.dynamic-views .writing-meta:not(.meta-left-only):not(.meta-right-only) .meta-right:not(:has(> span)) {
+    margin-left: 6px;
+}
+
 .dynamic-views .timestamp-icon {
     flex-shrink: 0;
     opacity: 0.7;
