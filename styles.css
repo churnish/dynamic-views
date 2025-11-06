@@ -1382,11 +1382,10 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     display: none;
 }
 
-/* Single-side metadata layout - always left-aligned */
+/* Single-side metadata layout */
 .dynamic-views .writing-meta.meta-left-only .meta-left {
     width: 100%;
     flex: 1;
-    justify-content: flex-start;
 }
 
 .dynamic-views .writing-meta.meta-left-only .meta-right {
@@ -1401,18 +1400,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     width: 100%;
     flex: 1;
     margin-left: 0;
-    justify-content: flex-start;  /* Left-align when only one side present */
-    justify-self: start;  /* Override justify-self: end when only one side */
+    /* Keep justify-self: end from parent rule - right column always right-aligned */
 }
 
 .dynamic-views .writing-meta.no-timestamp .meta-right {
     margin-left: 0;
-    justify-content: flex-start;
-}
-
-.dynamic-views .writing-meta.no-timestamp .tags-wrapper,
-.dynamic-views .writing-meta.no-timestamp .path-wrapper {
-    justify-content: flex-start;
 }
 
 .dynamic-views .tags-wrapper {
