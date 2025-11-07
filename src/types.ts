@@ -1,5 +1,4 @@
 export interface Settings {
-    minCardWidth: number;
     titleProperty: string;
     descriptionProperty: string;
     imageProperty: string;
@@ -8,7 +7,6 @@ export interface Settings {
     omitFirstLine: boolean;
     showTextPreview: boolean;
     showThumbnails: boolean;
-    thumbnailPosition: 'left' | 'right';
     fallbackToContent: boolean;
     fallbackToEmbeds: boolean;
     fallbackToCtime: boolean;
@@ -18,15 +16,11 @@ export interface Settings {
     metadataDisplayWinner: 'left' | 'right' | null;
     timestampDisplay: 'ctime' | 'mtime' | 'sort-based';
     listMarker: string;
-    showTimestampIcon: boolean;
-    minMasonryColumns: number;
-    minGridColumns: number;
     randomizeAction: string;
     thumbnailCacheSize: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited';
     queryHeight: number;
     openFileAction: 'card' | 'title';
     openRandomInNewPane: boolean;
-    addCardBackground: 'tinted' | 'transparent';
 }
 
 export interface UIState {

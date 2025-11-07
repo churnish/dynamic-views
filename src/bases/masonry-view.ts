@@ -11,6 +11,7 @@ import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from
 import { loadFilePreview } from '../utils/preview';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { formatTimestamp, getTimestampIcon } from '../shared/render-utils';
+import { getMinCardWidth, getMinMasonryColumns, showTimestampIcon } from '../utils/style-settings';
 import type DynamicViewsPlugin from '../../main';
 import type { Settings } from '../types';
 
@@ -189,7 +190,7 @@ export class DynamicViewsMasonryView extends BasesView {
     private setupMasonryLayout(settings: Settings): void {
         if (!this.masonryContainer) return;
 
-        const minColumns = settings.minMasonryColumns;
+        const minColumns = getMinMasonryColumns();
 
         // Setup update function
         this.updateLayoutRef.current = () => {
@@ -199,7 +200,7 @@ export class DynamicViewsMasonryView extends BasesView {
             if (cards.length === 0) return;
 
             const containerWidth = this.masonryContainer.clientWidth;
-            const cardMinWidth = settings.minCardWidth;
+            const cardMinWidth = getMinCardWidth();
             const gap = 8;
 
             // Calculate number of columns
@@ -350,7 +351,6 @@ export class DynamicViewsMasonryView extends BasesView {
         if ((settings.showTextPreview && card.snippet) ||
             (settings.showThumbnails && (card.imageUrl || card.hasImageAvailable))) {
             const snippetContainer = cardEl.createDiv('snippet-container');
-            snippetContainer.addClass(`thumbnail-${settings.thumbnailPosition}`);
 
             // Text preview
             if (settings.showTextPreview && card.snippet) {
@@ -511,7 +511,7 @@ export class DynamicViewsMasonryView extends BasesView {
                 const date = formatTimestamp(timestamp);
                 // Wrap in span for proper measurement
                 const timestampWrapper = container.createSpan();
-                if (settings.showTimestampIcon) {
+                if (showTimestampIcon()) {
                     const sortMethod = this.getSortMethod();
                     const iconName = getTimestampIcon(sortMethod);
                     const iconEl = timestampWrapper.createSpan('timestamp-icon');

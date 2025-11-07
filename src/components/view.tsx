@@ -11,6 +11,7 @@ import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../uti
 import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
 import { loadFilePreview } from '../utils/preview';
 import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
+import { getMinCardWidth, getMinMasonryColumns, getMinGridColumns } from '../utils/style-settings';
 import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
 
 // Extend App type to include isMobile property
@@ -588,11 +589,11 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
             // Skip if container not visible
             if (containerWidth < 100) return;
 
-            const cardMinWidth = settings.minCardWidth;
+            const cardMinWidth = getMinCardWidth();
             const gap = 8;
 
             // Calculate columns
-            const cols = Math.max(settings.minMasonryColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+            const cols = Math.max(getMinMasonryColumns(), Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
             setColumnCount(cols);
 
             // Calculate card width
@@ -704,7 +705,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
             window.removeEventListener('resize', handleResize);
             if (layoutTimeout) clearTimeout(layoutTimeout);
         };
-    }, [sorted, viewMode, settings.minMasonryColumns, settings.minCardWidth, dc]);
+    }, [sorted, viewMode, dc]);
 
     // Apply dynamic grid layout (all width modes)
     dc.useEffect(() => {
@@ -715,8 +716,8 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
 
         const updateGrid = () => {
             const containerWidth = container.clientWidth;
-            const cardMinWidth = settings.minCardWidth;
-            const minColumns = settings.minGridColumns;
+            const cardMinWidth = getMinCardWidth();
+            const minColumns = getMinGridColumns();
             const gap = 8;
             const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
             const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
@@ -733,7 +734,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
         return () => {
             resizeObserver.disconnect();
         };
-    }, [viewMode, settings.minCardWidth, settings.minGridColumns, dc]);
+    }, [viewMode, dc]);
 
     // Sync refs for callback access in infinite scroll
     dc.useEffect(() => {
@@ -1224,7 +1225,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
     return (
         <div
             ref={explorerRef}
-            className={`dynamic-views ${widthClass}${settings.addCardBackground === 'transparent' ? ' no-card-background' : ''}`}
+            className={`dynamic-views ${widthClass}`}
         >
             <div
                 ref={toolbarRef}

@@ -4,12 +4,59 @@ name: Dynamic Views
 id: dynamic-views
 settings:
     -
+        id: layout-heading
+        title: Layout
+        type: heading
+        level: 2
+    -
+        id: dynamic-views-min-card-width
+        title: Minimum card width
+        description: Minimum width of cards in pixels
+        type: variable-number-slider
+        default: 400
+        min: 50
+        max: 800
+        step: 10
+        format: px
+    -
+        id: dynamic-views-min-masonry-columns
+        title: Minimum masonry columns
+        description: Minimum number of columns in masonry view
+        type: variable-select
+        default: 2
+        options:
+            -
+                label: One
+                value: 1
+            -
+                label: Two
+                value: 2
+    -
+        id: dynamic-views-min-grid-columns
+        title: Minimum grid columns
+        description: Minimum number of columns in grid view
+        type: variable-select
+        default: 1
+        options:
+            -
+                label: One
+                value: 1
+            -
+                label: Two
+                value: 2
+    -
+        id: dynamic-views-card-background
+        title: Card background
+        description: Show tinted background on cards
+        type: class-toggle
+        default: true
+    -
         id: thumbnails-heading
         title: Thumbnails
         type: heading
         level: 2
     -
-        id: dv-thumbnail-size
+        id: dynamic-views-thumbnail-size
         title: Thumbnail size
         description: Size of card thumbnails in pixels
         type: variable-select
@@ -25,7 +72,7 @@ settings:
                 label: Expanded
                 value: 94.5px
     -
-        id: dv-thumbnail-border-radius
+        id: dynamic-views-thumbnail-border-radius
         title: Thumbnail border radius
         description: Corner roundness of thumbnails
         type: variable-number-slider
@@ -34,6 +81,31 @@ settings:
         max: 50
         step: 1
         format: px
+    -
+        id: dynamic-views-thumbnail-position
+        title: Thumbnail position
+        description: Position of thumbnail relative to text preview
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-thumbnail-right
+        options:
+            -
+                label: Left
+                value: dynamic-views-thumbnail-left
+            -
+                label: Right
+                value: dynamic-views-thumbnail-right
+    -
+        id: metadata-heading
+        title: Metadata
+        type: heading
+        level: 2
+    -
+        id: dynamic-views-show-timestamp-icon
+        title: Show timestamp icon
+        description: Show icon to differentiate between modified and created timestamps
+        type: class-toggle
+        default: true
 
 */
 
@@ -1190,7 +1262,8 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     transition: border-color 0.2s;
 }
 
-.dynamic-views.no-card-background .writing-card {
+/* Card background toggle (enabled by default via class-toggle) */
+body:not(.dynamic-views-card-background) .dynamic-views .writing-card {
     background-color: transparent;
 }
 
@@ -1246,12 +1319,12 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     margin-bottom: 8px;
 }
 
-/* Thumbnail positioning */
-.dynamic-views .snippet-container.thumbnail-left {
+/* Thumbnail positioning (controlled by body class from Style Settings) */
+body.dynamic-views-thumbnail-left .dynamic-views .snippet-container {
     flex-direction: row-reverse;
 }
 
-.dynamic-views .snippet-container.thumbnail-right {
+body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
     flex-direction: row;
 }
 
@@ -1271,18 +1344,18 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .card-thumbnail {
     flex-shrink: 0;
-    width: var(--dv-thumbnail-size, 80px);
-    height: var(--dv-thumbnail-size, 80px);
+    width: var(--dynamic-views-thumbnail-size, 80px);
+    height: var(--dynamic-views-thumbnail-size, 80px);
     overflow: hidden;
-    border-radius: var(--dv-thumbnail-border-radius, 4px);
+    border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
     pointer-events: none;
 }
 
 .dynamic-views .card-thumbnail-placeholder {
     flex-shrink: 0;
-    width: var(--dv-thumbnail-size, 80px);
-    height: var(--dv-thumbnail-size, 80px);
-    border-radius: var(--dv-thumbnail-border-radius, 4px);
+    width: var(--dynamic-views-thumbnail-size, 80px);
+    height: var(--dynamic-views-thumbnail-size, 80px);
+    border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
     background-color: var(--background-modifier-border);
 }
 
@@ -1414,6 +1487,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     width: 1em;
     height: 1em;
     vertical-align: middle;
+}
+
+/* Hide timestamp icon when class toggle is off */
+body:not(.dynamic-views-show-timestamp-icon) .dynamic-views .timestamp-icon {
+    display: none;
 }
 
 .dynamic-views .timestamp-icon svg {

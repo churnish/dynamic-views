@@ -11,6 +11,7 @@ import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from
 import { loadFilePreview } from '../utils/preview';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { formatTimestamp, getTimestampIcon } from '../shared/render-utils';
+import { getMinCardWidth, getMinGridColumns, showTimestampIcon } from '../utils/style-settings';
 import type DynamicViewsPlugin from '../../main';
 import type { Settings } from '../types';
 
@@ -71,8 +72,8 @@ export class DynamicViewsCardView extends BasesView {
 
         // Calculate grid columns
         const containerWidth = this.containerEl.clientWidth;
-        const cardMinWidth = settings.minCardWidth;
-        const minColumns = settings.minGridColumns;
+        const cardMinWidth = getMinCardWidth();
+        const minColumns = getMinGridColumns();
         const gap = 8;
         const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
         const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
@@ -160,16 +161,9 @@ export class DynamicViewsCardView extends BasesView {
         // Setup ResizeObserver for dynamic grid updates
         if (!this.resizeObserver) {
             this.resizeObserver = new ResizeObserver(() => {
-                // Re-read settings to get current values
-                const settings = readBasesSettings(
-                    this.config,
-                    this.plugin.persistenceManager.getGlobalSettings(),
-                    this.plugin.persistenceManager.getDefaultViewSettings()
-                );
-
                 const containerWidth = this.containerEl.clientWidth;
-                const cardMinWidth = settings.minCardWidth;
-                const minColumns = settings.minGridColumns;
+                const cardMinWidth = getMinCardWidth();
+                const minColumns = getMinGridColumns();
                 const gap = 8;
                 const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
                 const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
@@ -295,7 +289,6 @@ export class DynamicViewsCardView extends BasesView {
         if ((settings.showTextPreview && card.snippet) ||
             (settings.showThumbnails && (card.imageUrl || card.hasImageAvailable))) {
             const snippetContainer = cardEl.createDiv('snippet-container');
-            snippetContainer.addClass(`thumbnail-${settings.thumbnailPosition}`);
 
             // Text preview
             if (settings.showTextPreview && card.snippet) {
@@ -468,7 +461,7 @@ export class DynamicViewsCardView extends BasesView {
                 const date = formatTimestamp(timestamp);
                 // Wrap in span for proper measurement
                 const timestampWrapper = container.createSpan();
-                if (settings.showTimestampIcon) {
+                if (showTimestampIcon()) {
                     const sortMethod = this.getSortMethod();
                     const iconName = getTimestampIcon(sortMethod);
                     const iconEl = timestampWrapper.createSpan('timestamp-icon');

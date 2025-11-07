@@ -125,7 +125,6 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
     const imagePropertyValue = config.get('imageProperty');
 
     return {
-        minCardWidth: globalSettings.minCardWidth, // From global settings
         titleProperty: typeof titlePropertyValue === 'string' ? titlePropertyValue : defaultViewSettings.titleProperty,
         descriptionProperty: typeof descriptionPropertyValue === 'string' ? descriptionPropertyValue : defaultViewSettings.descriptionProperty,
         imageProperty: typeof imagePropertyValue === 'string' ? imagePropertyValue : defaultViewSettings.imageProperty,
@@ -134,7 +133,6 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         omitFirstLine: globalSettings.omitFirstLine, // From global settings
         showTextPreview: Boolean(config.get('showTextPreview') ?? defaultViewSettings.showTextPreview),
         showThumbnails: Boolean(config.get('showThumbnails') ?? defaultViewSettings.showThumbnails),
-        thumbnailPosition: globalSettings.thumbnailPosition, // From global settings
         fallbackToContent: Boolean(config.get('fallbackToContent') ?? defaultViewSettings.fallbackToContent),
         fallbackToEmbeds: Boolean(config.get('fallbackToEmbeds') ?? defaultViewSettings.fallbackToEmbeds),
         fallbackToCtime: Boolean(config.get('fallbackToCtime') ?? DEFAULT_SETTINGS.fallbackToCtime),
@@ -153,9 +151,6 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
             const value = config.get('listMarker');
             return (typeof value === 'string' ? value : DEFAULT_SETTINGS.listMarker) as 'bullet' | 'number';
         })(),
-        showTimestampIcon: globalSettings.showTimestampIcon, // From global settings
-        minMasonryColumns: globalSettings.minMasonryColumns, // From global settings
-        minGridColumns: globalSettings.minGridColumns, // From global settings
         randomizeAction: (() => {
             const value = config.get('randomizeAction');
             return (typeof value === 'string' ? value : DEFAULT_SETTINGS.randomizeAction) as 'shuffle' | 'random';
@@ -163,7 +158,6 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         thumbnailCacheSize: globalSettings.thumbnailCacheSize, // From global settings
         queryHeight: 0, // Not configurable in Bases
         openFileAction: globalSettings.openFileAction, // From global settings
-        addCardBackground: globalSettings.addCardBackground, // From global settings
         openRandomInNewPane: globalSettings.openRandomInNewPane // From global settings
     };
 }

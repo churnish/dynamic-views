@@ -17,19 +17,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 		const settings = this.plugin.persistenceManager.getGlobalSettings();
 
 		new Setting(containerEl)
-			.setName('Minimum card width')
-			.setDesc('Minimum width of cards in pixels. Reload view to apply.')
-			.addSlider((slider) =>
-				slider
-					.setLimits(50, 800, 10)
-					.setValue(settings.minCardWidth)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						await this.plugin.persistenceManager.setGlobalSettings({ minCardWidth: value });
-					})
-			);
-
-		new Setting(containerEl)
 			.setName('Open file action')
 			.setDesc('How files should open when clicked')
 			.addDropdown((dropdown) =>
@@ -66,69 +53,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 					.setValue(settings.thumbnailCacheSize)
 					.onChange(async (value: 'minimal' | 'small' | 'balanced' | 'large' | 'unlimited') => {
 						await this.plugin.persistenceManager.setGlobalSettings({ thumbnailCacheSize: value });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Minimum masonry columns')
-			.setDesc('Minimum number of columns in masonry view')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('1', 'One')
-					.addOption('2', 'Two')
-					.setValue(String(settings.minMasonryColumns))
-					.onChange(async (value: string) => {
-						await this.plugin.persistenceManager.setGlobalSettings({ minMasonryColumns: Number(value) });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Minimum grid columns')
-			.setDesc('Minimum number of columns in grid view')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('1', 'One')
-					.addOption('2', 'Two')
-					.setValue(String(settings.minGridColumns))
-					.onChange(async (value: string) => {
-						await this.plugin.persistenceManager.setGlobalSettings({ minGridColumns: Number(value) });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Card background')
-			.setDesc('Card background appearance')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('tinted', 'Tinted')
-					.addOption('transparent', 'Transparent')
-					.setValue(settings.addCardBackground)
-					.onChange(async (value: 'tinted' | 'transparent') => {
-						await this.plugin.persistenceManager.setGlobalSettings({ addCardBackground: value });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Thumbnail position')
-			.setDesc('Position of thumbnail relative to text preview')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('left', 'Left')
-					.addOption('right', 'Right')
-					.setValue(settings.thumbnailPosition)
-					.onChange(async (value: 'left' | 'right') => {
-						await this.plugin.persistenceManager.setGlobalSettings({ thumbnailPosition: value });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Show timestamp icon')
-			.setDesc('Show icon to differentiate between modified and created timestamps')
-			.addToggle((toggle) =>
-				toggle
-					.setValue(settings.showTimestampIcon)
-					.onChange(async (value) => {
-						await this.plugin.persistenceManager.setGlobalSettings({ showTimestampIcon: value });
 					})
 			);
 

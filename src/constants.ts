@@ -15,7 +15,6 @@ export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-    minCardWidth: 400,
     titleProperty: "",
     descriptionProperty: "",
     imageProperty: "",
@@ -24,7 +23,6 @@ export const DEFAULT_SETTINGS: Settings = {
     omitFirstLine: false,
     showTextPreview: true,
     showThumbnails: true,
-    thumbnailPosition: "right",
     fallbackToContent: true,
     fallbackToEmbeds: true,
     fallbackToCtime: true,
@@ -34,15 +32,11 @@ export const DEFAULT_SETTINGS: Settings = {
     metadataDisplayWinner: null,
     timestampDisplay: "sort-based",
     listMarker: "bullet",
-    showTimestampIcon: true,
-    minMasonryColumns: 2,
-    minGridColumns: 1,
     randomizeAction: "shuffle",
     thumbnailCacheSize: "balanced",
     queryHeight: 0,
     openFileAction: "card",
-    openRandomInNewPane: true,
-    addCardBackground: "tinted"
+    openRandomInNewPane: true
 };
 
 export const DEFAULT_UI_STATE = {
@@ -53,14 +47,14 @@ export const DEFAULT_UI_STATE = {
     widthMode: 'normal'
 };
 
-export const STORAGE_KEY_PREFIX = 'dv';
+export const STORAGE_KEY_PREFIX = 'dynamic-views';
 
 export const CSS_CLASSES = {
     CONTAINER: 'dynamic-views-container',
-    CARD: 'dv-card',
-    MASONRY: 'dv-masonry',
-    LIST: 'dv-list',
-    TOOLBAR: 'dv-toolbar',
-    SETTINGS: 'dv-settings',
-    CONTROL_BAR: 'dv-control-bar'
+    CARD: 'dynamic-views-card',
+    MASONRY: 'dynamic-views-masonry',
+    LIST: 'dynamic-views-list',
+    TOOLBAR: 'dynamic-views-toolbar',
+    SETTINGS: 'dynamic-views-settings',
+    CONTROL_BAR: 'dynamic-views-control-bar'
 };

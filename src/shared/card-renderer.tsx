@@ -6,6 +6,7 @@
 import type { App } from 'obsidian';
 import type { Settings } from '../types';
 import type { RefObject } from '../types/datacore';
+import { showTimestampIcon } from '../utils/style-settings';
 
 // Extend App type to include isMobile property
 declare module 'obsidian' {
@@ -63,7 +64,7 @@ function renderMetadataContent(
     if (displayType === 'timestamp' && date) {
         return (
             <>
-                {settings.showTimestampIcon && (
+                {showTimestampIcon() && (
                     <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         {timeIcon === "calendar" ? (
                             <>

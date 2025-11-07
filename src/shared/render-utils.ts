@@ -56,7 +56,11 @@ export function getEffectiveMetadata(settings: Settings): {
  * Check if timestamp icon should be shown
  */
 export function shouldShowTimestampIcon(settings: Settings): boolean {
-    return settings.showTimestampIcon;
+    // Import at runtime to avoid circular dependencies
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+    const { showTimestampIcon } = require('../utils/style-settings');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+    return showTimestampIcon();
 }
 
 /**
