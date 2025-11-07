@@ -16,13 +16,13 @@ settings:
         default: 80px
         options:
             -
-                label: Small (64×64 px)
+                label: Compact (64×64 px)
                 value: 64px
             -
-                label: Medium (80×80 px)
+                label: Standard (80×80 px)
                 value: 80px
             -
-                label: Big (94.5×94.5 px)
+                label: Expanded (94.5×94.5 px)
                 value: 94.5px
     -
         id: dv-thumbnail-border-radius
