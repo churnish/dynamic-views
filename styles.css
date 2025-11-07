@@ -1475,21 +1475,34 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     position: relative;
 }
 
-/* Gradient classes applied dynamically by JavaScript based on scroll position */
-/* Non-linear fade: stays transparent longer, then steep transition to black */
-.dynamic-views .scroll-gradient-left {
-    mask-image: linear-gradient(to right, transparent 0, transparent 4px, black 12px, black 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0, transparent 4px, black 12px, black 100%);
+/* Gradient overlay using ::after pseudo-element for visible shadow effect */
+.dynamic-views .scroll-gradient-left::after,
+.dynamic-views .scroll-gradient-right::after,
+.dynamic-views .scroll-gradient-both::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1;
 }
 
-.dynamic-views .scroll-gradient-right {
-    mask-image: linear-gradient(to right, black 0, black calc(100% - 12px), transparent calc(100% - 4px), transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 12px), transparent calc(100% - 4px), transparent 100%);
+.dynamic-views .scroll-gradient-left::after {
+    left: 0;
+    width: 20px;
+    background: linear-gradient(to right, var(--background-primary), transparent);
 }
 
-.dynamic-views .scroll-gradient-both {
-    mask-image: linear-gradient(to right, transparent 0, transparent 4px, black 12px, black calc(100% - 12px), transparent calc(100% - 4px), transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0, transparent 4px, black 12px, black calc(100% - 12px), transparent calc(100% - 4px), transparent 100%);
+.dynamic-views .scroll-gradient-right::after {
+    right: 0;
+    width: 20px;
+    background: linear-gradient(to left, var(--background-primary), transparent);
+}
+
+.dynamic-views .scroll-gradient-both::after {
+    left: 0;
+    right: 0;
+    background: linear-gradient(to right, var(--background-primary), transparent 20px, transparent calc(100% - 20px), var(--background-primary));
 }
 
 /* Hide scrollbars */
