@@ -610,9 +610,9 @@ export class DynamicViewsMasonryView extends BasesView {
 
     private setupScrollGradients(container: HTMLElement): void {
         // Find all scrollable elements:
-        // - tags-wrapper and path-wrapper (legacy 2-column system)
+        // - tags-wrapper and path-wrapper from legacy 2-column system ONLY (not inside .meta-4field)
         // - meta-field in side-by-side layout (4-field system)
-        const scrollables = container.querySelectorAll('.tags-wrapper, .path-wrapper, .meta-row-sidebyside .meta-field');
+        const scrollables = container.querySelectorAll('.writing-meta:not(.meta-4field) .tags-wrapper, .writing-meta:not(.meta-4field) .path-wrapper, .meta-row-sidebyside .meta-field');
 
         scrollables.forEach((el) => {
             const element = el as HTMLElement;
