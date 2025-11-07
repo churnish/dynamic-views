@@ -3,6 +3,8 @@
  * Extracts and sanitizes content for card previews
  */
 
+import { App, TFile } from 'obsidian';
+
 /**
  * Markdown patterns for syntax stripping
  * Note: Code blocks and escaped characters are handled separately before these patterns
@@ -211,4 +213,49 @@ export function sanitizeForPreview(
     }
 
     return preview;
+}
+
+/**
+ * Load text preview/snippet for a file
+ * Handles property extraction and content fallback
+ * @param file - TFile to load preview for
+ * @param app - Obsidian App instance
+ * @param propertyValue - Value from description property (if any)
+ * @param settings - Preview settings (fallback behavior, omit first line)
+ * @param fileName - File name for first line comparison
+ * @param titleValue - Title property value for first line comparison
+ * @returns Preview text (empty string if none available)
+ */
+export async function loadFilePreview(
+    file: TFile,
+    app: App,
+    propertyValue: unknown,
+    settings: {
+        fallbackToContent: boolean;
+        omitFirstLine: boolean;
+    },
+    fileName?: string,
+    titleValue?: string
+): Promise<string> {
+    // Check if property value is valid
+    const hasValidDesc = propertyValue != null &&
+        (typeof propertyValue === 'string' || typeof propertyValue === 'number') &&
+        String(propertyValue).trim().length > 0;
+
+    if (hasValidDesc) {
+        return String(propertyValue).trim();
+    }
+
+    // Fallback to content if enabled
+    if (settings.fallbackToContent) {
+        const content = await app.vault.cachedRead(file);
+        return sanitizeForPreview(
+            content,
+            settings.omitFirstLine,
+            fileName,
+            titleValue
+        );
+    }
+
+    return '';
 }

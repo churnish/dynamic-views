@@ -9,6 +9,7 @@ import { Toolbar } from './toolbar';
 import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
 import { isExternalUrl, hasValidImageExtension, validateImageUrl, stripWikilinkSyntax } from '../utils/image';
+import { loadFilePreview } from '../utils/preview';
 import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
 import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
 
@@ -464,12 +465,11 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                 try {
                     const file = app.vault.getAbstractFileByPath(p.$path);
                     if (file instanceof TFile) {
-                        // Check if property values are actually useful (not empty/whitespace)
+                        // Get property value for text preview
                         const descFromProp = getFirstDatacorePropertyValue(p, settings.descriptionProperty);
                         const descAsString = typeof descFromProp === 'string' || typeof descFromProp === 'number'
                             ? String(descFromProp)
                             : null;
-                        const hasValidDesc = descAsString && descAsString.trim().length > 0;
 
                         // Get ALL image values from ALL comma-separated properties
                         const propertyImageValues = getAllDatacoreImagePropertyValues(p, settings.imageProperty);
@@ -480,7 +480,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
 
                         for (const imgValue of propertyImageValues) {
                             // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
-                            let imgStr = stripWikilinkSyntax(imgValue);
+                            const imgStr = stripWikilinkSyntax(imgValue);
 
                             // Check if it's an external URL or internal path
                             if (imgStr.length > 0) {
@@ -498,54 +498,28 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                             }
                         }
 
-                        const hasValidImg = propertyImagePaths.length > 0 || propertyExternalUrls.length > 0;
-
-                        // Only read file if we need snippets or images from content
-                        const needsFileRead =
-                            (settings.showTextPreview && !hasValidDesc && settings.fallbackToContent) ||
-                            (settings.showThumbnails && !hasValidImg && settings.fallbackToEmbeds);
-
-                        const text = needsFileRead ? await app.vault.read(file) : '';
-
                         // Process text preview only if enabled
                         if (settings.showTextPreview) {
-                            // Try to get description from property first
-                            let description: string | null = hasValidDesc ? descAsString : null;
-                            if (!description && text && settings.fallbackToContent) {
-                                // Fallback: extract from file content
-                                const cleaned = text.replace(/^---[\s\S]*?---/, "").trim();
-                                let stripped = stripMarkdownSyntax(cleaned);
+                            // Get title for first line comparison
+                            let titleValue: unknown = p.value(settings.titleProperty);
+                            if (Array.isArray(titleValue)) titleValue = titleValue[0] as unknown;
+                            const titleString = titleValue ? dc.coerce.string(titleValue) : undefined;
 
-                                // Check if first line matches filename or title property
-                                const firstLineEnd = stripped.indexOf('\n');
-                                const firstLine = (firstLineEnd !== -1 ? stripped.substring(0, firstLineEnd) : stripped).trim();
-                                const fileName = p.$name;
-                                let titleValue: unknown = p.value(settings.titleProperty);
-                                if (Array.isArray(titleValue)) titleValue = titleValue[0] as unknown;
+                            // Use shared utility for preview loading
+                            const description = await loadFilePreview(
+                                file,
+                                app,
+                                descAsString,
+                                {
+                                    fallbackToContent: settings.fallbackToContent,
+                                    omitFirstLine: settings.omitFirstLine
+                                },
+                                p.$name,
+                                titleString
+                            );
 
-                                // Omit first line if it matches filename/title or if omitFirstLine enabled
-                                if (firstLine === fileName || (titleValue && firstLine === dc.coerce.string(titleValue)) || settings.omitFirstLine) {
-                                    stripped = firstLineEnd !== -1 ? stripped.substring(firstLineEnd + 1).trim() : '';
-                                }
-
-                                const normalized = stripped
-                                    .replace(/\^[a-zA-Z0-9-]+/g, '') // Remove block IDs
-                                    .replace(/\\/g, '') // Remove backslashes
-                                    .split(/\s+/)
-                                    .filter(word => word)
-                                    .join(' ')
-                                    .trim()
-                                    .replace(/\.{2,}/g, match => match.replace(/\./g, '\u2024'));
-
-                                const wasTruncated = normalized.length > 500;
-                                description = normalized.substring(0, 500);
-
-                                if (wasTruncated) {
-                                    description += '…';
-                                }
-                            }
                             // Always set snippet value, even if empty (to prevent perpetual "Loading...")
-                            newSnippets[p.$path] = description || '';
+                            newSnippets[p.$path] = description;
                         }
 
                         // Process thumbnails only if enabled

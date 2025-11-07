@@ -8,7 +8,7 @@ import { CardData } from '../shared/card-renderer';
 import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getBasesViewOptions } from '../shared/settings-schema';
 import { loadImageForFile, isExternalUrl, validateImageUrl, stripWikilinkSyntax } from '../utils/image';
-import { sanitizeForPreview } from '../utils/preview';
+import { loadFilePreview } from '../utils/preview';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { formatTimestamp, getTimestampIcon } from '../shared/render-utils';
 import type DynamicViewsPlugin from '../../main';
@@ -431,29 +431,23 @@ export class DynamicViewsCardView extends BasesView {
                     const path = entry.file.path;
                     if (!(path in this.snippets)) {
                         try {
-                            // Try to get text preview from property first
-                            const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
-                            const descData = descValue?.data;
-                            const hasValidDesc = descData != null &&
-                                (typeof descData === 'string' || typeof descData === 'number') &&
-                                String(descData).trim().length > 0;
+                            const file = this.app.vault.getAbstractFileByPath(path);
+                            if (file instanceof TFile && file.extension === 'md') {
+                                // Get property value
+                                const descValue = getFirstBasesPropertyValue(entry, settings.descriptionProperty) as { data?: unknown } | null;
+                                const descData = descValue?.data;
 
-                            if (hasValidDesc) {
-                                // Use property value
-                                this.snippets[path] = String(descData).trim();
-                            } else if (settings.fallbackToContent) {
-                                // Fallback to note content
-                                const file = this.app.vault.getAbstractFileByPath(path);
-                                if (file instanceof TFile && file.extension === 'md') {
-                                    const content = await this.app.vault.cachedRead(file);
-                                    const snippet = sanitizeForPreview(
-                                        content,
-                                        settings.omitFirstLine
-                                    );
-                                    this.snippets[path] = snippet;
-                                }
+                                // Use shared utility for preview loading
+                                this.snippets[path] = await loadFilePreview(
+                                    file,
+                                    this.app,
+                                    descData,
+                                    {
+                                        fallbackToContent: settings.fallbackToContent,
+                                        omitFirstLine: settings.omitFirstLine
+                                    }
+                                );
                             } else {
-                                // No property and fallback disabled
                                 this.snippets[path] = '';
                             }
                         } catch (error) {
