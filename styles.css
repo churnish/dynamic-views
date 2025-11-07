@@ -67,8 +67,8 @@ settings:
         description: Custom color for card backgrounds (only used when Card background is set to Custom color)
         type: variable-themed-color
         format: hex
-        default-light: '#'
-        default-dark: '#'
+        default-light: '#FFFFFF'
+        default-dark: '#000000'
     -
         id: thumbnails-heading
         title: Thumbnails
