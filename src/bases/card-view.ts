@@ -7,7 +7,7 @@ import { BasesView, BasesEntry, TFile, setIcon, QueryController } from 'obsidian
 import { CardData } from '../shared/card-renderer';
 import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getBasesViewOptions } from '../shared/settings-schema';
-import { processImagePaths, resolveInternalImagePaths } from '../utils/image';
+import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
 import { loadFilePreview } from '../utils/preview';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { formatTimestamp, getTimestampIcon } from '../shared/render-utils';
@@ -473,10 +473,18 @@ export class DynamicViewsCardView extends BasesView {
                             const { internalPaths, externalUrls } = await processImagePaths(imageValues);
 
                             // Convert internal paths to resource URLs using shared utility
-                            const validImages: string[] = [
+                            let validImages: string[] = [
                                 ...resolveInternalImagePaths(internalPaths, path, this.app),
                                 ...externalUrls  // External URLs already validated by processImagePaths
                             ];
+
+                            // If no property images and fallback enabled, extract embed images
+                            if (validImages.length === 0 && settings.fallbackToEmbeds) {
+                                const file = this.app.vault.getAbstractFileByPath(path);
+                                if (file instanceof TFile) {
+                                    validImages = await extractEmbedImages(file, this.app);
+                                }
+                            }
 
                             if (validImages.length > 0) {
                                 // Store as array if multiple, string if single

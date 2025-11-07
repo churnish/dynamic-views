@@ -111,6 +111,53 @@ export function resolveInternalImagePaths(
 }
 
 /**
+ * Extract image URLs from file embeds
+ * @param file - TFile to extract embeds from
+ * @param app - Obsidian App instance
+ * @returns Array of validated image resource URLs from embeds
+ */
+export async function extractEmbedImages(
+    file: TFile,
+    app: App
+): Promise<string[]> {
+    const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
+    const metadata = app.metadataCache.getFileCache(file);
+
+    if (!metadata?.embeds) return [];
+
+    const bodyResourcePaths: string[] = [];
+    const bodyExternalUrls: string[] = [];
+
+    // Process embeds - separate external URLs from internal paths
+    for (const embed of metadata.embeds) {
+        const embedLink = embed.link;
+        if (isExternalUrl(embedLink)) {
+            // External URL embed
+            if (hasValidImageExtension(embedLink) || !embedLink.includes('.')) {
+                bodyExternalUrls.push(embedLink);
+            }
+        } else {
+            // Internal path embed
+            const targetFile = app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
+            if (targetFile && validImageExtensions.includes(targetFile.extension)) {
+                const resourcePath = app.vault.getResourcePath(targetFile);
+                bodyResourcePaths.push(resourcePath);
+            }
+        }
+    }
+
+    // Validate external URLs
+    for (const externalUrl of bodyExternalUrls) {
+        const isValid = await validateImageUrl(externalUrl);
+        if (isValid) {
+            bodyResourcePaths.push(externalUrl);
+        }
+    }
+
+    return bodyResourcePaths;
+}
+
+/**
  * Load image for a file from property or embeds
  * @param app - Obsidian App instance
  * @param filePath - Path of the file to load image for

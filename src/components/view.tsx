@@ -8,7 +8,7 @@ import { ListView } from './list-view';
 import { Toolbar } from './toolbar';
 import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
-import { isExternalUrl, hasValidImageExtension, validateImageUrl, processImagePaths, resolveInternalImagePaths } from '../utils/image';
+import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
 import { loadFilePreview } from '../utils/preview';
 import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
 import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
@@ -73,9 +73,6 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
         /<([a-z][a-z0-9]*)\b[^>]*>(.*?)<\/\1>/gi,    // HTML tag pairs
         /<[^>]+>/g                                   // Remaining HTML tags
     ], []);
-
-    // Valid image extensions for thumbnail extraction
-    const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 
     const stripMarkdownSyntax = dc.useCallback((text: string) => {
         if (!text || text.trim().length === 0) return '';
@@ -510,40 +507,8 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                                 ...propertyExternalUrls  // External URLs already validated by processImagePaths
                             ];
 
-                            // Phase B: Extract body embed resource paths
-                            const metadata = app.metadataCache.getFileCache(file);
-                            if (!metadata) continue;
-
-                            const bodyResourcePaths: string[] = [];
-                            const bodyExternalUrls: string[] = [];
-
-                            // Process embeds - separate external URLs from internal paths
-                            if (metadata.embeds) {
-                                for (const embed of metadata.embeds) {
-                                    const embedLink = embed.link;
-                                    if (isExternalUrl(embedLink)) {
-                                        // External URL embed
-                                        if (hasValidImageExtension(embedLink) || !embedLink.includes('.')) {
-                                            bodyExternalUrls.push(embedLink);
-                                        }
-                                    } else {
-                                        // Internal path embed
-                                        const targetFile = app.metadataCache.getFirstLinkpathDest(embedLink, p.$path);
-                                        if (targetFile && validImageExtensions.includes(targetFile.extension)) {
-                                            const resourcePath = app.vault.getResourcePath(targetFile);
-                                            bodyResourcePaths.push(resourcePath);
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Validate external URLs from body
-                            for (const externalUrl of bodyExternalUrls) {
-                                const isValid = await validateImageUrl(externalUrl);
-                                if (isValid) {
-                                    bodyResourcePaths.push(externalUrl);
-                                }
-                            }
+                            // Phase B: Extract body embed resource paths using shared utility
+                            const bodyResourcePaths = await extractEmbedImages(file, app);
 
                             // Phase C: Merge with fallback: property images first, then body embeds (if enabled)
                             const allResourcePaths = propertyResourcePaths.length > 0
