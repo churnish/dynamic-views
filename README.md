@@ -5,9 +5,6 @@ Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](ht
 > [!NOTE]  
 > Looking for a primary plugin maintainer. Get equal seat at the helm, author credit, the sole funding link, and eternal user gratitude.
 
-> [!CAUTION]  
-> Currently in early stages of development.
-
 #### Masonry
 
 <img width="1156" height="935" alt="Screenshot 2025-10-29 at 06 45 53" src="https://github.com/user-attachments/assets/74aa4f21-50da-4c43-8464-ca9e4fbecc3b" />
@@ -15,6 +12,11 @@ Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](ht
 #### Grid
 
 ## ✅ Install
+
+> [!IMPORTANT]  
+> The plugin is in active development — things can break, or change drastically between releases.
+>
+> **Ensure your files are regularly [backed up](https://help.obsidian.md/backup).**
 
 Untill _Dynamic Views_ is [made availiable](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, follow the steps below to install it.
 
