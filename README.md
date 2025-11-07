@@ -3,7 +3,7 @@
 Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
 
 > [!NOTE]  
-> Seeking maintainers with coding experience. Get author credit, the sole funding link, and eternal user gratitude.
+> Looking for a primary plugin maintainer. Get equal seat at the helm, author credit, the sole funding link, and eternal user gratitude.
 
 > [!CAUTION]  
 > Currently in early stages of development.
