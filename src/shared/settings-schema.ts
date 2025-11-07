@@ -32,22 +32,40 @@ export function setPluginInstance(plugin: PluginInstance): void {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bases API requires untyped options array
 export function getBasesViewOptions(): any[] {
-    // Use static defaults from DEFAULT_VIEW_SETTINGS
-    // The template values will be used as fallbacks in readBasesSettings() instead
-    // TODO Phase 2: Add property suggester for these fields
+    // Get all vault properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const app = (window as any).app;
+    let allProperties: string[] = [];
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (app?.metadataCache?.getAllPropertyInfos) {
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            const propertyInfos = app.metadataCache.getAllPropertyInfos();
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            allProperties = Object.keys(propertyInfos || {});
+        } catch (e) {
+            console.error('Failed to get vault properties:', e);
+        }
+    }
+
+    // Build property options: special properties first, then vault properties
+    const specialProperties = ['file path', 'file tags', 'created time', 'modified time'];
+    const propertyOptions = ['', ...specialProperties, ...allProperties.filter(p => !specialProperties.includes(p)).sort()];
+
     return [
         {
-            type: 'text',
+            type: 'dropdown',
             displayName: 'Metadata display (1)',
             key: 'metadataDisplay1',
-            placeholder: 'e.g., file tags, status',
+            options: propertyOptions,
             default: DEFAULT_VIEW_SETTINGS.metadataDisplay1
         },
         {
-            type: 'text',
+            type: 'dropdown',
             displayName: 'Metadata display (2)',
             key: 'metadataDisplay2',
-            placeholder: 'Leave empty for none',
+            options: propertyOptions,
             default: DEFAULT_VIEW_SETTINGS.metadataDisplay2
         },
         {
@@ -57,17 +75,17 @@ export function getBasesViewOptions(): any[] {
             default: DEFAULT_VIEW_SETTINGS.metadataLayout12SideBySide
         },
         {
-            type: 'text',
+            type: 'dropdown',
             displayName: 'Metadata display (3)',
             key: 'metadataDisplay3',
-            placeholder: 'Leave empty for none',
+            options: propertyOptions,
             default: DEFAULT_VIEW_SETTINGS.metadataDisplay3
         },
         {
-            type: 'text',
+            type: 'dropdown',
             displayName: 'Metadata display (4)',
             key: 'metadataDisplay4',
-            placeholder: 'Leave empty for none',
+            options: propertyOptions,
             default: DEFAULT_VIEW_SETTINGS.metadataDisplay4
         },
         {
