@@ -747,8 +747,12 @@ export class DynamicViewsMasonryView extends BasesView {
 
     setSettings(): void {
         // Style Settings compatibility - trigger layout recalculation
-        if (this.updateLayoutRef.current) {
-            this.updateLayoutRef.current();
+        try {
+            if (this.updateLayoutRef && this.updateLayoutRef.current) {
+                this.updateLayoutRef.current();
+            }
+        } catch (error) {
+            console.warn('Dynamic Views: Failed to update layout on settings change', error);
         }
     }
 
