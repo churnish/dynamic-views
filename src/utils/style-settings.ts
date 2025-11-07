@@ -68,3 +68,12 @@ export function getThumbnailPosition(): 'left' | 'right' {
 export function showTimestampIcon(): boolean {
 	return hasBodyClass('dynamic-views-show-timestamp-icon');
 }
+
+/**
+ * Get tag style from body class
+ */
+export function getTagStyle(): 'plain' | 'theme' | 'minimal' {
+	if (hasBodyClass('dynamic-views-tag-style-minimal')) return 'minimal';
+	if (hasBodyClass('dynamic-views-tag-style-theme')) return 'theme';
+	return 'plain';
+}

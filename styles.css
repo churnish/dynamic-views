@@ -125,6 +125,23 @@ settings:
         description: Show icon to differentiate between modified and created timestamps
         type: class-toggle
         default: true
+    -
+        id: dynamic-views-tag-style
+        title: Tag style
+        description: Visual appearance of tags in card metadata
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-style-plain
+        options:
+            -
+                label: Plain
+                value: dynamic-views-tag-style-plain
+            -
+                label: Match theme
+                value: dynamic-views-tag-style-theme
+            -
+                label: Minimal
+                value: dynamic-views-tag-style-minimal
 
 */
 
@@ -1672,6 +1689,40 @@ body:not(.dynamic-views-show-timestamp-icon) .dynamic-views .timestamp-icon {
 .dynamic-views .writing-meta .tag:hover {
 	color: var(--text-muted);
     border-color: var(--background-modifier-border-hover);
+}
+
+/* Tag style: Match theme */
+body.dynamic-views-tag-style-theme .dynamic-views .writing-meta .tag,
+body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag {
+    background-color: var(--tag-background);
+    color: var(--tag-color);
+    border: none;
+    padding: 1px 8px;
+    border-radius: var(--tag-radius);
+}
+
+body.dynamic-views-tag-style-theme .dynamic-views .writing-meta .tag:hover,
+body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag:hover {
+    background-color: var(--tag-background-hover);
+    color: var(--tag-color);
+    opacity: 1;
+}
+
+/* Tag style: Minimal */
+body.dynamic-views-tag-style-minimal .dynamic-views .writing-meta .tag,
+body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag {
+    background-color: transparent;
+    color: inherit;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+}
+
+body.dynamic-views-tag-style-minimal .dynamic-views .writing-meta .tag:hover,
+body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
+    color: inherit;
+    opacity: 0.7;
 }
 
 .dynamic-views .file-path-segment {

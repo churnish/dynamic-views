@@ -6,7 +6,7 @@
 import type { App } from 'obsidian';
 import type { Settings } from '../types';
 import type { RefObject } from '../types/datacore';
-import { showTimestampIcon } from '../utils/style-settings';
+import { getTagStyle, showTimestampIcon } from '../utils/style-settings';
 
 // Extend App type to include isMobile property
 declare module 'obsidian' {
@@ -85,6 +85,9 @@ function renderMetadataContent(
             </>
         );
     } else if (displayType === 'tags' && card.tags.length > 0) {
+        const tagStyle = getTagStyle();
+        const showHashPrefix = tagStyle === 'minimal';
+
         return (
             <div className="tags-wrapper">
                 {card.tags.map((tag): JSX.Element => (
@@ -100,7 +103,7 @@ function renderMetadataContent(
                             }
                         }}
                     >
-                        {tag.replace(/^#/, '')}
+                        {showHashPrefix ? tag : tag.replace(/^#/, '')}
                     </a>
                 ))}
             </div>
