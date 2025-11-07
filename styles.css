@@ -1412,6 +1412,13 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     justify-content: flex-end;  /* Right-align content when only right column */
 }
 
+/* Remove margin-left: auto from inner containers when right-only */
+.dynamic-views .writing-meta.meta-right-only .meta-right .tags-wrapper,
+.dynamic-views .writing-meta.meta-right-only .meta-right .path-wrapper,
+.dynamic-views .writing-meta.meta-right-only .meta-right > span {
+    margin-left: 0;
+}
+
 .dynamic-views .writing-meta.no-timestamp .meta-right {
     margin-left: 0;
 }
