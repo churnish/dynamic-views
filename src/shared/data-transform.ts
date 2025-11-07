@@ -13,7 +13,7 @@ import {
     getFirstDatacoreDatePropertyValue,
     getFirstBasesDatePropertyValue
 } from '../utils/property';
-import { isBasesDateValue } from './render-utils';
+import { isBasesDateValue, formatTimestamp } from './render-utils';
 
 /**
  * Resolve timestamp for Datacore result based on settings and sort method
@@ -256,4 +256,114 @@ export function transformBasesEntries(
         images[entry.file.path],
         hasImageAvailable[entry.file.path]
     ));
+}
+
+/**
+ * Resolve metadata property value for Bases entry
+ * Returns null for missing/empty properties
+ */
+export function resolveBasesMetadataProperty(
+    propertyName: string,
+    entry: BasesEntry,
+    cardData: CardData,
+    settings: Settings
+): string | null {
+    if (!propertyName || propertyName === '') return null;
+
+    // Handle special properties
+    if (propertyName === 'file path') {
+        // Extract folder path, trim after last /, return null if root
+        const path = cardData.folderPath;
+        if (!path || path === '') return null;
+        return path;
+    }
+
+    if (propertyName === 'file tags' || propertyName === 'tags') {
+        // Tags are already resolved in cardData.tags
+        return cardData.tags.length > 0 ? 'tags' : null; // Special marker
+    }
+
+    // Check if property is a timestamp property
+    const isCreatedTimestamp = propertyName === 'created time' ||
+        settings.createdProperty.split(',').map(p => p.trim()).includes(propertyName);
+    const isModifiedTimestamp = propertyName === 'modified time' ||
+        settings.modifiedProperty.split(',').map(p => p.trim()).includes(propertyName);
+
+    if (isCreatedTimestamp || isModifiedTimestamp) {
+        // Use displayTimestamp if available, otherwise fall back to file timestamps
+        const timestamp = cardData.displayTimestamp ||
+            (isCreatedTimestamp ? cardData.ctime : cardData.mtime);
+
+        if (!timestamp) return null;
+        return formatTimestamp(timestamp);
+    }
+
+    // Generic property: read from frontmatter
+    const value = getFirstBasesPropertyValue(entry, propertyName) as { data?: unknown } | null;
+    const data = value?.data;
+
+    // Return null for missing or empty values
+    if (data == null || data === '' || (Array.isArray(data) && data.length === 0)) {
+        return null;
+    }
+
+    // Convert to string
+    if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+        return String(data);
+    }
+
+    // For complex types, return null (can't display)
+    return null;
+}
+
+/**
+ * Resolve metadata property value for Datacore file
+ * Returns null for missing/empty properties
+ */
+export function resolveDatacoreMetadataProperty(
+    propertyName: string,
+    result: DatacoreFile,
+    cardData: CardData,
+    settings: Settings,
+    dc: DatacoreAPI
+): string | null {
+    if (!propertyName || propertyName === '') return null;
+
+    // Handle special properties
+    if (propertyName === 'file path') {
+        // Extract folder path, trim after last /, return null if root
+        const path = cardData.folderPath;
+        if (!path || path === '') return null;
+        return path;
+    }
+
+    if (propertyName === 'file tags' || propertyName === 'tags') {
+        // Tags are already resolved in cardData.tags
+        return cardData.tags.length > 0 ? 'tags' : null; // Special marker
+    }
+
+    // Check if property is a timestamp property
+    const isCreatedTimestamp = propertyName === 'created time' ||
+        settings.createdProperty.split(',').map(p => p.trim()).includes(propertyName);
+    const isModifiedTimestamp = propertyName === 'modified time' ||
+        settings.modifiedProperty.split(',').map(p => p.trim()).includes(propertyName);
+
+    if (isCreatedTimestamp || isModifiedTimestamp) {
+        // Use displayTimestamp if available, otherwise fall back to file timestamps
+        const timestamp = cardData.displayTimestamp ||
+            (isCreatedTimestamp ? cardData.ctime : cardData.mtime);
+
+        if (!timestamp) return null;
+        return formatTimestamp(timestamp);
+    }
+
+    // Generic property: read from frontmatter
+    let rawValue = getFirstDatacorePropertyValue(result, propertyName);
+    if (Array.isArray(rawValue)) rawValue = rawValue[0];
+    const value = dc.coerce.string(rawValue || '');
+
+    // Return null for empty values
+    if (!value || value === '') return null;
+
+    return value;
 }
