@@ -24,6 +24,8 @@ export interface Settings {
     queryHeight: number;
     openFileAction: 'card' | 'title';
     openRandomInNewPane: boolean;
+    showShuffleInRibbon: boolean;
+    showRandomInRibbon: boolean;
 }
 
 export interface UIState {

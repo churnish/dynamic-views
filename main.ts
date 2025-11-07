@@ -90,15 +90,21 @@ export default class DynamicViewsPlugin extends Plugin {
 			}
 		});
 
-		// Add ribbon icons for Random and Shuffle
-		this.addRibbonIcon('dices', 'Open random file from Bases view', async () => {
-			const openInNewPane = this.persistenceManager.getGlobalSettings().openRandomInNewPane;
-			await openRandomFile(this.app, openInNewPane);
-		});
+		// Add ribbon icons for Random and Shuffle (if enabled in settings)
+		const settings = this.persistenceManager.getGlobalSettings();
 
-		this.addRibbonIcon('shuffle', 'Shuffle Bases view', () => {
-			toggleShuffleActiveView(this.app);
-		});
+		if (settings.showRandomInRibbon) {
+			this.addRibbonIcon('dices', 'Open random file from Bases view', async () => {
+				const openInNewPane = this.persistenceManager.getGlobalSettings().openRandomInNewPane;
+				await openRandomFile(this.app, openInNewPane);
+			});
+		}
+
+		if (settings.showShuffleInRibbon) {
+			this.addRibbonIcon('shuffle', 'Shuffle Bases view', () => {
+				toggleShuffleActiveView(this.app);
+			});
+		}
 
 		// Add commands for Random and Shuffle
 		this.addCommand({

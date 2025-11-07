@@ -2,6 +2,16 @@ import { App, PluginSettingTab, Setting, AbstractInputSuggest } from 'obsidian';
 import type DynamicViewsPlugin from '../main';
 import { getAllVaultProperties } from './utils/property';
 
+// Extend Obsidian API types
+declare module 'obsidian' {
+    interface App {
+        plugins: {
+            disablePlugin(id: string): Promise<void>;
+            enablePlugin(id: string): Promise<void>;
+        };
+    }
+}
+
 /**
  * Property suggester for searchable property dropdowns
  */
@@ -69,6 +79,34 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 					.setValue(settings.openRandomInNewPane)
 					.onChange(async (value) => {
 						await this.plugin.persistenceManager.setGlobalSettings({ openRandomInNewPane: value });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Show "Shuffle" in ribbon')
+			.setDesc('Display the shuffle button in the left sidebar ribbon')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.showShuffleInRibbon)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setGlobalSettings({ showShuffleInRibbon: value });
+						// Reload plugin to apply ribbon changes
+						await this.app.plugins.disablePlugin('dynamic-views');
+						await this.app.plugins.enablePlugin('dynamic-views');
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Show "Open random note" in ribbon')
+			.setDesc('Display the random note button in the left sidebar ribbon')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.showRandomInRibbon)
+					.onChange(async (value) => {
+						await this.plugin.persistenceManager.setGlobalSettings({ showRandomInRibbon: value });
+						// Reload plugin to apply ribbon changes
+						await this.app.plugins.disablePlugin('dynamic-views');
+						await this.app.plugins.enablePlugin('dynamic-views');
 					})
 			);
 
@@ -167,7 +205,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 		const allProperties = getAllVaultProperties(this.app);
 
 		new Setting(containerEl)
-			.setName('Metadata display (1)')
+			.setName('Metadata item one')
 			.setDesc('Property to show in first metadata position')
 			.addSearch((search) => {
 				search
@@ -180,7 +218,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Metadata display (2)')
+			.setName('Metadata item two')
 			.setDesc('Property to show in second metadata position')
 			.addSearch((search) => {
 				search
@@ -193,7 +231,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Show (1) and (2) side-by-side')
+			.setName('Show items one and two side-by-side')
 			.setDesc('Display first two metadata items horizontally')
 			.addToggle((toggle) =>
 				toggle
@@ -204,7 +242,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Metadata display (3)')
+			.setName('Metadata item three')
 			.setDesc('Property to show in third metadata position')
 			.addSearch((search) => {
 				search
@@ -217,7 +255,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Metadata display (4)')
+			.setName('Metadata item four')
 			.setDesc('Property to show in fourth metadata position')
 			.addSearch((search) => {
 				search
@@ -230,7 +268,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Show (3) and (4) side-by-side')
+			.setName('Show items three and four side-by-side')
 			.setDesc('Display third and fourth metadata items horizontally')
 			.addToggle((toggle) =>
 				toggle

@@ -25,6 +25,8 @@
     "queryHeight": 0,
     "openFileAction": "card",
     "openRandomInNewPane": false,
+    "showShuffleInRibbon": false,
+    "showRandomInRibbon": false,
     "metadataDisplayLeft": "timestamp",
     "metadataDisplayRight": "path",
     "metadataDisplayWinner": null,

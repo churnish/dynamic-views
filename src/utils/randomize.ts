@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any */
-import { App, Notice, View, BasesEntry } from 'obsidian';
+import { App, View, BasesEntry } from 'obsidian';
 import type { DynamicViewsCardView } from '../bases/card-view';
 import type { DynamicViewsMasonryView } from '../bases/masonry-view';
 
@@ -93,14 +93,12 @@ export async function openRandomFile(app: App, openInNewPane: boolean): Promise<
 	const basesView = getActiveBasesView(app);
 
 	if (!basesView) {
-		new Notice('No Bases view is currently active');
 		return;
 	}
 
 	const entries = basesView.data?.data;
 
 	if (!entries || entries.length === 0) {
-		new Notice('No files in current view');
 		return;
 	}
 
@@ -109,14 +107,12 @@ export async function openRandomFile(app: App, openInNewPane: boolean): Promise<
 	const randomEntry = entries[randomIndex];
 
 	if (!randomEntry.file) {
-		new Notice('Selected entry has no file');
 		return;
 	}
 
 	// Open the file
 	const filePath = randomEntry.file.path;
 	await app.workspace.openLinkText(filePath, '', openInNewPane);
-	new Notice(`Opened: ${randomEntry.file.basename || randomEntry.file.name || filePath}`);
 }
 
 /**
@@ -126,7 +122,6 @@ export function toggleShuffleActiveView(app: App): void {
 	const basesView = getActiveBasesView(app);
 
 	if (!basesView) {
-		new Notice('No Bases view is currently active');
 		return;
 	}
 
@@ -163,9 +158,6 @@ export function toggleShuffleActiveView(app: App): void {
 			console.log('// [Shuffle Debug] Triggering onDataUpdated');
 			dynamicView.onDataUpdated();
 		}
-
-		const newState = dynamicView.isShuffled;
-		new Notice(newState ? 'View shuffled' : 'Shuffle disabled');
 	} else {
 		// For other Bases views, shuffle the data array once
 		const entries = basesView.data?.data;
@@ -176,10 +168,6 @@ export function toggleShuffleActiveView(app: App): void {
 			if (basesView.onDataUpdated) {
 				basesView.onDataUpdated();
 			}
-
-			new Notice(`Shuffled ${entries.length} items (one-time shuffle)`);
-		} else {
-			new Notice('No items to shuffle');
 		}
 	}
 }

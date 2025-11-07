@@ -43,7 +43,9 @@ export const DEFAULT_SETTINGS: Settings = {
     thumbnailCacheSize: "balanced",
     queryHeight: 0,
     openFileAction: "card",
-    openRandomInNewPane: true
+    openRandomInNewPane: true,
+    showShuffleInRibbon: true,
+    showRandomInRibbon: true
 };
 
 export const DEFAULT_UI_STATE = {

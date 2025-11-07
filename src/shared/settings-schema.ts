@@ -35,41 +35,41 @@ export function getBasesViewOptions(): any[] {
     return [
         {
             type: 'property',
-            displayName: 'Metadata display (1)',
+            displayName: 'Metadata item one',
             key: 'metadataDisplay1',
             placeholder: 'Select property',
-            default: DEFAULT_VIEW_SETTINGS.metadataDisplay1
+            default: ''
         },
         {
             type: 'property',
-            displayName: 'Metadata display (2)',
+            displayName: 'Metadata item two',
             key: 'metadataDisplay2',
             placeholder: 'Select property',
-            default: DEFAULT_VIEW_SETTINGS.metadataDisplay2
+            default: ''
         },
         {
             type: 'toggle',
-            displayName: 'Show (1) and (2) side-by-side',
+            displayName: 'Show items one and two side-by-side',
             key: 'metadataLayout12SideBySide',
             default: DEFAULT_VIEW_SETTINGS.metadataLayout12SideBySide
         },
         {
             type: 'property',
-            displayName: 'Metadata display (3)',
+            displayName: 'Metadata item three',
             key: 'metadataDisplay3',
             placeholder: 'Select property',
-            default: DEFAULT_VIEW_SETTINGS.metadataDisplay3
+            default: ''
         },
         {
             type: 'property',
-            displayName: 'Metadata display (4)',
+            displayName: 'Metadata item four',
             key: 'metadataDisplay4',
             placeholder: 'Select property',
-            default: DEFAULT_VIEW_SETTINGS.metadataDisplay4
+            default: ''
         },
         {
             type: 'toggle',
-            displayName: 'Show (3) and (4) side-by-side',
+            displayName: 'Show items three and four side-by-side',
             key: 'metadataLayout34SideBySide',
             default: DEFAULT_VIEW_SETTINGS.metadataLayout34SideBySide
         },
@@ -153,19 +153,33 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         fallbackToMtime: Boolean(config.get('fallbackToMtime') ?? DEFAULT_SETTINGS.fallbackToMtime),
         metadataDisplay1: (() => {
             const value = config.get('metadataDisplay1');
-            return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay1;
+            // If value is explicitly set (including empty string), use it
+            // Otherwise fall back to default view settings
+            if (value !== undefined && value !== null) {
+                return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay1;
+            }
+            return defaultViewSettings.metadataDisplay1;
         })(),
         metadataDisplay2: (() => {
             const value = config.get('metadataDisplay2');
-            return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay2;
+            if (value !== undefined && value !== null) {
+                return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay2;
+            }
+            return defaultViewSettings.metadataDisplay2;
         })(),
         metadataDisplay3: (() => {
             const value = config.get('metadataDisplay3');
-            return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay3;
+            if (value !== undefined && value !== null) {
+                return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay3;
+            }
+            return defaultViewSettings.metadataDisplay3;
         })(),
         metadataDisplay4: (() => {
             const value = config.get('metadataDisplay4');
-            return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay4;
+            if (value !== undefined && value !== null) {
+                return typeof value === 'string' ? value : defaultViewSettings.metadataDisplay4;
+            }
+            return defaultViewSettings.metadataDisplay4;
         })(),
         metadataLayout12SideBySide: Boolean(config.get('metadataLayout12SideBySide') ?? defaultViewSettings.metadataLayout12SideBySide),
         metadataLayout34SideBySide: Boolean(config.get('metadataLayout34SideBySide') ?? defaultViewSettings.metadataLayout34SideBySide),
@@ -181,6 +195,8 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         thumbnailCacheSize: globalSettings.thumbnailCacheSize, // From global settings
         queryHeight: 0, // Not configurable in Bases
         openFileAction: globalSettings.openFileAction, // From global settings
-        openRandomInNewPane: globalSettings.openRandomInNewPane // From global settings
+        openRandomInNewPane: globalSettings.openRandomInNewPane, // From global settings
+        showShuffleInRibbon: globalSettings.showShuffleInRibbon, // From global settings
+        showRandomInRibbon: globalSettings.showRandomInRibbon // From global settings
     };
 }
