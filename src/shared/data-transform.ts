@@ -116,15 +116,6 @@ export function datacoreResultToCardData(
         return prop;
     });
 
-    // Resolve property values
-    console.log(`// [DEBUG Datacore Result] Settings metadata props:`, {
-        metadataDisplay1: settings.metadataDisplay1,
-        metadataDisplay2: settings.metadataDisplay2,
-        metadataDisplay3: settings.metadataDisplay3,
-        metadataDisplay4: settings.metadataDisplay4
-    });
-    console.log(`// [DEBUG Datacore Result] Effective props after deduplication:`, effectiveProps);
-
     // Store property names for rendering
     cardData.metadataProperty1 = effectiveProps[0] || undefined;
     cardData.metadataProperty2 = effectiveProps[1] || undefined;
@@ -136,13 +127,6 @@ export function datacoreResultToCardData(
     cardData.metadata2 = effectiveProps[1] ? resolveDatacoreMetadataProperty(effectiveProps[1], result, cardData, settings, dc) : null;
     cardData.metadata3 = effectiveProps[2] ? resolveDatacoreMetadataProperty(effectiveProps[2], result, cardData, settings, dc) : null;
     cardData.metadata4 = effectiveProps[3] ? resolveDatacoreMetadataProperty(effectiveProps[3], result, cardData, settings, dc) : null;
-
-    console.log(`// [DEBUG Datacore Result] Resolved metadata:`, {
-        metadata1: cardData.metadata1,
-        metadata2: cardData.metadata2,
-        metadata3: cardData.metadata3,
-        metadata4: cardData.metadata4
-    });
 
     return cardData;
 }
@@ -212,8 +196,6 @@ export function basesEntryToCardData(
     const tagsValue = entry.getValue('file.tags') as { data?: unknown } | null;
     let tags: string[] = [];
 
-    console.log(`// [DEBUG Tags] File: ${path}, tagsValue:`, tagsValue, 'data:', tagsValue?.data);
-
     if (tagsValue && tagsValue.data != null) {
         const tagData = tagsValue.data;
         const rawTags = Array.isArray(tagData)
@@ -229,9 +211,6 @@ export function basesEntryToCardData(
 
         // Strip leading # from tags if present
         tags = rawTags.map(tag => tag.replace(/^#/, ''));
-        console.log(`// [DEBUG Tags] Extracted tags:`, tags);
-    } else {
-        console.log(`// [DEBUG Tags] No tags found for ${path}`);
     }
 
     // Get timestamps
@@ -273,40 +252,17 @@ export function basesEntryToCardData(
         return prop;
     });
 
-    // Resolve property values
-    console.log(`// [DEBUG Bases Entry] Settings metadata props:`, {
-        metadataDisplay1: settings.metadataDisplay1,
-        metadataDisplay2: settings.metadataDisplay2,
-        metadataDisplay3: settings.metadataDisplay3,
-        metadataDisplay4: settings.metadataDisplay4
-    });
-    console.log(`// [DEBUG Bases Entry] Effective props after deduplication:`, effectiveProps);
-
     // Store property names for rendering
     cardData.metadataProperty1 = effectiveProps[0] || undefined;
     cardData.metadataProperty2 = effectiveProps[1] || undefined;
     cardData.metadataProperty3 = effectiveProps[2] || undefined;
     cardData.metadataProperty4 = effectiveProps[3] || undefined;
 
-    console.log(`// [DEBUG Bases Entry] Stored property names:`, {
-        metadataProperty1: cardData.metadataProperty1,
-        metadataProperty2: cardData.metadataProperty2,
-        metadataProperty3: cardData.metadataProperty3,
-        metadataProperty4: cardData.metadataProperty4
-    });
-
     // Resolve property values
     cardData.metadata1 = effectiveProps[0] ? resolveBasesMetadataProperty(effectiveProps[0], entry, cardData, settings) : null;
     cardData.metadata2 = effectiveProps[1] ? resolveBasesMetadataProperty(effectiveProps[1], entry, cardData, settings) : null;
     cardData.metadata3 = effectiveProps[2] ? resolveBasesMetadataProperty(effectiveProps[2], entry, cardData, settings) : null;
     cardData.metadata4 = effectiveProps[3] ? resolveBasesMetadataProperty(effectiveProps[3], entry, cardData, settings) : null;
-
-    console.log(`// [DEBUG Bases Entry] Resolved metadata values:`, {
-        metadata1: cardData.metadata1,
-        metadata2: cardData.metadata2,
-        metadata3: cardData.metadata3,
-        metadata4: cardData.metadata4
-    });
 
     return cardData;
 }
@@ -371,10 +327,7 @@ export function resolveBasesMetadataProperty(
     cardData: CardData,
     settings: Settings
 ): string | null {
-    console.log(`// [DEBUG Bases Metadata] Resolving property "${propertyName}" for file: ${cardData.path}`);
-
     if (!propertyName || propertyName === '') {
-        console.log(`// [DEBUG Bases Metadata] Empty property name, returning null`);
         return null;
     }
 
@@ -382,20 +335,15 @@ export function resolveBasesMetadataProperty(
     // Bases format: file.path, file.tags, file.mtime, file.ctime
     // Datacore format: "file path", "file tags", "modified time", "created time"
     if (propertyName === 'file.path' || propertyName === 'file path') {
-        console.log(`// [DEBUG Bases Metadata] Special property: file path. folderPath="${cardData.folderPath}"`);
         const path = cardData.folderPath;
         if (!path || path === '') {
-            console.log(`// [DEBUG Bases Metadata] No folder path, returning null`);
             return null;
         }
-        console.log(`// [DEBUG Bases Metadata] Returning folder path: "${path}"`);
         return path;
     }
 
     if (propertyName === 'file.tags' || propertyName === 'file tags' || propertyName === 'tags') {
-        console.log(`// [DEBUG Bases Metadata] Special property: file tags. tags=${JSON.stringify(cardData.tags)}`);
         const result = cardData.tags.length > 0 ? 'tags' : null;
-        console.log(`// [DEBUG Bases Metadata] Returning: ${result}`);
         return result;
     }
 
@@ -406,40 +354,32 @@ export function resolveBasesMetadataProperty(
         settings.modifiedProperty.split(',').map(p => p.trim()).includes(propertyName);
 
     if (isCreatedTimestamp || isModifiedTimestamp) {
-        console.log(`// [DEBUG Bases Metadata] Timestamp property. isCreated=${isCreatedTimestamp}, isModified=${isModifiedTimestamp}`);
         const timestamp = cardData.displayTimestamp ||
             (isCreatedTimestamp ? cardData.ctime : cardData.mtime);
 
         if (!timestamp) {
-            console.log(`// [DEBUG Bases Metadata] No timestamp, returning null`);
             return null;
         }
         const formatted = formatTimestamp(timestamp);
-        console.log(`// [DEBUG Bases Metadata] Formatted timestamp: "${formatted}"`);
         return formatted;
     }
 
     // Generic property: read from frontmatter
-    console.log(`// [DEBUG Bases Metadata] Generic property, reading from frontmatter`);
     const value = getFirstBasesPropertyValue(entry, propertyName) as { data?: unknown } | null;
     const data = value?.data;
-    console.log(`// [DEBUG Bases Metadata] Property value:`, value, 'data:', data);
 
     // Return null for missing or empty values
     if (data == null || data === '' || (Array.isArray(data) && data.length === 0)) {
-        console.log(`// [DEBUG Bases Metadata] Empty/null data, returning null`);
         return null;
     }
 
     // Convert to string
     if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
         const result = String(data);
-        console.log(`// [DEBUG Bases Metadata] Returning string: "${result}"`);
         return result;
     }
 
     // For complex types, return null (can't display)
-    console.log(`// [DEBUG Bases Metadata] Complex type, returning null`);
     return null;
 }
 

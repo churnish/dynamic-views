@@ -70,10 +70,7 @@ function renderMetadataContent(
     settings: Settings,
     app: App
 ): unknown {
-    console.log(`// [DEBUG Renderer] renderMetadataContent called with propertyName="${propertyName}", resolvedValue="${resolvedValue}"`);
-
     if (propertyName === '' || !resolvedValue) {
-        console.log(`// [DEBUG Renderer] Returning null - empty propertyName or no resolvedValue`);
         return null;
     }
 

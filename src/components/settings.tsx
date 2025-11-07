@@ -21,10 +21,10 @@ export function Settings({
 
     return (
         <div className="settings-dropdown-menu">
-            {/* Metadata Display (1) */}
+            {/* Metadata Item 1 */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">
-                    <label>Metadata display (1)</label>
+                    <label>Metadata item 1</label>
                     <div className="setting-desc">Property to show in first metadata position</div>
                 </div>
                 <select
@@ -42,10 +42,10 @@ export function Settings({
                 </select>
             </div>
 
-            {/* Metadata Display (2) */}
+            {/* Metadata Item 2 */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">
-                    <label>Metadata display (2)</label>
+                    <label>Metadata item 2</label>
                     <div className="setting-desc">Property to show in second metadata position</div>
                 </div>
                 <select
@@ -66,24 +66,29 @@ export function Settings({
             {/* Layout Toggle (1 & 2) */}
             <div className="setting-item setting-item-toggle">
                 <div className="setting-item-info">
-                    <label>Show (1) and (2) side-by-side</label>
+                    <label>Show metadata items 1 and 2 side-by-side</label>
                     <div className="setting-desc">Display first two metadata items horizontally</div>
                 </div>
-                <input
-                    type="checkbox"
-                    checked={settings.metadataLayout12SideBySide}
-                    onChange={(e: unknown) => {
-                        const evt = e as Event & { target: HTMLInputElement };
-                        onSettingsChange({ metadataLayout12SideBySide: evt.target.checked });
+                <div
+                    className={`checkbox-container ${settings.metadataLayout12SideBySide ? 'is-enabled' : ''}`}
+                    onClick={() => onSettingsChange({ metadataLayout12SideBySide: !settings.metadataLayout12SideBySide })}
+                    onKeyDown={(e: unknown) => {
+                        const evt = e as KeyboardEvent;
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                            evt.preventDefault();
+                            onSettingsChange({ metadataLayout12SideBySide: !settings.metadataLayout12SideBySide });
+                        }
                     }}
-                    className="checkbox-toggle"
+                    tabIndex={0}
+                    role="checkbox"
+                    aria-checked={settings.metadataLayout12SideBySide}
                 />
             </div>
 
-            {/* Metadata Display (3) */}
+            {/* Metadata Item 3 */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">
-                    <label>Metadata display (3)</label>
+                    <label>Metadata item 3</label>
                     <div className="setting-desc">Property to show in third metadata position</div>
                 </div>
                 <select
@@ -101,10 +106,10 @@ export function Settings({
                 </select>
             </div>
 
-            {/* Metadata Display (4) */}
+            {/* Metadata Item 4 */}
             <div className="setting-item setting-item-text">
                 <div className="setting-item-info">
-                    <label>Metadata display (4)</label>
+                    <label>Metadata item 4</label>
                     <div className="setting-desc">Property to show in fourth metadata position</div>
                 </div>
                 <select
@@ -125,17 +130,22 @@ export function Settings({
             {/* Layout Toggle (3 & 4) */}
             <div className="setting-item setting-item-toggle">
                 <div className="setting-item-info">
-                    <label>Show (3) and (4) side-by-side</label>
+                    <label>Show metadata items 3 and 4 side-by-side</label>
                     <div className="setting-desc">Display third and fourth metadata items horizontally</div>
                 </div>
-                <input
-                    type="checkbox"
-                    checked={settings.metadataLayout34SideBySide}
-                    onChange={(e: unknown) => {
-                        const evt = e as Event & { target: HTMLInputElement };
-                        onSettingsChange({ metadataLayout34SideBySide: evt.target.checked });
+                <div
+                    className={`checkbox-container ${settings.metadataLayout34SideBySide ? 'is-enabled' : ''}`}
+                    onClick={() => onSettingsChange({ metadataLayout34SideBySide: !settings.metadataLayout34SideBySide })}
+                    onKeyDown={(e: unknown) => {
+                        const evt = e as KeyboardEvent;
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                            evt.preventDefault();
+                            onSettingsChange({ metadataLayout34SideBySide: !settings.metadataLayout34SideBySide });
+                        }
                     }}
-                    className="checkbox-toggle"
+                    tabIndex={0}
+                    role="checkbox"
+                    aria-checked={settings.metadataLayout34SideBySide}
                 />
             </div>
 

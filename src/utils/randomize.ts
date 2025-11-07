@@ -14,6 +14,7 @@ interface BasesViewWrapper extends View {
 		};
 		onDataUpdated?: () => void;
 		isShuffled?: boolean;
+		shuffledOrder?: string[];
 	};
 }
 
@@ -45,11 +46,21 @@ export function getActiveBasesView(app: App): BasesViewWrapper['basesView'] | nu
 
 		// Check controller.view.data.data (standard Bases views)
 		if (wrapper.controller?.view?.data?.data && Array.isArray(wrapper.controller.view.data.data)) {
+			const viewInstanceType = wrapper.controller.view.type || 'unknown';
+
+			// For dynamic-views custom views, return the actual view instance
+			// This ensures property modifications (isShuffled, shuffledOrder) persist
+			if (viewInstanceType === 'dynamic-views-card' || viewInstanceType === 'dynamic-views-masonry') {
+				return wrapper.controller.view;
+			}
+
+			// For standard Bases views, construct a wrapper object
 			return {
-				type: wrapper.controller.view.type || 'unknown',
+				type: viewInstanceType,
 				data: wrapper.controller.view.data,
 				onDataUpdated: wrapper.controller.view.onDataUpdated?.bind(wrapper.controller.view),
-				isShuffled: wrapper.controller.view.isShuffled
+				isShuffled: wrapper.controller.view.isShuffled,
+				shuffledOrder: wrapper.controller.view.shuffledOrder
 			};
 		}
 

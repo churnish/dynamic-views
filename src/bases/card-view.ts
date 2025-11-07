@@ -60,7 +60,6 @@ export class DynamicViewsCardView extends BasesView {
 
     onDataUpdated(): void {
         void (async () => {
-            console.log('// DEBUG: card-view onDataUpdated() CALLED');
             const entries = this.data.data;
 
         // Read settings from Bases config
@@ -481,10 +480,7 @@ export class DynamicViewsCardView extends BasesView {
         entry: BasesEntry,
         settings: Settings
     ): void {
-        console.log(`// [DEBUG Bases Renderer] renderMetadataContent called with propertyName="${propertyName}", resolvedValue="${resolvedValue}", file: ${card.path}`);
-
         if (propertyName === '' || !resolvedValue) {
-            console.log(`// [DEBUG Bases Renderer] Returning early - empty propertyName or no resolvedValue`);
             return;
         }
 
@@ -507,7 +503,6 @@ export class DynamicViewsCardView extends BasesView {
                 timestampWrapper.appendText(date);
             }
         } else if ((propertyName === 'file.tags' || propertyName === 'tags' || propertyName === 'file tags') && card.tags.length > 0) {
-            console.log(`// [DEBUG Bases Renderer] Rendering tags for ${card.path}:`, card.tags);
             const tagStyle = getTagStyle();
             const showHashPrefix = tagStyle === 'minimal';
             const tagsWrapper = container.createDiv('tags-wrapper');
@@ -526,7 +521,6 @@ export class DynamicViewsCardView extends BasesView {
                 });
             });
         } else if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && card.folderPath.length > 0) {
-            console.log(`// [DEBUG Bases Renderer] Rendering path for ${card.path}: ${card.folderPath}`);
             const pathWrapper = container.createDiv('path-wrapper');
             const folders = card.folderPath.split('/').filter(f => f);
             folders.forEach((folder, idx) => {
@@ -538,7 +532,6 @@ export class DynamicViewsCardView extends BasesView {
             });
         } else {
             // Generic property: render the resolved value as text
-            console.log(`// [DEBUG Bases Renderer] Rendering generic property "${propertyName}" with value: ${resolvedValue}`);
             container.appendText(resolvedValue);
         }
     }
