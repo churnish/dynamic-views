@@ -1,9 +1,12 @@
 # Dynamic Views
 
-> [!NOTE]  
-> Currently in early stages of development.
-
 Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
+
+> [!NOTE]  
+> Seeking maintainers with coding experience. Get author credit, the sole funding link, and eternal user gratitude.
+
+> [!CAUTION]  
+> Currently in early stages of development.
 
 #### Masonry
 
