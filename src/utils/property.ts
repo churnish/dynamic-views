@@ -2,7 +2,7 @@
  * Property utility functions for handling comma-separated properties
  */
 
-import type { BasesEntry } from 'obsidian';
+import type { App, BasesEntry } from 'obsidian';
 import type { DatacoreFile, DatacoreDate } from '../types/datacore';
 
 /**
@@ -192,4 +192,50 @@ export function getAllDatacoreImagePropertyValues(page: DatacoreFile, propertySt
     }
 
     return allImages;
+}
+
+/**
+ * Get all property names used in the vault
+ * Returns an array of all property names (from frontmatter)
+ * Includes built-in special properties for metadata display
+ */
+export function getAllVaultProperties(app: App): string[] {
+    const properties = new Set<string>();
+
+    // Add special built-in properties for metadata display
+    properties.add('file path');
+    properties.add('file tags');
+    properties.add('created time');
+    properties.add('modified time');
+
+    // Get all properties from metadata cache using type assertion
+    // getAllPropertyInfos was added in Obsidian 1.4.0+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const metadataCache = app.metadataCache as any;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (typeof metadataCache.getAllPropertyInfos === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const allPropertyInfos = metadataCache.getAllPropertyInfos();
+
+        if (allPropertyInfos) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            for (const [propertyName] of Object.entries(allPropertyInfos)) {
+                properties.add(propertyName);
+            }
+        }
+    }
+
+    // Return sorted array
+    return Array.from(properties).sort((a, b) => {
+        // Sort special properties first
+        const aSpecial = a.startsWith('file ') || a.includes(' time');
+        const bSpecial = b.startsWith('file ') || b.includes(' time');
+
+        if (aSpecial && !bSpecial) return -1;
+        if (!aSpecial && bSpecial) return 1;
+
+        // Alphabetical for rest
+        return a.localeCompare(b);
+    });
 }
