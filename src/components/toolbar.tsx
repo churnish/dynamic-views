@@ -142,8 +142,9 @@ export function Toolbar({
                                 </>
                             ) : viewMode === "card" ? (
                                 <>
-                                    <rect width="18" height="7" x="3" y="3" rx="1"/>
-                                    <rect width="18" height="7" x="3" y="14" rx="1"/>
+                                    <path d="M12 3v18"/>
+                                    <path d="M3 12h18"/>
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
                                 </>
                             ) : (
                                 <>
@@ -161,8 +162,9 @@ export function Toolbar({
                         <div className="view-dropdown-menu">
                             <div className="view-option" onClick={onSetViewCard} onKeyDown={(e: unknown) => { const evt = e as KeyboardEvent; if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); onSetViewCard(); }}} tabIndex={0} role="menuitem">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect width="18" height="7" x="3" y="3" rx="1"/>
-                                    <rect width="18" height="7" x="3" y="14" rx="1"/>
+                                    <path d="M12 3v18"/>
+                                    <path d="M3 12h18"/>
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
                                 </svg>
                                 <span>Grid</span>
                             </div>
