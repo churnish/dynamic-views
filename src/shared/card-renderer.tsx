@@ -357,7 +357,7 @@ function Card({
                         ? 'none'
                         : settings.metadataDisplayRight;
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- JSX.Element resolves to any due to Datacore's JSX runtime
                 return (effectiveLeft !== 'none' || effectiveRight !== 'none') && (
                     <div className={`writing-meta${
                         effectiveLeft === 'none' && effectiveRight !== 'none' ? ' meta-right-only' :
@@ -384,7 +384,7 @@ function handleArrowKey(
     containerRef: RefObject<HTMLElement | null>,
     onFocusChange?: (index: number) => void
 ): void {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- querySelectorAll returns Element[], need HTMLElement[] for navigation
     const cards = Array.from(containerRef.current?.querySelectorAll('.writing-card') || []) as HTMLElement[];
     const currentCard = e.currentTarget as HTMLElement;
     const actualIndex = cards.indexOf(currentCard);

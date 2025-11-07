@@ -1161,7 +1161,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
     }, []);
 
     // Copy menu item for Toolbar
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Datacore useMemo lacks proper TypeScript types
     const copyMenuItem: JSX.Element = dc.useMemo((): JSX.Element => (
         <div
             className="bases-toolbar-menu-item"

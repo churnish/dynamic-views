@@ -92,7 +92,7 @@ export function ListView({
                                     ? 'none'
                                     : settings.metadataDisplayRight;
 
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- JSX.Element resolves to any due to Datacore's JSX runtime
                             return (effectiveLeft !== 'none' || effectiveRight !== 'none') && (
                                 <span className="list-meta">
                                     {effectiveLeft === 'tags' && p.$tags && p.$tags.length > 0 ? (

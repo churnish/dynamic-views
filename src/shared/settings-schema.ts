@@ -30,7 +30,7 @@ export function setPluginInstance(plugin: PluginInstance): void {
  * Bases view options for card/masonry views
  * These options appear in the Bases view configuration menu
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bases API requires untyped options array
 export function getBasesViewOptions(): any[] {
     // Use static defaults from DEFAULT_VIEW_SETTINGS
     // The template values will be used as fallbacks in readBasesSettings() instead
@@ -110,7 +110,7 @@ export function getBasesViewOptions(): any[] {
 /**
  * Additional options specific to masonry view
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bases API requires untyped options array
 export function getMasonryViewOptions(): any[] {
     return getBasesViewOptions();
 }

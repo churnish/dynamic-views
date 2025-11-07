@@ -15,7 +15,7 @@ export function getFirstBasesPropertyValue(entry: BasesEntry, propertyString: st
     const properties = propertyString.split(',').map(p => p.trim()).filter(p => p);
 
     for (const prop of properties) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any -- Bases API lacks proper TypeScript types for getValue
         const value = entry.getValue(prop as any);
 
         // Check if property exists and has a value
@@ -63,7 +63,7 @@ export function getFirstBasesDatePropertyValue(entry: BasesEntry, propertyString
     const properties = propertyString.split(',').map(p => p.trim()).filter(p => p);
 
     for (const prop of properties) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any -- Bases API lacks proper TypeScript types for getValue
         const value = entry.getValue(prop as any);
 
         // Only accept date/datetime values
@@ -110,7 +110,7 @@ export function getAllBasesImagePropertyValues(entry: BasesEntry, propertyString
     const allImages: string[] = [];
 
     for (const prop of properties) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any -- Bases API lacks proper TypeScript types for getValue
         const value = entry.getValue(prop as any);
 
         // Skip if property doesn't exist or is not text/list type
