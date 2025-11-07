@@ -1451,9 +1451,22 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Constrain inner containers to grid item width and handle overflow */
-.dynamic-views .meta-left .tags-wrapper,
-.dynamic-views .meta-left > span {
+/* Timestamps (direct span children) never need scrolling - always shown in full */
+.dynamic-views .meta-left > span,
+.dynamic-views .meta-right > span {
     max-width: 100%;
+}
+
+/* Tags: always scrollable */
+.dynamic-views .meta-left .tags-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.dynamic-views .meta-right .tags-wrapper {
+    max-width: 100%;
+    margin-left: auto;  /* Push content to the right */
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -1470,20 +1483,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     text-overflow: clip;
 }
 
-.dynamic-views .meta-left .tags-wrapper::-webkit-scrollbar,
-.dynamic-views .meta-left .path-wrapper::-webkit-scrollbar {
-    display: none;
-}
-
-.dynamic-views .meta-right .tags-wrapper,
-.dynamic-views .meta-right > span {
-    max-width: 100%;
-    margin-left: auto;  /* Push content to the right */
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-/* Path: ellipsis by default, scrollable on hover */
 .dynamic-views .meta-right .path-wrapper {
     max-width: 100%;
     margin-left: auto;  /* Push content to the right */
@@ -1496,6 +1495,9 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     text-overflow: clip;
 }
 
+/* Hide scrollbars */
+.dynamic-views .meta-left .tags-wrapper::-webkit-scrollbar,
+.dynamic-views .meta-left .path-wrapper::-webkit-scrollbar,
 .dynamic-views .meta-right .tags-wrapper::-webkit-scrollbar,
 .dynamic-views .meta-right .path-wrapper::-webkit-scrollbar {
     display: none;

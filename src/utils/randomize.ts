@@ -57,24 +57,24 @@ export function getActiveBasesView(app: App): BasesViewWrapper['basesView'] | nu
 		// Check controller for query results
 		if (wrapper.controller) {
 			console.log('// [Randomize Debug] wrapper.controller keys:', Object.keys(wrapper.controller));
-			console.log('// [Randomize Debug] wrapper.controller.data exists:', !!wrapper.controller.data);
+			console.log('// [Randomize Debug] wrapper.controller.results exists:', !!wrapper.controller.results);
 
-			if (wrapper.controller.data) {
-				console.log('// [Randomize Debug] wrapper.controller.data type:', typeof wrapper.controller.data);
-				console.log('// [Randomize Debug] wrapper.controller.data keys:', Object.keys(wrapper.controller.data));
-				console.log('// [Randomize Debug] wrapper.controller.data.data exists:', !!wrapper.controller.data?.data);
-				console.log('// [Randomize Debug] wrapper.controller.data.data length:', wrapper.controller.data?.data?.length);
+			if (wrapper.controller.results) {
+				console.log('// [Randomize Debug] wrapper.controller.results type:', typeof wrapper.controller.results);
+				console.log('// [Randomize Debug] wrapper.controller.results keys:', Object.keys(wrapper.controller.results));
+				console.log('// [Randomize Debug] wrapper.controller.results.data exists:', !!wrapper.controller.results?.data);
+				console.log('// [Randomize Debug] wrapper.controller.results.data length:', wrapper.controller.results?.data?.length);
 			}
 		}
 
-		// The controller holds the query results
-		if (wrapper.controller?.data?.data && Array.isArray(wrapper.controller.data.data)) {
-			console.log('// [Randomize Debug] Using controller.data as basesView data');
+		// The controller holds the query results in .results.data
+		if (wrapper.controller?.results?.data && Array.isArray(wrapper.controller.results.data)) {
+			console.log('// [Randomize Debug] Using controller.results as basesView data');
 
 			// Create a compatible basesView object
 			return {
 				type: wrapper.controller?.id || 'unknown',
-				data: wrapper.controller.data,
+				data: wrapper.controller.results,
 				onDataUpdated: wrapper.onDataUpdated?.bind(wrapper),
 				isShuffled: wrapper.isShuffled
 			};
