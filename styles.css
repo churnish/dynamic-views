@@ -1498,6 +1498,8 @@ body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
     flex-shrink: 0;
     white-space: nowrap;
     height: 20px;
+    display: flex;
+    align-items: center;
 }
 
 /* Prevent timestamp container from shrinking (timestamp = direct span child) */
@@ -1606,6 +1608,7 @@ body:not(.dynamic-views-show-timestamp-icon) .dynamic-views .timestamp-icon {
 
 .dynamic-views .tags-wrapper {
     display: flex;
+    align-items: center;
     gap: 4px;
     white-space: nowrap;
     flex-shrink: 0;
@@ -1615,6 +1618,7 @@ body:not(.dynamic-views-show-timestamp-icon) .dynamic-views .timestamp-icon {
 
 .dynamic-views .path-wrapper {
     display: inline-flex;
+    align-items: center;
     white-space: nowrap;
     flex-shrink: 0;
     height: 20px;
