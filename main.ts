@@ -39,6 +39,9 @@ export default class DynamicViewsPlugin extends Plugin {
 		// Set plugin instance for Bases view options to access template settings
 		setPluginInstance(this);
 
+		// Notify Style Settings to parse our CSS
+		this.app.workspace.trigger("parse-style-settings");
+
 		// Register settings tab
 		this.addSettingTab(new DynamicViewsSettingTab(this.app, this));
 

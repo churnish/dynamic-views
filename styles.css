@@ -1,3 +1,42 @@
+/* @settings
+
+name: Dynamic Views
+id: dynamic-views
+settings:
+    -
+        id: thumbnails-heading
+        title: Thumbnails
+        type: heading
+        level: 2
+    -
+        id: dv-thumbnail-size
+        title: Thumbnail size
+        description: Size of card thumbnails in pixels
+        type: variable-select
+        default: 80px
+        options:
+            -
+                label: Small (64×64 px)
+                value: 64px
+            -
+                label: Medium (80×80 px)
+                value: 80px
+            -
+                label: Big (94.5×94.5 px)
+                value: 94.5px
+    -
+        id: dv-thumbnail-border-radius
+        title: Thumbnail border radius
+        description: Corner roundness of thumbnails
+        type: variable-number-slider
+        default: 4
+        min: 0
+        max: 20
+        step: 1
+        format: px
+
+*/
+
 /* ============================================
    DATACORE EXPLORER STYLES
    ============================================ */
@@ -1232,18 +1271,18 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .card-thumbnail {
     flex-shrink: 0;
-    width: 80px;
-    height: 80px;
+    width: var(--dv-thumbnail-size, 80px);
+    height: var(--dv-thumbnail-size, 80px);
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: var(--dv-thumbnail-border-radius, 4px);
     pointer-events: none;
 }
 
 .dynamic-views .card-thumbnail-placeholder {
     flex-shrink: 0;
-    width: 80px;
-    height: 80px;
-    border-radius: 4px;
+    width: var(--dv-thumbnail-size, 80px);
+    height: var(--dv-thumbnail-size, 80px);
+    border-radius: var(--dv-thumbnail-border-radius, 4px);
     background-color: var(--background-modifier-border);
 }
 
