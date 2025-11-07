@@ -1802,7 +1802,6 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
 
 .dynamic-views .meta-field {
     display: flex;
-    align-items: center;
     gap: 4px;
     min-width: 0;
     white-space: nowrap;
