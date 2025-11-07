@@ -129,6 +129,24 @@ settings:
 */
 
 /* ============================================
+   PLUGIN SETTINGS STYLES
+   ============================================ */
+
+/* Section header styling */
+.dv-section-header {
+    border-top: none !important;
+    border-bottom: 1px solid var(--background-modifier-border) !important;
+}
+
+.dv-section-header.setting-item {
+    border-bottom: 1px solid var(--background-modifier-border) !important;
+}
+
+.dv-section-header .setting-item-name {
+    font-weight: bold;
+}
+
+/* ============================================
    DATACORE EXPLORER STYLES
    ============================================ */
 
