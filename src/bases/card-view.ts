@@ -407,10 +407,9 @@ export class DynamicViewsCardView extends BasesView {
         let field2Width: string;
 
         if (percent1 <= 50 && percent2 <= 50) {
-            // Both fit: use max width for both fields to keep them equal
-            const maxWidth = Math.max(width1, width2);
-            field1Width = `${maxWidth}px`;
-            field2Width = `${maxWidth}px`;
+            // Both fit: field1 gets exact width, field2 fills remainder (maximizes field2 content space)
+            field1Width = `${width1}px`;
+            field2Width = `${availableWidth - width1}px`;
         } else if (percent1 <= 50 && percent2 > 50) {
             // Field1 small, field2 needs more: field1 exact, field2 fills
             field1Width = `${width1}px`;
