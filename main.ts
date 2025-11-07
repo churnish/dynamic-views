@@ -45,7 +45,7 @@ export default class DynamicViewsPlugin extends Plugin {
 		// Note: Named "Grid" to differentiate from built-in Bases "Cards" view
 		this.registerBasesView('dynamic-views-card', {
 			name: 'Grid',
-			icon: 'grid-2x2',
+			icon: 'layout-grid',
 			factory: (controller: QueryController, containerEl: HTMLElement) => {
 				return new DynamicViewsCardView(controller, containerEl, this);
 			},
