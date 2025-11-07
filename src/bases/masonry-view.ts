@@ -285,9 +285,9 @@ export class DynamicViewsMasonryView extends BasesView {
         let rightWidth: string;
 
         if (leftPercent <= 50 && rightPercent <= 50) {
-            // Both content fits: give exact sizes
+            // Both content fits: left gets exact size, right fills remainder to ensure full width
             leftWidth = `${leftScrollWidth}px`;
-            rightWidth = `${rightScrollWidth}px`;
+            rightWidth = `${containerWidth - leftScrollWidth}px`;
         } else if (leftPercent <= 50 && rightPercent > 50) {
             // Left small, right needs more: left gets exact size, right fills remainder
             leftWidth = `${leftScrollWidth}px`;
