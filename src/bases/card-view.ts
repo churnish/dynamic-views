@@ -507,6 +507,16 @@ export class DynamicViewsCardView extends BasesView {
         row.style.setProperty('--field1-width', field1Width);
         row.style.setProperty('--field2-width', field2Width);
         row.addClass('meta-measured');
+
+        // Reset scroll position to 0 for both fields
+        field1.scrollLeft = 0;
+        field2.scrollLeft = 0;
+
+        // Update scroll gradients after layout settles
+        requestAnimationFrame(() => {
+            this.updateScrollGradient(field1);
+            this.updateScrollGradient(field2);
+        });
     }
 
     private measureMetadataFields(container: HTMLElement): void {

@@ -1851,6 +1851,15 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
     gap: 4px;
     min-width: 0;
     white-space: nowrap;
+    direction: ltr; /* Ensure scroll starts at position 0 */
+}
+
+/* Content wrappers inside fields */
+.dynamic-views .meta-field .property-value,
+.dynamic-views .meta-field .tags-wrapper,
+.dynamic-views .meta-field .path-wrapper {
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Field alignment in side-by-side layout */
@@ -1858,19 +1867,40 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
 .dynamic-views .meta-row-sidebyside .meta-field-1,
 .dynamic-views .meta-row-sidebyside .meta-field-3 {
     justify-content: flex-start !important;
+}
+
+.dynamic-views .meta-row-sidebyside .meta-field-1 .property-value,
+.dynamic-views .meta-row-sidebyside .meta-field-3 .property-value {
     text-align: left !important;
 }
 
-/* Right fields (2, 4) - right-aligned */
+/* Right fields (2, 4) - right-aligned content */
 .dynamic-views .meta-row-sidebyside .meta-field-2,
 .dynamic-views .meta-row-sidebyside .meta-field-4 {
-    justify-content: flex-end !important;
+    justify-content: flex-start !important; /* Always start at scroll position 0 */
+}
+
+.dynamic-views .meta-row-sidebyside .meta-field-2 .property-value,
+.dynamic-views .meta-row-sidebyside .meta-field-4 .property-value,
+.dynamic-views .meta-row-sidebyside .meta-field-2 .tags-wrapper,
+.dynamic-views .meta-row-sidebyside .meta-field-4 .tags-wrapper,
+.dynamic-views .meta-row-sidebyside .meta-field-2 .path-wrapper,
+.dynamic-views .meta-row-sidebyside .meta-field-4 .path-wrapper,
+.dynamic-views .meta-row-sidebyside .meta-field-2 > span,
+.dynamic-views .meta-row-sidebyside .meta-field-4 > span {
     text-align: right !important;
+    width: 100%;
 }
 
 /* Stacked layout - all fields left-aligned */
 .dynamic-views .meta-row:not(.meta-row-sidebyside) .meta-field {
     justify-content: flex-start !important;
+}
+
+.dynamic-views .meta-row:not(.meta-row-sidebyside) .meta-field .property-value,
+.dynamic-views .meta-row:not(.meta-row-sidebyside) .meta-field .tags-wrapper,
+.dynamic-views .meta-row:not(.meta-row-sidebyside) .meta-field .path-wrapper,
+.dynamic-views .meta-row:not(.meta-row-sidebyside) .meta-field > span {
     text-align: left !important;
 }
 
