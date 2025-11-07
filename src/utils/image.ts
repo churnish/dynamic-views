@@ -36,6 +36,17 @@ export function validateImageUrl(url: string): Promise<boolean> {
 }
 
 /**
+ * Strip wikilink syntax from image path
+ * Handles: [[path]], ![[path]], [[path|caption]]
+ * @param path - Path that may contain wikilink syntax
+ * @returns Clean path without wikilink markers
+ */
+export function stripWikilinkSyntax(path: string): string {
+    const wikilinkMatch = path.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
+    return wikilinkMatch ? wikilinkMatch[1].trim() : path;
+}
+
+/**
  * Load image for a file from property or embeds
  * @param app - Obsidian App instance
  * @param filePath - Path of the file to load image for

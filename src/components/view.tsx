@@ -8,7 +8,7 @@ import { ListView } from './list-view';
 import { Toolbar } from './toolbar';
 import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
-import { isExternalUrl, hasValidImageExtension, validateImageUrl } from '../utils/image';
+import { isExternalUrl, hasValidImageExtension, validateImageUrl, stripWikilinkSyntax } from '../utils/image';
 import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
 import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
 
@@ -479,13 +479,8 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                         const propertyExternalUrls: string[] = [];
 
                         for (const imgValue of propertyImageValues) {
-                            let imgStr = imgValue;
-
                             // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
-                            const wikilinkMatch = imgStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-                            if (wikilinkMatch) {
-                                imgStr = wikilinkMatch[1].trim();
-                            }
+                            let imgStr = stripWikilinkSyntax(imgValue);
 
                             // Check if it's an external URL or internal path
                             if (imgStr.length > 0) {

@@ -7,7 +7,7 @@ import { BasesView, BasesEntry, TFile, setIcon, QueryController } from 'obsidian
 import { CardData } from '../shared/card-renderer';
 import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getMasonryViewOptions } from '../shared/settings-schema';
-import { loadImageForFile, isExternalUrl, validateImageUrl } from '../utils/image';
+import { loadImageForFile, isExternalUrl, validateImageUrl, stripWikilinkSyntax } from '../utils/image';
 import { sanitizeForPreview } from '../utils/preview';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
 import { formatTimestamp, getTimestampIcon } from '../shared/render-utils';
@@ -449,10 +449,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
                             for (let imageStr of imageValues) {
                                 // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
-                                const wikilinkMatch = imageStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-                                if (wikilinkMatch) {
-                                    imageStr = wikilinkMatch[1].trim();
-                                }
+                                imageStr = stripWikilinkSyntax(imageStr);
 
                                 // Handle external URLs
                                 if (isExternalUrl(imageStr)) {
