@@ -1392,7 +1392,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     display: none;
 }
 
-/* Single-side metadata layout */
+/* Single-side metadata layout - collapse to 1 column grid */
+.dynamic-views .writing-meta.meta-left-only {
+    grid-template-columns: 1fr;
+}
+
 .dynamic-views .writing-meta.meta-left-only .meta-left {
     width: 100%;
     flex: 1;
@@ -1400,6 +1404,10 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .writing-meta.meta-left-only .meta-right {
     display: none;
+}
+
+.dynamic-views .writing-meta.meta-right-only {
+    grid-template-columns: 1fr;
 }
 
 .dynamic-views .writing-meta.meta-right-only .meta-left {
