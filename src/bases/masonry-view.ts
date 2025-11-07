@@ -745,6 +745,13 @@ export class DynamicViewsMasonryView extends BasesView {
         });
     }
 
+    setSettings(): void {
+        // Style Settings compatibility - trigger layout recalculation
+        if (this.updateLayoutRef.current) {
+            this.updateLayoutRef.current();
+        }
+    }
+
     onClose(): void {
         this.metadataObservers.forEach(obs => obs.disconnect());
         this.metadataObservers = [];

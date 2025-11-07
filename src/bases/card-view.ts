@@ -677,6 +677,22 @@ export class DynamicViewsCardView extends BasesView {
         });
     }
 
+    setSettings(): void {
+        // Style Settings compatibility - trigger layout recalculation
+        if (this.resizeObserver) {
+            // Trigger resize observer to recalculate grid with new CSS variables
+            const containerWidth = this.containerEl.clientWidth;
+            const cardMinWidth = getMinCardWidth();
+            const minColumns = getMinGridColumns();
+            const gap = 8;
+            const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+            const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
+
+            this.containerEl.style.setProperty('--card-min-width', `${cardWidth}px`);
+            this.containerEl.style.setProperty('--grid-columns', String(cols));
+        }
+    }
+
     onClose(): void {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
