@@ -1457,46 +1457,36 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     max-width: 100%;
 }
 
-/* Tags: always scrollable */
-.dynamic-views .meta-left .tags-wrapper {
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.dynamic-views .meta-right .tags-wrapper {
-    max-width: 100%;
-    margin-left: auto;  /* Push content to the right */
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-/* Path: ellipsis by default, gradient fade on hover when scrolling */
+/* Tags and paths: always scrollable with dynamic gradient edges */
+.dynamic-views .meta-left .tags-wrapper,
 .dynamic-views .meta-left .path-wrapper {
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.dynamic-views .meta-left .path-wrapper:hover {
     overflow-x: auto;
-    text-overflow: clip;
+    scrollbar-width: none;
     position: relative;
-    mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
 }
 
+.dynamic-views .meta-right .tags-wrapper,
 .dynamic-views .meta-right .path-wrapper {
     max-width: 100%;
     margin-left: auto;  /* Push content to the right */
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
 }
 
-.dynamic-views .meta-right .path-wrapper:hover {
-    overflow-x: auto;
-    text-overflow: clip;
-    position: relative;
+/* Gradient classes applied dynamically by JavaScript based on scroll position */
+.dynamic-views .scroll-gradient-left {
+    mask-image: linear-gradient(to right, transparent 0, black 8px, black 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black 100%);
+}
+
+.dynamic-views .scroll-gradient-right {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 8px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 8px), transparent 100%);
+}
+
+.dynamic-views .scroll-gradient-both {
     mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
 }

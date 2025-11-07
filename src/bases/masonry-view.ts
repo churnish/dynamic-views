@@ -398,7 +398,63 @@ export class DynamicViewsMasonryView extends BasesView {
                 // Store for cleanup
                 this.metadataObservers.push(observer);
             }
+
+            // Setup scroll gradients for tags and paths
+            this.setupScrollGradients(cardEl);
         }
+    }
+
+    private updateScrollGradient(element: HTMLElement): void {
+        const isScrollable = element.scrollWidth > element.clientWidth;
+
+        if (!isScrollable) {
+            // Not scrollable - remove all gradient classes
+            element.removeClass('scroll-gradient-left');
+            element.removeClass('scroll-gradient-right');
+            element.removeClass('scroll-gradient-both');
+            return;
+        }
+
+        const scrollLeft = element.scrollLeft;
+        const scrollWidth = element.scrollWidth;
+        const clientWidth = element.clientWidth;
+        const atStart = scrollLeft <= 1; // Allow 1px tolerance
+        const atEnd = scrollLeft + clientWidth >= scrollWidth - 1; // Allow 1px tolerance
+
+        // Remove all gradient classes first
+        element.removeClass('scroll-gradient-left');
+        element.removeClass('scroll-gradient-right');
+        element.removeClass('scroll-gradient-both');
+
+        // Apply appropriate gradient based on position
+        if (atStart && !atEnd) {
+            // At start, content extends right
+            element.addClass('scroll-gradient-right');
+        } else if (atEnd && !atStart) {
+            // At end, content extends left
+            element.addClass('scroll-gradient-left');
+        } else if (!atStart && !atEnd) {
+            // In middle, content extends both directions
+            element.addClass('scroll-gradient-both');
+        }
+        // If atStart && atEnd, content fits fully - no gradient
+    }
+
+    private setupScrollGradients(container: HTMLElement): void {
+        // Find all scrollable elements (tags and paths)
+        const scrollables = container.querySelectorAll('.tags-wrapper, .path-wrapper');
+
+        scrollables.forEach((el) => {
+            const element = el as HTMLElement;
+
+            // Initial gradient update
+            this.updateScrollGradient(element);
+
+            // Update on scroll
+            element.addEventListener('scroll', () => {
+                this.updateScrollGradient(element);
+            });
+        });
     }
 
     private renderMetadataContent(

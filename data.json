@@ -26,7 +26,7 @@
     "thumbnailCacheSize": "balanced",
     "queryHeight": 0,
     "openFileAction": "card",
-    "openRandomInNewPane": true,
+    "openRandomInNewPane": false,
     "addCardBackground": "tinted"
   },
   "defaultViewSettings": {
