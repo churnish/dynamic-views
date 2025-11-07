@@ -1803,6 +1803,10 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
     width: 100%;
 }
 
+.dynamic-views .meta-row.meta-row-sidebyside.meta-row-single .meta-field {
+    max-width: 100%;
+}
+
 .dynamic-views .meta-field {
     display: flex;
     align-items: center;
