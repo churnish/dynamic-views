@@ -363,10 +363,10 @@ export class DynamicViewsCardView extends BasesView {
             }
 
             const field1El = row1El.createDiv('meta-field meta-field-1');
-            if (values[0]) this.renderMetadataContent(field1El, effectiveProps[0], card, entry, settings);
+            if (values[0]) this.renderMetadataContent(field1El, effectiveProps[0], values[0], card, entry, settings);
 
             const field2El = row1El.createDiv('meta-field meta-field-2');
-            if (values[1]) this.renderMetadataContent(field2El, effectiveProps[1], card, entry, settings);
+            if (values[1]) this.renderMetadataContent(field2El, effectiveProps[1], values[1], card, entry, settings);
 
             // Check actual rendered content
             const has1 = field1El.children.length > 0 || field1El.textContent?.trim().length > 0;
@@ -389,10 +389,10 @@ export class DynamicViewsCardView extends BasesView {
             }
 
             const field3El = row2El.createDiv('meta-field meta-field-3');
-            if (values[2]) this.renderMetadataContent(field3El, effectiveProps[2], card, entry, settings);
+            if (values[2]) this.renderMetadataContent(field3El, effectiveProps[2], values[2], card, entry, settings);
 
             const field4El = row2El.createDiv('meta-field meta-field-4');
-            if (values[3]) this.renderMetadataContent(field4El, effectiveProps[3], card, entry, settings);
+            if (values[3]) this.renderMetadataContent(field4El, effectiveProps[3], values[3], card, entry, settings);
 
             // Check actual rendered content
             const has3 = field3El.children.length > 0 || field3El.textContent?.trim().length > 0;
@@ -475,17 +475,22 @@ export class DynamicViewsCardView extends BasesView {
 
     private renderMetadataContent(
         container: HTMLElement,
-        displayType: string,
+        propertyName: string,
+        resolvedValue: string,
         card: CardData,
         entry: BasesEntry,
         settings: Settings
     ): void {
-        console.log(`// [DEBUG Render] File: ${card.path}, displayType: ${displayType}, tags:`, card.tags, 'length:', card.tags.length);
-        if (displayType === '') return;
+        console.log(`// [DEBUG Bases Renderer] renderMetadataContent called with propertyName="${propertyName}", resolvedValue="${resolvedValue}", file: ${card.path}`);
 
-        // TODO Phase 3: Implement full property resolution
-        // For now, map old built-in types to new property names
-        if (displayType === 'timestamp' || displayType === 'modified time' || displayType === 'created time') {
+        if (propertyName === '' || !resolvedValue) {
+            console.log(`// [DEBUG Bases Renderer] Returning early - empty propertyName or no resolvedValue`);
+            return;
+        }
+
+        // Handle special properties by property name
+        if (propertyName === 'file.mtime' || propertyName === 'file.ctime' ||
+            propertyName === 'timestamp' || propertyName === 'modified time' || propertyName === 'created time') {
             // Use resolved displayTimestamp from CardData (already handles custom properties)
             const timestamp = card.displayTimestamp;
 
@@ -501,8 +506,8 @@ export class DynamicViewsCardView extends BasesView {
                 }
                 timestampWrapper.appendText(date);
             }
-        } else if ((displayType === 'tags' || displayType === 'file tags') && card.tags.length > 0) {
-            console.log(`// [DEBUG Render] Rendering tags for ${card.path}:`, card.tags);
+        } else if ((propertyName === 'file.tags' || propertyName === 'tags' || propertyName === 'file tags') && card.tags.length > 0) {
+            console.log(`// [DEBUG Bases Renderer] Rendering tags for ${card.path}:`, card.tags);
             const tagStyle = getTagStyle();
             const showHashPrefix = tagStyle === 'minimal';
             const tagsWrapper = container.createDiv('tags-wrapper');
@@ -520,9 +525,8 @@ export class DynamicViewsCardView extends BasesView {
                     }
                 });
             });
-        } else if (displayType === 'tags' || displayType === 'file tags') {
-            console.log(`// [DEBUG Render] Tags displayType but no tags for ${card.path}, tags.length:`, card.tags.length);
-        } else if ((displayType === 'path' || displayType === 'file path') && card.folderPath.length > 0) {
+        } else if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && card.folderPath.length > 0) {
+            console.log(`// [DEBUG Bases Renderer] Rendering path for ${card.path}: ${card.folderPath}`);
             const pathWrapper = container.createDiv('path-wrapper');
             const folders = card.folderPath.split('/').filter(f => f);
             folders.forEach((folder, idx) => {
@@ -532,6 +536,10 @@ export class DynamicViewsCardView extends BasesView {
                     span.createSpan({ cls: 'path-separator', text: '/' });
                 }
             });
+        } else {
+            // Generic property: render the resolved value as text
+            console.log(`// [DEBUG Bases Renderer] Rendering generic property "${propertyName}" with value: ${resolvedValue}`);
+            container.appendText(resolvedValue);
         }
     }
 
