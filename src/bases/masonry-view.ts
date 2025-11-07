@@ -31,6 +31,7 @@ export class DynamicViewsMasonryView extends BasesView {
     private scrollListener: (() => void) | null = null;
     private scrollThrottleTimeout: number | null = null;
     private resizeObserver: ResizeObserver | null = null;
+    private metadataObservers: ResizeObserver[] = [];
 
     constructor(controller: QueryController, containerEl: HTMLElement, plugin: DynamicViewsPlugin) {
         super(controller);
@@ -94,6 +95,10 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Clear and re-render
         this.containerEl.empty();
+
+        // Disconnect old metadata observers before re-rendering
+        this.metadataObservers.forEach(obs => obs.disconnect());
+        this.metadataObservers = [];
 
         // Create masonry container
         this.masonryContainer = this.containerEl.createDiv('cards-masonry');
@@ -223,6 +228,63 @@ export class DynamicViewsMasonryView extends BasesView {
         this.register(() => window.removeEventListener('resize', handleResize));
     }
 
+    private measureMetadataLayout(metaEl: HTMLElement, metaLeft: HTMLElement, metaRight: HTMLElement): void {
+        // Step 1: Enter measuring state to remove ALL constraints
+        metaEl.removeClass('meta-measured');
+        metaEl.addClass('meta-measuring');
+
+        // Step 2: Force reflow to apply measuring state
+        void metaEl.offsetWidth;
+
+        // Step 3: Measure TRUE unconstrained content widths
+        // Measure inner content containers, not outer wrappers
+        const leftInner = metaLeft.querySelector('.tags-wrapper, .path-wrapper, span') as HTMLElement;
+        const rightInner = metaRight.querySelector('.tags-wrapper, .path-wrapper, span') as HTMLElement;
+
+        const leftScrollWidth = leftInner ? leftInner.scrollWidth : 0;
+        const rightScrollWidth = rightInner ? rightInner.scrollWidth : 0;
+        const containerWidth = metaEl.clientWidth;
+
+        const leftPercent = (leftScrollWidth / containerWidth) * 100;
+        const rightPercent = (rightScrollWidth / containerWidth) * 100;
+
+        // Step 4: Calculate optimal widths based on conditional logic
+        let leftWidth: string;
+        let rightWidth: string;
+
+        if (leftPercent <= 50 && rightPercent <= 50) {
+            // Both content fits: give exact sizes
+            leftWidth = `${leftScrollWidth}px`;
+            rightWidth = `${rightScrollWidth}px`;
+        } else if (leftPercent <= 50 && rightPercent > 50) {
+            // Left small, right needs more: left gets exact size, right fills remainder
+            leftWidth = `${leftScrollWidth}px`;
+            rightWidth = `${containerWidth - leftScrollWidth}px`;
+        } else if (leftPercent > 50 && rightPercent <= 50) {
+            // Right small, left needs more: right gets exact size, left fills remainder
+            leftWidth = `${containerWidth - rightScrollWidth}px`;
+            rightWidth = `${rightScrollWidth}px`;
+        } else {
+            // Both >50%: split 50-50
+            const half = containerWidth / 2;
+            leftWidth = `${half}px`;
+            rightWidth = `${half}px`;
+        }
+
+        // Step 5: Exit measuring state, apply calculated values
+        metaEl.removeClass('meta-measuring');
+        metaEl.style.setProperty('--meta-left-width', leftWidth);
+        metaEl.style.setProperty('--meta-right-width', rightWidth);
+        metaEl.addClass('meta-measured');
+
+        // Step 6: For right column with overflow, scroll to show rightmost content
+        requestAnimationFrame(() => {
+            if (rightInner && rightInner.scrollWidth > rightInner.clientWidth) {
+                rightInner.scrollLeft = rightInner.scrollWidth - rightInner.clientWidth;
+            }
+        });
+    }
+
     private renderCard(
         container: HTMLElement,
         card: CardData,
@@ -312,6 +374,23 @@ export class DynamicViewsMasonryView extends BasesView {
             // Right side
             const metaRight = metaEl.createDiv('meta-right');
             this.renderMetadataContent(metaRight, effectiveRight, card, entry, settings);
+
+            // Setup dynamic layout measurement for both-sided metadata
+            if (effectiveLeft !== 'none' && effectiveRight !== 'none') {
+                // Initial measurement after DOM paint
+                requestAnimationFrame(() => {
+                    this.measureMetadataLayout(metaEl, metaLeft, metaRight);
+                });
+
+                // Re-measure on resize
+                const observer = new ResizeObserver(() => {
+                    this.measureMetadataLayout(metaEl, metaLeft, metaRight);
+                });
+                observer.observe(metaEl);
+
+                // Store for cleanup
+                this.metadataObservers.push(observer);
+            }
         }
     }
 
@@ -330,13 +409,15 @@ export class DynamicViewsMasonryView extends BasesView {
 
             if (timestamp) {
                 const date = formatTimestamp(timestamp);
+                // Wrap in span for proper measurement
+                const timestampWrapper = container.createSpan();
                 if (settings.showTimestampIcon) {
                     const sortMethod = this.getSortMethod();
                     const iconName = getTimestampIcon(sortMethod);
-                    const iconEl = container.createSpan('timestamp-icon');
+                    const iconEl = timestampWrapper.createSpan('timestamp-icon');
                     setIcon(iconEl, iconName);
                 }
-                container.appendText(date);
+                timestampWrapper.appendText(date);
             }
         } else if (displayType === 'tags' && card.tags.length > 0) {
             const tagsWrapper = container.createDiv('tags-wrapper');
@@ -562,6 +643,11 @@ export class DynamicViewsMasonryView extends BasesView {
                 this.resizeObserver.disconnect();
             }
         });
+    }
+
+    onClose(): void {
+        this.metadataObservers.forEach(obs => obs.disconnect());
+        this.metadataObservers = [];
     }
 }
 

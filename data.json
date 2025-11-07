@@ -19,7 +19,7 @@
     "metadataDisplayWinner": null,
     "timestampDisplay": "sort-based",
     "listMarker": "bullet",
-    "showTimestampIcon": true,
+    "showTimestampIcon": false,
     "minMasonryColumns": 2,
     "minGridColumns": 1,
     "randomizeAction": "shuffle",
@@ -44,10 +44,10 @@
   "queryStates": {
     "1762122189077": {
       "sortMethod": "mtime-desc",
-      "viewMode": "masonry",
+      "viewMode": "card",
       "searchQuery": "",
       "resultLimit": "",
-      "widthMode": "wide"
+      "widthMode": "normal"
     },
     "1762375187564": {
       "sortMethod": "mtime-desc",

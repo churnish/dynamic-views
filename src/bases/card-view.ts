@@ -359,13 +359,15 @@ export class DynamicViewsCardView extends BasesView {
 
             if (timestamp) {
                 const date = formatTimestamp(timestamp);
+                // Wrap in span for proper measurement
+                const timestampWrapper = container.createSpan();
                 if (settings.showTimestampIcon) {
                     const sortMethod = this.getSortMethod();
                     const iconName = getTimestampIcon(sortMethod);
-                    const iconEl = container.createSpan('timestamp-icon');
+                    const iconEl = timestampWrapper.createSpan('timestamp-icon');
                     setIcon(iconEl, iconName);
                 }
-                container.appendText(date);
+                timestampWrapper.appendText(date);
             }
         } else if (displayType === 'tags' && card.tags.length > 0) {
             const tagsWrapper = container.createDiv('tags-wrapper');
