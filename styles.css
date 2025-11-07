@@ -1675,19 +1675,33 @@ body:not(.dynamic-views-show-timestamp-icon) .dynamic-views .timestamp-icon {
     display: none;
 }
 
-.dynamic-views .writing-meta .tag {
-    background-color: transparent;
-    color: var(--text-faint);
-    border-radius: var(--tag-radius);
-	border: 1px solid var(--background-modifier-border);
-    padding: 2px 6px;
+/* Base tag styles */
+.dynamic-views .writing-meta .tag,
+.dynamic-views .list-meta .tag {
     text-decoration: none;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
-.dynamic-views .writing-meta .tag:hover {
-	color: var(--text-muted);
+.dynamic-views .list-meta .tag {
+    display: inline-block;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+/* Tag style: Plain */
+body.dynamic-views-tag-style-plain .dynamic-views .writing-meta .tag,
+body.dynamic-views-tag-style-plain .dynamic-views .list-meta .tag {
+    background-color: transparent;
+    color: var(--text-faint);
+    border-radius: var(--tag-radius);
+    border: 1px solid var(--background-modifier-border);
+    padding: 2px 6px;
+}
+
+body.dynamic-views-tag-style-plain .dynamic-views .writing-meta .tag:hover,
+body.dynamic-views-tag-style-plain .dynamic-views .list-meta .tag:hover {
+    color: var(--text-muted);
     border-color: var(--background-modifier-border-hover);
 }
 
@@ -1821,21 +1835,6 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
     margin-left: 8px;
 }
 
-.dynamic-views .list-meta .tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background-color: var(--tag-background);
-    color: var(--tag-text);
-    font-size: 0.85em;
-    white-space: nowrap;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.dynamic-views .list-meta .tag:hover {
-    opacity: 0.8;
-}
 
 .dynamic-views .list-meta.list-path {
     color: var(--text-faint);
