@@ -70,6 +70,13 @@
       "searchQuery": "",
       "resultLimit": "",
       "widthMode": "normal"
+    },
+    "1762204549373": {
+      "sortMethod": "mtime-desc",
+      "viewMode": "card",
+      "searchQuery": "",
+      "resultLimit": "",
+      "widthMode": "normal"
     }
   },
   "viewSettings": {
@@ -98,6 +105,23 @@
       "imageProperty": "",
       "metadataDisplayLeft": "timestamp",
       "metadataDisplayRight": "path",
+      "showTextPreview": true,
+      "fallbackToContent": true,
+      "showThumbnails": true,
+      "fallbackToEmbeds": true,
+      "queryHeight": 0,
+      "listMarker": "bullet"
+    },
+    "1762204549373": {
+      "titleProperty": "",
+      "descriptionProperty": "",
+      "imageProperty": "",
+      "metadataDisplay1": "file tags",
+      "metadataDisplay2": "",
+      "metadataDisplay3": "",
+      "metadataDisplay4": "modified time",
+      "metadataLayout12SideBySide": false,
+      "metadataLayout34SideBySide": true,
       "showTextPreview": true,
       "fallbackToContent": true,
       "showThumbnails": true,

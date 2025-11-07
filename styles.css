@@ -1704,9 +1704,10 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
     width: 100%;
 }
 
-/* Timestamps (direct span children) use justify-content since they're flex containers */
+/* Timestamps in right fields: use flex (not inline-flex) to actually take full width and right-align */
 .dynamic-views .meta-row-sidebyside .meta-field-2 > span,
 .dynamic-views .meta-row-sidebyside .meta-field-4 > span {
+    display: flex !important;
     justify-content: flex-end !important;
     width: 100%;
 }
