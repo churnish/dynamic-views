@@ -22,16 +22,28 @@ settings:
         id: dynamic-views-min-masonry-columns
         title: Minimum masonry columns
         description: Minimum number of columns in masonry view
-        type: variable-number
+        type: variable-select
         default: 2
-        format: ''
+        options:
+            -
+                label: One
+                value: 1
+            -
+                label: Two
+                value: 2
     -
         id: dynamic-views-min-grid-columns
         title: Minimum grid columns
         description: Minimum number of columns in grid view
-        type: variable-number
+        type: variable-select
         default: 1
-        format: ''
+        options:
+            -
+                label: One
+                value: 1
+            -
+                label: Two
+                value: 2
     -
         id: dynamic-views-card-background
         title: Card background
@@ -55,8 +67,8 @@ settings:
         description: Custom color for card backgrounds (only used when Card background is set to Custom color)
         type: variable-themed-color
         format: hex
-        default-light: '#f5f5f5'
-        default-dark: '#1e1e1e'
+        default-light: '#'
+        default-dark: '#'
     -
         id: thumbnails-heading
         title: Thumbnails
