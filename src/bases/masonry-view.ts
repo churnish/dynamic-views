@@ -515,19 +515,14 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     private updateScrollGradient(element: HTMLElement): void {
-        // For .meta-field: apply gradient to element itself
-        // For .tags-wrapper/.path-wrapper: apply to parent
-        const isMetaField = element.classList.contains('meta-field');
-        const target = isMetaField ? element : element.parentElement;
-        if (!target) return;
-
+        // Apply gradient classes directly to the scrollable .meta-field element
         const isScrollable = element.scrollWidth > element.clientWidth;
 
         if (!isScrollable) {
             // Not scrollable - remove all gradient classes
-            target.removeClass('scroll-gradient-left');
-            target.removeClass('scroll-gradient-right');
-            target.removeClass('scroll-gradient-both');
+            element.removeClass('scroll-gradient-left');
+            element.removeClass('scroll-gradient-right');
+            element.removeClass('scroll-gradient-both');
             return;
         }
 
@@ -538,28 +533,27 @@ export class DynamicViewsMasonryView extends BasesView {
         const atEnd = scrollLeft + clientWidth >= scrollWidth - 1; // Allow 1px tolerance
 
         // Remove all gradient classes first
-        target.removeClass('scroll-gradient-left');
-        target.removeClass('scroll-gradient-right');
-        target.removeClass('scroll-gradient-both');
+        element.removeClass('scroll-gradient-left');
+        element.removeClass('scroll-gradient-right');
+        element.removeClass('scroll-gradient-both');
 
         // Apply appropriate gradient based on position
         if (atStart && !atEnd) {
             // At start, content extends right
-            target.addClass('scroll-gradient-right');
+            element.addClass('scroll-gradient-right');
         } else if (atEnd && !atStart) {
             // At end, content extends left
-            target.addClass('scroll-gradient-left');
+            element.addClass('scroll-gradient-left');
         } else if (!atStart && !atEnd) {
             // In middle, content extends both directions
-            target.addClass('scroll-gradient-both');
+            element.addClass('scroll-gradient-both');
         }
         // If atStart && atEnd, content fits fully - no gradient
     }
 
     private setupScrollGradients(container: HTMLElement): void {
-        // Find all scrollable metadata elements
-        // Note: Exclude .tags-wrapper/.path-wrapper from .meta-4field since they're content (not containers) there
-        const scrollables = container.querySelectorAll('.writing-meta:not(.meta-4field) .tags-wrapper, .writing-meta:not(.meta-4field) .path-wrapper, .meta-row-sidebyside .meta-field');
+        // Find all scrollable metadata field containers
+        const scrollables = container.querySelectorAll('.meta-row-sidebyside .meta-field');
 
         scrollables.forEach((el) => {
             const element = el as HTMLElement;

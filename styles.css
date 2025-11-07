@@ -1650,11 +1650,19 @@ body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
     direction: ltr; /* Ensure scroll starts at position 0 */
 }
 
-/* Content wrappers inside fields */
-.dynamic-views .meta-field .property-value,
+/* Timestamps (direct span children) and custom properties need flex container styling */
+.dynamic-views .meta-field > span,
+.dynamic-views .meta-field .property-value {
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+}
+
+/* Ensure all content inside fields doesn't shrink */
 .dynamic-views .meta-field .tags-wrapper,
 .dynamic-views .meta-field .path-wrapper {
-    white-space: nowrap;
     flex-shrink: 0;
 }
 
