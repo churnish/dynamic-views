@@ -120,8 +120,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 		appearanceDesc.appendText('.');
 
 		const appearanceTip = containerEl.createEl('p', { cls: 'setting-item-description' });
-		appearanceTip.createEl('strong').appendText('Tip: ');
-		appearanceTip.appendText('Run ');
+		appearanceTip.appendText('Tip: Run ');
 		appearanceTip.createEl('em').appendText('Show style settings view');
 		appearanceTip.appendText(' command to open settings in a tab.');
 

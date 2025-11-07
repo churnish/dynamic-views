@@ -142,10 +142,6 @@ settings:
     border-bottom: 1px solid var(--background-modifier-border) !important;
 }
 
-.dynamic-views-section-header .setting-item-name {
-    font-weight: bold;
-}
-
 /* ============================================
    DATACORE EXPLORER STYLES
    ============================================ */
