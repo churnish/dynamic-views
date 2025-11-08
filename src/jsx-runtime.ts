@@ -2,15 +2,20 @@
 // This module provides h() and Fragment() that delegate to Datacore's bundled Preact
 // All JSX compiled by esbuild will use these functions
 
+import type { ComponentType, VNode } from './types/datacore';
+
 // Store reference to Datacore's Preact h and Fragment
-let datacoreH: any = null;
-let datacoreFragment: any = null;
+let datacoreH: ((type: string | ComponentType, props: Record<string, unknown> | null, ...children: unknown[]) => VNode) | null = null;
+let datacoreFragment: ComponentType | null = null;
 
 /**
  * Initialize the JSX runtime with Datacore's Preact implementation.
  * Must be called before any components render.
  */
-export function setDatacorePreact(preact: any) {
+export function setDatacorePreact(preact: {
+    h: (type: string | ComponentType, props: Record<string, unknown> | null, ...children: unknown[]) => VNode;
+    Fragment: ComponentType;
+}) {
     datacoreH = preact.h;
     datacoreFragment = preact.Fragment;
 }
@@ -19,7 +24,7 @@ export function setDatacorePreact(preact: any) {
  * Proxy h function that delegates to Datacore's Preact.
  * This is called by all esbuild-compiled JSX: <div> becomes h('div', ...)
  */
-export function h(type: any, props: any, ...children: any[]) {
+export function h(type: string | ComponentType, props: Record<string, unknown> | null, ...children: unknown[]): VNode {
     if (!datacoreH) {
         throw new Error(
             'Datacore Preact not initialized. ' +
@@ -34,15 +39,15 @@ export function h(type: any, props: any, ...children: any[]) {
  * Proxy Fragment that delegates to Datacore's Preact Fragment.
  * Used for JSX fragments: <>...</>
  */
-export function Fragment(props: any) {
+export function Fragment(props: { children?: unknown }): VNode {
     if (!datacoreFragment) {
         throw new Error('Datacore Preact not initialized.');
     }
-    return datacoreFragment(props);
+    return datacoreFragment(props) as VNode;
 }
 
 // Make h and Fragment globally available for esbuild-compiled JSX
 if (typeof globalThis !== 'undefined') {
-    (globalThis as any).h = h;
-    (globalThis as any).Fragment = Fragment;
+    (globalThis as Record<string, unknown>).h = h;
+    (globalThis as Record<string, unknown>).Fragment = Fragment;
 }

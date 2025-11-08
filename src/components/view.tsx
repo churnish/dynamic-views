@@ -1,23 +1,39 @@
-import { App, TFile, Plugin } from 'obsidian';
-import { Settings, UIState, ViewMode, WidthMode } from '../types';
+import { App, TFile, Plugin, Keymap } from 'obsidian';
+import { Settings, UIState, ViewMode, WidthMode, DefaultViewSettings } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
 import { PersistenceManager } from '../persistence';
 import { CardView } from './card-view';
 import { MasonryView } from './masonry-view';
 import { ListView } from './list-view';
 import { Toolbar } from './toolbar';
-import { getCurrentFile, getFileCtime } from '../utils/file';
+import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
+import { processImagePaths, resolveInternalImagePaths, extractEmbedImages } from '../utils/image';
+import { loadFilePreview } from '../utils/preview';
+import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
+import { getMinCardWidth, getMinMasonryColumns, getMinGridColumns } from '../utils/style-settings';
+import { calculateMasonryLayout, applyMasonryLayout } from '../utils/masonry-layout';
+import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
 
-interface ViewProps {
-    plugin: Plugin;
-    app: App;
-    dc: any;
-    USER_QUERY?: string;
-    USER_SETTINGS?: Partial<Settings>;
+// Extend App type to include isMobile property
+declare module 'obsidian' {
+    interface App {
+        isMobile: boolean;
+    }
 }
 
-export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: ViewProps) {
+interface DynamicViewsPlugin extends Plugin {
+    persistenceManager: PersistenceManager;
+}
+
+interface ViewProps {
+    plugin: DynamicViewsPlugin;
+    app: App;
+    dc: DatacoreAPI;
+    USER_QUERY?: string;
+}
+
+export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Element {
     // Get file containing this query (memoized to prevent re-fetching on every render)
     // This is used to exclude the query note itself from results
     const currentFile = dc.useMemo(() => {
@@ -29,7 +45,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     const ctime = getFileCtime(currentFile);
 
     // Access PersistenceManager from plugin
-    const persistenceManager = (plugin as any).persistenceManager as PersistenceManager;
+    const persistenceManager = plugin.persistenceManager;
 
     // Markdown stripping patterns - compiled once for performance
     const markdownPatterns = dc.useMemo(() => [
@@ -72,7 +88,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
         // Apply each pattern
         markdownPatterns.forEach((pattern) => {
-            result = result.replace(pattern, (match, ...groups) => {
+            result = result.replace(pattern, (match: string, ...groups: string[]) => {
                 // Special handling for HTML tag pairs - return content (group 2)
                 if (match.match(/<[a-z][a-z0-9]*\b[^>]*>.*?<\//i)) {
                     return groups[1] || '';
@@ -95,16 +111,34 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
     // Helper: get persisted settings
     const getPersistedSettings = dc.useCallback((): Settings => {
-        if (!ctime || !persistenceManager) return { ...DEFAULT_SETTINGS, ...USER_SETTINGS };
+        if (!ctime || !persistenceManager) return DEFAULT_SETTINGS;
 
-        const uiState = persistenceManager.getUIState(ctime);
         const globalSettings = persistenceManager.getGlobalSettings();
+        const defaultViewSettings = persistenceManager.getDefaultViewSettings();
+        const viewSettings = persistenceManager.getViewSettings(ctime);
 
-        // Check if settings should be localized
-        // Note: localizeSettings is stored in the UI state, not settings
-        // For now, we'll use global settings merged with USER_SETTINGS
-        return { ...globalSettings, ...USER_SETTINGS };
-    }, [ctime, persistenceManager, USER_SETTINGS]);
+        // Start with global settings as base
+        const baseSettings = { ...globalSettings };
+
+        // For view-specific properties, merge: defaultViewSettings -> viewSettings (persisted)
+        baseSettings.titleProperty = viewSettings.titleProperty ?? defaultViewSettings.titleProperty;
+        baseSettings.descriptionProperty = viewSettings.descriptionProperty ?? defaultViewSettings.descriptionProperty;
+        baseSettings.imageProperty = viewSettings.imageProperty ?? defaultViewSettings.imageProperty;
+        baseSettings.metadataDisplay1 = viewSettings.metadataDisplay1 ?? defaultViewSettings.metadataDisplay1;
+        baseSettings.metadataDisplay2 = viewSettings.metadataDisplay2 ?? defaultViewSettings.metadataDisplay2;
+        baseSettings.metadataDisplay3 = viewSettings.metadataDisplay3 ?? defaultViewSettings.metadataDisplay3;
+        baseSettings.metadataDisplay4 = viewSettings.metadataDisplay4 ?? defaultViewSettings.metadataDisplay4;
+        baseSettings.metadataLayout12SideBySide = viewSettings.metadataLayout12SideBySide ?? defaultViewSettings.metadataLayout12SideBySide;
+        baseSettings.metadataLayout34SideBySide = viewSettings.metadataLayout34SideBySide ?? defaultViewSettings.metadataLayout34SideBySide;
+        baseSettings.showTextPreview = viewSettings.showTextPreview ?? defaultViewSettings.showTextPreview;
+        baseSettings.fallbackToContent = viewSettings.fallbackToContent ?? defaultViewSettings.fallbackToContent;
+        baseSettings.showThumbnails = viewSettings.showThumbnails ?? defaultViewSettings.showThumbnails;
+        baseSettings.fallbackToEmbeds = viewSettings.fallbackToEmbeds ?? defaultViewSettings.fallbackToEmbeds;
+        baseSettings.queryHeight = viewSettings.queryHeight ?? defaultViewSettings.queryHeight;
+        baseSettings.listMarker = viewSettings.listMarker ?? defaultViewSettings.listMarker;
+
+        return baseSettings;
+    }, [ctime, persistenceManager]);
 
     // Helper: get persisted UI state value
     const getFilePersistedValue = dc.useCallback(<K extends keyof UIState>(
@@ -140,37 +174,37 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         .join('\n')
         .trim();
 
-    const [query, setQuery] = dc.useState(cleanQuery);
+    const [_query, setQuery] = dc.useState(cleanQuery);
     const [draftQuery, setDraftQuery] = dc.useState(cleanQuery);
     const [appliedQuery, setAppliedQuery] = dc.useState(cleanQuery);
     const [isShuffled, setIsShuffled] = dc.useState(false);
-    const [shuffledOrder, setShuffledOrder] = dc.useState([]);
+    const [shuffledOrder, setShuffledOrder] = dc.useState<string[]>([]);
     const [showQueryEditor, setShowQueryEditor] = dc.useState(false);
     const [showLimitDropdown, setShowLimitDropdown] = dc.useState(false);
     const [showSettings, setShowSettings] = dc.useState(false);
     const [showSortDropdown, setShowSortDropdown] = dc.useState(false);
     const [showViewDropdown, setShowViewDropdown] = dc.useState(false);
     const [isPinned, setIsPinned] = dc.useState(false);
-    const [queryError, setQueryError] = dc.useState(null);
-    const [displayedCount, setDisplayedCount] = dc.useState((app as any).isMobile ? 25 : 50);
+    const [queryError, setQueryError] = dc.useState<string | null>(null);
+    const [displayedCount, setDisplayedCount] = dc.useState(app.isMobile ? 25 : 50);
     const [focusableCardIndex, setFocusableCardIndex] = dc.useState(0);
     const [isResultsScrolled, setIsResultsScrolled] = dc.useState(false);
     const [isScrolledToBottom, setIsScrolledToBottom] = dc.useState(true);
-    const [localizeSettings, setLocalizeSettings] = dc.useState(false);
 
     // Settings state
     const [settings, setSettings] = dc.useState(getPersistedSettings());
 
     // Refs
-    const explorerRef = dc.useRef(null);
-    const toolbarRef = dc.useRef(null);
-    const containerRef = dc.useRef(null);
-    const updateLayoutRef = dc.useRef(null);
-    const loadMoreRef = dc.useRef(null);
+    const explorerRef = dc.useRef<HTMLElement | null>(null);
+    const toolbarRef = dc.useRef<HTMLElement | null>(null);
+    const containerRef = dc.useRef<HTMLElement | null>(null);
+    const updateLayoutRef = dc.useRef<(() => void) | null>(null);
+    const loadMoreRef = dc.useRef<(() => void) | null>(null);
     const isLoadingRef = dc.useRef(false);
-    const loadAttemptsRef = dc.useRef(0);
-    const settingsTimeoutRef = dc.useRef(null);
-    const initialToolbarOffset = dc.useRef(0);
+    const columnCountRef = dc.useRef<number | null>(null);
+    const displayedCountRef = dc.useRef(displayedCount);
+    const sortedLengthRef = dc.useRef<number>(0);
+    const settingsTimeoutRef = dc.useRef<ReturnType<typeof setTimeout> | null>(null);
     const isSyncing = dc.useRef(false);
 
     const [stickyTop, setStickyTop] = dc.useState(0);
@@ -179,54 +213,63 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     // Persist UI state changes
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { sortMethod });
+            void persistenceManager.setUIState(ctime, { sortMethod });
         }
     }, [sortMethod, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { viewMode });
+            void persistenceManager.setUIState(ctime, { viewMode });
         }
     }, [viewMode, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { widthMode });
+            void persistenceManager.setUIState(ctime, { widthMode });
         }
     }, [widthMode, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { searchQuery });
+            void persistenceManager.setUIState(ctime, { searchQuery });
         }
     }, [searchQuery, ctime, persistenceManager]);
 
     dc.useEffect(() => {
         if (ctime && persistenceManager) {
-            persistenceManager.setUIState(ctime, { resultLimit });
+            void persistenceManager.setUIState(ctime, { resultLimit });
         }
     }, [resultLimit, ctime, persistenceManager]);
 
     // Persist settings changes
     dc.useEffect(() => {
-        if (localizeSettings) {
-            // TODO: Write settings to USER_SETTINGS in file (requires file modification)
-            // For now, just save to global settings
-            if (settingsTimeoutRef.current) {
-                clearTimeout(settingsTimeoutRef.current);
-            }
-            settingsTimeoutRef.current = setTimeout(() => {
-                if (persistenceManager) {
-                    persistenceManager.setGlobalSettings(settings);
-                }
-            }, 300);
-        } else {
-            // Save to global settings immediately
-            if (persistenceManager) {
-                persistenceManager.setGlobalSettings(settings);
-            }
+        if (settingsTimeoutRef.current) {
+            clearTimeout(settingsTimeoutRef.current);
         }
-    }, [settings, localizeSettings, persistenceManager]);
+        settingsTimeoutRef.current = setTimeout(() => {
+            if (ctime && persistenceManager) {
+                // Extract only view-specific settings (those in DefaultViewSettings)
+                const viewSettings: Partial<DefaultViewSettings> = {
+                    titleProperty: settings.titleProperty,
+                    descriptionProperty: settings.descriptionProperty,
+                    imageProperty: settings.imageProperty,
+                    metadataDisplay1: settings.metadataDisplay1,
+                    metadataDisplay2: settings.metadataDisplay2,
+                    metadataDisplay3: settings.metadataDisplay3,
+                    metadataDisplay4: settings.metadataDisplay4,
+                    metadataLayout12SideBySide: settings.metadataLayout12SideBySide,
+                    metadataLayout34SideBySide: settings.metadataLayout34SideBySide,
+                    showTextPreview: settings.showTextPreview,
+                    fallbackToContent: settings.fallbackToContent,
+                    showThumbnails: settings.showThumbnails,
+                    fallbackToEmbeds: settings.fallbackToEmbeds,
+                    queryHeight: settings.queryHeight,
+                    listMarker: settings.listMarker
+                };
+                void persistenceManager.setViewSettings(ctime, viewSettings);
+            }
+        }, 300);
+    }, [settings, ctime, persistenceManager]);
 
     // Calculate sticky toolbar positioning
     dc.useEffect(() => {
@@ -276,11 +319,19 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     }, [appliedQuery]);
 
     // Workaround: Direct Datacore event subscription (fires AFTER reindexing completes)
-    const [indexRevision, setIndexRevision] = dc.useState(0);
+    const [_indexRevision, setIndexRevision] = dc.useState(0);
 
     dc.useEffect(() => {
         // Access Datacore core directly
-        const core = (window as any).datacore?.core;
+        const core = (window as unknown as {
+            datacore?: {
+                core?: {
+                    revision: number;
+                    on: (event: string, callback: (revision: number) => void) => unknown;
+                    offref: (ref: unknown) => void;
+                }
+            }
+        }).datacore?.core;
         if (!core) {
             return;
         }
@@ -300,11 +351,12 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     }, [app, dc]);
 
     // Execute query - indexRevision ensures re-execution AFTER Datacore reindexes
-    let pages: any[] = [];
+    let pages: DatacoreFile[] = [];
     try {
         pages = dc.useQuery(validatedQuery) || [];
-    } catch (error: any) {
-        setQueryError(error?.message || 'Query error');
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Query error';
+        setQueryError(errorMessage);
         pages = [];
     }
 
@@ -356,7 +408,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         }
 
         // Sort the filtered results
-        let sorted: any[];
+        let sorted: DatacoreFile[];
         if (isShuffled) {
             sorted = filtered.sort((a, b) => {
                 const indexA = shuffledOrder.indexOf(a.$path);
@@ -400,10 +452,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     // State to store file snippets and images
     const [snippets, setSnippets] = dc.useState({});
     const [images, setImages] = dc.useState({});
-    const [staticGifs, setStaticGifs] = dc.useState({});
-    const [hasMultipleImages, setHasMultipleImages] = dc.useState({});
     const [hasImageAvailable, setHasImageAvailable] = dc.useState({});
-    const [multiImagesLoaded, setMultiImagesLoaded] = dc.useState({});
 
     // Load file contents asynchronously (only for displayed items)
     dc.useEffect(() => {
@@ -411,7 +460,6 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         if (!settings.showTextPreview && !settings.showThumbnails) {
             setSnippets({});
             setImages({});
-            setHasMultipleImages({});
             setHasImageAvailable({});
             return;
         }
@@ -420,172 +468,69 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             const newSnippets: Record<string, string> = {};
             const newImages: Record<string, string | string[]> = {};
             const newHasImageAvailable: Record<string, boolean> = {};
-            const newHasMultipleImages: Record<string, boolean> = {};
 
             for (const p of sorted.slice(0, displayedCount)) {
                 try {
-                    const file = app.vault.getAbstractFileByPath(p.$path) as any;
-                    if (file) {
-                        // Check if property values are actually useful (not empty/whitespace)
-                        const descFromProp = p.value(settings.descriptionProperty);
-                        const hasValidDesc = descFromProp && String(descFromProp).trim().length > 0;
+                    const file = app.vault.getAbstractFileByPath(p.$path);
+                    if (file instanceof TFile) {
+                        // Get property value for text preview
+                        const descFromProp = getFirstDatacorePropertyValue(p, settings.descriptionProperty);
+                        const descAsString = typeof descFromProp === 'string' || typeof descFromProp === 'number'
+                            ? String(descFromProp)
+                            : null;
 
-                        // Check if image property contains valid image link
-                        const imgFromProp = p.value(settings.imageProperty);
-                        let imgStr = '';
+                        // Get ALL image values from ALL comma-separated properties
+                        const propertyImageValues = getAllDatacoreImagePropertyValues(p, settings.imageProperty);
 
-                        // Handle different property value types (Link objects or strings)
-                        if (imgFromProp) {
-                            // If it's a Link object with a path property, extract the path
-                            if (typeof imgFromProp === 'object' && imgFromProp !== null && 'path' in imgFromProp) {
-                                imgStr = String(imgFromProp.path).trim();
-                            } else {
-                                imgStr = String(imgFromProp).trim();
-                            }
-                        }
-
-                        // Strip wikilink syntax if present: [[path]] or ![[path]] or [[path|caption]]
-                        const wikilinkMatch = imgStr.match(/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-                        if (wikilinkMatch) {
-                            imgStr = wikilinkMatch[1].trim();
-                        }
-
-                        const imageExtensions = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
-                        const hasValidImg = imgStr.length > 0 && imageExtensions.test(imgStr);
-
-                        // Only read file if we need snippets or images from content
-                        const needsFileRead =
-                            (settings.showTextPreview && !hasValidDesc) ||
-                            (settings.showThumbnails && !hasValidImg);
-
-                        const text = needsFileRead ? await app.vault.read(file) : '';
+                        // Process and validate image paths using shared utility
+                        const { internalPaths: propertyImagePaths, externalUrls: propertyExternalUrls } =
+                            await processImagePaths(propertyImageValues);
 
                         // Process text preview only if enabled
                         if (settings.showTextPreview) {
-                            // Try to get description from property first
-                            let description = hasValidDesc ? descFromProp : null;
-                            if (!description && text) {
-                                // Fallback: extract from file content
-                                const cleaned = text.replace(/^---[\s\S]*?---/, "").trim();
-                                let stripped = stripMarkdownSyntax(cleaned);
+                            // Get title for first line comparison
+                            let titleValue: unknown = p.value(settings.titleProperty);
+                            if (Array.isArray(titleValue)) titleValue = titleValue[0] as unknown;
+                            const titleString = titleValue ? dc.coerce.string(titleValue) : undefined;
 
-                                // Check if first line matches filename or title property
-                                const firstLineEnd = stripped.indexOf('\n');
-                                const firstLine = (firstLineEnd !== -1 ? stripped.substring(0, firstLineEnd) : stripped).trim();
-                                const fileName = p.$name;
-                                let titleValue = p.value(settings.titleProperty);
-                                if (Array.isArray(titleValue)) titleValue = titleValue[0];
+                            // Use shared utility for preview loading
+                            const description = await loadFilePreview(
+                                file,
+                                app,
+                                descAsString,
+                                {
+                                    fallbackToContent: settings.fallbackToContent,
+                                    omitFirstLine: settings.omitFirstLine
+                                },
+                                p.$name,
+                                titleString
+                            );
 
-                                // Omit first line if it matches filename/title or if alwaysOmitFirstLine enabled
-                                if (firstLine === fileName || (titleValue && firstLine === dc.coerce.string(titleValue)) || settings.alwaysOmitFirstLine) {
-                                    stripped = firstLineEnd !== -1 ? stripped.substring(firstLineEnd + 1).trim() : '';
-                                }
-
-                                const normalized = stripped
-                                    .replace(/\^[a-zA-Z0-9-]+/g, '') // Remove block IDs
-                                    .replace(/\\/g, '') // Remove backslashes
-                                    .split(/\s+/)
-                                    .filter(word => word)
-                                    .join(' ')
-                                    .trim()
-                                    .replace(/\.{2,}/g, match => match.replace(/\./g, '\u2024'));
-
-                                const wasTruncated = normalized.length > 500;
-                                description = normalized.substring(0, 500);
-
-                                if (wasTruncated) {
-                                    description += '…';
-                                }
-                            }
                             // Always set snippet value, even if empty (to prevent perpetual "Loading...")
-                            newSnippets[p.$path] = description || '';
+                            newSnippets[p.$path] = description;
                         }
 
                         // Process thumbnails only if enabled
                         if (settings.showThumbnails) {
-                            let imagePath: string | null = null;
+                            // Phase A: Convert property image paths to resource paths using shared utility
+                            const propertyResourcePaths: string[] = [
+                                ...resolveInternalImagePaths(propertyImagePaths, p.$path, app),
+                                ...propertyExternalUrls  // External URLs already validated by processImagePaths
+                            ];
 
-                            // Try to get image from property first
-                            if (hasValidImg) {
-                                // Use stripped version (imgStr) without wikilink syntax
-                                const propImagePath = imgStr;
+                            // Phase B: Extract body embed resource paths using shared utility
+                            const bodyResourcePaths = await extractEmbedImages(file, app);
 
-                                // Verify the property image actually resolves to a valid image file
-                                if (propImagePath) {
-                                    const propImageFile = app.metadataCache.getFirstLinkpathDest(propImagePath, p.$path);
-                                    const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
-                                    if (propImageFile && validImageExtensions.includes(propImageFile.extension)) {
-                                        imagePath = propImagePath;
-                                    }
-                                }
-                            }
+                            // Phase C: Merge with fallback: property images first, then body embeds (if enabled)
+                            const allResourcePaths = propertyResourcePaths.length > 0
+                                ? propertyResourcePaths
+                                : (settings.fallbackToEmbeds ? bodyResourcePaths : []);
 
-                            // Fallback: Extract from content if property didn't provide valid image
-                            if (!imagePath) {
-                                // Read file if we haven't already
-                                const contentText = text || await app.vault.read(file);
-
-                                if (contentText) {
-                                    // Extract first image from content - support all wikilink and markdown formats
-                                    // Wikilink: [[img.png]], ![[img.png]], [[img.png|caption]], ![[img.png|caption]]
-                                    const wikiImageMatch = contentText.match(/!?\[\[([^\]|]+\.(avif|bmp|gif|jpe?g|png|svg|webp))(?:\|[^\]]*)?\]\]/i);
-                                    // Markdown: ![alt](img.png)
-                                    const mdImageMatch = contentText.match(/!\[([^\]]*)\]\(([^\)]+\.(avif|bmp|gif|jpe?g|png|svg|webp))\)/i);
-
-                                    if (wikiImageMatch && wikiImageMatch[1]) {
-                                        imagePath = wikiImageMatch[1];
-                                    } else if (mdImageMatch && mdImageMatch[2]) {
-                                        imagePath = mdImageMatch[2];
-                                    }
-
-                                    // Check for multiple images
-                                    if (imagePath) {
-                                        const isFirstGif = imagePath.toLowerCase().endsWith('.gif');
-                                        const metadata = app.metadataCache.getFileCache(file);
-                                        const imageEmbeds = metadata?.embeds?.filter((embed: any) => {
-                                            const targetFile = app.metadataCache.getFirstLinkpathDest(embed.link, p.$path);
-                                            return targetFile && ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'].includes(targetFile.extension);
-                                        }) || [];
-
-                                        const imageCount = imageEmbeds.length;
-                                        if (isFirstGif || (!isFirstGif && imageCount > 1)) {
-                                            newHasMultipleImages[p.$path] = true;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (imagePath && typeof imagePath === 'string') {
-                                const imageFile = app.metadataCache.getFirstLinkpathDest(imagePath, p.$path);
-                                // Verify file exists AND has valid image extension
-                                const validImageExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
-                                if (imageFile && validImageExtensions.includes(imageFile.extension)) {
-                                    const resourcePath = app.vault.getResourcePath(imageFile);
-                                    newImages[p.$path] = resourcePath;
-                                    newHasImageAvailable[p.$path] = true;
-
-                                    // Handle GIFs (static frame extraction)
-                                    const isGif = imageFile.extension === 'gif';
-                                    if (isGif && resourcePath) {
-                                        const cachedFrame = staticGifs[p.$path];
-                                        if (!cachedFrame) {
-                                            const img = new Image();
-                                            img.crossOrigin = "anonymous";
-                                            img.onload = () => {
-                                                const canvas = document.createElement('canvas');
-                                                canvas.width = img.width;
-                                                canvas.height = img.height;
-                                                const ctx = canvas.getContext('2d', { alpha: false });
-                                                if (ctx) {
-                                                    ctx.drawImage(img, 0, 0);
-                                                    const staticFrame = canvas.toDataURL('image/png');
-                                                    setStaticGifs(prev => ({...prev, [p.$path]: staticFrame}));
-                                                }
-                                            };
-                                            img.src = resourcePath;
-                                        }
-                                    }
-                                }
+                            // Phase D: Store combined result
+                            if (allResourcePaths.length > 0) {
+                                // Store as array if multiple, string if single
+                                newImages[p.$path] = allResourcePaths.length > 1 ? allResourcePaths : allResourcePaths[0];
+                                newHasImageAvailable[p.$path] = true;
                             }
                         }
                     } else {
@@ -593,8 +538,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                             newSnippets[p.$path] = "(File not found)";
                         }
                     }
-                } catch (e: any) {
-                    console.error("Error reading file:", p.$path, e.message || e);
+                } catch (e: unknown) {
+                    console.error("Error reading file:", p.$path, e instanceof Error ? e.message : e);
                     if (settings.showTextPreview) {
                         newSnippets[p.$path] = "(Error reading file)";
                     }
@@ -603,158 +548,311 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
             setSnippets(newSnippets);
             setImages(newImages);
-            setHasMultipleImages(newHasMultipleImages);
             setHasImageAvailable(newHasImageAvailable);
         };
 
-        loadSnippets();
+        void loadSnippets();
     }, [sorted, displayedCount, stripMarkdownSyntax, settings.showTextPreview, settings.showThumbnails, settings, app, dc]);
 
-    // Masonry layout
-    const [columnCount, setColumnCount] = dc.useState(1);
-    const [columnHeights, setColumnHeights] = dc.useState([]);
-    const columnHeightsRef = dc.useRef([]);
-    const lastPositionedCountRef = dc.useRef(0);
-    const lastContainerWidthRef = dc.useRef(0);
-
-    // Masonry layout effect
+    // Masonry layout - Direct DOM manipulation (no React re-renders on shuffle)
     dc.useEffect(() => {
-        if (viewMode !== 'masonry') return;
+        // Clean up masonry styles if not in masonry mode
+        if (viewMode !== 'masonry') {
+            const container = containerRef.current;
+            if (container) {
+                const cards = container.querySelectorAll<HTMLElement>('.writing-card');
+                cards.forEach((card) => {
+                    card.style.position = '';
+                    card.style.left = '';
+                    card.style.top = '';
+                    card.style.width = '';
+                    card.style.transition = '';
+                });
+                container.style.height = '';
+            }
+            updateLayoutRef.current = null;
+            return;
+        }
 
-        // Reset state
-        setColumnCount(1);
-        setColumnHeights([]);
-        columnHeightsRef.current = [];
-        lastPositionedCountRef.current = 0;
-        lastContainerWidthRef.current = 0;
-
+        // Setup masonry layout function using shared logic
         const updateLayout = () => {
             const container = containerRef.current;
             if (!container) return;
 
-            const cards = container.querySelectorAll('.writing-card');
-            const containerWidth = container.clientWidth;
-
-            // Skip if container not visible
-            if (containerWidth < 100) return;
-
-            const cardMinWidth = 320;
-            const gap = 8;
-
-            // Calculate columns
-            const cols = Math.max(settings.minMasonryColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
-            setColumnCount(cols);
-
-            // Calculate card width
-            const totalGapWidth = (cols - 1) * gap;
-            const cardWidth = (containerWidth - totalGapWidth) / cols;
-
+            const cards = Array.from(container.querySelectorAll<HTMLElement>('.writing-card'));
             if (cards.length === 0) return;
 
-            // Determine if incremental update possible
-            const previousCount = lastPositionedCountRef.current || 0;
-            const widthChanged = Math.abs(containerWidth - lastContainerWidthRef.current) > 1;
-            const isIncremental = previousCount > 0 &&
-                                  previousCount < cards.length &&
-                                  !widthChanged &&
-                                  columnHeightsRef.current.length === cols;
+            const containerWidth = container.clientWidth;
+            if (containerWidth < 100) return;
 
-            // Batch DOM operations
-            requestAnimationFrame(() => {
-                const cardsToProcess = isIncremental ?
-                    Array.from(cards).slice(previousCount) :
-                    Array.from(cards);
-
-                // Set widths
-                cardsToProcess.forEach((card: any) => {
-                    card.style.width = `${cardWidth}px`;
-                });
-
-                // Force reflow
-                container.offsetHeight;
-
-                // Read heights
-                const cardHeights = cardsToProcess.map((card: any) => card.offsetHeight);
-
-                // Calculate positions
-                const heights = isIncremental ?
-                    [...columnHeightsRef.current] :
-                    new Array(cols).fill(0);
-                const positions: any[] = [];
-
-                cardHeights.forEach((cardHeight) => {
-                    const shortestCol = heights.indexOf(Math.min(...heights));
-                    positions.push({
-                        left: shortestCol * (cardWidth + gap),
-                        top: heights[shortestCol]
-                    });
-                    heights[shortestCol] += cardHeight + gap;
-                });
-
-                // Apply positions
-                requestAnimationFrame(() => {
-                    cardsToProcess.forEach((card: any, i: number) => {
-                        const pos = positions[i];
-                        card.style.position = 'absolute';
-                        card.style.transition = 'none';
-                        card.style.left = `${pos.left}px`;
-                        card.style.top = `${pos.top}px`;
-                    });
-
-                    // Set container height
-                    const newContainerHeight = Math.max(...heights);
-                    container.style.height = `${newContainerHeight}px`;
-                    setColumnHeights(heights);
-
-                    // Store state
-                    columnHeightsRef.current = heights;
-                    lastPositionedCountRef.current = cards.length;
-                    lastContainerWidthRef.current = containerWidth;
-                });
+            // Calculate and apply layout using shared masonry logic
+            const result = calculateMasonryLayout({
+                cards,
+                containerWidth,
+                cardMinWidth: getMinCardWidth(),
+                minColumns: getMinMasonryColumns(),
+                gap: 8
             });
+
+            applyMasonryLayout(container, cards, result);
+
+            // Update column count for infinite scroll batching
+            columnCountRef.current = result.columns;
         };
 
-        // Store update function
+        // Store update function for external calls (shuffle, image load)
         updateLayoutRef.current = updateLayout;
 
-        // Debounced layout
-        let layoutTimeout: any;
-        const debouncedLayout = () => {
-            clearTimeout(layoutTimeout);
-            layoutTimeout = setTimeout(updateLayout, 16);
-        };
+        // Initial layout
+        updateLayout();
 
-        debouncedLayout();
-
-        // Observers
-        const intersectionObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    debouncedLayout();
-                }
-            });
+        // Watch for new cards being added (infinite scroll)
+        const mutationObserver = new MutationObserver(() => {
+            updateLayout();
         });
+
         if (containerRef.current) {
-            intersectionObserver.observe(containerRef.current);
+            mutationObserver.observe(containerRef.current, {
+                childList: true
+            });
         }
 
-        const resizeObserver = new ResizeObserver(debouncedLayout);
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
+        // Window resize handler
+        let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
         const handleResize = () => {
-            setTimeout(updateLayout, 100);
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(updateLayout, 100);
         };
         window.addEventListener('resize', handleResize);
 
         return () => {
-            intersectionObserver.disconnect();
-            resizeObserver.disconnect();
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            mutationObserver.disconnect();
             window.removeEventListener('resize', handleResize);
-            clearTimeout(layoutTimeout);
         };
-    }, [sorted, viewMode, settings.minMasonryColumns, dc]);
+    }, [viewMode, dc]);
+
+    // Apply dynamic grid layout (all width modes)
+    dc.useEffect(() => {
+        if (viewMode !== 'card') return;
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        const updateGrid = () => {
+            const containerWidth = container.clientWidth;
+            const cardMinWidth = getMinCardWidth();
+            const minColumns = getMinGridColumns();
+            const gap = 8;
+            const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+            const cardWidth = (containerWidth - (gap * (cols - 1))) / cols;
+
+            container.style.setProperty('--card-min-width', `${cardWidth}px`);
+            container.style.setProperty('--grid-columns', String(cols));
+        };
+
+        updateGrid();
+
+        const resizeObserver = new ResizeObserver(updateGrid);
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [viewMode, dc]);
+
+    // Sync refs for callback access in infinite scroll
+    dc.useEffect(() => {
+        console.log('[InfiniteScroll:RefSync] displayedCountRef updated:', displayedCountRef.current, '→', displayedCount);
+        displayedCountRef.current = displayedCount;
+    }, [displayedCount, dc]);
+
+    dc.useEffect(() => {
+        sortedLengthRef.current = sorted.length;
+    }, [sorted.length, dc]);
+
+    // Track scroll position for toolbar shadow and fade effect
+    dc.useEffect(() => {
+        const container = containerRef.current;
+        if (!container || settings.queryHeight === 0) {
+            setIsResultsScrolled(false);
+            setIsScrolledToBottom(true);
+            return;
+        }
+
+        const handleScroll = () => {
+            setIsResultsScrolled(container.scrollTop > 10);
+            const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 1;
+            setIsScrolledToBottom(isAtBottom);
+        };
+
+        handleScroll(); // Check initial state
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [settings.queryHeight, displayedCount, sorted.length, viewMode]);
+
+    // Infinite scroll: ResizeObserver + scroll + window resize
+    dc.useEffect(() => {
+        if (!containerRef.current) {
+            console.log('[InfiniteScroll] containerRef not available, skipping setup');
+            return;
+        }
+
+        console.log('[InfiniteScroll] Setting up infinite scroll system');
+
+        // Configuration: preload distance multipliers
+        const DESKTOP_VIEWPORT_MULTIPLIER = 2; // Load when within 2x viewport height from bottom
+        const MOBILE_VIEWPORT_MULTIPLIER = Math.max(1, DESKTOP_VIEWPORT_MULTIPLIER * 0.5); // Mobile: 0.5x of desktop, minimum 1x
+
+        // Find the element that actually scrolls
+        let element: HTMLElement | null = containerRef.current;
+        let scrollableElement: HTMLElement | Window | null = null;
+
+        while (element && !scrollableElement) {
+            const style = window.getComputedStyle(element);
+            const overflowY = style.overflowY;
+            const hasOverflow = overflowY === 'auto' || overflowY === 'scroll';
+
+            if (hasOverflow && element.scrollHeight > element.clientHeight) {
+                scrollableElement = element;
+            }
+            element = element.parentElement;
+        }
+
+        if (!scrollableElement) {
+            scrollableElement = window;
+            console.log('[InfiniteScroll] Using window as scroll container');
+        } else {
+            console.log('[InfiniteScroll] Using element as scroll container:', scrollableElement.className);
+        }
+
+        // Core batch loading function
+        const loadMoreItems = (trigger = 'unknown') => {
+            console.log(`[InfiniteScroll] loadMoreItems() called by: ${trigger}`);
+
+            // Guard: already loading or no container
+            if (isLoadingRef.current) {
+                console.log('[InfiniteScroll] Already loading, skipping');
+                return false;
+            }
+            if (!containerRef.current) {
+                console.log('[InfiniteScroll] No container, skipping');
+                return false;
+            }
+
+            // Get current count from ref (captures latest value)
+            const currentCount = displayedCountRef.current!;
+            const totalLength = sortedLengthRef.current;
+            console.log(`[InfiniteScroll] Current: ${currentCount}, Total: ${totalLength}`);
+            if (totalLength !== null && currentCount >= totalLength) {
+                console.log(`[InfiniteScroll] All items loaded (${currentCount}/${totalLength})`);
+                return false; // All items loaded
+            }
+
+            // Calculate distance from bottom using the scrollable element we already found
+            let scrollTop, editorHeight, scrollHeight;
+
+            if (scrollableElement === window) {
+                scrollTop = window.scrollY || document.documentElement.scrollTop;
+                editorHeight = window.innerHeight;
+                scrollHeight = document.documentElement.scrollHeight;
+            } else if (scrollableElement instanceof HTMLElement) {
+                // TypeScript narrowing: must be HTMLElement here
+                scrollTop = scrollableElement.scrollTop;
+                editorHeight = scrollableElement.clientHeight;
+                scrollHeight = scrollableElement.scrollHeight;
+            } else {
+                // Fallback if somehow scrollableElement is null (shouldn't happen)
+                return false;
+            }
+
+            const distanceFromBottom = scrollHeight - (scrollTop + editorHeight);
+
+            // Calculate threshold
+            const threshold = editorHeight * (app.isMobile ? MOBILE_VIEWPORT_MULTIPLIER : DESKTOP_VIEWPORT_MULTIPLIER);
+
+            console.log(`[InfiniteScroll] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
+
+            // Check if we should load
+            if (distanceFromBottom > threshold) {
+                console.log(`[InfiniteScroll] Distance (${distanceFromBottom.toFixed(0)}px) > threshold (${threshold.toFixed(0)}px), not loading`);
+                return false;
+            }
+
+            // Load batch
+            console.log('[InfiniteScroll] Distance within threshold, loading batch...');
+            isLoadingRef.current = true;
+
+            const currentCols = columnCountRef.current || 2;
+            const rowsPerColumn = 10;
+            const batchSize = Math.min(currentCols * rowsPerColumn, 7 * rowsPerColumn);
+            const newCount = Math.min(currentCount + batchSize, totalLength!);
+
+            console.log(`[InfiniteScroll] Loading batch: ${currentCount} → ${newCount} (${batchSize} items, ${currentCols} cols × ${rowsPerColumn} rows)`);
+
+            displayedCountRef.current = newCount;
+            setDisplayedCount(newCount);
+
+            return true; // Batch loaded
+        };
+
+        // Setup ResizeObserver (watches masonry container)
+        console.log('[InfiniteScroll] Setting up ResizeObserver on masonry container');
+        const resizeObserver = new ResizeObserver(() => {
+            console.log('[InfiniteScroll] ResizeObserver: Masonry container height changed (layout completed)');
+            // Only clear loading flag - don't trigger auto-loading to prevent cascade
+            isLoadingRef.current = false;
+        });
+        resizeObserver.observe(containerRef.current);
+
+        // One-time initial check after layout settles (if viewport isn't filled)
+        const initialCheckTimeout = setTimeout(() => {
+            console.log('[InfiniteScroll] Running one-time initial check');
+            loadMoreItems('initial-check');
+        }, 300);
+
+        // Setup window resize listener (handles viewport height changes)
+        console.log('[InfiniteScroll] Setting up window resize listener');
+        const handleWindowResize = () => {
+            console.log('[InfiniteScroll] Window resized, checking if need more items');
+            loadMoreItems('window.resize');
+        };
+        window.addEventListener('resize', handleWindowResize);
+
+        // Setup scroll listener with leading-edge throttle
+        console.log('[InfiniteScroll] Setting up scroll listener with leading-edge throttle');
+        let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+        const handleScroll = () => {
+            if (scrollTimer) {
+                // Cooldown active, ignore
+                return;
+            }
+
+            console.log('[InfiniteScroll] Scroll event (cooldown started)');
+
+            // Check immediately (leading edge)
+            loadMoreItems('scroll');
+
+            // Start cooldown
+            scrollTimer = setTimeout(() => {
+                console.log('[InfiniteScroll] Scroll cooldown ended');
+                scrollTimer = null;
+            }, 100);
+        };
+        scrollableElement.addEventListener('scroll', handleScroll, { passive: true });
+
+        console.log('[InfiniteScroll] All listeners attached, system ready');
+
+        // Cleanup
+        return () => {
+            console.log('[InfiniteScroll] Cleaning up all listeners');
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', handleWindowResize);
+            scrollableElement.removeEventListener('scroll', handleScroll);
+            if (scrollTimer) clearTimeout(scrollTimer);
+            clearTimeout(initialCheckTimeout);
+        };
+    }, []); // Empty deps - only set up once on mount
 
     // Auto-reload: Watch for USER_QUERY prop changes (Datacore re-renders on code block edits)
     dc.useEffect(() => {
@@ -843,8 +941,8 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
 
     const handleSearchChange = dc.useCallback((query: string) => {
         setSearchQuery(query);
-        setDisplayedCount((app as any).isMobile ? 25 : 50);
-    }, [(app as any).isMobile]);
+        setDisplayedCount(app.isMobile ? 25 : 50);
+    }, [app.isMobile]);
 
     const handleSearchFocus = dc.useCallback(() => {
         setShowViewDropdown(false);
@@ -857,18 +955,33 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     }, []);
 
     const handleShuffle = dc.useCallback(() => {
-        if (settings.randomizeAction === 'open') {
-            if (sorted.length === 0) return;
-            const randomIndex = Math.floor(Math.random() * sorted.length);
-            const randomPath = sorted[randomIndex].$path;
-            const file = app.vault.getAbstractFileByPath(randomPath);
-            if (file) {
-                app.workspace.getLeaf(false).openFile(file as TFile);
+        const container = containerRef.current;
+        if (!container) return;
+
+        // For masonry: directly reorder DOM and reposition
+        if (viewMode === 'masonry') {
+            const cards = Array.from(container.querySelectorAll<HTMLElement>('.writing-card'));
+
+            // Shuffle array of DOM elements
+            const shuffled = [...cards];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
+
+            // Reorder in DOM
+            shuffled.forEach(card => container.appendChild(card));
+
+            // Trigger immediate layout update
+            if (updateLayoutRef.current) {
+                updateLayoutRef.current();
+            }
+
+            setShowSortDropdown(false);
             return;
         }
 
-        // Shuffle the results
+        // For other views: use React state to trigger re-render
         const paths = sorted.map(p => p.$path);
         const shuffled = [...paths];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -878,7 +991,18 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         setShuffledOrder(shuffled);
         setIsShuffled(true);
         setShowSortDropdown(false);
-    }, [settings.randomizeAction, sorted, app]);
+    }, [sorted, viewMode]);
+
+    const handleOpenRandom = dc.useCallback((event: MouseEvent) => {
+        if (sorted.length === 0) return;
+        const randomIndex = Math.floor(Math.random() * sorted.length);
+        const randomPath = sorted[randomIndex].$path;
+        const file = app.vault.getAbstractFileByPath(randomPath);
+        if (file instanceof TFile) {
+            const newLeaf = Keymap.isModEvent(event);
+            void app.workspace.getLeaf(newLeaf).openFile(file);
+        }
+    }, [sorted, app]);
 
     const handleToggleCode = dc.useCallback(() => {
         setShowQueryEditor(!showQueryEditor);
@@ -911,58 +1035,65 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         }
     }, [currentFile, app]);
 
-    const handleApplyQuery = dc.useCallback(async () => {
-        const processedQuery = ensurePageSelector(draftQuery.trim());
-        setDraftQuery(processedQuery);  // Update editor to show processed query
-        setAppliedQuery(processedQuery);
-        setQuery(processedQuery);
-        setShowQueryEditor(false);
+    const handleApplyQuery = dc.useCallback(() => {
+        void (async () => {
+            const processedQuery = ensurePageSelector(draftQuery.trim());
+            setDraftQuery(processedQuery);  // Update editor to show processed query
+            setAppliedQuery(processedQuery);
+            setQuery(processedQuery);
+            setShowQueryEditor(false);
 
-        if (currentFile) {
-            try {
-                await syncQueryToCodeBlock(processedQuery);
-            } catch (error) {
-                console.error('Failed to sync query to code block:', error);
+            if (currentFile) {
+                try {
+                    await syncQueryToCodeBlock(processedQuery);
+                } catch (error) {
+                    console.error('Failed to sync query to code block:', error);
+                }
             }
-        }
+        })();
     }, [draftQuery, currentFile, syncQueryToCodeBlock]);
 
-    const handleClearQuery = dc.useCallback(async () => {
-        setDraftQuery('');
-        setAppliedQuery('');
-        setQuery('');
+    const handleClearQuery = dc.useCallback(() => {
+        void (async () => {
+            setDraftQuery('');
+            setAppliedQuery('');
+            setQuery('');
 
-        // Save empty query to code block
-        if (currentFile) {
-            try {
-                await syncQueryToCodeBlock('');
-            } catch (error) {
-                console.error('Failed to sync cleared query to code block:', error);
+            // Save empty query to code block
+            if (currentFile) {
+                try {
+                    await syncQueryToCodeBlock('');
+                } catch (error) {
+                    console.error('Failed to sync cleared query to code block:', error);
+                }
             }
-        }
+        })();
     }, [currentFile, syncQueryToCodeBlock]);
 
     const handleResultLimitChange = dc.useCallback((limit: string) => {
         setResultLimit(limit);
     }, []);
 
-    const handleResetLimit = dc.useCallback(() => {
+    const handleResetLimit = dc.useCallback((): void => {
         setResultLimit('');
         setShowLimitDropdown(false);
     }, []);
 
-    const handleCreateNote = dc.useCallback(async () => {
-        // TODO: Implement note creation
-        const fileName = `Untitled ${Date.now()}.md`;
-        const file = await app.vault.create(fileName, '');
-        app.workspace.getLeaf(false).openFile(file);
-    }, [app]);
+    const handleCreateNote = dc.useCallback((event: MouseEvent) => {
+        void (async () => {
+            const folderPath = currentFile?.parent?.path || '';
+            const filePath = getAvailablePath(app, folderPath, 'Untitled');
+            const file = await app.vault.create(filePath, '');
+            const newLeaf = Keymap.isModEvent(event);
+            void app.workspace.getLeaf(newLeaf).openFile(file);
+        })();
+    }, [app, currentFile]);
 
     const handleCardClick = dc.useCallback((path: string, newLeaf: boolean) => {
         const file = app.vault.getAbstractFileByPath(path);
-        if (file) {
+        if (file instanceof TFile) {
             if (settings.openFileAction === 'card') {
-                app.workspace.getLeaf(newLeaf).openFile(file as TFile);
+                void app.workspace.getLeaf(newLeaf).openFile(file);
             } else if (settings.openFileAction === 'title') {
                 // Only open on title click (handled in CardView)
             }
@@ -979,7 +1110,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             .map(p => `[[${p.$name}]]`)
             .join('\n');
 
-        navigator.clipboard.writeText(links);
+        void navigator.clipboard.writeText(links);
 
         // TODO: Show notification
         console.log(text);
@@ -989,19 +1120,17 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         setSettings(prev => ({ ...prev, ...newSettings }));
     }, []);
 
-    const handleLocalizeSettingsToggle = dc.useCallback(() => {
-        setLocalizeSettings(!localizeSettings);
-    }, [localizeSettings]);
-
     // Copy menu item for Toolbar
-    const copyMenuItem = dc.useMemo(() => (
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Datacore useMemo lacks proper TypeScript types
+    const copyMenuItem: JSX.Element = dc.useMemo((): JSX.Element => (
         <div
             className="bases-toolbar-menu-item"
             onClick={handleCopyToClipboard}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCopyToClipboard(e as any);
+            onKeyDown={(e: unknown) => {
+                const evt = e as KeyboardEvent;
+                if (evt.key === 'Enter' || evt.key === ' ') {
+                    evt.preventDefault();
+                    handleCopyToClipboard(evt as unknown as MouseEvent);
                 }
             }}
             tabIndex={0}
@@ -1020,7 +1149,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     ), [handleCopyToClipboard]);
 
     // Render appropriate view component
-    const renderView = () => {
+    const renderView = (): JSX.Element => {
         const commonProps = {
             results: sorted,
             displayedCount: Math.min(displayedCount, sorted.length),
@@ -1030,9 +1159,6 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             isShuffled,
             snippets,
             images,
-            staticGifs,
-            multiImagesLoaded,
-            hasMultipleImages,
             hasImageAvailable,
             focusableCardIndex,
             containerRef,
@@ -1040,10 +1166,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             app,
             dc,
             onCardClick: handleCardClick,
-            onFocusChange: setFocusableCardIndex,
-            onExtractMultipleImages: (path: string) => {
-                // TODO: Implement multiple image extraction
-            }
+            onFocusChange: setFocusableCardIndex
         };
 
         if (viewMode === 'list') {
@@ -1051,7 +1174,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
         } else if (viewMode === 'masonry') {
             return <MasonryView {...commonProps} />;
         } else {
-            return <CardView {...commonProps} />;
+            return <CardView {...commonProps} viewMode="card" />;
         }
     };
 
@@ -1061,7 +1184,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
     return (
         <div
             ref={explorerRef}
-            className={`dynamic-views ${widthClass}${!settings.addCardBackground ? ' no-card-background' : ''}`}
+            className={`dynamic-views ${widthClass}`}
         >
             <div
                 ref={toolbarRef}
@@ -1075,6 +1198,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             >
                 <Toolbar
                     dc={dc}
+                    app={app}
                     viewMode={viewMode}
                     showViewDropdown={showViewDropdown}
                     onToggleViewDropdown={handleToggleViewDropdown}
@@ -1097,6 +1221,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                     onClearSearch={handleClearSearch}
                     settings={settings}
                     onShuffle={handleShuffle}
+                    onOpenRandom={handleOpenRandom}
                     showQueryEditor={showQueryEditor}
                     draftQuery={draftQuery}
                     onToggleCode={handleToggleCode}
@@ -1110,7 +1235,7 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                     onToggleLimitDropdown={handleToggleLimitDropdown}
                     onResultLimitChange={handleResultLimitChange}
                     onResetLimit={handleResetLimit}
-                    copyMenuItem={copyMenuItem}
+                    copyMenuItem={copyMenuItem /* eslint-disable-line @typescript-eslint/no-unsafe-assignment */}
                     onCreateNote={handleCreateNote}
                     isPinned={isPinned}
                     widthMode={widthMode}
@@ -1119,8 +1244,6 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
                     onToggleWidth={handleToggleWidth}
                     onToggleSettings={handleToggleSettings}
                     showSettings={showSettings}
-                    localizeSettings={localizeSettings}
-                    onLocalizeSettingsChange={handleLocalizeSettingsToggle}
                     onSettingsChange={handleSettingsChange}
                 />
             </div>
@@ -1132,13 +1255,13 @@ export function View({ plugin, app, dc, USER_QUERY = '', USER_SETTINGS = {} }: V
             )}
 
             <div
-                className="results-container"
+                className={`results-container${settings.queryHeight > 0 && !isScrolledToBottom ? ' with-fade' : ''}`}
                 style={settings.queryHeight > 0 ? { maxHeight: `${settings.queryHeight}px`, overflowY: 'auto' } : {}}
             >
                 {renderView()}
             </div>
 
-            <div ref={loadMoreRef} style={{ height: '20px', marginTop: '20px' }} />
+            <div ref={loadMoreRef} style={{ height: '1px', width: '100%' }} />
         </div>
     );
 }

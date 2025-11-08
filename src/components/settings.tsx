@@ -1,40 +1,169 @@
 import { Settings as SettingsType } from '../types';
+import type { DatacoreAPI } from '../types/datacore';
+import type { App } from 'obsidian';
+import { getAllVaultProperties } from '../utils/property';
 
 interface SettingsProps {
-    dc: any;
+    dc: DatacoreAPI;
+    app: App;
     settings: SettingsType;
-    localizeSettings: boolean;
     onSettingsChange: (settings: Partial<SettingsType>) => void;
-    onLocalizeSettingsChange: (value: boolean) => void;
 }
 
 export function Settings({
     dc,
+    app,
     settings,
-    localizeSettings,
     onSettingsChange,
-    onLocalizeSettingsChange,
-}: SettingsProps) {
+}: SettingsProps): JSX.Element {
+    // Get all vault properties for dropdowns
+    const allProperties = getAllVaultProperties(app);
+
     return (
         <div className="settings-dropdown-menu">
-            {/* Localize Settings Toggle */}
+            {/* Metadata Item 1 */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>Metadata item 1</label>
+                    <div className="setting-desc">Property to show in first metadata position</div>
+                </div>
+                <select
+                    value={settings.metadataDisplay1}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLSelectElement };
+                        onSettingsChange({ metadataDisplay1: evt.target.value });
+                    }}
+                    className="dropdown"
+                >
+                    <option value="">None</option>
+                    {allProperties.map((prop): JSX.Element => (
+                        <option key={prop} value={prop}>{prop}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Metadata Item 2 */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>Metadata item 2</label>
+                    <div className="setting-desc">Property to show in second metadata position</div>
+                </div>
+                <select
+                    value={settings.metadataDisplay2}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLSelectElement };
+                        onSettingsChange({ metadataDisplay2: evt.target.value });
+                    }}
+                    className="dropdown"
+                >
+                    <option value="">None</option>
+                    {allProperties.map((prop): JSX.Element => (
+                        <option key={prop} value={prop}>{prop}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Layout Toggle (1 & 2) */}
             <div className="setting-item setting-item-toggle">
                 <div className="setting-item-info">
-                    <label>Store settings in this query</label>
-                    <div className="setting-desc">Apply the settings below to this query only rather than to all queries on this device.</div>
+                    <label>Show metadata items 1 and 2 side-by-side</label>
+                    <div className="setting-desc">Display first two metadata items horizontally</div>
                 </div>
                 <div
-                    className={`checkbox-container ${localizeSettings ? 'is-enabled' : ''}`}
-                    onClick={() => onLocalizeSettingsChange(!localizeSettings)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onLocalizeSettingsChange(!localizeSettings);
+                    className={`checkbox-container ${settings.metadataLayout12SideBySide ? 'is-enabled' : ''}`}
+                    onClick={() => onSettingsChange({ metadataLayout12SideBySide: !settings.metadataLayout12SideBySide })}
+                    onKeyDown={(e: unknown) => {
+                        const evt = e as KeyboardEvent;
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                            evt.preventDefault();
+                            onSettingsChange({ metadataLayout12SideBySide: !settings.metadataLayout12SideBySide });
                         }
                     }}
                     tabIndex={0}
                     role="checkbox"
-                    aria-checked={localizeSettings}
+                    aria-checked={settings.metadataLayout12SideBySide}
+                />
+            </div>
+
+            {/* Metadata Item 3 */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>Metadata item 3</label>
+                    <div className="setting-desc">Property to show in third metadata position</div>
+                </div>
+                <select
+                    value={settings.metadataDisplay3}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLSelectElement };
+                        onSettingsChange({ metadataDisplay3: evt.target.value });
+                    }}
+                    className="dropdown"
+                >
+                    <option value="">None</option>
+                    {allProperties.map((prop): JSX.Element => (
+                        <option key={prop} value={prop}>{prop}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Metadata Item 4 */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>Metadata item 4</label>
+                    <div className="setting-desc">Property to show in fourth metadata position</div>
+                </div>
+                <select
+                    value={settings.metadataDisplay4}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLSelectElement };
+                        onSettingsChange({ metadataDisplay4: evt.target.value });
+                    }}
+                    className="dropdown"
+                >
+                    <option value="">None</option>
+                    {allProperties.map((prop): JSX.Element => (
+                        <option key={prop} value={prop}>{prop}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Layout Toggle (3 & 4) */}
+            <div className="setting-item setting-item-toggle">
+                <div className="setting-item-info">
+                    <label>Show metadata items 3 and 4 side-by-side</label>
+                    <div className="setting-desc">Display third and fourth metadata items horizontally</div>
+                </div>
+                <div
+                    className={`checkbox-container ${settings.metadataLayout34SideBySide ? 'is-enabled' : ''}`}
+                    onClick={() => onSettingsChange({ metadataLayout34SideBySide: !settings.metadataLayout34SideBySide })}
+                    onKeyDown={(e: unknown) => {
+                        const evt = e as KeyboardEvent;
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                            evt.preventDefault();
+                            onSettingsChange({ metadataLayout34SideBySide: !settings.metadataLayout34SideBySide });
+                        }
+                    }}
+                    tabIndex={0}
+                    role="checkbox"
+                    aria-checked={settings.metadataLayout34SideBySide}
+                />
+            </div>
+
+            {/* Title Property */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>Title property</label>
+                    <div className="setting-desc">Set property to show as file title. Will use filename if unavailable.</div>
+                </div>
+                <input
+                    type="text"
+                    value={settings.titleProperty}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLInputElement };
+                        onSettingsChange({ titleProperty: evt.target.value });
+                    }}
+                    placeholder="Comma-separated if multiple"
+                    className="setting-text-input"
                 />
             </div>
 
@@ -47,9 +176,10 @@ export function Settings({
                 <div
                     className={`checkbox-container ${settings.showTextPreview ? 'is-enabled' : ''}`}
                     onClick={() => onSettingsChange({ showTextPreview: !settings.showTextPreview })}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                    onKeyDown={(e: unknown) => {
+                        const evt = e as KeyboardEvent;
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                            evt.preventDefault();
                             onSettingsChange({ showTextPreview: !settings.showTextPreview });
                         }
                     }}
@@ -59,25 +189,46 @@ export function Settings({
                 />
             </div>
 
-            {/* Omit First Line Toggle (conditional) */}
+            {/* Text Preview Property (conditional) */}
+            {settings.showTextPreview && (
+                <div className="setting-item setting-item-text">
+                    <div className="setting-item-info">
+                        <label>Text preview property</label>
+                        <div className="setting-desc">Set property to show as text preview. Will use first few lines in note if unavailable.</div>
+                    </div>
+                    <input
+                        type="text"
+                        value={settings.descriptionProperty}
+                        onChange={(e: unknown) => {
+                            const evt = e as Event & { target: HTMLInputElement };
+                            onSettingsChange({ descriptionProperty: evt.target.value });
+                        }}
+                        placeholder="Comma-separated if multiple"
+                        className="setting-text-input"
+                    />
+                </div>
+            )}
+
+            {/* Fall back to note content Toggle */}
             {settings.showTextPreview && (
                 <div className="setting-item setting-item-toggle">
                     <div className="setting-item-info">
-                        <label>Omit first line in preview</label>
-                        <div className="setting-desc">Always skip first line in text previews (in addition to automatic omission when first line matches title/filename).</div>
+                        <label>Use note content if text preview property unavailable</label>
+                        <div className="setting-desc">Fall back to note content when text preview property is not set or empty.</div>
                     </div>
                     <div
-                        className={`checkbox-container ${settings.alwaysOmitFirstLine ? 'is-enabled' : ''}`}
-                        onClick={() => onSettingsChange({ alwaysOmitFirstLine: !settings.alwaysOmitFirstLine })}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                onSettingsChange({ alwaysOmitFirstLine: !settings.alwaysOmitFirstLine });
+                        className={`checkbox-container ${settings.fallbackToContent ? 'is-enabled' : ''}`}
+                        onClick={() => onSettingsChange({ fallbackToContent: !settings.fallbackToContent })}
+                        onKeyDown={(e: unknown) => {
+                            const evt = e as KeyboardEvent;
+                            if (evt.key === 'Enter' || evt.key === ' ') {
+                                evt.preventDefault();
+                                onSettingsChange({ fallbackToContent: !settings.fallbackToContent });
                             }
                         }}
                         tabIndex={0}
                         role="checkbox"
-                        aria-checked={settings.alwaysOmitFirstLine}
+                        aria-checked={settings.fallbackToContent}
                     />
                 </div>
             )}
@@ -91,9 +242,10 @@ export function Settings({
                 <div
                     className={`checkbox-container ${settings.showThumbnails ? 'is-enabled' : ''}`}
                     onClick={() => onSettingsChange({ showThumbnails: !settings.showThumbnails })}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                    onKeyDown={(e: unknown) => {
+                        const evt = e as KeyboardEvent;
+                        if (evt.key === 'Enter' || evt.key === ' ') {
+                            evt.preventDefault();
                             onSettingsChange({ showThumbnails: !settings.showThumbnails });
                         }
                     }}
@@ -102,225 +254,6 @@ export function Settings({
                     aria-checked={settings.showThumbnails}
                 />
             </div>
-
-            {/* Show Timestamp Toggle */}
-            <div className="setting-item setting-item-toggle">
-                <div className="setting-item-info">
-                    <label>Show timestamp</label>
-                    <div className="setting-desc">Display file modification or creation timestamp in cards.</div>
-                </div>
-                <div
-                    className={`checkbox-container ${settings.showTimestamp ? 'is-enabled' : ''}`}
-                    onClick={() => onSettingsChange({ showTimestamp: !settings.showTimestamp })}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onSettingsChange({ showTimestamp: !settings.showTimestamp });
-                        }
-                    }}
-                    tabIndex={0}
-                    role="checkbox"
-                    aria-checked={settings.showTimestamp}
-                />
-            </div>
-
-            {/* Show Timestamp Icon Toggle (conditional) */}
-            {settings.showTimestamp && (
-                <div className="setting-item setting-item-toggle">
-                    <div className="setting-item-info">
-                        <label>Show timestamp icon</label>
-                        <div className="setting-desc">Show icon to differentiate between <i>modified</i> and <i>created</i> timestamps.</div>
-                    </div>
-                    <div
-                        className={`checkbox-container ${settings.showTimestampIcon ? 'is-enabled' : ''}`}
-                        onClick={() => onSettingsChange({ showTimestampIcon: !settings.showTimestampIcon })}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                onSettingsChange({ showTimestampIcon: !settings.showTimestampIcon });
-                            }
-                        }}
-                        tabIndex={0}
-                        role="checkbox"
-                        aria-checked={settings.showTimestampIcon}
-                    />
-                </div>
-            )}
-
-            {/* Add Card Background Toggle */}
-            <div className="setting-item setting-item-toggle">
-                <div className="setting-item-info">
-                    <label>Tint card background</label>
-                    <div className="setting-desc">Darken card background slightly.</div>
-                </div>
-                <div
-                    className={`checkbox-container ${settings.addCardBackground ? 'is-enabled' : ''}`}
-                    onClick={() => onSettingsChange({ addCardBackground: !settings.addCardBackground })}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onSettingsChange({ addCardBackground: !settings.addCardBackground });
-                        }
-                    }}
-                    tabIndex={0}
-                    role="checkbox"
-                    aria-checked={settings.addCardBackground}
-                />
-            </div>
-
-            {/* Thumbnail Cache Size */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>Thumbnail cache size</label>
-                    <div className="setting-desc">Set how many thumbnails to keep in memory. Larger cache shows fewer placeholders but uses more memory.</div>
-                </div>
-                <select
-                    value={settings.thumbnailCacheSize}
-                    onChange={(e) => onSettingsChange({ thumbnailCacheSize: e.target.value })}
-                    className="dropdown"
-                >
-                    <option value="minimal">Minimal</option>
-                    <option value="small">Small</option>
-                    <option value="balanced">Balanced</option>
-                    <option value="large">Large</option>
-                    <option value="unlimited">Unlimited</option>
-                </select>
-            </div>
-
-            {/* File Metadata Display */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>File metadata display</label>
-                    <div className="setting-desc">Set what metadata to show.</div>
-                </div>
-                <select
-                    value={settings.cardBottomDisplay}
-                    onChange={(e) => onSettingsChange({ cardBottomDisplay: e.target.value })}
-                    className="dropdown"
-                >
-                    <option value="tags">File tags</option>
-                    <option value="path">File path</option>
-                    <option value="none">Nothing</option>
-                </select>
-            </div>
-
-            {/* List Marker */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>List marker</label>
-                    <div className="setting-desc">Set marker style for list view.</div>
-                </div>
-                <select
-                    value={settings.listMarker}
-                    onChange={(e) => onSettingsChange({ listMarker: e.target.value })}
-                    className="dropdown"
-                >
-                    <option value="bullet">Bullet</option>
-                    <option value="number">Number</option>
-                    <option value="none">None</option>
-                </select>
-            </div>
-
-            {/* Smallest Number of Masonry Columns */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>Smallest number of masonry columns</label>
-                    <div className="setting-desc">Set minimum number of columns in masonry layout on narrow screens.</div>
-                </div>
-                <select
-                    value={settings.minMasonryColumns}
-                    onChange={(e) => onSettingsChange({ minMasonryColumns: parseInt(e.target.value) })}
-                    className="dropdown"
-                >
-                    <option value="1">One</option>
-                    <option value="2">Two</option>
-                </select>
-            </div>
-
-            {/* Randomize Action */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>Randomize action</label>
-                    <div className="setting-desc">Choose what the Randomize button does.</div>
-                </div>
-                <select
-                    value={settings.randomizeAction}
-                    onChange={(e) => onSettingsChange({ randomizeAction: e.target.value })}
-                    className="dropdown"
-                >
-                    <option value="shuffle">Shuffle order</option>
-                    <option value="open">Open random file</option>
-                </select>
-            </div>
-
-            {/* Explorer Height */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>Explorer height</label>
-                    <div className="setting-desc">Set maximum height of results area in pixels. Set to 0 for unlimited.</div>
-                </div>
-                <input
-                    type="number"
-                    min="0"
-                    placeholder="500"
-                    value={settings.queryHeight}
-                    onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val >= 0) {
-                            onSettingsChange({ queryHeight: val });
-                        }
-                    }}
-                    style={{ width: '80px' }}
-                />
-            </div>
-
-            {/* Open File Action */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>Open file action</label>
-                    <div className="setting-desc">Set whether pressing on card or title should open file, or only when pressing on title.</div>
-                </div>
-                <select
-                    value={settings.openFileAction}
-                    onChange={(e) => onSettingsChange({ openFileAction: e.target.value })}
-                    className="dropdown"
-                >
-                    <option value="card">Card or title</option>
-                    <option value="title">Title only</option>
-                </select>
-            </div>
-
-            {/* Title Property */}
-            <div className="setting-item setting-item-text">
-                <div className="setting-item-info">
-                    <label>Title property</label>
-                    <div className="setting-desc">Set property to show as file title. Will use filename if unavailable.</div>
-                </div>
-                <input
-                    type="text"
-                    value={settings.titleProperty}
-                    onChange={(e) => onSettingsChange({ titleProperty: e.target.value })}
-                    placeholder="title"
-                    className="setting-text-input"
-                />
-            </div>
-
-            {/* Description Property (conditional) */}
-            {settings.showTextPreview && (
-                <div className="setting-item setting-item-text">
-                    <div className="setting-item-info">
-                        <label>Description property</label>
-                        <div className="setting-desc">Set property to show as text preview. Will use first few lines in note if unavailable.</div>
-                    </div>
-                    <input
-                        type="text"
-                        value={settings.descriptionProperty}
-                        onChange={(e) => onSettingsChange({ descriptionProperty: e.target.value })}
-                        placeholder="description"
-                        className="setting-text-input"
-                    />
-                </div>
-            )}
 
             {/* Image Property (conditional) */}
             {settings.showThumbnails && (
@@ -332,12 +265,93 @@ export function Settings({
                     <input
                         type="text"
                         value={settings.imageProperty}
-                        onChange={(e) => onSettingsChange({ imageProperty: e.target.value })}
-                        placeholder="cover"
+                        onChange={(e: unknown) => {
+                            const evt = e as Event & { target: HTMLInputElement };
+                            onSettingsChange({ imageProperty: evt.target.value });
+                        }}
+                        placeholder="Comma-separated if multiple"
                         className="setting-text-input"
                     />
                 </div>
             )}
+
+            {/* Fall back to image embeds Toggle */}
+            {settings.showThumbnails && (
+                <div className="setting-item setting-item-toggle">
+                    <div className="setting-item-info">
+                        <label>Use in-note images if image property unavailable</label>
+                        <div className="setting-desc">Fall back to image embeds from note content when image property is not set or empty.</div>
+                    </div>
+                    <div
+                        className={`checkbox-container ${settings.fallbackToEmbeds ? 'is-enabled' : ''}`}
+                        onClick={() => onSettingsChange({ fallbackToEmbeds: !settings.fallbackToEmbeds })}
+                        onKeyDown={(e: unknown) => {
+                            const evt = e as KeyboardEvent;
+                            if (evt.key === 'Enter' || evt.key === ' ') {
+                                evt.preventDefault();
+                                onSettingsChange({ fallbackToEmbeds: !settings.fallbackToEmbeds });
+                            }
+                        }}
+                        tabIndex={0}
+                        role="checkbox"
+                        aria-checked={settings.fallbackToEmbeds}
+                    />
+                </div>
+            )}
+
+            {/* List Marker */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>List marker</label>
+                    <div className="setting-desc">Set marker style for list view.</div>
+                </div>
+                <select
+                    value={settings.listMarker}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLSelectElement };
+                        onSettingsChange({ listMarker: evt.target.value as 'bullet' | 'number' | 'none' });
+                    }}
+                    className="dropdown"
+                >
+                    <option value="bullet">Bullet</option>
+                    <option value="number">Number</option>
+                    <option value="none">None</option>
+                </select>
+            </div>
+
+            {/* View Height */}
+            <div className="setting-item setting-item-text">
+                <div className="setting-item-info">
+                    <label>View height</label>
+                    <div className="setting-desc">Set maximum height of results area in pixels. Set to 0 for unlimited.</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                        className="clickable-icon"
+                        aria-label="Restore default"
+                        onClick={() => onSettingsChange({ queryHeight: 0 })}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                            <path d="M3 3v5h5"/>
+                        </svg>
+                    </button>
+                    <input
+                        type="number"
+                        min="0"
+                        placeholder="500"
+                        value={settings.queryHeight}
+                        onChange={(e: unknown) => {
+                            const evt = e as Event & { target: HTMLInputElement };
+                            const val = parseInt(evt.target.value);
+                            if (!isNaN(val) && val >= 0) {
+                                onSettingsChange({ queryHeight: val });
+                            }
+                        }}
+                        style={{ width: '80px' }}
+                    />
+                </div>
+            </div>
         </div>
     );
 }

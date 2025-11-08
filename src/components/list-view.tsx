@@ -1,12 +1,28 @@
 import type { Settings } from '../types';
+import { getFirstDatacorePropertyValue } from '../utils/property';
+import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
+import type { App } from 'obsidian';
+import { datacoreResultToCardData } from '../shared/data-transform';
+import type { CardData } from '../shared/card-renderer';
+
+// Extend App type to include internal plugins
+declare module 'obsidian' {
+    interface App {
+        isMobile: boolean;
+        internalPlugins: {
+            plugins: Record<string, { enabled: boolean; instance?: { openGlobalSearch?: (query: string) => void; revealInFolder?: (file: unknown) => void } }>;
+            getPluginById(id: string): { instance?: unknown } | null;
+        };
+    }
+}
 
 interface ListViewProps {
-    results: any[];
+    results: DatacoreFile[];
     displayedCount: number;
     settings: Settings;
-    containerRef: any;
-    app: any;
-    dc: any;
+    containerRef: { current: HTMLElement | null };
+    app: App;
+    dc: DatacoreAPI;
     onLinkClick?: (path: string, newLeaf: boolean) => void;
 }
 
@@ -18,20 +34,18 @@ export function ListView({
     app,
     dc,
     onLinkClick
-}: ListViewProps) {
+}: ListViewProps): JSX.Element {
     return (
         <ul
             ref={containerRef}
             className={`list-view marker-${settings.listMarker}`}
             style={settings.queryHeight > 0 ? { maxHeight: `${settings.queryHeight}px`, overflowY: 'auto' } : {}}
         >
-            {results.slice(0, displayedCount).filter(p => p.$path).map((p, index) => {
-                // Get title from property or fallback to filename - coerce to string to handle Literal objects
-                let rawTitle = p.value(settings.titleProperty);
+            {results.slice(0, displayedCount).filter(p => p.$path).map((p, index): JSX.Element => {
+                // Get title from property (first available from comma-separated list) or fallback to filename
+                let rawTitle = getFirstDatacorePropertyValue(p, settings.titleProperty);
                 if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
                 const titleValue = dc.coerce.string(rawTitle || p.$name);
-                // Get folder path
-                const folderPath = (p.$path || '').split('/').slice(0, -1).join('/');
 
                 return (
                     <li key={p.$path} className="list-item">
@@ -44,7 +58,7 @@ export function ListView({
                                     if (onLinkClick) {
                                         onLinkClick(p.$path, false);
                                     } else {
-                                        app.workspace.openLinkText(p.$path, "", false);
+                                        void app.workspace.openLinkText(p.$path, "", false);
                                     }
                                 }
                             }}
@@ -63,29 +77,110 @@ export function ListView({
                         >
                             {titleValue}
                         </a>
-                        {settings.cardBottomDisplay === 'tags' && p.$tags && p.$tags.length > 0 ? (
-                            <span className="list-meta">
-                                {p.$tags.map((tag: string) => (
-                                    <a
-                                        key={tag}
-                                        href="#"
-                                        className="tag"
-                                        onClick={(e: MouseEvent) => {
-                                            e.preventDefault();
-                                            const searchPlugin = app.internalPlugins.plugins["global-search"];
-                                            if (searchPlugin && searchPlugin.instance) {
-                                                const searchView = searchPlugin.instance;
-                                                searchView.openGlobalSearch("tag:" + tag);
-                                            }
-                                        }}
-                                    >
-                                        {tag.replace(/^#/, '')}
-                                    </a>
-                                ))}
-                            </span>
-                        ) : settings.cardBottomDisplay === 'path' && folderPath ? (
-                            <span className="list-meta list-path">{folderPath}</span>
-                        ) : null}
+                        {/* Metadata - inline display (list view doesn't use 2-row layout) */}
+                        {(() => {
+                            // Transform to get resolved metadata
+                            const card: CardData = datacoreResultToCardData(p, dc, settings, 'mtime-desc', false);
+
+                            // Check if any metadata has content
+                            const hasMetadata = card.metadata1 || card.metadata2 || card.metadata3 || card.metadata4;
+
+                            if (!hasMetadata) return null;
+
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- JSX.Element resolves to any due to Datacore's JSX runtime
+                            return (
+                                <span className="list-meta">
+                                    {card.metadata1 === 'tags' && p.$tags && p.$tags.length > 0 ? (
+                                        <>
+                                            {p.$tags.map((tag: string): JSX.Element => (
+                                                <a
+                                                    key={tag}
+                                                    href="#"
+                                                    className="tag"
+                                                    onClick={(e: MouseEvent) => {
+                                                        e.preventDefault();
+                                                        const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                                        if (searchPlugin?.instance?.openGlobalSearch) {
+                                                            searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag.replace(/^#/, '')}
+                                                </a>
+                                            ))}
+                                        </>
+                                    ) : card.metadata1 ? (
+                                        <span className="list-text">{card.metadata1}</span>
+                                    ) : null}
+                                    {card.metadata2 === 'tags' && p.$tags && p.$tags.length > 0 ? (
+                                        <>
+                                            {p.$tags.map((tag: string): JSX.Element => (
+                                                <a
+                                                    key={tag}
+                                                    href="#"
+                                                    className="tag"
+                                                    onClick={(e: MouseEvent) => {
+                                                        e.preventDefault();
+                                                        const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                                        if (searchPlugin?.instance?.openGlobalSearch) {
+                                                            searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag.replace(/^#/, '')}
+                                                </a>
+                                            ))}
+                                        </>
+                                    ) : card.metadata2 ? (
+                                        <span className="list-text">{card.metadata2}</span>
+                                    ) : null}
+                                    {card.metadata3 === 'tags' && p.$tags && p.$tags.length > 0 ? (
+                                        <>
+                                            {p.$tags.map((tag: string): JSX.Element => (
+                                                <a
+                                                    key={tag}
+                                                    href="#"
+                                                    className="tag"
+                                                    onClick={(e: MouseEvent) => {
+                                                        e.preventDefault();
+                                                        const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                                        if (searchPlugin?.instance?.openGlobalSearch) {
+                                                            searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag.replace(/^#/, '')}
+                                                </a>
+                                            ))}
+                                        </>
+                                    ) : card.metadata3 ? (
+                                        <span className="list-text">{card.metadata3}</span>
+                                    ) : null}
+                                    {card.metadata4 === 'tags' && p.$tags && p.$tags.length > 0 ? (
+                                        <>
+                                            {p.$tags.map((tag: string): JSX.Element => (
+                                                <a
+                                                    key={tag}
+                                                    href="#"
+                                                    className="tag"
+                                                    onClick={(e: MouseEvent) => {
+                                                        e.preventDefault();
+                                                        const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                                        if (searchPlugin?.instance?.openGlobalSearch) {
+                                                            searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag.replace(/^#/, '')}
+                                                </a>
+                                            ))}
+                                        </>
+                                    ) : card.metadata4 ? (
+                                        <span className="list-text">{card.metadata4}</span>
+                                    ) : null}
+                                </span>
+                            );
+                        })()}
                     </li>
                 );
             })}

@@ -1,9 +1,9 @@
 {
 	"id": "dynamic-views",
 	"name": "Dynamic Views",
-	"version": "0.1.0",
-	"minAppVersion": "0.15.0",
-	"description": "View Datacore queries in card, masonry or list layouts.",
+	"version": "0.2.0",
+	"minAppVersion": "1.4.11",
+	"description": "Elegant card views for Bases and Datacore.",
 	"author": "greetclammy",
 	"isDesktopOnly": false
 }

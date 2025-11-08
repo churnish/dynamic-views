@@ -1,26 +1,24 @@
 import { CardView } from './card-view';
 import type { Settings } from '../types';
+import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
+import type { App } from 'obsidian';
 
 interface MasonryViewProps {
-    results: any[];
+    results: DatacoreFile[];
     displayedCount: number;
     settings: Settings;
     sortMethod: string;
     isShuffled: boolean;
     snippets: Record<string, string>;
     images: Record<string, string | string[]>;
-    staticGifs: Record<string, string | string[]>;
-    multiImagesLoaded: Record<string, boolean>;
-    hasMultipleImages: Record<string, boolean>;
     hasImageAvailable: Record<string, boolean>;
     focusableCardIndex: number;
-    containerRef: any;
-    updateLayoutRef: any;
-    app: any;
-    dc: any;
+    containerRef: { current: HTMLElement | null };
+    updateLayoutRef: { current: (() => void) | null };
+    app: App;
+    dc: DatacoreAPI;
     onCardClick?: (path: string, newLeaf: boolean) => void;
     onFocusChange?: (index: number) => void;
-    onExtractMultipleImages?: (path: string) => void;
 }
 
 /**
@@ -28,6 +26,6 @@ interface MasonryViewProps {
  * The masonry layout is achieved through CSS and the CardView component handles
  * both card and masonry rendering with appropriate className switching.
  */
-export function MasonryView(props: MasonryViewProps) {
+export function MasonryView(props: MasonryViewProps): JSX.Element {
     return <CardView {...props} viewMode="masonry" />;
 }

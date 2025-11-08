@@ -5,6 +5,8 @@
  */
 export function sanitizeString(value: string): string {
     if (typeof value !== 'string') return value;
+    // Intentionally using control characters to remove them from strings
+    // eslint-disable-next-line no-control-regex
     return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 }
 
@@ -13,13 +15,13 @@ export function sanitizeString(value: string): string {
  * @param obj - Object to sanitize
  * @returns New object with sanitized string values
  */
-export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
+export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
     const sanitized = {} as T;
     for (const [key, value] of Object.entries(obj)) {
         if (typeof value === 'string') {
             sanitized[key as keyof T] = sanitizeString(value) as T[keyof T];
         } else {
-            sanitized[key as keyof T] = value;
+            sanitized[key as keyof T] = value as T[keyof T];
         }
     }
     return sanitized;

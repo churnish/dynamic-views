@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
-import { PluginData, Settings, UIState } from './types';
-import { DEFAULT_SETTINGS, DEFAULT_UI_STATE } from './constants';
+import { PluginData, Settings, UIState, DefaultViewSettings } from './types';
+import { DEFAULT_SETTINGS, DEFAULT_UI_STATE, DEFAULT_VIEW_SETTINGS } from './constants';
 import { sanitizeObject, sanitizeString } from './utils/sanitize';
 
 export class PersistenceManager {
@@ -11,16 +11,20 @@ export class PersistenceManager {
         this.plugin = plugin;
         this.data = {
             globalSettings: { ...DEFAULT_SETTINGS },
-            queryStates: {}
+            defaultViewSettings: { ...DEFAULT_VIEW_SETTINGS },
+            queryStates: {},
+            viewSettings: {}
         };
     }
 
     async load(): Promise<void> {
-        const loadedData = await this.plugin.loadData();
+        const loadedData = await this.plugin.loadData() as Partial<PluginData> | null;
         if (loadedData) {
             this.data = {
-                globalSettings: { ...DEFAULT_SETTINGS, ...loadedData.globalSettings },
-                queryStates: loadedData.queryStates || {}
+                globalSettings: { ...DEFAULT_SETTINGS, ...(loadedData.globalSettings || {}) },
+                defaultViewSettings: { ...DEFAULT_VIEW_SETTINGS, ...(loadedData.defaultViewSettings || {}) },
+                queryStates: loadedData.queryStates || {},
+                viewSettings: loadedData.viewSettings || {}
             };
         }
     }
@@ -39,6 +43,16 @@ export class PersistenceManager {
         await this.save();
     }
 
+    getDefaultViewSettings(): DefaultViewSettings {
+        return { ...this.data.defaultViewSettings };
+    }
+
+    async setDefaultViewSettings(settings: Partial<DefaultViewSettings>): Promise<void> {
+        const sanitized = sanitizeObject(settings);
+        this.data.defaultViewSettings = { ...this.data.defaultViewSettings, ...sanitized };
+        await this.save();
+    }
+
     getUIState(ctime: number): UIState {
         const state = this.data.queryStates[ctime.toString()];
         return state ? { ...state } : { ...DEFAULT_UI_STATE };
@@ -51,12 +65,13 @@ export class PersistenceManager {
         // Sanitize and truncate searchQuery
         const sanitized: Partial<UIState> = {};
         for (const [k, v] of Object.entries(state)) {
+            const key = k as keyof UIState;
             if (k === 'searchQuery' && typeof v === 'string') {
-                sanitized[k as keyof UIState] = sanitizeString(v.slice(0, 500)) as any;
+                (sanitized as Record<string, string>)[key] = sanitizeString(v.slice(0, 500));
             } else if (typeof v === 'string') {
-                sanitized[k as keyof UIState] = sanitizeString(v) as any;
+                (sanitized as Record<string, string>)[key] = sanitizeString(v);
             } else {
-                sanitized[k as keyof UIState] = v as any;
+                (sanitized as Record<string, unknown>)[key] = v;
             }
         }
 
@@ -68,4 +83,26 @@ export class PersistenceManager {
         delete this.data.queryStates[ctime.toString()];
         await this.save();
     }
+
+    getViewSettings(ctime: number): Partial<DefaultViewSettings> {
+        const settings = this.data.viewSettings[ctime.toString()];
+        return settings ? { ...settings } : {};
+    }
+
+    async setViewSettings(ctime: number, settings: Partial<DefaultViewSettings>): Promise<void> {
+        const key = ctime.toString();
+        const current = this.data.viewSettings[key] || {};
+
+        // Sanitize settings
+        const sanitized = sanitizeObject(settings);
+
+        this.data.viewSettings[key] = { ...current, ...sanitized };
+        await this.save();
+    }
+
+    async clearViewSettings(ctime: number): Promise<void> {
+        delete this.data.viewSettings[ctime.toString()];
+        await this.save();
+    }
+
 }

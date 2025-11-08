@@ -1,6 +1,181 @@
+/* @settings
+
+name: Dynamic Views
+id: dynamic-views
+settings:
+    -
+        id: layout-heading
+        title: Layout
+        type: heading
+        level: 2
+    -
+        id: dynamic-views-min-card-width
+        title: Minimum card width
+        description: Minimum width of cards in pixels
+        type: variable-number-slider
+        default: 400
+        min: 50
+        max: 800
+        step: 10
+        format: px
+    -
+        id: dynamic-views-min-masonry-columns
+        title: Minimum masonry columns
+        description: Minimum number of columns in masonry view
+        type: variable-select
+        default: '2'
+        options:
+            -
+                label: One
+                value: '1'
+            -
+                label: Two
+                value: '2'
+    -
+        id: dynamic-views-min-grid-columns
+        title: Minimum grid columns
+        description: Minimum number of columns in grid view
+        type: variable-select
+        default: '1'
+        options:
+            -
+                label: One
+                value: '1'
+            -
+                label: Two
+                value: '2'
+    -
+        id: dynamic-views-card-background
+        title: Card background
+        description: Card background appearance
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-tinted
+        options:
+            -
+                label: Tinted
+                value: dynamic-views-card-background-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-transparent
+            -
+                label: Custom color
+                value: dynamic-views-card-background-custom
+    -
+        id: dynamic-views-card-background-custom-color
+        title: Custom card background
+        description: Custom color for card backgrounds (only used when Card background is set to Custom color)
+        type: variable-themed-color
+        format: hex
+        default-light: '#FFFFFF'
+        default-dark: '#000000'
+    -
+        id: thumbnails-heading
+        title: Thumbnails
+        type: heading
+        level: 2
+    -
+        id: dynamic-views-thumbnail-size
+        title: Thumbnail size
+        description: Size of card thumbnails in pixels
+        type: variable-select
+        default: 80px
+        options:
+            -
+                label: Compact
+                value: 64px
+            -
+                label: Standard
+                value: 80px
+            -
+                label: Expanded
+                value: 94.5px
+    -
+        id: dynamic-views-thumbnail-border-radius
+        title: Thumbnail border radius
+        description: Corner roundness of thumbnails
+        type: variable-number-slider
+        default: 4
+        min: 0
+        max: 50
+        step: 1
+        format: px
+    -
+        id: dynamic-views-thumbnail-position
+        title: Thumbnail position
+        description: Position of thumbnail relative to text preview
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-thumbnail-right
+        options:
+            -
+                label: Left
+                value: dynamic-views-thumbnail-left
+            -
+                label: Right
+                value: dynamic-views-thumbnail-right
+    -
+        id: metadata-heading
+        title: Metadata
+        type: heading
+        level: 2
+    -
+        id: dynamic-views-show-timestamp-icon
+        title: Show timestamp icon
+        description: Show icon to differentiate between modified and created timestamps
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-tag-style
+        title: Tag style
+        description: Visual appearance of tags in card metadata
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-style-plain
+        options:
+            -
+                label: Plain
+                value: dynamic-views-tag-style-plain
+            -
+                label: Match theme
+                value: dynamic-views-tag-style-theme
+            -
+                label: Minimal
+                value: dynamic-views-tag-style-minimal
+    -
+        id: dynamic-views-fade-trimmed-content
+        title: Fade trimmed content
+        description: Show gradient fade on tags and paths that overflow their container
+        type: class-toggle
+        default: true
+
+*/
+
+/* ============================================
+   PLUGIN SETTINGS STYLES
+   ============================================ */
+
+/* Add border-bottom to Appearance heading */
+.dynamic-views-appearance-heading {
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+}
+
 /* ============================================
    DATACORE EXPLORER STYLES
    ============================================ */
+
+/* ============================================
+   BASES VIEW PADDING
+   Match built-in Bases Cards view padding
+   ============================================ */
+
+.bases-view[data-view-type="dynamic-views-card"],
+.bases-view[data-view-type="dynamic-views-masonry"] {
+    --bases-view-padding: var(--size-4-3);
+    --bases-embed-padding: var(--size-4-1) 1px;
+}
 
 /* ============================================
    FOCUS & ACCESSIBILITY STYLES
@@ -484,6 +659,11 @@ body {
     background-color: var(--background-modifier-hover);
 }
 
+.limit-reset-button.disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .dynamic-views .limit-reset-button-icon {
     display: flex;
     align-items: center;
@@ -626,6 +806,32 @@ body {
 }
 
 .shuffle-btn:hover {
+    border-color: var(--text-faint);
+    background-color: var(--background-modifier-hover);
+}
+
+.dynamic-views .open-random-btn {
+    padding: 6px !important;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    height: 30px;
+    width: 30px;
+    box-sizing: border-box;
+}
+
+.dynamic-views .open-random-btn svg {
+    width: 16px;
+    height: 16px;
+    color: var(--text-normal);
+}
+
+.open-random-btn:hover {
     border-color: var(--text-faint);
     background-color: var(--background-modifier-hover);
 }
@@ -1069,57 +1275,59 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
    VIEW-SPECIFIC STYLES: CARD VIEW
    ============================================ */
 
+/* Unified grid layout for all grid views (all width modes) */
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed,
 .dynamic-views .cards-feed {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns, 1), 1fr);
+    gap: 8px;
+    align-items: stretch;
+    width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
-    gap: 8px;
-}
-
-/* Card grid: multiple columns in wide/max modes */
-.dc-wide .dynamic-views .cards-feed {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 8px;
-}
-
-.dc-max .dynamic-views .cards-feed {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 8px;
+    box-sizing: border-box;
 }
 
 /* Grid mode: remove margins (gap handles spacing) and set flexbox layout */
-.dc-wide .dynamic-views .cards-feed .writing-card,
-.dc-max .dynamic-views .cards-feed .writing-card {
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed .writing-card,
+.dynamic-views .cards-feed .writing-card {
     margin: 0 !important;
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Grid mode: push metadata to bottom of card (only when snippet-container exists) */
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed .writing-card .snippet-container ~ .writing-meta,
+.dynamic-views .cards-feed .writing-card .snippet-container ~ .writing-meta {
+    margin-top: auto;
 }
 
 .dynamic-views .writing-card {
     border: 1px solid var(--background-modifier-border);
-    border-radius: 12px;
+    border-radius: var(--radius-m);
     padding: 12px 16px;
-    margin: 0;
+    margin: 8px 0;
     background-color: var(--background-primary-alt);
     break-inside: avoid;
     page-break-inside: avoid;
     transition: border-color 0.2s;
 }
 
-.dynamic-views.no-card-background .writing-card {
+/* Card background options */
+body.dynamic-views-card-background-transparent .dynamic-views .writing-card {
     background-color: transparent;
+}
+
+body.dynamic-views-card-background-custom .dynamic-views .writing-card {
+    background-color: var(--dynamic-views-card-background-custom-color, #1e1e1e);
 }
 
 /* Snippet container flexbox in grid mode to push metadata to bottom */
 .dc-wide .dynamic-views .cards-feed .snippet-container,
 .dc-max .dynamic-views .cards-feed .snippet-container {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
 }
 
 @media (hover: hover) {
@@ -1162,10 +1370,19 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .snippet-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 12px;
     margin-top: 4px;
     margin-bottom: 8px;
+}
+
+/* Thumbnail positioning (controlled by body class from Style Settings) */
+body.dynamic-views-thumbnail-left .dynamic-views .snippet-container {
+    flex-direction: row-reverse;
+}
+
+body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
+    flex-direction: row;
 }
 
 .dynamic-views .writing-snippet {
@@ -1184,18 +1401,18 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 .dynamic-views .card-thumbnail {
     flex-shrink: 0;
-    width: 80px;
-    height: 80px;
+    width: var(--dynamic-views-thumbnail-size, 80px);
+    height: var(--dynamic-views-thumbnail-size, 80px);
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
     pointer-events: none;
 }
 
 .dynamic-views .card-thumbnail-placeholder {
     flex-shrink: 0;
-    width: 80px;
-    height: 80px;
-    border-radius: 4px;
+    width: var(--dynamic-views-thumbnail-size, 80px);
+    height: var(--dynamic-views-thumbnail-size, 80px);
+    border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
     background-color: var(--background-modifier-border);
 }
 
@@ -1224,87 +1441,131 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     pointer-events: auto;
 }
 
+/* Base metadata container styles */
 .dynamic-views .writing-meta {
-    display: flex;
-    align-items: center;
     font-size: 0.8em;
     margin-top: 4px;
     color: var(--text-faint);
     min-height: 24px;
-    max-height: 24px;
-    overflow: hidden;
+    line-height: 1.4;
+    white-space: nowrap;
 }
 
-.dynamic-views .meta-left {
-    flex-shrink: 0;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    line-height: 1;
+/* When no snippet/thumbnail exists, add same spacing as snippet-container would provide */
+.dynamic-views .writing-title + .writing-meta {
+    margin-top: 12px;
 }
 
 .dynamic-views .timestamp-icon {
     flex-shrink: 0;
     opacity: 0.7;
-    display: block;
-    margin-bottom: 1px;
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
 }
 
-.dynamic-views .meta-right {
-    overflow-x: auto;
-    flex: 1;
-    min-width: 0;
-    margin-left: 6px;
-    scrollbar-width: none;
-    text-align: right;
-}
-
-.dynamic-views .meta-right::-webkit-scrollbar {
+/* Hide timestamp icon when class toggle is off */
+body:not(.dynamic-views-show-timestamp-icon) .dynamic-views .timestamp-icon {
     display: none;
 }
 
-.dynamic-views .writing-meta.no-timestamp .meta-right {
-    margin-left: 0;
-    text-align: left;
-}
-
-.dynamic-views .writing-meta.no-timestamp .tags-wrapper,
-.dynamic-views .writing-meta.no-timestamp .path-wrapper {
-    justify-content: flex-start;
+.dynamic-views .timestamp-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .dynamic-views .tags-wrapper {
     display: flex;
+    align-items: center;
     gap: 4px;
     white-space: nowrap;
     flex-shrink: 0;
-    justify-content: flex-end;
-    min-width: min-content;
+    min-width: 0;
+    height: 20px;
 }
 
 .dynamic-views .path-wrapper {
-    display: flex;
+    display: inline-flex;
+    align-items: center;
     white-space: nowrap;
     flex-shrink: 0;
-    justify-content: flex-end;
-    min-width: min-content;
+    height: 20px;
 }
 
-.dynamic-views .writing-meta .tag {
-    background-color: transparent;
-    color: var(--text-faint);
-    border-radius: var(--tag-radius);
-	border: 1px solid var(--background-modifier-border);
-    padding: 2px 6px;
+.dynamic-views .text-wrapper {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+    height: 20px;
+}
+
+/* Path segments must be inline for ellipsis to work across the whole path */
+.dynamic-views .path-wrapper > span {
+    display: inline;
+}
+
+/* Base tag styles */
+.dynamic-views .writing-meta .tag,
+.dynamic-views .list-meta .tag {
     text-decoration: none;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
-.dynamic-views .writing-meta .tag:hover {
-	color: var(--text-muted);
+.dynamic-views .list-meta .tag {
+    display: inline-block;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+/* Tag style: Plain */
+body.dynamic-views-tag-style-plain .dynamic-views .writing-meta .tag,
+body.dynamic-views-tag-style-plain .dynamic-views .list-meta .tag {
+    background-color: transparent;
+    color: var(--text-faint);
+    border-radius: var(--tag-radius);
+    border: 1px solid var(--background-modifier-border);
+}
+
+body.dynamic-views-tag-style-plain .dynamic-views .writing-meta .tag:hover,
+body.dynamic-views-tag-style-plain .dynamic-views .list-meta .tag:hover {
+    color: var(--text-muted);
     border-color: var(--background-modifier-border-hover);
+}
+
+/* Tag style: Match theme */
+body.dynamic-views-tag-style-theme .dynamic-views .writing-meta .tag,
+body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag {
+    background-color: var(--tag-background);
+    color: var(--tag-color);
+    border: none;
+    border-radius: var(--tag-radius);
+}
+
+body.dynamic-views-tag-style-theme .dynamic-views .writing-meta .tag:hover,
+body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag:hover {
+    background-color: var(--tag-background-hover);
+    color: var(--tag-color);
+    opacity: 1;
+}
+
+/* Tag style: Minimal */
+body.dynamic-views-tag-style-minimal .dynamic-views .writing-meta .tag,
+body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag {
+    background-color: transparent;
+    color: var(--text-faint);
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+}
+
+body.dynamic-views-tag-style-minimal .dynamic-views .writing-meta .tag:hover,
+body.dynamic-views-tag-style-minimal .dynamic-views .list-meta .tag:hover {
+    color: var(--text-muted);
+    text-decoration: underline;
 }
 
 .dynamic-views .file-path-segment {
@@ -1326,6 +1587,155 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 
 /* ============================================
+   4-FIELD METADATA SYSTEM
+   ============================================ */
+
+.dynamic-views .writing-meta.meta-4field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    grid-template-columns: unset;
+    min-height: auto;
+}
+
+.dynamic-views .meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dynamic-views .meta-row.meta-row-sidebyside {
+    flex-direction: row;
+    gap: 8px;
+}
+
+/* Meta-field: scrollable container */
+.dynamic-views .meta-field {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+    direction: ltr;
+}
+
+/* Default state: fields split space equally with 50% max */
+.dynamic-views .meta-row.meta-row-sidebyside .meta-field {
+    flex: 1 1 0;
+    max-width: 50%;
+}
+
+/* Solo field: leave 50px gap where vacant field would be (alignment indicates identity) */
+/* EXPERIMENT: Commented out - using "…" placeholder instead
+.dynamic-views .meta-row.meta-row-sidebyside .meta-field.meta-field-solo {
+    flex: 0 0 calc(100% - 50px);
+    max-width: calc(100% - 50px);
+}
+*/
+
+/* Push solo right fields (2, 4) to the right side when left field is empty/hidden */
+/* EXPERIMENT: Commented out - using "…" placeholder instead
+.dynamic-views .meta-row.meta-row-sidebyside .meta-field-2.meta-field-solo,
+.dynamic-views .meta-row.meta-row-sidebyside .meta-field-4.meta-field-solo {
+    margin-left: auto;
+}
+*/
+
+/* Measured state: use calculated widths from CSS variables, remove 50% cap */
+.dynamic-views .meta-row.meta-row-sidebyside.meta-measured .meta-field-1,
+.dynamic-views .meta-row.meta-row-sidebyside.meta-measured .meta-field-3 {
+    width: var(--field1-width);
+    flex: 0 0 auto;
+    max-width: none;
+}
+
+.dynamic-views .meta-row.meta-row-sidebyside.meta-measured .meta-field-2,
+.dynamic-views .meta-row.meta-row-sidebyside.meta-measured .meta-field-4 {
+    width: var(--field2-width);
+    flex: 0 0 auto;
+    max-width: none;
+}
+
+/* Universal meta-content wrapper */
+.dynamic-views .meta-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 100%; /* Fills field, triggers scroll when content > field */
+    flex-shrink: 0;
+    white-space: nowrap;
+    height: 20px;
+}
+
+/* Measurement state: remove min-width to allow natural sizing */
+.dynamic-views .meta-row.meta-row-sidebyside.meta-measuring .meta-content {
+    min-width: 0 !important;
+}
+
+/* Alignment via justify-content on meta-content wrapper */
+/* Left fields (1, 3) */
+.dynamic-views .meta-row-sidebyside .meta-field-1 .meta-content,
+.dynamic-views .meta-row-sidebyside .meta-field-3 .meta-content {
+    justify-content: flex-start;
+}
+
+/* Right fields (2, 4) - only right-align when NOT scrollable */
+/* When scrollable, left-align to show beginning per requirements */
+.dynamic-views .meta-row-sidebyside .meta-field-2:not(.is-scrollable),
+.dynamic-views .meta-row-sidebyside .meta-field-4:not(.is-scrollable) {
+    justify-content: flex-end;
+}
+
+.dynamic-views .meta-row-sidebyside .meta-field-2:not(.is-scrollable) .meta-content,
+.dynamic-views .meta-row-sidebyside .meta-field-4:not(.is-scrollable) .meta-content {
+    justify-content: flex-end;
+}
+
+/* When scrollable, explicitly left-align to show beginning */
+.dynamic-views .meta-row-sidebyside .meta-field-2.is-scrollable,
+.dynamic-views .meta-row-sidebyside .meta-field-4.is-scrollable {
+    justify-content: flex-start;
+}
+
+.dynamic-views .meta-row-sidebyside .meta-field-2.is-scrollable .meta-content,
+.dynamic-views .meta-row-sidebyside .meta-field-4.is-scrollable .meta-content {
+    justify-content: flex-start;
+}
+
+/* Stacked layout */
+.dynamic-views .meta-row:not(.meta-row-sidebyside) .meta-content {
+    justify-content: flex-start;
+}
+
+/* Hide scrollbar for side-by-side fields */
+.dynamic-views .meta-row-sidebyside .meta-field::-webkit-scrollbar {
+    display: none;
+}
+
+/* Gradient masks for side-by-side fields when content is scrollable */
+body.dynamic-views-fade-trimmed-content .dynamic-views .meta-row-sidebyside .meta-field.scroll-gradient-left {
+    mask-image: linear-gradient(to right, rgba(0,0,0,0) 0, rgba(0,0,0,0.3) 4px, black 28px, black 100%);
+    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0) 0, rgba(0,0,0,0.3) 4px, black 28px, black 100%);
+}
+
+body.dynamic-views-fade-trimmed-content .dynamic-views .meta-row-sidebyside .meta-field.scroll-gradient-right {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 28px), rgba(0,0,0,0.3) calc(100% - 4px), rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 28px), rgba(0,0,0,0.3) calc(100% - 4px), rgba(0,0,0,0) 100%);
+}
+
+body.dynamic-views-fade-trimmed-content .dynamic-views .meta-row-sidebyside .meta-field.scroll-gradient-both {
+    mask-image: linear-gradient(to right, rgba(0,0,0,0) 0, rgba(0,0,0,0.3) 4px, black 28px, black calc(100% - 28px), rgba(0,0,0,0.3) calc(100% - 4px), rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0) 0, rgba(0,0,0,0.3) 4px, black 28px, black calc(100% - 28px), rgba(0,0,0,0.3) calc(100% - 4px), rgba(0,0,0,0) 100%);
+}
+
+/* Hide empty fields */
+.dynamic-views .meta-field:empty {
+    display: none;
+}
+
+
+/* ============================================
    VIEW-SPECIFIC STYLES: MASONRY VIEW
    ============================================ */
 
@@ -1337,7 +1747,9 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 .dynamic-views .cards-masonry .writing-card {
+    position: absolute;
     max-width: 100%;
+    margin-top: 0;
 }
 
 
@@ -1402,21 +1814,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     margin-left: 8px;
 }
 
-.dynamic-views .list-meta .tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background-color: var(--tag-background);
-    color: var(--tag-text);
-    font-size: 0.85em;
-    white-space: nowrap;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.dynamic-views .list-meta .tag:hover {
-    opacity: 0.8;
-}
 
 .dynamic-views .list-meta.list-path {
     color: var(--text-faint);
@@ -1446,7 +1843,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
 @container (max-width: 700px) {
     .dynamic-views .controls-wrapper {
-        padding: 3px 8px;
+        padding: 3px 8px 8px;
     }
 
     .dynamic-views .width-toggle-btn {
@@ -1546,34 +1943,27 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 
     /* Switch to single column at narrow widths */
     .dc-wide .dynamic-views .cards-feed,
-    .dc-max .dynamic-views .cards-feed {
+    .dc-max .dynamic-views .cards-feed,
+    .bases-view[data-view-type="dynamic-views-card"] .cards-feed {
         display: flex;
         flex-direction: column;
     }
 
     /* Stack metadata on narrow cards */
-    .dynamic-views .writing-meta {
-        flex-direction: column-reverse;
-        align-items: flex-start;
-        min-height: auto;
-        max-height: none;
-        gap: 8px;
-    }
-
-    .dynamic-views .meta-left {
-        width: 100%;
-    }
-
-    .dynamic-views .meta-right {
-        width: 100%;
-        margin-left: 0 !important;
-        text-align: left;
-    }
+    .dynamic-views .writing-meta,
 
     .dynamic-views .tags-wrapper,
-    .dynamic-views .path-wrapper {
+    .dynamic-views .path-wrapper,
+    .bases-view .tags-wrapper,
+    .bases-view .path-wrapper {
         justify-content: flex-start !important;
         flex-wrap: wrap;
+    }
+
+    /* Compact breakpoint: move thumbnails below text snippets */
+    .dynamic-views .snippet-container,
+    .bases-view .snippet-container {
+        flex-direction: column;
     }
 
     /* Settings panel responsive */

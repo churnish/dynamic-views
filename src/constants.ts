@@ -1,22 +1,51 @@
-import { Settings } from './types';
+import { Settings, DefaultViewSettings } from './types';
+
+export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
+    titleProperty: "",
+    descriptionProperty: "",
+    imageProperty: "",
+    metadataDisplay1: "file.tags",
+    metadataDisplay2: "",
+    metadataDisplay3: "file.path",
+    metadataDisplay4: "file.mtime",
+    metadataLayout12SideBySide: false,
+    metadataLayout34SideBySide: true,
+    showTextPreview: true,
+    fallbackToContent: true,
+    showThumbnails: true,
+    fallbackToEmbeds: true,
+    queryHeight: 0,
+    listMarker: "bullet"
+};
 
 export const DEFAULT_SETTINGS: Settings = {
-    titleProperty: "title",
-    descriptionProperty: "description",
-    imageProperty: "cover",
-    alwaysOmitFirstLine: false,
+    titleProperty: "",
+    descriptionProperty: "",
+    imageProperty: "",
+    createdProperty: "",
+    modifiedProperty: "",
+    omitFirstLine: false,
     showTextPreview: true,
     showThumbnails: true,
-    cardBottomDisplay: "tags",
+    fallbackToContent: true,
+    fallbackToEmbeds: true,
+    fallbackToCtime: true,
+    fallbackToMtime: true,
+    metadataDisplay1: "file.tags",
+    metadataDisplay2: "",
+    metadataDisplay3: "file.path",
+    metadataDisplay4: "file.mtime",
+    metadataLayout12SideBySide: false,
+    metadataLayout34SideBySide: true,
+    timestampDisplay: "sort-based",
     listMarker: "bullet",
-    showTimestamp: true,
-    showTimestampIcon: true,
-    minMasonryColumns: 1,
     randomizeAction: "shuffle",
     thumbnailCacheSize: "balanced",
     queryHeight: 0,
     openFileAction: "card",
-    addCardBackground: true
+    openRandomInNewPane: true,
+    showShuffleInRibbon: true,
+    showRandomInRibbon: true
 };
 
 export const DEFAULT_UI_STATE = {
@@ -27,14 +56,14 @@ export const DEFAULT_UI_STATE = {
     widthMode: 'normal'
 };
 
-export const STORAGE_KEY_PREFIX = 'dv';
+export const STORAGE_KEY_PREFIX = 'dynamic-views';
 
 export const CSS_CLASSES = {
     CONTAINER: 'dynamic-views-container',
-    CARD: 'dv-card',
-    MASONRY: 'dv-masonry',
-    LIST: 'dv-list',
-    TOOLBAR: 'dv-toolbar',
-    SETTINGS: 'dv-settings',
-    CONTROL_BAR: 'dv-control-bar'
+    CARD: 'dynamic-views-card',
+    MASONRY: 'dynamic-views-masonry',
+    LIST: 'dynamic-views-list',
+    TOOLBAR: 'dynamic-views-toolbar',
+    SETTINGS: 'dynamic-views-settings',
+    CONTROL_BAR: 'dynamic-views-control-bar'
 };

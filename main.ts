@@ -1,30 +1,33 @@
-import { Plugin, Notice, Editor, MarkdownView, normalizePath } from 'obsidian';
+import { Plugin, Notice, Editor, MarkdownView, QueryController, Keymap } from 'obsidian';
 import { PersistenceManager } from './src/persistence';
 import { View } from './src/components/view';
 import { setDatacorePreact } from './src/jsx-runtime';
+import { getAvailablePath } from './src/utils/file';
 import './src/jsx-runtime'; // Ensure h and Fragment are globally available
+import { DynamicViewsCardView, cardViewOptions } from './src/bases/card-view';
+import { DynamicViewsMasonryView, masonryViewOptions } from './src/bases/masonry-view';
+import { DynamicViewsSettingTab } from './src/settings-tab';
+import { setPluginInstance } from './src/shared/settings-schema';
+import type { DatacoreAPI } from './src/types/datacore';
+import { openRandomFile, toggleShuffleActiveView } from './src/utils/randomize';
 
 export default class DynamicViewsPlugin extends Plugin {
 	persistenceManager: PersistenceManager;
 
 	// Helper function for datacorejsx blocks
-	createView(dc: any, userQuery?: string, userSettings?: any) {
-		const plugin = this;
-		const app = this.app;
-
+	createView(dc: DatacoreAPI, userQuery?: string) {
 		// Initialize jsxRuntime with Datacore's Preact BEFORE returning component
 		// This allows all compiled JSX in our components to use Datacore's h function
 		setDatacorePreact(dc.preact);
 
-		// Return function component for Datacore to render
-		return function DynamicView() {
+		// Return arrow function component for Datacore to render (preserves 'this' context)
+		return (): JSX.Element => {
 			// View and all child components now use our h() proxy which delegates to dc.preact.h
 			return View({
-				plugin,
-				app,
+				plugin: this,
+				app: this.app,
 				dc,
-				USER_QUERY: userQuery || '@page',
-				USER_SETTINGS: userSettings || {}
+				USER_QUERY: userQuery || '@page'
 			});
 		};
 	}
@@ -32,6 +35,32 @@ export default class DynamicViewsPlugin extends Plugin {
 	async onload() {
 		this.persistenceManager = new PersistenceManager(this);
 		await this.persistenceManager.load();
+
+		// Set plugin instance for Bases view options to access template settings
+		setPluginInstance(this);
+
+		// Register settings tab
+		this.addSettingTab(new DynamicViewsSettingTab(this.app, this));
+
+		// Register Bases views
+		// Note: Named "Grid" to differentiate from built-in Bases "Cards" view
+		this.registerBasesView('dynamic-views-card', {
+			name: 'Grid',
+			icon: 'lucide-grid-2x-2',
+			factory: (controller: QueryController, containerEl: HTMLElement) => {
+				return new DynamicViewsCardView(controller, containerEl, this);
+			},
+			options: cardViewOptions,
+		});
+
+		this.registerBasesView('dynamic-views-masonry', {
+			name: 'Masonry',
+			icon: 'panels-right-bottom',
+			factory: (controller: QueryController, containerEl: HTMLElement) => {
+				return new DynamicViewsMasonryView(controller, containerEl, this);
+			},
+			options: masonryViewOptions,
+		});
 
 		this.addCommand({
 			id: 'create-dynamic-view',
@@ -60,6 +89,42 @@ export default class DynamicViewsPlugin extends Plugin {
 				return false;
 			}
 		});
+
+		// Add ribbon icons for Random and Shuffle (if enabled in settings)
+		const settings = this.persistenceManager.getGlobalSettings();
+
+		if (settings.showRandomInRibbon) {
+			const _randomRibbon = this.addRibbonIcon('dices', 'Open random file from Bases view', async (evt: MouseEvent) => {
+				const defaultOpenInNewPane = this.persistenceManager.getGlobalSettings().openRandomInNewPane;
+				// If modifier key is pressed, invert the default behavior
+				const openInNewPane = Keymap.isModEvent(evt) ? !defaultOpenInNewPane : defaultOpenInNewPane;
+				await openRandomFile(this.app, openInNewPane);
+			});
+		}
+
+		if (settings.showShuffleInRibbon) {
+			this.addRibbonIcon('shuffle', 'Shuffle Bases view', () => {
+				toggleShuffleActiveView(this.app);
+			});
+		}
+
+		// Add commands for Random and Shuffle
+		this.addCommand({
+			id: 'random-file-from-bases',
+			name: 'Open random file from Bases view',
+			callback: async () => {
+				const openInNewPane = this.persistenceManager.getGlobalSettings().openRandomInNewPane;
+				await openRandomFile(this.app, openInNewPane);
+			}
+		});
+
+		this.addCommand({
+			id: 'shuffle-bases-view',
+			name: 'Shuffle Bases view',
+			callback: () => {
+				toggleShuffleActiveView(this.app);
+			}
+		});
 	}
 
 	getQueryTemplate(): string {
@@ -75,28 +140,12 @@ return dv.createView(dc, USER_QUERY);
 \`\`\`\n`;
 	}
 
-	getAvailablePath(folderPath: string, baseName: string): string {
-		const name = baseName.replace(/\.md$/, '');
-		let filePath = folderPath ? `${folderPath}/${name}.md` : `${name}.md`;
-		filePath = normalizePath(filePath);
-
-		let counter = 1;
-		while (this.app.vault.getFileByPath(filePath)) {
-			const unnormalizedPath = folderPath
-				? `${folderPath}/${name} ${counter}.md`
-				: `${name} ${counter}.md`;
-			filePath = normalizePath(unnormalizedPath);
-			counter++;
-		}
-
-		return filePath;
-	}
-
 	async createExplorerFile() {
 		try {
 			const activeFile = this.app.workspace.getActiveFile();
-			const folderPath = activeFile?.parent?.path || '';
-			const filePath = this.getAvailablePath(folderPath, 'Dynamic View');
+			const folderPath = activeFile?.parent?.path
+				?? this.app.fileManager.getNewFileParent('').path;
+			const filePath = getAvailablePath(this.app, folderPath, 'Dynamic view');
 			const template = this.getQueryTemplate();
 
 			await this.app.vault.create(filePath, template);
