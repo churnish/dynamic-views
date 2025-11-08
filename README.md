@@ -5,11 +5,17 @@ Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](ht
 > [!NOTE]  
 > Looking for a primary plugin maintainer. Get equal seat at the helm, author credit, the sole funding link, and eternal user gratitude.
 
-#### Masonry
+### Masonry
 
-<img width="1156" height="935" alt="Screenshot 2025-10-29 at 06 45 53" src="https://github.com/user-attachments/assets/74aa4f21-50da-4c43-8464-ca9e4fbecc3b" />
+<img src="https://github.com/user-attachments/assets/a5997474-03ac-4c5c-a0bf-c9c302954d63" />
 
-#### Grid
+### Grid
+
+<img src="https://github.com/user-attachments/assets/4643b0da-97b0-4428-8779-012dc69d7069" />
+
+### Datacore view
+
+<img height="650" src="https://github.com/user-attachments/assets/b2541773-5fb8-4851-920c-ae2afa116fb5" />
 
 ## ✅ Install
 
