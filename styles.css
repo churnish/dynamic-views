@@ -2019,7 +2019,7 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .card-thumbnail img {
 }
 
 body.dynamic-views-thumbnail-expand-click .dynamic-views .image-embed:active {
-    background: var(--background-primary);
+    background: var(--background-primary) !important;
     cursor: zoom-out;
     display: block;
     z-index: 200;
@@ -2057,7 +2057,7 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .image-embed:active img
 
 /* Cover-specific zoom override (higher specificity needed) */
 body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
-    background: var(--background-primary);
+    background: var(--background-primary) !important;
     cursor: zoom-out;
     display: block;
     z-index: 200;
@@ -2093,9 +2093,14 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-for
     opacity: 1;
 }
 
+/* Hide cover blur background on zoom by default */
+body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+    content: none !important;
+}
+
 /* Zoom with cover background: Blur */
 body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
-    content: '';
+    content: '' !important;
     position: absolute;
     top: 0;
     left: 0;
