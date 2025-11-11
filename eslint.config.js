@@ -11,7 +11,8 @@ export default [
       "*.map",
       "esbuild.config.mjs",
       "eslint.config.js",
-      "check-*.js"
+      "check-*.js",
+      "version-bump.mjs"
     ]
   },
 
