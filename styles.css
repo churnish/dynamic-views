@@ -2014,7 +2014,12 @@ body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
 }
 
 /* Thumbnail expand on click */
-body.dynamic-views-thumbnail-expand-click .dynamic-views .card-thumbnail img {
+body.dynamic-views-thumbnail-expand-click .dynamic-views .image-embed {
+    pointer-events: auto;
+}
+
+body.dynamic-views-thumbnail-expand-click .dynamic-views .image-embed img {
+    pointer-events: none;
     cursor: zoom-in;
 }
 
