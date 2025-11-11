@@ -283,7 +283,7 @@ settings:
                 value: dynamic-views-cover-right
     -
         id: dynamic-views-image-aspect-ratio
-        title: Top/Bottom cover aspect ratio
+        title: Top/bottom cover aspect ratio
         description: Aspect ratio for top and bottom cover images (1.00 = square)
         type: variable-number-slider
         default: 0.55
@@ -293,7 +293,7 @@ settings:
         format: ''
     -
         id: dynamic-views-side-cover-ratio
-        title: Left/Right cover ratio
+        title: Left/right cover ratio
         description: Ratio of cover width to content width (1.00 = equal width)
         type: variable-number-slider
         default: 0.50
@@ -375,6 +375,12 @@ settings:
         opacity: false
         default-light: '#'
         default-dark: '#'
+    -
+        id: bases-cards-cover-background-on-zoom
+        title: Show cover background on zoom
+        description: When enabled, zoomed images use the same background as covers (Blur/Ambient/Custom). Transparent always uses default background.
+        type: class-toggle
+        default: false
     -
         id: dynamic-views-masonry-flexible-cover-height
         title: Flexible cover height
@@ -2085,6 +2091,41 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-for
     bottom: 0;
     position: absolute;
     opacity: 1;
+}
+
+/* Zoom with cover background: Blur */
+body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: var(--cover-image-url);
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px) brightness(0.7);
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+.theme-dark body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+    filter: blur(20px) brightness(0.5);
+}
+
+/* Zoom with cover background: Ambient */
+body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--ambient-color, var(--background-secondary)) !important;
+}
+
+/* Zoom with cover background: Custom color */
+body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--bases-cards-cover-background, var(--background-secondary)) !important;
+}
+
+/* Zoom with Transparent background: Always use default (override toggle) */
+body.dynamic-views-thumbnail-expand-click.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--background-primary) !important;
 }
 
 /* Thumbnail crop alignment (controlled by body class from Style Settings) */
