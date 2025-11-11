@@ -2093,12 +2093,22 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-for
     opacity: 1;
 }
 
-/* Hide cover blur background on zoom by default */
-body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+/* Toggle OFF: Blur - hide ::before pseudo-element */
+body.dynamic-views-thumbnail-expand-click:not(.dynamic-views-bases-cards-cover-background-on-zoom).dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
     content: none !important;
 }
 
-/* Zoom with cover background: Blur */
+/* Toggle OFF: Ambient - force default background */
+body.dynamic-views-thumbnail-expand-click:not(.dynamic-views-bases-cards-cover-background-on-zoom).dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--background-primary) !important;
+}
+
+/* Toggle OFF: Custom color - force default background */
+body.dynamic-views-thumbnail-expand-click:not(.dynamic-views-bases-cards-cover-background-on-zoom).dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--background-primary) !important;
+}
+
+/* Toggle ON: Blur - show blurred background */
 body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
     content: '' !important;
     position: absolute;
@@ -2118,17 +2128,17 @@ body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-backgr
     filter: blur(20px) brightness(0.5);
 }
 
-/* Zoom with cover background: Ambient */
+/* Toggle ON: Ambient - show ambient color background */
 body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
     background: var(--ambient-color, var(--background-secondary)) !important;
 }
 
-/* Zoom with cover background: Custom color */
+/* Toggle ON: Custom color - show custom color background */
 body.dynamic-views-thumbnail-expand-click.dynamic-views-bases-cards-cover-background-on-zoom.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
     background: var(--bases-cards-cover-background, var(--background-secondary)) !important;
 }
 
-/* Zoom with Transparent background: Always use default (override toggle) */
+/* Transparent: Always use default background (overrides toggle state) */
 body.dynamic-views-thumbnail-expand-click.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
     background: var(--background-primary) !important;
 }
