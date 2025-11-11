@@ -458,19 +458,22 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Show thumbnails')
-			.setDesc('Show thumbnails by default')
-			.addToggle((toggle) =>
-				toggle
-					.setValue(defaultViewSettings.showThumbnails)
-					.onChange(async (value) => {
-						await this.plugin.persistenceManager.setDefaultViewSettings({ showThumbnails: value });
+			.setName('Card image')
+			.setDesc('Default image format for cards')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('none', 'No image')
+					.addOption('thumbnail', 'Thumbnail')
+					.addOption('cover', 'Cover')
+					.setValue(defaultViewSettings.imageFormat)
+					.onChange(async (value: 'none' | 'thumbnail' | 'cover') => {
+						await this.plugin.persistenceManager.setDefaultViewSettings({ imageFormat: value });
 					})
 			);
 
 		new Setting(containerEl)
 			.setName('Image property')
-			.setDesc('Default property to show as thumbnail')
+			.setDesc('Default property to use for card images')
 			.addText((text) =>
 				text
 					.setPlaceholder('Comma-separated if multiple')

@@ -7,7 +7,7 @@ import type { App } from 'obsidian';
 import type { Settings } from '../types';
 import type { RefObject } from '../types/datacore';
 import { getTagStyle, showTimestampIcon } from '../utils/style-settings';
-import { extractAverageColor } from '../utils/image-color';
+import { handleImageLoad } from './image-loader';
 
 // Extend App type to include isMobile property
 declare module 'obsidian' {
@@ -346,12 +346,12 @@ function Card({
             )}
 
             {/* Snippet and Thumbnail */}
-            {((settings.showTextPreview && card.snippet) || (settings.showThumbnails && (imageArray.length > 0 || card.hasImageAvailable))) && (
+            {((settings.showTextPreview && card.snippet) || (settings.imageFormat !== 'none' && (imageArray.length > 0 || card.hasImageAvailable))) && (
                 <div className="snippet-container">
                     {settings.showTextPreview && card.snippet && (
                         <div className="writing-snippet">{card.snippet}</div>
                     )}
-                    {settings.showThumbnails && (
+                    {settings.imageFormat !== 'none' && (
                         imageArray.length > 0 ? (
                             <div
                                 className={`card-thumbnail ${isArray && imageArray.length > 1 ? 'multi-image' : ''}`}
@@ -385,33 +385,16 @@ function Card({
                                         src={imageArray[0] || ''}
                                         alt=""
                                         onLoad={(e: Event) => {
-                                            // Extract ambient color for letterbox background
                                             const imgEl = e.currentTarget as HTMLImageElement;
-                                            const ambientColor = extractAverageColor(imgEl);
                                             const imageEmbedEl = imgEl.parentElement;
                                             if (imageEmbedEl) {
-                                                imageEmbedEl.style.setProperty('--ambient-color', ambientColor);
-
-                                                // Set aspect ratio for flexible cover height (masonry only)
                                                 const thumbEl = imageEmbedEl.parentElement;
-                                                if (thumbEl && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
-                                                    const imgAspect = imgEl.naturalHeight / imgEl.naturalWidth;
-                                                    const containerMaxAspect = parseFloat(
-                                                        getComputedStyle(document.body).getPropertyValue('--dynamic-views-image-aspect-ratio') || '0.55'
-                                                    );
-
-                                                    // If image is wider (lower aspect ratio), use its ratio
-                                                    if (imgAspect < containerMaxAspect) {
-                                                        const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
-                                                        if (cardEl) {
-                                                            cardEl.style.setProperty('--actual-aspect-ratio', imgAspect.toString());
-                                                        }
+                                                if (thumbEl) {
+                                                    const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                                                    if (cardEl) {
+                                                        handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
                                                     }
                                                 }
-                                            }
-
-                                            if (updateLayoutRef.current) {
-                                                updateLayoutRef.current();
                                             }
                                         }}
                                     />

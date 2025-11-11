@@ -13,7 +13,6 @@ export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
     showTitle: true,
     showTextPreview: true,
     fallbackToContent: true,
-    showThumbnails: true,
     fallbackToEmbeds: true,
     imageFormat: "thumbnail",
     queryHeight: 0,
@@ -27,7 +26,6 @@ export const DEFAULT_SETTINGS: Settings = {
     omitFirstLine: false,
     showTitle: true,
     showTextPreview: true,
-    showThumbnails: true,
     fallbackToContent: true,
     fallbackToEmbeds: true,
     propertyDisplay1: "file.tags",
@@ -65,7 +63,7 @@ export const STORAGE_KEY_PREFIX = 'dynamic-views';
 
 export const CSS_CLASSES = {
     CONTAINER: 'dynamic-views-container',
-    CARD: 'dynamic-views-card',
+    GRID: 'dynamic-views-grid',
     MASONRY: 'dynamic-views-masonry',
     LIST: 'dynamic-views-list',
     TOOLBAR: 'dynamic-views-toolbar',

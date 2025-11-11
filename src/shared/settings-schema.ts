@@ -66,16 +66,11 @@ export function getBasesViewOptions(): any[] {
             default: DEFAULT_VIEW_SETTINGS.fallbackToContent
         },
         {
-            type: 'toggle',
-            displayName: 'Show image',
-            key: 'showThumbnails',
-            default: DEFAULT_VIEW_SETTINGS.showThumbnails
-        },
-        {
             type: 'dropdown',
-            displayName: 'Image format',
+            displayName: 'Card image',
             key: 'imageFormat',
             options: {
+                'none': 'No image',
                 'thumbnail': 'Thumbnail',
                 'cover': 'Cover'
             },
@@ -161,7 +156,6 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         omitFirstLine: globalSettings.omitFirstLine, // From global settings
         showTitle: Boolean(config.get('showTitle') ?? defaultViewSettings.showTitle),
         showTextPreview: Boolean(config.get('showTextPreview') ?? defaultViewSettings.showTextPreview),
-        showThumbnails: Boolean(config.get('showThumbnails') ?? defaultViewSettings.showThumbnails),
         fallbackToContent: Boolean(config.get('fallbackToContent') ?? defaultViewSettings.fallbackToContent),
         fallbackToEmbeds: Boolean(config.get('fallbackToEmbeds') ?? defaultViewSettings.fallbackToEmbeds),
         propertyDisplay1: (() => {
@@ -198,7 +192,7 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         propertyLayout34SideBySide: Boolean(config.get('propertyLayout34SideBySide') ?? defaultViewSettings.propertyLayout34SideBySide),
         imageFormat: (() => {
             const value = config.get('imageFormat');
-            return (value === 'thumbnail' || value === 'cover') ? value : defaultViewSettings.imageFormat;
+            return (value === 'none' || value === 'thumbnail' || value === 'cover') ? value : defaultViewSettings.imageFormat;
         })(),
         timestampFormat: globalSettings.timestampFormat, // From global settings
         listMarker: (() => {

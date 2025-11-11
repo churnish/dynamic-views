@@ -50,7 +50,7 @@ export function getActiveBasesView(app: App): BasesViewWrapper['basesView'] | nu
 
 			// For dynamic-views custom views, return the actual view instance
 			// This ensures property modifications (isShuffled, shuffledOrder) persist
-			if (viewInstanceType === 'dynamic-views-card' || viewInstanceType === 'dynamic-views-masonry') {
+			if (viewInstanceType === 'dynamic-views-grid' || viewInstanceType === 'dynamic-views-masonry') {
 				return wrapper.controller.view;
 			}
 
@@ -79,7 +79,7 @@ export function getActiveBasesView(app: App): BasesViewWrapper['basesView'] | nu
 export function getActiveDynamicViewsBase(app: App): DynamicBasesView | null {
 	const basesView = getActiveBasesView(app);
 
-	if (basesView?.type === 'dynamic-views-card' || basesView?.type === 'dynamic-views-masonry') {
+	if (basesView?.type === 'dynamic-views-grid' || basesView?.type === 'dynamic-views-masonry') {
 		return basesView as DynamicBasesView;
 	}
 
@@ -128,7 +128,7 @@ export function toggleShuffleActiveView(app: App): void {
 	}
 
 	// Check if this is a dynamic-views Bases view (which supports persistent shuffle state)
-	const isDynamicView = basesView.type === 'dynamic-views-card' || basesView.type === 'dynamic-views-masonry';
+	const isDynamicView = basesView.type === 'dynamic-views-grid' || basesView.type === 'dynamic-views-masonry';
 
 	if (isDynamicView) {
 		// Dynamic views have the isShuffled property for persistent shuffle

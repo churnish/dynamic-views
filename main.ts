@@ -51,7 +51,7 @@ export default class DynamicViewsPlugin extends Plugin {
 
 		// Register Bases views
 		// Note: Named "Grid" to differentiate from built-in Bases "Cards" view
-		this.registerBasesView('dynamic-views-card', {
+		this.registerBasesView('dynamic-views-grid', {
 			name: 'Grid',
 			icon: 'lucide-grid-2x-2',
 			factory: (controller: QueryController, containerEl: HTMLElement) => {

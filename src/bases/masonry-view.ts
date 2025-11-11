@@ -13,7 +13,9 @@ import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../u
 import { getTimestampIcon } from '../shared/render-utils';
 import { getMinCardWidth, getMinMasonryColumns, getTagStyle, showTimestampIcon, getCardSpacing } from '../utils/style-settings';
 import { calculateMasonryLayout, applyMasonryLayout } from '../utils/masonry-layout';
-import { extractAverageColor } from '../utils/image-color';
+import { setupImageLoadHandler } from '../shared/image-loader';
+import { updateScrollGradient, setupScrollGradients } from '../shared/scroll-gradient-manager';
+import { BATCH_SIZE, GAP_SIZE } from '../shared/constants';
 import type DynamicViewsPlugin from '../../main';
 import type { Settings } from '../types';
 
@@ -55,7 +57,7 @@ export class DynamicViewsMasonryView extends BasesView {
         this.containerEl.style.overflowY = 'auto';
         this.containerEl.style.height = '100%';
         // Set initial batch size based on device
-        this.displayedCount = this.app.isMobile ? 25 : 50;
+        this.displayedCount = this.app.isMobile ? 25 : BATCH_SIZE;
 
         // Watch for Dynamic Views Style Settings changes only
         const observer = new MutationObserver((mutations) => {
@@ -338,8 +340,8 @@ export class DynamicViewsMasonryView extends BasesView {
         // Snippet and thumbnail container
         // Create container if: text preview exists, OR thumbnails enabled with image, OR cover format (for placeholders)
         if ((settings.showTextPreview && card.snippet) ||
-            (settings.showThumbnails && (card.imageUrl || card.hasImageAvailable)) ||
-            (settings.showThumbnails && settings.imageFormat === 'cover')) {
+            (settings.imageFormat !== 'none' && (card.imageUrl || card.hasImageAvailable)) ||
+            (settings.imageFormat === 'cover')) {
             const snippetContainer = cardEl.createDiv('snippet-container');
 
             // Text preview
@@ -348,7 +350,7 @@ export class DynamicViewsMasonryView extends BasesView {
             }
 
             // Thumbnail
-            if (settings.showThumbnails && card.imageUrl) {
+            if (settings.imageFormat !== 'none' && card.imageUrl) {
                 const imageUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
                 const thumbEl = snippetContainer.createDiv('card-thumbnail');
 
@@ -361,33 +363,17 @@ export class DynamicViewsMasonryView extends BasesView {
                     imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
 
                     // Handle image load for masonry layout and color extraction
-                    imgEl.addEventListener('load', () => {
-                        // Extract ambient color for letterbox background
-                        const ambientColor = extractAverageColor(imgEl);
-                        imageEmbedContainer.style.setProperty('--ambient-color', ambientColor);
-
-                        // Set aspect ratio for flexible cover height (masonry only)
-                        if (imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
-                            const imgAspect = imgEl.naturalHeight / imgEl.naturalWidth;
-                            const containerMaxAspect = parseFloat(
-                                getComputedStyle(document.body).getPropertyValue('--dynamic-views-image-aspect-ratio') || '0.55'
-                            );
-
-                            // If image is wider (lower aspect ratio), use its ratio
-                            if (imgAspect < containerMaxAspect) {
-                                const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
-                                if (cardEl) {
-                                    cardEl.style.setProperty('--actual-aspect-ratio', imgAspect.toString());
-                                }
-                            }
-                        }
-
-                        if (this.updateLayoutRef.current) {
-                            this.updateLayoutRef.current();
-                        }
-                    });
+                    const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                    if (cardEl) {
+                        setupImageLoadHandler(
+                            imgEl,
+                            imageEmbedContainer,
+                            cardEl,
+                            this.updateLayoutRef.current || undefined
+                        );
+                    }
                 }
-            } else if (settings.showThumbnails) {
+            } else if (settings.imageFormat !== 'none') {
                 // Always render placeholder when no image - CSS controls visibility
                 snippetContainer.createDiv('card-thumbnail-placeholder');
             }
@@ -518,7 +504,7 @@ export class DynamicViewsMasonryView extends BasesView {
             // Measure side-by-side field widths
             this.measurePropertyFields(cardEl);
             // Setup scroll gradients for tags and paths
-            this.setupScrollGradients(cardEl);
+            setupScrollGradients(cardEl, this.propertyObservers, updateScrollGradient);
         }
     }
 
@@ -536,7 +522,7 @@ export class DynamicViewsMasonryView extends BasesView {
         const width1 = content1 ? content1.scrollWidth : 0;
         const width2 = content2 ? content2.scrollWidth : 0;
         const containerWidth = row.clientWidth;
-        const gap = 8;
+        const gap = GAP_SIZE;
         const availableWidth = containerWidth - gap;
 
         const percent1 = (width1 / availableWidth) * 100;
@@ -577,8 +563,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Update scroll gradients after layout settles
         requestAnimationFrame(() => {
-            this.updateScrollGradient(field1);
-            this.updateScrollGradient(field2);
+            updateScrollGradient(field1);
+            updateScrollGradient(field2);
         });
     }
 
@@ -606,73 +592,6 @@ export class DynamicViewsMasonryView extends BasesView {
         });
     }
 
-    private updateScrollGradient(element: HTMLElement): void {
-        // Check if content is wider than field (not element.scrollWidth which doesn't reflect content width with flexbox)
-        const content = element.querySelector('.property-content') as HTMLElement;
-        const isScrollable = content ? content.scrollWidth > element.clientWidth : element.scrollWidth > element.clientWidth;
-
-        if (!isScrollable) {
-            // Not scrollable - remove all gradient classes and mark as not scrollable
-            element.removeClass('scroll-gradient-left');
-            element.removeClass('scroll-gradient-right');
-            element.removeClass('scroll-gradient-both');
-            element.removeClass('is-scrollable');
-            return;
-        }
-
-        // Mark as scrollable for conditional alignment
-        element.addClass('is-scrollable');
-
-        const scrollLeft = element.scrollLeft;
-        const scrollWidth = element.scrollWidth;
-        const clientWidth = element.clientWidth;
-        const atStart = scrollLeft <= 1; // Allow 1px tolerance
-        const atEnd = scrollLeft + clientWidth >= scrollWidth - 1; // Allow 1px tolerance
-
-        // Remove all gradient classes first
-        element.removeClass('scroll-gradient-left');
-        element.removeClass('scroll-gradient-right');
-        element.removeClass('scroll-gradient-both');
-
-        // Apply appropriate gradient based on position
-        if (atStart && !atEnd) {
-            // At start, content extends right
-            element.addClass('scroll-gradient-right');
-        } else if (atEnd && !atStart) {
-            // At end, content extends left
-            element.addClass('scroll-gradient-left');
-        } else if (!atStart && !atEnd) {
-            // In middle, content extends both directions
-            element.addClass('scroll-gradient-both');
-        }
-        // If atStart && atEnd, content fits fully - no gradient
-    }
-
-    private setupScrollGradients(container: HTMLElement): void {
-        // Find all property field containers (both side-by-side and full-width)
-        const scrollables = container.querySelectorAll('.property-field');
-
-        scrollables.forEach((el) => {
-            const element = el as HTMLElement;
-
-            // Initial gradient update after layout settles
-            requestAnimationFrame(() => {
-                this.updateScrollGradient(element);
-            });
-
-            // Update on scroll
-            element.addEventListener('scroll', () => {
-                this.updateScrollGradient(element);
-            });
-
-            // Update on resize (for when layout dimensions change)
-            const observer = new ResizeObserver(() => {
-                this.updateScrollGradient(element);
-            });
-            observer.observe(element);
-            this.propertyObservers.push(observer);
-        });
-    }
 
     private renderPropertyContent(
         container: HTMLElement,
@@ -872,7 +791,7 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Load images for thumbnails
-        if (settings.showThumbnails) {
+        if (settings.imageFormat !== 'none') {
             await Promise.all(
                 entries.map(async (entry) => {
                     const path = entry.file.path;

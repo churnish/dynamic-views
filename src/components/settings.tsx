@@ -233,30 +233,28 @@ export function Settings({
                 </div>
             )}
 
-            {/* Show Thumbnails Toggle */}
-            <div className="setting-item setting-item-toggle">
+            {/* Card Image Dropdown */}
+            <div className="setting-item setting-item-dropdown">
                 <div className="setting-item-info">
-                    <label>Show thumbnails</label>
+                    <label>Card image</label>
                     <div className="setting-desc">Display first image embed in note (wikilink or markdown format), or first value of image property.</div>
                 </div>
-                <div
-                    className={`checkbox-container ${settings.showThumbnails ? 'is-enabled' : ''}`}
-                    onClick={() => onSettingsChange({ showThumbnails: !settings.showThumbnails })}
-                    onKeyDown={(e: unknown) => {
-                        const evt = e as KeyboardEvent;
-                        if (evt.key === 'Enter' || evt.key === ' ') {
-                            evt.preventDefault();
-                            onSettingsChange({ showThumbnails: !settings.showThumbnails });
-                        }
+                <select
+                    value={settings.imageFormat}
+                    onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLSelectElement };
+                        onSettingsChange({ imageFormat: evt.target.value as 'none' | 'thumbnail' | 'cover' });
                     }}
-                    tabIndex={0}
-                    role="checkbox"
-                    aria-checked={settings.showThumbnails}
-                />
+                    className="dropdown"
+                >
+                    <option value="none">No image</option>
+                    <option value="thumbnail">Thumbnail</option>
+                    <option value="cover">Cover</option>
+                </select>
             </div>
 
             {/* Image Property (conditional) */}
-            {settings.showThumbnails && (
+            {settings.imageFormat !== 'none' && (
                 <div className="setting-item setting-item-text">
                     <div className="setting-item-info">
                         <label>Image property</label>
@@ -276,7 +274,7 @@ export function Settings({
             )}
 
             {/* Fall back to image embeds Toggle */}
-            {settings.showThumbnails && (
+            {settings.imageFormat !== 'none' && (
                 <div className="setting-item setting-item-toggle">
                     <div className="setting-item-info">
                         <label>Use in-note images if image property unavailable</label>

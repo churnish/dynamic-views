@@ -5,7 +5,6 @@ export interface Settings {
     omitFirstLine: boolean;
     showTitle: boolean;
     showTextPreview: boolean;
-    showThumbnails: boolean;
     fallbackToContent: boolean;
     fallbackToEmbeds: boolean;
     propertyDisplay1: string;
@@ -14,7 +13,7 @@ export interface Settings {
     propertyDisplay4: string;
     propertyLayout12SideBySide: boolean;
     propertyLayout34SideBySide: boolean;
-    imageFormat: 'thumbnail' | 'cover';
+    imageFormat: 'none' | 'thumbnail' | 'cover';
     timestampFormat: string;
     listMarker: string;
     randomizeAction: string;
@@ -52,9 +51,8 @@ export interface DefaultViewSettings {
     showTitle: boolean;
     showTextPreview: boolean;
     fallbackToContent: boolean;
-    showThumbnails: boolean;
     fallbackToEmbeds: boolean;
-    imageFormat: 'thumbnail' | 'cover';
+    imageFormat: 'none' | 'thumbnail' | 'cover';
     queryHeight: number;
     listMarker: string;
 }

@@ -132,7 +132,6 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
         baseSettings.propertyLayout34SideBySide = viewSettings.propertyLayout34SideBySide ?? defaultViewSettings.propertyLayout34SideBySide;
         baseSettings.showTextPreview = viewSettings.showTextPreview ?? defaultViewSettings.showTextPreview;
         baseSettings.fallbackToContent = viewSettings.fallbackToContent ?? defaultViewSettings.fallbackToContent;
-        baseSettings.showThumbnails = viewSettings.showThumbnails ?? defaultViewSettings.showThumbnails;
         baseSettings.fallbackToEmbeds = viewSettings.fallbackToEmbeds ?? defaultViewSettings.fallbackToEmbeds;
         baseSettings.queryHeight = viewSettings.queryHeight ?? defaultViewSettings.queryHeight;
         baseSettings.listMarker = viewSettings.listMarker ?? defaultViewSettings.listMarker;
@@ -261,7 +260,6 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                     propertyLayout34SideBySide: settings.propertyLayout34SideBySide,
                     showTextPreview: settings.showTextPreview,
                     fallbackToContent: settings.fallbackToContent,
-                    showThumbnails: settings.showThumbnails,
                     fallbackToEmbeds: settings.fallbackToEmbeds,
                     queryHeight: settings.queryHeight,
                     listMarker: settings.listMarker
@@ -457,7 +455,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
     // Load file contents asynchronously (only for displayed items)
     dc.useEffect(() => {
         // Skip entirely if both previews and thumbnails are off
-        if (!settings.showTextPreview && !settings.showThumbnails) {
+        if (!settings.showTextPreview && settings.imageFormat === 'none') {
             setSnippets({});
             setImages({});
             setHasImageAvailable({});
@@ -511,7 +509,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                         }
 
                         // Process thumbnails only if enabled
-                        if (settings.showThumbnails) {
+                        if (settings.imageFormat !== 'none') {
                             // Phase A: Convert property image paths to resource paths using shared utility
                             const propertyResourcePaths: string[] = [
                                 ...resolveInternalImagePaths(propertyImagePaths, p.$path, app),
@@ -552,7 +550,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
         };
 
         void loadSnippets();
-    }, [sorted, displayedCount, stripMarkdownSyntax, settings.showTextPreview, settings.showThumbnails, settings, app, dc]);
+    }, [sorted, displayedCount, stripMarkdownSyntax, settings.showTextPreview, settings.imageFormat, settings, app, dc]);
 
     // Masonry layout - Direct DOM manipulation (no React re-renders on shuffle)
     dc.useEffect(() => {
