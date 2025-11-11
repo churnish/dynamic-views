@@ -417,9 +417,10 @@ function Card({
                                     />
                                 </div>
                             </div>
-                        ) : card.hasImageAvailable ? (
+                        ) : (
+                            // Always render placeholder when no image - CSS controls visibility
                             <div className="card-thumbnail-placeholder"></div>
-                        ) : null
+                        )
                     )}
                 </div>
             )}

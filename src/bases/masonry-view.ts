@@ -336,8 +336,10 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Snippet and thumbnail container
+        // Create container if: text preview exists, OR thumbnails enabled with image, OR cover format (for placeholders)
         if ((settings.showTextPreview && card.snippet) ||
-            (settings.showThumbnails && (card.imageUrl || card.hasImageAvailable))) {
+            (settings.showThumbnails && (card.imageUrl || card.hasImageAvailable)) ||
+            (settings.showThumbnails && settings.imageFormat === 'cover')) {
             const snippetContainer = cardEl.createDiv('snippet-container');
 
             // Text preview
@@ -385,7 +387,8 @@ export class DynamicViewsMasonryView extends BasesView {
                         }
                     });
                 }
-            } else if (settings.showThumbnails && card.hasImageAvailable) {
+            } else if (settings.showThumbnails) {
+                // Always render placeholder when no image - CSS controls visibility
                 snippetContainer.createDiv('card-thumbnail-placeholder');
             }
         }
