@@ -140,7 +140,6 @@ export class DynamicViewsMasonryView extends BasesView {
                 const indexB = this.shuffledOrder.indexOf(b.file.path);
                 return indexA - indexB;
             });
-        } else {
         }
 
         // Slice to displayed count for rendering
@@ -296,7 +295,6 @@ export class DynamicViewsMasonryView extends BasesView {
                 const result = `mtime-${direction}`;
                 return result;
             }
-        } else {
         }
         return 'mtime-desc';
     }
