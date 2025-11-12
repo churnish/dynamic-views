@@ -555,7 +555,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
         if (viewMode !== 'masonry') {
             const container = containerRef.current;
             if (container) {
-                const cards = container.querySelectorAll<HTMLElement>('.writing-card');
+                const cards = container.querySelectorAll<HTMLElement>('.card');
                 cards.forEach((card) => {
                     card.style.position = '';
                     card.style.left = '';
@@ -574,7 +574,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
             const container = containerRef.current;
             if (!container) return;
 
-            const cards = Array.from(container.querySelectorAll<HTMLElement>('.writing-card'));
+            const cards = Array.from(container.querySelectorAll<HTMLElement>('.card'));
             if (cards.length === 0) return;
 
             const containerWidth = container.clientWidth;
@@ -955,7 +955,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
 
         // For masonry: directly reorder DOM and reposition
         if (viewMode === 'masonry') {
-            const cards = Array.from(container.querySelectorAll<HTMLElement>('.writing-card'));
+            const cards = Array.from(container.querySelectorAll<HTMLElement>('.card'));
 
             // Shuffle array of DOM elements
             const shuffled = [...cards];

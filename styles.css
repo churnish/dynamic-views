@@ -730,7 +730,7 @@ body {
     outline-offset: 2px;
 }
 
-.dynamic-views .writing-card:focus-visible {
+.dynamic-views .card:focus-visible {
     outline: 2px solid var(--background-modifier-border-focus);
     outline-offset: -2px;
 }
@@ -1851,8 +1851,8 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Grid mode: remove margins (gap handles spacing) and set flexbox layout */
-.bases-view[data-view-type="dynamic-views-card"] .cards-feed .writing-card,
-.dynamic-views .cards-feed .writing-card {
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed .card,
+.dynamic-views .cards-feed .card {
     margin: 0 !important;
     display: flex;
     flex-direction: column;
@@ -1862,15 +1862,15 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Grid mode: push properties to bottom of card */
-.bases-view[data-view-type="dynamic-views-card"] .cards-feed .writing-card .snippet-container ~ .card-properties,
-.dynamic-views .cards-feed .writing-card .snippet-container ~ .card-properties,
-.bases-view[data-view-type="dynamic-views-card"] .cards-feed .writing-card .writing-title ~ .card-properties,
-.dynamic-views .cards-feed .writing-card .writing-title ~ .card-properties {
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed .card .card-content ~ .card-properties,
+.dynamic-views .cards-feed .card .card-content ~ .card-properties,
+.bases-view[data-view-type="dynamic-views-card"] .cards-feed .card .card-title ~ .card-properties,
+.dynamic-views .cards-feed .card .card-title ~ .card-properties {
     margin-top: auto;
     padding-top: var(--dynamic-views-element-spacing, 8px);
 }
 
-.dynamic-views .writing-card {
+.dynamic-views .card {
     border: 1px solid var(--dynamic-views-card-border-color, var(--background-modifier-border));
     border-radius: var(--dynamic-views-card-border-radius, 6px);
     padding: 12px;
@@ -1882,25 +1882,25 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Global spacing between card elements */
-.dynamic-views .writing-card > * + * {
+.dynamic-views .card > * + * {
     margin-top: var(--dynamic-views-element-spacing, 8px);
 }
 
 /* Card background options */
-body.dynamic-views-card-background-transparent .dynamic-views .writing-card {
+body.dynamic-views-card-background-transparent .dynamic-views .card {
     background-color: transparent;
 }
 
-body.dynamic-views-card-background-custom .dynamic-views .writing-card {
+body.dynamic-views-card-background-custom .dynamic-views .card {
     background-color: var(--dynamic-views-card-background-custom-color, #1e1e1e);
 }
 
-body.dynamic-views-card-background-ambient .dynamic-views .writing-card {
+body.dynamic-views-card-background-ambient .dynamic-views .card {
     background-color: var(--ambient-color, var(--background-primary-alt));
 }
 
 /* Text color adjustments for ambient card backgrounds */
-body.dynamic-views-card-background-ambient .dynamic-views .writing-card[data-ambient-theme='light'] {
+body.dynamic-views-card-background-ambient .dynamic-views .card[data-ambient-theme='light'] {
     --text-normal: #2e3338;
     --text-muted: #888888;
     --text-faint: #999999;
@@ -1912,7 +1912,7 @@ body.dynamic-views-card-background-ambient .dynamic-views .writing-card[data-amb
     --dynamic-views-title-color: #2e3338;
 }
 
-body.dynamic-views-card-background-ambient .dynamic-views .writing-card[data-ambient-theme='dark'] {
+body.dynamic-views-card-background-ambient .dynamic-views .card[data-ambient-theme='dark'] {
     --text-normal: #dcddde;
     --text-muted: #999999;
     --text-faint: #666666;
@@ -1925,29 +1925,29 @@ body.dynamic-views-card-background-ambient .dynamic-views .writing-card[data-amb
 }
 
 /* Snippet container flexbox in grid mode to push properties to bottom */
-.dc-wide .dynamic-views .cards-feed .snippet-container,
-.dc-max .dynamic-views .cards-feed .snippet-container {
+.dc-wide .dynamic-views .cards-feed .card-content,
+.dc-max .dynamic-views .cards-feed .card-content {
     flex-grow: 1;
 }
 
 @media (hover: hover) {
-    .writing-card:hover {
+    .card:hover {
         border-color: var(--dynamic-views-card-border-color-hover, var(--text-faint));
     }
 }
 
 /* No border when toggle is off */
-body:not(.dynamic-views-card-border) .dynamic-views .writing-card {
+body:not(.dynamic-views-card-border) .dynamic-views .card {
     border-color: transparent;
 }
 
 @media (hover: hover) {
-    body:not(.dynamic-views-card-border) .writing-card:hover {
+    body:not(.dynamic-views-card-border) .card:hover {
         border-color: transparent;
     }
 }
 
-.dynamic-views .writing-title {
+.dynamic-views .card-title {
     font-weight: calc(var(--font-weight) + var(--bold-modifier));
     color: var(--dynamic-views-title-color, var(--color-base-100));
     font-family: var(--dynamic-views-title-font, inherit);
@@ -1981,22 +1981,22 @@ body:not(.dynamic-views-card-border) .dynamic-views .writing-card {
     }
 }
 
-.dynamic-views .snippet-container {
+.dynamic-views .card-content {
     display: flex;
     flex-direction: row;
     gap: var(--dynamic-views-element-spacing, 8px);
 }
 
 /* Thumbnail positioning (controlled by body class from Style Settings) */
-body.dynamic-views-thumbnail-left .dynamic-views .snippet-container {
+body.dynamic-views-thumbnail-left .dynamic-views .card-content {
     flex-direction: row-reverse;
 }
 
-body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
+body.dynamic-views-thumbnail-right .dynamic-views .card-content {
     flex-direction: row;
 }
 
-.dynamic-views .writing-snippet {
+.dynamic-views .card-text-preview {
     color: var(--dynamic-views-text-preview-color, var(--text-muted));
     font-family: var(--dynamic-views-text-preview-font, inherit);
     font-size: var(--dynamic-views-text-preview-font-size, var(--bases-table-font-size));
@@ -2134,7 +2134,7 @@ body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
 }
 
 /* Carousel in cover format: fill padding-top area */
-.dynamic-views .writing-card.image-format-cover .card-thumbnail .image-carousel-container {
+.dynamic-views .card.image-format-cover .card-cover .image-carousel-container {
     position: absolute;
     top: 0;
     left: 0;
@@ -2295,7 +2295,7 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .image-embed:active img
 }
 
 /* Cover-specific zoom override (higher specificity needed) */
-body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--background-primary);
     cursor: zoom-out;
     display: block;
@@ -2315,7 +2315,7 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-for
     bottom: 0;
 }
 
-body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active img {
+body.dynamic-views-thumbnail-expand-click .dynamic-views .card.image-format-cover .card-cover .image-embed:active img {
     top: 50%;
     transform: translateY(-50%);
     padding: 0;
@@ -2333,27 +2333,27 @@ body.dynamic-views-thumbnail-expand-click .dynamic-views .writing-card.image-for
 }
 
 /* Toggle OFF: Blur - hide ::before pseudo-element */
-body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed:active::before {
     content: none !important;
 }
 
 /* Toggle OFF: Ambient - force default background */
-body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-ambient .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--background-primary) !important;
 }
 
 /* Toggle OFF: Custom color - force default background */
-body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-custom .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--background-primary) !important;
 }
 
 /* Toggle OFF: Plain - force default background */
-body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click:not(.cards-cover-background-on-zoom).dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--background-primary) !important;
 }
 
 /* Toggle ON: Blur - show blurred background */
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed:active::before {
     content: '' !important;
     position: absolute;
     top: 0;
@@ -2368,33 +2368,33 @@ body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic
     z-index: 0;
 }
 
-.theme-dark body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active::before {
+.theme-dark body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed:active::before {
     filter: blur(20px) brightness(0.5);
 }
 
 /* Toggle ON: Ambient - show ambient color background */
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-ambient .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--ambient-color, var(--background-secondary)) !important;
 }
 
 /* Toggle ON: Custom color - show custom color background */
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-custom .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--dynamic-views-cover-background-custom-color, var(--background-secondary)) !important;
 }
 
 /* Toggle ON: Plain - depends on Card background setting */
 /* Default: use Obsidian's Bases cards cover background variable */
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--bases-cards-cover-background) !important;
 }
 
 /* Override: If Card background is Tinted, use background-primary */
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--background-primary) !important;
 }
 
 /* Transparent: Always use default background (overrides toggle state) */
-body.dynamic-views-thumbnail-expand-click.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+body.dynamic-views-thumbnail-expand-click.dynamic-views-cover-bg-transparent .dynamic-views .card.image-format-cover .card-cover .image-embed:active {
     background: var(--background-primary) !important;
 }
 
@@ -2412,21 +2412,21 @@ body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
 }
 
 /* Cover crop alignment (controlled by body class from Style Settings) */
-body.dynamic-views-cover-crop-top .dynamic-views .writing-card.image-format-cover .card-thumbnail img {
+body.dynamic-views-cover-crop-top .dynamic-views .card.image-format-cover .card-cover img {
     object-position: center top;
 }
 
-body.dynamic-views-cover-crop-center .dynamic-views .writing-card.image-format-cover .card-thumbnail img {
+body.dynamic-views-cover-crop-center .dynamic-views .card.image-format-cover .card-cover img {
     object-position: center center;
 }
 
-body.dynamic-views-cover-crop-bottom .dynamic-views .writing-card.image-format-cover .card-thumbnail img {
+body.dynamic-views-cover-crop-bottom .dynamic-views .card.image-format-cover .card-cover img {
     object-position: center bottom;
 }
 
 /* Cover fit mode (top/bottom): Contain mode - all images use object-fit: contain */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb .dynamic-views .writing-card.image-format-cover .card-thumbnail img,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb .dynamic-views .writing-card.image-format-cover .card-thumbnail img {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb .dynamic-views .card.image-format-cover .card-cover img,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb .dynamic-views .card.image-format-cover .card-cover img {
     object-fit: contain;
     object-position: center;
     position: relative;
@@ -2434,8 +2434,8 @@ body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb .dynamic-views .w
 }
 
 /* Cover background: Blur */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before {
     content: '';
     position: absolute;
     top: 0;
@@ -2450,45 +2450,45 @@ body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cov
     z-index: 0;
 }
 
-.theme-dark body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before,
-.theme-dark body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before {
+.theme-dark body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before,
+.theme-dark body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before {
     filter: blur(20px) brightness(0.5);
 }
 
 /* Cover background: Ambient */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-ambient .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-ambient .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--ambient-color, var(--background-secondary));
 }
 
 /* Cover background: Transparent (no background) */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-transparent .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-transparent .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: transparent;
 }
 
 /* Cover background: Custom color */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-custom .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-custom .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--dynamic-views-cover-background-custom-color, var(--background-secondary));
 }
 
 /* Cover background: Plain - depends on Card background setting */
 /* Default: use Obsidian's Bases cards cover background variable */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--bases-cards-cover-background);
 }
 
 /* Override: If Card background is Tinted, use background-primary */
-body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--background-primary);
 }
 
 /* Cover fit mode (left/right): Contain mode - all images use object-fit: contain */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr .dynamic-views .writing-card.image-format-cover .card-thumbnail img,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr .dynamic-views .writing-card.image-format-cover .card-thumbnail img {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr .dynamic-views .card.image-format-cover .card-cover img,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr .dynamic-views .card.image-format-cover .card-cover img {
     object-fit: contain;
     object-position: center;
     position: relative;
@@ -2496,8 +2496,8 @@ body.dynamic-views-cover-right.dynamic-views-cover-contain-lr .dynamic-views .wr
 }
 
 /* Cover background: Blur (left/right) */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before {
     content: '';
     position: absolute;
     top: 0;
@@ -2512,78 +2512,78 @@ body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cove
     z-index: 0;
 }
 
-.theme-dark body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before,
-.theme-dark body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed::before {
+.theme-dark body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before,
+.theme-dark body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-blur .dynamic-views .card.image-format-cover .card-cover .image-embed::before {
     filter: blur(20px) brightness(0.5);
 }
 
 /* Cover background: Ambient (left/right) */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-ambient .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-ambient .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-ambient .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--ambient-color, var(--background-secondary));
 }
 
 /* Cover background: Transparent (left/right) */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-transparent .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-transparent .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: transparent;
 }
 
 /* Cover background: Custom color (left/right) */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-custom .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-custom .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--dynamic-views-cover-background-custom-color, var(--background-secondary));
 }
 
 /* Cover background: Plain - depends on Card background setting (left/right) */
 /* Default: use Obsidian's Bases cards cover background variable */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--bases-cards-cover-background);
 }
 
 /* Override: If Card background is Tinted, use background-primary */
-body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
-body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .card.image-format-cover .card-cover .image-embed,
+body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .card.image-format-cover .card-cover .image-embed {
     background: var(--background-primary);
 }
 
 /* Flexible cover height for masonry (remove letterbox for wide images) - top/bottom contain mode only */
-body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-top.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .writing-card.image-format-cover .card-thumbnail,
-body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .writing-card.image-format-cover .card-thumbnail {
+body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-top.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .card.image-format-cover .card-cover,
+body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .card.image-format-cover .card-cover {
     padding-top: calc(var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 0.55)) * (100% + 2px)) !important;
 }
 
 /* Only apply flexible height margin-top to TOP covers with thumbnails */
-body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-top.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .writing-card.image-format-cover:has(.card-thumbnail) .writing-title {
+body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-top.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .card.image-format-cover:has(.card-cover) .card-title {
     margin-top: calc(var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 0.55)) * (100% + 26px) - 1px) !important;
 }
 
 /* Apply flexible height margin-bottom to BOTTOM covers with thumbnails */
-body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .writing-card.image-format-cover:has(.card-thumbnail) .card-properties {
+body.dynamic-views-masonry-flexible-cover-height.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb [data-view-type="dynamic-views-masonry"] .card.image-format-cover:has(.card-cover) .card-properties {
     margin-bottom: calc(var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 0.55)) * (100% + 26px) - 1px) !important;
 }
 
 /* Cover image format */
-.dynamic-views .writing-card.image-format-cover {
+.dynamic-views .card.image-format-cover {
     position: relative;
     overflow: hidden;
 }
 
-.dynamic-views .writing-card.image-format-cover .snippet-container {
+.dynamic-views .card.image-format-cover .card-content {
     flex-direction: row;
     gap: var(--dynamic-views-element-spacing, 8px);
 }
 
-.dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .writing-title,
-body.dynamic-views-show-cover-placeholder-grid .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-masonry .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title {
+.dynamic-views .card.image-format-cover:has(.card-cover) .card-title,
+body.dynamic-views-show-cover-placeholder-grid .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-masonry .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title {
     margin-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
-.dynamic-views .writing-card.image-format-cover .card-thumbnail {
+.dynamic-views .card.image-format-cover .card-cover {
     position: absolute;
     top: -13px;
     left: -1px;
@@ -2596,7 +2596,7 @@ body.dynamic-views-show-cover-placeholder-both .dynamic-views .cards-masonry .wr
 }
 
 /* Hide placeholder by default, reset thumbnail mode styles for cover format */
-.dynamic-views .writing-card.image-format-cover .card-thumbnail-placeholder {
+.dynamic-views .card.image-format-cover .card-cover-placeholder {
     display: none;
     width: auto;
     height: auto;
@@ -2604,10 +2604,10 @@ body.dynamic-views-show-cover-placeholder-both .dynamic-views .cards-masonry .wr
 }
 
 /* Show placeholder for top/bottom covers in grid view */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-top .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-top .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-top .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-top .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder {
     display: block;
     position: absolute;
     top: -13px;
@@ -2621,10 +2621,10 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynam
 }
 
 /* Show placeholder for top/bottom covers in masonry view */
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-top .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-top .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bottom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-top .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-top .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bottom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     display: block;
     position: absolute;
     top: -13px;
@@ -2638,78 +2638,78 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynam
 }
 
 /* Show placeholder for left/right covers in grid view */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder {
     display: block;
 }
 
 /* Show placeholder for left/right covers in masonry view */
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     display: block;
 }
 
 /* Placeholder color mappings - simplified by grouping similar outcomes */
 
 /* Blur/Ambient cover + Tinted card = --background-primary */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     background-color: var(--background-primary);
 }
 
 /* Blur/Ambient/Custom cover (non-Tinted card) = --dynamic-views-cover-background-custom-color */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-blur .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-ambient .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-custom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-custom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-blur .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-ambient .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-custom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-custom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-blur .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-ambient .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-custom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-custom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-blur .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-blur .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-ambient .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-ambient .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-custom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-custom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     background-color: var(--dynamic-views-cover-background-custom-color);
 }
 
 /* Transparent cover = match card background */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-tinted .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     background-color: var(--background-primary-alt);
 }
 
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-transparent .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-ambient .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     background-color: transparent;
 }
 
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparent.dynamic-views-card-background-custom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     background-color: var(--dynamic-views-card-background-custom-color, #1e1e1e);
 }
 
-.dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
+.dynamic-views .card.image-format-cover .card-cover .image-embed {
     position: absolute;
     top: 0;
     left: 0;
@@ -2717,7 +2717,7 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
     height: 100%;
 }
 
-.dynamic-views .writing-card.image-format-cover .card-thumbnail img {
+.dynamic-views .card.image-format-cover .card-cover img {
     position: absolute;
     top: 0;
     left: 0;
@@ -2727,78 +2727,78 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
 }
 
 /* Cover position: bottom */
-body.dynamic-views-cover-bottom .dynamic-views .writing-card.image-format-cover .writing-title {
+body.dynamic-views-cover-bottom .dynamic-views .card.image-format-cover .card-title {
     margin-top: 0;
 }
 
 /* Override placeholder title margin-top for bottom covers to match image cards in grid */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title {
     margin-top: 0;
 }
 
-body.dynamic-views-cover-bottom .dynamic-views .writing-card.image-format-cover .card-thumbnail,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bottom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-masonry .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-cover-bottom .dynamic-views .card.image-format-cover .card-cover,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-bottom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-masonry .card.image-format-cover .card-cover-placeholder {
     top: auto;
     bottom: -13px;
     border-radius: 0 0 var(--dynamic-views-card-border-radius, 6px) var(--dynamic-views-card-border-radius, 6px);
 }
 
 /* Bottom covers: margin-bottom on properties to reserve space for cover/placeholder in grid */
-body.dynamic-views-cover-bottom .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .card-properties,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties {
+body.dynamic-views-cover-bottom .dynamic-views .card.image-format-cover:has(.card-cover) .card-properties,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bottom .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-properties {
     margin-bottom: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * (100% + 26px) - 1px);
 }
 
 /* Cover position: left */
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail),
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder),
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder),
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder),
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) {
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover:has(.card-cover),
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) {
     min-height: var(--dynamic-views-side-cover-min-height, 175px);
 }
 
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .writing-title,
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .snippet-container,
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .card-properties,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties {
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover:has(.card-cover) .card-title,
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover:has(.card-cover) .card-content,
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover:has(.card-cover) .card-properties,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-properties {
     margin-left: calc((var(--dynamic-views-side-cover-ratio, 0.50) / (var(--dynamic-views-side-cover-ratio, 0.50) + 1) * 100%) + var(--dynamic-views-element-spacing, 8px));
 }
 
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover .writing-title {
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover .card-title {
     margin-top: 0;
 }
 
 /* Override placeholder title margin-top for left covers to match image cards */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-left .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title {
     margin-top: 0;
 }
 
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover .card-properties {
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover .card-properties {
     margin-bottom: 0;
 }
 
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover .card-thumbnail,
-body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover .card-cover,
+body.dynamic-views-cover-left .dynamic-views .card.image-format-cover .card-cover-placeholder {
     position: absolute;
     top: 0 !important;
     left: 0 !important;
@@ -2811,50 +2811,50 @@ body.dynamic-views-cover-left .dynamic-views .writing-card.image-format-cover .c
 }
 
 /* Cover position: right */
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail),
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder),
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder),
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder),
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) {
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover:has(.card-cover),
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) {
     min-height: var(--dynamic-views-side-cover-min-height, 175px);
 }
 
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .writing-title,
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .snippet-container,
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover:has(.card-thumbnail) .card-properties,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .snippet-container,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .card-properties {
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover:has(.card-cover) .card-title,
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover:has(.card-cover) .card-content,
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover:has(.card-cover) .card-properties,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-content,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-properties,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-properties {
     margin-right: calc((var(--dynamic-views-side-cover-ratio, 0.50) / (var(--dynamic-views-side-cover-ratio, 0.50) + 1) * 100%) + var(--dynamic-views-element-spacing, 8px));
 }
 
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover .writing-title {
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover .card-title {
     margin-top: 0;
 }
 
 /* Override placeholder title margin-top for right covers to match image cards */
-body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title,
-body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .writing-card.image-format-cover:has(.card-thumbnail-placeholder) .writing-title {
+body.dynamic-views-show-cover-placeholder-grid.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-feed .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-masonry.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title,
+body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-right .dynamic-views .cards-masonry .card.image-format-cover:has(.card-cover-placeholder) .card-title {
     margin-top: 0;
 }
 
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover .card-properties {
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover .card-properties {
     margin-bottom: 0;
 }
 
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover .card-thumbnail,
-body.dynamic-views-cover-right .dynamic-views .writing-card.image-format-cover .card-thumbnail-placeholder {
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover .card-cover,
+body.dynamic-views-cover-right .dynamic-views .card.image-format-cover .card-cover-placeholder {
     position: absolute;
     top: 0 !important;
     left: auto !important;
@@ -3327,7 +3327,7 @@ body.dynamic-views-fade-trimmed-content .dynamic-views .property-field.scroll-gr
     overflow-x: hidden;
 }
 
-.dynamic-views .cards-masonry .writing-card {
+.dynamic-views .cards-masonry .card {
     position: absolute;
     max-width: 100%;
     margin-top: 0;
@@ -3335,19 +3335,19 @@ body.dynamic-views-fade-trimmed-content .dynamic-views .property-field.scroll-gr
     flex-direction: column;
 }
 
-.dynamic-views .cards-masonry .writing-card .snippet-container {
+.dynamic-views .cards-masonry .card .card-content {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
 
-.dynamic-views .cards-masonry .writing-card .writing-snippet {
+.dynamic-views .cards-masonry .card .card-text-preview {
     flex: 0 0 auto;
     min-width: 0;
 }
 
-.dynamic-views .cards-masonry .writing-card .snippet-container ~ .card-properties,
-.dynamic-views .cards-masonry .writing-card .writing-title ~ .card-properties {
+.dynamic-views .cards-masonry .card .card-content ~ .card-properties,
+.dynamic-views .cards-masonry .card .card-title ~ .card-properties {
     margin-top: auto;
     padding-top: var(--dynamic-views-element-spacing, 8px);
 }
@@ -3561,8 +3561,8 @@ body.dynamic-views-fade-trimmed-content .dynamic-views .property-field.scroll-gr
     }
 
     /* Compact breakpoint: move thumbnails below text snippets */
-    .dynamic-views .snippet-container,
-    .bases-view .snippet-container {
+    .dynamic-views .card-content,
+    .bases-view .card-content {
         flex-direction: column;
     }
 
