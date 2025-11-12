@@ -3,7 +3,7 @@
  * Consolidates duplicate card rendering logic from Grid and Masonry views
  */
 
-import { App, TFile, setIcon, Menu, BasesEntry } from 'obsidian';
+import { App, TFile, TFolder, setIcon, Menu, BasesEntry } from 'obsidian';
 import { CardData } from '../shared/card-renderer';
 import { resolveBasesProperty } from '../shared/data-transform';
 import { setupImageLoadHandler } from '../shared/image-loader';
@@ -48,19 +48,18 @@ export class SharedCardRenderer {
 
         // Handle card click to open file
         cardEl.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            // Don't open if clicking on tags or other interactive elements
-            const isTag = target.tagName === 'A' && target.classList.contains('tag');
-            const isInsideTag = target.closest('.tag');
-            const isImage = target.tagName === 'IMG';
-            const expandOnClick = document.body.classList.contains('dynamic-views-thumbnail-expand-click');
-            const shouldBlockImageClick = isImage && expandOnClick;
+            // Only handle card-level clicks when openFileAction is 'card'
+            // When openFileAction is 'title', the title link handles its own clicks
+            if (settings.openFileAction === 'card') {
+                const target = e.target as HTMLElement;
+                // Don't open if clicking on links, tags, or other interactive elements
+                const isLink = target.tagName === 'A' || target.closest('a');
+                const isTag = target.classList.contains('tag') || target.closest('.tag');
+                const isImage = target.tagName === 'IMG';
+                const expandOnClick = document.body.classList.contains('dynamic-views-thumbnail-expand-click');
+                const shouldBlockImageClick = isImage && expandOnClick;
 
-            if (!isTag && !isInsideTag && !shouldBlockImageClick) {
-                const openOnCard = settings.openFileAction === 'card';
-                const clickedOnTitle = target.closest('.card-title');
-
-                if (openOnCard || clickedOnTitle) {
+                if (!isLink && !isTag && !shouldBlockImageClick) {
                     const newLeaf = e.metaKey || e.ctrlKey;
                     void this.app.workspace.openLinkText(card.path, '', newLeaf);
                 }
@@ -90,10 +89,28 @@ export class SharedCardRenderer {
             menu.showAtMouseEvent(e);
         });
 
-        // Title - plain text, not a link (matching vanilla Bases)
+        // Title - render as link when openFileAction is 'title', otherwise plain text
         if (settings.showTitle) {
             const titleEl = cardEl.createDiv('card-title');
-            titleEl.createSpan({ cls: 'title-text', text: card.title });
+
+            if (settings.openFileAction === 'title') {
+                // Render as clickable link
+                const link = titleEl.createEl('a', {
+                    cls: 'internal-link card-title-link',
+                    attr: { 'data-href': card.path, href: card.path }
+                });
+                link.createSpan({ cls: 'title-text', text: card.title });
+
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newLeaf = e.metaKey || e.ctrlKey;
+                    void this.app.workspace.openLinkText(card.path, '', newLeaf);
+                });
+            } else {
+                // Render as plain text
+                titleEl.createSpan({ cls: 'title-text', text: card.title });
+            }
         }
 
         // Content container (for text preview and thumbnail/cover)
@@ -421,6 +438,20 @@ export class SharedCardRenderer {
                     }
                 });
 
+                // Add context menu for folder segments
+                if (!isLastSegment) {
+                    segmentEl.addEventListener('contextmenu', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const folderFile = this.app.vault.getAbstractFileByPath(cumulativePath);
+                        if (folderFile instanceof TFolder) {
+                            const menu = new Menu();
+                            this.app.workspace.trigger('file-menu', menu, folderFile, 'file-explorer');
+                            menu.showAtMouseEvent(e);
+                        }
+                    });
+                }
+
                 if (idx < segments.length - 1) {
                     span.createSpan({ cls: 'path-separator', text: '/' });
                 }
@@ -443,6 +474,18 @@ export class SharedCardRenderer {
                         if (folderFile) {
                             fileExplorer.instance.revealInFolder(folderFile);
                         }
+                    }
+                });
+
+                // Add context menu for folder segments
+                segmentEl.addEventListener('contextmenu', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const folderFile = this.app.vault.getAbstractFileByPath(cumulativePath);
+                    if (folderFile instanceof TFolder) {
+                        const menu = new Menu();
+                        this.app.workspace.trigger('file-menu', menu, folderFile, 'file-explorer');
+                        menu.showAtMouseEvent(e);
                     }
                 });
 

@@ -4,6 +4,7 @@
  */
 
 import type { App } from 'obsidian';
+import { TFolder, Menu } from 'obsidian';
 import type { Settings } from '../types';
 import type { RefObject } from '../types/datacore';
 import { getTagStyle, showTimestampIcon } from '../utils/style-settings';
@@ -131,13 +132,15 @@ function renderPropertyContent(
         return (
             <div className="property-content">
                 <div className="path-wrapper">
-                    {resolvedValue.split('/').filter(f => f).map((folder, idx, array): JSX.Element => {
+                    {resolvedValue.split('/').filter(f => f).map((segment, idx, array): JSX.Element => {
                         const allParts = resolvedValue.split('/').filter(f => f);
                         const cumulativePath = allParts.slice(0, idx + 1).join('/');
+                        const isLastSegment = idx === array.length - 1;
+                        const segmentClass = isLastSegment ? 'path-segment filename-segment' : 'path-segment file-path-segment';
                         return (
                             <span key={idx} style={{ display: 'inline-flex', alignItems: 'center' }}>
                                 <span
-                                    className="path-segment file-path-segment"
+                                    className={segmentClass}
                                     onClick={(e: MouseEvent) => {
                                         e.stopPropagation();
                                         const fileExplorer = app.internalPlugins?.plugins?.["file-explorer"];
@@ -148,8 +151,18 @@ function renderPropertyContent(
                                             }
                                         }
                                     }}
+                                    onContextMenu={!isLastSegment ? (e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
+                                        if (folderFile instanceof TFolder) {
+                                            const menu = new Menu();
+                                            app.workspace.trigger('file-menu', menu, folderFile, 'file-explorer');
+                                            menu.showAtMouseEvent(e as unknown as MouseEvent);
+                                        }
+                                    } : undefined}
                                 >
-                                    {folder}
+                                    {segment}
                                 </span>
                                 {idx < array.length - 1 && <span className="path-separator">/</span>}
                             </span>
@@ -261,18 +274,18 @@ function Card({
             data-path={card.path}
             tabIndex={index === focusableCardIndex ? 0 : -1}
             onClick={(e: MouseEvent) => {
+                // Only handle card-level clicks when openFileAction is 'card'
+                // When openFileAction is 'title', the title link handles its own clicks
                 if (settings.openFileAction === 'card') {
                     const target = e.target as HTMLElement;
-                    // Allow clicks on title link and its children when openFileAction is 'card'
-                    const isInsideTitleLink = target.closest('.card-title-link');
-                    // Don't open if clicking on other links or images
-                    const isOtherLink = target.tagName === 'A' && !target.classList.contains('card-title-link');
-                    const isInsideOtherLink = target.closest('a') && !isInsideTitleLink;
+                    // Don't open if clicking on links, tags, or images
+                    const isLink = target.tagName === 'A' || target.closest('a');
+                    const isTag = target.classList.contains('tag') || target.closest('.tag');
                     const isImage = target.tagName === 'IMG';
                     const expandOnClick = document.body.classList.contains('dynamic-views-thumbnail-expand-click');
                     const shouldBlockImageClick = isImage && expandOnClick;
 
-                    if (!isOtherLink && !isInsideOtherLink && !shouldBlockImageClick) {
+                    if (!isLink && !isTag && !shouldBlockImageClick) {
                         const newLeaf = e.metaKey || e.ctrlKey;
                         if (onCardClick) {
                             onCardClick(card.path, newLeaf);
@@ -328,21 +341,23 @@ function Card({
             {/* Title */}
             {settings.showTitle && (
                 <div className="card-title">
-                    <a
-                        href={card.path}
-                        className="internal-link card-title-link"
-                        data-href={card.path}
-                        onClick={(e: MouseEvent) => {
-                            e.preventDefault();
-                            if (settings.openFileAction === 'title') {
+                    {settings.openFileAction === 'title' ? (
+                        <a
+                            href={card.path}
+                            className="internal-link card-title-link"
+                            data-href={card.path}
+                            onClick={(e: MouseEvent) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 const newLeaf = e.metaKey || e.ctrlKey;
                                 void app.workspace.openLinkText(card.path, "", newLeaf);
-                            }
-                            // Otherwise prevent default and let card handler deal with it
-                        }}
-                    >
+                            }}
+                        >
+                            <span className="title-text">{card.title}</span>
+                        </a>
+                    ) : (
                         <span className="title-text">{card.title}</span>
-                    </a>
+                    )}
                 </div>
             )}
 

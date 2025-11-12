@@ -1954,6 +1954,8 @@ body:not(.dynamic-views-card-border) .dynamic-views .card {
     font-size: var(--dynamic-views-title-font-size, var(--font-ui-medium));
     max-width: 100%;
     word-break: break-word;
+    text-align: left;
+    margin: 0;
 }
 
 .dynamic-views .card-title-link {
@@ -1962,6 +1964,7 @@ body:not(.dynamic-views-card-border) .dynamic-views .card {
     font-weight: calc(var(--font-weight) + var(--bold-modifier));
     display: block;
     width: 100%;
+    margin: 0;
 }
 
 .dynamic-views .card-title-link .title-text {
@@ -1974,6 +1977,7 @@ body:not(.dynamic-views-card-border) .dynamic-views .card {
 
 @media (hover: hover) {
     .dynamic-views .card-title-link:hover {
+        text-decoration: underline;
         color: var(--text-normal) !important;
     }
     body.dynamic-views-open-on-title .dynamic-views .card-title-link:hover .title-text {
