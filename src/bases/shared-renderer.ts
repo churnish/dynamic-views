@@ -38,7 +38,7 @@ export class SharedCardRenderer {
         hoverParent: unknown
     ): void {
         // Create card element
-        const cardEl = container.createDiv('writing-card');
+        const cardEl = container.createDiv('card');
         if (settings.imageFormat === 'cover') {
             cardEl.classList.add('image-format-cover');
         }
@@ -58,7 +58,7 @@ export class SharedCardRenderer {
 
             if (!isTag && !isInsideTag && !shouldBlockImageClick) {
                 const openOnCard = settings.openFileAction === 'card';
-                const clickedOnTitle = target.closest('.writing-title');
+                const clickedOnTitle = target.closest('.card-title');
 
                 if (openOnCard || clickedOnTitle) {
                     const newLeaf = e.metaKey || e.ctrlKey;
@@ -92,34 +92,35 @@ export class SharedCardRenderer {
 
         // Title - plain text, not a link (matching vanilla Bases)
         if (settings.showTitle) {
-            const titleEl = cardEl.createDiv('writing-title');
+            const titleEl = cardEl.createDiv('card-title');
             titleEl.createSpan({ cls: 'title-text', text: card.title });
         }
 
-        // Snippet and thumbnail container
+        // Content container (for text preview and thumbnail/cover)
         // Create container if: text preview exists, OR thumbnails enabled with image, OR cover format (for placeholders)
         if ((settings.showTextPreview && card.snippet) ||
             (settings.imageFormat !== 'none' && (card.imageUrl || card.hasImageAvailable)) ||
             (settings.imageFormat === 'cover')) {
-            const snippetContainer = cardEl.createDiv('snippet-container');
+            const contentContainer = cardEl.createDiv('card-content');
 
             // Text preview
             if (settings.showTextPreview && card.snippet) {
-                snippetContainer.createDiv({ cls: 'writing-snippet', text: card.snippet });
+                contentContainer.createDiv({ cls: 'card-text-preview', text: card.snippet });
             }
 
-            // Thumbnail
+            // Thumbnail or cover
             if (settings.imageFormat !== 'none' && card.imageUrl) {
                 const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
                 // Filter out empty/invalid URLs
                 const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
 
-                const thumbEl = snippetContainer.createDiv('card-thumbnail');
+                const imageClassName = settings.imageFormat === 'cover' ? 'card-cover' : 'card-thumbnail';
+                const imageEl = contentContainer.createDiv(imageClassName);
 
                 if (imageUrls.length > 0) {
                     // Multi-image carousel
                     if (imageUrls.length > 1) {
-                        const carouselContainer = thumbEl.createDiv('image-carousel-container');
+                        const carouselContainer = imageEl.createDiv('image-carousel-container');
                         carouselContainer.dataset.carouselIndex = '0';
                         carouselContainer.dataset.carouselCount = String(imageUrls.length);
 
@@ -161,7 +162,7 @@ export class SharedCardRenderer {
                         );
 
                         // Handle image load for masonry layout and color extraction
-                        const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                        const cardEl = imageEl.closest('.card') as HTMLElement;
                         if (cardEl) {
                             setupImageLoadHandler(
                                 currentImg,
@@ -173,7 +174,7 @@ export class SharedCardRenderer {
                     }
                     // Single image (existing code path)
                     else {
-                        const imageEmbedContainer = thumbEl.createDiv('image-embed');
+                        const imageEmbedContainer = imageEl.createDiv('image-embed');
                         const imgEl = imageEmbedContainer.createEl('img', {
                             attr: { src: imageUrls[0], alt: '' }
                         });
@@ -181,7 +182,7 @@ export class SharedCardRenderer {
                         imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
 
                         // Handle image load for masonry layout and color extraction
-                        const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                        const cardEl = imageEl.closest('.card') as HTMLElement;
                         if (cardEl) {
                             setupImageLoadHandler(
                                 imgEl,
@@ -194,7 +195,8 @@ export class SharedCardRenderer {
                 }
             } else if (settings.imageFormat !== 'none') {
                 // Always render placeholder when no image - CSS controls visibility
-                snippetContainer.createDiv('card-thumbnail-placeholder');
+                const placeholderClassName = settings.imageFormat === 'cover' ? 'card-cover-placeholder' : 'card-thumbnail-placeholder';
+                contentContainer.createDiv(placeholderClassName);
             }
         }
 
@@ -562,7 +564,7 @@ export class SharedCardRenderer {
     ): void {
         // Preload all images on card hover
         let preloaded = false;
-        const cardEl = carouselContainer.closest('.writing-card') as HTMLElement;
+        const cardEl = carouselContainer.closest('.card') as HTMLElement;
 
         if (cardEl) {
             cardEl.addEventListener('mouseenter', () => {

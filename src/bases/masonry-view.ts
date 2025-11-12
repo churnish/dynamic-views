@@ -109,7 +109,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Try to find the first visible card to restore position more accurately
         let anchorCardPath: string | null = null;
         if (savedScrollTop > 0 && this.masonryContainer) {
-            const cards = this.masonryContainer.querySelectorAll('.writing-card');
+            const cards = this.masonryContainer.querySelectorAll('.card');
             const containerTop = this.containerEl.getBoundingClientRect().top;
             for (const card of Array.from(cards)) {
                 const cardTop = (card as HTMLElement).getBoundingClientRect().top;
@@ -191,7 +191,7 @@ export class DynamicViewsMasonryView extends BasesView {
                     requestAnimationFrame(() => {
                         // Try to scroll to anchor card if we found one
                         if (anchorCardPath && this.masonryContainer) {
-                            const anchorCard = this.masonryContainer.querySelector(`.writing-card[data-path="${anchorCardPath}"]`) as HTMLElement;
+                            const anchorCard = this.masonryContainer.querySelector(`.card[data-path="${anchorCardPath}"]`) as HTMLElement;
                             if (anchorCard) {
                                 // Scroll to anchor card's position
                                 const cardTop = anchorCard.offsetTop;
@@ -228,7 +228,7 @@ export class DynamicViewsMasonryView extends BasesView {
         this.updateLayoutRef.current = () => {
             if (!this.masonryContainer) return;
 
-            const cards = Array.from(this.masonryContainer.querySelectorAll<HTMLElement>('.writing-card'));
+            const cards = Array.from(this.masonryContainer.querySelectorAll<HTMLElement>('.card'));
             if (cards.length === 0) return;
 
             const containerWidth = this.masonryContainer.clientWidth;

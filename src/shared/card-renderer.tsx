@@ -257,7 +257,7 @@ function Card({
 
     return (
         <div
-            className={`writing-card ${settings.imageFormat === 'cover' ? 'image-format-cover' : ''}`}
+            className={`card ${settings.imageFormat === 'cover' ? 'image-format-cover' : ''}`}
             data-path={card.path}
             tabIndex={index === focusableCardIndex ? 0 : -1}
             onClick={(e: MouseEvent) => {
@@ -316,7 +316,8 @@ function Card({
                     sourcePath: card.path
                 });
                 // Reset hover index to 0
-                const imgEl = (e.currentTarget as HTMLElement).querySelector('.card-thumbnail img');
+                const imageSelector = settings.imageFormat === 'cover' ? '.card-cover img' : '.card-thumbnail img';
+                const imgEl = (e.currentTarget as HTMLElement).querySelector(imageSelector);
                 const firstImage = imageArray[0];
                 if (imgEl && firstImage) {
                     (imgEl as HTMLImageElement).src = firstImage;
@@ -326,7 +327,7 @@ function Card({
         >
             {/* Title */}
             {settings.showTitle && (
-                <div className="writing-title">
+                <div className="card-title">
                     <a
                         href={card.path}
                         className="internal-link card-title-link"
@@ -345,16 +346,16 @@ function Card({
                 </div>
             )}
 
-            {/* Snippet and Thumbnail */}
+            {/* Content: Text Preview and Thumbnail/Cover */}
             {((settings.showTextPreview && card.snippet) || (settings.imageFormat !== 'none' && (imageArray.length > 0 || card.hasImageAvailable))) && (
-                <div className="snippet-container">
+                <div className="card-content">
                     {settings.showTextPreview && card.snippet && (
-                        <div className="writing-snippet">{card.snippet}</div>
+                        <div className="card-text-preview">{card.snippet}</div>
                     )}
                     {settings.imageFormat !== 'none' && (
                         imageArray.length > 0 ? (
                             <div
-                                className={`card-thumbnail ${isArray && imageArray.length > 1 ? 'multi-image' : ''}`}
+                                className={`${settings.imageFormat === 'cover' ? 'card-cover' : 'card-thumbnail'} ${isArray && imageArray.length > 1 ? 'multi-image' : ''}`}
                                 onMouseMove={!app.isMobile && isArray && imageArray.length > 1 ? ((e: MouseEvent) => {
                                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                     const x = e.clientX - rect.left;
@@ -388,9 +389,9 @@ function Card({
                                             const imgEl = e.currentTarget as HTMLImageElement;
                                             const imageEmbedEl = imgEl.parentElement;
                                             if (imageEmbedEl) {
-                                                const thumbEl = imageEmbedEl.parentElement;
-                                                if (thumbEl) {
-                                                    const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                                                const imageEl = imageEmbedEl.parentElement;
+                                                if (imageEl) {
+                                                    const cardEl = imageEl.closest('.card') as HTMLElement;
                                                     if (cardEl) {
                                                         handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
                                                     }
@@ -402,7 +403,7 @@ function Card({
                             </div>
                         ) : (
                             // Always render placeholder when no image - CSS controls visibility
-                            <div className="card-thumbnail-placeholder"></div>
+                            <div className={settings.imageFormat === 'cover' ? 'card-cover-placeholder' : 'card-thumbnail-placeholder'}></div>
                         )
                     )}
                 </div>
@@ -461,7 +462,7 @@ function handleArrowKey(
     onFocusChange?: (index: number) => void
 ): void {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- querySelectorAll returns Element[], need HTMLElement[] for navigation
-    const cards = Array.from(containerRef.current?.querySelectorAll('.writing-card') || []) as HTMLElement[];
+    const cards = Array.from(containerRef.current?.querySelectorAll('.card') || []) as HTMLElement[];
     const currentCard = e.currentTarget as HTMLElement;
     const actualIndex = cards.indexOf(currentCard);
 
