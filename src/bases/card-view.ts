@@ -8,7 +8,7 @@ import { CardData } from '../shared/card-renderer';
 import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getBasesViewOptions } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
-import { getMinCardWidth, getMinGridColumns } from '../utils/style-settings';
+import { getMinCardWidthGrid, getMinGridColumns } from '../utils/style-settings';
 import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
 import { SharedCardRenderer } from './shared-renderer';
 import { BATCH_SIZE, GAP_SIZE } from '../shared/constants';
@@ -111,7 +111,7 @@ export class DynamicViewsCardView extends BasesView {
 
         // Calculate grid columns
         const containerWidth = this.containerEl.clientWidth;
-        const cardMinWidth = getMinCardWidth();
+        const cardMinWidth = getMinCardWidthGrid();
         const minColumns = getMinGridColumns();
         const gap = GAP_SIZE;
         const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
@@ -191,7 +191,7 @@ export class DynamicViewsCardView extends BasesView {
         if (!this.resizeObserver) {
             this.resizeObserver = new ResizeObserver(() => {
                 const containerWidth = this.containerEl.clientWidth;
-                const cardMinWidth = getMinCardWidth();
+                const cardMinWidth = getMinCardWidthGrid();
                 const minColumns = getMinGridColumns();
                 const gap = GAP_SIZE;
                 const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));

@@ -110,26 +110,86 @@ export class SharedCardRenderer {
 
             // Thumbnail
             if (settings.imageFormat !== 'none' && card.imageUrl) {
-                const imageUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
+                const rawUrls = Array.isArray(card.imageUrl) ? card.imageUrl : [card.imageUrl];
+                // Filter out empty/invalid URLs
+                const imageUrls = rawUrls.filter(url => url && typeof url === 'string' && url.trim().length > 0);
+
                 const thumbEl = snippetContainer.createDiv('card-thumbnail');
 
                 if (imageUrls.length > 0) {
-                    const imageEmbedContainer = thumbEl.createDiv('image-embed');
-                    const imgEl = imageEmbedContainer.createEl('img', {
-                        attr: { src: imageUrls[0], alt: '' }
-                    });
-                    // Set CSS variable for letterbox blur background
-                    imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
+                    // Multi-image carousel
+                    if (imageUrls.length > 1) {
+                        const carouselContainer = thumbEl.createDiv('image-carousel-container');
+                        carouselContainer.dataset.carouselIndex = '0';
+                        carouselContainer.dataset.carouselCount = String(imageUrls.length);
 
-                    // Handle image load for masonry layout and color extraction
-                    const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
-                    if (cardEl) {
-                        setupImageLoadHandler(
-                            imgEl,
+                        // Image embed with dual images
+                        const imageEmbedContainer = carouselContainer.createDiv('image-embed');
+
+                        // Current image (initially visible, showing first image)
+                        const currentImg = imageEmbedContainer.createEl('img', {
+                            cls: 'carousel-img carousel-img-current',
+                            attr: { src: imageUrls[0], alt: '', 'data-img-slot': '0' }
+                        });
+
+                        // Next image (initially hidden, empty)
+                        const nextImg = imageEmbedContainer.createEl('img', {
+                            cls: 'carousel-img carousel-img-next',
+                            attr: { alt: '', 'data-img-slot': '1' }
+                        });
+
+                        imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
+
+                        // Navigation arrows
+                        const leftArrow = carouselContainer.createDiv('carousel-nav-left');
+                        setIcon(leftArrow, 'lucide-chevron-left');
+
+                        const rightArrow = carouselContainer.createDiv('carousel-nav-right');
+                        setIcon(rightArrow, 'lucide-chevron-right');
+
+                        // Multi-image indicator
+                        const indicator = carouselContainer.createDiv('carousel-indicator');
+                        setIcon(indicator, 'lucide-images');
+
+                        // Setup navigation
+                        this.setupCarouselNavigation(
+                            carouselContainer,
                             imageEmbedContainer,
-                            cardEl,
-                            this.updateLayoutRef.current || undefined
+                            currentImg,
+                            nextImg,
+                            imageUrls
                         );
+
+                        // Handle image load for masonry layout and color extraction
+                        const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                        if (cardEl) {
+                            setupImageLoadHandler(
+                                currentImg,
+                                imageEmbedContainer,
+                                cardEl,
+                                this.updateLayoutRef.current || undefined
+                            );
+                        }
+                    }
+                    // Single image (existing code path)
+                    else {
+                        const imageEmbedContainer = thumbEl.createDiv('image-embed');
+                        const imgEl = imageEmbedContainer.createEl('img', {
+                            attr: { src: imageUrls[0], alt: '' }
+                        });
+                        // Set CSS variable for letterbox blur background
+                        imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
+
+                        // Handle image load for masonry layout and color extraction
+                        const cardEl = thumbEl.closest('.writing-card') as HTMLElement;
+                        if (cardEl) {
+                            setupImageLoadHandler(
+                                imgEl,
+                                imageEmbedContainer,
+                                cardEl,
+                                this.updateLayoutRef.current || undefined
+                            );
+                        }
                     }
                 }
             } else if (settings.imageFormat !== 'none') {
@@ -488,5 +548,107 @@ export class SharedCardRenderer {
             updateScrollGradient(field1);
             updateScrollGradient(field2);
         });
+    }
+
+    /**
+     * Sets up carousel navigation for multi-image cards using dual-image choreography
+     */
+    private setupCarouselNavigation(
+        carouselContainer: HTMLElement,
+        imageEmbedContainer: HTMLElement,
+        currentImg: HTMLImageElement,
+        nextImg: HTMLImageElement,
+        imageUrls: string[]
+    ): void {
+        // Preload all images on card hover
+        let preloaded = false;
+        const cardEl = carouselContainer.closest('.writing-card') as HTMLElement;
+
+        if (cardEl) {
+            cardEl.addEventListener('mouseenter', () => {
+                if (!preloaded) {
+                    preloaded = true;
+                    // Preload all images (except first which is already loaded)
+                    imageUrls.slice(1).forEach((url) => {
+                        const img = new Image();
+                        img.src = url;
+                    });
+                }
+            }, { once: true });
+        }
+
+        const navigate = (direction: 1 | -1) => {
+            const currentIndex = parseInt(carouselContainer.dataset.carouselIndex || '0');
+            const count = parseInt(carouselContainer.dataset.carouselCount || '1');
+
+            // Calculate new index (wrap around)
+            let newIndex = currentIndex + direction;
+            if (newIndex < 0) newIndex = count - 1;
+            if (newIndex >= count) newIndex = 0;
+
+            const newUrl = imageUrls[newIndex];
+
+            // Query DOM for current images (handles swapping correctly)
+            const currentImgEl = imageEmbedContainer.querySelector('.carousel-img-current') as HTMLImageElement;
+            const nextImgEl = imageEmbedContainer.querySelector('.carousel-img-next') as HTMLImageElement;
+
+            if (!currentImgEl || !nextImgEl) return;
+
+            // Set next image src (loads instantly from cache)
+            nextImgEl.src = newUrl;
+            imageEmbedContainer.style.setProperty('--cover-image-url', `url("${newUrl}")`);
+
+            // Determine animation classes based on direction
+            const exitClass = direction === 1 ? 'carousel-exit-left' : 'carousel-exit-right';
+            const enterClass = direction === 1 ? 'carousel-enter-left' : 'carousel-enter-right';
+
+            // Animate both images simultaneously
+            currentImgEl.classList.add(exitClass);
+            nextImgEl.classList.add(enterClass);
+
+            // After animation completes, clean up and swap roles
+            setTimeout(() => {
+                // Remove animation classes
+                currentImgEl.classList.remove(exitClass);
+                nextImgEl.classList.remove(enterClass);
+
+                // Swap z-index to make next image the new current
+                currentImgEl.classList.remove('carousel-img-current');
+                currentImgEl.classList.add('carousel-img-next');
+                nextImgEl.classList.remove('carousel-img-next');
+                nextImgEl.classList.add('carousel-img-current');
+
+                // Update index
+                carouselContainer.dataset.carouselIndex = String(newIndex);
+
+                // Clear the now-next (old current) image to save memory
+                currentImgEl.src = '';
+
+                // Trigger layout update for masonry (new image may have different dimensions)
+                if (this.updateLayoutRef.current) {
+                    this.updateLayoutRef.current();
+                }
+            }, 300);
+        };
+
+        // Arrow click handlers
+        const leftArrow = carouselContainer.querySelector('.carousel-nav-left') as HTMLElement;
+        const rightArrow = carouselContainer.querySelector('.carousel-nav-right') as HTMLElement;
+
+        if (leftArrow) {
+            leftArrow.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Don't trigger card click
+                navigate(-1);
+            });
+        }
+
+        if (rightArrow) {
+            rightArrow.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(1);
+            });
+        }
     }
 }

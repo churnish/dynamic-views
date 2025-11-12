@@ -46,3 +46,36 @@ export function extractAverageColor(img: HTMLImageElement): string {
 
     return `rgb(${r}, ${g}, ${b})`;
 }
+
+/**
+ * Calculate relative luminance of an RGB color
+ * Uses WCAG formula: https://www.w3.org/TR/WCAG20/#relativeluminancedef
+ * @param rgbString - RGB color string in format "rgb(r, g, b)"
+ * @returns Luminance value between 0 (darkest) and 1 (lightest)
+ */
+export function calculateLuminance(rgbString: string): number {
+    const match = rgbString.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (!match) return 0.5;
+
+    const r = parseInt(match[1]) / 255;
+    const g = parseInt(match[2]) / 255;
+    const b = parseInt(match[3]) / 255;
+
+    const gammaCorrect = (val: number) =>
+        val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+
+    const rLinear = gammaCorrect(r);
+    const gLinear = gammaCorrect(g);
+    const bLinear = gammaCorrect(b);
+
+    return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+}
+
+/**
+ * Determine if a color is light or dark based on its luminance
+ * @param rgbString - RGB color string in format "rgb(r, g, b)"
+ * @returns 'light' if luminance > 0.5, otherwise 'dark'
+ */
+export function getColorTheme(rgbString: string): 'light' | 'dark' {
+    return calculateLuminance(rgbString) > 0.5 ? 'light' : 'dark';
+}

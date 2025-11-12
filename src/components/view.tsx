@@ -10,7 +10,7 @@ import { getCurrentFile, getFileCtime, getAvailablePath } from '../utils/file';
 import { ensurePageSelector, updateQueryInBlock, findQueryInBlock } from '../utils/query-sync';
 import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
 import { getFirstDatacorePropertyValue, getAllDatacoreImagePropertyValues } from '../utils/property';
-import { getMinCardWidth, getMinMasonryColumns, getMinGridColumns, getCardSpacing } from '../utils/style-settings';
+import { getMinCardWidthGrid, getMinCardWidthMasonry, getMinMasonryColumns, getMinGridColumns, getCardSpacing } from '../utils/style-settings';
 import { calculateMasonryLayout, applyMasonryLayout } from '../utils/masonry-layout';
 import type { DatacoreAPI, DatacoreFile } from '../types/datacore';
 
@@ -584,7 +584,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
             const result = calculateMasonryLayout({
                 cards,
                 containerWidth,
-                cardMinWidth: getMinCardWidth(),
+                cardMinWidth: getMinCardWidthMasonry(),
                 minColumns: getMinMasonryColumns(),
                 gap: getCardSpacing()
             });
@@ -636,7 +636,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
 
         const updateGrid = () => {
             const containerWidth = container.clientWidth;
-            const cardMinWidth = getMinCardWidth();
+            const cardMinWidth = getMinCardWidthGrid();
             const minColumns = getMinGridColumns();
             const gap = 8;
             const cols = Math.max(minColumns, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));

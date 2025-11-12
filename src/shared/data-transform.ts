@@ -23,28 +23,28 @@ function applySmartTimestamp(
     sortMethod: string,
     settings: Settings
 ): string[] {
-    console.log('// [Smart Timestamp] applySmartTimestamp called');
-    console.log('// [Smart Timestamp] Input props:', props);
-    console.log('// [Smart Timestamp] sortMethod:', sortMethod);
-    console.log('// [Smart Timestamp] settings.smartTimestamp:', settings.smartTimestamp);
-    console.log('// [Smart Timestamp] settings.createdTimeProperty:', settings.createdTimeProperty);
-    console.log('// [Smart Timestamp] settings.modifiedTimeProperty:', settings.modifiedTimeProperty);
+    // console.log('// [Smart Timestamp] applySmartTimestamp called');
+    // console.log('// [Smart Timestamp] Input props:', props);
+    // console.log('// [Smart Timestamp] sortMethod:', sortMethod);
+    // console.log('// [Smart Timestamp] settings.smartTimestamp:', settings.smartTimestamp);
+    // console.log('// [Smart Timestamp] settings.createdTimeProperty:', settings.createdTimeProperty);
+    // console.log('// [Smart Timestamp] settings.modifiedTimeProperty:', settings.modifiedTimeProperty);
 
     // Only apply if smart timestamp is enabled
     if (!settings.smartTimestamp) {
-        console.log('// [Smart Timestamp] Feature disabled, returning original props');
+        // console.log('// [Smart Timestamp] Feature disabled, returning original props');
         return props;
     }
 
     // Determine which timestamp we're sorting by
     const sortingByCtime = sortMethod.includes('ctime');
     const sortingByMtime = sortMethod.includes('mtime');
-    console.log('// [Smart Timestamp] sortingByCtime:', sortingByCtime);
-    console.log('// [Smart Timestamp] sortingByMtime:', sortingByMtime);
+    // console.log('// [Smart Timestamp] sortingByCtime:', sortingByCtime);
+    // console.log('// [Smart Timestamp] sortingByMtime:', sortingByMtime);
 
     // Only proceed if sorting by a timestamp
     if (!sortingByCtime && !sortingByMtime) {
-        console.log('// [Smart Timestamp] Not sorting by timestamp, returning original props');
+        // console.log('// [Smart Timestamp] Not sorting by timestamp, returning original props');
         return props;
     }
 
@@ -57,12 +57,12 @@ function applySmartTimestamp(
         p === 'file.mtime' || p === 'modified time' ||
         (settings.modifiedTimeProperty && p === settings.modifiedTimeProperty)
     );
-    console.log('// [Smart Timestamp] hasCtimeProperty:', hasCtimeProperty);
-    console.log('// [Smart Timestamp] hasMtimeProperty:', hasMtimeProperty);
+    // console.log('// [Smart Timestamp] hasCtimeProperty:', hasCtimeProperty);
+    // console.log('// [Smart Timestamp] hasMtimeProperty:', hasMtimeProperty);
 
     // If both are shown, don't change anything
     if (hasCtimeProperty && hasMtimeProperty) {
-        console.log('// [Smart Timestamp] Both timestamps shown, returning original props');
+        // console.log('// [Smart Timestamp] Both timestamps shown, returning original props');
         return props;
     }
 
@@ -75,19 +75,19 @@ function applySmartTimestamp(
         ? ['file.mtime', 'modified time', settings.modifiedTimeProperty].filter(Boolean)
         : ['file.ctime', 'created time', settings.createdTimeProperty].filter(Boolean);
 
-    console.log('// [Smart Timestamp] targetProperty:', targetProperty);
-    console.log('// [Smart Timestamp] propertiesToReplace:', propertiesToReplace);
+    // console.log('// [Smart Timestamp] targetProperty:', targetProperty);
+    // console.log('// [Smart Timestamp] propertiesToReplace:', propertiesToReplace);
 
     // Replace mismatched timestamp properties
     const result = props.map(prop => {
         if (propertiesToReplace.includes(prop)) {
-            console.log(`// [Smart Timestamp] Replacing "${prop}" with "${targetProperty}"`);
+            // console.log(`// [Smart Timestamp] Replacing "${prop}" with "${targetProperty}"`);
             return targetProperty;
         }
         return prop;
     });
 
-    console.log('// [Smart Timestamp] Output props:', result);
+    // console.log('// [Smart Timestamp] Output props:', result);
     return result;
 }
 

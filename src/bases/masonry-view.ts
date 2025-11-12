@@ -8,7 +8,7 @@ import { CardData } from '../shared/card-renderer';
 import { transformBasesEntries } from '../shared/data-transform';
 import { readBasesSettings, getMasonryViewOptions } from '../shared/settings-schema';
 import { getFirstBasesPropertyValue, getAllBasesImagePropertyValues } from '../utils/property';
-import { getMinCardWidth, getMinMasonryColumns, getCardSpacing } from '../utils/style-settings';
+import { getMinCardWidthMasonry, getMinMasonryColumns, getCardSpacing } from '../utils/style-settings';
 import { calculateMasonryLayout, applyMasonryLayout } from '../utils/masonry-layout';
 import { loadSnippetsForEntries, loadImagesForEntries } from '../shared/content-loader';
 import { SharedCardRenderer } from './shared-renderer';
@@ -237,7 +237,7 @@ export class DynamicViewsMasonryView extends BasesView {
             const result = calculateMasonryLayout({
                 cards,
                 containerWidth,
-                cardMinWidth: getMinCardWidth(),
+                cardMinWidth: getMinCardWidthMasonry(),
                 minColumns,
                 gap: getCardSpacing()
             });

@@ -10,9 +10,19 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-min-card-width
-        title: Minimum card width
-        description: Minimum width of cards in pixels
+        id: dynamic-views-min-card-width-grid
+        title: Minimum card width (Grid)
+        description: Minimum width of cards in Grid view
+        type: variable-number-slider
+        default: 400
+        min: 50
+        max: 800
+        step: 10
+        format: px
+    -
+        id: dynamic-views-min-card-width-masonry
+        title: Minimum card width (Masonry)
+        description: Minimum width of cards in Masonry view
         type: variable-number-slider
         default: 400
         min: 50
@@ -120,6 +130,9 @@ settings:
             -
                 label: Custom color
                 value: dynamic-views-card-background-custom
+            -
+                label: Ambient
+                value: dynamic-views-card-background-ambient
     -
         id: dynamic-views-card-background-custom-color
         title: Custom card background
@@ -415,7 +428,7 @@ settings:
         title: Minimum left/right cover height
         description: Minimum height for cards with left or right cover position
         type: variable-text
-        default: 175px
+        default: 150px
     -
         id: title-heading
         title: Title
@@ -1882,6 +1895,35 @@ body.dynamic-views-card-background-custom .dynamic-views .writing-card {
     background-color: var(--dynamic-views-card-background-custom-color, #1e1e1e);
 }
 
+body.dynamic-views-card-background-ambient .dynamic-views .writing-card {
+    background-color: var(--ambient-color, var(--background-primary-alt));
+}
+
+/* Text color adjustments for ambient card backgrounds */
+body.dynamic-views-card-background-ambient .dynamic-views .writing-card[data-ambient-theme='light'] {
+    --text-normal: #2e3338;
+    --text-muted: #888888;
+    --text-faint: #999999;
+    --text-accent: #705dcf;
+    --bold-color: #2e3338;
+    --tag-color: #2e3338;
+    --text-on-accent: #f0f0f0;
+    --dynamic-views-text-preview-color: #888888;
+    --dynamic-views-title-color: #2e3338;
+}
+
+body.dynamic-views-card-background-ambient .dynamic-views .writing-card[data-ambient-theme='dark'] {
+    --text-normal: #dcddde;
+    --text-muted: #999999;
+    --text-faint: #666666;
+    --text-accent: #a893ff;
+    --bold-color: #dcddde;
+    --tag-color: #dcddde;
+    --text-on-accent: #2e3338;
+    --dynamic-views-text-preview-color: #999999;
+    --dynamic-views-title-color: #dcddde;
+}
+
 /* Snippet container flexbox in grid mode to push properties to bottom */
 .dc-wide .dynamic-views .cards-feed .snippet-container,
 .dc-max .dynamic-views .cards-feed .snippet-container {
@@ -1907,7 +1949,7 @@ body:not(.dynamic-views-card-border) .dynamic-views .writing-card {
 
 .dynamic-views .writing-title {
     font-weight: calc(var(--font-weight) + var(--bold-modifier));
-    color: var(--dynamic-views-title-color, var(--bold-color));
+    color: var(--dynamic-views-title-color, var(--color-base-100));
     font-family: var(--dynamic-views-title-font, inherit);
     font-size: var(--dynamic-views-title-font-size, var(--font-ui-medium));
     max-width: 100%;
@@ -1916,7 +1958,7 @@ body:not(.dynamic-views-card-border) .dynamic-views .writing-card {
 
 .dynamic-views .card-title-link {
     text-decoration: none !important;
-    color: var(--dynamic-views-title-color, var(--bold-color)) !important;
+    color: var(--dynamic-views-title-color, var(--color-base-100)) !important;
     font-weight: calc(var(--font-weight) + var(--bold-modifier));
     display: block;
     width: 100%;
@@ -2014,6 +2056,195 @@ body.dynamic-views-thumbnail-right .dynamic-views .snippet-container {
     height: 100%;
     object-fit: cover;
     pointer-events: auto;
+}
+
+/* Image carousel */
+.dynamic-views .image-carousel-container {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.dynamic-views .image-carousel-container .image-embed {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+/* Dual stacked images for carousel */
+.dynamic-views .carousel-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dynamic-views .carousel-img-current {
+    z-index: 2;
+}
+
+.dynamic-views .carousel-img-next {
+    z-index: 1;
+}
+
+/* Carousel animations - dual image choreography */
+
+/* Current image exits left (when navigating right) */
+@keyframes carousel-exit-left {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-100%); opacity: 0; }
+}
+
+/* Current image exits right (when navigating left) */
+@keyframes carousel-exit-right {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Next image enters from right (when navigating right) */
+@keyframes carousel-enter-left {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Next image enters from left (when navigating left) */
+@keyframes carousel-enter-right {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.dynamic-views .carousel-exit-left {
+    animation: carousel-exit-left 0.3s ease forwards;
+}
+
+.dynamic-views .carousel-exit-right {
+    animation: carousel-exit-right 0.3s ease forwards;
+}
+
+.dynamic-views .carousel-enter-left {
+    animation: carousel-enter-left 0.3s ease forwards;
+}
+
+.dynamic-views .carousel-enter-right {
+    animation: carousel-enter-right 0.3s ease forwards;
+}
+
+/* Carousel in cover format: fill padding-top area */
+.dynamic-views .writing-card.image-format-cover .card-thumbnail .image-carousel-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.dynamic-views .carousel-nav-left,
+.dynamic-views .carousel-nav-right {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.dynamic-views .carousel-nav-left {
+    left: 8px;
+}
+
+.dynamic-views .carousel-nav-right {
+    right: 8px;
+}
+
+/* Show arrows on card hover */
+.dynamic-views .card-thumbnail:hover .carousel-nav-left,
+.dynamic-views .card-thumbnail:hover .carousel-nav-right {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Icon styling */
+.dynamic-views .carousel-nav-left svg,
+.dynamic-views .carousel-nav-right svg {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+
+.theme-light .dynamic-views .carousel-nav-left svg,
+.theme-light .dynamic-views .carousel-nav-right svg {
+    color: white;
+}
+
+.theme-dark .dynamic-views .carousel-nav-left svg,
+.theme-dark .dynamic-views .carousel-nav-right svg {
+    color: rgb(209, 209, 209);
+}
+
+/* Multi-image indicator */
+.dynamic-views .carousel-indicator {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9;
+    pointer-events: none;
+}
+
+.dynamic-views .carousel-indicator svg {
+    width: 16px;
+    height: 16px;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+
+.theme-light .dynamic-views .carousel-indicator svg {
+    color: white;
+}
+
+.theme-dark .dynamic-views .carousel-indicator svg {
+    color: rgb(209, 209, 209);
+}
+
+/* Mobile adjustments */
+.is-mobile .dynamic-views .carousel-nav-left,
+.is-mobile .dynamic-views .carousel-nav-right {
+    width: 20px;
+    height: 20px;
+}
+
+.is-mobile .dynamic-views .carousel-nav-left svg,
+.is-mobile .dynamic-views .carousel-nav-right svg {
+    width: 20px;
+    height: 20px;
+}
+
+.is-mobile .dynamic-views .carousel-indicator {
+    bottom: 6px;
+    right: 6px;
+    width: 14px;
+    height: 14px;
+}
+
+.is-mobile .dynamic-views .carousel-indicator svg {
+    width: 14px;
+    height: 14px;
 }
 
 /* Thumbnail expand on click */
@@ -2780,7 +3011,6 @@ body.dynamic-views-tag-style-outline .dynamic-views .list-meta .tag {
     border-radius: var(--tag-radius);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-faint);
-    opacity: 0.7;
 }
 
 body.dynamic-views-tag-style-outline .dynamic-views .card-properties .tag:hover,

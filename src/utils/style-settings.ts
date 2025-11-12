@@ -28,10 +28,17 @@ function hasBodyClass(className: string): boolean {
 }
 
 /**
- * Get minimum card width from CSS variable
+ * Get minimum card width for Grid view from CSS variable
  */
-export function getMinCardWidth(): number {
-	return getCSSVariableAsNumber('--dynamic-views-min-card-width', 400);
+export function getMinCardWidthGrid(): number {
+	return getCSSVariableAsNumber('--dynamic-views-min-card-width-grid', 400);
+}
+
+/**
+ * Get minimum card width for Masonry view from CSS variable
+ */
+export function getMinCardWidthMasonry(): number {
+	return getCSSVariableAsNumber('--dynamic-views-min-card-width-masonry', 400);
 }
 
 /**
@@ -99,4 +106,44 @@ export function shouldShowRecentTimeOnly(): boolean {
  */
 export function shouldShowOlderDateOnly(): boolean {
 	return hasBodyClass('dynamic-views-timestamp-older-date-only');
+}
+
+/**
+ * Type for Style Settings color cache
+ */
+export interface StyleSettingsColorCache {
+	titleColor?: { light?: string; dark?: string };
+	snippetColor?: { light?: string; dark?: string };
+	tagsColor?: { light?: string; dark?: string };
+	timestampColor?: { light?: string; dark?: string };
+	metadataColor?: { light?: string; dark?: string };
+}
+
+/**
+ * Apply custom colors from Style Settings to a card element
+ * Used for ambient card backgrounds to apply themed text colors
+ * @param cardEl - Card element to apply colors to
+ * @param theme - 'light' or 'dark' theme based on ambient color
+ * @param cache - Style Settings color cache with custom colors
+ */
+export function applyCustomColors(
+	cardEl: HTMLElement,
+	theme: 'light' | 'dark',
+	cache: StyleSettingsColorCache
+): void {
+	if (cache.titleColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-title-color', cache.titleColor[theme]);
+	}
+	if (cache.snippetColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-snippet-color', cache.snippetColor[theme]);
+	}
+	if (cache.tagsColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-tags-color', cache.tagsColor[theme]);
+	}
+	if (cache.timestampColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-timestamp-color', cache.timestampColor[theme]);
+	}
+	if (cache.metadataColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-metadata-color', cache.metadataColor[theme]);
+	}
 }

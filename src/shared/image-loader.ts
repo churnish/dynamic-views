@@ -1,4 +1,4 @@
-import { extractAverageColor } from '../utils/image-color';
+import { extractAverageColor, getColorTheme } from '../utils/image-color';
 import { IMAGE_ASPECT_RATIO } from './constants';
 
 /**
@@ -17,9 +17,14 @@ export function handleImageLoad(
     cardEl: HTMLElement,
     onLayoutUpdate?: (() => void) | null
 ): void {
-    // Extract ambient color for letterbox background
+    // Extract ambient color for Cover background: Ambient and Card background: Ambient options
     const ambientColor = extractAverageColor(imgEl);
-    imageEmbedContainer.style.setProperty('--ambient-color', ambientColor);
+    imageEmbedContainer.style.setProperty('--ambient-color', ambientColor); // For Cover background: Ambient
+    cardEl.style.setProperty('--ambient-color', ambientColor); // For Card background: Ambient
+
+    // Set ambient theme on card for text color adjustments
+    const colorTheme = getColorTheme(ambientColor);
+    cardEl.setAttribute('data-ambient-theme', colorTheme);
 
     // Set aspect ratio for flexible cover height (masonry only)
     if (imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
