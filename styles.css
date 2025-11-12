@@ -372,7 +372,7 @@ settings:
     -
         id: dynamic-views-cover-background-custom-color
         title: Custom cover background
-        description: Background color for "Custom color" and "Plain" modes
+        description: Background color for "Custom color" mode
         type: variable-themed-color
         format: rgb
         opacity: false
@@ -2152,13 +2152,14 @@ body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic
 }
 
 /* Toggle ON: Plain - depends on Card background setting */
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
-    background: var(--background-primary) !important;
+/* Default: use Obsidian's Bases cards cover background variable */
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--bases-cards-cover-background) !important;
 }
 
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain.dynamic-views-card-background-transparent .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active,
-body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain.dynamic-views-card-background-custom .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
-    background: var(--dynamic-views-cover-background-custom-color, var(--background-secondary)) !important;
+/* Override: If Card background is Tinted, use background-primary */
+body.dynamic-views-thumbnail-expand-click.cards-cover-background-on-zoom.dynamic-views-cover-bg-plain.dynamic-views-card-background-tinted .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed:active {
+    background: var(--background-primary) !important;
 }
 
 /* Transparent: Always use default background (overrides toggle state) */
@@ -2242,10 +2243,10 @@ body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cov
 }
 
 /* Cover background: Plain - depends on Card background setting */
-/* Default: use cover custom background */
+/* Default: use Obsidian's Bases cards cover background variable */
 body.dynamic-views-cover-top.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
 body.dynamic-views-cover-bottom.dynamic-views-cover-contain-tb.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
-    background: var(--dynamic-views-cover-background-custom-color);
+    background: var(--bases-cards-cover-background);
 }
 
 /* Override: If Card background is Tinted, use background-primary */
@@ -2304,10 +2305,10 @@ body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cove
 }
 
 /* Cover background: Plain - depends on Card background setting (left/right) */
-/* Default: use cover custom background */
+/* Default: use Obsidian's Bases cards cover background variable */
 body.dynamic-views-cover-left.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed,
 body.dynamic-views-cover-right.dynamic-views-cover-contain-lr.dynamic-views-cover-bg-plain .dynamic-views .writing-card.image-format-cover .card-thumbnail .image-embed {
-    background: var(--dynamic-views-cover-background-custom-color);
+    background: var(--bases-cards-cover-background);
 }
 
 /* Override: If Card background is Tinted, use background-primary */
