@@ -1,7 +1,7 @@
 {
 	"id": "dynamic-views",
 	"name": "Dynamic Views",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"minAppVersion": "1.4.11",
 	"description": "Elegant card views for Bases and Datacore.",
 	"author": "greetclammy",
