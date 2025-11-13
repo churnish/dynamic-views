@@ -129,6 +129,17 @@ export function getBasesViewOptions(): any[] {
             key: 'propertyLayout34SideBySide',
             default: DEFAULT_VIEW_SETTINGS.propertyLayout34SideBySide
         },
+        {
+            type: 'dropdown',
+            displayName: 'Show property labels',
+            key: 'propertyLabels',
+            options: {
+                'hide': 'Hide',
+                'inline': 'Inline',
+                'above': 'On top'
+            },
+            default: DEFAULT_VIEW_SETTINGS.propertyLabels
+        },
     ];
 }
 
@@ -190,6 +201,10 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         })(),
         propertyLayout12SideBySide: Boolean(config.get('propertyLayout12SideBySide') ?? defaultViewSettings.propertyLayout12SideBySide),
         propertyLayout34SideBySide: Boolean(config.get('propertyLayout34SideBySide') ?? defaultViewSettings.propertyLayout34SideBySide),
+        propertyLabels: (() => {
+            const value = config.get('propertyLabels');
+            return (value === 'hide' || value === 'inline' || value === 'above') ? value : defaultViewSettings.propertyLabels;
+        })(),
         imageFormat: (() => {
             const value = config.get('imageFormat');
             return (value === 'none' || value === 'thumbnail' || value === 'cover') ? value : defaultViewSettings.imageFormat;

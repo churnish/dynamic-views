@@ -8,6 +8,7 @@ import { TFolder, Menu } from 'obsidian';
 import type { Settings } from '../types';
 import type { RefObject } from '../types/datacore';
 import { getTagStyle, showTimestampIcon } from '../utils/style-settings';
+import { getPropertyLabel } from '../utils/property';
 import { handleImageLoad } from './image-loader';
 
 // Extend App type to include isMobile property
@@ -26,7 +27,8 @@ export interface CardData {
     path: string;
     name: string;
     title: string;
-    tags: string[];
+    tags: string[];  // tags in YAML + note body (file.tags property)
+    yamlTags: string[];  // YAML tags only (tags property)
     ctime: number;  // milliseconds
     mtime: number;  // milliseconds
     folderPath: string;
@@ -65,13 +67,43 @@ export interface CardRendererProps {
 function renderPropertyContent(
     propertyName: string,
     card: CardData,
-    resolvedValue: string,
+    resolvedValue: string | null,
     timeIcon: 'calendar' | 'clock',
     settings: Settings,
     app: App
 ): unknown {
-    if (propertyName === '' || !resolvedValue) {
+    if (propertyName === '') {
         return null;
+    }
+
+    // If no value and labels are hidden, render nothing
+    if (!resolvedValue && settings.propertyLabels === 'hide') {
+        return null;
+    }
+
+    // Render label above if enabled
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSX.Element resolves to any due to Datacore's JSX runtime
+    const labelAbove = settings.propertyLabels === 'above' ? (
+        <div className="property-label">{getPropertyLabel(propertyName)}</div>
+    ) : null;
+
+    // Render inline label if enabled (as sibling, before property-content)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSX.Element resolves to any due to Datacore's JSX runtime
+    const labelInline = settings.propertyLabels === 'inline' ? (
+        <span className="property-label-inline">{getPropertyLabel(propertyName)} </span>
+    ) : null;
+
+    // If no value but labels are enabled, show placeholder
+    if (!resolvedValue) {
+        return (
+            <>
+                {labelAbove}
+                {labelInline}
+                <div className="property-content">
+                    <span>…</span>
+                </div>
+            </>
+        );
     }
 
     // Handle special properties by property name
@@ -79,105 +111,153 @@ function renderPropertyContent(
     if (propertyName === 'file.mtime' || propertyName === 'file.ctime' ||
         propertyName === 'timestamp' || propertyName === 'modified time' || propertyName === 'created time') {
         return (
-            <div className="property-content">
-                <span>
-                    {showTimestampIcon() && (
-                        <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            {timeIcon === "calendar" ? (
-                                <>
-                                    <path d="M8 2v4"/>
-                                    <path d="M16 2v4"/>
-                                    <rect width="18" height="18" x="3" y="4" rx="2"/>
-                                    <path d="M3 10h18"/>
-                                </>
-                            ) : (
-                                <>
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <polyline points="12 6 12 12 16 14"/>
-                                </>
-                            )}
-                        </svg>
-                    )}
-                    <span>{resolvedValue}</span>
-                </span>
-            </div>
+            <>
+                {labelAbove}
+                {labelInline}
+                <div className="property-content">
+                    <span>
+                        {showTimestampIcon() && settings.propertyLabels === 'hide' && (
+                            <svg className="timestamp-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                {timeIcon === "calendar" ? (
+                                    <>
+                                        <path d="M8 2v4"/>
+                                        <path d="M16 2v4"/>
+                                        <rect width="18" height="18" x="3" y="4" rx="2"/>
+                                        <path d="M3 10h18"/>
+                                    </>
+                                ) : (
+                                    <>
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12 6 12 12 16 14"/>
+                                    </>
+                                )}
+                            </svg>
+                        )}
+                        <span>{resolvedValue}</span>
+                    </span>
+                </div>
+            </>
         );
-    } else if ((propertyName === 'file.tags' || propertyName === 'tags' || propertyName === 'file tags') && card.tags.length > 0) {
+    } else if ((propertyName === 'tags' || propertyName === 'note.tags') && card.yamlTags.length > 0) {
+        // YAML tags only
         const tagStyle = getTagStyle();
         const showHashPrefix = tagStyle === 'minimal';
 
         return (
-            <div className="property-content">
-                <div className="tags-wrapper">
-                    {card.tags.map((tag): JSX.Element => (
-                        <a
-                            key={tag}
-                            href="#"
-                            className="tag"
-                            onClick={(e: MouseEvent) => {
-                                e.preventDefault();
-                                const searchPlugin = app.internalPlugins.plugins["global-search"];
-                                if (searchPlugin?.instance?.openGlobalSearch) {
-                                    searchPlugin.instance.openGlobalSearch("tag:" + tag);
-                                }
-                            }}
-                        >
-                            {showHashPrefix ? '#' + tag : tag}
-                        </a>
-                    ))}
+            <>
+                {labelAbove}
+                {labelInline}
+                <div className="property-content">
+                    <div className="tags-wrapper">
+                        {card.yamlTags.map((tag): JSX.Element => (
+                            <a
+                                key={tag}
+                                href="#"
+                                className="tag"
+                                onClick={(e: MouseEvent) => {
+                                    e.preventDefault();
+                                    const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                    if (searchPlugin?.instance?.openGlobalSearch) {
+                                        searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                    }
+                                }}
+                            >
+                                {showHashPrefix ? '#' + tag : tag}
+                            </a>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </>
+        );
+    } else if ((propertyName === 'file.tags' || propertyName === 'file tags') && card.tags.length > 0) {
+        // tags in YAML + note body
+        const tagStyle = getTagStyle();
+        const showHashPrefix = tagStyle === 'minimal';
+
+        return (
+            <>
+                {labelAbove}
+                {labelInline}
+                <div className="property-content">
+                    <div className="tags-wrapper">
+                        {card.tags.map((tag): JSX.Element => (
+                            <a
+                                key={tag}
+                                href="#"
+                                className="tag"
+                                onClick={(e: MouseEvent) => {
+                                    e.preventDefault();
+                                    const searchPlugin = app.internalPlugins.plugins["global-search"];
+                                    if (searchPlugin?.instance?.openGlobalSearch) {
+                                        searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                                    }
+                                }}
+                            >
+                                {showHashPrefix ? '#' + tag : tag}
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            </>
         );
     } else if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && resolvedValue) {
         return (
-            <div className="property-content">
-                <div className="path-wrapper">
-                    {resolvedValue.split('/').filter(f => f).map((segment, idx, array): JSX.Element => {
-                        const allParts = resolvedValue.split('/').filter(f => f);
-                        const cumulativePath = allParts.slice(0, idx + 1).join('/');
-                        const isLastSegment = idx === array.length - 1;
-                        const segmentClass = isLastSegment ? 'path-segment filename-segment' : 'path-segment file-path-segment';
-                        return (
-                            <span key={idx} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                                <span
-                                    className={segmentClass}
-                                    onClick={(e: MouseEvent) => {
-                                        e.stopPropagation();
-                                        const fileExplorer = app.internalPlugins?.plugins?.["file-explorer"];
-                                        if (fileExplorer?.instance?.revealInFolder) {
-                                            const folder = app.vault.getAbstractFileByPath(cumulativePath);
-                                            if (folder) {
-                                                fileExplorer.instance.revealInFolder(folder);
+            <>
+                {labelAbove}
+                {labelInline}
+                <div className="property-content">
+                    <div className="path-wrapper">
+                        {resolvedValue.split('/').filter(f => f).map((segment, idx, array): JSX.Element => {
+                            const allParts = resolvedValue.split('/').filter(f => f);
+                            const cumulativePath = allParts.slice(0, idx + 1).join('/');
+                            const isLastSegment = idx === array.length - 1;
+                            const segmentClass = isLastSegment ? 'path-segment filename-segment' : 'path-segment file-path-segment';
+                            return (
+                                <span key={idx} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <span
+                                        className={segmentClass}
+                                        onClick={(e: MouseEvent) => {
+                                            e.stopPropagation();
+                                            const fileExplorer = app.internalPlugins?.plugins?.["file-explorer"];
+                                            if (fileExplorer?.instance?.revealInFolder) {
+                                                const folder = app.vault.getAbstractFileByPath(cumulativePath);
+                                                if (folder) {
+                                                    fileExplorer.instance.revealInFolder(folder);
+                                                }
                                             }
-                                        }
-                                    }}
-                                    onContextMenu={!isLastSegment ? (e: MouseEvent) => {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
-                                        if (folderFile instanceof TFolder) {
-                                            const menu = new Menu();
-                                            app.workspace.trigger('file-menu', menu, folderFile, 'file-explorer');
-                                            menu.showAtMouseEvent(e as unknown as MouseEvent);
-                                        }
-                                    } : undefined}
-                                >
-                                    {segment}
+                                        }}
+                                        onContextMenu={!isLastSegment ? (e: MouseEvent) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
+                                            if (folderFile instanceof TFolder) {
+                                                const menu = new Menu();
+                                                app.workspace.trigger('file-menu', menu, folderFile, 'file-explorer');
+                                                menu.showAtMouseEvent(e as unknown as MouseEvent);
+                                            }
+                                        } : undefined}
+                                    >
+                                        {segment}
+                                    </span>
+                                    {idx < array.length - 1 && <span className="path-separator">/</span>}
                                 </span>
-                                {idx < array.length - 1 && <span className="path-separator">/</span>}
-                            </span>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
     // Generic property: just render the resolved value as text
     return (
-        <div className="property-content">
-            <span>{resolvedValue}</span>
-        </div>
+        <>
+            {labelAbove}
+            {labelInline}
+            <div className="property-content">
+                <span>{resolvedValue}</span>
+            </div>
+        </>
     );
 }
 
@@ -197,7 +277,7 @@ export function CardRenderer({
     return (
         <div
             ref={containerRef}
-            className={viewMode === "masonry" ? "cards-masonry" : "cards-feed"}
+            className={viewMode === "masonry" ? "dynamic-views-masonry" : "dynamic-views-grid"}
             style={settings.queryHeight > 0 ? { maxHeight: `${settings.queryHeight}px`, overflowY: 'auto' } : {}}
         >
             {cards.map((card, index): JSX.Element =>
@@ -344,7 +424,7 @@ function Card({
                     {settings.openFileAction === 'title' ? (
                         <a
                             href={card.path}
-                            className="internal-link card-title-link"
+                            className="internal-link"
                             data-href={card.path}
                             onClick={(e: MouseEvent) => {
                                 e.preventDefault();
@@ -353,10 +433,10 @@ function Card({
                                 void app.workspace.openLinkText(card.path, "", newLeaf);
                             }}
                         >
-                            <span className="title-text">{card.title}</span>
+                            {card.title}
                         </a>
                     ) : (
-                        <span className="title-text">{card.title}</span>
+                        card.title
                     )}
                 </div>
             )}
@@ -370,8 +450,8 @@ function Card({
                     {settings.imageFormat !== 'none' && (
                         imageArray.length > 0 ? (
                             <div
-                                className={`${settings.imageFormat === 'cover' ? 'card-cover' : 'card-thumbnail'} ${isArray && imageArray.length > 1 ? 'multi-image' : ''}`}
-                                onMouseMove={!app.isMobile && isArray && imageArray.length > 1 ? ((e: MouseEvent) => {
+                                className={`${settings.imageFormat === 'cover' ? 'card-cover' : 'card-thumbnail'} ${isArray && imageArray.length > 1 && settings.imageFormat === 'thumbnail' ? 'multi-image' : ''}`}
+                                onMouseMove={!app.isMobile && isArray && imageArray.length > 1 && settings.imageFormat === 'thumbnail' ? ((e: MouseEvent) => {
                                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                     const x = e.clientX - rect.left;
                                     const section = Math.floor((x / rect.width) * imageArray.length);
@@ -385,7 +465,7 @@ function Card({
                                         }
                                     }
                                 }) : undefined}
-                                onMouseLeave={!app.isMobile ? ((e: MouseEvent) => {
+                                onMouseLeave={!app.isMobile && isArray && imageArray.length > 1 && settings.imageFormat === 'thumbnail' ? ((e: MouseEvent) => {
                                     const imgEl = (e.currentTarget as HTMLElement).querySelector('img');
                                     const firstSrc = imageArray[0];
                                     if (imgEl && firstSrc) {
@@ -427,8 +507,14 @@ function Card({
             {/* Properties - 4-field rendering with 2-row layout */}
             {(() => {
                 // Check if any row has content
-                const row1HasContent = card.property1 !== null || card.property2 !== null;
-                const row2HasContent = card.property3 !== null || card.property4 !== null;
+                // When labels are enabled, show row if property is configured (even if value is empty)
+                // When labels are hidden, only show row if value exists
+                const row1HasContent = settings.propertyLabels !== 'hide'
+                    ? (card.propertyName1 !== undefined || card.propertyName2 !== undefined)
+                    : (card.property1 !== null || card.property2 !== null);
+                const row2HasContent = settings.propertyLabels !== 'hide'
+                    ? (card.propertyName3 !== undefined || card.propertyName4 !== undefined)
+                    : (card.property3 !== null || card.property4 !== null);
 
                 if (!row1HasContent && !row2HasContent) return null;
 
@@ -441,10 +527,10 @@ function Card({
                                 (card.property1 === null && card.property2 !== null) || (card.property1 !== null && card.property2 === null) ? ' property-row-single' : ''
                             }`}>
                                 <div className="property-field property-field-1">
-                                    {card.property1 && renderPropertyContent(card.propertyName1 || '', card, card.property1, timeIcon, settings, app)}
+                                    {card.propertyName1 && renderPropertyContent(card.propertyName1, card, card.property1 ?? null, timeIcon, settings, app)}
                                 </div>
                                 <div className="property-field property-field-2">
-                                    {card.property2 && renderPropertyContent(card.propertyName2 || '', card, card.property2, timeIcon, settings, app)}
+                                    {card.propertyName2 && renderPropertyContent(card.propertyName2, card, card.property2 ?? null, timeIcon, settings, app)}
                                 </div>
                             </div>
                         )}
@@ -454,10 +540,10 @@ function Card({
                                 (card.property3 === null && card.property4 !== null) || (card.property3 !== null && card.property4 === null) ? ' property-row-single' : ''
                             }`}>
                                 <div className="property-field property-field-3">
-                                    {card.property3 && renderPropertyContent(card.propertyName3 || '', card, card.property3, timeIcon, settings, app)}
+                                    {card.propertyName3 && renderPropertyContent(card.propertyName3, card, card.property3 ?? null, timeIcon, settings, app)}
                                 </div>
                                 <div className="property-field property-field-4">
-                                    {card.property4 && renderPropertyContent(card.propertyName4 || '', card, card.property4, timeIcon, settings, app)}
+                                    {card.propertyName4 && renderPropertyContent(card.propertyName4, card, card.property4 ?? null, timeIcon, settings, app)}
                                 </div>
                             </div>
                         )}

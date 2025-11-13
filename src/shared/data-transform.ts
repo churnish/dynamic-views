@@ -115,7 +115,10 @@ export function datacoreResultToCardData(
     const path = result.$path || '';
     const folderPath = path.split('/').slice(0, -1).join('/');
 
-    // Get tags
+    // Get YAML tags only from 'tags' property
+    const yamlTagsRaw = result.value('tags') as unknown;
+    const yamlTags: string[] = Array.isArray(yamlTagsRaw) ? yamlTagsRaw as string[] : [];
+    // Get tags in YAML + note body from $tags
     const tags = result.$tags || [];
 
     // Get timestamps (convert Luxon DateTime to milliseconds)
@@ -128,6 +131,7 @@ export function datacoreResultToCardData(
         name: result.$name || '',
         title,
         tags,
+        yamlTags,
         ctime,
         mtime,
         folderPath,
@@ -199,12 +203,33 @@ export function basesEntryToCardData(
     const path = entry.file.path;
     const folderPath = path.split('/').slice(0, -1).join('/');
 
-    // Get tags from file.tags property (includes both YAML and inline body tags)
-    const tagsValue = entry.getValue('file.tags') as { data?: unknown } | null;
+    // Get YAML tags only from 'tags' property
+    const yamlTagsValue = entry.getValue('note.tags') as { data?: unknown } | null;
+    let yamlTags: string[] = [];
+
+    if (yamlTagsValue && yamlTagsValue.data != null) {
+        const tagData = yamlTagsValue.data;
+        const rawTags = Array.isArray(tagData)
+            ? tagData.map((t: unknown) => {
+                // Handle Bases tag objects - extract the actual tag string
+                if (t && typeof t === 'object' && 'data' in t) {
+                    return String((t as { data: unknown }).data);
+                }
+                // Fallback to string/number conversion
+                return (typeof t === 'string' || typeof t === 'number') ? String(t) : '';
+            }).filter(t => t)
+            : (typeof tagData === 'string' || typeof tagData === 'number') ? [String(tagData)] : [];
+
+        // Strip leading # from tags if present
+        yamlTags = rawTags.map(tag => tag.replace(/^#/, ''));
+    }
+
+    // Get tags in YAML + note body from file.tags property
+    const allTagsValue = entry.getValue('file.tags') as { data?: unknown } | null;
     let tags: string[] = [];
 
-    if (tagsValue && tagsValue.data != null) {
-        const tagData = tagsValue.data;
+    if (allTagsValue && allTagsValue.data != null) {
+        const tagData = allTagsValue.data;
         const rawTags = Array.isArray(tagData)
             ? tagData.map((t: unknown) => {
                 // Handle Bases tag objects - extract the actual tag string
@@ -230,6 +255,7 @@ export function basesEntryToCardData(
         name: fileName,
         title,
         tags,
+        yamlTags,
         ctime,
         mtime,
         folderPath,
@@ -348,9 +374,14 @@ export function resolveBasesProperty(
         return path;
     }
 
-    if (propertyName === 'file.tags' || propertyName === 'file tags' || propertyName === 'tags') {
-        const result = cardData.tags.length > 0 ? 'tags' : null;
-        return result;
+    // YAML tags only
+    if (propertyName === 'tags' || propertyName === 'note.tags') {
+        return cardData.yamlTags.length > 0 ? 'tags' : null;
+    }
+
+    // tags in YAML + note body
+    if (propertyName === 'file.tags' || propertyName === 'file tags') {
+        return cardData.tags.length > 0 ? 'tags' : null;
     }
 
     // Handle file timestamp properties directly
@@ -448,8 +479,13 @@ export function resolveDatacoreProperty(
         return path;
     }
 
-    if (propertyName === 'file.tags' || propertyName === 'file tags' || propertyName === 'tags') {
-        // Tags are already resolved in cardData.tags
+    // YAML tags only
+    if (propertyName === 'tags') {
+        return cardData.yamlTags.length > 0 ? 'tags' : null; // Special marker
+    }
+
+    // tags in YAML + note body
+    if (propertyName === 'file.tags' || propertyName === 'file tags') {
         return cardData.tags.length > 0 ? 'tags' : null; // Special marker
     }
 

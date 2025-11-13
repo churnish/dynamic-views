@@ -13,6 +13,7 @@ export interface Settings {
     propertyDisplay4: string;
     propertyLayout12SideBySide: boolean;
     propertyLayout34SideBySide: boolean;
+    propertyLabels: 'hide' | 'inline' | 'above';
     imageFormat: 'none' | 'thumbnail' | 'cover';
     timestampFormat: string;
     listMarker: string;
@@ -48,6 +49,7 @@ export interface DefaultViewSettings {
     propertyDisplay4: string;
     propertyLayout12SideBySide: boolean;
     propertyLayout34SideBySide: boolean;
+    propertyLabels: 'hide' | 'inline' | 'above';
     showTitle: boolean;
     showTextPreview: boolean;
     fallbackToContent: boolean;

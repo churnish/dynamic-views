@@ -689,11 +689,11 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
     // Infinite scroll: ResizeObserver + scroll + window resize
     dc.useEffect(() => {
         if (!containerRef.current) {
-            console.log('[InfiniteScroll] containerRef not available, skipping setup');
+            // console.log('[InfiniteScroll] containerRef not available, skipping setup');
             return;
         }
 
-        console.log('[InfiniteScroll] Setting up infinite scroll system');
+        // console.log('[InfiniteScroll] Setting up infinite scroll system');
 
         // Configuration: preload distance multipliers
         const DESKTOP_VIEWPORT_MULTIPLIER = 2; // Load when within 2x viewport height from bottom
@@ -716,31 +716,31 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
 
         if (!scrollableElement) {
             scrollableElement = window;
-            console.log('[InfiniteScroll] Using window as scroll container');
+            // console.log('[InfiniteScroll] Using window as scroll container');
         } else {
-            console.log('[InfiniteScroll] Using element as scroll container:', scrollableElement.className);
+            // console.log('[InfiniteScroll] Using element as scroll container:', scrollableElement.className);
         }
 
         // Core batch loading function
         const loadMoreItems = (trigger = 'unknown') => {
-            console.log(`[InfiniteScroll] loadMoreItems() called by: ${trigger}`);
+            // console.log(`[InfiniteScroll] loadMoreItems() called by: ${trigger}`);
 
             // Guard: already loading or no container
             if (isLoadingRef.current) {
-                console.log('[InfiniteScroll] Already loading, skipping');
+                // console.log('[InfiniteScroll] Already loading, skipping');
                 return false;
             }
             if (!containerRef.current) {
-                console.log('[InfiniteScroll] No container, skipping');
+                // console.log('[InfiniteScroll] No container, skipping');
                 return false;
             }
 
             // Get current count from ref (captures latest value)
             const currentCount = displayedCountRef.current!;
             const totalLength = sortedLengthRef.current;
-            console.log(`[InfiniteScroll] Current: ${currentCount}, Total: ${totalLength}`);
+            // console.log(`[InfiniteScroll] Current: ${currentCount}, Total: ${totalLength}`);
             if (totalLength !== null && currentCount >= totalLength) {
-                console.log(`[InfiniteScroll] All items loaded (${currentCount}/${totalLength})`);
+                // console.log(`[InfiniteScroll] All items loaded (${currentCount}/${totalLength})`);
                 return false; // All items loaded
             }
 
@@ -766,16 +766,16 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
             // Calculate threshold
             const threshold = editorHeight * (app.isMobile ? MOBILE_VIEWPORT_MULTIPLIER : DESKTOP_VIEWPORT_MULTIPLIER);
 
-            console.log(`[InfiniteScroll] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
+            // console.log(`[InfiniteScroll] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
 
             // Check if we should load
             if (distanceFromBottom > threshold) {
-                console.log(`[InfiniteScroll] Distance (${distanceFromBottom.toFixed(0)}px) > threshold (${threshold.toFixed(0)}px), not loading`);
+                // console.log(`[InfiniteScroll] Distance (${distanceFromBottom.toFixed(0)}px) > threshold (${threshold.toFixed(0)}px), not loading`);
                 return false;
             }
 
             // Load batch
-            console.log('[InfiniteScroll] Distance within threshold, loading batch...');
+            // console.log('[InfiniteScroll] Distance within threshold, loading batch...');
             isLoadingRef.current = true;
 
             const currentCols = columnCountRef.current || 2;
@@ -783,7 +783,7 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
             const batchSize = Math.min(currentCols * rowsPerColumn, 7 * rowsPerColumn);
             const newCount = Math.min(currentCount + batchSize, totalLength!);
 
-            console.log(`[InfiniteScroll] Loading batch: ${currentCount} → ${newCount} (${batchSize} items, ${currentCols} cols × ${rowsPerColumn} rows)`);
+            // console.log(`[InfiniteScroll] Loading batch: ${currentCount} → ${newCount} (${batchSize} items, ${currentCols} cols × ${rowsPerColumn} rows)`);
 
             displayedCountRef.current = newCount;
             setDisplayedCount(newCount);
@@ -792,9 +792,9 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
         };
 
         // Setup ResizeObserver (watches masonry container)
-        console.log('[InfiniteScroll] Setting up ResizeObserver on masonry container');
+        // console.log('[InfiniteScroll] Setting up ResizeObserver on masonry container');
         const resizeObserver = new ResizeObserver(() => {
-            console.log('[InfiniteScroll] ResizeObserver: Masonry container height changed (layout completed)');
+            // console.log('[InfiniteScroll] ResizeObserver: Masonry container height changed (layout completed)');
             // Only clear loading flag - don't trigger auto-loading to prevent cascade
             isLoadingRef.current = false;
         });
@@ -802,20 +802,20 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
 
         // One-time initial check after layout settles (if viewport isn't filled)
         const initialCheckTimeout = setTimeout(() => {
-            console.log('[InfiniteScroll] Running one-time initial check');
+            // console.log('[InfiniteScroll] Running one-time initial check');
             loadMoreItems('initial-check');
         }, 300);
 
         // Setup window resize listener (handles viewport height changes)
-        console.log('[InfiniteScroll] Setting up window resize listener');
+        // console.log('[InfiniteScroll] Setting up window resize listener');
         const handleWindowResize = () => {
-            console.log('[InfiniteScroll] Window resized, checking if need more items');
+            // console.log('[InfiniteScroll] Window resized, checking if need more items');
             loadMoreItems('window.resize');
         };
         window.addEventListener('resize', handleWindowResize);
 
         // Setup scroll listener with leading-edge throttle
-        console.log('[InfiniteScroll] Setting up scroll listener with leading-edge throttle');
+        // console.log('[InfiniteScroll] Setting up scroll listener with leading-edge throttle');
         let scrollTimer: ReturnType<typeof setTimeout> | null = null;
         const handleScroll = () => {
             if (scrollTimer) {
@@ -823,24 +823,24 @@ export function View({ plugin, app, dc, USER_QUERY = '' }: ViewProps): JSX.Eleme
                 return;
             }
 
-            console.log('[InfiniteScroll] Scroll event (cooldown started)');
+            // console.log('[InfiniteScroll] Scroll event (cooldown started)');
 
             // Check immediately (leading edge)
             loadMoreItems('scroll');
 
             // Start cooldown
             scrollTimer = setTimeout(() => {
-                console.log('[InfiniteScroll] Scroll cooldown ended');
+                // console.log('[InfiniteScroll] Scroll cooldown ended');
                 scrollTimer = null;
             }, 100);
         };
         scrollableElement.addEventListener('scroll', handleScroll, { passive: true });
 
-        console.log('[InfiniteScroll] All listeners attached, system ready');
+        // console.log('[InfiniteScroll] All listeners attached, system ready');
 
         // Cleanup
         return () => {
-            console.log('[InfiniteScroll] Cleaning up all listeners');
+            // console.log('[InfiniteScroll] Cleaning up all listeners');
             resizeObserver.disconnect();
             window.removeEventListener('resize', handleWindowResize);
             scrollableElement.removeEventListener('scroll', handleScroll);

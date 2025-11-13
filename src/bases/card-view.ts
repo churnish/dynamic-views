@@ -100,7 +100,8 @@ export class DynamicViewsCardView extends BasesView {
 
     onDataUpdated(): void {
         void (async () => {
-            const entries = this.data.data;
+            const groupedData = this.data.groupedData;
+            const allEntries = this.data.data;
 
         // Read settings from Bases config
         const settings = readBasesSettings(
@@ -135,32 +136,35 @@ export class DynamicViewsCardView extends BasesView {
         }
         this.lastSortMethod = sortMethod;
 
-        // Apply shuffled order if enabled
-        let orderedEntries = entries;
-        if (this.isShuffled && this.shuffledOrder.length > 0) {
-            // Sort by shuffled order
-            orderedEntries = [...entries].sort((a, b) => {
-                const indexA = this.shuffledOrder.indexOf(a.file.path);
-                const indexB = this.shuffledOrder.indexOf(b.file.path);
-                return indexA - indexB;
-            });
-        }
+        // Process groups and apply shuffle within groups if enabled
+        const processedGroups = groupedData.map(group => {
+            let groupEntries = [...group.entries];
 
-        // Slice to displayed count for rendering
-        const visibleEntries = orderedEntries.slice(0, this.displayedCount);
+            if (this.isShuffled && this.shuffledOrder.length > 0) {
+                // Sort by shuffled order within this group
+                groupEntries = groupEntries.sort((a, b) => {
+                    const indexA = this.shuffledOrder.indexOf(a.file.path);
+                    const indexB = this.shuffledOrder.indexOf(b.file.path);
+                    return indexA - indexB;
+                });
+            }
+
+            return { group, entries: groupEntries };
+        });
+
+        // Collect visible entries across all groups (up to displayedCount)
+        const visibleEntries: BasesEntry[] = [];
+        let remainingCount = this.displayedCount;
+
+        for (const processedGroup of processedGroups) {
+            if (remainingCount <= 0) break;
+            const entriesToTake = Math.min(processedGroup.entries.length, remainingCount);
+            visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
+            remainingCount -= entriesToTake;
+        }
 
         // Load snippets and images ONLY for displayed entries
         await this.loadContentForEntries(visibleEntries, settings);
-
-        const cards = transformBasesEntries(
-            visibleEntries,
-            settings,
-            sortMethod,
-            false, // Don't shuffle in transform, we already applied order above
-            this.snippets,
-            this.images,
-            this.hasImageAvailable
-        );
 
         // Clear and re-render
         this.containerEl.empty();
@@ -170,13 +174,60 @@ export class DynamicViewsCardView extends BasesView {
         this.propertyObservers = [];
 
         // Create cards feed container
-        const feedEl = this.containerEl.createDiv('cards-feed');
+        const feedEl = this.containerEl.createDiv('dynamic-views-grid');
 
-        // Render each card
-        for (let i = 0; i < cards.length; i++) {
-            const card = cards[i];
-            const entry = visibleEntries[i];
-            this.renderCard(feedEl, card, entry, i, settings);
+        // Render groups with headers
+        let displayedSoFar = 0;
+        for (const processedGroup of processedGroups) {
+            if (displayedSoFar >= this.displayedCount) break;
+
+            const entriesToDisplay = Math.min(processedGroup.entries.length, this.displayedCount - displayedSoFar);
+            if (entriesToDisplay === 0) continue;
+
+            const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
+
+            // Create group container
+            const groupEl = feedEl.createDiv('dynamic-views-group');
+
+            // Render group header if key exists
+            if (processedGroup.group.hasKey()) {
+                const headerEl = groupEl.createDiv('bases-group-heading');
+
+                // Add group property label if groupBy is configured
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                const groupBy = (this.config as any).groupBy;
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                if (groupBy?.property) {
+                    const propertyEl = headerEl.createDiv('bases-group-property');
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+                    const propertyName = this.config.getDisplayName(groupBy.property);
+                    propertyEl.setText(propertyName);
+                }
+
+                // Add group value
+                const valueEl = headerEl.createDiv('bases-group-value');
+                const keyValue = processedGroup.group.key?.toString() || '';
+                valueEl.setText(keyValue);
+            }
+
+            // Render cards in this group
+            const cards = transformBasesEntries(
+                groupEntries,
+                settings,
+                sortMethod,
+                false,
+                this.snippets,
+                this.images,
+                this.hasImageAvailable
+            );
+
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const entry = groupEntries[i];
+                this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+            }
+
+            displayedSoFar += entriesToDisplay;
         }
 
         // Restore scroll position after rendering
@@ -185,7 +236,7 @@ export class DynamicViewsCardView extends BasesView {
         }
 
         // Setup infinite scroll
-        this.setupInfiniteScroll(entries.length);
+        this.setupInfiniteScroll(allEntries.length);
 
         // Setup ResizeObserver for dynamic grid updates
         if (!this.resizeObserver) {

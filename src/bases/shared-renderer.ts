@@ -10,6 +10,7 @@ import { setupImageLoadHandler } from '../shared/image-loader';
 import { updateScrollGradient, setupScrollGradients } from '../shared/scroll-gradient-manager';
 import { getTimestampIcon } from '../shared/render-utils';
 import { getTagStyle, showTimestampIcon } from '../utils/style-settings';
+import { getPropertyLabel } from '../utils/property';
 import { GAP_SIZE } from '../shared/constants';
 import type DynamicViewsPlugin from '../../main';
 import type { Settings } from '../types';
@@ -96,10 +97,10 @@ export class SharedCardRenderer {
             if (settings.openFileAction === 'title') {
                 // Render as clickable link
                 const link = titleEl.createEl('a', {
-                    cls: 'internal-link card-title-link',
+                    cls: 'internal-link',
+                    text: card.title,
                     attr: { 'data-href': card.path, href: card.path }
                 });
-                link.createSpan({ cls: 'title-text', text: card.title });
 
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -109,7 +110,7 @@ export class SharedCardRenderer {
                 });
             } else {
                 // Render as plain text
-                titleEl.createSpan({ cls: 'title-text', text: card.title });
+                titleEl.appendText(card.title);
             }
         }
 
@@ -135,8 +136,8 @@ export class SharedCardRenderer {
                 const imageEl = contentContainer.createDiv(imageClassName);
 
                 if (imageUrls.length > 0) {
-                    // Multi-image carousel
-                    if (imageUrls.length > 1) {
+                    // Multi-image carousel (covers only, not thumbnails)
+                    if (imageUrls.length > 1 && settings.imageFormat === 'cover') {
                         const carouselContainer = imageEl.createDiv('image-carousel-container');
                         carouselContainer.dataset.carouselIndex = '0';
                         carouselContainer.dataset.carouselCount = String(imageUrls.length);
@@ -253,8 +254,14 @@ export class SharedCardRenderer {
         );
 
         // Check if any row has content
-        const row1HasContent = values[0] !== null || values[1] !== null;
-        const row2HasContent = values[2] !== null || values[3] !== null;
+        // When labels are enabled, show row if property is configured (even if value is empty)
+        // When labels are hidden, only show row if value exists
+        const row1HasContent = settings.propertyLabels !== 'hide'
+            ? (effectiveProps[0] !== '' || effectiveProps[1] !== '')
+            : (values[0] !== null || values[1] !== null);
+        const row2HasContent = settings.propertyLabels !== 'hide'
+            ? (effectiveProps[2] !== '' || effectiveProps[3] !== '')
+            : (values[2] !== null || values[3] !== null);
 
         if (!row1HasContent && !row2HasContent) return;
 
@@ -268,10 +275,10 @@ export class SharedCardRenderer {
             }
 
             const field1El = row1El.createDiv('property-field property-field-1');
-            if (values[0]) this.renderPropertyContent(field1El, effectiveProps[0], values[0], card, entry, settings);
+            if (effectiveProps[0]) this.renderPropertyContent(field1El, effectiveProps[0], values[0], card, entry, settings);
 
             const field2El = row1El.createDiv('property-field property-field-2');
-            if (values[1]) this.renderPropertyContent(field2El, effectiveProps[1], values[1], card, entry, settings);
+            if (effectiveProps[1]) this.renderPropertyContent(field2El, effectiveProps[1], values[1], card, entry, settings);
 
             // Check actual rendered content
             const has1 = field1El.children.length > 0 || field1El.textContent?.trim().length > 0;
@@ -307,10 +314,10 @@ export class SharedCardRenderer {
             }
 
             const field3El = row2El.createDiv('property-field property-field-3');
-            if (values[2]) this.renderPropertyContent(field3El, effectiveProps[2], values[2], card, entry, settings);
+            if (effectiveProps[2]) this.renderPropertyContent(field3El, effectiveProps[2], values[2], card, entry, settings);
 
             const field4El = row2El.createDiv('property-field property-field-4');
-            if (values[3]) this.renderPropertyContent(field4El, effectiveProps[3], values[3], card, entry, settings);
+            if (effectiveProps[3]) this.renderPropertyContent(field4El, effectiveProps[3], values[3], card, entry, settings);
 
             // Check actual rendered content
             const has3 = field3El.children.length > 0 || field3El.textContent?.trim().length > 0;
@@ -355,25 +362,53 @@ export class SharedCardRenderer {
     private renderPropertyContent(
         container: HTMLElement,
         propertyName: string,
-        resolvedValue: string,
+        resolvedValue: string | null,
         card: CardData,
         entry: BasesEntry,
         settings: Settings
     ): void {
-        if (propertyName === '' || !resolvedValue) {
+        if (propertyName === '') {
             return;
         }
 
-        // Early return for empty special properties
-        if ((propertyName === 'file.tags' || propertyName === 'tags' || propertyName === 'file tags') && card.tags.length === 0) {
+        // If no value and labels are hidden, render nothing
+        if (!resolvedValue && settings.propertyLabels === 'hide') {
             return;
         }
-        if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && card.folderPath.length === 0) {
-            return;
+
+        // Early return for empty special properties when labels are hidden
+        if (settings.propertyLabels === 'hide') {
+            if ((propertyName === 'tags' || propertyName === 'note.tags') && card.yamlTags.length === 0) {
+                return;
+            }
+            if ((propertyName === 'file.tags' || propertyName === 'file tags') && card.tags.length === 0) {
+                return;
+            }
+            if ((propertyName === 'file.path' || propertyName === 'path' || propertyName === 'file path') && card.folderPath.length === 0) {
+                return;
+            }
+        }
+
+        // Render label if property labels are enabled
+        if (settings.propertyLabels === 'above') {
+            const labelEl = container.createDiv('property-label');
+            labelEl.textContent = getPropertyLabel(propertyName);
+        }
+
+        // Add inline label if enabled (as sibling, before property-content)
+        if (settings.propertyLabels === 'inline') {
+            const labelSpan = container.createSpan('property-label-inline');
+            labelSpan.textContent = getPropertyLabel(propertyName) + ' ';
         }
 
         // Universal wrapper for all content types
         const metaContent = container.createDiv('property-content');
+
+        // If no value but labels are enabled, show placeholder
+        if (!resolvedValue) {
+            metaContent.appendText('…');
+            return;
+        }
 
         // Handle timestamp properties - only show icons for known timestamp properties
         const isKnownTimestampProperty = propertyName === 'file.mtime' || propertyName === 'file.ctime' ||
@@ -382,13 +417,33 @@ export class SharedCardRenderer {
         if (isKnownTimestampProperty) {
             // resolvedValue is already formatted by data-transform
             const timestampWrapper = metaContent.createSpan();
-            if (showTimestampIcon()) {
+            if (showTimestampIcon() && settings.propertyLabels === 'hide') {
                 const iconName = getTimestampIcon(propertyName, settings);
                 const iconEl = timestampWrapper.createSpan('timestamp-icon');
                 setIcon(iconEl, iconName);
             }
             timestampWrapper.appendText(resolvedValue);
-        } else if ((propertyName === 'file.tags' || propertyName === 'tags' || propertyName === 'file tags') && card.tags.length > 0) {
+        } else if ((propertyName === 'tags' || propertyName === 'note.tags') && card.yamlTags.length > 0) {
+            // YAML tags only
+            const tagStyle = getTagStyle();
+            const showHashPrefix = tagStyle === 'minimal';
+            const tagsWrapper = metaContent.createDiv('tags-wrapper');
+            card.yamlTags.forEach(tag => {
+                const tagEl = tagsWrapper.createEl('a', {
+                    cls: 'tag',
+                    text: showHashPrefix ? '#' + tag : tag,
+                    href: '#'
+                });
+                tagEl.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const searchPlugin = this.plugin.app.internalPlugins.plugins["global-search"];
+                    if (searchPlugin?.instance?.openGlobalSearch) {
+                        searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                    }
+                });
+            });
+        } else if ((propertyName === 'file.tags' || propertyName === 'file tags') && card.tags.length > 0) {
+            // tags in YAML + note body
             const tagStyle = getTagStyle();
             const showHashPrefix = tagStyle === 'minimal';
             const tagsWrapper = metaContent.createDiv('tags-wrapper');
@@ -546,8 +601,21 @@ export class SharedCardRenderer {
         const content1 = field1.querySelector('.property-content') as HTMLElement;
         const content2 = field2.querySelector('.property-content') as HTMLElement;
 
-        const width1 = content1 ? content1.scrollWidth : 0;
-        const width2 = content2 ? content2.scrollWidth : 0;
+        // Measure inline labels if present
+        const label1 = field1.querySelector('.property-label-inline') as HTMLElement;
+        const label2 = field2.querySelector('.property-label-inline') as HTMLElement;
+
+        // Total width = content width + label width (if inline label exists)
+        let width1 = content1 ? content1.scrollWidth : 0;
+        let width2 = content2 ? content2.scrollWidth : 0;
+
+        if (label1) {
+            width1 += label1.scrollWidth;
+        }
+        if (label2) {
+            width2 += label2.scrollWidth;
+        }
+
         const containerWidth = row.clientWidth;
         const gap = GAP_SIZE;
         const availableWidth = containerWidth - gap;

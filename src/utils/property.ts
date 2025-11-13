@@ -195,6 +195,57 @@ export function getAllDatacoreImagePropertyValues(page: DatacoreFile, propertySt
 }
 
 /**
+ * Convert property name to readable label
+ * Returns exact property names for special properties, or original name for custom properties
+ */
+export function getPropertyLabel(propertyName: string): string {
+    if (!propertyName || propertyName === '') return '';
+
+    // Map of technical names to exact labels (no capitalization changes)
+    const labelMap: Record<string, string> = {
+        'file.file': 'file',
+        'file': 'file',
+        'file.name': 'file name',
+        'file name': 'file name',
+        'file.basename': 'file base name',
+        'file base name': 'file base name',
+        'file.ext': 'file extension',
+        'file.extension': 'file extension',
+        'file extension': 'file extension',
+        'file.backlinks': 'file backlinks',
+        'file backlinks': 'file backlinks',
+        'file.ctime': 'created time',
+        'created time': 'created time',
+        'file.embeds': 'file embeds',
+        'file embeds': 'file embeds',
+        'file.fullname': 'file full name',
+        'file full name': 'file full name',
+        'file.links': 'file links',
+        'file links': 'file links',
+        'file.path': 'file path',
+        'path': 'file path',
+        'file path': 'file path',
+        'file.size': 'file size',
+        'file size': 'file size',
+        'file.tags': 'file tags',
+        'file tags': 'file tags',
+        'tags': 'tags',
+        'note.tags': 'tags',
+        'file.mtime': 'modified time',
+        'modified time': 'modified time',
+        'file.folder': 'folder',
+        'folder': 'folder'
+    };
+
+    // Check if we have a mapped label
+    const mappedLabel = labelMap[propertyName.toLowerCase()];
+    if (mappedLabel) return mappedLabel;
+
+    // For custom properties, use exact capitalization as-is
+    return propertyName;
+}
+
+/**
  * Get all property names used in the vault
  * Returns an array of all property names (from frontmatter)
  * Includes built-in special properties for property display
