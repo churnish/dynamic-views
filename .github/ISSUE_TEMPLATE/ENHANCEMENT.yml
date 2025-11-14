@@ -14,6 +14,16 @@ body:
         required: true
       - label: I have updated to the latest version of Obsidian
         required: true
+- type: markdown
+  attributes:
+    value: "**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your text."
+- type: checkboxes
+  id: affected-views
+  attributes:
+    label: What views does the issue affect? (If applicable)
+    options:
+      - label: Bases view
+      - label: Datacore view
 - type: textarea
   id: use-case
   attributes:
@@ -36,6 +46,31 @@ body:
     label: Current workaround (optional)
     description: If you're using any workarounds, it might be helpful to us to get some inspiration.
     placeholder: Describe workaround here...
+  validations:
+    required: false
+- type: textarea
+  id: debug-info
+  attributes:
+    label: Debug information (optional)
+    description: If you want, you can copy and paste Obsidian debug information here.
+    placeholder: Paste debug info here...
+    render: text
+  validations:
+    required: false
+- type: textarea
+  id: plugin-settings
+  attributes:
+    label: Dynamic Views plugin settings (optional)
+    placeholder: Paste your Dynamic Views plugin settings here...
+    render: json
+  validations:
+    required: false
+- type: textarea
+  id: style-settings
+  attributes:
+    label: Style Settings configuration (optional)
+    placeholder: Paste your Style Settings configuration here...
+    render: json
   validations:
     required: false
 - type: textarea
