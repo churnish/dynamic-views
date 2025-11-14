@@ -1,4 +1,4 @@
-name: Bug Report
+name: Bug report
 description: I want to report something that is not working as expected in Dynamic Views.
 labels:
   - bug
@@ -6,7 +6,7 @@ body:
 - type: checkboxes
   id: checklist
   attributes:
-    label: Bug Report Checklist
+    label: Bug report checklist
     options:
       - label: I have searched existing issues and this is not a duplicate
         required: true
@@ -14,10 +14,17 @@ body:
         required: true
       - label: I can reproduce the issue in the sandbox vault, or after disabling all other third-party plugins and CSS snippets, switching to default theme, then restarting Obsidian
         required: false
+- type: checkboxes
+  id: affected-views
+  attributes:
+    label: What views does the issue affect? (if applicable)
+    options:
+      - label: Bases view
+      - label: Datacore view
 - type: textarea
   id: steps-to-reproduce
   attributes:
-    label: Steps to Reproduce
+    label: Steps to reproduce
     description: |-
       Starting from scratch, what are the steps to make the bug happen?
 
@@ -28,7 +35,7 @@ body:
 - type: textarea
   id: expected-result
   attributes:
-    label: Expected Result
+    label: Expected result
     description: What do you expect to see after carrying out the steps above?
     placeholder: Write the expected result here...
   validations:
@@ -36,7 +43,7 @@ body:
 - type: textarea
   id: actual-result
   attributes:
-    label: Actual Result
+    label: Actual result
     description: |-
       Instead of the expected result, what happened?
 
@@ -47,7 +54,7 @@ body:
 - type: textarea
   id: debug-info
   attributes:
-    label: Debug Information
+    label: Debug information
     description: |-
       Please copy and paste Obsidian's Debug Information here:
 
@@ -56,12 +63,13 @@ body:
       3. Press "Copy to clipboard".
       4. Paste the copied text here.
     placeholder: Paste the debug info here...
+    render: shell
   validations:
     required: true
 - type: textarea
   id: plugin-settings
   attributes:
-    label: Dynamic Views Plugin Settings (Optional)
+    label: Dynamic Views plugin settings (optional)
     description: |-
       To share your Dynamic Views plugin settings:
 
@@ -70,12 +78,13 @@ body:
       3. Copy `data.json`.
       4. Paste the copied file here.
     placeholder: Paste your Dynamic Views plugin settings here...
+    render: json
   validations:
     required: false
 - type: textarea
   id: style-settings
   attributes:
-    label: Style Settings Configuration (Optional)
+    label: Style Settings configuration (optional)
     description: |-
       To share your Style Settings configuration:
 
@@ -83,12 +92,13 @@ body:
       2. Press "Export settings" to the right of the Dynamic Views section.
       3. Paste the copied text here.
     placeholder: Paste your Style Settings configuration here...
+    render: json
   validations:
     required: false
 - type: textarea
   id: additional-info
   attributes:
-    label: Additional Information (Optional)
+    label: Additional information (optional)
     description: Provide any additional information that you think might be helpful in solving the issue.
     placeholder: Add additional information here...
   validations:
