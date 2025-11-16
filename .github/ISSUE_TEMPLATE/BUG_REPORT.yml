@@ -25,7 +25,10 @@ body:
       - label: Datacore view
 - type: markdown
   attributes:
-    value: "\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
+    value: ""
+- type: markdown
+  attributes:
+    value: "**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
 - type: textarea
   id: steps-to-reproduce
   attributes:
@@ -53,6 +56,14 @@ body:
     placeholder: Write actual result here...
   validations:
     required: true
+- type: textarea
+  id: additional-info
+  attributes:
+    label: Additional information (optional)
+    description: Provide any additional information that you think might be helpful in solving the issue.
+    placeholder: Add additional information here...
+  validations:
+    required: false
 - type: textarea
   id: debug-info
   attributes:
@@ -85,7 +96,7 @@ body:
 - type: textarea
   id: style-settings
   attributes:
-    label: Style Settings configuration (optional)
+    label: Style Settings (optional)
     description: |-
       To share your Style Settings configuration:
 
@@ -94,13 +105,5 @@ body:
       3. Paste the copied text here.
     placeholder: Paste Style Settings here...
     render: json
-  validations:
-    required: false
-- type: textarea
-  id: additional-info
-  attributes:
-    label: Additional information (optional)
-    description: Provide any additional information that you think might be helpful in solving the issue.
-    placeholder: Add additional information here...
   validations:
     required: false
