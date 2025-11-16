@@ -25,10 +25,10 @@ body:
       - label: Datacore view
 - type: markdown
   attributes:
-    value: "&nbsp;"
+    value: " "
 - type: markdown
   attributes:
-    value: "**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
+    value: "\n\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
 - type: textarea
   id: steps-to-reproduce
   attributes:
