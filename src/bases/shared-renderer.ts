@@ -200,8 +200,17 @@ export class SharedCardRenderer {
         // ALL COVERS: direct children of card (regardless of position)
         if (format === 'cover' && (hasImage || hasImageAvailable)) {
             if (hasImage) {
-                const imageEl = cardEl.createDiv('card-cover');
-                this.renderImage(imageEl, imageUrls, format, position, settings);
+                const shouldShowCarousel =
+                    (position === 'top' || position === 'bottom') &&
+                    imageUrls.length >= 2;
+
+                if (shouldShowCarousel) {
+                    const carouselEl = cardEl.createDiv('card-cover card-cover-carousel');
+                    this.renderCarousel(carouselEl, imageUrls, format, position, settings);
+                } else {
+                    const imageEl = cardEl.createDiv('card-cover');
+                    this.renderImage(imageEl, imageUrls, format, position, settings);
+                }
             } else {
                 cardEl.createDiv('card-cover-placeholder');
             }
@@ -217,22 +226,25 @@ export class SharedCardRenderer {
             }
         }
 
-        // ALWAYS create content container for proper flex layout
-        // This ensures properties get pushed to bottom via margin-top: auto
-        const contentContainer = cardEl.createDiv('card-content');
+        // Determine if card-content will have children
+        const hasTextPreview = settings.showTextPreview && card.snippet;
+        const hasThumbnailInContent = format === 'thumbnail' && (position === 'left' || position === 'right') && (hasImage || hasImageAvailable);
 
-        // Add text preview if enabled
-        if (settings.showTextPreview && card.snippet) {
-            contentContainer.createDiv({ cls: 'card-text-preview', text: card.snippet });
-        }
+        // Only create card-content if it will have children
+        if (hasTextPreview || hasThumbnailInContent) {
+            const contentContainer = cardEl.createDiv('card-content');
 
-        // Add left/right thumbnails to content container
-        if (format === 'thumbnail' && (position === 'left' || position === 'right') && (hasImage || hasImageAvailable)) {
-            if (hasImage) {
-                const imageEl = contentContainer.createDiv('card-thumbnail');
-                this.renderImage(imageEl, imageUrls, format, position, settings);
-            } else {
-                contentContainer.createDiv('card-thumbnail-placeholder');
+            if (hasTextPreview) {
+                contentContainer.createDiv({ cls: 'card-text-preview', text: card.snippet });
+            }
+
+            if (hasThumbnailInContent && format === 'thumbnail') {
+                if (hasImage) {
+                    const imageEl = contentContainer.createDiv('card-thumbnail');
+                    this.renderImage(imageEl, imageUrls, format, position, settings);
+                } else {
+                    contentContainer.createDiv('card-thumbnail-placeholder');
+                }
             }
         }
 
@@ -251,6 +263,116 @@ export class SharedCardRenderer {
     }
 
     /**
+     * Renders carousel for covers with multiple images
+     */
+    private renderCarousel(
+        carouselEl: HTMLElement,
+        imageUrls: string[],
+        format: 'thumbnail' | 'cover',
+        position: 'left' | 'right' | 'top' | 'bottom',
+        settings: Settings
+    ): void {
+        let currentSlide = 0;
+
+        console.log('// CAROUSEL INIT:', { totalSlides: imageUrls.length, urls: imageUrls });
+
+        // Create slides container
+        const slidesContainer = carouselEl.createDiv('carousel-slides');
+
+        // Create all slides
+        const slideElements = imageUrls.map((url, index) => {
+            const slideEl = slidesContainer.createDiv('carousel-slide');
+            if (index === 0) {
+                slideEl.addClass('is-active');
+            }
+            // Don't add position classes to non-active slides - let transition logic handle it
+
+            const imageEmbedContainer = slideEl.createDiv('image-embed');
+            const imgEl = imageEmbedContainer.createEl('img', {
+                attr: { src: url, alt: '' }
+            });
+            imageEmbedContainer.style.setProperty('--cover-image-url', `url("${url}")`);
+
+            // Handle image load for masonry layout and color extraction
+            const cardEl = carouselEl.closest('.card') as HTMLElement;
+            if (cardEl && index === 0) { // Only setup for first image
+                setupImageLoadHandler(
+                    imgEl,
+                    imageEmbedContainer,
+                    cardEl,
+                    this.updateLayoutRef.current || undefined
+                );
+            }
+
+            return slideEl;
+        });
+
+        // Update slide with direction
+        const updateSlide = (newIndex: number, direction: 'next' | 'prev') => {
+            const oldSlide = slideElements[currentSlide];
+            const newSlide = slideElements[newIndex];
+
+            console.log('// CAROUSEL TRANSITION:', {
+                from: currentSlide,
+                to: newIndex,
+                direction,
+                oldClasses: oldSlide.className,
+                newClasses: newSlide.className
+            });
+
+            // Position new slide off-screen in the direction it will enter from
+            newSlide.removeClass('is-active', 'slide-left', 'slide-right');
+            newSlide.addClass(direction === 'next' ? 'slide-right' : 'slide-left');
+
+            console.log('// After positioning new slide:', newSlide.className);
+
+            // Force reflow to ensure position is set before transition
+            void newSlide.offsetHeight;
+
+            // Move old slide out and new slide in
+            oldSlide.removeClass('is-active', 'slide-left', 'slide-right');
+            oldSlide.addClass(direction === 'next' ? 'slide-left' : 'slide-right');
+
+            // Add is-active class (keep positioning class, CSS will handle the transition)
+            newSlide.addClass('is-active');
+
+            console.log('// After transition:', {
+                oldClasses: oldSlide.className,
+                newClasses: newSlide.className
+            });
+
+            currentSlide = newIndex;
+        };
+
+        // Navigation buttons
+        const prevBtn = carouselEl.createEl('button', {
+            cls: 'carousel-nav-button carousel-nav-prev',
+            attr: { 'aria-label': 'Previous slide' }
+        });
+        prevBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newIndex = currentSlide === 0 ? imageUrls.length - 1 : currentSlide - 1;
+            // Direction based on visual progression: wrapping forward (last->first) should look like going forward
+            const direction = currentSlide === 0 ? 'next' : 'prev';
+            updateSlide(newIndex, direction);
+        });
+
+        const nextBtn = carouselEl.createEl('button', {
+            cls: 'carousel-nav-button carousel-nav-next',
+            attr: { 'aria-label': 'Next slide' }
+        });
+        nextBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newIndex = currentSlide === imageUrls.length - 1 ? 0 : currentSlide + 1;
+            // Direction based on visual progression: wrapping back (last->first) should look like going backward
+            const direction = currentSlide === imageUrls.length - 1 ? 'prev' : 'next';
+            updateSlide(newIndex, direction);
+        });
+    }
+
+    /**
      * Renders image (cover or thumbnail) with all necessary handlers
      */
     private renderImage(
@@ -260,164 +382,7 @@ export class SharedCardRenderer {
         position: 'left' | 'right' | 'top' | 'bottom',
         settings: Settings
     ): void {
-        // Multi-image carousel (covers only, not thumbnails)
-        if (imageUrls.length > 1 && format === 'cover' && settings.enableCoverCarousel && (position === 'top' || position === 'bottom')) {
-            console.log('// [Carousel] Creating carousel with', imageUrls.length, 'images:');
-            imageUrls.forEach((url, i) => {
-                console.log(`//   [${i}]:`, url);
-            });
-
-            const carouselContainer = imageEl.createDiv('image-carousel-container');
-            carouselContainer.dataset.carouselIndex = '0';
-            carouselContainer.dataset.carouselCount = String(imageUrls.length);
-
-            // Image embed with dual images
-            const imageEmbedContainer = carouselContainer.createDiv('image-embed');
-
-            // Add zoom handler
-            imageEmbedContainer.addEventListener('click', (e) => {
-                            const isToggleMode = document.body.classList.contains('dynamic-views-thumbnail-expand-click-toggle');
-                            const isHoldMode = document.body.classList.contains('dynamic-views-thumbnail-expand-click-hold');
-
-                            if (isToggleMode || isHoldMode) {
-                                e.stopPropagation();
-
-                                if (isToggleMode) {
-                                    const embedEl = e.currentTarget as HTMLElement;
-                                    const isZoomed = embedEl.classList.contains('is-zoomed');
-
-                                    if (isZoomed) {
-                                        // Close zoom
-                                        embedEl.classList.remove('is-zoomed');
-                                    } else {
-                                        // Close all other zoomed images first
-                                        document.querySelectorAll('.image-embed.is-zoomed').forEach(el => {
-                                            el.classList.remove('is-zoomed');
-                                        });
-                                        // Open this one
-                                        embedEl.classList.add('is-zoomed');
-
-                                        // Add listeners for closing
-                                        const closeZoom = (evt: Event) => {
-                                            const target = evt.target as HTMLElement;
-                                            // Don't close if clicking on the zoomed image itself
-                                            if (!embedEl.contains(target)) {
-                                                embedEl.classList.remove('is-zoomed');
-                                                document.removeEventListener('click', closeZoom);
-                                                document.removeEventListener('keydown', handleEscape);
-                                            }
-                                        };
-
-                                        const handleEscape = (evt: KeyboardEvent) => {
-                                            if (evt.key === 'Escape') {
-                                                embedEl.classList.remove('is-zoomed');
-                                                document.removeEventListener('click', closeZoom);
-                                                document.removeEventListener('keydown', handleEscape);
-                                            }
-                                        };
-
-                                        // Delay adding listeners to avoid immediate trigger
-                                        setTimeout(() => {
-                                            document.addEventListener('click', closeZoom);
-                                            document.addEventListener('keydown', handleEscape);
-                                        }, 0);
-                                    }
-                                }
-                            }
-                        });
-
-                        // Current image (initially visible, showing first image)
-                        const currentImg = imageEmbedContainer.createEl('img', {
-                            cls: 'carousel-img carousel-img-current',
-                            attr: { src: imageUrls[0], alt: '', 'data-img-slot': '0' }
-                        });
-
-                        // Next image (initially hidden, preload second image if available)
-                        const nextImg = imageEmbedContainer.createEl('img', {
-                            cls: 'carousel-img carousel-img-next',
-                            attr: { alt: '', 'data-img-slot': '1' }
-                        });
-
-                        // Preload the second image to ensure smooth first transition
-                        if (imageUrls.length > 1) {
-                            const preloadImg = new Image();
-                            preloadImg.src = imageUrls[1];
-                        }
-
-                        imageEmbedContainer.style.setProperty('--cover-image-url', `url("${imageUrls[0]}")`);
-
-                        // Calculate indicator position based on actual rendered image dimensions
-                        const updateIndicatorPosition = () => {
-                            const containerWidth = imageEmbedContainer.offsetWidth;
-                            const containerHeight = imageEmbedContainer.offsetHeight;
-
-                            if (currentImg.naturalWidth && currentImg.naturalHeight && containerWidth && containerHeight) {
-                                const imageRatio = currentImg.naturalWidth / currentImg.naturalHeight;
-                                const containerRatio = containerWidth / containerHeight;
-
-                                // Check if image is using contain mode (via card class)
-                                const cardElement = imageEmbedContainer.closest('.card') as HTMLElement;
-                                const isContainMode = cardElement?.classList.contains('card-cover-contain');
-                                // Check if flexible cover height is enabled (masonry only)
-                                const isFlexibleHeight = document.body.classList.contains('dynamic-views-masonry-flexible-cover-height');
-
-                                let imageOffsetBottom = 0;
-
-                                // Skip calculation for flexible height mode - container adapts to image
-                                if (isContainMode && !isFlexibleHeight) {
-                                    // In contain mode, image is letterboxed to fit
-                                    if (imageRatio > containerRatio) {
-                                        // Image wider than container - letterbox top/bottom
-                                        const renderedHeight = containerWidth / imageRatio;
-                                        imageOffsetBottom = (containerHeight - renderedHeight) / 2;
-                                    }
-                                    // If image taller than container, no bottom offset needed
-                                }
-
-                                imageEmbedContainer.style.setProperty('--image-offset-bottom', `${imageOffsetBottom}px`);
-                            }
-                        };
-
-                        currentImg.addEventListener('load', updateIndicatorPosition);
-                        // Also update on resize (container might change)
-                        if (currentImg.complete) {
-                            updateIndicatorPosition();
-                        }
-
-                        // Multi-image indicator (positioned on image itself)
-                        const indicator = imageEmbedContainer.createDiv('carousel-indicator');
-                        setIcon(indicator, 'lucide-images');
-
-                        // Navigation arrows
-                        const leftArrow = carouselContainer.createDiv('carousel-nav-left');
-                        setIcon(leftArrow, 'lucide-chevron-left');
-
-                        const rightArrow = carouselContainer.createDiv('carousel-nav-right');
-                        setIcon(rightArrow, 'lucide-chevron-right');
-
-                        // Setup navigation
-                        this.setupCarouselNavigation(
-                            carouselContainer,
-                            imageEmbedContainer,
-                            currentImg,
-                            nextImg,
-                            imageUrls
-                        );
-
-                        // Handle image load for masonry layout and color extraction
-                        const cardEl = imageEl.closest('.card') as HTMLElement;
-                        if (cardEl) {
-                            setupImageLoadHandler(
-                                currentImg,
-                                imageEmbedContainer,
-                                cardEl,
-                                this.updateLayoutRef.current || undefined
-                            );
-                        }
-        }
-        // Single image (existing code path)
-        else {
-            const imageEmbedContainer = imageEl.createDiv('image-embed');
+        const imageEmbedContainer = imageEl.createDiv('image-embed');
 
             // Add zoom handler
             imageEmbedContainer.addEventListener('click', (e) => {
@@ -487,7 +452,6 @@ export class SharedCardRenderer {
                     this.updateLayoutRef.current || undefined
                 );
             }
-        }
     }
 
     /**
@@ -994,119 +958,4 @@ export class SharedCardRenderer {
         });
     }
 
-    /**
-     * Sets up carousel navigation for multi-image cards using dual-image choreography
-     */
-    private setupCarouselNavigation(
-        carouselContainer: HTMLElement,
-        imageEmbedContainer: HTMLElement,
-        currentImg: HTMLImageElement,
-        nextImg: HTMLImageElement,
-        imageUrls: string[]
-    ): void {
-        // Preload all images on card hover
-        let preloaded = false;
-        const cardEl = carouselContainer.closest('.card') as HTMLElement;
-
-        if (cardEl) {
-            cardEl.addEventListener('mouseenter', () => {
-                if (!preloaded) {
-                    preloaded = true;
-                    // Preload all images (except first which is already loaded)
-                    imageUrls.slice(1).forEach((url) => {
-                        const img = new Image();
-                        img.src = url;
-                    });
-                }
-            }, { once: true });
-        }
-
-        const navigate = (direction: 1 | -1) => {
-            const currentIndex = parseInt(carouselContainer.dataset.carouselIndex || '0');
-            const count = parseInt(carouselContainer.dataset.carouselCount || '1');
-
-            // Calculate new index (wrap around)
-            let newIndex = currentIndex + direction;
-            if (newIndex < 0) newIndex = count - 1;
-            if (newIndex >= count) newIndex = 0;
-
-            const newUrl = imageUrls[newIndex];
-            console.log('// [Carousel] Navigate to index', newIndex, 'URL:', newUrl);
-
-            // Query DOM for current images (handles swapping correctly)
-            const currentImgEl = imageEmbedContainer.querySelector('.carousel-img-current') as HTMLImageElement;
-            const nextImgEl = imageEmbedContainer.querySelector('.carousel-img-next') as HTMLImageElement;
-
-            if (!currentImgEl || !nextImgEl) {
-                console.log('// [Carousel] ERROR: Missing carousel images');
-                return;
-            }
-
-            console.log('// [Carousel] Before navigation:');
-            console.log('//   Current img src:', currentImgEl.src);
-            console.log('//   Next img src:', nextImgEl.src);
-
-            // Set next image src (loads instantly from cache)
-            nextImgEl.src = newUrl;
-            imageEmbedContainer.style.setProperty('--cover-image-url', `url("${newUrl}")`);
-
-            console.log('// [Carousel] After setting next img src:', nextImgEl.src);
-
-            // Determine animation classes based on direction
-            const exitClass = direction === 1 ? 'carousel-exit-left' : 'carousel-exit-right';
-            const enterClass = direction === 1 ? 'carousel-enter-left' : 'carousel-enter-right';
-
-            // Animate both images simultaneously
-            currentImgEl.classList.add(exitClass);
-            nextImgEl.classList.add(enterClass);
-
-            // After animation completes, clean up and swap roles
-            setTimeout(() => {
-                console.log('// [Carousel] Animation complete, swapping roles');
-                console.log('//   Current img (becoming next) src before clear:', currentImgEl.src);
-
-                // Remove animation classes
-                currentImgEl.classList.remove(exitClass);
-                nextImgEl.classList.remove(enterClass);
-
-                // Swap z-index to make next image the new current
-                currentImgEl.classList.remove('carousel-img-current');
-                currentImgEl.classList.add('carousel-img-next');
-                nextImgEl.classList.remove('carousel-img-next');
-                nextImgEl.classList.add('carousel-img-current');
-
-                // Update index
-                carouselContainer.dataset.carouselIndex = String(newIndex);
-
-                console.log('// [Carousel] After role swap:');
-                console.log('//   New current (was next):', nextImgEl.src);
-                console.log('//   New next (was current):', currentImgEl.src);
-
-                // Trigger layout update for masonry (new image may have different dimensions)
-                if (this.updateLayoutRef.current) {
-                    this.updateLayoutRef.current();
-                }
-            }, 300);
-        };
-
-        // Arrow click handlers
-        const leftArrow = carouselContainer.querySelector('.carousel-nav-left') as HTMLElement;
-        const rightArrow = carouselContainer.querySelector('.carousel-nav-right') as HTMLElement;
-
-        if (leftArrow) {
-            leftArrow.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation(); // Don't trigger card click
-                navigate(-1);
-            });
-        }
-
-        if (rightArrow) {
-            rightArrow.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                navigate(1);
-            });
-        }
-    }
 }

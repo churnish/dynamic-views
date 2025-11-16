@@ -175,17 +175,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Cover slideshow')
-			.setDesc('Enable slideshow for cards with multiple images. Only works for Top and Bottom cover positions.')
-			.addToggle((toggle) =>
-				toggle
-					.setValue(settings.enableCoverCarousel)
-					.onChange(async (value) => {
-						await this.plugin.persistenceManager.setGlobalSettings({ enableCoverCarousel: value });
-					})
-			);
-
-		new Setting(containerEl)
 			.setName('Thumbnail cache size')
 			.setDesc('Size of cached thumbnails (affects performance and quality)')
 			.addDropdown((dropdown) =>
@@ -476,7 +465,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Card image')
+			.setName('Image format')
 			.setDesc('Default image format for cards')
 			.addDropdown((dropdown) =>
 				dropdown

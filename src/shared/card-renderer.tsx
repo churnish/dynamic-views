@@ -76,12 +76,147 @@ function renderPropertyContent(
     settings: Settings,
     app: App
 ): unknown {
-    if (propertyName === '') {
-        return null;
-    }
+    return renderProperty(propertyName, null, resolvedValue || '', settings, card, app, timeIcon);
+}
 
-    // If no value and labels are hidden, render nothing
-    if (!resolvedValue && settings.propertyLabels === 'hide') {
+/**
+ * Cover carousel component for multiple images
+ * Uses ref callback to create imperative carousel after mount
+ */
+function CoverCarousel({ imageArray, updateLayoutRef }: { imageArray: string[]; updateLayoutRef: RefObject<(() => void) | null> }): JSX.Element {
+    const onCarouselRef = (carouselEl: HTMLElement | null) => {
+        if (!carouselEl) return;
+
+        let currentSlide = 0;
+        const slides = Array.from(carouselEl.querySelectorAll('.carousel-slide'));
+
+        const updateSlide = (newIndex: number, direction: 'next' | 'prev') => {
+            const oldSlide = slides[currentSlide];
+            const newSlide = slides[newIndex];
+
+            if (!oldSlide || !newSlide) return;
+
+            console.log('// CAROUSEL TRANSITION (Datacore):', {
+                from: currentSlide,
+                to: newIndex,
+                direction,
+                oldClasses: oldSlide.className,
+                newClasses: newSlide.className
+            });
+
+            // Position new slide off-screen in the direction it will enter from
+            newSlide.classList.remove('is-active', 'slide-left', 'slide-right');
+            newSlide.classList.add(direction === 'next' ? 'slide-right' : 'slide-left');
+
+            console.log('// After positioning new slide:', newSlide.className);
+
+            // Force reflow to ensure position is set before transition
+            void (newSlide as HTMLElement).offsetHeight;
+
+            // Move old slide out and new slide in
+            oldSlide.classList.remove('is-active', 'slide-left', 'slide-right');
+            oldSlide.classList.add(direction === 'next' ? 'slide-left' : 'slide-right');
+
+            // Add is-active class (keep positioning class, CSS will handle the transition)
+            newSlide.classList.add('is-active');
+
+            console.log('// After transition:', {
+                oldClasses: oldSlide.className,
+                newClasses: newSlide.className
+            });
+
+            currentSlide = newIndex;
+        };
+
+        const prevBtn = carouselEl.querySelector('.carousel-nav-prev');
+        const nextBtn = carouselEl.querySelector('.carousel-nav-next');
+
+        prevBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newIndex = currentSlide === 0 ? imageArray.length - 1 : currentSlide - 1;
+            // Direction based on visual progression: wrapping forward (last->first) should look like going forward
+            const direction = currentSlide === 0 ? 'next' : 'prev';
+            updateSlide(newIndex, direction);
+        });
+
+        nextBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newIndex = currentSlide === imageArray.length - 1 ? 0 : currentSlide + 1;
+            // Direction based on visual progression: wrapping back (last->first) should look like going backward
+            const direction = currentSlide === imageArray.length - 1 ? 'prev' : 'next';
+            updateSlide(newIndex, direction);
+        });
+    };
+
+    return (
+        <div className="card-cover card-cover-carousel" ref={onCarouselRef}>
+            <div className="carousel-slides">
+                {imageArray.map((url, index): JSX.Element => (
+                    <div
+                        key={index}
+                        className={`carousel-slide ${index === 0 ? 'is-active' : ''}`}
+                    >
+                        <div
+                            className="image-embed"
+                            style={{ '--cover-image-url': `url("${url}")` }}
+                        >
+                            <img
+                                src={url}
+                                alt=""
+                                onLoad={(e: Event) => {
+                                    if (index === 0) { // Only setup for first image
+                                        const imgEl = e.currentTarget as HTMLImageElement;
+                                        const imageEmbedEl = imgEl.parentElement;
+                                        if (imageEmbedEl) {
+                                            const slideEl = imageEmbedEl.parentElement;
+                                            if (slideEl) {
+                                                const carouselEl = slideEl.parentElement?.parentElement;
+                                                if (carouselEl) {
+                                                    const cardEl = carouselEl.closest('.card') as HTMLElement;
+                                                    if (cardEl) {
+                                                        handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <button
+                className="carousel-nav-button carousel-nav-prev"
+                aria-label="Previous slide"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button
+                className="carousel-nav-button carousel-nav-next"
+                aria-label="Next slide"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+        </div>
+    );
+}
+
+function renderProperty(
+    propertyName: string,
+    propertyValue: unknown,
+    resolvedValue: string,
+    settings: Settings,
+    card: CardData,
+    app: App,
+    timeIcon: 'calendar' | 'clock'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSX.Element resolves to any due to Datacore's JSX runtime
+): any {
+    if (propertyName === '') {
         return null;
     }
 
@@ -542,74 +677,88 @@ function Card({
             {/* Covers: ALL positions render as direct children of card */}
             {format === 'cover' && (imageArray.length > 0 || card.hasImageAvailable) && (
                 imageArray.length > 0 ? (
-                    <div className="card-cover">
-                        <div
-                            className="image-embed"
-                            style={{ '--cover-image-url': `url("${imageArray[0] || ''}")` }}
-                            onClick={(e: MouseEvent) => {
-                                const isToggleMode = document.body.classList.contains('dynamic-views-thumbnail-expand-click-toggle');
-                                const isHoldMode = document.body.classList.contains('dynamic-views-thumbnail-expand-click-hold');
+                    (() => {
+                        const shouldShowCarousel =
+                            (position === 'top' || position === 'bottom') &&
+                            imageArray.length >= 2;
 
-                                if (isToggleMode || isHoldMode) {
-                                    e.stopPropagation();
+                        if (shouldShowCarousel) {
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- JSX.Element resolves to any due to Datacore's JSX runtime
+                            return <CoverCarousel imageArray={imageArray} updateLayoutRef={updateLayoutRef} />;
+                        }
 
-                                    if (isToggleMode) {
-                                        const embedEl = e.currentTarget as HTMLElement;
-                                        const isZoomed = embedEl.classList.contains('is-zoomed');
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- JSX.Element resolves to any due to Datacore's JSX runtime
+                        return (
+                            <div className="card-cover">
+                                <div
+                                    className="image-embed"
+                                    style={{ '--cover-image-url': `url("${imageArray[0] || ''}")` }}
+                                    onClick={(e: MouseEvent) => {
+                                        const isToggleMode = document.body.classList.contains('dynamic-views-thumbnail-expand-click-toggle');
+                                        const isHoldMode = document.body.classList.contains('dynamic-views-thumbnail-expand-click-hold');
 
-                                        if (isZoomed) {
-                                            embedEl.classList.remove('is-zoomed');
-                                        } else {
-                                            document.querySelectorAll('.image-embed.is-zoomed').forEach(el => {
-                                                el.classList.remove('is-zoomed');
-                                            });
-                                            embedEl.classList.add('is-zoomed');
+                                        if (isToggleMode || isHoldMode) {
+                                            e.stopPropagation();
 
-                                            const closeZoom = (evt: Event) => {
-                                                const target = evt.target as HTMLElement;
-                                                if (!embedEl.contains(target)) {
+                                            if (isToggleMode) {
+                                                const embedEl = e.currentTarget as HTMLElement;
+                                                const isZoomed = embedEl.classList.contains('is-zoomed');
+
+                                                if (isZoomed) {
                                                     embedEl.classList.remove('is-zoomed');
-                                                    document.removeEventListener('click', closeZoom);
-                                                    document.removeEventListener('keydown', handleEscape);
-                                                }
-                                            };
+                                                } else {
+                                                    document.querySelectorAll('.image-embed.is-zoomed').forEach(el => {
+                                                        el.classList.remove('is-zoomed');
+                                                    });
+                                                    embedEl.classList.add('is-zoomed');
 
-                                            const handleEscape = (evt: KeyboardEvent) => {
-                                                if (evt.key === 'Escape') {
-                                                    embedEl.classList.remove('is-zoomed');
-                                                    document.removeEventListener('click', closeZoom);
-                                                    document.removeEventListener('keydown', handleEscape);
-                                                }
-                                            };
+                                                    const closeZoom = (evt: Event) => {
+                                                        const target = evt.target as HTMLElement;
+                                                        if (!embedEl.contains(target)) {
+                                                            embedEl.classList.remove('is-zoomed');
+                                                            document.removeEventListener('click', closeZoom);
+                                                            document.removeEventListener('keydown', handleEscape);
+                                                        }
+                                                    };
 
-                                            setTimeout(() => {
-                                                document.addEventListener('click', closeZoom);
-                                                document.addEventListener('keydown', handleEscape);
-                                            }, 0);
-                                        }
-                                    }
-                                }
-                            }}
-                        >
-                            <img
-                                src={imageArray[0] || ''}
-                                alt=""
-                                onLoad={(e: Event) => {
-                                    const imgEl = e.currentTarget as HTMLImageElement;
-                                    const imageEmbedEl = imgEl.parentElement;
-                                    if (imageEmbedEl) {
-                                        const imageEl = imageEmbedEl.parentElement;
-                                        if (imageEl) {
-                                            const cardEl = imageEl.closest('.card') as HTMLElement;
-                                            if (cardEl) {
-                                                handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
+                                                    const handleEscape = (evt: KeyboardEvent) => {
+                                                        if (evt.key === 'Escape') {
+                                                            embedEl.classList.remove('is-zoomed');
+                                                            document.removeEventListener('click', closeZoom);
+                                                            document.removeEventListener('keydown', handleEscape);
+                                                        }
+                                                    };
+
+                                                    setTimeout(() => {
+                                                        document.addEventListener('click', closeZoom);
+                                                        document.addEventListener('keydown', handleEscape);
+                                                    }, 0);
+                                                }
                                             }
                                         }
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
+                                    }}
+                                >
+                                    <img
+                                        src={imageArray[0] || ''}
+                                        alt=""
+                                        onLoad={(e: Event) => {
+                                            const imgEl = e.currentTarget as HTMLImageElement;
+                                            const imageEmbedEl = imgEl.parentElement;
+                                            if (imageEmbedEl) {
+                                                const imageEl = imageEmbedEl.parentElement;
+                                                if (imageEl) {
+                                                    const cardEl = imageEl.closest('.card') as HTMLElement;
+                                                    if (cardEl) {
+                                                        handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })()
                 ) : (
                     <div className="card-cover-placeholder"></div>
                 )
@@ -720,12 +869,13 @@ function Card({
                 )
             )}
 
-            {/* Content container - ALWAYS render for proper flex layout */}
-            <div className="card-content">
-                {settings.showTextPreview && card.snippet && (
-                    <div className="card-text-preview">{card.snippet}</div>
-                )}
-                {format === 'thumbnail' && (position === 'left' || position === 'right') && (
+            {/* Content container - only render if it will have children */}
+            {((settings.showTextPreview && card.snippet) || (format === 'thumbnail' && (position === 'left' || position === 'right') && (imageArray.length > 0 || card.hasImageAvailable))) && (
+                <div className="card-content">
+                    {settings.showTextPreview && card.snippet && (
+                        <div className="card-text-preview">{card.snippet}</div>
+                    )}
+                    {format === 'thumbnail' && (position === 'left' || position === 'right') && (
                         imageArray.length > 0 ? (
                             <div
                                 className={`card-thumbnail ${isArray && imageArray.length > 1 ? 'multi-image' : ''}`}
@@ -829,7 +979,8 @@ function Card({
                             <div className="card-thumbnail-placeholder"></div>
                         )
                     )}
-            </div>
+                </div>
+            )}
 
             {/* Thumbnail-bottom: after text preview */}
             {format === 'thumbnail' && position === 'bottom' && (imageArray.length > 0 || card.hasImageAvailable) && (

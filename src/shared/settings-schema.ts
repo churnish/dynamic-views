@@ -76,7 +76,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
             type: 'dropdown',
-            displayName: 'Card image',
+            displayName: 'Image format',
             key: 'imageFormat',
             options: {
                 'thumbnail': 'Thumbnail',
@@ -179,9 +179,9 @@ export function getBasesViewOptions(): any[] {
             displayName: 'Show property labels',
             key: 'propertyLabels',
             options: {
-                'hide': 'Hide',
                 'inline': 'Inline',
-                'above': 'On top'
+                'above': 'On top',
+                'hide': 'Hide'
             },
             default: DEFAULT_VIEW_SETTINGS.propertyLabels
         }
@@ -309,7 +309,6 @@ export function readBasesSettings(config: BasesConfig, globalSettings: Settings,
         modifiedTimeProperty: globalSettings.modifiedTimeProperty, // From global settings
         fallbackToFileMetadata: globalSettings.fallbackToFileMetadata, // From global settings
         expandImagesOnClick: globalSettings.expandImagesOnClick, // From global settings
-        enableCoverCarousel: globalSettings.enableCoverCarousel, // From global settings
         cardSize: (() => {
             const value = config.get('cardSize');
             return (typeof value === 'number') ? value : defaultViewSettings.cardSize;

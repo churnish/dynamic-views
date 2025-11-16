@@ -42,7 +42,6 @@ export const DEFAULT_SETTINGS: Settings = {
     imageFormat: "thumbnail-right",
     coverFitMode: 'crop',
     imageAspectRatio: 1.00,
-    enableCoverCarousel: true,
     timestampFormat: "",
     listMarker: "bullet",
     randomizeAction: "shuffle",

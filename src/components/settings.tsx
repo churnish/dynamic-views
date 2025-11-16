@@ -151,7 +151,7 @@ export function Settings({
             {/* 7. Card Image Dropdown */}
             <div className="setting-item setting-item-dropdown">
                 <div className="setting-item-info">
-                    <label>Card image</label>
+                    <label>Image format</label>
                     <div className="setting-desc">Display first image embed in note (wikilink or markdown format), or first value of image property</div>
                 </div>
                 <select
@@ -424,9 +424,9 @@ export function Settings({
                     }}
                     className="dropdown"
                 >
-                    <option value="hide">Hide</option>
                     <option value="inline">Inline</option>
                     <option value="above">On top</option>
+                    <option value="hide">Hide</option>
                 </select>
             </div>
 

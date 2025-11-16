@@ -17,7 +17,6 @@ export interface Settings {
     imageFormat: 'none' | 'thumbnail-left' | 'thumbnail-right' | 'thumbnail-top' | 'thumbnail-bottom' | 'cover-top' | 'cover-bottom' | 'cover-left' | 'cover-right';
     coverFitMode: 'crop' | 'contain';
     imageAspectRatio: number;
-    enableCoverCarousel: boolean;
     timestampFormat: string;
     listMarker: string;
     randomizeAction: string;
