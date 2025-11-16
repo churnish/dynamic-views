@@ -1,5 +1,5 @@
 name: Enhancement
-description: I want to suggest an improvement or new feature for Dynamic Views.
+description: Suggest an improvement or new feature for the Dynamic Views plugin.
 labels:
   - enhancement
 body:
@@ -17,13 +17,13 @@ body:
 - type: checkboxes
   id: affected-views
   attributes:
-    label: What views does the issue affect? (If applicable)
+    label: What views does this suggestion affect? (If applicable)
     options:
       - label: Bases view
       - label: Datacore view
 - type: markdown
   attributes:
-    value: "\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your text."
+    value: "\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
 - type: textarea
   id: use-case
   attributes:
@@ -53,7 +53,7 @@ body:
   attributes:
     label: Additional information (optional)
     description: Provide any additional information that you think would be helpful to understand your suggestion.
-    placeholder: Provide additional information here...
+    placeholder: Add additional information here...
   validations:
     required: false
 - type: textarea
@@ -61,7 +61,7 @@ body:
   attributes:
     label: Debug information (optional)
     description: |-
-      If you want, you can copy and paste Obsidian's Debug Information here:
+      If you want, you can copy and paste Obsidian debug info here:
 
       1. Open Command palette.
       2. Search for then select "Show debug info".
@@ -74,29 +74,28 @@ body:
 - type: textarea
   id: plugin-settings
   attributes:
-    label: Dynamic Views plugin settings (optional)
+    label: Plugin settings (optional)
     description: |-
-      To share your Dynamic Views plugin settings:
+      To share your plugin settings:
 
-      1. Open your [configuration folder](https://help.obsidian.md/data-storage#Vault+settings).
-      2. Navigate to `plugins/dynamic-views`.
-      3. Copy `data.json`.
-      4. Paste the copied file here.
-    placeholder: If you want, you can paste your Dynamic Views plugin settings here...
-    render: json
+      1. Open Dynamic Views settings.
+      2. Scroll down to 'Configuration'.
+      3. Press Export.
+      4. Attach the file here.
+    placeholder: Paste plugin settings here...
   validations:
     required: false
 - type: textarea
   id: style-settings
   attributes:
-    label: Style Settings configuration (optional)
+    label: Style Settings (optional)
     description: |-
       To share your Style Settings configuration:
 
       1. Open Style Settings.
-      2. Press "Export settings" to the right of the Dynamic Views section.
+      2. Press the cloud button to the right of the Dynamic Views section.
       3. Paste the copied text here.
-    placeholder: If you want, you can paste your Style Settings configuration here...
+    placeholder: Paste Style Settings here...
     render: json
   validations:
     required: false

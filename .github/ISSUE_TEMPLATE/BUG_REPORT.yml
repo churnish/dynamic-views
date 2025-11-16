@@ -1,5 +1,5 @@
 name: Bug report
-description: I want to report something that is not working as expected in Dynamic Views.
+description: Report something that is not working as expected in the Dynamic Views plugin.
 labels:
   - bug
 body:
@@ -25,13 +25,13 @@ body:
       - label: Datacore view
 - type: markdown
   attributes:
-    value: "\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your text."
+    value: "\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
 - type: textarea
   id: steps-to-reproduce
   attributes:
     label: Steps to reproduce
     description: Starting from scratch, what are the steps to make the bug happen?
-    placeholder: Write out the steps to reproduce here...
+    placeholder: Write steps to reproduce here...
   validations:
     required: true
 - type: textarea
@@ -39,7 +39,7 @@ body:
   attributes:
     label: Expected result
     description: What do you expect to see after carrying out the steps above?
-    placeholder: Write the expected result here...
+    placeholder: Write expected result here...
   validations:
     required: true
 - type: textarea
@@ -49,8 +49,8 @@ body:
     description: |-
       Instead of the expected result, what happened?
 
-      If applicable, please attach screenshots or screen recordings that demonstrate the bug.
-    placeholder: Write the actual result here...
+      You can attach screenshots or screen recordings that demonstrate the bug.
+    placeholder: Write actual result here...
   validations:
     required: true
 - type: textarea
@@ -58,29 +58,28 @@ body:
   attributes:
     label: Debug information
     description: |-
-      Please copy and paste Obsidian's Debug Information here:
+      Please copy and paste Obsidian debug info here:
 
       1. Open Command palette.
       2. Search for then select "Show debug info".
       3. Press "Copy to clipboard".
       4. Paste the copied text here.
-    placeholder: Paste the debug info here...
+    placeholder: Paste debug info here...
     render: text
   validations:
     required: true
 - type: textarea
   id: plugin-settings
   attributes:
-    label: Dynamic Views plugin settings (optional)
+    label: Plugin settings (optional)
     description: |-
-      To share your Dynamic Views plugin settings:
+      To share your plugin settings:
 
-      1. Open your [configuration folder](https://help.obsidian.md/data-storage#Vault+settings).
-      2. Navigate to `plugins/dynamic-views`.
-      3. Copy `data.json`.
-      4. Paste the copied file here.
-    placeholder: Paste your Dynamic Views plugin settings here...
-    render: json
+      1. Open Dynamic Views settings.
+      2. Scroll down to 'Configuration'.
+      3. Press Export.
+      4. Attach the file here.
+    placeholder: Paste plugin settings here...
   validations:
     required: false
 - type: textarea
@@ -91,9 +90,9 @@ body:
       To share your Style Settings configuration:
 
       1. Open Style Settings.
-      2. Press "Export settings" to the right of the Dynamic Views section.
+      2. Press the cloud button to the right of the Dynamic Views section.
       3. Paste the copied text here.
-    placeholder: Paste your Style Settings configuration here...
+    placeholder: Paste Style Settings here...
     render: json
   validations:
     required: false
