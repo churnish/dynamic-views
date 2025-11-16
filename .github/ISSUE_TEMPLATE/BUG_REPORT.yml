@@ -25,7 +25,7 @@ body:
       - label: Datacore view
 - type: markdown
   attributes:
-    value: ""
+    value: "&nbsp;"
 - type: markdown
   attributes:
     value: "**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
