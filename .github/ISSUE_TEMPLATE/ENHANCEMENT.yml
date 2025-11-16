@@ -3,6 +3,9 @@ description: Suggest an improvement or new feature for the Dynamic Views plugin.
 labels:
   - enhancement
 body:
+- type: markdown
+  attributes:
+    value: "**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
 - type: checkboxes
   id: checklist
   attributes:
@@ -21,9 +24,6 @@ body:
     options:
       - label: Bases view
       - label: Datacore view
-- type: markdown
-  attributes:
-    value: "\n**Note:** If English is not your first language, please consider using AI tools like ChatGPT to translate your responses."
 - type: textarea
   id: use-case
   attributes:
