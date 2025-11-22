@@ -1,4 +1,4 @@
-import { STORAGE_KEY_PREFIX } from "../constants";
+import { STORAGE_KEY_PREFIX } from '../constants';
 
 /**
  * Generate storage key for file-specific data using ctime
@@ -7,7 +7,7 @@ import { STORAGE_KEY_PREFIX } from "../constants";
  * @returns Storage key string
  */
 export function getStorageKey(ctime: number, key: string): string {
-  return `${STORAGE_KEY_PREFIX}-${ctime}-${key}`;
+    return `${STORAGE_KEY_PREFIX}-${ctime}-${key}`;
 }
 
 /**
@@ -16,5 +16,5 @@ export function getStorageKey(ctime: number, key: string): string {
  * @returns Storage key string
  */
 export function getGlobalStorageKey(key: string): string {
-  return `${STORAGE_KEY_PREFIX}-global-${key}`;
+    return `${STORAGE_KEY_PREFIX}-global-${key}`;
 }

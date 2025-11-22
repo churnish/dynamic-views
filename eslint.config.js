@@ -12,8 +12,8 @@ export default [
       "esbuild.config.mjs",
       "eslint.config.js",
       "check-*.js",
-      "version-bump.mjs",
-    ],
+      "version-bump.mjs"
+    ]
   },
 
   // Base JavaScript recommended rules
@@ -28,14 +28,14 @@ export default [
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
-      },
-    },
+      }
+    }
   },
 
   // Obsidian plugin rules (manual config due to plugin bug)
   {
     plugins: {
-      obsidianmd: obsidianmd,
+      obsidianmd: obsidianmd
     },
     rules: {
       // Core Obsidian rules
@@ -46,12 +46,9 @@ export default [
       "obsidianmd/platform": "error",
 
       // TypeScript overrides
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { args: "none", varsIgnorePattern: "^_" },
-      ],
+      "@typescript-eslint/no-unused-vars": ["warn", { "args": "none", "varsIgnorePattern": "^_" }],
       "@typescript-eslint/ban-ts-comment": "off",
-      "no-prototype-builtins": "off",
-    },
-  },
+      "no-prototype-builtins": "off"
+    }
+  }
 ];

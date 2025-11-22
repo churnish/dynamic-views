@@ -29,8 +29,7 @@ export interface QueryMatch {
  * Find query between DQL QUERY START/END markers
  */
 export function findQueryInBlock(content: string): QueryMatch | null {
-  const pattern =
-    /\/\/\s*–+\s*DQL QUERY START\s*–+\s*\n([\s\S]*?)\n\s*\/\/\s*–+\s*DQL QUERY END\s*–+/;
+  const pattern = /\/\/\s*–+\s*DQL QUERY START\s*–+\s*\n([\s\S]*?)\n\s*\/\/\s*–+\s*DQL QUERY END\s*–+/;
   const match = content.match(pattern);
 
   if (!match) {
@@ -41,7 +40,7 @@ export function findQueryInBlock(content: string): QueryMatch | null {
     query: match[1].trim(),
     fullMatch: match[0],
     startIndex: match.index!,
-    endIndex: match.index! + match[0].length,
+    endIndex: match.index! + match[0].length
   };
 }
 
@@ -52,7 +51,7 @@ export function updateQueryInBlock(content: string, newQuery: string): string {
   const queryMatch = findQueryInBlock(content);
 
   if (!queryMatch) {
-    console.warn("Could not find DQL QUERY markers");
+    console.warn('Could not find DQL QUERY markers');
     return content;
   }
 
@@ -62,7 +61,5 @@ export function updateQueryInBlock(content: string, newQuery: string): string {
 ${newQuery}
 // ––––– DQL QUERY END –––––`;
 
-  return (
-    content.substring(0, startIndex) + replacement + content.substring(endIndex)
-  );
+  return content.substring(0, startIndex) + replacement + content.substring(endIndex);
 }

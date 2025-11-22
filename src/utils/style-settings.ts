@@ -6,46 +6,46 @@
  * Read a CSS variable value from the document body
  */
 function getCSSVariable(name: string, defaultValue: string): string {
-  const value = getComputedStyle(document.body).getPropertyValue(name).trim();
-  return value || defaultValue;
+	const value = getComputedStyle(document.body).getPropertyValue(name).trim();
+	return value || defaultValue;
 }
 
 /**
  * Parse a CSS variable as a number (removing units like 'px')
  */
 function getCSSVariableAsNumber(name: string, defaultValue: number): number {
-  const value = getCSSVariable(name, "");
-  if (!value) return defaultValue;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? defaultValue : parsed;
+	const value = getCSSVariable(name, '');
+	if (!value) return defaultValue;
+	const parsed = parseFloat(value);
+	return isNaN(parsed) ? defaultValue : parsed;
 }
 
 /**
  * Check if body has a specific class
  */
 function hasBodyClass(className: string): boolean {
-  return document.body.classList.contains(className);
+	return document.body.classList.contains(className);
 }
 
 /**
  * Get minimum masonry columns from CSS variable
  */
 export function getMinMasonryColumns(): number {
-  return getCSSVariableAsNumber("--dynamic-views-min-masonry-columns", 2);
+	return getCSSVariableAsNumber('--dynamic-views-min-masonry-columns', 2);
 }
 
 /**
  * Get minimum grid columns from CSS variable
  */
 export function getMinGridColumns(): number {
-  return getCSSVariableAsNumber("--dynamic-views-min-grid-columns", 1);
+	return getCSSVariableAsNumber('--dynamic-views-min-grid-columns', 1);
 }
 
 /**
  * Check if card background is enabled
  */
 export function hasCardBackground(): boolean {
-  return hasBodyClass("dynamic-views-card-background");
+	return hasBodyClass('dynamic-views-card-background');
 }
 
 /**
@@ -54,37 +54,37 @@ export function hasCardBackground(): boolean {
  * Returns false only when explicitly hidden
  */
 export function showTimestampIcon(): boolean {
-  return !hasBodyClass("dynamic-views-timestamp-icon-hide");
+	return !hasBodyClass('dynamic-views-timestamp-icon-hide');
 }
 
 /**
  * Get tag style from body class
  */
-export function getTagStyle(): "plain" | "theme" | "minimal" {
-  if (hasBodyClass("dynamic-views-tag-style-minimal")) return "minimal";
-  if (hasBodyClass("dynamic-views-tag-style-theme")) return "theme";
-  return "plain";
+export function getTagStyle(): 'plain' | 'theme' | 'minimal' {
+	if (hasBodyClass('dynamic-views-tag-style-minimal')) return 'minimal';
+	if (hasBodyClass('dynamic-views-tag-style-theme')) return 'theme';
+	return 'plain';
 }
 
 /**
  * Get card spacing from CSS variable
  */
 export function getCardSpacing(): number {
-  return getCSSVariableAsNumber("--dynamic-views-card-spacing", 12);
+	return getCSSVariableAsNumber('--dynamic-views-card-spacing', 12);
 }
 
 /**
  * Check if recent timestamps should show time only
  */
 export function shouldShowRecentTimeOnly(): boolean {
-  return hasBodyClass("dynamic-views-timestamp-recent-time-only");
+	return hasBodyClass('dynamic-views-timestamp-recent-time-only');
 }
 
 /**
  * Check if older timestamps should show date only
  */
 export function shouldShowOlderDateOnly(): boolean {
-  return hasBodyClass("dynamic-views-timestamp-older-date-only");
+	return hasBodyClass('dynamic-views-timestamp-older-date-only');
 }
 
 /**
@@ -92,21 +92,16 @@ export function shouldShowOlderDateOnly(): boolean {
  * Returns the separator for list-type properties
  */
 export function getListSeparator(): string {
-  // Read without trim to preserve whitespace
-  let value = getComputedStyle(document.body).getPropertyValue(
-    "--dynamic-views-list-separator",
-  );
+	// Read without trim to preserve whitespace
+	let value = getComputedStyle(document.body).getPropertyValue('--dynamic-views-list-separator');
 
-  // Strip surrounding quotes if present (Style Settings or CSS default adds them)
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    value = value.slice(1, -1);
-  }
+	// Strip surrounding quotes if present (Style Settings or CSS default adds them)
+	if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+		value = value.slice(1, -1);
+	}
 
-  // Fallback to default if empty (Style Settings shows placeholder but doesn't set variable)
-  return value || ", ";
+	// Fallback to default if empty (Style Settings shows placeholder but doesn't set variable)
+	return value || ', ';
 }
 
 /**
@@ -114,21 +109,16 @@ export function getListSeparator(): string {
  * Returns the symbol for empty property values
  */
 export function getEmptyValueMarker(): string {
-  // Read without trim to preserve whitespace
-  let value = getComputedStyle(document.body).getPropertyValue(
-    "--dynamic-views-empty-value-marker",
-  );
+	// Read without trim to preserve whitespace
+	let value = getComputedStyle(document.body).getPropertyValue('--dynamic-views-empty-value-marker');
 
-  // Strip surrounding quotes if present (Style Settings or CSS default adds them)
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    value = value.slice(1, -1);
-  }
+	// Strip surrounding quotes if present (Style Settings or CSS default adds them)
+	if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+		value = value.slice(1, -1);
+	}
 
-  // Fallback to default if empty (Style Settings shows placeholder but doesn't set variable)
-  return value || "—";
+	// Fallback to default if empty (Style Settings shows placeholder but doesn't set variable)
+	return value || '—';
 }
 
 /**
@@ -136,7 +126,7 @@ export function getEmptyValueMarker(): string {
  * Returns true if properties that don't exist on a file should not be displayed
  */
 export function shouldHideMissingProperties(): boolean {
-  return hasBodyClass("dynamic-views-hide-missing-properties");
+	return hasBodyClass('dynamic-views-hide-missing-properties');
 }
 
 /**
@@ -144,18 +134,18 @@ export function shouldHideMissingProperties(): boolean {
  * Returns true if properties with empty values should not be displayed
  */
 export function shouldHideEmptyProperties(): boolean {
-  return hasBodyClass("dynamic-views-hide-empty-properties");
+	return hasBodyClass('dynamic-views-hide-empty-properties');
 }
 
 /**
  * Type for Style Settings color cache
  */
 export interface StyleSettingsColorCache {
-  titleColor?: { light?: string; dark?: string };
-  snippetColor?: { light?: string; dark?: string };
-  tagsColor?: { light?: string; dark?: string };
-  timestampColor?: { light?: string; dark?: string };
-  metadataColor?: { light?: string; dark?: string };
+	titleColor?: { light?: string; dark?: string };
+	snippetColor?: { light?: string; dark?: string };
+	tagsColor?: { light?: string; dark?: string };
+	timestampColor?: { light?: string; dark?: string };
+	metadataColor?: { light?: string; dark?: string };
 }
 
 /**
@@ -166,38 +156,23 @@ export interface StyleSettingsColorCache {
  * @param cache - Style Settings color cache with custom colors
  */
 export function applyCustomColors(
-  cardEl: HTMLElement,
-  theme: "light" | "dark",
-  cache: StyleSettingsColorCache,
+	cardEl: HTMLElement,
+	theme: 'light' | 'dark',
+	cache: StyleSettingsColorCache
 ): void {
-  if (cache.titleColor?.[theme]) {
-    cardEl.style.setProperty(
-      "--dynamic-views-title-color",
-      cache.titleColor[theme],
-    );
-  }
-  if (cache.snippetColor?.[theme]) {
-    cardEl.style.setProperty(
-      "--dynamic-views-snippet-color",
-      cache.snippetColor[theme],
-    );
-  }
-  if (cache.tagsColor?.[theme]) {
-    cardEl.style.setProperty(
-      "--dynamic-views-tags-color",
-      cache.tagsColor[theme],
-    );
-  }
-  if (cache.timestampColor?.[theme]) {
-    cardEl.style.setProperty(
-      "--dynamic-views-timestamp-color",
-      cache.timestampColor[theme],
-    );
-  }
-  if (cache.metadataColor?.[theme]) {
-    cardEl.style.setProperty(
-      "--dynamic-views-metadata-color",
-      cache.metadataColor[theme],
-    );
-  }
+	if (cache.titleColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-title-color', cache.titleColor[theme]);
+	}
+	if (cache.snippetColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-snippet-color', cache.snippetColor[theme]);
+	}
+	if (cache.tagsColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-tags-color', cache.tagsColor[theme]);
+	}
+	if (cache.timestampColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-timestamp-color', cache.timestampColor[theme]);
+	}
+	if (cache.metadataColor?.[theme]) {
+		cardEl.style.setProperty('--dynamic-views-metadata-color', cache.metadataColor[theme]);
+	}
 }
