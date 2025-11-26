@@ -1,9 +1,8 @@
 {
-  "id": "dynamic-views",
-  "name": "Dynamic Views",
-  "version": "0.5.0",
-  "minAppVersion": "1.4.11",
-  "description": "Elegant card views for Bases and Datacore.",
-  "author": "greetclammy",
-  "isDesktopOnly": false
+	"id": "dynamic-views",
+	"name": "Dynamic Views",
+	"minAppVersion": "1.4.11",
+	"description": "Elegant card views for Bases and Datacore.",
+	"author": "greetclammy",
+	"isDesktopOnly": false
 }

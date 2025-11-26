@@ -160,14 +160,34 @@ export type TextSegment =
   | { type: "link"; link: ParsedLink; raw: string };
 
 /**
+ * Strip trailing punctuation from plain URLs
+ * Returns [cleanUrl, trailingPunctuation]
+ */
+function stripTrailingPunctuation(url: string): [string, string] {
+  // Common sentence-ending punctuation that's unlikely to be part of URL
+  const match = url.match(/^(.+?)([.,;:!?]+)$/);
+  if (match) {
+    return [match[1], match[2]];
+  }
+  return [url, ""];
+}
+
+/**
  * Find all links within text and return segments
  * Handles mixed content like "hello [[World]] and https://example.com"
+ *
+ * Capture groups:
+ * 1-2: embedded wikilink (path, alias)
+ * 3-4: wikilink (path, alias)
+ * 5-7: embedded markdown (caption, angle path, regular path)
+ * 8-10: markdown link (caption, angle path, regular path)
+ * 11: angle bracket URL
+ * 12: plain URL
  */
 export function findLinksInText(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
 
   // Combined pattern to match all link types (non-anchored)
-  // Order: embedded wikilink, wikilink, embedded markdown, markdown link, angle bracket URL, plain URL
   const linkPattern =
     /!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|!\[([^\]]*)\]\((?:<([^>]+)>|([^)]+))\)|\[([^\]]+)\]\((?:<([^>]+)>|([^)]+))\)|<([a-z][a-z0-9+.-]*:\/\/[^>]+)>|([a-z][a-z0-9+.-]*:\/\/[^\s<>[\]()]+)/gi;
 
@@ -183,12 +203,89 @@ export function findLinksInText(text: string): TextSegment[] {
       });
     }
 
-    // Parse the matched link
     const rawMatch = match[0];
-    const parsed = parseLink(rawMatch);
+    let parsed: ParsedLink | null = null;
+    let actualRaw = rawMatch;
+
+    // Construct ParsedLink directly from capture groups
+    if (match[1] !== undefined) {
+      // Group 1-2: Embedded wikilink ![[path|alias]]
+      parsed = {
+        type: "internal",
+        url: match[1],
+        caption: match[2] || match[1],
+        isEmbed: true,
+        isWebUrl: false,
+      };
+    } else if (match[3] !== undefined) {
+      // Group 3-4: Wikilink [[path|alias]]
+      parsed = {
+        type: "internal",
+        url: match[3],
+        caption: match[4] || match[3],
+        isEmbed: false,
+        isWebUrl: false,
+      };
+    } else if (
+      match[5] !== undefined ||
+      match[6] !== undefined ||
+      match[7] !== undefined
+    ) {
+      // Group 5-7: Embedded markdown ![caption](<path>) or ![caption](path)
+      const caption = match[5] || "";
+      const path = normalizePath(match[6] || match[7]);
+      const external = hasUriScheme(path);
+      parsed = {
+        type: external ? "external" : "internal",
+        url: path,
+        caption: caption || path,
+        isEmbed: true,
+        isWebUrl: isWebUrl(path),
+      };
+    } else if (match[8] !== undefined) {
+      // Group 8-10: Markdown link [caption](<path>) or [caption](path)
+      const caption = match[8];
+      const path = normalizePath(match[9] || match[10]);
+      const external = hasUriScheme(path);
+      parsed = {
+        type: external ? "external" : "internal",
+        url: path,
+        caption: caption,
+        isEmbed: false,
+        isWebUrl: isWebUrl(path),
+      };
+    } else if (match[11] !== undefined) {
+      // Group 11: Angle bracket URL <scheme://url>
+      const url = match[11];
+      parsed = {
+        type: "external",
+        url: url,
+        caption: url,
+        isEmbed: false,
+        isWebUrl: isWebUrl(url),
+      };
+    } else if (match[12] !== undefined) {
+      // Group 12: Plain URL - strip trailing punctuation
+      const [cleanUrl, trailing] = stripTrailingPunctuation(match[12]);
+      parsed = {
+        type: "external",
+        url: cleanUrl,
+        caption: cleanUrl,
+        isEmbed: false,
+        isWebUrl: isWebUrl(cleanUrl),
+      };
+      actualRaw = cleanUrl;
+      // Add trailing punctuation as text after link
+      if (trailing) {
+        segments.push({ type: "link", link: parsed, raw: actualRaw });
+        segments.push({ type: "text", content: trailing });
+        lastIndex = match.index + rawMatch.length;
+        continue;
+      }
+    }
 
     if (parsed) {
-      segments.push({ type: "link", link: parsed, raw: rawMatch });
+      segments.push({ type: "link", link: parsed, raw: actualRaw });
     } else {
       // Fallback: treat as text if parsing fails
       segments.push({ type: "text", content: rawMatch });
