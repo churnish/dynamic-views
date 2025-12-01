@@ -16,58 +16,48 @@ interface DateValue {
 }
 
 /**
- * Format timestamp using moment.js format from settings
- * Falls back to automatic date/datetime detection with Style Settings toggles
+ * Format timestamp using moment.js with formats from Style Settings
  */
 export function formatTimestamp(
   timestamp: number,
-  settings: Settings,
   isDateOnly: boolean = false,
+  styled: boolean = false,
 ): string {
-  const date = new Date(timestamp);
-
-  // Use custom format from settings (overrides all auto-detection)
-  if (settings.timestampFormat && settings.timestampFormat.trim()) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-    const moment = require("moment");
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
-    return moment(timestamp).format(settings.timestampFormat);
-  }
-
-  // Format components
-  const yyyy = date.getFullYear();
-  const MM = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const HH = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-
-  // For date-only properties, show date only
-  if (isDateOnly) {
-    return `${yyyy}-${MM}-${dd}`;
-  }
-
-  // For datetime properties, apply Style Settings toggles
-  // Import at runtime to avoid circular dependencies
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+  const moment = require("moment");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const styleSettings = require("../utils/style-settings") as {
     shouldShowRecentTimeOnly(): boolean;
     shouldShowOlderDateOnly(): boolean;
+    getDatetimeFormat(): string;
+    getDateFormat(): string;
+    getTimeFormat(): string;
   };
 
-  const now = Date.now();
-  const isRecent = now - timestamp < 86400000;
+  // For date-only properties, show date only
+  if (isDateOnly) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+    return moment(timestamp).format(styleSettings.getDateFormat());
+  }
 
-  if (isRecent) {
-    if (styleSettings.shouldShowRecentTimeOnly()) {
-      return `${HH}:${mm}`;
+  // For styled property display, apply Style Settings toggles
+  if (styled) {
+    const now = Date.now();
+    const isRecent = now - timestamp < 86400000;
+
+    if (isRecent && styleSettings.shouldShowRecentTimeOnly()) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+      return moment(timestamp).format(styleSettings.getTimeFormat());
     }
-    return `${yyyy}-${MM}-${dd} ${HH}:${mm}`;
+    if (!isRecent && styleSettings.shouldShowOlderDateOnly()) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+      return moment(timestamp).format(styleSettings.getDateFormat());
+    }
   }
 
-  if (styleSettings.shouldShowOlderDateOnly()) {
-    return `${yyyy}-${MM}-${dd}`;
-  }
-  return `${yyyy}-${MM}-${dd} ${HH}:${mm}`;
+  // Full datetime
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+  return moment(timestamp).format(styleSettings.getDatetimeFormat());
 }
 
 /**

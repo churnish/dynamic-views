@@ -20,12 +20,66 @@ import {
   shouldHideMissingProperties,
   shouldHideEmptyProperties,
   getListSeparator,
+  isSlideshowEnabled,
+  isSlideshowIndicatorEnabled,
 } from "../utils/style-settings";
-import { getPropertyLabel } from "../utils/property";
+import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import { handleImageZoomClick } from "../shared/image-zoom-handler";
+import {
+  getFileTypeIcon,
+  getFileExtInfo,
+  stripExtFromTitle,
+} from "../utils/file-extension";
 import type DynamicViewsPlugin from "../../main";
 import type { Settings } from "../types";
+
+/**
+ * Truncate title text to fit within container with ellipsis
+ * Preserves extension visibility when present
+ */
+function truncateTitleWithExtension(
+  titleEl: HTMLElement,
+  textEl: HTMLElement | Text,
+): void {
+  const containerStyle = getComputedStyle(titleEl);
+  const lineHeight = parseFloat(containerStyle.lineHeight);
+  const maxLines = parseInt(
+    containerStyle.getPropertyValue("--dynamic-views-title-lines") || "2",
+  );
+  const maxHeight = lineHeight * maxLines;
+
+  const fullText = textEl.textContent || "";
+  if (!fullText) return;
+
+  // Check if truncation needed
+  if (titleEl.scrollHeight <= maxHeight) return;
+
+  // Binary search for max text that fits
+  let low = 0;
+  let high = fullText.length;
+  const ellipsis = "…";
+
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    textEl.textContent = fullText.slice(0, mid) + ellipsis;
+
+    if (titleEl.scrollHeight <= maxHeight) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  // Set final truncated text
+  textEl.textContent = fullText.slice(0, low) + ellipsis;
+
+  // Safety: keep reducing if still overflowing (ensures extension visible)
+  while (titleEl.scrollHeight > maxHeight && low > 0) {
+    low--;
+    textEl.textContent = fullText.slice(0, low) + ellipsis;
+  }
+}
 
 // Extend App type to include dragManager
 declare module "obsidian" {
@@ -303,17 +357,36 @@ export class SharedCardRenderer {
           ? containerEl.createDiv("card-title")
           : containerEl;
 
+        // Add file type icon for non-markdown files
+        const icon = getFileTypeIcon(card.path);
+        if (icon) {
+          const iconEl = titleEl.createSpan({ cls: "card-title-icon" });
+          setIcon(iconEl, icon);
+        }
+
+        // Only strip extension when titleProperty is file.fullname
+        const normalized = normalizePropertyName(
+          this.app,
+          settings.titleProperty || "",
+        );
+        const isFullname = normalized === "file.fullname";
+        const displayTitle = isFullname
+          ? stripExtFromTitle(card.title, card.path, true)
+          : card.title;
+
+        let textEl: HTMLElement | null = null;
         if (settings.openFileAction === "title") {
           // Render as clickable, draggable link
           const link = titleEl.createEl("a", {
             cls: "internal-link",
-            text: card.title,
+            text: displayTitle,
             attr: {
               "data-href": card.path,
               href: card.path,
               draggable: "true",
             },
           });
+          textEl = link;
 
           link.addEventListener("click", (e) => {
             e.preventDefault();
@@ -325,8 +398,50 @@ export class SharedCardRenderer {
           // Make title draggable when openFileAction is 'title'
           link.addEventListener("dragstart", handleDrag);
         } else {
-          // Render as plain text
-          titleEl.appendText(card.title);
+          // Render as plain text in a span for truncation
+          const textSpan = titleEl.createSpan({
+            cls: "card-title-text-content",
+            text: displayTitle,
+          });
+          textEl = textSpan;
+        }
+
+        // Add file extension after title text (force show for file.fullname)
+        const extInfo = getFileExtInfo(card.path, isFullname);
+        let extEl: HTMLElement | null = null;
+        if (extInfo) {
+          extEl = titleEl.createSpan({
+            cls: "card-title-ext",
+            text: extInfo.ext,
+          });
+
+          // Make extension clickable/draggable when openFileAction is 'title'
+          if (settings.openFileAction === "title") {
+            extEl.addClass("clickable");
+            extEl.setAttribute("draggable", "true");
+            extEl.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const newLeaf = e.metaKey || e.ctrlKey;
+              void this.app.workspace.openLinkText(card.path, "", newLeaf);
+            });
+            extEl.addEventListener("dragstart", handleDrag);
+          }
+        }
+
+        // Truncate title with ellipsis (skip in scroll mode)
+        if (
+          textEl &&
+          !document.body.classList.contains(
+            "dynamic-views-title-overflow-scroll",
+          )
+        ) {
+          // Double RAF ensures layout is complete
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              truncateTitleWithExtension(titleEl, textEl);
+            });
+          });
         }
 
         // Setup scroll gradients for title if scroll mode is enabled
@@ -348,7 +463,7 @@ export class SharedCardRenderer {
         const iconEl = containerEl.createDiv(
           "card-title-url-icon text-icon-button svg-icon",
         );
-        iconEl.setAttribute("title", "Open URL");
+        iconEl.setAttribute("aria-label", card.urlValue);
         setIcon(iconEl, "square-arrow-out-up-right");
 
         iconEl.addEventListener("click", (e) => {
@@ -431,16 +546,17 @@ export class SharedCardRenderer {
       );
 
       if (hasImage) {
-        const shouldShowCarousel =
+        const shouldShowSlideshow =
+          isSlideshowEnabled() &&
           (position === "top" || position === "bottom") &&
           imageUrls.length >= 2;
 
-        if (shouldShowCarousel) {
-          const carouselEl = coverWrapper.createDiv(
-            "card-cover card-cover-carousel",
+        if (shouldShowSlideshow) {
+          const slideshowEl = coverWrapper.createDiv(
+            "card-cover card-cover-slideshow",
           );
-          this.renderCarousel(
-            carouselEl,
+          this.renderSlideshow(
+            slideshowEl,
             imageUrls,
             format,
             position,
@@ -611,7 +727,7 @@ export class SharedCardRenderer {
     // Properties - 4-field rendering with 2-row layout
     this.renderProperties(cardEl, card, entry, settings);
 
-    // Compact mode: add class when card width below breakpoint
+    // Card-level responsive behaviors (single ResizeObserver)
     const breakpoint =
       parseFloat(
         getComputedStyle(document.body).getPropertyValue(
@@ -619,62 +735,57 @@ export class SharedCardRenderer {
         ),
       ) || 400;
 
-    if (breakpoint > 0) {
-      const compactObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const width = entry.contentRect.width;
-          cardEl.classList.toggle("compact-mode", width < breakpoint);
-        }
-      });
-      compactObserver.observe(cardEl);
-      this.propertyObservers.push(compactObserver);
-    }
-
-    // Responsive thumbnail: move to top position when text preview too narrow
-    if (
+    // Check if thumbnail stacking is applicable
+    const needsThumbnailStacking =
       format === "thumbnail" &&
       (position === "left" || position === "right") &&
       settings.showTextPreview &&
-      card.snippet
-    ) {
-      const thumbnailEl = cardEl.querySelector(
-        ".card-thumbnail",
-      ) as HTMLElement;
-      const contentEl = cardEl.querySelector(".card-content") as HTMLElement;
+      card.snippet;
 
-      if (thumbnailEl && contentEl) {
-        let isStacked = false;
+    const thumbnailEl = needsThumbnailStacking
+      ? (cardEl.querySelector(".card-thumbnail") as HTMLElement)
+      : null;
+    const contentEl = needsThumbnailStacking
+      ? (cardEl.querySelector(".card-content") as HTMLElement)
+      : null;
 
-        const thumbnailObserver = new ResizeObserver(() => {
+    let isStacked = false;
+
+    const cardObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const cardWidth = entry.contentRect.width;
+
+        // Compact mode
+        if (breakpoint > 0) {
+          cardEl.classList.toggle("compact-mode", cardWidth < breakpoint);
+        }
+
+        // Thumbnail stacking
+        if (thumbnailEl && contentEl) {
           const thumbnailWidth = thumbnailEl.offsetWidth;
-          const cardWidth = cardEl.offsetWidth;
-          // Stack when card too narrow for side-by-side layout
-          // Text preview needs thumbnail × 2 minimum, plus thumbnail itself + padding
-          const shouldStack = cardWidth < thumbnailWidth * 3.5;
+          const shouldStack = cardWidth < thumbnailWidth * 3;
 
           if (shouldStack && !isStacked) {
-            // Move thumbnail before card-content (like thumbnail-top)
             cardEl.insertBefore(thumbnailEl, contentEl);
             cardEl.classList.add("thumbnail-stack");
             isStacked = true;
           } else if (!shouldStack && isStacked) {
-            // Move thumbnail back inside card-content (always after text preview)
             contentEl.appendChild(thumbnailEl);
             cardEl.classList.remove("thumbnail-stack");
             isStacked = false;
           }
-        });
-        thumbnailObserver.observe(cardEl);
-        this.propertyObservers.push(thumbnailObserver);
+        }
       }
-    }
+    });
+    cardObserver.observe(cardEl);
+    this.propertyObservers.push(cardObserver);
   }
 
   /**
-   * Renders carousel for covers with multiple images
+   * Renders slideshow for covers with multiple images
    */
-  private renderCarousel(
-    carouselEl: HTMLElement,
+  private renderSlideshow(
+    slideshowEl: HTMLElement,
     imageUrls: string[],
     format: "thumbnail" | "cover",
     position: "left" | "right" | "top" | "bottom",
@@ -683,11 +794,11 @@ export class SharedCardRenderer {
     let currentSlide = 0;
 
     // Create slides container
-    const slidesContainer = carouselEl.createDiv("carousel-slides");
+    const slidesContainer = slideshowEl.createDiv("slideshow-slides");
 
     // Create all slides
     const slideElements = imageUrls.map((url, index) => {
-      const slideEl = slidesContainer.createDiv("carousel-slide");
+      const slideEl = slidesContainer.createDiv("slideshow-slide");
       if (index === 0) {
         slideEl.addClass("is-active");
       }
@@ -696,8 +807,8 @@ export class SharedCardRenderer {
       const imageEmbedContainer = slideEl.createDiv("image-embed");
 
       // Multi-image indicator (positioned on image itself)
-      if (index === 0) {
-        const indicator = imageEmbedContainer.createDiv("carousel-indicator");
+      if (index === 0 && isSlideshowIndicatorEnabled()) {
+        const indicator = imageEmbedContainer.createDiv("slideshow-indicator");
         setIcon(indicator, "lucide-images");
       }
 
@@ -710,7 +821,7 @@ export class SharedCardRenderer {
       );
 
       // Handle image load for masonry layout and color extraction
-      const cardEl = carouselEl.closest(".card") as HTMLElement;
+      const cardEl = slideshowEl.closest(".card") as HTMLElement;
       if (cardEl && index === 0) {
         // Only setup for first image
         setupImageLoadHandler(
@@ -752,10 +863,10 @@ export class SharedCardRenderer {
     };
 
     // Navigation arrows
-    const leftArrow = carouselEl.createDiv("carousel-nav-left");
+    const leftArrow = slideshowEl.createDiv("slideshow-nav-left");
     setIcon(leftArrow, "lucide-chevron-left");
 
-    const rightArrow = carouselEl.createDiv("carousel-nav-right");
+    const rightArrow = slideshowEl.createDiv("slideshow-nav-right");
     setIcon(rightArrow, "lucide-chevron-right");
 
     leftArrow.addEventListener("click", (e) => {
@@ -1543,11 +1654,11 @@ export class SharedCardRenderer {
     const contentWrapper = container.createDiv("property-content-wrapper");
 
     // Content container (actual property value)
-    const metaContent = contentWrapper.createDiv("property-content");
+    const propertyContent = contentWrapper.createDiv("property-content");
 
     // If no value, show placeholder
     if (!stringValue) {
-      const markerSpan = metaContent.createSpan("empty-value-marker");
+      const markerSpan = propertyContent.createSpan("empty-value-marker");
       markerSpan.textContent = getEmptyValueMarker();
       return;
     }
@@ -1560,7 +1671,7 @@ export class SharedCardRenderer {
           items: string[];
         };
         if (arrayData.type === "array" && Array.isArray(arrayData.items)) {
-          const listWrapper = metaContent.createSpan("list-wrapper");
+          const listWrapper = propertyContent.createSpan("list-wrapper");
           const separator = getListSeparator();
           arrayData.items.forEach((item, idx) => {
             const span = listWrapper.createSpan();
@@ -1586,7 +1697,7 @@ export class SharedCardRenderer {
 
     if (isKnownTimestampProperty) {
       // stringValue is already formatted by data-transform
-      const timestampWrapper = metaContent.createSpan();
+      const timestampWrapper = propertyContent.createSpan();
       if (showTimestampIcon() && settings.propertyLabels === "hide") {
         const iconName = getTimestampIcon(propertyName, settings);
         const iconEl = timestampWrapper.createSpan("timestamp-icon");
@@ -1599,7 +1710,7 @@ export class SharedCardRenderer {
     ) {
       // YAML tags only
       const showHashPrefix = showTagHashPrefix();
-      const tagsWrapper = metaContent.createDiv("tags-wrapper");
+      const tagsWrapper = propertyContent.createDiv("tags-wrapper");
       card.yamlTags.forEach((tag) => {
         const tagEl = tagsWrapper.createEl("a", {
           cls: "tag",
@@ -1621,7 +1732,7 @@ export class SharedCardRenderer {
     ) {
       // tags in YAML + note body
       const showHashPrefix = showTagHashPrefix();
-      const tagsWrapper = metaContent.createDiv("tags-wrapper");
+      const tagsWrapper = propertyContent.createDiv("tags-wrapper");
       card.tags.forEach((tag) => {
         const tagEl = tagsWrapper.createEl("a", {
           cls: "tag",
@@ -1643,7 +1754,7 @@ export class SharedCardRenderer {
         propertyName === "file path") &&
       card.path.length > 0
     ) {
-      const pathWrapper = metaContent.createDiv("path-wrapper");
+      const pathWrapper = propertyContent.createDiv("path-wrapper");
       // Split full path including filename
       const segments = card.path.split("/").filter((f) => f);
       segments.forEach((segment, idx) => {
@@ -1706,7 +1817,7 @@ export class SharedCardRenderer {
       (propertyName === "file.folder" || propertyName === "folder") &&
       card.folderPath.length > 0
     ) {
-      const folderWrapper = metaContent.createDiv("path-wrapper");
+      const folderWrapper = propertyContent.createDiv("path-wrapper");
       // Split folder path into segments
       const folders = card.folderPath.split("/").filter((f) => f);
       folders.forEach((folder, idx) => {
@@ -1755,16 +1866,16 @@ export class SharedCardRenderer {
       });
     } else {
       // Generic property - wrap in div for proper scrolling (consistent with tags/paths)
-      const textWrapper = metaContent.createDiv("text-wrapper");
+      const textWrapper = propertyContent.createDiv("text-wrapper");
       this.renderTextWithLinks(textWrapper, stringValue);
     }
 
-    // Remove metaContent wrapper if it ended up empty (e.g., tags with no values)
+    // Remove propertyContent wrapper if it ended up empty (e.g., tags with no values)
     if (
-      !metaContent.textContent ||
-      metaContent.textContent.trim().length === 0
+      !propertyContent.textContent ||
+      propertyContent.textContent.trim().length === 0
     ) {
-      metaContent.remove();
+      propertyContent.remove();
     }
   }
 

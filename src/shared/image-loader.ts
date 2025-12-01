@@ -1,5 +1,5 @@
 import { extractAverageColor, getColorTheme } from "../utils/image-color";
-import { IMAGE_ASPECT_RATIO } from "./constants";
+import type { RefObject } from "../types/datacore";
 
 /**
  * Core logic for handling image load
@@ -26,19 +26,11 @@ export function handleImageLoad(
   const colorTheme = getColorTheme(ambientColor);
   cardEl.setAttribute("data-ambient-theme", colorTheme);
 
-  // Set aspect ratio for flexible cover height (masonry only)
+  // Set actual aspect ratio for flexible cover height (masonry)
   if (imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
     const imgAspect = imgEl.naturalHeight / imgEl.naturalWidth;
-    const containerMaxAspect = parseFloat(
-      getComputedStyle(document.body).getPropertyValue(
-        "--dynamic-views-image-aspect-ratio",
-      ) || String(IMAGE_ASPECT_RATIO),
-    );
-
-    // If image is wider (lower aspect ratio), use its ratio
-    if (imgAspect < containerMaxAspect) {
-      cardEl.style.setProperty("--actual-aspect-ratio", imgAspect.toString());
-    }
+    cardEl.style.setProperty("--actual-aspect-ratio", imgAspect.toString());
+    cardEl.classList.add("cover-ready"); // Signal cover can show (for masonry flexible mode)
   }
 
   // Trigger layout update if callback provided (for masonry reflow)
@@ -62,7 +54,72 @@ export function setupImageLoadHandler(
   cardEl: HTMLElement,
   onLayoutUpdate?: () => void,
 ): void {
-  imgEl.addEventListener("load", () => {
+  // Handle already-loaded images (from cache)
+  if (imgEl.complete && imgEl.naturalWidth > 0) {
     handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
-  });
+  } else {
+    imgEl.addEventListener("load", () => {
+      handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
+    });
+    // On error, still add cover-ready so cover shows (even if broken)
+    imgEl.addEventListener("error", () => {
+      cardEl.classList.add("cover-ready");
+      if (onLayoutUpdate) onLayoutUpdate();
+    });
+  }
+}
+
+/**
+ * JSX ref callback for image elements
+ * Handles already-cached images immediately on mount
+ * Uses idempotency guard to prevent double-processing
+ */
+export function handleJsxImageRef(
+  imgEl: HTMLImageElement | null,
+  updateLayoutRef: RefObject<(() => void) | null>,
+): void {
+  if (!imgEl || !imgEl.complete || imgEl.naturalWidth === 0) return;
+
+  const cardEl = imgEl.closest(".card") as HTMLElement;
+  if (!cardEl || cardEl.classList.contains("cover-ready")) return; // Already handled
+
+  const imageEmbedEl = imgEl.closest(".image-embed") as HTMLElement;
+  if (!imageEmbedEl) return;
+
+  handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
+}
+
+/**
+ * JSX onLoad handler for image elements
+ * Uses idempotency guard to prevent double-processing if ref already handled
+ */
+export function handleJsxImageLoad(
+  e: Event,
+  updateLayoutRef: RefObject<(() => void) | null>,
+): void {
+  const imgEl = e.currentTarget as HTMLImageElement;
+
+  const cardEl = imgEl.closest(".card") as HTMLElement;
+  if (!cardEl || cardEl.classList.contains("cover-ready")) return; // Already handled by ref
+
+  const imageEmbedEl = imgEl.closest(".image-embed") as HTMLElement;
+  if (!imageEmbedEl) return;
+
+  handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);
+}
+
+/**
+ * JSX onError handler for image elements
+ * Ensures cover-ready is set even on error so layout doesn't wait indefinitely
+ */
+export function handleJsxImageError(
+  e: Event,
+  updateLayoutRef: RefObject<(() => void) | null>,
+): void {
+  const imgEl = e.currentTarget as HTMLImageElement;
+  const cardEl = imgEl.closest(".card") as HTMLElement;
+  if (!cardEl) return;
+
+  cardEl.classList.add("cover-ready");
+  if (updateLayoutRef.current) updateLayoutRef.current();
 }

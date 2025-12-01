@@ -24,10 +24,9 @@ const markdownPatterns = [
   /\[\[[^\]|]+\|[^\]]+\]\]/g, // Wikilinks with display
   /\[\[[^\]]+\]\]/g, // Wikilinks
   /#[a-zA-Z0-9_\-/]+/g, // Tags
-  /^[-*+]\s*\[[ xX]\]\s+/gm, // Task list markers (bullet-style)
-  /^(\d+\.\s*)\[[ xX]\]\s+/gm, // Task list markers (numbered with dot) - preserves number
-  /^(\d+\)\s*)\[[ xX]\]\s+/gm, // Task list markers (numbered with paren) - preserves number
-  /^[-*+]\s+/gm, // Bullet list markers
+  /^\s*[-*+]\s*\[[ xX]\]\s+/gm, // Task list markers (bullet-style)
+  /^\s*(\d+[.)]\s*)\[[ xX]\]\s+/gm, // Task list markers (numbered) - preserves number
+  /^\s*[-*+]\s+/gm, // Bullet list markers
   /^#{1,6}\s+.+$/gm, // Heading lines (full removal)
   /^\s*(?:[-_*])\s*(?:[-_*])\s*(?:[-_*])[\s\-_*]*$/gm, // Horizontal rules
   /^\s*\|.*\|.*$/gm, // Tables
@@ -232,7 +231,7 @@ export function sanitizeForPreview(
  * Handles property extraction and content fallback
  * @param file - TFile to load preview for
  * @param app - Obsidian App instance
- * @param propertyValue - Value from description property (if any)
+ * @param propertyValue - Value from text preview property (if any)
  * @param settings - Preview settings (fallback behavior, omit first line)
  * @param fileName - File name for first line comparison
  * @param titleValue - Title property value for first line comparison

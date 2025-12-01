@@ -74,9 +74,9 @@ export function getBasesViewOptions(): any[] {
         {
           type: "text",
           displayName: "Text preview property",
-          key: "descriptionProperty",
+          key: "textPreviewProperty",
           placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.descriptionProperty,
+          default: DEFAULT_VIEW_SETTINGS.textPreviewProperty,
         },
         {
           type: "toggle",
@@ -93,7 +93,7 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "dropdown",
-          displayName: "Image format",
+          displayName: "Format",
           key: "imageFormat",
           options: {
             thumbnail: "Thumbnail",
@@ -104,7 +104,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "dropdown",
-          displayName: "Image position",
+          displayName: "Position",
           key: "imagePosition",
           options: {
             left: "Left",
@@ -134,7 +134,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "dropdown",
-          displayName: "Image fit",
+          displayName: "Fit",
           key: "coverFitMode",
           options: {
             crop: "Crop",
@@ -144,7 +144,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "slider",
-          displayName: "Image ratio",
+          displayName: "Ratio",
           key: "imageAspectRatio",
           min: 0.25,
           max: 2.5,
@@ -173,7 +173,7 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "dropdown",
-          displayName: "Show property labels",
+          displayName: "Property labels",
           key: "propertyLabels",
           options: {
             inline: "Inline",
@@ -457,7 +457,7 @@ export function readBasesSettings(
   defaultViewSettings: DefaultViewSettings,
 ): Settings {
   const titlePropertyValue = config.get("titleProperty");
-  const descriptionPropertyValue = config.get("descriptionProperty");
+  const textPreviewPropertyValue = config.get("textPreviewProperty");
   const imagePropertyValue = config.get("imageProperty");
   const urlPropertyValue = config.get("urlProperty");
 
@@ -466,10 +466,10 @@ export function readBasesSettings(
       typeof titlePropertyValue === "string"
         ? titlePropertyValue
         : defaultViewSettings.titleProperty,
-    descriptionProperty:
-      typeof descriptionPropertyValue === "string"
-        ? descriptionPropertyValue
-        : defaultViewSettings.descriptionProperty,
+    textPreviewProperty:
+      typeof textPreviewPropertyValue === "string"
+        ? textPreviewPropertyValue
+        : defaultViewSettings.textPreviewProperty,
     imageProperty:
       typeof imagePropertyValue === "string"
         ? imagePropertyValue
@@ -719,7 +719,6 @@ export function readBasesSettings(
         ? value
         : defaultViewSettings.coverFitMode;
     })(),
-    timestampFormat: globalSettings.timestampFormat, // From global settings
     listMarker: (() => {
       const value = config.get("listMarker");
       return (
@@ -735,7 +734,7 @@ export function readBasesSettings(
     thumbnailCacheSize: globalSettings.thumbnailCacheSize, // From global settings
     queryHeight: 0, // Not configurable in Bases
     openFileAction: globalSettings.openFileAction, // From global settings
-    openRandomInNewPane: globalSettings.openRandomInNewPane, // From global settings
+    openRandomInNewTab: globalSettings.openRandomInNewTab, // From global settings
     showShuffleInRibbon: globalSettings.showShuffleInRibbon, // From global settings
     showRandomInRibbon: globalSettings.showRandomInRibbon, // From global settings
     smartTimestamp: globalSettings.smartTimestamp, // From global settings

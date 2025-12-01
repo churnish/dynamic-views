@@ -1,9 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any */
-import { App, Notice, View, BasesEntry } from "obsidian";
+import { App, Notice, View, BasesEntry, PaneType, Keymap } from "obsidian";
 import type { DynamicViewsCardView } from "../bases/card-view";
 import type { DynamicViewsMasonryView } from "../bases/masonry-view";
 
 type DynamicBasesView = DynamicViewsCardView | DynamicViewsMasonryView;
+
+/**
+ * Calculate pane type based on modifier keys and setting.
+ * - split/window modifiers take precedence
+ * - cmd/ctrl alone inverts the setting
+ * - no modifier uses the setting as-is
+ */
+export function getPaneType(
+  event: MouseEvent | KeyboardEvent | null,
+  defaultInNewTab: boolean,
+): PaneType | boolean {
+  const modEvent = Keymap.isModEvent(event);
+  return modEvent === "split" || modEvent === "window"
+    ? modEvent
+    : modEvent
+      ? !defaultInNewTab
+      : defaultInNewTab;
+}
 
 // Internal Obsidian base-view structure
 interface BasesViewWrapper extends View {
@@ -104,7 +122,7 @@ export function getActiveDynamicViewsBase(app: App): DynamicBasesView | null {
  */
 export async function openRandomFile(
   app: App,
-  openInNewPane: boolean,
+  paneType: PaneType | boolean,
 ): Promise<void> {
   const basesView = getActiveBasesView(app);
 
@@ -129,7 +147,7 @@ export async function openRandomFile(
 
   // Open the file
   const filePath = randomEntry.file.path;
-  await app.workspace.openLinkText(filePath, "", openInNewPane);
+  await app.workspace.openLinkText(filePath, "", paneType);
 }
 
 /**

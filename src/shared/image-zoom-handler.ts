@@ -10,6 +10,38 @@ import { setupImageZoomGestures } from "./image-zoom-gestures";
 const zoomListenerCleanups = new WeakMap<HTMLElement, () => void>();
 
 /**
+ * Closes zoomed image and returns it to original position
+ */
+function closeImageZoom(
+  embedEl: HTMLElement,
+  zoomCleanupFns: Map<HTMLElement, () => void>,
+  zoomedOriginalParents: Map<HTMLElement, HTMLElement>,
+): void {
+  embedEl.classList.remove("is-zoomed");
+
+  // Return to original parent
+  const originalParent = zoomedOriginalParents.get(embedEl);
+  if (originalParent && embedEl.parentElement !== originalParent) {
+    originalParent.appendChild(embedEl);
+    zoomedOriginalParents.delete(embedEl);
+  }
+
+  // Cleanup zoom gestures
+  const cleanup = zoomCleanupFns.get(embedEl);
+  if (cleanup) {
+    cleanup();
+    zoomCleanupFns.delete(embedEl);
+  }
+
+  // Remove event listeners
+  const removeListeners = zoomListenerCleanups.get(embedEl);
+  if (removeListeners) {
+    removeListeners();
+    zoomListenerCleanups.delete(embedEl);
+  }
+}
+
+/**
  * Handles image zoom click events
  * @param e - Mouse event
  * @param cardPath - Path to the card's file
@@ -24,10 +56,10 @@ export function handleImageZoomClick(
   zoomCleanupFns: Map<HTMLElement, () => void>,
   zoomedOriginalParents: Map<HTMLElement, HTMLElement>,
 ): void {
-  const isZoomEnabled = document.body.classList.contains(
-    "dynamic-views-image-zoom-enabled",
+  const isZoomDisabled = document.body.classList.contains(
+    "dynamic-views-image-zoom-disabled",
   );
-  if (!isZoomEnabled) return;
+  if (isZoomDisabled) return;
 
   e.stopPropagation();
   const embedEl = e.currentTarget as HTMLElement;
@@ -47,35 +79,6 @@ export function handleImageZoomClick(
 }
 
 /**
- * Closes zoomed image and returns it to original position
- */
-function closeImageZoom(
-  embedEl: HTMLElement,
-  zoomCleanupFns: Map<HTMLElement, () => void>,
-  zoomedOriginalParents: Map<HTMLElement, HTMLElement>,
-): void {
-  embedEl.classList.remove("is-zoomed");
-  // Return to original parent
-  const originalParent = zoomedOriginalParents.get(embedEl);
-  if (originalParent && embedEl.parentElement !== originalParent) {
-    originalParent.appendChild(embedEl);
-    zoomedOriginalParents.delete(embedEl);
-  }
-  // Cleanup zoom gestures
-  const cleanup = zoomCleanupFns.get(embedEl);
-  if (cleanup) {
-    cleanup();
-    zoomCleanupFns.delete(embedEl);
-  }
-  // Remove event listeners
-  const removeListeners = zoomListenerCleanups.get(embedEl);
-  if (removeListeners) {
-    removeListeners();
-    zoomListenerCleanups.delete(embedEl);
-  }
-}
-
-/**
  * Opens image zoom with gesture support and close handlers
  */
 function openImageZoom(
@@ -89,19 +92,7 @@ function openImageZoom(
   const viewContainer = embedEl.closest(".workspace-leaf-content");
   if (viewContainer) {
     viewContainer.querySelectorAll(".image-embed.is-zoomed").forEach((el) => {
-      el.classList.remove("is-zoomed");
-      // Return to original parent
-      const originalParent = zoomedOriginalParents.get(el as HTMLElement);
-      if (originalParent && el.parentElement !== originalParent) {
-        originalParent.appendChild(el);
-        zoomedOriginalParents.delete(el as HTMLElement);
-      }
-      // Cleanup zoom gestures for other images
-      const cleanup = zoomCleanupFns.get(el as HTMLElement);
-      if (cleanup) {
-        cleanup();
-        zoomCleanupFns.delete(el as HTMLElement);
-      }
+      closeImageZoom(el as HTMLElement, zoomCleanupFns, zoomedOriginalParents);
     });
   }
 
@@ -114,6 +105,7 @@ function openImageZoom(
     zoomedOriginalParents.set(embedEl, originalParent);
     document.body.appendChild(embedEl);
   }
+
   // Open this one
   embedEl.classList.add("is-zoomed");
 
@@ -125,74 +117,44 @@ function openImageZoom(
   }
 
   const file = app.vault.getAbstractFileByPath(cardPath);
-  const cleanup = setupImageZoomGestures(
-    imgEl,
-    embedEl,
-    app,
-    file instanceof TFile ? file : undefined,
+
+  // Only setup pinch/gesture zoom if not disabled
+  const isPinchZoomDisabled = document.body.classList.contains(
+    "dynamic-views-zoom-disabled",
   );
-  zoomCleanupFns.set(embedEl, cleanup);
+  if (!isPinchZoomDisabled) {
+    const cleanup = setupImageZoomGestures(
+      imgEl,
+      embedEl,
+      app,
+      file instanceof TFile ? file : undefined,
+    );
+    zoomCleanupFns.set(embedEl, cleanup);
+  }
 
   // Add listeners for closing
-  const closeZoom = (evt: Event) => {
+  const onClickOutside = (evt: Event) => {
     const target = evt.target as HTMLElement;
-    // Don't close if clicking on the zoomed image itself
     if (!embedEl.contains(target)) {
-      embedEl.classList.remove("is-zoomed");
-      // Return to original parent
-      const originalParent = zoomedOriginalParents.get(embedEl);
-      if (originalParent && embedEl.parentElement !== originalParent) {
-        originalParent.appendChild(embedEl);
-        zoomedOriginalParents.delete(embedEl);
-      }
-      // Cleanup zoom gestures
-      const cleanup = zoomCleanupFns.get(embedEl);
-      if (cleanup) {
-        cleanup();
-        zoomCleanupFns.delete(embedEl);
-      }
-      // Remove event listeners
-      const removeListeners = zoomListenerCleanups.get(embedEl);
-      if (removeListeners) {
-        removeListeners();
-        zoomListenerCleanups.delete(embedEl);
-      }
+      closeImageZoom(embedEl, zoomCleanupFns, zoomedOriginalParents);
     }
   };
 
-  const handleEscape = (evt: KeyboardEvent) => {
+  const onEscape = (evt: KeyboardEvent) => {
     if (evt.key === "Escape") {
-      embedEl.classList.remove("is-zoomed");
-      // Return to original parent
-      const originalParent = zoomedOriginalParents.get(embedEl);
-      if (originalParent && embedEl.parentElement !== originalParent) {
-        originalParent.appendChild(embedEl);
-        zoomedOriginalParents.delete(embedEl);
-      }
-      // Cleanup zoom gestures
-      const cleanup = zoomCleanupFns.get(embedEl);
-      if (cleanup) {
-        cleanup();
-        zoomCleanupFns.delete(embedEl);
-      }
-      // Remove event listeners
-      const removeListeners = zoomListenerCleanups.get(embedEl);
-      if (removeListeners) {
-        removeListeners();
-        zoomListenerCleanups.delete(embedEl);
-      }
+      closeImageZoom(embedEl, zoomCleanupFns, zoomedOriginalParents);
     }
   };
 
   // Delay adding listeners to avoid immediate trigger
   setTimeout(() => {
-    document.addEventListener("click", closeZoom);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("click", onClickOutside);
+    document.addEventListener("keydown", onEscape);
   }, 0);
 
   // Store cleanup function for this zoom instance
   zoomListenerCleanups.set(embedEl, () => {
-    document.removeEventListener("click", closeZoom);
-    document.removeEventListener("keydown", handleEscape);
+    document.removeEventListener("click", onClickOutside);
+    document.removeEventListener("keydown", onEscape);
   });
 }

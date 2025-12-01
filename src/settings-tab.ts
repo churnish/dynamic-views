@@ -4,6 +4,7 @@ import {
   Setting,
   AbstractInputSuggest,
   Notice,
+  setIcon,
 } from "obsidian";
 import type DynamicViewsPlugin from "../main";
 import { getAllVaultProperties } from "./utils/property";
@@ -63,13 +64,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     let hasGlobalChanges = false;
 
     if (
-      globalSettings.timestampFormat.trim() !== globalSettings.timestampFormat
-    ) {
-      trimmedGlobalSettings.timestampFormat =
-        globalSettings.timestampFormat.trim();
-      hasGlobalChanges = true;
-    }
-    if (
       globalSettings.createdTimeProperty.trim() !==
       globalSettings.createdTimeProperty
     ) {
@@ -99,11 +93,11 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       hasDefaultViewChanges = true;
     }
     if (
-      defaultViewSettings.descriptionProperty.trim() !==
-      defaultViewSettings.descriptionProperty
+      defaultViewSettings.textPreviewProperty.trim() !==
+      defaultViewSettings.textPreviewProperty
     ) {
-      trimmedDefaultViewSettings.descriptionProperty =
-        defaultViewSettings.descriptionProperty.trim();
+      trimmedDefaultViewSettings.textPreviewProperty =
+        defaultViewSettings.textPreviewProperty.trim();
       hasDefaultViewChanges = true;
     }
     if (
@@ -160,18 +154,16 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Open random file in new pane")
+      .setName("Open random file in new tab")
       .setDesc(
-        "When opening a random file from Bases view, open it in a new pane instead of the same pane",
+        "When opening a random file, open it in a new tab instead of the same tab",
       )
       .addToggle((toggle) =>
-        toggle
-          .setValue(settings.openRandomInNewPane)
-          .onChange(async (value) => {
-            await this.plugin.persistenceManager.setGlobalSettings({
-              openRandomInNewPane: value,
-            });
-          }),
+        toggle.setValue(settings.openRandomInNewTab).onChange(async (value) => {
+          await this.plugin.persistenceManager.setGlobalSettings({
+            openRandomInNewTab: value,
+          });
+        }),
       );
 
     new Setting(containerEl)
@@ -236,26 +228,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           });
         }),
       );
-
-    const timestampFormatSetting = new Setting(containerEl)
-      .setName("Timestamp format")
-      .addText((text) =>
-        text
-          .setPlaceholder("YYYY-MM-DD HH:mm")
-          .setValue(settings.timestampFormat)
-          .onChange(async (value) => {
-            await this.plugin.persistenceManager.setGlobalSettings({
-              timestampFormat: value,
-            });
-          }),
-      );
-
-    const timestampFormatDesc = timestampFormatSetting.descEl;
-    timestampFormatDesc.createEl("a", {
-      text: "Moment.js",
-      href: "https://momentjs.com/docs/#/displaying/format/",
-    });
-    timestampFormatDesc.appendText(" format for displaying date properties.");
 
     // Smart timestamp section
     const smartTimestampSetting = new Setting(containerEl)
@@ -515,10 +487,10 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder("Comma-separated if multiple")
-          .setValue(defaultViewSettings.descriptionProperty)
+          .setValue(defaultViewSettings.textPreviewProperty)
           .onChange(async (value) => {
             await this.plugin.persistenceManager.setDefaultViewSettings({
-              descriptionProperty: value,
+              textPreviewProperty: value,
             });
           }),
       );
@@ -539,7 +511,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Image format")
+      .setName("Format")
       .setDesc("Default image format for cards")
       .addDropdown((dropdown) =>
         dropdown
@@ -843,6 +815,25 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
             }).open();
           });
       });
+
+    // Feedback button
+    const feedbackContainer = containerEl.createEl("div", {
+      cls: "dynamic-views-feedback-container",
+    });
+
+    const button = feedbackContainer.createEl("button", {
+      cls: "mod-cta dynamic-views-feedback-button",
+    });
+    button.addEventListener("click", () => {
+      window.open(
+        "https://github.com/greetclammy/dynamic-views/issues",
+        "_blank",
+      );
+    });
+
+    const iconDiv = button.createEl("div");
+    setIcon(iconDiv, "message-square-reply");
+    button.appendText("Leave feedback");
   }
 
   hide(): void {

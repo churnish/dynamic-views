@@ -5,7 +5,10 @@
 
 import { BasesView, BasesEntry, TFile, QueryController } from "obsidian";
 import { CardData } from "../shared/card-renderer";
-import { transformBasesEntries } from "../shared/data-transform";
+import {
+  transformBasesEntries,
+  resolveTimestampProperty,
+} from "../shared/data-transform";
 import {
   readBasesSettings,
   getBasesViewOptions,
@@ -13,6 +16,7 @@ import {
 import {
   getFirstBasesPropertyValue,
   getAllBasesImagePropertyValues,
+  normalizePropertyName,
 } from "../utils/property";
 import { getMinGridColumns, getCardSpacing } from "../utils/style-settings";
 import {
@@ -347,19 +351,47 @@ export class DynamicViewsCardView extends BasesView {
           const file = this.app.vault.getAbstractFileByPath(entry.file.path);
           if (!(file instanceof TFile)) return null;
 
-          const descValue = getFirstBasesPropertyValue(
-            this.app,
-            entry,
-            settings.descriptionProperty,
-          ) as { data?: unknown } | null;
+          // Resolve text preview property - check timestamps first
+          let textPreviewData: unknown = null;
+          if (settings.textPreviewProperty) {
+            const textPreviewProps = settings.textPreviewProperty
+              .split(",")
+              .map((p) => p.trim());
+            for (const prop of textPreviewProps) {
+              const normalizedProp = normalizePropertyName(this.app, prop);
+              // Try timestamp property first
+              const timestamp = resolveTimestampProperty(
+                normalizedProp,
+                entry.file.stat.ctime,
+                entry.file.stat.mtime,
+              );
+              if (timestamp) {
+                textPreviewData = timestamp;
+                break;
+              }
+              // Try regular property
+              const textPreviewValue = getFirstBasesPropertyValue(
+                this.app,
+                entry,
+                normalizedProp,
+              ) as { data?: unknown } | null;
+              if (
+                textPreviewValue?.data != null &&
+                textPreviewValue.data !== ""
+              ) {
+                textPreviewData = textPreviewValue.data;
+                break;
+              }
+            }
+          }
           return {
             path: entry.file.path,
             file,
-            descriptionData: descValue?.data,
+            textPreviewData,
           };
         })
         .filter(
-          (e): e is { path: string; file: TFile; descriptionData: unknown } =>
+          (e): e is { path: string; file: TFile; textPreviewData: unknown } =>
             e !== null,
         );
 
@@ -381,10 +413,17 @@ export class DynamicViewsCardView extends BasesView {
           const file = this.app.vault.getAbstractFileByPath(entry.file.path);
           if (!(file instanceof TFile)) return null;
 
+          // Normalize property names to support both display names and syntax names
+          const normalizedImageProperty = settings.imageProperty
+            ? settings.imageProperty
+                .split(",")
+                .map((p) => normalizePropertyName(this.app, p.trim()))
+                .join(",")
+            : "";
           const imagePropertyValues = getAllBasesImagePropertyValues(
             this.app,
             entry,
-            settings.imageProperty,
+            normalizedImageProperty,
           );
           return {
             path: entry.file.path,

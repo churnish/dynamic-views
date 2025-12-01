@@ -2,10 +2,7 @@ import { ViewMode, Settings, WidthMode } from "../types";
 import { Settings as SettingsPanel } from "./settings";
 import type { DatacoreAPI } from "../types/datacore";
 import type { App } from "obsidian";
-import {
-  positionDropdown,
-  setupClickOutside,
-} from "../utils/dropdown-position";
+import { setupClickOutside } from "../utils/dropdown-position";
 
 interface ToolbarProps {
   dc: DatacoreAPI;
@@ -125,51 +122,41 @@ export function Toolbar({
   showSettings,
   onSettingsChange,
 }: ToolbarProps): unknown {
-  // Refs for positioning
-  const viewButtonRef = dc.useRef<HTMLButtonElement | null>(null);
+  // Refs for dropdown menus and click-outside handling
   const viewMenuRef = dc.useRef<HTMLDivElement | null>(null);
-  const sortButtonRef = dc.useRef<HTMLButtonElement | null>(null);
   const sortMenuRef = dc.useRef<HTMLDivElement | null>(null);
-  const limitWrapperRef = dc.useRef<HTMLDivElement | null>(null);
   const limitMenuRef = dc.useRef<HTMLDivElement | null>(null);
-  const queryButtonRef = dc.useRef<HTMLButtonElement | null>(null);
   const queryMenuRef = dc.useRef<HTMLDivElement | null>(null);
   const settingsButtonRef = dc.useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = dc.useRef<HTMLDivElement | null>(null);
-  const settingsWrapperRef = dc.useRef<HTMLDivElement | null>(null);
 
-  // Position and setup click-outside for each dropdown
+  // Setup click-outside for each dropdown
   dc.useEffect(() => {
-    if (showViewDropdown && viewButtonRef.current && viewMenuRef.current) {
-      positionDropdown(viewButtonRef.current, viewMenuRef.current);
+    if (showViewDropdown && viewMenuRef.current) {
       return setupClickOutside(viewMenuRef.current, onToggleViewDropdown);
     }
   }, [showViewDropdown, onToggleViewDropdown]);
 
   dc.useEffect(() => {
-    if (showSortDropdown && sortButtonRef.current && sortMenuRef.current) {
-      positionDropdown(sortButtonRef.current, sortMenuRef.current);
+    if (showSortDropdown && sortMenuRef.current) {
       return setupClickOutside(sortMenuRef.current, onToggleSortDropdown);
     }
   }, [showSortDropdown, onToggleSortDropdown]);
 
   dc.useEffect(() => {
-    if (showLimitDropdown && limitWrapperRef.current && limitMenuRef.current) {
-      positionDropdown(limitWrapperRef.current, limitMenuRef.current);
+    if (showLimitDropdown && limitMenuRef.current) {
       return setupClickOutside(limitMenuRef.current, onToggleLimitDropdown);
     }
   }, [showLimitDropdown, onToggleLimitDropdown]);
 
   dc.useEffect(() => {
-    if (showQueryEditor && queryButtonRef.current && queryMenuRef.current) {
-      positionDropdown(queryButtonRef.current, queryMenuRef.current);
+    if (showQueryEditor && queryMenuRef.current) {
       return setupClickOutside(queryMenuRef.current, onToggleCode);
     }
   }, [showQueryEditor, onToggleCode]);
 
   dc.useEffect(() => {
-    if (showSettings && settingsButtonRef.current && settingsMenuRef.current) {
-      positionDropdown(settingsButtonRef.current, settingsMenuRef.current);
+    if (showSettings && settingsButtonRef.current) {
       // Settings click-outside needs special handling - check wrapper
       const settingsWrapper = settingsButtonRef.current.closest(
         ".settings-dropdown-wrapper",
@@ -183,44 +170,6 @@ export function Toolbar({
     }
   }, [showSettings, onToggleSettings]);
 
-  // Reposition dropdowns on window resize
-  dc.useEffect(() => {
-    const handleResize = () => {
-      if (showViewDropdown && viewButtonRef.current && viewMenuRef.current) {
-        positionDropdown(viewButtonRef.current, viewMenuRef.current);
-      }
-      if (showSortDropdown && sortButtonRef.current && sortMenuRef.current) {
-        positionDropdown(sortButtonRef.current, sortMenuRef.current);
-      }
-      if (
-        showLimitDropdown &&
-        limitWrapperRef.current &&
-        limitMenuRef.current
-      ) {
-        positionDropdown(limitWrapperRef.current, limitMenuRef.current);
-      }
-      if (showQueryEditor && queryButtonRef.current && queryMenuRef.current) {
-        positionDropdown(queryButtonRef.current, queryMenuRef.current);
-      }
-      if (
-        showSettings &&
-        settingsButtonRef.current &&
-        settingsMenuRef.current
-      ) {
-        positionDropdown(settingsButtonRef.current, settingsMenuRef.current);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [
-    showViewDropdown,
-    showSortDropdown,
-    showLimitDropdown,
-    showQueryEditor,
-    showSettings,
-  ]);
-
   return (
     <>
       <div className="bottom-controls">
@@ -228,7 +177,6 @@ export function Toolbar({
         <div className="view-controls-wrapper">
           <div className="view-dropdown-wrapper">
             <button
-              ref={viewButtonRef}
               className="view-dropdown-btn"
               onClick={onToggleViewDropdown}
               aria-label="Switch view"
@@ -385,7 +333,6 @@ export function Toolbar({
           {/* Sort Dropdown */}
           <div className="sort-dropdown-wrapper">
             <button
-              ref={sortButtonRef}
               className="sort-dropdown-btn"
               onClick={onToggleSortDropdown}
               aria-label="Change sort order"
@@ -806,7 +753,6 @@ export function Toolbar({
 
         {/* Results Count Wrapper */}
         <div
-          ref={limitWrapperRef}
           className={`results-count-wrapper${showLimitDropdown ? " active" : ""}`}
           onClick={onToggleLimitDropdown}
           onKeyDown={(e: unknown) => {
@@ -974,8 +920,8 @@ export function Toolbar({
           </svg>
         </button>
 
-        {/* Meta Controls (Shuffle, Open Random, Query Editor, Pin, Settings, Width) */}
-        <div className="meta-controls">
+        {/* Property Controls (Shuffle, Open Random, Query Editor, Pin, Settings, Width) */}
+        <div className="property-controls">
           <button
             className="shuffle-btn"
             onClick={onShuffle}
@@ -1025,7 +971,6 @@ export function Toolbar({
           </button>
           <div className="query-dropdown-wrapper">
             <button
-              ref={queryButtonRef}
               className="query-toggle-btn"
               onClick={onToggleCode}
               aria-label={showQueryEditor ? "Hide query" : "Edit query"}
@@ -1135,7 +1080,7 @@ export function Toolbar({
           ) : null}
 
           {/* Settings Button */}
-          <div ref={settingsWrapperRef} className="settings-dropdown-wrapper">
+          <div className="settings-dropdown-wrapper">
             <button
               ref={settingsButtonRef}
               className="settings-btn"

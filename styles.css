@@ -48,7 +48,7 @@ settings:
     -
         id: dynamic-views-card-padding-container
         title: Card padding
-        description: Padding between cards and container borders
+        description: Padding between cards and Bases container borders
         type: variable-number-slider
         default: 12
         min: 0
@@ -90,11 +90,10 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-fade-truncated-text
-        title: Fade truncated text
-        description: Show gradient fade on titles, subtitles, and properties when they can be scrolled horizontally
+        id: dynamic-views-no-fade-truncated-text
+        title: Don't fade truncated text
+        description: Hide gradient fade on titles, subtitles, and properties when they can be scrolled horizontally
         type: class-toggle
-        default: true
     -
         id: dynamic-views-cover-gap-setting
         title: Cover gap setting
@@ -266,53 +265,45 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-show-search
-        title: Show search filter
-        description: Show search input field in toolbar
+        id: dynamic-views-hide-search
+        title: Hide search filter
+        description: Hide search input field in toolbar
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-result-count
-        title: Show result count
-        description: Show result count and limit dropdown in toolbar
+        id: dynamic-views-hide-result-count
+        title: Hide result count
+        description: Hide result count and limit dropdown in toolbar
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-create-note
-        title: Show 'Create new note' button
-        description: Show button to create new note in toolbar
+        id: dynamic-views-hide-create-note
+        title: Hide 'Create new note' button
+        description: Hide button to create new note in toolbar
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-shuffle
-        title: Show 'Shuffle' button
-        description: Show shuffle button in toolbar
+        id: dynamic-views-hide-shuffle
+        title: Hide 'Shuffle' button
+        description: Hide shuffle button in toolbar
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-random
-        title: Show 'Open random file' button
-        description: Show random file button in toolbar
+        id: dynamic-views-hide-random
+        title: Hide 'Open random file' button
+        description: Hide random file button in toolbar
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-edit-query
-        title: Show 'Edit query' button
-        description: Show edit query button in toolbar
+        id: dynamic-views-hide-edit-query
+        title: Hide 'Edit query' button
+        description: Hide edit query button in toolbar
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-pin-toolbar
-        title: Show 'Pin toolbar' button
-        description: Show pin toolbar button
+        id: dynamic-views-hide-pin-toolbar
+        title: Hide 'Pin toolbar' button
+        description: Hide pin toolbar button
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-show-expand-width
-        title: Show 'Expand width' button
-        description: Show expand width button in toolbar
+        id: dynamic-views-hide-expand-width
+        title: Hide 'Expand width' button
+        description: Hide expand width button in toolbar
         type: class-toggle
-        default: true
     -
         id: image-zoom-heading
         title: Image zoom
@@ -320,17 +311,15 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-image-zoom-enabled
-        title: Enable image zoom
-        description: Enable or disable the image zoom feature entirely
+        id: dynamic-views-image-zoom-disabled
+        title: Disable image zoom
+        description: Disable the image zoom feature entirely
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-zoom-enabled
-        title: Enable pinch/gesture zoom
-        description: Enable pinch-to-zoom and pan gestures on enlarged images
+        id: dynamic-views-zoom-disabled
+        title: Disable pinch/gesture zoom
+        description: Disable pinch-to-zoom and pan gestures on enlarged images
         type: class-toggle
-        default: true
     -
         id: dynamic-views-zoom-sensitivity
         title: Zoom sensitivity
@@ -367,11 +356,10 @@ settings:
         default: ", "
         quotes: true
     -
-        id: dynamic-views-fade-list-separator
-        title: Fade list separator
-        description: Dim the separator color
+        id: dynamic-views-no-fade-list-separator
+        title: Don't fade list separator
+        description: Keep the separator color at normal intensity
         type: class-toggle
-        default: true
     -
         id: dynamic-views-empty-value-marker
         title: Empty value marker
@@ -380,46 +368,10 @@ settings:
         default: "—"
         quotes: true
     -
-        id: dynamic-views-fade-empty-marker
-        title: Fade empty marker
-        description: Dim the empty value marker color
+        id: dynamic-views-no-fade-empty-marker
+        title: Don't fade empty marker
+        description: Keep the empty value marker color at normal intensity
         type: class-toggle
-        default: true
-    -
-        id: dynamic-views-timestamp-recent-time-only
-        title: Only show time for recent timestamps
-        description: Omit the date for timestamps in the last 24 h. Will show timestamp as-is if it has no time.
-        type: class-toggle
-        default: true
-    -
-        id: dynamic-views-timestamp-older-date-only
-        title: Only show date for older timestamps
-        description: Omit the time for timestamps older than a day.
-        type: class-toggle
-        default: true
-    -
-        id: dynamic-views-timestamp-icon
-        title: Timestamp icon
-        description: Show icon next to timestamp to distinguish between modified and created timestamps
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-timestamp-icon-edge
-        options:
-            -
-                label: Align left
-                value: dynamic-views-timestamp-icon-left
-            -
-                label: Align right
-                value: dynamic-views-timestamp-icon-right
-            -
-                label: Align to card center
-                value: dynamic-views-timestamp-icon-center
-            -
-                label: Align to card edge
-                value: dynamic-views-timestamp-icon-edge
-            -
-                label: Don't show
-                value: dynamic-views-timestamp-icon-hide
     -
         id: dynamic-views-property-master-font
         title: Property font
@@ -433,56 +385,111 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-property-color
-        title: Text color
-        description: Theme color preset for property text
+        id: dynamic-views-property-color-with-labels
+        title: Text color (with labels)
+        description: Theme color preset for property text when labels are shown
         type: class-select
         allowEmpty: false
-        default: dynamic-views-property-color-muted
+        default: dynamic-views-property-color-with-labels-muted
         options:
             -
                 label: Faint
-                value: dynamic-views-property-color-faint
+                value: dynamic-views-property-color-with-labels-faint
             -
                 label: Muted
-                value: dynamic-views-property-color-muted
+                value: dynamic-views-property-color-with-labels-muted
             -
                 label: Normal
-                value: dynamic-views-property-color-normal
+                value: dynamic-views-property-color-with-labels-normal
             -
                 label: Accent
-                value: dynamic-views-property-color-accent
+                value: dynamic-views-property-color-with-labels-accent
             -
                 label: Red
-                value: dynamic-views-property-color-red
+                value: dynamic-views-property-color-with-labels-red
             -
                 label: Orange
-                value: dynamic-views-property-color-orange
+                value: dynamic-views-property-color-with-labels-orange
             -
                 label: Yellow
-                value: dynamic-views-property-color-yellow
+                value: dynamic-views-property-color-with-labels-yellow
             -
                 label: Green
-                value: dynamic-views-property-color-green
+                value: dynamic-views-property-color-with-labels-green
             -
                 label: Cyan
-                value: dynamic-views-property-color-cyan
+                value: dynamic-views-property-color-with-labels-cyan
             -
                 label: Blue
-                value: dynamic-views-property-color-blue
+                value: dynamic-views-property-color-with-labels-blue
             -
                 label: Purple
-                value: dynamic-views-property-color-purple
+                value: dynamic-views-property-color-with-labels-purple
             -
                 label: Pink
-                value: dynamic-views-property-color-pink
+                value: dynamic-views-property-color-with-labels-pink
             -
                 label: Custom
-                value: dynamic-views-property-color-custom
+                value: dynamic-views-property-color-with-labels-custom
     -
-        id: dynamic-views-property-color-custom
-        title: Custom text color
-        description: Custom color for property text (when Text color is set to Custom)
+        id: dynamic-views-property-color-with-labels-custom
+        title: Custom text color (with labels)
+        description: Custom color for property text when labels are shown
+        type: variable-themed-color
+        format: hsl-split
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-property-color-without-labels
+        title: Text color (without labels)
+        description: Theme color preset for property text when labels are hidden
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-color-without-labels-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-property-color-without-labels-faint
+            -
+                label: Muted
+                value: dynamic-views-property-color-without-labels-muted
+            -
+                label: Normal
+                value: dynamic-views-property-color-without-labels-normal
+            -
+                label: Accent
+                value: dynamic-views-property-color-without-labels-accent
+            -
+                label: Red
+                value: dynamic-views-property-color-without-labels-red
+            -
+                label: Orange
+                value: dynamic-views-property-color-without-labels-orange
+            -
+                label: Yellow
+                value: dynamic-views-property-color-without-labels-yellow
+            -
+                label: Green
+                value: dynamic-views-property-color-without-labels-green
+            -
+                label: Cyan
+                value: dynamic-views-property-color-without-labels-cyan
+            -
+                label: Blue
+                value: dynamic-views-property-color-without-labels-blue
+            -
+                label: Purple
+                value: dynamic-views-property-color-without-labels-purple
+            -
+                label: Pink
+                value: dynamic-views-property-color-without-labels-pink
+            -
+                label: Custom
+                value: dynamic-views-property-color-without-labels-custom
+    -
+        id: dynamic-views-property-color-without-labels-custom
+        title: Custom text color (without labels)
+        description: Custom color for property text when labels are hidden
         type: variable-themed-color
         format: hsl-split
         default-light: '#'
@@ -650,6 +657,22 @@ settings:
         description: Use small caps for property labels
         type: class-toggle
         default: false
+    -
+        id: slideshow
+        title: Slideshow
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-slideshow-disabled
+        title: Disable slideshow
+        description: Don't cycle through images on cards with multiple images
+        type: class-toggle
+    -
+        id: dynamic-views-hide-slideshow-indicator
+        title: Hide slideshow indicator
+        description: Hide indicator icon when card has multiple images
+        type: class-toggle
     -
         id: subtitle
         title: Subtitle
@@ -983,11 +1006,84 @@ settings:
         type: class-toggle
         default: false
     -
+        id: timestamps-heading
+        title: Timestamps
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-datetime-format
+        title: Datetime format
+        description: Moment.js format for full datetime display
+        type: variable-text
+        default: YYYY-MM-DD HH:mm
+    -
+        id: dynamic-views-time-format
+        title: Time format
+        description: Moment.js format for time-only display (recent timestamps)
+        type: variable-text
+        default: HH:mm
+    -
+        id: dynamic-views-date-format
+        title: Date format
+        description: Moment.js format for date-only display (older timestamps)
+        type: variable-text
+        default: YYYY-MM-DD
+    -
+        id: dynamic-views-timestamp-recent-full
+        title: Show full recent timestamps
+        description: Include the date for timestamps in the last 24 h.
+        type: class-toggle
+    -
+        id: dynamic-views-timestamp-older-full
+        title: Show full older timestamps
+        description: Include the time for timestamps older than a day.
+        type: class-toggle
+    -
+        id: dynamic-views-timestamp-icon
+        title: Timestamp icon
+        description: Show icon next to timestamp to distinguish between modified and created timestamps
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-timestamp-icon-edge
+        options:
+            -
+                label: Align left
+                value: dynamic-views-timestamp-icon-left
+            -
+                label: Align right
+                value: dynamic-views-timestamp-icon-right
+            -
+                label: Align to card center
+                value: dynamic-views-timestamp-icon-center
+            -
+                label: Align to card edge
+                value: dynamic-views-timestamp-icon-edge
+            -
+                label: Don't show
+                value: dynamic-views-timestamp-icon-hide
+    -
         id: title-heading
         title: Title
         type: heading
         level: 2
         collapsed: true
+    -
+        id: dynamic-views-hide-file-type-icon
+        title: Hide file type icon
+        description: Hide the icon shown before titles of non-markdown files
+        type: class-toggle
+    -
+        id: dynamic-views-hidden-file-extensions
+        title: Hide file extensions
+        description: Comma-separated list of extensions to hide (e.g., md, base, canvas)
+        type: variable-text
+        default: 'md, base, canvas'
+    -
+        id: dynamic-views-file-ext-match-title
+        title: Disable file extension styling
+        description: Make file extension match the title style
+        type: class-toggle
     -
         id: dynamic-views-title-font
         title: Title font
@@ -1117,15 +1213,25 @@ body {
 /* Compose custom colors from HSL components */
 /* When HSL components undefined, entire color becomes invalid and falls back */
 body {
-  --dynamic-views-property-color-custom: hsl(
-    var(--dynamic-views-property-color-custom-h),
-    var(--dynamic-views-property-color-custom-s),
-    var(--dynamic-views-property-color-custom-l)
+  --dynamic-views-property-color-with-labels-custom: hsl(
+    var(--dynamic-views-property-color-with-labels-custom-h),
+    var(--dynamic-views-property-color-with-labels-custom-s),
+    var(--dynamic-views-property-color-with-labels-custom-l)
   );
-  --dynamic-views-property-color-custom-hover: hsl(
-    calc(var(--dynamic-views-property-color-custom-h) - 3),
-    calc(var(--dynamic-views-property-color-custom-s) * 1.02),
-    calc(var(--dynamic-views-property-color-custom-l) * 1.15)
+  --dynamic-views-property-color-with-labels-custom-hover: hsl(
+    calc(var(--dynamic-views-property-color-with-labels-custom-h) - 3),
+    calc(var(--dynamic-views-property-color-with-labels-custom-s) * 1.02),
+    calc(var(--dynamic-views-property-color-with-labels-custom-l) * 1.15)
+  );
+  --dynamic-views-property-color-without-labels-custom: hsl(
+    var(--dynamic-views-property-color-without-labels-custom-h),
+    var(--dynamic-views-property-color-without-labels-custom-s),
+    var(--dynamic-views-property-color-without-labels-custom-l)
+  );
+  --dynamic-views-property-color-without-labels-custom-hover: hsl(
+    calc(var(--dynamic-views-property-color-without-labels-custom-h) - 3),
+    calc(var(--dynamic-views-property-color-without-labels-custom-s) * 1.02),
+    calc(var(--dynamic-views-property-color-without-labels-custom-l) * 1.15)
   );
   --dynamic-views-tag-color-custom: hsl(
     var(--dynamic-views-tag-color-custom-h),
@@ -1159,9 +1265,9 @@ body {
    Match built-in Bases Cards view padding
    ============================================ */
 
-.bases-view[data-view-type="dynamic-views-card"],
+.bases-view[data-view-type="dynamic-views-grid"],
 .bases-view[data-view-type="dynamic-views-masonry"] {
-  --bases-view-padding: var(--size-4-3);
+  --bases-view-padding: var(--dynamic-views-card-padding-container, 12px);
   --bases-embed-padding: var(--size-4-1) 1px;
 }
 
@@ -1500,7 +1606,9 @@ body {
 }
 
 .dynamic-views .view-dropdown-menu {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
   background-color: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -1566,7 +1674,9 @@ body {
 }
 
 .dynamic-views .sort-dropdown-menu {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
   background-color: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -1643,7 +1753,9 @@ body {
 }
 
 .dynamic-views .limit-dropdown-menu {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
   background-color: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -1763,7 +1875,7 @@ body {
   background-color: var(--background-modifier-hover);
 }
 
-.dynamic-views .meta-controls {
+.dynamic-views .property-controls {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -1932,48 +2044,46 @@ body {
    TOOLBAR VISIBILITY CONTROLS
    ============================================ */
 
-/* Hide search filter when toggle is off */
-body:not(.dynamic-views-show-search) .dynamic-views .search-controls,
-body:not(.dynamic-views-show-search) .search-controls-compact {
+/* Hide search filter when toggle is on */
+body.dynamic-views-hide-search .dynamic-views .search-controls,
+body.dynamic-views-hide-search .search-controls-compact {
   display: none !important;
 }
 
-/* Hide result count when toggle is off */
-body:not(.dynamic-views-show-result-count)
-  .dynamic-views
-  .results-count-wrapper,
-body:not(.dynamic-views-show-result-count) .results-count-wrapper-compact {
+/* Hide result count when toggle is on */
+body.dynamic-views-hide-result-count .dynamic-views .results-count-wrapper,
+body.dynamic-views-hide-result-count .results-count-wrapper-compact {
   display: none !important;
 }
 
-/* Hide create note button when toggle is off */
-body:not(.dynamic-views-show-create-note) .dynamic-views .create-note-button,
-body:not(.dynamic-views-show-create-note) .create-note-button-compact {
+/* Hide create note button when toggle is on */
+body.dynamic-views-hide-create-note .dynamic-views .create-note-button,
+body.dynamic-views-hide-create-note .create-note-button-compact {
   display: none !important;
 }
 
-/* Hide shuffle button when toggle is off */
-body:not(.dynamic-views-show-shuffle) .dynamic-views .shuffle-btn {
+/* Hide shuffle button when toggle is on */
+body.dynamic-views-hide-shuffle .dynamic-views .shuffle-btn {
   display: none !important;
 }
 
-/* Hide random button when toggle is off */
-body:not(.dynamic-views-show-random) .dynamic-views .open-random-btn {
+/* Hide random button when toggle is on */
+body.dynamic-views-hide-random .dynamic-views .open-random-btn {
   display: none !important;
 }
 
-/* Hide edit query button when toggle is off */
-body:not(.dynamic-views-show-edit-query) .dynamic-views .query-toggle-btn {
+/* Hide edit query button when toggle is on */
+body.dynamic-views-hide-edit-query .dynamic-views .query-toggle-btn {
   display: none !important;
 }
 
-/* Hide pin toolbar button when toggle is off */
-body:not(.dynamic-views-show-pin-toolbar) .dynamic-views .pin-btn {
+/* Hide pin toolbar button when toggle is on */
+body.dynamic-views-hide-pin-toolbar .dynamic-views .pin-btn {
   display: none !important;
 }
 
-/* Hide expand width button when toggle is off */
-body:not(.dynamic-views-show-expand-width) .dynamic-views .width-toggle-btn {
+/* Hide expand width button when toggle is on */
+body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
   display: none !important;
 }
 
@@ -1986,7 +2096,9 @@ body:not(.dynamic-views-show-expand-width) .dynamic-views .width-toggle-btn {
 }
 
 .dynamic-views .query-dropdown-menu {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
   background-color: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -2101,7 +2213,9 @@ body:not(.dynamic-views-show-expand-width) .dynamic-views .width-toggle-btn {
 }
 
 .dynamic-views .settings-dropdown-menu {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
   background-color: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -2113,6 +2227,9 @@ body:not(.dynamic-views-show-expand-width) .dynamic-views .width-toggle-btn {
   overflow-y: auto;
   padding: 16px;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
 }
 
 .dynamic-views .settings-panel {
@@ -2187,6 +2304,60 @@ body:not(.dynamic-views-show-expand-width) .dynamic-views .width-toggle-btn {
   font-size: 0.8em;
   color: var(--text-faint);
   text-align: left !important;
+}
+
+/* Collapsible settings sections */
+.dynamic-views .settings-section {
+  width: 100%;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.dynamic-views .settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--background-secondary);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  font-size: 0.9em;
+  color: var(--text-normal);
+  border-radius: 5px 5px 0 0;
+}
+
+.dynamic-views .settings-section-header.collapsed {
+  border-radius: 5px;
+}
+
+.dynamic-views .settings-section-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.dynamic-views .settings-section-header .chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.dynamic-views .settings-section-header.collapsed .chevron {
+  transform: rotate(-90deg);
+}
+
+.dynamic-views .settings-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--background-primary);
+  border-radius: 0 0 5px 5px;
+}
+
+.dynamic-views .settings-section-content.collapsed {
+  display: none;
 }
 
 .dynamic-views .setting-item-text {
@@ -2361,21 +2532,20 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
    ============================================ */
 
 /* Unified grid layout for all grid views (all width modes) */
-.bases-view[data-view-type="dynamic-views-card"] .dynamic-views-grid,
+.bases-view[data-view-type="dynamic-views-grid"] .dynamic-views-grid,
 .dynamic-views .dynamic-views-grid {
   display: grid;
   grid-template-columns: repeat(var(--grid-columns, 1), 1fr);
-  gap: var(--dynamic-views-card-spacing, 12px);
+  gap: var(--dynamic-views-card-spacing, 8px);
   align-items: stretch;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: var(--dynamic-views-card-padding-container, 12px);
   background-color: var(--dynamic-views-view-background);
 }
 
 /* Grid mode: remove margins (gap handles spacing) and set flexbox layout */
-.bases-view[data-view-type="dynamic-views-card"] .dynamic-views-grid .card,
+.bases-view[data-view-type="dynamic-views-grid"] .dynamic-views-grid .card,
 .dynamic-views .dynamic-views-grid .card {
   margin: 0 !important;
   display: flex;
@@ -2386,10 +2556,10 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Grid mode: side covers use overflow visible, rely on wrapper positioning */
-.bases-view[data-view-type="dynamic-views-card"]
+.bases-view[data-view-type="dynamic-views-grid"]
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover,
-.bases-view[data-view-type="dynamic-views-card"]
+.bases-view[data-view-type="dynamic-views-grid"]
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover,
 .dynamic-views .dynamic-views-grid .card.card-cover-left.image-format-cover,
@@ -2418,7 +2588,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Grid mode: push bottom properties to bottom of card */
-.bases-view[data-view-type="dynamic-views-card"]
+.bases-view[data-view-type="dynamic-views-grid"]
   .dynamic-views-grid
   .card
   .card-content
@@ -2428,13 +2598,13 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   .card
   .card-content
   ~ .card-properties-bottom,
-.bases-view[data-view-type="dynamic-views-card"]
+.bases-view[data-view-type="dynamic-views-grid"]
   .dynamic-views-grid
   .card
   .card-title
   ~ .card-properties-bottom,
 .dynamic-views .dynamic-views-grid .card .card-title ~ .card-properties-bottom,
-.bases-view[data-view-type="dynamic-views-card"]
+.bases-view[data-view-type="dynamic-views-grid"]
   .dynamic-views-grid
   .card
   .card-properties-bottom:only-child,
@@ -2448,7 +2618,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  row-gap: var(--dynamic-views-card-spacing, 12px);
+  row-gap: var(--dynamic-views-card-spacing, 8px);
   padding: 0 0 var(--size-4-4) 0;
   border-color: var(--background-modifier-border);
   border-width: 0 0 1px 0;
@@ -2489,7 +2659,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     var(--dynamic-views-card-border-color, var(--background-modifier-border));
   border-radius: var(--dynamic-views-card-border-radius, 8px);
   padding: var(--dynamic-views-card-padding, 12px);
-  margin: var(--dynamic-views-card-spacing, 12px) 0;
+  margin: var(--dynamic-views-card-spacing, 8px) 0;
   background-color: var(--background-primary-alt);
   break-inside: avoid;
   page-break-inside: avoid;
@@ -2499,23 +2669,28 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Disable container-type and position: relative on ALL ancestors when zoomed */
-body.dynamic-views-image-zoom-enabled .dynamic-views:has(.is-zoomed),
-body.dynamic-views-image-zoom-enabled .dynamic-views-grid:has(.is-zoomed),
-body.dynamic-views-image-zoom-enabled .dynamic-views-masonry:has(.is-zoomed),
-body.dynamic-views-image-zoom-enabled .masonry-container:has(.is-zoomed) {
+body:not(.dynamic-views-image-zoom-disabled) .dynamic-views:has(.is-zoomed),
+body:not(.dynamic-views-image-zoom-disabled)
+  .dynamic-views-grid:has(.is-zoomed),
+body:not(.dynamic-views-image-zoom-disabled)
+  .dynamic-views-masonry:has(.is-zoomed),
+body:not(.dynamic-views-image-zoom-disabled)
+  .masonry-container:has(.is-zoomed) {
   position: static !important;
 }
 
-body.dynamic-views-image-zoom-enabled .dynamic-views .card:has(.is-zoomed) {
+body:not(.dynamic-views-image-zoom-disabled)
+  .dynamic-views
+  .card:has(.is-zoomed) {
   container-type: normal !important;
   position: static !important;
 }
 
-body.dynamic-views-image-zoom-enabled
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card:has(.is-zoomed)
   .card-cover,
-body.dynamic-views-image-zoom-enabled
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card:has(.is-zoomed)
   .card-thumbnail {
@@ -2641,25 +2816,69 @@ body.dynamic-views-ambient-background
   word-break: break-word;
   text-align: left;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
-  -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: var(--line-height-tight);
+  max-height: calc(
+    var(--dynamic-views-title-lines, 2) * 1em * var(--line-height-tight)
+  );
 }
 
 .dynamic-views .card-title-url-icon {
   flex-shrink: 0;
 }
 
+.dynamic-views .card-title-icon {
+  float: left;
+  margin-right: 0.35em;
+}
+
+.dynamic-views .card-title-icon svg {
+  width: 1em;
+  height: calc(1em * var(--line-height-tight));
+  vertical-align: bottom;
+  color: var(--text-normal);
+  stroke-width: var(--icon-xs-stroke-width);
+}
+
+/* Hide file type icon */
+body.dynamic-views-hide-file-type-icon .dynamic-views .card-title-icon {
+  display: none;
+}
+
+/* File extension styles */
+.dynamic-views .card-title-ext {
+  opacity: 0.6;
+  font-weight: normal;
+}
+
+.dynamic-views .card-title-ext.clickable {
+  cursor: pointer;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Match title style */
+body.dynamic-views-file-ext-match-title .dynamic-views .card-title-ext {
+  opacity: 1;
+  font-weight: inherit;
+}
+
 .dynamic-views .card-title a {
   text-decoration: none;
   color: inherit;
   font-weight: inherit;
+  cursor: pointer;
 }
 
 @media (hover: hover) {
   .dynamic-views .card-title a:hover {
+    text-decoration: underline;
+  }
+  .dynamic-views .card-title:has(a:hover) .card-title-ext,
+  .dynamic-views .card-title:has(.card-title-ext:hover) .card-title-ext {
+    text-decoration: underline;
+  }
+  .dynamic-views .card-title:has(.card-title-ext:hover) a {
     text-decoration: underline;
   }
   body.dynamic-views-open-on-title .dynamic-views .card-title a:hover {
@@ -2676,7 +2895,7 @@ body.dynamic-views-ambient-background
   text-align: left;
   margin: 0;
   display: block;
-  overflow: visible;
+  overflow: hidden;
   line-height: var(--line-height-tight);
 }
 
@@ -2794,20 +3013,10 @@ body.dynamic-views-subtitle-divider .dynamic-views .card-subtitle {
   flex-direction: row;
 }
 
-/* Thumbnail top: between title and text preview */
-.dynamic-views .card.card-thumbnail-top .card-thumbnail {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
-  margin-bottom: var(--dynamic-views-element-spacing, 8px);
-}
-
-/* Thumbnail bottom: after text preview */
-.dynamic-views .card.card-thumbnail-bottom .card-thumbnail {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
-  margin-bottom: var(--dynamic-views-element-spacing, 8px);
-}
-
-/* Responsive thumbnail: stack uses thumbnail-top styling */
-.dynamic-views .card.thumbnail-stack .card-thumbnail {
+/* Thumbnail top/bottom/stacked: margins for vertical positioning */
+.dynamic-views
+  .card:is(.card-thumbnail-top, .card-thumbnail-bottom, .thumbnail-stack)
+  .card-thumbnail {
   margin-top: var(--dynamic-views-element-spacing, 8px);
   margin-bottom: var(--dynamic-views-element-spacing, 8px);
 }
@@ -2834,6 +3043,24 @@ body.dynamic-views-subtitle-divider .dynamic-views .card-subtitle {
 /* Text cursor on text preview when openFileAction is 'title' */
 body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
   cursor: text;
+}
+
+/* Make all card text selectable when openFileAction is 'title' */
+body.dynamic-views-open-on-title .dynamic-views .card-title,
+body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
+body.dynamic-views-open-on-title .dynamic-views .property-label,
+body.dynamic-views-open-on-title .dynamic-views .property-label-inline,
+body.dynamic-views-open-on-title .dynamic-views .property-content {
+  user-select: text;
+  cursor: text;
+}
+
+/* Title link and extension: pointer cursor + selectable text */
+body.dynamic-views-open-on-title .dynamic-views .card-title a,
+body.dynamic-views-open-on-title .dynamic-views .card-title-ext.clickable {
+  cursor: pointer;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .dynamic-views .card-thumbnail {
@@ -2907,21 +3134,21 @@ body.dynamic-views-show-thumbnail-placeholder.is-mobile.theme-dark
 }
 
 /* Thumbnail expand on click - Toggle mode */
-body.dynamic-views-image-zoom-enabled:not(.dynamic-views-image-zoom-disabled)
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card-thumbnail
   img {
   cursor: zoom-in;
 }
 
-body.dynamic-views-image-zoom-enabled
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card-thumbnail
   .image-embed {
   cursor: zoom-in;
 }
 
-body.dynamic-views-image-zoom-enabled
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card.image-format-cover
   .card-cover
@@ -2929,17 +3156,19 @@ body.dynamic-views-image-zoom-enabled
   cursor: zoom-in;
 }
 
-body.dynamic-views-image-zoom-enabled .dynamic-views .image-embed {
+body:not(.dynamic-views-image-zoom-disabled) .dynamic-views .image-embed {
   pointer-events: auto;
 }
 
-body.dynamic-views-image-zoom-enabled .dynamic-views .image-embed img {
+body:not(.dynamic-views-image-zoom-disabled) .dynamic-views .image-embed img {
   pointer-events: none;
   cursor: zoom-in;
 }
 
-body.dynamic-views-image-zoom-enabled .dynamic-views .image-embed.is-zoomed,
-body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed {
+body:not(.dynamic-views-image-zoom-disabled)
+  .dynamic-views
+  .image-embed.is-zoomed,
+body:not(.dynamic-views-image-zoom-disabled) > .image-embed.is-zoomed {
   cursor: zoom-out;
   display: flex;
   align-items: center;
@@ -2956,7 +3185,9 @@ body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed {
 }
 
 /* Constrain to tab: opacity from --background-modifier-cover + absolute positioning */
-body.dynamic-views-image-zoom-enabled.dynamic-views-zoom-constrain-to-editor
+body:not(
+    .dynamic-views-image-zoom-disabled
+  ).dynamic-views-zoom-constrain-to-editor
   .dynamic-views
   .image-embed.is-zoomed {
   background: color-mix(
@@ -2970,12 +3201,12 @@ body.dynamic-views-image-zoom-enabled.dynamic-views-zoom-constrain-to-editor
 }
 
 /* Not constrained: transparent background + fixed positioning */
-body.dynamic-views-image-zoom-enabled:not(
+body:not(.dynamic-views-image-zoom-disabled):not(
     .dynamic-views-zoom-constrain-to-editor
   )
   .dynamic-views
   .image-embed.is-zoomed,
-body.dynamic-views-image-zoom-enabled:not(
+body:not(.dynamic-views-image-zoom-disabled):not(
     .dynamic-views-zoom-constrain-to-editor
   )
   > .image-embed.is-zoomed {
@@ -2985,8 +3216,11 @@ body.dynamic-views-image-zoom-enabled:not(
   outline: 3px solid red;
 }
 
-body.dynamic-views-image-zoom-enabled .dynamic-views .image-embed.is-zoomed img,
-body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed img {
+body:not(.dynamic-views-image-zoom-disabled)
+  .dynamic-views
+  .image-embed.is-zoomed
+  img,
+body:not(.dynamic-views-image-zoom-disabled) > .image-embed.is-zoomed img {
   padding: 0;
   margin: 0;
   width: auto;
@@ -2998,11 +3232,11 @@ body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed img {
 }
 
 /* Desktop only: limit zoomed images to 90% viewport */
-body.dynamic-views-image-zoom-enabled:not(.is-mobile)
+body:not(.dynamic-views-image-zoom-disabled):not(.is-mobile)
   .dynamic-views
   .image-embed.is-zoomed
   img,
-body.dynamic-views-image-zoom-enabled:not(.is-mobile)
+body:not(.dynamic-views-image-zoom-disabled):not(.is-mobile)
   > .image-embed.is-zoomed
   img {
   max-height: 90vh;
@@ -3010,12 +3244,12 @@ body.dynamic-views-image-zoom-enabled:not(.is-mobile)
 }
 
 /* Cover-specific zoom override (higher specificity needed) */
-body.dynamic-views-image-zoom-enabled
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card.image-format-cover
   .card-cover
   .image-embed.is-zoomed,
-body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed {
+body:not(.dynamic-views-image-zoom-disabled) > .image-embed.is-zoomed {
   cursor: zoom-out;
   display: flex;
   align-items: center;
@@ -3032,7 +3266,9 @@ body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed {
 }
 
 /* Constrain to tab: opacity from --background-modifier-cover + absolute positioning for covers */
-body.dynamic-views-image-zoom-enabled.dynamic-views-zoom-constrain-to-editor
+body:not(
+    .dynamic-views-image-zoom-disabled
+  ).dynamic-views-zoom-constrain-to-editor
   .dynamic-views
   .card.image-format-cover
   .card-cover
@@ -3048,14 +3284,14 @@ body.dynamic-views-image-zoom-enabled.dynamic-views-zoom-constrain-to-editor
 }
 
 /* Not constrained: transparent background + fixed positioning for covers */
-body.dynamic-views-image-zoom-enabled:not(
+body:not(.dynamic-views-image-zoom-disabled):not(
     .dynamic-views-zoom-constrain-to-editor
   )
   .dynamic-views
   .card.image-format-cover
   .card-cover
   .image-embed.is-zoomed,
-body.dynamic-views-image-zoom-enabled:not(
+body:not(.dynamic-views-image-zoom-disabled):not(
     .dynamic-views-zoom-constrain-to-editor
   )
   > .image-embed.is-zoomed {
@@ -3065,13 +3301,13 @@ body.dynamic-views-image-zoom-enabled:not(
   outline: 3px solid red !important;
 }
 
-body.dynamic-views-image-zoom-enabled
+body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
   .card.image-format-cover
   .card-cover
   .image-embed.is-zoomed
   img,
-body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed img {
+body:not(.dynamic-views-image-zoom-disabled) > .image-embed.is-zoomed img {
   padding: 0;
   margin: 0;
   width: auto;
@@ -3083,13 +3319,13 @@ body.dynamic-views-image-zoom-enabled > .image-embed.is-zoomed img {
 }
 
 /* Desktop only: limit zoomed cover images to 90% viewport */
-body.dynamic-views-image-zoom-enabled:not(.is-mobile)
+body:not(.dynamic-views-image-zoom-disabled):not(.is-mobile)
   .dynamic-views
   .card.image-format-cover
   .card-cover
   .image-embed.is-zoomed
   img,
-body.dynamic-views-image-zoom-enabled:not(.is-mobile)
+body:not(.dynamic-views-image-zoom-disabled):not(.is-mobile)
   > .image-embed.is-zoomed
   img {
   max-height: 90vh;
@@ -3239,6 +3475,28 @@ body.dynamic-views-masonry-fixed-cover-height
   padding-top: calc(
     var(--dynamic-views-image-aspect-ratio, 0.55) * 100%
   ) !important;
+}
+
+/* Hide cover until dimensions known - masonry flexible mode, top/bottom only */
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-top:not(.cover-ready)
+  .card-cover-wrapper,
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-bottom:not(.cover-ready)
+  .card-cover-wrapper {
+  display: none;
+}
+
+/* Fixed mode: always show cover immediately (no waiting for dimensions) */
+body.dynamic-views-masonry-fixed-cover-height
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-top:not(.cover-ready)
+  .card-cover-wrapper,
+body.dynamic-views-masonry-fixed-cover-height
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-bottom:not(.cover-ready)
+  .card-cover-wrapper {
+  display: block;
 }
 
 /* ==================== CARD COVER FORMAT - FLEXBOX SYSTEM ==================== */
@@ -3603,6 +3861,10 @@ body.dynamic-views-show-cover-placeholder-none
 .dynamic-views
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover)
+  .card-subtitle,
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover)
   .card-content,
 .dynamic-views
   .dynamic-views-grid
@@ -3613,6 +3875,11 @@ body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-grid
@@ -3628,6 +3895,11 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-grid
@@ -3654,7 +3926,7 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
-  min-height: var(--dynamic-views-side-cover-min-height, 175px);
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
 }
 
 /* Cover-right: content padding */
@@ -3662,6 +3934,10 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover)
   .card-title,
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover)
+  .card-subtitle,
 .dynamic-views
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover)
@@ -3675,6 +3951,11 @@ body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-grid
@@ -3690,6 +3971,11 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-grid
@@ -3715,7 +4001,7 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
-  min-height: var(--dynamic-views-side-cover-min-height, 175px);
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
 }
 
 /* Masonry view: spacing for cards with actual covers OR when placeholder should show */
@@ -3728,6 +4014,10 @@ body.dynamic-views-show-cover-placeholder-both
 .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover)
+  .card-subtitle,
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover)
   .card-content,
 .dynamic-views
   .dynamic-views-masonry
@@ -3738,6 +4028,11 @@ body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views
   .dynamic-views-masonry
@@ -3753,6 +4048,11 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-masonry
@@ -3779,7 +4079,7 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
-  min-height: var(--dynamic-views-side-cover-min-height, 175px);
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
 }
 
 /* Cover-right: content padding */
@@ -3787,6 +4087,10 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover)
   .card-title,
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover)
+  .card-subtitle,
 .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover)
@@ -3800,6 +4104,11 @@ body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views
   .dynamic-views-masonry
@@ -3815,6 +4124,11 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   .card-title,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  .card-subtitle,
 body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-masonry
@@ -3840,7 +4154,7 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
-  min-height: var(--dynamic-views-side-cover-min-height, 175px);
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
 }
 
 /* Placeholder color mappings - organized by cover background type */
@@ -4053,10 +4367,10 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
   background-color: transparent;
 }
 
-/* ==================== CAROUSEL STYLES ==================== */
+/* ==================== SLIDESHOW STYLES ==================== */
 
 /* Slides container - inherits positioning from .card-cover */
-.dynamic-views .carousel-slides {
+.dynamic-views .slideshow-slides {
   position: absolute;
   top: 0;
   left: 0;
@@ -4065,40 +4379,42 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
   overflow: hidden;
 }
 
-/* Individual slides */
-.dynamic-views .carousel-slide {
+/* Individual slides - hidden by default, active slide shown */
+.dynamic-views .slideshow-slide {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  opacity: 0;
+  pointer-events: none;
   transition:
     transform 0.3s ease-in-out,
     opacity 0.3s ease-in-out;
 }
 
-.dynamic-views .carousel-slide.slide-left {
+.dynamic-views .slideshow-slide.slide-left {
   opacity: 0;
   pointer-events: none;
   transform: translateX(-100%);
 }
 
-.dynamic-views .carousel-slide.slide-right {
+.dynamic-views .slideshow-slide.slide-right {
   opacity: 0;
   pointer-events: none;
   transform: translateX(100%);
 }
 
 /* is-active must come last to override position classes */
-.dynamic-views .carousel-slide.is-active {
+.dynamic-views .slideshow-slide.is-active {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(0);
 }
 
 /* Navigation arrows */
-.dynamic-views .carousel-nav-left,
-.dynamic-views .carousel-nav-right {
+.dynamic-views .slideshow-nav-left,
+.dynamic-views .slideshow-nav-right {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -4113,53 +4429,53 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
   transition: opacity 0.2s ease;
 }
 
-.dynamic-views .carousel-nav-left {
+.dynamic-views .slideshow-nav-left {
   left: 4px;
 }
 
-.dynamic-views .carousel-nav-right {
+.dynamic-views .slideshow-nav-right {
   right: 4px;
 }
 
 /* Show arrows on hover */
-.dynamic-views .card-cover-carousel:hover .carousel-nav-left,
-.dynamic-views .card-cover-carousel:hover .carousel-nav-right {
+.dynamic-views .card-cover-slideshow:hover .slideshow-nav-left,
+.dynamic-views .card-cover-slideshow:hover .slideshow-nav-right {
   opacity: 1;
 }
 
 /* Arrow icons */
-.dynamic-views .carousel-nav-left svg,
-.dynamic-views .carousel-nav-right svg {
+.dynamic-views .slideshow-nav-left svg,
+.dynamic-views .slideshow-nav-right svg {
   width: 20px;
   height: 20px;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
     drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
 }
 
-.theme-light .dynamic-views .carousel-nav-left svg,
-.theme-light .dynamic-views .carousel-nav-right svg {
+.theme-light .dynamic-views .slideshow-nav-left svg,
+.theme-light .dynamic-views .slideshow-nav-right svg {
   color: white;
 }
 
-.theme-dark .dynamic-views .carousel-nav-left svg,
-.theme-dark .dynamic-views .carousel-nav-right svg {
+.theme-dark .dynamic-views .slideshow-nav-left svg,
+.theme-dark .dynamic-views .slideshow-nav-right svg {
   color: rgb(209, 209, 209);
 }
 
 /* Mobile: Always show arrows and larger touch targets */
-.is-mobile .dynamic-views .carousel-nav-left,
-.is-mobile .dynamic-views .carousel-nav-right {
+.is-mobile .dynamic-views .slideshow-nav-left,
+.is-mobile .dynamic-views .slideshow-nav-right {
   opacity: 1;
 }
 
-.is-mobile .dynamic-views .carousel-nav-left svg,
-.is-mobile .dynamic-views .carousel-nav-right svg {
+.is-mobile .dynamic-views .slideshow-nav-left svg,
+.is-mobile .dynamic-views .slideshow-nav-right svg {
   width: 24px;
   height: 24px;
 }
 
 /* Slideshow indicator */
-.dynamic-views .carousel-indicator {
+.dynamic-views .slideshow-indicator {
   position: absolute;
   right: 8px;
   bottom: calc(8px + var(--image-offset-bottom, 0px));
@@ -4171,46 +4487,53 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
   z-index: 3;
 }
 
-.dynamic-views .carousel-indicator svg {
+/* Hide slideshow indicator when toggle is on */
+body.dynamic-views-hide-slideshow-indicator
+  .dynamic-views
+  .slideshow-indicator {
+  display: none;
+}
+
+.dynamic-views .slideshow-indicator svg {
   width: 16px;
   height: 16px;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
     drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
 }
 
-.theme-light .dynamic-views .carousel-indicator svg {
+.theme-light .dynamic-views .slideshow-indicator svg {
   color: white;
 }
 
-.theme-dark .dynamic-views .carousel-indicator svg {
+.theme-dark .dynamic-views .slideshow-indicator svg {
   color: rgb(209, 209, 209);
 }
 
 /* Hide indicator when zoomed */
-.dynamic-views .image-embed.is-zoomed .carousel-indicator {
+.dynamic-views .image-embed.is-zoomed .slideshow-indicator {
   display: none;
 }
 
 /* Mobile: Larger indicator */
-.is-mobile .dynamic-views .carousel-indicator {
+.is-mobile .dynamic-views .slideshow-indicator {
   width: 24px;
   height: 24px;
   right: 6px;
   bottom: calc(6px + var(--image-offset-bottom, 0px));
 }
 
-.is-mobile .dynamic-views .carousel-indicator svg {
+.is-mobile .dynamic-views .slideshow-indicator svg {
   width: 20px;
   height: 20px;
 }
 
 /* Cover bottom position: move indicator to top */
-.dynamic-views .card.card-cover-bottom .carousel-indicator {
+.dynamic-views .card.card-cover-bottom .slideshow-indicator {
   top: 8px;
   bottom: auto;
 }
 
-.is-mobile .dynamic-views .card.card-cover-bottom .carousel-indicator {
+.is-mobile .dynamic-views .card.card-cover-bottom .slideshow-indicator {
   top: 6px;
 }
 
@@ -4218,7 +4541,7 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
 .dynamic-views .card-properties {
   font-size: var(
     --dynamic-views-property-master-font-size,
-    var(--font-smaller)
+    var(--font-ui-small)
   );
   color: var(--text-faint);
   min-height: 24px;
@@ -4251,14 +4574,19 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
   margin-right: 0.3em;
 }
 
-/* Edge positioning is default: right-side fields (even) show icon on right */
-.dynamic-views .property-field-2 .timestamp-icon,
-.dynamic-views .property-field-4 .timestamp-icon,
-.dynamic-views .property-field-6 .timestamp-icon,
-.dynamic-views .property-field-8 .timestamp-icon,
-.dynamic-views .property-field-10 .timestamp-icon,
-.dynamic-views .property-field-12 .timestamp-icon,
-.dynamic-views .property-field-14 .timestamp-icon {
+/* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
+.dynamic-views
+  .property-row-sidebyside
+  :is(
+    .property-field-2,
+    .property-field-4,
+    .property-field-6,
+    .property-field-8,
+    .property-field-10,
+    .property-field-12,
+    .property-field-14
+  )
+  .timestamp-icon {
   order: 2;
   margin-right: 0;
   margin-left: 0.3em;
@@ -4275,102 +4603,57 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
   margin-left: 0.3em;
 }
 
-/* Center positioning: odd fields (left side) show icon on right */
+/* Center positioning: odd fields show icon on right ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
-  .property-field-1
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-3
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-5
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-7
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-9
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-11
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-13
+  .property-row-sidebyside
+  :is(
+    .property-field-1,
+    .property-field-3,
+    .property-field-5,
+    .property-field-7,
+    .property-field-9,
+    .property-field-11,
+    .property-field-13
+  )
   .timestamp-icon {
   order: 2;
   margin-right: 0;
   margin-left: 0.3em;
 }
 
-/* Center positioning: even fields (right side) show icon on left */
+/* Center positioning: even fields show icon on left ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
-  .property-field-2
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-4
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-6
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-8
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-10
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-12
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-field-14
+  .property-row-sidebyside
+  :is(
+    .property-field-2,
+    .property-field-4,
+    .property-field-6,
+    .property-field-8,
+    .property-field-10,
+    .property-field-12,
+    .property-field-14
+  )
   .timestamp-icon {
   order: 0;
   margin-right: 0.3em;
   margin-left: 0;
 }
 
-/* Left positioning: even fields (right side) reset to left */
+/* Left positioning: even fields reset to left ONLY in side-by-side (counters edge default) */
 body.dynamic-views-timestamp-icon-left
   .dynamic-views
-  .property-field-2
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-field-4
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-field-6
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-field-8
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-field-10
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-field-12
-  .timestamp-icon,
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-field-14
+  .property-row-sidebyside
+  :is(
+    .property-field-2,
+    .property-field-4,
+    .property-field-6,
+    .property-field-8,
+    .property-field-10,
+    .property-field-12,
+    .property-field-14
+  )
   .timestamp-icon {
   order: 0;
   margin-right: 0.3em;
@@ -4429,22 +4712,21 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
 /* Base tag styles */
 .dynamic-views .card-properties .tag,
 .dynamic-views .card-subtitle .tag,
-.dynamic-views .list-meta .tag {
+.dynamic-views .list-properties .tag {
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.dynamic-views .list-meta .tag {
+.dynamic-views .list-properties .tag {
   display: inline-block;
   cursor: pointer;
-  font-size: 0.85em;
 }
 
 /* Tag style: Outline (default) */
 .dynamic-views .card-properties .tag,
 .dynamic-views .card-subtitle .tag,
-.dynamic-views .list-meta .tag {
+.dynamic-views .list-properties .tag {
   background-color: transparent;
   border-radius: var(--tag-radius);
   border: 1px solid var(--background-modifier-border);
@@ -4453,7 +4735,7 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
 
 .dynamic-views .card-properties .tag:hover,
 .dynamic-views .card-subtitle .tag:hover,
-.dynamic-views .list-meta .tag:hover {
+.dynamic-views .list-properties .tag:hover {
   border-color: var(--background-modifier-border-hover);
   opacity: 1;
 }
@@ -4471,7 +4753,7 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
 /* Tag style: Match theme */
 body.dynamic-views-tag-style-theme .dynamic-views .card-properties .tag,
 body.dynamic-views-tag-style-theme .dynamic-views .card-subtitle .tag,
-body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag {
+body.dynamic-views-tag-style-theme .dynamic-views .list-properties .tag {
   background-color: var(--tag-background);
   color: var(--tag-color);
   border: none;
@@ -4480,7 +4762,7 @@ body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag {
 
 body.dynamic-views-tag-style-theme .dynamic-views .card-properties .tag:hover,
 body.dynamic-views-tag-style-theme .dynamic-views .card-subtitle .tag:hover,
-body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag:hover {
+body.dynamic-views-tag-style-theme .dynamic-views .list-properties .tag:hover {
   background-color: var(--tag-background-hover);
   color: var(--tag-color);
   opacity: 1;
@@ -4489,7 +4771,7 @@ body.dynamic-views-tag-style-theme .dynamic-views .list-meta .tag:hover {
 /* Tag style: Plaintext */
 body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag,
 body.dynamic-views-tag-style-plaintext .dynamic-views .card-subtitle .tag,
-body.dynamic-views-tag-style-plaintext .dynamic-views .list-meta .tag {
+body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
   background-color: transparent;
   border: none;
   padding: 0;
@@ -4694,6 +4976,7 @@ body.dynamic-views-tag-style-pill.dynamic-views-tag-color-custom
   )
   .property-content {
   justify-content: flex-start;
+  order: 0;
 }
 
 .dynamic-views
@@ -4729,22 +5012,6 @@ body.dynamic-views-tag-style-pill.dynamic-views-tag-color-custom
   order: 0;
   padding-left: 0;
   padding-right: var(--size-4-1);
-}
-
-.dynamic-views
-  .card.compact-mode
-  .property-row.property-row-sidebyside
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-content {
-  order: 0;
 }
 
 /* Right alignment for full-row properties with inline labels - value only */
@@ -5060,45 +5327,144 @@ body.dynamic-views-property-label-color-custom
   color: var(--dynamic-views-property-label-color-custom, var(--text-faint));
 }
 
-/* Property text color presets */
-body.dynamic-views-property-color-faint .dynamic-views .property-field {
+/* Property text color presets - with labels */
+body.dynamic-views-property-color-with-labels-faint
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-faint);
 }
-body.dynamic-views-property-color-muted .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-muted
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-muted);
 }
-body.dynamic-views-property-color-normal .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-normal
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-normal);
 }
-body.dynamic-views-property-color-accent .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-accent
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-accent);
 }
-body.dynamic-views-property-color-red .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-red
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-red);
 }
-body.dynamic-views-property-color-orange .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-orange
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-orange);
 }
-body.dynamic-views-property-color-yellow .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-yellow
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-yellow);
 }
-body.dynamic-views-property-color-green .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-green
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-green);
 }
-body.dynamic-views-property-color-cyan .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-cyan
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-cyan);
 }
-body.dynamic-views-property-color-blue .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-blue
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-blue);
 }
-body.dynamic-views-property-color-purple .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-purple
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-purple);
 }
-body.dynamic-views-property-color-pink .dynamic-views .property-field {
+body.dynamic-views-property-color-with-labels-pink
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
   color: var(--color-pink);
 }
-body.dynamic-views-property-color-custom .dynamic-views .property-field {
-  color: var(--dynamic-views-property-color-custom, var(--text-faint));
+body.dynamic-views-property-color-with-labels-custom
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
+  color: var(
+    --dynamic-views-property-color-with-labels-custom,
+    var(--text-faint)
+  );
+}
+
+/* Property text color presets - without labels */
+body.dynamic-views-property-color-without-labels-faint
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-faint);
+}
+body.dynamic-views-property-color-without-labels-muted
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-muted);
+}
+body.dynamic-views-property-color-without-labels-normal
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-normal);
+}
+body.dynamic-views-property-color-without-labels-accent
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-accent);
+}
+body.dynamic-views-property-color-without-labels-red
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-red);
+}
+body.dynamic-views-property-color-without-labels-orange
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-orange);
+}
+body.dynamic-views-property-color-without-labels-yellow
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-yellow);
+}
+body.dynamic-views-property-color-without-labels-green
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-green);
+}
+body.dynamic-views-property-color-without-labels-cyan
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-cyan);
+}
+body.dynamic-views-property-color-without-labels-blue
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-blue);
+}
+body.dynamic-views-property-color-without-labels-purple
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-purple);
+}
+body.dynamic-views-property-color-without-labels-pink
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--color-pink);
+}
+body.dynamic-views-property-color-without-labels-custom
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(
+    --dynamic-views-property-color-without-labels-custom,
+    var(--text-faint)
+  );
 }
 
 /* Links in properties use Obsidian default colors (not property text color) */
@@ -5423,127 +5789,304 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
     );
   }
 
-  /* Property hover colors (for clickable links and path segments, excluding tags) */
-  body.dynamic-views-property-color-faint
+  /* Property hover colors - with labels */
+  body.dynamic-views-property-color-with-labels-faint
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-faint
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: var(--text-muted);
   }
-  body.dynamic-views-property-color-muted
+  body.dynamic-views-property-color-with-labels-muted
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-muted
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: var(--text-normal);
   }
   /* Normal - no hover color change */
-  body.dynamic-views-property-color-accent
+  body.dynamic-views-property-color-with-labels-accent
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-accent
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: var(--text-accent-hover);
   }
-  body.dynamic-views-property-color-red
+  body.dynamic-views-property-color-with-labels-red
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-red
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-red), white 15%);
   }
-  body.dynamic-views-property-color-orange
+  body.dynamic-views-property-color-with-labels-orange
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-orange
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-orange), white 15%);
   }
-  body.dynamic-views-property-color-yellow
+  body.dynamic-views-property-color-with-labels-yellow
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-yellow
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-yellow), white 15%);
   }
-  body.dynamic-views-property-color-green
+  body.dynamic-views-property-color-with-labels-green
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-green
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-green), white 15%);
   }
-  body.dynamic-views-property-color-cyan
+  body.dynamic-views-property-color-with-labels-cyan
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-cyan
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-cyan), white 15%);
   }
-  body.dynamic-views-property-color-blue
+  body.dynamic-views-property-color-with-labels-blue
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-blue
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-blue), white 15%);
   }
-  body.dynamic-views-property-color-purple
+  body.dynamic-views-property-color-with-labels-purple
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-purple
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-purple), white 15%);
   }
-  body.dynamic-views-property-color-pink
+  body.dynamic-views-property-color-with-labels-pink
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-pink
-    .dynamic-views
-    .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
     color: color-mix(in hsl, var(--color-pink), white 15%);
   }
-  body.dynamic-views-property-color-custom
+  body.dynamic-views-property-color-with-labels-custom
     .dynamic-views
+    .property-field:has(:is(.property-label, .property-label-inline))
     .property-content
-    a:not(.tag):not(.internal-link):not(.external-link):hover,
-  body.dynamic-views-property-color-custom
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(
+      --dynamic-views-property-color-with-labels-custom-hover,
+      var(--text-muted)
+    );
+  }
+
+  /* Property hover colors - without labels */
+  body.dynamic-views-property-color-without-labels-faint
     .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
-    :is(.file-path-segment, .folder-segment, .filename-segment):hover {
-    color: var(--dynamic-views-property-color-custom-hover, var(--text-muted));
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-property-color-without-labels-muted
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-normal);
+  }
+  /* Normal - no hover color change */
+  body.dynamic-views-property-color-without-labels-accent
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-accent-hover);
+  }
+  body.dynamic-views-property-color-without-labels-red
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-red), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-orange
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-orange), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-yellow
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-yellow), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-green
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-green), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-cyan
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-cyan), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-blue
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-blue), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-purple
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-purple), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-pink
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(in hsl, var(--color-pink), white 15%);
+  }
+  body.dynamic-views-property-color-without-labels-custom
+    .dynamic-views
+    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .file-path-segment,
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(
+      --dynamic-views-property-color-without-labels-custom-hover,
+      var(--text-muted)
+    );
   }
 
   /* Tag hover colors */
@@ -5719,7 +6262,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   text-align: right;
 }
 
-/* Universal meta-content wrapper */
+/* Universal property-content wrapper */
 .dynamic-views .property-content {
   display: flex;
   align-items: center;
@@ -5733,12 +6276,16 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   width: max-content;
 }
 
-/* Empty value marker styling (inherited by default, faded when enabled) */
-body.dynamic-views-fade-empty-marker
+/* Empty value marker styling (faded by default, normal when toggle on) */
+.dynamic-views .property-content > span.empty-value-marker {
+  color: var(--text-faint);
+}
+
+body.dynamic-views-no-fade-empty-marker
   .dynamic-views
   .property-content
   > span.empty-value-marker {
-  color: var(--text-faint);
+  color: inherit;
 }
 
 /* Even fields (right side) - content should fill wrapper width for proper alignment */
@@ -5776,9 +6323,13 @@ body.dynamic-views-fade-empty-marker
   display: inline;
 }
 
-/* List separator styling (inherited by default, faded when enabled) */
-body.dynamic-views-fade-list-separator .dynamic-views .list-separator {
+/* List separator styling (faded by default, normal when toggle on) */
+.dynamic-views .list-separator {
   color: var(--text-faint);
+}
+
+body.dynamic-views-no-fade-list-separator .dynamic-views .list-separator {
+  color: inherit;
 }
 
 /* Measurement state: remove min-width to allow natural sizing */
@@ -5788,7 +6339,7 @@ body.dynamic-views-fade-list-separator .dynamic-views .list-separator {
   min-width: 0 !important;
 }
 
-/* Alignment via justify-content on meta-content wrapper */
+/* Alignment via justify-content on property-content wrapper */
 /* Odd fields (left side) */
 .dynamic-views
   .property-row-sidebyside
@@ -5868,6 +6419,7 @@ body.dynamic-views-paired-prop-align-left
   )
   .property-content {
   justify-content: flex-start;
+  order: 0;
 }
 
 body.dynamic-views-paired-prop-align-left
@@ -5905,22 +6457,6 @@ body.dynamic-views-paired-prop-align-left
   padding-right: var(--size-4-1);
 }
 
-body.dynamic-views-paired-prop-align-left
-  .dynamic-views
-  .property-row-sidebyside
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-content {
-  order: 0;
-}
-
 /* Stacked layout */
 .dynamic-views .property-row:not(.property-row-sidebyside) .property-content {
   justify-content: flex-start;
@@ -5931,84 +6467,98 @@ body.dynamic-views-paired-prop-align-left
   display: none;
 }
 
-/* Gradient masks for scrollable content (when enabled via Style Settings) */
-body.dynamic-views-fade-truncated-text
+/* Gradient masks for scrollable content (enabled by default) */
+.dynamic-views .property-content-wrapper.scroll-gradient-left,
+.dynamic-views .card-subtitle.scroll-gradient-left,
+.dynamic-views .card-title.scroll-gradient-left {
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+}
+
+.dynamic-views .property-content-wrapper.scroll-gradient-right,
+.dynamic-views .card-subtitle.scroll-gradient-right,
+.dynamic-views .card-title.scroll-gradient-right {
+  mask-image: linear-gradient(
+    to right,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.dynamic-views .property-content-wrapper.scroll-gradient-both,
+.dynamic-views .card-subtitle.scroll-gradient-both,
+.dynamic-views .card-title.scroll-gradient-both {
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* Remove gradient masks when toggle is on */
+body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .property-content-wrapper.scroll-gradient-left,
-body.dynamic-views-fade-truncated-text
-  .dynamic-views
-  .card-subtitle.scroll-gradient-left,
-body.dynamic-views-fade-truncated-text
-  .dynamic-views
-  .card-title.scroll-gradient-left {
-  mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black 100%
-  );
-}
-
-body.dynamic-views-fade-truncated-text
+body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .property-content-wrapper.scroll-gradient-right,
-body.dynamic-views-fade-truncated-text
-  .dynamic-views
-  .card-subtitle.scroll-gradient-right,
-body.dynamic-views-fade-truncated-text
-  .dynamic-views
-  .card-title.scroll-gradient-right {
-  mask-image: linear-gradient(
-    to right,
-    black 0,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    black 0,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-}
-
-body.dynamic-views-fade-truncated-text
+body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .property-content-wrapper.scroll-gradient-both,
-body.dynamic-views-fade-truncated-text
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-subtitle.scroll-gradient-left,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-subtitle.scroll-gradient-right,
+body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .card-subtitle.scroll-gradient-both,
-body.dynamic-views-fade-truncated-text
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-title.scroll-gradient-left,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-title.scroll-gradient-right,
+body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .card-title.scroll-gradient-both {
-  mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
 /* Hide empty fields */
@@ -6144,7 +6694,7 @@ body.dynamic-views-fade-truncated-text
   color: var(--link-color-hover);
 }
 
-.dynamic-views .list-meta {
+.dynamic-views .list-properties {
   display: inline-flex;
   gap: 4px;
   align-items: center;
@@ -6153,7 +6703,7 @@ body.dynamic-views-fade-truncated-text
   margin-left: 8px;
 }
 
-.dynamic-views .list-meta.list-path {
+.dynamic-views .list-properties.list-path {
   color: var(--text-faint);
 }
 
@@ -6278,7 +6828,7 @@ body.dynamic-views-fade-truncated-text
   /* Switch to single column at narrow widths */
   .dc-wide .dynamic-views .dynamic-views-grid,
   .dc-max .dynamic-views .dynamic-views-grid,
-  .bases-view[data-view-type="dynamic-views-card"] .dynamic-views-grid {
+  .bases-view[data-view-type="dynamic-views-grid"] .dynamic-views-grid {
     display: flex;
     flex-direction: column;
   }
@@ -6350,4 +6900,22 @@ body.dynamic-views-fade-truncated-text
   bottom: 10px;
   width: 2px;
   background-color: var(--background-modifier-border);
+}
+
+/* Feedback button */
+.dynamic-views-feedback-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 20px;
+  margin-bottom: 0;
+  padding: 4px 0;
+  overflow: visible;
+}
+
+.dynamic-views-feedback-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

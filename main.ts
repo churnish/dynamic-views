@@ -4,7 +4,6 @@ import {
   Editor,
   MarkdownView,
   QueryController,
-  Keymap,
   TFile,
 } from "obsidian";
 import { PersistenceManager } from "./src/persistence";
@@ -20,7 +19,11 @@ import {
 import { DynamicViewsSettingTab } from "./src/settings-tab";
 import { setPluginInstance } from "./src/shared/settings-schema";
 import type { DatacoreAPI } from "./src/types/datacore";
-import { openRandomFile, toggleShuffleActiveView } from "./src/utils/randomize";
+import {
+  openRandomFile,
+  toggleShuffleActiveView,
+  getPaneType,
+} from "./src/utils/randomize";
 
 export default class DynamicViewsPlugin extends Plugin {
   persistenceManager: PersistenceManager;
@@ -107,8 +110,10 @@ export default class DynamicViewsPlugin extends Plugin {
     // Notify Style Settings to parse our CSS
     this.app.workspace.trigger("parse-style-settings");
 
-    // Sync overlay opacity from --background-modifier-cover (only if zoom enabled)
-    if (document.body.classList.contains("dynamic-views-image-zoom-enabled")) {
+    // Sync overlay opacity from --background-modifier-cover (only if zoom not disabled)
+    if (
+      !document.body.classList.contains("dynamic-views-image-zoom-disabled")
+    ) {
       this.syncOverlayOpacity();
     }
 
@@ -116,7 +121,7 @@ export default class DynamicViewsPlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on("css-change", () => {
         if (
-          document.body.classList.contains("dynamic-views-image-zoom-enabled")
+          !document.body.classList.contains("dynamic-views-image-zoom-disabled")
         ) {
           this.syncOverlayOpacity();
         }
@@ -165,13 +170,9 @@ export default class DynamicViewsPlugin extends Plugin {
           document.querySelectorAll(".image-embed.is-zoomed").forEach((el) => {
             el.classList.remove("is-zoomed");
           });
-          const defaultOpenInNewPane =
-            this.persistenceManager.getGlobalSettings().openRandomInNewPane;
-          // If modifier key is pressed, invert the default behavior
-          const openInNewPane = Keymap.isModEvent(evt)
-            ? !defaultOpenInNewPane
-            : defaultOpenInNewPane;
-          await openRandomFile(this.app, openInNewPane);
+          const defaultInNewTab =
+            this.persistenceManager.getGlobalSettings().openRandomInNewTab;
+          await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
         },
       );
     }
@@ -196,7 +197,7 @@ export default class DynamicViewsPlugin extends Plugin {
           el.classList.remove("is-zoomed");
         });
         const openInNewPane =
-          this.persistenceManager.getGlobalSettings().openRandomInNewPane;
+          this.persistenceManager.getGlobalSettings().openRandomInNewTab;
         await openRandomFile(this.app, openInNewPane);
       },
     });
@@ -292,5 +293,11 @@ return dv.createView(dc, USER_QUERY);
     }
   }
 
-  onunload() {}
+  onunload() {
+    // Remove open-on class added during load
+    const settings = this.persistenceManager.getGlobalSettings();
+    document.body.classList.remove(
+      `dynamic-views-open-on-${settings.openFileAction}`,
+    );
+  }
 }

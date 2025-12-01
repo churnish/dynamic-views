@@ -11,6 +11,22 @@ function getCSSVariable(name: string, defaultValue: string): string {
 }
 
 /**
+ * Read a CSS text variable, stripping surrounding quotes
+ * Style Settings wraps text values in quotes
+ */
+function getCSSTextVariable(name: string, defaultValue: string): string {
+  let value = getComputedStyle(document.body).getPropertyValue(name).trim();
+  // Strip surrounding quotes if present (Style Settings adds them)
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1);
+  }
+  return value || defaultValue;
+}
+
+/**
  * Parse a CSS variable as a number (removing units like 'px')
  */
 function getCSSVariableAsNumber(name: string, defaultValue: number): number {
@@ -77,21 +93,50 @@ export function showTagHashPrefix(): boolean {
  * Get card spacing from CSS variable
  */
 export function getCardSpacing(): number {
-  return getCSSVariableAsNumber("--dynamic-views-card-spacing", 12);
+  return getCSSVariableAsNumber("--dynamic-views-card-spacing", 8);
 }
 
 /**
- * Check if recent timestamps should show time only
+ * Check if recent timestamps should show time only (default behavior)
+ * Returns false when user enables "Show full recent timestamps"
  */
 export function shouldShowRecentTimeOnly(): boolean {
-  return hasBodyClass("dynamic-views-timestamp-recent-time-only");
+  return !hasBodyClass("dynamic-views-timestamp-recent-full");
 }
 
 /**
- * Check if older timestamps should show date only
+ * Check if older timestamps should show date only (default behavior)
+ * Returns false when user enables "Show full older timestamps"
  */
 export function shouldShowOlderDateOnly(): boolean {
-  return hasBodyClass("dynamic-views-timestamp-older-date-only");
+  return !hasBodyClass("dynamic-views-timestamp-older-full");
+}
+
+/**
+ * Get datetime format from Style Settings
+ * Returns Moment.js format string for full datetime display
+ */
+export function getDatetimeFormat(): string {
+  return getCSSTextVariable(
+    "--dynamic-views-datetime-format",
+    "YYYY-MM-DD HH:mm",
+  );
+}
+
+/**
+ * Get date format from Style Settings
+ * Returns Moment.js format string for date-only display (older timestamps)
+ */
+export function getDateFormat(): string {
+  return getCSSTextVariable("--dynamic-views-date-format", "YYYY-MM-DD");
+}
+
+/**
+ * Get time format from Style Settings
+ * Returns Moment.js format string for time-only display (recent timestamps)
+ */
+export function getTimeFormat(): string {
+  return getCSSTextVariable("--dynamic-views-time-format", "HH:mm");
 }
 
 /**
@@ -99,21 +144,7 @@ export function shouldShowOlderDateOnly(): boolean {
  * Returns the separator for list-type properties
  */
 export function getListSeparator(): string {
-  // Read without trim to preserve whitespace
-  let value = getComputedStyle(document.body).getPropertyValue(
-    "--dynamic-views-list-separator",
-  );
-
-  // Strip surrounding quotes if present (Style Settings or CSS default adds them)
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    value = value.slice(1, -1);
-  }
-
-  // Fallback to default if empty (Style Settings shows placeholder but doesn't set variable)
-  return value || ", ";
+  return getCSSTextVariable("--dynamic-views-list-separator", ", ");
 }
 
 /**
@@ -121,21 +152,7 @@ export function getListSeparator(): string {
  * Returns the symbol for empty property values
  */
 export function getEmptyValueMarker(): string {
-  // Read without trim to preserve whitespace
-  let value = getComputedStyle(document.body).getPropertyValue(
-    "--dynamic-views-empty-value-marker",
-  );
-
-  // Strip surrounding quotes if present (Style Settings or CSS default adds them)
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    value = value.slice(1, -1);
-  }
-
-  // Fallback to default if empty (Style Settings shows placeholder but doesn't set variable)
-  return value || "—";
+  return getCSSTextVariable("--dynamic-views-empty-value-marker", "—");
 }
 
 /**
@@ -162,6 +179,22 @@ export function getZoomSensitivity(): number {
 }
 
 /**
+ * Check if slideshow is enabled (default behavior)
+ * Returns false when user enables "Disable slideshow"
+ */
+export function isSlideshowEnabled(): boolean {
+  return !hasBodyClass("dynamic-views-slideshow-disabled");
+}
+
+/**
+ * Check if slideshow indicator should be shown (default behavior)
+ * Returns false when user enables "Hide slideshow indicator"
+ */
+export function isSlideshowIndicatorEnabled(): boolean {
+  return !hasBodyClass("dynamic-views-hide-slideshow-indicator");
+}
+
+/**
  * Type for Style Settings color cache
  */
 export interface StyleSettingsColorCache {
@@ -169,7 +202,7 @@ export interface StyleSettingsColorCache {
   snippetColor?: { light?: string; dark?: string };
   tagsColor?: { light?: string; dark?: string };
   timestampColor?: { light?: string; dark?: string };
-  metadataColor?: { light?: string; dark?: string };
+  propertyColor?: { light?: string; dark?: string };
 }
 
 /**
@@ -208,10 +241,10 @@ export function applyCustomColors(
       cache.timestampColor[theme],
     );
   }
-  if (cache.metadataColor?.[theme]) {
+  if (cache.propertyColor?.[theme]) {
     cardEl.style.setProperty(
-      "--dynamic-views-metadata-color",
-      cache.metadataColor[theme],
+      "--dynamic-views-property-color",
+      cache.propertyColor[theme],
     );
   }
 }

@@ -1,6 +1,6 @@
 export interface Settings {
   titleProperty: string;
-  descriptionProperty: string;
+  textPreviewProperty: string;
   imageProperty: string;
   urlProperty: string;
   omitFirstLine: boolean;
@@ -50,13 +50,12 @@ export interface Settings {
     | "cover-right";
   coverFitMode: "crop" | "contain";
   imageAspectRatio: number;
-  timestampFormat: string;
   listMarker: string;
   randomizeAction: string;
   thumbnailCacheSize: "minimal" | "small" | "balanced" | "large" | "unlimited";
   queryHeight: number;
   openFileAction: "card" | "title";
-  openRandomInNewPane: boolean;
+  openRandomInNewTab: boolean;
   showShuffleInRibbon: boolean;
   showRandomInRibbon: boolean;
   smartTimestamp: boolean;
@@ -76,7 +75,7 @@ export interface UIState {
 
 export interface DefaultViewSettings {
   titleProperty: string;
-  descriptionProperty: string;
+  textPreviewProperty: string;
   imageProperty: string;
   urlProperty: string;
   propertyDisplay1: string;

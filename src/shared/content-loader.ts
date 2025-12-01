@@ -106,13 +106,13 @@ export async function loadImagesForEntries(
 
 /**
  * Loads text snippet/preview for an entry
- * Handles property description, fallback to content, and caching
+ * Handles text preview property, fallback to content, and caching
  *
  * @param path - File path for the entry
  * @param file - TFile object
  * @param app - Obsidian app instance
- * @param descriptionData - Description property value
- * @param fallbackToContent - Whether to fall back to file content if no description
+ * @param textPreviewData - Text preview property value
+ * @param fallbackToContent - Whether to fall back to file content if no text preview
  * @param omitFirstLine - Whether to omit first line from preview
  * @param snippetCache - Cache object to store loaded snippets
  * @param fileName - Optional file name for title comparison (Datacore only)
@@ -122,7 +122,7 @@ export async function loadSnippetForEntry(
   path: string,
   file: TFile,
   app: App,
-  descriptionData: unknown,
+  textPreviewData: unknown,
   fallbackToContent: boolean,
   omitFirstLine: boolean,
   snippetCache: Record<string, string>,
@@ -140,7 +140,7 @@ export async function loadSnippetForEntry(
       snippetCache[path] = await loadFilePreview(
         file,
         app,
-        descriptionData,
+        textPreviewData,
         {
           fallbackToContent,
           omitFirstLine,
@@ -160,8 +160,8 @@ export async function loadSnippetForEntry(
 /**
  * Loads snippets for multiple entries in parallel
  *
- * @param entries - Array of entries with path, file, and descriptionData
- * @param fallbackToContent - Whether to fall back to file content if no description
+ * @param entries - Array of entries with path, file, and textPreviewData
+ * @param fallbackToContent - Whether to fall back to file content if no text preview
  * @param omitFirstLine - Whether to omit first line from preview
  * @param app - Obsidian app instance
  * @param snippetCache - Cache object to store loaded snippets
@@ -170,7 +170,7 @@ export async function loadSnippetsForEntries(
   entries: Array<{
     path: string;
     file: TFile;
-    descriptionData: unknown;
+    textPreviewData: unknown;
     fileName?: string;
     titleString?: string;
   }>,
@@ -185,7 +185,7 @@ export async function loadSnippetsForEntries(
         entry.path,
         entry.file,
         app,
-        entry.descriptionData,
+        entry.textPreviewData,
         fallbackToContent,
         omitFirstLine,
         snippetCache,

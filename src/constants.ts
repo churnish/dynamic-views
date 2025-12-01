@@ -2,7 +2,7 @@ import { Settings, DefaultViewSettings } from "./types";
 
 export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
   titleProperty: "",
-  descriptionProperty: "",
+  textPreviewProperty: "",
   imageProperty: "",
   urlProperty: "",
   propertyDisplay1: "file.tags",
@@ -49,7 +49,7 @@ export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
 
 export const DEFAULT_SETTINGS: Settings = {
   titleProperty: "",
-  descriptionProperty: "",
+  textPreviewProperty: "",
   imageProperty: "",
   urlProperty: "",
   omitFirstLine: false,
@@ -90,13 +90,12 @@ export const DEFAULT_SETTINGS: Settings = {
   imageFormat: "thumbnail-right",
   coverFitMode: "crop",
   imageAspectRatio: 1.0,
-  timestampFormat: "",
   listMarker: "bullet",
   randomizeAction: "shuffle",
   thumbnailCacheSize: "balanced",
   queryHeight: 0,
   openFileAction: "card",
-  openRandomInNewPane: true,
+  openRandomInNewTab: true,
   showShuffleInRibbon: true,
   showRandomInRibbon: true,
   smartTimestamp: true,

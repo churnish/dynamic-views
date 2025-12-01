@@ -6,6 +6,134 @@ import type { App, BasesEntry } from "obsidian";
 import type { DatacoreFile, DatacoreDate } from "../types/datacore";
 
 /**
+ * Type declarations for undocumented Bases API
+ */
+interface BasesPropertyConfig {
+  propertyId: string;
+  getDisplayName(): string;
+}
+
+interface BasesQuery {
+  properties: Record<string, BasesPropertyConfig>;
+  formulas: Record<string, unknown>;
+}
+
+interface BasesView {
+  query: BasesQuery;
+}
+
+/**
+ * Hardcoded fallback map: display name → syntax name
+ * Used when Bases API is unavailable
+ */
+const DEFAULT_DISPLAY_TO_SYNTAX: Record<string, string> = {
+  "file name": "file.name",
+  "file backlinks": "file.backlinks",
+  "file base name": "file.basename",
+  "created time": "file.ctime",
+  "file embeds": "file.embeds",
+  "file extension": "file.ext",
+  folder: "file.folder",
+  "file full name": "file.fullname",
+  "file links": "file.links",
+  "modified time": "file.mtime",
+  "file path": "file.path",
+  "file size": "file.size",
+  "file tags": "file.tags",
+};
+
+/**
+ * Build reverse lookup map from Bases view's query.properties
+ * Returns displayName → syntaxName mapping
+ */
+function buildDisplayToSyntaxMap(app: App): Record<string, string> | null {
+  try {
+    const leaves = app.workspace.getLeavesOfType("bases");
+    if (!leaves || leaves.length === 0) return null;
+
+    const view = leaves[0].view as unknown as BasesView;
+    if (!view?.query?.properties) return null;
+
+    const map: Record<string, string> = {};
+    for (const [syntaxName, config] of Object.entries(view.query.properties)) {
+      if (config && typeof config.getDisplayName === "function") {
+        const displayName = config.getDisplayName();
+        if (displayName) {
+          map[displayName] = syntaxName;
+        }
+      }
+    }
+    return map;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get formula names from Bases view's query.formulas
+ */
+function getFormulaNames(app: App): Set<string> {
+  try {
+    const leaves = app.workspace.getLeavesOfType("bases");
+    if (!leaves || leaves.length === 0) return new Set();
+
+    const view = leaves[0].view as unknown as BasesView;
+    if (!view?.query?.formulas) return new Set();
+
+    return new Set(Object.keys(view.query.formulas));
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Normalize property name to Bases syntax format
+ * Accepts both display names ("file name") and syntax names ("file.name")
+ *
+ * @param app - Obsidian app instance
+ * @param propertyName - User-entered property name
+ * @returns Normalized syntax name for Bases getValue()
+ */
+export function normalizePropertyName(app: App, propertyName: string): string {
+  if (!propertyName || !propertyName.trim()) return propertyName;
+
+  const trimmed = propertyName.trim();
+
+  // 1. Already in syntax format - pass through
+  if (
+    trimmed.startsWith("file.") ||
+    trimmed.startsWith("formula.") ||
+    trimmed.startsWith("note.")
+  ) {
+    return trimmed;
+  }
+
+  // 2. Try dynamic API first
+  const dynamicMap = buildDisplayToSyntaxMap(app);
+  if (dynamicMap) {
+    // API available - only use dynamic lookup
+    if (trimmed in dynamicMap) {
+      return dynamicMap[trimmed];
+    }
+    // Don't fall back to hardcoded defaults when API is available
+  } else {
+    // 3. API unavailable - use hardcoded fallback
+    if (trimmed in DEFAULT_DISPLAY_TO_SYNTAX) {
+      return DEFAULT_DISPLAY_TO_SYNTAX[trimmed];
+    }
+  }
+
+  // 4. Check if it's a formula name (without prefix)
+  const formulaNames = getFormulaNames(app);
+  if (formulaNames.has(trimmed)) {
+    return `formula.${trimmed}`;
+  }
+
+  // 5. Otherwise return as-is (note property bare name)
+  return trimmed;
+}
+
+/**
  * Get first non-empty property value from comma-separated list (Bases)
  * Accepts any property type (text, number, checkbox, date, datetime, list)
  */

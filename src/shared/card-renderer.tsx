@@ -4,7 +4,7 @@
  */
 
 import type { App } from "obsidian";
-import { TFile, TFolder, Menu } from "obsidian";
+import { TFile, TFolder, Menu, setIcon } from "obsidian";
 import type { Settings } from "../types";
 import type { RefObject } from "../types/datacore";
 import {
@@ -14,11 +14,129 @@ import {
   shouldHideMissingProperties,
   shouldHideEmptyProperties,
   getListSeparator,
+  isSlideshowEnabled,
+  isSlideshowIndicatorEnabled,
 } from "../utils/style-settings";
-import { getPropertyLabel } from "../utils/property";
+import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
-import { handleImageLoad } from "./image-loader";
+import {
+  getFileTypeIcon,
+  getFileExtInfo,
+  stripExtFromTitle,
+} from "../utils/file-extension";
+import {
+  handleJsxImageRef,
+  handleJsxImageLoad,
+  handleJsxImageError,
+} from "./image-loader";
 import { handleImageZoomClick } from "./image-zoom-handler";
+
+/**
+ * Render file type icon as JSX
+ */
+function renderFileTypeIcon(path: string) {
+  const icon = getFileTypeIcon(path);
+  if (!icon) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return (
+    <span
+      className="card-title-icon"
+      ref={(el: HTMLElement | null) => {
+        if (el) setIcon(el, icon);
+      }}
+    />
+  );
+}
+
+/**
+ * Truncate title text to fit within container with ellipsis
+ * Preserves extension visibility when present
+ */
+function truncateTitleWithExtension(titleEl: HTMLElement): void {
+  // Find text element (extension element is optional)
+  const textEl =
+    titleEl.querySelector<HTMLElement>(".card-title-text-content") ||
+    titleEl.querySelector<HTMLElement>("a.internal-link");
+
+  if (!textEl) return;
+
+  const containerStyle = getComputedStyle(titleEl);
+  const lineHeight = parseFloat(containerStyle.lineHeight);
+  const maxLines = parseInt(
+    containerStyle.getPropertyValue("--dynamic-views-title-lines") || "2",
+  );
+  const maxHeight = lineHeight * maxLines;
+
+  const fullText = textEl.textContent || "";
+  if (!fullText) return;
+
+  // Check if truncation needed
+  if (titleEl.scrollHeight <= maxHeight) return;
+
+  // Binary search for max text that fits
+  let low = 0;
+  let high = fullText.length;
+  const ellipsis = "…";
+
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    textEl.textContent = fullText.slice(0, mid) + ellipsis;
+
+    if (titleEl.scrollHeight <= maxHeight) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  // Set final truncated text
+  textEl.textContent = fullText.slice(0, low) + ellipsis;
+
+  // Safety: keep reducing if still overflowing (ensures extension visible)
+  while (titleEl.scrollHeight > maxHeight && low > 0) {
+    low--;
+    textEl.textContent = fullText.slice(0, low) + ellipsis;
+  }
+}
+
+/**
+ * Render file extension as JSX
+ * When openFileAction is 'title', extension is clickable/draggable
+ */
+function renderFileExt(
+  path: string,
+  settings: Settings,
+  app: App,
+  handleDrag: (e: DragEvent) => void,
+  isFullname: boolean,
+) {
+  // Force show extension when titleProperty is file.fullname (bypass hidden list)
+  const extInfo = getFileExtInfo(path, isFullname);
+  if (!extInfo) return null;
+
+  if (settings.openFileAction === "title") {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return (
+      <span
+        className="card-title-ext clickable"
+        draggable={true}
+        onDragStart={handleDrag}
+        onClick={(e: MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const newLeaf = e.metaKey || e.ctrlKey;
+          void app.workspace.openLinkText(path, "", newLeaf);
+        }}
+      >
+        {extInfo.ext}
+      </span>
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return <span className="card-title-ext">{extInfo.ext}</span>;
+}
 
 /**
  * Render a single link as JSX
@@ -249,21 +367,21 @@ function renderPropertyContent(
 }
 
 /**
- * Cover carousel component for multiple images
- * Uses ref callback to create imperative carousel after mount
+ * Cover slideshow component for multiple images
+ * Uses ref callback to create imperative slideshow after mount
  */
-function CoverCarousel({
+function CoverSlideshow({
   imageArray,
   updateLayoutRef,
 }: {
   imageArray: string[];
   updateLayoutRef: RefObject<(() => void) | null>;
 }): JSX.Element {
-  const onCarouselRef = (carouselEl: HTMLElement | null) => {
-    if (!carouselEl) return;
+  const onSlideshowRef = (slideshowEl: HTMLElement | null) => {
+    if (!slideshowEl) return;
 
     let currentSlide = 0;
-    const slides = Array.from(carouselEl.querySelectorAll(".carousel-slide"));
+    const slides = Array.from(slideshowEl.querySelectorAll(".slideshow-slide"));
 
     const updateSlide = (newIndex: number, direction: "next" | "prev") => {
       const oldSlide = slides[currentSlide];
@@ -297,8 +415,8 @@ function CoverCarousel({
       currentSlide = newIndex;
     };
 
-    const leftArrow = carouselEl.querySelector(".carousel-nav-left");
-    const rightArrow = carouselEl.querySelector(".carousel-nav-right");
+    const leftArrow = slideshowEl.querySelector(".slideshow-nav-left");
+    const rightArrow = slideshowEl.querySelector(".slideshow-nav-right");
 
     leftArrow?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -321,20 +439,20 @@ function CoverCarousel({
   };
 
   return (
-    <div className="card-cover card-cover-carousel" ref={onCarouselRef}>
-      <div className="carousel-slides">
+    <div className="card-cover card-cover-slideshow" ref={onSlideshowRef}>
+      <div className="slideshow-slides">
         {imageArray.map(
           (url, index): JSX.Element => (
             <div
               key={index}
-              className={`carousel-slide ${index === 0 ? "is-active" : ""}`}
+              className={`slideshow-slide ${index === 0 ? "is-active" : ""}`}
             >
               <div
                 className="image-embed"
                 style={{ "--cover-image-url": `url("${url}")` }}
               >
-                {index === 0 && (
-                  <div className="carousel-indicator">
+                {index === 0 && isSlideshowIndicatorEnabled() && (
+                  <div className="slideshow-indicator">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -356,32 +474,14 @@ function CoverCarousel({
                 <img
                   src={url}
                   alt=""
+                  ref={(imgEl: HTMLImageElement | null) => {
+                    if (index === 0) handleJsxImageRef(imgEl, updateLayoutRef);
+                  }}
                   onLoad={(e: Event) => {
-                    if (index === 0) {
-                      // Only setup for first image
-                      const imgEl = e.currentTarget as HTMLImageElement;
-                      const imageEmbedEl = imgEl.parentElement;
-                      if (imageEmbedEl) {
-                        const slideEl = imageEmbedEl.parentElement;
-                        if (slideEl) {
-                          const carouselEl =
-                            slideEl.parentElement?.parentElement;
-                          if (carouselEl) {
-                            const cardEl = carouselEl.closest(
-                              ".card",
-                            ) as HTMLElement;
-                            if (cardEl) {
-                              handleImageLoad(
-                                imgEl,
-                                imageEmbedEl,
-                                cardEl,
-                                updateLayoutRef.current,
-                              );
-                            }
-                          }
-                        }
-                      }
-                    }
+                    if (index === 0) handleJsxImageLoad(e, updateLayoutRef);
+                  }}
+                  onError={(e: Event) => {
+                    if (index === 0) handleJsxImageError(e, updateLayoutRef);
                   }}
                 />
               </div>
@@ -389,7 +489,7 @@ function CoverCarousel({
           ),
         )}
       </div>
-      <div className="carousel-nav-left">
+      <div className="slideshow-nav-left">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -404,7 +504,7 @@ function CoverCarousel({
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </div>
-      <div className="carousel-nav-right">
+      <div className="slideshow-nav-right">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -820,6 +920,16 @@ function Card({
   // Determine time icon (calendar for ctime, clock for mtime)
   const timeIcon = useCreatedTime ? "calendar" : "clock";
 
+  // Compute title display (only strip extension for file.fullname)
+  const normalizedTitleProperty = normalizePropertyName(
+    app,
+    settings.titleProperty || "",
+  );
+  const isFullname = normalizedTitleProperty === "file.fullname";
+  const displayTitle = isFullname
+    ? stripExtFromTitle(card.title, card.path, true)
+    : card.title;
+
   // Handle images
   const isArray = Array.isArray(card.imageUrl);
   const imageArray: string[] = isArray
@@ -953,9 +1063,39 @@ function Card({
       {(settings.showTitle || card.hasValidUrl) && (
         <div
           className={card.hasValidUrl ? "card-title-container" : "card-title"}
+          ref={(el: HTMLElement | null) => {
+            if (
+              el &&
+              !card.hasValidUrl &&
+              !document.body.classList.contains(
+                "dynamic-views-title-overflow-scroll",
+              )
+            ) {
+              // Double RAF ensures children are rendered and layout complete
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => truncateTitleWithExtension(el));
+              });
+            }
+          }}
         >
           {settings.showTitle && (
-            <div className={card.hasValidUrl ? "card-title" : undefined}>
+            <div
+              className={card.hasValidUrl ? "card-title" : undefined}
+              ref={(el: HTMLElement | null) => {
+                if (
+                  el &&
+                  card.hasValidUrl &&
+                  !document.body.classList.contains(
+                    "dynamic-views-title-overflow-scroll",
+                  )
+                ) {
+                  requestAnimationFrame(() => {
+                    requestAnimationFrame(() => truncateTitleWithExtension(el));
+                  });
+                }
+              }}
+            >
+              {renderFileTypeIcon(card.path)}
               {settings.openFileAction === "title" ? (
                 <a
                   href={card.path}
@@ -970,36 +1110,41 @@ function Card({
                     void app.workspace.openLinkText(card.path, "", newLeaf);
                   }}
                 >
-                  {card.title}
+                  {displayTitle}
                 </a>
               ) : (
-                card.title
+                <span className="card-title-text-content">{displayTitle}</span>
               )}
+              {renderFileExt(card.path, settings, app, handleDrag, isFullname)}
             </div>
           )}
           {card.hasValidUrl && card.urlValue && (
-            <svg
-              className="card-title-url-icon text-icon-button svg-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <span
+              className="card-title-url-icon text-icon-button"
+              aria-label={card.urlValue}
               onClick={(e: MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
                 window.open(card.urlValue!, "_blank", "noopener,noreferrer");
               }}
-              title="Open URL"
             >
-              <path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"></path>
-              <path d="m21 3-9 9"></path>
-              <path d="M15 3h6v6"></path>
-            </svg>
+              <svg
+                className="svg-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"></path>
+                <path d="m21 3-9 9"></path>
+                <path d="M15 3h6v6"></path>
+              </svg>
+            </span>
           )}
         </div>
       )}
@@ -1030,14 +1175,15 @@ function Card({
         >
           {imageArray.length > 0 ? (
             (() => {
-              const shouldShowCarousel =
+              const shouldShowSlideshow =
+                isSlideshowEnabled() &&
                 (position === "top" || position === "bottom") &&
                 imageArray.length >= 2;
 
-              if (shouldShowCarousel) {
+              if (shouldShowSlideshow) {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- JSX.Element resolves to any due to Datacore's JSX runtime
                 return (
-                  <CoverCarousel
+                  <CoverSlideshow
                     imageArray={imageArray}
                     updateLayoutRef={updateLayoutRef}
                   />
@@ -1065,26 +1211,15 @@ function Card({
                     <img
                       src={imageArray[0] || ""}
                       alt=""
-                      onLoad={(e: Event) => {
-                        const imgEl = e.currentTarget as HTMLImageElement;
-                        const imageEmbedEl = imgEl.parentElement;
-                        if (imageEmbedEl) {
-                          const imageEl = imageEmbedEl.parentElement;
-                          if (imageEl) {
-                            const cardEl = imageEl.closest(
-                              ".card",
-                            ) as HTMLElement;
-                            if (cardEl) {
-                              handleImageLoad(
-                                imgEl,
-                                imageEmbedEl,
-                                cardEl,
-                                updateLayoutRef.current,
-                              );
-                            }
-                          }
-                        }
-                      }}
+                      ref={(imgEl: HTMLImageElement | null) =>
+                        handleJsxImageRef(imgEl, updateLayoutRef)
+                      }
+                      onLoad={(e: Event) =>
+                        handleJsxImageLoad(e, updateLayoutRef)
+                      }
+                      onError={(e: Event) =>
+                        handleJsxImageError(e, updateLayoutRef)
+                      }
                     />
                   </div>
                 </div>
@@ -1234,24 +1369,11 @@ function Card({
               <img
                 src={imageArray[0] || ""}
                 alt=""
-                onLoad={(e: Event) => {
-                  const imgEl = e.currentTarget as HTMLImageElement;
-                  const imageEmbedEl = imgEl.parentElement;
-                  if (imageEmbedEl) {
-                    const imageEl = imageEmbedEl.parentElement;
-                    if (imageEl) {
-                      const cardEl = imageEl.closest(".card") as HTMLElement;
-                      if (cardEl) {
-                        handleImageLoad(
-                          imgEl,
-                          imageEmbedEl,
-                          cardEl,
-                          updateLayoutRef.current,
-                        );
-                      }
-                    }
-                  }
-                }}
+                ref={(imgEl: HTMLImageElement | null) =>
+                  handleJsxImageRef(imgEl, updateLayoutRef)
+                }
+                onLoad={(e: Event) => handleJsxImageLoad(e, updateLayoutRef)}
+                onError={(e: Event) => handleJsxImageError(e, updateLayoutRef)}
               />
             </div>
           </div>
@@ -1335,26 +1457,15 @@ function Card({
                   <img
                     src={imageArray[0] || ""}
                     alt=""
-                    onLoad={(e: Event) => {
-                      const imgEl = e.currentTarget as HTMLImageElement;
-                      const imageEmbedEl = imgEl.parentElement;
-                      if (imageEmbedEl) {
-                        const imageEl = imageEmbedEl.parentElement;
-                        if (imageEl) {
-                          const cardEl = imageEl.closest(
-                            ".card",
-                          ) as HTMLElement;
-                          if (cardEl) {
-                            handleImageLoad(
-                              imgEl,
-                              imageEmbedEl,
-                              cardEl,
-                              updateLayoutRef.current,
-                            );
-                          }
-                        }
-                      }
-                    }}
+                    ref={(imgEl: HTMLImageElement | null) =>
+                      handleJsxImageRef(imgEl, updateLayoutRef)
+                    }
+                    onLoad={(e: Event) =>
+                      handleJsxImageLoad(e, updateLayoutRef)
+                    }
+                    onError={(e: Event) =>
+                      handleJsxImageError(e, updateLayoutRef)
+                    }
                   />
                 </div>
               </div>
@@ -1426,24 +1537,11 @@ function Card({
               <img
                 src={imageArray[0] || ""}
                 alt=""
-                onLoad={(e: Event) => {
-                  const imgEl = e.currentTarget as HTMLImageElement;
-                  const imageEmbedEl = imgEl.parentElement;
-                  if (imageEmbedEl) {
-                    const imageEl = imageEmbedEl.parentElement;
-                    if (imageEl) {
-                      const cardEl = imageEl.closest(".card") as HTMLElement;
-                      if (cardEl) {
-                        handleImageLoad(
-                          imgEl,
-                          imageEmbedEl,
-                          cardEl,
-                          updateLayoutRef.current,
-                        );
-                      }
-                    }
-                  }
-                }}
+                ref={(imgEl: HTMLImageElement | null) =>
+                  handleJsxImageRef(imgEl, updateLayoutRef)
+                }
+                onLoad={(e: Event) => handleJsxImageLoad(e, updateLayoutRef)}
+                onError={(e: Event) => handleJsxImageError(e, updateLayoutRef)}
               />
             </div>
           </div>

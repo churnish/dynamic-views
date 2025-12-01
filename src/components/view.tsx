@@ -18,6 +18,7 @@ import {
   updateQueryInBlock,
   findQueryInBlock,
 } from "../utils/query-sync";
+import { getPaneType } from "../utils/randomize";
 import {
   loadSnippetsForEntries,
   loadImagesForEntries,
@@ -36,6 +37,7 @@ import {
   applyMasonryLayout,
 } from "../utils/masonry-layout";
 import type { DatacoreAPI, DatacoreFile } from "../types/datacore";
+import { resolveTimestampProperty } from "../shared/data-transform";
 
 // Extend App type to include isMobile property
 declare module "obsidian" {
@@ -159,11 +161,15 @@ export function View({
     // For view-specific properties, merge: defaultViewSettings -> viewSettings (persisted)
     baseSettings.titleProperty =
       viewSettings.titleProperty ?? defaultViewSettings.titleProperty;
-    baseSettings.descriptionProperty =
-      viewSettings.descriptionProperty ??
-      defaultViewSettings.descriptionProperty;
+    baseSettings.textPreviewProperty =
+      viewSettings.textPreviewProperty ??
+      defaultViewSettings.textPreviewProperty;
     baseSettings.imageProperty =
       viewSettings.imageProperty ?? defaultViewSettings.imageProperty;
+    baseSettings.subtitleProperty =
+      viewSettings.subtitleProperty ?? defaultViewSettings.subtitleProperty;
+    baseSettings.urlProperty =
+      viewSettings.urlProperty ?? defaultViewSettings.urlProperty;
     baseSettings.propertyDisplay1 =
       viewSettings.propertyDisplay1 ?? defaultViewSettings.propertyDisplay1;
     baseSettings.propertyDisplay2 =
@@ -172,22 +178,90 @@ export function View({
       viewSettings.propertyDisplay3 ?? defaultViewSettings.propertyDisplay3;
     baseSettings.propertyDisplay4 =
       viewSettings.propertyDisplay4 ?? defaultViewSettings.propertyDisplay4;
+    baseSettings.propertyDisplay5 =
+      viewSettings.propertyDisplay5 ?? defaultViewSettings.propertyDisplay5;
+    baseSettings.propertyDisplay6 =
+      viewSettings.propertyDisplay6 ?? defaultViewSettings.propertyDisplay6;
+    baseSettings.propertyDisplay7 =
+      viewSettings.propertyDisplay7 ?? defaultViewSettings.propertyDisplay7;
+    baseSettings.propertyDisplay8 =
+      viewSettings.propertyDisplay8 ?? defaultViewSettings.propertyDisplay8;
+    baseSettings.propertyDisplay9 =
+      viewSettings.propertyDisplay9 ?? defaultViewSettings.propertyDisplay9;
+    baseSettings.propertyDisplay10 =
+      viewSettings.propertyDisplay10 ?? defaultViewSettings.propertyDisplay10;
+    baseSettings.propertyDisplay11 =
+      viewSettings.propertyDisplay11 ?? defaultViewSettings.propertyDisplay11;
+    baseSettings.propertyDisplay12 =
+      viewSettings.propertyDisplay12 ?? defaultViewSettings.propertyDisplay12;
+    baseSettings.propertyDisplay13 =
+      viewSettings.propertyDisplay13 ?? defaultViewSettings.propertyDisplay13;
+    baseSettings.propertyDisplay14 =
+      viewSettings.propertyDisplay14 ?? defaultViewSettings.propertyDisplay14;
     baseSettings.propertyGroup1SideBySide =
       viewSettings.propertyGroup1SideBySide ??
       defaultViewSettings.propertyGroup1SideBySide;
     baseSettings.propertyGroup2SideBySide =
       viewSettings.propertyGroup2SideBySide ??
       defaultViewSettings.propertyGroup2SideBySide;
+    baseSettings.propertyGroup3SideBySide =
+      viewSettings.propertyGroup3SideBySide ??
+      defaultViewSettings.propertyGroup3SideBySide;
+    baseSettings.propertyGroup4SideBySide =
+      viewSettings.propertyGroup4SideBySide ??
+      defaultViewSettings.propertyGroup4SideBySide;
+    baseSettings.propertyGroup5SideBySide =
+      viewSettings.propertyGroup5SideBySide ??
+      defaultViewSettings.propertyGroup5SideBySide;
+    baseSettings.propertyGroup6SideBySide =
+      viewSettings.propertyGroup6SideBySide ??
+      defaultViewSettings.propertyGroup6SideBySide;
+    baseSettings.propertyGroup7SideBySide =
+      viewSettings.propertyGroup7SideBySide ??
+      defaultViewSettings.propertyGroup7SideBySide;
+    baseSettings.propertyGroup1Position =
+      viewSettings.propertyGroup1Position ??
+      defaultViewSettings.propertyGroup1Position;
+    baseSettings.propertyGroup2Position =
+      viewSettings.propertyGroup2Position ??
+      defaultViewSettings.propertyGroup2Position;
+    baseSettings.propertyGroup3Position =
+      viewSettings.propertyGroup3Position ??
+      defaultViewSettings.propertyGroup3Position;
+    baseSettings.propertyGroup4Position =
+      viewSettings.propertyGroup4Position ??
+      defaultViewSettings.propertyGroup4Position;
+    baseSettings.propertyGroup5Position =
+      viewSettings.propertyGroup5Position ??
+      defaultViewSettings.propertyGroup5Position;
+    baseSettings.propertyGroup6Position =
+      viewSettings.propertyGroup6Position ??
+      defaultViewSettings.propertyGroup6Position;
+    baseSettings.propertyGroup7Position =
+      viewSettings.propertyGroup7Position ??
+      defaultViewSettings.propertyGroup7Position;
+    baseSettings.propertyLabels =
+      viewSettings.propertyLabels ?? defaultViewSettings.propertyLabels;
+    baseSettings.showTitle =
+      viewSettings.showTitle ?? defaultViewSettings.showTitle;
     baseSettings.showTextPreview =
       viewSettings.showTextPreview ?? defaultViewSettings.showTextPreview;
     baseSettings.fallbackToContent =
       viewSettings.fallbackToContent ?? defaultViewSettings.fallbackToContent;
     baseSettings.fallbackToEmbeds =
       viewSettings.fallbackToEmbeds ?? defaultViewSettings.fallbackToEmbeds;
+    baseSettings.imageFormat =
+      viewSettings.imageFormat ?? defaultViewSettings.imageFormat;
+    baseSettings.coverFitMode =
+      viewSettings.coverFitMode ?? defaultViewSettings.coverFitMode;
+    baseSettings.imageAspectRatio =
+      viewSettings.imageAspectRatio ?? defaultViewSettings.imageAspectRatio;
     baseSettings.queryHeight =
       viewSettings.queryHeight ?? defaultViewSettings.queryHeight;
     baseSettings.listMarker =
       viewSettings.listMarker ?? defaultViewSettings.listMarker;
+    baseSettings.cardSize =
+      viewSettings.cardSize ?? defaultViewSettings.cardSize;
 
     return baseSettings;
   }, [ctime, persistenceManager]);
@@ -313,14 +387,38 @@ export function View({
         // Extract only view-specific settings (those in DefaultViewSettings)
         const viewSettings: Partial<DefaultViewSettings> = {
           titleProperty: settings.titleProperty,
-          descriptionProperty: settings.descriptionProperty,
+          textPreviewProperty: settings.textPreviewProperty,
           imageProperty: settings.imageProperty,
+          subtitleProperty: settings.subtitleProperty,
+          urlProperty: settings.urlProperty,
           propertyDisplay1: settings.propertyDisplay1,
           propertyDisplay2: settings.propertyDisplay2,
           propertyDisplay3: settings.propertyDisplay3,
           propertyDisplay4: settings.propertyDisplay4,
+          propertyDisplay5: settings.propertyDisplay5,
+          propertyDisplay6: settings.propertyDisplay6,
+          propertyDisplay7: settings.propertyDisplay7,
+          propertyDisplay8: settings.propertyDisplay8,
+          propertyDisplay9: settings.propertyDisplay9,
+          propertyDisplay10: settings.propertyDisplay10,
+          propertyDisplay11: settings.propertyDisplay11,
+          propertyDisplay12: settings.propertyDisplay12,
+          propertyDisplay13: settings.propertyDisplay13,
+          propertyDisplay14: settings.propertyDisplay14,
           propertyGroup1SideBySide: settings.propertyGroup1SideBySide,
           propertyGroup2SideBySide: settings.propertyGroup2SideBySide,
+          propertyGroup3SideBySide: settings.propertyGroup3SideBySide,
+          propertyGroup4SideBySide: settings.propertyGroup4SideBySide,
+          propertyGroup5SideBySide: settings.propertyGroup5SideBySide,
+          propertyGroup6SideBySide: settings.propertyGroup6SideBySide,
+          propertyGroup7SideBySide: settings.propertyGroup7SideBySide,
+          propertyGroup1Position: settings.propertyGroup1Position,
+          propertyGroup2Position: settings.propertyGroup2Position,
+          propertyGroup3Position: settings.propertyGroup3Position,
+          propertyGroup4Position: settings.propertyGroup4Position,
+          propertyGroup5Position: settings.propertyGroup5Position,
+          propertyGroup6Position: settings.propertyGroup6Position,
+          propertyGroup7Position: settings.propertyGroup7Position,
           propertyLabels: settings.propertyLabels,
           showTitle: settings.showTitle,
           showTextPreview: settings.showTextPreview,
@@ -584,15 +682,39 @@ export function View({
                 return null;
               }
 
-              const descFromProp = getFirstDatacorePropertyValue(
-                p,
-                settings.descriptionProperty,
-              );
-              const descAsString =
-                typeof descFromProp === "string" ||
-                typeof descFromProp === "number"
-                  ? String(descFromProp)
-                  : null;
+              // Resolve text preview property - check timestamps first
+              let textPreviewValue: string | null = null;
+              if (settings.textPreviewProperty) {
+                const ctime = p.$ctime?.toMillis?.() || 0;
+                const mtime = p.$mtime?.toMillis?.() || 0;
+                const textPreviewProps = settings.textPreviewProperty
+                  .split(",")
+                  .map((prop) => prop.trim());
+                for (const prop of textPreviewProps) {
+                  // Try timestamp property first
+                  const timestamp = resolveTimestampProperty(
+                    prop,
+                    ctime,
+                    mtime,
+                  );
+                  if (timestamp) {
+                    textPreviewValue = timestamp;
+                    break;
+                  }
+                  // Try regular property
+                  const textPreviewPropValue = getFirstDatacorePropertyValue(
+                    p,
+                    prop,
+                  );
+                  if (
+                    typeof textPreviewPropValue === "string" ||
+                    typeof textPreviewPropValue === "number"
+                  ) {
+                    textPreviewValue = String(textPreviewPropValue);
+                    break;
+                  }
+                }
+              }
 
               // Get title for first line comparison
               let titleValue: unknown = p.value(settings.titleProperty);
@@ -605,7 +727,7 @@ export function View({
               return {
                 path: p.$path,
                 file,
-                descriptionData: descAsString as unknown,
+                textPreviewData: textPreviewValue as unknown,
                 fileName: p.$name,
                 titleString,
               };
@@ -1185,11 +1307,11 @@ export function View({
       const randomPath = sorted[randomIndex].$path;
       const file = app.vault.getAbstractFileByPath(randomPath);
       if (file instanceof TFile) {
-        const newLeaf = Keymap.isModEvent(event);
-        void app.workspace.getLeaf(newLeaf).openFile(file);
+        const paneType = getPaneType(event, settings.openRandomInNewTab);
+        void app.workspace.getLeaf(paneType).openFile(file);
       }
     },
-    [sorted, app],
+    [sorted, app, settings.openRandomInNewTab],
   );
 
   const handleToggleCode = dc.useCallback(() => {

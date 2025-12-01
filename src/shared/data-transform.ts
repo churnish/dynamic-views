@@ -10,6 +10,7 @@ import type { DatacoreAPI, DatacoreFile } from "../types/datacore";
 import {
   getFirstDatacorePropertyValue,
   getFirstBasesPropertyValue,
+  normalizePropertyName,
 } from "../utils/property";
 import { hasUriScheme } from "../utils/link-parser";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
@@ -50,7 +51,7 @@ function handleTimestampPropertyFallback(
   if (settings.fallbackToFileMetadata) {
     // Fall back to file metadata
     const timestamp = isCustomCreatedTime ? cardData.ctime : cardData.mtime;
-    return formatTimestamp(timestamp, settings);
+    return formatTimestamp(timestamp);
   } else {
     // Show placeholder but still render as timestamp (for icon)
     return "...";
@@ -180,6 +181,31 @@ function applySmartTimestamp(
 }
 
 /**
+ * Resolve timestamp property to formatted string
+ * Shared by title, text preview, and property display
+ * @param styled - Apply Style Settings abbreviation rules (for styled property display)
+ */
+export function resolveTimestampProperty(
+  propertyName: string,
+  ctime: number,
+  mtime: number,
+  styled: boolean = false,
+): string | null {
+  if (!propertyName) return null;
+
+  const prop = propertyName.trim().toLowerCase();
+
+  if (prop === "file.ctime" || prop === "created time") {
+    return formatTimestamp(ctime, false, styled);
+  }
+  if (prop === "file.mtime" || prop === "modified time") {
+    return formatTimestamp(mtime, false, styled);
+  }
+
+  return null;
+}
+
+/**
  * Transform Datacore result into CardData
  * Handles Datacore-specific API (p.value(), p.$path, etc.)
  */
@@ -193,26 +219,47 @@ export function datacoreResultToCardData(
   imageUrl?: string | string[],
   hasImageAvailable?: boolean,
 ): CardData {
-  // Get title from property (first available from comma-separated list) or fallback to filename
-  let rawTitle = getFirstDatacorePropertyValue(result, settings.titleProperty);
-  if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
-  const title = dc.coerce.string(rawTitle || result.$name || "");
-
   // Get folder path (without filename)
   const path = result.$path || "";
   const folderPath = path.split("/").slice(0, -1).join("/");
 
-  // Get YAML tags only from 'tags' property
-  const yamlTagsRaw = result.value("tags") as unknown;
-  const yamlTags: string[] = Array.isArray(yamlTagsRaw)
-    ? (yamlTagsRaw as string[])
-    : [];
-  // Get tags in YAML + note body from $tags
-  const tags = result.$tags || [];
-
-  // Get timestamps (convert Luxon DateTime to milliseconds)
+  // Get timestamps (convert Luxon DateTime to milliseconds) - needed for special property resolution
   const ctime = result.$ctime?.toMillis?.() || 0;
   const mtime = result.$mtime?.toMillis?.() || 0;
+
+  // Get title from property (first available from comma-separated list) or fallback to filename
+  // Check for special properties first (timestamps, etc.)
+  let title = "";
+  if (settings.titleProperty) {
+    const titleProps = settings.titleProperty.split(",").map((p) => p.trim());
+    for (const prop of titleProps) {
+      // Try timestamp property first
+      const specialValue = resolveTimestampProperty(prop, ctime, mtime);
+      if (specialValue) {
+        title = specialValue;
+        break;
+      }
+      // Try regular property
+      let rawTitle = getFirstDatacorePropertyValue(result, prop);
+      if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
+      const propTitle = dc.coerce.string(rawTitle);
+      if (propTitle) {
+        title = propTitle;
+        break;
+      }
+    }
+  }
+  if (!title) {
+    title = result.$name || "";
+  }
+
+  // Get YAML tags only from 'tags' property
+  const yamlTagsRaw = result.value("tags") as unknown;
+  const yamlTags: string[] = stripTagHashes(
+    Array.isArray(yamlTagsRaw) ? (yamlTagsRaw as string[]) : [],
+  );
+  // Get tags in YAML + note body from $tags
+  const tags = stripTagHashes(result.$tags || []);
 
   // Create base card data
   const cardData: CardData = {
@@ -341,23 +388,48 @@ export function basesEntryToCardData(
   // Use file.basename directly (file name without extension)
   const fileName = entry.file.basename || entry.file.name;
 
-  // Get title from property (first available from comma-separated list) or fallback to filename
-  const titleValue = getFirstBasesPropertyValue(
-    app,
-    entry,
-    settings.titleProperty,
-  ) as { data?: unknown } | null;
-  const titleData = titleValue?.data;
-  const title =
-    titleData != null &&
-    titleData !== "" &&
-    (typeof titleData === "string" || typeof titleData === "number")
-      ? String(titleData)
-      : fileName;
-
   // Get folder path (without filename)
   const path = entry.file.path;
   const folderPath = path.split("/").slice(0, -1).join("/");
+
+  // Get timestamps - needed for special property resolution
+  const ctime = entry.file.stat.ctime;
+  const mtime = entry.file.stat.mtime;
+
+  // Get title from property (first available from comma-separated list) or fallback to filename
+  // Check for special properties first (timestamps, etc.)
+  let title = "";
+  if (settings.titleProperty) {
+    const titleProps = settings.titleProperty.split(",").map((p) => p.trim());
+    for (const prop of titleProps) {
+      // Normalize property name for Bases API
+      const normalizedProp = normalizePropertyName(app, prop);
+      // Try timestamp property first
+      const specialValue = resolveTimestampProperty(
+        normalizedProp,
+        ctime,
+        mtime,
+      );
+      if (specialValue) {
+        title = specialValue;
+        break;
+      }
+      // Try regular property via Bases API
+      const titleValue = getFirstBasesPropertyValue(app, entry, normalizedProp);
+      const titleData = (titleValue as { data?: unknown } | null)?.data;
+      if (
+        titleData != null &&
+        titleData !== "" &&
+        (typeof titleData === "string" || typeof titleData === "number")
+      ) {
+        title = String(titleData);
+        break;
+      }
+    }
+  }
+  if (!title) {
+    title = fileName;
+  }
 
   // Get YAML tags only from 'tags' property
   const yamlTagsValue = entry.getValue("note.tags") as {
@@ -412,10 +484,6 @@ export function basesEntryToCardData(
 
     tags = stripTagHashes(rawTags);
   }
-
-  // Get timestamps
-  const ctime = entry.file.stat.ctime;
-  const mtime = entry.file.stat.mtime;
 
   // Create base card data
   const cardData: CardData = {
@@ -482,10 +550,11 @@ export function basesEntryToCardData(
   }
 
   // Resolve subtitle property (supports comma-separated list)
+  // Normalize property names to support both display names and syntax names
   if (settings.subtitleProperty) {
     const subtitleProps = settings.subtitleProperty
       .split(",")
-      .map((p) => p.trim())
+      .map((p) => normalizePropertyName(app, p.trim()))
       .filter((p) => p);
     for (const prop of subtitleProps) {
       const resolved = resolveBasesProperty(
@@ -507,11 +576,16 @@ export function basesEntryToCardData(
   }
 
   // Resolve URL property
+  // Normalize property names to support both display names and syntax names
   if (settings.urlProperty) {
+    const normalizedUrlProperty = settings.urlProperty
+      .split(",")
+      .map((p) => normalizePropertyName(app, p.trim()))
+      .join(",");
     const urlValue = getFirstBasesPropertyValue(
       app,
       entry,
-      settings.urlProperty,
+      normalizedUrlProperty,
     );
 
     if (
@@ -625,15 +699,14 @@ export function resolveBasesProperty(
     return cardData.tags.length > 0 ? "tags" : null;
   }
 
-  // Handle file timestamp properties directly
-  if (propertyName === "file.ctime" || propertyName === "created time") {
-    const formatted = formatTimestamp(cardData.ctime, settings);
-    return formatted;
-  }
-  if (propertyName === "file.mtime" || propertyName === "modified time") {
-    const formatted = formatTimestamp(cardData.mtime, settings);
-    return formatted;
-  }
+  // Handle file timestamp properties (styled for property display)
+  const timestamp = resolveTimestampProperty(
+    propertyName,
+    cardData.ctime,
+    cardData.mtime,
+    true,
+  );
+  if (timestamp) return timestamp;
 
   // Generic property: read from frontmatter
   const value = getFirstBasesPropertyValue(app, entry, propertyName);
@@ -653,12 +726,7 @@ export function resolveBasesProperty(
   // Date properties return { date: Date, time: boolean } directly
   const timestampData = extractTimestamp(value);
   if (timestampData) {
-    const formatted = formatTimestamp(
-      timestampData.timestamp,
-      settings,
-      timestampData.isDateOnly,
-    );
-    return formatted;
+    return formatTimestamp(timestampData.timestamp, timestampData.isDateOnly);
   }
 
   // For non-date properties, extract .data
@@ -827,13 +895,14 @@ export function resolveDatacoreProperty(
     return cardData.tags.length > 0 ? "tags" : null; // Special marker
   }
 
-  // Handle file timestamp properties directly
-  if (propertyName === "file.ctime" || propertyName === "created time") {
-    return formatTimestamp(cardData.ctime, settings);
-  }
-  if (propertyName === "file.mtime" || propertyName === "modified time") {
-    return formatTimestamp(cardData.mtime, settings);
-  }
+  // Handle file timestamp properties (styled for property display)
+  const timestamp = resolveTimestampProperty(
+    propertyName,
+    cardData.ctime,
+    cardData.mtime,
+    true,
+  );
+  if (timestamp) return timestamp;
 
   // Generic property: read from frontmatter
   const rawValue = getFirstDatacorePropertyValue(result, propertyName);
@@ -844,11 +913,7 @@ export function resolveDatacoreProperty(
     const firstElement = rawValue[0] as unknown;
     const timestampData = extractTimestamp(firstElement);
     if (timestampData) {
-      return formatTimestamp(
-        timestampData.timestamp,
-        settings,
-        timestampData.isDateOnly,
-      );
+      return formatTimestamp(timestampData.timestamp, timestampData.isDateOnly);
     }
 
     // Otherwise join all elements as strings
@@ -878,11 +943,7 @@ export function resolveDatacoreProperty(
   // Check if it's a date/datetime value - format with custom format
   const timestampData = extractTimestamp(rawValue);
   if (timestampData) {
-    return formatTimestamp(
-      timestampData.timestamp,
-      settings,
-      timestampData.isDateOnly,
-    );
+    return formatTimestamp(timestampData.timestamp, timestampData.isDateOnly);
   }
 
   // Handle missing property (null/undefined)
@@ -899,7 +960,7 @@ export function resolveDatacoreProperty(
       if (settings.fallbackToFileMetadata) {
         // Fall back to file metadata
         const timestamp = isCustomCreatedTime ? cardData.ctime : cardData.mtime;
-        return formatTimestamp(timestamp, settings);
+        return formatTimestamp(timestamp);
       } else {
         // Show placeholder but still render as timestamp (for icon)
         return "...";
