@@ -3,7 +3,16 @@
  * Consolidates duplicate card rendering logic from Grid and Masonry views
  */
 
-import { App, TFile, TFolder, setIcon, Menu, BasesEntry } from "obsidian";
+import {
+  App,
+  TFile,
+  TFolder,
+  setIcon,
+  Menu,
+  BasesEntry,
+  Platform,
+  Notice,
+} from "obsidian";
 import { CardData } from "../shared/card-renderer";
 import { resolveBasesProperty } from "../shared/data-transform";
 import { setupImageLoadHandler } from "../shared/image-loader";
@@ -309,33 +318,568 @@ export class SharedCardRenderer {
       }
     });
 
-    // Handle hover for page preview
-    cardEl.addEventListener("mouseover", (e) => {
-      this.app.workspace.trigger("hover-link", {
-        event: e,
-        source: "dynamic-views",
-        hoverParent: hoverParent,
-        targetEl: cardEl,
-        linktext: card.path,
+    // Handle hover for page preview (only on card when openFileAction is 'card')
+    if (settings.openFileAction === "card") {
+      cardEl.addEventListener("mouseover", (e) => {
+        this.app.workspace.trigger("hover-link", {
+          event: e,
+          source: "dynamic-views",
+          hoverParent: hoverParent,
+          targetEl: cardEl,
+          linktext: card.path,
+        });
       });
-    });
+    }
 
-    // Handle right-click for context menu
-    cardEl.addEventListener("contextmenu", (e) => {
+    // Context menu handler for file
+    const handleContextMenu = (e: MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
-      const menu = new Menu();
 
-      // @ts-ignore - Trigger file-menu to add standard items
-      this.app.workspace.trigger(
-        "file-menu",
-        menu,
-        entry.file,
-        "file-explorer",
-      );
+      const menu = new Menu();
+      const file = entry.file;
+      const isMobile = Platform.isMobile;
+
+      // Build menu based on platform
+      if (isMobile) {
+        // Mobile: Match vanilla Obsidian mobile menu
+        menu.addItem((item) =>
+          item
+            .setTitle("Open link")
+            .setIcon("lucide-file")
+            .onClick(() => {
+              void this.app.workspace.openLinkText(card.path, "", false);
+            }),
+        );
+
+        menu.addItem((item) =>
+          item
+            .setTitle("Open in new tab")
+            .setIcon("lucide-file-plus")
+            .onClick(() => {
+              void this.app.workspace.openLinkText(card.path, "", "tab");
+            }),
+        );
+
+        menu.addSeparator();
+
+        menu.addItem((item) =>
+          item
+            .setTitle("Rename...")
+            .setIcon("lucide-edit-3")
+            .onClick(async () => {
+              try {
+                await this.app.fileManager.promptForFileRename(file);
+              } catch {
+                new Notice("Failed to rename file");
+              }
+            }),
+        );
+
+        // Native items: Move file to..., Bookmark..., Copy Obsidian URL
+        // will be relocated via DOM manipulation
+
+        // Custom Share item (triggers platform share sheet)
+        menu.addItem((item) =>
+          item
+            .setTitle("Share")
+            .setIcon("lucide-arrow-up-right")
+            .onClick(() => {
+              this.app.openWithDefaultApp(card.path);
+            }),
+        );
+
+        menu.addSeparator();
+
+        // Trigger file-menu for plugins/native items
+        this.app.workspace.trigger("file-menu", menu, file, "file-explorer");
+
+        menu.addSeparator();
+
+        menu.addItem((item) =>
+          item
+            .setTitle("Delete file")
+            .setIcon("lucide-trash-2")
+            .setWarning(true)
+            .onClick(async () => {
+              try {
+                await this.app.fileManager.trashFile(file);
+              } catch {
+                new Notice("Failed to delete file");
+              }
+            }),
+        );
+      } else {
+        // Desktop: Let Obsidian build menu in correct order, then modify in RAF
+        this.app.workspace.trigger("file-menu", menu, file, "file-explorer");
+      }
 
       menu.showAtMouseEvent(e);
-    });
+
+      // Manipulate menu DOM after rendering
+      const menuEl = document.body.querySelector(".menu") as HTMLElement;
+      if (!menuEl) return;
+
+      // Hide menu during processing to prevent flicker
+      menuEl.style.visibility = "hidden";
+
+      // Platform-specific titles to remove
+      const titlesToRemove = isMobile
+        ? new Set([
+            "Open link",
+            "Open in new tab",
+            "Rename...",
+            "Share",
+            "Delete file",
+            "Merge entire file with...",
+            // Desktop-only items to hide on mobile (all platforms)
+            "Open to the right",
+            "Open in new window",
+            "Copy path",
+            "Copy relative path",
+            "Open in default app",
+            "Reveal in Finder",
+            "Show in Explorer",
+            "Show in system explorer",
+            "Reveal file in navigation",
+          ])
+        : new Set([
+            // Desktop: items to exclude entirely
+            "Merge entire file with...",
+          ]);
+
+      // Mobile relocation order (desktop rebuilds entire menu structure)
+      // Note: "Rename..." and "Share" are in titlesToRemove, so those anchors/items don't exist
+      const relocationOrder: Array<{
+        title: string;
+        after: string;
+        wrapInGroup?: boolean;
+      }> = isMobile
+        ? [
+            // "Move file to..." stays in native position from file-menu
+            { title: "Bookmark...", after: "Move file to..." },
+            {
+              title: "Copy Obsidian URL",
+              after: "Bookmark...",
+              wrapInGroup: true,
+            },
+          ]
+        : [];
+
+      requestAnimationFrame(() => {
+        // Ensure menu still exists (user may have closed it)
+        if (!document.body.contains(menuEl)) return;
+
+        try {
+          // Add filename label at top for mobile (matching vanilla)
+          if (isMobile) {
+            const menuScroll = menuEl.querySelector(".menu-scroll");
+            if (menuScroll && menuScroll.firstChild) {
+              // Create label group
+              const labelGroup = document.createElement("div");
+              labelGroup.className = "menu-group";
+
+              const labelItem = document.createElement("div");
+              labelItem.className = "menu-item is-label";
+              labelItem.setAttribute("data-section", "title");
+
+              const iconDiv = document.createElement("div");
+              iconDiv.className = "menu-item-icon";
+              iconDiv.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-file"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>`;
+
+              const titleDiv = document.createElement("div");
+              titleDiv.className = "menu-item-title";
+              // Get filename with extension
+              const pathParts = card.path.split("/");
+              titleDiv.textContent = pathParts[pathParts.length - 1];
+
+              labelItem.appendChild(iconDiv);
+              labelItem.appendChild(titleDiv);
+              labelGroup.appendChild(labelItem);
+
+              // Insert at beginning
+              menuScroll.insertBefore(labelGroup, menuScroll.firstChild);
+
+              // Add separator after label
+              const separator = document.createElement("div");
+              separator.className = "menu-separator";
+              labelGroup.after(separator);
+            }
+          }
+
+          // Build map of all menu items by title
+          const itemsByTitle = new Map<string, HTMLElement>();
+          menuEl.querySelectorAll(".menu-item").forEach((item) => {
+            const titleEl = item.querySelector(".menu-item-title");
+            if (titleEl?.textContent) {
+              itemsByTitle.set(titleEl.textContent, item as HTMLElement);
+            }
+          });
+
+          // Desktop: Rebuild menu in correct order
+          if (!isMobile) {
+            const menuScroll = menuEl.querySelector(".menu-scroll");
+            if (!menuScroll) return;
+
+            // Helper to create menu item
+            const createMenuItem = (
+              title: string,
+              icon: string,
+              onClick: () => void,
+              isWarning = false,
+            ): HTMLElement => {
+              const item = document.createElement("div");
+              item.className = isWarning
+                ? "menu-item tappable is-warning"
+                : "menu-item tappable";
+              item.innerHTML = `
+                <div class="menu-item-icon">${icon}</div>
+                <div class="menu-item-title">${title}</div>
+              `;
+              item.addEventListener("click", () => {
+                onClick();
+                document.body.click();
+              });
+              return item;
+            };
+
+            // Icons
+            const icons = {
+              filePlus: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-file-plus"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M9 15h6"></path><path d="M12 18v-6"></path></svg>`,
+              splitVertical: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-separator-vertical"><line x1="12" x2="12" y1="3" y2="21"></line><polyline points="8 8 4 12 8 16"></polyline><polyline points="16 16 20 12 16 8"></polyline></svg>`,
+              edit: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-edit-3"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`,
+              arrowUpRight: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-arrow-up-right"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg>`,
+              trash: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-trash-2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
+            };
+
+            // Create custom items that file-menu doesn't provide
+            if (!itemsByTitle.has("Open in new tab")) {
+              itemsByTitle.set(
+                "Open in new tab",
+                createMenuItem("Open in new tab", icons.filePlus, () => {
+                  void this.app.workspace.openLinkText(card.path, "", "tab");
+                }),
+              );
+            }
+
+            if (!itemsByTitle.has("Open to the right")) {
+              itemsByTitle.set(
+                "Open to the right",
+                createMenuItem("Open to the right", icons.splitVertical, () => {
+                  void this.app.workspace.openLinkText(card.path, "", "split");
+                }),
+              );
+            }
+
+            if (!itemsByTitle.has("Rename...")) {
+              itemsByTitle.set(
+                "Rename...",
+                createMenuItem("Rename...", icons.edit, () => {
+                  this.app.fileManager.promptForFileRename(file).catch(() => {
+                    new Notice("Failed to rename file");
+                  });
+                }),
+              );
+            }
+
+            // Create custom "Open in default app" (native can freeze)
+            const openInDefaultApp = createMenuItem(
+              "Open in default app",
+              icons.arrowUpRight,
+              () => {
+                const fullPath = this.app.vault.adapter.getFullPath(card.path);
+                if (!fullPath) {
+                  new Notice("Cannot open file: path not found");
+                  return;
+                }
+                const { spawn } =
+                  // eslint-disable-next-line @typescript-eslint/no-require-imports
+                  require("child_process") as typeof import("child_process");
+                if (process.platform === "darwin") {
+                  spawn("open", [fullPath], {
+                    detached: true,
+                    stdio: "ignore",
+                  });
+                } else if (process.platform === "win32") {
+                  spawn("cmd", ["/c", "start", "", fullPath], {
+                    detached: true,
+                    stdio: "ignore",
+                    shell: true,
+                  });
+                } else {
+                  spawn("xdg-open", [fullPath], {
+                    detached: true,
+                    stdio: "ignore",
+                  });
+                }
+              },
+            );
+            itemsByTitle.set("Open in default app", openInDefaultApp);
+
+            if (!itemsByTitle.has("Delete file")) {
+              itemsByTitle.set(
+                "Delete file",
+                createMenuItem(
+                  "Delete file",
+                  icons.trash,
+                  () => {
+                    this.app.fileManager.trashFile(file).catch(() => {
+                      new Notice("Failed to delete file");
+                    });
+                  },
+                  true,
+                ),
+              );
+            }
+
+            // Detect platform-specific reveal title
+            const revealTitles = [
+              "Reveal in Finder",
+              "Show in Explorer",
+              "Show in system explorer",
+              "Reveal in file explorer",
+            ];
+            let revealTitle = "Reveal in Finder";
+            for (const title of revealTitles) {
+              if (itemsByTitle.has(title)) {
+                revealTitle = title;
+                break;
+              }
+            }
+
+            // Define vanilla menu order with groups
+            const menuStructure: Array<{
+              items: string[];
+              separator?: boolean;
+            }> = [
+              {
+                items: [
+                  "Open in new tab",
+                  "Open to the right",
+                  "Open in new window",
+                ],
+                separator: true,
+              },
+              {
+                items: ["Rename...", "Move file to...", "Bookmark..."],
+                separator: true,
+              },
+              {
+                items: ["Copy Obsidian URL", "Copy path", "Copy relative path"],
+                separator: true,
+              },
+              {
+                items: [
+                  "Open in default app",
+                  revealTitle,
+                  "Reveal file in navigation",
+                ],
+                separator: true,
+              },
+            ];
+
+            // Collect plugin items (items not in our structure and not in titlesToRemove)
+            const knownItems = new Set(menuStructure.flatMap((g) => g.items));
+            knownItems.add("Delete file");
+            titlesToRemove.forEach((t) => knownItems.add(t));
+            const pluginItems: HTMLElement[] = [];
+            itemsByTitle.forEach((item, title) => {
+              if (!knownItems.has(title)) {
+                pluginItems.push(item);
+              }
+            });
+
+            // Clear menu content
+            menuScroll.innerHTML = "";
+
+            // Rebuild menu in order
+            for (const group of menuStructure) {
+              const groupEl = document.createElement("div");
+              groupEl.className = "menu-group";
+              let hasItems = false;
+
+              for (const title of group.items) {
+                const item = itemsByTitle.get(title);
+                if (item && !titlesToRemove.has(title)) {
+                  groupEl.appendChild(item);
+                  hasItems = true;
+                }
+              }
+
+              if (hasItems) {
+                menuScroll.appendChild(groupEl);
+                if (group.separator) {
+                  const sep = document.createElement("div");
+                  sep.className = "menu-separator";
+                  menuScroll.appendChild(sep);
+                }
+              }
+            }
+
+            // Add plugin items
+            if (pluginItems.length > 0) {
+              const pluginGroup = document.createElement("div");
+              pluginGroup.className = "menu-group";
+              pluginItems.forEach((item) => pluginGroup.appendChild(item));
+              menuScroll.appendChild(pluginGroup);
+              const sep = document.createElement("div");
+              sep.className = "menu-separator";
+              menuScroll.appendChild(sep);
+            }
+
+            // Add Delete file at end
+            const deleteItem = itemsByTitle.get("Delete file");
+            if (deleteItem) {
+              const deleteGroup = document.createElement("div");
+              deleteGroup.className = "menu-group";
+              deleteGroup.appendChild(deleteItem);
+              menuScroll.appendChild(deleteGroup);
+            }
+
+            // Fix hover state for all items (native items lose their handlers after DOM rebuild)
+            const allItems = menuScroll.querySelectorAll(".menu-item");
+            allItems.forEach((item) => {
+              item.addEventListener("mouseenter", () => {
+                // Remove selected from all other items
+                allItems.forEach((other) => {
+                  if (other !== item) other.classList.remove("selected");
+                });
+                item.classList.add("selected");
+              });
+              item.addEventListener("mouseleave", () => {
+                item.classList.remove("selected");
+              });
+            });
+          } else {
+            // Mobile: Remove items and relocate
+            menuEl
+              .querySelectorAll(".menu-item[data-section]")
+              .forEach((item) => {
+                const title =
+                  item.querySelector(".menu-item-title")?.textContent ?? "";
+                if (titlesToRemove.has(title)) {
+                  const group = item.closest(".menu-group");
+                  item.remove();
+                  if (group && group.children.length === 0) {
+                    group.remove();
+                  }
+                }
+              });
+
+            // Rebuild itemsByTitle after removal
+            itemsByTitle.clear();
+            menuEl.querySelectorAll(".menu-item").forEach((item) => {
+              const titleEl = item.querySelector(".menu-item-title");
+              if (titleEl?.textContent) {
+                itemsByTitle.set(titleEl.textContent, item as HTMLElement);
+              }
+            });
+
+            // Relocate items
+            for (const { title, after, wrapInGroup } of relocationOrder) {
+              const itemToMove = itemsByTitle.get(title);
+              const afterItem = itemsByTitle.get(after);
+              if (itemToMove && afterItem) {
+                const group = itemToMove.closest(".menu-group");
+                const afterGroup = afterItem.closest(".menu-group");
+
+                if (wrapInGroup && !group) {
+                  const newGroup = document.createElement("div");
+                  newGroup.className = "menu-group";
+                  if (afterGroup) {
+                    afterGroup.after(newGroup);
+                  } else {
+                    afterItem.after(newGroup);
+                  }
+                  newGroup.appendChild(itemToMove);
+                } else if (group && group !== afterGroup) {
+                  if (afterGroup) {
+                    afterGroup.after(group);
+                  } else {
+                    afterItem.after(group);
+                  }
+                } else if (!group) {
+                  const newGroup = document.createElement("div");
+                  newGroup.className = "menu-group";
+                  newGroup.appendChild(itemToMove);
+                  if (afterGroup) {
+                    afterGroup.after(newGroup);
+                  } else {
+                    afterItem.after(newGroup);
+                  }
+                } else {
+                  afterItem.after(itemToMove);
+                }
+              }
+            }
+          }
+
+          // Remove empty menu groups and orphaned separators
+          menuEl.querySelectorAll(".menu-group").forEach((group) => {
+            if (group.children.length === 0) {
+              const prev = group.previousElementSibling;
+              const next = group.nextElementSibling;
+              // Remove separator before empty group
+              if (prev?.classList.contains("menu-separator")) {
+                prev.remove();
+              }
+              // Remove separator after empty group
+              if (next?.classList.contains("menu-separator")) {
+                next.remove();
+              }
+              group.remove();
+            }
+          });
+
+          // Clean up consecutive separators (can occur after item removal)
+          let prevWasSeparator = false;
+          menuEl.querySelectorAll(".menu-separator").forEach((sep) => {
+            if (prevWasSeparator) {
+              sep.remove();
+            } else {
+              prevWasSeparator = true;
+            }
+            // Reset if next sibling is not a separator
+            if (
+              sep.nextElementSibling &&
+              !sep.nextElementSibling.classList.contains("menu-separator")
+            ) {
+              prevWasSeparator = false;
+            }
+          });
+
+          // Remove trailing separator at menu end
+          const lastMenuChild =
+            menuEl.querySelector(".menu-scroll")?.lastElementChild;
+          if (lastMenuChild?.classList.contains("menu-separator")) {
+            lastMenuChild.remove();
+          }
+
+          // Reposition menu at mouse location, adjusted for new size
+          const rect = menuEl.getBoundingClientRect();
+          let top = e.clientY;
+          let left = e.clientX;
+
+          // Adjust if menu would overflow viewport
+          if (top + rect.height > window.innerHeight) {
+            top = Math.max(0, window.innerHeight - rect.height - 10);
+          }
+          if (left + rect.width > window.innerWidth) {
+            left = Math.max(0, window.innerWidth - rect.width - 10);
+          }
+
+          menuEl.style.top = `${top}px`;
+          menuEl.style.left = `${left}px`;
+        } finally {
+          menuEl.style.visibility = "visible";
+        }
+      });
+    };
+
+    // Attach context menu to card when openFileAction is 'card'
+    if (settings.openFileAction === "card") {
+      cardEl.addEventListener("contextmenu", handleContextMenu);
+    }
 
     // Drag handler function
     const handleDrag = (e: DragEvent) => {

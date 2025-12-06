@@ -3,12 +3,12 @@ import type { RefObject } from "../types/datacore";
 
 /**
  * Core logic for handling image load
- * Extracts ambient color, calculates aspect ratio, and triggers layout update
+ * Extracts ambient color and triggers layout update
  * Can be called from both addEventListener and JSX onLoad handlers
  *
  * @param imgEl - The image element
  * @param imageEmbedContainer - Container for the image embed (for CSS variables)
- * @param cardEl - The card element (for aspect ratio CSS variable)
+ * @param cardEl - The card element
  * @param onLayoutUpdate - Optional callback to trigger layout update (for masonry)
  */
 export function handleImageLoad(
@@ -26,12 +26,14 @@ export function handleImageLoad(
   const colorTheme = getColorTheme(ambientColor);
   cardEl.setAttribute("data-ambient-theme", colorTheme);
 
-  // Set actual aspect ratio for flexible cover height (masonry)
+  // Set actual aspect ratio for masonry contain mode (used when "Fixed cover height" is OFF)
   if (imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
     const imgAspect = imgEl.naturalHeight / imgEl.naturalWidth;
     cardEl.style.setProperty("--actual-aspect-ratio", imgAspect.toString());
-    cardEl.classList.add("cover-ready"); // Signal cover can show (for masonry flexible mode)
   }
+
+  // Mark as processed (idempotency guard)
+  cardEl.classList.add("cover-ready");
 
   // Trigger layout update if callback provided (for masonry reflow)
   if (onLayoutUpdate) {
@@ -41,11 +43,11 @@ export function handleImageLoad(
 
 /**
  * Sets up image load event handler for card images (for imperative DOM / Bases)
- * Handles ambient color extraction, aspect ratio calculation, and layout updates
+ * Handles ambient color extraction and layout updates
  *
  * @param imgEl - The image element
  * @param imageEmbedContainer - Container for the image embed (for CSS variables)
- * @param cardEl - The card element (for aspect ratio CSS variable)
+ * @param cardEl - The card element
  * @param onLayoutUpdate - Optional callback to trigger layout update (for masonry)
  */
 export function setupImageLoadHandler(
@@ -55,7 +57,7 @@ export function setupImageLoadHandler(
   onLayoutUpdate?: () => void,
 ): void {
   // Handle already-loaded images (from cache)
-  if (imgEl.complete && imgEl.naturalWidth > 0) {
+  if (imgEl.complete && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
     handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
   } else {
     imgEl.addEventListener("load", () => {

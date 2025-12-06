@@ -9,6 +9,26 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { TFile } from "obsidian";
+
+/**
+ * Extend Obsidian types with undocumented APIs used by this plugin
+ */
+declare module "obsidian" {
+  interface FileManager {
+    /** Prompt user to rename a file (undocumented API) */
+    promptForFileRename(file: TFile): Promise<void>;
+  }
+  interface App {
+    /** Open file with system default app (undocumented API) */
+    openWithDefaultApp(path: string): void;
+  }
+  interface DataAdapter {
+    /** Get absolute filesystem path (undocumented API) */
+    getFullPath(path: string): string | undefined;
+  }
+}
+
 /**
  * Preact component type
  */

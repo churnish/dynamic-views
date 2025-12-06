@@ -1035,15 +1035,17 @@ function Card({
         }
       }}
       onMouseEnter={(e: MouseEvent) => {
-        // Trigger Obsidian's hover preview
-        app.workspace.trigger("hover-link", {
-          event: e,
-          source: "dynamic-views",
-          hoverParent: e.currentTarget,
-          targetEl: e.currentTarget,
-          linktext: card.path,
-          sourcePath: card.path,
-        });
+        // Trigger Obsidian's hover preview (only on card when openFileAction is 'card')
+        if (settings.openFileAction === "card") {
+          app.workspace.trigger("hover-link", {
+            event: e,
+            source: "dynamic-views",
+            hoverParent: e.currentTarget,
+            targetEl: e.currentTarget,
+            linktext: card.path,
+            sourcePath: card.path,
+          });
+        }
         // Reset hover index to 0
         const imageSelector =
           format === "cover" ? ".card-cover img" : ".card-thumbnail img";

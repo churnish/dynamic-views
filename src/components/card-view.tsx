@@ -43,6 +43,7 @@ export function CardView({
 }: CardViewProps): JSX.Element {
   // Transform Datacore results to CardData array
   const allCards = transformDatacoreResults(
+    app,
     results,
     dc,
     settings,

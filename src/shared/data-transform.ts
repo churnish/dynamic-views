@@ -3,7 +3,7 @@
  * Converts various data sources (Datacore, Bases) into normalized CardData format
  */
 
-import type { App, BasesEntry } from "obsidian";
+import { TFile, type App, type BasesEntry } from "obsidian";
 import type { CardData } from "./card-renderer";
 import type { Settings } from "../types";
 import type { DatacoreAPI, DatacoreFile } from "../types/datacore";
@@ -11,8 +11,10 @@ import {
   getFirstDatacorePropertyValue,
   getFirstBasesPropertyValue,
   normalizePropertyName,
+  isValidUri,
 } from "../utils/property";
 import { hasUriScheme } from "../utils/link-parser";
+import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
 
 /**
@@ -352,17 +354,12 @@ export function datacoreResultToCardData(
 
   // Resolve URL property
   if (settings.urlProperty) {
-    const urlValue = getFirstDatacorePropertyValue(
-      result,
-      settings.urlProperty,
-    );
+    let urlValue = getFirstDatacorePropertyValue(result, settings.urlProperty);
+    if (Array.isArray(urlValue)) {
+      urlValue = urlValue.find((v): v is string => typeof v === "string");
+    }
 
-    if (urlValue !== null && typeof urlValue === "string") {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { isValidUri } = require("../utils/property") as {
-        isValidUri: (value: string) => boolean;
-      };
-
+    if (typeof urlValue === "string") {
       cardData.urlValue = urlValue;
       cardData.hasValidUrl = isValidUri(urlValue);
     }
@@ -588,19 +585,16 @@ export function basesEntryToCardData(
       normalizedUrlProperty,
     );
 
-    if (
-      urlValue &&
-      typeof urlValue === "object" &&
-      "data" in urlValue &&
-      typeof urlValue.data === "string"
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { isValidUri } = require("../utils/property") as {
-        isValidUri: (value: string) => boolean;
-      };
+    if (urlValue && typeof urlValue === "object" && "data" in urlValue) {
+      let urlData = urlValue.data;
+      if (Array.isArray(urlData)) {
+        urlData = urlData.find((v): v is string => typeof v === "string");
+      }
 
-      cardData.urlValue = urlValue.data;
-      cardData.hasValidUrl = isValidUri(urlValue.data);
+      if (typeof urlData === "string") {
+        cardData.urlValue = urlData;
+        cardData.hasValidUrl = isValidUri(urlData);
+      }
     }
   }
 
@@ -611,6 +605,7 @@ export function basesEntryToCardData(
  * Batch transform Datacore results to CardData array
  */
 export function transformDatacoreResults(
+  app: App,
   results: DatacoreFile[],
   dc: DatacoreAPI,
   settings: Settings,
@@ -622,8 +617,17 @@ export function transformDatacoreResults(
 ): CardData[] {
   return results
     .filter((p) => p.$path)
-    .map((p) =>
-      datacoreResultToCardData(
+    .map((p) => {
+      // For image files, use file itself as card image
+      const ext = p.$path.split(".").pop()?.toLowerCase() || "";
+      if (VALID_IMAGE_EXTENSIONS.includes(ext) && !images[p.$path]) {
+        const file = app.vault.getAbstractFileByPath(p.$path);
+        if (file instanceof TFile) {
+          images[p.$path] = app.vault.getResourcePath(file);
+          hasImageAvailable[p.$path] = true;
+        }
+      }
+      return datacoreResultToCardData(
         p,
         dc,
         settings,
@@ -632,8 +636,8 @@ export function transformDatacoreResults(
         snippets[p.$path],
         images[p.$path],
         hasImageAvailable[p.$path],
-      ),
-    );
+      );
+    });
 }
 
 /**
@@ -649,8 +653,14 @@ export function transformBasesEntries(
   images: Record<string, string | string[]>,
   hasImageAvailable: Record<string, boolean>,
 ): CardData[] {
-  return entries.map((entry) =>
-    basesEntryToCardData(
+  return entries.map((entry) => {
+    // For image files, use file itself as card image
+    const ext = entry.file.extension?.toLowerCase() || "";
+    if (VALID_IMAGE_EXTENSIONS.includes(ext) && !images[entry.file.path]) {
+      images[entry.file.path] = app.vault.getResourcePath(entry.file);
+      hasImageAvailable[entry.file.path] = true;
+    }
+    return basesEntryToCardData(
       app,
       entry,
       settings,
@@ -659,8 +669,8 @@ export function transformBasesEntries(
       snippets[entry.file.path],
       images[entry.file.path],
       hasImageAvailable[entry.file.path],
-    ),
-  );
+    );
+  });
 }
 
 /**

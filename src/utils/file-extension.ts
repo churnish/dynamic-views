@@ -3,16 +3,7 @@
  * Shared between card-renderer.tsx (Datacore) and shared-renderer.ts (Bases)
  */
 
-const IMAGE_EXTENSIONS = [
-  "png",
-  "jpg",
-  "jpeg",
-  "gif",
-  "webp",
-  "svg",
-  "bmp",
-  "avif",
-];
+import { VALID_IMAGE_EXTENSIONS } from "./image";
 
 // Cache for hidden extensions (invalidated on style change)
 let cachedHiddenExtensions: Set<string> | null = null;
@@ -54,7 +45,7 @@ export function getFileTypeIcon(path: string): string | null {
   if (ext === "canvas") return "layout-dashboard";
   if (ext === "base") return "layout-list";
   if (ext === "pdf") return "file-text";
-  if (IMAGE_EXTENSIONS.includes(ext)) return "image";
+  if (VALID_IMAGE_EXTENSIONS.includes(ext)) return "image";
   return "file";
 }
 

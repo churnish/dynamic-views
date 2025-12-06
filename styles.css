@@ -229,7 +229,7 @@ settings:
     -
         id: dynamic-views-masonry-fixed-cover-height
         title: Fixed cover height
-        description: Use fixed aspect ratio for cover height in Masonry view (shows letterbox bars).
+        description: Keep top/bottom letterbox bars visible in Masonry contain mode.
         type: class-toggle
         default: false
     -
@@ -3450,51 +3450,68 @@ body.dynamic-views-cover-bg-custom
   );
 }
 
-/* Flexible cover height for masonry (default: use actual image aspect ratio) - top/bottom only */
+/* Masonry cover height: use slider value (crop mode only) */
 [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-top.image-format-cover
+  .card:not(.card-cover-contain).card-cover-top.image-format-cover
   .card-cover,
 [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-bottom.image-format-cover
-  .card-cover {
-  padding-top: calc(
-    var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 0.55)) *
-      100%
-  ) !important;
-}
-
-/* Fixed cover height for masonry (override to fixed aspect ratio) */
-body.dynamic-views-masonry-fixed-cover-height
-  [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-top.image-format-cover
-  .card-cover,
-body.dynamic-views-masonry-fixed-cover-height
-  [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-bottom.image-format-cover
+  .card:not(.card-cover-contain).card-cover-bottom.image-format-cover
   .card-cover {
   padding-top: calc(
     var(--dynamic-views-image-aspect-ratio, 0.55) * 100%
   ) !important;
 }
 
-/* Hide cover until dimensions known - masonry flexible mode, top/bottom only */
+/* Masonry contain mode OFF: collapse top/bottom bars only (keep left/right) */
+/* Use min(actual, slider) - shrinks only when image is wider than slider ratio */
 [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-top:not(.cover-ready)
+  .card.card-cover-contain.card-cover-top.image-format-cover
+  .card-cover,
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-bottom.image-format-cover
+  .card-cover {
+  padding-top: calc(
+    min(
+        var(
+          --actual-aspect-ratio,
+          var(--dynamic-views-image-aspect-ratio, 0.55)
+        ),
+        var(--dynamic-views-image-aspect-ratio, 0.55)
+      ) *
+      100%
+  );
+}
+
+/* Masonry contain mode ON: use slider value (top/bottom bars visible) */
+body.dynamic-views-masonry-fixed-cover-height
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-top.image-format-cover
+  .card-cover,
+body.dynamic-views-masonry-fixed-cover-height
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-bottom.image-format-cover
+  .card-cover {
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Masonry contain mode OFF: hide cover until dimensions known */
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain:not(.cover-ready).card-cover-top
   .card-cover-wrapper,
 [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-bottom:not(.cover-ready)
+  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
   .card-cover-wrapper {
   display: none;
 }
 
-/* Fixed mode: always show cover immediately (no waiting for dimensions) */
+/* Masonry contain mode ON: show immediately (no waiting) */
 body.dynamic-views-masonry-fixed-cover-height
   [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-top:not(.cover-ready)
+  .card.card-cover-contain:not(.cover-ready).card-cover-top
   .card-cover-wrapper,
 body.dynamic-views-masonry-fixed-cover-height
   [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-bottom:not(.cover-ready)
+  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
   .card-cover-wrapper {
   display: block;
 }
