@@ -19,10 +19,10 @@ const markdownPatterns = [
   /_((?:(?!_).)+)_/g, // Italic underscores
   /~~((?:(?!~~).)+)~~/g, // Strikethrough (after code blocks processed)
   /==((?:(?!==).)+)==/g, // Highlight
-  /\[([^\]]+)\]\([^)]+\)/g, // Links
-  /!\[\[[^\]]+\]\]/g, // Embedded wikilinks (images, etc.)
-  /\[\[[^\]|]+\|[^\]]+\]\]/g, // Wikilinks with display
-  /\[\[[^\]]+\]\]/g, // Wikilinks
+  /\[((?:[^\]]|\](?!\]))+)\]\([^)]+\)/g, // Links
+  /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, // Embedded wikilinks (images, etc.)
+  /\[\[(?:[^\]|]|\](?!\]))+\|(?:[^\]]|\](?!\]))*\]\]/g, // Wikilinks with display
+  /\[\[(?:[^\]]|\](?!\]))+\]\]/g, // Wikilinks
   /#[a-zA-Z0-9_\-/]+/g, // Tags
   /^\s*[-*+]\s*\[[ xX]\]\s+/gm, // Task list markers (bullet-style)
   /^\s*(\d+[.)]\s*)\[[ xX]\]\s+/gm, // Task list markers (numbered) - preserves number

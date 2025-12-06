@@ -20,8 +20,8 @@ import {
 import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import {
-  getFileTypeIcon,
   getFileExtInfo,
+  getFileTypeIcon,
   stripExtFromTitle,
 } from "../utils/file-extension";
 import {
@@ -106,20 +106,22 @@ function truncateTitleWithExtension(titleEl: HTMLElement): void {
  */
 function renderFileExt(
   path: string,
+  extInfo: { ext: string } | null,
   settings: Settings,
   app: App,
   handleDrag: (e: DragEvent) => void,
-  isFullname: boolean,
 ) {
-  // Force show extension when titleProperty is file.fullname (bypass hidden list)
-  const extInfo = getFileExtInfo(path, isFullname);
   if (!extInfo) return null;
+
+  // data-ext contains extension without dot for badge style
+  const extNoDot = extInfo.ext.slice(1);
 
   if (settings.openFileAction === "title") {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return (
       <span
         className="card-title-ext clickable"
+        data-ext={extNoDot}
         draggable={true}
         onDragStart={handleDrag}
         onClick={(e: MouseEvent) => {
@@ -135,7 +137,11 @@ function renderFileExt(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return <span className="card-title-ext">{extInfo.ext}</span>;
+  return (
+    <span className="card-title-ext" data-ext={extNoDot}>
+      {extInfo.ext}
+    </span>
+  );
 }
 
 /**
@@ -930,6 +936,10 @@ function Card({
     ? stripExtFromTitle(card.title, card.path, true)
     : card.title;
 
+  // Compute extension info once for use in title data-ext and renderFileExt
+  const extInfo = getFileExtInfo(card.path, isFullname);
+  const extNoDot = extInfo?.ext.slice(1) || "";
+
   // Handle images
   const isArray = Array.isArray(card.imageUrl);
   const imageArray: string[] = isArray
@@ -1098,11 +1108,13 @@ function Card({
               }}
             >
               {renderFileTypeIcon(card.path)}
+              {renderFileExt(card.path, extInfo, settings, app, handleDrag)}
               {settings.openFileAction === "title" ? (
                 <a
                   href={card.path}
                   className="internal-link"
                   data-href={card.path}
+                  data-ext={extNoDot}
                   draggable={true}
                   onDragStart={handleDrag}
                   onClick={(e: MouseEvent) => {
@@ -1115,9 +1127,10 @@ function Card({
                   {displayTitle}
                 </a>
               ) : (
-                <span className="card-title-text-content">{displayTitle}</span>
+                <span className="card-title-text-content" data-ext={extNoDot}>
+                  {displayTitle}
+                </span>
               )}
-              {renderFileExt(card.path, settings, app, handleDrag, isFullname)}
             </div>
           )}
           {card.hasValidUrl && card.urlValue && (

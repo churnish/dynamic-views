@@ -1069,21 +1069,30 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-hide-file-type-icon
-        title: Hide file type icon
-        description: Hide the icon shown before titles of non-markdown files
-        type: class-toggle
-    -
         id: dynamic-views-hidden-file-extensions
         title: Hide file extensions
         description: Comma-separated list of extensions to hide (e.g., md, base, canvas)
         type: variable-text
-        default: 'md, base, canvas'
+        default: md
     -
-        id: dynamic-views-file-ext-match-title
-        title: Disable file extension styling
-        description: Make file extension match the title style
-        type: class-toggle
+        id: dynamic-views-file-type-indicator
+        title: File type indicator
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-file-type-badge
+        options:
+            -
+                label: Extension
+                value: dynamic-views-file-type-ext
+            -
+                label: Badge
+                value: dynamic-views-file-type-badge
+            -
+                label: Icon
+                value: dynamic-views-file-type-icon
+            -
+                label: None
+                value: dynamic-views-file-type-none
     -
         id: dynamic-views-title-font
         title: Title font
@@ -2827,9 +2836,29 @@ body.dynamic-views-ambient-background
   flex-shrink: 0;
 }
 
+/* File type indicator styles */
+.dynamic-views .card-title-ext {
+  display: none;
+}
+
 .dynamic-views .card-title-icon {
   float: left;
   margin-right: 0.35em;
+  display: none;
+}
+
+/* File type indicator: Extension (default - shown via ::after on title) */
+body.dynamic-views-file-type-ext
+  .dynamic-views
+  .card
+  a.internal-link[data-ext]:not([data-ext=""])::after,
+body.dynamic-views-file-type-ext
+  .dynamic-views
+  .card
+  .card-title-text-content[data-ext]:not([data-ext=""])::after {
+  content: "." attr(data-ext);
+  opacity: 0.6;
+  font-weight: normal;
 }
 
 .dynamic-views .card-title-icon svg {
@@ -2840,27 +2869,47 @@ body.dynamic-views-ambient-background
   stroke-width: var(--icon-xs-stroke-width);
 }
 
-/* Hide file type icon */
-body.dynamic-views-hide-file-type-icon .dynamic-views .card-title-icon {
+/* File type indicator: Badge (box before title) */
+body.dynamic-views-file-type-badge .dynamic-views .card-title-ext {
+  display: block;
+  font-size: 0;
+  pointer-events: none;
+  cursor: default;
+  float: left;
+  margin-right: var(--dynamic-views-element-spacing, 8px);
+}
+
+body.dynamic-views-file-type-badge .dynamic-views .card-title-ext::before {
+  content: attr(data-ext);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: calc(
+    var(--dynamic-views-title-font-size, var(--font-ui-medium)) *
+      var(--line-height-tight)
+  );
+  padding: 0 0.4em;
+  border-radius: var(--radius-s);
+  background-color: var(--background-modifier-border);
+  font-weight: var(--nav-tag-weight);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* File type indicator: Icon */
+body.dynamic-views-file-type-icon .dynamic-views .card-title-ext {
   display: none;
 }
 
-/* File extension styles */
-.dynamic-views .card-title-ext {
-  opacity: 0.6;
-  font-weight: normal;
+body.dynamic-views-file-type-icon .dynamic-views .card-title-icon {
+  display: block;
+  pointer-events: none;
+  cursor: default;
 }
 
-.dynamic-views .card-title-ext.clickable {
-  cursor: pointer;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-/* Match title style */
-body.dynamic-views-file-ext-match-title .dynamic-views .card-title-ext {
-  opacity: 1;
-  font-weight: inherit;
+/* File type indicator: None */
+body.dynamic-views-file-type-none .dynamic-views .card-title-ext,
+body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
+  display: none;
 }
 
 .dynamic-views .card-title a {
@@ -2871,17 +2920,9 @@ body.dynamic-views-file-ext-match-title .dynamic-views .card-title-ext {
 }
 
 @media (hover: hover) {
-  .dynamic-views .card-title a:hover {
-    text-decoration: underline;
-  }
-  .dynamic-views .card-title:has(a:hover) .card-title-ext,
-  .dynamic-views .card-title:has(.card-title-ext:hover) .card-title-ext {
-    text-decoration: underline;
-  }
-  .dynamic-views .card-title:has(.card-title-ext:hover) a {
-    text-decoration: underline;
-  }
+  /* Underline title on hover when open action is "press on title" */
   body.dynamic-views-open-on-title .dynamic-views .card-title a:hover {
+    text-decoration: underline;
     color: var(--text-normal);
   }
 }

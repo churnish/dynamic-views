@@ -30,23 +30,9 @@ export function getHiddenExtensions(): Set<string> {
 
   cachedHiddenExtensions = value
     ? new Set(value.split(",").map((e) => e.trim().toLowerCase()))
-    : new Set(["md", "base", "canvas"]);
+    : new Set(["md"]);
 
   return cachedHiddenExtensions;
-}
-
-/**
- * Get Lucide icon name for file type (non-markdown files only)
- */
-export function getFileTypeIcon(path: string): string | null {
-  const ext = path.split(".").pop()?.toLowerCase();
-  if (!ext || ext === "md") return null;
-
-  if (ext === "canvas") return "layout-dashboard";
-  if (ext === "base") return "layout-list";
-  if (ext === "pdf") return "file-text";
-  if (VALID_IMAGE_EXTENSIONS.includes(ext)) return "image";
-  return "file";
 }
 
 /**
@@ -84,4 +70,18 @@ export function stripExtFromTitle(
     return title.slice(0, -extWithDot.length);
   }
   return title;
+}
+
+/**
+ * Get Lucide icon name for file type (non-markdown files only)
+ */
+export function getFileTypeIcon(path: string): string | null {
+  const ext = path.split(".").pop()?.toLowerCase();
+  if (!ext || ext === "md") return null;
+
+  if (ext === "canvas") return "layout-dashboard";
+  if (ext === "base") return "layout-list";
+  if (ext === "pdf") return "file-text";
+  if (VALID_IMAGE_EXTENSIONS.includes(ext)) return "image";
+  return "file";
 }

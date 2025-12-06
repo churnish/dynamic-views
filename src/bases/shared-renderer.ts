@@ -36,8 +36,8 @@ import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import { handleImageZoomClick } from "../shared/image-zoom-handler";
 import {
-  getFileTypeIcon,
   getFileExtInfo,
+  getFileTypeIcon,
   stripExtFromTitle,
 } from "../utils/file-extension";
 import type DynamicViewsPlugin from "../../main";
@@ -423,16 +423,10 @@ export class SharedCardRenderer {
       // Hide menu during processing to prevent flicker
       menuEl.style.visibility = "hidden";
 
-      // Platform-specific titles to remove
+      // Platform-specific titles to remove (desktop-only items not shown on mobile)
       const titlesToRemove = isMobile
         ? new Set([
-            "Open link",
-            "Open in new tab",
-            "Rename...",
-            "Share",
-            "Delete file",
             "Merge entire file with...",
-            // Desktop-only items to hide on mobile (all platforms)
             "Open to the right",
             "Open in new window",
             "Copy path",
@@ -447,24 +441,6 @@ export class SharedCardRenderer {
             // Desktop: items to exclude entirely
             "Merge entire file with...",
           ]);
-
-      // Mobile relocation order (desktop rebuilds entire menu structure)
-      // Note: "Rename..." and "Share" are in titlesToRemove, so those anchors/items don't exist
-      const relocationOrder: Array<{
-        title: string;
-        after: string;
-        wrapInGroup?: boolean;
-      }> = isMobile
-        ? [
-            // "Move file to..." stays in native position from file-menu
-            { title: "Bookmark...", after: "Move file to..." },
-            {
-              title: "Copy Obsidian URL",
-              after: "Bookmark...",
-              wrapInGroup: true,
-            },
-          ]
-        : [];
 
       requestAnimationFrame(() => {
         // Ensure menu still exists (user may have closed it)
@@ -483,17 +459,16 @@ export class SharedCardRenderer {
               labelItem.className = "menu-item is-label";
               labelItem.setAttribute("data-section", "title");
 
-              const iconDiv = document.createElement("div");
-              iconDiv.className = "menu-item-icon";
-              iconDiv.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-file"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>`;
-
               const titleDiv = document.createElement("div");
               titleDiv.className = "menu-item-title";
-              // Get filename with extension
+              // Get filename, strip .md extension
               const pathParts = card.path.split("/");
-              titleDiv.textContent = pathParts[pathParts.length - 1];
+              let filename = pathParts[pathParts.length - 1];
+              if (filename.toLowerCase().endsWith(".md")) {
+                filename = filename.slice(0, -3);
+              }
+              titleDiv.textContent = filename;
 
-              labelItem.appendChild(iconDiv);
               labelItem.appendChild(titleDiv);
               labelGroup.appendChild(labelItem);
 
@@ -507,20 +482,23 @@ export class SharedCardRenderer {
             }
           }
 
-          // Build map of all menu items by title
+          // Build map of all menu items by title (exclude labels)
           const itemsByTitle = new Map<string, HTMLElement>();
-          menuEl.querySelectorAll(".menu-item").forEach((item) => {
-            const titleEl = item.querySelector(".menu-item-title");
-            if (titleEl?.textContent) {
-              itemsByTitle.set(titleEl.textContent, item as HTMLElement);
-            }
-          });
+          menuEl
+            .querySelectorAll(".menu-item:not(.is-label)")
+            .forEach((item) => {
+              const titleEl = item.querySelector(".menu-item-title");
+              if (titleEl?.textContent) {
+                itemsByTitle.set(titleEl.textContent, item as HTMLElement);
+              }
+            });
 
-          // Desktop: Rebuild menu in correct order
+          // Rebuild menu in correct order
+          const menuScroll = menuEl.querySelector(".menu-scroll");
+          if (!menuScroll) return;
+
+          // Desktop-only items (mobile doesn't need spawn/reveal)
           if (!isMobile) {
-            const menuScroll = menuEl.querySelector(".menu-scroll");
-            if (!menuScroll) return;
-
             // Helper to create menu item
             const createMenuItem = (
               title: string,
@@ -595,22 +573,23 @@ export class SharedCardRenderer {
                 const { spawn } =
                   // eslint-disable-next-line @typescript-eslint/no-require-imports
                   require("child_process") as typeof import("child_process");
+                const onSpawnError = () => new Notice("Failed to open file");
                 if (process.platform === "darwin") {
                   spawn("open", [fullPath], {
                     detached: true,
                     stdio: "ignore",
-                  });
+                  }).on("error", onSpawnError);
                 } else if (process.platform === "win32") {
-                  spawn("cmd", ["/c", "start", "", fullPath], {
+                  // Use explorer.exe directly to avoid shell injection risks
+                  spawn("explorer.exe", [fullPath], {
                     detached: true,
                     stdio: "ignore",
-                    shell: true,
-                  });
+                  }).on("error", onSpawnError);
                 } else {
                   spawn("xdg-open", [fullPath], {
                     detached: true,
                     stdio: "ignore",
-                  });
+                  }).on("error", onSpawnError);
                 }
               },
             );
@@ -631,188 +610,155 @@ export class SharedCardRenderer {
                 ),
               );
             }
+          }
 
-            // Detect platform-specific reveal title
-            const revealTitles = [
-              "Reveal in Finder",
-              "Show in Explorer",
-              "Show in system explorer",
-              "Reveal in file explorer",
-            ];
-            let revealTitle = "Reveal in Finder";
-            for (const title of revealTitles) {
-              if (itemsByTitle.has(title)) {
-                revealTitle = title;
-                break;
-              }
+          // Detect platform-specific reveal title (desktop only, but must be in scope for menuStructure)
+          const revealTitles = [
+            "Reveal in Finder",
+            "Show in Explorer",
+            "Show in system explorer",
+            "Reveal in file explorer",
+          ];
+          let revealTitle = "Reveal in Finder";
+          for (const title of revealTitles) {
+            if (itemsByTitle.has(title)) {
+              revealTitle = title;
+              break;
             }
+          }
 
-            // Define vanilla menu order with groups
-            const menuStructure: Array<{
-              items: string[];
-              separator?: boolean;
-            }> = [
-              {
-                items: [
-                  "Open in new tab",
-                  "Open to the right",
-                  "Open in new window",
-                ],
-                separator: true,
-              },
-              {
-                items: ["Rename...", "Move file to...", "Bookmark..."],
-                separator: true,
-              },
-              {
-                items: ["Copy Obsidian URL", "Copy path", "Copy relative path"],
-                separator: true,
-              },
-              {
-                items: [
-                  "Open in default app",
-                  revealTitle,
-                  "Reveal file in navigation",
-                ],
-                separator: true,
-              },
-            ];
+          // Define vanilla menu order with groups (platform-specific)
+          const menuStructure: Array<{
+            items: string[];
+            separator?: boolean;
+          }> = isMobile
+            ? [
+                { items: ["Open link", "Open in new tab"], separator: true },
+                {
+                  items: ["Rename...", "Move file to...", "Bookmark..."],
+                  separator: true,
+                },
+                { items: ["Copy Obsidian URL"], separator: true },
+                { items: ["Share"], separator: true },
+              ]
+            : [
+                {
+                  items: [
+                    "Open in new tab",
+                    "Open to the right",
+                    "Open in new window",
+                  ],
+                  separator: true,
+                },
+                {
+                  items: ["Rename...", "Move file to...", "Bookmark..."],
+                  separator: true,
+                },
+                {
+                  items: [
+                    "Copy Obsidian URL",
+                    "Copy path",
+                    "Copy relative path",
+                  ],
+                  separator: true,
+                },
+                {
+                  items: [
+                    "Open in default app",
+                    revealTitle,
+                    "Reveal file in navigation",
+                  ],
+                  separator: true,
+                },
+              ];
 
-            // Collect plugin items (items not in our structure and not in titlesToRemove)
-            const knownItems = new Set(menuStructure.flatMap((g) => g.items));
-            knownItems.add("Delete file");
-            titlesToRemove.forEach((t) => knownItems.add(t));
-            const pluginItems: HTMLElement[] = [];
-            itemsByTitle.forEach((item, title) => {
-              if (!knownItems.has(title)) {
-                pluginItems.push(item);
-              }
-            });
+          // Collect plugin items (items not in our structure and not in titlesToRemove)
+          const knownItems = new Set(menuStructure.flatMap((g) => g.items));
+          knownItems.add("Delete file");
+          titlesToRemove.forEach((t) => knownItems.add(t));
+          const pluginItems: HTMLElement[] = [];
+          itemsByTitle.forEach((item, title) => {
+            if (!knownItems.has(title)) {
+              pluginItems.push(item);
+            }
+          });
 
-            // Clear menu content
+          // Clear menu content (preserve label group for mobile)
+          if (isMobile) {
+            // Keep label group and separator, remove everything else
+            const labelGroup = menuScroll.querySelector(
+              ".menu-group:has(.is-label)",
+            );
+            const labelSep = labelGroup?.nextElementSibling;
             menuScroll.innerHTML = "";
-
-            // Rebuild menu in order
-            for (const group of menuStructure) {
-              const groupEl = document.createElement("div");
-              groupEl.className = "menu-group";
-              let hasItems = false;
-
-              for (const title of group.items) {
-                const item = itemsByTitle.get(title);
-                if (item && !titlesToRemove.has(title)) {
-                  groupEl.appendChild(item);
-                  hasItems = true;
-                }
-              }
-
-              if (hasItems) {
-                menuScroll.appendChild(groupEl);
-                if (group.separator) {
-                  const sep = document.createElement("div");
-                  sep.className = "menu-separator";
-                  menuScroll.appendChild(sep);
-                }
+            if (labelGroup) {
+              menuScroll.appendChild(labelGroup);
+              if (labelSep?.classList.contains("menu-separator")) {
+                menuScroll.appendChild(labelSep);
               }
             }
-
-            // Add plugin items
-            if (pluginItems.length > 0) {
-              const pluginGroup = document.createElement("div");
-              pluginGroup.className = "menu-group";
-              pluginItems.forEach((item) => pluginGroup.appendChild(item));
-              menuScroll.appendChild(pluginGroup);
-              const sep = document.createElement("div");
-              sep.className = "menu-separator";
-              menuScroll.appendChild(sep);
-            }
-
-            // Add Delete file at end
-            const deleteItem = itemsByTitle.get("Delete file");
-            if (deleteItem) {
-              const deleteGroup = document.createElement("div");
-              deleteGroup.className = "menu-group";
-              deleteGroup.appendChild(deleteItem);
-              menuScroll.appendChild(deleteGroup);
-            }
-
-            // Fix hover state for all items (native items lose their handlers after DOM rebuild)
-            const allItems = menuScroll.querySelectorAll(".menu-item");
-            allItems.forEach((item) => {
-              item.addEventListener("mouseenter", () => {
-                // Remove selected from all other items
-                allItems.forEach((other) => {
-                  if (other !== item) other.classList.remove("selected");
-                });
-                item.classList.add("selected");
-              });
-              item.addEventListener("mouseleave", () => {
-                item.classList.remove("selected");
-              });
-            });
           } else {
-            // Mobile: Remove items and relocate
-            menuEl
-              .querySelectorAll(".menu-item[data-section]")
-              .forEach((item) => {
-                const title =
-                  item.querySelector(".menu-item-title")?.textContent ?? "";
-                if (titlesToRemove.has(title)) {
-                  const group = item.closest(".menu-group");
-                  item.remove();
-                  if (group && group.children.length === 0) {
-                    group.remove();
-                  }
-                }
-              });
+            menuScroll.innerHTML = "";
+          }
 
-            // Rebuild itemsByTitle after removal
-            itemsByTitle.clear();
-            menuEl.querySelectorAll(".menu-item").forEach((item) => {
-              const titleEl = item.querySelector(".menu-item-title");
-              if (titleEl?.textContent) {
-                itemsByTitle.set(titleEl.textContent, item as HTMLElement);
+          // Rebuild menu in order
+          for (const group of menuStructure) {
+            const groupEl = document.createElement("div");
+            groupEl.className = "menu-group";
+            let hasItems = false;
+
+            for (const title of group.items) {
+              const item = itemsByTitle.get(title);
+              if (item && !titlesToRemove.has(title)) {
+                groupEl.appendChild(item);
+                hasItems = true;
               }
-            });
+            }
 
-            // Relocate items
-            for (const { title, after, wrapInGroup } of relocationOrder) {
-              const itemToMove = itemsByTitle.get(title);
-              const afterItem = itemsByTitle.get(after);
-              if (itemToMove && afterItem) {
-                const group = itemToMove.closest(".menu-group");
-                const afterGroup = afterItem.closest(".menu-group");
-
-                if (wrapInGroup && !group) {
-                  const newGroup = document.createElement("div");
-                  newGroup.className = "menu-group";
-                  if (afterGroup) {
-                    afterGroup.after(newGroup);
-                  } else {
-                    afterItem.after(newGroup);
-                  }
-                  newGroup.appendChild(itemToMove);
-                } else if (group && group !== afterGroup) {
-                  if (afterGroup) {
-                    afterGroup.after(group);
-                  } else {
-                    afterItem.after(group);
-                  }
-                } else if (!group) {
-                  const newGroup = document.createElement("div");
-                  newGroup.className = "menu-group";
-                  newGroup.appendChild(itemToMove);
-                  if (afterGroup) {
-                    afterGroup.after(newGroup);
-                  } else {
-                    afterItem.after(newGroup);
-                  }
-                } else {
-                  afterItem.after(itemToMove);
-                }
+            if (hasItems) {
+              menuScroll.appendChild(groupEl);
+              if (group.separator) {
+                const sep = document.createElement("div");
+                sep.className = "menu-separator";
+                menuScroll.appendChild(sep);
               }
             }
           }
+
+          // Add plugin items
+          if (pluginItems.length > 0) {
+            const pluginGroup = document.createElement("div");
+            pluginGroup.className = "menu-group";
+            pluginItems.forEach((item) => pluginGroup.appendChild(item));
+            menuScroll.appendChild(pluginGroup);
+            const sep = document.createElement("div");
+            sep.className = "menu-separator";
+            menuScroll.appendChild(sep);
+          }
+
+          // Add Delete file at end
+          const deleteItem = itemsByTitle.get("Delete file");
+          if (deleteItem) {
+            const deleteGroup = document.createElement("div");
+            deleteGroup.className = "menu-group";
+            deleteGroup.appendChild(deleteItem);
+            menuScroll.appendChild(deleteGroup);
+          }
+
+          // Fix hover state using event delegation (O(1) per event instead of O(n))
+          let currentSelected: Element | null = null;
+          menuScroll.addEventListener("mouseover", (e) => {
+            const item = (e.target as Element).closest(".menu-item");
+            if (item && item !== currentSelected) {
+              currentSelected?.classList.remove("selected");
+              item.classList.add("selected");
+              currentSelected = item;
+            }
+          });
+          menuScroll.addEventListener("mouseleave", () => {
+            currentSelected?.classList.remove("selected");
+            currentSelected = null;
+          });
 
           // Remove empty menu groups and orphaned separators
           menuEl.querySelectorAll(".menu-group").forEach((group) => {
@@ -901,13 +847,6 @@ export class SharedCardRenderer {
           ? containerEl.createDiv("card-title")
           : containerEl;
 
-        // Add file type icon for non-markdown files
-        const icon = getFileTypeIcon(card.path);
-        if (icon) {
-          const iconEl = titleEl.createSpan({ cls: "card-title-icon" });
-          setIcon(iconEl, icon);
-        }
-
         // Only strip extension when titleProperty is file.fullname
         const normalized = normalizePropertyName(
           this.app,
@@ -918,6 +857,39 @@ export class SharedCardRenderer {
           ? stripExtFromTitle(card.title, card.path, true)
           : card.title;
 
+        // Add file type icon first (hidden by default, shown via CSS when Icon mode selected)
+        const icon = getFileTypeIcon(card.path);
+        if (icon) {
+          const iconEl = titleEl.createSpan({ cls: "card-title-icon" });
+          setIcon(iconEl, icon);
+        }
+
+        // Add file extension before title text (for Badge mode float:left)
+        const extInfo = getFileExtInfo(card.path, isFullname);
+        const extNoDot = extInfo?.ext.slice(1) || "";
+        let extEl: HTMLElement | null = null;
+        if (extInfo) {
+          extEl = titleEl.createSpan({
+            cls: "card-title-ext",
+            text: extInfo.ext,
+            attr: { "data-ext": extNoDot },
+          });
+
+          // Make extension clickable/draggable when openFileAction is 'title'
+          if (settings.openFileAction === "title") {
+            extEl.addClass("clickable");
+            extEl.setAttribute("draggable", "true");
+            extEl.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const newLeaf = e.metaKey || e.ctrlKey;
+              void this.app.workspace.openLinkText(card.path, "", newLeaf);
+            });
+            extEl.addEventListener("dragstart", handleDrag);
+          }
+        }
+
+        // Add title text
         let textEl: HTMLElement | null = null;
         if (settings.openFileAction === "title") {
           // Render as clickable, draggable link
@@ -928,6 +900,7 @@ export class SharedCardRenderer {
               "data-href": card.path,
               href: card.path,
               draggable: "true",
+              "data-ext": extNoDot,
             },
           });
           textEl = link;
@@ -946,31 +919,9 @@ export class SharedCardRenderer {
           const textSpan = titleEl.createSpan({
             cls: "card-title-text-content",
             text: displayTitle,
+            attr: { "data-ext": extNoDot },
           });
           textEl = textSpan;
-        }
-
-        // Add file extension after title text (force show for file.fullname)
-        const extInfo = getFileExtInfo(card.path, isFullname);
-        let extEl: HTMLElement | null = null;
-        if (extInfo) {
-          extEl = titleEl.createSpan({
-            cls: "card-title-ext",
-            text: extInfo.ext,
-          });
-
-          // Make extension clickable/draggable when openFileAction is 'title'
-          if (settings.openFileAction === "title") {
-            extEl.addClass("clickable");
-            extEl.setAttribute("draggable", "true");
-            extEl.addEventListener("click", (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const newLeaf = e.metaKey || e.ctrlKey;
-              void this.app.workspace.openLinkText(card.path, "", newLeaf);
-            });
-            extEl.addEventListener("dragstart", handleDrag);
-          }
         }
 
         // Truncate title with ellipsis (skip in scroll mode)
