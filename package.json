@@ -1,6 +1,6 @@
 {
   "name": "dynamic-views",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Elegant card views for Bases and Datacore.",
   "main": "main.js",
   "type": "module",
