@@ -3,22 +3,20 @@
  */
 
 import Panzoom, { PanzoomObject } from "@panzoom/panzoom";
-import { App, Menu, TFile } from "obsidian";
+import { App } from "obsidian";
 import { getZoomSensitivity } from "../utils/style-settings";
 
 /**
  * Setup zoom and pan gestures for an enlarged image
  * @param imgEl - The image element
  * @param container - The container element (overlay or embed)
- * @param app - Obsidian app instance (optional, for context menu)
- * @param file - File being displayed (optional, for context menu)
+ * @param app - Obsidian app instance (optional, for mobile detection)
  * @returns Cleanup function
  */
 export function setupImageZoomGestures(
   imgEl: HTMLImageElement,
   container: HTMLElement,
   app?: App,
-  file?: TFile,
 ): () => void {
   let panzoomInstance: PanzoomObject | null = null;
   let clickHandler: ((e: MouseEvent) => void) | null = null;
@@ -55,7 +53,7 @@ export function setupImageZoomGestures(
       maxScale: 4,
       minScale,
       startScale,
-      step: zoomSensitivity,
+      step: isMobile ? zoomSensitivity * 2 : zoomSensitivity,
       canvas: false,
       cursor: "move",
     });
@@ -78,17 +76,13 @@ export function setupImageZoomGestures(
     };
     imgEl.addEventListener("dblclick", dblclickHandler);
 
-    // Right-click context menu for file
-    if (app && file) {
-      contextmenuHandler = (e: MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const menu = new Menu();
-        app.workspace.trigger("file-menu", menu, file, "file-explorer");
-        menu.showAtMouseEvent(e);
-      };
-      imgEl.addEventListener("contextmenu", contextmenuHandler);
-    }
+    // Right-click resets to initial size
+    contextmenuHandler = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      panzoomInstance?.reset();
+    };
+    imgEl.addEventListener("contextmenu", contextmenuHandler);
   }
 
   // Check if image already loaded

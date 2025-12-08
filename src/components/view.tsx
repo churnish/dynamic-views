@@ -38,6 +38,7 @@ import {
 } from "../utils/masonry-layout";
 import type { DatacoreAPI, DatacoreFile } from "../types/datacore";
 import { resolveTimestampProperty } from "../shared/data-transform";
+import { setupSwipeInterception } from "../bases/swipe-interceptor";
 
 // Extend App type to include isMobile property
 declare module "obsidian" {
@@ -435,6 +436,21 @@ export function View({
       }
     }, 300);
   }, [settings, ctime, persistenceManager]);
+
+  // Setup swipe interception on mobile if enabled (Datacore is always embedded)
+  // Note: preventSidebarSwipe intentionally omitted from deps - global settings require restart
+  dc.useEffect(() => {
+    const globalSettings = persistenceManager.getGlobalSettings();
+    if (
+      app.isMobile &&
+      globalSettings.preventSidebarSwipe === "all-views" &&
+      explorerRef.current
+    ) {
+      const controller = new AbortController();
+      setupSwipeInterception(explorerRef.current, controller.signal);
+      return () => controller.abort();
+    }
+  }, [app.isMobile, persistenceManager]);
 
   // Calculate sticky toolbar positioning
   dc.useEffect(() => {

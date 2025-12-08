@@ -3,28 +3,22 @@
  * Primary implementation using Bases API
  */
 
-import { BasesView, BasesEntry, TFile, QueryController } from "obsidian";
+import { BasesView, BasesEntry, QueryController } from "obsidian";
 import { CardData } from "../shared/card-renderer";
-import {
-  transformBasesEntries,
-  resolveTimestampProperty,
-} from "../shared/data-transform";
+import { transformBasesEntries } from "../shared/data-transform";
 import {
   readBasesSettings,
   getBasesViewOptions,
 } from "../shared/settings-schema";
-import {
-  getFirstBasesPropertyValue,
-  getAllBasesImagePropertyValues,
-  normalizePropertyName,
-} from "../utils/property";
 import { getMinGridColumns, getCardSpacing } from "../utils/style-settings";
-import {
-  loadSnippetsForEntries,
-  loadImagesForEntries,
-} from "../shared/content-loader";
 import { SharedCardRenderer } from "./shared-renderer";
 import { BATCH_SIZE } from "../shared/constants";
+import {
+  setupBasesSwipeInterception,
+  setupStyleSettingsObserver,
+  getSortMethod,
+  loadContentForEntries,
+} from "./bases-utils";
 import type DynamicViewsPlugin from "../../main";
 import type { Settings } from "../types";
 
@@ -57,6 +51,7 @@ export class DynamicViewsCardView extends BasesView {
   shuffledOrder: string[] = [];
   private lastSortMethod: string | null = null;
   private feedContainerRef: { current: HTMLElement | null } = { current: null };
+  private swipeAbortController: AbortController | null = null;
 
   // Style Settings compatibility - must be own property (not prototype)
   setSettings = (): void => {
@@ -83,41 +78,19 @@ export class DynamicViewsCardView extends BasesView {
     // Set initial batch size based on device
     this.displayedCount = this.app.isMobile ? 25 : BATCH_SIZE;
 
+    // Setup swipe interception on mobile if enabled
+    const globalSettings = this.plugin.persistenceManager.getGlobalSettings();
+    this.swipeAbortController = setupBasesSwipeInterception(
+      this.containerEl,
+      this.app,
+      globalSettings,
+    );
+
     // Watch for Dynamic Views Style Settings changes only
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (
-          mutation.type === "attributes" &&
-          mutation.attributeName === "class"
-        ) {
-          // Check if any dynamic-views class changed
-          const oldClasses = mutation.oldValue?.split(" ") || [];
-          const newClasses = document.body.className.split(" ");
-          const dynamicViewsChanged =
-            oldClasses
-              .filter((c) => c.startsWith("dynamic-views-"))
-              .sort()
-              .join() !==
-            newClasses
-              .filter((c) => c.startsWith("dynamic-views-"))
-              .sort()
-              .join();
-
-          if (dynamicViewsChanged) {
-            this.onDataUpdated();
-            break;
-          }
-        }
-      }
-    });
-
-    observer.observe(document.body, {
-      attributes: true,
-      attributeOldValue: true,
-      attributeFilter: ["class"],
-    });
-
-    this.register(() => observer.disconnect());
+    const disconnectObserver = setupStyleSettingsObserver(() =>
+      this.onDataUpdated(),
+    );
+    this.register(disconnectObserver);
   }
 
   onload(): void {
@@ -169,7 +142,7 @@ export class DynamicViewsCardView extends BasesView {
       const savedScrollTop = this.containerEl.scrollTop;
 
       // Transform to CardData (only visible entries)
-      const sortMethod = this.getSortMethod();
+      const sortMethod = getSortMethod(this.config);
 
       // Reset shuffle if sort method changed
       if (this.lastSortMethod !== null && this.lastSortMethod !== sortMethod) {
@@ -209,7 +182,14 @@ export class DynamicViewsCardView extends BasesView {
       }
 
       // Load snippets and images ONLY for displayed entries
-      await this.loadContentForEntries(visibleEntries, settings);
+      await loadContentForEntries(
+        visibleEntries,
+        settings,
+        this.app,
+        this.snippets,
+        this.images,
+        this.hasImageAvailable,
+      );
 
       // Clear and re-render
       this.containerEl.empty();
@@ -327,134 +307,6 @@ export class DynamicViewsCardView extends BasesView {
     });
   }
 
-  private getSortMethod(): string {
-    // Get sort configuration from Bases
-    const sortConfigs = this.config.getSort();
-
-    if (sortConfigs && sortConfigs.length > 0) {
-      const firstSort = sortConfigs[0];
-
-      const property = firstSort.property;
-      const direction = firstSort.direction.toLowerCase();
-
-      // Check for ctime/mtime in property
-      if (property.includes("ctime")) {
-        const result = `ctime-${direction}`;
-        return result;
-      }
-      if (property.includes("mtime")) {
-        const result = `mtime-${direction}`;
-        return result;
-      }
-    }
-    return "mtime-desc";
-  }
-
-  private async loadContentForEntries(
-    entries: BasesEntry[],
-    settings: Settings,
-  ): Promise<void> {
-    // Load snippets for text preview
-    if (settings.showTextPreview) {
-      // Prepare entries for snippet loading
-      const snippetEntries = entries
-        .filter((entry) => !(entry.file.path in this.snippets))
-        .map((entry) => {
-          const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-          if (!(file instanceof TFile)) return null;
-
-          // Resolve text preview property - check timestamps first
-          let textPreviewData: unknown = null;
-          if (settings.textPreviewProperty) {
-            const textPreviewProps = settings.textPreviewProperty
-              .split(",")
-              .map((p) => p.trim());
-            for (const prop of textPreviewProps) {
-              const normalizedProp = normalizePropertyName(this.app, prop);
-              // Try timestamp property first
-              const timestamp = resolveTimestampProperty(
-                normalizedProp,
-                entry.file.stat.ctime,
-                entry.file.stat.mtime,
-              );
-              if (timestamp) {
-                textPreviewData = timestamp;
-                break;
-              }
-              // Try regular property
-              const textPreviewValue = getFirstBasesPropertyValue(
-                this.app,
-                entry,
-                normalizedProp,
-              ) as { data?: unknown } | null;
-              if (
-                textPreviewValue?.data != null &&
-                textPreviewValue.data !== ""
-              ) {
-                textPreviewData = textPreviewValue.data;
-                break;
-              }
-            }
-          }
-          return {
-            path: entry.file.path,
-            file,
-            textPreviewData,
-          };
-        })
-        .filter(
-          (e): e is { path: string; file: TFile; textPreviewData: unknown } =>
-            e !== null,
-        );
-
-      await loadSnippetsForEntries(
-        snippetEntries,
-        settings.fallbackToContent,
-        settings.omitFirstLine,
-        this.app,
-        this.snippets,
-      );
-    }
-
-    // Load images for thumbnails
-    if (settings.imageFormat !== "none") {
-      // Prepare entries for image loading
-      const imageEntries = entries
-        .filter((entry) => !(entry.file.path in this.images))
-        .map((entry) => {
-          const file = this.app.vault.getAbstractFileByPath(entry.file.path);
-          if (!(file instanceof TFile)) return null;
-
-          // Normalize property names to support both display names and syntax names
-          const normalizedImageProperty = settings.imageProperty
-            ? settings.imageProperty
-                .split(",")
-                .map((p) => normalizePropertyName(this.app, p.trim()))
-                .join(",")
-            : "";
-          const imagePropertyValues = getAllBasesImagePropertyValues(
-            this.app,
-            entry,
-            normalizedImageProperty,
-          );
-          return {
-            path: entry.file.path,
-            file,
-            imagePropertyValues: imagePropertyValues as unknown[],
-          };
-        })
-        .filter((e): e is NonNullable<typeof e> => e !== null);
-
-      await loadImagesForEntries(
-        imageEntries,
-        settings.fallbackToEmbeds,
-        this.app,
-        this.images,
-        this.hasImageAvailable,
-      );
-    }
-  }
-
   private setupInfiniteScroll(totalEntries: number): void {
     // Clean up existing listener
     if (this.scrollListener) {
@@ -532,6 +384,7 @@ export class DynamicViewsCardView extends BasesView {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }
+    this.swipeAbortController?.abort();
     this.cardRenderer.cleanup();
   }
 

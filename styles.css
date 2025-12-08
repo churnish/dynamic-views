@@ -323,23 +323,23 @@ settings:
     -
         id: dynamic-views-zoom-sensitivity
         title: Zoom sensitivity
-        description: Controls how quickly images zoom when using trackpad pinch or mouse wheel
+        description: Set how quickly images zoom
         type: variable-number-slider
-        default: 0.15
+        default: 0.08
         min: 0.01
         max: 1
         step: 0.01
         format: ''
     -
-        id: dynamic-views-zoom-constrain-to-editor
-        title: Constrain to tab
-        description: When enabled, zoomed images are constrained to the editor pane instead of fullscreen
+        id: dynamic-views-zoom-fullscreen
+        title: Fullscreen zoom (desktop)
+        description: Open zoomed images in fullscreen
         type: class-toggle
         default: false
     -
-        id: dynamic-views-zoom-persist
-        title: Persistent zoom
-        description: When enabled, zoomed images stay zoomed when clicking outside. When disabled, clicking outside closes zoom.
+        id: dynamic-views-zoom-close-on-click
+        title: Close when losing focus (desktop)
+        description: Close zoomed images when tab loses focus
         type: class-toggle
         default: false
     -
@@ -2611,7 +2611,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   .card
   .card-title
   ~ .card-properties-bottom,
-.dynamic-views .dynamic-views-grid .card .card-title ~ .card-properties-bottom,
+.dynamic-views .dynamic-views-grid .card .card-title ~ .card-properties-bottom {
+  margin-top: auto;
+}
+
+/* Grid mode: only-child needs padding-top since owl selector doesn't apply */
 .bases-view[data-view-type="dynamic-views-grid"]
   .dynamic-views-grid
   .card
@@ -2871,7 +2875,12 @@ body.dynamic-views-file-type-ext
 
 /* File type indicator: Badge (box before title) */
 body.dynamic-views-file-type-badge .dynamic-views .card-title-ext {
-  display: block;
+  display: flex;
+  align-items: center;
+  height: calc(
+    var(--dynamic-views-title-font-size, var(--font-ui-medium)) *
+      var(--line-height-tight)
+  );
   font-size: 0;
   pointer-events: none;
   cursor: default;
@@ -2883,10 +2892,7 @@ body.dynamic-views-file-type-badge .dynamic-views .card-title-ext::before {
   content: attr(data-ext);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-  line-height: calc(
-    var(--dynamic-views-title-font-size, var(--font-ui-medium)) *
-      var(--line-height-tight)
-  );
+  line-height: var(--dynamic-views-title-font-size, var(--font-ui-medium));
   padding: 0 0.4em;
   border-radius: var(--radius-s);
   background-color: var(--background-modifier-border);
@@ -3238,15 +3244,11 @@ body:not(.dynamic-views-image-zoom-disabled)
   bottom: 0;
 }
 
-/* Constrain to tab: opacity from --background-modifier-cover + absolute positioning */
-body:not(
-    .dynamic-views-image-zoom-disabled
-  ).dynamic-views-zoom-constrain-to-editor
+/* Default (constrained to tab): absolute positioning within pane */
+body:not(.dynamic-views-image-zoom-disabled):not(.dynamic-views-zoom-fullscreen)
   .dynamic-views
   .image-embed.is-zoomed,
-body:not(
-    .dynamic-views-image-zoom-disabled
-  ).dynamic-views-zoom-constrain-to-editor
+body:not(.dynamic-views-image-zoom-disabled):not(.dynamic-views-zoom-fullscreen)
   .workspace-leaf-content
   > .image-embed.is-zoomed {
   background: color-mix(
@@ -3256,24 +3258,16 @@ body:not(
   );
   position: absolute;
   inset: 0;
-  /* Debug: green border for constrained mode */
-  outline: 3px solid green;
 }
 
-/* Not constrained: transparent background + fixed positioning */
-body:not(.dynamic-views-image-zoom-disabled):not(
-    .dynamic-views-zoom-constrain-to-editor
-  )
+/* Fullscreen zoom: fixed positioning over entire viewport */
+body:not(.dynamic-views-image-zoom-disabled).dynamic-views-zoom-fullscreen
   .dynamic-views
   .image-embed.is-zoomed,
-body:not(.dynamic-views-image-zoom-disabled):not(
-    .dynamic-views-zoom-constrain-to-editor
-  )
+body:not(.dynamic-views-image-zoom-disabled).dynamic-views-zoom-fullscreen
   > .image-embed.is-zoomed {
   background: var(--background-modifier-cover);
   position: fixed;
-  /* Debug: red border for unconstrained mode */
-  outline: 3px solid red;
 }
 
 body:not(.dynamic-views-image-zoom-disabled)
@@ -3312,6 +3306,15 @@ body:not(.dynamic-views-image-zoom-disabled):not(.is-mobile)
   max-width: 90vw;
 }
 
+/* Default (constrained): limit to 90% of pane (not viewport) */
+body:not(.dynamic-views-image-zoom-disabled):not(.dynamic-views-zoom-fullscreen)
+  .workspace-leaf-content
+  > .image-embed.is-zoomed
+  img {
+  max-height: 90%;
+  max-width: 90%;
+}
+
 /* Cover-specific zoom override (higher specificity needed) */
 body:not(.dynamic-views-image-zoom-disabled)
   .dynamic-views
@@ -3334,10 +3337,8 @@ body:not(.dynamic-views-image-zoom-disabled) > .image-embed.is-zoomed {
   bottom: 0;
 }
 
-/* Constrain to tab: opacity from --background-modifier-cover + absolute positioning for covers */
-body:not(
-    .dynamic-views-image-zoom-disabled
-  ).dynamic-views-zoom-constrain-to-editor
+/* Default (constrained): absolute positioning for covers */
+body:not(.dynamic-views-image-zoom-disabled):not(.dynamic-views-zoom-fullscreen)
   .dynamic-views
   .card.image-format-cover
   .card-cover
@@ -3348,26 +3349,18 @@ body:not(
     transparent
   ) !important;
   position: absolute !important;
-  /* Debug: green border for constrained mode */
-  outline: 3px solid green !important;
 }
 
-/* Not constrained: transparent background + fixed positioning for covers */
-body:not(.dynamic-views-image-zoom-disabled):not(
-    .dynamic-views-zoom-constrain-to-editor
-  )
+/* Fullscreen: fixed positioning for covers */
+body:not(.dynamic-views-image-zoom-disabled).dynamic-views-zoom-fullscreen
   .dynamic-views
   .card.image-format-cover
   .card-cover
   .image-embed.is-zoomed,
-body:not(.dynamic-views-image-zoom-disabled):not(
-    .dynamic-views-zoom-constrain-to-editor
-  )
+body:not(.dynamic-views-image-zoom-disabled).dynamic-views-zoom-fullscreen
   > .image-embed.is-zoomed {
   background: var(--background-modifier-cover) !important;
   position: fixed !important;
-  /* Debug: red border for unconstrained mode */
-  outline: 3px solid red !important;
 }
 
 body:not(.dynamic-views-image-zoom-disabled)
@@ -3400,6 +3393,17 @@ body:not(.dynamic-views-image-zoom-disabled):not(.is-mobile)
   img {
   max-height: 90vh;
   max-width: 90vw;
+}
+
+/* Default (constrained): limit cover images to 90% of pane */
+body:not(.dynamic-views-image-zoom-disabled):not(.dynamic-views-zoom-fullscreen)
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover
+  .image-embed.is-zoomed
+  img {
+  max-height: 90%;
+  max-width: 90%;
 }
 
 /* Thumbnail crop alignment overrides */
@@ -3558,6 +3562,18 @@ body.dynamic-views-masonry-fixed-cover-height
   padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }
 
+/* Slideshow covers always use fixed height (ignore "Fixed cover height" setting) */
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-top.image-format-cover
+  .card-cover.card-cover-slideshow,
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-bottom.image-format-cover
+  .card-cover.card-cover-slideshow {
+  padding-top: calc(
+    var(--dynamic-views-image-aspect-ratio, 0.55) * 100%
+  ) !important;
+}
+
 /* Masonry contain mode OFF: hide cover until dimensions known */
 [data-view-type="dynamic-views-masonry"]
   .card.card-cover-contain:not(.cover-ready).card-cover-top
@@ -3639,6 +3655,61 @@ body.dynamic-views-cover-gap-card-padding
   margin: 0 calc(var(--dynamic-views-card-padding, 12px) * -1)
     calc(var(--dynamic-views-card-padding, 12px) * -1)
     calc(var(--dynamic-views-card-padding, 12px) * -1); /* Bleed to bottom/left/right edges */
+}
+
+/* ==================== COVER-ONLY CARDS ==================== */
+/* When cover is the only visible element, fill entire card */
+
+/* Cover-only cards: zero padding, reset wrapper margins */
+.dynamic-views
+  .card.card-cover-top.image-format-cover:not(:has(.card-title)):not(
+    :has(.card-title-container)
+  ):not(:has(.card-subtitle)):not(:has(.card-content)):not(
+    :has(.card-properties-top)
+  ):not(:has(.card-properties-bottom)),
+.dynamic-views
+  .card.card-cover-bottom.image-format-cover:not(:has(.card-title)):not(
+    :has(.card-title-container)
+  ):not(:has(.card-subtitle)):not(:has(.card-content)):not(
+    :has(.card-properties-top)
+  ):not(:has(.card-properties-bottom)) {
+  padding: 0;
+}
+
+/* Reset negative margins since padding is 0 */
+.dynamic-views
+  .card.card-cover-top.image-format-cover:not(:has(.card-title)):not(
+    :has(.card-title-container)
+  ):not(:has(.card-subtitle)):not(:has(.card-content)):not(
+    :has(.card-properties-top)
+  ):not(:has(.card-properties-bottom))
+  .card-cover-wrapper,
+.dynamic-views
+  .card.card-cover-bottom.image-format-cover:not(:has(.card-title)):not(
+    :has(.card-title-container)
+  ):not(:has(.card-subtitle)):not(:has(.card-content)):not(
+    :has(.card-properties-top)
+  ):not(:has(.card-properties-bottom))
+  .card-cover-wrapper {
+  margin: 0;
+}
+
+/* Cover-only: full border radius on cover */
+.dynamic-views
+  .card.card-cover-top.image-format-cover:not(:has(.card-title)):not(
+    :has(.card-title-container)
+  ):not(:has(.card-subtitle)):not(:has(.card-content)):not(
+    :has(.card-properties-top)
+  ):not(:has(.card-properties-bottom))
+  .card-cover,
+.dynamic-views
+  .card.card-cover-bottom.image-format-cover:not(:has(.card-title)):not(
+    :has(.card-title-container)
+  ):not(:has(.card-subtitle)):not(:has(.card-content)):not(
+    :has(.card-properties-top)
+  ):not(:has(.card-properties-bottom))
+  .card-cover {
+  border-radius: var(--dynamic-views-card-border-radius, 8px);
 }
 
 /* Cover-left: wrapper positioned at padding-box edges */
@@ -4571,8 +4642,8 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
 /* Arrow icons */
 .dynamic-views .slideshow-nav-left svg,
 .dynamic-views .slideshow-nav-right svg {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
     drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
 }
@@ -4646,16 +4717,6 @@ body.dynamic-views-hide-slideshow-indicator
 .is-mobile .dynamic-views .slideshow-indicator svg {
   width: 20px;
   height: 20px;
-}
-
-/* Cover bottom position: move indicator to top */
-.dynamic-views .card.card-cover-bottom .slideshow-indicator {
-  top: 8px;
-  bottom: auto;
-}
-
-.is-mobile .dynamic-views .card.card-cover-bottom .slideshow-indicator {
-  top: 6px;
 }
 
 /* Base properties container styles */
@@ -6617,6 +6678,11 @@ body.dynamic-views-no-fade-truncated-text
 .dynamic-views .dynamic-views-masonry .card .card-content ~ .card-properties,
 .dynamic-views .dynamic-views-masonry .card .card-title ~ .card-properties {
   margin-top: auto;
+}
+
+/* Masonry: only-child needs padding-top since owl selector doesn't apply */
+.dynamic-views .dynamic-views-masonry .card .card-properties:only-child {
+  margin-top: auto;
   padding-top: var(--dynamic-views-element-spacing, 8px);
 }
 
@@ -6876,7 +6942,7 @@ body.dynamic-views-no-fade-truncated-text
   left: 0;
   top: 0;
   bottom: 10px;
-  width: 2px;
+  width: 1px;
   background-color: var(--background-modifier-border);
 }
 

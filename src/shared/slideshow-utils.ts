@@ -27,7 +27,6 @@ export function createSlideshowNavigator(
   callbacks?: SlideshowCallbacks,
 ): {
   navigate: (direction: 1 | -1) => void;
-  getCurrentIndex: () => number;
 } {
   let currentIndex = 0;
   let isAnimating = false;
@@ -67,16 +66,27 @@ export function createSlideshowNavigator(
     nextImg.src = newUrl;
     imageEmbed.style.setProperty("--cover-image-url", `url("${newUrl}")`);
 
-    // Apply animation classes
-    const exitClass =
-      direction === 1 ? "slideshow-exit-left" : "slideshow-exit-right";
-    const enterClass =
-      direction === 1 ? "slideshow-enter-left" : "slideshow-enter-right";
+    // Detect wrap from last to first - animate in reverse to signal "rewind"
+    // Only reverse for 3+ images; with 2 images alternating direction feels glitchy
+    const isWrapToFirst =
+      direction === 1 &&
+      currentIndex === imageUrls.length - 1 &&
+      newIndex === 0 &&
+      imageUrls.length >= 3;
+
+    // Normal: next=left, prev=right. Last→first wrap: reverse direction
+    const slideLeft = direction === 1 && !isWrapToFirst;
+    const exitClass = slideLeft
+      ? "slideshow-exit-left"
+      : "slideshow-exit-right";
+    const enterClass = slideLeft
+      ? "slideshow-enter-left"
+      : "slideshow-enter-right";
 
     currImg.classList.add(exitClass);
     nextImg.classList.add(enterClass);
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (signal.aborted) return;
 
       // Remove animation classes
@@ -99,12 +109,14 @@ export function createSlideshowNavigator(
         callbacks.onAnimationComplete();
       }
     }, SLIDESHOW_ANIMATION_MS);
+
+    // Clean up timeout if aborted
+    signal.addEventListener("abort", () => clearTimeout(timeoutId), {
+      once: true,
+    });
   };
 
-  return {
-    navigate,
-    getCurrentIndex: () => currentIndex,
-  };
+  return { navigate };
 }
 
 /**

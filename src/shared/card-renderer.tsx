@@ -2031,24 +2031,3 @@ function handleArrowKey(
     targetCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 }
-
-/**
- * Cleanup function to remove all zoomed clones and event listeners
- * Should be called when a view using CardRenderer is unmounted
- */
-export function cleanupZoomState(): void {
-  // Skip zoom cleanup if persistent zoom is enabled (preserve across tab switches)
-  if (document.body.classList.contains("dynamic-views-zoom-persist")) {
-    return;
-  }
-
-  zoomedClones.forEach((clone) => {
-    clone.remove();
-  });
-  zoomedClones.clear();
-
-  zoomCleanupFns.forEach((cleanup) => {
-    cleanup();
-  });
-  zoomCleanupFns.clear();
-}

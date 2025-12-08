@@ -81,7 +81,7 @@ export function getBasesViewOptions(): any[] {
         {
           type: "toggle",
           displayName:
-            "Use note content if text preview property missing or empty",
+            "Show note content if text preview property missing or empty",
           key: "fallbackToContent",
           default: DEFAULT_VIEW_SETTINGS.fallbackToContent,
         },
@@ -751,5 +751,6 @@ export function readBasesSettings(
         ? value
         : defaultViewSettings.imageAspectRatio;
     })(),
+    preventSidebarSwipe: globalSettings.preventSidebarSwipe, // From global settings
   };
 }

@@ -145,8 +145,8 @@ export class SharedCardRenderer {
     this.cardAbortControllers.forEach((controller) => controller.abort());
     this.cardAbortControllers = [];
 
-    // Skip zoom cleanup if persistent zoom is enabled (preserve across tab switches)
-    if (!document.body.classList.contains("dynamic-views-zoom-persist")) {
+    // Skip zoom cleanup unless close-on-click is enabled (preserve by default)
+    if (document.body.classList.contains("dynamic-views-zoom-close-on-click")) {
       this.zoomedClones.forEach((clone) => {
         clone.remove();
       });
@@ -325,6 +325,11 @@ export class SharedCardRenderer {
       settings.openFileAction === "card",
     );
 
+    // Create AbortController for event listener cleanup
+    const abortController = new AbortController();
+    this.cardAbortControllers.push(abortController);
+    const { signal } = abortController;
+
     // Keyboard navigation setup (roving tabindex pattern)
     if (keyboardNav) {
       cardEl.tabIndex =
@@ -342,11 +347,6 @@ export class SharedCardRenderer {
         return false;
       });
       this.cardScopes.push(cardScope);
-
-      // Create AbortController for event listener cleanup
-      const abortController = new AbortController();
-      this.cardAbortControllers.push(abortController);
-      const { signal } = abortController;
 
       // Update focus state and push scope when card receives focus
       cardEl.addEventListener(
@@ -1210,6 +1210,7 @@ export class SharedCardRenderer {
             position,
             settings,
             cardEl,
+            signal,
           );
         }
       } else {
@@ -1301,6 +1302,7 @@ export class SharedCardRenderer {
           position,
           settings,
           cardEl,
+          signal,
         );
       } else {
         cardEl.createDiv("card-thumbnail-placeholder");
@@ -1335,6 +1337,7 @@ export class SharedCardRenderer {
             position,
             settings,
             cardEl,
+            signal,
           );
         } else {
           contentContainer.createDiv("card-thumbnail-placeholder");
@@ -1357,6 +1360,7 @@ export class SharedCardRenderer {
           position,
           settings,
           cardEl,
+          signal,
         );
       } else {
         cardEl.createDiv("card-thumbnail-placeholder");
@@ -1557,19 +1561,24 @@ export class SharedCardRenderer {
     position: "left" | "right" | "top" | "bottom",
     settings: Settings,
     cardEl: HTMLElement,
+    signal?: AbortSignal,
   ): void {
     const imageEmbedContainer = imageEl.createDiv("image-embed");
 
-    // Add zoom handler
-    imageEmbedContainer.addEventListener("click", (e) => {
-      handleImageZoomClick(
-        e,
-        cardEl.getAttribute("data-path") || "",
-        this.app,
-        this.zoomCleanupFns,
-        this.zoomedClones,
-      );
-    });
+    // Add zoom handler with cleanup via AbortController
+    imageEmbedContainer.addEventListener(
+      "click",
+      (e) => {
+        handleImageZoomClick(
+          e,
+          cardEl.getAttribute("data-path") || "",
+          this.app,
+          this.zoomCleanupFns,
+          this.zoomedClones,
+        );
+      },
+      signal ? { signal } : undefined,
+    );
 
     const imgEl = imageEmbedContainer.createEl("img", {
       attr: { src: imageUrls[0], alt: "" },
@@ -2588,9 +2597,8 @@ export class SharedCardRenderer {
     field2: HTMLElement,
   ): void {
     try {
-      const card = row.closest(".card");
       const cardProperties = row.closest(".card-properties");
-      if (!card || !cardProperties) return;
+      if (!row.closest(".card") || !cardProperties) return;
 
       // Remove measured state and enter measuring state to remove constraints
       row.removeClass("property-measured");
@@ -2633,30 +2641,9 @@ export class SharedCardRenderer {
         width2 += label2.scrollWidth + inlineLabelGap;
       }
 
-      // Calculate available width from card dimensions
-      // Can't use row.clientWidth because it lags behind when CSS variables update
-
-      // Get side cover padding from CSS variable (freshly updated by side cover observer)
-      const sideCoverPadding =
-        parseFloat(
-          getComputedStyle(card).getPropertyValue(
-            "--dynamic-views-side-cover-content-padding",
-          ),
-        ) || 0;
-
-      // Calculate available width: cardProperties width = card content width minus side cover
-      // For cards with side covers: cardProperties has max-width constraint
-      // For cards without: cardProperties spans full card content area
-      let containerWidth: number;
-      if (sideCoverPadding > 0) {
-        // Card has side cover: cardProperties max-width = 100% - sideCoverPadding
-        // cardProperties content width = card content width - sideCoverPadding
-        const cardContentWidth = card.clientWidth; // Content width (excludes border)
-        containerWidth = cardContentWidth - sideCoverPadding;
-      } else {
-        // No side cover: use cardProperties full width
-        containerWidth = cardProperties.clientWidth;
-      }
+      // Use cardProperties.clientWidth directly - it already accounts for
+      // card padding and side cover constraints
+      const containerWidth = cardProperties.clientWidth;
 
       // Guard against negative or zero width (edge case: very narrow cards or misconfiguration)
       if (containerWidth <= 0) {

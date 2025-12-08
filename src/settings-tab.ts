@@ -154,47 +154,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Open random file in new tab")
-      .setDesc(
-        "When opening a random file, open it in a new tab instead of the same tab",
-      )
-      .addToggle((toggle) =>
-        toggle.setValue(settings.openRandomInNewTab).onChange(async (value) => {
-          await this.plugin.persistenceManager.setGlobalSettings({
-            openRandomInNewTab: value,
-          });
-        }),
-      );
-
-    new Setting(containerEl)
-      .setName('Show "Shuffle" in ribbon')
-      .setDesc(
-        "Display the shuffle button in the left sidebar ribbon. Reload plugin or Obsidian to apply.",
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(settings.showShuffleInRibbon)
-          .onChange(async (value) => {
-            await this.plugin.persistenceManager.setGlobalSettings({
-              showShuffleInRibbon: value,
-            });
-          }),
-      );
-
-    new Setting(containerEl)
-      .setName('Show "Open random note" in ribbon')
-      .setDesc(
-        "Display the random note button in the left sidebar ribbon. Reload plugin or Obsidian to apply.",
-      )
-      .addToggle((toggle) =>
-        toggle.setValue(settings.showRandomInRibbon).onChange(async (value) => {
-          await this.plugin.persistenceManager.setGlobalSettings({
-            showRandomInRibbon: value,
-          });
-        }),
-      );
-
-    new Setting(containerEl)
       .setName("Thumbnail cache size")
       .setDesc("Size of cached thumbnails (affects performance and quality)")
       .addDropdown((dropdown) =>
@@ -228,6 +187,42 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           });
         }),
       );
+
+    const swipeSetting = new Setting(containerEl).setName(
+      "Prevent sidebar swipe on mobile",
+    );
+    const swipeDesc = document.createDocumentFragment();
+    swipeDesc.appendText(
+      "Disable mobile sidebar gestures when a plugin view is open. Prevents unintentional triggers when scrolling horizontally.",
+    );
+    const swipeTip = document.createElement("span");
+    swipeTip.appendChild(document.createElement("br"));
+    swipeTip.appendText(
+      "Tip: long press the triple dot button in the top-right to bring up the right sidebar.",
+    );
+    if (settings.preventSidebarSwipe !== "disabled") {
+      swipeDesc.appendChild(swipeTip);
+    }
+    swipeSetting.setDesc(swipeDesc).addDropdown((dropdown) =>
+      dropdown
+        .addOption("all-views", "In all views")
+        .addOption("base-files", "In base files")
+        .addOption("disabled", "Disabled")
+        .setValue(settings.preventSidebarSwipe)
+        .onChange(async (value) => {
+          if (value === "disabled") {
+            swipeTip.remove();
+          } else if (!swipeTip.parentElement) {
+            swipeSetting.descEl.appendChild(swipeTip);
+          }
+          await this.plugin.persistenceManager.setGlobalSettings({
+            preventSidebarSwipe: value as
+              | "disabled"
+              | "base-files"
+              | "all-views",
+          });
+        }),
+    );
 
     // Smart timestamp section
     const smartTimestampSetting = new Setting(containerEl)
@@ -333,6 +328,47 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       conditionalText.hide();
       smartTimestampSubSettings.hide();
     }
+
+    new Setting(containerEl)
+      .setName("Show 'Shuffle' ribbon icon")
+      .setDesc(
+        "Display the shuffle button in the left sidebar ribbon. Reload plugin or Obsidian to apply.",
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(settings.showShuffleInRibbon)
+          .onChange(async (value) => {
+            await this.plugin.persistenceManager.setGlobalSettings({
+              showShuffleInRibbon: value,
+            });
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Show 'Open random file' ribbon icon")
+      .setDesc(
+        "Display the random file button in the left sidebar ribbon. Reload plugin or Obsidian to apply.",
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(settings.showRandomInRibbon).onChange(async (value) => {
+          await this.plugin.persistenceManager.setGlobalSettings({
+            showRandomInRibbon: value,
+          });
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("Open random file in new tab")
+      .setDesc(
+        "When opening a random file, open it in a new tab instead of the same tab",
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(settings.openRandomInNewTab).onChange(async (value) => {
+          await this.plugin.persistenceManager.setGlobalSettings({
+            openRandomInNewTab: value,
+          });
+        }),
+      );
 
     // Appearance section
     const appearanceHeading = new Setting(containerEl)

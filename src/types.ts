@@ -63,6 +63,7 @@ export interface Settings {
   modifiedTimeProperty: string;
   fallbackToFileMetadata: boolean;
   cardSize: number;
+  preventSidebarSwipe: "disabled" | "base-files" | "all-views";
 }
 
 export interface UIState {

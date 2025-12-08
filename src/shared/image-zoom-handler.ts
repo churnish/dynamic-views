@@ -3,7 +3,7 @@
  */
 
 import type { App } from "obsidian";
-import { TFile } from "obsidian";
+import { setupSwipeInterception } from "../bases/swipe-interceptor";
 import { setupImageZoomGestures } from "./image-zoom-gestures";
 
 // Store cleanup functions for event listeners to prevent memory leaks
@@ -17,10 +17,8 @@ function closeImageZoom(
   zoomCleanupFns: Map<HTMLElement, () => void>,
   zoomedClones: Map<HTMLElement, HTMLElement>,
 ): void {
-  // Remove clone from DOM
   cloneEl.remove();
 
-  // Remove from tracking map (find and delete the entry for this clone)
   for (const [original, clone] of zoomedClones) {
     if (clone === cloneEl) {
       zoomedClones.delete(original);
@@ -28,14 +26,12 @@ function closeImageZoom(
     }
   }
 
-  // Cleanup zoom gestures
   const cleanup = zoomCleanupFns.get(cloneEl);
   if (cleanup) {
     cleanup();
     zoomCleanupFns.delete(cloneEl);
   }
 
-  // Remove event listeners
   const removeListeners = zoomListenerCleanups.get(cloneEl);
   if (removeListeners) {
     removeListeners();
@@ -85,6 +81,13 @@ function openImageZoom(
   zoomCleanupFns: Map<HTMLElement, () => void>,
   zoomedClones: Map<HTMLElement, HTMLElement>,
 ): void {
+  // Validate embed has an image before proceeding
+  const sourceImg = embedEl.querySelector("img");
+  if (!sourceImg) {
+    console.warn("Dynamic Views: Cannot zoom - no img element found");
+    return;
+  }
+
   // Close other zoomed images (find all existing clones)
   for (const [, clone] of zoomedClones) {
     closeImageZoom(clone, zoomCleanupFns, zoomedClones);
@@ -93,12 +96,13 @@ function openImageZoom(
   // Clone the embed element for zooming (original stays on card)
   const cloneEl = embedEl.cloneNode(true) as HTMLElement;
   cloneEl.classList.add("is-zoomed");
+  const imgEl = cloneEl.querySelector("img") as HTMLImageElement;
 
-  // Append clone to appropriate container
-  const isConstrained = document.body.classList.contains(
-    "dynamic-views-zoom-constrain-to-editor",
-  );
-  if (isConstrained) {
+  // Append clone to appropriate container (mobile always fullscreen)
+  const isFullscreen =
+    app.isMobile ||
+    document.body.classList.contains("dynamic-views-zoom-fullscreen");
+  if (!isFullscreen) {
     const viewContainer = embedEl.closest(".workspace-leaf-content");
     if (viewContainer) {
       viewContainer.appendChild(cloneEl);
@@ -109,61 +113,91 @@ function openImageZoom(
     document.body.appendChild(cloneEl);
   }
 
-  // Track the clone
   zoomedClones.set(embedEl, cloneEl);
-
-  // Setup zoom gestures on clone
-  const imgEl = cloneEl.querySelector("img");
-  if (!imgEl) {
-    console.warn("Dynamic Views: Zoom opened but no img element found");
-    return;
-  }
-
-  const file = app.vault.getAbstractFileByPath(cardPath);
 
   // Only setup pinch/gesture zoom if not disabled
   const isPinchZoomDisabled = document.body.classList.contains(
     "dynamic-views-zoom-disabled",
   );
   if (!isPinchZoomDisabled) {
-    const cleanup = setupImageZoomGestures(
-      imgEl,
-      cloneEl,
-      app,
-      file instanceof TFile ? file : undefined,
-    );
-    zoomCleanupFns.set(cloneEl, cleanup);
+    const gestureCleanup = setupImageZoomGestures(imgEl, cloneEl, app);
+
+    // On mobile, disable all touch gestures (sidebar swipes + pull-down) while panning
+    if (app.isMobile) {
+      const swipeController = new AbortController();
+      setupSwipeInterception(cloneEl, swipeController.signal, true);
+      zoomCleanupFns.set(cloneEl, () => {
+        gestureCleanup();
+        swipeController.abort();
+      });
+    } else {
+      zoomCleanupFns.set(cloneEl, gestureCleanup);
+    }
+  } else {
+    // When panzoom disabled, still allow clicking image to close
+    const onImageClick = (e: MouseEvent) => {
+      e.stopPropagation();
+      closeImageZoom(cloneEl, zoomCleanupFns, zoomedClones);
+    };
+    // Prevent context menu when panzoom disabled
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    imgEl.addEventListener("click", onImageClick);
+    imgEl.addEventListener("contextmenu", onContextMenu);
+    zoomCleanupFns.set(cloneEl, () => {
+      imgEl.removeEventListener("click", onImageClick);
+      imgEl.removeEventListener("contextmenu", onContextMenu);
+    });
   }
 
-  // Add listeners for closing
-  // Clicks on img are stopped by panzoom's click handler, so any click reaching here should close
-  const onClickOutside = (evt: Event) => {
-    // Skip if persistent zoom is enabled
-    if (document.body.classList.contains("dynamic-views-zoom-persist")) {
+  // Click on overlay (cloneEl background, not image) closes zoom
+  const onOverlayClick = (e: MouseEvent) => {
+    if (e.target === cloneEl) {
+      closeImageZoom(cloneEl, zoomCleanupFns, zoomedClones);
+    }
+  };
+
+  // Document-level click closes zoom only if close-on-click enabled
+  const onClickOutside = (e: Event) => {
+    if (
+      !document.body.classList.contains("dynamic-views-zoom-close-on-click")
+    ) {
       return;
     }
-    const target = evt.target as HTMLElement;
-    // Close unless clicking directly on the image (shouldn't reach here due to stopPropagation, but safety check)
-    if (target !== imgEl) {
+    const target = e.target as HTMLElement;
+    if (target !== imgEl && target !== cloneEl) {
       closeImageZoom(cloneEl, zoomCleanupFns, zoomedClones);
     }
   };
 
-  const onEscape = (evt: KeyboardEvent) => {
-    if (evt.key === "Escape") {
+  const onEscape = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
       closeImageZoom(cloneEl, zoomCleanupFns, zoomedClones);
     }
   };
 
-  // Delay adding listeners to avoid immediate trigger
-  setTimeout(() => {
-    document.addEventListener("click", onClickOutside);
-    document.addEventListener("keydown", onEscape);
-  }, 0);
+  // Add escape listener immediately (always want Escape to work)
+  document.addEventListener("keydown", onEscape);
 
-  // Store cleanup function for this zoom instance
+  // Delay click listeners to avoid immediate trigger from opening click
+  // Use requestAnimationFrame for more reliable timing than setTimeout
+  let clickListenersAdded = false;
+  requestAnimationFrame(() => {
+    // Only add if clone still in DOM (not already closed)
+    if (cloneEl.isConnected) {
+      cloneEl.addEventListener("click", onOverlayClick);
+      document.addEventListener("click", onClickOutside);
+      clickListenersAdded = true;
+    }
+  });
+
   zoomListenerCleanups.set(cloneEl, () => {
-    document.removeEventListener("click", onClickOutside);
     document.removeEventListener("keydown", onEscape);
+    if (clickListenersAdded) {
+      cloneEl.removeEventListener("click", onOverlayClick);
+      document.removeEventListener("click", onClickOutside);
+    }
   });
 }

@@ -103,6 +103,7 @@ export const DEFAULT_SETTINGS: Settings = {
   modifiedTimeProperty: "",
   fallbackToFileMetadata: true,
   cardSize: 400,
+  preventSidebarSwipe: "disabled",
 };
 
 export const DEFAULT_UI_STATE = {
