@@ -12,10 +12,11 @@ import {
   BasesEntry,
   Platform,
   Notice,
+  Scope,
 } from "obsidian";
 import { CardData } from "../shared/card-renderer";
 import { resolveBasesProperty } from "../shared/data-transform";
-import { setupImageLoadHandler } from "../shared/image-loader";
+import { setupImageLoadHandler, handleImageLoad } from "../shared/image-loader";
 import {
   updateScrollGradient,
   updateElementScrollGradient,
@@ -42,6 +43,11 @@ import {
 } from "../utils/file-extension";
 import type DynamicViewsPlugin from "../../main";
 import type { Settings } from "../types";
+import {
+  createSlideshowNavigator,
+  setupImagePreload,
+} from "../shared/slideshow-utils";
+import { handleArrowNavigation, isArrowKey } from "../shared/keyboard-nav";
 
 /**
  * Truncate title text to fit within container with ellipsis
@@ -104,6 +110,10 @@ export class SharedCardRenderer {
   private propertyObservers: ResizeObserver[] = [];
   private zoomCleanupFns: Map<HTMLElement, () => void> = new Map();
   private zoomedClones: Map<HTMLElement, HTMLElement> = new Map();
+  private slideshowCleanups: (() => void)[] = [];
+  private cardScopes: Scope[] = [];
+  private cardAbortControllers: AbortController[] = [];
+  private activeScope: Scope | null = null;
 
   constructor(
     protected app: App,
@@ -112,22 +122,41 @@ export class SharedCardRenderer {
   ) {}
 
   /**
-   * Cleanup observers and zoom state when renderer is destroyed
+   * Cleanup observers, scopes, event listeners, and zoom state when renderer is destroyed
    */
   public cleanup(): void {
     this.propertyObservers.forEach((obs) => obs.disconnect());
     this.propertyObservers = [];
 
-    // Remove all zoom clones and cleanup
-    this.zoomedClones.forEach((clone) => {
-      clone.remove();
-    });
-    this.zoomedClones.clear();
+    // Cleanup slideshow event listeners
+    this.slideshowCleanups.forEach((cleanup) => cleanup());
+    this.slideshowCleanups = [];
 
-    this.zoomCleanupFns.forEach((cleanup) => {
-      cleanup();
-    });
-    this.zoomCleanupFns.clear();
+    // Pop any active scope to prevent scope leak on unmount
+    if (this.activeScope) {
+      this.app.keymap.popScope(this.activeScope);
+      this.activeScope = null;
+    }
+
+    // Clear scope references
+    this.cardScopes = [];
+
+    // Abort all card event listeners
+    this.cardAbortControllers.forEach((controller) => controller.abort());
+    this.cardAbortControllers = [];
+
+    // Skip zoom cleanup if persistent zoom is enabled (preserve across tab switches)
+    if (!document.body.classList.contains("dynamic-views-zoom-persist")) {
+      this.zoomedClones.forEach((clone) => {
+        clone.remove();
+      });
+      this.zoomedClones.clear();
+
+      this.zoomCleanupFns.forEach((cleanup) => {
+        cleanup();
+      });
+      this.zoomCleanupFns.clear();
+    }
   }
 
   /**
@@ -230,6 +259,7 @@ export class SharedCardRenderer {
    * @param entry - Bases entry
    * @param settings - View settings
    * @param hoverParent - Parent object for hover-link event
+   * @param keyboardNav - Optional keyboard navigation config
    */
   renderCard(
     container: HTMLElement,
@@ -237,6 +267,12 @@ export class SharedCardRenderer {
     entry: BasesEntry,
     settings: Settings,
     hoverParent: unknown,
+    keyboardNav?: {
+      index: number;
+      focusableCardIndex: number;
+      containerRef: { current: HTMLElement | null };
+      onFocusChange?: (index: number) => void;
+    },
   ): void {
     // Create card element
     const cardEl = container.createDiv("card");
@@ -289,13 +325,103 @@ export class SharedCardRenderer {
       settings.openFileAction === "card",
     );
 
+    // Keyboard navigation setup (roving tabindex pattern)
+    if (keyboardNav) {
+      cardEl.tabIndex =
+        keyboardNav.index === keyboardNav.focusableCardIndex ? 0 : -1;
+
+      // Create scope for Cmd/Ctrl+Enter and Cmd/Ctrl+Space handling
+      // Pass app.scope as parent so unhandled keys bubble up to Obsidian
+      const cardScope = new Scope(this.app.scope);
+      cardScope.register(["Mod"], "Enter", () => {
+        void this.app.workspace.openLinkText(card.path, "", "tab");
+        return false;
+      });
+      cardScope.register(["Mod"], " ", () => {
+        void this.app.workspace.openLinkText(card.path, "", "tab");
+        return false;
+      });
+      this.cardScopes.push(cardScope);
+
+      // Create AbortController for event listener cleanup
+      const abortController = new AbortController();
+      this.cardAbortControllers.push(abortController);
+      const { signal } = abortController;
+
+      // Update focus state and push scope when card receives focus
+      cardEl.addEventListener(
+        "focus",
+        () => {
+          if (keyboardNav.onFocusChange) {
+            keyboardNav.onFocusChange(keyboardNav.index);
+          }
+          // Pop previous scope if exists and different (handles rapid focus switching)
+          if (this.activeScope && this.activeScope !== cardScope) {
+            this.app.keymap.popScope(this.activeScope);
+          }
+          this.activeScope = cardScope;
+          this.app.keymap.pushScope(cardScope);
+        },
+        { signal },
+      );
+
+      // Pop scope when card loses focus
+      cardEl.addEventListener(
+        "blur",
+        () => {
+          // Only pop if this card's scope is the active one
+          if (this.activeScope === cardScope) {
+            this.app.keymap.popScope(cardScope);
+            this.activeScope = null;
+          }
+        },
+        { signal },
+      );
+
+      // Handle keyboard events (Enter/Space, arrows, Tab, Escape)
+      cardEl.addEventListener(
+        "keydown",
+        (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            // Open file (Mod+key handled by scope above)
+            if (!e.metaKey && !e.ctrlKey) {
+              e.preventDefault();
+              void this.app.workspace.openLinkText(card.path, "", false);
+            }
+          } else if (isArrowKey(e.key)) {
+            // Arrow key navigation
+            e.preventDefault();
+            if (keyboardNav.containerRef.current) {
+              handleArrowNavigation(
+                e,
+                cardEl,
+                keyboardNav.containerRef.current,
+                (_targetCard, targetIndex) => {
+                  if (keyboardNav.onFocusChange) {
+                    keyboardNav.onFocusChange(targetIndex);
+                  }
+                },
+              );
+            }
+          } else if (e.key === "Tab") {
+            // Prevent Tab from moving focus within card grid
+            e.preventDefault();
+          } else if (e.key === "Escape") {
+            // Unfocus card on Escape
+            cardEl.blur();
+          }
+        },
+        { signal },
+      );
+    }
+
     // Handle card click to open file
     cardEl.addEventListener("click", (e) => {
       // Only handle card-level clicks when openFileAction is 'card'
       // When openFileAction is 'title', the title link handles its own clicks
       if (settings.openFileAction === "card") {
         const target = e.target as HTMLElement;
-        // Don't open if clicking on links, tags, path segments, or images
+        // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
         const isLink = target.tagName === "A" || target.closest("a");
         const isTag =
           target.classList.contains("tag") || target.closest(".tag");
@@ -303,8 +429,16 @@ export class SharedCardRenderer {
           target.classList.contains("path-segment") ||
           target.closest(".path-segment");
         const isImage = target.tagName === "IMG";
+        const isZoomEnabled = !document.body.classList.contains(
+          "dynamic-views-image-zoom-disabled",
+        );
 
-        if (!isLink && !isTag && !isPathSegment && !isImage) {
+        if (
+          !isLink &&
+          !isTag &&
+          !isPathSegment &&
+          !(isImage && isZoomEnabled)
+        ) {
           const newLeaf = e.metaKey || e.ctrlKey;
           const file = this.app.vault.getAbstractFileByPath(card.path);
           if (file instanceof TFile) {
@@ -860,7 +994,7 @@ export class SharedCardRenderer {
           setIcon(iconEl, icon);
         }
 
-        // Add file extension before title text (for Badge mode float:left)
+        // Add file format indicator before title text (for Badge mode float:left)
         const extInfo = getFileExtInfo(card.path, isFullname);
         const extNoDot = extInfo?.ext.slice(1) || "";
         let extEl: HTMLElement | null = null;
@@ -906,6 +1040,17 @@ export class SharedCardRenderer {
             e.stopPropagation();
             const newLeaf = e.metaKey || e.ctrlKey;
             void this.app.workspace.openLinkText(card.path, "", newLeaf);
+          });
+
+          // Page preview on hover
+          link.addEventListener("mouseover", (e) => {
+            this.app.workspace.trigger("hover-link", {
+              event: e,
+              source: "dynamic-views",
+              hoverParent: hoverParent,
+              targetEl: link,
+              linktext: card.path,
+            });
           });
 
           // Open context menu on right-click
@@ -1277,6 +1422,7 @@ export class SharedCardRenderer {
 
   /**
    * Renders slideshow for covers with multiple images
+   * Uses two-image swap with keyframe animations (0.4.0 carousel approach)
    */
   private renderSlideshow(
     slideshowEl: HTMLElement,
@@ -1285,85 +1431,91 @@ export class SharedCardRenderer {
     position: "left" | "right" | "top" | "bottom",
     settings: Settings,
   ): void {
-    let currentSlide = 0;
-    let isTransitioning = false;
+    // Create AbortController for cleanup
+    const controller = new AbortController();
+    const { signal } = controller;
+    this.slideshowCleanups.push(() => controller.abort());
 
-    // Create slides container
-    const slidesContainer = slideshowEl.createDiv("slideshow-slides");
+    // Create image embed with two stacked images
+    const imageEmbedContainer = slideshowEl.createDiv("image-embed");
+    imageEmbedContainer.style.setProperty(
+      "--cover-image-url",
+      `url("${imageUrls[0]}")`,
+    );
 
-    // Create all slides
-    const slideElements = imageUrls.map((url, index) => {
-      const slideEl = slidesContainer.createDiv("slideshow-slide");
-      if (index === 0) {
-        slideEl.addClass("is-active");
-      }
-      // Don't add position classes to non-active slides - let transition logic handle it
-
-      const imageEmbedContainer = slideEl.createDiv("image-embed");
-
-      const imgEl = imageEmbedContainer.createEl("img", {
-        attr: { src: url, alt: "" },
-      });
-      imageEmbedContainer.style.setProperty(
-        "--cover-image-url",
-        `url("${url}")`,
-      );
-
-      // Handle image load for masonry layout and color extraction
-      const cardEl = slideshowEl.closest(".card") as HTMLElement;
-      if (cardEl && index === 0) {
-        // Only setup for first image
-        setupImageLoadHandler(
-          imgEl,
-          imageEmbedContainer,
-          cardEl,
-          this.updateLayoutRef.current || undefined,
+    // Add zoom handler
+    const cardEl = slideshowEl.closest(".card") as HTMLElement;
+    imageEmbedContainer.addEventListener(
+      "click",
+      (e) => {
+        handleImageZoomClick(
+          e,
+          cardEl?.getAttribute("data-path") || "",
+          this.app,
+          this.zoomCleanupFns,
+          this.zoomedClones,
         );
-      }
+      },
+      { signal },
+    );
 
-      return slideEl;
+    // Create two persistent img elements (current and next)
+    const currentImg = imageEmbedContainer.createEl("img", {
+      cls: "slideshow-img slideshow-img-current",
+      attr: { src: imageUrls[0], alt: "" },
     });
 
-    // Update slide with direction
-    const updateSlide = (newIndex: number, direction: "next" | "prev") => {
-      const oldSlide = slideElements[currentSlide];
-      const newSlide = slideElements[newIndex];
+    // Next image starts with empty src
+    imageEmbedContainer.createEl("img", {
+      cls: "slideshow-img slideshow-img-next",
+      attr: { src: "", alt: "" },
+    });
 
-      if (newIndex === currentSlide || isTransitioning) return;
+    // Handle image load for masonry layout and color extraction
+    if (cardEl) {
+      setupImageLoadHandler(
+        currentImg,
+        imageEmbedContainer,
+        cardEl,
+        this.updateLayoutRef.current || undefined,
+      );
 
-      isTransitioning = true;
+      // Setup image preloading
+      setupImagePreload(cardEl, imageUrls, signal);
+    }
 
-      // Determine classes based on direction
-      const enterFrom = direction === "next" ? "slide-right" : "slide-left";
-      const exitTo = direction === "next" ? "slide-left" : "slide-right";
+    // Create navigator with shared logic
+    const { navigate } = createSlideshowNavigator(
+      imageUrls,
+      () => {
+        const currImg = imageEmbedContainer.querySelector(
+          ".slideshow-img-current",
+        ) as HTMLImageElement;
+        const nextImg = imageEmbedContainer.querySelector(
+          ".slideshow-img-next",
+        ) as HTMLImageElement;
+        if (!currImg || !nextImg) return null;
+        return { imageEmbed: imageEmbedContainer, currImg, nextImg };
+      },
+      signal,
+      {
+        onSlideChange: (_newIndex, nextImg) => {
+          if (cardEl) {
+            handleImageLoad(
+              nextImg,
+              imageEmbedContainer,
+              cardEl,
+              this.updateLayoutRef.current || undefined,
+            );
+          }
+        },
+        onAnimationComplete: () => {
+          if (this.updateLayoutRef.current) this.updateLayoutRef.current();
+        },
+      },
+    );
 
-      // Position new slide off-screen (no transition yet)
-      newSlide.removeClass("is-active", "slide-left", "slide-right");
-      newSlide.addClass(enterFrom);
-
-      // Use double RAF to ensure browser has painted the initial position
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Move old slide out
-          oldSlide.removeClass("is-active");
-          oldSlide.addClass(exitTo);
-
-          // Move new slide in (is-active overrides position class via CSS order)
-          newSlide.addClass("is-active");
-
-          // Clean up position classes after transition
-          setTimeout(() => {
-            newSlide.removeClass("slide-left", "slide-right");
-            oldSlide.removeClass("slide-left", "slide-right");
-            isTransitioning = false;
-          }, 310);
-
-          currentSlide = newIndex;
-        });
-      });
-    };
-
-    // Multi-image indicator (positioned outside slides so it doesn't move)
+    // Multi-image indicator
     if (isSlideshowIndicatorEnabled()) {
       const indicator = slideshowEl.createDiv("slideshow-indicator");
       setIcon(indicator, "lucide-images");
@@ -1376,19 +1528,23 @@ export class SharedCardRenderer {
     const rightArrow = slideshowEl.createDiv("slideshow-nav-right");
     setIcon(rightArrow, "lucide-chevron-right");
 
-    leftArrow.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const newIndex =
-        currentSlide === 0 ? imageUrls.length - 1 : currentSlide - 1;
-      updateSlide(newIndex, "prev");
-    });
+    leftArrow.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        navigate(-1);
+      },
+      { signal },
+    );
 
-    rightArrow.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const newIndex =
-        currentSlide === imageUrls.length - 1 ? 0 : currentSlide + 1;
-      updateSlide(newIndex, "next");
-    });
+    rightArrow.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        navigate(1);
+      },
+      { signal },
+    );
   }
 
   /**

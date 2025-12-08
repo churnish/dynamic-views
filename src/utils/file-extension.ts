@@ -1,5 +1,5 @@
 /**
- * File extension utilities
+ * File format utilities
  * Shared between card-renderer.tsx (Datacore) and shared-renderer.ts (Bases)
  */
 
@@ -9,10 +9,19 @@ import { VALID_IMAGE_EXTENSIONS } from "./image";
 let cachedHiddenFormats: Set<string> | null = null;
 
 /**
+ * Extract lowercase extension from path
+ * Returns null for empty/invalid extensions (e.g., ".", "file.")
+ */
+function extractExtension(path: string): string | null {
+  const ext = path.split(".").pop()?.toLowerCase();
+  return ext && ext !== "" ? ext : null;
+}
+
+/**
  * Get hidden file formats from Style Settings CSS variable
  * Cached for performance - changes require reload
  */
-export function getHiddenExtensions(): Set<string> {
+export function getHiddenFormats(): Set<string> {
   if (cachedHiddenFormats) return cachedHiddenFormats;
 
   const rawValue = getComputedStyle(document.body)
@@ -33,17 +42,17 @@ export function getHiddenExtensions(): Set<string> {
 }
 
 /**
- * Get file extension info for display
+ * Get file format info for display
  * @param path - File path
- * @param forceShow - Bypass hidden extensions check (for file.fullname)
+ * @param forceShow - Bypass hidden formats check (for file.fullname)
  */
 export function getFileExtInfo(
   path: string,
   forceShow = false,
 ): { ext: string } | null {
-  const ext = path.split(".").pop()?.toLowerCase();
+  const ext = extractExtension(path);
   if (!ext) return null;
-  if (!forceShow && getHiddenExtensions().has(ext)) return null;
+  if (!forceShow && getHiddenFormats().has(ext)) return null;
   return { ext: `.${ext}` };
 }
 
@@ -58,7 +67,7 @@ export function stripExtFromTitle(
   path: string,
   forceStrip = false,
 ): string {
-  const ext = path.split(".").pop()?.toLowerCase();
+  const ext = extractExtension(path);
   if (!ext) return title;
   if (!forceStrip && ext === "md") return title;
 
@@ -70,13 +79,13 @@ export function stripExtFromTitle(
 }
 
 /**
- * Get Lucide icon name for file type
+ * Get Lucide icon name for file format
  * Returns null if format is hidden or no extension
  */
 export function getFileTypeIcon(path: string): string | null {
-  const ext = path.split(".").pop()?.toLowerCase();
+  const ext = extractExtension(path);
   if (!ext) return null;
-  if (getHiddenExtensions().has(ext)) return null;
+  if (getHiddenFormats().has(ext)) return null;
 
   if (ext === "canvas") return "layout-dashboard";
   if (ext === "base") return "layout-list";

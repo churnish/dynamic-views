@@ -138,6 +138,10 @@ function openImageZoom(
   // Add listeners for closing
   // Clicks on img are stopped by panzoom's click handler, so any click reaching here should close
   const onClickOutside = (evt: Event) => {
+    // Skip if persistent zoom is enabled
+    if (document.body.classList.contains("dynamic-views-zoom-persist")) {
+      return;
+    }
     const target = evt.target as HTMLElement;
     // Close unless clicking directly on the image (shouldn't reach here due to stopPropagation, but safety check)
     if (target !== imgEl) {

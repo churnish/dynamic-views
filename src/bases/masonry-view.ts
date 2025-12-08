@@ -53,6 +53,7 @@ export class DynamicViewsMasonryView extends BasesView {
   isShuffled: boolean = false;
   shuffledOrder: string[] = [];
   private lastSortMethod: string | null = null;
+  private containerRef: { current: HTMLElement | null } = { current: null };
 
   // Style Settings compatibility - must be own property (not prototype)
   setSettings = (): void => {
@@ -128,6 +129,9 @@ export class DynamicViewsMasonryView extends BasesView {
       if (!this.data) {
         return;
       }
+
+      // Reset focusable card index to prevent out-of-bounds when card count changes
+      this.focusableCardIndex = 0;
 
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
@@ -216,6 +220,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.masonryContainer = this.containerEl.createDiv(
         "dynamic-views-masonry",
       );
+      this.containerRef.current = this.masonryContainer;
 
       // Setup masonry layout
       this.setupMasonryLayout(settings);
@@ -376,7 +381,14 @@ export class DynamicViewsMasonryView extends BasesView {
     index: number,
     settings: Settings,
   ): void {
-    this.cardRenderer.renderCard(container, card, entry, settings, this);
+    this.cardRenderer.renderCard(container, card, entry, settings, this, {
+      index,
+      focusableCardIndex: this.focusableCardIndex,
+      containerRef: this.containerRef,
+      onFocusChange: (newIndex: number) => {
+        this.focusableCardIndex = newIndex;
+      },
+    });
   }
 
   private getSortMethod(): string {

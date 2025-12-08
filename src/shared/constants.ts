@@ -25,3 +25,6 @@ export const VIEWPORT_MULTIPLIER_BELOW = 1;
 
 /** Debounce delay for layout updates in milliseconds */
 export const LAYOUT_UPDATE_DELAY = 50;
+
+/** Slideshow animation duration in milliseconds (must match CSS) */
+export const SLIDESHOW_ANIMATION_MS = 300;

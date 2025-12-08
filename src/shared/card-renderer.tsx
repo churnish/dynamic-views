@@ -28,8 +28,10 @@ import {
   handleJsxImageRef,
   handleJsxImageLoad,
   handleJsxImageError,
+  handleImageLoad,
 } from "./image-loader";
 import { handleImageZoomClick } from "./image-zoom-handler";
+import { createSlideshowNavigator, setupImagePreload } from "./slideshow-utils";
 
 /**
  * Render file type icon as JSX
@@ -101,8 +103,8 @@ function truncateTitleWithExtension(titleEl: HTMLElement): void {
 }
 
 /**
- * Render file extension as JSX
- * When openFileAction is 'title', extension is clickable/draggable
+ * Render file format indicator as JSX
+ * When openFileAction is 'title', indicator is clickable/draggable
  */
 function renderFileExt(
   path: string,
@@ -374,114 +376,120 @@ function renderPropertyContent(
 
 /**
  * Cover slideshow component for multiple images
- * Uses ref callback to create imperative slideshow after mount
+ * Uses two-image swap with keyframe animations (0.4.0 carousel approach)
  */
 function CoverSlideshow({
   imageArray,
   updateLayoutRef,
+  cardPath,
+  app,
 }: {
   imageArray: string[];
   updateLayoutRef: RefObject<(() => void) | null>;
+  cardPath: string;
+  app: App;
 }): JSX.Element {
   const onSlideshowRef = (slideshowEl: HTMLElement | null) => {
     if (!slideshowEl) return;
 
-    let currentSlide = 0;
-    let isTransitioning = false;
-    const slides = Array.from(slideshowEl.querySelectorAll(".slideshow-slide"));
+    // Cleanup any existing slideshow listeners (for re-renders)
+    const existingController = (
+      slideshowEl as HTMLElement & { _slideshowController?: AbortController }
+    )._slideshowController;
+    if (existingController) {
+      existingController.abort();
+    }
 
-    const updateSlide = (newIndex: number, direction: "next" | "prev") => {
-      const oldSlide = slides[currentSlide];
-      const newSlide = slides[newIndex];
+    // Create AbortController for cleanup
+    const controller = new AbortController();
+    const { signal } = controller;
+    (
+      slideshowEl as HTMLElement & { _slideshowController?: AbortController }
+    )._slideshowController = controller;
 
-      if (
-        !oldSlide ||
-        !newSlide ||
-        newIndex === currentSlide ||
-        isTransitioning
-      )
-        return;
+    const imageEmbed = slideshowEl.querySelector(".image-embed") as HTMLElement;
+    if (!imageEmbed) return;
 
-      isTransitioning = true;
+    const cardEl = slideshowEl.closest(".card") as HTMLElement;
 
-      // Determine classes based on direction
-      const enterFrom = direction === "next" ? "slide-right" : "slide-left";
-      const exitTo = direction === "next" ? "slide-left" : "slide-right";
+    // Setup image preloading
+    if (cardEl) {
+      setupImagePreload(cardEl, imageArray, signal);
+    }
 
-      // Position new slide off-screen (no transition yet)
-      newSlide.classList.remove("is-active", "slide-left", "slide-right");
-      newSlide.classList.add(enterFrom);
+    // Create navigator with shared logic
+    const { navigate } = createSlideshowNavigator(
+      imageArray,
+      () => {
+        const currImg = imageEmbed.querySelector(
+          ".slideshow-img-current",
+        ) as HTMLImageElement;
+        const nextImg = imageEmbed.querySelector(
+          ".slideshow-img-next",
+        ) as HTMLImageElement;
+        if (!currImg || !nextImg) return null;
+        return { imageEmbed, currImg, nextImg };
+      },
+      signal,
+      {
+        onSlideChange: (_newIndex, nextImg) => {
+          if (cardEl) {
+            handleImageLoad(
+              nextImg,
+              imageEmbed,
+              cardEl,
+              updateLayoutRef.current,
+            );
+          }
+        },
+        onAnimationComplete: () => {
+          if (updateLayoutRef.current) updateLayoutRef.current();
+        },
+      },
+    );
 
-      // Use double RAF to ensure browser has painted the initial position
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Move old slide out
-          oldSlide.classList.remove("is-active");
-          oldSlide.classList.add(exitTo);
-
-          // Move new slide in (is-active overrides position class via CSS order)
-          newSlide.classList.add("is-active");
-
-          // Clean up position classes after transition
-          setTimeout(() => {
-            newSlide.classList.remove("slide-left", "slide-right");
-            oldSlide.classList.remove("slide-left", "slide-right");
-            isTransitioning = false;
-          }, 310);
-
-          currentSlide = newIndex;
-        });
-      });
-    };
-
+    // Setup arrow navigation
     const leftArrow = slideshowEl.querySelector(".slideshow-nav-left");
     const rightArrow = slideshowEl.querySelector(".slideshow-nav-right");
 
-    leftArrow?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const newIndex =
-        currentSlide === 0 ? imageArray.length - 1 : currentSlide - 1;
-      updateSlide(newIndex, "prev");
-    });
+    leftArrow?.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        navigate(-1);
+      },
+      { signal },
+    );
 
-    rightArrow?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const newIndex =
-        currentSlide === imageArray.length - 1 ? 0 : currentSlide + 1;
-      updateSlide(newIndex, "next");
-    });
+    rightArrow?.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        navigate(1);
+      },
+      { signal },
+    );
   };
 
   return (
     <div className="card-cover card-cover-slideshow" ref={onSlideshowRef}>
-      <div className="slideshow-slides">
-        {imageArray.map(
-          (url, index): JSX.Element => (
-            <div
-              key={index}
-              className={`slideshow-slide ${index === 0 ? "is-active" : ""}`}
-            >
-              <div
-                className="image-embed"
-                style={{ "--cover-image-url": `url("${url}")` }}
-              >
-                <img
-                  src={url}
-                  alt=""
-                  ref={(imgEl: HTMLImageElement | null) => {
-                    if (index === 0) handleJsxImageRef(imgEl, updateLayoutRef);
-                  }}
-                  onLoad={(e: Event) => {
-                    if (index === 0) handleJsxImageLoad(e, updateLayoutRef);
-                  }}
-                  onError={(e: Event) => {
-                    if (index === 0) handleJsxImageError(e, updateLayoutRef);
-                  }}
-                />
-              </div>
-            </div>
-          ),
-        )}
+      <div
+        className="image-embed"
+        style={{ "--cover-image-url": `url("${imageArray[0]}")` }}
+        onClick={(e: MouseEvent) => {
+          handleImageZoomClick(e, cardPath, app, zoomCleanupFns, zoomedClones);
+        }}
+      >
+        <img
+          className="slideshow-img slideshow-img-current"
+          src={imageArray[0]}
+          alt=""
+          ref={(imgEl: HTMLImageElement | null) =>
+            handleJsxImageRef(imgEl, updateLayoutRef)
+          }
+          onLoad={(e: Event) => handleJsxImageLoad(e, updateLayoutRef)}
+        />
+        <img className="slideshow-img slideshow-img-next" src="" alt="" />
       </div>
       {isSlideshowIndicatorEnabled() && (
         <div className="slideshow-indicator">
@@ -1011,13 +1019,24 @@ function Card({
         // When openFileAction is 'title', the title link handles its own clicks
         if (settings.openFileAction === "card") {
           const target = e.target as HTMLElement;
-          // Don't open if clicking on links, tags, or images
+          // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === "A" || target.closest("a");
           const isTag =
             target.classList.contains("tag") || target.closest(".tag");
+          const isPathSegment =
+            target.classList.contains("path-segment") ||
+            target.closest(".path-segment");
           const isImage = target.tagName === "IMG";
+          const isZoomEnabled = !document.body.classList.contains(
+            "dynamic-views-image-zoom-disabled",
+          );
 
-          if (!isLink && !isTag && !isImage) {
+          if (
+            !isLink &&
+            !isTag &&
+            !isPathSegment &&
+            !(isImage && isZoomEnabled)
+          ) {
             const newLeaf = e.metaKey || e.ctrlKey;
             if (onCardClick) {
               onCardClick(card.path, newLeaf);
@@ -1209,6 +1228,8 @@ function Card({
                   <CoverSlideshow
                     imageArray={imageArray}
                     updateLayoutRef={updateLayoutRef}
+                    cardPath={card.path}
+                    app={app}
                   />
                 );
               }
@@ -2016,7 +2037,11 @@ function handleArrowKey(
  * Should be called when a view using CardRenderer is unmounted
  */
 export function cleanupZoomState(): void {
-  // Remove all zoom clones and cleanup
+  // Skip zoom cleanup if persistent zoom is enabled (preserve across tab switches)
+  if (document.body.classList.contains("dynamic-views-zoom-persist")) {
+    return;
+  }
+
   zoomedClones.forEach((clone) => {
     clone.remove();
   });
