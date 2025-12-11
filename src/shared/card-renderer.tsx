@@ -4,7 +4,7 @@
  */
 
 import type { App } from "obsidian";
-import { TFile, TFolder, Menu, setIcon } from "obsidian";
+import { TFile, TFolder, setIcon, Menu } from "obsidian";
 import type { Settings } from "../types";
 import type { RefObject } from "../types/datacore";
 import {
@@ -38,6 +38,13 @@ import {
   setupImagePreload,
   setupSwipeGestures,
 } from "./slideshow-utils";
+import { showFileContextMenu } from "./context-menu";
+import {
+  updateScrollGradient,
+  setupScrollGradients,
+  setupElementScrollGradient,
+} from "./scroll-gradient-manager";
+import { handleArrowNavigation, isArrowKey } from "./keyboard-nav";
 
 /**
  * Render file type icon as JSX
@@ -244,6 +251,9 @@ const viewerClones = new Map<HTMLElement, HTMLElement>();
 // Module-level Map to store ResizeObservers for cleanup
 const cardResizeObservers = new Map<string, ResizeObserver>();
 
+// Module-level Map to store AbortControllers for scroll listener cleanup
+const cardScrollAbortControllers = new Map<string, AbortController>();
+
 /**
  * Cleanup ResizeObserver for a card when it's removed
  */
@@ -261,6 +271,25 @@ export function cleanupCardObserver(cardPath: string): void {
 export function cleanupAllCardObservers(): void {
   cardResizeObservers.forEach((observer) => observer.disconnect());
   cardResizeObservers.clear();
+}
+
+/**
+ * Cleanup scroll listeners for a card when it's removed
+ */
+export function cleanupCardScrollListeners(cardPath: string): void {
+  const controller = cardScrollAbortControllers.get(cardPath);
+  if (controller) {
+    controller.abort();
+    cardScrollAbortControllers.delete(cardPath);
+  }
+}
+
+/**
+ * Cleanup all card scroll listeners (call when view is destroyed)
+ */
+export function cleanupAllCardScrollListeners(): void {
+  cardScrollAbortControllers.forEach((controller) => controller.abort());
+  cardScrollAbortControllers.clear();
 }
 
 // Extend App type to include isMobile property and dragManager
@@ -1025,6 +1054,16 @@ function Card({
     <div
       className={cardClasses.join(" ")}
       data-path={card.path}
+      ref={(cardEl: HTMLElement | null) => {
+        if (!cardEl) return;
+        // Cleanup previous scroll listeners for this card
+        cleanupCardScrollListeners(card.path);
+        // Create AbortController for scroll listener cleanup
+        const controller = new AbortController();
+        cardScrollAbortControllers.set(card.path, controller);
+        // Setup scroll gradients for property fields (setupScrollGradients has internal double RAF)
+        setupScrollGradients(cardEl, updateScrollGradient, controller.signal);
+      }}
       draggable={effectiveOpenFileAction === "card"}
       onDragStart={effectiveOpenFileAction === "card" ? handleDrag : undefined}
       tabIndex={index === focusableCardIndex ? 0 : -1}
@@ -1076,11 +1115,17 @@ function Card({
               void app.workspace.openLinkText(card.path, "", newLeaf);
             }
           }
-        } else if (
-          ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
-        ) {
+        } else if (isArrowKey(e.key)) {
           e.preventDefault();
-          handleArrowKey(e, index, viewMode, containerRef, onFocusChange);
+          const container = containerRef.current;
+          if (container) {
+            handleArrowNavigation(
+              e,
+              e.currentTarget as HTMLElement,
+              container,
+              (_, targetIndex) => onFocusChange?.(targetIndex),
+            );
+          }
         } else if (e.key === "Tab") {
           e.preventDefault();
         }
@@ -1108,6 +1153,15 @@ function Card({
           (imgEl as HTMLImageElement).src = firstImage;
         }
       }}
+      onContextMenu={(e: MouseEvent) => {
+        // Show file context menu when effectiveOpenFileAction is 'card'
+        if (effectiveOpenFileAction === "card") {
+          const file = app.vault.getAbstractFileByPath(card.path);
+          if (file instanceof TFile) {
+            showFileContextMenu(e, app, file, card.path);
+          }
+        }
+      }}
       style={{
         cursor: effectiveOpenFileAction === "card" ? "pointer" : "default",
       }}
@@ -1117,14 +1171,14 @@ function Card({
         <div
           className={card.hasValidUrl ? "card-title-container" : "card-title"}
           ref={(el: HTMLElement | null) => {
-            if (
-              el &&
-              !card.hasValidUrl &&
-              !document.body.classList.contains(
-                "dynamic-views-title-overflow-scroll",
-              )
-            ) {
-              // Double RAF ensures children are rendered and layout complete
+            if (!el || card.hasValidUrl) return;
+            const isScrollMode = document.body.classList.contains(
+              "dynamic-views-title-overflow-scroll",
+            );
+            if (isScrollMode) {
+              const signal = cardScrollAbortControllers.get(card.path)?.signal;
+              setupElementScrollGradient(el, signal);
+            } else {
               requestAnimationFrame(() => {
                 requestAnimationFrame(() => truncateTitleWithExtension(el));
               });
@@ -1135,13 +1189,16 @@ function Card({
             <div
               className={card.hasValidUrl ? "card-title" : undefined}
               ref={(el: HTMLElement | null) => {
-                if (
-                  el &&
-                  card.hasValidUrl &&
-                  !document.body.classList.contains(
-                    "dynamic-views-title-overflow-scroll",
-                  )
-                ) {
+                if (!el || !card.hasValidUrl) return;
+                const isScrollMode = document.body.classList.contains(
+                  "dynamic-views-title-overflow-scroll",
+                );
+                if (isScrollMode) {
+                  const signal = cardScrollAbortControllers.get(
+                    card.path,
+                  )?.signal;
+                  setupElementScrollGradient(el, signal);
+                } else {
                   requestAnimationFrame(() => {
                     requestAnimationFrame(() => truncateTitleWithExtension(el));
                   });
@@ -1207,7 +1264,26 @@ function Card({
 
       {/* Subtitle */}
       {settings.subtitleProperty && card.subtitle && (
-        <div className="card-subtitle">
+        <div
+          className="card-subtitle"
+          ref={(el: HTMLElement | null) => {
+            if (!el) return;
+            const signal = cardScrollAbortControllers.get(card.path)?.signal;
+            const isScrollMode = document.body.classList.contains(
+              "dynamic-views-subtitle-overflow-scroll",
+            );
+            if (isScrollMode) {
+              setupElementScrollGradient(el, signal);
+            }
+            // Setup scroll gradients for inner wrapper (works in wrap mode too)
+            const subtitleWrapper = el.querySelector(
+              ".property-content-wrapper",
+            ) as HTMLElement;
+            if (subtitleWrapper) {
+              setupElementScrollGradient(subtitleWrapper, signal);
+            }
+          }}
+        >
           {renderProperty(
             settings.subtitleProperty,
             null,
@@ -1956,92 +2032,4 @@ function Card({
       })()}
     </div>
   );
-}
-
-// Helper function for arrow key navigation
-function handleArrowKey(
-  e: KeyboardEvent,
-  currentIndex: number,
-  viewMode: "card" | "masonry",
-  containerRef: RefObject<HTMLElement | null>,
-  onFocusChange?: (index: number) => void,
-): void {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- querySelectorAll returns Element[], need HTMLElement[] for navigation
-  const cards = Array.from(
-    containerRef.current?.querySelectorAll(".card") || [],
-  ) as HTMLElement[];
-  const currentCard = e.currentTarget as HTMLElement;
-  const actualIndex = cards.indexOf(currentCard);
-
-  if (actualIndex === -1) return;
-
-  const currentRect = currentCard.getBoundingClientRect();
-  const currentX = currentRect.left + currentRect.width / 2;
-  const currentY = currentRect.top + currentRect.height / 2;
-
-  let targetCard: HTMLElement | null = null;
-  let minDistance = Infinity;
-
-  if (viewMode === "masonry") {
-    // 2D navigation based on actual positions
-    cards.forEach((card, idx) => {
-      if (idx === actualIndex) return;
-
-      const rect = card.getBoundingClientRect();
-      const cardX = rect.left + rect.width / 2;
-      const cardY = rect.top + rect.height / 2;
-
-      let isValid = false;
-      let distance = 0;
-
-      if (e.key === "ArrowDown" && cardY > currentY) {
-        if (rect.left !== currentRect.left) return;
-        const verticalDist = cardY - currentY;
-        const horizontalDist = Math.abs(cardX - currentX);
-        distance = verticalDist + horizontalDist * 0.5;
-        isValid = true;
-      } else if (e.key === "ArrowUp" && cardY < currentY) {
-        if (rect.left !== currentRect.left) return;
-        const verticalDist = currentY - cardY;
-        const horizontalDist = Math.abs(cardX - currentX);
-        distance = verticalDist + horizontalDist * 0.5;
-        isValid = true;
-      } else if (e.key === "ArrowRight" && cardX > currentX) {
-        const horizontalDist = cardX - currentX;
-        const verticalDist = Math.abs(cardY - currentY);
-        distance = horizontalDist + verticalDist * 0.5;
-        isValid = true;
-      } else if (e.key === "ArrowLeft" && cardX < currentX) {
-        const horizontalDist = currentX - cardX;
-        const verticalDist = Math.abs(cardY - currentY);
-        distance = horizontalDist + verticalDist * 0.5;
-        isValid = true;
-      }
-
-      if (isValid && distance < minDistance) {
-        minDistance = distance;
-        targetCard = card;
-      }
-    });
-  } else {
-    // Sequential navigation for card view
-    let targetIndex = actualIndex;
-    if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-      targetIndex = actualIndex + 1;
-    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-      targetIndex = actualIndex - 1;
-    }
-    if (targetIndex >= 0 && targetIndex < cards.length) {
-      targetCard = cards[targetIndex];
-    }
-  }
-
-  if (targetCard) {
-    const targetIndex = cards.indexOf(targetCard);
-    if (onFocusChange) {
-      onFocusChange(targetIndex);
-    }
-    targetCard.focus();
-    targetCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }
 }

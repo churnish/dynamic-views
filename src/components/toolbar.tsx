@@ -62,6 +62,7 @@ interface ToolbarProps {
   // Toolbar controls
   isPinned: boolean;
   widthMode: WidthMode;
+  canExpandToMax: boolean;
   queryHeight: number;
   onTogglePin: () => void;
   onToggleWidth: () => void;
@@ -115,6 +116,7 @@ export function Toolbar({
   onCreateNote,
   isPinned,
   widthMode,
+  canExpandToMax,
   queryHeight,
   onTogglePin,
   onToggleWidth,
@@ -1128,48 +1130,55 @@ export function Toolbar({
           </div>
 
           {/* Width Toggle Button */}
-          <button
-            className="width-toggle-btn"
-            onClick={onToggleWidth}
-            aria-label={widthMode === "max" ? "Shrink width" : "Expand width"}
-            tabIndex={0}
-          >
-            {widthMode === "max" ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          {/* Show shrink icon when: max mode, OR wide mode with no room to expand */}
+          {(() => {
+            const showShrink =
+              widthMode === "max" || (widthMode === "wide" && !canExpandToMax);
+            return (
+              <button
+                className="width-toggle-btn"
+                onClick={onToggleWidth}
+                aria-label={showShrink ? "Shrink width" : "Expand width"}
+                tabIndex={0}
               >
-                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
-                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
-                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-              </svg>
-            )}
-          </button>
+                {showShrink ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                    <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                    <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                    <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                    <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                    <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                    <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                  </svg>
+                )}
+              </button>
+            );
+          })()}
         </div>
       </div>
 

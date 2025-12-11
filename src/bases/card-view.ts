@@ -61,6 +61,8 @@ export class DynamicViewsCardView extends BasesView {
   private previousDisplayedCount: number = 0;
   private lastGroupKey: string | undefined = undefined;
   private lastGroupContainer: HTMLElement | null = null;
+  // Render version to cancel stale async renders
+  private renderVersion: number = 0;
 
   // Style Settings compatibility - must be own property (not prototype)
   setSettings = (): void => {
@@ -115,6 +117,16 @@ export class DynamicViewsCardView extends BasesView {
         return;
       }
 
+      // Guard: skip if batch loading in progress to prevent race conditions
+      // The batch append will handle rendering new entries
+      if (this.isLoading) {
+        return;
+      }
+
+      // Increment render version to cancel any in-flight stale renders
+      this.renderVersion++;
+      const currentVersion = this.renderVersion;
+
       // Reset focusable card index to prevent out-of-bounds when card count changes
       this.focusableCardIndex = 0;
 
@@ -161,20 +173,7 @@ export class DynamicViewsCardView extends BasesView {
       this.lastSortMethod = sortMethod;
 
       // Process groups and apply shuffle within groups if enabled
-      const processedGroups = groupedData.map((group) => {
-        let groupEntries = [...group.entries];
-
-        if (this.isShuffled && this.shuffledOrder.length > 0) {
-          // Sort by shuffled order within this group
-          groupEntries = groupEntries.sort((a, b) => {
-            const indexA = this.shuffledOrder.indexOf(a.file.path);
-            const indexB = this.shuffledOrder.indexOf(b.file.path);
-            return indexA - indexB;
-          });
-        }
-
-        return { group, entries: groupEntries };
-      });
+      const processedGroups = this.processGroups(groupedData);
 
       // Collect visible entries across all groups (up to displayedCount)
       const visibleEntries: BasesEntry[] = [];
@@ -199,6 +198,11 @@ export class DynamicViewsCardView extends BasesView {
         this.images,
         this.hasImageAvailable,
       );
+
+      // Abort if a newer render started while we were loading
+      if (this.renderVersion !== currentVersion) {
+        return;
+      }
 
       // Clear and re-render
       this.containerEl.empty();
@@ -232,25 +236,7 @@ export class DynamicViewsCardView extends BasesView {
         const groupEl = feedEl.createDiv("dynamic-views-group");
 
         // Render group header if key exists
-        if (processedGroup.group.hasKey()) {
-          const headerEl = groupEl.createDiv("bases-group-heading");
-
-          // Add group property label if groupBy is configured
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          const groupBy = (this.config as any).groupBy;
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          if (groupBy?.property) {
-            const propertyEl = headerEl.createDiv("bases-group-property");
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-            const propertyName = this.config.getDisplayName(groupBy.property);
-            propertyEl.setText(propertyName);
-          }
-
-          // Add group value
-          const valueEl = headerEl.createDiv("bases-group-value");
-          const keyValue = processedGroup.group.key?.toString() || "";
-          valueEl.setText(keyValue);
-        }
+        this.renderGroupHeader(groupEl, processedGroup.group);
 
         // Render cards in this group
         const cards = transformBasesEntries(
@@ -328,9 +314,53 @@ export class DynamicViewsCardView extends BasesView {
     });
   }
 
+  /** Process groups with shuffle logic applied */
+  private processGroups<
+    T extends { entries: BasesEntry[]; hasKey(): boolean; key?: unknown },
+  >(groupedData: T[]): Array<{ group: T; entries: BasesEntry[] }> {
+    return groupedData.map((group) => {
+      let groupEntries = [...group.entries];
+      if (this.isShuffled && this.shuffledOrder.length > 0) {
+        groupEntries = groupEntries.sort((a, b) => {
+          const indexA = this.shuffledOrder.indexOf(a.file.path);
+          const indexB = this.shuffledOrder.indexOf(b.file.path);
+          return indexA - indexB;
+        });
+      }
+      return { group, entries: groupEntries };
+    });
+  }
+
+  /** Render group header if group has a key */
+  private renderGroupHeader(
+    groupEl: HTMLElement,
+    group: { hasKey(): boolean; key?: unknown },
+  ): void {
+    if (!group.hasKey()) return;
+
+    const headerEl = groupEl.createDiv("bases-group-heading");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const groupBy = (this.config as any).groupBy;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (groupBy?.property) {
+      const propertyEl = headerEl.createDiv("bases-group-property");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      const propertyName = this.config.getDisplayName(groupBy.property);
+      propertyEl.setText(propertyName);
+    }
+
+    const valueEl = headerEl.createDiv("bases-group-value");
+    const keyValue = group.key?.toString() || "";
+    valueEl.setText(keyValue);
+  }
+
   private async appendBatch(totalEntries: number): Promise<void> {
     // Guard: return early if data not initialized or no feed container
     if (!this.data || !this.feedContainerRef.current) return;
+
+    // Increment render version to cancel any stale onDataUpdated renders
+    this.renderVersion++;
 
     const groupedData = this.data.groupedData;
 
@@ -343,20 +373,14 @@ export class DynamicViewsCardView extends BasesView {
 
     const sortMethod = getSortMethod(this.config);
 
-    // Process groups (same shuffle logic as onDataUpdated)
-    const processedGroups = groupedData.map((group) => {
-      let groupEntries = [...group.entries];
-      if (this.isShuffled && this.shuffledOrder.length > 0) {
-        groupEntries = groupEntries.sort((a, b) => {
-          const indexA = this.shuffledOrder.indexOf(a.file.path);
-          const indexB = this.shuffledOrder.indexOf(b.file.path);
-          return indexA - indexB;
-        });
-      }
-      return { group, entries: groupEntries };
-    });
+    // Process groups with shuffle logic
+    const processedGroups = this.processGroups(groupedData);
 
-    // Collect ONLY NEW entries (from previousDisplayedCount to displayedCount)
+    // Capture state at start - these may change during async operations
+    const prevCount = this.previousDisplayedCount;
+    const currCount = this.displayedCount;
+
+    // Collect ONLY NEW entries (from prevCount to currCount)
     const newEntries: BasesEntry[] = [];
     let currentCount = 0;
 
@@ -365,13 +389,10 @@ export class DynamicViewsCardView extends BasesView {
       const groupEnd = currentCount + processedGroup.entries.length;
 
       // Determine which entries from this group are new
-      const newStartInGroup = Math.max(
-        0,
-        this.previousDisplayedCount - groupStart,
-      );
+      const newStartInGroup = Math.max(0, prevCount - groupStart);
       const newEndInGroup = Math.min(
         processedGroup.entries.length,
-        this.displayedCount - groupStart,
+        currCount - groupStart,
       );
 
       if (
@@ -397,32 +418,27 @@ export class DynamicViewsCardView extends BasesView {
     );
 
     // Render new cards, handling group boundaries
+    // Use captured prevCount/currCount to avoid race conditions
     let displayedSoFar = 0;
     let newCardsRendered = 0;
-    const startIndex = this.previousDisplayedCount;
+    const startIndex = prevCount;
 
     for (const processedGroup of processedGroups) {
-      if (displayedSoFar >= this.displayedCount) break;
+      if (displayedSoFar >= currCount) break;
 
       const groupEntriesToDisplay = Math.min(
         processedGroup.entries.length,
-        this.displayedCount - displayedSoFar,
+        currCount - displayedSoFar,
       );
 
       // Skip groups that were fully rendered before
-      if (
-        displayedSoFar + groupEntriesToDisplay <=
-        this.previousDisplayedCount
-      ) {
+      if (displayedSoFar + groupEntriesToDisplay <= prevCount) {
         displayedSoFar += groupEntriesToDisplay;
         continue;
       }
 
       // Determine entries to render in this group
-      const startInGroup = Math.max(
-        0,
-        this.previousDisplayedCount - displayedSoFar,
-      );
+      const startInGroup = Math.max(0, prevCount - displayedSoFar);
       const groupEntries = processedGroup.entries.slice(
         startInGroup,
         groupEntriesToDisplay,
@@ -444,21 +460,7 @@ export class DynamicViewsCardView extends BasesView {
         );
 
         // Render group header if key exists
-        if (processedGroup.group.hasKey()) {
-          const headerEl = groupEl.createDiv("bases-group-heading");
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          const groupBy = (this.config as any).groupBy;
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          if (groupBy?.property) {
-            const propertyEl = headerEl.createDiv("bases-group-property");
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-            const propertyName = this.config.getDisplayName(groupBy.property);
-            propertyEl.setText(propertyName);
-          }
-          const valueEl = headerEl.createDiv("bases-group-value");
-          const keyValue = processedGroup.group.key?.toString() || "";
-          valueEl.setText(keyValue);
-        }
+        this.renderGroupHeader(groupEl, processedGroup.group);
 
         // Update last group tracking
         this.lastGroupKey = currentGroupKey;
@@ -493,8 +495,9 @@ export class DynamicViewsCardView extends BasesView {
       displayedSoFar += groupEntriesToDisplay;
     }
 
-    // Update state for next append
-    this.previousDisplayedCount = displayedSoFar;
+    // Update state for next append - use currCount (captured at start)
+    // to ensure consistency even if this.displayedCount changed during async
+    this.previousDisplayedCount = currCount;
 
     // Clear loading flag and re-setup infinite scroll
     this.isLoading = false;

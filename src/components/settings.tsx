@@ -1,7 +1,6 @@
 import { Settings as SettingsType } from "../types";
 import type { DatacoreAPI } from "../types/datacore";
 import type { App } from "obsidian";
-import { getAllVaultProperties } from "../utils/property";
 
 interface SettingsProps {
   dc: DatacoreAPI;
@@ -96,8 +95,6 @@ export function Settings({
   onSettingsChange,
   menuRef,
 }: SettingsProps): JSX.Element {
-  const allProperties = getAllVaultProperties(app);
-
   // Section expansion state - all collapsed by default
   const [expandedSections, setExpandedSections] = dc.useState<
     Record<string, boolean>
@@ -206,35 +203,6 @@ export function Settings({
     </div>
   );
 
-  // Helper to render a property dropdown
-  const renderPropertyDropdown = (
-    label: string,
-    settingKey: keyof SettingsType,
-  ): JSX.Element => (
-    <div className="setting-item setting-item-dropdown">
-      <div className="setting-item-info">
-        <label>{label}</label>
-      </div>
-      <select
-        value={settings[settingKey] as string}
-        onChange={(e: unknown) => {
-          const evt = e as Event & { target: HTMLSelectElement };
-          onSettingsChange({ [settingKey]: evt.target.value });
-        }}
-        className="dropdown"
-      >
-        <option value="">None</option>
-        {allProperties.map(
-          (prop): JSX.Element => (
-            <option key={prop} value={prop}>
-              {prop}
-            </option>
-          ),
-        )}
-      </select>
-    </div>
-  );
-
   // Render a property group section
   const renderPropertyGroup = (group: PropertyGroupConfig): JSX.Element => (
     <div className="settings-section" key={group.key}>
@@ -242,8 +210,16 @@ export function Settings({
       <div
         className={`settings-section-content ${expandedSections[group.key] ? "" : "collapsed"}`}
       >
-        {renderPropertyDropdown("First property", group.firstProp)}
-        {renderPropertyDropdown("Second property", group.secondProp)}
+        {renderTextInput(
+          "First property",
+          group.firstProp,
+          "Enter property name",
+        )}
+        {renderTextInput(
+          "Second property",
+          group.secondProp,
+          "Enter property name",
+        )}
         {renderToggle("Show side-by-side", group.sideBySide)}
         <div className="setting-item setting-item-dropdown">
           <div className="setting-item-info">

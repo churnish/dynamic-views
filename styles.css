@@ -588,9 +588,9 @@ settings:
     -
         id: dynamic-views-compact-breakpoint
         title: Compact breakpoint
-        description: Card width (in pixels) at which side-by-side properties stack vertically. Set to 0 to disable.
+        description: Card width in pixels at which side-by-side properties stack vertically. Set to 0 to disable.
         type: variable-number
-        default: 400
+        default: 390
         format: px
     -
         id: property-labels-heading
@@ -1454,13 +1454,22 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
 body {
   --container-datacorejsx-width: 100%;
   --container-datacorejsx-max-width: 100%;
+  /* Wide mode expansion multiplier (default: 1.75x line width) */
+  --datacore-wide-multiplier: 1.75;
+  /* Transform offset for centering: (multiplier - 1) / 2 */
+  --datacore-wide-offset: calc(
+    (var(--datacore-wide-multiplier) - 1) / 2 * var(--file-line-width, 700px)
+  );
 }
 
 /* Helper classes set width variables (applied to section) */
 .datacore-wide {
-  --container-datacorejsx-width: min(calc(1.75 * var(--file-line-width)), 100%);
+  --container-datacorejsx-width: min(
+    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
+    100%
+  );
   --container-datacorejsx-max-width: min(
-    calc(1.75 * var(--file-line-width)),
+    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
     100%
   );
 }
@@ -1491,7 +1500,10 @@ body {
 /* Expand sizer in wide and max modes (Reading View) */
 .markdown-preview-view.datacore-wide .markdown-preview-sizer,
 .markdown-reading-view.datacore-wide .markdown-reading-sizer {
-  max-width: min(calc(1.75 * var(--file-line-width)), 96vw) !important;
+  max-width: min(
+    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
+    96vw
+  ) !important;
 }
 
 .markdown-preview-view.datacore-max .markdown-preview-sizer,
@@ -1525,23 +1537,38 @@ body {
 .markdown-reading-view.datacore-max .el-pre:has(.block-language-datacorejsx) {
   max-width: var(--container-datacorejsx-max-width) !important;
   width: var(--container-datacorejsx-width) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
-/* Live Preview: .cm-preview-code-block - use positioning to break out */
+/* Live Preview: .cm-preview-code-block - use transform to center since parent is narrower */
 .markdown-source-view.datacore-wide
   .cm-preview-code-block:has(.block-language-datacorejsx) {
-  width: min(calc(1.75 * var(--file-line-width)), 96vw) !important;
-  max-width: min(calc(1.75 * var(--file-line-width)), 96vw) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
+  width: min(
+    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
+    96vw
+  ) !important;
+  max-width: min(
+    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
+    96vw
+  ) !important;
+  /* Center with transform using pre-calculated offset */
+  transform: translateX(calc(-1 * var(--datacore-wide-offset))) !important;
 }
 
+/* Max mode in Live Preview: JS handles width/transform dynamically based on pane size */
+/* CSS fallback for when JS hasn't run yet */
 .markdown-source-view.datacore-max
   .cm-preview-code-block:has(.block-language-datacorejsx) {
-  width: 96vw !important;
-  max-width: 96vw !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
+  /* Will be overridden by JS with pane-aware values */
+  width: calc(100vw - var(--file-margins, 32px) * 2) !important;
+  max-width: calc(100vw - var(--file-margins, 32px) * 2) !important;
+  transform: translateX(
+    calc(
+      (var(--file-line-width, 700px) - 100vw + var(--file-margins, 32px) * 2) /
+        2
+    )
+  ) !important;
 }
 
 /* Expand datacore block when wide/max active */

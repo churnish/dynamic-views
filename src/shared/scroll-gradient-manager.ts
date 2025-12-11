@@ -1,6 +1,24 @@
 import { SCROLL_TOLERANCE } from "./constants";
 
 /**
+ * Creates a throttled version of a function
+ * Uses requestAnimationFrame for smooth 60fps throttling
+ */
+function throttleRAF<T extends (...args: unknown[]) => void>(
+  fn: T,
+): (...args: Parameters<T>) => void {
+  let scheduled = false;
+  return (...args: Parameters<T>) => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      fn(...args);
+      scheduled = false;
+    });
+  };
+}
+
+/**
  * Updates scroll gradient classes for a simple scrollable element
  * Used for elements that are both the scrolling container and gradient target
  *
@@ -71,19 +89,48 @@ export function updateScrollGradient(element: HTMLElement): void {
 }
 
 /**
+ * Sets up scroll gradient for a single element (title/subtitle)
+ * Attaches throttled scroll listener with optional cleanup via AbortSignal
+ *
+ * @param element - The scrollable element
+ * @param signal - Optional AbortSignal for listener cleanup
+ */
+export function setupElementScrollGradient(
+  element: HTMLElement,
+  signal?: AbortSignal,
+): void {
+  // Initial gradient update
+  requestAnimationFrame(() => {
+    updateElementScrollGradient(element);
+  });
+
+  // Throttled scroll handler
+  const throttledUpdate = throttleRAF(() => {
+    updateElementScrollGradient(element);
+  });
+
+  element.addEventListener("scroll", throttledUpdate, { signal });
+}
+
+/**
  * Sets up scroll gradients for all property fields in a container
  * Attaches scroll listeners for user interaction
  * Note: ResizeObserver not needed - card-level observer triggers gradient updates via measurement
  *
  * @param container - The container element with property fields
  * @param updateGradientFn - Function to call for gradient updates (bound to view instance)
+ * @param signal - Optional AbortSignal for listener cleanup
  */
 export function setupScrollGradients(
   container: HTMLElement,
   updateGradientFn: (element: HTMLElement) => void,
+  signal?: AbortSignal,
 ): void {
   // Find all property field containers (both side-by-side and full-width)
   const scrollables = container.querySelectorAll(".property-field");
+
+  // Throttle the update function
+  const throttledUpdate = throttleRAF(updateGradientFn);
 
   scrollables.forEach((el) => {
     const element = el as HTMLElement;
@@ -101,8 +148,12 @@ export function setupScrollGradients(
     });
 
     // Attach scroll listener to wrapper for user scroll interaction
-    wrapper.addEventListener("scroll", () => {
-      updateGradientFn(element);
-    });
+    wrapper.addEventListener(
+      "scroll",
+      () => {
+        throttledUpdate(element);
+      },
+      { signal },
+    );
   });
 }

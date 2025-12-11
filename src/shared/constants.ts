@@ -31,3 +31,6 @@ export const LAYOUT_UPDATE_DELAY = 50;
 
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
+
+/** Wide mode multiplier for expanded width (must match CSS --datacore-wide-multiplier) */
+export const WIDE_MODE_MULTIPLIER = 1.75;

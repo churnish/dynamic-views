@@ -60,6 +60,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private previousDisplayedCount: number = 0;
   private lastGroupKey: string | undefined = undefined;
   private lastGroupContainer: HTMLElement | null = null;
+  // Render version to cancel stale async renders
+  private renderVersion: number = 0;
 
   // Style Settings compatibility - must be own property (not prototype)
   setSettings = (): void => {
@@ -114,6 +116,16 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
+      // Guard: skip if batch loading in progress to prevent race conditions
+      // The batch append will handle rendering new entries
+      if (this.isLoading) {
+        return;
+      }
+
+      // Increment render version to cancel any in-flight stale renders
+      this.renderVersion++;
+      const currentVersion = this.renderVersion;
+
       // Reset focusable card index to prevent out-of-bounds when card count changes
       this.focusableCardIndex = 0;
 
@@ -162,20 +174,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.lastSortMethod = sortMethod;
 
       // Process groups and apply shuffle within groups if enabled
-      const processedGroups = groupedData.map((group) => {
-        let groupEntries = [...group.entries];
-
-        if (this.isShuffled && this.shuffledOrder.length > 0) {
-          // Sort by shuffled order within this group
-          groupEntries = groupEntries.sort((a, b) => {
-            const indexA = this.shuffledOrder.indexOf(a.file.path);
-            const indexB = this.shuffledOrder.indexOf(b.file.path);
-            return indexA - indexB;
-          });
-        }
-
-        return { group, entries: groupEntries };
-      });
+      const processedGroups = this.processGroups(groupedData);
 
       // Collect visible entries across all groups (up to displayedCount)
       const visibleEntries: BasesEntry[] = [];
@@ -200,6 +199,11 @@ export class DynamicViewsMasonryView extends BasesView {
         this.images,
         this.hasImageAvailable,
       );
+
+      // Abort if a newer render started while we were loading
+      if (this.renderVersion !== currentVersion) {
+        return;
+      }
 
       // Clear and re-render
       this.containerEl.empty();
@@ -238,25 +242,7 @@ export class DynamicViewsMasonryView extends BasesView {
         const groupEl = this.masonryContainer.createDiv("dynamic-views-group");
 
         // Render group header if key exists
-        if (processedGroup.group.hasKey()) {
-          const headerEl = groupEl.createDiv("bases-group-heading");
-
-          // Add group property label if groupBy is configured
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          const groupBy = (this.config as any).groupBy;
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          if (groupBy?.property) {
-            const propertyEl = headerEl.createDiv("bases-group-property");
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-            const propertyName = this.config.getDisplayName(groupBy.property);
-            propertyEl.setText(propertyName);
-          }
-
-          // Add group value
-          const valueEl = headerEl.createDiv("bases-group-value");
-          const keyValue = processedGroup.group.key?.toString() || "";
-          valueEl.setText(keyValue);
-        }
+        this.renderGroupHeader(groupEl, processedGroup.group);
 
         // Render cards in this group
         const cards = transformBasesEntries(
@@ -409,18 +395,11 @@ export class DynamicViewsMasonryView extends BasesView {
     });
   }
 
-  private async appendBatch(
-    totalEntries: number,
-    settings: Settings,
-  ): Promise<void> {
-    // Guard: return early if data not initialized or no masonry container
-    if (!this.data || !this.masonryContainer) return;
-
-    const groupedData = this.data.groupedData;
-    const sortMethod = getSortMethod(this.config);
-
-    // Process groups (same shuffle logic as onDataUpdated)
-    const processedGroups = groupedData.map((group) => {
+  /** Process groups with shuffle logic applied */
+  private processGroups<
+    T extends { entries: BasesEntry[]; hasKey(): boolean; key?: unknown },
+  >(groupedData: T[]): Array<{ group: T; entries: BasesEntry[] }> {
+    return groupedData.map((group) => {
       let groupEntries = [...group.entries];
       if (this.isShuffled && this.shuffledOrder.length > 0) {
         groupEntries = groupEntries.sort((a, b) => {
@@ -431,6 +410,47 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       return { group, entries: groupEntries };
     });
+  }
+
+  /** Render group header if group has a key */
+  private renderGroupHeader(
+    groupEl: HTMLElement,
+    group: { hasKey(): boolean; key?: unknown },
+  ): void {
+    if (!group.hasKey()) return;
+
+    const headerEl = groupEl.createDiv("bases-group-heading");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const groupBy = (this.config as any).groupBy;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (groupBy?.property) {
+      const propertyEl = headerEl.createDiv("bases-group-property");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      const propertyName = this.config.getDisplayName(groupBy.property);
+      propertyEl.setText(propertyName);
+    }
+
+    const valueEl = headerEl.createDiv("bases-group-value");
+    const keyValue = group.key?.toString() || "";
+    valueEl.setText(keyValue);
+  }
+
+  private async appendBatch(
+    totalEntries: number,
+    settings: Settings,
+  ): Promise<void> {
+    // Guard: return early if data not initialized or no masonry container
+    if (!this.data || !this.masonryContainer) return;
+
+    // Increment render version to cancel any stale onDataUpdated renders
+    this.renderVersion++;
+
+    const groupedData = this.data.groupedData;
+    const sortMethod = getSortMethod(this.config);
+
+    // Process groups with shuffle logic
+    const processedGroups = this.processGroups(groupedData);
 
     // Capture state at start - these may change during async operations
     const prevCount = this.previousDisplayedCount;
@@ -495,10 +515,9 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Determine entries to render in this group
       const startInGroup = Math.max(0, prevCount - displayedSoFar);
-      const endInGroup = groupEntriesToDisplay;
       const groupEntries = processedGroup.entries.slice(
         startInGroup,
-        endInGroup,
+        groupEntriesToDisplay,
       );
 
       // Get or create group container
@@ -515,21 +534,7 @@ export class DynamicViewsMasonryView extends BasesView {
         groupEl = this.masonryContainer.createDiv("dynamic-views-group");
 
         // Render group header if key exists
-        if (processedGroup.group.hasKey()) {
-          const headerEl = groupEl.createDiv("bases-group-heading");
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          const groupBy = (this.config as any).groupBy;
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          if (groupBy?.property) {
-            const propertyEl = headerEl.createDiv("bases-group-property");
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-            const propertyName = this.config.getDisplayName(groupBy.property);
-            propertyEl.setText(propertyName);
-          }
-          const valueEl = headerEl.createDiv("bases-group-value");
-          const keyValue = processedGroup.group.key?.toString() || "";
-          valueEl.setText(keyValue);
-        }
+        this.renderGroupHeader(groupEl, processedGroup.group);
 
         // Update last group tracking
         this.lastGroupKey = currentGroupKey;
@@ -605,10 +610,8 @@ export class DynamicViewsMasonryView extends BasesView {
     const checkAndLoad = () => {
       // Skip if already loading
       if (this.isLoading) {
-        console.log("// checkAndLoad SKIP - isLoading true");
         return;
       }
-      console.log("// checkAndLoad PROCEED - isLoading false");
 
       // Calculate distance from bottom (use scrollContainer, not containerEl)
       const scrollTop = scrollContainer.scrollTop;
