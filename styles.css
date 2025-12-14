@@ -3108,7 +3108,8 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   display: none;
 }
 
-.dynamic-views .card-title a {
+.dynamic-views .card-title a,
+.dynamic-views .card-title .card-title-link {
   text-decoration: none;
   color: inherit;
   font-weight: inherit;
@@ -3117,7 +3118,11 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 
 @media (hover: hover) {
   /* Underline title on hover when open action is "press on title" */
-  body.dynamic-views-open-on-title .dynamic-views .card-title a:hover {
+  body.dynamic-views-open-on-title .dynamic-views .card-title a:hover,
+  body.dynamic-views-open-on-title
+    .dynamic-views
+    .card-title
+    .card-title-link:hover {
     text-decoration: underline;
     color: var(--text-normal);
   }
@@ -3127,6 +3132,11 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .dynamic-views
     .card-title
     a:hover
+    .card-title-ext-suffix,
+  body.dynamic-views-file-type-ext
+    .dynamic-views
+    .card-title
+    .card-title-link:hover
     .card-title-ext-suffix {
     text-decoration: underline;
     text-decoration-color: var(--_title-color);
@@ -3295,7 +3305,8 @@ body.dynamic-views-open-on-title .dynamic-views .property-content {
 }
 
 /* Title link: selectable text */
-body.dynamic-views-open-on-title .dynamic-views .card-title a {
+body.dynamic-views-open-on-title .dynamic-views .card-title a,
+body.dynamic-views-open-on-title .dynamic-views .card-title .card-title-link {
   user-select: text;
   -webkit-user-select: text;
 }

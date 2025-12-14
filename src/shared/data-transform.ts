@@ -675,7 +675,7 @@ export function resolveBasesProperty(
   // Bases format: file.path, file.tags, file.mtime, file.ctime
   // Datacore format: "file path", "file tags", "modified time", "created time"
   if (propertyName === "file.path" || propertyName === "file path") {
-    const path = cardData.folderPath;
+    const path = cardData.path;
     if (!path || path === "") {
       return null;
     }
@@ -872,8 +872,7 @@ export function resolveDatacoreProperty(
   // Bases format: file.path, file.tags, file.mtime, file.ctime
   // Datacore format: "file path", "file tags", "modified time", "created time"
   if (propertyName === "file.path" || propertyName === "file path") {
-    // Extract folder path, trim after last /, return null if root
-    const path = cardData.folderPath;
+    const path = cardData.path;
     if (!path || path === "") return null;
     return path;
   }

@@ -2129,11 +2129,18 @@ export class SharedCardRenderer {
           }
         });
 
-        // Add context menu for folder segments
-        if (!isLastSegment) {
-          segmentEl.addEventListener("contextmenu", (e) => {
-            e.stopPropagation();
-            e.preventDefault();
+        // Add context menu for all segments
+        segmentEl.addEventListener("contextmenu", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (isLastSegment) {
+            // Filename segment - show file context menu
+            const file = this.app.vault.getAbstractFileByPath(card.path);
+            if (file instanceof TFile) {
+              showFileContextMenu(e, this.app, file, card.path);
+            }
+          } else {
+            // Folder segment - show folder context menu
             const folderFile =
               this.app.vault.getAbstractFileByPath(cumulativePath);
             if (folderFile instanceof TFolder) {
@@ -2146,8 +2153,8 @@ export class SharedCardRenderer {
               );
               menu.showAtMouseEvent(e);
             }
-          });
-        }
+          }
+        });
 
         if (idx < segments.length - 1) {
           span.createSpan({ cls: "path-separator", text: "/" });

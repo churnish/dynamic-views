@@ -218,6 +218,8 @@ export function measurePropertyFields(
           for (const entry of entries) {
             if (entry.isIntersecting && cardProps.clientWidth > 0) {
               requestAnimationFrame(() => {
+                // Clear measured state to allow re-measurement (width may have changed while hidden)
+                rowEl.classList.remove("property-measured");
                 measureSideBySideRow(rowEl, field1, field2);
               });
             }

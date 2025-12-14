@@ -498,6 +498,7 @@ describe("data-transform", () => {
       };
 
       const mockCardData: any = {
+        path: "test/folder/file.md",
         folderPath: "test/folder",
         tags: [],
         yamlTags: [],
@@ -513,7 +514,7 @@ describe("data-transform", () => {
         mockSettings,
       );
 
-      expect(result).toBe("test/folder");
+      expect(result).toBe("test/folder/file.md");
     });
 
     it("should resolve file.tags property", () => {
@@ -579,6 +580,7 @@ describe("data-transform", () => {
       };
 
       const mockCardData: any = {
+        path: "test/folder/file.md",
         folderPath: "test/folder",
         tags: [],
         yamlTags: [],
@@ -598,7 +600,7 @@ describe("data-transform", () => {
         mockDC,
       );
 
-      expect(result).toBe("test/folder");
+      expect(result).toBe("test/folder/file.md");
     });
 
     it("should resolve tags property", () => {

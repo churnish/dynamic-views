@@ -911,30 +911,33 @@ function renderProperty(
                             }
                           }
                         }}
-                        onContextMenu={
-                          !isLastSegment
-                            ? (e: MouseEvent) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                const folderFile =
-                                  app.vault.getAbstractFileByPath(
-                                    cumulativePath,
-                                  );
-                                if (folderFile instanceof TFolder) {
-                                  const menu = new Menu();
-                                  app.workspace.trigger(
-                                    "file-menu",
-                                    menu,
-                                    folderFile,
-                                    "file-explorer",
-                                  );
-                                  menu.showAtMouseEvent(
-                                    e as unknown as MouseEvent,
-                                  );
-                                }
-                              }
-                            : undefined
-                        }
+                        onContextMenu={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (isLastSegment) {
+                            // Filename segment - show file context menu
+                            const file = app.vault.getAbstractFileByPath(
+                              card.path,
+                            );
+                            if (file instanceof TFile) {
+                              showFileContextMenu(e, app, file, card.path);
+                            }
+                          } else {
+                            // Folder segment - show folder context menu
+                            const folderFile =
+                              app.vault.getAbstractFileByPath(cumulativePath);
+                            if (folderFile instanceof TFolder) {
+                              const menu = new Menu();
+                              app.workspace.trigger(
+                                "file-menu",
+                                menu,
+                                folderFile,
+                                "file-explorer",
+                              );
+                              menu.showAtMouseEvent(e as unknown as MouseEvent);
+                            }
+                          }
+                        }}
                       >
                         {segment}
                       </span>
@@ -1445,18 +1448,33 @@ function Card({
               {renderFileTypeIcon(card.path)}
               {renderFileExt(extInfo)}
               {effectiveOpenFileAction === "title" ? (
-                <a
-                  href={card.path}
-                  className="internal-link"
+                <span
+                  className="card-title-link"
                   data-href={card.path}
                   tabIndex={-1}
                   draggable={true}
                   onDragStart={handleDrag}
                   onClick={(e: MouseEvent) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     const newLeaf = e.metaKey || e.ctrlKey;
                     void app.workspace.openLinkText(card.path, "", newLeaf);
+                  }}
+                  onContextMenu={(e: MouseEvent) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const file = app.vault.getAbstractFileByPath(card.path);
+                    if (file instanceof TFile) {
+                      showFileContextMenu(e, app, file, card.path);
+                    }
+                  }}
+                  onMouseOver={(e: MouseEvent) => {
+                    app.workspace.trigger("hover-link", {
+                      event: e,
+                      source: "dynamic-views",
+                      hoverParent: { hoverPopover: null },
+                      targetEl: e.currentTarget,
+                      linktext: card.path,
+                    });
                   }}
                 >
                   <span className="card-title-text-content">
@@ -1465,7 +1483,7 @@ function Card({
                   {extNoDot && (
                     <span className="card-title-ext-suffix">.{extNoDot}</span>
                   )}
-                </a>
+                </span>
               ) : (
                 <>
                   <span className="card-title-text-content">
