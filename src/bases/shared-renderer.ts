@@ -51,36 +51,47 @@ import {
   setupSwipeGestures,
 } from "../shared/slideshow-utils";
 import { handleArrowNavigation, isArrowKey } from "../shared/keyboard-nav";
+import { measurePropertyFields } from "../shared/property-measure";
 
 /**
- * Truncate title text to fit within container with ellipsis
- * Preserves extension visibility when present
+ * Truncate title text to fit within container with ellipsis.
+ * Preserves extension visibility when present.
+ *
+ * Note: Unlike Datacore's setupTitleTruncation which uses ResizeObserver,
+ * this runs once at render time. Bases cards have fixed layout after render.
  */
 function truncateTitleWithExtension(
   titleEl: HTMLElement,
   textEl: HTMLElement | Text,
 ): void {
+  // Skip truncation if container has no width (hidden tab, etc.)
+  // Binary search would incorrectly truncate to 1 char
+  if (titleEl.offsetWidth === 0) return;
+
   const containerStyle = getComputedStyle(titleEl);
   const lineHeight = parseFloat(containerStyle.lineHeight);
   const maxLines = parseInt(
     containerStyle.getPropertyValue("--dynamic-views-title-lines") || "2",
   );
-  const maxHeight = lineHeight * maxLines;
+  // Guard against invalid CSS config
+  if (maxLines <= 0 || !isFinite(lineHeight)) return;
+  // Add 1px tolerance for sub-pixel rounding differences
+  const maxHeight = Math.ceil(lineHeight * maxLines) + 1;
 
-  const fullText = textEl.textContent || "";
+  const fullText = (textEl.textContent || "").trim();
   if (!fullText) return;
 
   // Check if truncation needed
   if (titleEl.scrollHeight <= maxHeight) return;
 
   // Binary search for max text that fits
-  let low = 0;
+  let low = 1; // Minimum 1 character
   let high = fullText.length;
   const ellipsis = "…";
 
   while (low < high) {
     const mid = Math.ceil((low + high) / 2);
-    textEl.textContent = fullText.slice(0, mid) + ellipsis;
+    textEl.textContent = fullText.slice(0, mid).trimEnd() + ellipsis;
 
     if (titleEl.scrollHeight <= maxHeight) {
       low = mid;
@@ -90,12 +101,13 @@ function truncateTitleWithExtension(
   }
 
   // Set final truncated text
-  textEl.textContent = fullText.slice(0, low) + ellipsis;
+  textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
 
   // Safety: keep reducing if still overflowing (ensures extension visible)
-  while (titleEl.scrollHeight > maxHeight && low > 0) {
+  // But never go below 1 character
+  while (titleEl.scrollHeight > maxHeight && low > 1) {
     low--;
-    textEl.textContent = fullText.slice(0, low) + ellipsis;
+    textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
   }
 }
 
@@ -275,6 +287,8 @@ export class SharedCardRenderer {
       focusableCardIndex: number;
       containerRef: { current: HTMLElement | null };
       onFocusChange?: (index: number) => void;
+      onHoverStart?: (el: HTMLElement) => void;
+      onHoverEnd?: () => void;
     },
   ): void {
     // Create card element
@@ -457,6 +471,24 @@ export class SharedCardRenderer {
       }
     });
 
+    // Track hovered card for hover-to-start keyboard navigation
+    if (keyboardNav?.onHoverStart && keyboardNav?.onHoverEnd) {
+      cardEl.addEventListener(
+        "mouseenter",
+        () => {
+          keyboardNav.onHoverStart?.(cardEl);
+        },
+        { signal },
+      );
+      cardEl.addEventListener(
+        "mouseleave",
+        () => {
+          keyboardNav.onHoverEnd?.();
+        },
+        { signal },
+      );
+    }
+
     // Handle hover for page preview (only on card when openFileAction is 'card')
     if (effectiveOpenFileAction === "card") {
       cardEl.addEventListener("mouseover", (e) => {
@@ -523,7 +555,6 @@ export class SharedCardRenderer {
         if (extInfo) {
           titleEl.createSpan({
             cls: "card-title-ext",
-            text: extInfo.ext,
             attr: { "data-ext": extNoDot },
           });
         }
@@ -540,6 +571,7 @@ export class SharedCardRenderer {
               href: card.path,
               draggable: "true",
               "data-ext": extNoDot,
+              tabindex: "-1",
             },
           });
           textEl = link;
@@ -584,12 +616,35 @@ export class SharedCardRenderer {
             "dynamic-views-title-overflow-scroll",
           )
         ) {
-          // Double RAF ensures layout is complete
-          requestAnimationFrame(() => {
+          // For masonry: wait until card is positioned (has width)
+          // For grid: double RAF is sufficient
+          const card = titleEl.closest(".card");
+          const isMasonry = card?.closest(".dynamic-views-masonry");
+
+          const doTruncate = () => {
+            truncateTitleWithExtension(titleEl, textEl);
+          };
+
+          if (isMasonry) {
+            // Poll until masonry layout applies width (masonry-positioned class)
+            // Limit to 100 attempts (~1.6s at 60fps) to prevent infinite loop
+            const waitForLayout = (attempts = 0) => {
+              if (card?.classList.contains("masonry-positioned")) {
+                requestAnimationFrame(doTruncate);
+              } else if (attempts < 100) {
+                requestAnimationFrame(() => waitForLayout(attempts + 1));
+              } else {
+                // Fallback: truncate anyway after timeout
+                requestAnimationFrame(doTruncate);
+              }
+            };
+            requestAnimationFrame(() => waitForLayout(0));
+          } else {
+            // Grid: double RAF ensures layout is complete
             requestAnimationFrame(() => {
-              truncateTitleWithExtension(titleEl, textEl);
+              requestAnimationFrame(doTruncate);
             });
-          });
+          }
         }
 
         // Setup scroll gradients for title if scroll mode is enabled
@@ -627,6 +682,8 @@ export class SharedCardRenderer {
         card,
         entry,
         { ...settings, propertyLabels: "hide" },
+        shouldHideMissingProperties(),
+        shouldHideEmptyProperties(),
       );
 
       // Setup scroll gradients if scroll mode is enabled
@@ -873,7 +930,7 @@ export class SharedCardRenderer {
         getComputedStyle(document.body).getPropertyValue(
           "--dynamic-views-compact-breakpoint",
         ),
-      ) || 400;
+      ) || 390;
 
     // Check if thumbnail stacking is applicable
     const needsThumbnailStacking =
@@ -889,11 +946,17 @@ export class SharedCardRenderer {
       ? (cardEl.querySelector(".card-content") as HTMLElement)
       : null;
 
-    let isStacked = false;
+    // Initialize isStacked based on actual DOM state
+    // Thumbnail starts inside content, so isStacked = false means "inside content" (not stacked as sibling)
+    // We need to track whether thumbnail is currently a direct child of card (stacked) or inside content
+    let isStacked = thumbnailEl?.parentElement === cardEl;
 
     const cardObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const cardWidth = entry.contentRect.width;
+
+        // Skip if card hasn't been sized yet (masonry sets width)
+        if (cardWidth === 0) continue;
 
         // Compact mode
         if (breakpoint > 0) {
@@ -942,8 +1005,16 @@ export class SharedCardRenderer {
     const { signal } = controller;
     this.slideshowCleanups.push(() => controller.abort());
 
+    // Compute effective open file action
+    const effectiveOpenFileAction =
+      settings.openFileAction === "title" && !settings.showTitle
+        ? "card"
+        : settings.openFileAction;
+
     // Create image embed with two stacked images
-    const imageEmbedContainer = slideshowEl.createDiv("image-embed");
+    const imageEmbedContainer = slideshowEl.createDiv(
+      "dynamic-views-image-embed",
+    );
     imageEmbedContainer.style.setProperty(
       "--cover-image-url",
       `url("${imageUrls[0]}")`,
@@ -960,6 +1031,7 @@ export class SharedCardRenderer {
           this.app,
           this.viewerCleanupFns,
           this.viewerClones,
+          effectiveOpenFileAction,
         );
       },
       { signal },
@@ -1068,7 +1140,13 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     signal?: AbortSignal,
   ): void {
-    const imageEmbedContainer = imageEl.createDiv("image-embed");
+    // Compute effective open file action
+    const effectiveOpenFileAction =
+      settings.openFileAction === "title" && !settings.showTitle
+        ? "card"
+        : settings.openFileAction;
+
+    const imageEmbedContainer = imageEl.createDiv("dynamic-views-image-embed");
 
     // Add zoom handler with cleanup via AbortController
     imageEmbedContainer.addEventListener(
@@ -1080,6 +1158,7 @@ export class SharedCardRenderer {
           this.app,
           this.viewerCleanupFns,
           this.viewerClones,
+          effectiveOpenFileAction,
         );
       },
       signal ? { signal } : undefined,
@@ -1095,12 +1174,15 @@ export class SharedCardRenderer {
     );
 
     // Handle image load for masonry layout and color extraction
+    // Only pass layout callback for covers (thumbnails have fixed CSS height)
     if (cardEl) {
       setupImageLoadHandler(
         imgEl,
         imageEmbedContainer,
         cardEl,
-        this.updateLayoutRef.current || undefined,
+        format === "cover"
+          ? this.updateLayoutRef.current || undefined
+          : undefined,
       );
     }
 
@@ -1197,37 +1279,35 @@ export class SharedCardRenderer {
       prop ? resolveBasesProperty(this.app, prop, entry, card, settings) : null,
     );
 
+    // Pre-compute hide toggles (avoid repeated classList checks)
+    const hideMissing = shouldHideMissingProperties();
+    const hideEmpty = shouldHideEmptyProperties();
+
     // Check if any row has content
-    // When labels are enabled, show row if property is configured (even if value is empty)
-    // When labels are hidden, only show row if value exists
-    const row1HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[0] !== "" || effectiveProps[1] !== ""
-        : values[0] !== null || values[1] !== null;
-    const row2HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[2] !== "" || effectiveProps[3] !== ""
-        : values[2] !== null || values[3] !== null;
-    const row3HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[4] !== "" || effectiveProps[5] !== ""
-        : values[4] !== null || values[5] !== null;
-    const row4HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[6] !== "" || effectiveProps[7] !== ""
-        : values[6] !== null || values[7] !== null;
-    const row5HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[8] !== "" || effectiveProps[9] !== ""
-        : values[8] !== null || values[9] !== null;
-    const row6HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[10] !== "" || effectiveProps[11] !== ""
-        : values[10] !== null || values[11] !== null;
-    const row7HasContent =
-      settings.propertyLabels !== "hide"
-        ? effectiveProps[12] !== "" || effectiveProps[13] !== ""
-        : values[12] !== null || values[13] !== null;
+    // Show row if property is configured, UNLESS labels hidden AND hideMissingProperties enabled
+    const showConfiguredProps =
+      settings.propertyLabels !== "hide" || !hideMissing;
+    const row1HasContent = showConfiguredProps
+      ? effectiveProps[0] !== "" || effectiveProps[1] !== ""
+      : values[0] !== null || values[1] !== null;
+    const row2HasContent = showConfiguredProps
+      ? effectiveProps[2] !== "" || effectiveProps[3] !== ""
+      : values[2] !== null || values[3] !== null;
+    const row3HasContent = showConfiguredProps
+      ? effectiveProps[4] !== "" || effectiveProps[5] !== ""
+      : values[4] !== null || values[5] !== null;
+    const row4HasContent = showConfiguredProps
+      ? effectiveProps[6] !== "" || effectiveProps[7] !== ""
+      : values[6] !== null || values[7] !== null;
+    const row5HasContent = showConfiguredProps
+      ? effectiveProps[8] !== "" || effectiveProps[9] !== ""
+      : values[8] !== null || values[9] !== null;
+    const row6HasContent = showConfiguredProps
+      ? effectiveProps[10] !== "" || effectiveProps[11] !== ""
+      : values[10] !== null || values[11] !== null;
+    const row7HasContent = showConfiguredProps
+      ? effectiveProps[12] !== "" || effectiveProps[13] !== ""
+      : values[12] !== null || values[13] !== null;
 
     if (
       !row1HasContent &&
@@ -1319,6 +1399,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field2El = row1El.createDiv("property-field property-field-2");
@@ -1330,6 +1412,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       // Check actual rendered content
@@ -1349,8 +1433,8 @@ export class SharedCardRenderer {
         // Add placeholder ONLY if prop2 is set AND not hidden by toggles
         if (prop2Set) {
           const shouldHide =
-            (values[1] === null && shouldHideMissingProperties()) ||
-            (values[1] === "" && shouldHideEmptyProperties());
+            (values[1] === null && hideMissing) ||
+            (values[1] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field2El.createDiv("property-content");
             const markerSpan =
@@ -1363,8 +1447,8 @@ export class SharedCardRenderer {
         // Add placeholder ONLY if prop1 is set AND not hidden by toggles
         if (prop1Set) {
           const shouldHide =
-            (values[0] === null && shouldHideMissingProperties()) ||
-            (values[0] === "" && shouldHideEmptyProperties());
+            (values[0] === null && hideMissing) ||
+            (values[0] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field1El.createDiv("property-content");
             const markerSpan =
@@ -1392,6 +1476,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field4El = row2El.createDiv("property-field property-field-4");
@@ -1403,6 +1489,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       // Check actual rendered content
@@ -1422,8 +1510,8 @@ export class SharedCardRenderer {
         // Add placeholder ONLY if prop4 is set AND not hidden by toggles
         if (prop4Set) {
           const shouldHide =
-            (values[3] === null && shouldHideMissingProperties()) ||
-            (values[3] === "" && shouldHideEmptyProperties());
+            (values[3] === null && hideMissing) ||
+            (values[3] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field4El.createDiv("property-content");
             const markerSpan =
@@ -1436,8 +1524,8 @@ export class SharedCardRenderer {
         // Add placeholder ONLY if prop3 is set AND not hidden by toggles
         if (prop3Set) {
           const shouldHide =
-            (values[2] === null && shouldHideMissingProperties()) ||
-            (values[2] === "" && shouldHideEmptyProperties());
+            (values[2] === null && hideMissing) ||
+            (values[2] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field3El.createDiv("property-content");
             const markerSpan =
@@ -1465,6 +1553,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field6El = row3El.createDiv("property-field property-field-6");
@@ -1476,6 +1566,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const has5 =
@@ -1491,8 +1583,8 @@ export class SharedCardRenderer {
       } else if (has5 && !has6) {
         if (prop6Set) {
           const shouldHide =
-            (values[5] === null && shouldHideMissingProperties()) ||
-            (values[5] === "" && shouldHideEmptyProperties());
+            (values[5] === null && hideMissing) ||
+            (values[5] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field6El.createDiv("property-content");
             const markerSpan =
@@ -1503,8 +1595,8 @@ export class SharedCardRenderer {
       } else if (!has5 && has6) {
         if (prop5Set) {
           const shouldHide =
-            (values[4] === null && shouldHideMissingProperties()) ||
-            (values[4] === "" && shouldHideEmptyProperties());
+            (values[4] === null && hideMissing) ||
+            (values[4] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field5El.createDiv("property-content");
             const markerSpan =
@@ -1531,6 +1623,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field8El = row4El.createDiv("property-field property-field-8");
@@ -1542,6 +1636,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const has7 =
@@ -1557,8 +1653,8 @@ export class SharedCardRenderer {
       } else if (has7 && !has8) {
         if (prop8Set) {
           const shouldHide =
-            (values[7] === null && shouldHideMissingProperties()) ||
-            (values[7] === "" && shouldHideEmptyProperties());
+            (values[7] === null && hideMissing) ||
+            (values[7] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field8El.createDiv("property-content");
             const markerSpan =
@@ -1569,8 +1665,8 @@ export class SharedCardRenderer {
       } else if (!has7 && has8) {
         if (prop7Set) {
           const shouldHide =
-            (values[6] === null && shouldHideMissingProperties()) ||
-            (values[6] === "" && shouldHideEmptyProperties());
+            (values[6] === null && hideMissing) ||
+            (values[6] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field7El.createDiv("property-content");
             const markerSpan =
@@ -1597,6 +1693,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field10El = row5El.createDiv("property-field property-field-10");
@@ -1608,6 +1706,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const has9 =
@@ -1624,8 +1724,8 @@ export class SharedCardRenderer {
       } else if (has9 && !has10) {
         if (prop10Set) {
           const shouldHide =
-            (values[9] === null && shouldHideMissingProperties()) ||
-            (values[9] === "" && shouldHideEmptyProperties());
+            (values[9] === null && hideMissing) ||
+            (values[9] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field10El.createDiv("property-content");
             const markerSpan =
@@ -1636,8 +1736,8 @@ export class SharedCardRenderer {
       } else if (!has9 && has10) {
         if (prop9Set) {
           const shouldHide =
-            (values[8] === null && shouldHideMissingProperties()) ||
-            (values[8] === "" && shouldHideEmptyProperties());
+            (values[8] === null && hideMissing) ||
+            (values[8] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field9El.createDiv("property-content");
             const markerSpan =
@@ -1664,6 +1764,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field12El = row6El.createDiv("property-field property-field-12");
@@ -1675,6 +1777,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const has11 =
@@ -1692,8 +1796,8 @@ export class SharedCardRenderer {
       } else if (has11 && !has12) {
         if (prop12Set) {
           const shouldHide =
-            (values[11] === null && shouldHideMissingProperties()) ||
-            (values[11] === "" && shouldHideEmptyProperties());
+            (values[11] === null && hideMissing) ||
+            (values[11] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field12El.createDiv("property-content");
             const markerSpan =
@@ -1704,8 +1808,8 @@ export class SharedCardRenderer {
       } else if (!has11 && has12) {
         if (prop11Set) {
           const shouldHide =
-            (values[10] === null && shouldHideMissingProperties()) ||
-            (values[10] === "" && shouldHideEmptyProperties());
+            (values[10] === null && hideMissing) ||
+            (values[10] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field11El.createDiv("property-content");
             const markerSpan =
@@ -1732,6 +1836,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const field14El = row7El.createDiv("property-field property-field-14");
@@ -1743,6 +1849,8 @@ export class SharedCardRenderer {
           card,
           entry,
           settings,
+          hideMissing,
+          hideEmpty,
         );
 
       const has13 =
@@ -1760,8 +1868,8 @@ export class SharedCardRenderer {
       } else if (has13 && !has14) {
         if (prop14Set) {
           const shouldHide =
-            (values[13] === null && shouldHideMissingProperties()) ||
-            (values[13] === "" && shouldHideEmptyProperties());
+            (values[13] === null && hideMissing) ||
+            (values[13] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field14El.createDiv("property-content");
             const markerSpan =
@@ -1772,8 +1880,8 @@ export class SharedCardRenderer {
       } else if (!has13 && has14) {
         if (prop13Set) {
           const shouldHide =
-            (values[12] === null && shouldHideMissingProperties()) ||
-            (values[12] === "" && shouldHideEmptyProperties());
+            (values[12] === null && hideMissing) ||
+            (values[12] === "" && hideEmpty);
           if (!shouldHide) {
             const placeholderContent = field13El.createDiv("property-content");
             const markerSpan =
@@ -1798,7 +1906,7 @@ export class SharedCardRenderer {
       (bottomPropertiesEl && bottomPropertiesEl.children.length > 0)
     ) {
       // Measure side-by-side field widths
-      this.measurePropertyFields(cardEl);
+      this.measurePropertyFieldsForCard(cardEl);
       // Setup scroll gradients for tags and paths
       setupScrollGradients(cardEl, updateScrollGradient);
     }
@@ -1814,6 +1922,8 @@ export class SharedCardRenderer {
     card: CardData,
     entry: BasesEntry,
     settings: Settings,
+    hideMissing: boolean,
+    hideEmpty: boolean,
   ): void {
     if (propertyName === "") {
       return;
@@ -1823,23 +1933,18 @@ export class SharedCardRenderer {
     const stringValue =
       typeof resolvedValue === "string" ? resolvedValue : null;
 
-    // If no value and labels are hidden, render nothing
-    if (!stringValue && settings.propertyLabels === "hide") {
-      return;
-    }
-
     // Hide missing properties if toggle enabled (stringValue is null for missing properties)
-    if (stringValue === null && shouldHideMissingProperties()) {
+    if (stringValue === null && hideMissing) {
       return;
     }
 
     // Hide empty properties if toggle enabled (stringValue is '' for empty properties)
-    if (stringValue === "" && shouldHideEmptyProperties()) {
+    if (stringValue === "" && hideEmpty) {
       return;
     }
 
-    // Early return for empty special properties when labels are hidden
-    if (settings.propertyLabels === "hide") {
+    // Early return for empty special properties when labels are hidden AND hideEmpty enabled
+    if (settings.propertyLabels === "hide" && hideEmpty) {
       if (
         (propertyName === "tags" || propertyName === "note.tags") &&
         card.yamlTags.length === 0
@@ -1989,6 +2094,17 @@ export class SharedCardRenderer {
           : "path-segment file-path-segment";
         const segmentEl = span.createSpan({ cls: segmentClass, text: segment });
 
+        // Make filename segment draggable
+        if (isLastSegment) {
+          segmentEl.draggable = true;
+          segmentEl.addEventListener("dragstart", (e: DragEvent) => {
+            const file = this.app.vault.getAbstractFileByPath(card.path);
+            if (!(file instanceof TFile)) return;
+            const dragData = this.app.dragManager.dragFile(e, file);
+            this.app.dragManager.onDragStart(e, dragData);
+          });
+        }
+
         // Make clickable
         const cumulativePath = segments.slice(0, idx + 1).join("/");
         segmentEl.addEventListener("click", (e) => {
@@ -2104,176 +2220,10 @@ export class SharedCardRenderer {
   }
 
   /**
-   * Measures property fields for side-by-side layout
+   * Measures property fields for side-by-side layout (delegates to shared utility)
    */
-  private measurePropertyFields(container: HTMLElement): void {
-    // Skip measurement if 50-50 mode - default CSS is already 50-50
-    if (
-      document.body.classList.contains("dynamic-views-property-width-50-50")
-    ) {
-      return;
-    }
-
-    const rows = container.querySelectorAll(".property-row-sidebyside");
-    rows.forEach((row) => {
-      const rowEl = row as HTMLElement;
-
-      const field1 = rowEl.querySelector(
-        ".property-field-1, .property-field-3, .property-field-5, .property-field-7, .property-field-9, .property-field-11, .property-field-13",
-      ) as HTMLElement;
-      const field2 = rowEl.querySelector(
-        ".property-field-2, .property-field-4, .property-field-6, .property-field-8, .property-field-10, .property-field-12, .property-field-14",
-      ) as HTMLElement;
-
-      if (field1 && field2) {
-        // Initial measurement
-        requestAnimationFrame(() => {
-          this.measureSideBySideRow(rowEl, field1, field2);
-        });
-
-        // Re-measure on card resize (RAF to avoid concurrent measurements)
-        const card = rowEl.closest(".card") as HTMLElement;
-        const observer = new ResizeObserver(() => {
-          requestAnimationFrame(() => {
-            this.measureSideBySideRow(rowEl, field1, field2);
-          });
-        });
-        observer.observe(card);
-        this.propertyObservers.push(observer);
-      }
-    });
-  }
-
-  /**
-   * Measures and applies widths for side-by-side row
-   */
-  private measureSideBySideRow(
-    row: HTMLElement,
-    field1: HTMLElement,
-    field2: HTMLElement,
-  ): void {
-    try {
-      const cardProperties = row.closest(".card-properties");
-      if (!row.closest(".card") || !cardProperties) return;
-
-      // Remove measured state and enter measuring state to remove constraints
-      row.removeClass("property-measured");
-      row.addClass("property-measuring");
-
-      // Force reflow
-      void row.offsetWidth;
-
-      // Get wrapper references for scroll reset later
-      const wrapper1 = field1.querySelector(
-        ".property-content-wrapper",
-      ) as HTMLElement;
-      const wrapper2 = field2.querySelector(
-        ".property-content-wrapper",
-      ) as HTMLElement;
-
-      // Measure property-content (actual content, not wrapper which may be flex-grown)
-      const content1 = field1.querySelector(".property-content") as HTMLElement;
-      const content2 = field2.querySelector(".property-content") as HTMLElement;
-
-      // Measure inline labels if present
-      const inlineLabel1 = field1.querySelector(
-        ".property-label-inline",
-      ) as HTMLElement;
-      const inlineLabel2 = field2.querySelector(
-        ".property-label-inline",
-      ) as HTMLElement;
-
-      // Measure above labels if present (need max of label vs content width)
-      const aboveLabel1 = field1.querySelector(
-        ".property-label",
-      ) as HTMLElement;
-      const aboveLabel2 = field2.querySelector(
-        ".property-label",
-      ) as HTMLElement;
-
-      // Total width = content width + inline label width + gap (if inline label exists)
-      // For above labels, use max of label width vs content width
-      let width1 = content1 ? content1.scrollWidth : 0;
-      let width2 = content2 ? content2.scrollWidth : 0;
-
-      // Account for above labels - field must fit the wider of label or content
-      if (aboveLabel1) {
-        width1 = Math.max(width1, aboveLabel1.scrollWidth);
-      }
-      if (aboveLabel2) {
-        width2 = Math.max(width2, aboveLabel2.scrollWidth);
-      }
-
-      // Add inline label width + gap between label and wrapper
-      // Read gap from CSS variable (var(--size-4-1), typically 4px)
-      const inlineLabelGap = parseFloat(getComputedStyle(field1).gap) || 4;
-      if (inlineLabel1) {
-        width1 += inlineLabel1.scrollWidth + inlineLabelGap;
-      }
-      if (inlineLabel2) {
-        width2 += inlineLabel2.scrollWidth + inlineLabelGap;
-      }
-
-      // Use cardProperties.clientWidth directly - it already accounts for
-      // card padding and side cover constraints
-      const containerWidth = cardProperties.clientWidth;
-
-      // Guard against negative or zero width (edge case: very narrow cards or misconfiguration)
-      if (containerWidth <= 0) {
-        return;
-      }
-
-      // Read field gap from CSS variable (var(--dynamic-views-element-spacing, 8px))
-      const fieldGap = parseFloat(getComputedStyle(row).gap) || 8;
-      const availableWidth = containerWidth - fieldGap;
-
-      const percent1 = (width1 / availableWidth) * 100;
-      const percent2 = (width2 / availableWidth) * 100;
-
-      // Calculate optimal widths using smart strategy
-      let field1Width: string;
-      let field2Width: string;
-
-      if (width1 === 0 && width2 === 0) {
-        // Both empty: split 50-50
-        const half = availableWidth / 2;
-        field1Width = `${half}px`;
-        field2Width = `${half}px`;
-      } else if (percent1 <= 50) {
-        // Field1 fits: field1 exact, field2 fills remainder
-        field1Width = `${width1}px`;
-        field2Width = `${availableWidth - width1}px`;
-      } else if (percent2 <= 50) {
-        // Field2 fits: field2 exact, field1 fills remainder
-        field1Width = `${availableWidth - width2}px`;
-        field2Width = `${width2}px`;
-      } else {
-        // Both > 50%: split 50-50
-        const half = availableWidth / 2;
-        field1Width = `${half}px`;
-        field2Width = `${half}px`;
-      }
-
-      // Apply calculated values
-      row.style.setProperty("--field1-width", field1Width);
-      row.style.setProperty("--field2-width", field2Width);
-      row.addClass("property-measured");
-
-      // Reset scroll position to 0 for both wrappers (reuse variables from measurement)
-      if (wrapper1) wrapper1.scrollLeft = 0;
-      if (wrapper2) wrapper2.scrollLeft = 0;
-
-      // Update scroll gradients after layout settles
-      // Use double RAF to ensure CSS variables are fully applied before checking scrollability
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          updateScrollGradient(field1);
-          updateScrollGradient(field2);
-        });
-      });
-    } finally {
-      // Always exit measuring state, even if error occurs
-      row.removeClass("property-measuring");
-    }
+  private measurePropertyFieldsForCard(container: HTMLElement): void {
+    const observers = measurePropertyFields(container);
+    this.propertyObservers.push(...observers);
   }
 }

@@ -48,11 +48,6 @@ export function ListView({
     <ul
       ref={containerRef}
       className={`list-view marker-${settings.listMarker}`}
-      style={
-        settings.queryHeight > 0
-          ? { maxHeight: `${settings.queryHeight}px`, overflowY: "auto" }
-          : {}
-      }
     >
       {results
         .slice(0, displayedCount)

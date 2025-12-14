@@ -13,6 +13,7 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   WIDE_MODE_MULTIPLIER,
+  SCROLL_THROTTLE_MS,
 } from "../shared/constants";
 import { PersistenceManager } from "../persistence";
 import { CardView } from "./card-view";
@@ -20,6 +21,7 @@ import {
   cleanupAllCardObservers,
   cleanupAllCardScrollListeners,
 } from "../shared/card-renderer";
+import { remeasurePropertyFields } from "../shared/property-measure";
 import { MasonryView } from "./masonry-view";
 import { ListView } from "./list-view";
 import { Toolbar } from "./toolbar";
@@ -42,14 +44,22 @@ import {
   getMinMasonryColumns,
   getMinGridColumns,
   getCardSpacing,
+  setupStyleSettingsObserver,
 } from "../utils/style-settings";
 import {
   calculateMasonryLayout,
+  calculateIncrementalMasonryLayout,
   applyMasonryLayout,
+  type MasonryLayoutResult,
 } from "../utils/masonry-layout";
 import type { DatacoreAPI, DatacoreFile } from "./types";
-import { resolveTimestampProperty } from "../shared/data-transform";
+import {
+  resolveTimestampProperty,
+  datacoreResultToCardData,
+} from "../shared/data-transform";
+import type { CardData } from "../shared/card-renderer";
 import { setupSwipeInterception } from "../bases/swipe-interceptor";
+import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
 
 // Extend App type to include isMobile property
 declare module "obsidian" {
@@ -252,7 +262,6 @@ export function View({
   const [showSettings, setShowSettings] = dc.useState(false);
   const [showSortDropdown, setShowSortDropdown] = dc.useState(false);
   const [showViewDropdown, setShowViewDropdown] = dc.useState(false);
-  const [isPinned, setIsPinned] = dc.useState(false);
   const [queryError, setQueryError] = dc.useState<string | null>(null);
   const [displayedCount, setDisplayedCount] = dc.useState(
     app.isMobile ? BATCH_SIZE * 0.5 : BATCH_SIZE,
@@ -269,6 +278,7 @@ export function View({
   const explorerRef = dc.useRef<HTMLElement | null>(null);
   const toolbarRef = dc.useRef<HTMLElement | null>(null);
   const containerRef = dc.useRef<HTMLElement | null>(null);
+  const hoveredCardRef = dc.useRef<HTMLElement | null>(null);
   const resultsContainerRef = dc.useRef<HTMLElement | null>(null);
   const updateLayoutRef = dc.useRef<(() => void) | null>(null);
   const loadMoreRef = dc.useRef<(() => void) | null>(null);
@@ -281,12 +291,17 @@ export function View({
   );
   const isSyncing = dc.useRef(false);
 
-  const [stickyTop, setStickyTop] = dc.useState(0);
-  const [toolbarDimensions, setToolbarDimensions] = dc.useState({
-    width: 0,
-    height: 0,
-    left: 0,
-  });
+  // Stable pages reference - prevents re-renders when Datacore returns new array with same content
+  const prevPagesKeyRef = dc.useRef<string>("");
+
+  // Debounce pages updates to prevent render cascade
+  const [stablePages, setStablePages] = dc.useState<DatacoreFile[]>([]);
+
+  // Incremental masonry layout tracking
+  const lastLayoutResultRef = dc.useRef<MasonryLayoutResult | null>(null);
+  const prevMasonryCountRef = dc.useRef(0);
+  const prevCardSizeRef = dc.useRef(settings.cardSize);
+  const prevStyleRevisionRef = dc.useRef(0);
 
   // Cleanup ResizeObservers and scroll listeners on unmount
   dc.useEffect(() => {
@@ -296,22 +311,52 @@ export function View({
     };
   }, []);
 
-  // Persist UI state changes
+  // Re-read state from persistence on layout change (Live Preview <-> Reading View sync)
+  dc.useEffect(() => {
+    if (!ctime || !persistenceManager) return;
+
+    const handleLayoutChange = () => {
+      const state = persistenceManager.getUIState(ctime);
+      // Always set from persistence - React will bail out if values are the same
+      if (state.sortMethod !== undefined) setSortMethod(state.sortMethod);
+      if (state.viewMode !== undefined) setViewMode(state.viewMode as ViewMode);
+      if (state.widthMode !== undefined)
+        setWidthMode(state.widthMode as WidthMode);
+      if (state.searchQuery !== undefined) setSearchQuery(state.searchQuery);
+      if (state.resultLimit !== undefined) setResultLimit(state.resultLimit);
+    };
+
+    app.workspace.on("layout-change", handleLayoutChange);
+    return () => {
+      app.workspace.off("layout-change", handleLayoutChange);
+    };
+  }, [ctime, persistenceManager, app.workspace]);
+
+  // Persist UI state changes (only if different from persisted value to avoid overwriting on mount)
   dc.useEffect(() => {
     if (ctime && persistenceManager) {
-      void persistenceManager.setUIState(ctime, { sortMethod });
+      const persisted = persistenceManager.getUIState(ctime);
+      if (persisted.sortMethod !== sortMethod) {
+        void persistenceManager.setUIState(ctime, { sortMethod });
+      }
     }
   }, [sortMethod, ctime, persistenceManager]);
 
   dc.useEffect(() => {
     if (ctime && persistenceManager) {
-      void persistenceManager.setUIState(ctime, { viewMode });
+      const persisted = persistenceManager.getUIState(ctime);
+      if (persisted.viewMode !== viewMode) {
+        void persistenceManager.setUIState(ctime, { viewMode });
+      }
     }
   }, [viewMode, ctime, persistenceManager]);
 
   dc.useEffect(() => {
     if (ctime && persistenceManager) {
-      void persistenceManager.setUIState(ctime, { widthMode });
+      const persisted = persistenceManager.getUIState(ctime);
+      if (persisted.widthMode !== widthMode) {
+        void persistenceManager.setUIState(ctime, { widthMode });
+      }
     }
   }, [widthMode, ctime, persistenceManager]);
 
@@ -482,13 +527,19 @@ export function View({
 
   dc.useEffect(() => {
     if (ctime && persistenceManager) {
-      void persistenceManager.setUIState(ctime, { searchQuery });
+      const persisted = persistenceManager.getUIState(ctime);
+      if (persisted.searchQuery !== searchQuery) {
+        void persistenceManager.setUIState(ctime, { searchQuery });
+      }
     }
   }, [searchQuery, ctime, persistenceManager]);
 
   dc.useEffect(() => {
     if (ctime && persistenceManager) {
-      void persistenceManager.setUIState(ctime, { resultLimit });
+      const persisted = persistenceManager.getUIState(ctime);
+      if (persisted.resultLimit !== resultLimit) {
+        void persistenceManager.setUIState(ctime, { resultLimit });
+      }
     }
   }, [resultLimit, ctime, persistenceManager]);
 
@@ -566,61 +617,23 @@ export function View({
     }
   }, [app.isMobile, persistenceManager]);
 
-  // Calculate sticky toolbar positioning
+  // Setup hover-to-start keyboard navigation
   dc.useEffect(() => {
-    if (isPinned && toolbarRef.current) {
-      const scrollContainer = toolbarRef.current.closest(
-        ".markdown-preview-view, .markdown-reading-view, .markdown-source-view",
-      );
+    const cleanup = setupHoverKeyboardNavigation(
+      () => hoveredCardRef.current,
+      () => containerRef.current,
+      setFocusableCardIndex,
+    );
+    return cleanup;
+  }, []);
 
-      if (!scrollContainer) {
-        setStickyTop(0);
-        return;
-      }
-
-      const updateStickyTop = () => {
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const headerHeight = containerRect.top;
-        setStickyTop(Math.max(0, headerHeight));
-
-        if (toolbarRef.current && explorerRef.current) {
-          const explorerRect = explorerRef.current.getBoundingClientRect();
-          setToolbarDimensions({
-            width: explorerRect.width,
-            height: toolbarRef.current.offsetHeight,
-            left: explorerRect.left,
-          });
-        }
-      };
-
-      updateStickyTop();
-      window.addEventListener("resize", updateStickyTop);
-      scrollContainer.addEventListener("scroll", updateStickyTop);
-
-      return () => {
-        window.removeEventListener("resize", updateStickyTop);
-        scrollContainer.removeEventListener("scroll", updateStickyTop);
-      };
-    }
-  }, [isPinned]);
-
-  // Apply toolbar positioning styles
+  // Setup Style Settings observer - re-render when CSS variables change
   dc.useEffect(() => {
-    const toolbar = toolbarRef.current;
-    if (!toolbar) return;
-
-    if (isPinned) {
-      toolbar.style.setProperty("position", "fixed");
-      toolbar.style.setProperty("top", `${stickyTop}px`);
-      toolbar.style.setProperty("width", `${toolbarDimensions.width}px`);
-      toolbar.style.setProperty("left", `${toolbarDimensions.left}px`);
-    } else {
-      toolbar.style.removeProperty("position");
-      toolbar.style.removeProperty("top");
-      toolbar.style.removeProperty("width");
-      toolbar.style.removeProperty("left");
-    }
-  }, [isPinned, stickyTop, toolbarDimensions]);
+    const disconnect = setupStyleSettingsObserver(() => {
+      setStyleRevision((r) => r + 1);
+    });
+    return disconnect;
+  }, []);
 
   // Validate and fallback query
   const validatedQuery = dc.useMemo(() => {
@@ -633,52 +646,65 @@ export function View({
     return ensurePageSelector(q);
   }, [appliedQuery]);
 
-  // Workaround: Direct Datacore event subscription (fires AFTER reindexing completes)
-  const [_indexRevision, setIndexRevision] = dc.useState(0);
+  // Style Settings revision - triggers re-render when CSS variables change
+  const [_styleRevision, setStyleRevision] = dc.useState(0);
 
+  // Ref to always capture latest validatedQuery for debounced callbacks
+  const validatedQueryRef = dc.useRef(validatedQuery);
+  validatedQueryRef.current = validatedQuery;
+
+  // Execute query with debounced updates
+  // Use dc.query() (sync, non-reactive) instead of dc.useQuery() to control render timing
   dc.useEffect(() => {
-    // Access Datacore core directly
-    const core = (
-      window as unknown as {
-        datacore?: {
-          core?: {
-            revision: number;
-            on: (
-              event: string,
-              callback: (revision: number) => void,
-            ) => unknown;
-            offref: (ref: unknown) => void;
-          };
-        };
+    const runQuery = () => {
+      try {
+        // Use ref to always get latest query (avoids stale closure in debounce)
+        const query = validatedQueryRef.current;
+        if (!query) return;
+        const rawPages = dc.query(query) || [];
+        const pagesKey =
+          rawPages.length +
+          ":" +
+          rawPages
+            .map((p) => p.$path)
+            .sort()
+            .join("|");
+        if (pagesKey !== prevPagesKeyRef.current) {
+          prevPagesKeyRef.current = pagesKey;
+          setStablePages(rawPages);
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Query error";
+        setQueryError(errorMessage);
+        setStablePages([]);
+        prevPagesKeyRef.current = ""; // Reset for recovery
       }
-    ).datacore?.core;
+    };
+
+    // Run immediately on mount/query change
+    runQuery();
+
+    // Subscribe to index updates with debounce
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+    const core = (app as any).plugins?.plugins?.datacore?.api?.core;
     if (!core) {
-      return;
+      return () => {}; // Empty cleanup when core unavailable
     }
 
-    // Subscribe to update event (fires AFTER index changes complete)
-    const updateRef = core.on("update", (revision: number) => {
-      setIndexRevision(revision);
+    let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+    const updateRef = core.on("update", () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(runQuery, 150);
     });
-
-    // Set initial revision
-    const initialRevision = core.revision || 0;
-    setIndexRevision(initialRevision);
-
     return () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
       core.offref(updateRef);
     };
-  }, [app, dc]);
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+  }, [validatedQuery, app, dc]);
 
-  // Execute query - indexRevision ensures re-execution AFTER Datacore reindexes
-  let pages: DatacoreFile[] = [];
-  try {
-    pages = dc.useQuery(validatedQuery) || [];
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Query error";
-    setQueryError(errorMessage);
-    pages = [];
-  }
+  const pages = stablePages;
 
   // Parse search terms
   const parsedSearchTerms = dc.useMemo(() => {
@@ -808,6 +834,138 @@ export function View({
   const [hasImageAvailable, setHasImageAvailable] = dc.useState<
     Record<string, boolean>
   >({});
+
+  // CardData cache - stores transformed card data by path:mtime key
+  // Avoids re-transforming unchanged files on displayedCount changes
+  const cardDataCache = dc.useRef<Map<string, CardData>>(new Map());
+
+  // Clear cache when settings change (they affect card transformation)
+  const prevSettingsRef = dc.useRef(settings);
+  dc.useEffect(() => {
+    // Compare relevant settings properties that affect card transformation
+    const relevantSettings = JSON.stringify({
+      titleProperty: settings.titleProperty,
+      textPreviewProperty: settings.textPreviewProperty,
+      imageProperty: settings.imageProperty,
+      subtitleProperty: settings.subtitleProperty,
+      urlProperty: settings.urlProperty,
+      propertyDisplay1: settings.propertyDisplay1,
+      propertyDisplay2: settings.propertyDisplay2,
+      propertyDisplay3: settings.propertyDisplay3,
+      propertyDisplay4: settings.propertyDisplay4,
+      propertyDisplay5: settings.propertyDisplay5,
+      propertyDisplay6: settings.propertyDisplay6,
+      propertyDisplay7: settings.propertyDisplay7,
+      propertyDisplay8: settings.propertyDisplay8,
+      propertyDisplay9: settings.propertyDisplay9,
+      propertyDisplay10: settings.propertyDisplay10,
+      propertyDisplay11: settings.propertyDisplay11,
+      propertyDisplay12: settings.propertyDisplay12,
+      propertyDisplay13: settings.propertyDisplay13,
+      propertyDisplay14: settings.propertyDisplay14,
+      propertyLabels: settings.propertyLabels,
+      showTitle: settings.showTitle,
+      showTextPreview: settings.showTextPreview,
+      imageFormat: settings.imageFormat,
+      coverFitMode: settings.coverFitMode,
+      imageAspectRatio: settings.imageAspectRatio,
+    });
+
+    const prevSettings = JSON.stringify(prevSettingsRef.current);
+    if (cardDataCache.current && prevSettings !== relevantSettings) {
+      cardDataCache.current.clear();
+      prevSettingsRef.current = {
+        titleProperty: settings.titleProperty,
+        textPreviewProperty: settings.textPreviewProperty,
+        imageProperty: settings.imageProperty,
+        subtitleProperty: settings.subtitleProperty,
+        urlProperty: settings.urlProperty,
+        propertyDisplay1: settings.propertyDisplay1,
+        propertyDisplay2: settings.propertyDisplay2,
+        propertyDisplay3: settings.propertyDisplay3,
+        propertyDisplay4: settings.propertyDisplay4,
+        propertyDisplay5: settings.propertyDisplay5,
+        propertyDisplay6: settings.propertyDisplay6,
+        propertyDisplay7: settings.propertyDisplay7,
+        propertyDisplay8: settings.propertyDisplay8,
+        propertyDisplay9: settings.propertyDisplay9,
+        propertyDisplay10: settings.propertyDisplay10,
+        propertyDisplay11: settings.propertyDisplay11,
+        propertyDisplay12: settings.propertyDisplay12,
+        propertyDisplay13: settings.propertyDisplay13,
+        propertyDisplay14: settings.propertyDisplay14,
+        propertyLabels: settings.propertyLabels,
+        showTitle: settings.showTitle,
+        showTextPreview: settings.showTextPreview,
+        imageFormat: settings.imageFormat,
+        coverFitMode: settings.coverFitMode,
+        imageAspectRatio: settings.imageAspectRatio,
+      } as Settings;
+    }
+  }, [settings]);
+
+  // Transform sorted results to CardData with caching
+  const allCards = dc.useMemo(() => {
+    const cache = cardDataCache.current;
+    return sorted.map((file) => {
+      const path = file.$path || "";
+      const mtime = file.$mtime?.toMillis?.() || 0;
+      const ctime = file.$ctime?.toMillis?.() || 0;
+      const cacheKey = `${path}:${mtime}:${ctime}`;
+
+      // Check cache first
+      const cached = cache?.get(cacheKey);
+      if (cached) {
+        // Return new object instead of mutating cached object
+        return {
+          ...cached,
+          textPreview: textPreviews[path],
+          imageUrl: images[path],
+          hasImageAvailable: hasImageAvailable[path] || false,
+        };
+      }
+
+      // Transform and cache
+      const cardData = datacoreResultToCardData(
+        file,
+        dc,
+        settings,
+        sortMethod,
+        isShuffled,
+        textPreviews[path],
+        images[path],
+        hasImageAvailable[path],
+      );
+      cache?.set(cacheKey, cardData);
+      return cardData;
+    });
+  }, [
+    sorted,
+    settings,
+    sortMethod,
+    isShuffled,
+    textPreviews,
+    images,
+    hasImageAvailable,
+    app,
+    dc,
+  ]);
+
+  // Prune stale cache entries
+  dc.useEffect(() => {
+    const cache = cardDataCache.current;
+    if (!cache) return;
+    const currentKeys = new Set(
+      sorted.map((f) => {
+        const mtime = f.$mtime?.toMillis?.() || 0;
+        const ctime = f.$ctime?.toMillis?.() || 0;
+        return `${f.$path}:${mtime}:${ctime}`;
+      }),
+    );
+    for (const key of cache.keys()) {
+      if (!currentKeys.has(key)) cache.delete(key);
+    }
+  }, [sorted]);
 
   // Load file contents asynchronously (only for displayed items)
   dc.useEffect(() => {
@@ -957,6 +1115,7 @@ export function View({
                 p.$path,
                 e instanceof Error ? e.message : e,
               );
+              newHasImageAvailable[p.$path] = false; // Prevent retry loop
               return null;
             }
           })
@@ -982,7 +1141,12 @@ export function View({
     displayedCount,
     settings.showTextPreview,
     settings.imageFormat,
-    settings,
+    settings.textPreviewProperty,
+    settings.titleProperty,
+    settings.imageProperty,
+    settings.fallbackToContent,
+    settings.omitFirstLine,
+    settings.fallbackToEmbeds,
     app,
     dc,
   ]);
@@ -1004,7 +1168,21 @@ export function View({
         container.style.removeProperty("--masonry-height");
       }
       updateLayoutRef.current = null;
+      // Clear incremental cache when leaving masonry mode
+      lastLayoutResultRef.current = null;
+      prevMasonryCountRef.current = 0;
       return;
+    }
+
+    // Clear incremental cache only when layout params changed (not displayedCount)
+    const cardSizeChanged = settings.cardSize !== prevCardSizeRef.current;
+    const styleRevisionChanged =
+      _styleRevision !== prevStyleRevisionRef.current;
+    if (cardSizeChanged || styleRevisionChanged) {
+      lastLayoutResultRef.current = null;
+      prevMasonryCountRef.current = 0;
+      prevCardSizeRef.current = settings.cardSize;
+      prevStyleRevisionRef.current = _styleRevision;
     }
 
     // Setup masonry layout function using shared logic
@@ -1033,7 +1211,50 @@ export function View({
         const minColumns = getMinMasonryColumns();
         const gap = getCardSpacing();
 
-        // Calculate and apply layout using shared masonry logic
+        const lastResult = lastLayoutResultRef.current;
+        const prevCount = prevMasonryCountRef.current ?? 0;
+
+        // Incremental path: new cards added, same container width
+        if (
+          lastResult &&
+          cards.length > prevCount &&
+          containerWidth === lastResult.containerWidth
+        ) {
+          const newCards = cards.slice(prevCount);
+
+          // Pre-set width on new cards before measuring
+          newCards.forEach((card) =>
+            card.style.setProperty(
+              "--masonry-width",
+              `${lastResult.cardWidth}px`,
+            ),
+          );
+
+          const result = calculateIncrementalMasonryLayout({
+            newCards,
+            columnHeights: lastResult.columnHeights,
+            containerWidth: lastResult.containerWidth,
+            cardWidth: lastResult.cardWidth,
+            columns: lastResult.columns,
+            gap,
+          });
+
+          // Apply to new cards only
+          applyMasonryLayout(container, newCards, result);
+
+          // Update container height (applyMasonryLayout sets it, but we update it explicitly)
+          container.style.setProperty(
+            "--masonry-height",
+            `${result.containerHeight}px`,
+          );
+
+          lastLayoutResultRef.current = result;
+          prevMasonryCountRef.current = cards.length;
+          columnCountRef.current = result.columns;
+          return;
+        }
+
+        // Full recalculation
         const result = calculateMasonryLayout({
           cards,
           containerWidth,
@@ -1044,7 +1265,9 @@ export function View({
 
         applyMasonryLayout(container, cards, result);
 
-        // Update column count for infinite scroll batching
+        // Store for incremental updates
+        lastLayoutResultRef.current = result;
+        prevMasonryCountRef.current = cards.length;
         columnCountRef.current = result.columns;
       } finally {
         isUpdatingLayout = false;
@@ -1062,17 +1285,6 @@ export function View({
     // Initial layout
     updateLayout();
 
-    // Watch for new cards being added (infinite scroll)
-    const mutationObserver = new MutationObserver(() => {
-      updateLayout();
-    });
-
-    if (containerRef.current) {
-      mutationObserver.observe(containerRef.current, {
-        childList: true,
-      });
-    }
-
     // Window resize handler
     let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
     const handleResize = () => {
@@ -1083,10 +1295,9 @@ export function View({
 
     return () => {
       if (resizeTimeout) clearTimeout(resizeTimeout);
-      mutationObserver.disconnect();
       window.removeEventListener("resize", handleResize);
     };
-  }, [viewMode, settings.cardSize, dc]);
+  }, [viewMode, settings.cardSize, _styleRevision, dc]);
 
   // Apply dynamic grid layout (all width modes)
   dc.useEffect(() => {
@@ -1124,11 +1335,10 @@ export function View({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [viewMode, settings.cardSize, dc]);
+  }, [viewMode, settings.cardSize, _styleRevision, dc]);
 
   // Sync refs for callback access in infinite scroll
   dc.useEffect(() => {
-    // console.log('[InfiniteScroll:RefSync] displayedCountRef updated:', displayedCountRef.current, '→', displayedCount);
     displayedCountRef.current = displayedCount;
   }, [displayedCount, dc]);
 
@@ -1155,7 +1365,7 @@ export function View({
 
   // Track scroll position for toolbar shadow and fade effect
   dc.useEffect(() => {
-    const container = containerRef.current;
+    const container = resultsContainerRef.current;
     if (!container || settings.queryHeight === 0) {
       setIsResultsScrolled(false);
       setIsScrolledToBottom(true);
@@ -1170,62 +1380,65 @@ export function View({
       setIsScrolledToBottom(isAtBottom);
     };
 
-    handleScroll(); // Check initial state
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [settings.queryHeight, displayedCount, sorted.length, viewMode]);
+    // Delay initial check to ensure DOM is painted (especially for ListView)
+    // Attach listener inside RAF so initial check completes before scroll events fire
+    const rafId = requestAnimationFrame(() => {
+      handleScroll();
+      container.addEventListener("scroll", handleScroll);
+    });
+    return () => {
+      cancelAnimationFrame(rafId);
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [settings.queryHeight, viewMode]);
 
   // Infinite scroll: ResizeObserver + scroll + window resize
   dc.useEffect(() => {
     if (!containerRef.current) {
-      // console.log('[InfiniteScroll] containerRef not available, skipping setup');
       return;
     }
-
-    // console.log('[InfiniteScroll] Setting up infinite scroll system');
 
     // PANE_MULTIPLIER imported from shared/constants
 
     // Find the element that actually scrolls
-    let element: HTMLElement | null = containerRef.current;
     let scrollableElement: HTMLElement | null = null;
 
-    while (element && !scrollableElement) {
-      const style = window.getComputedStyle(element);
-      const overflowY = style.overflowY;
-      const hasOverflow = overflowY === "auto" || overflowY === "scroll";
+    // When queryHeight > 0, resultsContainer is the scrollable element
+    if (settings.queryHeight > 0 && resultsContainerRef.current) {
+      scrollableElement = resultsContainerRef.current;
+    } else {
+      // Walk up DOM to find scrollable ancestor
+      let element: HTMLElement | null = containerRef.current;
+      while (element && !scrollableElement) {
+        const style = window.getComputedStyle(element);
+        const overflowY = style.overflowY;
+        const hasOverflow = overflowY === "auto" || overflowY === "scroll";
 
-      if (hasOverflow && element.scrollHeight > element.clientHeight) {
-        scrollableElement = element;
+        if (hasOverflow && element.scrollHeight > element.clientHeight) {
+          scrollableElement = element;
+        }
+        element = element.parentElement;
       }
-      element = element.parentElement;
     }
 
     if (!scrollableElement) {
-      // No scrollable ancestor found - skip infinite scroll setup
       return;
     }
 
     // Core batch loading function
-    const loadMoreItems = (trigger = "unknown") => {
-      // console.log(`[InfiniteScroll] loadMoreItems() called by: ${trigger}`);
-
+    const loadMoreItems = () => {
       // Guard: already loading or no container
       if (isLoadingRef.current) {
-        // console.log('[InfiniteScroll] Already loading, skipping');
         return false;
       }
       if (!containerRef.current) {
-        // console.log('[InfiniteScroll] No container, skipping');
         return false;
       }
 
       // Get current count from ref (captures latest value)
       const currentCount = displayedCountRef.current!;
       const totalLength = sortedLengthRef.current;
-      // console.log(`[InfiniteScroll] Current: ${currentCount}, Total: ${totalLength}`);
       if (totalLength !== null && currentCount >= totalLength) {
-        // console.log(`[InfiniteScroll] All items loaded (${currentCount}/${totalLength})`);
         return false; // All items loaded
       }
 
@@ -1238,23 +1451,17 @@ export function View({
       // Calculate threshold
       const threshold = clientHeight * PANE_MULTIPLIER;
 
-      // console.log(`[InfiniteScroll] Metrics: scrollTop=${scrollTop.toFixed(0)}px, editorHeight=${editorHeight}px, scrollHeight=${scrollHeight}px, distance=${distanceFromBottom.toFixed(0)}px, threshold=${threshold.toFixed(0)}px`);
-
       // Check if we should load
       if (distanceFromBottom > threshold) {
-        // console.log(`[InfiniteScroll] Distance (${distanceFromBottom.toFixed(0)}px) > threshold (${threshold.toFixed(0)}px), not loading`);
         return false;
       }
 
       // Load batch
-      // console.log('[InfiniteScroll] Distance within threshold, loading batch...');
       isLoadingRef.current = true;
 
       const currentCols = columnCountRef.current || 2;
       const batchSize = Math.min(currentCols * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
       const newCount = Math.min(currentCount + batchSize, totalLength!);
-
-      // console.log(`[InfiniteScroll] Loading batch: ${currentCount} → ${newCount} (${batchSize} items, ${currentCols} cols × ${ROWS_PER_COLUMN} rows)`);
 
       displayedCountRef.current = newCount;
       setDisplayedCount(newCount);
@@ -1263,9 +1470,7 @@ export function View({
     };
 
     // Setup ResizeObserver (watches masonry container)
-    // console.log('[InfiniteScroll] Setting up ResizeObserver on masonry container');
     const resizeObserver = new ResizeObserver(() => {
-      // console.log('[InfiniteScroll] ResizeObserver: Masonry container height changed (layout completed)');
       // Only clear loading flag - don't trigger auto-loading to prevent cascade
       isLoadingRef.current = false;
     });
@@ -1273,20 +1478,16 @@ export function View({
 
     // One-time initial check after layout settles (if viewport isn't filled)
     const initialCheckTimeout = setTimeout(() => {
-      // console.log('[InfiniteScroll] Running one-time initial check');
-      loadMoreItems("initial-check");
+      loadMoreItems();
     }, 300);
 
     // Setup window resize listener (handles viewport height changes)
-    // console.log('[InfiniteScroll] Setting up window resize listener');
     const handleWindowResize = () => {
-      // console.log('[InfiniteScroll] Window resized, checking if need more items');
-      loadMoreItems("window.resize");
+      loadMoreItems();
     };
     window.addEventListener("resize", handleWindowResize);
 
     // Setup scroll listener with leading-edge throttle
-    // console.log('[InfiniteScroll] Setting up scroll listener with leading-edge throttle');
     let scrollTimer: ReturnType<typeof setTimeout> | null = null;
     const handleScroll = () => {
       if (scrollTimer) {
@@ -1294,33 +1495,27 @@ export function View({
         return;
       }
 
-      // console.log('[InfiniteScroll] Scroll event (cooldown started)');
-
       // Check immediately (leading edge)
-      loadMoreItems("scroll");
+      loadMoreItems();
 
       // Start cooldown
       scrollTimer = setTimeout(() => {
-        // console.log('[InfiniteScroll] Scroll cooldown ended');
         scrollTimer = null;
-      }, 100);
+      }, SCROLL_THROTTLE_MS);
     };
     scrollableElement.addEventListener("scroll", handleScroll, {
       passive: true,
     });
 
-    // console.log('[InfiniteScroll] All listeners attached, system ready');
-
     // Cleanup
     return () => {
-      // console.log('[InfiniteScroll] Cleaning up all listeners');
       resizeObserver.disconnect();
       window.removeEventListener("resize", handleWindowResize);
       scrollableElement.removeEventListener("scroll", handleScroll);
       if (scrollTimer) clearTimeout(scrollTimer);
       clearTimeout(initialCheckTimeout);
     };
-  }, []); // Empty deps - only set up once on mount
+  }, [settings.queryHeight]); // Re-run when queryHeight changes (affects scrollable element)
 
   // Auto-reload: Watch for USER_QUERY prop changes (Datacore re-renders on code block edits)
   dc.useEffect(() => {
@@ -1340,10 +1535,6 @@ export function View({
   }, [USER_QUERY]);
 
   // Handlers
-  const handleTogglePin = dc.useCallback(() => {
-    setIsPinned(!isPinned);
-  }, [isPinned]);
-
   const handleToggleWidth = dc.useCallback(() => {
     // Determine next mode based on current mode and whether we can expand
     let nextMode: WidthMode;
@@ -1639,6 +1830,19 @@ export function View({
     [],
   );
 
+  // Re-measure property fields when label mode changes
+  dc.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Use double RAF to ensure DOM has updated after settings change
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        remeasurePropertyFields(container);
+      });
+    });
+  }, [settings.propertyLabels, viewMode, settings.cardSize]);
+
   // Copy menu item for Toolbar
 
   const copyMenuItem: JSX.Element = dc.useMemo(
@@ -1683,27 +1887,36 @@ export function View({
 
   // Render appropriate view component
   const renderView = (): JSX.Element => {
+    // Slice allCards to displayedCount for rendering
+    const cards = allCards.slice(0, Math.min(displayedCount, allCards.length));
+
     const commonProps = {
-      results: sorted,
-      displayedCount: Math.min(displayedCount, sorted.length),
+      cards,
       settings,
-      viewMode,
       sortMethod,
       isShuffled,
-      textPreviews,
-      images,
-      hasImageAvailable,
       focusableCardIndex,
+      hoveredCardRef,
       containerRef,
       updateLayoutRef,
       app,
-      dc,
       onCardClick: handleCardClick,
       onFocusChange: setFocusableCardIndex,
     };
 
     if (viewMode === "list") {
-      return <ListView {...commonProps} />;
+      // ListView has different props - needs raw DatacoreFile for tag handlers
+      return (
+        <ListView
+          results={sorted}
+          displayedCount={displayedCount}
+          settings={settings}
+          containerRef={containerRef}
+          app={app}
+          dc={dc}
+          onLinkClick={handleCardClick}
+        />
+      );
     } else if (viewMode === "masonry") {
       return <MasonryView {...commonProps} />;
     } else {
@@ -1723,7 +1936,7 @@ export function View({
     <div ref={explorerRef} className={`dynamic-views ${widthClass}`}>
       <div
         ref={toolbarRef}
-        className={`controls-wrapper${isPinned ? " pinned" : ""}${isResultsScrolled ? " scrolled" : ""}`}
+        className={`controls-wrapper${isResultsScrolled ? " scrolled" : ""}`}
       >
         <Toolbar
           dc={dc}
@@ -1766,11 +1979,11 @@ export function View({
           onResetLimit={handleResetLimit}
           copyMenuItem={copyMenuItem}
           onCreateNote={handleCreateNote}
-          isPinned={isPinned}
+          isPinned={false}
           widthMode={widthMode}
           canExpandToMax={canExpandToMax}
           queryHeight={settings.queryHeight}
-          onTogglePin={handleTogglePin}
+          onTogglePin={() => {}}
           onToggleWidth={handleToggleWidth}
           onToggleSettings={handleToggleSettings}
           showSettings={showSettings}

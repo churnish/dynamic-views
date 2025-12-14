@@ -18,7 +18,10 @@ export const ROW_TOLERANCE = 20;
 export const IMAGE_ASPECT_RATIO = 0.55;
 
 /** Pane height multiplier for infinite scroll trigger threshold */
-export const PANE_MULTIPLIER = 2;
+export const PANE_MULTIPLIER = 3;
+
+/** Scroll event throttle in milliseconds */
+export const SCROLL_THROTTLE_MS = 100;
 
 /** Rows per column for batch size calculation */
 export const ROWS_PER_COLUMN = 10;

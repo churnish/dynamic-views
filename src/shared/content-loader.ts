@@ -5,6 +5,7 @@ import {
   extractEmbedImages,
 } from "../utils/image";
 import { loadFilePreview } from "../utils/text-preview";
+import { getSlideshowMaxImages } from "../utils/style-settings";
 
 /**
  * Entry with text preview loading data
@@ -74,8 +75,12 @@ export async function loadImageForEntry(
     }
 
     if (validImages.length > 0) {
+      // Limit images to slideshow max to avoid loading excess images
+      const maxImages = getSlideshowMaxImages();
+      const limitedImages = validImages.slice(0, maxImages);
       // Store as array if multiple, string if single
-      imageCache[path] = validImages.length > 1 ? validImages : validImages[0];
+      imageCache[path] =
+        limitedImages.length > 1 ? limitedImages : limitedImages[0];
       hasImageCache[path] = true;
     } else {
       // Mark as checked but no images available

@@ -49,6 +49,7 @@ function closeImageViewer(
  * @param app - Obsidian app instance
  * @param viewerCleanupFns - Map storing cleanup functions
  * @param viewerClones - Map storing original → clone element mappings
+ * @param openFileAction - How card clicks should open files ("card" or "title")
  */
 export function handleImageViewerClick(
   e: MouseEvent,
@@ -56,13 +57,23 @@ export function handleImageViewerClick(
   app: App,
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>,
+  openFileAction: "card" | "title",
 ): void {
+  // Always stop propagation to prevent third-party plugins (e.g. Image Toolkit)
+  e.stopPropagation();
+
   const isViewerDisabled = document.body.classList.contains(
     "dynamic-views-image-zoom-disabled",
   );
-  if (isViewerDisabled) return;
-
-  e.stopPropagation();
+  if (isViewerDisabled) {
+    // When viewer disabled, only open file if openFileAction is "card"
+    if (openFileAction === "card") {
+      const newLeaf = e.metaKey || e.ctrlKey;
+      void app.workspace.openLinkText(cardPath, "", newLeaf);
+    }
+    // If openFileAction is "title", do nothing (image click has no action)
+    return;
+  }
   const embedEl = e.currentTarget as HTMLElement;
 
   // Check if this element already has a viewer clone

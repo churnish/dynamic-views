@@ -13,10 +13,10 @@ import {
 import { getMinGridColumns, getCardSpacing } from "../utils/style-settings";
 import { SharedCardRenderer } from "./shared-renderer";
 import {
-  BATCH_SIZE,
   PANE_MULTIPLIER,
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
+  SCROLL_THROTTLE_MS,
 } from "../shared/constants";
 import {
   setupBasesSwipeInterception,
@@ -26,6 +26,7 @@ import {
   processGroups,
   renderGroupHeader,
 } from "./utils";
+import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
 import type DynamicViewsPlugin from "../../main";
 import type { Settings } from "../types";
 
@@ -47,6 +48,7 @@ export class DynamicViewsCardView extends BasesView {
   private hasImageAvailable: Record<string, boolean> = {};
   private updateLayoutRef: { current: (() => void) | null } = { current: null };
   private focusableCardIndex: number = 0;
+  private hoveredCardEl: HTMLElement | null = null;
   private displayedCount: number = 50;
   private isLoading: boolean = false;
   private scrollListener: (() => void) | null = null;
@@ -67,6 +69,26 @@ export class DynamicViewsCardView extends BasesView {
   private renderVersion: number = 0;
   // AbortController for async content loading
   private abortController: AbortController | null = null;
+
+  /** Calculate initial card count based on container dimensions */
+  private calculateInitialCount(settings: Settings): number {
+    const containerWidth = this.containerEl.clientWidth;
+    const minColumns = getMinGridColumns();
+    const gap = getCardSpacing(this.containerEl);
+    const cardSize = settings.cardSize;
+
+    if (containerWidth === 0) {
+      // Fallback using minimum columns when container not yet laid out
+      return Math.min(minColumns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
+    }
+
+    const calculatedColumns = Math.floor(
+      (containerWidth + gap) / (cardSize + gap),
+    );
+    const columns = Math.max(minColumns, calculatedColumns);
+    const rawCount = columns * ROWS_PER_COLUMN;
+    return Math.min(rawCount, MAX_BATCH_SIZE);
+  }
 
   // Style Settings compatibility - must be own property (not prototype)
   setSettings = (): void => {
@@ -90,8 +112,8 @@ export class DynamicViewsCardView extends BasesView {
       this.plugin,
       this.updateLayoutRef,
     );
-    // Set initial batch size based on device
-    this.displayedCount = this.app.isMobile ? BATCH_SIZE * 0.5 : BATCH_SIZE;
+    // Placeholder - calculated dynamically on first render
+    this.displayedCount = 0;
 
     // Setup swipe interception on mobile if enabled
     const globalSettings = this.plugin.persistenceManager.getGlobalSettings();
@@ -106,6 +128,16 @@ export class DynamicViewsCardView extends BasesView {
       this.onDataUpdated(),
     );
     this.register(disconnectObserver);
+
+    // Setup hover-to-start keyboard navigation
+    const cleanupKeyboard = setupHoverKeyboardNavigation(
+      () => this.hoveredCardEl,
+      () => this.feedContainerRef.current,
+      (index) => {
+        this.focusableCardIndex = index;
+      },
+    );
+    this.register(cleanupKeyboard);
   }
 
   onload(): void {
@@ -150,13 +182,18 @@ export class DynamicViewsCardView extends BasesView {
         this.plugin.persistenceManager.getDefaultViewSettings(),
       );
 
+      // Calculate initial count dynamically on first render
+      if (this.displayedCount === 0) {
+        this.displayedCount = this.calculateInitialCount(settings);
+      }
+
       // Calculate grid columns
       const containerWidth = this.containerEl.clientWidth;
       // Card size represents minimum width; actual width may be larger to fill space
       this.currentCardSize = settings.cardSize;
       const cardSize = this.currentCardSize;
       const minColumns = getMinGridColumns();
-      const gap = getCardSpacing();
+      const gap = getCardSpacing(this.containerEl);
       const cols = Math.max(
         minColumns,
         Math.floor((containerWidth + gap) / (cardSize + gap)),
@@ -291,16 +328,19 @@ export class DynamicViewsCardView extends BasesView {
       }
 
       // Setup infinite scroll
-      this.setupInfiniteScroll(allEntries.length);
+      this.setupInfiniteScroll(allEntries.length, settings);
 
       // Setup ResizeObserver for dynamic grid updates
       if (!this.resizeObserver) {
         this.resizeObserver = new ResizeObserver(() => {
+          // Guard: skip if container disconnected from DOM
+          if (!this.containerEl?.isConnected) return;
+
           const containerWidth = this.containerEl.clientWidth;
           // Card size represents minimum width; actual width may be larger to fill space
           const cardSize = this.currentCardSize;
           const minColumns = getMinGridColumns();
-          const gap = getCardSpacing();
+          const gap = getCardSpacing(this.containerEl);
           const cols = Math.max(
             minColumns,
             Math.floor((containerWidth + gap) / (cardSize + gap)),
@@ -309,6 +349,7 @@ export class DynamicViewsCardView extends BasesView {
           this.containerEl.style.setProperty("--grid-columns", String(cols));
         });
         this.resizeObserver.observe(this.containerEl);
+        this.register(() => this.resizeObserver?.disconnect());
       }
       // Note: Don't reset isLoading here - scroll listener may have started a batch
     })();
@@ -327,6 +368,12 @@ export class DynamicViewsCardView extends BasesView {
       containerRef: this.feedContainerRef,
       onFocusChange: (newIndex: number) => {
         this.focusableCardIndex = newIndex;
+      },
+      onHoverStart: (el: HTMLElement) => {
+        this.hoveredCardEl = el;
+      },
+      onHoverEnd: () => {
+        this.hoveredCardEl = null;
       },
     });
   }
@@ -487,14 +534,14 @@ export class DynamicViewsCardView extends BasesView {
 
     // Clear loading flag and re-setup infinite scroll
     this.isLoading = false;
-    this.setupInfiniteScroll(totalEntries);
+    this.setupInfiniteScroll(totalEntries, settings);
   }
 
-  private setupInfiniteScroll(totalEntries: number): void {
+  private setupInfiniteScroll(totalEntries: number, settings?: Settings): void {
     // Find the actual scroll container (parent in Bases views)
     const scrollContainer = this.containerEl.parentElement || this.containerEl;
 
-    // Clean up existing listener
+    // Clean up existing listener (don't use this.register() since this method is called multiple times)
     if (this.scrollListener) {
       scrollContainer.removeEventListener("scroll", this.scrollListener);
       this.scrollListener = null;
@@ -534,10 +581,18 @@ export class DynamicViewsCardView extends BasesView {
         this.isLoading = true;
 
         // Dynamic batch size: columns × rows per column, capped
-        const columns =
-          parseInt(
-            this.containerEl.style.getPropertyValue("--grid-columns") || "2",
-          ) || 2;
+        const columns = settings
+          ? Math.max(
+              getMinGridColumns(),
+              Math.floor(
+                (this.containerEl.clientWidth +
+                  getCardSpacing(this.containerEl)) /
+                  (settings.cardSize + getCardSpacing(this.containerEl)),
+              ),
+            )
+          : parseInt(
+              this.containerEl.style.getPropertyValue("--grid-columns") || "2",
+            ) || 2;
         const batchSize = Math.min(columns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
         this.displayedCount = Math.min(
           this.displayedCount + batchSize,
@@ -551,26 +606,25 @@ export class DynamicViewsCardView extends BasesView {
       // Start throttle cooldown
       this.scrollThrottleTimeout = window.setTimeout(() => {
         this.scrollThrottleTimeout = null;
-      }, 100);
+      }, SCROLL_THROTTLE_MS);
     };
 
     // Attach listener to scroll container
     scrollContainer.addEventListener("scroll", this.scrollListener);
-
-    // Register cleanup
-    this.register(() => {
-      if (this.scrollListener) {
-        scrollContainer.removeEventListener("scroll", this.scrollListener);
-      }
-      if (this.scrollThrottleTimeout !== null) {
-        window.clearTimeout(this.scrollThrottleTimeout);
-      }
-    });
   }
 
   onunload(): void {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
+    }
+    // Clean up scroll-related resources
+    if (this.scrollListener) {
+      const scrollContainer =
+        this.containerEl.parentElement || this.containerEl;
+      scrollContainer.removeEventListener("scroll", this.scrollListener);
+    }
+    if (this.scrollThrottleTimeout !== null) {
+      window.clearTimeout(this.scrollThrottleTimeout);
     }
     this.swipeAbortController?.abort();
     this.abortController?.abort();

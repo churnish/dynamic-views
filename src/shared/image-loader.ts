@@ -8,6 +8,14 @@ const ambientColorCache = new Map<
 >();
 
 /**
+ * Get cached aspect ratio for an image URL
+ * Used by masonry layout to determine if card height is known before image loads
+ */
+export function getCachedAspectRatio(imgSrc: string): number | undefined {
+  return ambientColorCache.get(imgSrc)?.aspectRatio;
+}
+
+/**
  * Apply cached ambient color and aspect ratio to card immediately
  * Called before image loads to prevent flash on re-render
  */
@@ -172,7 +180,9 @@ export function handleJsxImageRef(
   const cardEl = imgEl.closest(".card") as HTMLElement;
   if (!cardEl) return;
 
-  const imageEmbedEl = imgEl.closest(".image-embed") as HTMLElement;
+  const imageEmbedEl = imgEl.closest(
+    ".dynamic-views-image-embed",
+  ) as HTMLElement;
   if (!imageEmbedEl) return;
 
   // Apply cached color immediately to prevent flash on re-render
@@ -203,7 +213,9 @@ export function handleJsxImageLoad(
   const cardEl = imgEl.closest(".card") as HTMLElement;
   if (!cardEl || cardEl.classList.contains("cover-ready")) return; // Already handled by ref
 
-  const imageEmbedEl = imgEl.closest(".image-embed") as HTMLElement;
+  const imageEmbedEl = imgEl.closest(
+    ".dynamic-views-image-embed",
+  ) as HTMLElement;
   if (!imageEmbedEl) return;
 
   handleImageLoad(imgEl, imageEmbedEl, cardEl, updateLayoutRef.current);

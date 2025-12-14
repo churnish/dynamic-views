@@ -45,6 +45,7 @@ import {
   setupElementScrollGradient,
 } from "./scroll-gradient-manager";
 import { handleArrowNavigation, isArrowKey } from "./keyboard-nav";
+import { measurePropertyFields } from "./property-measure";
 
 /**
  * Render file type icon as JSX
@@ -64,70 +65,99 @@ function renderFileTypeIcon(path: string) {
 }
 
 /**
- * Truncate title text to fit within container with ellipsis
- * Preserves extension visibility when present
- */
-function truncateTitleWithExtension(titleEl: HTMLElement): void {
-  // Find text element (extension element is optional)
-  const textEl =
-    titleEl.querySelector<HTMLElement>(".card-title-text-content") ||
-    titleEl.querySelector<HTMLElement>("a.internal-link");
-
-  if (!textEl) return;
-
-  const containerStyle = getComputedStyle(titleEl);
-  const lineHeight = parseFloat(containerStyle.lineHeight);
-  const maxLines = parseInt(
-    containerStyle.getPropertyValue("--dynamic-views-title-lines") || "2",
-  );
-  const maxHeight = lineHeight * maxLines;
-
-  const fullText = textEl.textContent || "";
-  if (!fullText) return;
-
-  // Check if truncation needed
-  if (titleEl.scrollHeight <= maxHeight) return;
-
-  // Binary search for max text that fits
-  let low = 0;
-  let high = fullText.length;
-  const ellipsis = "…";
-
-  while (low < high) {
-    const mid = Math.ceil((low + high) / 2);
-    textEl.textContent = fullText.slice(0, mid) + ellipsis;
-
-    if (titleEl.scrollHeight <= maxHeight) {
-      low = mid;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  // Set final truncated text
-  textEl.textContent = fullText.slice(0, low) + ellipsis;
-
-  // Safety: keep reducing if still overflowing (ensures extension visible)
-  while (titleEl.scrollHeight > maxHeight && low > 0) {
-    low--;
-    textEl.textContent = fullText.slice(0, low) + ellipsis;
-  }
-}
-
-/**
- * Render file format indicator as JSX
+ * Render file format indicator as JSX (for Badge mode)
+ * Text content not rendered - CSS uses data-ext via ::before
  */
 function renderFileExt(extInfo: { ext: string } | null) {
   if (!extInfo) return null;
-
-  // data-ext contains extension without dot for badge style
   const extNoDot = extInfo.ext.slice(1);
+  return <span className="card-title-ext" data-ext={extNoDot} />;
+}
 
-  return (
-    <span className="card-title-ext" data-ext={extNoDot}>
-      {extInfo.ext}
-    </span>
-  );
+/**
+ * Set up title truncation with extension preservation.
+ * Truncates title text while keeping extension visible at end.
+ */
+function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
+  const textEl = titleEl.querySelector<HTMLElement>(".card-title-text-content");
+  const extEl = titleEl.querySelector<HTMLElement>(".card-title-ext-suffix");
+
+  if (!textEl) return;
+
+  const fullText = (textEl.textContent || "").trim();
+  if (fullText.length === 0) return; // Skip empty titles
+
+  const ellipsis = "…";
+
+  // Get max height from CSS (returns 0 if invalid)
+  const getMaxHeight = () => {
+    const style = getComputedStyle(titleEl);
+    const lineHeight = parseFloat(style.lineHeight);
+    const maxLines = parseInt(
+      style.getPropertyValue("--dynamic-views-title-lines") || "2",
+    );
+    if (maxLines <= 0 || !isFinite(lineHeight)) return 0;
+    return Math.ceil(lineHeight * maxLines) + 1;
+  };
+
+  const truncate = () => {
+    // Skip if no width (hidden tab)
+    if (titleEl.offsetWidth === 0) return;
+
+    const maxHeight = getMaxHeight();
+    if (maxHeight <= 0) return; // Invalid CSS config
+
+    const currentText = textEl.textContent || "";
+
+    // Reset to full text only if currently truncated
+    if (currentText !== fullText) {
+      textEl.textContent = fullText;
+    }
+
+    // Check if truncation needed
+    if (titleEl.scrollHeight <= maxHeight) return;
+
+    // Binary search for max text that fits with ellipsis + extension
+    let low = 1;
+    let high = fullText.length;
+
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      textEl.textContent = fullText.slice(0, mid).trimEnd() + ellipsis;
+
+      if (titleEl.scrollHeight <= maxHeight) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    // Set final truncated text
+    textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
+
+    // Safety: reduce further if still overflowing
+    while (titleEl.scrollHeight > maxHeight && low > 1) {
+      low--;
+      textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
+    }
+  };
+
+  // Only truncate in Extension mode (when extension suffix is visible)
+  const isExtensionMode = () =>
+    extEl && getComputedStyle(extEl).display !== "none";
+
+  const check = () => {
+    if (isExtensionMode()) {
+      truncate();
+    }
+    // Non-extension modes use CSS line-clamp (no JS needed)
+  };
+
+  const observer = new ResizeObserver(check);
+  observer.observe(titleEl);
+  check(); // Initial check
+
+  signal.addEventListener("abort", () => observer.disconnect());
 }
 
 /**
@@ -251,6 +281,12 @@ const viewerClones = new Map<HTMLElement, HTMLElement>();
 // Module-level Map to store ResizeObservers for cleanup
 const cardResizeObservers = new Map<string, ResizeObserver>();
 
+// Module-level Map to store responsive ResizeObservers (compact mode, thumbnail stacking)
+const cardResponsiveObservers = new Map<string, ResizeObserver>();
+
+// Module-level Map to store property measurement ResizeObservers
+const cardPropertyObservers = new Map<string, ResizeObserver[]>();
+
 // Module-level Map to store AbortControllers for scroll listener cleanup
 const cardScrollAbortControllers = new Map<string, AbortController>();
 
@@ -263,6 +299,16 @@ export function cleanupCardObserver(cardPath: string): void {
     observer.disconnect();
     cardResizeObservers.delete(cardPath);
   }
+  const responsiveObserver = cardResponsiveObservers.get(cardPath);
+  if (responsiveObserver) {
+    responsiveObserver.disconnect();
+    cardResponsiveObservers.delete(cardPath);
+  }
+  const propertyObservers = cardPropertyObservers.get(cardPath);
+  if (propertyObservers) {
+    propertyObservers.forEach((obs) => obs.disconnect());
+    cardPropertyObservers.delete(cardPath);
+  }
 }
 
 /**
@@ -271,6 +317,12 @@ export function cleanupCardObserver(cardPath: string): void {
 export function cleanupAllCardObservers(): void {
   cardResizeObservers.forEach((observer) => observer.disconnect());
   cardResizeObservers.clear();
+  cardResponsiveObservers.forEach((observer) => observer.disconnect());
+  cardResponsiveObservers.clear();
+  cardPropertyObservers.forEach((observers) =>
+    observers.forEach((obs) => obs.disconnect()),
+  );
+  cardPropertyObservers.clear();
 }
 
 /**
@@ -371,6 +423,7 @@ export interface CardRendererProps {
   sortMethod: string;
   isShuffled: boolean;
   focusableCardIndex: number;
+  hoveredCardRef: RefObject<HTMLElement | null>;
   containerRef: RefObject<HTMLElement | null>;
   updateLayoutRef: RefObject<(() => void) | null>;
   app: App;
@@ -411,11 +464,13 @@ function CoverSlideshow({
   updateLayoutRef,
   cardPath,
   app,
+  openFileAction,
 }: {
   imageArray: string[];
   updateLayoutRef: RefObject<(() => void) | null>;
   cardPath: string;
   app: App;
+  openFileAction: "card" | "title";
 }): JSX.Element {
   const onSlideshowRef = (slideshowEl: HTMLElement | null) => {
     if (!slideshowEl) return;
@@ -435,7 +490,9 @@ function CoverSlideshow({
       slideshowEl as HTMLElement & { _slideshowController?: AbortController }
     )._slideshowController = controller;
 
-    const imageEmbed = slideshowEl.querySelector(".image-embed") as HTMLElement;
+    const imageEmbed = slideshowEl.querySelector(
+      ".dynamic-views-image-embed",
+    ) as HTMLElement;
     if (!imageEmbed) return;
 
     const cardEl = slideshowEl.closest(".card") as HTMLElement;
@@ -505,7 +562,7 @@ function CoverSlideshow({
   return (
     <div className="card-cover card-cover-slideshow" ref={onSlideshowRef}>
       <div
-        className="image-embed"
+        className="dynamic-views-image-embed"
         style={{ "--cover-image-url": `url("${imageArray[0]}")` }}
         onClick={(e: MouseEvent) => {
           handleImageViewerClick(
@@ -514,6 +571,7 @@ function CoverSlideshow({
             app,
             viewerCleanupFns,
             viewerClones,
+            openFileAction,
           );
         }}
       >
@@ -805,6 +863,14 @@ function renderProperty(
       propertyName === "file path") &&
     resolvedValue
   ) {
+    // Drag handler for filename segment
+    const handleFilenameDrag = (e: DragEvent) => {
+      const file = app.vault.getAbstractFileByPath(card.path);
+      if (!(file instanceof TFile)) return;
+      const dragData = app.dragManager.dragFile(e, file);
+      app.dragManager.onDragStart(e, dragData);
+    };
+
     return (
       <>
         {labelAbove}
@@ -829,6 +895,10 @@ function renderProperty(
                     >
                       <span
                         className={segmentClass}
+                        draggable={isLastSegment}
+                        onDragStart={
+                          isLastSegment ? handleFilenameDrag : undefined
+                        }
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation();
                           const fileExplorer =
@@ -902,6 +972,7 @@ export function CardRenderer({
   sortMethod,
   isShuffled,
   focusableCardIndex,
+  hoveredCardRef,
   containerRef,
   updateLayoutRef,
   app,
@@ -910,14 +981,103 @@ export function CardRenderer({
 }: CardRendererProps): unknown {
   return (
     <div
-      ref={containerRef}
+      ref={(el: HTMLElement | null) => {
+        // Store in containerRef
+        if (containerRef) {
+          (containerRef as { current: HTMLElement | null }).current = el;
+        }
+        if (!el) return;
+
+        // Setup single document-level keydown listener for hover-to-start
+        // Check if already setup (avoid duplicates on re-render)
+        type ContainerWithCleanup = HTMLElement & {
+          _hoverKeydownCleanup?: () => void;
+        };
+        const container = el as ContainerWithCleanup;
+        if (container._hoverKeydownCleanup) {
+          return; // Already setup
+        }
+
+        // Track intentional focus and last key to distinguish Tab from Escape
+        type ContainerWithFlags = HTMLElement & {
+          _intentionalFocus?: boolean;
+          _lastKey?: string | null;
+        };
+        (el as ContainerWithFlags)._intentionalFocus = false;
+        (el as ContainerWithFlags)._lastKey = null;
+
+        const handleKeydown = (e: KeyboardEvent) => {
+          // Track last key for Tab detection in focusin
+          (el as ContainerWithFlags)._lastKey = e.key;
+          requestAnimationFrame(() => {
+            (el as ContainerWithFlags)._lastKey = null;
+          });
+
+          // Only handle arrow keys if hovering a card
+          const hoveredCard = hoveredCardRef.current;
+          if (!hoveredCard) return;
+          if (!isArrowKey(e.key)) return;
+
+          const activeEl = document.activeElement;
+          const isCardFocused = activeEl?.classList.contains("card");
+          if (isCardFocused) return;
+
+          // Focus the hovered card (mark as intentional)
+          e.preventDefault();
+          (el as ContainerWithFlags)._intentionalFocus = true;
+          hoveredCard.focus();
+          requestAnimationFrame(() => {
+            (el as ContainerWithFlags)._intentionalFocus = false;
+          });
+
+          // Find index of hovered card and update focusableCardIndex
+          const allCards = el.querySelectorAll(".card");
+          const index = Array.from(allCards).indexOf(hoveredCard);
+          if (index >= 0) {
+            onFocusChange?.(index);
+          }
+        };
+
+        // Block unwanted focus on cards (e.g., from Obsidian's Escape handler)
+        // Allow: intentional focus (arrow keys), Tab from outside
+        const handleFocusin = (e: FocusEvent) => {
+          if ((el as ContainerWithFlags)._intentionalFocus) return;
+
+          const target = e.target as HTMLElement;
+          if (!target.classList.contains("card")) return;
+
+          const relatedTarget = e.relatedTarget as HTMLElement | null;
+
+          // Focus from outside container - only allow if Tab was pressed
+          if (!relatedTarget || !el.contains(relatedTarget)) {
+            if ((el as ContainerWithFlags)._lastKey === "Tab") return;
+            // Block non-Tab focus from outside (e.g., Escape)
+            target.blur();
+            return;
+          }
+
+          // Block focus moving between cards without arrow keys
+          if (relatedTarget.classList.contains("card")) {
+            (el as ContainerWithFlags)._intentionalFocus = true;
+            relatedTarget.focus();
+            requestAnimationFrame(() => {
+              (el as ContainerWithFlags)._intentionalFocus = false;
+            });
+          }
+        };
+
+        document.addEventListener("keydown", handleKeydown, { capture: true });
+        el.addEventListener("focusin", handleFocusin);
+
+        container._hoverKeydownCleanup = () => {
+          document.removeEventListener("keydown", handleKeydown, {
+            capture: true,
+          });
+          el.removeEventListener("focusin", handleFocusin);
+        };
+      }}
       className={
         viewMode === "masonry" ? "dynamic-views-masonry" : "dynamic-views-grid"
-      }
-      style={
-        settings.queryHeight > 0
-          ? { maxHeight: `${settings.queryHeight}px`, overflowY: "auto" }
-          : {}
       }
     >
       {cards.map(
@@ -931,6 +1091,7 @@ export function CardRenderer({
             sortMethod={sortMethod}
             isShuffled={isShuffled}
             focusableCardIndex={focusableCardIndex}
+            hoveredCardRef={hoveredCardRef}
             containerRef={containerRef}
             updateLayoutRef={updateLayoutRef}
             app={app}
@@ -952,6 +1113,7 @@ interface CardProps {
   sortMethod: string;
   isShuffled: boolean;
   focusableCardIndex: number;
+  hoveredCardRef: RefObject<HTMLElement | null>;
   containerRef: RefObject<HTMLElement | null>;
   updateLayoutRef: RefObject<(() => void) | null>;
   app: App;
@@ -967,6 +1129,7 @@ function Card({
   sortMethod,
   isShuffled,
   focusableCardIndex,
+  hoveredCardRef,
   containerRef,
   updateLayoutRef,
   app,
@@ -1061,12 +1224,73 @@ function Card({
       data-path={card.path}
       ref={(cardEl: HTMLElement | null) => {
         if (!cardEl) return;
+
         // Setup scroll gradients for property fields (setupScrollGradients has internal double RAF)
         setupScrollGradients(
           cardEl,
           updateScrollGradient,
           scrollController.signal,
         );
+
+        // Measure side-by-side property field widths (double RAF to ensure DOM is ready)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const existingPropertyObservers = cardPropertyObservers.get(
+              card.path,
+            );
+            if (existingPropertyObservers) {
+              existingPropertyObservers.forEach((obs) => obs.disconnect());
+            }
+            const propertyObservers = measurePropertyFields(cardEl);
+            if (propertyObservers.length > 0) {
+              cardPropertyObservers.set(card.path, propertyObservers);
+            }
+          });
+        });
+
+        // Setup responsive behaviors (compact mode, thumbnail stacking)
+        const existingResponsiveObserver = cardResponsiveObservers.get(
+          card.path,
+        );
+        if (existingResponsiveObserver) {
+          existingResponsiveObserver.disconnect();
+        }
+
+        const breakpoint =
+          parseFloat(
+            getComputedStyle(document.body).getPropertyValue(
+              "--dynamic-views-compact-breakpoint",
+            ),
+          ) || 390;
+
+        const needsThumbnailStacking =
+          format === "thumbnail" &&
+          (position === "left" || position === "right") &&
+          settings.showTextPreview &&
+          card.textPreview;
+
+        const responsiveObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const cardWidth = entry.contentRect.width;
+
+            // Compact mode
+            if (breakpoint > 0) {
+              cardEl.classList.toggle("compact-mode", cardWidth < breakpoint);
+            }
+
+            // Thumbnail stacking via CSS class only (CSS order handles positioning)
+            if (needsThumbnailStacking) {
+              const thumbnailEl = cardEl.querySelector(".card-thumbnail");
+              if (thumbnailEl) {
+                const thumbnailWidth = (thumbnailEl as HTMLElement).offsetWidth;
+                const isStacked = cardWidth < thumbnailWidth * 3;
+                cardEl.classList.toggle("thumbnail-stack", isStacked);
+              }
+            }
+          }
+        });
+        responsiveObserver.observe(cardEl);
+        cardResponsiveObservers.set(card.path, responsiveObserver);
       }}
       draggable={effectiveOpenFileAction === "card"}
       onDragStart={effectiveOpenFileAction === "card" ? handleDrag : undefined}
@@ -1121,20 +1345,33 @@ function Card({
           }
         } else if (isArrowKey(e.key)) {
           e.preventDefault();
-          const container = containerRef.current;
+          const container = containerRef.current as HTMLElement & {
+            _intentionalFocus?: boolean;
+          };
           if (container) {
+            // Mark focus as intentional before navigation
+            container._intentionalFocus = true;
             handleArrowNavigation(
               e,
               e.currentTarget as HTMLElement,
               container,
               (_, targetIndex) => onFocusChange?.(targetIndex),
             );
+            requestAnimationFrame(() => {
+              container._intentionalFocus = false;
+            });
           }
+        } else if (e.key === "Escape") {
+          (e.currentTarget as HTMLElement).blur();
         } else if (e.key === "Tab") {
           e.preventDefault();
         }
       }}
       onMouseEnter={(e: MouseEvent) => {
+        // Track hovered card for hover-to-start keyboard navigation
+        (hoveredCardRef as { current: HTMLElement | null }).current =
+          e.currentTarget as HTMLElement;
+
         // Trigger Obsidian's hover preview (only on card when openFileAction is 'card')
         if (effectiveOpenFileAction === "card") {
           app.workspace.trigger("hover-link", {
@@ -1146,7 +1383,7 @@ function Card({
             sourcePath: card.path,
           });
         }
-        // Reset hover index to 0
+        // Reset thumbnail to first image on hover
         const imageSelector =
           format === "cover" ? ".card-cover img" : ".card-thumbnail img";
         const imgEl = (e.currentTarget as HTMLElement).querySelector(
@@ -1156,6 +1393,10 @@ function Card({
         if (imgEl && firstImage) {
           (imgEl as HTMLImageElement).src = firstImage;
         }
+      }}
+      onMouseLeave={() => {
+        // Clear hovered card reference
+        (hoveredCardRef as { current: HTMLElement | null }).current = null;
       }}
       onContextMenu={(e: MouseEvent) => {
         // Show file context menu when effectiveOpenFileAction is 'card'
@@ -1182,9 +1423,7 @@ function Card({
             if (isScrollMode) {
               setupElementScrollGradient(el, scrollController.signal);
             } else {
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => truncateTitleWithExtension(el));
-              });
+              setupTitleTruncation(el, scrollController.signal);
             }
           }}
         >
@@ -1199,9 +1438,7 @@ function Card({
                 if (isScrollMode) {
                   setupElementScrollGradient(el, scrollController.signal);
                 } else {
-                  requestAnimationFrame(() => {
-                    requestAnimationFrame(() => truncateTitleWithExtension(el));
-                  });
+                  setupTitleTruncation(el, scrollController.signal);
                 }
               }}
             >
@@ -1212,7 +1449,7 @@ function Card({
                   href={card.path}
                   className="internal-link"
                   data-href={card.path}
-                  data-ext={extNoDot}
+                  tabIndex={-1}
                   draggable={true}
                   onDragStart={handleDrag}
                   onClick={(e: MouseEvent) => {
@@ -1222,12 +1459,22 @@ function Card({
                     void app.workspace.openLinkText(card.path, "", newLeaf);
                   }}
                 >
-                  {displayTitle}
+                  <span className="card-title-text-content">
+                    {displayTitle}
+                  </span>
+                  {extNoDot && (
+                    <span className="card-title-ext-suffix">.{extNoDot}</span>
+                  )}
                 </a>
               ) : (
-                <span className="card-title-text-content" data-ext={extNoDot}>
-                  {displayTitle}
-                </span>
+                <>
+                  <span className="card-title-text-content">
+                    {displayTitle}
+                  </span>
+                  {extNoDot && (
+                    <span className="card-title-ext-suffix">.{extNoDot}</span>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -1323,6 +1570,7 @@ function Card({
                     updateLayoutRef={updateLayoutRef}
                     cardPath={card.path}
                     app={app}
+                    openFileAction={effectiveOpenFileAction}
                   />
                 );
               }
@@ -1330,7 +1578,7 @@ function Card({
               return (
                 <div className="card-cover">
                   <div
-                    className="image-embed"
+                    className="dynamic-views-image-embed"
                     style={{
                       "--cover-image-url": `url("${imageArray[0] || ""}")`,
                     }}
@@ -1341,6 +1589,7 @@ function Card({
                         app,
                         viewerCleanupFns,
                         viewerClones,
+                        effectiveOpenFileAction,
                       );
                     }}
                   >
@@ -1497,7 +1746,7 @@ function Card({
             }
           >
             <div
-              className="image-embed"
+              className="dynamic-views-image-embed"
               style={{ "--cover-image-url": `url("${imageArray[0] || ""}")` }}
               onClick={(e: MouseEvent) => {
                 handleImageViewerClick(
@@ -1506,6 +1755,7 @@ function Card({
                   app,
                   viewerCleanupFns,
                   viewerClones,
+                  effectiveOpenFileAction,
                 );
               }}
             >
@@ -1580,7 +1830,7 @@ function Card({
                 }
               >
                 <div
-                  className="image-embed"
+                  className="dynamic-views-image-embed"
                   style={{
                     "--cover-image-url": `url("${imageArray[0] || ""}")`,
                   }}
@@ -1591,6 +1841,7 @@ function Card({
                       app,
                       viewerCleanupFns,
                       viewerClones,
+                      effectiveOpenFileAction,
                     );
                   }}
                 >
@@ -1665,7 +1916,7 @@ function Card({
             }
           >
             <div
-              className="image-embed"
+              className="dynamic-views-image-embed"
               style={{ "--cover-image-url": `url("${imageArray[0] || ""}")` }}
               onClick={(e: MouseEvent) => {
                 handleImageViewerClick(
@@ -1674,6 +1925,7 @@ function Card({
                   app,
                   viewerCleanupFns,
                   viewerClones,
+                  effectiveOpenFileAction,
                 );
               }}
             >

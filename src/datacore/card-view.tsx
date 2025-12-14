@@ -1,62 +1,36 @@
 import type { Settings } from "../types";
-import { CardRenderer } from "../shared/card-renderer";
-import { transformDatacoreResults } from "../shared/data-transform";
-import type { DatacoreAPI, DatacoreFile } from "./types";
+import { CardRenderer, type CardData } from "../shared/card-renderer";
 import type { App } from "obsidian";
 
 interface CardViewProps {
-  results: DatacoreFile[];
-  displayedCount: number;
+  cards: CardData[];
   settings: Settings;
   viewMode: "card" | "masonry";
   sortMethod: string;
   isShuffled: boolean;
-  textPreviews: Record<string, string>;
-  images: Record<string, string | string[]>;
-  hasImageAvailable: Record<string, boolean>;
   focusableCardIndex: number;
+  hoveredCardRef: { current: HTMLElement | null };
   containerRef: { current: HTMLElement | null };
   updateLayoutRef: { current: (() => void) | null };
   app: App;
-  dc: DatacoreAPI;
   onCardClick?: (path: string, newLeaf: boolean) => void;
   onFocusChange?: (index: number) => void;
 }
 
 export function CardView({
-  results,
-  displayedCount,
+  cards,
   settings,
   viewMode,
   sortMethod,
   isShuffled,
-  textPreviews,
-  images,
-  hasImageAvailable,
   focusableCardIndex,
+  hoveredCardRef,
   containerRef,
   updateLayoutRef,
   app,
-  dc,
   onCardClick,
   onFocusChange,
 }: CardViewProps): JSX.Element {
-  // Transform Datacore results to CardData array
-  const allCards = transformDatacoreResults(
-    app,
-    results,
-    dc,
-    settings,
-    sortMethod,
-    isShuffled,
-    textPreviews,
-    images,
-    hasImageAvailable,
-  );
-
-  // Apply display limit
-  const cards = allCards.slice(0, displayedCount);
-
   return (
     <CardRenderer
       cards={cards}
@@ -65,6 +39,7 @@ export function CardView({
       sortMethod={sortMethod}
       isShuffled={isShuffled}
       focusableCardIndex={focusableCardIndex}
+      hoveredCardRef={hoveredCardRef}
       containerRef={containerRef}
       updateLayoutRef={updateLayoutRef}
       app={app}

@@ -1,8 +1,147 @@
 import { ViewMode, Settings, WidthMode } from "../types";
 import { Settings as SettingsPanel } from "./settings";
-import type { DatacoreAPI } from "./types";
+import type { DatacoreAPI, RefObject } from "./types";
 import type { App } from "obsidian";
 import { setupClickOutside } from "../utils/dropdown-position";
+
+interface ResultsDropdownMenuProps {
+  menuRef?: RefObject<HTMLDivElement | null>;
+  resultLimit: string;
+  totalCount: number;
+  onResultLimitChange: (limit: string) => void;
+  onResetLimit: () => void;
+  onToggleResultsDropdown: () => void;
+  copyMenuItem: unknown;
+}
+
+function ResultsDropdownMenu({
+  menuRef,
+  resultLimit,
+  totalCount,
+  onResultLimitChange,
+  onResetLimit,
+  onToggleResultsDropdown,
+  copyMenuItem,
+}: ResultsDropdownMenuProps): JSX.Element {
+  return (
+    <div
+      ref={menuRef as RefObject<HTMLDivElement>}
+      className="limit-dropdown-menu"
+    >
+      <div
+        className="limit-dropdown-label"
+        onClick={(e: unknown) => {
+          const evt = e as MouseEvent;
+          evt.stopPropagation();
+        }}
+      >
+        Limit number of results
+      </div>
+      <input
+        type="text"
+        inputMode="numeric"
+        className="limit-dropdown-input"
+        placeholder="e.g., 10"
+        value={resultLimit}
+        onClick={(e: unknown) => {
+          const evt = e as MouseEvent;
+          evt.stopPropagation();
+        }}
+        onKeyDown={(e: unknown) => {
+          const evt = e as KeyboardEvent;
+          // Allow: backspace, delete, tab, escape, enter, arrows
+          if (
+            [
+              "Backspace",
+              "Tab",
+              "Enter",
+              "Escape",
+              "ArrowLeft",
+              "ArrowUp",
+              "ArrowRight",
+              "ArrowDown",
+              "Delete",
+            ].includes(evt.key)
+          ) {
+            return;
+          }
+          // Allow: Ctrl/Cmd+A, Ctrl/Cmd+C, Ctrl/Cmd+V, Ctrl/Cmd+X
+          if (
+            (evt.ctrlKey || evt.metaKey) &&
+            ["a", "c", "v", "x"].includes(evt.key.toLowerCase())
+          ) {
+            return;
+          }
+          // Block: non-digit keys, or digit 0 if it would be first character
+          if (
+            evt.key < "0" ||
+            evt.key > "9" ||
+            (evt.key === "0" && resultLimit === "")
+          ) {
+            evt.preventDefault();
+          }
+        }}
+        onChange={(e: unknown) => {
+          const evt = e as InputEvent & { target: HTMLInputElement };
+          const val = evt.target.value;
+          // Only allow positive integers (no leading zeros, no whitespace, no special chars)
+          if (val === "" || /^[1-9]\d*$/.test(val)) {
+            onResultLimitChange(val);
+          }
+        }}
+      />
+      <div
+        className={`limit-reset-button${!(resultLimit.trim() && parseInt(resultLimit) > 0) ? " disabled" : ""}`}
+        onClick={(e: unknown) => {
+          const evt = e as MouseEvent;
+          evt.stopPropagation();
+          if (resultLimit.trim() && parseInt(resultLimit) > 0) {
+            onResetLimit();
+          } else {
+            onToggleResultsDropdown();
+          }
+        }}
+        onKeyDown={(e: unknown) => {
+          const evt = e as KeyboardEvent;
+          if (evt.key === "Enter" || evt.key === " ") {
+            evt.preventDefault();
+            evt.stopPropagation();
+            if (resultLimit.trim() && parseInt(resultLimit) > 0) {
+              onResetLimit();
+            } else {
+              onToggleResultsDropdown();
+            }
+          }
+        }}
+        tabIndex={0}
+        role="menuitem"
+      >
+        <div className="limit-reset-button-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+        </div>
+        <div className="limit-reset-button-text">
+          {resultLimit.trim() && parseInt(resultLimit) > 0
+            ? `Show all (${totalCount.toLocaleString()})`
+            : "Show all"}
+        </div>
+      </div>
+      {copyMenuItem}
+    </div>
+  );
+}
 
 interface ToolbarProps {
   dc: DatacoreAPI;
@@ -797,115 +936,15 @@ export function Toolbar({
             <polyline points="6 9 12 15 18 9" />
           </svg>
           {showLimitDropdown ? (
-            <div ref={limitMenuRef} className="limit-dropdown-menu">
-              <div
-                className="limit-dropdown-label"
-                onClick={(e: unknown) => {
-                  const evt = e as MouseEvent;
-                  evt.stopPropagation();
-                }}
-              >
-                Limit number of results
-              </div>
-              <input
-                type="text"
-                inputMode="numeric"
-                className="limit-dropdown-input"
-                placeholder="e.g., 10"
-                value={resultLimit}
-                onKeyDown={(e: unknown) => {
-                  const evt = e as KeyboardEvent;
-                  // Allow: backspace, delete, tab, escape, enter, arrows
-                  if (
-                    [
-                      "Backspace",
-                      "Tab",
-                      "Enter",
-                      "Escape",
-                      "ArrowLeft",
-                      "ArrowUp",
-                      "ArrowRight",
-                      "ArrowDown",
-                      "Delete",
-                    ].includes(evt.key)
-                  ) {
-                    return;
-                  }
-                  // Allow: Ctrl/Cmd+A, Ctrl/Cmd+C, Ctrl/Cmd+V, Ctrl/Cmd+X
-                  if (
-                    (evt.ctrlKey || evt.metaKey) &&
-                    ["a", "c", "v", "x"].includes(evt.key.toLowerCase())
-                  ) {
-                    return;
-                  }
-                  // Block: non-digit keys, or digit 0 if it would be first character
-                  if (
-                    evt.key < "0" ||
-                    evt.key > "9" ||
-                    (evt.key === "0" && resultLimit === "")
-                  ) {
-                    evt.preventDefault();
-                  }
-                }}
-                onChange={(e: unknown) => {
-                  const evt = e as InputEvent & { target: HTMLInputElement };
-                  const val = evt.target.value;
-                  // Only allow positive integers (no leading zeros, no whitespace, no special chars)
-                  if (val === "" || /^[1-9]\d*$/.test(val)) {
-                    onResultLimitChange(val);
-                  }
-                }}
-              />
-              <div
-                className={`limit-reset-button${!(resultLimit.trim() && parseInt(resultLimit) > 0) ? " disabled" : ""}`}
-                onClick={(e: unknown) => {
-                  const evt = e as MouseEvent;
-                  evt.stopPropagation();
-                  if (resultLimit.trim() && parseInt(resultLimit) > 0) {
-                    onResetLimit();
-                  } else {
-                    onToggleLimitDropdown();
-                  }
-                }}
-                onKeyDown={(e: unknown) => {
-                  const evt = e as KeyboardEvent;
-                  if (evt.key === "Enter" || evt.key === " ") {
-                    evt.preventDefault();
-                    evt.stopPropagation();
-                    if (resultLimit.trim() && parseInt(resultLimit) > 0) {
-                      onResetLimit();
-                    } else {
-                      onToggleLimitDropdown();
-                    }
-                  }
-                }}
-                tabIndex={0}
-                role="menuitem"
-              >
-                <div className="limit-reset-button-icon">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                  </svg>
-                </div>
-                <div className="limit-reset-button-text">
-                  {resultLimit.trim() && parseInt(resultLimit) > 0
-                    ? `Show all (${totalCount.toLocaleString()})`
-                    : "Show all"}
-                </div>
-              </div>
-              {copyMenuItem}
-            </div>
+            <ResultsDropdownMenu
+              menuRef={limitMenuRef}
+              resultLimit={resultLimit}
+              totalCount={totalCount}
+              onResultLimitChange={onResultLimitChange}
+              onResetLimit={onResetLimit}
+              onToggleResultsDropdown={onToggleLimitDropdown}
+              copyMenuItem={copyMenuItem}
+            />
           ) : null}
         </div>
 
@@ -1292,115 +1331,14 @@ export function Toolbar({
               <polyline points="6 9 12 15 18 9" />
             </svg>
             {showLimitDropdown ? (
-              <div className="limit-dropdown-menu">
-                <div
-                  className="limit-dropdown-label"
-                  onClick={(e: unknown) => {
-                    const evt = e as MouseEvent;
-                    evt.stopPropagation();
-                  }}
-                >
-                  Limit number of results
-                </div>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className="limit-dropdown-input"
-                  placeholder="e.g., 10"
-                  value={resultLimit}
-                  onKeyDown={(e: unknown) => {
-                    const evt = e as KeyboardEvent;
-                    // Allow: backspace, delete, tab, escape, enter, arrows
-                    if (
-                      [
-                        "Backspace",
-                        "Tab",
-                        "Enter",
-                        "Escape",
-                        "ArrowLeft",
-                        "ArrowUp",
-                        "ArrowRight",
-                        "ArrowDown",
-                        "Delete",
-                      ].includes(evt.key)
-                    ) {
-                      return;
-                    }
-                    // Allow: Ctrl/Cmd+A, Ctrl/Cmd+C, Ctrl/Cmd+V, Ctrl/Cmd+X
-                    if (
-                      (evt.ctrlKey || evt.metaKey) &&
-                      ["a", "c", "v", "x"].includes(evt.key.toLowerCase())
-                    ) {
-                      return;
-                    }
-                    // Block: non-digit keys, or digit 0 if it would be first character
-                    if (
-                      evt.key < "0" ||
-                      evt.key > "9" ||
-                      (evt.key === "0" && resultLimit === "")
-                    ) {
-                      evt.preventDefault();
-                    }
-                  }}
-                  onChange={(e: unknown) => {
-                    const evt = e as InputEvent & { target: HTMLInputElement };
-                    const val = evt.target.value;
-                    // Only allow positive integers (no leading zeros, no whitespace, no special chars)
-                    if (val === "" || /^[1-9]\d*$/.test(val)) {
-                      onResultLimitChange(val);
-                    }
-                  }}
-                />
-                <div
-                  className={`limit-reset-button${!(resultLimit.trim() && parseInt(resultLimit) > 0) ? " disabled" : ""}`}
-                  onClick={(e: unknown) => {
-                    const evt = e as MouseEvent;
-                    evt.stopPropagation();
-                    if (resultLimit.trim() && parseInt(resultLimit) > 0) {
-                      onResetLimit();
-                    } else {
-                      onToggleLimitDropdown();
-                    }
-                  }}
-                  onKeyDown={(e: unknown) => {
-                    const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
-                      evt.preventDefault();
-                      evt.stopPropagation();
-                      if (resultLimit.trim() && parseInt(resultLimit) > 0) {
-                        onResetLimit();
-                      } else {
-                        onToggleLimitDropdown();
-                      }
-                    }
-                  }}
-                  tabIndex={0}
-                  role="menuitem"
-                >
-                  <div className="limit-reset-button-icon">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                      <path d="M3 3v5h5"></path>
-                    </svg>
-                  </div>
-                  <div className="limit-reset-button-text">
-                    {resultLimit.trim() && parseInt(resultLimit) > 0
-                      ? `Show all (${totalCount.toLocaleString()})`
-                      : "Show all"}
-                  </div>
-                </div>
-                {copyMenuItem}
-              </div>
+              <ResultsDropdownMenu
+                resultLimit={resultLimit}
+                totalCount={totalCount}
+                onResultLimitChange={onResultLimitChange}
+                onResetLimit={onResetLimit}
+                onToggleResultsDropdown={onToggleLimitDropdown}
+                copyMenuItem={copyMenuItem}
+              />
             ) : null}
           </div>
           {/* Create Note Button (Compact) */}

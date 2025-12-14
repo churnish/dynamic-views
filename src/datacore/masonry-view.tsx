@@ -1,22 +1,18 @@
 import { CardView } from "./card-view";
 import type { Settings } from "../types";
-import type { DatacoreAPI, DatacoreFile } from "./types";
+import type { CardData } from "../shared/card-renderer";
 import type { App } from "obsidian";
 
 interface MasonryViewProps {
-  results: DatacoreFile[];
-  displayedCount: number;
+  cards: CardData[];
   settings: Settings;
   sortMethod: string;
   isShuffled: boolean;
-  textPreviews: Record<string, string>;
-  images: Record<string, string | string[]>;
-  hasImageAvailable: Record<string, boolean>;
   focusableCardIndex: number;
+  hoveredCardRef: { current: HTMLElement | null };
   containerRef: { current: HTMLElement | null };
   updateLayoutRef: { current: (() => void) | null };
   app: App;
-  dc: DatacoreAPI;
   onCardClick?: (path: string, newLeaf: boolean) => void;
   onFocusChange?: (index: number) => void;
 }

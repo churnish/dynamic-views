@@ -51,72 +51,8 @@ export function setupBasesSwipeInterception(
   return null;
 }
 
-/**
- * Setup MutationObserver for Dynamic Views Style Settings changes
- * Watches class changes (class-toggle settings) and Style Settings stylesheet changes (slider settings)
- * @returns Cleanup function to disconnect observer
- */
-export function setupStyleSettingsObserver(
-  onStyleChange: () => void,
-): () => void {
-  // Observer for body class changes (Style Settings class-toggle settings)
-  const bodyObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (
-        mutation.type === "attributes" &&
-        mutation.attributeName === "class"
-      ) {
-        // Check if any dynamic-views class changed
-        const oldClasses = mutation.oldValue?.split(" ") || [];
-        const newClasses = document.body.className.split(" ");
-        const dynamicViewsChanged =
-          oldClasses
-            .filter((c) => c.startsWith("dynamic-views-"))
-            .sort()
-            .join() !==
-          newClasses
-            .filter((c) => c.startsWith("dynamic-views-"))
-            .sort()
-            .join();
-
-        if (dynamicViewsChanged) {
-          onStyleChange();
-          break;
-        }
-      }
-    }
-  });
-
-  bodyObserver.observe(document.body, {
-    attributes: true,
-    attributeOldValue: true,
-    attributeFilter: ["class"],
-  });
-
-  // Observer for Style Settings stylesheet changes (slider/variable settings)
-  // Style Settings updates a <style> element in <head> with id "css-settings-manager"
-  const styleEl = document.getElementById("css-settings-manager");
-  let styleObserver: MutationObserver | null = null;
-
-  if (styleEl) {
-    styleObserver = new MutationObserver(() => {
-      if (styleEl.textContent?.includes("--dynamic-views-")) {
-        onStyleChange();
-      }
-    });
-
-    styleObserver.observe(styleEl, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-  return () => {
-    bodyObserver.disconnect();
-    styleObserver?.disconnect();
-  };
-}
+// Re-export from shared location
+export { setupStyleSettingsObserver } from "../utils/style-settings";
 
 /** Interface for Bases config sort method */
 interface BasesConfigWithSort {

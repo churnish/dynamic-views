@@ -542,7 +542,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           .addOption("cover-bottom", "Cover bottom")
           .addOption("cover-left", "Cover left")
           .addOption("cover-right", "Cover right")
-          .addOption("none", "None")
+          .addOption("none", "No image")
           .setValue(defaultViewSettings.imageFormat)
           .onChange(
             async (
@@ -847,7 +847,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     });
     button.addEventListener("click", () => {
       window.open(
-        "https://github.com/greetclammy/dynamic-views?tab=readme-ov-file#%EF%B8%8F-support",
+        "https://github.com/greetclammy/dynamic-views/issues",
         "_blank",
       );
     });

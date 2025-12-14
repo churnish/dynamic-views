@@ -27,6 +27,9 @@ export interface SlideshowCallbacks {
  * Creates a slideshow navigator with shared logic
  * Returns navigate function and current state
  */
+// Time window to detect "undo" navigation (First→Last→First)
+const UNDO_WINDOW_MS = 2500;
+
 export function createSlideshowNavigator(
   imageUrls: string[],
   getElements: () => SlideshowElements | null,
@@ -37,6 +40,7 @@ export function createSlideshowNavigator(
 } {
   let currentIndex = 0;
   let isAnimating = false;
+  let lastWrapFromFirstTimestamp: number | null = null;
 
   const navigate = (direction: 1 | -1, honorGestureDirection = false) => {
     if (isAnimating || signal.aborted || imageUrls.length === 0) return;
@@ -76,11 +80,32 @@ export function createSlideshowNavigator(
     nextImg.src = newUrl;
     imageEmbed.style.setProperty("--cover-image-url", `url("${newUrl}")`);
 
+    // Check if this is an "undo" of recent First→Last navigation
+    // Must check BEFORE updating the timestamp
+    const isRecentUndo =
+      lastWrapFromFirstTimestamp !== null &&
+      Date.now() - lastWrapFromFirstTimestamp < UNDO_WINDOW_MS;
+
+    // Track wrap from first to last (for detecting "undo" sequences)
+    const isWrapFromFirst =
+      direction === -1 &&
+      currentIndex === 0 &&
+      newIndex === imageUrls.length - 1;
+
+    // Update timestamp: set when wrapping First→Last, clear otherwise
+    if (isWrapFromFirst) {
+      lastWrapFromFirstTimestamp = Date.now();
+    } else {
+      lastWrapFromFirstTimestamp = null;
+    }
+
     // Detect wrap from last to first - animate in reverse to signal "rewind"
     // Only reverse for 3+ images; with 2 images alternating direction feels glitchy
     // Skip reversal when honoring gesture direction (scroll/swipe)
+    // Skip reversal when undoing recent First→Last navigation
     const isWrapToFirst =
       !honorGestureDirection &&
+      !isRecentUndo &&
       direction === 1 &&
       currentIndex === imageUrls.length - 1 &&
       newIndex === 0 &&

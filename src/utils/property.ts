@@ -2,6 +2,7 @@
  * Property utility functions for handling comma-separated properties
  */
 
+import { TFile } from "obsidian";
 import type { App, BasesEntry } from "obsidian";
 import type { DatacoreFile, DatacoreDate } from "../datacore/types";
 
@@ -150,17 +151,33 @@ export function getFirstBasesPropertyValue(
     .filter((p) => p);
 
   for (const prop of properties) {
-    // Try property as-is first, then with formula. prefix if not found
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
     let value = entry.getValue(prop as any);
 
-    // If property not found (error object with icon), try as formula property
+    // Check for empty property BEFORE formula fallback
+    // Bases returns {icon} for both missing and empty - use metadata cache to distinguish
+    // Empty properties return {data: null}, missing properties return null
     if (
       value &&
       typeof value === "object" &&
       "icon" in value &&
       !("data" in value)
     ) {
+      const filePath = entry.file?.path;
+      if (filePath) {
+        const file = app.vault.getAbstractFileByPath(filePath);
+        if (file instanceof TFile) {
+          const cache = app.metadataCache.getFileCache(file);
+          // Strip "note." prefix to get frontmatter property name
+          const fmProp = prop.startsWith("note.") ? prop.slice(5) : prop;
+          if (cache?.frontmatter && fmProp in cache.frontmatter) {
+            // Property exists in frontmatter but has no value - return empty marker
+            return { data: null };
+          }
+        }
+      }
+
+      // Not found in frontmatter - try as formula property
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
       value = entry.getValue(`formula.${prop}` as any);
     }

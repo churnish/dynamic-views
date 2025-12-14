@@ -246,7 +246,6 @@ export function Settings({
       <div className="setting-item">
         <div className="setting-item-info">
           <label>Card size</label>
-          <div className="setting-desc">Minimum width of cards in pixels</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <input
@@ -255,13 +254,13 @@ export function Settings({
             max="800"
             step="10"
             value={settings.cardSize}
-            aria-label={String(settings.cardSize)}
             onChange={(e: unknown) => {
               const evt = e as Event & { target: HTMLInputElement };
               onSettingsChange({ cardSize: parseInt(evt.target.value) });
             }}
             style={{ flex: 1 }}
           />
+          <span className="slider-value">{settings.cardSize}</span>
         </div>
       </div>
 
@@ -336,7 +335,7 @@ export function Settings({
             >
               <option value="thumbnail">Thumbnail</option>
               <option value="cover">Cover</option>
-              <option value="none">None</option>
+              <option value="none">No image</option>
             </select>
           </div>
           <div className="setting-item setting-item-dropdown">
@@ -491,7 +490,6 @@ export function Settings({
       <div className="setting-item setting-item-dropdown">
         <div className="setting-item-info">
           <label>List marker</label>
-          <div className="setting-desc">Marker style for list view</div>
         </div>
         <select
           value={settings.listMarker}
@@ -512,9 +510,6 @@ export function Settings({
       <div className="setting-item setting-item-text">
         <div className="setting-item-info">
           <label>View height</label>
-          <div className="setting-desc">
-            Maximum height of results area in pixels (0 for unlimited)
-          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button

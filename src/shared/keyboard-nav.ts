@@ -147,3 +147,47 @@ export function handleArrowNavigation(
 export function isArrowKey(key: string): boolean {
   return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key);
 }
+
+/**
+ * Setup keyboard navigation for hover-to-start pattern
+ * When user hovers over a card and presses an arrow key, focus moves to that card
+ * @returns Cleanup function to remove event listener
+ */
+export function setupHoverKeyboardNavigation(
+  getHoveredCard: () => HTMLElement | null,
+  getContainerRef: () => HTMLElement | null,
+  setFocusableIndex: (index: number) => void,
+): () => void {
+  const handleKeydown = (e: KeyboardEvent) => {
+    const hoveredCard = getHoveredCard();
+    if (!hoveredCard) return;
+
+    // Block Escape from triggering Obsidian's focus behavior on hovered card
+    if (e.key === "Escape") {
+      e.stopImmediatePropagation();
+      return;
+    }
+
+    if (!isArrowKey(e.key)) return;
+
+    const activeEl = document.activeElement;
+    const isCardFocused = activeEl?.classList.contains("card");
+    if (isCardFocused) return;
+
+    e.preventDefault();
+    hoveredCard.focus();
+
+    const container = getContainerRef();
+    if (container) {
+      const allCards = container.querySelectorAll(".card");
+      const index = Array.from(allCards).indexOf(hoveredCard);
+      if (index >= 0) {
+        setFocusableIndex(index);
+      }
+    }
+  };
+
+  document.addEventListener("keydown", handleKeydown, { capture: true });
+  return () =>
+    document.removeEventListener("keydown", handleKeydown, { capture: true });
+}
