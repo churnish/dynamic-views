@@ -918,20 +918,6 @@ function renderProperty(
                             }
                           }
                         }}
-                        onMouseOver={
-                          isLastSegment
-                            ? (e: MouseEvent) => {
-                                app.workspace.trigger("hover-link", {
-                                  event: e,
-                                  source: "dynamic-views",
-                                  hoverParent: { hoverPopover: null },
-                                  targetEl: e.currentTarget,
-                                  linktext: card.path,
-                                  sourcePath: card.path,
-                                });
-                              }
-                            : undefined
-                        }
                         onContextMenu={(e: MouseEvent) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -1400,7 +1386,7 @@ function Card({
         if (effectiveOpenFileAction === "card") {
           app.workspace.trigger("hover-link", {
             event: e,
-            source: "dynamic-views",
+            source: "file-explorer",
             hoverParent: e.currentTarget,
             targetEl: e.currentTarget,
             linktext: card.path,
@@ -1495,7 +1481,7 @@ function Card({
                   onMouseOver={(e: MouseEvent) => {
                     app.workspace.trigger("hover-link", {
                       event: e,
-                      source: "dynamic-views",
+                      source: "file-explorer",
                       hoverParent: { hoverPopover: null },
                       targetEl: e.currentTarget,
                       linktext: card.path,

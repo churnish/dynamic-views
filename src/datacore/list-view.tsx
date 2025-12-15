@@ -80,7 +80,7 @@ export function ListView({
                   if (p.$path) {
                     app.workspace.trigger("hover-link", {
                       event: e,
-                      source: "dynamic-views",
+                      source: "file-explorer",
                       hoverParent: e.currentTarget,
                       targetEl: e.currentTarget,
                       linktext: p.$path,

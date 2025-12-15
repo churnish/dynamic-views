@@ -533,7 +533,7 @@ export class SharedCardRenderer {
       cardEl.addEventListener("mouseover", (e) => {
         this.app.workspace.trigger("hover-link", {
           event: e,
-          source: "dynamic-views",
+          source: "bases",
           hoverParent: hoverParent,
           targetEl: cardEl,
           linktext: card.path,
@@ -630,7 +630,7 @@ export class SharedCardRenderer {
           link.addEventListener("mouseover", (e) => {
             this.app.workspace.trigger("hover-link", {
               event: e,
-              source: "dynamic-views",
+              source: "bases",
               hoverParent: hoverParent,
               targetEl: link,
               linktext: card.path,
@@ -2202,20 +2202,6 @@ export class SharedCardRenderer {
               if (!(file instanceof TFile)) return;
               const dragData = this.app.dragManager.dragFile(e, file);
               this.app.dragManager.onDragStart(e, dragData);
-            },
-            { signal },
-          );
-          segmentEl.addEventListener(
-            "mouseover",
-            (e: MouseEvent) => {
-              this.app.workspace.trigger("hover-link", {
-                event: e,
-                source: "dynamic-views",
-                hoverParent: { hoverPopover: null },
-                targetEl: segmentEl,
-                linktext: card.path,
-                sourcePath: card.path,
-              });
             },
             { signal },
           );
