@@ -628,7 +628,7 @@ export class DynamicViewsCardView extends BasesView {
     }
     this.swipeAbortController?.abort();
     this.abortController?.abort();
-    this.cardRenderer.cleanup();
+    this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
 
   focus(): void {

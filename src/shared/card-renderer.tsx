@@ -32,7 +32,7 @@ import {
   handleJsxImageError,
   handleImageLoad,
 } from "./image-loader";
-import { handleImageViewerClick } from "./image-viewer";
+import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
 import {
   createSlideshowNavigator,
   setupImagePreload,
@@ -342,6 +342,13 @@ export function cleanupCardScrollListeners(cardPath: string): void {
 export function cleanupAllCardScrollListeners(): void {
   cardScrollAbortControllers.forEach((controller) => controller.abort());
   cardScrollAbortControllers.clear();
+}
+
+/**
+ * Cleanup all image viewer clones and listeners (call when view is destroyed)
+ */
+export function cleanupAllImageViewers(): void {
+  cleanupAllViewers(viewerCleanupFns, viewerClones);
 }
 
 // Extend App type to include isMobile property and dragManager

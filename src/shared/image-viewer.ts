@@ -6,8 +6,34 @@ import type { App } from "obsidian";
 import { setupSwipeInterception } from "../bases/swipe-interceptor";
 import { setupImageViewerGestures } from "./image-viewer-gestures";
 
-// Store cleanup functions for event listeners to prevent memory leaks
-const viewerListenerCleanups = new WeakMap<HTMLElement, () => void>();
+// Store cleanup functions for event listeners (Map for explicit lifecycle control)
+const viewerListenerCleanups = new Map<HTMLElement, () => void>();
+
+/**
+ * Force cleanup all viewers - call on view destruction
+ * Removes clones from DOM, runs cleanup functions, clears all maps
+ */
+export function cleanupAllViewers(
+  viewerCleanupFns: Map<HTMLElement, () => void>,
+  viewerClones: Map<HTMLElement, HTMLElement>,
+): void {
+  // Remove clones from DOM and run gesture cleanup
+  viewerClones.forEach((clone) => {
+    clone.remove();
+  });
+  viewerClones.clear();
+
+  viewerCleanupFns.forEach((cleanup) => {
+    cleanup();
+  });
+  viewerCleanupFns.clear();
+
+  // Also cleanup listeners (keyboard, click, touch, ResizeObserver)
+  viewerListenerCleanups.forEach((cleanup) => {
+    cleanup();
+  });
+  viewerListenerCleanups.clear();
+}
 
 /** Extended clone element type with original embed reference */
 type CloneElement = HTMLElement & { __originalEmbed?: HTMLElement };
@@ -134,10 +160,15 @@ function openImageViewer(
     // Use workspace-leaf-content (stable across React re-renders) as observer target
     const workspaceLeaf = embedEl.closest(".workspace-leaf-content");
     if (workspaceLeaf) {
-      // Helper to update clone bounds - re-queries view-content each time
-      // since React may recreate it on re-render
+      // Cache viewContainer, re-query only if detached (React re-rendered)
+      let viewContainer: Element | null =
+        workspaceLeaf.querySelector(".view-content");
+
       const updateBounds = () => {
-        const viewContainer = workspaceLeaf.querySelector(".view-content");
+        // Re-query if cached element was detached (React re-rendered)
+        if (viewContainer && !viewContainer.isConnected) {
+          viewContainer = workspaceLeaf.querySelector(".view-content");
+        }
         if (viewContainer) {
           const rect = viewContainer.getBoundingClientRect();
           cloneEl.style.top = `${rect.top}px`;
@@ -235,8 +266,15 @@ function openImageViewer(
     cloneEl.addEventListener("touchend", onTouchEnd, { passive: true });
   }
 
+  // Flag to prevent opening click from immediately closing viewer
+  let isOpening = true;
+  setTimeout(() => {
+    isOpening = false;
+  }, 0);
+
   // Click on overlay (cloneEl background, not image) closes viewer
   const onOverlayClick = (e: MouseEvent) => {
+    if (isOpening) return;
     // On mobile, ignore clicks during or immediately after gesture
     if (isMobile && gestureInProgress) {
       return;
@@ -248,6 +286,7 @@ function openImageViewer(
 
   // Document-level click closes viewer only if close-on-click enabled (desktop only)
   const onClickOutside = (e: Event) => {
+    if (isOpening) return;
     if (
       isMobile ||
       !document.body.classList.contains(
@@ -268,18 +307,10 @@ function openImageViewer(
     }
   };
 
-  // Add escape listener immediately (always want Escape to work)
+  // Add all listeners synchronously (isOpening flag prevents immediate trigger)
   document.addEventListener("keydown", onEscape);
-
-  // Delay click listeners to avoid immediate trigger from opening click
-  // Use requestAnimationFrame for more reliable timing than setTimeout
-  requestAnimationFrame(() => {
-    // Only add if clone still in DOM (not already closed)
-    if (cloneEl.isConnected) {
-      cloneEl.addEventListener("click", onOverlayClick);
-      document.addEventListener("click", onClickOutside);
-    }
-  });
+  cloneEl.addEventListener("click", onOverlayClick);
+  document.addEventListener("click", onClickOutside);
 
   // Cleanup always removes all listeners (removeEventListener is no-op if never added)
   viewerListenerCleanups.set(cloneEl, () => {

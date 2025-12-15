@@ -21,6 +21,7 @@ import { CardView } from "./card-view";
 import {
   cleanupAllCardObservers,
   cleanupAllCardScrollListeners,
+  cleanupAllImageViewers,
 } from "../shared/card-renderer";
 import { remeasurePropertyFields } from "../shared/property-measure";
 import { MasonryView } from "./masonry-view";
@@ -304,11 +305,12 @@ export function View({
   const prevCardSizeRef = dc.useRef(settings.cardSize);
   const prevStyleRevisionRef = dc.useRef(0);
 
-  // Cleanup ResizeObservers and scroll listeners on unmount
+  // Cleanup ResizeObservers, scroll listeners, and image viewers on unmount
   dc.useEffect(() => {
     return () => {
       cleanupAllCardObservers();
       cleanupAllCardScrollListeners();
+      cleanupAllImageViewers();
     };
   }, []);
 

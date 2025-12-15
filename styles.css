@@ -2808,35 +2808,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   margin: var(--dynamic-views-card-spacing, 8px) 0;
 }
 
-/* Disable container-type and position: relative on ALL ancestors when zoomed */
-body:not(.dynamic-views-image-viewer-disabled) .dynamic-views:has(.is-zoomed),
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views-grid:has(.is-zoomed),
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views-masonry:has(.is-zoomed),
-body:not(.dynamic-views-image-viewer-disabled)
-  .masonry-container:has(.is-zoomed) {
-  position: static !important;
-}
-
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card:has(.is-zoomed) {
-  container-type: normal !important;
-  position: static !important;
-}
-
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card:has(.is-zoomed)
-  .card-cover,
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card:has(.is-zoomed)
-  .card-thumbnail {
-  position: static !important;
-}
-
 /* Completely blank cards: no title, content, thumbnails, covers, or properties */
 /* Use ::after with padding to create height equal to card padding x 2 */
 .dynamic-views
@@ -3439,13 +3410,8 @@ body.dynamic-views-image-viewer-disabled
   cursor: inherit !important;
 }
 
+/* Image viewer clone (appended to body with is-zoomed class) */
 body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed,
-body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed,
-body:not(.dynamic-views-image-viewer-disabled)
-  .view-content
   > .dynamic-views-image-embed.is-zoomed {
   cursor: zoom-out;
   display: flex;
@@ -3462,20 +3428,7 @@ body:not(.dynamic-views-image-viewer-disabled)
   bottom: 0;
 }
 
-/* Constrained mode (desktop only, fullscreen toggle off): view-content needs relative positioning */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
-  .view-content {
-  position: relative;
-}
-
 /* Constrained mode: overlay styling (desktop, fullscreen toggle off) */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed,
 body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
     .dynamic-views-image-viewer-fullscreen
   )
@@ -3494,15 +3447,7 @@ body.is-mobile:has(.is-zoomed) .mobile-navbar {
 
 /* Fullscreen image viewer: mobile (always) or desktop with toggle on */
 body:not(.dynamic-views-image-viewer-disabled).is-mobile
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed,
-body:not(.dynamic-views-image-viewer-disabled).is-mobile
   > .dynamic-views-image-embed.is-zoomed,
-body:not(
-    .dynamic-views-image-viewer-disabled
-  ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed,
 body:not(
     .dynamic-views-image-viewer-disabled
   ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
@@ -3512,14 +3457,6 @@ body:not(
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled)
-  .view-content
   > .dynamic-views-image-embed.is-zoomed
   img {
   padding: 0;
@@ -3533,44 +3470,19 @@ body:not(.dynamic-views-image-viewer-disabled)
   border-radius: 0;
 }
 
-/* Limit zoomed images to 90% viewport (desktop) / 80% (mobile) */
+/* Limit zoomed images to 90% viewport (desktop) / 85vh (mobile) */
 body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  > .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  .view-content
   > .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 90vh;
 }
-/* Mobile: limit height to 85vh */
 body:not(.dynamic-views-image-viewer-disabled).is-mobile
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled).is-mobile
-  > .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled).is-mobile
-  .view-content
   > .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 85vh;
 }
 /* Desktop: also limit width */
 body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  .dynamic-views
-  .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  > .dynamic-views-image-embed.is-zoomed
-  img,
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  .view-content
   > .dynamic-views-image-embed.is-zoomed
   img {
   max-width: 90vw;
@@ -3581,118 +3493,6 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
     .dynamic-views-image-viewer-fullscreen
   )
   > .dynamic-views-image-embed.is-zoomed
-  img {
-  max-height: 90%;
-  max-width: 90%;
-}
-
-/* Cover-specific zoom override (higher specificity needed for covers nested in cards) */
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed {
-  cursor: zoom-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  padding: 0;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-}
-
-/* Constrained mode (desktop, toggle off): absolute positioning for covers */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed {
-  background: color-mix(
-    in srgb,
-    var(--background-primary) var(--dynamic-views-overlay-opacity, 90%),
-    transparent
-  ) !important;
-  position: absolute !important;
-}
-
-/* Fullscreen: fixed positioning for covers (mobile always, desktop with toggle) */
-body:not(.dynamic-views-image-viewer-disabled).is-mobile
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed,
-body:not(
-    .dynamic-views-image-viewer-disabled
-  ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed {
-  background: var(--background-modifier-cover) !important;
-  position: fixed !important;
-}
-
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed
-  img {
-  padding: 0;
-  margin: 0;
-  width: auto;
-  height: auto;
-  max-height: 100vh;
-  max-width: 100vw;
-  object-fit: contain;
-  opacity: 1;
-  border-radius: 0;
-}
-
-/* Limit zoomed cover images to 90% viewport (desktop) / 80% (mobile) */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed
-  img {
-  max-height: 90vh;
-}
-/* Mobile: limit height to 85vh */
-body:not(.dynamic-views-image-viewer-disabled).is-mobile
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed
-  img {
-  max-height: 85vh;
-}
-/* Desktop: also limit width */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed
-  img {
-  max-width: 90vw;
-}
-
-/* Constrained mode (desktop, toggle off): limit cover images to 90% of view */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 90%;
   max-width: 90%;

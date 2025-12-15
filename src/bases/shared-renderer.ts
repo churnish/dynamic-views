@@ -38,7 +38,10 @@ import {
 } from "../utils/style-settings";
 import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
-import { handleImageViewerClick } from "../shared/image-viewer";
+import {
+  handleImageViewerClick,
+  cleanupAllViewers,
+} from "../shared/image-viewer";
 import {
   getFileExtInfo,
   getFileTypeIcon,
@@ -130,6 +133,7 @@ export class SharedCardRenderer {
   private cardScopes: Scope[] = [];
   private cardAbortControllers: AbortController[] = [];
   private activeScope: Scope | null = null;
+  private titleTrimAmount: number | null = null;
 
   constructor(
     protected app: App,
@@ -140,7 +144,7 @@ export class SharedCardRenderer {
   /**
    * Cleanup observers, scopes, event listeners, and zoom state when renderer is destroyed
    */
-  public cleanup(): void {
+  public cleanup(forceViewerCleanup = false): void {
     this.propertyObservers.forEach((obs) => obs.disconnect());
     this.propertyObservers = [];
 
@@ -161,21 +165,15 @@ export class SharedCardRenderer {
     this.cardAbortControllers.forEach((controller) => controller.abort());
     this.cardAbortControllers = [];
 
-    // Skip viewer cleanup unless close-on-click is enabled (preserve viewer by default)
+    // Cleanup viewers if forced (view destruction) or "close when losing focus" is enabled
+    // This allows viewer to persist across re-renders when setting is off
     if (
+      forceViewerCleanup ||
       document.body.classList.contains(
         "dynamic-views-image-viewer-close-on-click",
       )
     ) {
-      this.viewerClones.forEach((clone) => {
-        clone.remove();
-      });
-      this.viewerClones.clear();
-
-      this.viewerCleanupFns.forEach((cleanup) => {
-        cleanup();
-      });
-      this.viewerCleanupFns.clear();
+      cleanupAllViewers(this.viewerCleanupFns, this.viewerClones);
     }
   }
 
@@ -281,6 +279,39 @@ export class SharedCardRenderer {
    * @param hoverParent - Parent object for hover-link event
    * @param keyboardNav - Optional keyboard navigation config
    */
+  /**
+   * Measure title text-box trim amount using a probe element.
+   * Called once per view, result cached for all cards.
+   */
+  private measureTitleTrim(container: HTMLElement): void {
+    if (this.titleTrimAmount !== null) return;
+
+    // Create probe with same structure as title
+    const probe = container.createDiv("card");
+    const titleProbe = probe.createDiv("card-title");
+    const textProbe = titleProbe.createSpan("card-title-text");
+    textProbe.textContent = "Xg"; // Cap height + descender
+    probe.style.position = "absolute";
+    probe.style.pointerEvents = "none";
+
+    // Force layout
+    void probe.offsetHeight;
+
+    // Measure without text-box (natural height)
+    const beforeHeight = textProbe.getBoundingClientRect().height;
+
+    // Apply text-box and measure trimmed height
+    textProbe.style.setProperty("text-box", "trim-both cap text");
+    void probe.offsetHeight; // Force reflow
+    const afterHeight = textProbe.getBoundingClientRect().height;
+
+    this.titleTrimAmount = beforeHeight - afterHeight;
+    console.log(
+      `[measureTitleTrim] before=${beforeHeight.toFixed(1)} after=${afterHeight.toFixed(1)} trim=${this.titleTrimAmount.toFixed(1)}`,
+    );
+    probe.remove();
+  }
+
   renderCard(
     container: HTMLElement,
     card: CardData,
@@ -296,6 +327,9 @@ export class SharedCardRenderer {
       onHoverEnd?: () => void;
     },
   ): void {
+    // Measure title trim once per view (before first card)
+    this.measureTitleTrim(container);
+
     // Create card element
     const cardEl = container.createDiv("card");
 
@@ -666,8 +700,13 @@ export class SharedCardRenderer {
           setupElementScrollGradient(titleEl, signal);
         }
 
-        // Sync container height to match text-box trimmed text
-        if (textEl) {
+        // Sync container height using cached trim amount
+        if (
+          textEl &&
+          this.titleTrimAmount !== null &&
+          this.titleTrimAmount > 0
+        ) {
+          const trimAmount = this.titleTrimAmount;
           let lastWidth = 0;
           let synced = false;
 
@@ -677,24 +716,14 @@ export class SharedCardRenderer {
 
             // Clear previous height to measure natural container height
             titleEl.style.height = "";
-            const textHeight = textEl.getBoundingClientRect().height;
             const containerHeight = titleEl.getBoundingClientRect().height;
 
-            if (textHeight > 0) {
-              if (textHeight <= containerHeight) {
-                // Single/few lines: use text height (already trimmed by text-box)
-                console.log(`[titleSync] "${card.title.slice(0, 20)}" single-line: text=${textHeight.toFixed(1)} container=${containerHeight.toFixed(1)} -> ${textHeight.toFixed(1)}`);
-                titleEl.style.height = `${textHeight}px`;
-              } else {
-                // Multi-line clamped: text overflows container, apply fixed trim
-                const lineHeight = parseFloat(
-                  getComputedStyle(textEl).lineHeight,
-                );
-                const trimAmount = lineHeight * 0.1;
-                const newHeight = containerHeight - trimAmount;
-                console.log(`[titleSync] "${card.title.slice(0, 20)}" clamped: text=${textHeight.toFixed(1)} container=${containerHeight.toFixed(1)} -> ${newHeight.toFixed(1)}`);
-                titleEl.style.height = `${newHeight}px`;
-              }
+            if (containerHeight > trimAmount) {
+              const newHeight = containerHeight - trimAmount;
+              console.log(
+                `[titleSync] "${card.title.slice(0, 20)}" container=${containerHeight.toFixed(1)} trim=${trimAmount.toFixed(1)} -> ${newHeight.toFixed(1)}`,
+              );
+              titleEl.style.height = `${newHeight}px`;
             }
           };
 

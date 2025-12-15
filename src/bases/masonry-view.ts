@@ -973,7 +973,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.scrollResizeObserver) {
       this.scrollResizeObserver.disconnect();
     }
-    this.cardRenderer.cleanup();
+    this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
 
   focus(): void {
