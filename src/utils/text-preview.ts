@@ -190,14 +190,14 @@ export function stripMarkdownSyntax(text: string): string {
 /**
  * Sanitize markdown content for preview display
  * @param content - Raw markdown content
- * @param omitFirstLine - Whether to always omit the first line
+ * @param omitFirstLine - When to omit first line: "always", "ifMatchesTitle", or "never"
  * @param filename - Optional filename to compare against first line
  * @param titleValue - Optional title value to compare against first line
  * @returns Sanitized preview text (max 1000 chars)
  */
 export function sanitizeForPreview(
   content: string,
-  omitFirstLine: boolean = false,
+  omitFirstLine: "always" | "ifMatchesTitle" | "never" = "ifMatchesTitle",
   filename?: string,
   titleValue?: string,
 ): string {
@@ -211,12 +211,14 @@ export function sanitizeForPreview(
     firstLineEnd !== -1 ? stripped.substring(0, firstLineEnd) : stripped
   ).trim();
 
-  // Omit first line if it matches filename/title or if omitFirstLine enabled
-  if (
-    omitFirstLine ||
-    (filename && firstLine === filename) ||
-    (titleValue && firstLine === titleValue)
-  ) {
+  // Determine whether to omit first line based on setting
+  const shouldOmit =
+    omitFirstLine === "always" ||
+    (omitFirstLine === "ifMatchesTitle" &&
+      ((filename && firstLine === filename) ||
+        (titleValue && firstLine === titleValue)));
+
+  if (shouldOmit) {
     stripped =
       firstLineEnd !== -1 ? stripped.substring(firstLineEnd + 1).trim() : "";
   }
@@ -258,7 +260,7 @@ export async function loadFilePreview(
   propertyValue: unknown,
   settings: {
     fallbackToContent: boolean;
-    omitFirstLine: boolean;
+    omitFirstLine: "always" | "ifMatchesTitle" | "never";
   },
   fileName?: string,
   titleValue?: string,

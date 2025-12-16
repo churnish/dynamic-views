@@ -70,16 +70,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-element-spacing
-        title: Card element spacing
-        description: Spacing between elements within cards
-        type: variable-number-slider
-        default: 8
-        min: 0
-        max: 24
-        step: 1
-        format: px
-    -
         id: dynamic-views-card-padding
         title: Card padding
         description: Padding from card edges to content
@@ -1322,15 +1312,24 @@ body {
   );
 }
 
-/* ============================================
-   PLUGIN SETTINGS STYLES
-   ============================================ */
+/* Appearance section description styling */
+.dynamic-views-appearance-group .setting-item-description {
+  padding-top: 0;
+}
 
-/* Add border-bottom to Appearance heading */
-.dynamic-views-appearance-heading {
-  border-bottom: 1px solid var(--background-modifier-border);
-  padding-bottom: 12px;
-  margin-bottom: 12px;
+.dynamic-views-appearance-group .setting-item-description:first-child {
+  margin-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:last-child {
+  margin-bottom: 0;
+}
+
+.dynamic-views-appearance-group .setting-items {
+  margin-bottom: 0;
+  background-color: transparent;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
 }
 
 /* ============================================
@@ -2731,7 +2730,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   ~ .card-properties-bottom,
 .dynamic-views .dynamic-views-grid .card .card-title ~ .card-properties-bottom {
   margin-top: auto;
-  padding-top: var(--dynamic-views-element-spacing, 8px);
+  padding-top: var(--size-4-2);
 }
 
 /* Grid mode: only-child pushes to bottom but needs no padding (no sibling above) */
@@ -2861,7 +2860,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   .card:not(.image-format-cover)
   > *
   + *:not(.card-properties-bottom) {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
+  margin-top: var(--size-4-2);
 }
 
 /* Fix spacing when title hidden: properties-top visually precedes card-content due to flexbox order,
@@ -2871,7 +2870,7 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     .card-properties-top
   )
   .card-content {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
+  margin-top: var(--size-4-2);
 }
 
 /* Remove owl-pattern margin from properties-top when it's visually first (title hidden) */
@@ -2950,7 +2949,7 @@ body.dynamic-views-ambient-background
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--dynamic-views-element-spacing, 8px);
+  gap: var(--size-4-2);
 }
 
 .dynamic-views .card-title {
@@ -3019,7 +3018,7 @@ body.dynamic-views-file-type-ext
 
 .dynamic-views .card-title-icon {
   float: left;
-  margin-right: 0.35em;
+  margin-right: var(--size-4-1);
   display: none;
 }
 
@@ -3045,7 +3044,7 @@ body.dynamic-views-file-type-badge .dynamic-views .card-title-ext {
   pointer-events: none;
   cursor: default;
   float: left;
-  margin-right: 4px;
+  margin-right: var(--size-4-1);
 }
 
 body.dynamic-views-file-type-badge .dynamic-views .card-title-ext::before {
@@ -3079,14 +3078,6 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   display: none;
 }
 
-/* Trim outer leading for consistent visual spacing on title text elements */
-.dynamic-views .card-title a,
-.dynamic-views .card-title .card-title-link,
-.dynamic-views .card-title .card-title-text {
-  line-height: var(--line-height-tight);
-  text-box: trim-both cap text;
-}
-
 .dynamic-views .card-title a,
 .dynamic-views .card-title .card-title-link {
   text-decoration: none;
@@ -3114,6 +3105,12 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     text-decoration: underline;
     text-decoration-color: var(--_title-color);
   }
+}
+
+/* Fixed gap between title and subtitle (higher specificity to override owl selector) */
+.dynamic-views .card .card-title + .card-subtitle,
+.dynamic-views .card .card-title-container + .card-subtitle {
+  margin-top: var(--size-2-1);
 }
 
 .dynamic-views .card-subtitle {
@@ -3219,14 +3216,14 @@ body.dynamic-views-subtitle-overflow-scroll
 
 /* Subtitle divider line (shown when class-toggle is ON) */
 body.dynamic-views-subtitle-divider .dynamic-views .card-subtitle {
-  padding-bottom: var(--dynamic-views-element-spacing, 8px);
+  padding-bottom: var(--size-4-2);
   border-bottom: 1px solid var(--hr-color);
 }
 
 .dynamic-views .card-content {
   display: flex;
   flex-direction: row;
-  gap: var(--dynamic-views-element-spacing, 8px);
+  gap: var(--size-4-2);
   order: 0; /* Between properties-top (-50) and properties-bottom (50) */
 }
 
@@ -3479,7 +3476,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
 body:not(.dynamic-views-image-viewer-disabled).is-mobile
   > .dynamic-views-image-embed.is-zoomed
   img {
-  max-height: 85vh;
+  max-height: 80vh;
 }
 /* Desktop: also limit width */
 body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
@@ -3716,7 +3713,7 @@ body.dynamic-views-masonry-fixed-cover-height.dynamic-views-show-cover-placehold
   padding: var(--dynamic-views-card-padding, 12px); /* Card edge padding */
   display: flex;
   flex-direction: column;
-  gap: var(--dynamic-views-element-spacing, 8px); /* Default element spacing */
+  gap: var(--size-4-2); /* Default element spacing */
 }
 
 /* Cards with actual cover (not placeholder): no flexbox gap (margins control spacing) */
@@ -3758,7 +3755,7 @@ body.dynamic-views-show-cover-placeholder-both
 /* Card content flex setup */
 .dynamic-views .card.image-format-cover .card-content {
   flex-direction: row;
-  gap: var(--dynamic-views-element-spacing, 8px);
+  gap: var(--size-4-2);
 }
 
 /* Element spacing for cards with actual cover (replaces flexbox gap) */
@@ -3770,7 +3767,7 @@ body.dynamic-views-show-cover-placeholder-both
   )
   > *
   + *:not(.card-cover-wrapper):not(.card-properties-bottom) {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
+  margin-top: var(--size-4-2);
 }
 
 /* Element spacing for cards with visible placeholder */
@@ -3808,7 +3805,7 @@ body.dynamic-views-show-cover-placeholder-both
   .card.image-format-cover:has(.card-cover-wrapper-placeholder)
   > *
   + *:not(.card-cover-wrapper):not(.card-properties-bottom) {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
+  margin-top: var(--size-4-2);
 }
 
 /* ==================== COVER WRAPPER POSITIONING ==================== */
@@ -4938,7 +4935,7 @@ body.dynamic-views-hide-slideshow-indicator
   opacity: 0.7;
   width: 1em;
   height: 1em;
-  margin-right: 0.3em;
+  margin-right: var(--size-4-1);
 }
 
 /* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
@@ -4956,7 +4953,7 @@ body.dynamic-views-hide-slideshow-indicator
   .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: 0.3em;
+  margin-left: var(--size-4-1);
 }
 
 /* Hide icon when "hide" option selected */
@@ -4967,7 +4964,7 @@ body.dynamic-views-timestamp-icon-hide .dynamic-views .timestamp-icon {
 /* When icon is on right for all fields */
 body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
   margin-right: 0;
-  margin-left: 0.3em;
+  margin-left: var(--size-4-1);
 }
 
 /* Center positioning: odd fields show icon on right ONLY in side-by-side */
@@ -4986,7 +4983,7 @@ body.dynamic-views-timestamp-icon-center
   .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: 0.3em;
+  margin-left: var(--size-4-1);
 }
 
 /* Center positioning: even fields show icon on left ONLY in side-by-side */
@@ -5004,7 +5001,7 @@ body.dynamic-views-timestamp-icon-center
   )
   .timestamp-icon {
   order: 0;
-  margin-right: 0.3em;
+  margin-right: var(--size-4-1);
   margin-left: 0;
 }
 
@@ -5023,7 +5020,7 @@ body.dynamic-views-timestamp-icon-left
   )
   .timestamp-icon {
   order: 0;
-  margin-right: 0.3em;
+  margin-right: var(--size-4-1);
   margin-left: 0;
 }
 
@@ -5249,7 +5246,7 @@ body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
 
 .dynamic-views .property-row.property-row-sidebyside {
   flex-direction: row;
-  gap: var(--dynamic-views-element-spacing, 8px);
+  gap: var(--size-4-2);
 }
 
 /* Compact mode: stack side-by-side properties on narrow cards */
@@ -6841,16 +6838,16 @@ body.dynamic-views-no-fade-truncated-text
 
 /* Masonry: Thumbnail top/bottom positioning */
 .dynamic-views .dynamic-views-masonry .card.card-thumbnail-top .card-thumbnail {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
-  margin-bottom: var(--dynamic-views-element-spacing, 8px);
+  margin-top: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
 }
 
 .dynamic-views
   .dynamic-views-masonry
   .card.card-thumbnail-bottom
   .card-thumbnail {
-  margin-top: var(--dynamic-views-element-spacing, 8px);
-  margin-bottom: var(--dynamic-views-element-spacing, 8px);
+  margin-top: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
 }
 
 .dynamic-views .dynamic-views-masonry .card .card-text-preview {
@@ -6870,7 +6867,7 @@ body.dynamic-views-no-fade-truncated-text
   .card-title
   ~ .card-properties-bottom {
   margin-top: auto;
-  padding-top: var(--dynamic-views-element-spacing, 8px);
+  padding-top: var(--size-4-2);
 }
 
 /* Masonry: only-child pushes to bottom but needs no padding (no sibling above) */
@@ -7133,6 +7130,14 @@ body.dynamic-views-no-fade-truncated-text
   }
 }
 
+/* Smart timestamp toggle - remove bottom padding when toggle is off */
+.setting-items
+  > .setting-item:has(+ .smart-timestamp-sub-settings):has(
+    .checkbox-container:not(.is-enabled)
+  ) {
+  padding-bottom: 0;
+}
+
 /* Settings tab indentation */
 .smart-timestamp-sub-settings {
   margin-inline-start: 20px;
@@ -7168,4 +7173,12 @@ body.dynamic-views-no-fade-truncated-text
   justify-content: center;
   gap: 8px;
   line-height: 1;
+}
+
+/* Hide scrollbar during scroll restoration (prevents distracting flicker) */
+.dynamic-views-restoring-scroll {
+  scrollbar-width: none !important;
+}
+.dynamic-views-restoring-scroll::-webkit-scrollbar {
+  display: none !important;
 }

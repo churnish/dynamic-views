@@ -81,7 +81,7 @@ export function measureSideBySideRow(
       return;
     }
 
-    // Read field gap from CSS variable (var(--dynamic-views-element-spacing, 8px))
+    // Read field gap from CSS variable (var(--size-4-2))
     const fieldGap = parseFloat(getComputedStyle(row).gap) || 8;
     const availableWidth = containerWidth - fieldGap;
 

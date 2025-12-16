@@ -322,7 +322,7 @@ describe("content-loader", () => {
         mockApp,
         null,
         true,
-        false,
+        "never",
         textPreviewCache,
       );
 
@@ -338,7 +338,7 @@ describe("content-loader", () => {
         mockApp,
         "preview property",
         true,
-        false,
+        "never",
         textPreviewCache,
       );
 
@@ -346,7 +346,7 @@ describe("content-loader", () => {
         mockFile,
         mockApp,
         "preview property",
-        { fallbackToContent: true, omitFirstLine: false },
+        { fallbackToContent: true, omitFirstLine: "never" },
         undefined,
         undefined,
       );
@@ -362,7 +362,7 @@ describe("content-loader", () => {
         mockApp,
         "preview property",
         true,
-        true,
+        "always",
         textPreviewCache,
         "myFile",
         "My Title",
@@ -372,7 +372,7 @@ describe("content-loader", () => {
         mockFile,
         mockApp,
         "preview property",
-        { fallbackToContent: true, omitFirstLine: true },
+        { fallbackToContent: true, omitFirstLine: "always" },
         "myFile",
         "My Title",
       );
@@ -391,7 +391,7 @@ describe("content-loader", () => {
         mockApp,
         null,
         true,
-        false,
+        "never",
         textPreviewCache,
       );
 
@@ -415,7 +415,7 @@ describe("content-loader", () => {
         mockApp,
         null,
         true,
-        false,
+        "never",
         textPreviewCache,
       );
 
@@ -443,7 +443,7 @@ describe("content-loader", () => {
           { path: "file2.md", file: file2, textPreviewData: "preview2" },
         ],
         true,
-        false,
+        "never",
         mockApp,
         textPreviewCache,
       );

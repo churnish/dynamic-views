@@ -1,7 +1,7 @@
 {
   "id": "dynamic-views",
   "name": "Dynamic Views",
-  "minAppVersion": "1.4.11",
+  "minAppVersion": "1.11.0",
   "description": "Elegant grid and masonry card views for Bases and Datacore.",
   "author": "greetclammy",
   "isDesktopOnly": false,

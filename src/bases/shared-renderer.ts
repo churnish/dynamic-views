@@ -16,7 +16,10 @@ import {
 import { CardData } from "../shared/card-renderer";
 import { resolveBasesProperty } from "../shared/data-transform";
 import { setupImageLoadHandler, handleImageLoad } from "../shared/image-loader";
-import { showFileContextMenu } from "../shared/context-menu";
+import {
+  showFileContextMenu,
+  showExternalLinkContextMenu,
+} from "../shared/context-menu";
 import {
   updateScrollGradient,
   setupScrollGradients,
@@ -133,7 +136,6 @@ export class SharedCardRenderer {
   private cardScopes: Scope[] = [];
   private cardAbortControllers: AbortController[] = [];
   private activeScope: Scope | null = null;
-  private titleTrimAmount: number | null = null;
 
   constructor(
     protected app: App,
@@ -181,7 +183,11 @@ export class SharedCardRenderer {
    * Render text with link detection
    * Uses parseLink utility for comprehensive link detection
    */
-  private renderTextWithLinks(container: HTMLElement, text: string): void {
+  private renderTextWithLinks(
+    container: HTMLElement,
+    text: string,
+    signal?: AbortSignal,
+  ): void {
     const segments = findLinksInText(text);
 
     for (const segment of segments) {
@@ -189,12 +195,16 @@ export class SharedCardRenderer {
         // Wrap text in span to preserve whitespace in flex containers
         container.createSpan({ text: segment.content });
       } else {
-        this.renderLink(container, segment.link);
+        this.renderLink(container, segment.link, signal);
       }
     }
   }
 
-  private renderLink(container: HTMLElement, link: ParsedLink): void {
+  private renderLink(
+    container: HTMLElement,
+    link: ParsedLink,
+    signal?: AbortSignal,
+  ): void {
     // Internal link (wikilink or markdown internal)
     if (link.type === "internal") {
       if (link.isEmbed) {
@@ -202,12 +212,16 @@ export class SharedCardRenderer {
         const embed = container.createSpan({ cls: "internal-embed" });
         embed.dataset.src = link.url;
         embed.setText(link.caption);
-        embed.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const newLeaf = e.metaKey || e.ctrlKey;
-          void this.app.workspace.openLinkText(link.url, "", newLeaf);
-        });
+        embed.addEventListener(
+          "click",
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const newLeaf = e.metaKey || e.ctrlKey;
+            void this.app.workspace.openLinkText(link.url, "", newLeaf);
+          },
+          { signal },
+        );
         return;
       }
       // Regular internal link
@@ -218,19 +232,44 @@ export class SharedCardRenderer {
       });
       el.dataset.href = link.url;
       el.draggable = true;
-      el.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const newLeaf = e.metaKey || e.ctrlKey;
-        void this.app.workspace.openLinkText(link.url, "", newLeaf);
-      });
-      el.addEventListener("dragstart", (e) => {
-        e.stopPropagation();
-        const file = this.app.metadataCache.getFirstLinkpathDest(link.url, "");
-        if (!(file instanceof TFile)) return;
-        const dragData = this.app.dragManager.dragFile(e, file);
-        this.app.dragManager.onDragStart(e, dragData);
-      });
+      el.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const newLeaf = e.metaKey || e.ctrlKey;
+          void this.app.workspace.openLinkText(link.url, "", newLeaf);
+        },
+        { signal },
+      );
+      el.addEventListener(
+        "dragstart",
+        (e) => {
+          e.stopPropagation();
+          const file = this.app.metadataCache.getFirstLinkpathDest(
+            link.url,
+            "",
+          );
+          if (!(file instanceof TFile)) return;
+          const dragData = this.app.dragManager.dragFile(e, file);
+          this.app.dragManager.onDragStart(e, dragData);
+        },
+        { signal },
+      );
+      el.addEventListener(
+        "contextmenu",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const file = this.app.metadataCache.getFirstLinkpathDest(
+            link.url,
+            "",
+          );
+          if (!(file instanceof TFile)) return;
+          showFileContextMenu(e, this.app, file, link.url);
+        },
+        { signal },
+      );
       return;
     }
 
@@ -241,9 +280,13 @@ export class SharedCardRenderer {
         cls: "external-embed",
         attr: { src: link.url, alt: link.caption },
       });
-      img.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
+      img.addEventListener(
+        "click",
+        (e) => {
+          e.stopPropagation();
+        },
+        { signal },
+      );
       return;
     }
     // Regular external link
@@ -257,17 +300,34 @@ export class SharedCardRenderer {
       el.target = "_blank";
       el.rel = "noopener noreferrer";
     }
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-    el.addEventListener("dragstart", (e) => {
-      e.stopPropagation();
-      e.dataTransfer?.clearData();
-      // Bare link (caption === url) → plain URL; captioned → markdown link
-      const dragText =
-        link.caption === link.url ? link.url : `[${link.caption}](${link.url})`;
-      e.dataTransfer?.setData("text/plain", dragText);
-    });
+    el.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+      },
+      { signal },
+    );
+    el.addEventListener(
+      "dragstart",
+      (e) => {
+        e.stopPropagation();
+        e.dataTransfer?.clearData();
+        // Bare link (caption === url) → plain URL; captioned → markdown link
+        const dragText =
+          link.caption === link.url
+            ? link.url
+            : `[${link.caption}](${link.url})`;
+        e.dataTransfer?.setData("text/plain", dragText);
+      },
+      { signal },
+    );
+    el.addEventListener(
+      "contextmenu",
+      (e) => {
+        showExternalLinkContextMenu(e, link.url);
+      },
+      { signal },
+    );
   }
 
   /**
@@ -276,48 +336,13 @@ export class SharedCardRenderer {
    * @param card - Card data
    * @param entry - Bases entry
    * @param settings - View settings
-   * @param hoverParent - Parent object for hover-link event
    * @param keyboardNav - Optional keyboard navigation config
    */
-  /**
-   * Measure title text-box trim amount using a probe element.
-   * Called once per view, result cached for all cards.
-   */
-  private measureTitleTrim(container: HTMLElement): void {
-    if (this.titleTrimAmount !== null) return;
-
-    // Create probe with same structure as title
-    const probe = container.createDiv("card");
-    const titleProbe = probe.createDiv("card-title");
-    const textProbe = titleProbe.createSpan("card-title-text");
-    textProbe.textContent = "Xg"; // Cap height + descender
-    probe.style.position = "absolute";
-    probe.style.pointerEvents = "none";
-
-    // Force layout
-    void probe.offsetHeight;
-
-    // Measure without text-box (natural height)
-    const beforeHeight = textProbe.getBoundingClientRect().height;
-
-    // Apply text-box and measure trimmed height
-    textProbe.style.setProperty("text-box", "trim-both cap text");
-    void probe.offsetHeight; // Force reflow
-    const afterHeight = textProbe.getBoundingClientRect().height;
-
-    this.titleTrimAmount = beforeHeight - afterHeight;
-    console.log(
-      `[measureTitleTrim] before=${beforeHeight.toFixed(1)} after=${afterHeight.toFixed(1)} trim=${this.titleTrimAmount.toFixed(1)}`,
-    );
-    probe.remove();
-  }
-
   renderCard(
     container: HTMLElement,
     card: CardData,
     entry: BasesEntry,
     settings: Settings,
-    hoverParent: unknown,
     keyboardNav?: {
       index: number;
       focusableCardIndex: number;
@@ -327,9 +352,6 @@ export class SharedCardRenderer {
       onHoverEnd?: () => void;
     },
   ): void {
-    // Measure title trim once per view (before first card)
-    this.measureTitleTrim(container);
-
     // Create card element
     const cardEl = container.createDiv("card");
 
@@ -529,12 +551,13 @@ export class SharedCardRenderer {
     }
 
     // Handle hover for page preview (only on card when openFileAction is 'card')
+    // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
     if (effectiveOpenFileAction === "card") {
-      cardEl.addEventListener("mouseover", (e) => {
+      cardEl.addEventListener("mouseenter", (e) => {
         this.app.workspace.trigger("hover-link", {
           event: e,
           source: "bases",
-          hoverParent: hoverParent,
+          hoverParent: { hoverPopover: null },
           targetEl: cardEl,
           linktext: card.path,
         });
@@ -626,12 +649,12 @@ export class SharedCardRenderer {
             );
           });
 
-          // Page preview on hover
-          link.addEventListener("mouseover", (e) => {
+          // Page preview on hover (mouseenter to prevent bubbling)
+          link.addEventListener("mouseenter", (e) => {
             this.app.workspace.trigger("hover-link", {
               event: e,
               source: "bases",
-              hoverParent: hoverParent,
+              hoverParent: { hoverPopover: null },
               targetEl: link,
               linktext: card.path,
               sourcePath: card.path,
@@ -698,46 +721,6 @@ export class SharedCardRenderer {
           )
         ) {
           setupElementScrollGradient(titleEl, signal);
-        }
-
-        // Sync container height using cached trim amount
-        if (
-          textEl &&
-          this.titleTrimAmount !== null &&
-          this.titleTrimAmount > 0
-        ) {
-          const trimAmount = this.titleTrimAmount;
-          let lastWidth = 0;
-          let synced = false;
-
-          const syncHeight = () => {
-            if (synced) return;
-            synced = true;
-
-            // Clear previous height to measure natural container height
-            titleEl.style.height = "";
-            const containerHeight = titleEl.getBoundingClientRect().height;
-
-            if (containerHeight > trimAmount) {
-              const newHeight = containerHeight - trimAmount;
-              console.log(
-                `[titleSync] "${card.title.slice(0, 20)}" container=${containerHeight.toFixed(1)} trim=${trimAmount.toFixed(1)} -> ${newHeight.toFixed(1)}`,
-              );
-              titleEl.style.height = `${newHeight}px`;
-            }
-          };
-
-          const titleObserver = new ResizeObserver((entries) => {
-            const width = entries[0]?.contentRect.width ?? 0;
-            // Re-sync when width changes (line count may change)
-            if (width > 0 && width !== lastWidth) {
-              lastWidth = width;
-              synced = false;
-              requestAnimationFrame(syncHeight);
-            }
-          });
-          titleObserver.observe(titleEl);
-          this.propertyObservers.push(titleObserver);
         }
       }
 
@@ -921,6 +904,7 @@ export class SharedCardRenderer {
 
           // Observe the card element for size changes
           resizeObserver.observe(cardEl);
+          this.propertyObservers.push(resizeObserver);
         });
       }
     }
@@ -2102,7 +2086,7 @@ export class SharedCardRenderer {
           arrayData.items.forEach((item, idx) => {
             const span = listWrapper.createSpan();
             const listItem = span.createSpan({ cls: "list-item" });
-            this.renderTextWithLinks(listItem, item);
+            this.renderTextWithLinks(listItem, item, signal);
             if (idx < arrayData.items.length - 1) {
               span.createSpan({ cls: "list-separator", text: separator });
             }
@@ -2316,7 +2300,7 @@ export class SharedCardRenderer {
     } else {
       // Generic property - wrap in div for proper scrolling (consistent with tags/paths)
       const textWrapper = propertyContent.createDiv("text-wrapper");
-      this.renderTextWithLinks(textWrapper, stringValue);
+      this.renderTextWithLinks(textWrapper, stringValue, signal);
     }
 
     // Remove propertyContent wrapper if it ended up empty (e.g., tags with no values)

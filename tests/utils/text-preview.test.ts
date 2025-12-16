@@ -280,33 +280,49 @@ Regular text`;
       expect(result.endsWith("…")).toBe(false);
     });
 
-    it("should omit first line when omitFirstLine is true", () => {
+    it("should omit first line when omitFirstLine is always", () => {
       const input = `First line
 Second line
 Third line`;
-      const result = sanitizeForPreview(input, true);
+      const result = sanitizeForPreview(input, "always");
       expect(result).toBe("Second line Third line");
     });
 
-    it("should omit first line when it matches filename", () => {
+    it("should omit first line when it matches filename (ifMatchesTitle)", () => {
       const input = `My File
 Content here`;
-      const result = sanitizeForPreview(input, false, "My File");
+      const result = sanitizeForPreview(input, "ifMatchesTitle", "My File");
       expect(result).toBe("Content here");
     });
 
-    it("should omit first line when it matches title value", () => {
+    it("should omit first line when it matches title value (ifMatchesTitle)", () => {
       const input = `Page Title
 Content here`;
-      const result = sanitizeForPreview(input, false, undefined, "Page Title");
+      const result = sanitizeForPreview(
+        input,
+        "ifMatchesTitle",
+        undefined,
+        "Page Title",
+      );
       expect(result).toBe("Content here");
     });
 
-    it("should not omit first line when it does not match", () => {
+    it("should not omit first line when it does not match (ifMatchesTitle)", () => {
       const input = `Different Title
 Content here`;
-      const result = sanitizeForPreview(input, false, "Another Title");
+      const result = sanitizeForPreview(
+        input,
+        "ifMatchesTitle",
+        "Another Title",
+      );
       expect(result).toBe("Different Title Content here");
+    });
+
+    it("should never omit first line when omitFirstLine is never", () => {
+      const input = `My File
+Content here`;
+      const result = sanitizeForPreview(input, "never", "My File");
+      expect(result).toBe("My File Content here");
     });
 
     it("should handle empty content", () => {
@@ -413,7 +429,7 @@ After`;
         mockFile,
         mockApp,
         "Property description",
-        { fallbackToContent: true, omitFirstLine: false },
+        { fallbackToContent: true, omitFirstLine: "never" },
       );
 
       expect(result).toBe("Property description");
@@ -422,7 +438,7 @@ After`;
     it("should return property value if valid number", async () => {
       const result = await loadFilePreview(mockFile, mockApp, 42, {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("42");
@@ -433,7 +449,7 @@ After`;
         mockFile,
         mockApp,
         "  Property value  ",
-        { fallbackToContent: true, omitFirstLine: false },
+        { fallbackToContent: true, omitFirstLine: "never" },
       );
 
       expect(result).toBe("Property value");
@@ -444,7 +460,7 @@ After`;
 
       const result = await loadFilePreview(mockFile, mockApp, null, {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("File content");
@@ -456,7 +472,7 @@ After`;
 
       const result = await loadFilePreview(mockFile, mockApp, undefined, {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("File content");
@@ -467,7 +483,7 @@ After`;
 
       const result = await loadFilePreview(mockFile, mockApp, "", {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("File content");
@@ -478,7 +494,7 @@ After`;
 
       const result = await loadFilePreview(mockFile, mockApp, "   ", {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("File content");
@@ -487,25 +503,25 @@ After`;
     it("should return empty string when no property and fallback disabled", async () => {
       const result = await loadFilePreview(mockFile, mockApp, null, {
         fallbackToContent: false,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("");
     });
 
-    it("should pass omitFirstLine to sanitizeForPreview", async () => {
+    it("should pass omitFirstLine always to sanitizeForPreview", async () => {
       mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`First line
 Second line`);
 
       const result = await loadFilePreview(mockFile, mockApp, null, {
         fallbackToContent: true,
-        omitFirstLine: true,
+        omitFirstLine: "always",
       });
 
       expect(result).toBe("Second line");
     });
 
-    it("should pass fileName to sanitizeForPreview", async () => {
+    it("should pass fileName to sanitizeForPreview (ifMatchesTitle)", async () => {
       mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`My File
 Content`);
 
@@ -513,14 +529,14 @@ Content`);
         mockFile,
         mockApp,
         null,
-        { fallbackToContent: true, omitFirstLine: false },
+        { fallbackToContent: true, omitFirstLine: "ifMatchesTitle" },
         "My File",
       );
 
       expect(result).toBe("Content");
     });
 
-    it("should pass titleValue to sanitizeForPreview", async () => {
+    it("should pass titleValue to sanitizeForPreview (ifMatchesTitle)", async () => {
       mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`Title Here
 Content`);
 
@@ -528,7 +544,7 @@ Content`);
         mockFile,
         mockApp,
         null,
-        { fallbackToContent: true, omitFirstLine: false },
+        { fallbackToContent: true, omitFirstLine: "ifMatchesTitle" },
         undefined,
         "Title Here",
       );
@@ -547,7 +563,7 @@ title: Test
 
       const result = await loadFilePreview(mockFile, mockApp, null, {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).not.toContain("**");
@@ -565,7 +581,7 @@ title: Test
       await expect(
         loadFilePreview(mockFile, mockApp, null, {
           fallbackToContent: true,
-          omitFirstLine: false,
+          omitFirstLine: "never",
         }),
       ).rejects.toThrow("Read failed");
     });
@@ -577,7 +593,7 @@ title: Test
         mockFile,
         mockApp,
         "Property value",
-        { fallbackToContent: true, omitFirstLine: false },
+        { fallbackToContent: true, omitFirstLine: "never" },
       );
 
       expect(result).toBe("Property value");
@@ -587,7 +603,7 @@ title: Test
     it("should handle number 0 as valid property value", async () => {
       const result = await loadFilePreview(mockFile, mockApp, 0, {
         fallbackToContent: true,
-        omitFirstLine: false,
+        omitFirstLine: "never",
       });
 
       expect(result).toBe("0");

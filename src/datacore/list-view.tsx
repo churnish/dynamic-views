@@ -81,7 +81,7 @@ export function ListView({
                     app.workspace.trigger("hover-link", {
                       event: e,
                       source: "file-explorer",
-                      hoverParent: e.currentTarget,
+                      hoverParent: { hoverPopover: null },
                       targetEl: e.currentTarget,
                       linktext: p.$path,
                       sourcePath: p.$path,

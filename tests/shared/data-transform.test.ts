@@ -36,7 +36,7 @@ describe("data-transform", () => {
       createdTimeProperty: "",
       modifiedTimeProperty: "",
       fallbackToInNote: true,
-      omitFirstLine: false,
+      omitFirstLine: "ifMatchesTitle",
     } as Settings;
 
     mockApp = new App();

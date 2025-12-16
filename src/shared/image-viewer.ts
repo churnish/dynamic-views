@@ -197,6 +197,26 @@ function openImageViewer(
 
   viewerClones.set(embedEl, cloneEl);
 
+  // Watch for Obsidian modals opening (command palette, settings, etc.)
+  const modalObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (
+          node instanceof HTMLElement &&
+          node.matches(".modal-container, .prompt")
+        ) {
+          if (isFullscreen) {
+            closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
+          } else {
+            cloneEl.style.zIndex = "0";
+          }
+          return;
+        }
+      }
+    }
+  });
+  modalObserver.observe(document.body, { childList: true });
+
   // Only setup pinch/gesture zoom if not disabled
   const isPinchZoomDisabled = document.body.classList.contains(
     "dynamic-views-zoom-disabled",
@@ -239,6 +259,7 @@ function openImageViewer(
     }
   } catch (error) {
     console.error("Failed to setup image viewer", error);
+    modalObserver.disconnect();
     cloneEl.remove();
     viewerClones.delete(embedEl);
     return;
@@ -246,17 +267,24 @@ function openImageViewer(
 
   // Track multi-touch gesture state to prevent pinch from triggering close
   let gestureInProgress = false;
+  let gestureTimeoutId: ReturnType<typeof setTimeout> | null = null;
   const onTouchStart = (e: TouchEvent) => {
     if (e.touches.length > 1) {
       gestureInProgress = true;
+      // Clear any pending reset since gesture is active
+      if (gestureTimeoutId !== null) {
+        clearTimeout(gestureTimeoutId);
+        gestureTimeoutId = null;
+      }
     }
   };
   const onTouchEnd = (e: TouchEvent) => {
     // Only clear gesture flag when all fingers lifted
     if (e.touches.length === 0) {
       // Short delay to ensure click event doesn't fire during gesture completion
-      setTimeout(() => {
+      gestureTimeoutId = setTimeout(() => {
         gestureInProgress = false;
+        gestureTimeoutId = null;
       }, 50);
     }
   };
@@ -321,8 +349,13 @@ function openImageViewer(
       cloneEl.removeEventListener("touchstart", onTouchStart);
       cloneEl.removeEventListener("touchend", onTouchEnd);
     }
+    // Clear pending gesture timeout to prevent dangling callbacks
+    if (gestureTimeoutId !== null) {
+      clearTimeout(gestureTimeoutId);
+    }
     if (resizeObserver) {
       resizeObserver.disconnect();
     }
+    modalObserver.disconnect();
   });
 }

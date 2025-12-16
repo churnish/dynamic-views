@@ -39,8 +39,20 @@ declare module "obsidian" {
 
 export const GRID_VIEW_TYPE = "dynamic-views-grid";
 
+// Module-level storage for first visible card - survives view instance recreation
+// Keyed by leaf.id (stable across tab switches)
+interface SavedScrollState {
+  path: string;
+  offset: number;
+  width: number;
+  height: number;
+}
+const savedScrollState = new Map<string, SavedScrollState>();
+
 export class DynamicViewsCardView extends BasesView {
   readonly type = GRID_VIEW_TYPE;
+  private scrollEl: HTMLElement;
+  private leafId: string;
   private containerEl: HTMLElement;
   private plugin: DynamicViewsPlugin;
   private textPreviews: Record<string, string> = {};
@@ -69,6 +81,10 @@ export class DynamicViewsCardView extends BasesView {
   private renderVersion: number = 0;
   // AbortController for async content loading
   private abortController: AbortController | null = null;
+  // Track scroll state for restoration
+  private savedState: SavedScrollState | null = null;
+  // Flag to skip scroll save during tab switch (prevents corrupted saves)
+  private isTabSwitching: boolean = false;
 
   /** Calculate initial card count based on container dimensions */
   private calculateInitialCount(settings: Settings): number {
@@ -97,6 +113,11 @@ export class DynamicViewsCardView extends BasesView {
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
     super(controller);
+    // Store scroll parent reference for scroll preservation across tab switches
+    this.scrollEl = scrollEl;
+    // Get stable leaf ID for scroll position storage
+    const leaf = this.app.workspace.getLeaf();
+    this.leafId = (leaf as unknown as { id: string })?.id ?? "";
     // Create container inside scroll parent (critical for embedded views)
     this.containerEl = scrollEl.createDiv({
       cls: "dynamic-views dynamic-views-bases-container",
@@ -138,6 +159,84 @@ export class DynamicViewsCardView extends BasesView {
       },
     );
     this.register(cleanupKeyboard);
+
+    // Listen for tab switches to prevent scroll save during reset
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        this.isTabSwitching = true;
+        // Re-enable after scroll reset completes
+        setTimeout(() => {
+          this.isTabSwitching = false;
+        }, 100);
+      }),
+    );
+
+    // Track first visible card on scroll (more reliable than pixel position)
+    const scrollSaveHandler = () => {
+      // Skip save during tab switch (scroll resets to 0 during switch, would corrupt saved position)
+      if (
+        !this.feedContainerRef.current ||
+        this.scrollEl.scrollTop === 0 ||
+        this.isTabSwitching
+      )
+        return;
+
+      // Find topmost-leftmost visible card
+      const cards =
+        this.feedContainerRef.current.querySelectorAll<HTMLElement>(".card");
+      const scrollTop = this.scrollEl.scrollTop;
+      const viewportBottom = scrollTop + this.scrollEl.clientHeight;
+
+      let firstVisible: { path: string; top: number; left: number } | null =
+        null;
+
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const containerRect = this.scrollEl.getBoundingClientRect();
+        const cardTop = rect.top - containerRect.top + scrollTop;
+        const cardBottom = cardTop + rect.height;
+
+        // Card is visible if any part is in viewport
+        if (cardBottom > scrollTop && cardTop < viewportBottom) {
+          const path = card.dataset.path;
+          if (path) {
+            if (
+              !firstVisible ||
+              cardTop < firstVisible.top ||
+              (cardTop === firstVisible.top && rect.left < firstVisible.left)
+            ) {
+              firstVisible = { path, top: cardTop, left: rect.left };
+            }
+          }
+        }
+      }
+
+      if (firstVisible) {
+        const offset = scrollTop - firstVisible.top;
+        const state: SavedScrollState = {
+          path: firstVisible.path,
+          offset,
+          width: this.scrollEl.clientWidth,
+          height: this.scrollEl.clientHeight,
+        };
+        this.savedState = state;
+        if (this.leafId) {
+          savedScrollState.set(this.leafId, state);
+        }
+      }
+    };
+    this.scrollEl.addEventListener("scroll", scrollSaveHandler, {
+      passive: true,
+    });
+    this.register(() =>
+      this.scrollEl.removeEventListener("scroll", scrollSaveHandler),
+    );
+
+    // Restore savedState from Map for cross-tab-switch restoration
+    const saved = this.leafId ? savedScrollState.get(this.leafId) : null;
+    if (saved) {
+      this.savedState = saved;
+    }
   }
 
   onload(): void {
@@ -156,6 +255,71 @@ export class DynamicViewsCardView extends BasesView {
       // Guard: skip if batch loading in progress to prevent race conditions
       // The batch append will handle rendering new entries
       if (this.isLoading) {
+        return;
+      }
+
+      // Guard: skip full re-render if content already exists (returning to tab)
+      if (this.feedContainerRef.current?.children.length && this.savedState) {
+        const dimsMatch =
+          this.scrollEl.clientWidth === this.savedState.width &&
+          this.scrollEl.clientHeight === this.savedState.height;
+
+        // Hide scrollbar during restoration to prevent flicker
+        this.scrollEl.classList.add("dynamic-views-restoring-scroll");
+
+        if (dimsMatch) {
+          // Dims unchanged - positions valid, restore immediately with offset
+          const card = this.feedContainerRef.current.querySelector<HTMLElement>(
+            `.card[data-path="${CSS.escape(this.savedState.path)}"]`,
+          );
+          if (card) {
+            const containerRect = this.scrollEl.getBoundingClientRect();
+            const cardRect = card.getBoundingClientRect();
+            const cardTop =
+              cardRect.top - containerRect.top + this.scrollEl.scrollTop;
+            const targetScroll = cardTop + this.savedState.offset;
+            this.scrollEl.scrollTop = targetScroll;
+          }
+          // Show scrollbar after restoration
+          requestAnimationFrame(() => {
+            this.scrollEl.classList.remove("dynamic-views-restoring-scroll");
+          });
+        } else {
+          // Dims changed - grid auto-adjusts columns, just need to find card and scroll
+          // Use double RAF to ensure layout has settled after resize
+          const savedPath = this.savedState.path;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (!this.feedContainerRef.current) {
+                this.scrollEl.classList.remove(
+                  "dynamic-views-restoring-scroll",
+                );
+                return;
+              }
+
+              const card =
+                this.feedContainerRef.current.querySelector<HTMLElement>(
+                  `.card[data-path="${CSS.escape(savedPath)}"]`,
+                );
+              if (card) {
+                const containerRect = this.scrollEl.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                const cardTop =
+                  cardRect.top - containerRect.top + this.scrollEl.scrollTop;
+                const gap = getCardSpacing(this.containerEl);
+                const maxScroll =
+                  this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
+                const targetScroll = Math.min(
+                  Math.floor(cardTop - gap),
+                  maxScroll,
+                );
+                this.scrollEl.scrollTop = targetScroll;
+              }
+              // Show scrollbar after restoration
+              this.scrollEl.classList.remove("dynamic-views-restoring-scroll");
+            });
+          });
+        }
         return;
       }
 
@@ -205,9 +369,6 @@ export class DynamicViewsCardView extends BasesView {
         "--dynamic-views-image-aspect-ratio",
         String(settings.imageAspectRatio),
       );
-
-      // Save scroll position before re-rendering
-      const savedScrollTop = this.containerEl.scrollTop;
 
       // Transform to CardData (only visible entries)
       const sortMethod = getSortMethod(this.config);
@@ -322,11 +483,6 @@ export class DynamicViewsCardView extends BasesView {
       // Track state for batch append
       this.previousDisplayedCount = displayedSoFar;
 
-      // Restore scroll position after rendering
-      if (savedScrollTop > 0) {
-        this.containerEl.scrollTop = savedScrollTop;
-      }
-
       // Setup infinite scroll
       this.setupInfiniteScroll(allEntries.length, settings);
 
@@ -362,7 +518,7 @@ export class DynamicViewsCardView extends BasesView {
     index: number,
     settings: Settings,
   ): void {
-    this.cardRenderer.renderCard(container, card, entry, settings, this, {
+    this.cardRenderer.renderCard(container, card, entry, settings, {
       index,
       focusableCardIndex: this.focusableCardIndex,
       containerRef: this.feedContainerRef,
@@ -614,6 +770,8 @@ export class DynamicViewsCardView extends BasesView {
   }
 
   onunload(): void {
+    // Don't delete scroll position from Map - we need it for tab switch restoration
+    // Map entries are cleaned up when leaf is actually closed (not on tab switch)
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }

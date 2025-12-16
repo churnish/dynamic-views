@@ -38,7 +38,10 @@ import {
   setupImagePreload,
   setupSwipeGestures,
 } from "./slideshow-utils";
-import { showFileContextMenu } from "./context-menu";
+import {
+  showFileContextMenu,
+  showExternalLinkContextMenu,
+} from "./context-menu";
 import {
   updateScrollGradient,
   setupScrollGradients,
@@ -203,6 +206,14 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
           const dragData = app.dragManager.dragFile(e, file);
           app.dragManager.onDragStart(e, dragData);
         }}
+        onContextMenu={(e: MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const file = app.metadataCache.getFirstLinkpathDest(link.url, "");
+          if (file instanceof TFile) {
+            showFileContextMenu(e, app, file, link.url);
+          }
+        }}
       >
         {link.caption}
       </a>
@@ -243,6 +254,9 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
             ? link.url
             : `[${link.caption}](${link.url})`;
         e.dataTransfer?.setData("text/plain", dragText);
+      }}
+      onContextMenu={(e: MouseEvent) => {
+        showExternalLinkContextMenu(e, link.url);
       }}
     >
       {link.caption}
@@ -1387,7 +1401,7 @@ function Card({
           app.workspace.trigger("hover-link", {
             event: e,
             source: "file-explorer",
-            hoverParent: e.currentTarget,
+            hoverParent: { hoverPopover: null },
             targetEl: e.currentTarget,
             linktext: card.path,
             sourcePath: card.path,

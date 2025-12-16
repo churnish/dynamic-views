@@ -137,7 +137,7 @@ export async function loadImagesForEntries(
  * @param app - Obsidian app instance
  * @param textPreviewData - Text preview property value
  * @param fallbackToContent - Whether to fall back to file content if no text preview
- * @param omitFirstLine - Whether to omit first line from preview
+ * @param omitFirstLine - When to omit first line from preview
  * @param textPreviewCache - Cache object to store loaded text previews
  * @param fileName - Optional file name for title comparison (Datacore only)
  * @param titleString - Optional title string for first line comparison (Datacore only)
@@ -148,7 +148,7 @@ export async function loadTextPreviewForEntry(
   app: App,
   textPreviewData: unknown,
   fallbackToContent: boolean,
-  omitFirstLine: boolean,
+  omitFirstLine: "always" | "ifMatchesTitle" | "never",
   textPreviewCache: Record<string, string>,
   fileName?: string,
   titleString?: string,
@@ -186,14 +186,14 @@ export async function loadTextPreviewForEntry(
  *
  * @param entries - Array of entries with path, file, and textPreviewData
  * @param fallbackToContent - Whether to fall back to file content if no text preview
- * @param omitFirstLine - Whether to omit first line from preview
+ * @param omitFirstLine - When to omit first line from preview
  * @param app - Obsidian app instance
  * @param textPreviewCache - Cache object to store loaded text previews
  */
 export async function loadTextPreviewsForEntries(
   entries: TextPreviewEntry[],
   fallbackToContent: boolean,
-  omitFirstLine: boolean,
+  omitFirstLine: "always" | "ifMatchesTitle" | "never",
   app: App,
   textPreviewCache: Record<string, string>,
 ): Promise<void> {

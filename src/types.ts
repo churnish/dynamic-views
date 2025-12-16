@@ -3,7 +3,7 @@ export interface Settings {
   textPreviewProperty: string;
   imageProperty: string;
   urlProperty: string;
-  omitFirstLine: boolean;
+  omitFirstLine: "always" | "ifMatchesTitle" | "never";
   showTitle: boolean;
   subtitleProperty: string;
   showTextPreview: boolean;

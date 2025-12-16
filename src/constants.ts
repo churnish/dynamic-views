@@ -52,7 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textPreviewProperty: "",
   imageProperty: "",
   urlProperty: "",
-  omitFirstLine: false,
+  omitFirstLine: "ifMatchesTitle",
   showTitle: true,
   subtitleProperty: "",
   showTextPreview: true,
