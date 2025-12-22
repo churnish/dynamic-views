@@ -98,7 +98,6 @@ function removeCodeBlocks(text: string): string {
     const openMatch = result.match(/^(\s*)([`~]{3,})/m);
     if (!openMatch) break;
 
-    const _indent = openMatch[1]; // Captured but unused (kept for clarity)
     const fence = openMatch[2];
     const fenceChar = fence[0];
     const fenceLength = fence.length;
@@ -233,14 +232,10 @@ export function sanitizeForPreview(
 
   // Truncate to 1000 characters (using spread to handle surrogate pairs correctly)
   const chars = [...normalized];
-  const wasTruncated = chars.length > 1000;
-  let preview = wasTruncated ? chars.slice(0, 1000).join("") : normalized;
-
-  if (wasTruncated) {
-    preview += "…";
+  if (chars.length > 1000) {
+    return chars.slice(0, 1000).join("").trimEnd() + "…";
   }
-
-  return preview;
+  return normalized;
 }
 
 /**

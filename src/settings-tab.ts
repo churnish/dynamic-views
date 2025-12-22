@@ -211,7 +211,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
         s
           .setName("Prevent sidebar swipe on mobile")
           .setDesc(
-            "Disable mobile sidebar gestures when a plugin view is open. Prevents unintentional triggers when scrolling horizontally.",
+            "Prevent sidebars from opening unintentionally when scrolling horizontally in a plugin view.",
           )
           .addDropdown((dropdown) =>
             dropdown

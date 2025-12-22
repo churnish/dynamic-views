@@ -5,6 +5,7 @@
 
 import { BasesView, BasesEntry, QueryController } from "obsidian";
 import { CardData } from "../shared/card-renderer";
+import { clearImageMetadataCache } from "../shared/image-loader";
 import { transformBasesEntries } from "../shared/data-transform";
 import {
   readBasesSettings,
@@ -25,8 +26,12 @@ import {
   loadContentForEntries,
   processGroups,
   renderGroupHeader,
+  hasGroupBy,
+  serializeGroupKey,
+  setGroupKeyDataset,
 } from "./utils";
 import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
+import { ScrollPreservation } from "../shared/scroll-preservation";
 import type DynamicViewsPlugin from "../../main";
 import type { Settings } from "../types";
 
@@ -39,15 +44,13 @@ declare module "obsidian" {
 
 export const GRID_VIEW_TYPE = "dynamic-views-grid";
 
-// Simple scroll restoration: stores scrollTop by leafId
-const scrollPositions = new Map<string, number>();
-
 export class DynamicViewsCardView extends BasesView {
   readonly type = GRID_VIEW_TYPE;
   private scrollEl: HTMLElement;
   private leafId: string;
   private containerEl: HTMLElement;
   private plugin: DynamicViewsPlugin;
+  private scrollPreservation: ScrollPreservation;
   private textPreviews: Record<string, string> = {};
   private images: Record<string, string | string[]> = {};
   private hasImageAvailable: Record<string, boolean> = {};
@@ -74,6 +77,8 @@ export class DynamicViewsCardView extends BasesView {
   private renderVersion: number = 0;
   // AbortController for async content loading
   private abortController: AbortController | null = null;
+  // Guard against reentrant ResizeObserver callbacks (#13)
+  private isUpdatingColumns: boolean = false;
 
   /** Calculate initial card count based on container dimensions */
   private calculateInitialCount(settings: Settings): number {
@@ -134,8 +139,9 @@ export class DynamicViewsCardView extends BasesView {
     );
 
     // Watch for Dynamic Views Style Settings changes only
-    const disconnectObserver = setupStyleSettingsObserver(() =>
-      this.onDataUpdated(),
+    const disconnectObserver = setupStyleSettingsObserver(
+      () => this.onDataUpdated(),
+      clearImageMetadataCache,
     );
     this.register(disconnectObserver);
 
@@ -149,48 +155,14 @@ export class DynamicViewsCardView extends BasesView {
     );
     this.register(cleanupKeyboard);
 
-    // Hide/show scroll container on tab switch to prevent flash
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", (leaf) => {
-        const leafId = (leaf as unknown as { id: string })?.id;
-        if (leafId === this.leafId) {
-          // Switching TO - restore scroll then show
-          const saved = scrollPositions.get(this.leafId);
-          if (saved !== undefined && saved > 0) {
-            this.scrollEl.scrollTop = saved;
-          }
-          this.scrollEl.style.visibility = "";
-          this.scrollEl.style.overflow = "";
-        } else {
-          // Switching AWAY - hide to prevent flash
-          this.scrollEl.style.visibility = "hidden";
-          this.scrollEl.style.overflow = "hidden";
-        }
-      }),
-    );
-
-    // Dedicated scroll tracking for scroll preservation
-    const scrollTrackingHandler = () => {
-      const currentSaved = scrollPositions.get(this.leafId) ?? 0;
-      const newScroll = this.scrollEl.scrollTop;
-
-      // Detect sudden reset (Obsidian tab switch) and restore
-      if (newScroll < currentSaved * 0.1 && currentSaved > 100) {
-        this.scrollEl.scrollTop = currentSaved;
-        return;
-      }
-
-      // Normal tracking
-      if (newScroll >= currentSaved * 0.5 || currentSaved === 0) {
-        scrollPositions.set(this.leafId, newScroll);
-      }
-    };
-    this.scrollEl.addEventListener("scroll", scrollTrackingHandler, {
-      passive: true,
+    // Setup scroll preservation (handles tab switching, scroll tracking, reset detection)
+    this.scrollPreservation = new ScrollPreservation({
+      leafId: this.leafId,
+      scrollEl: this.scrollEl,
+      registerEvent: (e) => this.registerEvent(e),
+      register: (c) => this.register(c),
+      app: this.app,
     });
-    this.register(() =>
-      this.scrollEl.removeEventListener("scroll", scrollTrackingHandler),
-    );
   }
 
   onload(): void {
@@ -211,9 +183,6 @@ export class DynamicViewsCardView extends BasesView {
       if (this.isLoading) {
         return;
       }
-
-      // Get saved scroll position for restoration after render
-      const savedScrollTop = scrollPositions.get(this.leafId) ?? 0;
 
       // Increment render version to cancel any in-flight stale renders
       this.renderVersion++;
@@ -326,8 +295,15 @@ export class DynamicViewsCardView extends BasesView {
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
 
+      // Check if grouping is active and toggle is-grouped class
+      const isGrouped =
+        hasGroupBy(this.config) && !!this.config.groupBy?.property;
+      this.containerEl.toggleClass("is-grouped", isGrouped);
+
       // Create cards feed container
-      const feedEl = this.containerEl.createDiv("dynamic-views-grid");
+      const feedEl = this.containerEl.createDiv(
+        `dynamic-views-grid${isGrouped ? " bases-cards-container" : ""}`,
+      );
       this.feedContainerRef.current = feedEl;
 
       // Render groups with headers
@@ -343,11 +319,19 @@ export class DynamicViewsCardView extends BasesView {
 
         const groupEntries = processedGroup.entries.slice(0, entriesToDisplay);
 
-        // Create group container
-        const groupEl = feedEl.createDiv("dynamic-views-group");
+        // Render group header to feed container (sibling to card group, matching vanilla)
+        renderGroupHeader(feedEl, processedGroup.group, this.config);
 
-        // Render group header if key exists
-        renderGroupHeader(groupEl, processedGroup.group, this.config);
+        // Create group container for cards
+        const groupEl = feedEl.createDiv(
+          "dynamic-views-group bases-cards-group",
+        );
+
+        // Store group key for consistency with masonry-view (#7)
+        const groupKey = processedGroup.group.hasKey()
+          ? serializeGroupKey(processedGroup.group.key)
+          : undefined;
+        setGroupKeyDataset(groupEl, groupKey);
 
         // Render cards in this group
         const cards = transformBasesEntries(
@@ -370,9 +354,7 @@ export class DynamicViewsCardView extends BasesView {
         displayedSoFar += entriesToDisplay;
 
         // Track last group for batch append
-        this.lastGroupKey = processedGroup.group.hasKey()
-          ? processedGroup.group.key?.toString()
-          : undefined;
+        this.lastGroupKey = groupKey;
         this.lastGroupContainer = groupEl;
       }
 
@@ -388,26 +370,32 @@ export class DynamicViewsCardView extends BasesView {
           // Guard: skip if container disconnected from DOM
           if (!this.containerEl?.isConnected) return;
 
-          const containerWidth = this.containerEl.clientWidth;
-          // Card size represents minimum width; actual width may be larger to fill space
-          const cardSize = this.currentCardSize;
-          const minColumns = getMinGridColumns();
-          const gap = getCardSpacing(this.containerEl);
-          const cols = Math.max(
-            minColumns,
-            Math.floor((containerWidth + gap) / (cardSize + gap)),
-          );
+          // Guard against reentrant calls (#13)
+          if (this.isUpdatingColumns) return;
+          this.isUpdatingColumns = true;
 
-          this.containerEl.style.setProperty("--grid-columns", String(cols));
+          try {
+            const containerWidth = this.containerEl.clientWidth;
+            // Card size represents minimum width; actual width may be larger to fill space
+            const cardSize = this.currentCardSize;
+            const minColumns = getMinGridColumns();
+            const gap = getCardSpacing(this.containerEl);
+            const cols = Math.max(
+              minColumns,
+              Math.floor((containerWidth + gap) / (cardSize + gap)),
+            );
+
+            this.containerEl.style.setProperty("--grid-columns", String(cols));
+          } finally {
+            this.isUpdatingColumns = false;
+          }
         });
         this.resizeObserver.observe(this.containerEl);
         this.register(() => this.resizeObserver?.disconnect());
       }
 
       // Restore scroll position after render
-      if (savedScrollTop > 0) {
-        this.scrollEl.scrollTop = savedScrollTop;
-      }
+      this.scrollPreservation.restoreAfterRender();
 
       // Remove height preservation now that scroll is restored
       this.containerEl.style.minHeight = "";
@@ -540,20 +528,28 @@ export class DynamicViewsCardView extends BasesView {
       // Get or create group container
       let groupEl: HTMLElement;
       const currentGroupKey = processedGroup.group.hasKey()
-        ? processedGroup.group.key?.toString()
+        ? serializeGroupKey(processedGroup.group.key)
         : undefined;
 
-      if (currentGroupKey === this.lastGroupKey && this.lastGroupContainer) {
+      if (
+        currentGroupKey === this.lastGroupKey &&
+        this.lastGroupContainer?.isConnected
+      ) {
         // Same group as last - append to existing container
         groupEl = this.lastGroupContainer;
       } else {
-        // New group - create container
-        groupEl = this.feedContainerRef.current.createDiv(
-          "dynamic-views-group",
+        // Render group header to feed container (sibling to card group, matching vanilla)
+        renderGroupHeader(
+          this.feedContainerRef.current,
+          processedGroup.group,
+          this.config,
         );
 
-        // Render group header if key exists
-        renderGroupHeader(groupEl, processedGroup.group, this.config);
+        // New group - create container for cards
+        groupEl = this.feedContainerRef.current.createDiv(
+          "dynamic-views-group bases-cards-group",
+        );
+        setGroupKeyDataset(groupEl, currentGroupKey);
 
         // Update last group tracking
         this.lastGroupKey = currentGroupKey;
@@ -678,7 +674,7 @@ export class DynamicViewsCardView extends BasesView {
   }
 
   onunload(): void {
-    scrollPositions.delete(this.leafId);
+    this.scrollPreservation.cleanup();
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }

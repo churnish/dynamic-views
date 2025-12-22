@@ -350,17 +350,9 @@ function setupImageViewerGestures(
     container.addEventListener("wheel", wheelHandler, WHEEL_OPTIONS);
     containerWheelHandlers.set(container, wheelHandler);
 
-    // Calculate scale to fill container without cropping
-    function getContainScale(): number {
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      const imgWidth = imgEl.clientWidth;
-      const imgHeight = imgEl.clientHeight;
-      return Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
-    }
-
-    // Helper to update maximized state and class
+    // Helper to update maximized state and class (desktop-only)
     function setMaximized(value: boolean, containScale?: number): void {
+      if (isMobile) return; // Defensive guard
       isMaximized = value;
       container.classList.toggle("is-maximized", value);
       // Reset desktop pan tracking for fresh start in new mode
@@ -372,30 +364,6 @@ function setupImageViewerGestures(
         panzoomInstance?.setOptions({ minScale: 1 });
       }
     }
-
-    // Double-press detection via click timing (more reliable than native dblclick)
-    // Capture phase on container handles stopPropagation for clicks on image
-    let lastPressTime = 0;
-    doublePressHandler = (e: MouseEvent) => {
-      if (e.target !== imgEl) return;
-      e.stopPropagation();
-      const now = Date.now();
-      if (now - lastPressTime < DOUBLE_PRESS_THRESHOLD) {
-        // Double-press detected
-        lastPressTime = 0; // Reset to prevent triple-press triggering
-        if (isMaximized) {
-          setMaximized(false);
-          panzoomInstance?.reset();
-        } else {
-          const containScale = getContainScale();
-          setMaximized(true, containScale);
-          panzoomInstance?.zoom(containScale, { animate: true });
-        }
-      } else {
-        lastPressTime = now;
-      }
-    };
-    container.addEventListener("click", doublePressHandler, true);
 
     // Right-click: prevent default context menu, no action
     contextmenuHandler = (e: MouseEvent) => {
@@ -412,9 +380,40 @@ function setupImageViewerGestures(
       }
     };
 
-    // Desktop-only: long-press to reset, double-click to maximize
+    // Desktop-only: double-press maximize, long-press reset
     // Mobile uses standard pinch-zoom + pan (no maximize/long-press features)
     if (!isMobile) {
+      // Calculate scale to fill container without cropping
+      function getContainScale(): number {
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        const imgWidth = imgEl.clientWidth;
+        const imgHeight = imgEl.clientHeight;
+        return Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
+      }
+
+      // Double-press detection via click timing (more reliable than native dblclick)
+      let lastPressTime = 0;
+      doublePressHandler = (e: MouseEvent) => {
+        if (e.target !== imgEl) return;
+        e.stopPropagation();
+        const now = Date.now();
+        if (now - lastPressTime < DOUBLE_PRESS_THRESHOLD) {
+          lastPressTime = 0; // Reset to prevent triple-press triggering
+          if (isMaximized) {
+            setMaximized(false);
+            panzoomInstance?.reset();
+          } else {
+            const containScale = getContainScale();
+            setMaximized(true, containScale);
+            panzoomInstance?.zoom(containScale, { animate: true });
+          }
+        } else {
+          lastPressTime = now;
+        }
+      };
+      container.addEventListener("click", doublePressHandler, true);
+
       // Long-press via pointer events on container (panzoom stops propagation on imgEl)
       pointerdownHandler = (e: PointerEvent) => {
         // Only primary pointer, left mouse button, and target is the image

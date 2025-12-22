@@ -402,11 +402,11 @@ export function Settings({
               <label>Fit</label>
             </div>
             <select
-              value={settings.coverFitMode}
+              value={settings.imageFit}
               onChange={(e: unknown) => {
                 const evt = e as Event & { target: HTMLSelectElement };
                 onSettingsChange({
-                  coverFitMode: evt.target.value as "crop" | "contain",
+                  imageFit: evt.target.value as "crop" | "contain",
                 });
               }}
               className="dropdown"

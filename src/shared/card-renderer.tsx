@@ -37,7 +37,7 @@ import {
   createSlideshowNavigator,
   setupImagePreload,
   setupSwipeGestures,
-} from "./slideshow-utils";
+} from "./slideshow";
 import {
   showFileContextMenu,
   showExternalLinkContextMenu,
@@ -46,7 +46,7 @@ import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
-} from "./scroll-gradient-manager";
+} from "./scroll-gradient";
 import { handleArrowNavigation, isArrowKey } from "./keyboard-nav";
 import { measurePropertyFields } from "./property-measure";
 
@@ -1222,10 +1222,11 @@ function Card({
   if (format === "cover") {
     cardClasses.push("image-format-cover");
     cardClasses.push(`card-cover-${position}`);
-    cardClasses.push(`card-cover-${settings.coverFitMode}`);
+    cardClasses.push(`card-cover-${settings.imageFit}`);
   } else if (format === "thumbnail") {
     cardClasses.push("image-format-thumbnail");
     cardClasses.push(`card-thumbnail-${position}`);
+    cardClasses.push(`card-thumbnail-${settings.imageFit}`);
   }
 
   // Drag handler function

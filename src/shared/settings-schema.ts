@@ -133,7 +133,7 @@ export function getBasesViewOptions(): any[] {
         {
           type: "dropdown",
           displayName: "Fit",
-          key: "coverFitMode",
+          key: "imageFit",
           options: {
             crop: "Crop",
             contain: "Contain",
@@ -711,11 +711,11 @@ export function readBasesSettings(
 
       return defaultViewSettings.imageFormat;
     })(),
-    coverFitMode: (() => {
-      const value = config.get("coverFitMode");
+    imageFit: (() => {
+      const value = config.get("imageFit");
       return value === "crop" || value === "contain"
         ? value
-        : defaultViewSettings.coverFitMode;
+        : defaultViewSettings.imageFit;
     })(),
     listMarker: (() => {
       const value = config.get("listMarker");
@@ -738,7 +738,6 @@ export function readBasesSettings(
     smartTimestamp: globalSettings.smartTimestamp, // From global settings
     createdTimeProperty: globalSettings.createdTimeProperty, // From global settings
     modifiedTimeProperty: globalSettings.modifiedTimeProperty, // From global settings
-    fallbackToFileMetadata: globalSettings.fallbackToFileMetadata, // From global settings
     cardSize: (() => {
       const value = config.get("cardSize");
       return typeof value === "number" ? value : defaultViewSettings.cardSize;

@@ -48,7 +48,7 @@ export interface Settings {
     | "cover-bottom"
     | "cover-left"
     | "cover-right";
-  coverFitMode: "crop" | "contain";
+  imageFit: "crop" | "contain";
   imageAspectRatio: number;
   listMarker: string;
   randomizeAction: string;
@@ -61,7 +61,6 @@ export interface Settings {
   smartTimestamp: boolean;
   createdTimeProperty: string;
   modifiedTimeProperty: string;
-  fallbackToFileMetadata: boolean;
   cardSize: number;
   preventSidebarSwipe: "disabled" | "base-files" | "all-views";
 }
@@ -123,7 +122,7 @@ export interface DefaultViewSettings {
     | "cover-bottom"
     | "cover-left"
     | "cover-right";
-  coverFitMode: "crop" | "contain";
+  imageFit: "crop" | "contain";
   imageAspectRatio: number;
   queryHeight: number;
   listMarker: string;

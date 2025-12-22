@@ -225,9 +225,9 @@ describe("image-color", () => {
     });
 
     it("should handle invalid RGB strings gracefully", () => {
-      // Invalid strings return 0.5 luminance, which equals threshold
-      // 0.5 > 0.5 is false, so should return 'dark'
-      expect(getColorTheme("invalid")).toBe("dark");
+      // Invalid strings return 0.5 luminance fallback
+      // 0.5 > 0.3 threshold, so should return 'light'
+      expect(getColorTheme("invalid")).toBe("light");
     });
 
     it("should work with various color combinations", () => {

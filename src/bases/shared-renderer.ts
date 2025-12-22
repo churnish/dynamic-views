@@ -24,7 +24,7 @@ import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
-} from "../shared/scroll-gradient-manager";
+} from "../shared/scroll-gradient";
 import { getTimestampIcon } from "../shared/render-utils";
 import {
   showTagHashPrefix,
@@ -56,7 +56,7 @@ import {
   createSlideshowNavigator,
   setupImagePreload,
   setupSwipeGestures,
-} from "../shared/slideshow-utils";
+} from "../shared/slideshow";
 import { handleArrowNavigation, isArrowKey } from "../shared/keyboard-nav";
 import { measurePropertyFields } from "../shared/property-measure";
 
@@ -382,13 +382,10 @@ export class SharedCardRenderer {
     // Add position class
     if (format === "thumbnail") {
       cardEl.classList.add(`card-thumbnail-${position}`);
+      cardEl.classList.add(`card-thumbnail-${settings.imageFit}`);
     } else if (format === "cover") {
       cardEl.classList.add(`card-cover-${position}`);
-    }
-
-    // Add cover fit mode class
-    if (format === "cover") {
-      cardEl.classList.add(`card-cover-${settings.coverFitMode}`);
+      cardEl.classList.add(`card-cover-${settings.imageFit}`);
     }
 
     cardEl.setAttribute("data-path", card.path);

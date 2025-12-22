@@ -273,6 +273,16 @@ Regular text`;
       expect(result.endsWith("…")).toBe(true);
     });
 
+    it("should trim trailing whitespace before ellipsis when truncating", () => {
+      // Create input where char 1000 lands right after a space
+      // "word " repeated = 5 chars each, 200 times = 1000 chars ending with space
+      const input = "word ".repeat(200) + "extra";
+      const result = sanitizeForPreview(input);
+      // Should be "word word...word…" not "word word...word …"
+      expect(result).not.toMatch(/\s…$/);
+      expect(result.endsWith("…")).toBe(true);
+    });
+
     it("should not add ellipsis for content under 1000 chars", () => {
       const input = "Short content";
       const result = sanitizeForPreview(input);

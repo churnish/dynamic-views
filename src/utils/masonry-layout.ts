@@ -14,6 +14,7 @@ export interface MasonryLayoutParams {
   cardSize: number; // Represents minimum width; actual width may be larger to fill space
   minColumns: number;
   gap: number;
+  heights?: number[]; // Optional pre-measured heights to avoid reflows in grouped mode
 }
 
 export interface IncrementalMasonryParams {
@@ -23,6 +24,7 @@ export interface IncrementalMasonryParams {
   cardWidth: number;
   columns: number;
   gap: number;
+  heights?: number[]; // Optional pre-measured heights to avoid reflows
 }
 
 export interface MasonryLayoutResult {
@@ -67,7 +69,14 @@ export function calculateMasonryDimensions(params: {
 export function calculateMasonryLayout(
   params: MasonryLayoutParams,
 ): MasonryLayoutResult {
-  const { cards, containerWidth, cardSize, minColumns, gap } = params;
+  const {
+    cards,
+    containerWidth,
+    cardSize,
+    minColumns,
+    gap,
+    heights: preHeights,
+  } = params;
 
   // Calculate number of columns
   const columns = Math.max(
@@ -85,9 +94,12 @@ export function calculateMasonryLayout(
   const columnHeights: number[] = new Array(columns).fill(0) as number[];
   const positions: MasonryPosition[] = [];
 
-  // Batch read all card heights in single pass to avoid layout thrashing
-  // Reading offsetHeight in a loop forces N reflows; reading all at once forces only 1
-  const heights = cards.map((card) => card.offsetHeight);
+  // Use pre-measured heights if provided and valid (avoids reflow in grouped mode),
+  // otherwise batch read all card heights in single pass
+  const heights =
+    preHeights && preHeights.length === cards.length
+      ? preHeights
+      : cards.map((card) => card.offsetHeight);
 
   cards.forEach((card, index) => {
     // Find shortest column - track index during search
@@ -111,9 +123,10 @@ export function calculateMasonryLayout(
     columnHeights[shortestColumn] += cardHeight + gap;
   });
 
-  // Calculate container height
-  const containerHeight =
-    columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
+  // Calculate container height (subtract trailing gap after last row)
+  // Guard against negative height when no cards exist
+  const maxHeight = columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
+  const containerHeight = maxHeight > 0 ? maxHeight - gap : 0;
 
   return {
     positions,
@@ -165,14 +178,18 @@ export function calculateIncrementalMasonryLayout(
     cardWidth,
     columns,
     gap,
+    heights: preHeights,
   } = params;
 
   // Clone column heights to avoid mutating previous state
   const columnHeights = [...prevColumnHeights];
   const positions: MasonryPosition[] = [];
 
-  // Batch read heights for new cards only
-  const heights = newCards.map((card) => card.offsetHeight);
+  // Use pre-measured heights if provided and valid, otherwise batch read
+  const heights =
+    preHeights && preHeights.length === newCards.length
+      ? preHeights
+      : newCards.map((card) => card.offsetHeight);
 
   newCards.forEach((card, index) => {
     // Find shortest column - track index during search
@@ -196,8 +213,10 @@ export function calculateIncrementalMasonryLayout(
     columnHeights[shortestColumn] += cardHeight + gap;
   });
 
-  const containerHeight =
-    columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
+  // Subtract trailing gap after last row
+  // Guard against negative height when columns are empty
+  const maxHeight = columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
+  const containerHeight = maxHeight > 0 ? maxHeight - gap : 0;
 
   return {
     positions,

@@ -2,7 +2,7 @@
  * Shared utility for measuring side-by-side property field widths
  */
 
-import { updateScrollGradient } from "./scroll-gradient-manager";
+import { updateScrollGradient } from "./scroll-gradient";
 
 /**
  * Measures and applies optimal widths for a side-by-side property row

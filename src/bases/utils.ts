@@ -21,6 +21,28 @@ import type { Settings } from "../types";
 export const EMBEDDED_VIEW_SELECTOR =
   ".markdown-preview-view, .markdown-reading-view, .markdown-source-view";
 
+/** Sentinel value for undefined group keys in dataset storage */
+export const UNDEFINED_GROUP_KEY_SENTINEL = "__dv_undefined__";
+
+/**
+ * Write group key to element's dataset, using sentinel for undefined
+ */
+export function setGroupKeyDataset(
+  el: HTMLElement,
+  groupKey: string | undefined,
+): void {
+  el.dataset.groupKey =
+    groupKey === undefined ? UNDEFINED_GROUP_KEY_SENTINEL : groupKey;
+}
+
+/**
+ * Read group key from element's dataset, converting sentinel to undefined
+ */
+export function getGroupKeyDataset(el: HTMLElement): string | undefined {
+  const value = el.dataset.groupKey;
+  return value === UNDEFINED_GROUP_KEY_SENTINEL ? undefined : value;
+}
+
 /**
  * Check if a container element is embedded within a markdown view
  */
@@ -54,10 +76,74 @@ export function setupBasesSwipeInterception(
 // Re-export from shared location
 export { setupStyleSettingsObserver } from "../utils/style-settings";
 
-/** Interface for Bases config sort method */
+/** Interface for Bases config groupBy property */
+export interface BasesGroupBy {
+  property?: string;
+}
+
+/** Interface for Bases config with sort and groupBy methods */
 interface BasesConfigWithSort {
   getSort(): Array<{ property: string; direction: string }> | null;
   getDisplayName(property: string): string;
+  groupBy?: BasesGroupBy;
+}
+
+/** Type guard to check if config has groupBy with valid structure */
+export function hasGroupBy(
+  config: unknown,
+): config is { groupBy?: BasesGroupBy } {
+  if (typeof config !== "object" || config === null || !("groupBy" in config)) {
+    return false;
+  }
+  const groupBy = (config as { groupBy: unknown }).groupBy;
+  // groupBy can be undefined (no grouping) or object with optional property string
+  return (
+    groupBy === undefined ||
+    (typeof groupBy === "object" &&
+      groupBy !== null &&
+      (!("property" in groupBy) ||
+        typeof (groupBy as { property: unknown }).property === "string"))
+  );
+}
+
+/**
+ * Serialize group key to string for comparison
+ * Handles Bases Value objects, date objects, and objects that would stringify to "[object Object]"
+ */
+export function serializeGroupKey(key: unknown): string | undefined {
+  if (key === undefined || key === null) return undefined;
+  if (typeof key === "string") return key;
+  if (typeof key === "number" || typeof key === "boolean") return String(key);
+
+  if (typeof key === "object" && key !== null) {
+    // Handle Bases date Value objects (e.g., {date: Date, time: boolean})
+    if ("date" in key && (key as { date: unknown }).date instanceof Date) {
+      return (key as { date: Date }).date.toISOString();
+    }
+
+    // Handle Bases Value objects with .data property (e.g., {icon: "...", data: 462})
+    if ("data" in key) {
+      const data = (key as { data: unknown }).data;
+      if (data === null || data === undefined) return undefined;
+      if (typeof data === "string") return data;
+      if (typeof data === "number" || typeof data === "boolean")
+        return String(data);
+      // For complex data (arrays, nested objects), stringify the data portion
+      try {
+        return JSON.stringify(data);
+      } catch {
+        // Fall through to full object stringify
+      }
+    }
+  }
+
+  // For objects/arrays, use JSON to avoid collision
+  try {
+    return JSON.stringify(key);
+  } catch {
+    // JSON.stringify can fail on circular references - fallback to unique string
+    return `[object:${Object.prototype.toString.call(key)}]`;
+  }
 }
 
 /** Interface for group data with entries */
@@ -82,7 +168,10 @@ export function processGroups<T extends GroupData>(
       groupEntries = groupEntries.sort((a, b) => {
         const indexA = shuffledOrder.indexOf(a.file.path);
         const indexB = shuffledOrder.indexOf(b.file.path);
-        return indexA - indexB;
+        // Missing entries (indexOf returns -1) sort to end
+        const adjustedA = indexA === -1 ? Infinity : indexA;
+        const adjustedB = indexB === -1 ? Infinity : indexB;
+        return adjustedA - adjustedB;
       });
     }
     return { group, entries: groupEntries };
@@ -92,28 +181,26 @@ export function processGroups<T extends GroupData>(
 /**
  * Render group header if group has a key
  * Creates the heading element with property label and value
+ * Header is rendered as sibling to card group (matching vanilla Bases structure)
  */
 export function renderGroupHeader(
-  groupEl: HTMLElement,
+  containerEl: HTMLElement,
   group: { hasKey(): boolean; key?: unknown },
   config: BasesConfigWithSort,
 ): void {
   if (!group.hasKey()) return;
 
-  const headerEl = groupEl.createDiv("bases-group-heading");
+  const headerEl = containerEl.createDiv("bases-group-heading");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const groupBy = (config as any).groupBy;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  if (groupBy?.property) {
+  if (config.groupBy?.property) {
     const propertyEl = headerEl.createDiv("bases-group-property");
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-    const propertyName = config.getDisplayName(groupBy.property);
+    const propertyName = config.getDisplayName(config.groupBy.property);
     propertyEl.setText(propertyName);
   }
 
   const valueEl = headerEl.createDiv("bases-group-value");
-  const keyValue = group.key?.toString() || "";
+  // Use serializeGroupKey for display - handles primitives cleanly
+  const keyValue = serializeGroupKey(group.key) ?? "";
   valueEl.setText(keyValue);
 }
 

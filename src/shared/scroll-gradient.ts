@@ -25,31 +25,40 @@ function throttleRAF<T extends (...args: unknown[]) => void>(
  * @param element - The scrollable element that receives gradient classes
  */
 export function updateElementScrollGradient(element: HTMLElement): void {
-  const isScrollable = element.scrollWidth > element.clientWidth;
-
-  if (!isScrollable) {
-    element.removeClass("scroll-gradient-left");
-    element.removeClass("scroll-gradient-right");
-    element.removeClass("scroll-gradient-both");
-    return;
-  }
-
-  const scrollLeft = element.scrollLeft;
   const scrollWidth = element.scrollWidth;
   const clientWidth = element.clientWidth;
-  const atStart = scrollLeft <= SCROLL_TOLERANCE;
-  const atEnd = scrollLeft + clientWidth >= scrollWidth - SCROLL_TOLERANCE;
+  const isScrollable = scrollWidth > clientWidth;
 
-  element.removeClass("scroll-gradient-left");
-  element.removeClass("scroll-gradient-right");
-  element.removeClass("scroll-gradient-both");
+  // Determine target class (null if not scrollable)
+  let targetClass: string | null = null;
+  if (isScrollable) {
+    const scrollLeft = element.scrollLeft;
+    const atStart = scrollLeft <= SCROLL_TOLERANCE;
+    const atEnd = scrollLeft + clientWidth >= scrollWidth - SCROLL_TOLERANCE;
 
-  if (atStart && !atEnd) {
-    element.addClass("scroll-gradient-right");
-  } else if (atEnd && !atStart) {
-    element.addClass("scroll-gradient-left");
-  } else if (!atStart && !atEnd) {
-    element.addClass("scroll-gradient-both");
+    targetClass =
+      atStart && !atEnd
+        ? "scroll-gradient-right"
+        : atEnd && !atStart
+          ? "scroll-gradient-left"
+          : !atStart && !atEnd
+            ? "scroll-gradient-both"
+            : null;
+  }
+
+  // Only modify classes if state changed (minimizes DOM mutations)
+  const classes = [
+    "scroll-gradient-left",
+    "scroll-gradient-right",
+    "scroll-gradient-both",
+  ];
+  for (const cls of classes) {
+    const hasClass = element.classList.contains(cls);
+    if (cls === targetClass && !hasClass) {
+      element.addClass(cls);
+    } else if (cls !== targetClass && hasClass) {
+      element.removeClass(cls);
+    }
   }
 }
 
@@ -70,19 +79,31 @@ export function updateScrollGradient(element: HTMLElement): void {
     return;
   }
 
+  // Skip if element not visible/measured - don't clear existing gradients with invalid data
+  if (wrapper.clientWidth === 0) {
+    return;
+  }
+
   // Check if content exceeds wrapper space
   const isScrollable = content.scrollWidth > wrapper.clientWidth;
 
   if (!isScrollable) {
-    wrapper.removeClass("scroll-gradient-left");
-    wrapper.removeClass("scroll-gradient-right");
-    wrapper.removeClass("scroll-gradient-both");
-    element.removeClass("is-scrollable");
+    // Only remove classes if they exist (minimizes DOM mutations)
+    if (wrapper.classList.contains("scroll-gradient-left"))
+      wrapper.removeClass("scroll-gradient-left");
+    if (wrapper.classList.contains("scroll-gradient-right"))
+      wrapper.removeClass("scroll-gradient-right");
+    if (wrapper.classList.contains("scroll-gradient-both"))
+      wrapper.removeClass("scroll-gradient-both");
+    if (element.classList.contains("is-scrollable"))
+      element.removeClass("is-scrollable");
     return;
   }
 
   // Mark field as scrollable for conditional alignment
-  element.addClass("is-scrollable");
+  if (!element.classList.contains("is-scrollable")) {
+    element.addClass("is-scrollable");
+  }
 
   // Use shared logic for gradient updates
   updateElementScrollGradient(wrapper);
@@ -129,9 +150,6 @@ export function setupScrollGradients(
   // Find all property field containers (both side-by-side and full-width)
   const scrollables = container.querySelectorAll(".property-field");
 
-  // Throttle the update function
-  const throttledUpdate = throttleRAF(updateGradientFn);
-
   scrollables.forEach((el) => {
     const element = el as HTMLElement;
     const wrapper = element.querySelector(
@@ -140,20 +158,22 @@ export function setupScrollGradients(
 
     if (!wrapper) return;
 
-    // Initial gradient update after layout settles (double rAF for CSS to fully apply)
-    requestAnimationFrame(() => {
+    // If layout is ready (width > 0), apply gradients sync to avoid flicker.
+    // Otherwise use double-RAF to wait for layout to settle.
+    if (wrapper.clientWidth > 0) {
+      updateGradientFn(element);
+    } else {
       requestAnimationFrame(() => {
-        updateGradientFn(element);
+        requestAnimationFrame(() => {
+          updateGradientFn(element);
+        });
       });
-    });
+    }
+
+    // Create per-element throttle to avoid lost updates when multiple fields scroll
+    const throttledUpdate = throttleRAF(() => updateGradientFn(element));
 
     // Attach scroll listener to wrapper for user scroll interaction
-    wrapper.addEventListener(
-      "scroll",
-      () => {
-        throttledUpdate(element);
-      },
-      { signal },
-    );
+    wrapper.addEventListener("scroll", throttledUpdate, { signal });
   });
 }

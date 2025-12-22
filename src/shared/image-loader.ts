@@ -1,35 +1,50 @@
 import { extractAverageColor, getColorTheme } from "../utils/image-color";
+import {
+  isCardBackgroundAmbient,
+  isCoverBackgroundAmbient,
+} from "../utils/style-settings";
 import type { RefObject } from "../datacore/types";
 
-// Cache ambient colors and aspect ratio by image URL to avoid flash on re-render
-const ambientColorCache = new Map<
+// Cache image metadata (ambient color + aspect ratio) by URL to avoid flash on re-render
+const imageMetadataCache = new Map<
   string,
-  { color: string; theme: "light" | "dark"; aspectRatio?: number }
+  { color?: string; theme?: "light" | "dark"; aspectRatio?: number }
 >();
+
+/**
+ * Clear image metadata cache when ambient settings change
+ * Called by style-settings observer to prevent stale colors
+ */
+export function clearImageMetadataCache(): void {
+  imageMetadataCache.clear();
+}
 
 /**
  * Get cached aspect ratio for an image URL
  * Used by masonry layout to determine if card height is known before image loads
  */
 export function getCachedAspectRatio(imgSrc: string): number | undefined {
-  return ambientColorCache.get(imgSrc)?.aspectRatio;
+  return imageMetadataCache.get(imgSrc)?.aspectRatio;
 }
 
 /**
- * Apply cached ambient color and aspect ratio to card immediately
+ * Apply cached image metadata (ambient color + aspect ratio) to card immediately
  * Called before image loads to prevent flash on re-render
  */
-export function applyCachedAmbientColor(
+export function applyCachedImageMetadata(
   imgSrc: string,
   imageEmbedContainer: HTMLElement,
   cardEl: HTMLElement,
 ): boolean {
-  const cached = ambientColorCache.get(imgSrc);
+  const cached = imageMetadataCache.get(imgSrc);
   if (!cached) return false;
 
-  imageEmbedContainer.style.setProperty("--ambient-color", cached.color);
-  cardEl.style.setProperty("--ambient-color", cached.color);
-  cardEl.setAttribute("data-ambient-theme", cached.theme);
+  // Only apply ambient color if it was cached (ambient settings were on when extracted)
+  if (cached.color && cached.theme) {
+    imageEmbedContainer.style.setProperty("--ambient-color", cached.color);
+    cardEl.style.setProperty("--ambient-color", cached.color);
+    cardEl.setAttribute("data-ambient-theme", cached.theme);
+  }
   if (cached.aspectRatio !== undefined) {
     cardEl.style.setProperty(
       "--actual-aspect-ratio",
@@ -56,39 +71,46 @@ export function handleImageLoad(
   cardEl: HTMLElement,
   onLayoutUpdate?: (() => void) | null,
 ): void {
-  // Extract ambient color for Cover background: Ambient and Card background: Ambient options
-  let ambientColor: string;
-  let colorTheme: "light" | "dark";
-  try {
-    ambientColor = extractAverageColor(imgEl);
-    colorTheme = getColorTheme(ambientColor);
-  } catch {
-    // Canvas operations can fail (tainted canvas, etc.) - use fallback
-    cardEl.classList.add("cover-ready");
-    if (onLayoutUpdate) onLayoutUpdate();
-    return;
-  }
-
-  // Calculate aspect ratio
+  // Calculate aspect ratio (always needed for masonry)
   const aspectRatio =
     imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0
       ? imgEl.naturalHeight / imgEl.naturalWidth
       : undefined;
 
+  // Only extract ambient color if needed by current settings
+  // - Card bg ambient: needs color for all images (cover + thumbnail)
+  // - Cover bg ambient: only needs color for cover images
+  let ambientColor: string | undefined;
+  let colorTheme: "light" | "dark" | undefined;
+
+  const isCoverImage = cardEl.classList.contains("image-format-cover");
+  const needsAmbient =
+    isCardBackgroundAmbient() || (isCoverImage && isCoverBackgroundAmbient());
+
+  if (needsAmbient) {
+    try {
+      ambientColor = extractAverageColor(imgEl);
+      colorTheme = getColorTheme(ambientColor);
+    } catch {
+      // Canvas operations can fail (tainted canvas, etc.) - continue without color
+    }
+  }
+
   // Cache for future re-renders
   if (imgEl.src) {
-    ambientColorCache.set(imgEl.src, {
+    imageMetadataCache.set(imgEl.src, {
       color: ambientColor,
       theme: colorTheme,
       aspectRatio,
     });
   }
 
-  imageEmbedContainer.style.setProperty("--ambient-color", ambientColor); // For Cover background: Ambient
-  cardEl.style.setProperty("--ambient-color", ambientColor); // For Card background: Ambient
-
-  // Set ambient theme on card for text color adjustments
-  cardEl.setAttribute("data-ambient-theme", colorTheme);
+  // Apply ambient color if extracted
+  if (ambientColor && colorTheme) {
+    imageEmbedContainer.style.setProperty("--ambient-color", ambientColor);
+    cardEl.style.setProperty("--ambient-color", ambientColor);
+    cardEl.setAttribute("data-ambient-theme", colorTheme);
+  }
 
   // Set actual aspect ratio for masonry contain mode (used when "Fixed cover height" is OFF)
   if (aspectRatio !== undefined) {
@@ -119,51 +141,36 @@ export function setupImageLoadHandler(
   cardEl: HTMLElement,
   onLayoutUpdate?: () => void,
 ): void {
-  // Apply cached ambient color immediately to prevent flash on re-render
-  const hasCached =
-    imgEl.src &&
-    applyCachedAmbientColor(imgEl.src, imageEmbedContainer, cardEl);
-
-  // Handle already-loaded images (from cache)
-  if (imgEl.complete && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
-    handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
-  } else if (!hasCached) {
-    // Only add listeners if we didn't have cached color
-    imgEl.addEventListener(
-      "load",
-      () => {
-        handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
-      },
-      { once: true },
-    );
-    // On error, still add cover-ready so cover shows (even if broken)
-    imgEl.addEventListener(
-      "error",
-      () => {
-        cardEl.classList.add("cover-ready");
-        if (onLayoutUpdate) onLayoutUpdate();
-      },
-      { once: true },
-    );
-  } else {
-    // Had cached color, still need load handler for aspect ratio and layout
-    imgEl.addEventListener(
-      "load",
-      () => {
-        handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
-      },
-      { once: true },
-    );
-    // Also need error handler in case image fails to load
-    imgEl.addEventListener(
-      "error",
-      () => {
-        cardEl.classList.add("cover-ready");
-        if (onLayoutUpdate) onLayoutUpdate();
-      },
-      { once: true },
-    );
+  // Apply cached metadata immediately to prevent flash on re-render
+  if (imgEl.src && !cardEl.classList.contains("cover-ready")) {
+    applyCachedImageMetadata(imgEl.src, imageEmbedContainer, cardEl);
   }
+
+  // Handle already-loaded images (skip if already processed via cache)
+  if (
+    imgEl.complete &&
+    imgEl.naturalWidth > 0 &&
+    imgEl.naturalHeight > 0 &&
+    !cardEl.classList.contains("cover-ready")
+  ) {
+    handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate);
+    return;
+  }
+
+  // Add load/error listeners for pending images
+  imgEl.addEventListener(
+    "load",
+    () => handleImageLoad(imgEl, imageEmbedContainer, cardEl, onLayoutUpdate),
+    { once: true },
+  );
+  imgEl.addEventListener(
+    "error",
+    () => {
+      cardEl.classList.add("cover-ready");
+      if (onLayoutUpdate) onLayoutUpdate();
+    },
+    { once: true },
+  );
 }
 
 /**
@@ -185,9 +192,9 @@ export function handleJsxImageRef(
   ) as HTMLElement;
   if (!imageEmbedEl) return;
 
-  // Apply cached color immediately to prevent flash on re-render
+  // Apply cached metadata immediately to prevent flash on re-render
   if (imgEl.src && !cardEl.classList.contains("cover-ready")) {
-    applyCachedAmbientColor(imgEl.src, imageEmbedEl, cardEl);
+    applyCachedImageMetadata(imgEl.src, imageEmbedEl, cardEl);
   }
 
   // Handle already-loaded images

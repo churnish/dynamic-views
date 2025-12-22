@@ -48,6 +48,7 @@ import {
   getCardSpacing,
   setupStyleSettingsObserver,
 } from "../utils/style-settings";
+import { clearImageMetadataCache } from "../shared/image-loader";
 import {
   calculateMasonryLayout,
   calculateIncrementalMasonryLayout,
@@ -205,8 +206,8 @@ export function View({
       viewSettings.fallbackToEmbeds ?? defaultViewSettings.fallbackToEmbeds;
     baseSettings.imageFormat =
       viewSettings.imageFormat ?? defaultViewSettings.imageFormat;
-    baseSettings.coverFitMode =
-      viewSettings.coverFitMode ?? defaultViewSettings.coverFitMode;
+    baseSettings.imageFit =
+      viewSettings.imageFit ?? defaultViewSettings.imageFit;
     baseSettings.imageAspectRatio =
       viewSettings.imageAspectRatio ?? defaultViewSettings.imageAspectRatio;
     baseSettings.queryHeight =
@@ -594,7 +595,7 @@ export function View({
           fallbackToContent: settings.fallbackToContent,
           fallbackToEmbeds: settings.fallbackToEmbeds,
           imageFormat: settings.imageFormat,
-          coverFitMode: settings.coverFitMode,
+          imageFit: settings.imageFit,
           imageAspectRatio: settings.imageAspectRatio,
           queryHeight: settings.queryHeight,
           listMarker: settings.listMarker,
@@ -632,9 +633,10 @@ export function View({
 
   // Setup Style Settings observer - re-render when CSS variables change
   dc.useEffect(() => {
-    const disconnect = setupStyleSettingsObserver(() => {
-      setStyleRevision((r) => r + 1);
-    });
+    const disconnect = setupStyleSettingsObserver(
+      () => setStyleRevision((r) => r + 1),
+      clearImageMetadataCache,
+    );
     return disconnect;
   }, []);
 
@@ -870,7 +872,7 @@ export function View({
       showTitle: settings.showTitle,
       showTextPreview: settings.showTextPreview,
       imageFormat: settings.imageFormat,
-      coverFitMode: settings.coverFitMode,
+      imageFit: settings.imageFit,
       imageAspectRatio: settings.imageAspectRatio,
     });
 
@@ -901,7 +903,7 @@ export function View({
         showTitle: settings.showTitle,
         showTextPreview: settings.showTextPreview,
         imageFormat: settings.imageFormat,
-        coverFitMode: settings.coverFitMode,
+        imageFit: settings.imageFit,
         imageAspectRatio: settings.imageAspectRatio,
       } as Settings;
     }

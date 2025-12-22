@@ -50,14 +50,9 @@ function handleTimestampPropertyFallback(
     return null; // Not a custom timestamp property
   }
 
-  if (settings.fallbackToFileMetadata) {
-    // Fall back to file metadata
-    const timestamp = isCustomCreatedTime ? cardData.ctime : cardData.mtime;
-    return formatTimestamp(timestamp);
-  } else {
-    // Show placeholder but still render as timestamp (for icon)
-    return "...";
-  }
+  // Fall back to file metadata
+  const timestamp = isCustomCreatedTime ? cardData.ctime : cardData.mtime;
+  return formatTimestamp(timestamp);
 }
 
 /**
@@ -949,14 +944,9 @@ export function resolveDatacoreProperty(
       propertyName === settings.modifiedTimeProperty;
 
     if (isCustomCreatedTime || isCustomModifiedTime) {
-      if (settings.fallbackToFileMetadata) {
-        // Fall back to file metadata
-        const timestamp = isCustomCreatedTime ? cardData.ctime : cardData.mtime;
-        return formatTimestamp(timestamp);
-      } else {
-        // Show placeholder but still render as timestamp (for icon)
-        return "...";
-      }
+      // Fall back to file metadata
+      const timestamp = isCustomCreatedTime ? cardData.ctime : cardData.mtime;
+      return formatTimestamp(timestamp);
     }
     // Return null for missing property
     return null;

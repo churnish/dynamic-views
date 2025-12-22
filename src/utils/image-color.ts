@@ -76,8 +76,8 @@ export function calculateLuminance(rgbString: string): number {
 /**
  * Determine if a color is light or dark based on its luminance
  * @param rgbString - RGB color string in format "rgb(r, g, b)"
- * @returns 'light' if luminance > 0.5, otherwise 'dark'
+ * @returns 'light' if luminance > 0.3, otherwise 'dark'
  */
 export function getColorTheme(rgbString: string): "light" | "dark" {
-  return calculateLuminance(rgbString) > 0.5 ? "light" : "dark";
+  return calculateLuminance(rgbString) > 0.3 ? "light" : "dark";
 }

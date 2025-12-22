@@ -222,6 +222,28 @@ export function isThumbnailScrubbingDisabled(): boolean {
 }
 
 /**
+ * Check if Card background: Ambient is enabled
+ */
+export function isCardBackgroundAmbient(): boolean {
+  return hasBodyClass("dynamic-views-ambient-background");
+}
+
+/**
+ * Check if Cover background: Ambient is enabled
+ */
+export function isCoverBackgroundAmbient(): boolean {
+  return hasBodyClass("dynamic-views-cover-bg-ambient");
+}
+
+/**
+ * Check if ambient color extraction is needed (for cache invalidation)
+ * Returns true if either Card background: Ambient or Cover background: Ambient is enabled
+ */
+export function isAmbientColorNeeded(): boolean {
+  return isCardBackgroundAmbient() || isCoverBackgroundAmbient();
+}
+
+/**
  * Get maximum number of images for slideshow
  * Returns slider value (default 10, min 2, max 24)
  */
@@ -307,7 +329,13 @@ export function applyCustomColors(
  */
 export function setupStyleSettingsObserver(
   onStyleChange: () => void,
+  onAmbientSettingChange?: () => void,
 ): () => void {
+  const ambientClasses = [
+    "dynamic-views-ambient-background",
+    "dynamic-views-cover-bg-ambient",
+  ];
+
   // Observer for body class changes (Style Settings class-toggle settings)
   const bodyObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
@@ -329,6 +357,18 @@ export function setupStyleSettingsObserver(
             .join();
 
         if (dynamicViewsChanged) {
+          // Check if ambient settings specifically changed
+          if (onAmbientSettingChange) {
+            const oldAmbient = ambientClasses.some((c) =>
+              oldClasses.includes(c),
+            );
+            const newAmbient = ambientClasses.some((c) =>
+              newClasses.includes(c),
+            );
+            if (oldAmbient !== newAmbient) {
+              onAmbientSettingChange();
+            }
+          }
           onStyleChange();
           break;
         }
