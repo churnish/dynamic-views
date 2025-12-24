@@ -1105,9 +1105,6 @@ export function CardRenderer({
   onCardClick,
   onFocusChange,
 }: CardRendererProps): unknown {
-  // DEBUG: Log when CardRenderer renders
-  console.log(`// CardRenderer render: propertyLabels=${settings.propertyLabels}`);
-
   return (
     <div
       ref={(el: HTMLElement | null) => {

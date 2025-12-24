@@ -82,6 +82,10 @@ export class DynamicViewsMasonryView extends BasesView {
   private renderVersion: number = 0;
   // AbortController for async content loading
   private abortController: AbortController | null = null;
+  // Track last data hash to detect actual data changes
+  private lastDataHash: string = "";
+  // Layout ResizeObserver (created once, not per render)
+  private layoutResizeObserver: ResizeObserver | null = null;
   // Timeout ID for masonry layout delay
   private layoutTimeoutId: ReturnType<typeof setTimeout> | null = null;
   // RAF ID for debounced resize handling
@@ -125,9 +129,11 @@ export class DynamicViewsMasonryView extends BasesView {
     return Math.min(rawCount, MAX_BATCH_SIZE);
   }
 
-  // Style Settings compatibility - must be own property (not prototype)
+  // Called by Obsidian when view settings change - trigger re-render
   setSettings = (): void => {
-    // No-op: MutationObserver handles updates
+    // Reset data hash to force re-render (bypass tab-switch optimization)
+    this.lastDataHash = "";
+    this.onDataUpdated();
   };
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
@@ -223,6 +229,20 @@ export class DynamicViewsMasonryView extends BasesView {
 
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
+
+      // Check if data actually changed - skip re-render if not (prevents tab switch flash)
+      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
+      const dataHash = allEntries
+        .map((e: BasesEntry) => e.file.path)
+        .join("\0");
+      if (
+        dataHash === this.lastDataHash &&
+        this.masonryContainer?.children.length
+      ) {
+        this.scrollPreservation.restoreAfterRender();
+        return;
+      }
+      this.lastDataHash = dataHash;
 
       // Read settings from Bases config
       const settings = readBasesSettings(
@@ -494,14 +514,22 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     };
 
-    // Setup resize observer (c59fe2d simple version)
-    const resizeObserver = new ResizeObserver(() => {
-      if (this.updateLayoutRef.current) {
-        this.updateLayoutRef.current();
-      }
-    });
-    resizeObserver.observe(this.masonryContainer);
-    this.register(() => resizeObserver.disconnect());
+    // Setup resize observer (only once, not per render)
+    if (!this.layoutResizeObserver) {
+      this.layoutResizeObserver = new ResizeObserver(() => {
+        // Guard: skip if container disconnected
+        if (!this.masonryContainer?.isConnected) return;
+        if (this.updateLayoutRef.current) {
+          this.updateLayoutRef.current();
+        }
+      });
+      this.layoutResizeObserver.observe(this.masonryContainer);
+      this.register(() => this.layoutResizeObserver?.disconnect());
+    } else if (this.masonryContainer) {
+      // Re-observe if container was recreated
+      this.layoutResizeObserver.disconnect();
+      this.layoutResizeObserver.observe(this.masonryContainer);
+    }
 
     // Setup window resize listener (c59fe2d had this)
     const handleResize = () => {

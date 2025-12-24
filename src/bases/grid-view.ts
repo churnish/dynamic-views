@@ -104,9 +104,23 @@ export class DynamicViewsCardView extends BasesView {
     return Math.min(rawCount, MAX_BATCH_SIZE);
   }
 
-  // Style Settings compatibility - must be own property (not prototype)
+  /** Calculate grid column count based on container width and card size */
+  private calculateColumnCount(): number {
+    const containerWidth = this.containerEl.clientWidth;
+    const cardSize = this.currentCardSize;
+    const minColumns = getMinGridColumns();
+    const gap = getCardSpacing(this.containerEl);
+    return Math.max(
+      minColumns,
+      Math.floor((containerWidth + gap) / (cardSize + gap)),
+    );
+  }
+
+  // Called by Obsidian when view settings change - trigger re-render
   setSettings = (): void => {
-    // No-op: MutationObserver handles updates
+    // Reset data hash to force re-render (bypass tab-switch optimization)
+    this.lastDataHash = "";
+    this.onDataUpdated();
   };
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
@@ -205,7 +219,10 @@ export class DynamicViewsCardView extends BasesView {
       const allEntries = this.data.data;
 
       // Check if data actually changed - skip re-render if not (prevents tab switch flash)
-      const dataHash = allEntries.map((e: BasesEntry) => e.file.path).join(",");
+      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
+      const dataHash = allEntries
+        .map((e: BasesEntry) => e.file.path)
+        .join("\0");
       if (
         dataHash === this.lastDataHash &&
         this.feedContainerRef.current?.children.length
@@ -227,17 +244,9 @@ export class DynamicViewsCardView extends BasesView {
         this.displayedCount = this.calculateInitialCount(settings);
       }
 
-      // Calculate grid columns
-      const containerWidth = this.containerEl.clientWidth;
-      // Card size represents minimum width; actual width may be larger to fill space
+      // Update card size before calculating columns
       this.currentCardSize = settings.cardSize;
-      const cardSize = this.currentCardSize;
-      const minColumns = getMinGridColumns();
-      const gap = getCardSpacing(this.containerEl);
-      const cols = Math.max(
-        minColumns,
-        Math.floor((containerWidth + gap) / (cardSize + gap)),
-      );
+      const cols = this.calculateColumnCount();
 
       // Set CSS variables for grid layout
       this.lastColumnCount = cols;
@@ -391,15 +400,7 @@ export class DynamicViewsCardView extends BasesView {
           this.isUpdatingColumns = true;
 
           try {
-            const containerWidth = this.containerEl.clientWidth;
-            // Card size represents minimum width; actual width may be larger to fill space
-            const cardSize = this.currentCardSize;
-            const minColumns = getMinGridColumns();
-            const gap = getCardSpacing(this.containerEl);
-            const cols = Math.max(
-              minColumns,
-              Math.floor((containerWidth + gap) / (cardSize + gap)),
-            );
+            const cols = this.calculateColumnCount();
 
             // Only update if changed
             if (cols !== this.lastColumnCount) {

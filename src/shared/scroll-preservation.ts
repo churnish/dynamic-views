@@ -3,7 +3,7 @@
  * Simple scroll save/restore - no visibility manipulation (matches fork behavior)
  */
 
-import type { App, EventRef } from "obsidian";
+import type { App, EventRef, WorkspaceLeaf } from "obsidian";
 
 // Shared scroll positions across all views (keyed by leafId)
 const scrollPositions = new Map<string, number>();
@@ -15,8 +15,11 @@ interface LeafRuntimeProps {
 }
 
 /** Safely access runtime-only leaf properties */
-function getLeafProps(leaf: unknown): LeafRuntimeProps {
-  return (leaf ?? {}) as LeafRuntimeProps;
+function getLeafProps(
+  leaf: WorkspaceLeaf | null | undefined,
+): LeafRuntimeProps {
+  if (!leaf) return {};
+  return leaf as unknown as LeafRuntimeProps;
 }
 
 export interface ScrollPreservationConfig {
@@ -31,10 +34,10 @@ export class ScrollPreservation {
   private leafId: string;
   private scrollEl: HTMLElement;
   private app: App;
-  private scrollHandler: (() => void) | null = null;
+  private scrollHandler: () => void;
 
   constructor(config: ScrollPreservationConfig) {
-    if (!config.leafId) {
+    if (!config.leafId || config.leafId.length === 0) {
       throw new Error("ScrollPreservation: leafId cannot be empty");
     }
     this.leafId = config.leafId;
@@ -45,6 +48,9 @@ export class ScrollPreservation {
     config.registerEvent(
       config.app.workspace.on("active-leaf-change", (leaf) => {
         const leafId = getLeafProps(leaf).id;
+        // Guard: skip if leaf has no id (transitional state)
+        if (!leafId) return;
+
         if (leafId === this.leafId) {
           this.handleSwitchTo();
         } else {
@@ -59,13 +65,12 @@ export class ScrollPreservation {
       passive: true,
     });
     config.register(() => {
-      if (this.scrollHandler) {
-        this.scrollEl.removeEventListener("scroll", this.scrollHandler);
-      }
+      this.scrollEl.removeEventListener("scroll", this.scrollHandler);
     });
   }
 
-  private handleSwitchTo(): void {
+  /** Restore scroll position from saved state */
+  private restore(): void {
     if (!this.scrollEl.isConnected) return;
     const saved = scrollPositions.get(this.leafId) ?? 0;
     if (saved > 0) {
@@ -73,16 +78,31 @@ export class ScrollPreservation {
     }
   }
 
-  private handleSwitchAway(newLeaf: unknown): void {
+  private handleSwitchTo(): void {
+    this.restore();
+  }
+
+  private handleSwitchAway(newLeaf: WorkspaceLeaf | null): void {
     if (!this.scrollEl.isConnected) return;
 
-    // Compare parent containers to detect same-pane tab switches
+    // Get this view's leaf - abort if not found (view may be destroyed)
     const thisLeaf = this.app.workspace.getLeafById(this.leafId);
+    if (!thisLeaf) return;
+
+    // Compare parent containers to detect same-pane tab switches
     const thisParent = getLeafProps(thisLeaf).parent;
     const newParent = getLeafProps(newLeaf).parent;
 
     // Only save for same-pane switches
     if (thisParent !== newParent) return;
+
+    // Check container state before reading scrollTop (avoids forced reflow)
+    if (
+      this.scrollEl.scrollHeight === 0 ||
+      this.scrollEl.scrollHeight <= this.scrollEl.clientHeight
+    ) {
+      return;
+    }
 
     const currentScroll = this.scrollEl.scrollTop;
     if (currentScroll > 0) {
@@ -99,8 +119,11 @@ export class ScrollPreservation {
         scheduled = false;
         if (!this.scrollEl.isConnected) return;
 
-        // Don't save when container collapsed
-        if (this.scrollEl.scrollHeight <= this.scrollEl.clientHeight) {
+        // Don't save when container collapsed or has no scrollable content
+        if (
+          this.scrollEl.scrollHeight === 0 ||
+          this.scrollEl.scrollHeight <= this.scrollEl.clientHeight
+        ) {
           return;
         }
 
@@ -111,11 +134,7 @@ export class ScrollPreservation {
 
   /** Restore scroll position after render */
   restoreAfterRender(): void {
-    if (!this.scrollEl.isConnected) return;
-    const saved = scrollPositions.get(this.leafId) ?? 0;
-    if (saved > 0) {
-      this.scrollEl.scrollTop = saved;
-    }
+    this.restore();
   }
 
   /** Clean up on view unload */
