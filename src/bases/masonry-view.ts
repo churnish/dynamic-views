@@ -82,8 +82,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private renderVersion: number = 0;
   // AbortController for async content loading
   private abortController: AbortController | null = null;
-  // Track last data hash to detect actual data changes
-  private lastDataHash: string = "";
+  // Track last data+settings hash to detect changes
+  private lastRenderHash: string = "";
   // Layout ResizeObserver (created once, not per render)
   private layoutResizeObserver: ResizeObserver | null = null;
   // Timeout ID for masonry layout delay
@@ -131,8 +131,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
   // Called by Obsidian when view settings change - trigger re-render
   setSettings = (): void => {
-    // Reset data hash to force re-render (bypass tab-switch optimization)
-    this.lastDataHash = "";
     this.onDataUpdated();
   };
 
@@ -230,26 +228,27 @@ export class DynamicViewsMasonryView extends BasesView {
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
 
-      // Check if data actually changed - skip re-render if not (prevents tab switch flash)
-      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
-      const dataHash = allEntries
-        .map((e: BasesEntry) => e.file.path)
-        .join("\0");
-      if (
-        dataHash === this.lastDataHash &&
-        this.masonryContainer?.children.length
-      ) {
-        this.scrollPreservation.restoreAfterRender();
-        return;
-      }
-      this.lastDataHash = dataHash;
-
-      // Read settings from Bases config
+      // Read settings from Bases config (before hash check so we can include settings)
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getGlobalSettings(),
         this.plugin.persistenceManager.getDefaultViewSettings(),
       );
+
+      // Check if data or settings changed - skip re-render if not (prevents tab switch flash)
+      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
+      const renderHash =
+        allEntries.map((e: BasesEntry) => e.file.path).join("\0") +
+        "\0\0" +
+        JSON.stringify(settings);
+      if (
+        renderHash === this.lastRenderHash &&
+        this.masonryContainer?.children.length
+      ) {
+        this.scrollPreservation.restoreAfterRender();
+        return;
+      }
+      this.lastRenderHash = renderHash;
 
       // Calculate initial count dynamically on first render
       if (this.displayedCount === 0) {

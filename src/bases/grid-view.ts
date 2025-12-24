@@ -79,8 +79,8 @@ export class DynamicViewsCardView extends BasesView {
   private abortController: AbortController | null = null;
   // Guard against reentrant ResizeObserver callbacks (#13)
   private isUpdatingColumns: boolean = false;
-  // Track last data hash to detect actual data changes
-  private lastDataHash: string = "";
+  // Track last data+settings hash to detect changes
+  private lastRenderHash: string = "";
   // Track last column count to avoid unnecessary CSS reflow
   private lastColumnCount: number = 0;
 
@@ -118,8 +118,6 @@ export class DynamicViewsCardView extends BasesView {
 
   // Called by Obsidian when view settings change - trigger re-render
   setSettings = (): void => {
-    // Reset data hash to force re-render (bypass tab-switch optimization)
-    this.lastDataHash = "";
     this.onDataUpdated();
   };
 
@@ -218,26 +216,27 @@ export class DynamicViewsCardView extends BasesView {
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
 
-      // Check if data actually changed - skip re-render if not (prevents tab switch flash)
-      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
-      const dataHash = allEntries
-        .map((e: BasesEntry) => e.file.path)
-        .join("\0");
-      if (
-        dataHash === this.lastDataHash &&
-        this.feedContainerRef.current?.children.length
-      ) {
-        this.scrollPreservation.restoreAfterRender();
-        return;
-      }
-      this.lastDataHash = dataHash;
-
-      // Read settings from Bases config
+      // Read settings from Bases config (before hash check so we can include settings)
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getGlobalSettings(),
         this.plugin.persistenceManager.getDefaultViewSettings(),
       );
+
+      // Check if data or settings changed - skip re-render if not (prevents tab switch flash)
+      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
+      const renderHash =
+        allEntries.map((e: BasesEntry) => e.file.path).join("\0") +
+        "\0\0" +
+        JSON.stringify(settings);
+      if (
+        renderHash === this.lastRenderHash &&
+        this.feedContainerRef.current?.children.length
+      ) {
+        this.scrollPreservation.restoreAfterRender();
+        return;
+      }
+      this.lastRenderHash = renderHash;
 
       // Calculate initial count dynamically on first render
       if (this.displayedCount === 0) {
