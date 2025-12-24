@@ -9,7 +9,7 @@ import type { Settings } from "../types";
 import type { RefObject } from "../datacore/types";
 import {
   showTagHashPrefix,
-  hideEmptyTagMarker,
+  hideEmptyTagField,
   showTimestampIcon,
   getEmptyValueMarker,
   shouldHideMissingProperties,
@@ -707,11 +707,12 @@ function renderProperty(
       </span>
     ) : null;
 
-  // If no value, show placeholder (or hide for tags when setting enabled)
+  // If no value, show placeholder (or hide for tags when labels hidden and setting enabled)
   if (!resolvedValue) {
-    // Hide empty tags/file-tags when setting enabled
+    // Hide empty tags/file-tags when labels hidden and setting enabled
     if (
-      hideEmptyTagMarker() &&
+      hideEmptyTagField() &&
+      settings.propertyLabels === "hide" &&
       (propertyName === "tags" ||
         propertyName === "note.tags" ||
         propertyName === "file.tags" ||

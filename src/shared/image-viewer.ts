@@ -5,8 +5,9 @@
 import type { App } from "obsidian";
 import Panzoom, { PanzoomObject } from "@panzoom/panzoom";
 import { setupSwipeInterception } from "../bases/swipe-interceptor";
+import { GESTURE_TIMEOUT_MS } from "./constants";
 import {
-  getZoomSensitivity,
+  getZoomSensitivityDesktop,
   getZoomSensitivityMobile,
 } from "../utils/style-settings";
 
@@ -126,7 +127,7 @@ export function handleImageViewerClick(
   if (existingClone) {
     closeImageViewer(existingClone, viewerCleanupFns, viewerClones);
   } else {
-    openImageViewer(embedEl, cardPath, app, viewerCleanupFns, viewerClones);
+    openImageViewer(embedEl, app, viewerCleanupFns, viewerClones);
   }
 }
 
@@ -149,6 +150,7 @@ function setupImageViewerGestures(
   let pointerdownHandler: ((e: PointerEvent) => void) | null = null;
   let pointermoveHandler: ((e: PointerEvent) => void) | null = null;
   let pointerupHandler: (() => void) | null = null;
+  let pointercancelHandler: (() => void) | null = null;
   let resizeHandler: (() => void) | null = null;
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let isMaximized = false;
@@ -182,7 +184,7 @@ function setupImageViewerGestures(
   function attachPanzoom(): void {
     const zoomSensitivity = isMobile
       ? getZoomSensitivityMobile()
-      : getZoomSensitivity();
+      : getZoomSensitivityDesktop();
 
     // Setup resize handling for cached dimensions
     if (isMobile) {
@@ -369,7 +371,7 @@ function setupImageViewerGestures(
       }
     };
 
-    // Desktop-only: double-press maximize, long-press reset
+    // Desktop-only: spacebar maximize, long-press reset
     // Mobile uses standard pinch-zoom + pan (no maximize/long-press features)
     if (!isMobile) {
       // Calculate scale to fill container without cropping
@@ -406,6 +408,8 @@ function setupImageViewerGestures(
         if (!e.isPrimary || e.button !== 0 || e.target !== imgEl) return;
         longPressStartX = e.clientX;
         longPressStartY = e.clientY;
+        // Disable panning during long press detection
+        panzoomInstance?.setOptions({ disablePan: true });
         longPressTimer = setTimeout(() => {
           if (isMaximized) {
             // Reset to initial maximized position (containScale, centered)
@@ -424,22 +428,31 @@ function setupImageViewerGestures(
       // Cancel long-press on move beyond threshold (user is panning, not long-pressing)
       pointermoveHandler = (e: PointerEvent) => {
         if (
-          Math.abs(e.clientX - longPressStartX) > MOVE_THRESHOLD ||
-          Math.abs(e.clientY - longPressStartY) > MOVE_THRESHOLD
+          longPressTimer &&
+          (Math.abs(e.clientX - longPressStartX) > MOVE_THRESHOLD ||
+            Math.abs(e.clientY - longPressStartY) > MOVE_THRESHOLD)
         ) {
           clearLongPress();
+          // Re-enable panning for normal pan gesture
+          panzoomInstance?.setOptions({ disablePan: false });
         }
       };
       container.addEventListener("pointermove", pointermoveHandler, true);
 
       pointerupHandler = () => {
         clearLongPress();
+        // Re-enable panning (disabled on pointerdown for long press detection)
+        panzoomInstance?.setOptions({ disablePan: false });
         // Clear long press flag after click event has fired
         setTimeout(() => {
           delete container.dataset.longPressTriggered;
         }, 0);
       };
       container.addEventListener("pointerup", pointerupHandler, true);
+
+      // Handle pointer cancel (system gesture, browser scroll) same as pointerup
+      pointercancelHandler = pointerupHandler;
+      container.addEventListener("pointercancel", pointercancelHandler, true);
     }
   }
 
@@ -489,6 +502,13 @@ function setupImageViewerGestures(
     if (pointerupHandler) {
       container.removeEventListener("pointerup", pointerupHandler, true);
     }
+    if (pointercancelHandler) {
+      container.removeEventListener(
+        "pointercancel",
+        pointercancelHandler,
+        true,
+      );
+    }
     if (loadHandler) {
       imgEl.removeEventListener("load", loadHandler);
     }
@@ -509,7 +529,6 @@ function setupImageViewerGestures(
  */
 function openImageViewer(
   embedEl: HTMLElement,
-  cardPath: string,
   app: App,
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>,
@@ -747,7 +766,7 @@ function openImageViewer(
       gestureTimeoutId = setTimeout(() => {
         gestureInProgress = false;
         gestureTimeoutId = null;
-      }, 50);
+      }, GESTURE_TIMEOUT_MS);
     }
   };
 
@@ -766,27 +785,10 @@ function openImageViewer(
   const onOverlayClick = (e: MouseEvent) => {
     if (isOpening) return;
     // On mobile, ignore clicks during or immediately after gesture
-    if (isMobile && gestureInProgress) {
-      return;
-    }
+    if (isMobile && gestureInProgress) return;
+    // Ignore overlay click after long press reset (cursor may end over overlay)
+    if (cloneEl.dataset.longPressTriggered) return;
     if (e.target === cloneEl) {
-      closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-    }
-  };
-
-  // Document-level click closes viewer only if close-on-click enabled (desktop only)
-  const onClickOutside = (e: Event) => {
-    if (isOpening) return;
-    if (
-      isMobile ||
-      !document.body.classList.contains(
-        "dynamic-views-image-viewer-close-on-click",
-      )
-    ) {
-      return;
-    }
-    const target = e.target as HTMLElement;
-    if (target !== imgEl && target !== cloneEl) {
       closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
     }
   };
@@ -800,7 +802,6 @@ function openImageViewer(
   // Add all listeners synchronously (isOpening flag prevents immediate trigger)
   document.addEventListener("keydown", onEscape);
   cloneEl.addEventListener("click", onOverlayClick);
-  document.addEventListener("click", onClickOutside);
 
   // Cleanup always removes all listeners (removeEventListener is no-op if never added)
   // Call existing cleanup first to prevent leak if map entry is overwritten
@@ -808,7 +809,6 @@ function openImageViewer(
   viewerListenerCleanups.set(cloneEl, () => {
     document.removeEventListener("keydown", onEscape);
     cloneEl.removeEventListener("click", onOverlayClick);
-    document.removeEventListener("click", onClickOutside);
     if (isMobile) {
       cloneEl.removeEventListener("touchstart", onTouchStart);
       cloneEl.removeEventListener("touchend", onTouchEnd);

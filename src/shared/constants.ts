@@ -37,3 +37,9 @@ export const SLIDESHOW_ANIMATION_MS = 300;
 
 /** Wide mode multiplier for expanded width (must match CSS --datacore-wide-multiplier) */
 export const WIDE_MODE_MULTIPLIER = 1.75;
+
+/** Minimum movement in pixels to determine swipe direction */
+export const SWIPE_DETECT_THRESHOLD = 10;
+
+/** Delay in ms after gesture ends before allowing click events */
+export const GESTURE_TIMEOUT_MS = 50;

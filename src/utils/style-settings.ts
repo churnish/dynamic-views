@@ -90,10 +90,10 @@ export function showTagHashPrefix(): boolean {
 }
 
 /**
- * Check if empty value marker should be hidden for tags
+ * Check if empty tag field should be hidden when labels are not shown
  */
-export function hideEmptyTagMarker(): boolean {
-  return hasBodyClass("dynamic-views-hide-empty-tag-marker");
+export function hideEmptyTagField(): boolean {
+  return hasBodyClass("dynamic-views-hide-empty-tag-field");
 }
 
 /**
@@ -190,7 +190,7 @@ export function shouldHideEmptyProperties(): boolean {
 /**
  * Get zoom sensitivity from Style Settings (desktop)
  */
-export function getZoomSensitivity(): number {
+export function getZoomSensitivityDesktop(): number {
   return getCSSVariableAsNumber(
     "--dynamic-views-zoom-sensitivity-desktop",
     0.08,
@@ -198,10 +198,10 @@ export function getZoomSensitivity(): number {
 }
 
 /**
- * Get zoom sensitivity from Style Settings (mobile)
+ * Get zoom sensitivity for mobile (hardcoded - no user setting)
  */
 export function getZoomSensitivityMobile(): number {
-  return getCSSVariableAsNumber("--dynamic-views-zoom-sensitivity-mobile", 0.5);
+  return 0.6;
 }
 
 /**

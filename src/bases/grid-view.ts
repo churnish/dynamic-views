@@ -664,9 +664,10 @@ export class DynamicViewsCardView extends BasesView {
 
       checkAndLoad();
 
-      // Start throttle cooldown
+      // Start throttle cooldown with trailing call
       this.scrollThrottleTimeout = window.setTimeout(() => {
         this.scrollThrottleTimeout = null;
+        checkAndLoad(); // Trailing call catches scroll position changes during throttle
       }, SCROLL_THROTTLE_MS);
     };
 

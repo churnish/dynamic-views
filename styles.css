@@ -345,27 +345,11 @@ settings:
         type: class-toggle
         default: true
     -
-        id: dynamic-views-image-viewer-close-on-click
-        title: Close when losing focus (desktop)
-        description: Close image viewer when clicking outside (desktop only)
-        type: class-toggle
-        default: false
-    -
         id: dynamic-views-zoom-sensitivity-desktop
         title: Zoom sensitivity (desktop)
         description: Set how quickly images zoom on desktop
         type: variable-number-slider
         default: 0.08
-        min: 0.01
-        max: 1
-        step: 0.01
-        format: ''
-    -
-        id: dynamic-views-zoom-sensitivity-mobile
-        title: Zoom sensitivity (mobile)
-        description: Set how quickly images zoom on mobile
-        type: variable-number-slider
-        default: 0.5
         min: 0.01
         max: 1
         step: 0.01
@@ -924,9 +908,9 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-hide-empty-tag-marker
-        title: Hide empty value marker
-        description: Show nothing when tags or file tags property has no value
+        id: dynamic-views-hide-empty-tag-field
+        title: Hide empty tag field
+        description: Show nothing when the property label is hidden and there are no tags
         type: class-toggle
         default: true
     -
@@ -3470,6 +3454,13 @@ body.dynamic-views-show-thumbnail-placeholder
   filter: none;
 }
 
+/* Bottom spacing for phone to prevent mobile toolbar from obscuring cards */
+.is-phone
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views-bases-container {
+  margin-bottom: var(--view-bottom-spacing);
+}
+
 /* Hide multi-image thumbnail shadow when setting enabled */
 body.dynamic-views-hide-thumbnail-shadow
   .dynamic-views
@@ -3599,7 +3590,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
     .dynamic-views-image-viewer-fullscreen
   )
   > .dynamic-views-image-embed.is-zoomed {
-  background: var(--background-modifier-cover);
+  background: color-mix(in srgb, var(--background-primary) 40%, transparent);
   transition: background var(--anim-duration-fast) ease;
 }
 
@@ -5630,6 +5621,11 @@ body.dynamic-views-full-row-align-right
   font-family: var(--dynamic-views-property-master-font, inherit);
 }
 
+/* Collapsed field: hidden entirely */
+.dynamic-views .property-field.property-field-collapsed {
+  display: none;
+}
+
 /* Gap between inline property label and content */
 .dynamic-views .property-field:has(.property-label-inline) {
   gap: var(--size-2-2);
@@ -7066,7 +7062,7 @@ body.dynamic-views-no-fade-truncated-text
   position: relative;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .dynamic-views .dynamic-views-masonry .card,

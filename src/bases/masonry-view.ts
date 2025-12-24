@@ -632,7 +632,13 @@ export class DynamicViewsMasonryView extends BasesView {
         ? serializeGroupKey(processedGroup.group.key)
         : undefined;
 
-      if (
+      // For ungrouped mode (no group key), use masonryContainer directly
+      // to match initial render structure
+      if (currentGroupKey === undefined) {
+        groupEl = this.masonryContainer;
+        this.lastGroupKey = undefined;
+        this.lastGroupContainer = this.masonryContainer;
+      } else if (
         currentGroupKey === this.lastGroupKey &&
         this.lastGroupContainer?.isConnected
       ) {
@@ -649,7 +655,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // New group - create container for cards
         groupEl = this.masonryContainer.createDiv(
-          "dynamic-views-group bases-cards-group",
+          "dynamic-views-group bases-cards-group masonry-container",
         );
         setGroupKeyDataset(groupEl, currentGroupKey);
 
@@ -696,6 +702,14 @@ export class DynamicViewsMasonryView extends BasesView {
     const prevLayout = this.groupLayoutResults.get(layoutKey);
     const targetContainer = this.lastGroupContainer ?? this.masonryContainer;
 
+    // Ensure target container has masonry-container class for CSS height rule
+    if (
+      targetContainer &&
+      !targetContainer.classList.contains("masonry-container")
+    ) {
+      targetContainer.classList.add("masonry-container");
+    }
+
     if (prevLayout && newCardsRendered > 0 && targetContainer) {
       // Get only the newly rendered cards from the target container
       const allCards = Array.from(
@@ -717,7 +731,9 @@ export class DynamicViewsMasonryView extends BasesView {
         const currentPrevLayout = this.groupLayoutResults.get(layoutKey);
 
         // Validate refs are still valid after async delay (#5)
-        if (!targetContainer?.isConnected || !currentPrevLayout) return;
+        if (!targetContainer?.isConnected || !currentPrevLayout) {
+          return;
+        }
 
         // If any card was disconnected, fall back to full recalc
         if (newCards.some((c) => !c.isConnected)) {
@@ -921,6 +937,7 @@ export class DynamicViewsMasonryView extends BasesView {
     };
 
     // Create scroll handler with throttling (scroll tracking is in constructor)
+    // Uses leading+trailing pattern: runs immediately on first event, then again when throttle expires
     this.scrollListener = () => {
       // Throttle: skip if cooldown active
       if (this.scrollThrottleTimeout !== null) {
@@ -929,9 +946,10 @@ export class DynamicViewsMasonryView extends BasesView {
 
       checkAndLoad();
 
-      // Start throttle cooldown
+      // Start throttle cooldown with trailing call
       this.scrollThrottleTimeout = window.setTimeout(() => {
         this.scrollThrottleTimeout = null;
+        checkAndLoad(); // Trailing call catches scroll position changes during throttle
       }, SCROLL_THROTTLE_MS);
     };
 

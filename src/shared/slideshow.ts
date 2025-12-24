@@ -3,13 +3,12 @@
  * Extracts common logic between card-renderer.tsx and shared-renderer.ts
  */
 
-import { SLIDESHOW_ANIMATION_MS } from "./constants";
+import { SLIDESHOW_ANIMATION_MS, SWIPE_DETECT_THRESHOLD } from "./constants";
 
 // Gesture detection thresholds
 const WHEEL_SWIPE_THRESHOLD = 5; // Accumulated deltaX to trigger navigation
 const WHEEL_ACCEL_THRESHOLD = 5; // Minimum deltaX to detect acceleration
 const WHEEL_ACCEL_OFFSET = 2; // Delta increase to count as acceleration
-const TOUCH_DETECT_THRESHOLD = 10; // Movement to determine swipe direction
 const TOUCH_SWIPE_THRESHOLD = 30; // Distance to trigger navigation
 
 export interface SlideshowElements {
@@ -247,7 +246,7 @@ export function setupSwipeGestures(
       const deltaY = e.touches[0].clientY - touchStartY;
 
       // Determine swipe direction on first significant movement
-      if (!isHorizontalSwipe && Math.abs(deltaX) > TOUCH_DETECT_THRESHOLD) {
+      if (!isHorizontalSwipe && Math.abs(deltaX) > SWIPE_DETECT_THRESHOLD) {
         isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
       }
 

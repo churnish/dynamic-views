@@ -3,8 +3,7 @@
  * Prevents Obsidian sidebar gestures from triggering when interacting with Bases views
  */
 
-/** Minimum horizontal movement to consider it a horizontal swipe */
-const HORIZONTAL_THRESHOLD = 10;
+import { SWIPE_DETECT_THRESHOLD } from "../shared/constants";
 
 /**
  * Setup touch event interception for a container
@@ -46,7 +45,7 @@ export function setupSwipeInterception(
     const deltaY = Math.abs(touch.clientY - touchStartY);
 
     // Only intercept if horizontal movement dominates
-    if (deltaX > HORIZONTAL_THRESHOLD && deltaX > deltaY) {
+    if (deltaX > SWIPE_DETECT_THRESHOLD && deltaX > deltaY) {
       e.stopPropagation();
     }
   };

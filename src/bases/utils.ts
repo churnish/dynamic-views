@@ -180,6 +180,11 @@ export function serializeGroupKey(key: unknown): string | undefined {
         return serializeGroupKey(data);
       }
     }
+
+    // Handle Bases Value objects with .icon but no .data (empty/missing value)
+    if ("icon" in key && !("data" in key)) {
+      return undefined;
+    }
   }
 
   // For objects/arrays, use JSON to avoid collision
@@ -323,8 +328,7 @@ function renderGroupValue(valueEl: HTMLElement, key: unknown, app: App): void {
 }
 
 /**
- * Render group header if group has a key
- * Creates the heading element with property label and value
+ * Render group header with property name and value (or "None" for empty keys)
  * Header is rendered as sibling to card group (matching vanilla Bases structure)
  */
 export function renderGroupHeader(
@@ -333,17 +337,23 @@ export function renderGroupHeader(
   config: BasesConfigWithSort,
   app: App,
 ): void {
-  if (!group.hasKey()) return;
+  // Don't render header when not grouping
+  if (!config.groupBy?.property) return;
 
   const headerEl = containerEl.createDiv("bases-group-heading");
 
-  if (config.groupBy?.property) {
-    const propertyEl = headerEl.createDiv("bases-group-property");
-    const propertyName = config.getDisplayName(config.groupBy.property);
-    propertyEl.setText(propertyName);
-  }
+  const propertyEl = headerEl.createDiv("bases-group-property");
+  const propertyName = config.getDisplayName(config.groupBy.property);
+  propertyEl.setText(propertyName);
 
   const valueEl = headerEl.createDiv("bases-group-value");
+
+  // Show "None" for empty/missing keys (covers hasKey()=false and empty arrays)
+  if (!serializeGroupKey(group.key)) {
+    valueEl.setText("None");
+    return;
+  }
+
   renderGroupValue(valueEl, group.key, app);
 }
 

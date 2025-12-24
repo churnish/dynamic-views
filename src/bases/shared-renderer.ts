@@ -28,7 +28,7 @@ import {
 import { getTimestampIcon } from "../shared/render-utils";
 import {
   showTagHashPrefix,
-  hideEmptyTagMarker,
+  hideEmptyTagField,
   showTimestampIcon,
   getEmptyValueMarker,
   shouldHideMissingProperties,
@@ -77,6 +77,23 @@ function isTagProperty(propertyName: string | undefined): boolean {
     propertyName === "file.tags" ||
     propertyName === "file tags"
   );
+}
+
+/**
+ * Determine if a field should be collapsed based on hide settings
+ */
+function shouldCollapseField(
+  value: string | null,
+  propertyName: string,
+  hideMissing: boolean,
+  hideEmpty: boolean,
+  hideEmptyTags: boolean,
+): boolean {
+  if (value === null && hideMissing) return true;
+  if (value === "" && hideEmpty) return true;
+  // Tag properties return null (not "") when empty, so check both
+  if (!value && isTagProperty(propertyName) && hideEmptyTags) return true;
+  return false;
 }
 
 /**
@@ -186,14 +203,8 @@ export class SharedCardRenderer {
     this.cardAbortControllers.forEach((controller) => controller.abort());
     this.cardAbortControllers = [];
 
-    // Cleanup viewers if forced (view destruction) or "close when losing focus" is enabled
-    // This allows viewer to persist across re-renders when setting is off
-    if (
-      forceViewerCleanup ||
-      document.body.classList.contains(
-        "dynamic-views-image-viewer-close-on-click",
-      )
-    ) {
+    // Cleanup viewers only on view destruction (viewer persists across re-renders)
+    if (forceViewerCleanup) {
       cleanupAllViewers(this.viewerCleanupFns, this.viewerClones);
     }
   }
@@ -1350,7 +1361,8 @@ export class SharedCardRenderer {
     // Pre-compute hide toggles (avoid repeated classList checks)
     const hideMissing = shouldHideMissingProperties();
     const hideEmpty = shouldHideEmptyProperties();
-    const hideEmptyTags = hideEmptyTagMarker();
+    const hideEmptyTags =
+      hideEmptyTagField() && settings.propertyLabels === "hide";
 
     // Check if any row has content
     // Show row if property is configured, UNLESS labels hidden AND hideMissingProperties enabled
@@ -1490,43 +1502,54 @@ export class SharedCardRenderer {
         field2El.children.length > 0 || field2El.textContent?.trim().length > 0;
 
       // Check if properties are actually set (not empty string from duplicate/empty slots)
-      const prop1Set = effectiveProps[0] !== "";
-      const prop2Set = effectiveProps[1] !== "";
+      const field1HasProp = effectiveProps[0] !== "";
+      const field2HasProp = effectiveProps[1] !== "";
 
       if (!has1 && !has2) {
         row1El.remove();
       } else if (has1 && !has2) {
-        // Field 1 has content, field 2 empty
-        // Add placeholder ONLY if prop2 is set AND not hidden by toggles
-        if (prop2Set) {
-          const shouldHide =
-            (values[1] === null && hideMissing) ||
-            (values[1] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[1]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field2HasProp) {
+          if (
+            shouldCollapseField(
+              values[1],
+              effectiveProps[1],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field2El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field2El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field2El.addClass("property-field-collapsed");
         }
       } else if (!has1 && has2) {
-        // Field 2 has content, field 1 empty
-        // Add placeholder ONLY if prop1 is set AND not hidden by toggles
-        if (prop1Set) {
-          const shouldHide =
-            (values[0] === null && hideMissing) ||
-            (values[0] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[0]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field1HasProp) {
+          if (
+            shouldCollapseField(
+              values[0],
+              effectiveProps[0],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field1El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field1El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field1El.addClass("property-field-collapsed");
         }
       }
-      // Keep both fields in DOM for proper positioning (field 2 stays right-aligned)
     }
 
     // Row 2
@@ -1571,43 +1594,54 @@ export class SharedCardRenderer {
         field4El.children.length > 0 || field4El.textContent?.trim().length > 0;
 
       // Check if properties are actually set (not empty string from duplicate/empty slots)
-      const prop3Set = effectiveProps[2] !== "";
-      const prop4Set = effectiveProps[3] !== "";
+      const field3HasProp = effectiveProps[2] !== "";
+      const field4HasProp = effectiveProps[3] !== "";
 
       if (!has3 && !has4) {
         row2El.remove();
       } else if (has3 && !has4) {
-        // Field 3 has content, field 4 empty
-        // Add placeholder ONLY if prop4 is set AND not hidden by toggles
-        if (prop4Set) {
-          const shouldHide =
-            (values[3] === null && hideMissing) ||
-            (values[3] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[3]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field4HasProp) {
+          if (
+            shouldCollapseField(
+              values[3],
+              effectiveProps[3],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field4El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field4El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field4El.addClass("property-field-collapsed");
         }
       } else if (!has3 && has4) {
-        // Field 4 has content, field 3 empty
-        // Add placeholder ONLY if prop3 is set AND not hidden by toggles
-        if (prop3Set) {
-          const shouldHide =
-            (values[2] === null && hideMissing) ||
-            (values[2] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[2]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field3HasProp) {
+          if (
+            shouldCollapseField(
+              values[2],
+              effectiveProps[2],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field3El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field3El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field3El.addClass("property-field-collapsed");
         }
       }
-      // Keep both fields in DOM for proper positioning (field 4 stays right-aligned)
     }
 
     // Row 3
@@ -1650,36 +1684,52 @@ export class SharedCardRenderer {
       const has6 =
         field6El.children.length > 0 || field6El.textContent?.trim().length > 0;
 
-      const prop5Set = effectiveProps[4] !== "";
-      const prop6Set = effectiveProps[5] !== "";
+      const field5HasProp = effectiveProps[4] !== "";
+      const field6HasProp = effectiveProps[5] !== "";
 
       if (!has5 && !has6) {
         row3El.remove();
       } else if (has5 && !has6) {
-        if (prop6Set) {
-          const shouldHide =
-            (values[5] === null && hideMissing) ||
-            (values[5] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[5]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field6HasProp) {
+          if (
+            shouldCollapseField(
+              values[5],
+              effectiveProps[5],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field6El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field6El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field6El.addClass("property-field-collapsed");
         }
       } else if (!has5 && has6) {
-        if (prop5Set) {
-          const shouldHide =
-            (values[4] === null && hideMissing) ||
-            (values[4] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[4]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field5HasProp) {
+          if (
+            shouldCollapseField(
+              values[4],
+              effectiveProps[4],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field5El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field5El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field5El.addClass("property-field-collapsed");
         }
       }
     }
@@ -1724,36 +1774,52 @@ export class SharedCardRenderer {
       const has8 =
         field8El.children.length > 0 || field8El.textContent?.trim().length > 0;
 
-      const prop7Set = effectiveProps[6] !== "";
-      const prop8Set = effectiveProps[7] !== "";
+      const field7HasProp = effectiveProps[6] !== "";
+      const field8HasProp = effectiveProps[7] !== "";
 
       if (!has7 && !has8) {
         row4El.remove();
       } else if (has7 && !has8) {
-        if (prop8Set) {
-          const shouldHide =
-            (values[7] === null && hideMissing) ||
-            (values[7] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[7]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field8HasProp) {
+          if (
+            shouldCollapseField(
+              values[7],
+              effectiveProps[7],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field8El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field8El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field8El.addClass("property-field-collapsed");
         }
       } else if (!has7 && has8) {
-        if (prop7Set) {
-          const shouldHide =
-            (values[6] === null && hideMissing) ||
-            (values[6] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[6]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field7HasProp) {
+          if (
+            shouldCollapseField(
+              values[6],
+              effectiveProps[6],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field7El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field7El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field7El.addClass("property-field-collapsed");
         }
       }
     }
@@ -1799,36 +1865,52 @@ export class SharedCardRenderer {
         field10El.children.length > 0 ||
         field10El.textContent?.trim().length > 0;
 
-      const prop9Set = effectiveProps[8] !== "";
-      const prop10Set = effectiveProps[9] !== "";
+      const field9HasProp = effectiveProps[8] !== "";
+      const field10HasProp = effectiveProps[9] !== "";
 
       if (!has9 && !has10) {
         row5El.remove();
       } else if (has9 && !has10) {
-        if (prop10Set) {
-          const shouldHide =
-            (values[9] === null && hideMissing) ||
-            (values[9] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[9]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field10HasProp) {
+          if (
+            shouldCollapseField(
+              values[9],
+              effectiveProps[9],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field10El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field10El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field10El.addClass("property-field-collapsed");
         }
       } else if (!has9 && has10) {
-        if (prop9Set) {
-          const shouldHide =
-            (values[8] === null && hideMissing) ||
-            (values[8] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[8]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field9HasProp) {
+          if (
+            shouldCollapseField(
+              values[8],
+              effectiveProps[8],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field9El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field9El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field9El.addClass("property-field-collapsed");
         }
       }
     }
@@ -1875,36 +1957,52 @@ export class SharedCardRenderer {
         field12El.children.length > 0 ||
         field12El.textContent?.trim().length > 0;
 
-      const prop11Set = effectiveProps[10] !== "";
-      const prop12Set = effectiveProps[11] !== "";
+      const field11HasProp = effectiveProps[10] !== "";
+      const field12HasProp = effectiveProps[11] !== "";
 
       if (!has11 && !has12) {
         row6El.remove();
       } else if (has11 && !has12) {
-        if (prop12Set) {
-          const shouldHide =
-            (values[11] === null && hideMissing) ||
-            (values[11] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[11]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field12HasProp) {
+          if (
+            shouldCollapseField(
+              values[11],
+              effectiveProps[11],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field12El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field12El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field12El.addClass("property-field-collapsed");
         }
       } else if (!has11 && has12) {
-        if (prop11Set) {
-          const shouldHide =
-            (values[10] === null && hideMissing) ||
-            (values[10] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[10]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field11HasProp) {
+          if (
+            shouldCollapseField(
+              values[10],
+              effectiveProps[10],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field11El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field11El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field11El.addClass("property-field-collapsed");
         }
       }
     }
@@ -1951,36 +2049,52 @@ export class SharedCardRenderer {
         field14El.children.length > 0 ||
         field14El.textContent?.trim().length > 0;
 
-      const prop13Set = effectiveProps[12] !== "";
-      const prop14Set = effectiveProps[13] !== "";
+      const field13HasProp = effectiveProps[12] !== "";
+      const field14HasProp = effectiveProps[13] !== "";
 
       if (!has13 && !has14) {
         row7El.remove();
       } else if (has13 && !has14) {
-        if (prop14Set) {
-          const shouldHide =
-            (values[13] === null && hideMissing) ||
-            (values[13] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[13]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field14HasProp) {
+          if (
+            shouldCollapseField(
+              values[13],
+              effectiveProps[13],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field14El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field14El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field14El.addClass("property-field-collapsed");
         }
       } else if (!has13 && has14) {
-        if (prop13Set) {
-          const shouldHide =
-            (values[12] === null && hideMissing) ||
-            (values[12] === "" && hideEmpty) ||
-            (isTagProperty(effectiveProps[12]) && hideEmptyTags);
-          if (!shouldHide) {
+        if (field13HasProp) {
+          if (
+            shouldCollapseField(
+              values[12],
+              effectiveProps[12],
+              hideMissing,
+              hideEmpty,
+              hideEmptyTags,
+            )
+          ) {
+            field13El.addClass("property-field-collapsed");
+          } else {
             const placeholderContent = field13El.createDiv("property-content");
             const markerSpan =
               placeholderContent.createSpan("empty-value-marker");
             markerSpan.textContent = getEmptyValueMarker();
           }
+        } else if (settings.propertyLabels === "hide") {
+          field13El.addClass("property-field-collapsed");
         }
       }
     }
@@ -2073,17 +2187,25 @@ export class SharedCardRenderer {
       labelSpan.textContent = getPropertyLabel(propertyName) + " ";
     }
 
+    // Early return for empty tag fields when labels hidden - before creating wrapper divs
+    // so container remains empty and field can be collapsed
+    if (
+      !stringValue &&
+      isTagProperty(propertyName) &&
+      hideEmptyTagField() &&
+      settings.propertyLabels === "hide"
+    ) {
+      return;
+    }
+
     // Wrapper for scrolling content (gradients applied here)
     const contentWrapper = container.createDiv("property-content-wrapper");
 
     // Content container (actual property value)
     const propertyContent = contentWrapper.createDiv("property-content");
 
-    // If no value, show placeholder (or hide for tags when setting enabled)
+    // If no value, show placeholder
     if (!stringValue) {
-      if (isTagProperty(propertyName) && hideEmptyTagMarker()) {
-        return;
-      }
       const markerSpan = propertyContent.createSpan("empty-value-marker");
       markerSpan.textContent = getEmptyValueMarker();
       return;

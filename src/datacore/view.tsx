@@ -1503,9 +1503,10 @@ export function View({
       // Check immediately (leading edge)
       loadMoreItems();
 
-      // Start cooldown
+      // Start cooldown with trailing call
       scrollTimer = setTimeout(() => {
         scrollTimer = null;
+        loadMoreItems(); // Trailing call catches scroll position changes during throttle
       }, SCROLL_THROTTLE_MS);
     };
     scrollableElement.addEventListener("scroll", handleScroll, {
