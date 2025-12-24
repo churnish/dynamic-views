@@ -70,42 +70,8 @@ import {
   isTagProperty,
   isFileProperty,
   isFormulaProperty,
+  shouldCollapseField,
 } from "../shared/property-helpers";
-
-/**
- * Determine if a field should be collapsed based on hide settings
- *
- * Settings:
- * - hideMissing: only applies to YAML properties (file/formula/tag can't be missing)
- * - hideEmptyMode: applies to all property types uniformly
- */
-function shouldCollapseField(
-  value: string | null,
-  propertyName: string,
-  hideMissing: boolean,
-  hideEmptyMode: HideEmptyMode,
-  propertyLabels: "hide" | "inline" | "above",
-): boolean {
-  const isTag = isTagProperty(propertyName);
-  const isFile = isFileProperty(propertyName);
-  const isFormula = isFormulaProperty(propertyName);
-
-  // Empty handling (applies to all property types uniformly)
-  const isEmpty = value === "" || (isTag && !value);
-  if (isEmpty) {
-    if (hideEmptyMode === "all") return true;
-    if (hideEmptyMode === "labels-hidden" && propertyLabels === "hide")
-      return true;
-    return false; // "show" mode
-  }
-
-  // Missing handling (only YAML properties can be "missing")
-  if (value === null && !isFile && !isFormula && !isTag) {
-    return hideMissing;
-  }
-
-  return false;
-}
 
 /**
  * Truncate title text to fit within container with ellipsis.

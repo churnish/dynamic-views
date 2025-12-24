@@ -52,6 +52,7 @@ import {
   isTagProperty,
   isFileProperty,
   isFormulaProperty,
+  shouldCollapseField,
 } from "./property-helpers";
 import {
   shouldUseNotebookNavigator,
@@ -464,10 +465,11 @@ export interface CardRendererProps {
 }
 
 /**
- * Determine if a property field should be collapsed (hidden entirely)
- * Pure function - all settings passed as parameters for predictable behavior
+ * Wrapper for shouldCollapseField that handles Datacore-specific concerns:
+ * - undefined propertyName (no property configured)
+ * - unknown resolvedValue type (convert to string | null)
  */
-function shouldCollapseField(
+function shouldCollapseFieldDatacore(
   propertyName: string | undefined,
   resolvedValue: unknown,
   propertyLabels: "hide" | "inline" | "above",
@@ -478,26 +480,15 @@ function shouldCollapseField(
   if (!propertyName) {
     return propertyLabels === "hide";
   }
-
+  // Convert unknown to string | null for shared function
   const stringValue = typeof resolvedValue === "string" ? resolvedValue : null;
-  const isTag = isTagProperty(propertyName);
-  const isFile = isFileProperty(propertyName);
-  const isFormula = isFormulaProperty(propertyName);
-
-  // Empty handling
-  const isEmpty = stringValue === "" || (isTag && !stringValue);
-  if (isEmpty) {
-    if (hideEmptyMode === "all") return true;
-    if (hideEmptyMode === "labels-hidden" && propertyLabels === "hide")
-      return true;
-  }
-
-  // Missing handling (null value, not empty string)
-  if (stringValue === null && !isFile && !isFormula && !isTag) {
-    return hideMissing;
-  }
-
-  return false;
+  return shouldCollapseField(
+    stringValue,
+    propertyName,
+    hideMissing,
+    hideEmptyMode,
+    propertyLabels,
+  );
 }
 
 /**
@@ -1262,11 +1253,6 @@ function Card({
   onCardClick,
   onFocusChange,
 }: CardProps): unknown {
-  // DEBUG: Log when Card renders and what settings.propertyLabels is
-  console.log(
-    `// Card render: ${card.path.split("/").pop()}, propertyLabels=${settings.propertyLabels}`,
-  );
-
   // Edge case: if openFileAction is "title" but title is hidden, treat as "card"
   const effectiveOpenFileAction =
     settings.openFileAction === "title" && !settings.showTitle
@@ -1957,98 +1943,98 @@ function Card({
 
         // Pre-compute collapse states for all fields
         const collapse = [
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName1,
             card.property1,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName2,
             card.property2,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName3,
             card.property3,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName4,
             card.property4,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName5,
             card.property5,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName6,
             card.property6,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName7,
             card.property7,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName8,
             card.property8,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName9,
             card.property9,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName10,
             card.property10,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName11,
             card.property11,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName12,
             card.property12,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName13,
             card.property13,
             propertyLabels,
             hideEmptyMode,
             hideMissing,
           ),
-          shouldCollapseField(
+          shouldCollapseFieldDatacore(
             card.propertyName14,
             card.property14,
             propertyLabels,

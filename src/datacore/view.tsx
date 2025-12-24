@@ -1290,17 +1290,24 @@ export function View({
     // Initial layout
     updateLayout();
 
-    // Window resize handler
-    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-    const handleResize = () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateLayout, 100);
+    // Debounced resize handler (double-RAF)
+    // ResizeObserver handles both pane and window resize (container resizes in both cases)
+    let resizeRafId: number | null = null;
+    const debouncedResize = () => {
+      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
+      resizeRafId = requestAnimationFrame(() => {
+        resizeRafId = requestAnimationFrame(() => {
+          updateLayout();
+        });
+      });
     };
-    window.addEventListener("resize", handleResize);
+
+    const resizeObserver = new ResizeObserver(debouncedResize);
+    resizeObserver.observe(containerRef.current!);
 
     return () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      window.removeEventListener("resize", handleResize);
+      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
+      resizeObserver.disconnect();
     };
   }, [viewMode, settings.cardSize, _styleRevision, dc]);
 
@@ -1334,10 +1341,22 @@ export function View({
 
     updateGrid();
 
-    const resizeObserver = new ResizeObserver(updateGrid);
+    // Debounced resize handler (double-RAF)
+    let resizeRafId: number | null = null;
+    const debouncedResize = () => {
+      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
+      resizeRafId = requestAnimationFrame(() => {
+        resizeRafId = requestAnimationFrame(() => {
+          updateGrid();
+        });
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(debouncedResize);
     resizeObserver.observe(container);
 
     return () => {
+      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
       resizeObserver.disconnect();
     };
   }, [viewMode, settings.cardSize, _styleRevision, dc]);

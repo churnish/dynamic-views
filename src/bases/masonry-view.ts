@@ -88,7 +88,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private layoutResizeObserver: ResizeObserver | null = null;
   // Timeout ID for masonry layout delay
   private layoutTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  // RAF ID for debounced resize handling
+  // RAF ID for debounced resize handling (double-RAF)
   private resizeRafId: number | null = null;
   // Layout results per group for incremental append (undefined key = ungrouped)
   private groupLayoutResults: Map<string | undefined, MasonryLayoutResult> =
@@ -513,15 +513,23 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     };
 
-    // Setup resize observer (only once, not per render)
-    if (!this.layoutResizeObserver) {
-      this.layoutResizeObserver = new ResizeObserver(() => {
-        // Guard: skip if container disconnected
-        if (!this.masonryContainer?.isConnected) return;
-        if (this.updateLayoutRef.current) {
-          this.updateLayoutRef.current();
-        }
+    // Debounced resize handler (double-RAF)
+    const debouncedResize = () => {
+      if (this.resizeRafId !== null) cancelAnimationFrame(this.resizeRafId);
+      this.resizeRafId = requestAnimationFrame(() => {
+        this.resizeRafId = requestAnimationFrame(() => {
+          if (!this.masonryContainer?.isConnected) return;
+          if (this.updateLayoutRef.current) {
+            this.updateLayoutRef.current();
+          }
+        });
       });
+    };
+
+    // Setup resize observer (only once, not per render)
+    // ResizeObserver handles both pane and window resize (container resizes in both cases)
+    if (!this.layoutResizeObserver) {
+      this.layoutResizeObserver = new ResizeObserver(debouncedResize);
       this.layoutResizeObserver.observe(this.masonryContainer);
       this.register(() => this.layoutResizeObserver?.disconnect());
     } else if (this.masonryContainer) {
@@ -529,15 +537,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.layoutResizeObserver.disconnect();
       this.layoutResizeObserver.observe(this.masonryContainer);
     }
-
-    // Setup window resize listener (c59fe2d had this)
-    const handleResize = () => {
-      if (this.updateLayoutRef.current) {
-        this.updateLayoutRef.current();
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    this.register(() => window.removeEventListener("resize", handleResize));
   }
 
   private renderCard(

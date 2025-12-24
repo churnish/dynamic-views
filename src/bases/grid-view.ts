@@ -83,6 +83,8 @@ export class DynamicViewsCardView extends BasesView {
   private lastRenderHash: string = "";
   // Track last column count to avoid unnecessary CSS reflow
   private lastColumnCount: number = 0;
+  // RAF ID for debounced resize handling (double-RAF)
+  private resizeRafId: number | null = null;
 
   /** Calculate initial card count based on container dimensions */
   private calculateInitialCount(settings: Settings): number {
@@ -388,35 +390,40 @@ export class DynamicViewsCardView extends BasesView {
       // Setup infinite scroll
       this.setupInfiniteScroll(allEntries.length, settings);
 
-      // Setup ResizeObserver for dynamic grid updates
+      // Setup ResizeObserver for dynamic grid updates (double-RAF debounce)
       if (!this.resizeObserver) {
         this.resizeObserver = new ResizeObserver(() => {
-          // Guard: skip if container disconnected from DOM
-          if (!this.containerEl?.isConnected) return;
+          if (this.resizeRafId !== null) cancelAnimationFrame(this.resizeRafId);
+          this.resizeRafId = requestAnimationFrame(() => {
+            this.resizeRafId = requestAnimationFrame(() => {
+              // Guard: skip if container disconnected from DOM
+              if (!this.containerEl?.isConnected) return;
 
-          // Guard against reentrant calls (#13)
-          if (this.isUpdatingColumns) return;
-          this.isUpdatingColumns = true;
+              // Guard against reentrant calls (#13)
+              if (this.isUpdatingColumns) return;
+              this.isUpdatingColumns = true;
 
-          try {
-            const cols = this.calculateColumnCount();
+              try {
+                const cols = this.calculateColumnCount();
 
-            // Only update if changed
-            if (cols !== this.lastColumnCount) {
-              // Save scroll before CSS change, restore after (prevents reflow reset)
-              const scrollBefore = this.scrollEl.scrollTop;
-              this.lastColumnCount = cols;
-              this.containerEl.style.setProperty(
-                "--grid-columns",
-                String(cols),
-              );
-              if (scrollBefore > 0) {
-                this.scrollEl.scrollTop = scrollBefore;
+                // Only update if changed
+                if (cols !== this.lastColumnCount) {
+                  // Save scroll before CSS change, restore after (prevents reflow reset)
+                  const scrollBefore = this.scrollEl.scrollTop;
+                  this.lastColumnCount = cols;
+                  this.containerEl.style.setProperty(
+                    "--grid-columns",
+                    String(cols),
+                  );
+                  if (scrollBefore > 0) {
+                    this.scrollEl.scrollTop = scrollBefore;
+                  }
+                }
+              } finally {
+                this.isUpdatingColumns = false;
               }
-            }
-          } finally {
-            this.isUpdatingColumns = false;
-          }
+            });
+          });
         });
         this.resizeObserver.observe(this.containerEl);
         this.register(() => this.resizeObserver?.disconnect());
@@ -707,6 +714,9 @@ export class DynamicViewsCardView extends BasesView {
     this.scrollPreservation.cleanup();
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
+    }
+    if (this.resizeRafId !== null) {
+      cancelAnimationFrame(this.resizeRafId);
     }
     // Clean up scroll-related resources
     if (this.scrollListener) {
