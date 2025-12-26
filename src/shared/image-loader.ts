@@ -156,18 +156,10 @@ export function handleImageLoad(
   isCoverImage?: boolean,
 ): void {
   // Calculate aspect ratio with validation (always needed for masonry)
-  // Require minimum 1px dimensions to avoid extreme ratios from tiny/broken images
-  const rawAspectRatio =
+  // Require minimum 1px dimensions to catch broken/corrupt images
+  const aspectRatio =
     imgEl.naturalWidth >= 1 && imgEl.naturalHeight >= 1
       ? imgEl.naturalHeight / imgEl.naturalWidth
-      : undefined;
-  // Validate aspect ratio is a finite, reasonable number (cap at 10:1 either direction)
-  const aspectRatio =
-    rawAspectRatio !== undefined &&
-    isFinite(rawAspectRatio) &&
-    rawAspectRatio >= 0.1 &&
-    rawAspectRatio <= 10
-      ? rawAspectRatio
       : undefined;
 
   // Only extract ambient color if needed by current settings
