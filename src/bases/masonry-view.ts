@@ -902,7 +902,7 @@ export class DynamicViewsMasonryView extends BasesView {
             getComputedStyle(document.body).getPropertyValue(
               "--dynamic-views-compact-breakpoint",
             ),
-          ) || 400;
+          ) || 390;
 
         newCards.forEach((card) => {
           const actualWidth = card.offsetWidth; // Force reflow

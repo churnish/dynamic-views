@@ -262,6 +262,46 @@ describe("image", () => {
       expect(result.internalPaths).toEqual([]);
       expect(result.externalUrls).toEqual([]);
     });
+
+    it("should validate external URLs with query parameters", async () => {
+      const paths = ["https://example.com/image.png?size=large&v=2"];
+
+      const promise = processImagePaths(paths);
+
+      // URL should be validated via Image object regardless of query params
+      const img = (global as any).__lastImage;
+      if (img && img.onload) img.onload();
+
+      const result = await promise;
+
+      expect(result.externalUrls).toEqual([
+        "https://example.com/image.png?size=large&v=2",
+      ]);
+    });
+
+    it("should validate external URLs without file extensions", async () => {
+      const paths = [
+        "https://picsum.photos/200",
+        "https://api.example.com/image/123",
+      ];
+
+      const promise = processImagePaths(paths);
+
+      // Both URLs validated via Image object
+      const img1 = (global as any).__imageInstances[0];
+      if (img1 && img1.onload) img1.onload();
+      await Promise.resolve();
+
+      const img2 = (global as any).__imageInstances[1];
+      if (img2 && img2.onload) img2.onload();
+
+      const result = await promise;
+
+      expect(result.externalUrls).toContain("https://picsum.photos/200");
+      expect(result.externalUrls).toContain(
+        "https://api.example.com/image/123",
+      );
+    });
   });
 
   describe("resolveInternalImagePaths", () => {

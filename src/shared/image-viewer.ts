@@ -834,21 +834,44 @@ function openImageViewer(
   };
 
   const onCopy = (e: KeyboardEvent) => {
-    // Check Cmd+C (Mac) or Ctrl+C (Win/Linux)
     const isCopyShortcut = (e.metaKey || e.ctrlKey) && e.key === "c";
     if (!isCopyShortcut) return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     void (async () => {
       try {
+        if (!document.hasFocus()) {
+          window.focus();
+          await new Promise((r) => setTimeout(r, 50));
+        }
+
+        // For external images, reload with crossOrigin to avoid tainted canvas
+        const isExternal = /^https?:\/\//i.test(imgEl.src);
+        let sourceImg: HTMLImageElement = imgEl;
+
+        if (isExternal) {
+          sourceImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("Failed to load image"));
+            img.src = imgEl.src;
+          });
+        }
+
+        if (!sourceImg.naturalWidth || !sourceImg.naturalHeight) {
+          throw new Error("Image not loaded");
+        }
+
         // Clipboard API only supports PNG - convert via canvas
         const canvas = document.createElement("canvas");
-        canvas.width = imgEl.naturalWidth;
-        canvas.height = imgEl.naturalHeight;
+        canvas.width = sourceImg.naturalWidth;
+        canvas.height = sourceImg.naturalHeight;
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Failed to get canvas context");
-        ctx.drawImage(imgEl, 0, 0);
+        ctx.drawImage(sourceImg, 0, 0);
 
         const blob = await new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((b) => {

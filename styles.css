@@ -166,8 +166,8 @@ settings:
                 value: dynamic-views-ambient-bg-dramatic
     -
         id: dynamic-views-no-fade-truncated-text
-        title: Don't fade truncated text
-        description: Hide gradient fade on titles, subtitles, and properties when they can be scrolled horizontally
+        title: Hide scroll gradient
+        description: Hide gradient fade effect on titles, subtitles and properties when they can be scrolled horizontally
         type: class-toggle
     -
         id: covers-heading
@@ -522,7 +522,7 @@ settings:
     -
         id: dynamic-views-hide-missing-properties
         title: Hide missing properties
-        description: Hides YAML properties that don't exist in note frontmatter
+        description: Hide properties that don't exist in note frontmatter
         type: class-toggle
         default: false
     -
@@ -545,7 +545,7 @@ settings:
     -
         id: dynamic-views-full-row-property-alignment
         title: Full-row property alignment
-        description: How to align properties with inline labels that aren't shown side-by-side
+        description: How to align values when properties aren't shown side-by-side
         type: class-select
         allowEmpty: false
         default: dynamic-views-full-row-align-left
@@ -559,7 +559,7 @@ settings:
     -
         id: dynamic-views-paired-property-alignment
         title: Paired property alignment
-        description: How to align right-side property when properties are shown side-by-side
+        description: How to align right-side properties when properties are shown side-by-side
         type: class-select
         allowEmpty: false
         default: dynamic-views-paired-prop-align-right
@@ -3672,7 +3672,7 @@ body:not(.dynamic-views-image-viewer-disabled)
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 50; /* Below Obsidian's notice layer */
   position: fixed;
   height: 100%;
   width: 100%;
@@ -3686,7 +3686,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 /* Ensure drag ghost appears above image viewer overlay */
 body:has(.dynamic-views-image-embed.is-zoomed) {
-  --layer-dragged-item: 201;
+  --layer-dragged-item: 51;
 }
 
 /* Constrained mode: overlay styling (desktop, fullscreen toggle off) */
@@ -5680,8 +5680,6 @@ body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
   )
   .property-label-inline {
   order: 0;
-  padding-left: 0;
-  padding-right: var(--size-2-2);
 }
 
 /* Compact mode: reset timestamp icon to left for even fields (edge mode only) */
@@ -6820,23 +6818,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   }
 }
 
-/* Odd fields (left side) - label padding */
-.dynamic-views
-  .property-row-sidebyside
-  :is(
-    .property-field-1,
-    .property-field-3,
-    .property-field-5,
-    .property-field-7,
-    .property-field-9,
-    .property-field-11,
-    .property-field-13
-  )
-  .property-label-inline {
-  padding-right: var(--size-2-2);
-}
-
-/* Even fields (right side) - label padding and order */
+/* Even fields (right side) - label after content */
 .dynamic-views
   .property-row-sidebyside
   :is(
@@ -6849,7 +6831,6 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
     .property-field-14
   )
   .property-label-inline {
-  padding-left: var(--size-2-2);
   order: 2;
 }
 
@@ -7076,8 +7057,6 @@ body.dynamic-views-paired-prop-align-left
   )
   .property-label-inline {
   order: 0;
-  padding-left: 0;
-  padding-right: var(--size-2-2);
 }
 
 /* Stacked layout */

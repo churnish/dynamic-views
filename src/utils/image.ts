@@ -80,13 +80,11 @@ export async function processImagePaths(
     if (cleanPath.length === 0) continue;
 
     if (isExternalUrl(cleanPath)) {
-      // External URL - validate extension if present
-      if (hasValidImageExtension(cleanPath) || !cleanPath.includes(".")) {
-        // Validate URL asynchronously
-        const isValid = await validateImageUrl(cleanPath);
-        if (isValid) {
-          externalUrls.push(cleanPath);
-        }
+      // External URL - validate with browser Image object
+      // Skip extension check: URLs may have query params, no extension, or API endpoints
+      const isValid = await validateImageUrl(cleanPath);
+      if (isValid) {
+        externalUrls.push(cleanPath);
       }
     } else {
       // Internal path - validate extension
@@ -148,10 +146,8 @@ export async function extractEmbedImages(
   for (const embed of metadata.embeds) {
     const embedLink = embed.link;
     if (isExternalUrl(embedLink)) {
-      // External URL embed
-      if (hasValidImageExtension(embedLink) || !embedLink.includes(".")) {
-        bodyExternalUrls.push(embedLink);
-      }
+      // External URL embed - collect for async validation
+      bodyExternalUrls.push(embedLink);
     } else {
       // Internal path embed
       const targetFile = app.metadataCache.getFirstLinkpathDest(
@@ -252,10 +248,8 @@ export async function loadImageForFile(
     for (const embed of metadata.embeds) {
       const embedLink = embed.link;
       if (isExternalUrl(embedLink)) {
-        // External URL embed
-        if (hasValidImageExtension(embedLink) || !embedLink.includes(".")) {
-          bodyExternalUrls.push(embedLink);
-        }
+        // External URL embed - collect for async validation
+        bodyExternalUrls.push(embedLink);
       } else {
         // Internal path embed
         const targetFile = app.metadataCache.getFirstLinkpathDest(

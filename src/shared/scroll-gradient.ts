@@ -181,16 +181,25 @@ export function setupScrollGradients(
 
     if (!wrapper) return;
 
+    // Skip initial gradient update for side-by-side fields that haven't been measured -
+    // they'll be handled by measureSideBySideRow after width calculation
+    const row = element.closest(".property-row");
+    const isSideBySide = row?.classList.contains("property-row-sidebyside");
+    const isMeasured = row?.classList.contains("property-measured");
+    const skipInitialUpdate = isSideBySide && !isMeasured;
+
     // If layout is ready (width > 0), apply gradients sync to avoid flicker.
     // Otherwise use double-RAF to wait for layout to settle.
-    if (wrapper.clientWidth > 0) {
-      updateGradientFn(element);
-    } else {
-      requestAnimationFrame(() => {
+    if (!skipInitialUpdate) {
+      if (wrapper.clientWidth > 0) {
+        updateGradientFn(element);
+      } else {
         requestAnimationFrame(() => {
-          updateGradientFn(element);
+          requestAnimationFrame(() => {
+            updateGradientFn(element);
+          });
         });
-      });
+      }
     }
 
     // Create per-element throttle to avoid lost updates when multiple fields scroll
