@@ -85,6 +85,8 @@ export class DynamicViewsCardView extends BasesView {
   private lastColumnCount: number = 0;
   // RAF ID for debounced resize handling (double-RAF)
   private resizeRafId: number | null = null;
+  // Track last observed width for 0→positive detection (tab switch)
+  private lastObservedWidth: number = 0;
   // Track if any batch append occurred (for end indicator)
   private hasBatchAppended: boolean = false;
 
@@ -436,38 +438,54 @@ export class DynamicViewsCardView extends BasesView {
       if (!this.resizeObserver) {
         this.resizeObserver = new ResizeObserver((entries) => {
           const width = entries[0]?.contentRect.width ?? 0;
-          console.log("[grid-view] ResizeObserver fired", { width });
-          if (this.resizeRafId !== null) cancelAnimationFrame(this.resizeRafId);
-          this.resizeRafId = requestAnimationFrame(() => {
-            this.resizeRafId = requestAnimationFrame(() => {
-              // Guard: skip if container disconnected from DOM
-              if (!this.containerEl?.isConnected) return;
 
-              // Guard against reentrant calls (#13)
-              if (this.isUpdatingColumns) return;
-              this.isUpdatingColumns = true;
+          // Column update logic (extracted for reuse)
+          const updateColumns = () => {
+            // Guard: skip if container disconnected from DOM
+            if (!this.containerEl?.isConnected) return;
 
-              try {
-                const cols = this.calculateColumnCount();
+            // Guard against reentrant calls (#13)
+            if (this.isUpdatingColumns) return;
+            this.isUpdatingColumns = true;
 
-                // Only update if changed
-                if (cols !== this.lastColumnCount) {
-                  // Save scroll before CSS change, restore after (prevents reflow reset)
-                  const scrollBefore = this.scrollEl.scrollTop;
-                  this.lastColumnCount = cols;
-                  this.containerEl.style.setProperty(
-                    "--grid-columns",
-                    String(cols),
-                  );
-                  if (scrollBefore > 0) {
-                    this.scrollEl.scrollTop = scrollBefore;
-                  }
+            try {
+              const cols = this.calculateColumnCount();
+
+              // Only update if changed
+              if (cols !== this.lastColumnCount) {
+                // Save scroll before CSS change, restore after (prevents reflow reset)
+                const scrollBefore = this.scrollEl.scrollTop;
+                this.lastColumnCount = cols;
+                this.containerEl.style.setProperty(
+                  "--grid-columns",
+                  String(cols),
+                );
+                if (scrollBefore > 0) {
+                  this.scrollEl.scrollTop = scrollBefore;
                 }
-              } finally {
-                this.isUpdatingColumns = false;
               }
+            } finally {
+              this.isUpdatingColumns = false;
+            }
+          };
+
+          // Skip debounce on tab switch (width 0→positive) to prevent flash
+          if (width > 0 && this.lastObservedWidth === 0) {
+            if (this.resizeRafId !== null)
+              cancelAnimationFrame(this.resizeRafId);
+            this.resizeRafId = null;
+            updateColumns();
+          } else if (width > 0) {
+            // Normal resize: double-RAF debounce to coalesce rapid events
+            if (this.resizeRafId !== null)
+              cancelAnimationFrame(this.resizeRafId);
+            this.resizeRafId = requestAnimationFrame(() => {
+              this.resizeRafId = requestAnimationFrame(() => {
+                updateColumns();
+              });
             });
-          });
+          }
+          this.lastObservedWidth = width;
         });
         this.resizeObserver.observe(this.containerEl);
         this.register(() => this.resizeObserver?.disconnect());
