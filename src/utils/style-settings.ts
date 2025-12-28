@@ -94,17 +94,6 @@ export function getMinGridColumns(): number {
 }
 
 /**
- * Get Datacore link display format from CSS variable
- */
-export function getDatacoreLinkDisplay(): "filename" | "full-path" {
-  const value = getCSSTextVariable(
-    "--dynamic-views-datacore-link-display",
-    "filename",
-  );
-  return value === "full-path" ? "full-path" : "filename";
-}
-
-/**
  * Get compact mode breakpoint from CSS variable
  * Cards narrower than this value enter compact mode
  */

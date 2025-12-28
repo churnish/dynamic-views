@@ -143,6 +143,87 @@ function ResultsDropdownMenu({
   );
 }
 
+interface SearchInputProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  onSearchFocus: () => void;
+  onClearSearch: () => void;
+}
+
+function SearchInput({
+  searchQuery,
+  onSearchChange,
+  onSearchFocus,
+  onClearSearch,
+}: SearchInputProps): JSX.Element {
+  return (
+    <div className="search-input-container">
+      <svg
+        className="search-input-loupe-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      <input
+        type="text"
+        placeholder="Filter..."
+        value={searchQuery}
+        onChange={(e: unknown) => {
+          const evt = e as InputEvent & { target: HTMLInputElement };
+          onSearchChange(evt.target.value);
+        }}
+        onFocus={onSearchFocus}
+        className="search-input desktop-search"
+      />
+      {searchQuery ? (
+        <svg
+          className="search-input-clear-button"
+          aria-label="Clear search"
+          onClick={onClearSearch}
+          onKeyDown={(e: unknown) => {
+            const evt = e as KeyboardEvent;
+            if (evt.key === "Enter" || evt.key === " ") {
+              evt.preventDefault();
+              onClearSearch();
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 16 16"
+        >
+          <circle cx="8" cy="8" r="7" fill="currentColor" />
+          <line
+            x1="5"
+            y1="5"
+            x2="11"
+            y2="11"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <line
+            x1="11"
+            y1="5"
+            x2="5"
+            y2="11"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : null}
+    </div>
+  );
+}
+
 interface ToolbarProps {
   dc: DatacoreAPI;
   app: App;
@@ -826,70 +907,12 @@ export function Toolbar({
 
         {/* Search Controls */}
         <div className="search-controls">
-          <div className="search-input-container">
-            <svg
-              className="search-input-loupe-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Filter..."
-              value={searchQuery}
-              onChange={(e: unknown) => {
-                const evt = e as InputEvent & { target: HTMLInputElement };
-                onSearchChange(evt.target.value);
-              }}
-              onFocus={onSearchFocus}
-              className="search-input desktop-search"
-            />
-            {searchQuery ? (
-              <svg
-                className="search-input-clear-button"
-                aria-label="Clear search"
-                onClick={onClearSearch}
-                onKeyDown={(e: unknown) => {
-                  const evt = e as KeyboardEvent;
-                  if (evt.key === "Enter" || evt.key === " ") {
-                    evt.preventDefault();
-                    onClearSearch();
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 16 16"
-              >
-                <circle cx="8" cy="8" r="7" fill="currentColor" />
-                <line
-                  x1="5"
-                  y1="5"
-                  x2="11"
-                  y2="11"
-                  stroke="white"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="11"
-                  y1="5"
-                  x2="5"
-                  y2="11"
-                  stroke="white"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            ) : null}
-          </div>
+          <SearchInput
+            searchQuery={searchQuery}
+            onSearchChange={onSearchChange}
+            onSearchFocus={onSearchFocus}
+            onClearSearch={onClearSearch}
+          />
         </div>
 
         {/* Results Count Wrapper */}
@@ -1222,70 +1245,12 @@ export function Toolbar({
 
       {/* Compact Layout - Search + Results + Create Note (shown only at narrow widths) */}
       <div className="search-controls-compact">
-        <div className="search-input-container">
-          <svg
-            className="search-input-loupe-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Filter..."
-            value={searchQuery}
-            onChange={(e: unknown) => {
-              const evt = e as InputEvent & { target: HTMLInputElement };
-              onSearchChange(evt.target.value);
-            }}
-            onFocus={onSearchFocus}
-            className="search-input desktop-search"
-          />
-          {searchQuery ? (
-            <svg
-              className="search-input-clear-button"
-              aria-label="Clear search"
-              onClick={onClearSearch}
-              onKeyDown={(e: unknown) => {
-                const evt = e as KeyboardEvent;
-                if (evt.key === "Enter" || evt.key === " ") {
-                  evt.preventDefault();
-                  onClearSearch();
-                }
-              }}
-              tabIndex={0}
-              role="button"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-            >
-              <circle cx="8" cy="8" r="7" fill="currentColor" />
-              <line
-                x1="5"
-                y1="5"
-                x2="11"
-                y2="11"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <line
-                x1="11"
-                y1="5"
-                x2="5"
-                y2="11"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          ) : null}
-        </div>
+        <SearchInput
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          onSearchFocus={onSearchFocus}
+          onClearSearch={onClearSearch}
+        />
         <div className="compact-bottom-row">
           {/* Results Count Wrapper (Compact) */}
           <div

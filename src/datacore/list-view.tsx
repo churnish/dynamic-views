@@ -95,6 +95,7 @@ export function ListView({
               {(() => {
                 // Transform to get resolved properties
                 const card: CardData = datacoreResultToCardData(
+                  app,
                   p,
                   dc,
                   settings,

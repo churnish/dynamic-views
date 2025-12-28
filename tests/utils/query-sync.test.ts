@@ -114,7 +114,7 @@ and tags = #note)`);
   describe("findQueryInBlock", () => {
     it("should find query between markers", () => {
       const content = `Some text
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 title = "Test"
 // ––––– DQL QUERY END –––––
 More text`;
@@ -131,7 +131,7 @@ More text`;
     });
 
     it("should handle multiline queries", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 title = "Test" and
 tags = #note and
 date > 2024-01-01
@@ -146,7 +146,7 @@ date > 2024-01-01`);
     });
 
     it("should trim whitespace from query", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
   title = "Test"
 // ––––– DQL QUERY END –––––`;
 
@@ -158,7 +158,7 @@ date > 2024-01-01`);
 
     it("should return start and end indices", () => {
       const content = `prefix
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 query
 // ––––– DQL QUERY END –––––
 suffix`;
@@ -174,7 +174,7 @@ suffix`;
     });
 
     it("should return fullMatch", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 title = "Test"
 // ––––– DQL QUERY END –––––`;
 
@@ -187,7 +187,7 @@ title = "Test"
     });
 
     it("should handle markers with varying spacing", () => {
-      const content = `//  –––––  DQL QUERY START  –––––
+      const content = `//  ––––  DQL QUERY START  ––––
 query content
   //  –––––  DQL QUERY END  –––––`;
 
@@ -198,7 +198,7 @@ query content
     });
 
     it("should handle empty query between markers", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 
 // ––––– DQL QUERY END –––––`;
 
@@ -209,7 +209,7 @@ query content
     });
 
     it("should handle only START marker", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 query without end`;
 
       expect(findQueryInBlock(content)).toBeNull();
@@ -225,16 +225,16 @@ query without end`;
     it("should handle markers in reverse order", () => {
       const content = `// ––––– DQL QUERY END –––––
 query
-// ––––– DQL QUERY START –––––`;
+// –––– DQL QUERY START ––––`;
 
       expect(findQueryInBlock(content)).toBeNull();
     });
 
     it("should find first occurrence when multiple markers exist", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 first query
 // ––––– DQL QUERY END –––––
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 second query
 // ––––– DQL QUERY END –––––`;
 
@@ -245,7 +245,7 @@ second query
     });
 
     it("should handle query with special characters", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 title =~ /regex.*pattern/ and description != null
 // ––––– DQL QUERY END –––––`;
 
@@ -258,7 +258,7 @@ title =~ /regex.*pattern/ and description != null
     });
 
     it("should handle queries with code comments", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 // This is a comment in the query
 title = "Test"
 // ––––– DQL QUERY END –––––`;
@@ -273,7 +273,7 @@ title = "Test"
   describe("updateQueryInBlock", () => {
     it("should update query between markers", () => {
       const content = `prefix
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 old query
 // ––––– DQL QUERY END –––––
 suffix`;
@@ -289,7 +289,7 @@ suffix`;
     it("should preserve surrounding content", () => {
       const content = `line 1
 line 2
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––
 line 3
@@ -305,7 +305,7 @@ line 4`;
     });
 
     it("should handle multiline new query", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
 
@@ -329,7 +329,7 @@ line 3`;
     });
 
     it("should handle empty new query", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 old query
 // ––––– DQL QUERY END –––––`;
 
@@ -341,21 +341,21 @@ old query
     });
 
     it("should maintain marker format", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
 
       const result = updateQueryInBlock(content, "new");
 
-      expect(result).toMatch(/\/\/ ––––– DQL QUERY START –––––/);
+      expect(result).toMatch(/\/\/ –––– DQL QUERY START ––––/);
       expect(result).toMatch(/\/\/ ––––– DQL QUERY END –––––/);
     });
 
     it("should update only first occurrence", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 first
 // ––––– DQL QUERY END –––––
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 second
 // ––––– DQL QUERY END –––––`;
 
@@ -370,7 +370,7 @@ second
     });
 
     it("should handle query with special characters", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
 
@@ -381,7 +381,7 @@ old
     });
 
     it("should preserve indentation of markers", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 old query
 // ––––– DQL QUERY END –––––`;
 
@@ -392,7 +392,7 @@ old query
     });
 
     it("should handle query with Unicode characters", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
 
@@ -405,7 +405,7 @@ old
 
   describe("QueryMatch type", () => {
     it("should have correct structure", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 test query
 // ––––– DQL QUERY END –––––`;
 
@@ -426,7 +426,7 @@ test query
 
   describe("integration tests", () => {
     it("should work with ensurePageSelector and updateQueryInBlock", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 title = "Test"
 // ––––– DQL QUERY END –––––`;
 
@@ -438,7 +438,7 @@ title = "Test"
     });
 
     it("should preserve query with @page selector", () => {
-      const content = `// ––––– DQL QUERY START –––––
+      const content = `// –––– DQL QUERY START ––––
 @page and title = "Test"
 // ––––– DQL QUERY END –––––`;
 

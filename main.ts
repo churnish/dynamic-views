@@ -87,7 +87,7 @@ export default class DynamicViewsPlugin extends Plugin {
 
     this.addCommand({
       id: "create-dynamic-view",
-      name: "Create note with query",
+      name: "Create note with Datacore query",
       callback: async () => {
         await this.createExplorerFile();
       },
@@ -95,7 +95,7 @@ export default class DynamicViewsPlugin extends Plugin {
 
     this.addCommand({
       id: "insert-dynamic-view-at-cursor",
-      name: "Insert query at cursor position",
+      name: "Insert Datacore query",
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
@@ -220,7 +220,7 @@ export default class DynamicViewsPlugin extends Plugin {
   getQueryTemplate(): string {
     return `\`\`\`datacorejsx
 const USER_QUERY = \`
-// ––––– DQL QUERY START –––––
+// –––– DQL QUERY START ––––
 
 // ––––– DQL QUERY END –––––
 \`;

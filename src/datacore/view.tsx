@@ -15,6 +15,7 @@ import {
   MAX_BATCH_SIZE,
   WIDE_MODE_MULTIPLIER,
   SCROLL_THROTTLE_MS,
+  RESIZE_THROTTLE_MS,
 } from "../shared/constants";
 import { PersistenceManager } from "../persistence";
 import { CardView } from "./card-view";
@@ -846,6 +847,9 @@ export function View({
   // Avoids re-transforming unchanged files on displayedCount changes
   const cardDataCache = dc.useRef<Map<string, CardData>>(new Map());
 
+  // Track current content loading effect to prevent race conditions
+  const currentContentLoadRef = dc.useRef<string | null>(null);
+
   // Clear cache when settings change (they affect card transformation)
   const prevSettingsRef = dc.useRef(settings);
   dc.useEffect(() => {
@@ -933,6 +937,7 @@ export function View({
 
       // Transform and cache
       const cardData = datacoreResultToCardData(
+        app,
         file,
         dc,
         settings,
@@ -981,6 +986,9 @@ export function View({
       setHasImageAvailable({});
       return;
     }
+
+    const effectId = Math.random().toString(36).slice(2);
+    currentContentLoadRef.current = effectId;
 
     const loadTextPreviews = async () => {
       const newTextPreviews: Record<string, string> = {};
@@ -1083,6 +1091,11 @@ export function View({
         );
       }
 
+      // Skip image loading if effect became stale during text preview loading
+      if (currentContentLoadRef.current !== effectId) {
+        return;
+      }
+
       // Prepare entries for image loading
       if (settings.imageFormat !== "none") {
         // Copy existing cached entries that are still in results
@@ -1138,6 +1151,11 @@ export function View({
             includeCardLink: globalSettings.showCardLinkCovers,
           },
         );
+      }
+
+      // Skip state update if a newer effect has started (prevents race condition)
+      if (currentContentLoadRef.current !== effectId) {
+        return;
       }
 
       setTextPreviews(newTextPreviews);
@@ -1198,35 +1216,27 @@ export function View({
     // Setup masonry layout function using shared logic
     let isUpdatingLayout = false;
     let pendingLayoutUpdate = false;
-    let layoutCallId = 0;
     const updateLayout = () => {
       const container = containerRef.current;
-      if (!container) return;
+      if (!container?.isConnected) return;
       // Guard against reentrant calls - queue update if one is in progress
       if (isUpdatingLayout) {
         pendingLayoutUpdate = true;
-        console.log("[masonry:dc] updateLayout QUEUED (reentrant)");
         return;
       }
       isUpdatingLayout = true;
-      const callId = ++layoutCallId;
 
       try {
         const cards = Array.from(
           container.querySelectorAll<HTMLElement>(".card"),
         );
-        if (cards.length === 0) {
-          console.log(`[masonry:dc] updateLayout #${callId} SKIP: no cards`);
-          return;
-        }
+        if (cards.length === 0) return;
 
-        const containerWidth = container.clientWidth;
-        if (containerWidth < 100) {
-          console.log(
-            `[masonry:dc] updateLayout #${callId} SKIP: width=${containerWidth} < 100`,
-          );
-          return;
-        }
+        // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
+        const containerWidth = Math.floor(
+          container.getBoundingClientRect().width,
+        );
+        if (containerWidth < 100) return;
 
         const cardSize = settings.cardSize;
         const minColumns = getMinMasonryColumns();
@@ -1235,10 +1245,6 @@ export function View({
         const lastResult = lastLayoutResultRef.current;
         const prevCount = prevMasonryCountRef.current ?? 0;
 
-        console.log(
-          `[masonry:dc] updateLayout #${callId} START | cards=${cards.length}, containerWidth=${containerWidth}, cardSize=${cardSize}, prevCount=${prevCount}, hasLastResult=${!!lastResult}, lastWidth=${lastResult?.containerWidth ?? "N/A"}`,
-        );
-
         // Incremental path: new cards added, same container width
         if (
           lastResult &&
@@ -1246,9 +1252,6 @@ export function View({
           containerWidth === lastResult.containerWidth
         ) {
           const newCards = cards.slice(prevCount);
-          console.log(
-            `[masonry:dc] updateLayout #${callId} INCREMENTAL path | newCards=${newCards.length}`,
-          );
 
           // Pre-set width on new cards before measuring
           newCards.forEach((card) =>
@@ -1279,24 +1282,11 @@ export function View({
           lastLayoutResultRef.current = result;
           prevMasonryCountRef.current = cards.length;
           columnCountRef.current = result.columns;
-          lastLayoutWidthRef.current = Math.round(containerWidth);
-          console.log(
-            `[masonry:dc] updateLayout #${callId} INCREMENTAL done | containerHeight=${Math.round(result.containerHeight)}`,
-          );
+          lastLayoutWidthRef.current = containerWidth;
           return;
         }
 
-        // Full recalculation - log reason
-        let reason = "unknown";
-        if (!lastResult) reason = "no previous result";
-        else if (cards.length <= prevCount)
-          reason = `card count not increased (${cards.length} <= ${prevCount})`;
-        else if (containerWidth !== lastResult.containerWidth)
-          reason = `width changed (${lastResult.containerWidth} -> ${containerWidth})`;
-        console.log(
-          `[masonry:dc] updateLayout #${callId} FULL recalc | reason: ${reason}`,
-        );
-
+        // Full recalculation
         const result = calculateMasonryLayout({
           cards,
           containerWidth,
@@ -1311,18 +1301,12 @@ export function View({
         lastLayoutResultRef.current = result;
         prevMasonryCountRef.current = cards.length;
         columnCountRef.current = result.columns;
-        lastLayoutWidthRef.current = Math.round(containerWidth);
-        console.log(
-          `[masonry:dc] updateLayout #${callId} FULL done | cols=${result.columns}, containerHeight=${Math.round(result.containerHeight)}`,
-        );
+        lastLayoutWidthRef.current = containerWidth;
       } finally {
         isUpdatingLayout = false;
         // Process any queued update
         if (pendingLayoutUpdate) {
           pendingLayoutUpdate = false;
-          console.log(
-            `[masonry:dc] updateLayout #${callId} processing queued update`,
-          );
           requestAnimationFrame(updateLayout);
         }
       }
@@ -1332,22 +1316,19 @@ export function View({
     updateLayoutRef.current = updateLayout;
 
     // Initial layout
-    console.log("[masonry:dc] initial layout call");
     updateLayout();
 
     // Throttled resize handler (double-RAF)
     // ResizeObserver handles both pane and window resize (container resizes in both cases)
     let resizeRafId: number | null = null;
+    let trailingRafId: number | null = null;
+    let staleWidthRafId: number | null = null;
     let resizeThrottleTimeout: ReturnType<typeof setTimeout> | null = null;
-    const RESIZE_THROTTLE_MS = 100;
-    let resizeCallId = 0;
     const throttledResize = (entries: ResizeObserverEntry[]) => {
+      if (entries.length === 0) return;
       const entry = entries[0];
-      const newWidth = Math.round(entry?.contentRect?.width ?? 0);
-      const callId = ++resizeCallId;
-      console.log(
-        `[masonry:dc] ResizeObserver #${callId} fired | newWidth=${newWidth}`,
-      );
+      // Use Math.floor for consistency with getBoundingClientRect measurements
+      const newWidth = Math.floor(entry?.contentRect?.width ?? 0);
 
       // Skip if width unchanged
       if (newWidth === lastLayoutWidthRef.current) return;
@@ -1356,33 +1337,54 @@ export function View({
       if (resizeThrottleTimeout === null) {
         if (resizeRafId !== null) {
           cancelAnimationFrame(resizeRafId);
-          console.log(
-            `[masonry:dc] ResizeObserver #${callId} cancelled previous RAF`,
-          );
         }
         resizeRafId = requestAnimationFrame(() => {
-          resizeRafId = requestAnimationFrame(() => {
+          const innerRafId = requestAnimationFrame(() => {
+            resizeRafId = null;
             if (!containerRef.current?.isConnected) return;
-            console.log(
-              `[masonry:dc] ResizeObserver #${callId} double-RAF complete, calling updateLayout`,
-            );
             updateLayout();
 
             // Check if width changed during async execution (stale width detection)
-            const currentWidth = containerRef.current?.clientWidth ?? 0;
+            const currentWidth = containerRef.current
+              ? Math.floor(containerRef.current.getBoundingClientRect().width)
+              : 0;
             if (
               currentWidth > 0 &&
               currentWidth !== lastLayoutWidthRef.current
             ) {
-              console.log(
-                `[masonry:dc] Width changed during layout (${lastLayoutWidthRef.current} -> ${currentWidth}), scheduling another pass`,
-              );
-              requestAnimationFrame(() => updateLayout());
+              if (staleWidthRafId !== null)
+                cancelAnimationFrame(staleWidthRafId);
+              staleWidthRafId = requestAnimationFrame(() => {
+                staleWidthRafId = null;
+                updateLayout();
+              });
             }
           });
+          resizeRafId = innerRafId; // Track inner RAF for cancellation
         });
         resizeThrottleTimeout = setTimeout(() => {
           resizeThrottleTimeout = null;
+          // Trailing edge: check if width changed during throttle cooldown
+          if (!containerRef.current?.isConnected) return;
+          const trailingWidth = Math.floor(
+            containerRef.current.getBoundingClientRect().width,
+          );
+          if (
+            trailingWidth > 0 &&
+            trailingWidth !== lastLayoutWidthRef.current
+          ) {
+            if (trailingRafId !== null) {
+              cancelAnimationFrame(trailingRafId);
+            }
+            trailingRafId = requestAnimationFrame(() => {
+              const innerTrailingRafId = requestAnimationFrame(() => {
+                trailingRafId = null;
+                if (!containerRef.current?.isConnected) return;
+                updateLayout();
+              });
+              trailingRafId = innerTrailingRafId; // Track inner RAF
+            });
+          }
         }, RESIZE_THROTTLE_MS);
       }
     };
@@ -1392,6 +1394,8 @@ export function View({
 
     return () => {
       if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
+      if (trailingRafId !== null) cancelAnimationFrame(trailingRafId);
+      if (staleWidthRafId !== null) cancelAnimationFrame(staleWidthRafId);
       if (resizeThrottleTimeout !== null) clearTimeout(resizeThrottleTimeout);
       resizeObserver.disconnect();
     };
@@ -1405,7 +1409,13 @@ export function View({
     if (!container) return;
 
     const updateGrid = () => {
-      const containerWidth = container.clientWidth;
+      if (!container.isConnected) return;
+      // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
+      const containerWidth = Math.floor(
+        container.getBoundingClientRect().width,
+      );
+      // Skip if container is hidden or collapsed
+      if (containerWidth < 100) return;
       // Card size represents minimum width; actual width may be larger to fill space
       const cardSize = settings.cardSize;
       const minColumns = getMinGridColumns();
@@ -1433,6 +1443,7 @@ export function View({
       if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
       resizeRafId = requestAnimationFrame(() => {
         resizeRafId = requestAnimationFrame(() => {
+          resizeRafId = null; // Clear after use
           updateGrid();
         });
       });

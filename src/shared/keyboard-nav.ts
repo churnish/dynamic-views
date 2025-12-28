@@ -162,12 +162,6 @@ export function setupHoverKeyboardNavigation(
     const hoveredCard = getHoveredCard();
     if (!hoveredCard) return;
 
-    // Block Escape from triggering Obsidian's focus behavior on hovered card
-    if (e.key === "Escape") {
-      e.stopImmediatePropagation();
-      return;
-    }
-
     if (!isArrowKey(e.key)) return;
 
     const activeEl = document.activeElement;

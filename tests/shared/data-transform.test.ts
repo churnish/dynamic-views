@@ -7,7 +7,7 @@ import {
   resolveDatacoreProperty,
 } from "../../src/shared/data-transform";
 import type { Settings } from "../../src/types";
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 
 // Mock dependencies
 jest.mock("../../src/utils/property");
@@ -60,6 +60,7 @@ describe("data-transform", () => {
       };
 
       const result = datacoreResultToCardData(
+        mockApp,
         mockResult,
         mockDC,
         mockSettings,
@@ -90,6 +91,7 @@ describe("data-transform", () => {
       };
 
       const result = datacoreResultToCardData(
+        mockApp,
         mockResult,
         mockDC,
         mockSettings,
@@ -113,6 +115,7 @@ describe("data-transform", () => {
       };
 
       const result = datacoreResultToCardData(
+        mockApp,
         mockResult,
         mockDC,
         mockSettings,
@@ -139,6 +142,7 @@ describe("data-transform", () => {
       };
 
       const result = datacoreResultToCardData(
+        mockApp,
         mockResult,
         mockDC,
         mockSettings,
@@ -173,6 +177,7 @@ describe("data-transform", () => {
       getFirstDatacorePropertyValue.mockReturnValue(["Title 1", "Title 2"]);
 
       const result = datacoreResultToCardData(
+        mockApp,
         mockResult,
         mockDC,
         mockSettings,
@@ -595,6 +600,17 @@ describe("data-transform", () => {
   });
 
   describe("resolveDatacoreProperty", () => {
+    // Mock app for all resolveDatacoreProperty tests
+    const mockApp: any = {
+      vault: {
+        getAbstractFileByPath: jest.fn(),
+        getResourcePath: jest.fn(),
+      },
+      metadataCache: {
+        getFileCache: jest.fn(),
+      },
+    };
+
     it("should resolve file.path property", () => {
       const mockPage: any = {
         $path: "test/folder/file.md",
@@ -615,6 +631,7 @@ describe("data-transform", () => {
       };
 
       const result = resolveDatacoreProperty(
+        mockApp,
         "file.path",
         mockPage,
         mockCardData,
@@ -645,6 +662,7 @@ describe("data-transform", () => {
       };
 
       const result = resolveDatacoreProperty(
+        mockApp,
         "file path",
         mockPage,
         mockCardData,
@@ -675,6 +693,7 @@ describe("data-transform", () => {
       };
 
       const result = resolveDatacoreProperty(
+        mockApp,
         "file.path",
         mockPage,
         mockCardData,
@@ -704,6 +723,7 @@ describe("data-transform", () => {
       };
 
       const result = resolveDatacoreProperty(
+        mockApp,
         "tags",
         mockPage,
         mockCardData,
@@ -732,6 +752,7 @@ describe("data-transform", () => {
       };
 
       const result = resolveDatacoreProperty(
+        mockApp,
         "customProp",
         mockPage,
         mockCardData,
@@ -741,6 +762,271 @@ describe("data-transform", () => {
 
       // Should return null or string for missing property (depends on custom timestamp settings)
       expect(result === null || typeof result === "string").toBe(true);
+    });
+
+    describe("file.links property", () => {
+      it("should return array of wikilinks from metadataCache", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          links: [{ link: "Page One" }, { link: "Page Two" }],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file.links",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBe(
+          '{"type":"array","items":["[[Page One]]","[[Page Two]]"]}',
+        );
+      });
+
+      it("should return null for empty links array", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          links: [],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file.links",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it("should return null when file not found", () => {
+        mockApp.vault.getAbstractFileByPath = jest.fn().mockReturnValue(null);
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "nonexistent.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file.links",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it("should support space variant 'file links'", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          links: [{ link: "Some Page" }],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file links",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBe('{"type":"array","items":["[[Some Page]]"]}');
+      });
+    });
+
+    describe("file.embeds property", () => {
+      it("should return array of wikilinks from metadataCache embeds", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          embeds: [{ link: "image.png" }, { link: "attachment.pdf" }],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file.embeds",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBe(
+          '{"type":"array","items":["[[image.png]]","[[attachment.pdf]]"]}',
+        );
+      });
+
+      it("should return null for empty embeds array", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          embeds: [],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file.embeds",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it("should support space variant 'file embeds'", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          embeds: [{ link: "doc.pdf" }],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file embeds",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBe('{"type":"array","items":["[[doc.pdf]]"]}');
+      });
+
+      it("should filter out empty link strings", () => {
+        const mockFile = Object.assign(new TFile(), { path: "test.md" });
+        mockApp.vault.getAbstractFileByPath = jest
+          .fn()
+          .mockReturnValue(mockFile);
+        mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
+          embeds: [
+            { link: "valid.png" },
+            { link: "" },
+            { link: "   " },
+            { link: "also-valid.jpg" },
+          ],
+        });
+
+        const mockPage: any = { value: jest.fn() };
+        const mockCardData: any = {
+          path: "test.md",
+          folderPath: "",
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          "file.embeds",
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC,
+        );
+
+        expect(result).toBe(
+          '{"type":"array","items":["[[valid.png]]","[[also-valid.jpg]]"]}',
+        );
+      });
     });
   });
 });

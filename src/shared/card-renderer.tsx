@@ -64,6 +64,16 @@ import {
 import { measurePropertyFields } from "./property-measure";
 
 /**
+ * Extended container element with focus management properties
+ * Used by CardRenderer for keyboard navigation and text selection
+ */
+interface CardContainerElement extends HTMLElement {
+  _intentionalFocus?: boolean;
+  _lastKey?: string | null;
+  _mouseDown?: boolean;
+}
+
+/**
  * Render file type icon as JSX
  */
 function renderFileTypeIcon(path: string) {
@@ -1156,6 +1166,9 @@ export function CardRenderer({
   onCardClick,
   onFocusChange,
 }: CardRendererProps): unknown {
+  // Closure variable for cleanup - persists across ref callback calls
+  let containerCleanup: (() => void) | null = null;
+
   return (
     <div
       ref={(el: HTMLElement | null) => {
@@ -1163,88 +1176,60 @@ export function CardRenderer({
         if (containerRef) {
           (containerRef as { current: HTMLElement | null }).current = el;
         }
-        if (!el) return;
 
-        // Setup single document-level keydown listener for hover-to-start
-        // Check if already setup (avoid duplicates on re-render)
-        type ContainerWithCleanup = HTMLElement & {
-          _hoverKeydownCleanup?: () => void;
-        };
-        const container = el as ContainerWithCleanup;
-        if (container._hoverKeydownCleanup) {
-          return; // Already setup
+        // Call cleanup when element is removed (unmount)
+        if (!el) {
+          containerCleanup?.();
+          containerCleanup = null;
+          return;
         }
 
-        // Track intentional focus and last key to distinguish Tab from Escape
-        type ContainerWithFlags = HTMLElement & {
-          _intentionalFocus?: boolean;
-          _lastKey?: string | null;
-        };
-        (el as ContainerWithFlags)._intentionalFocus = false;
-        (el as ContainerWithFlags)._lastKey = null;
+        // Skip if already setup (avoid duplicates on re-render)
+        if (containerCleanup) {
+          return;
+        }
 
+        // Initialize focus management properties
+        const container = el as CardContainerElement;
+        container._intentionalFocus = false;
+        container._lastKey = null;
+        container._mouseDown = false;
+
+        // Track last key for Tab detection in focusin
+        // Note: Arrow key navigation is handled by setupHoverKeyboardNavigation in view layer
         const handleKeydown = (e: KeyboardEvent) => {
-          // Track last key for Tab detection in focusin
-          (el as ContainerWithFlags)._lastKey = e.key;
+          container._lastKey = e.key;
           requestAnimationFrame(() => {
-            (el as ContainerWithFlags)._lastKey = null;
+            if (el.isConnected) {
+              container._lastKey = null;
+            }
           });
-
-          // Only handle arrow keys if hovering a card
-          const hoveredCard = hoveredCardRef.current;
-          if (!hoveredCard) return;
-          if (!isArrowKey(e.key)) return;
-
-          const activeEl = document.activeElement;
-          const isCardFocused = activeEl?.classList.contains("card");
-          if (isCardFocused) return;
-
-          // Focus the hovered card (mark as intentional)
-          e.preventDefault();
-          (el as ContainerWithFlags)._intentionalFocus = true;
-          hoveredCard.focus();
-          requestAnimationFrame(() => {
-            (el as ContainerWithFlags)._intentionalFocus = false;
-          });
-
-          // Find index of hovered card and update focusableCardIndex
-          const allCards = el.querySelectorAll(".card");
-          const index = Array.from(allCards).indexOf(hoveredCard);
-          if (index >= 0) {
-            onFocusChange?.(index);
-          }
         };
 
         // Track mouse button state to allow focus during text selection
-        type ContainerWithMouse = HTMLElement & { _mouseDown?: boolean };
-        (el as ContainerWithMouse)._mouseDown = false;
-
         const handleMouseDown = () => {
-          (el as ContainerWithMouse)._mouseDown = true;
+          container._mouseDown = true;
         };
         const handleMouseUp = () => {
-          (el as ContainerWithMouse)._mouseDown = false;
+          container._mouseDown = false;
         };
-
-        el.addEventListener("mousedown", handleMouseDown, { capture: true });
-        document.addEventListener("mouseup", handleMouseUp);
 
         // Block unwanted focus on cards (e.g., from Obsidian's Escape handler)
         // Allow: intentional focus (arrow keys), Tab from outside, mouse clicks
         const handleFocusin = (e: FocusEvent) => {
-          if ((el as ContainerWithFlags)._intentionalFocus) return;
+          if (container._intentionalFocus) return;
 
           const target = e.target as HTMLElement;
           if (!target.classList.contains("card")) return;
 
           // Allow focus during mouse click (needed for text selection)
-          if ((el as ContainerWithMouse)._mouseDown) return;
+          if (container._mouseDown) return;
 
           const relatedTarget = e.relatedTarget as HTMLElement | null;
 
           // Focus from outside container - only allow if Tab was pressed
           if (!relatedTarget || !el.contains(relatedTarget)) {
-            if ((el as ContainerWithFlags)._lastKey === "Tab") return;
+            if (container._lastKey === "Tab") return;
             // Block non-Tab focus from outside (e.g., Escape)
             target.blur();
             return;
@@ -1252,18 +1237,24 @@ export function CardRenderer({
 
           // Block focus moving between cards without arrow keys
           if (relatedTarget.classList.contains("card")) {
-            (el as ContainerWithFlags)._intentionalFocus = true;
+            container._intentionalFocus = true;
             relatedTarget.focus();
             requestAnimationFrame(() => {
-              (el as ContainerWithFlags)._intentionalFocus = false;
+              if (el.isConnected) {
+                container._intentionalFocus = false;
+              }
             });
           }
         };
 
+        // Register event listeners
         document.addEventListener("keydown", handleKeydown, { capture: true });
         el.addEventListener("focusin", handleFocusin);
+        el.addEventListener("mousedown", handleMouseDown, { capture: true });
+        document.addEventListener("mouseup", handleMouseUp, { capture: true });
 
-        container._hoverKeydownCleanup = () => {
+        // Store cleanup function in closure (not on element)
+        containerCleanup = () => {
           document.removeEventListener("keydown", handleKeydown, {
             capture: true,
           });
@@ -1271,7 +1262,9 @@ export function CardRenderer({
           el.removeEventListener("mousedown", handleMouseDown, {
             capture: true,
           });
-          document.removeEventListener("mouseup", handleMouseUp);
+          document.removeEventListener("mouseup", handleMouseUp, {
+            capture: true,
+          });
         };
       }}
       className={
@@ -1652,9 +1645,7 @@ function Card({
           }
         } else if (isArrowKey(e.key)) {
           e.preventDefault();
-          const container = containerRef.current as HTMLElement & {
-            _intentionalFocus?: boolean;
-          };
+          const container = containerRef.current as CardContainerElement | null;
           if (container) {
             // Mark focus as intentional before navigation
             container._intentionalFocus = true;
@@ -1665,13 +1656,13 @@ function Card({
               (_, targetIndex) => onFocusChange?.(targetIndex),
             );
             requestAnimationFrame(() => {
-              container._intentionalFocus = false;
+              if (container.isConnected) {
+                container._intentionalFocus = false;
+              }
             });
           }
         } else if (e.key === "Escape") {
           (e.currentTarget as HTMLElement).blur();
-        } else if (e.key === "Tab") {
-          e.preventDefault();
         }
       }}
       onMouseEnter={(e: MouseEvent) => {

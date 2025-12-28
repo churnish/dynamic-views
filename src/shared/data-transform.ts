@@ -16,7 +16,27 @@ import {
 import { hasUriScheme } from "../utils/link-parser";
 import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
-import { getDatacoreLinkDisplay } from "../utils/style-settings";
+
+/**
+ * Resolve file.links or file.embeds property from metadataCache
+ * Shared helper used by both Bases and Datacore resolvers
+ */
+function resolveFileLinksProperty(
+  app: App,
+  filePath: string,
+  type: "links" | "embeds",
+): string | null {
+  const file = app.vault.getAbstractFileByPath(filePath);
+  if (!(file instanceof TFile)) return null;
+
+  const cache = app.metadataCache.getFileCache(file);
+  const source = type === "links" ? cache?.links : cache?.embeds;
+  const items = (source || [])
+    .filter((l) => typeof l.link === "string" && l.link.trim() !== "")
+    .map((l) => `[[${l.link}]]`);
+
+  return items.length === 0 ? null : JSON.stringify({ type: "array", items });
+}
 
 /**
  * Strip leading hash (#) from tag strings
@@ -189,6 +209,7 @@ export function resolveTimestampProperty(
  * Handles Datacore-specific API (p.value(), p.$path, etc.)
  */
 export function datacoreResultToCardData(
+  app: App,
   result: DatacoreFile,
   dc: DatacoreAPI,
   settings: Settings,
@@ -294,6 +315,7 @@ export function datacoreResultToCardData(
     cardData[propValue] = (
       effectiveProps[i]
         ? resolveDatacoreProperty(
+            app,
             effectiveProps[i],
             result,
             cardData,
@@ -312,6 +334,7 @@ export function datacoreResultToCardData(
       .filter((p) => p);
     for (const prop of subtitleProps) {
       const resolved = resolveDatacoreProperty(
+        app,
         prop,
         result,
         cardData,
@@ -603,6 +626,7 @@ export function transformDatacoreResults(
         }
       }
       return datacoreResultToCardData(
+        app,
         p,
         dc,
         settings,
@@ -661,9 +685,9 @@ export function resolveBasesProperty(
     return null;
   }
 
-  // Handle special properties (support both Bases and Datacore formats)
-  // Bases format: file.path, file.tags, file.mtime, file.ctime
-  // Datacore format: "file path", "file tags", "modified time", "created time"
+  // Handle special properties (support both dot and space notation)
+  // Examples: file.path, file.tags, file.mtime, file.ctime
+  // Or: "file path", "file tags", "modified time", "created time"
   if (propertyName === "file.path" || propertyName === "file path") {
     const path = cardData.path;
     if (!path || path === "") {
@@ -684,30 +708,12 @@ export function resolveBasesProperty(
 
   // file.links - non-embedded links from metadataCache
   if (propertyName === "file.links" || propertyName === "file links") {
-    const file = app.vault.getAbstractFileByPath(cardData.path);
-    if (file instanceof TFile) {
-      const cache = app.metadataCache.getFileCache(file);
-      const items = (cache?.links || [])
-        .filter((l) => typeof l.link === "string" && l.link.trim() !== "")
-        .map((l) => `[[${l.link}]]`);
-      if (items.length === 0) return null;
-      return JSON.stringify({ type: "array", items });
-    }
-    return null;
+    return resolveFileLinksProperty(app, cardData.path, "links");
   }
 
   // file.embeds - embedded links from metadataCache
   if (propertyName === "file.embeds" || propertyName === "file embeds") {
-    const file = app.vault.getAbstractFileByPath(cardData.path);
-    if (file instanceof TFile) {
-      const cache = app.metadataCache.getFileCache(file);
-      const items = (cache?.embeds || [])
-        .filter((e) => typeof e.link === "string" && e.link.trim() !== "")
-        .map((e) => `[[${e.link}]]`);
-      if (items.length === 0) return null;
-      return JSON.stringify({ type: "array", items });
-    }
-    return null;
+    return resolveFileLinksProperty(app, cardData.path, "embeds");
   }
 
   // Handle file timestamp properties (styled for property display)
@@ -801,44 +807,31 @@ export function resolveBasesProperty(
             return String(nestedData);
           }
           // Handle nested Link objects in .data
+          // Check link first (original text), fall back to path (resolved)
           if (typeof nestedData === "object" && nestedData !== null) {
-            if ("path" in nestedData) {
-              const pathValue = (nestedData as { path: unknown }).path;
-              if (typeof pathValue === "string" && pathValue.trim() !== "") {
-                return `[[${pathValue}]]`;
-              }
-            }
             if ("link" in nestedData) {
               const linkValue = (nestedData as { link: unknown }).link;
               if (typeof linkValue === "string" && linkValue.trim() !== "") {
                 return `[[${linkValue}]]`;
               }
             }
+            if ("path" in nestedData) {
+              const pathValue = (nestedData as { path: unknown }).path;
+              if (typeof pathValue === "string" && pathValue.trim() !== "") {
+                return `[[${pathValue}]]`;
+              }
+            }
           }
           return null; // Can't stringify complex nested objects
         }
         if (item == null || item === "") return null;
+        // Bases preserves original YAML strings (including wikilinks)
         if (
           typeof item === "string" ||
           typeof item === "number" ||
           typeof item === "boolean"
         ) {
           return String(item);
-        }
-        // Handle Link objects directly in array
-        if (typeof item === "object") {
-          if ("path" in item) {
-            const pathValue = (item as { path: unknown }).path;
-            if (typeof pathValue === "string" && pathValue.trim() !== "") {
-              return `[[${pathValue}]]`;
-            }
-          }
-          if ("link" in item) {
-            const linkValue = (item as { link: unknown }).link;
-            if (typeof linkValue === "string" && linkValue.trim() !== "") {
-              return `[[${linkValue}]]`;
-            }
-          }
         }
         return null; // Can't stringify complex objects
       })
@@ -851,25 +844,8 @@ export function resolveBasesProperty(
     return JSON.stringify({ type: "array", items: stringElements });
   }
 
-  // Handle Link objects (Bases may use path or link property for wikilinks)
-  if (typeof data === "object" && data !== null) {
-    // Check for path property (like Datacore Link objects)
-    if ("path" in data) {
-      const pathValue = (data as { path: unknown }).path;
-      if (typeof pathValue === "string" && pathValue.trim() !== "") {
-        return `[[${pathValue}]]`;
-      }
-    }
-    // Check for link property (alternative structure)
-    if ("link" in data) {
-      const linkValue = (data as { link: unknown }).link;
-      if (typeof linkValue === "string" && linkValue.trim() !== "") {
-        return `[[${linkValue}]]`;
-      }
-    }
-  }
-
-  // For complex types, return null (can't display)
+  // For complex types (objects), return null (can't display)
+  // Note: Bases preserves wikilinks as plain strings, no Link object handling needed
   return null;
 }
 
@@ -878,6 +854,7 @@ export function resolveBasesProperty(
  * Returns null for missing/empty properties
  */
 export function resolveDatacoreProperty(
+  app: App,
   propertyName: string,
   result: DatacoreFile,
   cardData: CardData,
@@ -886,9 +863,9 @@ export function resolveDatacoreProperty(
 ): string | null {
   if (!propertyName || propertyName === "") return null;
 
-  // Handle special properties (support both Bases and Datacore formats)
-  // Bases format: file.path, file.tags, file.mtime, file.ctime
-  // Datacore format: "file path", "file tags", "modified time", "created time"
+  // Handle special properties (support both dot and space notation)
+  // Dot notation: file.path, file.tags, file.mtime, file.ctime
+  // Space notation: "file path", "file tags", "modified time", "created time"
   if (propertyName === "file.path" || propertyName === "file path") {
     const path = cardData.path;
     if (!path || path === "") return null;
@@ -905,46 +882,14 @@ export function resolveDatacoreProperty(
     return cardData.tags.length > 0 ? "tags" : null; // Special marker
   }
 
-  // file.links - non-embedded links only
+  // file.links - non-embedded links from metadataCache
   if (propertyName === "file.links" || propertyName === "file links") {
-    const links = (result.$links || []).filter(
-      (l): l is { path: string; display?: string; embed?: boolean } =>
-        typeof l === "object" &&
-        l !== null &&
-        "path" in l &&
-        typeof (l as { path: unknown }).path === "string" &&
-        (l as { path: string }).path.trim() !== "" &&
-        (l as { embed?: boolean }).embed !== true,
-    );
-    if (links.length === 0) return null;
-    const displayMode = getDatacoreLinkDisplay();
-    const items = links.map((l) => {
-      const linkText =
-        displayMode === "filename" ? l.display || l.path : l.path;
-      return `[[${linkText}]]`;
-    });
-    return JSON.stringify({ type: "array", items });
+    return resolveFileLinksProperty(app, cardData.path, "links");
   }
 
-  // file.embeds - embedded links only
+  // file.embeds - embedded links from metadataCache
   if (propertyName === "file.embeds" || propertyName === "file embeds") {
-    const embeds = (result.$links || []).filter(
-      (l): l is { path: string; display?: string; embed?: boolean } =>
-        typeof l === "object" &&
-        l !== null &&
-        "path" in l &&
-        typeof (l as { path: unknown }).path === "string" &&
-        (l as { path: string }).path.trim() !== "" &&
-        (l as { embed?: boolean }).embed === true,
-    );
-    if (embeds.length === 0) return null;
-    const displayMode = getDatacoreLinkDisplay();
-    const items = embeds.map((l) => {
-      const linkText =
-        displayMode === "filename" ? l.display || l.path : l.path;
-      return `[[${linkText}]]`;
-    });
-    return JSON.stringify({ type: "array", items });
+    return resolveFileLinksProperty(app, cardData.path, "embeds");
   }
 
   // Handle file timestamp properties (styled for property display)
@@ -971,13 +916,8 @@ export function resolveDatacoreProperty(
     // Otherwise join all elements as strings
     const stringElements = rawValue
       .map((item: unknown) => {
-        // Handle Link objects with path property
-        if (typeof item === "object" && item !== null && "path" in item) {
-          const pathValue = (item as { path: unknown }).path;
-          if (typeof pathValue === "string" && pathValue.trim() !== "") {
-            return `[[${pathValue}]]`;
-          }
-        }
+        // Use dc.coerce.string for all items - handles Link objects correctly
+        // (returns [[path|display]] format which preserves navigation and shows filename)
         const str = dc.coerce.string(item);
         return str && str.trim() !== "" ? str : null;
       })
@@ -1017,16 +957,7 @@ export function resolveDatacoreProperty(
     return null;
   }
 
-  // Handle Link objects with path property (single value)
-  // Preserve wikilink syntax so renderTextWithLinks can detect it
-  if (typeof rawValue === "object" && rawValue !== null && "path" in rawValue) {
-    const pathValue = (rawValue as { path: unknown }).path;
-    if (typeof pathValue === "string" && pathValue.trim() !== "") {
-      return `[[${pathValue}]]`;
-    }
-  }
-
-  // Coerce to string for non-date, non-link values
+  // Coerce to string - handles Link objects correctly (returns [[path|display]] format)
   const value = dc.coerce.string(rawValue);
 
   // Handle empty values (property exists but empty)

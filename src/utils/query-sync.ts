@@ -58,7 +58,7 @@ export function updateQueryInBlock(content: string, newQuery: string): string {
 
   const { startIndex, endIndex } = queryMatch;
 
-  const replacement = `// ––––– DQL QUERY START –––––
+  const replacement = `// –––– DQL QUERY START ––––
 ${newQuery}
 // ––––– DQL QUERY END –––––`;
 

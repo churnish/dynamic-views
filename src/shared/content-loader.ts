@@ -7,12 +7,22 @@ import {
 import { loadFilePreview } from "../utils/text-preview";
 import { getSlideshowMaxImages } from "../utils/style-settings";
 
-// Track in-flight loads to prevent duplicate parallel requests
-const inFlightTextPreviews = new Set<string>();
-const inFlightImages = new Set<string>();
+// Track in-flight loads - Map to Promises so concurrent requests can await
+const inFlightTextPreviews = new Map<string, Promise<string>>();
 
 /**
- * Clear in-flight tracking sets (call on plugin unload)
+ * Result of loading images for an entry
+ * Returned by Promise so all callers can assign to their own caches
+ */
+interface ImageLoadResult {
+  images: string | string[] | null;
+  hasImage: boolean;
+}
+
+const inFlightImages = new Map<string, Promise<ImageLoadResult>>();
+
+/**
+ * Clear in-flight tracking (call on plugin unload)
  */
 export function clearInFlightLoads(): void {
   inFlightTextPreviews.clear();
@@ -56,68 +66,98 @@ export async function loadImageForEntry(
     includeCardLink?: boolean;
   },
 ): Promise<void> {
-  // Skip if already checked (hasImageCache tracks both success and failure)
-  // or if currently being loaded (prevents race with parallel Promise.all)
-  if (path in hasImageCache || inFlightImages.has(path)) {
+  // Skip if already in caller's cache (uses path, not composite key, because each
+  // caller passes their own cache objects - this prevents re-loading within a batch)
+  if (path in hasImageCache) {
     return;
   }
 
-  // Mark as in-flight before async work
-  inFlightImages.add(path);
+  // If another view is loading this path with same settings, await its result
+  // Composite key includes all parameters that affect output:
+  // - fallbackToEmbeds: determines whether embeds are extracted
+  // - embedOptions: determines which embed types (YouTube, CardLink) are included
+  const embedKey = embedOptions
+    ? `${embedOptions.includeYoutube ?? false}|${embedOptions.includeCardLink ?? false}`
+    : "false|false";
+  const cacheKey = `${path}|${fallbackToEmbeds}|${embedKey}`;
+  const existing = inFlightImages.get(cacheKey);
+  if (existing) {
+    const result = await existing;
+    if (result.images !== null) {
+      imageCache[path] = result.images;
+    }
+    hasImageCache[path] = result.hasImage;
+    return;
+  }
+
+  // Create and store the loading promise - returns result so all callers can assign to their caches
+  const loadPromise = (async (): Promise<ImageLoadResult> => {
+    try {
+      // Get max images once (used for both embed limit check and final slice)
+      const maxImages = getSlideshowMaxImages();
+
+      // Filter to only valid string paths before processing
+      const validPaths = imagePropertyValues.filter(
+        (v): v is string => typeof v === "string" && v.length > 0,
+      );
+
+      // Process image paths using shared utility (sync - no validation needed)
+      const { internalPaths, externalUrls } = processImagePaths(validPaths);
+
+      // Convert internal paths to resource URLs using shared utility
+      let validImages: string[] = [
+        ...resolveInternalImagePaths(internalPaths, path, app),
+        ...externalUrls, // External URLs passed through - browser handles load/error
+      ];
+
+      // Handle embed images based on fallbackToEmbeds mode
+      if (fallbackToEmbeds === "always") {
+        // Pull from properties first, then append in-note embeds
+        // Skip parsing if property already has max images
+        if (validImages.length < maxImages) {
+          const embedImages = await extractImageEmbeds(file, app, embedOptions);
+          validImages = [...validImages, ...embedImages];
+        }
+      } else if (fallbackToEmbeds === "if-empty") {
+        // Only use embeds if property missing/empty
+        if (validImages.length === 0) {
+          validImages = await extractImageEmbeds(file, app, embedOptions);
+        }
+      } else if (fallbackToEmbeds === "never") {
+        // Only use property images, never use embeds
+        // No action needed - validImages already contains only property images
+      }
+
+      if (validImages.length > 0) {
+        // Limit images to slideshow max to avoid loading excess images
+        const limitedImages = validImages.slice(0, maxImages);
+        // Return as array if multiple, string if single
+        return {
+          images: limitedImages.length > 1 ? limitedImages : limitedImages[0],
+          hasImage: true,
+        };
+      } else {
+        // No images available
+        return { images: null, hasImage: false };
+      }
+    } catch (error) {
+      console.error(`Failed to load image for ${path}:`, error);
+      // Return failure result to prevent infinite retry loops
+      return { images: null, hasImage: false };
+    }
+  })();
+
+  inFlightImages.set(cacheKey, loadPromise);
 
   try {
-    // Filter to only valid string paths before processing
-    const validPaths = imagePropertyValues.filter(
-      (v): v is string => typeof v === "string" && v.length > 0,
-    );
-
-    // Process image paths using shared utility (sync - no validation needed)
-    const { internalPaths, externalUrls } = processImagePaths(validPaths);
-
-    // Convert internal paths to resource URLs using shared utility
-    let validImages: string[] = [
-      ...resolveInternalImagePaths(internalPaths, path, app),
-      ...externalUrls, // External URLs passed through - browser handles load/error
-    ];
-
-    // Handle embed images based on fallbackToEmbeds mode
-    if (fallbackToEmbeds === "always") {
-      // Pull from properties first, then append in-note embeds
-      // Skip parsing if property already has max images
-      const maxImages = getSlideshowMaxImages();
-      if (validImages.length < maxImages) {
-        const embedImages = await extractImageEmbeds(file, app, embedOptions);
-        validImages = [...validImages, ...embedImages];
-      }
-    } else if (fallbackToEmbeds === "if-empty") {
-      // Only use embeds if property missing/empty
-      if (validImages.length === 0) {
-        validImages = await extractImageEmbeds(file, app, embedOptions);
-      }
-    } else if (fallbackToEmbeds === "never") {
-      // Only use property images, never use embeds
-      // No action needed - validImages already contains only property images
+    const result = await loadPromise;
+    // Assign to caller's cache
+    if (result.images !== null) {
+      imageCache[path] = result.images;
     }
-
-    if (validImages.length > 0) {
-      // Limit images to slideshow max to avoid loading excess images
-      const maxImages = getSlideshowMaxImages();
-      const limitedImages = validImages.slice(0, maxImages);
-      // Store as array if multiple, string if single
-      imageCache[path] =
-        limitedImages.length > 1 ? limitedImages : limitedImages[0];
-      hasImageCache[path] = true;
-    } else {
-      // Mark as checked but no images available
-      hasImageCache[path] = false;
-    }
-  } catch (error) {
-    console.error(`Failed to load image for ${path}:`, error);
-    // Mark as checked to prevent infinite retry loops
-    hasImageCache[path] = false;
+    hasImageCache[path] = result.hasImage;
   } finally {
-    // Always remove from in-flight set
-    inFlightImages.delete(path);
+    inFlightImages.delete(cacheKey);
   }
 }
 
@@ -187,37 +227,66 @@ export async function loadTextPreviewForEntry(
   fileName?: string,
   titleString?: string,
 ): Promise<void> {
-  // Skip if already in cache or currently being loaded (prevents race with parallel Promise.all)
-  if (path in textPreviewCache || inFlightTextPreviews.has(path)) {
+  // Skip if already in caller's cache (uses path, not composite key, because each
+  // caller passes their own cache objects - this prevents re-loading within a batch)
+  if (path in textPreviewCache) {
     return;
   }
 
-  // Mark as in-flight before async work
-  inFlightTextPreviews.add(path);
+  // If another view is loading this path with same settings, await its result
+  // Composite key includes all parameters that affect output:
+  // - fallbackToContent: determines whether file content is used as fallback
+  // - omitFirstLine: affects whether first line is stripped from preview
+  // - hasPreview: whether textPreviewData is provided (affects output source)
+  // - fileName/titleString: included when omitFirstLine="ifMatchesTitle" (affects first-line comparison)
+  const hasPreview =
+    textPreviewData != null &&
+    (typeof textPreviewData === "string" ||
+      typeof textPreviewData === "number") &&
+    String(textPreviewData).trim().length > 0
+      ? "1"
+      : "0";
+  const titleKey =
+    omitFirstLine === "ifMatchesTitle"
+      ? `|${fileName ?? ""}|${titleString ?? ""}`
+      : "";
+  const cacheKey = `${path}|${fallbackToContent}|${omitFirstLine}|${hasPreview}${titleKey}`;
+  const existing = inFlightTextPreviews.get(cacheKey);
+  if (existing) {
+    textPreviewCache[path] = await existing;
+    return;
+  }
+
+  // Create and store the loading promise
+  const loadPromise = (async (): Promise<string> => {
+    try {
+      if (file.extension === "md") {
+        return await loadFilePreview(
+          file,
+          app,
+          textPreviewData,
+          {
+            fallbackToContent,
+            omitFirstLine,
+          },
+          fileName,
+          titleString,
+        );
+      } else {
+        return "";
+      }
+    } catch (error) {
+      console.error(`Failed to load text preview for ${path}:`, error);
+      return "";
+    }
+  })();
+
+  inFlightTextPreviews.set(cacheKey, loadPromise);
 
   try {
-    if (file.extension === "md") {
-      // Use shared utility for preview loading
-      textPreviewCache[path] = await loadFilePreview(
-        file,
-        app,
-        textPreviewData,
-        {
-          fallbackToContent,
-          omitFirstLine,
-        },
-        fileName,
-        titleString,
-      );
-    } else {
-      textPreviewCache[path] = "";
-    }
-  } catch (error) {
-    console.error(`Failed to load text preview for ${path}:`, error);
-    textPreviewCache[path] = "";
+    textPreviewCache[path] = await loadPromise;
   } finally {
-    // Always remove from in-flight set
-    inFlightTextPreviews.delete(path);
+    inFlightTextPreviews.delete(cacheKey);
   }
 }
 

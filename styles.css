@@ -335,19 +335,6 @@ settings:
         description: Hide fade-out gradient at bottom of scrollable results (applies when View height > 0)
         type: class-toggle
     -
-        id: dynamic-views-datacore-link-display
-        title: Link display format
-        description: How file.links and file.embeds property values are displayed
-        type: variable-select
-        default: filename
-        options:
-            -
-                label: Filename
-                value: filename
-            -
-                label: Full path
-                value: full-path
-    -
         id: image-viewer-heading
         title: Image viewer
         type: heading
@@ -1310,7 +1297,6 @@ body {
   );
   --dynamic-views-list-separator: ", ";
   --dynamic-views-empty-value-marker: "—";
-  --dynamic-views-datacore-link-display: filename;
 }
 
 /* Compose custom colors from HSL components */
@@ -1658,10 +1644,9 @@ body {
   flex-direction: column;
   gap: 8px;
   max-width: 100%;
-  padding: 3px 0;
+  padding: 3px 0 8px;
   position: relative;
   background-color: var(--background-primary);
-  padding-bottom: 8px;
 }
 
 .dynamic-views .controls-wrapper.scrolled::after {
@@ -1863,7 +1848,8 @@ body.dynamic-views-disable-toolbar-shadow
    RESULTS COUNT & LIMIT CONTROLS
    ============================================ */
 
-.dynamic-views .results-count-wrapper {
+.dynamic-views .results-count-wrapper,
+.dynamic-views .results-count-wrapper-compact {
   position: relative;
   display: flex;
   align-items: center;
@@ -1873,15 +1859,33 @@ body.dynamic-views-disable-toolbar-shadow
   cursor: pointer;
   transition:
     background-color var(--anim-duration-fast, 140ms),
+    opacity var(--anim-duration-fast, 140ms);
+}
+
+/* Normal variant has additional transitions for search animation */
+.dynamic-views .results-count-wrapper {
+  transition:
+    background-color var(--anim-duration-fast, 140ms),
     opacity var(--anim-duration-fast, 140ms),
     transform var(--anim-duration-fast, 140ms) ease,
     margin var(--anim-duration-moderate, 300ms) ease;
 }
 
+/* Hide compact variant by default (shown via container query) */
+.dynamic-views .results-count-wrapper-compact {
+  display: none;
+}
+
 @media (hover: hover) {
-  .results-count-wrapper:hover {
+  .results-count-wrapper:hover,
+  .results-count-wrapper-compact:hover {
     background-color: var(--background-modifier-hover);
     opacity: var(--icon-opacity-hover);
+  }
+
+  .results-count-wrapper:has(.limited):hover,
+  .results-count-wrapper-compact:has(.limited):hover {
+    background-color: var(--background-modifier-active-hover);
   }
 }
 
@@ -2004,7 +2008,8 @@ body.dynamic-views-disable-toolbar-shadow
    TOOLBAR BUTTONS
    ============================================ */
 
-.dynamic-views .create-note-button {
+.dynamic-views .create-note-button,
+.dynamic-views .create-note-button-compact {
   padding: 6px !important;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -2019,15 +2024,22 @@ body.dynamic-views-disable-toolbar-shadow
   box-sizing: border-box;
 }
 
-.dynamic-views .create-note-button svg {
+.dynamic-views .create-note-button svg,
+.dynamic-views .create-note-button-compact svg {
   width: 16px;
   height: 16px;
   color: var(--text-normal);
 }
 
-.dynamic-views .create-note-button:hover {
+.dynamic-views .create-note-button:hover,
+.dynamic-views .create-note-button-compact:hover {
   border-color: var(--text-faint);
   background-color: var(--background-modifier-hover);
+}
+
+/* Hide compact variant by default (shown via container query) */
+.dynamic-views .create-note-button-compact {
+  display: none;
 }
 
 .dynamic-views .property-controls {
@@ -7431,7 +7443,7 @@ body.dynamic-views-no-fade-truncated-text
 
 @container (max-width: 700px) and (min-width: 51px) {
   .dynamic-views .controls-wrapper {
-    padding: 3px 8px 8px;
+    padding: 3px 0 8px;
   }
 
   .dynamic-views .width-toggle-btn {
@@ -7473,41 +7485,10 @@ body.dynamic-views-no-fade-truncated-text
 
   .results-count-wrapper-compact {
     display: flex;
-    align-items: center;
-    gap: var(--size-2-2);
-    cursor: pointer;
-    padding: 6px 8px;
-    position: relative;
-    border-radius: 6px;
-    transition:
-      background-color var(--anim-duration-fast, 140ms),
-      opacity var(--anim-duration-fast, 140ms);
   }
 
   .create-note-button-compact {
     display: flex;
-    padding: 6px !important;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
-    background-color: transparent;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--anim-duration-fast, 140ms);
-    height: 30px;
-    width: 30px;
-    box-sizing: border-box;
-  }
-
-  .create-note-button-compact svg {
-    width: 16px;
-    height: 16px;
-    color: var(--text-normal);
-  }
-
-  .create-note-button-compact:hover {
-    border-color: var(--text-faint);
-    background-color: var(--background-modifier-hover);
   }
 
   .dynamic-views .search-controls {
