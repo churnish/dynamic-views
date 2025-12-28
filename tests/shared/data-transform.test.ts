@@ -183,34 +183,6 @@ describe("data-transform", () => {
       // Should use first element
       expect(result.title).toBeTruthy();
     });
-
-    it("should set hasImageAvailable flag", () => {
-      const mockResult: any = {
-        $path: "file.md",
-        $name: "file",
-        $tags: [],
-        $ctime: { toMillis: () => 0 },
-        $mtime: { toMillis: () => 0 },
-        value: jest.fn().mockReturnValue([]),
-      };
-
-      const mockDC: any = {
-        coerce: { string: (val: any) => String(val) },
-      };
-
-      const result = datacoreResultToCardData(
-        mockResult,
-        mockDC,
-        mockSettings,
-        "alphabetical",
-        false,
-        undefined,
-        undefined,
-        true,
-      );
-
-      expect(result.hasImageAvailable).toBe(true);
-    });
   });
 
   describe("basesEntryToCardData", () => {

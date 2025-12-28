@@ -56,16 +56,6 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-view-padding
-        title: View padding
-        description: Padding between cards and view container edges
-        type: variable-number-slider
-        default: 12
-        min: 0
-        max: 32
-        step: 1
-        format: px
-    -
         id: dynamic-views-view-background
         title: View background
         description: Background color for card views
@@ -344,6 +334,19 @@ settings:
         title: Disable fade gradient at query bottom
         description: Hide fade-out gradient at bottom of scrollable results (applies when View height > 0)
         type: class-toggle
+    -
+        id: dynamic-views-datacore-link-display
+        title: Link display format
+        description: How file.links and file.embeds property values are displayed
+        type: variable-select
+        default: filename
+        options:
+            -
+                label: Filename
+                value: filename
+            -
+                label: Full path
+                value: full-path
     -
         id: image-viewer-heading
         title: Image viewer
@@ -1307,6 +1310,7 @@ body {
   );
   --dynamic-views-list-separator: ", ";
   --dynamic-views-empty-value-marker: "—";
+  --dynamic-views-datacore-link-display: filename;
 }
 
 /* Compose custom colors from HSL components */
@@ -1367,22 +1371,6 @@ body {
 /* ============================================
    DATACORE & BASES VIEW STYLES
    ============================================ */
-
-/* ============================================
-   BASES VIEW PADDING
-   Match built-in Bases Cards view padding
-   ============================================ */
-
-/* Bases files only (not embeds) */
-.workspace-leaf-content[data-type="bases"]
-  .bases-view[data-view-type="dynamic-views-grid"],
-.workspace-leaf-content[data-type="bases"]
-  .bases-view[data-view-type="dynamic-views-masonry"] {
-  padding: var(--dynamic-views-view-padding, 12px);
-  background-color: var(--dynamic-views-view-background);
-}
-
-/* Bases container - no scroll styling, parent handles scrolling */
 
 /* ============================================
    FOCUS & ACCESSIBILITY STYLES
@@ -2702,11 +2690,19 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
    VIEW-SPECIFIC STYLES: CARD VIEW
    ============================================ */
 
-/* Enable container queries for bases views (used for responsive hiding during tab transitions) */
+/* Enable container queries and set view padding variable for Obsidian's default .bases-view */
 .bases-view[data-view-type="dynamic-views-grid"],
 .bases-view[data-view-type="dynamic-views-masonry"] {
   container-type: inline-size;
-  --bases-view-padding: var(--dynamic-views-view-padding, 12px);
+  --bases-view-padding: var(--size-4-3);
+}
+
+/* View background - Bases files only (not embeds) */
+.workspace-leaf-content[data-type="bases"]
+  .bases-view[data-view-type="dynamic-views-grid"],
+.workspace-leaf-content[data-type="bases"]
+  .bases-view[data-view-type="dynamic-views-masonry"] {
+  background-color: var(--dynamic-views-view-background);
 }
 
 /* Unified grid layout for all grid views (all width modes) */
@@ -2748,10 +2744,20 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   overflow: hidden;
 }
 
-/* Card element ordering for flexbox layout */
+/* Card element ordering for flexbox layout
+   Order hierarchy: -100 (title/header) → -50 (properties-top) → 0 (content) → 50 (properties-bottom) */
 .dynamic-views .card .card-title,
-.dynamic-views .card .card-header {
+.dynamic-views .card .card-header,
+.dynamic-views .card > .card-title-group {
   order: -100;
+}
+
+/* Explicit order for title-group children (DOM order is title then subtitle) */
+.dynamic-views .card-title-group .card-title {
+  order: 0;
+}
+.dynamic-views .card-title-group .card-subtitle {
+  order: 1;
 }
 
 /* Property set position: top (below title/subtitle, above content) */
@@ -5637,6 +5643,11 @@ body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
   opacity: 0.5;
 }
 
+.dynamic-views .bases-group-heading .path-separator {
+  color: var(--text-faint);
+  opacity: 1;
+}
+
 /* ============================================
    PROPERTY ROW SYSTEM
    ============================================ */
@@ -7313,7 +7324,7 @@ body.dynamic-views-no-fade-truncated-text
 .dynamic-views
   .dynamic-views-masonry
   .card
-  .card-title
+  .card-title-group
   ~ .card-properties-bottom {
   margin-top: auto;
   padding-top: var(--size-4-2);
@@ -7659,7 +7670,7 @@ body.dynamic-views-no-fade-truncated-text
 }
 
 body:not(.is-mobile) .dynamic-views-end-indicator {
-  padding-bottom: var(--size-4-6);
+  height: 31px;
 }
 
 body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {

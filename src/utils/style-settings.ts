@@ -3,18 +3,52 @@
  */
 
 /**
- * Read a CSS variable value from the document body
+ * Cache for CSS text variables to avoid repeated getComputedStyle calls.
+ * Reading getComputedStyle forces layout recalculation - calling it per card
+ * during render causes severe layout thrashing (1000+ forced layouts).
+ * Cache is cleared at start of each render cycle.
+ */
+const cssTextCache = new Map<string, string>();
+
+/**
+ * Clear the CSS variable cache.
+ * Call at start of render cycle to pick up any style changes.
+ */
+export function clearStyleSettingsCache(): void {
+  cssTextCache.clear();
+}
+
+/**
+ * Read a CSS variable value from the document body.
+ * Uses cache to avoid repeated getComputedStyle calls during render.
  */
 function getCSSVariable(name: string, defaultValue: string): string {
+  // Check cache first
+  const cacheKey = `var:${name}|${defaultValue}`;
+  const cached = cssTextCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const value = getComputedStyle(document.body).getPropertyValue(name).trim();
-  return value || defaultValue;
+  const result = value || defaultValue;
+  cssTextCache.set(cacheKey, result);
+  return result;
 }
 
 /**
  * Read a CSS text variable, stripping surrounding quotes
- * Style Settings wraps text values in quotes
+ * Style Settings wraps text values in quotes.
+ * Uses cache to avoid repeated getComputedStyle calls during render.
  */
 function getCSSTextVariable(name: string, defaultValue: string): string {
+  // Check cache first
+  const cacheKey = `${name}|${defaultValue}`;
+  const cached = cssTextCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   let value = getComputedStyle(document.body).getPropertyValue(name).trim();
   // Strip surrounding quotes if present (Style Settings adds them)
   if (
@@ -23,7 +57,9 @@ function getCSSTextVariable(name: string, defaultValue: string): string {
   ) {
     value = value.slice(1, -1);
   }
-  return value || defaultValue;
+  const result = value || defaultValue;
+  cssTextCache.set(cacheKey, result);
+  return result;
 }
 
 /**
@@ -55,6 +91,25 @@ export function getMinMasonryColumns(): number {
  */
 export function getMinGridColumns(): number {
   return getCSSVariableAsNumber("--dynamic-views-min-grid-columns", 1);
+}
+
+/**
+ * Get Datacore link display format from CSS variable
+ */
+export function getDatacoreLinkDisplay(): "filename" | "full-path" {
+  const value = getCSSTextVariable(
+    "--dynamic-views-datacore-link-display",
+    "filename",
+  );
+  return value === "full-path" ? "full-path" : "filename";
+}
+
+/**
+ * Get compact mode breakpoint from CSS variable
+ * Cards narrower than this value enter compact mode
+ */
+export function getCompactBreakpoint(): number {
+  return getCSSVariableAsNumber("--dynamic-views-compact-breakpoint", 390);
 }
 
 /**

@@ -427,7 +427,6 @@ export interface CardData {
   textPreview?: string;
   subtitle?: string;
   imageUrl?: string | string[];
-  hasImageAvailable: boolean;
   urlValue?: string | null;
   hasValidUrl?: boolean;
   // Property names (for rendering special properties)
@@ -1694,6 +1693,14 @@ function Card({
           }
         }
       }}
+      onMouseDownCapture={(e: MouseEvent) => {
+        // Stop propagation in capture phase to prevent CodeMirror's capture-phase
+        // handler on cm-scroller from intercepting text selection
+        // when openFileAction is 'title' (card content should be selectable)
+        if (effectiveOpenFileAction === "title") {
+          e.stopPropagation();
+        }
+      }}
       style={{
         cursor: effectiveOpenFileAction === "card" ? "pointer" : "default",
       }}
@@ -1896,9 +1903,9 @@ function Card({
         })()}
 
       {/* Content container - only render if it will have children */}
+      {/* Always create for thumbnail format to allow placeholder rendering */}
       {((settings.showTextPreview && card.textPreview) ||
-        (format === "thumbnail" &&
-          (imageArray.length > 0 || card.hasImageAvailable))) && (
+        format === "thumbnail") && (
         <div className="card-content">
           {settings.showTextPreview && card.textPreview && (
             <div className="card-text-preview-wrapper">

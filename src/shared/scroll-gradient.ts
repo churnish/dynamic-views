@@ -195,9 +195,8 @@ function getThrottledUpdate(
 }
 
 /**
- * Sets up scroll gradients for all property fields in a container
- * Attaches scroll listeners for user interaction
- * Note: ResizeObserver not needed - card-level observer triggers gradient updates via measurement
+ * Sets up scroll listeners for all property fields in a container.
+ * Does NOT apply initial gradients - call initializeScrollGradients after render.
  *
  * @param container - The container element with property fields
  * @param updateGradientFn - Function to call for gradient updates (bound to view instance)
@@ -223,31 +222,79 @@ export function setupScrollGradients(
 
     if (!wrapper) return;
 
-    // Skip initial gradient update for side-by-side fields that haven't been measured -
-    // they'll be handled by measureSideBySideRow after width calculation
-    const row = element.closest(".property-row");
-    const isSideBySide = row?.classList.contains("property-row-sidebyside");
-    const isMeasured = row?.classList.contains("property-measured");
-    const skipInitialUpdate = isSideBySide && !isMeasured;
-
-    // If layout is ready (width > 0), apply gradients sync to avoid flicker.
-    // Otherwise use double-RAF to wait for layout to settle.
-    if (!skipInitialUpdate) {
-      if (wrapper.clientWidth > 0) {
-        updateGradientFn(element);
-      } else {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            updateGradientFn(element);
-          });
-        });
-      }
-    }
-
     // Get or create throttled update (reuses existing instance)
     const throttledUpdate = getThrottledUpdate(element, updateGradientFn);
 
     // Attach scroll listener to wrapper for user scroll interaction
     wrapper.addEventListener("scroll", throttledUpdate, { signal });
   });
+}
+
+/**
+ * Batch-initialize scroll gradients for all property fields in a container.
+ * Uses read-then-write pattern to avoid layout thrashing:
+ * - Phase 1: Read all dimensions (forces ONE layout recalc)
+ * - Phase 2: Apply all classes (no layout reads)
+ *
+ * Call this AFTER all cards are rendered to apply initial gradients efficiently.
+ *
+ * @param container - The container element with property fields
+ */
+export function initializeScrollGradients(container: HTMLElement): void {
+  const fields = container.querySelectorAll<HTMLElement>(".property-field");
+
+  // Phase 1: Read all dimensions (single forced layout)
+  const measurements: Array<{
+    field: HTMLElement;
+    wrapper: HTMLElement;
+    isScrollable: boolean;
+    targetClass: string | null;
+  }> = [];
+
+  fields.forEach((field) => {
+    // Skip side-by-side fields that haven't been measured yet
+    const row = field.closest(".property-row");
+    const isSideBySide = row?.classList.contains("property-row-sidebyside");
+    const isMeasured = row?.classList.contains("property-measured");
+    if (isSideBySide && !isMeasured) return;
+
+    // Get cached refs or query and cache
+    let wrapper = wrapperCache.get(field);
+    let content = contentCache.get(field);
+
+    if (wrapper === undefined) {
+      wrapper = field.querySelector<HTMLElement>(".property-content-wrapper");
+      wrapperCache.set(field, wrapper);
+    }
+    if (content === undefined) {
+      content = field.querySelector<HTMLElement>(".property-content");
+      contentCache.set(field, content);
+    }
+
+    if (!wrapper || !content) return;
+
+    // Read dimensions
+    const wrapperWidth = wrapper.clientWidth;
+    const contentScrollWidth = content.scrollWidth;
+
+    // Skip unmeasured elements
+    if (wrapperWidth === 0 || content.clientWidth === 0) return;
+
+    const isScrollable = contentScrollWidth > wrapperWidth;
+    const targetClass = isScrollable
+      ? getGradientClass(wrapper.scrollLeft, wrapper.scrollWidth, wrapperWidth)
+      : null;
+
+    measurements.push({ field, wrapper, isScrollable, targetClass });
+  });
+
+  // Phase 2: Apply all classes (no layout reads)
+  for (const { field, wrapper, isScrollable, targetClass } of measurements) {
+    if (isScrollable) {
+      field.classList.add("is-scrollable");
+    } else {
+      field.classList.remove("is-scrollable");
+    }
+    setGradientClasses(wrapper, targetClass);
+  }
 }

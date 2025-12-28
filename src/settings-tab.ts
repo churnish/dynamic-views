@@ -199,67 +199,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               }),
           ),
       )
-      .addSetting((s) =>
-        s
-          .setName("Reveal in Notebook Navigator")
-          .then((s) => {
-            const desc = s.descEl;
-            desc.empty();
-            desc.appendText(
-              "When pressing tags or file path segments, reveal in ",
-            );
-            desc.createEl("a", {
-              text: "Notebook Navigator",
-              href: "obsidian://show-plugin?id=notebook-navigator",
-            });
-            desc.appendText(" instead of the default file explorer.");
-          })
-          .addDropdown((dropdown) =>
-            dropdown
-              .addOption("files-folders", "Files & folders")
-              .addOption("tags", "Tags")
-              .addOption("all", "Files, folders & tags")
-              .addOption("disable", "Disable")
-              .setValue(settings.revealInNotebookNavigator)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
-                  revealInNotebookNavigator: value as
-                    | "disable"
-                    | "files-folders"
-                    | "tags"
-                    | "all",
-                });
-              }),
-          ),
-      )
-      .addSetting((s) =>
-        s
-          .setName("Fetch YouTube thumbnails")
-          .setDesc("Extract thumbnail images from YouTube embeds in notes.")
-          .addToggle((toggle) =>
-            toggle
-              .setValue(settings.showYoutubeThumbnails)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
-                  showYoutubeThumbnails: value,
-                });
-              }),
-          ),
-      )
-      .addSetting((s) =>
-        s
-          .setName("Fetch cardlink images")
-          .setDesc("Extract cover images from Auto Card Link blocks in notes.")
-          .addToggle((toggle) =>
-            toggle
-              .setValue(settings.showCardLinkCovers)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
-                  showCardLinkCovers: value,
-                });
-              }),
-          ),
-      )
       // Smart timestamp toggle (sub-settings in separate container below)
       .addSetting((s) => {
         smartTimestampSetting = s;
@@ -331,6 +270,83 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       conditionalText.hide();
       smartTimestampSubSettingsEl.hide();
     }
+
+    new SettingGroup(containerEl)
+      .setHeading("Integrations")
+      .addSetting((s) =>
+        s
+          .setName("Reveal in Notebook Navigator")
+          .then((s) => {
+            const desc = s.descEl;
+            desc.empty();
+            desc.appendText(
+              "When pressing tags or file path segments, reveal in ",
+            );
+            desc.createEl("a", {
+              text: "Notebook Navigator",
+              href: "obsidian://show-plugin?id=notebook-navigator",
+            });
+            desc.appendText(" instead of the default file explorer.");
+          })
+          .addDropdown((dropdown) =>
+            dropdown
+              .addOption("files-folders", "Files & folders")
+              .addOption("tags", "Tags")
+              .addOption("all", "Files, folders & tags")
+              .addOption("disable", "Disable")
+              .setValue(settings.revealInNotebookNavigator)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setGlobalSettings({
+                  revealInNotebookNavigator: value as
+                    | "disable"
+                    | "files-folders"
+                    | "tags"
+                    | "all",
+                });
+              }),
+          ),
+      )
+      .addSetting((s) =>
+        s
+          .setName("Fetch YouTube thumbnails")
+          .setDesc("Extract thumbnail images from YouTube embeds in notes.")
+          .addToggle((toggle) =>
+            toggle
+              .setValue(settings.showYoutubeThumbnails)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setGlobalSettings({
+                  showYoutubeThumbnails: value,
+                });
+              }),
+          ),
+      )
+      .addSetting((s) =>
+        s
+          .setName("Fetch cardlink images")
+          .then((s) => {
+            const desc = s.descEl;
+            desc.appendText("Extract cover images from ");
+            desc.createEl("a", {
+              text: "Auto Card Link",
+              href: "obsidian://show-plugin?id=auto-card-link",
+            });
+            desc.appendText(" or ");
+            desc.createEl("a", {
+              text: "Link Embed",
+              href: "obsidian://show-plugin?id=obsidian-link-embed",
+            });
+            desc.appendText(" blocks in notes.");
+          })
+          .addToggle((toggle) =>
+            toggle
+              .setValue(settings.showCardLinkCovers)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setGlobalSettings({
+                  showCardLinkCovers: value,
+                });
+              }),
+          ),
+      );
 
     new SettingGroup(containerEl)
       .setHeading("Ribbon")

@@ -11,8 +11,16 @@ import {
   readBasesSettings,
   getBasesViewOptions,
 } from "../shared/settings-schema";
-import { getMinGridColumns, getCardSpacing } from "../utils/style-settings";
-import { SharedCardRenderer } from "./shared-renderer";
+import {
+  getMinGridColumns,
+  getCardSpacing,
+  clearStyleSettingsCache,
+} from "../utils/style-settings";
+import { initializeScrollGradients } from "../shared/scroll-gradient";
+import {
+  SharedCardRenderer,
+  initializeTitleTruncation,
+} from "./shared-renderer";
 import {
   PANE_MULTIPLIER,
   ROWS_PER_COLUMN,
@@ -36,7 +44,15 @@ import {
   getLeafProps,
 } from "../shared/scroll-preservation";
 import type DynamicViewsPlugin from "../../main";
-import type { Settings } from "../types";
+import type {
+  Settings,
+  ContentCache,
+  RenderState,
+  LastGroupState,
+  ScrollThrottleState,
+  SortState,
+  FocusState,
+} from "../types";
 
 // Extend App type to include isMobile property
 declare module "obsidian" {
@@ -54,45 +70,59 @@ export class DynamicViewsCardView extends BasesView {
   private containerEl: HTMLElement;
   private plugin: DynamicViewsPlugin;
   private scrollPreservation: ScrollPreservation | null = null;
-  private textPreviews: Record<string, string> = {};
-  private images: Record<string, string | string[]> = {};
-  private hasImageAvailable: Record<string, boolean> = {};
+  private cardRenderer: SharedCardRenderer;
+
+  // Consolidated state objects (shared patterns with masonry-view)
+  private contentCache: ContentCache = {
+    textPreviews: {},
+    images: {},
+    hasImageAvailable: {},
+  };
+  private renderState: RenderState = {
+    version: 0,
+    abortController: null,
+    lastRenderHash: "",
+    lastSettingsHash: null,
+  };
+  private lastGroup: LastGroupState = { key: undefined, container: null };
+  private scrollThrottle: ScrollThrottleState = {
+    listener: null,
+    timeoutId: null,
+  };
+  private sortState: SortState = {
+    isShuffled: false,
+    order: [],
+    lastMethod: null,
+  };
+  private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
+
+  // Public accessors for sortState (used by randomize.ts)
+  get isShuffled(): boolean {
+    return this.sortState.isShuffled;
+  }
+  set isShuffled(value: boolean) {
+    this.sortState.isShuffled = value;
+  }
+  get shuffledOrder(): string[] {
+    return this.sortState.order;
+  }
+  set shuffledOrder(value: string[]) {
+    this.sortState.order = value;
+  }
+
+  // Grid-specific state
   private updateLayoutRef: { current: (() => void) | null } = { current: null };
-  private focusableCardIndex: number = 0;
-  private hoveredCardEl: HTMLElement | null = null;
   private displayedCount: number = 50;
   private isLoading: boolean = false;
-  private scrollListener: (() => void) | null = null;
-  private scrollThrottleTimeout: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
-  private cardRenderer: SharedCardRenderer;
   private currentCardSize: number = 400;
-  isShuffled: boolean = false;
-  shuffledOrder: string[] = [];
-  private lastSortMethod: string | null = null;
   private feedContainerRef: { current: HTMLElement | null } = { current: null };
   private swipeAbortController: AbortController | null = null;
-  // Batch append state
   private previousDisplayedCount: number = 0;
-  private lastGroupKey: string | undefined = undefined;
-  private lastGroupContainer: HTMLElement | null = null;
-  // Render version to cancel stale async renders
-  private renderVersion: number = 0;
-  // AbortController for async content loading
-  private abortController: AbortController | null = null;
-  // Guard against reentrant ResizeObserver callbacks
   private isUpdatingColumns: boolean = false;
-  // Track last data+settings hash to detect changes
-  private lastRenderHash: string = "";
-  // Track settings hash separately to invalidate caches on settings change
-  private lastSettingsHash: string | null = null;
-  // Track last column count to avoid unnecessary CSS reflow
   private lastColumnCount: number = 0;
-  // RAF ID for debounced resize handling (double-RAF)
   private resizeRafId: number | null = null;
-  // Track last observed width for 0→positive detection (tab switch)
   private lastObservedWidth: number = 0;
-  // Track if any batch append occurred (for end indicator)
   private hasBatchAppended: boolean = false;
 
   /** Calculate initial card count based on container dimensions */
@@ -187,10 +217,10 @@ export class DynamicViewsCardView extends BasesView {
 
     // Setup hover-to-start keyboard navigation
     const cleanupKeyboard = setupHoverKeyboardNavigation(
-      () => this.hoveredCardEl,
+      () => this.focusState.hoveredEl,
       () => this.feedContainerRef.current,
       (index) => {
-        this.focusableCardIndex = index;
+        this.focusState.cardIndex = index;
       },
     );
     this.register(cleanupKeyboard);
@@ -227,17 +257,17 @@ export class DynamicViewsCardView extends BasesView {
       }
 
       // Increment render version to cancel any in-flight stale renders
-      this.renderVersion++;
-      const currentVersion = this.renderVersion;
+      this.renderState.version++;
+      const currentVersion = this.renderState.version;
 
       // Abort any previous async content loading
-      if (this.abortController) {
-        this.abortController.abort();
+      if (this.renderState.abortController) {
+        this.renderState.abortController.abort();
       }
-      this.abortController = new AbortController();
+      this.renderState.abortController = new AbortController();
 
       // Reset focusable card index to prevent out-of-bounds when card count changes
-      this.focusableCardIndex = 0;
+      this.focusState.cardIndex = 0;
 
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
@@ -262,7 +292,7 @@ export class DynamicViewsCardView extends BasesView {
         "\0\0" +
         (groupByProperty ?? "");
       if (
-        renderHash === this.lastRenderHash &&
+        renderHash === this.renderState.lastRenderHash &&
         this.feedContainerRef.current?.children.length
       ) {
         // Restore column CSS (may be lost on tab switch)
@@ -274,21 +304,31 @@ export class DynamicViewsCardView extends BasesView {
         return;
       }
 
-      // Clear caches if settings changed (textPreviewProperty, imageProperty, etc.)
-      if (
-        this.lastSettingsHash !== null &&
-        this.lastSettingsHash !== settingsHash
-      ) {
-        this.textPreviews = {};
-        this.images = {};
-        this.hasImageAvailable = {};
-      }
-      this.lastSettingsHash = settingsHash;
-      this.lastRenderHash = renderHash;
+      // Calculate initial count for comparison and first render
+      const initialCount = this.calculateInitialCount(settings);
 
-      // Calculate initial count dynamically on first render
+      // Reset to initial batch if settings changed AND infinite scroll has appended batches
+      // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
+      const settingsChanged =
+        this.renderState.lastSettingsHash !== null &&
+        this.renderState.lastSettingsHash !== settingsHash;
+      if (settingsChanged) {
+        this.contentCache.textPreviews = {};
+        this.contentCache.images = {};
+        this.contentCache.hasImageAvailable = {};
+        // Only scroll to top + reset if batches were appended
+        if (this.displayedCount > initialCount) {
+          this.displayedCount = 0;
+          this.scrollEl.scrollTop = 0;
+          this.scrollPreservation?.clearSavedPosition();
+        }
+      }
+      this.renderState.lastSettingsHash = settingsHash;
+      this.renderState.lastRenderHash = renderHash;
+
+      // Set displayedCount when starting fresh (first render or after reset)
       if (this.displayedCount === 0) {
-        this.displayedCount = this.calculateInitialCount(settings);
+        this.displayedCount = initialCount;
       }
 
       // Update card size before calculating columns
@@ -306,18 +346,21 @@ export class DynamicViewsCardView extends BasesView {
       // Transform to CardData (only visible entries)
       const sortMethod = getSortMethod(this.config);
 
-      // Reset shuffle if sort method changed
-      if (this.lastSortMethod !== null && this.lastSortMethod !== sortMethod) {
-        this.isShuffled = false;
-        this.shuffledOrder = [];
+      // Reset shuffle state if sort method changed
+      if (
+        this.sortState.lastMethod !== null &&
+        this.sortState.lastMethod !== sortMethod
+      ) {
+        this.sortState.isShuffled = false;
+        this.sortState.order = [];
       }
-      this.lastSortMethod = sortMethod;
+      this.sortState.lastMethod = sortMethod;
 
       // Process groups and apply shuffle within groups if enabled
       const processedGroups = processGroups(
         groupedData,
-        this.isShuffled,
-        this.shuffledOrder,
+        this.sortState.isShuffled,
+        this.sortState.order,
       );
 
       // Collect visible entries across all groups (up to displayedCount)
@@ -339,15 +382,15 @@ export class DynamicViewsCardView extends BasesView {
         visibleEntries,
         settings,
         this.app,
-        this.textPreviews,
-        this.images,
-        this.hasImageAvailable,
+        this.contentCache.textPreviews,
+        this.contentCache.images,
+        this.contentCache.hasImageAvailable,
       );
 
       // Abort if a newer render started or if aborted while we were loading
       if (
-        this.renderVersion !== currentVersion ||
-        this.abortController?.signal.aborted
+        this.renderState.version !== currentVersion ||
+        this.renderState.abortController?.signal.aborted
       ) {
         return;
       }
@@ -361,8 +404,8 @@ export class DynamicViewsCardView extends BasesView {
 
       // Reset batch append state for full re-render
       this.previousDisplayedCount = 0;
-      this.lastGroupKey = undefined;
-      this.lastGroupContainer = null;
+      this.lastGroup.key = undefined;
+      this.lastGroup.container = null;
       this.hasBatchAppended = false;
       this.lastObservedWidth = 0;
 
@@ -378,6 +421,10 @@ export class DynamicViewsCardView extends BasesView {
         `dynamic-views-grid${isGrouped ? " bases-cards-container" : ""}`,
       );
       this.feedContainerRef.current = feedEl;
+
+      // Clear CSS variable cache to pick up any style changes
+      // (prevents layout thrashing from repeated getComputedStyle calls per card)
+      clearStyleSettingsCache();
 
       // Render groups with headers
       let displayedSoFar = 0;
@@ -413,9 +460,9 @@ export class DynamicViewsCardView extends BasesView {
           settings,
           sortMethod,
           false,
-          this.textPreviews,
-          this.images,
-          this.hasImageAvailable,
+          this.contentCache.textPreviews,
+          this.contentCache.images,
+          this.contentCache.hasImageAvailable,
         );
 
         for (let i = 0; i < cards.length; i++) {
@@ -427,18 +474,23 @@ export class DynamicViewsCardView extends BasesView {
         displayedSoFar += entriesToDisplay;
 
         // Track last group for batch append
-        this.lastGroupKey = groupKey;
-        this.lastGroupContainer = groupEl;
+        this.lastGroup.key = groupKey;
+        this.lastGroup.container = groupEl;
       }
 
       // Track state for batch append
       this.previousDisplayedCount = displayedSoFar;
 
+      // Batch-initialize scroll gradients and title truncation after all cards rendered
+      // (avoids layout thrashing from per-card measurements)
+      initializeScrollGradients(feedEl);
+      initializeTitleTruncation(feedEl);
+
       // Setup infinite scroll
       this.setupInfiniteScroll(allEntries.length, settings);
 
-      // Show end indicator if all items fit in initial render
-      if (displayedSoFar >= allEntries.length) {
+      // Show end indicator if all items fit in initial render (skip if 0 results)
+      if (displayedSoFar >= allEntries.length && allEntries.length > 0) {
         this.showEndIndicator();
       }
 
@@ -517,16 +569,16 @@ export class DynamicViewsCardView extends BasesView {
   ): HTMLElement {
     return this.cardRenderer.renderCard(container, card, entry, settings, {
       index,
-      focusableCardIndex: this.focusableCardIndex,
+      focusableCardIndex: this.focusState.cardIndex,
       containerRef: this.feedContainerRef,
       onFocusChange: (newIndex: number) => {
-        this.focusableCardIndex = newIndex;
+        this.focusState.cardIndex = newIndex;
       },
       onHoverStart: (el: HTMLElement) => {
-        this.hoveredCardEl = el;
+        this.focusState.hoveredEl = el;
       },
       onHoverEnd: () => {
-        this.hoveredCardEl = null;
+        this.focusState.hoveredEl = null;
       },
     });
   }
@@ -536,8 +588,8 @@ export class DynamicViewsCardView extends BasesView {
     if (!this.data || !this.feedContainerRef.current) return;
 
     // Increment render version to cancel any stale onDataUpdated renders
-    this.renderVersion++;
-    const currentVersion = this.renderVersion;
+    this.renderState.version++;
+    const currentVersion = this.renderState.version;
 
     const groupedData = this.data.groupedData;
 
@@ -553,8 +605,8 @@ export class DynamicViewsCardView extends BasesView {
     // Process groups with shuffle logic
     const processedGroups = processGroups(
       groupedData,
-      this.isShuffled,
-      this.shuffledOrder,
+      this.sortState.isShuffled,
+      this.sortState.order,
     );
 
     // Capture state at start - these may change during async operations
@@ -593,17 +645,20 @@ export class DynamicViewsCardView extends BasesView {
       newEntries,
       settings,
       this.app,
-      this.textPreviews,
-      this.images,
-      this.hasImageAvailable,
+      this.contentCache.textPreviews,
+      this.contentCache.images,
+      this.contentCache.hasImageAvailable,
     );
 
     // Abort if renderVersion changed during loading
-    if (this.renderVersion !== currentVersion) {
+    if (this.renderState.version !== currentVersion) {
       this.containerEl.querySelector(".dynamic-views-end-indicator")?.remove();
       this.isLoading = false;
       return;
     }
+
+    // Clear CSS variable cache for this batch
+    clearStyleSettingsCache();
 
     // Render new cards, handling group boundaries
     // Use captured prevCount/currCount to avoid race conditions
@@ -639,11 +694,11 @@ export class DynamicViewsCardView extends BasesView {
         : undefined;
 
       if (
-        currentGroupKey === this.lastGroupKey &&
-        this.lastGroupContainer?.isConnected
+        currentGroupKey === this.lastGroup.key &&
+        this.lastGroup.container?.isConnected
       ) {
         // Same group as last - append to existing container
-        groupEl = this.lastGroupContainer;
+        groupEl = this.lastGroup.container;
       } else {
         // Render group header to feed container (sibling to card group, matching vanilla)
         renderGroupHeader(
@@ -660,8 +715,8 @@ export class DynamicViewsCardView extends BasesView {
         setGroupKeyDataset(groupEl, currentGroupKey);
 
         // Update last group tracking
-        this.lastGroupKey = currentGroupKey;
-        this.lastGroupContainer = groupEl;
+        this.lastGroup.key = currentGroupKey;
+        this.lastGroup.container = groupEl;
       }
 
       // Transform and render cards
@@ -671,9 +726,9 @@ export class DynamicViewsCardView extends BasesView {
         settings,
         sortMethod,
         false,
-        this.textPreviews,
-        this.images,
-        this.hasImageAvailable,
+        this.contentCache.textPreviews,
+        this.contentCache.images,
+        this.contentCache.hasImageAvailable,
       );
 
       for (let i = 0; i < cards.length; i++) {
@@ -696,31 +751,39 @@ export class DynamicViewsCardView extends BasesView {
     // to ensure consistency even if this.displayedCount changed during async
     this.previousDisplayedCount = currCount;
 
+    // Batch-initialize scroll gradients and title truncation for newly rendered cards
+    if (this.feedContainerRef.current) {
+      initializeScrollGradients(this.feedContainerRef.current);
+      initializeTitleTruncation(this.feedContainerRef.current);
+    }
+
     // Mark that batch append occurred (for end indicator)
     this.hasBatchAppended = true;
 
-    // Clear loading flag and re-setup infinite scroll
+    // Clear loading flag - existing scroll listener handles future loads
     this.isLoading = false;
-    this.setupInfiniteScroll(totalEntries, settings);
   }
 
   private setupInfiniteScroll(totalEntries: number, settings?: Settings): void {
     const scrollContainer = this.scrollEl;
 
     // Clean up existing listener (don't use this.register() since this method is called multiple times)
-    if (this.scrollListener) {
-      scrollContainer.removeEventListener("scroll", this.scrollListener);
-      this.scrollListener = null;
+    if (this.scrollThrottle.listener) {
+      scrollContainer.removeEventListener(
+        "scroll",
+        this.scrollThrottle.listener,
+      );
+      this.scrollThrottle.listener = null;
     }
 
     // Clear any pending throttle timeout to prevent stale callback execution
-    if (this.scrollThrottleTimeout !== null) {
-      window.clearTimeout(this.scrollThrottleTimeout);
-      this.scrollThrottleTimeout = null;
+    if (this.scrollThrottle.timeoutId !== null) {
+      window.clearTimeout(this.scrollThrottle.timeoutId);
+      this.scrollThrottle.timeoutId = null;
     }
 
-    // Show end indicator only after batch append completed all items
-    if (this.displayedCount >= totalEntries) {
+    // Show end indicator only after batch append completed all items (skip if 0 results)
+    if (this.displayedCount >= totalEntries && totalEntries > 0) {
       if (this.hasBatchAppended) {
         this.showEndIndicator();
       }
@@ -783,23 +846,25 @@ export class DynamicViewsCardView extends BasesView {
     };
 
     // Create scroll handler with throttling (scroll tracking is in constructor)
-    this.scrollListener = () => {
+    this.scrollThrottle.listener = () => {
       // Throttle: skip if cooldown active
-      if (this.scrollThrottleTimeout !== null) {
+      if (this.scrollThrottle.timeoutId !== null) {
         return;
       }
 
       checkAndLoad();
 
       // Start throttle cooldown with trailing call
-      this.scrollThrottleTimeout = window.setTimeout(() => {
-        this.scrollThrottleTimeout = null;
+      this.scrollThrottle.timeoutId = window.setTimeout(() => {
+        this.scrollThrottle.timeoutId = null;
         checkAndLoad(); // Trailing call catches scroll position changes during throttle
       }, SCROLL_THROTTLE_MS);
     };
 
     // Attach listener to scroll container
-    scrollContainer.addEventListener("scroll", this.scrollListener);
+    scrollContainer.addEventListener("scroll", this.scrollThrottle.listener, {
+      passive: true,
+    });
 
     // Trigger initial check in case viewport already needs more content
     checkAndLoad();
@@ -807,6 +872,8 @@ export class DynamicViewsCardView extends BasesView {
 
   /** Show end-of-content indicator when all items are displayed */
   private showEndIndicator(): void {
+    // Guard against disconnected container (RAF callback after view destroyed)
+    if (!this.containerEl?.isConnected) return;
     // Avoid duplicates
     if (this.containerEl.querySelector(".dynamic-views-end-indicator")) return;
     this.containerEl.createDiv("dynamic-views-end-indicator");
@@ -821,14 +888,14 @@ export class DynamicViewsCardView extends BasesView {
       cancelAnimationFrame(this.resizeRafId);
     }
     // Clean up scroll-related resources
-    if (this.scrollListener) {
-      this.scrollEl.removeEventListener("scroll", this.scrollListener);
+    if (this.scrollThrottle.listener) {
+      this.scrollEl.removeEventListener("scroll", this.scrollThrottle.listener);
     }
-    if (this.scrollThrottleTimeout !== null) {
-      window.clearTimeout(this.scrollThrottleTimeout);
+    if (this.scrollThrottle.timeoutId !== null) {
+      window.clearTimeout(this.scrollThrottle.timeoutId);
     }
     this.swipeAbortController?.abort();
-    this.abortController?.abort();
+    this.renderState.abortController?.abort();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
 

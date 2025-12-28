@@ -39,6 +39,7 @@ import {
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
   getUrlIcon,
+  getCompactBreakpoint,
 } from "../utils/style-settings";
 import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
@@ -74,60 +75,124 @@ import {
 } from "../shared/property-helpers";
 
 /**
- * Truncate title text to fit within container with ellipsis.
- * Preserves extension visibility when present.
- *
- * Note: Unlike Datacore's setupTitleTruncation which uses ResizeObserver,
- * this runs once at render time. Bases cards have fixed layout after render.
+ * Shared canvas for text measurement (avoids layout reads)
  */
-function truncateTitleWithExtension(
-  titleEl: HTMLElement,
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+function getMeasureContext(): CanvasRenderingContext2D {
+  if (!measureCanvas) {
+    measureCanvas = document.createElement("canvas");
+    measureCtx = measureCanvas.getContext("2d");
+  }
+  return measureCtx!;
+}
+
+/**
+ * Truncate title text using canvas measureText (no layout reads).
+ * Called with pre-read measurements to avoid layout thrashing.
+ */
+function truncateTitleWithCanvas(
   textEl: HTMLElement | Text,
+  fullText: string,
+  containerWidth: number,
+  font: string,
+  maxLines: number,
 ): void {
-  // Skip truncation if container has no width (hidden tab, etc.)
-  // Binary search would incorrectly truncate to 1 char
-  if (titleEl.offsetWidth === 0) return;
+  if (!fullText || containerWidth <= 0 || maxLines <= 0) return;
 
-  const containerStyle = getComputedStyle(titleEl);
-  const lineHeight = parseFloat(containerStyle.lineHeight);
-  const maxLines = parseInt(
-    containerStyle.getPropertyValue("--dynamic-views-title-lines") || "2",
-  );
-  // Guard against invalid CSS config
-  if (maxLines <= 0 || !isFinite(lineHeight)) return;
-  // Add 1px tolerance for sub-pixel rounding differences
-  const maxHeight = Math.ceil(lineHeight * maxLines) + 1;
+  const ctx = getMeasureContext();
+  ctx.font = font;
 
-  const fullText = (textEl.textContent || "").trim();
-  if (!fullText) return;
-
-  // Check if truncation needed
-  if (titleEl.scrollHeight <= maxHeight) return;
-
-  // Binary search for max text that fits
-  let low = 1; // Minimum 1 character
-  let high = fullText.length;
   const ellipsis = "…";
+  const ellipsisWidth = ctx.measureText(ellipsis).width;
+  // Total width available across all lines, minus ellipsis
+  const availableWidth = containerWidth * maxLines - ellipsisWidth;
+
+  // Measure full text width
+  const fullWidth = ctx.measureText(fullText).width;
+  if (fullWidth <= availableWidth) {
+    // No truncation needed
+    return;
+  }
+
+  // Binary search for truncation point using canvas (no layout reads)
+  let low = 1;
+  let high = fullText.length;
 
   while (low < high) {
     const mid = Math.ceil((low + high) / 2);
-    textEl.textContent = fullText.slice(0, mid).trimEnd() + ellipsis;
+    const testText = fullText.slice(0, mid);
+    const testWidth = ctx.measureText(testText).width;
 
-    if (titleEl.scrollHeight <= maxHeight) {
+    if (testWidth <= availableWidth) {
       low = mid;
     } else {
       high = mid - 1;
     }
   }
 
-  // Set final truncated text
+  // Apply truncated text
   textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
+}
 
-  // Safety: keep reducing if still overflowing (ensures extension visible)
-  // But never go below 1 character
-  while (titleEl.scrollHeight > maxHeight && low > 1) {
-    low--;
-    textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
+/**
+ * Batch-initialize title truncation for all cards in container.
+ * Uses read-then-write pattern to avoid layout thrashing:
+ * - Phase 1: Read all title dimensions (1 layout recalc)
+ * - Phase 2: Calculate and apply truncations (no layout reads)
+ *
+ * Only runs when extension mode is ON (CSS can't preserve extension).
+ */
+export function initializeTitleTruncation(container: HTMLElement): void {
+  // Only run when extension mode is enabled
+  if (!document.body.classList.contains("dynamic-views-file-type-ext")) {
+    return;
+  }
+
+  // Skip if scroll mode is enabled (no truncation)
+  if (document.body.classList.contains("dynamic-views-title-overflow-scroll")) {
+    return;
+  }
+
+  const titles = container.querySelectorAll<HTMLElement>(".card-title");
+  if (titles.length === 0) return;
+
+  // Phase 1: Read all dimensions (forces 1 layout recalc)
+  const measurements: Array<{
+    textEl: HTMLElement;
+    fullText: string;
+    width: number;
+    font: string;
+    maxLines: number;
+  }> = [];
+
+  for (const titleEl of titles) {
+    const textEl = titleEl.querySelector<HTMLElement>(".card-title-text");
+    if (!textEl) continue;
+
+    const fullText = (textEl.textContent || "").trim();
+    if (!fullText) continue;
+
+    const style = getComputedStyle(titleEl);
+    const width = titleEl.offsetWidth;
+
+    // Skip if not visible
+    if (width === 0) continue;
+
+    measurements.push({
+      textEl,
+      fullText,
+      width,
+      font: style.font,
+      maxLines:
+        parseInt(style.getPropertyValue("--dynamic-views-title-lines")) || 2,
+    });
+  }
+
+  // Phase 2: Calculate and apply truncations (no layout reads)
+  for (const m of measurements) {
+    truncateTitleWithCanvas(m.textEl, m.fullText, m.width, m.font, m.maxLines);
   }
 }
 
@@ -617,11 +682,10 @@ export class SharedCardRenderer {
       }
 
       // Add title text
-      let textEl: HTMLElement | null = null;
       if (effectiveOpenFileAction === "title") {
         // Render as clickable, draggable link
         const link = titleEl.createEl("a", {
-          cls: "internal-link",
+          cls: "internal-link card-title-text",
           text: displayTitle,
           attr: {
             "data-href": card.path,
@@ -631,7 +695,6 @@ export class SharedCardRenderer {
             tabindex: "-1",
           },
         });
-        textEl = link;
 
         link.addEventListener("click", (e) => {
           e.preventDefault();
@@ -661,48 +724,33 @@ export class SharedCardRenderer {
 
         // Make title draggable when openFileAction is 'title'
         link.addEventListener("dragstart", handleDrag);
+
+        // Add extension suffix inside link for Extension mode
+        if (
+          extInfo &&
+          document.body.classList.contains("dynamic-views-file-type-ext")
+        ) {
+          link.createSpan({
+            cls: "card-title-ext-suffix",
+            text: `.${extNoDot}`,
+          });
+        }
       } else {
         // Render as plain text in a span for truncation
-        const textSpan = titleEl.createSpan({
+        titleEl.createSpan({
           cls: "card-title-text",
           text: displayTitle,
           attr: { "data-ext": extNoDot },
         });
-        textEl = textSpan;
-      }
 
-      // Truncate title with ellipsis (skip in scroll mode)
-      if (
-        textEl &&
-        !document.body.classList.contains("dynamic-views-title-overflow-scroll")
-      ) {
-        // For masonry: wait until card is positioned (has width)
-        // For grid: double RAF is sufficient
-        const card = titleEl.closest(".card");
-        const isMasonry = card?.closest(".dynamic-views-masonry");
-
-        const doTruncate = () => {
-          truncateTitleWithExtension(titleEl, textEl);
-        };
-
-        if (isMasonry) {
-          // Poll until masonry layout applies width (masonry-positioned class)
-          // Limit to 100 attempts (~1.6s at 60fps) to prevent infinite loop
-          const waitForLayout = (attempts = 0) => {
-            if (card?.classList.contains("masonry-positioned")) {
-              requestAnimationFrame(doTruncate);
-            } else if (attempts < 100) {
-              requestAnimationFrame(() => waitForLayout(attempts + 1));
-            } else {
-              // Fallback: truncate anyway after timeout
-              requestAnimationFrame(doTruncate);
-            }
-          };
-          requestAnimationFrame(() => waitForLayout(0));
-        } else {
-          // Grid: double RAF ensures layout is complete
-          requestAnimationFrame(() => {
-            requestAnimationFrame(doTruncate);
+        // Add extension suffix for Extension mode
+        if (
+          extInfo &&
+          document.body.classList.contains("dynamic-views-file-type-ext")
+        ) {
+          titleEl.createSpan({
+            cls: "card-title-ext-suffix",
+            text: `.${extNoDot}`,
           });
         }
       }
@@ -824,7 +872,6 @@ export class SharedCardRenderer {
       ),
     );
     const hasImage = format !== "none" && imageUrls.length > 0;
-    const hasImageAvailable = format !== "none" && card.hasImageAvailable;
 
     // ALL COVERS: wrapped in card-cover-wrapper for flexbox positioning
     if (format === "cover") {
@@ -942,11 +989,11 @@ export class SharedCardRenderer {
 
     // Determine if card-content will have children
     const hasTextPreview = settings.showTextPreview && card.textPreview;
-    const hasThumbnail =
-      format === "thumbnail" && (hasImage || hasImageAvailable);
+    const isThumbnailFormat = format === "thumbnail";
 
     // Only create card-content if it will have children
-    if (hasTextPreview || hasThumbnail) {
+    // Always create for thumbnail format to allow placeholder rendering
+    if (hasTextPreview || isThumbnailFormat) {
       const contentContainer = cardEl.createDiv("card-content");
 
       if (hasTextPreview) {
@@ -958,7 +1005,7 @@ export class SharedCardRenderer {
       }
 
       // Thumbnail (all positions now inside card-content)
-      if (hasThumbnail) {
+      if (isThumbnailFormat) {
         if (hasImage) {
           const imageEl = contentContainer.createDiv("card-thumbnail");
           this.renderImage(
@@ -980,12 +1027,8 @@ export class SharedCardRenderer {
     this.renderProperties(cardEl, card, entry, settings, signal);
 
     // Card-level responsive behaviors (single ResizeObserver)
-    const breakpoint =
-      parseFloat(
-        getComputedStyle(document.body).getPropertyValue(
-          "--dynamic-views-compact-breakpoint",
-        ),
-      ) || 390;
+    // Use cached breakpoint to avoid getComputedStyle per card
+    const breakpoint = getCompactBreakpoint();
 
     // Check if thumbnail stacking is applicable
     const needsThumbnailStacking =
@@ -1146,9 +1189,6 @@ export class SharedCardRenderer {
         },
         onAnimationComplete: () => {
           if (this.updateLayoutRef.current) {
-            console.log(
-              "[masonry:shared-renderer] slideshow animation complete triggering layout update",
-            );
             this.updateLayoutRef.current("slideshow-animation-complete");
           }
         },
@@ -1431,9 +1471,6 @@ export class SharedCardRenderer {
       const isTop = positions[rowNum - 1];
       return isTop ? topPropertiesEl : bottomPropertiesEl;
     };
-
-    // For backwards compatibility, metaEl references the container where rows are added
-    // Each row will use getContainer() to determine which container to use
 
     // Row 1
     if (row1HasContent) {

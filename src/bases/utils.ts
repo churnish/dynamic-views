@@ -3,7 +3,7 @@
  * Eliminates code duplication between view implementations
  */
 
-import { BasesEntry, TFile, App } from "obsidian";
+import { BasesEntry, TFile, TFolder, Menu, App } from "obsidian";
 import { resolveTimestampProperty } from "../shared/data-transform";
 import {
   getFirstBasesPropertyValue,
@@ -18,6 +18,7 @@ import { setupSwipeInterception } from "./swipe-interceptor";
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
+  navigateToFolderInNotebookNavigator,
 } from "../utils/notebook-navigator";
 import type { Settings } from "../types";
 
@@ -252,9 +253,14 @@ function isTagArray(key: unknown): boolean {
 
 /**
  * Render group value with rich HTML matching vanilla Bases structure
- * Handles tags, dates, and primitives
+ * Handles tags, dates, folders, and primitives
  */
-function renderGroupValue(valueEl: HTMLElement, key: unknown, app: App): void {
+function renderGroupValue(
+  valueEl: HTMLElement,
+  key: unknown,
+  app: App,
+  propertyName?: string,
+): void {
   // Tags: render as clickable tag elements
   if (isTagArray(key)) {
     // Bases proxy has .data containing the actual array
@@ -322,6 +328,83 @@ function renderGroupValue(valueEl: HTMLElement, key: unknown, app: App): void {
     return;
   }
 
+  // Folders: render as clickable path segments
+  if (propertyName === "file.folder" || propertyName === "folder") {
+    // Extract folder path from Bases Value object or plain string
+    const folderPath =
+      key && typeof key === "object" && "data" in key
+        ? String((key as { data: unknown }).data)
+        : typeof key === "string"
+          ? key
+          : null;
+
+    if (folderPath && folderPath.length > 0) {
+      const folders = folderPath.split("/").filter((f) => f);
+      if (folders.length > 0) {
+        const pathWrapper = valueEl.createDiv("path-wrapper");
+
+        folders.forEach((folder, idx) => {
+          const cumulativePath = folders.slice(0, idx + 1).join("/");
+          const segmentWrapper = pathWrapper.createSpan("path-segment-wrapper");
+
+          const segment = segmentWrapper.createSpan(
+            "path-segment folder-segment",
+          );
+          segment.setText(folder);
+
+          segment.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
+            if (shouldUseNotebookNavigator(app, "folder")) {
+              if (
+                folderFile instanceof TFolder &&
+                navigateToFolderInNotebookNavigator(app, folderFile)
+              ) {
+                return;
+              }
+            }
+            const fileExplorer = (
+              app as unknown as {
+                internalPlugins?: {
+                  plugins?: {
+                    "file-explorer"?: {
+                      instance?: { revealInFolder?: (file: unknown) => void };
+                    };
+                  };
+                };
+              }
+            ).internalPlugins?.plugins?.["file-explorer"];
+            if (fileExplorer?.instance?.revealInFolder && folderFile) {
+              fileExplorer.instance.revealInFolder(folderFile);
+            }
+          });
+
+          segment.addEventListener("contextmenu", (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
+            if (folderFile instanceof TFolder) {
+              const menu = new Menu();
+              app.workspace.trigger(
+                "file-menu",
+                menu,
+                folderFile,
+                "file-explorer",
+              );
+              menu.showAtMouseEvent(e);
+            }
+          });
+
+          if (idx < folders.length - 1) {
+            const separator = segmentWrapper.createSpan("path-separator");
+            separator.setText("/");
+          }
+        });
+        return;
+      }
+    }
+  }
+
   // Fallback: use serialized string
   const keyValue = serializeGroupKey(key) ?? "";
   valueEl.setText(keyValue);
@@ -354,11 +437,12 @@ export function renderGroupHeader(
     return;
   }
 
-  renderGroupValue(valueEl, group.key, app);
+  renderGroupValue(valueEl, group.key, app, config.groupBy.property);
 }
 
 /**
  * Get sort method from Bases config
+ * Returns a string that uniquely identifies the sort configuration
  */
 export function getSortMethod(config: BasesConfigWithSort): string {
   const sortConfigs = config.getSort();
@@ -367,13 +451,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
     const firstSort = sortConfigs[0];
     const property = firstSort.property;
     const direction = firstSort.direction.toLowerCase();
-
-    if (property.includes("ctime")) {
-      return `ctime-${direction}`;
-    }
-    if (property.includes("mtime")) {
-      return `mtime-${direction}`;
-    }
+    return `${property}-${direction}`;
   }
   return "mtime-desc";
 }

@@ -11,6 +11,7 @@ import {
   shouldHideMissingProperties,
   getHideEmptyMode,
   getUrlIcon,
+  clearStyleSettingsCache,
 } from "../../src/utils/style-settings";
 
 describe("style-settings", () => {
@@ -18,6 +19,9 @@ describe("style-settings", () => {
   let mockClassList: Set<string>;
 
   beforeEach(() => {
+    // Clear CSS variable cache to ensure fresh reads in each test
+    clearStyleSettingsCache();
+
     // Mock getComputedStyle
     mockGetComputedStyle = jest
       .spyOn(window, "getComputedStyle")

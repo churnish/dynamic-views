@@ -137,6 +137,11 @@ export class ScrollPreservation {
     this.restore();
   }
 
+  /** Clear saved scroll position (for intentional scroll-to-top) */
+  clearSavedPosition(): void {
+    scrollPositions.delete(this.leafId);
+  }
+
   /** Clean up on view unload */
   cleanup(): void {
     scrollPositions.delete(this.leafId);

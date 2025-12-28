@@ -148,3 +148,47 @@ export type SortMethod =
   | "title"
   | "size"
   | "random";
+
+// ============================================================================
+// View State Interfaces (shared between grid-view.ts and masonry-view.ts)
+// ============================================================================
+
+/** Content preview/image cache */
+export interface ContentCache {
+  textPreviews: Record<string, string>;
+  images: Record<string, string | string[]>;
+  hasImageAvailable: Record<string, boolean>;
+}
+
+/** Render version and abort control */
+export interface RenderState {
+  version: number;
+  abortController: AbortController | null;
+  lastRenderHash: string;
+  lastSettingsHash: string | null;
+}
+
+/** Group tracking for batch append */
+export interface LastGroupState {
+  key: string | undefined;
+  container: HTMLElement | null;
+}
+
+/** Scroll throttle state */
+export interface ScrollThrottleState {
+  listener: (() => void) | null;
+  timeoutId: number | null;
+}
+
+/** Sort/shuffle state */
+export interface SortState {
+  isShuffled: boolean;
+  order: string[];
+  lastMethod: string | null;
+}
+
+/** Keyboard focus state */
+export interface FocusState {
+  cardIndex: number;
+  hoveredEl: HTMLElement | null;
+}

@@ -11,9 +11,6 @@ export const GAP_SIZE = 12;
 /** Scroll position tolerance in pixels */
 export const SCROLL_TOLERANCE = 1;
 
-/** Row grouping tolerance for masonry layout in pixels */
-export const ROW_TOLERANCE = 20;
-
 /** Default image aspect ratio for covers */
 export const IMAGE_ASPECT_RATIO = 0.55;
 

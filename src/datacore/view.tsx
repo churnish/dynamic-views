@@ -928,7 +928,6 @@ export function View({
           ...cached,
           textPreview: textPreviews[path],
           imageUrl: images[path],
-          hasImageAvailable: hasImageAvailable[path] || false,
         };
       }
 
@@ -941,7 +940,6 @@ export function View({
         isShuffled,
         textPreviews[path],
         images[path],
-        hasImageAvailable[path],
       );
       cache?.set(cacheKey, cardData);
       return cardData;
@@ -1551,6 +1549,8 @@ export function View({
       const currentCount = displayedCountRef.current!;
       const totalLength = sortedLengthRef.current;
       if (totalLength !== null && currentCount >= totalLength) {
+        // All items fit - set flag so end indicator shows
+        hasBatchAppendedRef.current = true;
         return false; // All items loaded
       }
 
@@ -1731,12 +1731,14 @@ export function View({
     setViewMode(mode);
     setShowViewDropdown(false);
     setIsShuffled(false);
+    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleSetSortMethod = dc.useCallback((method: string) => {
     setSortMethod(method);
     setShowSortDropdown(false);
     setIsShuffled(false);
+    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleSearchChange = dc.useCallback(
@@ -1756,6 +1758,7 @@ export function View({
 
   const handleClearSearch = dc.useCallback(() => {
     setSearchQuery("");
+    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleShuffle = dc.useCallback(() => {
@@ -1784,6 +1787,7 @@ export function View({
       }
 
       setShowSortDropdown(false);
+      hasBatchAppendedRef.current = false;
       return;
     }
 
@@ -1797,6 +1801,7 @@ export function View({
     setShuffledOrder(shuffled);
     setIsShuffled(true);
     setShowSortDropdown(false);
+    hasBatchAppendedRef.current = false;
   }, [sorted, viewMode]);
 
   const handleOpenRandom = dc.useCallback(
@@ -1889,11 +1894,13 @@ export function View({
 
   const handleResultLimitChange = dc.useCallback((limit: string) => {
     setResultLimit(limit);
+    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleResetLimit = dc.useCallback((): void => {
     setResultLimit("");
     setShowLimitDropdown(false);
+    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleCreateNote = dc.useCallback(

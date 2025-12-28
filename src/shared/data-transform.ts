@@ -16,6 +16,7 @@ import {
 import { hasUriScheme } from "../utils/link-parser";
 import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
+import { getDatacoreLinkDisplay } from "../utils/style-settings";
 
 /**
  * Strip leading hash (#) from tag strings
@@ -195,7 +196,6 @@ export function datacoreResultToCardData(
   isShuffled: boolean,
   textPreview?: string,
   imageUrl?: string | string[],
-  hasImageAvailable?: boolean,
 ): CardData {
   // Get folder path (without filename)
   const path = result.$path || "";
@@ -253,7 +253,6 @@ export function datacoreResultToCardData(
     folderPath,
     textPreview,
     imageUrl,
-    hasImageAvailable: hasImageAvailable || false,
   };
 
   // Resolve properties
@@ -358,7 +357,6 @@ export function basesEntryToCardData(
   isShuffled: boolean,
   textPreview?: string,
   imageUrl?: string | string[],
-  hasImageAvailable?: boolean,
 ): CardData {
   // Use file.basename directly (file name without extension)
   const fileName = entry.file.basename || entry.file.name;
@@ -472,7 +470,6 @@ export function basesEntryToCardData(
     folderPath,
     textPreview,
     imageUrl,
-    hasImageAvailable: hasImageAvailable || false,
   };
 
   // Resolve properties
@@ -613,7 +610,6 @@ export function transformDatacoreResults(
         isShuffled,
         textPreviews[p.$path],
         images[p.$path],
-        hasImageAvailable[p.$path],
       );
     });
 }
@@ -646,7 +642,6 @@ export function transformBasesEntries(
       isShuffled,
       textPreviews[entry.file.path],
       images[entry.file.path],
-      hasImageAvailable[entry.file.path],
     );
   });
 }
@@ -685,6 +680,34 @@ export function resolveBasesProperty(
   // tags in YAML + note body
   if (propertyName === "file.tags" || propertyName === "file tags") {
     return cardData.tags.length > 0 ? "tags" : null;
+  }
+
+  // file.links - non-embedded links from metadataCache
+  if (propertyName === "file.links" || propertyName === "file links") {
+    const file = app.vault.getAbstractFileByPath(cardData.path);
+    if (file instanceof TFile) {
+      const cache = app.metadataCache.getFileCache(file);
+      const items = (cache?.links || [])
+        .filter((l) => typeof l.link === "string" && l.link.trim() !== "")
+        .map((l) => `[[${l.link}]]`);
+      if (items.length === 0) return null;
+      return JSON.stringify({ type: "array", items });
+    }
+    return null;
+  }
+
+  // file.embeds - embedded links from metadataCache
+  if (propertyName === "file.embeds" || propertyName === "file embeds") {
+    const file = app.vault.getAbstractFileByPath(cardData.path);
+    if (file instanceof TFile) {
+      const cache = app.metadataCache.getFileCache(file);
+      const items = (cache?.embeds || [])
+        .filter((e) => typeof e.link === "string" && e.link.trim() !== "")
+        .map((e) => `[[${e.link}]]`);
+      if (items.length === 0) return null;
+      return JSON.stringify({ type: "array", items });
+    }
+    return null;
   }
 
   // Handle file timestamp properties (styled for property display)
@@ -882,6 +905,48 @@ export function resolveDatacoreProperty(
     return cardData.tags.length > 0 ? "tags" : null; // Special marker
   }
 
+  // file.links - non-embedded links only
+  if (propertyName === "file.links" || propertyName === "file links") {
+    const links = (result.$links || []).filter(
+      (l): l is { path: string; display?: string; embed?: boolean } =>
+        typeof l === "object" &&
+        l !== null &&
+        "path" in l &&
+        typeof (l as { path: unknown }).path === "string" &&
+        (l as { path: string }).path.trim() !== "" &&
+        (l as { embed?: boolean }).embed !== true,
+    );
+    if (links.length === 0) return null;
+    const displayMode = getDatacoreLinkDisplay();
+    const items = links.map((l) => {
+      const linkText =
+        displayMode === "filename" ? l.display || l.path : l.path;
+      return `[[${linkText}]]`;
+    });
+    return JSON.stringify({ type: "array", items });
+  }
+
+  // file.embeds - embedded links only
+  if (propertyName === "file.embeds" || propertyName === "file embeds") {
+    const embeds = (result.$links || []).filter(
+      (l): l is { path: string; display?: string; embed?: boolean } =>
+        typeof l === "object" &&
+        l !== null &&
+        "path" in l &&
+        typeof (l as { path: unknown }).path === "string" &&
+        (l as { path: string }).path.trim() !== "" &&
+        (l as { embed?: boolean }).embed === true,
+    );
+    if (embeds.length === 0) return null;
+    const displayMode = getDatacoreLinkDisplay();
+    const items = embeds.map((l) => {
+      const linkText =
+        displayMode === "filename" ? l.display || l.path : l.path;
+      return `[[${linkText}]]`;
+    });
+    return JSON.stringify({ type: "array", items });
+  }
+
   // Handle file timestamp properties (styled for property display)
   const timestamp = resolveTimestampProperty(
     propertyName,
@@ -910,7 +975,7 @@ export function resolveDatacoreProperty(
         if (typeof item === "object" && item !== null && "path" in item) {
           const pathValue = (item as { path: unknown }).path;
           if (typeof pathValue === "string" && pathValue.trim() !== "") {
-            return pathValue;
+            return `[[${pathValue}]]`;
           }
         }
         const str = dc.coerce.string(item);
