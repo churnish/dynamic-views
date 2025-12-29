@@ -67,14 +67,33 @@ describe("render-utils", () => {
       expect(mockStyleSettings.getDateFormat).toHaveBeenCalled();
     });
 
-    it("should treat timestamp exactly 24 hours old as not recent", () => {
-      const now = Date.now();
-      const exactBoundary = now - 86400000; // exactly 24 hours ago
+    it("should treat yesterday at 11pm as older (not today), not recent", () => {
+      // Even if yesterday 11pm is only 13 hours ago at 10am today,
+      // it should be "older" because it's not today's calendar date
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(23, 0, 0, 0); // 11pm yesterday
 
-      const result = formatTimestamp(exactBoundary, false, true);
-      // At exactly 24 hours, isRecent = (now - timestamp < 86400000) is false
-      expect(result).toBe(`${exactBoundary}-YYYY-MM-DD`);
+      const result = formatTimestamp(yesterday.getTime(), false, true);
+      expect(result).toBe(`${yesterday.getTime()}-YYYY-MM-DD`);
       expect(mockStyleSettings.getDateFormat).toHaveBeenCalled();
+    });
+
+    it("should treat earlier today as recent (same calendar date)", () => {
+      // A timestamp from earlier today should be "recent" (same calendar date)
+      const now = new Date();
+      const earlierToday = new Date(now);
+      earlierToday.setHours(
+        Math.max(0, now.getHours() - 1),
+        now.getMinutes(),
+        0,
+        0,
+      ); // 1 hour ago, same day
+
+      const result = formatTimestamp(earlierToday.getTime(), false, true);
+      expect(result).toBe(`${earlierToday.getTime()}-HH:mm`);
+      expect(mockStyleSettings.getTimeFormat).toHaveBeenCalled();
     });
 
     it("should format styled timestamps as full datetime when settings disabled", () => {
@@ -96,6 +115,50 @@ describe("render-utils", () => {
     it("should handle zero timestamp", () => {
       const result = formatTimestamp(0, false, false);
       expect(result).toBe("0-YYYY-MM-DD HH:mm");
+    });
+
+    it("should handle NaN timestamp gracefully", () => {
+      const result = formatTimestamp(NaN, false, true);
+      // NaN comparisons fail (isToday = false), treated as "older" → date only
+      expect(result).toBe("NaN-YYYY-MM-DD");
+    });
+
+    it("should treat future timestamp on same calendar day as today", () => {
+      const now = new Date();
+      const laterToday = new Date(now);
+      laterToday.setHours(23, 59, 59, 999);
+
+      const result = formatTimestamp(laterToday.getTime(), false, true);
+      expect(result).toBe(`${laterToday.getTime()}-HH:mm`);
+    });
+
+    it("should show full datetime for future day timestamps", () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(12, 0, 0, 0);
+
+      const result = formatTimestamp(tomorrow.getTime(), false, true);
+      expect(result).toBe(`${tomorrow.getTime()}-YYYY-MM-DD HH:mm`);
+    });
+
+    it("should show full datetime for older timestamps when shouldShowOlderDateOnly is false", () => {
+      mockStyleSettings.shouldShowRecentTimeOnly.mockReturnValue(true);
+      mockStyleSettings.shouldShowOlderDateOnly.mockReturnValue(false);
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const result = formatTimestamp(yesterday.getTime(), false, true);
+      expect(result).toBe(`${yesterday.getTime()}-YYYY-MM-DD HH:mm`);
+    });
+
+    it("should show full datetime for today when shouldShowRecentTimeOnly is false", () => {
+      mockStyleSettings.shouldShowRecentTimeOnly.mockReturnValue(false);
+      mockStyleSettings.shouldShowOlderDateOnly.mockReturnValue(true);
+
+      const now = Date.now();
+      const result = formatTimestamp(now - 1000, false, true);
+      expect(result).toBe(`${now - 1000}-YYYY-MM-DD HH:mm`);
     });
   });
 
@@ -166,9 +229,7 @@ describe("render-utils", () => {
     it("should return false for invalid Date objects", () => {
       const invalidDate = new Date(NaN);
       const value = { date: invalidDate, time: true };
-      // Note: isDateValue checks instanceof Date, so NaN date passes
-      // This documents current behavior - invalid dates are accepted
-      expect(isDateValue(value)).toBe(true);
+      expect(isDateValue(value)).toBe(false);
     });
   });
 

@@ -872,6 +872,11 @@ export function resolveDatacoreProperty(
     return path;
   }
 
+  if (propertyName === "file.folder" || propertyName === "folder") {
+    // Return "/" for root folder (empty folderPath)
+    return cardData.folderPath === "" ? "/" : cardData.folderPath || null;
+  }
+
   // YAML tags only
   if (propertyName === "tags") {
     return cardData.yamlTags.length > 0 ? "tags" : null; // Special marker

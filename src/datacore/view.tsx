@@ -113,110 +113,61 @@ export function View({
     // Start with global settings as base
     const baseSettings = { ...globalSettings };
 
-    // For view-specific properties, merge: defaultViewSettings -> viewSettings (persisted)
-    baseSettings.titleProperty =
-      viewSettings.titleProperty ?? defaultViewSettings.titleProperty;
-    baseSettings.textPreviewProperty =
-      viewSettings.textPreviewProperty ??
-      defaultViewSettings.textPreviewProperty;
-    baseSettings.imageProperty =
-      viewSettings.imageProperty ?? defaultViewSettings.imageProperty;
-    baseSettings.subtitleProperty =
-      viewSettings.subtitleProperty ?? defaultViewSettings.subtitleProperty;
-    baseSettings.urlProperty =
-      viewSettings.urlProperty ?? defaultViewSettings.urlProperty;
-    baseSettings.propertyDisplay1 =
-      viewSettings.propertyDisplay1 ?? defaultViewSettings.propertyDisplay1;
-    baseSettings.propertyDisplay2 =
-      viewSettings.propertyDisplay2 ?? defaultViewSettings.propertyDisplay2;
-    baseSettings.propertyDisplay3 =
-      viewSettings.propertyDisplay3 ?? defaultViewSettings.propertyDisplay3;
-    baseSettings.propertyDisplay4 =
-      viewSettings.propertyDisplay4 ?? defaultViewSettings.propertyDisplay4;
-    baseSettings.propertyDisplay5 =
-      viewSettings.propertyDisplay5 ?? defaultViewSettings.propertyDisplay5;
-    baseSettings.propertyDisplay6 =
-      viewSettings.propertyDisplay6 ?? defaultViewSettings.propertyDisplay6;
-    baseSettings.propertyDisplay7 =
-      viewSettings.propertyDisplay7 ?? defaultViewSettings.propertyDisplay7;
-    baseSettings.propertyDisplay8 =
-      viewSettings.propertyDisplay8 ?? defaultViewSettings.propertyDisplay8;
-    baseSettings.propertyDisplay9 =
-      viewSettings.propertyDisplay9 ?? defaultViewSettings.propertyDisplay9;
-    baseSettings.propertyDisplay10 =
-      viewSettings.propertyDisplay10 ?? defaultViewSettings.propertyDisplay10;
-    baseSettings.propertyDisplay11 =
-      viewSettings.propertyDisplay11 ?? defaultViewSettings.propertyDisplay11;
-    baseSettings.propertyDisplay12 =
-      viewSettings.propertyDisplay12 ?? defaultViewSettings.propertyDisplay12;
-    baseSettings.propertyDisplay13 =
-      viewSettings.propertyDisplay13 ?? defaultViewSettings.propertyDisplay13;
-    baseSettings.propertyDisplay14 =
-      viewSettings.propertyDisplay14 ?? defaultViewSettings.propertyDisplay14;
-    baseSettings.propertySet1SideBySide =
-      viewSettings.propertySet1SideBySide ??
-      defaultViewSettings.propertySet1SideBySide;
-    baseSettings.propertySet2SideBySide =
-      viewSettings.propertySet2SideBySide ??
-      defaultViewSettings.propertySet2SideBySide;
-    baseSettings.propertySet3SideBySide =
-      viewSettings.propertySet3SideBySide ??
-      defaultViewSettings.propertySet3SideBySide;
-    baseSettings.propertySet4SideBySide =
-      viewSettings.propertySet4SideBySide ??
-      defaultViewSettings.propertySet4SideBySide;
-    baseSettings.propertySet5SideBySide =
-      viewSettings.propertySet5SideBySide ??
-      defaultViewSettings.propertySet5SideBySide;
-    baseSettings.propertySet6SideBySide =
-      viewSettings.propertySet6SideBySide ??
-      defaultViewSettings.propertySet6SideBySide;
-    baseSettings.propertySet7SideBySide =
-      viewSettings.propertySet7SideBySide ??
-      defaultViewSettings.propertySet7SideBySide;
-    baseSettings.propertySet1Position =
-      viewSettings.propertySet1Position ??
-      defaultViewSettings.propertySet1Position;
-    baseSettings.propertySet2Position =
-      viewSettings.propertySet2Position ??
-      defaultViewSettings.propertySet2Position;
-    baseSettings.propertySet3Position =
-      viewSettings.propertySet3Position ??
-      defaultViewSettings.propertySet3Position;
-    baseSettings.propertySet4Position =
-      viewSettings.propertySet4Position ??
-      defaultViewSettings.propertySet4Position;
-    baseSettings.propertySet5Position =
-      viewSettings.propertySet5Position ??
-      defaultViewSettings.propertySet5Position;
-    baseSettings.propertySet6Position =
-      viewSettings.propertySet6Position ??
-      defaultViewSettings.propertySet6Position;
-    baseSettings.propertySet7Position =
-      viewSettings.propertySet7Position ??
-      defaultViewSettings.propertySet7Position;
-    baseSettings.propertyLabels =
-      viewSettings.propertyLabels ?? defaultViewSettings.propertyLabels;
-    baseSettings.showTitle =
-      viewSettings.showTitle ?? defaultViewSettings.showTitle;
-    baseSettings.showTextPreview =
-      viewSettings.showTextPreview ?? defaultViewSettings.showTextPreview;
-    baseSettings.fallbackToContent =
-      viewSettings.fallbackToContent ?? defaultViewSettings.fallbackToContent;
-    baseSettings.fallbackToEmbeds =
-      viewSettings.fallbackToEmbeds ?? defaultViewSettings.fallbackToEmbeds;
-    baseSettings.imageFormat =
-      viewSettings.imageFormat ?? defaultViewSettings.imageFormat;
-    baseSettings.imageFit =
-      viewSettings.imageFit ?? defaultViewSettings.imageFit;
-    baseSettings.imageAspectRatio =
-      viewSettings.imageAspectRatio ?? defaultViewSettings.imageAspectRatio;
-    baseSettings.queryHeight =
-      viewSettings.queryHeight ?? defaultViewSettings.queryHeight;
-    baseSettings.listMarker =
-      viewSettings.listMarker ?? defaultViewSettings.listMarker;
-    baseSettings.cardSize =
-      viewSettings.cardSize ?? defaultViewSettings.cardSize;
+    // View-specific properties that can be overridden per-view
+    // Merge priority: viewSettings (persisted) > defaultViewSettings > globalSettings
+    // Using satisfies to validate at compile-time that all keys exist in both Settings and DefaultViewSettings
+    const viewSpecificKeys = [
+      "titleProperty",
+      "textPreviewProperty",
+      "imageProperty",
+      "urlProperty",
+      "subtitleProperty",
+      "propertyDisplay1",
+      "propertyDisplay2",
+      "propertyDisplay3",
+      "propertyDisplay4",
+      "propertyDisplay5",
+      "propertyDisplay6",
+      "propertyDisplay7",
+      "propertyDisplay8",
+      "propertyDisplay9",
+      "propertyDisplay10",
+      "propertyDisplay11",
+      "propertyDisplay12",
+      "propertyDisplay13",
+      "propertyDisplay14",
+      "propertySet1SideBySide",
+      "propertySet2SideBySide",
+      "propertySet3SideBySide",
+      "propertySet4SideBySide",
+      "propertySet5SideBySide",
+      "propertySet6SideBySide",
+      "propertySet7SideBySide",
+      "propertySet1Position",
+      "propertySet2Position",
+      "propertySet3Position",
+      "propertySet4Position",
+      "propertySet5Position",
+      "propertySet6Position",
+      "propertySet7Position",
+      "propertyLabels",
+      "showTitle",
+      "showTextPreview",
+      "fallbackToContent",
+      "fallbackToEmbeds",
+      "imageFormat",
+      "imageFit",
+      "imageAspectRatio",
+      "queryHeight",
+      "listMarker",
+      "cardSize",
+    ] as const satisfies readonly (keyof Settings &
+      keyof DefaultViewSettings)[];
+
+    for (const key of viewSpecificKeys) {
+      (baseSettings as Record<string, unknown>)[key] =
+        viewSettings[key] ?? defaultViewSettings[key];
+    }
 
     return baseSettings;
   }, [ctime, persistenceManager]);
@@ -1995,26 +1946,21 @@ export function View({
         tabIndex={0}
         role="menuitem"
       >
-        <div className="bases-toolbar-menu-item-info">
-          <div className="bases-toolbar-menu-item-info-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="svg-icon lucide-copy"
-            >
-              <rect x="8" y="8" width="14" height="14" rx="2" ry="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-            </svg>
-          </div>
-          <div className="bases-toolbar-menu-item-name">Copy to clipboard</div>
-        </div>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="8" y="8" width="14" height="14" rx="2" ry="2" />
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </svg>
+        <span>Copy to clipboard</span>
       </div>
     ),
     [handleCopyToClipboard],

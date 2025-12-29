@@ -547,9 +547,13 @@ export class SharedCardRenderer {
             // Arrow key navigation
             e.preventDefault();
             const container = keyboardNav.containerRef.current as
-              | (HTMLElement & { _keyboardNavActive?: boolean })
+              | (HTMLElement & {
+                  _keyboardNavActive?: boolean;
+                  _intentionalFocus?: boolean;
+                })
               | null;
-            if (container) {
+            if (container?.isConnected) {
+              container._intentionalFocus = true;
               handleArrowNavigation(
                 e,
                 cardEl,
@@ -561,9 +565,17 @@ export class SharedCardRenderer {
                   }
                 },
               );
+              // Clear immediately after navigation completes (synchronous)
+              container._intentionalFocus = false;
             }
           } else if (e.key === "Escape") {
-            // Unfocus card on Escape
+            // Exit keyboard nav mode and unfocus card
+            const container = keyboardNav.containerRef.current as
+              | (HTMLElement & { _keyboardNavActive?: boolean })
+              | null;
+            if (container?.isConnected) {
+              container._keyboardNavActive = false;
+            }
             cardEl.blur();
           }
         },
@@ -571,38 +583,59 @@ export class SharedCardRenderer {
       );
     }
 
-    // Handle card click to open file
-    cardEl.addEventListener("click", (e) => {
-      // Only handle card-level clicks when openFileAction is 'card'
-      // When openFileAction is 'title', the title link handles its own clicks
-      if (effectiveOpenFileAction === "card") {
-        const target = e.target as HTMLElement;
-        // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
-        const isLink = target.tagName === "A" || target.closest("a");
-        const isTag =
-          target.classList.contains("tag") || target.closest(".tag");
-        const isPathSegment =
-          target.classList.contains("path-segment") ||
-          target.closest(".path-segment");
-        const isImage = target.tagName === "IMG";
-        const isZoomEnabled = !document.body.classList.contains(
-          "dynamic-views-image-viewer-disabled",
-        );
+    // Exit keyboard nav mode on mouse click (focus via mouse, not keyboard)
+    // Use capture phase so this fires before child element stopPropagation
+    if (keyboardNav?.containerRef) {
+      cardEl.addEventListener(
+        "mousedown",
+        () => {
+          const container = keyboardNav.containerRef.current as
+            | (HTMLElement & { _keyboardNavActive?: boolean })
+            | null;
+          if (container) {
+            container._keyboardNavActive = false;
+          }
+        },
+        { signal, capture: true },
+      );
+    }
 
-        if (
-          !isLink &&
-          !isTag &&
-          !isPathSegment &&
-          !(isImage && isZoomEnabled)
-        ) {
-          const paneType = Keymap.isModEvent(e);
-          const file = this.app.vault.getAbstractFileByPath(card.path);
-          if (file instanceof TFile) {
-            void this.app.workspace.getLeaf(paneType || false).openFile(file);
+    // Handle card click to open file
+    cardEl.addEventListener(
+      "click",
+      (e) => {
+        // Only handle card-level clicks when openFileAction is 'card'
+        // When openFileAction is 'title', the title link handles its own clicks
+        if (effectiveOpenFileAction === "card") {
+          const target = e.target as HTMLElement;
+          // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
+          const isLink = target.tagName === "A" || target.closest("a");
+          const isTag =
+            target.classList.contains("tag") || target.closest(".tag");
+          const isPathSegment =
+            target.classList.contains("path-segment") ||
+            target.closest(".path-segment");
+          const isImage = target.tagName === "IMG";
+          const isZoomEnabled = !document.body.classList.contains(
+            "dynamic-views-image-viewer-disabled",
+          );
+
+          if (
+            !isLink &&
+            !isTag &&
+            !isPathSegment &&
+            !(isImage && isZoomEnabled)
+          ) {
+            const paneType = Keymap.isModEvent(e);
+            const file = this.app.vault.getAbstractFileByPath(card.path);
+            if (file instanceof TFile) {
+              void this.app.workspace.getLeaf(paneType || false).openFile(file);
+            }
           }
         }
-      }
-    });
+      },
+      { signal },
+    );
 
     // Track hovered card for hover-to-start keyboard navigation
     if (keyboardNav?.onHoverStart && keyboardNav?.onHoverEnd) {
@@ -625,15 +658,19 @@ export class SharedCardRenderer {
     // Handle hover for page preview (only on card when openFileAction is 'card')
     // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
     if (effectiveOpenFileAction === "card") {
-      cardEl.addEventListener("mouseenter", (e) => {
-        this.app.workspace.trigger("hover-link", {
-          event: e,
-          source: "bases",
-          hoverParent: { hoverPopover: null },
-          targetEl: cardEl,
-          linktext: card.path,
-        });
-      });
+      cardEl.addEventListener(
+        "mouseenter",
+        (e) => {
+          this.app.workspace.trigger("hover-link", {
+            event: e,
+            source: "bases",
+            hoverParent: { hoverPopover: null },
+            targetEl: cardEl,
+            linktext: card.path,
+          });
+        },
+        { signal },
+      );
     }
 
     // Context menu handler for file
@@ -643,7 +680,7 @@ export class SharedCardRenderer {
 
     // Attach context menu to card when effectiveOpenFileAction is 'card'
     if (effectiveOpenFileAction === "card") {
-      cardEl.addEventListener("contextmenu", handleContextMenu);
+      cardEl.addEventListener("contextmenu", handleContextMenu, { signal });
     }
 
     // Drag handler function

@@ -42,15 +42,19 @@ export function formatTimestamp(
 
   // For styled property display, apply Style Settings toggles
   if (styled) {
-    const now = Date.now();
-    // Guard against future timestamps - treat them as not recent
-    const isRecent = timestamp <= now && now - timestamp < 86400000;
+    const timestampDate = new Date(timestamp);
+    const todayDate = new Date();
+    const isToday =
+      timestampDate.getFullYear() === todayDate.getFullYear() &&
+      timestampDate.getMonth() === todayDate.getMonth() &&
+      timestampDate.getDate() === todayDate.getDate();
 
-    if (isRecent && styleSettings.shouldShowRecentTimeOnly()) {
+    if (isToday && styleSettings.shouldShowRecentTimeOnly()) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
       return moment(timestamp).format(styleSettings.getTimeFormat()) as string;
     }
-    if (!isRecent && styleSettings.shouldShowOlderDateOnly()) {
+    const isFuture = timestamp > Date.now();
+    if (!isToday && !isFuture && styleSettings.shouldShowOlderDateOnly()) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
       return moment(timestamp).format(styleSettings.getDateFormat()) as string;
     }
@@ -104,6 +108,7 @@ export function isDateValue(value: unknown): value is DateValue {
     typeof value === "object" &&
     "date" in value &&
     value.date instanceof Date &&
+    !isNaN(value.date.getTime()) &&
     "time" in value &&
     typeof (value as DateValue).time === "boolean"
   );

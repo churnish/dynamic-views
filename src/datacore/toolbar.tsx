@@ -116,27 +116,25 @@ function ResultsDropdownMenu({
         tabIndex={0}
         role="menuitem"
       >
-        <div className="limit-reset-button-icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-          </svg>
-        </div>
-        <div className="limit-reset-button-text">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+        <span>
           {resultLimit.trim() && parseInt(resultLimit) > 0
             ? `Show all (${totalCount.toLocaleString()})`
             : "Show all"}
-        </div>
+        </span>
       </div>
       {copyMenuItem}
     </div>
@@ -456,7 +454,7 @@ export function Toolbar({
             {showViewDropdown ? (
               <div ref={viewMenuRef} className="view-dropdown-menu">
                 <div
-                  className="view-option"
+                  className={`view-option${viewMode === "card" ? " active" : ""}`}
                   onClick={onSetViewCard}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -486,7 +484,7 @@ export function Toolbar({
                   <span>Grid</span>
                 </div>
                 <div
-                  className="view-option"
+                  className={`view-option${viewMode === "masonry" ? " active" : ""}`}
                   onClick={onSetViewMasonry}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -516,7 +514,7 @@ export function Toolbar({
                   <span>Masonry</span>
                 </div>
                 <div
-                  className="view-option"
+                  className={`view-option${viewMode === "list" ? " active" : ""}`}
                   onClick={onSetViewList}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -709,7 +707,7 @@ export function Toolbar({
             {showSortDropdown ? (
               <div ref={sortMenuRef} className="sort-dropdown-menu">
                 <div
-                  className="sort-option"
+                  className={`sort-option${sortMethod === "name-asc" ? " active" : ""}`}
                   onClick={onSetSortNameAsc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -741,7 +739,7 @@ export function Toolbar({
                   <span>File name (A to Z)</span>
                 </div>
                 <div
-                  className="sort-option"
+                  className={`sort-option${sortMethod === "name-desc" ? " active" : ""}`}
                   onClick={onSetSortNameDesc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -773,7 +771,7 @@ export function Toolbar({
                   <span>File name (Z to A)</span>
                 </div>
                 <div
-                  className="sort-option"
+                  className={`sort-option${sortMethod === "mtime-desc" ? " active" : ""}`}
                   onClick={onSetSortMtimeDesc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -804,7 +802,7 @@ export function Toolbar({
                   <span>Modified time (new to old)</span>
                 </div>
                 <div
-                  className="sort-option"
+                  className={`sort-option${sortMethod === "mtime-asc" ? " active" : ""}`}
                   onClick={onSetSortMtimeAsc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -835,7 +833,7 @@ export function Toolbar({
                   <span>Modified time (old to new)</span>
                 </div>
                 <div
-                  className="sort-option"
+                  className={`sort-option${sortMethod === "ctime-desc" ? " active" : ""}`}
                   onClick={onSetSortCtimeDesc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
@@ -868,7 +866,7 @@ export function Toolbar({
                   <span>Created time (new to old)</span>
                 </div>
                 <div
-                  className="sort-option"
+                  className={`sort-option${sortMethod === "ctime-asc" ? " active" : ""}`}
                   onClick={onSetSortCtimeAsc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;

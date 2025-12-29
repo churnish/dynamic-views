@@ -838,7 +838,6 @@ function renderProperty(
   if (
     propertyName === "file.mtime" ||
     propertyName === "file.ctime" ||
-    propertyName === "timestamp" ||
     propertyName === "modified time" ||
     propertyName === "created time"
   ) {
@@ -1194,12 +1193,12 @@ export function CardRenderer({
           return;
         }
 
-        // Initialize focus management properties
+        // Initialize focus management properties (always reset to ensure clean state)
         const container = el as CardContainerElement;
         container._intentionalFocus = false;
         container._lastKey = null;
         container._mouseDown = false;
-        container._keyboardNavActive ??= false; // Preserve existing value
+        container._keyboardNavActive = false;
 
         // Track last key for Tab detection in focusin
         // Note: Arrow key navigation is handled by setupHoverKeyboardNavigation in view layer
@@ -1239,19 +1238,18 @@ export function CardRenderer({
           if (!target.classList.contains("card")) return;
 
           // Allow focus during mouse click (needed for text selection)
-          if (container._mouseDown) return;
+          // Also exit keyboard nav mode since user is using mouse
+          if (container._mouseDown) {
+            container._keyboardNavActive = false;
+            return;
+          }
 
           const relatedTarget = e.relatedTarget as HTMLElement | null;
 
           // Focus from outside container - allow Tab or arrow keys (hover-to-start)
           if (!relatedTarget || !el.contains(relatedTarget)) {
             const key = container._lastKey;
-            const isArrowKey =
-              key === "ArrowUp" ||
-              key === "ArrowDown" ||
-              key === "ArrowLeft" ||
-              key === "ArrowRight";
-            if (key === "Tab" || isArrowKey) {
+            if (key === "Tab" || (key && isArrowKey(key))) {
               container._keyboardNavActive = true;
               return;
             }
@@ -1264,14 +1262,9 @@ export function CardRenderer({
           // (allows mouse clicks even if _mouseDown timing is off)
           if (relatedTarget.classList.contains("card")) {
             const key = container._lastKey;
-            const isArrowKey =
-              key === "ArrowUp" ||
-              key === "ArrowDown" ||
-              key === "ArrowLeft" ||
-              key === "ArrowRight";
 
             // Only block if a key was pressed that's not an arrow key
-            if (key && !isArrowKey) {
+            if (key && !isArrowKey(key)) {
               container._intentionalFocus = true;
               relatedTarget.focus();
               requestAnimationFrame(() => {

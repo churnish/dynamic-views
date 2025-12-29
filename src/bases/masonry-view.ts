@@ -50,7 +50,10 @@ import {
   setGroupKeyDataset,
   getGroupKeyDataset,
 } from "./utils";
-import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
+import {
+  initializeContainerFocus,
+  setupHoverKeyboardNavigation,
+} from "../shared/keyboard-nav";
 import {
   ScrollPreservation,
   getLeafProps,
@@ -105,6 +108,7 @@ export class DynamicViewsMasonryView extends BasesView {
     lastMethod: null,
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
+  private focusCleanup: (() => void) | null = null;
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -492,6 +496,10 @@ export class DynamicViewsMasonryView extends BasesView {
         `dynamic-views-masonry${isGrouped ? " bases-cards-container" : " masonry-container"}`,
       );
       this.containerRef.current = this.masonryContainer;
+
+      // Initialize focus management on container (cleanup previous first)
+      this.focusCleanup?.();
+      this.focusCleanup = initializeContainerFocus(this.masonryContainer);
 
       // Setup masonry layout
       this.setupMasonryLayout(settings);
@@ -1430,6 +1438,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     // Clean up property measurement observer
     cleanupVisibilityObserver();
+    this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
 

@@ -1,6 +1,13 @@
 /**
  * Shared keyboard navigation utilities for card/masonry views
  * Used by both Datacore and Bases implementations
+ *
+ * Focus terminology:
+ * - "DOM focus": The browser's native focus (document.activeElement)
+ * - "Visible focus": When _keyboardNavActive=true, showing focus ring via CSS
+ *
+ * A card can have DOM focus without visible focus (e.g., after mouse click).
+ * Visible focus requires explicit activation via keyboard interaction.
  */
 
 const CARD_SELECTOR = ".card";
@@ -149,8 +156,71 @@ export function isArrowKey(key: string): boolean {
 }
 
 /**
- * Setup keyboard navigation for hover-to-start pattern
- * When user hovers over a card and presses an arrow key, focus moves to that card
+ * Container element with focus management properties
+ *
+ * @property _keyboardNavActive - When true, shows focus ring on focused card.
+ *   Set true on keyboard activation, false on mouse click, Escape, or focusout.
+ * @property _intentionalFocus - Guards against focus event handlers rejecting
+ *   programmatic focus changes. Set true before focus(), cleared on next frame.
+ * @property _focusCleanup - Cleanup function for focusout listener, used to
+ *   prevent duplicate handler registration on re-initialization.
+ */
+interface FocusManagedContainer extends HTMLElement {
+  _keyboardNavActive?: boolean;
+  _intentionalFocus?: boolean;
+  _focusCleanup?: () => void;
+}
+
+/**
+ * Initialize focus management on a container element.
+ * Sets up focusout handler and initializes state.
+ * Call this when container is created/re-created.
+ * @returns Cleanup function to remove handlers
+ */
+export function initializeContainerFocus(container: HTMLElement): () => void {
+  const el = container as FocusManagedContainer;
+
+  // Skip if already initialized (avoid duplicate handlers)
+  if (el._focusCleanup) {
+    return el._focusCleanup;
+  }
+
+  // Initialize focus state
+  el._keyboardNavActive = false;
+  el._intentionalFocus = false;
+
+  // Reset keyboard nav mode when focus leaves all cards
+  const handleFocusout = (e: FocusEvent) => {
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    // Only reset if focus is leaving to something that's not a card
+    // Use optional chaining for defensive access to classList
+    if (!relatedTarget?.classList?.contains("card")) {
+      el._keyboardNavActive = false;
+    }
+  };
+
+  container.addEventListener("focusout", handleFocusout);
+
+  // Store and return cleanup function
+  el._focusCleanup = () => {
+    container.removeEventListener("focusout", handleFocusout);
+    delete el._focusCleanup;
+  };
+
+  return el._focusCleanup;
+}
+
+/**
+ * Setup keyboard navigation for hover-to-start pattern.
+ * Handles the initial activation of visible focus from arrow keys.
+ *
+ * Priority order:
+ * 1. If any card is visibly focused, defer to that card's keydown handler
+ * 2. If hovering over a card, visibly focus that card
+ * 3. If a card has DOM focus (but not visible), activate visible focus
+ * 4. Otherwise, do nothing (let arrow keys scroll the page, etc.)
+ *
+ * Uses capture phase to intercept before individual card handlers.
  * @returns Cleanup function to remove event listener
  */
 export function setupHoverKeyboardNavigation(
@@ -159,54 +229,71 @@ export function setupHoverKeyboardNavigation(
   setFocusableIndex: (index: number) => void,
 ): () => void {
   const handleKeydown = (e: KeyboardEvent) => {
-    const hoveredCard = getHoveredCard();
-    if (!hoveredCard) return;
-
     if (!isArrowKey(e.key)) return;
 
-    const container = getContainerRef() as
-      | (HTMLElement & {
-          _keyboardNavActive?: boolean;
-          _intentionalFocus?: boolean;
-        })
-      | null;
+    const hoveredCard = getHoveredCard();
     const activeEl = document.activeElement as HTMLElement | null;
     const isCardFocused = activeEl?.classList.contains("card");
 
-    // Check the DOM-focused card's container, not hovered card's container
-    // (they may be in different views with separate _keyboardNavActive flags)
+    // Check the DOM-focused card's container for visible focus state
     const focusedCardContainer = activeEl?.closest(
       ".dynamic-views-masonry, .dynamic-views-grid",
     ) as (HTMLElement & { _keyboardNavActive?: boolean }) | null;
     const isVisiblyFocused =
       focusedCardContainer?._keyboardNavActive && isCardFocused;
 
+    // Case 1: Any card is visibly focused → let card's keydown handler navigate
+    // Return early so the card's handler (in card-renderer/shared-renderer)
+    // can call handleArrowNavigation() to move focus to an adjacent card
     if (isVisiblyFocused) return;
 
-    e.preventDefault();
-    e.stopImmediatePropagation(); // Prevent focused card's handler from also running
+    // Case 2: Hovering over a card → visibly focus that card
+    // Hover takes priority because user's cursor indicates intent
+    if (hoveredCard?.isConnected) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
 
-    // Set flags BEFORE focus() so focusin handler allows it
-    if (container) {
-      container._intentionalFocus = true;
-      container._keyboardNavActive = true;
-    }
+      const container = getContainerRef() as
+        | (HTMLElement & {
+            _keyboardNavActive?: boolean;
+            _intentionalFocus?: boolean;
+          })
+        | null;
 
-    hoveredCard.focus();
-
-    // Update roving tabIndex and clear intentional flag
-    if (container) {
-      const allCards = container.querySelectorAll(".card");
-      const index = Array.from(allCards).indexOf(hoveredCard);
-      if (index >= 0) {
-        setFocusableIndex(index);
+      if (container?.isConnected) {
+        container._intentionalFocus = true;
+        container._keyboardNavActive = true;
       }
-      requestAnimationFrame(() => {
-        if (container.isConnected) {
-          container._intentionalFocus = false;
+
+      hoveredCard.focus();
+
+      if (container?.isConnected) {
+        const allCards = container.querySelectorAll(".card");
+        const index = Array.from(allCards).indexOf(hoveredCard);
+        if (index >= 0) {
+          setFocusableIndex(index);
         }
-      });
+        // Capture container reference to prevent stale closure
+        const containerSnapshot = container;
+        requestAnimationFrame(() => {
+          if (containerSnapshot?.isConnected) {
+            containerSnapshot._intentionalFocus = false;
+          }
+        });
+      }
+      return;
     }
+
+    // Case 3: Not hovering but card has DOM focus → activate visible focus
+    // This handles Tab focus: card has DOM focus but not visible focus yet.
+    // Pressing arrow activates visible focus so subsequent arrows navigate.
+    if (isCardFocused && focusedCardContainer?.isConnected) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      focusedCardContainer._keyboardNavActive = true;
+    }
+
+    // Case 4: Not hovering and no card has DOM focus → do nothing
   };
 
   document.addEventListener("keydown", handleKeydown, { capture: true });

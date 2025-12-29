@@ -4,24 +4,11 @@
  */
 
 import type { Settings, DefaultViewSettings } from "../types";
-import { DEFAULT_SETTINGS, DEFAULT_VIEW_SETTINGS } from "../constants";
+import { DEFAULT_VIEW_SETTINGS } from "../constants";
 
 // Bases config object interface
 interface BasesConfig {
   get(key: string): unknown;
-}
-
-// Plugin instance interface
-interface PluginInstance {
-  persistenceManager: {
-    getGlobalSettings(): Settings;
-    getDefaultViewSettings(): DefaultViewSettings;
-  };
-}
-
-export function setPluginInstance(plugin: PluginInstance): void {
-  // Function exists to maintain API compatibility
-  // Plugin instance currently unused but may be needed for future features
 }
 
 /**
@@ -160,7 +147,7 @@ export function getBasesViewOptions(): any[] {
           displayName: "Subtitle property",
           key: "subtitleProperty",
           placeholder: "Comma-separated if multiple",
-          default: "",
+          default: DEFAULT_VIEW_SETTINGS.subtitleProperty,
         },
         {
           type: "text",
@@ -191,14 +178,14 @@ export function getBasesViewOptions(): any[] {
           displayName: "First property",
           key: "propertyDisplay1",
           placeholder: "Select property",
-          default: "",
+          default: DEFAULT_VIEW_SETTINGS.propertyDisplay1,
         },
         {
           type: "property",
           displayName: "Second property",
           key: "propertyDisplay2",
           placeholder: "Select property",
-          default: "",
+          default: DEFAULT_VIEW_SETTINGS.propertyDisplay2,
         },
         {
           type: "toggle",
@@ -454,302 +441,218 @@ export function readBasesSettings(
   globalSettings: Settings,
   defaultViewSettings: DefaultViewSettings,
 ): Settings {
-  const titlePropertyValue = config.get("titleProperty");
-  const textPreviewPropertyValue = config.get("textPreviewProperty");
-  const imagePropertyValue = config.get("imageProperty");
-  const urlPropertyValue = config.get("urlProperty");
+  // Null guard
+  const defaults = defaultViewSettings || DEFAULT_VIEW_SETTINGS;
+
+  // Helper: get string property with fallback
+  const getString = (key: string, fallback: string): string => {
+    const value = config.get(key);
+    if (value !== undefined && value !== null) {
+      return typeof value === "string" ? value : fallback;
+    }
+    return fallback;
+  };
+
+  // Helper: get boolean property with fallback
+  const getBool = (key: string, fallback: boolean): boolean => {
+    const value = config.get(key);
+    return typeof value === "boolean" ? value : fallback;
+  };
+
+  // Helper: get number property with fallback
+  const getNumber = (key: string, fallback: number): number => {
+    const value = config.get(key);
+    return typeof value === "number" && Number.isFinite(value)
+      ? value
+      : fallback;
+  };
+
+  // Helper: get position property with fallback
+  const getPosition = (
+    key: string,
+    fallback: "top" | "bottom",
+  ): "top" | "bottom" => {
+    const value = config.get(key);
+    return value === "top" || value === "bottom" ? value : fallback;
+  };
+
+  // Helper: get imageFormat from separate format and position dropdowns
+  const getImageFormat = (): Settings["imageFormat"] => {
+    const format = config.get("imageFormat");
+    const position = config.get("imagePosition");
+
+    if (format === "none") return "none";
+
+    // Combine format + position (e.g., "cover" + "top" → "cover-top")
+    if (
+      (format === "thumbnail" || format === "cover") &&
+      (position === "left" ||
+        position === "right" ||
+        position === "top" ||
+        position === "bottom")
+    ) {
+      return `${format}-${position}` as Settings["imageFormat"];
+    }
+
+    return defaults.imageFormat;
+  };
 
   return {
-    titleProperty:
-      typeof titlePropertyValue === "string"
-        ? titlePropertyValue
-        : defaultViewSettings.titleProperty,
-    textPreviewProperty:
-      typeof textPreviewPropertyValue === "string"
-        ? textPreviewPropertyValue
-        : defaultViewSettings.textPreviewProperty,
-    imageProperty:
-      typeof imagePropertyValue === "string"
-        ? imagePropertyValue
-        : defaultViewSettings.imageProperty,
-    urlProperty:
-      typeof urlPropertyValue === "string"
-        ? urlPropertyValue
-        : defaultViewSettings.urlProperty,
-    omitFirstLine: globalSettings.omitFirstLine, // From global settings
-    showTitle: Boolean(
-      config.get("showTitle") ?? defaultViewSettings.showTitle,
+    // String properties
+    titleProperty: getString("titleProperty", defaults.titleProperty),
+    textPreviewProperty: getString(
+      "textPreviewProperty",
+      defaults.textPreviewProperty,
     ),
-    subtitleProperty: (() => {
-      const value = config.get("subtitleProperty");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    showTextPreview: Boolean(
-      config.get("showTextPreview") ?? defaultViewSettings.showTextPreview,
-    ),
-    fallbackToContent: Boolean(
-      config.get("fallbackToContent") ?? defaultViewSettings.fallbackToContent,
-    ),
+    imageProperty: getString("imageProperty", defaults.imageProperty),
+    urlProperty: getString("urlProperty", defaults.urlProperty),
+    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
+
+    // Boolean properties
+    showTitle: getBool("showTitle", defaults.showTitle),
+    showTextPreview: getBool("showTextPreview", defaults.showTextPreview),
+    fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
+
+    // Enum: fallbackToEmbeds
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
       return value === "always" || value === "if-empty" || value === "never"
         ? value
-        : defaultViewSettings.fallbackToEmbeds;
+        : defaults.fallbackToEmbeds;
     })(),
-    propertyDisplay1: (() => {
-      const value = config.get("propertyDisplay1");
-      // If value is explicitly set (including empty string), use it
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      // For Bases views, default to empty (no properties shown)
-      return "";
-    })(),
-    propertyDisplay2: (() => {
-      const value = config.get("propertyDisplay2");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay3: (() => {
-      const value = config.get("propertyDisplay3");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay4: (() => {
-      const value = config.get("propertyDisplay4");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertySet1SideBySide: Boolean(
-      config.get("propertySet1SideBySide") ??
-      defaultViewSettings.propertySet1SideBySide,
+
+    // Property display strings (1-14)
+    propertyDisplay1: getString("propertyDisplay1", defaults.propertyDisplay1),
+    propertyDisplay2: getString("propertyDisplay2", defaults.propertyDisplay2),
+    propertyDisplay3: getString("propertyDisplay3", defaults.propertyDisplay3),
+    propertyDisplay4: getString("propertyDisplay4", defaults.propertyDisplay4),
+    propertyDisplay5: getString("propertyDisplay5", defaults.propertyDisplay5),
+    propertyDisplay6: getString("propertyDisplay6", defaults.propertyDisplay6),
+    propertyDisplay7: getString("propertyDisplay7", defaults.propertyDisplay7),
+    propertyDisplay8: getString("propertyDisplay8", defaults.propertyDisplay8),
+    propertyDisplay9: getString("propertyDisplay9", defaults.propertyDisplay9),
+    propertyDisplay10: getString(
+      "propertyDisplay10",
+      defaults.propertyDisplay10,
     ),
-    propertySet2SideBySide: Boolean(
-      config.get("propertySet2SideBySide") ??
-      defaultViewSettings.propertySet2SideBySide,
+    propertyDisplay11: getString(
+      "propertyDisplay11",
+      defaults.propertyDisplay11,
     ),
-    propertyDisplay5: (() => {
-      const value = config.get("propertyDisplay5");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay6: (() => {
-      const value = config.get("propertyDisplay6");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertySet3SideBySide: Boolean(
-      config.get("propertySet3SideBySide") ??
-      defaultViewSettings.propertySet3SideBySide,
+    propertyDisplay12: getString(
+      "propertyDisplay12",
+      defaults.propertyDisplay12,
     ),
-    propertyDisplay7: (() => {
-      const value = config.get("propertyDisplay7");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay8: (() => {
-      const value = config.get("propertyDisplay8");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertySet4SideBySide: Boolean(
-      config.get("propertySet4SideBySide") ??
-      defaultViewSettings.propertySet4SideBySide,
+    propertyDisplay13: getString(
+      "propertyDisplay13",
+      defaults.propertyDisplay13,
     ),
-    propertyDisplay9: (() => {
-      const value = config.get("propertyDisplay9");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay10: (() => {
-      const value = config.get("propertyDisplay10");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertySet5SideBySide: Boolean(
-      config.get("propertySet5SideBySide") ??
-      defaultViewSettings.propertySet5SideBySide,
+    propertyDisplay14: getString(
+      "propertyDisplay14",
+      defaults.propertyDisplay14,
     ),
-    propertyDisplay11: (() => {
-      const value = config.get("propertyDisplay11");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay12: (() => {
-      const value = config.get("propertyDisplay12");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertySet6SideBySide: Boolean(
-      config.get("propertySet6SideBySide") ??
-      defaultViewSettings.propertySet6SideBySide,
+
+    // Property set side-by-side booleans (1-7)
+    propertySet1SideBySide: getBool(
+      "propertySet1SideBySide",
+      defaults.propertySet1SideBySide,
     ),
-    propertyDisplay13: (() => {
-      const value = config.get("propertyDisplay13");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertyDisplay14: (() => {
-      const value = config.get("propertyDisplay14");
-      if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : "";
-      }
-      return "";
-    })(),
-    propertySet7SideBySide: Boolean(
-      config.get("propertySet7SideBySide") ??
-      defaultViewSettings.propertySet7SideBySide,
+    propertySet2SideBySide: getBool(
+      "propertySet2SideBySide",
+      defaults.propertySet2SideBySide,
     ),
-    propertySet1Position: (() => {
-      const value = config.get("propertySet1Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet1Position;
-    })(),
-    propertySet2Position: (() => {
-      const value = config.get("propertySet2Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet2Position;
-    })(),
-    propertySet3Position: (() => {
-      const value = config.get("propertySet3Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet3Position;
-    })(),
-    propertySet4Position: (() => {
-      const value = config.get("propertySet4Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet4Position;
-    })(),
-    propertySet5Position: (() => {
-      const value = config.get("propertySet5Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet5Position;
-    })(),
-    propertySet6Position: (() => {
-      const value = config.get("propertySet6Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet6Position;
-    })(),
-    propertySet7Position: (() => {
-      const value = config.get("propertySet7Position");
-      return value === "top" || value === "bottom"
-        ? value
-        : defaultViewSettings.propertySet7Position;
-    })(),
+    propertySet3SideBySide: getBool(
+      "propertySet3SideBySide",
+      defaults.propertySet3SideBySide,
+    ),
+    propertySet4SideBySide: getBool(
+      "propertySet4SideBySide",
+      defaults.propertySet4SideBySide,
+    ),
+    propertySet5SideBySide: getBool(
+      "propertySet5SideBySide",
+      defaults.propertySet5SideBySide,
+    ),
+    propertySet6SideBySide: getBool(
+      "propertySet6SideBySide",
+      defaults.propertySet6SideBySide,
+    ),
+    propertySet7SideBySide: getBool(
+      "propertySet7SideBySide",
+      defaults.propertySet7SideBySide,
+    ),
+
+    // Property set positions (1-7)
+    propertySet1Position: getPosition(
+      "propertySet1Position",
+      defaults.propertySet1Position,
+    ),
+    propertySet2Position: getPosition(
+      "propertySet2Position",
+      defaults.propertySet2Position,
+    ),
+    propertySet3Position: getPosition(
+      "propertySet3Position",
+      defaults.propertySet3Position,
+    ),
+    propertySet4Position: getPosition(
+      "propertySet4Position",
+      defaults.propertySet4Position,
+    ),
+    propertySet5Position: getPosition(
+      "propertySet5Position",
+      defaults.propertySet5Position,
+    ),
+    propertySet6Position: getPosition(
+      "propertySet6Position",
+      defaults.propertySet6Position,
+    ),
+    propertySet7Position: getPosition(
+      "propertySet7Position",
+      defaults.propertySet7Position,
+    ),
+
+    // Enum: propertyLabels
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
       return value === "hide" || value === "inline" || value === "above"
         ? value
-        : defaultViewSettings.propertyLabels;
+        : defaults.propertyLabels;
     })(),
-    imageFormat: (() => {
-      const format = config.get("imageFormat");
-      const position = config.get("imagePosition");
 
-      // Handle "none" directly
-      if (format === "none") return "none";
-
-      // Combine format + position (e.g., "cover" + "top" → "cover-top")
-      if (
-        (format === "thumbnail" || format === "cover") &&
-        (position === "left" ||
-          position === "right" ||
-          position === "top" ||
-          position === "bottom")
-      ) {
-        return `${format}-${position}` as Settings["imageFormat"];
-      }
-
-      // Check if already a combined value (legacy/direct)
-      const value = format;
-      if (
-        value === "thumbnail-left" ||
-        value === "thumbnail-right" ||
-        value === "thumbnail-top" ||
-        value === "thumbnail-bottom" ||
-        value === "cover-left" ||
-        value === "cover-right" ||
-        value === "cover-top" ||
-        value === "cover-bottom" ||
-        value === "none"
-      ) {
-        return value;
-      }
-
-      return defaultViewSettings.imageFormat;
-    })(),
+    // Image settings
+    imageFormat: getImageFormat(),
     imageFit: (() => {
       const value = config.get("imageFit");
       return value === "crop" || value === "contain"
         ? value
-        : defaultViewSettings.imageFit;
+        : defaults.imageFit;
     })(),
+    imageAspectRatio: getNumber("imageAspectRatio", defaults.imageAspectRatio),
+    cardSize: getNumber("cardSize", defaults.cardSize),
+
+    // Enum: listMarker
     listMarker: (() => {
       const value = config.get("listMarker");
-      return (
-        typeof value === "string" ? value : DEFAULT_SETTINGS.listMarker
-      ) as "bullet" | "number";
-    })(),
-    randomizeAction: (() => {
-      const value = config.get("randomizeAction");
-      return (
-        typeof value === "string" ? value : DEFAULT_SETTINGS.randomizeAction
-      ) as "shuffle" | "random";
-    })(),
-    queryHeight: 0, // Not configurable in Bases
-    openFileAction: globalSettings.openFileAction, // From global settings
-    openRandomInNewTab: globalSettings.openRandomInNewTab, // From global settings
-    showShuffleInRibbon: globalSettings.showShuffleInRibbon, // From global settings
-    showRandomInRibbon: globalSettings.showRandomInRibbon, // From global settings
-    smartTimestamp: globalSettings.smartTimestamp, // From global settings
-    createdTimeProperty: globalSettings.createdTimeProperty, // From global settings
-    modifiedTimeProperty: globalSettings.modifiedTimeProperty, // From global settings
-    showYoutubeThumbnails: globalSettings.showYoutubeThumbnails, // From global settings
-    showCardLinkCovers: globalSettings.showCardLinkCovers, // From global settings
-    cardSize: (() => {
-      const value = config.get("cardSize");
-      return typeof value === "number" ? value : defaultViewSettings.cardSize;
-    })(),
-    imageAspectRatio: (() => {
-      const value = config.get("imageAspectRatio");
-      return typeof value === "number"
+      return value === "bullet" || value === "number"
         ? value
-        : defaultViewSettings.imageAspectRatio;
+        : defaults.listMarker;
     })(),
-    preventSidebarSwipe: globalSettings.preventSidebarSwipe, // From global settings
-    revealInNotebookNavigator: globalSettings.revealInNotebookNavigator, // From global settings
+
+    // Global settings (not configurable per-view in Bases)
+    omitFirstLine: globalSettings.omitFirstLine,
+    randomizeAction: globalSettings.randomizeAction,
+    queryHeight: 0, // Not configurable in Bases
+    openFileAction: globalSettings.openFileAction,
+    openRandomInNewTab: globalSettings.openRandomInNewTab,
+    showShuffleInRibbon: globalSettings.showShuffleInRibbon,
+    showRandomInRibbon: globalSettings.showRandomInRibbon,
+    smartTimestamp: globalSettings.smartTimestamp,
+    createdTimeProperty: globalSettings.createdTimeProperty,
+    modifiedTimeProperty: globalSettings.modifiedTimeProperty,
+    showYoutubeThumbnails: globalSettings.showYoutubeThumbnails,
+    showCardLinkCovers: globalSettings.showCardLinkCovers,
+    preventSidebarSwipe: globalSettings.preventSidebarSwipe,
+    revealInNotebookNavigator: globalSettings.revealInNotebookNavigator,
   };
 }

@@ -17,7 +17,6 @@ import {
   masonryViewOptions,
 } from "./src/bases/masonry-view";
 import { DynamicViewsSettingTab } from "./src/settings-tab";
-import { setPluginInstance } from "./src/shared/settings-schema";
 import type { DatacoreAPI } from "./src/datacore/types";
 import {
   openRandomFile,
@@ -57,9 +56,6 @@ export default class DynamicViewsPlugin extends Plugin {
     document.body.classList.add(
       `dynamic-views-open-on-${settings.openFileAction}`,
     );
-
-    // Set plugin instance for Bases view options to access template settings
-    setPluginInstance(this);
 
     // Register settings tab
     this.addSettingTab(new DynamicViewsSettingTab(this.app, this));

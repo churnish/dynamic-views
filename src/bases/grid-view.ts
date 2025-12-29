@@ -38,7 +38,10 @@ import {
   serializeGroupKey,
   setGroupKeyDataset,
 } from "./utils";
-import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
+import {
+  initializeContainerFocus,
+  setupHoverKeyboardNavigation,
+} from "../shared/keyboard-nav";
 import {
   ScrollPreservation,
   getLeafProps,
@@ -95,6 +98,7 @@ export class DynamicViewsCardView extends BasesView {
     lastMethod: null,
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
+  private focusCleanup: (() => void) | null = null;
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -421,6 +425,10 @@ export class DynamicViewsCardView extends BasesView {
         `dynamic-views-grid${isGrouped ? " bases-cards-container" : ""}`,
       );
       this.feedContainerRef.current = feedEl;
+
+      // Initialize focus management on container (cleanup previous first)
+      this.focusCleanup?.();
+      this.focusCleanup = initializeContainerFocus(feedEl);
 
       // Clear CSS variable cache to pick up any style changes
       // (prevents layout thrashing from repeated getComputedStyle calls per card)
@@ -896,6 +904,7 @@ export class DynamicViewsCardView extends BasesView {
     }
     this.swipeAbortController?.abort();
     this.renderState.abortController?.abort();
+    this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
 

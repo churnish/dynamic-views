@@ -398,7 +398,7 @@ settings:
         type: variable-text
         default: 'square-arrow-out-up-right'
     -
-        id: dynamic-views-property-master-font
+        id: dynamic-views-property-font
         title: Property font
         description: Font name as it appears on your system. Can be overridden by individual item options below.
         type: variable-text
@@ -1112,12 +1112,12 @@ settings:
     -
         id: dynamic-views-timestamp-recent-full
         title: Show full recent timestamps
-        description: Include the date for timestamps in the last 24 h.
+        description: Show date for today's timestamps
         type: class-toggle
     -
         id: dynamic-views-timestamp-older-full
         title: Show full older timestamps
-        description: Include the time for timestamps older than a day.
+        description: Show time for timestamps older than today
         type: class-toggle
     -
         id: dynamic-views-timestamp-icon
@@ -1726,6 +1726,10 @@ body.dynamic-views-disable-toolbar-shadow
   box-sizing: border-box;
 }
 
+.dynamic-views .view-dropdown-btn svg {
+  color: var(--icon-color);
+}
+
 .dynamic-views .view-dropdown-btn .chevron {
   opacity: 0.6;
 }
@@ -1790,6 +1794,7 @@ body.dynamic-views-disable-toolbar-shadow
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+  color: var(--icon-color);
 }
 
 .dynamic-views .sort-dropdown-btn .chevron {
@@ -1830,8 +1835,20 @@ body.dynamic-views-disable-toolbar-shadow
   background-color: var(--background-modifier-hover);
 }
 
+.dynamic-views .view-option svg,
 .dynamic-views .sort-option svg {
   flex-shrink: 0;
+  color: var(--icon-color);
+}
+
+.view-option.active,
+.sort-option.active {
+  font-weight: var(--font-semibold);
+}
+
+.view-option.active svg,
+.sort-option.active svg {
+  color: var(--text-normal);
 }
 
 /* ============================================
@@ -1951,10 +1968,11 @@ body.dynamic-views-disable-toolbar-shadow
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
+  padding: 8px 12px;
   cursor: pointer;
   border-radius: 6px;
   transition: background-color var(--anim-duration-fast, 140ms);
+  font-size: 0.9em;
 }
 
 .limit-reset-button:hover {
@@ -1966,32 +1984,30 @@ body.dynamic-views-disable-toolbar-shadow
   cursor: default;
 }
 
-.dynamic-views .limit-reset-button-icon {
-  display: flex;
-  align-items: center;
-  color: var(--text-muted);
-}
-
-.dynamic-views .limit-reset-button-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.dynamic-views .limit-reset-button-text {
-  font-size: 0.9em;
-  color: var(--text-normal);
+.dynamic-views .limit-reset-button svg {
+  flex-shrink: 0;
+  color: var(--icon-color);
 }
 
 .dynamic-views .limit-dropdown-menu .bases-toolbar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  padding: 8px;
+  padding: 8px 12px;
   cursor: pointer;
   border-radius: 6px;
   transition: background-color var(--anim-duration-fast, 140ms);
+  font-size: 0.9em;
 }
 
 .dynamic-views .limit-dropdown-menu .bases-toolbar-menu-item:hover {
   background-color: var(--background-modifier-hover);
+}
+
+.dynamic-views .bases-toolbar-menu-item svg {
+  flex-shrink: 0;
+  color: var(--icon-color);
 }
 
 /* ============================================
@@ -2018,7 +2034,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .create-note-button-compact svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .dynamic-views .create-note-button:hover,
@@ -2058,7 +2074,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .settings-btn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .settings-btn:hover {
@@ -2085,7 +2101,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .query-toggle-btn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .query-toggle-btn:hover {
@@ -2111,7 +2127,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .shuffle-btn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .shuffle-btn:hover {
@@ -2137,7 +2153,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .open-random-btn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .open-random-btn:hover {
@@ -2163,7 +2179,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .width-toggle-btn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .width-toggle-btn:hover {
@@ -2189,7 +2205,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views .pin-btn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-normal);
+  color: var(--icon-color);
 }
 
 .pin-btn:hover {
@@ -5778,7 +5794,7 @@ body.dynamic-views-full-row-align-right
   position: relative;
   direction: ltr;
   color: var(--text-faint);
-  font-family: var(--dynamic-views-property-master-font, inherit);
+  font-family: var(--dynamic-views-property-font, inherit);
 }
 
 /* Collapsed field: hidden entirely */
