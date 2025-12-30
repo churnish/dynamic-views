@@ -7,6 +7,32 @@ import type { App, BasesEntry } from "obsidian";
 import type { DatacoreFile, DatacoreDate } from "../datacore/types";
 
 /**
+ * Strip "note." prefix from property name to get frontmatter key
+ * Bases prefixes frontmatter properties with "note." in its syntax
+ */
+export function stripNotePrefix(propertyName: string): string {
+  return propertyName.startsWith("note.")
+    ? propertyName.slice(5)
+    : propertyName;
+}
+
+/**
+ * Check if a property is a checkbox type using Obsidian's property registry
+ * @param app - Obsidian App instance
+ * @param propertyName - Property name (may include "note." prefix)
+ * @returns true if property widget type is "checkbox"
+ */
+export function isCheckboxProperty(app: App, propertyName: string): boolean {
+  const fmProp = stripNotePrefix(propertyName);
+  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- getAllPropertyInfos not in official types */
+  const propInfo = (app.metadataCache as any).getAllPropertyInfos?.()?.[
+    fmProp
+  ] as { widget?: string } | undefined;
+  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+  return propInfo?.widget === "checkbox";
+}
+
+/**
  * Type declarations for undocumented Bases API
  */
 interface BasesPropertyConfig {
@@ -155,10 +181,13 @@ export function getFirstBasesPropertyValue(
     let value = entry.getValue(prop as any);
 
     // Check for date/datetime values first - they have { icon, date, time } structure
+    // Validate date is actually a Date object to avoid passing malformed values
     if (
       value &&
       typeof value === "object" &&
       "date" in value &&
+      (value as { date: unknown }).date instanceof Date &&
+      !isNaN((value as { date: Date }).date.getTime()) &&
       "time" in value
     ) {
       return value;
@@ -178,8 +207,7 @@ export function getFirstBasesPropertyValue(
         const file = app.vault.getAbstractFileByPath(filePath);
         if (file instanceof TFile) {
           const cache = app.metadataCache.getFileCache(file);
-          // Strip "note." prefix to get frontmatter property name
-          const fmProp = prop.startsWith("note.") ? prop.slice(5) : prop;
+          const fmProp = stripNotePrefix(prop);
           if (cache?.frontmatter && fmProp in cache.frontmatter) {
             // Property exists in frontmatter but has no value - return empty marker
             return { data: null };

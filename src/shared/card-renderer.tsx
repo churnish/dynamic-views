@@ -19,7 +19,11 @@ import {
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
 } from "../utils/style-settings";
-import { getPropertyLabel, normalizePropertyName } from "../utils/property";
+import {
+  getPropertyLabel,
+  normalizePropertyName,
+  stripNotePrefix,
+} from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import {
   getFileExtInfo,
@@ -52,6 +56,7 @@ import {
   setupElementScrollGradient,
 } from "./scroll-gradient";
 import { handleArrowNavigation, isArrowKey } from "./keyboard-nav";
+import { CHECKBOX_MARKER_PREFIX } from "./constants";
 
 import {
   isTagProperty,
@@ -861,7 +866,7 @@ function renderProperty(
   }
 
   // Handle checkbox properties - render as native Obsidian checkbox
-  if (resolvedValue.startsWith('{"type":"checkbox"')) {
+  if (resolvedValue.startsWith(CHECKBOX_MARKER_PREFIX)) {
     try {
       const checkboxData = JSON.parse(resolvedValue) as {
         type: string;
@@ -877,10 +882,7 @@ function renderProperty(
           input.dataset.indeterminate = "false";
           const file = app.vault.getAbstractFileByPath(card.path);
           if (!(file instanceof TFile)) return;
-          // Strip note. prefix to get frontmatter property name
-          const fmProp = propertyName.startsWith("note.")
-            ? propertyName.slice(5)
-            : propertyName;
+          const fmProp = stripNotePrefix(propertyName);
           void app.fileManager.processFrontMatter(file, (frontmatter) => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- processFrontMatter callback receives any
             frontmatter[fmProp] = input.checked;

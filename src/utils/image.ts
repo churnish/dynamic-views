@@ -30,11 +30,11 @@ export function isExternalUrl(url: string): boolean {
 }
 
 // Generate regex from VALID_IMAGE_EXTENSIONS to ensure they stay in sync
-// Combines jpeg/jpg as jpe?g for efficiency
+// Combines jpeg/jpg as jpe?g for efficiency (order-independent)
 const IMAGE_EXTENSION_REGEX = new RegExp(
-  `\\.(${VALID_IMAGE_EXTENSIONS.filter((e) => e !== "jpeg")
-    .join("|")
-    .replace("jpg", "jpe?g")})$`,
+  `\\.(${VALID_IMAGE_EXTENSIONS.filter((e) => e !== "jpeg" && e !== "jpg")
+    .concat(["jpe?g"])
+    .join("|")})$`,
   "i",
 );
 
@@ -55,9 +55,11 @@ function hasValidImageExtension(path: string): boolean {
  */
 export function stripWikilinkSyntax(path: string | null | undefined): string {
   if (!path) return "";
+  // Trim before matching - wikilinks may have surrounding whitespace
+  const trimmed = path.trim();
   // Capture path before any | (caption) or # (fragment/heading/block)
-  const wikilinkMatch = path.match(/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/);
-  return wikilinkMatch ? wikilinkMatch[1].trim() : path;
+  const wikilinkMatch = trimmed.match(/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/);
+  return wikilinkMatch ? wikilinkMatch[1].trim() : trimmed;
 }
 
 /**

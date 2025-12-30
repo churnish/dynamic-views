@@ -12,6 +12,7 @@ import {
   getFirstBasesPropertyValue,
   normalizePropertyName,
   isValidUri,
+  isCheckboxProperty,
 } from "../utils/property";
 import { hasUriScheme } from "../utils/link-parser";
 import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
@@ -763,15 +764,7 @@ export function resolveBasesProperty(
     if (fallback !== null) return fallback;
 
     // Check if this is an empty checkbox property - show indeterminate state
-    const fmProp = propertyName.startsWith("note.")
-      ? propertyName.slice(5)
-      : propertyName;
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- getAllPropertyInfos not in official types */
-    const propInfo = (app.metadataCache as any).getAllPropertyInfos?.()?.[
-      fmProp
-    ] as { widget?: string } | undefined;
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-    if (propInfo?.widget === "checkbox") {
+    if (isCheckboxProperty(app, propertyName)) {
       return JSON.stringify({ type: "checkbox", indeterminate: true });
     }
 
@@ -979,12 +972,7 @@ export function resolveDatacoreProperty(
     }
 
     // Check if this is an empty checkbox property - show indeterminate state
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- getAllPropertyInfos not in official types */
-    const propInfo = (app.metadataCache as any).getAllPropertyInfos?.()?.[
-      propertyName
-    ] as { widget?: string } | undefined;
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-    if (propInfo?.widget === "checkbox") {
+    if (isCheckboxProperty(app, propertyName)) {
       return JSON.stringify({ type: "checkbox", indeterminate: true });
     }
 

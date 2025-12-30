@@ -43,3 +43,6 @@ export const SWIPE_DETECT_THRESHOLD = 10;
 
 /** Delay in ms after gesture ends before allowing click events */
 export const GESTURE_TIMEOUT_MS = 50;
+
+/** JSON prefix for checkbox property markers */
+export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';

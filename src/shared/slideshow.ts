@@ -57,6 +57,24 @@ export function markExternalUrlAsFailed(url: string): void {
 }
 
 /**
+ * Invalidate a cached blob URL for a failed external image
+ * Marks as failed, revokes blob URL, and removes from cache
+ * @param originalUrl - Original HTTP URL
+ * @param blobUrl - Cached blob URL (if different from originalUrl)
+ */
+export function invalidateExternalUrl(
+  originalUrl: string,
+  blobUrl?: string,
+): void {
+  failedUrls.add(originalUrl);
+  // If blob was created, revoke it to free memory
+  if (blobUrl && blobUrl !== originalUrl && blobUrl.startsWith("blob:")) {
+    URL.revokeObjectURL(blobUrl);
+  }
+  externalBlobCache.delete(originalUrl);
+}
+
+/**
  * Get cached blob URL for external image (sync)
  * Returns cached blob URL if available, otherwise original URL
  */
@@ -258,7 +276,8 @@ export function createSlideshowNavigator(
         // Only handle errors for the URL we actually set (use event target, not element ref)
         const targetSrc = (e.target as HTMLImageElement).src;
         if (targetSrc !== effectiveUrl) return;
-        failedUrls.add(newUrl);
+        // Invalidate cache entry and revoke blob URL if needed
+        invalidateExternalUrl(newUrl, effectiveUrl);
         nextImg.style.display = "none";
 
         // After animation completes, try to advance to next valid slide

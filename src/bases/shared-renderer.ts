@@ -53,7 +53,11 @@ import {
   LUMINANCE_LIGHT_THRESHOLD,
 } from "../utils/ambient-color";
 import { isExternalUrl } from "../utils/image";
-import { getPropertyLabel, normalizePropertyName } from "../utils/property";
+import {
+  getPropertyLabel,
+  normalizePropertyName,
+  stripNotePrefix,
+} from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import {
   handleImageViewerClick,
@@ -75,6 +79,7 @@ import {
   setupSwipeGestures,
 } from "../shared/slideshow";
 import { handleArrowNavigation, isArrowKey } from "../shared/keyboard-nav";
+import { CHECKBOX_MARKER_PREFIX } from "../shared/constants";
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
@@ -1057,13 +1062,9 @@ export class SharedCardRenderer {
           });
 
           // Observe the card element for size changes
+          // Cleanup via this.propertyObservers.forEach(obs => obs.disconnect()) in cleanup()
           resizeObserver.observe(cardEl);
           this.propertyObservers.push(resizeObserver);
-
-          // Disconnect on abort to prevent accumulation during rapid re-renders
-          signal.addEventListener("abort", () => resizeObserver.disconnect(), {
-            once: true,
-          });
         });
       }
     }
@@ -1238,13 +1239,9 @@ export class SharedCardRenderer {
         }
       }
     });
+    // Cleanup via this.propertyObservers.forEach(obs => obs.disconnect()) in cleanup()
     cardObserver.observe(cardEl);
     this.propertyObservers.push(cardObserver);
-
-    // Disconnect on abort to prevent accumulation during rapid re-renders
-    signal.addEventListener("abort", () => cardObserver.disconnect(), {
-      once: true,
-    });
 
     return cardEl;
   }
@@ -1530,15 +1527,8 @@ export class SharedCardRenderer {
       }
 
       // Cache bounding rect on mouseenter to avoid layout thrashing on every mousemove
+      // Closure and DOMRect freed when event listeners are removed via { signal }
       let cachedRect: DOMRect | null = null;
-      // Clear cached rect on abort to prevent memory leak if element removed while hovered
-      signal?.addEventListener(
-        "abort",
-        () => {
-          cachedRect = null;
-        },
-        { once: true },
-      );
       imageEl.addEventListener(
         "mouseenter",
         () => {
@@ -1989,7 +1979,7 @@ export class SharedCardRenderer {
     }
 
     // Handle checkbox properties - render as native Obsidian checkbox
-    if (stringValue.startsWith('{"type":"checkbox"')) {
+    if (stringValue.startsWith(CHECKBOX_MARKER_PREFIX)) {
       try {
         const checkboxData = JSON.parse(stringValue) as {
           type: string;
@@ -2015,10 +2005,7 @@ export class SharedCardRenderer {
               e.stopPropagation();
               const file = this.app.vault.getAbstractFileByPath(card.path);
               if (!(file instanceof TFile)) return;
-              // Strip note. prefix to get frontmatter property name
-              const fmProp = propertyName.startsWith("note.")
-                ? propertyName.slice(5)
-                : propertyName;
+              const fmProp = stripNotePrefix(propertyName);
               // Clear indeterminate state on click
               checkboxEl.indeterminate = false;
               checkboxEl.dataset.indeterminate = "false";

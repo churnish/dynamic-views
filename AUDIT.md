@@ -1,410 +1,437 @@
 # Comprehensive Code Audit Report
 
-**Date:** 2025-12-30
-**Scope:** All code paths affected by slideshow/image-viewer fixes and stashed changes
+Generated: 2025-12-30
 
----
+## Scope
 
-## Executive Summary
+Changes made in this session:
 
-Audited 7 files with 6 parallel code-reviewer agents. Found **31 issues** across severity levels:
-
-- **Critical (12):** Memory leaks, race conditions, logic errors requiring immediate fix
-- **Important (11):** Edge cases, inconsistencies, potential issues under specific conditions
-- **Optimization (8):** Performance improvements, code cleanup, maintainability
+- Checkbox property support (interactive, indeterminate state)
+- Date/datetime property display fix
+- Memory leak prevention (signal guards, observer cleanup)
+- Slideshow/image handling improvements
 
 ---
 
 ## Critical Issues
 
-### 1. slideshow.ts:258 - `isAnimating` flag never reset on recursive navigation failure
+### 1. Datacore checkbox detection missing "note." prefix strip
 
-**Confidence: 100%**
+**File:** `src/shared/data-transform.ts`
+**Lines:** 983-987 vs 766-775
+**Confidence:** 95%
 
-When image error handler schedules recursive `navigate()` and that call returns early (signal aborted, no elements, or all URLs failed), `isAnimating` remains `true` forever, breaking all future navigation.
+Bases strips "note." prefix before checking `getAllPropertyInfos()`, but Datacore does not:
 
 ```typescript
-// Current (broken):
-const timeoutId = setTimeout(() => {
-  pendingTimeouts.delete(timeoutId);
-  if (!signal.aborted) {
-    nextImg.style.display = "";
-    navigate(direction, honorGestureDirection); // May return early without resetting flag
-  }
-}, SLIDESHOW_ANIMATION_MS + 50);
+// Bases (correct) - line 766-768
+const fmProp = propertyName.startsWith("note.")
+  ? propertyName.slice(5)
+  : propertyName;
 
-// Fix: Reset flag before recursive call
-isAnimating = false;
-navigate(direction, honorGestureDirection);
+// Datacore (bug) - line 983-984
+const propInfo = (app.metadataCache as any).getAllPropertyInfos?.()?.[
+  propertyName // <- Should be fmProp
+];
+```
+
+**Impact:** Checkbox properties with "note." prefix won't be detected as checkboxes in Datacore views.
+
+**Fix:**
+
+```typescript
+const fmProp = propertyName.startsWith("note.")
+  ? propertyName.slice(5)
+  : propertyName;
+const propInfo = (app.metadataCache as any).getAllPropertyInfos?.()?.[fmProp];
 ```
 
 ---
 
-### 2. slideshow.ts:89 - Race condition in `getExternalBlobUrl` deduplication
+### 2. Date validation missing in early detection
 
-**Confidence: 95%**
+**File:** `src/utils/property.ts`
+**Lines:** 157-165
+**Confidence:** 95%
 
-When cleanup happens while pending fetch is in flight, the deduplication path returns the pending promise without checking `isCleanedUp` flag. Caller receives blob URL that gets immediately orphaned.
+Early date detection checks for `{date, time}` structure but doesn't validate `date` is actually a Date:
 
 ```typescript
-// Current (broken):
-if (pendingFetches.has(url)) return pendingFetches.get(url)!;
+if (
+  value &&
+  typeof value === "object" &&
+  "date" in value &&
+  "time" in value // Missing: value.date instanceof Date
+) {
+  return value;
+}
+```
 
-// Fix:
-if (pendingFetches.has(url)) {
-  if (isCleanedUp) return url;
-  return pendingFetches.get(url)!;
+**Impact:** Malformed date values `{date: "string", time: true}` pass validation but fail later in `extractTimestamp()`.
+
+**Fix:**
+
+```typescript
+if (
+  value &&
+  typeof value === "object" &&
+  "date" in value &&
+  value.date instanceof Date &&
+  !isNaN(value.date.getTime()) &&
+  "time" in value
+) {
+  return value;
 }
 ```
 
 ---
 
-### 3. slideshow.ts:247-249 - Error handler URL comparison races with navigation
+### 3. Dual ResizeObserver cleanup creates redundancy
 
-**Confidence: 85%**
+**File:** `src/bases/shared-renderer.ts`
+**Lines:** 1034-1066, 1206-1247
+**Confidence:** 100%
 
-Between error event firing and handler executing, another navigation could change `nextImg.src`. Handler compares current src with expected URL from closure, causing legitimate errors to be ignored.
+ResizeObservers use both array-based AND signal-based cleanup:
 
 ```typescript
-// Current (broken):
-if (nextImg.src !== expectedUrl) return;
+resizeObserver.observe(cardEl);
+this.propertyObservers.push(resizeObserver); // Array cleanup
 
-// Fix: Use event target instead of element reference
-nextImg.addEventListener("error", (e) => {
-  if ((e.target as HTMLImageElement).src !== expectedUrl) return;
-  // ...
+signal.addEventListener("abort", () => resizeObserver.disconnect(), {
+  once: true, // Signal cleanup
 });
 ```
 
----
+**Impact:** Redundant cleanup attempts, inconsistent pattern across codebase.
 
-### 4. slideshow.ts:28-35 - Memory leak in `validateBlobUrl`
-
-**Confidence: 90%**
-
-Image object created for validation never cleaned up. Handlers remain attached, src not cleared.
+**Fix:** Use one pattern consistently. Recommend removing signal listener since array cleanup already exists:
 
 ```typescript
-// Fix: Clear handlers and src after resolution
-const cleanup = (result: boolean) => {
-  img.onload = null;
-  img.onerror = null;
-  img.src = "";
-  resolve(result);
-};
+resizeObserver.observe(cardEl);
+this.propertyObservers.push(resizeObserver);
+// Remove signal.addEventListener for disconnect
 ```
 
 ---
 
-### 5. card-renderer.tsx:1970-2048 - ResizeObserver memory leak in side cover
+### 4. IMAGE_EXTENSION_REGEX fragile jpeg handling
 
-**Confidence: 95%**
+**File:** `src/utils/image.ts`
+**Lines:** 34-39
+**Confidence:** 95%
 
-Observer created inside `setTimeout` never stored in Map, no cleanup on unmount. Each re-render creates new orphaned observer.
+Regex construction assumes "jpeg" appears before "jpg" in array:
 
 ```typescript
-// Current (broken):
-setTimeout(() => {
-  const resizeObserver = new ResizeObserver(...);
-  resizeObserver.observe(cardEl);
-  // Never stored, never cleaned up
-}, 100);
+const IMAGE_EXTENSION_REGEX = new RegExp(
+  `\\.(${VALID_IMAGE_EXTENSIONS.filter((e) => e !== "jpeg")
+    .join("|")
+    .replace("jpg", "jpe?g")})$`,
+  "i",
+);
+```
 
-// Fix: Use ref callback + store in cardResizeObservers Map
+**Impact:** If array order changes (e.g., alphabetical sort), regex breaks.
+
+**Fix:**
+
+```typescript
+const IMAGE_EXTENSION_REGEX = new RegExp(
+  `\\.(${VALID_IMAGE_EXTENSIONS.filter((e) => e !== "jpeg" && e !== "jpg")
+    .concat(["jpe?g"])
+    .join("|")})$`,
+  "i",
+);
 ```
 
 ---
 
-### 6. card-renderer.tsx:626-647 - Fragile URL substring check in error handler
+### 5. slideshow failedUrls doesn't invalidate blob cache
 
-**Confidence: 90%**
+**File:** `src/shared/slideshow.ts`
+**Lines:** 259-261
+**Confidence:** 92%
 
-Uses `includes(...slice(-30))` for URL comparison which fails with shared suffixes or URL changes.
+When image fails, original URL is added to `failedUrls` but blob cache entry remains:
 
 ```typescript
-// Current (broken):
-!firstImg.src.includes(expectedFirstUrl.split("?")[0].slice(-30));
-
-// Fix: Store and compare exact expected URL
-const expectedSrc = getCachedBlobUrl(imageArray[0]);
-if (firstImg.src !== expectedSrc) return;
+failedUrls.add(newUrl); // Adds original URL
+// But externalBlobCache still has the blob URL
 ```
 
----
+**Impact:** Cached blobs that fail to load won't be invalidated. `getCachedBlobUrl()` bypasses `failedUrls` check.
 
-### 7. shared-renderer.ts:1094-1117 - Race condition in backdrop fallback
-
-**Confidence: 95%**
-
-`tryNextBackdropImage` modifies DOM without checking if signal is aborted. Can leave image in inconsistent state.
+**Fix:**
 
 ```typescript
-// Fix: Add abort check at start and in loop
-const tryNextBackdropImage = () => {
-  if (signal.aborted) return;
-  // ... rest of logic
-};
-```
-
----
-
-### 8. shared-renderer.ts:1453-1494 - Same race condition in `renderImage` fallback
-
-**Confidence: 90%**
-
-Identical pattern to #7 - DOM mutations without abort checks.
-
----
-
-### 9. image-viewer.ts:783-788 - ResizeObserver leak in error path
-
-**Confidence: 95%**
-
-When gesture setup throws, `resizeObserver` created earlier isn't disconnected in catch block.
-
-```typescript
-// Fix: Add to catch block
-} catch (error) {
-  resizeObserver?.disconnect(); // Add this
-  modalObserver.disconnect();
-  cloneEl.remove();
-  // ...
+failedUrls.add(newUrl);
+if (effectiveUrl !== newUrl) {
+  URL.revokeObjectURL(effectiveUrl);
+  externalBlobCache.delete(newUrl);
 }
-```
-
----
-
-### 10. image.ts:148 - YouTube ID returns `undefined` for malformed URLs
-
-**Confidence: 95%**
-
-`segments[2]` accessed without existence check, returns `undefined` instead of `null`.
-
-```typescript
-// Current (broken):
-if (["embed", "shorts", "v"].includes(segments[1])) return segments[2];
-
-// Fix:
-if (["embed", "shorts", "v"].includes(segments[1]) && segments[2])
-  return segments[2];
-```
-
----
-
-### 11. image.ts:166-176 - Thumbnail validation timeout not cleaned
-
-**Confidence: 90%**
-
-5-second timeout continues running after image loads, wastes resources.
-
-```typescript
-// Fix: Store timeout ID and clear on load/error
-const timeoutId = setTimeout(() => resolve(false), 5000);
-img.onload = () => { clearTimeout(timeoutId); resolve(...); };
-img.onerror = () => { clearTimeout(timeoutId); resolve(false); };
-```
-
----
-
-### 12. image.ts:49 - Wikilink fragments not stripped
-
-**Confidence: 82%**
-
-Regex doesn't strip `#heading` or `#^block` fragments from wikilinks, causing resolution failures.
-
-```typescript
-// Current:
-/^!?\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/
-
-// Fix: Exclude fragments
-/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/
 ```
 
 ---
 
 ## Important Issues
 
-### 13. shared-renderer.ts:1034-1060 - ResizeObservers not tied to AbortSignal
+### 6. Code duplication: checkbox detection logic
 
-**Confidence: 100%**
+**Files:** `src/shared/data-transform.ts`
+**Lines:** 764-776, 981-989
+**Confidence:** 85%
 
-Observers added to `this.propertyObservers` but not cleaned when signal aborts. Accumulate during rapid re-renders.
+Identical checkbox detection appears in both Bases and Datacore resolvers.
 
----
+**Fix:** Extract to shared helper:
 
-### 14. shared-renderer.ts:1496-1567 - Thumbnail scrubbing state leak
-
-**Confidence: 85%**
-
-`cachedRect` in closure not cleared when element removed from DOM while hovered.
-
----
-
-### 15. card-renderer.tsx:564-673 vs shared-renderer.ts - Inconsistent slideshow cleanup
-
-**Confidence: 85%**
-
-JSX stores AbortController on element with cleanup check; shared-renderer doesn't. Causes listener leaks in Bases views.
+```typescript
+function isCheckboxProperty(app: App, propertyName: string): boolean {
+  const fmProp = propertyName.startsWith("note.")
+    ? propertyName.slice(5)
+    : propertyName;
+  const propInfo = (app.metadataCache as any).getAllPropertyInfos?.()?.[fmProp];
+  return propInfo?.widget === "checkbox";
+}
+```
 
 ---
 
-### 16. card-renderer.tsx:1955-1967 - Backdrop missing multi-image fallback in JSX
+### 7. Code duplication: property name prefix stripping
 
-**Confidence: 80%**
+**Files:** `data-transform.ts`, `card-renderer.tsx`, `shared-renderer.ts`
+**Confidence:** 90%
 
-shared-renderer.ts has backdrop multi-image fallback (1094-1129), JSX doesn't. Feature gap.
+Same `propertyName.startsWith("note.") ? propertyName.slice(5) : propertyName` pattern repeated 4+ times.
 
----
+**Fix:** Add to `src/utils/property.ts`:
 
-### 17. image-loader.ts:23-31 - Cache never invalidates on file changes
-
-**Confidence: 85%**
-
-Stale RGB values and aspect ratios persist when images are modified until plugin reload.
-
----
-
-### 18. image-loader.ts:386-434 - Race condition on instant image load
-
-**Confidence: 82%**
-
-If image loads before React attaches onLoad handler, `cover-ready` class never added.
+```typescript
+export function stripNotePrefix(propertyName: string): string {
+  return propertyName.startsWith("note.")
+    ? propertyName.slice(5)
+    : propertyName;
+}
+```
 
 ---
 
-### 19. image.ts:476-479 - Content truncation may cut mid-wikilink
+### 8. Redundant abort guards in event listeners
 
-**Confidence: 80%**
+**File:** `src/bases/shared-renderer.ts`
+**Lines:** 1079, 1106, 1113, 1473, 1477, 1553
+**Confidence:** 85%
 
-100KB truncation at arbitrary byte position can split wikilinks, causing non-deterministic behavior.
+Guards like `if (signal.aborted) return` inside callbacks are redundant when `{ signal }` is passed:
 
----
+```typescript
+img.addEventListener(
+  "load",
+  () => {
+    if (signal.aborted) return; // Redundant - listener auto-removed on abort
+    // ...
+  },
+  { signal },
+);
+```
 
-### 20. image.ts:482-487 - Frontmatter stripping fails on Windows newlines
+**Note:** Guards ARE useful if signal aborts DURING callback execution, but current comments suggest misunderstanding.
 
-**Confidence: 80%**
-
-Only checks for `---\n`, not `---\r\n`.
-
----
-
-### 21. slideshow.ts:522 - `setupImagePreload` doesn't skip failed URLs
-
-**Confidence: 80%**
-
-Preloads known-failed internal images, wasting resources.
-
----
-
-### 22. image-viewer.ts:916 - Redundant cleanup call on new clone
-
-**Confidence: 90%**
-
-`viewerListenerCleanups.get(cloneEl)?.()` called on newly created clone which can't have existing entry.
+**Fix:** Either remove guards or clarify comments to explain mid-execution defense.
 
 ---
 
-### 23. styles.css:5290,5299 - Possibly unnecessary `!important` on slideshow
+### 9. Unnecessary cachedRect cleanup on abort
 
-**Confidence: 85%**
+**File:** `src/bases/shared-renderer.ts`
+**Lines:** 1535-1541
+**Confidence:** 80%
 
-Comments claim override of "contain mode" rules, but those rules not found. Needs verification.
+Signal listener solely to null out `cachedRect`:
+
+```typescript
+signal?.addEventListener(
+  "abort",
+  () => {
+    cachedRect = null;
+  },
+  { once: true },
+);
+```
+
+**Impact:** Doesn't prevent memory leak. When listeners are removed, closure is GC'd anyway. DOMRect is small.
+
+**Fix:** Remove or add comment explaining it's purely defensive.
 
 ---
 
-## Optimization Opportunities
+### 10. stripWikilinkSyntax doesn't trim before matching
 
-### 24. slideshow.ts:248 - Redundant blob URL lookup
+**File:** `src/utils/image.ts`
+**Lines:** 56-61
+**Confidence:** 85%
 
-Cache `effectiveUrl` in closure instead of calling `getCachedBlobUrl` twice.
+Regex requires wikilink to be entire string, fails with surrounding whitespace:
 
-### 25. image.ts:38 - Hardcoded regex can drift from extensions array
+```typescript
+const wikilinkMatch = path.match(/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/);
+// "  [[image.png]]  " won't match due to ^ and $
+```
 
-Generate regex from `VALID_IMAGE_EXTENSIONS` or add sync test.
+**Fix:**
 
-### 26. image.ts:82 - Redundant extension validation
+```typescript
+export function stripWikilinkSyntax(path: string | null | undefined): string {
+  if (!path) return "";
+  const trimmed = path.trim();
+  const wikilinkMatch = trimmed.match(/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/);
+  return wikilinkMatch ? wikilinkMatch[1].trim() : path;
+}
+```
 
-`hasValidImageExtension` check in `processImagePaths` duplicates post-resolution check.
+---
 
-### 27. image.ts:367 - Inline code regex recreated on each call
+### 11. validateBlobUrl potential race
 
-Move `INLINE_CODE_REGEX` to module scope.
+**File:** `src/shared/slideshow.ts`
+**Lines:** 28-41
+**Confidence:** 90%
 
-### 28. card-renderer.tsx:1973 - Uses setTimeout instead of requestAnimationFrame
+Setting `img.src = ""` can trigger error handler:
 
-Imperative renderer uses rAF for dimension calculation; JSX should match.
+```typescript
+const cleanup = (result: boolean) => {
+  img.onload = null;
+  img.onerror = null;
+  img.src = ""; // May trigger error before handlers nulled
+  resolve(result);
+};
+```
 
-### 29. card-renderer.tsx:589-592 + slideshow.ts:510-536 - Double preload calls
+**Fix:** Already nulling handlers before setting src, should be safe. But order matters - verify handlers are null BEFORE src change.
 
-Both files call `setupImagePreload` with separate `preloaded` flags.
+---
 
-### 30. styles.css:5482-5490 - Mobile slideshow indicator too small for touch
+### 12. Formatting inconsistency for custom date properties
 
-22x22px is below iOS 44x44pt minimum touch target guideline.
+**File:** `src/shared/data-transform.ts`
+**Lines:** 746 vs 724
+**Confidence:** 80%
 
-### 31. styles.css:5403-5406 - Hover styles apply to mobile needlessly
+Custom date properties always get full datetime formatting, while file timestamps get abbreviated (styled) formatting:
 
-Add `@media (hover: hover)` to exclude touch devices.
+```typescript
+// File timestamps - styled = true
+const timestamp = resolveTimestampProperty(propertyName, ctime, mtime, true);
+
+// Custom dates - styled = false (implicit)
+return formatTimestamp(timestampData.timestamp, timestampData.isDateOnly);
+```
+
+**Impact:** Inconsistent UX between `file.ctime` (abbreviated) and custom date property (full datetime).
+
+**Fix:** Consider passing `styled: true` to custom date formatting for consistency.
 
 ---
 
 ## Test Coverage Gaps
 
-1. **slideshow.ts** - No tests for:
-   - Error recovery and auto-advance
-   - `isAnimating` flag state machine
-   - Rapid navigation race conditions
-   - AbortSignal cleanup
+### Missing Tests
 
-2. **image-viewer.ts** - No tests for:
-   - Clone cleanup on error
-   - ResizeObserver lifecycle
-   - Slideshow image removal from clone
+1. **Checkbox marker creation** - `data-transform.ts` boolean → JSON marker
+2. **Indeterminate state detection** - `getAllPropertyInfos().widget === "checkbox"`
+3. **Date detection in `getFirstBasesPropertyValue`** - `{icon, date, time}` structure
+4. **`stripWikilinkSyntax` with fragments** - `[[image.png#heading]]`
+5. **`invalidateCacheForFile`** - 0% coverage (image-loader.ts)
+6. **`normalizePropertyName`** - 0% coverage (property.ts)
+7. **`isValidUri`** - 0% coverage (property.ts)
+8. **Empty vs missing property detection** - metadata cache logic
+9. **YouTube ID edge cases** - empty paths, missing segments
+10. **Windows newlines in frontmatter** - CRLF handling
 
-3. **image.ts** - Missing edge cases:
-   - YouTube URLs without video ID
-   - Wikilinks with fragments
-   - Windows-style newlines in frontmatter
+### Suggested Tests
 
----
+```typescript
+// image.test.ts
+describe("stripWikilinkSyntax with fragments", () => {
+  it("strips heading fragments", () => {
+    expect(stripWikilinkSyntax("[[image.png#heading]]")).toBe("image.png");
+  });
+  it("strips block references", () => {
+    expect(stripWikilinkSyntax("![[photo.jpg#^block-id]]")).toBe("photo.jpg");
+  });
+  it("handles whitespace", () => {
+    expect(stripWikilinkSyntax("  [[image.png]]  ")).toBe("image.png");
+  });
+});
 
-## Recommended Priority
-
-### Phase 1 - Critical Memory Leaks (Immediate)
-
-- #1: `isAnimating` flag reset
-- #4: `validateBlobUrl` cleanup
-- #5: Side cover ResizeObserver
-- #9: image-viewer error path cleanup
-
-### Phase 2 - Race Conditions (High)
-
-- #2: `getExternalBlobUrl` deduplication
-- #3: Error handler URL comparison
-- #6: Fragile URL substring check
-- #7, #8: Backdrop/cover fallback abort checks
-
-### Phase 3 - Edge Cases (Medium)
-
-- #10-12: image.ts URL/wikilink parsing
-- #13-14: shared-renderer cleanup issues
-- #17-20: image-loader/extraction edge cases
-
-### Phase 4 - Consistency & Optimization (Low)
-
-- #15-16: JSX/imperative feature parity
-- #24-31: Performance and code quality
+// data-transform.test.ts
+describe("checkbox property handling", () => {
+  it("creates checkbox marker for boolean true", () => {
+    // Mock Bases entry returning {data: true}
+    expect(result).toBe('{"type":"checkbox","checked":true}');
+  });
+  it("creates indeterminate marker for empty checkbox property", () => {
+    // Mock getAllPropertyInfos returning {widget: "checkbox"}
+    expect(result).toBe('{"type":"checkbox","indeterminate":true}');
+  });
+});
+```
 
 ---
 
-## Files Requiring Changes
+## Code Smell / Refactoring Opportunities
 
-| File               | Issues                                 | Severity           |
-| ------------------ | -------------------------------------- | ------------------ |
-| slideshow.ts       | #1, #2, #3, #4, #21, #24               | Critical           |
-| card-renderer.tsx  | #5, #6, #15, #16, #28, #29             | Critical           |
-| shared-renderer.ts | #7, #8, #13, #14                       | Critical           |
-| image-viewer.ts    | #9, #22                                | Critical           |
-| image.ts           | #10, #11, #12, #19, #20, #25, #26, #27 | Critical/Important |
-| image-loader.ts    | #17, #18                               | Important          |
-| styles.css         | #23, #30, #31                          | Low                |
+### 1. Cleanup pattern inconsistency
+
+**Current state:**
+
+- ResizeObservers: Both array AND signal cleanup
+- Event listeners: Signal only
+- Slideshow: Array only
+
+**Recommendation:** Standardize on signal-based cleanup for all or array-based for all.
+
+---
+
+### 2. Large functions
+
+- `renderPropertyValue()` in shared-renderer.ts: 200+ lines
+- `Card()` in card-renderer.tsx: 500+ lines
+
+**Recommendation:** Extract checkbox rendering, timestamp rendering, array rendering into separate functions.
+
+---
+
+### 3. Magic strings
+
+Checkbox marker uses JSON string matching:
+
+```typescript
+if (stringValue.startsWith('{"type":"checkbox"')) {
+```
+
+**Recommendation:** Define constant:
+
+```typescript
+const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
+```
+
+---
+
+## Summary
+
+| Severity  | Count | Key Issues                                                                              |
+| --------- | ----- | --------------------------------------------------------------------------------------- |
+| Critical  | 5     | Datacore prefix bug, date validation, dual cleanup, regex fragility, cache invalidation |
+| Important | 7     | Code duplication, redundant guards, whitespace handling                                 |
+| Test Gaps | 10    | Checkbox, dates, fragments, new functions                                               |
+
+**Priority fixes:**
+
+1. Fix Datacore checkbox prefix stripping (Critical #1)
+2. Add date validation (Critical #2)
+3. Fix regex fragility (Critical #4)
+4. Add cache invalidation on failure (Critical #5)
+5. Consolidate cleanup pattern (Critical #3)
