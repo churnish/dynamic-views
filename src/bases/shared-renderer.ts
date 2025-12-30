@@ -749,34 +749,42 @@ export class SharedCardRenderer {
           },
         });
 
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const paneType = Keymap.isModEvent(e);
-          void this.app.workspace.openLinkText(
-            card.path,
-            "",
-            paneType || false,
-          );
-        });
+        link.addEventListener(
+          "click",
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const paneType = Keymap.isModEvent(e);
+            void this.app.workspace.openLinkText(
+              card.path,
+              "",
+              paneType || false,
+            );
+          },
+          { signal },
+        );
 
         // Page preview on hover (mouseenter to prevent bubbling)
-        link.addEventListener("mouseenter", (e) => {
-          this.app.workspace.trigger("hover-link", {
-            event: e,
-            source: "bases",
-            hoverParent: { hoverPopover: null },
-            targetEl: link,
-            linktext: card.path,
-            sourcePath: card.path,
-          });
-        });
+        link.addEventListener(
+          "mouseenter",
+          (e) => {
+            this.app.workspace.trigger("hover-link", {
+              event: e,
+              source: "bases",
+              hoverParent: { hoverPopover: null },
+              targetEl: link,
+              linktext: card.path,
+              sourcePath: card.path,
+            });
+          },
+          { signal },
+        );
 
         // Open context menu on right-click
-        link.addEventListener("contextmenu", handleContextMenu);
+        link.addEventListener("contextmenu", handleContextMenu, { signal });
 
         // Make title draggable when openFileAction is 'title'
-        link.addEventListener("dragstart", handleDrag);
+        link.addEventListener("dragstart", handleDrag, { signal });
 
         // Add extension suffix inside link for Extension mode
         if (
@@ -1059,6 +1067,9 @@ export class SharedCardRenderer {
                   luminance > LUMINANCE_LIGHT_THRESHOLD ? "light" : "dark";
                 cardEl.setAttribute("data-backdrop-theme", theme);
               }
+            } else {
+              // Clear theme for external images (can't extract due to CORS)
+              cardEl.removeAttribute("data-backdrop-theme");
             }
           }
           this.updateLayoutRef.current?.();

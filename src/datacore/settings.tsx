@@ -14,6 +14,8 @@ interface PropertySetConfig {
   label: string;
   firstProp: keyof SettingsType;
   secondProp: keyof SettingsType;
+  firstLabel: string;
+  secondLabel: string;
   sideBySide: keyof SettingsType;
   position: keyof SettingsType;
 }
@@ -24,6 +26,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 1",
     firstProp: "propertyDisplay1",
     secondProp: "propertyDisplay2",
+    firstLabel: "Property 1",
+    secondLabel: "Property 2",
     sideBySide: "propertySet1SideBySide",
     position: "propertySet1Position",
   },
@@ -32,6 +36,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 2",
     firstProp: "propertyDisplay3",
     secondProp: "propertyDisplay4",
+    firstLabel: "Property 3",
+    secondLabel: "Property 4",
     sideBySide: "propertySet2SideBySide",
     position: "propertySet2Position",
   },
@@ -40,6 +46,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 3",
     firstProp: "propertyDisplay5",
     secondProp: "propertyDisplay6",
+    firstLabel: "Property 5",
+    secondLabel: "Property 6",
     sideBySide: "propertySet3SideBySide",
     position: "propertySet3Position",
   },
@@ -48,6 +56,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 4",
     firstProp: "propertyDisplay7",
     secondProp: "propertyDisplay8",
+    firstLabel: "Property 7",
+    secondLabel: "Property 8",
     sideBySide: "propertySet4SideBySide",
     position: "propertySet4Position",
   },
@@ -56,6 +66,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 5",
     firstProp: "propertyDisplay9",
     secondProp: "propertyDisplay10",
+    firstLabel: "Property 9",
+    secondLabel: "Property 10",
     sideBySide: "propertySet5SideBySide",
     position: "propertySet5Position",
   },
@@ -64,6 +76,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 6",
     firstProp: "propertyDisplay11",
     secondProp: "propertyDisplay12",
+    firstLabel: "Property 11",
+    secondLabel: "Property 12",
     sideBySide: "propertySet6SideBySide",
     position: "propertySet6Position",
   },
@@ -72,6 +86,8 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     label: "Property set 7",
     firstProp: "propertyDisplay13",
     secondProp: "propertyDisplay14",
+    firstLabel: "Property 13",
+    secondLabel: "Property 14",
     sideBySide: "propertySet7SideBySide",
     position: "propertySet7Position",
   },
@@ -208,12 +224,12 @@ export function Settings({
         className={`settings-section-content ${expandedSections[group.key] ? "" : "collapsed"}`}
       >
         {renderTextInput(
-          "First property",
+          group.firstLabel,
           group.firstProp,
           "Enter property name",
         )}
         {renderTextInput(
-          "Second property",
+          group.secondLabel,
           group.secondProp,
           "Enter property name",
         )}

@@ -287,7 +287,7 @@ export function getCardAmbientOpacity(): number {
   if (hasBodyClass("dynamic-views-adaptive-text")) {
     return 0.9;
   }
-  return 0.17; // Default for subtle or cover background
+  return 0.17; // Subtle mode (also returned if ambient off, but not called in that case)
 }
 
 /**
@@ -346,12 +346,12 @@ export function setupStyleSettingsObserver(
   onStyleChange: () => void,
   onAmbientSettingChange?: () => void,
 ): () => void {
-  // Card background ambient classes (mutually exclusive)
-  // Note: cover-bg-ambient is a separate setting, not included here
+  // Ambient-related classes that trigger onAmbientSettingChange
   const ambientClasses = [
     "dynamic-views-ambient-bg-off",
     "dynamic-views-ambient-bg-subtle",
     "dynamic-views-adaptive-text",
+    "dynamic-views-cover-bg-ambient",
   ];
 
   // Observer for body class changes (Style Settings class-toggle settings)

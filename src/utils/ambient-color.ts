@@ -1,46 +1,54 @@
-import ColorThief from "colorthief";
-
-// Lazy-initialized ColorThief instance
-let colorThief: ColorThief | null = null;
-
-function getColorThief(): ColorThief {
-  if (!colorThief) {
-    colorThief = new ColorThief();
-  }
-  return colorThief;
-}
-
 export type RGBTuple = [number, number, number];
-
-// Pre-compiled regex for RGB parsing
-const RGB_REGEX = /rgba?\((\d+),\s*(\d+),\s*(\d+)/;
 
 // Luminance threshold for light/dark theme detection
 // Values above this are considered "light" backgrounds
 export const LUMINANCE_LIGHT_THRESHOLD = 0.333;
 
 /**
- * Convert RGB tuple to CSS rgb() string
- * @param rgb - RGB tuple [r, g, b] with values 0-255
- * @returns CSS string in format "rgb(r, g, b)"
- */
-export function rgbTupleToString(rgb: RGBTuple): string {
-  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-}
-
-/**
- * Extract the dominant color from an image element using color-thief
- * Uses Modified Median Cut Quantization for vibrant color extraction
+ * Extract the average color from an image element using canvas sampling
+ * Uses a 50×50 scaled canvas for performance (~400× less work than full image)
  *
  * Error handling: Returns null on any failure (CORS, invalid image, etc.)
- * Use console warnings in development to debug extraction failures.
  *
  * @param img - HTMLImageElement to analyze (must be loaded and same-origin/CORS-enabled)
  * @returns RGB tuple [r, g, b] or null on failure
  */
 export function extractDominantColor(img: HTMLImageElement): RGBTuple | null {
   try {
-    return getColorThief().getColor(img);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    // 50×50 is enough for average color extraction
+    const targetSize = 50;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+
+    // Draw image scaled down to target size
+    ctx.drawImage(img, 0, 0, targetSize, targetSize);
+
+    // Get pixel data
+    const imageData = ctx.getImageData(0, 0, targetSize, targetSize);
+    const data = imageData.data;
+
+    let r = 0,
+      g = 0,
+      b = 0;
+    const pixelCount = targetSize * targetSize;
+
+    // Sum all RGB values
+    for (let i = 0; i < data.length; i += 4) {
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+    }
+
+    // Calculate average
+    return [
+      Math.floor(r / pixelCount),
+      Math.floor(g / pixelCount),
+      Math.floor(b / pixelCount),
+    ];
   } catch (e) {
     // Log for debugging CORS/image issues
     console.warn("[ambient-color] Failed to extract color:", e);
@@ -84,34 +92,4 @@ export function calculateLuminanceFromTuple(rgb: RGBTuple): number {
 
   // WCAG luminance weights for human perception
   return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
-}
-
-/**
- * Helper to safely parse integer with NaN handling
- */
-function safeParseInt(value: string): number {
-  const parsed = parseInt(value);
-  return isNaN(parsed) ? 0 : Math.min(255, Math.max(0, parsed));
-}
-
-/**
- * Calculate relative luminance of an RGB color from string
- * Uses WCAG 2.0 formula: https://www.w3.org/TR/WCAG20/#relativeluminancedef
- *
- * Error handling: Returns 0.5 (mid-gray) for invalid input strings.
- *
- * @param rgbString - RGB color string in exact format "rgb(r, g, b)" or "rgba(r, g, b, a)"
- *                    where r, g, b are integers 0-255
- * @returns Luminance value between 0 (darkest) and 1 (lightest)
- */
-export function calculateLuminance(rgbString: string): number {
-  const match = rgbString.match(RGB_REGEX);
-  if (!match) return 0.5;
-
-  // Parse with NaN handling
-  const rRaw = safeParseInt(match[1]);
-  const gRaw = safeParseInt(match[2]);
-  const bRaw = safeParseInt(match[3]);
-
-  return calculateLuminanceFromTuple([rRaw, gRaw, bRaw]);
 }

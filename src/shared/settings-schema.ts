@@ -9,6 +9,7 @@ import { DEFAULT_VIEW_SETTINGS } from "../constants";
 // Bases config object interface
 interface BasesConfig {
   get(key: string): unknown;
+  getAll?(): Record<string, unknown>;
 }
 
 /**
@@ -176,14 +177,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 1",
           key: "propertyDisplay1",
           placeholder: "Select property",
           default: DEFAULT_VIEW_SETTINGS.propertyDisplay1,
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 2",
           key: "propertyDisplay2",
           placeholder: "Select property",
           default: DEFAULT_VIEW_SETTINGS.propertyDisplay2,
@@ -212,14 +213,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 3",
           key: "propertyDisplay3",
           placeholder: "Select property",
           default: "",
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 4",
           key: "propertyDisplay4",
           placeholder: "Select property",
           default: "",
@@ -248,14 +249,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 5",
           key: "propertyDisplay5",
           placeholder: "Select property",
           default: "",
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 6",
           key: "propertyDisplay6",
           placeholder: "Select property",
           default: "",
@@ -284,14 +285,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 7",
           key: "propertyDisplay7",
           placeholder: "Select property",
           default: "",
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 8",
           key: "propertyDisplay8",
           placeholder: "Select property",
           default: "",
@@ -320,14 +321,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 9",
           key: "propertyDisplay9",
           placeholder: "Select property",
           default: "",
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 10",
           key: "propertyDisplay10",
           placeholder: "Select property",
           default: "",
@@ -356,14 +357,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 11",
           key: "propertyDisplay11",
           placeholder: "Select property",
           default: "",
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 12",
           key: "propertyDisplay12",
           placeholder: "Select property",
           default: "",
@@ -392,14 +393,14 @@ export function getBasesViewOptions(): any[] {
       items: [
         {
           type: "property",
-          displayName: "First property",
+          displayName: "Property 13",
           key: "propertyDisplay13",
           placeholder: "Select property",
           default: "",
         },
         {
           type: "property",
-          displayName: "Second property",
+          displayName: "Property 14",
           key: "propertyDisplay14",
           placeholder: "Select property",
           default: "",
@@ -499,6 +500,12 @@ export function readBasesSettings(
     return defaults.imageFormat;
   };
 
+  // Get all stored keys to distinguish "never set" from "cleared"
+  // Bases stores the key even when value is undefined (cleared)
+  const allKeys = config.getAll?.() ?? {};
+  const hasKey = (key: string) =>
+    Object.prototype.hasOwnProperty.call(allKeys, key);
+
   return {
     // String properties
     titleProperty: getString("titleProperty", defaults.titleProperty),
@@ -524,8 +531,16 @@ export function readBasesSettings(
     })(),
 
     // Property display strings (1-14)
-    propertyDisplay1: getString("propertyDisplay1", defaults.propertyDisplay1),
-    propertyDisplay2: getString("propertyDisplay2", defaults.propertyDisplay2),
+    // For propertyDisplay1/2: if key exists but value is undefined, field was cleared → use ""
+    // If key doesn't exist, field never touched → use defaults
+    propertyDisplay1: getString(
+      "propertyDisplay1",
+      hasKey("propertyDisplay1") ? "" : defaults.propertyDisplay1,
+    ),
+    propertyDisplay2: getString(
+      "propertyDisplay2",
+      hasKey("propertyDisplay2") ? "" : defaults.propertyDisplay2,
+    ),
     propertyDisplay3: getString("propertyDisplay3", defaults.propertyDisplay3),
     propertyDisplay4: getString("propertyDisplay4", defaults.propertyDisplay4),
     propertyDisplay5: getString("propertyDisplay5", defaults.propertyDisplay5),

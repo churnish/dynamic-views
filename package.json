@@ -37,7 +37,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@panzoom/panzoom": "^4.6.1",
-    "colorthief": "^2.6.0"
+    "@panzoom/panzoom": "^4.6.1"
   }
 }

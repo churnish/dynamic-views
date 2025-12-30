@@ -488,5 +488,7 @@ export function handleJsxImageError(
     "--actual-aspect-ratio",
     DEFAULT_ASPECT_RATIO.toString(),
   );
+  // Clear any stale backdrop theme from previous image
+  cardEl.removeAttribute("data-backdrop-theme");
   if (updateLayoutRef.current) updateLayoutRef.current();
 }

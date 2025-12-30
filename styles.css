@@ -3048,21 +3048,15 @@ body.dynamic-views-hide-card-border .dynamic-views .card {
   --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
 }
 
-/* Hide border on cards WITH ambient color */
-body.dynamic-views-ambient-bg-subtle
-  .dynamic-views
-  .card[data-ambient-theme]::after,
+/* Hide border on cards WITH ambient color (dramatic mode only) */
 body.dynamic-views-adaptive-text
   .dynamic-views
   .card[data-ambient-theme]::after {
   box-shadow: none;
 }
 
-/* Show border on hover for ambient cards */
+/* Show border on hover for dramatic ambient cards */
 @media (hover: hover) {
-  body.dynamic-views-ambient-bg-subtle
-    .dynamic-views
-    .card[data-ambient-theme]:hover::after,
   body.dynamic-views-adaptive-text
     .dynamic-views
     .card[data-ambient-theme]:hover::after {
@@ -3074,8 +3068,7 @@ body.dynamic-views-adaptive-text
   }
 }
 
-/* Ambient cards have border hidden: no inset adjustment */
-body.dynamic-views-ambient-bg-subtle .dynamic-views .card[data-ambient-theme],
+/* Dramatic ambient cards have border hidden: no inset adjustment */
 body.dynamic-views-adaptive-text .dynamic-views .card[data-ambient-theme] {
   --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
 }
@@ -3091,7 +3084,6 @@ body .dynamic-views .card:focus-visible::after {
   z-index: 10;
 }
 
-body.dynamic-views-ambient-bg-subtle .dynamic-views .card:focus-visible::after,
 body.dynamic-views-adaptive-text .dynamic-views .card:focus-visible::after {
   box-shadow:
     inset 0 0 0 2px var(--background-modifier-border-focus),

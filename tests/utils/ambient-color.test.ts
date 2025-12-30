@@ -1,67 +1,113 @@
 import {
   extractDominantColor,
   formatAmbientColor,
-  calculateLuminance,
   calculateLuminanceFromTuple,
   LUMINANCE_LIGHT_THRESHOLD,
-  rgbTupleToString,
 } from "../../src/utils/ambient-color";
-
-// Mock colorthief with configurable behavior
-const mockGetColor = jest.fn().mockReturnValue([100, 150, 200]);
-jest.mock("colorthief", () => {
-  return jest.fn().mockImplementation(() => ({
-    getColor: mockGetColor,
-  }));
-});
 
 describe("ambient-color", () => {
   describe("extractDominantColor", () => {
     let mockImg: HTMLImageElement;
+    let mockCtx: Partial<CanvasRenderingContext2D>;
+    let mockCanvas: Partial<HTMLCanvasElement>;
+    let createElementSpy: jest.SpyInstance;
 
     beforeEach(() => {
-      mockImg = document.createElement("img") as HTMLImageElement;
+      // Create mock image using prototype to avoid spy
+      mockImg = Document.prototype.createElement.call(
+        document,
+        "img",
+      ) as HTMLImageElement;
       mockImg.width = 100;
       mockImg.height = 100;
-      mockGetColor.mockClear();
-      mockGetColor.mockReturnValue([100, 150, 200]);
+
+      // Create mock pixel data for 50x50 canvas (2500 pixels * 4 channels = 10000)
+      // All pixels set to RGB(100, 150, 200)
+      const pixelData = new Uint8ClampedArray(50 * 50 * 4);
+      for (let i = 0; i < pixelData.length; i += 4) {
+        pixelData[i] = 100; // R
+        pixelData[i + 1] = 150; // G
+        pixelData[i + 2] = 200; // B
+        pixelData[i + 3] = 255; // A
+      }
+
+      mockCtx = {
+        drawImage: jest.fn(),
+        getImageData: jest.fn().mockReturnValue({
+          data: pixelData,
+        }),
+      };
+
+      mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jest.fn().mockReturnValue(mockCtx),
+      };
+
+      createElementSpy = jest
+        .spyOn(document, "createElement")
+        .mockImplementation((tagName: string) => {
+          if (tagName === "canvas") {
+            return mockCanvas as HTMLCanvasElement;
+          }
+          // Call native implementation for non-canvas elements
+          return Document.prototype.createElement.call(document, tagName);
+        });
     });
 
-    it("should extract dominant color and return RGB tuple", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("should extract average color and return RGB tuple", () => {
       const result = extractDominantColor(mockImg);
       expect(result).toEqual([100, 150, 200]);
     });
 
-    it("should return null when ColorThief throws CORS error", () => {
-      mockGetColor.mockImplementation(() => {
+    it("should return null when getContext returns null", () => {
+      mockCanvas.getContext = jest.fn().mockReturnValue(null);
+      const result = extractDominantColor(mockImg);
+      expect(result).toBeNull();
+    });
+
+    it("should return null when getImageData throws CORS error", () => {
+      mockCtx.getImageData = jest.fn().mockImplementation(() => {
         throw new Error("Unable to access image data: CORS");
       });
       const result = extractDominantColor(mockImg);
       expect(result).toBeNull();
     });
 
-    it("should return null when ColorThief throws canvas error", () => {
-      mockGetColor.mockImplementation(() => {
+    it("should return null when canvas is tainted", () => {
+      mockCtx.getImageData = jest.fn().mockImplementation(() => {
         throw new Error("Canvas is tainted");
       });
       const result = extractDominantColor(mockImg);
       expect(result).toBeNull();
     });
 
-    it("should return null for invalid image", () => {
-      mockGetColor.mockImplementation(() => {
-        throw new Error("Image is not loaded");
-      });
-      const result = extractDominantColor(mockImg);
-      expect(result).toBeNull();
-    });
-  });
+    it("should calculate average of mixed colors", () => {
+      // Create pixel data with varying colors
+      const pixelData = new Uint8ClampedArray(50 * 50 * 4);
+      // Half pixels are (0, 0, 0), half are (200, 200, 200)
+      for (let i = 0; i < pixelData.length; i += 4) {
+        const isFirstHalf = i < pixelData.length / 2;
+        pixelData[i] = isFirstHalf ? 0 : 200;
+        pixelData[i + 1] = isFirstHalf ? 0 : 200;
+        pixelData[i + 2] = isFirstHalf ? 0 : 200;
+        pixelData[i + 3] = 255;
+      }
+      mockCtx.getImageData = jest.fn().mockReturnValue({ data: pixelData });
 
-  describe("rgbTupleToString", () => {
-    it("should convert RGB tuple to css string", () => {
-      expect(rgbTupleToString([100, 150, 200])).toBe("rgb(100, 150, 200)");
-      expect(rgbTupleToString([0, 0, 0])).toBe("rgb(0, 0, 0)");
-      expect(rgbTupleToString([255, 255, 255])).toBe("rgb(255, 255, 255)");
+      const result = extractDominantColor(mockImg);
+      // Average should be (100, 100, 100)
+      expect(result).toEqual([100, 100, 100]);
+    });
+
+    it("should use 50x50 canvas for performance", () => {
+      extractDominantColor(mockImg);
+      expect(mockCanvas.width).toBe(50);
+      expect(mockCanvas.height).toBe(50);
     });
   });
 
@@ -85,99 +131,6 @@ describe("ambient-color", () => {
     });
   });
 
-  describe("calculateLuminance", () => {
-    it("should calculate luminance for black", () => {
-      const result = calculateLuminance("rgb(0, 0, 0)");
-      expect(result).toBeCloseTo(0, 5);
-    });
-
-    it("should calculate luminance for white", () => {
-      const result = calculateLuminance("rgb(255, 255, 255)");
-      expect(result).toBeCloseTo(1, 5);
-    });
-
-    it("should calculate luminance for gray", () => {
-      const result = calculateLuminance("rgb(128, 128, 128)");
-      expect(result).toBeGreaterThan(0);
-      expect(result).toBeLessThan(1);
-      expect(result).toBeCloseTo(0.215, 2); // Mid gray ~21.5% luminance
-    });
-
-    it("should calculate luminance for red", () => {
-      const result = calculateLuminance("rgb(255, 0, 0)");
-      // Red has lowest weight in WCAG formula (0.2126)
-      expect(result).toBeCloseTo(0.2126, 3);
-    });
-
-    it("should calculate luminance for green", () => {
-      const result = calculateLuminance("rgb(0, 255, 0)");
-      // Green has highest weight in WCAG formula (0.7152)
-      expect(result).toBeCloseTo(0.7152, 3);
-    });
-
-    it("should calculate luminance for blue", () => {
-      const result = calculateLuminance("rgb(0, 0, 255)");
-      // Blue has lowest weight in WCAG formula (0.0722)
-      expect(result).toBeCloseTo(0.0722, 3);
-    });
-
-    it("should handle RGB strings with spaces", () => {
-      const result1 = calculateLuminance("rgb(128, 128, 128)");
-      const result2 = calculateLuminance("rgb(128,128,128)");
-      expect(result1).toBe(result2);
-    });
-
-    it("should return 0.5 for invalid RGB strings", () => {
-      expect(calculateLuminance("invalid")).toBe(0.5);
-      expect(calculateLuminance("rgb()")).toBe(0.5);
-      expect(calculateLuminance("rgb(a, b, c)")).toBe(0.5);
-      expect(calculateLuminance("#ffffff")).toBe(0.5);
-    });
-
-    it("should apply gamma correction correctly", () => {
-      // Low values use linear scaling (val / 12.92)
-      const lowResult = calculateLuminance("rgb(10, 10, 10)");
-      expect(lowResult).toBeGreaterThan(0);
-
-      // High values use power formula
-      const highResult = calculateLuminance("rgb(200, 200, 200)");
-      expect(highResult).toBeGreaterThan(lowResult);
-    });
-
-    it("should use WCAG formula weights (0.2126, 0.7152, 0.0722)", () => {
-      // Pure colors should reflect the weights
-      const redLum = calculateLuminance("rgb(255, 0, 0)");
-      const greenLum = calculateLuminance("rgb(0, 255, 0)");
-      const blueLum = calculateLuminance("rgb(0, 0, 255)");
-
-      // Green should have highest luminance
-      expect(greenLum).toBeGreaterThan(redLum);
-      expect(greenLum).toBeGreaterThan(blueLum);
-
-      // Red should have higher luminance than blue
-      expect(redLum).toBeGreaterThan(blueLum);
-    });
-
-    it("should clamp RGB values > 255 to 255", () => {
-      // Values above 255 should be clamped
-      const result = calculateLuminance("rgb(300, 500, 999)");
-      const white = calculateLuminance("rgb(255, 255, 255)");
-      expect(result).toBeCloseTo(white, 5);
-    });
-
-    it("should return fallback for negative RGB values (invalid CSS)", () => {
-      // Negative values don't match the regex (invalid CSS), returns 0.5 fallback
-      const result = calculateLuminance("rgb(-10, -50, -100)");
-      expect(result).toBe(0.5);
-    });
-
-    it("should handle rgba format", () => {
-      const rgb = calculateLuminance("rgb(128, 128, 128)");
-      const rgba = calculateLuminance("rgba(128, 128, 128, 0.5)");
-      expect(rgb).toBeCloseTo(rgba, 5);
-    });
-  });
-
   describe("calculateLuminanceFromTuple", () => {
     it("should calculate luminance for black", () => {
       const result = calculateLuminanceFromTuple([0, 0, 0]);
@@ -192,13 +145,6 @@ describe("ambient-color", () => {
     it("should calculate luminance for gray", () => {
       const result = calculateLuminanceFromTuple([128, 128, 128]);
       expect(result).toBeCloseTo(0.215, 2);
-    });
-
-    it("should match calculateLuminance for same colors", () => {
-      const tuple: [number, number, number] = [100, 150, 200];
-      const fromTuple = calculateLuminanceFromTuple(tuple);
-      const fromString = calculateLuminance(rgbTupleToString(tuple));
-      expect(fromTuple).toBeCloseTo(fromString, 10);
     });
 
     it("should use WCAG formula weights", () => {
