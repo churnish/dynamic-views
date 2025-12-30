@@ -213,8 +213,8 @@ describe("ambient-color", () => {
   });
 
   describe("LUMINANCE_LIGHT_THRESHOLD", () => {
-    it("should be 0.33", () => {
-      expect(LUMINANCE_LIGHT_THRESHOLD).toBe(0.33);
+    it("should be 0.333", () => {
+      expect(LUMINANCE_LIGHT_THRESHOLD).toBe(0.333);
     });
 
     it("should correctly classify light vs dark colors", () => {
@@ -228,7 +228,7 @@ describe("ambient-color", () => {
         LUMINANCE_LIGHT_THRESHOLD,
       );
 
-      // Mid-gray is dark (~0.215 < 0.33)
+      // Mid-gray is dark (~0.215 < 0.333)
       expect(calculateLuminanceFromTuple([128, 128, 128])).toBeLessThan(
         LUMINANCE_LIGHT_THRESHOLD,
       );

@@ -4,6 +4,55 @@ name: Dynamic Views
 id: dynamic-views
 settings:
     -
+        id: backdrop-heading
+        title: Backdrop
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-backdrop-overlay-tint
+        title: Overlay tint
+        description: Color of the backdrop overlay
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-backdrop-theme-match
+        options:
+            -
+                label: Light
+                value: dynamic-views-backdrop-theme-light
+            -
+                label: Dark
+                value: dynamic-views-backdrop-theme-dark
+            -
+                label: Match theme
+                value: dynamic-views-backdrop-theme-match
+            -
+                label: Disable
+                value: dynamic-views-backdrop-theme-disable
+    -
+        id: dynamic-views-backdrop-overlay-light
+        title: Light overlay opacity
+        description: Strength of the light overlay
+        type: variable-number-slider
+        default: 70
+        min: 0
+        max: 100
+        step: 1
+    -
+        id: dynamic-views-backdrop-overlay-dark
+        title: Dark overlay opacity
+        description: Strength of the dark overlay
+        type: variable-number-slider
+        default: 70
+        min: 0
+        max: 100
+        step: 1
+    -
+        id: dynamic-views-backdrop-no-adaptive-text
+        title: Disable adaptive text colors
+        description: Do not adjust text colors for backdrop overlay
+        type: class-toggle
+    -
         id: layout-heading
         title: Card layout
         type: heading
@@ -148,27 +197,27 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-no-fade-truncated-text
+        title: Hide scroll gradient
+        description: Hide gradient fade effect on titles, subtitles and properties when they can be scrolled horizontally
+        type: class-toggle
+    -
         id: dynamic-views-ambient-background
         title: Ambient background
-        description: Use image ambient color as card background. Local images only.
+        description: Use image ambient color as card background (local images only)
         type: class-select
         allowEmpty: false
         default: dynamic-views-ambient-bg-off
         options:
             -
-                label: Off
-                value: dynamic-views-ambient-bg-off
-            -
                 label: Subtle
                 value: dynamic-views-ambient-bg-subtle
             -
                 label: Dramatic
-                value: dynamic-views-ambient-bg-dramatic
-    -
-        id: dynamic-views-no-fade-truncated-text
-        title: Hide scroll gradient
-        description: Hide gradient fade effect on titles, subtitles and properties when they can be scrolled horizontally
-        type: class-toggle
+                value: dynamic-views-adaptive-text
+            -
+                label: Disable
+                value: dynamic-views-ambient-bg-off
     -
         id: covers-heading
         title: Covers
@@ -352,8 +401,8 @@ settings:
         type: class-toggle
     -
         id: dynamic-views-image-viewer-disable-dismiss-on-click
-        title: Don't dismiss image when pressing on it
-        description: Prevent closing image viewer when pressing on the image
+        title: Don't dismiss on press
+        description: Prevent image viewer from closing when pressing on image
         type: class-toggle
     -
         id: dynamic-views-image-viewer-fullscreen
@@ -3003,17 +3052,31 @@ body.dynamic-views-hide-card-border .dynamic-views .card {
 body.dynamic-views-ambient-bg-subtle
   .dynamic-views
   .card[data-ambient-theme]::after,
-body.dynamic-views-ambient-bg-dramatic
+body.dynamic-views-adaptive-text
   .dynamic-views
   .card[data-ambient-theme]::after {
   box-shadow: none;
 }
 
+/* Show border on hover for ambient cards */
+@media (hover: hover) {
+  body.dynamic-views-ambient-bg-subtle
+    .dynamic-views
+    .card[data-ambient-theme]:hover::after,
+  body.dynamic-views-adaptive-text
+    .dynamic-views
+    .card[data-ambient-theme]:hover::after {
+    box-shadow: inset 0 0 0 1px
+      var(
+        --dynamic-views-card-border-color-hover,
+        var(--background-modifier-border-focus)
+      );
+  }
+}
+
 /* Ambient cards have border hidden: no inset adjustment */
 body.dynamic-views-ambient-bg-subtle .dynamic-views .card[data-ambient-theme],
-body.dynamic-views-ambient-bg-dramatic
-  .dynamic-views
-  .card[data-ambient-theme] {
+body.dynamic-views-adaptive-text .dynamic-views .card[data-ambient-theme] {
   --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
 }
 
@@ -3029,9 +3092,7 @@ body .dynamic-views .card:focus-visible::after {
 }
 
 body.dynamic-views-ambient-bg-subtle .dynamic-views .card:focus-visible::after,
-body.dynamic-views-ambient-bg-dramatic
-  .dynamic-views
-  .card:focus-visible::after {
+body.dynamic-views-adaptive-text .dynamic-views .card:focus-visible::after {
   box-shadow:
     inset 0 0 0 2px var(--background-modifier-border-focus),
     inset 0 0 0 4px #d4d4d4;
@@ -3115,7 +3176,10 @@ body.dynamic-views-card-background-transparent .dynamic-views .card {
 }
 
 body.dynamic-views-card-background-custom .dynamic-views .card {
-  background-color: var(--dynamic-views-card-background-custom-color, #1e1e1e);
+  background-color: var(
+    --dynamic-views-card-background-custom-color,
+    var(--background-primary-alt)
+  );
 }
 
 /* Ambient background: Cards WITH images only (requires cover-ready to avoid flash) */
@@ -3125,27 +3189,28 @@ body.dynamic-views-ambient-bg-subtle
 body.dynamic-views-ambient-bg-subtle
   .dynamic-views
   .card.image-format-thumbnail.cover-ready:has(.card-thumbnail),
-body.dynamic-views-ambient-bg-dramatic
+body.dynamic-views-adaptive-text
   .dynamic-views
   .card.image-format-cover.cover-ready:has(.card-cover),
-body.dynamic-views-ambient-bg-dramatic
+body.dynamic-views-adaptive-text
   .dynamic-views
   .card.image-format-thumbnail.cover-ready:has(.card-thumbnail) {
   background-color: var(--ambient-color, var(--background-primary-alt));
 }
 
 /* Text color adjustments for ambient card backgrounds (dramatic only) */
-body.dynamic-views-ambient-bg-dramatic
+/* Excludes backdrop cards - they have separate adaptive text control */
+body.dynamic-views-adaptive-text
   .dynamic-views
-  .card[data-ambient-theme="light"] {
+  .card[data-ambient-theme="light"]:not(.image-format-backdrop) {
   --text-normal: #222222;
   --text-muted: #333333;
   --text-faint: #666666;
 }
 
-body.dynamic-views-ambient-bg-dramatic
+body.dynamic-views-adaptive-text
   .dynamic-views
-  .card[data-ambient-theme="dark"] {
+  .card[data-ambient-theme="dark"]:not(.image-format-backdrop) {
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: #d0d0d0;
@@ -5097,6 +5162,148 @@ body.dynamic-views-show-cover-placeholder-both.dynamic-views-cover-bg-transparen
   background-color: transparent;
 }
 
+/* ==================== BACKGROUND FORMAT ==================== */
+
+/* Background format - image fills entire card */
+.dynamic-views .card.image-format-backdrop {
+  position: relative;
+  overflow: hidden;
+  --backdrop-inset: 1px;
+}
+
+.dynamic-views .card.image-format-backdrop .card-backdrop {
+  position: absolute;
+  inset: calc(var(--backdrop-inset) - var(--dynamic-views-card-padding, 8px));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* No border = no inset */
+body.dynamic-views-hide-card-border .dynamic-views .card.image-format-backdrop {
+  --backdrop-inset: 0px;
+}
+
+.dynamic-views .card.image-format-backdrop .card-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Overlay for text readability */
+.dynamic-views .card.image-format-backdrop .card-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Overlay theme: Match theme (default) */
+body.dynamic-views-backdrop-theme-match.theme-dark
+  .dynamic-views
+  .card.image-format-backdrop
+  .card-backdrop::after {
+  background: black;
+  opacity: calc(var(--dynamic-views-backdrop-overlay-dark, 70) / 100);
+}
+
+body.dynamic-views-backdrop-theme-match.theme-light
+  .dynamic-views
+  .card.image-format-backdrop
+  .card-backdrop::after {
+  background: white;
+  opacity: calc(var(--dynamic-views-backdrop-overlay-light, 70) / 100);
+}
+
+/* Overlay theme: Light (forced) */
+body.dynamic-views-backdrop-theme-light
+  .dynamic-views
+  .card.image-format-backdrop
+  .card-backdrop::after {
+  background: white;
+  opacity: calc(var(--dynamic-views-backdrop-overlay-light, 70) / 100);
+}
+
+/* Overlay theme: Dark (forced) */
+body.dynamic-views-backdrop-theme-dark
+  .dynamic-views
+  .card.image-format-backdrop
+  .card-backdrop::after {
+  background: black;
+  opacity: calc(var(--dynamic-views-backdrop-overlay-dark, 70) / 100);
+}
+
+/* Overlay theme: Disable */
+body.dynamic-views-backdrop-theme-disable
+  .dynamic-views
+  .card.image-format-backdrop
+  .card-backdrop::after {
+  display: none;
+}
+
+/* Card content stacks above background image */
+.dynamic-views .card.image-format-backdrop .card-content,
+.dynamic-views .card.image-format-backdrop .card-title-group {
+  position: relative;
+  z-index: 1;
+}
+
+/* Backdrop text color overrides (light overlay) - on by default */
+/* Only applies to cards with actual backdrop images */
+body:not(
+    .dynamic-views-backdrop-no-adaptive-text
+  ).dynamic-views-backdrop-theme-light
+  .dynamic-views
+  .card.image-format-backdrop:has(.card-backdrop),
+body:not(
+    .dynamic-views-backdrop-no-adaptive-text
+  ).dynamic-views-backdrop-theme-match.theme-light
+  .dynamic-views
+  .card.image-format-backdrop:has(.card-backdrop) {
+  --text-normal: #222222;
+  --text-muted: #333333;
+  --text-faint: #666666;
+}
+
+/* Backdrop text color overrides (dark overlay) - on by default */
+/* Only applies to cards with actual backdrop images */
+body:not(
+    .dynamic-views-backdrop-no-adaptive-text
+  ).dynamic-views-backdrop-theme-dark
+  .dynamic-views
+  .card.image-format-backdrop:has(.card-backdrop),
+body:not(
+    .dynamic-views-backdrop-no-adaptive-text
+  ).dynamic-views-backdrop-theme-match.theme-dark
+  .dynamic-views
+  .card.image-format-backdrop:has(.card-backdrop) {
+  --text-normal: #fafafa;
+  --text-muted: #f5f5f5;
+  --text-faint: #d0d0d0;
+}
+
+/* Backdrop text color overrides (tint disabled, luminance-based) */
+/* Uses extracted image luminance to determine text color */
+body:not(
+    .dynamic-views-backdrop-no-adaptive-text
+  ).dynamic-views-backdrop-theme-disable
+  .dynamic-views
+  .card.image-format-backdrop[data-backdrop-theme="light"]:has(.card-backdrop) {
+  --text-normal: #222222;
+  --text-muted: #333333;
+  --text-faint: #666666;
+}
+
+body:not(
+    .dynamic-views-backdrop-no-adaptive-text
+  ).dynamic-views-backdrop-theme-disable
+  .dynamic-views
+  .card.image-format-backdrop[data-backdrop-theme="dark"]:has(.card-backdrop) {
+  --text-normal: #fafafa;
+  --text-muted: #f5f5f5;
+  --text-faint: #d0d0d0;
+}
+
 /* ==================== SLIDESHOW STYLES ==================== */
 
 /* Dual stacked images for slideshow */
@@ -5552,16 +5759,26 @@ body.dynamic-views-tag-style-plaintext
   text-decoration: underline;
 }
 
-/* Tag color presets - value definitions (faint is default) */
-body.dynamic-views-tag-color-faint {
-  --dynamic-views-tag-color-value: var(--text-faint);
+/* Tag color presets - semantic colors applied at element level for ambient compatibility */
+body.dynamic-views-tag-color-faint:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-faint);
 }
-body.dynamic-views-tag-color-muted {
-  --dynamic-views-tag-color-value: var(--text-muted);
+body.dynamic-views-tag-color-muted:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-muted);
 }
-body.dynamic-views-tag-color-normal {
-  --dynamic-views-tag-color-value: var(--text-normal);
+body.dynamic-views-tag-color-normal:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-normal);
 }
+
 body.dynamic-views-tag-color-accent {
   --dynamic-views-tag-color-value: var(--text-accent);
 }
@@ -5594,6 +5811,13 @@ body.dynamic-views-tag-color-custom {
     --dynamic-views-tag-color-custom,
     var(--text-faint)
   );
+}
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--dynamic-views-tag-color-custom, var(--text-faint));
 }
 
 /* Tag color application (skip when using theme styling) */
@@ -5990,16 +6214,23 @@ body.dynamic-views-property-label-small-caps
   font-variant: small-caps;
 }
 
-/* Property label color presets - value definitions */
-body.dynamic-views-property-label-color-faint {
-  --dynamic-views-prop-label-color-value: var(--text-faint);
+/* Property label color presets - semantic colors applied at element level for ambient compatibility */
+body.dynamic-views-property-label-color-faint
+  .dynamic-views
+  :is(.property-label, .property-label-inline) {
+  color: var(--text-faint);
 }
-body.dynamic-views-property-label-color-muted {
-  --dynamic-views-prop-label-color-value: var(--text-muted);
+body.dynamic-views-property-label-color-muted
+  .dynamic-views
+  :is(.property-label, .property-label-inline) {
+  color: var(--text-muted);
 }
-body.dynamic-views-property-label-color-normal {
-  --dynamic-views-prop-label-color-value: var(--text-normal);
+body.dynamic-views-property-label-color-normal
+  .dynamic-views
+  :is(.property-label, .property-label-inline) {
+  color: var(--text-normal);
 }
+
 body.dynamic-views-property-label-color-accent {
   --dynamic-views-prop-label-color-value: var(--text-accent);
 }
@@ -6033,22 +6264,35 @@ body.dynamic-views-property-label-color-custom {
     var(--text-faint)
   );
 }
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-property-label-color-custom
+  .dynamic-views
+  :is(.property-label, .property-label-inline) {
+  color: var(--dynamic-views-property-label-color-custom, var(--text-faint));
+}
 
 /* Property label color application */
 .dynamic-views :is(.property-label, .property-label-inline) {
   color: var(--dynamic-views-prop-label-color-value, var(--text-faint));
 }
 
-/* Property text color presets - with labels - value definitions */
-body.dynamic-views-property-color-with-labels-faint {
-  --dynamic-views-prop-with-label-color-value: var(--text-faint);
+/* Property text color presets - with labels - semantic colors for ambient compatibility */
+body.dynamic-views-property-color-with-labels-faint
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
+  color: var(--text-faint);
 }
-body.dynamic-views-property-color-with-labels-muted {
-  --dynamic-views-prop-with-label-color-value: var(--text-muted);
+body.dynamic-views-property-color-with-labels-muted
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
+  color: var(--text-muted);
 }
-body.dynamic-views-property-color-with-labels-normal {
-  --dynamic-views-prop-with-label-color-value: var(--text-normal);
+body.dynamic-views-property-color-with-labels-normal
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
+  color: var(--text-normal);
 }
+
 body.dynamic-views-property-color-with-labels-accent {
   --dynamic-views-prop-with-label-color-value: var(--text-accent);
 }
@@ -6082,6 +6326,15 @@ body.dynamic-views-property-color-with-labels-custom {
     var(--text-faint)
   );
 }
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-property-color-with-labels-custom
+  .dynamic-views
+  .property-field:has(:is(.property-label, .property-label-inline)) {
+  color: var(
+    --dynamic-views-property-color-with-labels-custom,
+    var(--text-faint)
+  );
+}
 
 /* Property text color application - with labels */
 .dynamic-views
@@ -6089,16 +6342,23 @@ body.dynamic-views-property-color-with-labels-custom {
   color: var(--dynamic-views-prop-with-label-color-value, var(--text-faint));
 }
 
-/* Property text color presets - without labels - value definitions */
-body.dynamic-views-property-color-without-labels-faint {
-  --dynamic-views-prop-no-label-color-value: var(--text-faint);
+/* Property text color presets - without labels - semantic colors for ambient compatibility */
+body.dynamic-views-property-color-without-labels-faint
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-faint);
 }
-body.dynamic-views-property-color-without-labels-muted {
-  --dynamic-views-prop-no-label-color-value: var(--text-muted);
+body.dynamic-views-property-color-without-labels-muted
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-muted);
 }
-body.dynamic-views-property-color-without-labels-normal {
-  --dynamic-views-prop-no-label-color-value: var(--text-normal);
+body.dynamic-views-property-color-without-labels-normal
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(--text-normal);
 }
+
 body.dynamic-views-property-color-without-labels-accent {
   --dynamic-views-prop-no-label-color-value: var(--text-accent);
 }
@@ -6132,6 +6392,15 @@ body.dynamic-views-property-color-without-labels-custom {
     var(--text-faint)
   );
 }
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-property-color-without-labels-custom
+  .dynamic-views
+  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  color: var(
+    --dynamic-views-property-color-without-labels-custom,
+    var(--text-faint)
+  );
+}
 
 /* Property text color application - without labels */
 .dynamic-views
@@ -6153,16 +6422,17 @@ body.dynamic-views-property-color-without-labels-custom {
   color: var(--link-external-color-hover);
 }
 
-/* Subtitle color presets - value definitions (faint is default) */
-body.dynamic-views-subtitle-color-faint {
-  --dynamic-views-subtitle-color-value: var(--text-faint);
+/* Subtitle color presets - semantic colors applied at element level for ambient compatibility */
+body.dynamic-views-subtitle-color-faint .dynamic-views .card-subtitle {
+  color: var(--text-faint);
 }
-body.dynamic-views-subtitle-color-muted {
-  --dynamic-views-subtitle-color-value: var(--text-muted);
+body.dynamic-views-subtitle-color-muted .dynamic-views .card-subtitle {
+  color: var(--text-muted);
 }
-body.dynamic-views-subtitle-color-normal {
-  --dynamic-views-subtitle-color-value: var(--text-normal);
+body.dynamic-views-subtitle-color-normal .dynamic-views .card-subtitle {
+  color: var(--text-normal);
 }
+
 body.dynamic-views-subtitle-color-accent {
   --dynamic-views-subtitle-color-value: var(--text-accent);
 }
@@ -6196,22 +6466,27 @@ body.dynamic-views-subtitle-color-custom {
     var(--text-faint)
   );
 }
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-subtitle-color-custom .dynamic-views .card-subtitle {
+  color: var(--dynamic-views-subtitle-color-custom, var(--text-faint));
+}
 
 /* Subtitle color application */
 .dynamic-views .card-subtitle {
   color: var(--dynamic-views-subtitle-color-value, var(--text-faint));
 }
 
-/* Text preview color presets - value definitions (muted is default) */
-body.dynamic-views-text-preview-color-faint {
-  --dynamic-views-text-preview-color-value: var(--text-faint);
+/* Text preview color presets - semantic colors applied at element level for ambient compatibility */
+body.dynamic-views-text-preview-color-faint .dynamic-views .card-text-preview {
+  color: var(--text-faint);
 }
-body.dynamic-views-text-preview-color-muted {
-  --dynamic-views-text-preview-color-value: var(--text-muted);
+body.dynamic-views-text-preview-color-muted .dynamic-views .card-text-preview {
+  color: var(--text-muted);
 }
-body.dynamic-views-text-preview-color-normal {
-  --dynamic-views-text-preview-color-value: var(--text-normal);
+body.dynamic-views-text-preview-color-normal .dynamic-views .card-text-preview {
+  color: var(--text-normal);
 }
+
 body.dynamic-views-text-preview-color-accent {
   --dynamic-views-text-preview-color-value: var(--text-accent);
 }
@@ -6245,6 +6520,10 @@ body.dynamic-views-text-preview-color-custom {
     var(--text-muted)
   );
 }
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-text-preview-color-custom .dynamic-views .card-text-preview {
+  color: var(--dynamic-views-text-preview-color-custom, var(--text-muted));
+}
 
 /* Text preview color application */
 .dynamic-views .card-text-preview {
@@ -6254,13 +6533,17 @@ body.dynamic-views-text-preview-color-custom {
   );
 }
 
-/* Title color presets - value definitions (normal is default) */
-body.dynamic-views-title-color-faint {
-  --dynamic-views-title-color-value: var(--text-faint);
+/* Title color presets - semantic colors applied at element level for ambient compatibility */
+body.dynamic-views-title-color-faint .dynamic-views .card-title {
+  --dynamic-views-title-color: var(--text-faint);
 }
-body.dynamic-views-title-color-muted {
-  --dynamic-views-title-color-value: var(--text-muted);
+body.dynamic-views-title-color-muted .dynamic-views .card-title {
+  --dynamic-views-title-color: var(--text-muted);
 }
+body.dynamic-views-title-color-normal .dynamic-views .card-title {
+  --dynamic-views-title-color: var(--text-normal);
+}
+
 body.dynamic-views-title-color-accent {
   --dynamic-views-title-color-value: var(--text-accent);
 }
@@ -6290,6 +6573,13 @@ body.dynamic-views-title-color-pink {
 }
 body.dynamic-views-title-color-custom {
   --dynamic-views-title-color-value: var(
+    --dynamic-views-title-color-custom,
+    var(--text-normal)
+  );
+}
+/* Custom fallback with ambient compatibility */
+body.dynamic-views-title-color-custom .dynamic-views .card-title {
+  --dynamic-views-title-color: var(
     --dynamic-views-title-color-custom,
     var(--text-normal)
   );

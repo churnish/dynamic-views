@@ -253,10 +253,14 @@ export function initializeScrollGradients(container: HTMLElement): void {
 
   fields.forEach((field) => {
     // Skip side-by-side fields that haven't been measured yet
+    // (unless in compact mode where measurement isn't needed)
     const row = field.closest(".property-set");
     const isSideBySide = row?.classList.contains("property-set-sidebyside");
     const isMeasured = row?.classList.contains("property-measured");
-    if (isSideBySide && !isMeasured) return;
+    const isCompact = field
+      .closest(".card")
+      ?.classList.contains("compact-mode");
+    if (isSideBySide && !isMeasured && !isCompact) return;
 
     // Get cached refs or query and cache
     let wrapper = wrapperCache.get(field);

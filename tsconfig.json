@@ -17,5 +17,5 @@
     "lib": ["DOM", "ES5", "ES6", "ES7"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "tests"]
+  "exclude": ["node_modules", "tests", "archive"]
 }

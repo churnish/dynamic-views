@@ -9,6 +9,8 @@ import {
   isCardBackgroundAmbient,
   isCoverBackgroundAmbient,
   getCardAmbientOpacity,
+  isBackdropTintDisabled,
+  isBackdropAdaptiveTextEnabled,
 } from "../utils/style-settings";
 import { isExternalOrBlobUrl } from "../utils/image";
 import { cacheExternalImage } from "./slideshow";
@@ -134,6 +136,7 @@ export function applyCachedImageMetadata(
   imageEmbedContainer: HTMLElement,
   cardEl: HTMLElement,
   isCoverImage?: boolean,
+  isBackdropImage?: boolean,
 ): void {
   const cached = imageMetadataCache.get(imgSrc);
   if (!cached) return;
@@ -151,6 +154,17 @@ export function applyCachedImageMetadata(
       isCover,
     );
   }
+
+  // Apply cached backdrop theme for luminance-based adaptive text
+  if (
+    isBackdropImage &&
+    cached.theme &&
+    isBackdropTintDisabled() &&
+    isBackdropAdaptiveTextEnabled()
+  ) {
+    cardEl.setAttribute("data-backdrop-theme", cached.theme);
+  }
+
   if (cached.aspectRatio !== undefined) {
     cardEl.style.setProperty(
       "--actual-aspect-ratio",
@@ -170,6 +184,7 @@ export function applyCachedImageMetadata(
  * @param cardEl - The card element
  * @param onLayoutUpdate - Optional callback to trigger layout update (for masonry)
  * @param isCoverImage - Pre-computed cover check to avoid DOM query
+ * @param isBackdropImage - Whether this is a backdrop image (for luminance-based adaptive text)
  */
 export function handleImageLoad(
   imgEl: HTMLImageElement,
@@ -177,6 +192,7 @@ export function handleImageLoad(
   cardEl: HTMLElement,
   onLayoutUpdate?: (() => void) | null,
   isCoverImage?: boolean,
+  isBackdropImage?: boolean,
 ): void {
   // Guard against null/empty src
   if (!imgEl.src) return;
@@ -203,7 +219,13 @@ export function handleImageLoad(
   const needsAmbient =
     isCardBackgroundAmbient() || (isCover && isCoverBackgroundAmbient());
 
-  if (needsAmbient) {
+  // Backdrop needs luminance when tint is disabled (for adaptive text based on image)
+  const needsBackdropLuminance =
+    isBackdropImage &&
+    isBackdropTintDisabled() &&
+    isBackdropAdaptiveTextEnabled();
+
+  if (needsAmbient || needsBackdropLuminance) {
     // Skip external images - most servers don't support CORS, and attempting
     // to reload with crossOrigin causes noisy browser console errors
     if (!isExternalOrBlobUrl(imgEl.src)) {
@@ -240,6 +262,14 @@ export function handleImageLoad(
   } else if (needsAmbient && isExternalOrBlobUrl(imgEl.src)) {
     // Clear ambient styles for external images (e.g., slideshow switching from local to external)
     clearAmbientStyles(imageEmbedContainer, cardEl);
+  }
+
+  // Apply backdrop theme for luminance-based adaptive text (when tint is disabled)
+  if (isBackdropImage && colorTheme && needsBackdropLuminance) {
+    cardEl.setAttribute("data-backdrop-theme", colorTheme);
+  } else if (isBackdropImage && isExternalOrBlobUrl(imgEl.src)) {
+    // Clear backdrop theme for external images
+    cardEl.removeAttribute("data-backdrop-theme");
   }
 
   // Set actual aspect ratio for masonry contain mode (used when "Fixed cover height" is OFF)
@@ -354,14 +384,26 @@ export function handleJsxImageRef(
   const cardEl = imgEl.closest(".card");
   if (!cardEl || !(cardEl instanceof HTMLElement)) return;
 
-  const imageEmbedEl = imgEl.closest(".dynamic-views-image-embed");
+  // Check for backdrop image (in .card-backdrop container)
+  const backdropEl = imgEl.closest(".card-backdrop");
+  const isBackdropImage = !!backdropEl;
+
+  // Get container - backdrop or image embed
+  const imageEmbedEl =
+    backdropEl ?? imgEl.closest(".dynamic-views-image-embed");
   if (!imageEmbedEl || !(imageEmbedEl instanceof HTMLElement)) return;
 
   const isCoverImage = cardEl.classList.contains("image-format-cover");
 
   // Apply cached metadata immediately to prevent flash on re-render
   if (imgEl.src && !cardEl.classList.contains("cover-ready")) {
-    applyCachedImageMetadata(imgEl.src, imageEmbedEl, cardEl, isCoverImage);
+    applyCachedImageMetadata(
+      imgEl.src,
+      imageEmbedEl,
+      cardEl,
+      isCoverImage,
+      isBackdropImage,
+    );
   }
 
   // Handle already-loaded images
@@ -377,6 +419,7 @@ export function handleJsxImageRef(
       cardEl,
       updateLayoutRef.current,
       isCoverImage,
+      isBackdropImage,
     );
   }
 }
@@ -400,7 +443,13 @@ export function handleJsxImageLoad(
   )
     return;
 
-  const imageEmbedEl = imgEl.closest(".dynamic-views-image-embed");
+  // Check for backdrop image (in .card-backdrop container)
+  const backdropEl = imgEl.closest(".card-backdrop");
+  const isBackdropImage = !!backdropEl;
+
+  // Get container - backdrop or image embed
+  const imageEmbedEl =
+    backdropEl ?? imgEl.closest(".dynamic-views-image-embed");
   if (!imageEmbedEl || !(imageEmbedEl instanceof HTMLElement)) return;
 
   const isCoverImage = cardEl.classList.contains("image-format-cover");
@@ -410,6 +459,7 @@ export function handleJsxImageLoad(
     cardEl,
     updateLayoutRef.current,
     isCoverImage,
+    isBackdropImage,
   );
 }
 

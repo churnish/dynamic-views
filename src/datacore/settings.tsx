@@ -310,19 +310,22 @@ export function Settings({
             </div>
             <select
               value={(() => {
+                if (settings.imageFormat === "none") return "none";
+                if (settings.imageFormat === "background") return "background";
                 const imageFormatParts = settings.imageFormat.split("-");
-                return settings.imageFormat === "none"
-                  ? "none"
-                  : (imageFormatParts[0] as "thumbnail" | "cover");
+                return imageFormatParts[0] as "thumbnail" | "cover";
               })()}
               onChange={(e: unknown) => {
                 const evt = e as Event & { target: HTMLSelectElement };
                 const newFormat = evt.target.value;
-                if (newFormat === "none") {
-                  onSettingsChange({ imageFormat: "none" });
+                if (newFormat === "none" || newFormat === "background") {
+                  onSettingsChange({
+                    imageFormat: newFormat as typeof settings.imageFormat,
+                  });
                 } else {
                   const currentPosition =
-                    settings.imageFormat === "none"
+                    settings.imageFormat === "none" ||
+                    settings.imageFormat === "background"
                       ? "right"
                       : settings.imageFormat.split("-")[1] || "right";
                   onSettingsChange({
@@ -335,41 +338,45 @@ export function Settings({
             >
               <option value="thumbnail">Thumbnail</option>
               <option value="cover">Cover</option>
+              <option value="background">Backdrop</option>
               <option value="none">No image</option>
             </select>
           </div>
-          <div className="setting-item setting-item-dropdown">
-            <div className="setting-item-info">
-              <label>Position</label>
-            </div>
-            <select
-              value={(() => {
-                const position = settings.imageFormat.split("-")[1] as
-                  | "left"
-                  | "right"
-                  | "top"
-                  | "bottom"
-                  | undefined;
-                return position || "right";
-              })()}
-              onChange={(e: unknown) => {
-                const evt = e as Event & { target: HTMLSelectElement };
-                const currentFormat = settings.imageFormat.split("-")[0] as
-                  | "thumbnail"
-                  | "cover";
-                onSettingsChange({
-                  imageFormat:
-                    `${currentFormat}-${evt.target.value}` as typeof settings.imageFormat,
-                });
-              }}
-              className="dropdown"
-            >
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-              <option value="top">Top</option>
-              <option value="bottom">Bottom</option>
-            </select>
-          </div>
+          {settings.imageFormat !== "none" &&
+            settings.imageFormat !== "background" && (
+              <div className="setting-item setting-item-dropdown">
+                <div className="setting-item-info">
+                  <label>Position</label>
+                </div>
+                <select
+                  value={(() => {
+                    const position = settings.imageFormat.split("-")[1] as
+                      | "left"
+                      | "right"
+                      | "top"
+                      | "bottom"
+                      | undefined;
+                    return position || "right";
+                  })()}
+                  onChange={(e: unknown) => {
+                    const evt = e as Event & { target: HTMLSelectElement };
+                    const currentFormat = settings.imageFormat.split("-")[0] as
+                      | "thumbnail"
+                      | "cover";
+                    onSettingsChange({
+                      imageFormat:
+                        `${currentFormat}-${evt.target.value}` as typeof settings.imageFormat,
+                    });
+                  }}
+                  className="dropdown"
+                >
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                  <option value="top">Top</option>
+                  <option value="bottom">Bottom</option>
+                </select>
+              </div>
+            )}
           {renderTextInput(
             "Image property",
             "imageProperty",

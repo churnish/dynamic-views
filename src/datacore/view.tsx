@@ -654,7 +654,7 @@ export function View({
     let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
     const updateRef = core.on("update", () => {
       if (debounceTimeout) clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(runQuery, 150);
+      debounceTimeout = setTimeout(runQuery, 500);
     });
     return () => {
       if (debounceTimeout) clearTimeout(debounceTimeout);

@@ -275,7 +275,7 @@ export function isThumbnailScrubbingDisabled(): boolean {
 export function isCardBackgroundAmbient(): boolean {
   return (
     hasBodyClass("dynamic-views-ambient-bg-subtle") ||
-    hasBodyClass("dynamic-views-ambient-bg-dramatic")
+    hasBodyClass("dynamic-views-adaptive-text")
   );
 }
 
@@ -284,7 +284,7 @@ export function isCardBackgroundAmbient(): boolean {
  * Returns 0.17 for subtle, 0.9 for dramatic
  */
 export function getCardAmbientOpacity(): number {
-  if (hasBodyClass("dynamic-views-ambient-bg-dramatic")) {
+  if (hasBodyClass("dynamic-views-adaptive-text")) {
     return 0.9;
   }
   return 0.17; // Default for subtle or cover background
@@ -295,6 +295,22 @@ export function getCardAmbientOpacity(): number {
  */
 export function isCoverBackgroundAmbient(): boolean {
   return hasBodyClass("dynamic-views-cover-bg-ambient");
+}
+
+/**
+ * Check if backdrop overlay tint is disabled
+ * When disabled, luminance detection determines adaptive text colors
+ */
+export function isBackdropTintDisabled(): boolean {
+  return hasBodyClass("dynamic-views-backdrop-theme-disable");
+}
+
+/**
+ * Check if backdrop adaptive text is enabled (default: ON)
+ * Returns true when the "disable" toggle is NOT set
+ */
+export function isBackdropAdaptiveTextEnabled(): boolean {
+  return !hasBodyClass("dynamic-views-backdrop-no-adaptive-text");
 }
 
 /**
@@ -335,7 +351,7 @@ export function setupStyleSettingsObserver(
   const ambientClasses = [
     "dynamic-views-ambient-bg-off",
     "dynamic-views-ambient-bg-subtle",
-    "dynamic-views-ambient-bg-dramatic",
+    "dynamic-views-adaptive-text",
   ];
 
   // Observer for body class changes (Style Settings class-toggle settings)

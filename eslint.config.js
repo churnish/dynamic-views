@@ -16,6 +16,7 @@ export default [
       "jest.config.cjs",
       "tests/**",
       "coverage/**",
+      "archive/**",
     ],
   },
 

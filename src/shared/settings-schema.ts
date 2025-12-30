@@ -83,6 +83,7 @@ export function getBasesViewOptions(): any[] {
           options: {
             thumbnail: "Thumbnail",
             cover: "Cover",
+            background: "Backdrop",
             none: "No image",
           },
           default: "thumbnail",
@@ -482,6 +483,7 @@ export function readBasesSettings(
     const position = config.get("imagePosition");
 
     if (format === "none") return "none";
+    if (format === "background") return "background";
 
     // Combine format + position (e.g., "cover" + "top" → "cover-top")
     if (

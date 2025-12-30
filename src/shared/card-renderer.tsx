@@ -1459,11 +1459,13 @@ function Card({
 
   // Parse imageFormat to extract format and position
   const imageFormat = settings.imageFormat;
-  let format: "none" | "thumbnail" | "cover" = "none";
+  let format: "none" | "thumbnail" | "cover" | "background" = "none";
   let position: "left" | "right" | "top" | "bottom" = "right";
 
   if (imageFormat === "none") {
     format = "none";
+  } else if (imageFormat === "background") {
+    format = "background";
   } else if (imageFormat.startsWith("thumbnail-")) {
     format = "thumbnail";
     position = imageFormat.split("-")[1] as "left" | "right" | "top" | "bottom";
@@ -1482,6 +1484,8 @@ function Card({
     cardClasses.push("image-format-thumbnail");
     cardClasses.push(`card-thumbnail-${position}`);
     cardClasses.push(`card-thumbnail-${settings.imageFit}`);
+  } else if (format === "background") {
+    cardClasses.push("image-format-backdrop");
   }
 
   // Drag handler for card-level drag (reuses shared utility)
@@ -1914,6 +1918,21 @@ function Card({
           ) : (
             <div className="card-cover-placeholder"></div>
           )}
+        </div>
+      )}
+
+      {/* Background: absolute-positioned image fills entire card */}
+      {format === "background" && imageArray.length > 0 && (
+        <div className="card-backdrop">
+          <img
+            src={imageArray[0] || ""}
+            alt=""
+            ref={(imgEl: HTMLImageElement | null) =>
+              handleJsxImageRef(imgEl, updateLayoutRef)
+            }
+            onLoad={(e: Event) => handleJsxImageLoad(e, updateLayoutRef)}
+            onError={(e: Event) => handleJsxImageError(e, updateLayoutRef)}
+          />
         </div>
       )}
 

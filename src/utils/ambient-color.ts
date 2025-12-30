@@ -17,7 +17,7 @@ const RGB_REGEX = /rgba?\((\d+),\s*(\d+),\s*(\d+)/;
 
 // Luminance threshold for light/dark theme detection
 // Values above this are considered "light" backgrounds
-export const LUMINANCE_LIGHT_THRESHOLD = 0.33;
+export const LUMINANCE_LIGHT_THRESHOLD = 0.333;
 
 /**
  * Convert RGB tuple to CSS rgb() string

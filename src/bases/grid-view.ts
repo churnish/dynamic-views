@@ -15,6 +15,7 @@ import {
   getMinGridColumns,
   getCardSpacing,
   clearStyleSettingsCache,
+  getCompactBreakpoint,
 } from "../utils/style-settings";
 import { initializeScrollGradients } from "../shared/scroll-gradient";
 import {
@@ -86,6 +87,7 @@ export class DynamicViewsCardView extends BasesView {
     abortController: null,
     lastRenderHash: "",
     lastSettingsHash: null,
+    lastMtimes: new Map(),
   };
   private lastGroup: LastGroupState = { key: undefined, container: null };
   private scrollThrottle: ScrollThrottleState = {
@@ -289,12 +291,42 @@ export class DynamicViewsCardView extends BasesView {
         ? this.config.groupBy?.property
         : undefined;
       const settingsHash = JSON.stringify(settings);
+      // Include mtime in hash so content changes trigger updates
       const renderHash =
-        allEntries.map((e: BasesEntry) => e.file.path).join("\0") +
+        allEntries
+          .map((e: BasesEntry) => `${e.file.path}:${e.file.stat.mtime}`)
+          .join("\0") +
         "\0\0" +
         settingsHash +
         "\0\0" +
         (groupByProperty ?? "");
+
+      // Detect files with changed content (mtime changed but paths unchanged)
+      const changedPaths = new Set<string>();
+      const currentPaths = allEntries
+        .map((e) => e.file.path)
+        .sort()
+        .join("\0");
+      const lastPaths = Array.from(this.renderState.lastMtimes.keys())
+        .sort()
+        .join("\0");
+      const pathsUnchanged = currentPaths === lastPaths;
+
+      for (const entry of allEntries) {
+        const path = entry.file.path;
+        const mtime = entry.file.stat.mtime;
+        const lastMtime = this.renderState.lastMtimes.get(path);
+        if (lastMtime !== undefined && lastMtime !== mtime) {
+          changedPaths.add(path);
+        }
+      }
+
+      // Update mtime tracking
+      this.renderState.lastMtimes.clear();
+      for (const entry of allEntries) {
+        this.renderState.lastMtimes.set(entry.file.path, entry.file.stat.mtime);
+      }
+
       if (
         renderHash === this.renderState.lastRenderHash &&
         this.feedContainerRef.current?.children.length
@@ -311,11 +343,20 @@ export class DynamicViewsCardView extends BasesView {
       // Calculate initial count for comparison and first render
       const initialCount = this.calculateInitialCount(settings);
 
-      // Reset to initial batch if settings changed AND infinite scroll has appended batches
-      // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
+      // Check if settings changed (for cache clearing and in-place update logic)
       const settingsChanged =
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
+
+      // If only content changed (not paths/settings), update in-place
+      if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {
+        await this.updateCardsInPlace(changedPaths, allEntries, settings);
+        this.renderState.lastRenderHash = renderHash;
+        return;
+      }
+
+      // Reset to initial batch if settings changed AND infinite scroll has appended batches
+      // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
       if (settingsChanged) {
         this.contentCache.textPreviews = {};
         this.contentCache.images = {};
@@ -430,6 +471,16 @@ export class DynamicViewsCardView extends BasesView {
       this.focusCleanup?.();
       this.focusCleanup = initializeContainerFocus(feedEl);
 
+      // DEBUG: trace focus (document level to catch all)
+      document.addEventListener("focusin", (e) => {
+        const target = e.target as HTMLElement;
+        console.log(
+          "[focusin] target:",
+          target.tagName,
+          target.className?.slice?.(0, 50),
+        );
+      });
+
       // Clear CSS variable cache to pick up any style changes
       // (prevents layout thrashing from repeated getComputedStyle calls per card)
       clearStyleSettingsCache();
@@ -490,7 +541,25 @@ export class DynamicViewsCardView extends BasesView {
       this.previousDisplayedCount = displayedSoFar;
 
       // Batch-initialize scroll gradients and title truncation after all cards rendered
-      // (avoids layout thrashing from per-card measurements)
+      // Sync responsive classes before gradient init (ResizeObservers are async)
+      const compactBreakpoint = getCompactBreakpoint();
+      if (compactBreakpoint > 0) {
+        feedEl.querySelectorAll<HTMLElement>(".card").forEach((card) => {
+          // Read all widths before writes to avoid layout thrashing
+          const cardWidth = card.offsetWidth;
+          if (cardWidth === 0) return; // Skip unmeasured cards
+          const thumb = card.querySelector<HTMLElement>(".card-thumbnail");
+          const thumbWidth = thumb?.offsetWidth ?? 0;
+
+          card.classList.toggle("compact-mode", cardWidth < compactBreakpoint);
+          if (thumb && thumbWidth > 0) {
+            card.classList.toggle(
+              "thumbnail-stack",
+              cardWidth < thumbWidth * 3,
+            );
+          }
+        });
+      }
       initializeScrollGradients(feedEl);
       initializeTitleTruncation(feedEl);
 
@@ -589,6 +658,49 @@ export class DynamicViewsCardView extends BasesView {
         this.focusState.hoveredEl = null;
       },
     });
+  }
+
+  /** Update only changed cards in-place without full re-render */
+  private async updateCardsInPlace(
+    changedPaths: Set<string>,
+    allEntries: BasesEntry[],
+    settings: Settings,
+  ): Promise<void> {
+    // Clear cache for changed files only
+    for (const path of changedPaths) {
+      delete this.contentCache.textPreviews[path];
+      delete this.contentCache.images[path];
+      delete this.contentCache.hasImageAvailable[path];
+    }
+
+    // Load fresh content for changed files
+    const changedEntries = allEntries.filter((e) =>
+      changedPaths.has(e.file.path),
+    );
+    await loadContentForEntries(
+      changedEntries,
+      settings,
+      this.app,
+      this.contentCache.textPreviews,
+      this.contentCache.images,
+      this.contentCache.hasImageAvailable,
+    );
+
+    // Update each changed card's DOM
+    for (const path of changedPaths) {
+      const cardEl = this.containerEl.querySelector<HTMLElement>(
+        `[data-path="${CSS.escape(path)}"]`,
+      );
+      if (!cardEl) continue;
+
+      // Update text preview
+      const previewEl = cardEl.querySelector(".card-text-preview");
+      if (previewEl) {
+        previewEl.textContent = this.contentCache.textPreviews[path] || "";
+      }
+    }
+
+    // Grid: CSS auto-handles row height changes, no relayout needed
   }
 
   private async appendBatch(totalEntries: number): Promise<void> {
@@ -761,6 +873,30 @@ export class DynamicViewsCardView extends BasesView {
 
     // Batch-initialize scroll gradients and title truncation for newly rendered cards
     if (this.feedContainerRef.current) {
+      // Sync responsive classes before gradient init (ResizeObservers are async)
+      const compactBreakpoint = getCompactBreakpoint();
+      if (compactBreakpoint > 0) {
+        this.feedContainerRef.current
+          .querySelectorAll<HTMLElement>(".card")
+          .forEach((card) => {
+            // Read all widths before writes to avoid layout thrashing
+            const cardWidth = card.offsetWidth;
+            if (cardWidth === 0) return; // Skip unmeasured cards
+            const thumb = card.querySelector<HTMLElement>(".card-thumbnail");
+            const thumbWidth = thumb?.offsetWidth ?? 0;
+
+            card.classList.toggle(
+              "compact-mode",
+              cardWidth < compactBreakpoint,
+            );
+            if (thumb && thumbWidth > 0) {
+              card.classList.toggle(
+                "thumbnail-stack",
+                cardWidth < thumbWidth * 3,
+              );
+            }
+          });
+      }
       initializeScrollGradients(this.feedContainerRef.current);
       initializeTitleTruncation(this.feedContainerRef.current);
     }

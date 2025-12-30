@@ -40,6 +40,7 @@ export interface Settings {
   propertyLabels: "hide" | "inline" | "above";
   imageFormat:
     | "none"
+    | "background"
     | "thumbnail-left"
     | "thumbnail-right"
     | "thumbnail-top"
@@ -116,6 +117,7 @@ export interface DefaultViewSettings {
   fallbackToEmbeds: "always" | "if-empty" | "never";
   imageFormat:
     | "none"
+    | "background"
     | "thumbnail-left"
     | "thumbnail-right"
     | "thumbnail-top"
@@ -166,6 +168,7 @@ export interface RenderState {
   abortController: AbortController | null;
   lastRenderHash: string;
   lastSettingsHash: string | null;
+  lastMtimes: Map<string, number>;
 }
 
 /** Group tracking for batch append */

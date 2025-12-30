@@ -40,7 +40,15 @@ import {
   getSlideshowMaxImages,
   getUrlIcon,
   getCompactBreakpoint,
+  isBackdropTintDisabled,
+  isBackdropAdaptiveTextEnabled,
 } from "../utils/style-settings";
+import {
+  extractDominantColor,
+  calculateLuminanceFromTuple,
+  LUMINANCE_LIGHT_THRESHOLD,
+} from "../utils/ambient-color";
+import { isExternalOrBlobUrl } from "../utils/image";
 import { getPropertyLabel, normalizePropertyName } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import {
@@ -431,10 +439,12 @@ export class SharedCardRenderer {
 
     // Parse imageFormat to extract format and position
     const imageFormat = settings.imageFormat;
-    let format: "none" | "thumbnail" | "cover" = "none";
+    let format: "none" | "thumbnail" | "cover" | "background" = "none";
     let position: "left" | "right" | "top" | "bottom" = "right";
 
-    if (imageFormat.startsWith("thumbnail-")) {
+    if (imageFormat === "background") {
+      format = "background";
+    } else if (imageFormat.startsWith("thumbnail-")) {
       format = "thumbnail";
       position = imageFormat.split("-")[1] as "left" | "right";
     } else if (imageFormat.startsWith("cover-")) {
@@ -451,6 +461,8 @@ export class SharedCardRenderer {
       cardEl.classList.add("image-format-cover");
     } else if (format === "thumbnail") {
       cardEl.classList.add("image-format-thumbnail");
+    } else if (format === "background") {
+      cardEl.classList.add("image-format-backdrop");
     }
 
     // Add position class
@@ -537,6 +549,7 @@ export class SharedCardRenderer {
       cardEl.addEventListener(
         "keydown",
         (e) => {
+          console.log("[keydown]", e.key, "on card", keyboardNav.index);
           if (e.key === "Enter" || e.key === " ") {
             // Open file (Mod+key handled by scope above)
             if (!e.metaKey && !e.ctrlKey) {
@@ -1025,6 +1038,40 @@ export class SharedCardRenderer {
           this.propertyObservers.push(resizeObserver);
         });
       }
+    }
+
+    // BACKGROUND: absolute-positioned image fills entire card
+    if (format === "background" && hasImage) {
+      const bgWrapper = cardEl.createDiv("card-backdrop");
+      const img = bgWrapper.createEl("img", {
+        attr: { src: imageUrls[0], alt: "" },
+      });
+      img.addEventListener(
+        "load",
+        () => {
+          // Extract luminance for adaptive text when tint is disabled
+          if (isBackdropTintDisabled() && isBackdropAdaptiveTextEnabled()) {
+            if (!isExternalOrBlobUrl(img.src)) {
+              const rgb = extractDominantColor(img);
+              if (rgb) {
+                const luminance = calculateLuminanceFromTuple(rgb);
+                const theme =
+                  luminance > LUMINANCE_LIGHT_THRESHOLD ? "light" : "dark";
+                cardEl.setAttribute("data-backdrop-theme", theme);
+              }
+            }
+          }
+          this.updateLayoutRef.current?.();
+        },
+        { signal },
+      );
+      img.addEventListener(
+        "error",
+        () => {
+          this.updateLayoutRef.current?.();
+        },
+        { signal },
+      );
     }
 
     // Determine if card-content will have children
