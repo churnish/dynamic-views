@@ -23,40 +23,135 @@ import {
 import type { Settings, DefaultViewSettings } from "../types";
 import { DEFAULT_VIEW_SETTINGS } from "../constants";
 
-// Bases config interface for initialization
+// Bases config interface for initialization (get/set only - getAll handled by tryGetAllConfig)
 interface BasesConfigInit {
   get(key: string): unknown;
   set(key: string, value: unknown): void;
-  getAll(): Record<string, unknown>;
 }
+
+/** Marker key for initialized views - plugin-scoped to avoid collisions */
+const INIT_MARKER = "_dynamic-views-initialized";
+
+/**
+ * Safely get all config keys, validating structure
+ * Returns config keys object if valid, null otherwise
+ * Used to safely access Obsidian's undocumented config.getAll()
+ */
+export function tryGetAllConfig(
+  config: unknown,
+): Record<string, unknown> | null {
+  if (
+    typeof config !== "object" ||
+    config === null ||
+    !("getAll" in config) ||
+    typeof (config as Record<string, unknown>).getAll !== "function"
+  ) {
+    return null;
+  }
+
+  try {
+    const result = (config as { getAll: () => unknown }).getAll();
+    // Validate result is a plain object (not null, array, or other object types)
+    if (
+      result !== null &&
+      typeof result === "object" &&
+      !Array.isArray(result)
+    ) {
+      return result as Record<string, unknown>;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Safely set config value with error handling
+ */
+function safeConfigSet(
+  config: BasesConfigInit,
+  key: string,
+  value: unknown,
+): void {
+  try {
+    config.set(key, value);
+  } catch (e) {
+    console.warn(`[dynamic-views] Failed to set config key "${key}":`, e);
+  }
+}
+
+/**
+ * Check if value needs to be set to empty string (cleared or invalid type)
+ */
+function needsEmptyString(value: unknown): boolean {
+  return value === undefined || typeof value !== "string";
+}
+
+/** All property display keys (1-14) for iteration */
+const PROPERTY_DISPLAY_KEYS = [
+  "propertyDisplay1",
+  "propertyDisplay2",
+  "propertyDisplay3",
+  "propertyDisplay4",
+  "propertyDisplay5",
+  "propertyDisplay6",
+  "propertyDisplay7",
+  "propertyDisplay8",
+  "propertyDisplay9",
+  "propertyDisplay10",
+  "propertyDisplay11",
+  "propertyDisplay12",
+  "propertyDisplay13",
+  "propertyDisplay14",
+] as const;
 
 /**
  * Initialize default property values for a new Bases view
  * Called once on view creation to persist defaults so clearing works correctly
+ *
+ * IMPORTANT: This function must run before readBasesSettings() to ensure
+ * defaults are persisted. If initialization fails, propertyDisplay fields
+ * fall back to "" (empty) in readBasesSettings.
+ *
+ * @param config - Bases config object with get/set methods
+ * @param allKeys - Pre-fetched config keys from tryGetAllConfig()
+ * @param defaults - Default view settings to apply
  */
 export function initializeViewDefaults(
   config: BasesConfigInit,
+  allKeys: Record<string, unknown>,
   defaults: DefaultViewSettings = DEFAULT_VIEW_SETTINGS,
 ): void {
-  const allKeys = config.getAll();
-
   // Check for initialization marker (persists even if user clears all settings)
-  if ("_dvInitialized" in allKeys) {
+  if (INIT_MARKER in allKeys) {
     // View was initialized before - persist cleared state as "" so it survives reload
     // (undefined doesn't persist to JSON, but "" does)
-    if (allKeys.propertyDisplay1 === undefined) {
-      config.set("propertyDisplay1", "");
-    }
-    if (allKeys.propertyDisplay2 === undefined) {
-      config.set("propertyDisplay2", "");
+    // Also handle corrupted values (non-string types)
+    for (const key of PROPERTY_DISPLAY_KEYS) {
+      if (needsEmptyString(allKeys[key])) {
+        safeConfigSet(config, key, "");
+      }
     }
     return;
   }
 
   // Fresh view - set defaults and marker
-  config.set("_dvInitialized", true);
-  config.set("propertyDisplay1", defaults.propertyDisplay1);
-  config.set("propertyDisplay2", defaults.propertyDisplay2);
+  // Only propertyDisplay1-2 have non-empty defaults; 3-14 default to ""
+  safeConfigSet(config, INIT_MARKER, true);
+  safeConfigSet(
+    config,
+    "propertyDisplay1",
+    defaults?.propertyDisplay1 ?? DEFAULT_VIEW_SETTINGS.propertyDisplay1,
+  );
+  safeConfigSet(
+    config,
+    "propertyDisplay2",
+    defaults?.propertyDisplay2 ?? DEFAULT_VIEW_SETTINGS.propertyDisplay2,
+  );
+  // Properties 3-14 default to "" (empty) - persist so clearing works
+  for (const key of PROPERTY_DISPLAY_KEYS.slice(2)) {
+    safeConfigSet(config, key, defaults?.[key] ?? "");
+  }
 }
 
 /** CSS selector for embedded view detection - centralized for maintainability */

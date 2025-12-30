@@ -39,6 +39,7 @@ import {
   serializeGroupKey,
   setGroupKeyDataset,
   initializeViewDefaults,
+  tryGetAllConfig,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -281,17 +282,20 @@ export class DynamicViewsCardView extends BasesView {
 
       // Initialize default property values for new views (before reading settings)
       // This persists defaults so clearing them works correctly
-      // Cast: Obsidian types lack getAll but runtime has it
-      const configWithGetAll = this.config as unknown as {
-        getAll?: () => Record<string, unknown>;
-      };
-      if (configWithGetAll?.getAll) {
-        initializeViewDefaults(
-          this.config as unknown as Parameters<
-            typeof initializeViewDefaults
-          >[0],
-          this.plugin.persistenceManager.getDefaultViewSettings(),
-        );
+      const allKeys = tryGetAllConfig(this.config);
+      if (allKeys) {
+        try {
+          initializeViewDefaults(
+            this.config,
+            allKeys,
+            this.plugin.persistenceManager.getDefaultViewSettings(),
+          );
+        } catch (e) {
+          console.warn(
+            "[dynamic-views] Failed to initialize view defaults:",
+            e,
+          );
+        }
       }
 
       // Read settings from Bases config (before hash check so we can include settings)
@@ -486,16 +490,6 @@ export class DynamicViewsCardView extends BasesView {
       // Initialize focus management on container (cleanup previous first)
       this.focusCleanup?.();
       this.focusCleanup = initializeContainerFocus(feedEl);
-
-      // DEBUG: trace focus (document level to catch all)
-      document.addEventListener("focusin", (e) => {
-        const target = e.target as HTMLElement;
-        console.log(
-          "[focusin] target:",
-          target.tagName,
-          target.className?.slice?.(0, 50),
-        );
-      });
 
       // Clear CSS variable cache to pick up any style changes
       // (prevents layout thrashing from repeated getComputedStyle calls per card)

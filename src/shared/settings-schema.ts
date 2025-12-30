@@ -524,36 +524,25 @@ export function readBasesSettings(
     })(),
 
     // Property display strings (1-14)
-    // Defaults are persisted on view creation, so undefined = cleared
+    // DEPENDENCY: initializeViewDefaults() must run before this to persist defaults.
+    // Fallback is "" (empty) because:
+    // - New views: initializeViewDefaults sets file.tags/file.mtime defaults for 1-2
+    // - Cleared fields: "" persists to JSON (undefined doesn't)
+    // - If init fails: shows empty (safe fallback, user can re-select)
     propertyDisplay1: getString("propertyDisplay1", ""),
     propertyDisplay2: getString("propertyDisplay2", ""),
-    propertyDisplay3: getString("propertyDisplay3", defaults.propertyDisplay3),
-    propertyDisplay4: getString("propertyDisplay4", defaults.propertyDisplay4),
-    propertyDisplay5: getString("propertyDisplay5", defaults.propertyDisplay5),
-    propertyDisplay6: getString("propertyDisplay6", defaults.propertyDisplay6),
-    propertyDisplay7: getString("propertyDisplay7", defaults.propertyDisplay7),
-    propertyDisplay8: getString("propertyDisplay8", defaults.propertyDisplay8),
-    propertyDisplay9: getString("propertyDisplay9", defaults.propertyDisplay9),
-    propertyDisplay10: getString(
-      "propertyDisplay10",
-      defaults.propertyDisplay10,
-    ),
-    propertyDisplay11: getString(
-      "propertyDisplay11",
-      defaults.propertyDisplay11,
-    ),
-    propertyDisplay12: getString(
-      "propertyDisplay12",
-      defaults.propertyDisplay12,
-    ),
-    propertyDisplay13: getString(
-      "propertyDisplay13",
-      defaults.propertyDisplay13,
-    ),
-    propertyDisplay14: getString(
-      "propertyDisplay14",
-      defaults.propertyDisplay14,
-    ),
+    propertyDisplay3: getString("propertyDisplay3", ""),
+    propertyDisplay4: getString("propertyDisplay4", ""),
+    propertyDisplay5: getString("propertyDisplay5", ""),
+    propertyDisplay6: getString("propertyDisplay6", ""),
+    propertyDisplay7: getString("propertyDisplay7", ""),
+    propertyDisplay8: getString("propertyDisplay8", ""),
+    propertyDisplay9: getString("propertyDisplay9", ""),
+    propertyDisplay10: getString("propertyDisplay10", ""),
+    propertyDisplay11: getString("propertyDisplay11", ""),
+    propertyDisplay12: getString("propertyDisplay12", ""),
+    propertyDisplay13: getString("propertyDisplay13", ""),
+    propertyDisplay14: getString("propertyDisplay14", ""),
 
     // Property set side-by-side booleans (1-7)
     propertySet1SideBySide: getBool(

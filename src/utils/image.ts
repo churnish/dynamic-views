@@ -30,36 +30,12 @@ export function isExternalUrl(url: string): boolean {
 }
 
 /**
- * Check if URL is a blob URL (from cached external image)
- */
-export function isBlobUrl(url: string): boolean {
-  return url.startsWith("blob:");
-}
-
-/**
  * Check if a path has a valid image file extension
  * @param path - The file path or URL to check
  * @returns true if path ends with a valid image extension
  */
-export function hasValidImageExtension(path: string): boolean {
+function hasValidImageExtension(path: string): boolean {
   return /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(path);
-}
-
-/**
- * Validate if a URL points to a valid, loadable image
- * Uses the browser's Image object to verify the URL can be loaded
- * @param url - The image URL to validate
- * @returns Promise that resolves to true if image loads successfully
- */
-export function validateImageUrl(url: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    // Set a reasonable timeout to avoid hanging on slow/dead URLs
-    setTimeout(() => resolve(false), 5000);
-    img.src = url;
-  });
 }
 
 /**
@@ -220,23 +196,57 @@ export async function getYouTubeThumbnailUrl(
 // ============================================================================
 
 /**
- * Represents a code block range in content
+ * Unified code range representation.
+ * Used for fenced blocks, indented blocks, and inline code.
  */
-interface CodeBlockRange {
+interface CodeRange {
   start: number;
   end: number;
+}
+
+/**
+ * Extended range for fenced code blocks with cardlink detection and content.
+ */
+interface FencedCodeBlock extends CodeRange {
   isCardlink: boolean;
   content: string;
 }
 
 /**
- * Find all code block ranges in content
- * Handles both ``` and ~~~ fences with matching lengths
+ * Line metadata for efficient multi-pass processing.
  */
-function findCodeBlockRanges(content: string): CodeBlockRange[] {
-  const ranges: CodeBlockRange[] = [];
-  const lines = content.split("\n");
+interface LineInfo {
+  text: string;
+  start: number;
+  end: number;
+}
+
+/**
+ * Parse content into line metadata array (split once, reuse everywhere).
+ */
+function parseLines(content: string): LineInfo[] {
+  const lines: LineInfo[] = [];
   let position = 0;
+
+  for (const text of content.split("\n")) {
+    const start = position;
+    const end = position + text.length;
+    lines.push({ text, start, end });
+    position = end + 1; // +1 for newline
+  }
+
+  return lines;
+}
+
+/**
+ * Find all fenced code block ranges in content.
+ * Handles both ``` and ~~~ fences with matching lengths.
+ */
+function findFencedCodeBlocks(
+  content: string,
+  lines: LineInfo[],
+): FencedCodeBlock[] {
+  const blocks: FencedCodeBlock[] = [];
   let currentBlock: {
     start: number;
     fenceChar: string;
@@ -246,57 +256,171 @@ function findCodeBlockRanges(content: string): CodeBlockRange[] {
   } | null = null;
 
   for (const line of lines) {
-    const lineStart = position;
-    const lineEnd = position + line.length;
-
     // Check for fence (3+ backticks or tildes at line start)
-    const fenceMatch = line.match(/^(\s*)([`~]{3,})(\w*)\s*$/);
+    // Per CommonMark, info string can contain any characters after the fence
+    const fenceMatch = line.text.match(/^(\s*)([`~]{3,})(.*)$/);
 
     if (fenceMatch) {
       const fenceChar = fenceMatch[2][0];
       const fenceLength = fenceMatch[2].length;
-      const language = fenceMatch[3]?.toLowerCase() || "";
+      // Extract first word of info string as language (e.g., "python" from "python {.class}")
+      const infoString = fenceMatch[3]?.trim() || "";
+      const language = infoString.split(/\s+/)[0]?.toLowerCase() || "";
 
       if (!currentBlock) {
         // Opening fence
         currentBlock = {
-          start: lineStart,
+          start: line.start,
           fenceChar,
           fenceLength,
           isCardlink: language === "cardlink" || language === "embed",
-          contentStart: lineEnd + 1,
+          contentStart: line.end + 1,
         };
       } else if (
         fenceChar === currentBlock.fenceChar &&
-        fenceLength === currentBlock.fenceLength
+        fenceLength === currentBlock.fenceLength &&
+        infoString === "" // Per CommonMark, closing fence must have no content
       ) {
         // Matching closing fence
-        ranges.push({
+        blocks.push({
           start: currentBlock.start,
-          end: lineEnd,
+          end: line.end,
           isCardlink: currentBlock.isCardlink,
-          content: content.slice(currentBlock.contentStart, lineStart),
+          content: content.slice(currentBlock.contentStart, line.start),
         });
         currentBlock = null;
       }
     }
+  }
 
-    position = lineEnd + 1; // +1 for newline
+  return blocks;
+}
+
+/**
+ * Find all indented code block ranges.
+ * Per CommonMark: indented code requires a preceding blank line.
+ * Excludes lines inside fenced code blocks.
+ */
+function findIndentedCodeBlocks(
+  lines: LineInfo[],
+  fencedBlocks: FencedCodeBlock[],
+): CodeRange[] {
+  const ranges: CodeRange[] = [];
+  let blockStart: number | null = null;
+  let blockEnd = 0;
+  let prevLineBlank = true; // Treat start of content as preceded by blank
+
+  for (const line of lines) {
+    // Skip lines inside fenced code blocks
+    if (fencedBlocks.some((b) => line.start >= b.start && line.end <= b.end)) {
+      // Reset indented block tracking when entering fenced block
+      if (blockStart !== null) {
+        ranges.push({ start: blockStart, end: blockEnd });
+        blockStart = null;
+      }
+      prevLineBlank = false;
+      continue;
+    }
+
+    const isEmpty = line.text.trim() === "";
+    const isIndented = /^(\t| {4})/.test(line.text);
+
+    if (isIndented) {
+      // Only start new indented block if preceded by blank line
+      if (blockStart === null && prevLineBlank) {
+        blockStart = line.start;
+      }
+      // Extend existing block (blank lines within block are ok)
+      if (blockStart !== null) {
+        blockEnd = line.end;
+      }
+    } else if (!isEmpty) {
+      // Non-empty, non-indented line ends the block
+      if (blockStart !== null) {
+        ranges.push({ start: blockStart, end: blockEnd });
+        blockStart = null;
+      }
+    }
+    // Empty lines: don't end block, but allow next indented line to continue it
+
+    prevLineBlank = isEmpty;
+  }
+
+  // Handle block at end of content
+  if (blockStart !== null) {
+    ranges.push({ start: blockStart, end: blockEnd });
   }
 
   return ranges;
 }
 
 /**
- * Check if a position falls inside any non-cardlink code block
+ * Find all inline code ranges (single backticks).
+ * Excludes ranges inside fenced code blocks.
  */
-function isInsideCodeBlock(
+function findInlineCodeRanges(
+  content: string,
+  fencedBlocks: FencedCodeBlock[],
+): CodeRange[] {
+  const ranges: CodeRange[] = [];
+  // Match inline code: `...` (backticks with content, not spanning newlines)
+  const INLINE_CODE_REGEX = /`[^`\n]+`/g;
+
+  for (const match of content.matchAll(INLINE_CODE_REGEX)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    // Exclude if inside any fenced block (including cardlink)
+    const insideFenced = fencedBlocks.some(
+      (b) => start >= b.start && start <= b.end,
+    );
+    if (!insideFenced) {
+      ranges.push({ start, end });
+    }
+  }
+
+  return ranges;
+}
+
+/**
+ * Check if a position falls inside any code range.
+ *
+ * Boundary semantics:
+ * - Fenced/indented: position <= end (inclusive, end is last char of closing fence/line)
+ * - Inline: position < end (exclusive, end is position after closing backtick)
+ *
+ * This function uses <= for all ranges. Inline code ranges are already
+ * constructed such that 'end' is exclusive (position of char after closing `),
+ * so using < in the original was equivalent. We normalize here by checking
+ * if position is at the last character of the range.
+ */
+function isInsideCode(
   position: number,
-  ranges: CodeBlockRange[],
+  fencedBlocks: FencedCodeBlock[],
+  indentedBlocks: CodeRange[],
+  inlineRanges: CodeRange[],
 ): boolean {
-  return ranges.some(
-    (r) => !r.isCardlink && position >= r.start && position <= r.end,
-  );
+  // Check fenced blocks (excluding cardlink blocks which we want to parse)
+  for (const block of fencedBlocks) {
+    if (!block.isCardlink && position >= block.start && position <= block.end) {
+      return true;
+    }
+  }
+
+  // Check indented blocks (inclusive boundaries)
+  for (const range of indentedBlocks) {
+    if (position >= range.start && position <= range.end) {
+      return true;
+    }
+  }
+
+  // Check inline code (exclusive end - don't match at closing backtick position)
+  for (const range of inlineRanges) {
+    if (position >= range.start && position < range.end) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // ============================================================================
@@ -362,15 +486,24 @@ export async function extractImageEmbeds(
     }
   }
 
-  // Find all code block ranges
-  const codeBlockRanges = findCodeBlockRanges(content);
+  // Parse lines once for all code detection passes
+  const lines = parseLines(content);
+
+  // Find all fenced code blocks (``` or ~~~)
+  const fencedBlocks = findFencedCodeBlocks(content, lines);
+
+  // Find all indented code blocks (requires preceding blank line per CommonMark)
+  const indentedBlocks = findIndentedCodeBlocks(lines, fencedBlocks);
+
+  // Find all inline code ranges (excludes fenced blocks)
+  const inlineRanges = findInlineCodeRanges(content, fencedBlocks);
 
   // Collect all embeds with positions
   const embeds: EmbedMatch[] = [];
 
   // Extract cardlink images first
   if (includeCardLink) {
-    for (const block of codeBlockRanges) {
+    for (const block of fencedBlocks) {
       if (block.isCardlink) {
         const match = CARDLINK_IMAGE_REGEX.exec(block.content);
         if (match) {
@@ -399,7 +532,7 @@ export async function extractImageEmbeds(
   // Extract wikilink embeds
   for (const match of content.matchAll(WIKILINK_EMBED_REGEX)) {
     const position = match.index;
-    if (!isInsideCodeBlock(position, codeBlockRanges)) {
+    if (!isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges)) {
       embeds.push({
         type: "wikilink",
         path: match[1].trim(),
@@ -411,7 +544,7 @@ export async function extractImageEmbeds(
   // Extract markdown image embeds
   for (const match of content.matchAll(MD_IMAGE_REGEX)) {
     const position = match.index;
-    if (!isInsideCodeBlock(position, codeBlockRanges)) {
+    if (!isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges)) {
       // Strip optional title from URL
       const url = match[1].trim().replace(MD_IMAGE_TITLE_REGEX, "");
       embeds.push({
@@ -471,125 +604,4 @@ export async function extractImageEmbeds(
   }
 
   return resultUrls;
-}
-
-/**
- * Load image for a file from property or embeds
- * @param app - Obsidian App instance
- * @param filePath - Path of the file to load image for
- * @param imagePropertyValue - Value from image property (if any)
- * @param cacheSize - Thumbnail cache size setting
- * @param fallbackToEmbeds - Whether to fall back to in-note images when property has no value
- * @param imagePropertyName - The image property name (empty string means no property configured)
- * @returns Image URL(s) or null
- */
-export function loadImageForFile(
-  app: App,
-  filePath: string,
-  imagePropertyValue: string,
-  cacheSize: "small" | "balanced" | "large",
-  fallbackToEmbeds: boolean = true,
-  imagePropertyName: string = "",
-): string | string[] | null {
-  const propertyImagePaths: string[] = [];
-  const propertyExternalUrls: string[] = [];
-
-  // Parse image property value (could be single path or array)
-  if (imagePropertyValue) {
-    const paths = Array.isArray(imagePropertyValue)
-      ? imagePropertyValue
-      : [imagePropertyValue];
-
-    for (const path of paths) {
-      if (typeof path === "string") {
-        if (isExternalUrl(path)) {
-          propertyExternalUrls.push(path);
-        } else {
-          propertyImagePaths.push(path);
-        }
-      }
-    }
-  }
-
-  // Phase A: Convert property image paths to resource paths
-  const propertyResourcePaths: string[] = [];
-
-  // Process internal paths
-  for (const propPath of propertyImagePaths) {
-    const imageFile = app.metadataCache.getFirstLinkpathDest(
-      propPath,
-      filePath,
-    );
-    if (imageFile && VALID_IMAGE_EXTENSIONS.includes(imageFile.extension)) {
-      const resourcePath = app.vault.getResourcePath(imageFile);
-      propertyResourcePaths.push(resourcePath);
-    }
-  }
-
-  // Add external URLs without validation - browser handles load/error at render time
-  propertyResourcePaths.push(...propertyExternalUrls);
-
-  // Phase B: Extract body embed resource paths (fallback if no property images)
-  const file = app.vault.getAbstractFileByPath(filePath);
-  if (!file || !(file instanceof TFile)) return null;
-
-  const metadata = app.metadataCache.getFileCache(file);
-  if (!metadata) return null;
-
-  const bodyResourcePaths: string[] = [];
-  const bodyExternalUrls: string[] = [];
-
-  // Process embeds - separate external URLs from internal paths
-  if (metadata.embeds) {
-    for (const embed of metadata.embeds) {
-      const embedLink = embed.link;
-      if (isExternalUrl(embedLink)) {
-        // External URL embed - collect for async validation
-        bodyExternalUrls.push(embedLink);
-      } else {
-        // Internal path embed
-        const targetFile = app.metadataCache.getFirstLinkpathDest(
-          embedLink,
-          filePath,
-        );
-        if (
-          targetFile &&
-          VALID_IMAGE_EXTENSIONS.includes(targetFile.extension)
-        ) {
-          const resourcePath = app.vault.getResourcePath(targetFile);
-          bodyResourcePaths.push(resourcePath);
-        }
-      }
-    }
-  }
-
-  // Add external URLs without validation - browser handles load/error at render time
-  bodyResourcePaths.push(...bodyExternalUrls);
-
-  // Phase C: Determine which images to use based on settings
-  let allResourcePaths: string[] = [];
-
-  // If no image property is configured, always use in-note images
-  if (!imagePropertyName || imagePropertyName.trim() === "") {
-    allResourcePaths = bodyResourcePaths;
-  }
-  // If image property is configured
-  else {
-    // If property has values, use them (no fallback)
-    if (propertyResourcePaths.length > 0) {
-      allResourcePaths = propertyResourcePaths;
-    }
-    // If property has no values and fallback is enabled, use body embeds
-    else if (fallbackToEmbeds) {
-      allResourcePaths = bodyResourcePaths;
-    }
-    // Otherwise, no images
-    else {
-      allResourcePaths = [];
-    }
-  }
-
-  // Return result
-  if (allResourcePaths.length === 0) return null;
-  return allResourcePaths.length > 1 ? allResourcePaths : allResourcePaths[0];
 }

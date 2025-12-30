@@ -49,20 +49,20 @@ export function cleanupVisibilityObserver(): void {
   visibleCards.clear();
 }
 
-/** Global row queue to prevent frame drops */
-interface QueuedRow {
-  row: HTMLElement;
+/** Global set queue to prevent frame drops */
+interface QueuedSet {
+  set: HTMLElement;
   card: HTMLElement;
 }
-const rowQueue: QueuedRow[] = [];
+const setQueue: QueuedSet[] = [];
 /** Set for O(1) duplicate detection */
-const queuedRows = new Set<HTMLElement>();
-let isProcessingRows = false;
+const queuedSets = new Set<HTMLElement>();
+let isProcessingSets = false;
 let pendingFlush = false;
 const gradientBatch: HTMLElement[] = [];
 
-/** Rows to process per frame */
-const ROWS_PER_FRAME = 5;
+/** Sets to process per frame */
+const SETS_PER_FRAME = 5;
 
 /** Maximum queue size to prevent unbounded growth */
 const MAX_QUEUE_SIZE = 500;
@@ -73,11 +73,11 @@ const MAX_GRADIENT_BATCH_SIZE = 100;
 /** Event name for masonry relayout coordination */
 export const PROPERTY_MEASURED_EVENT = "dynamic-views:property-measured";
 
-/** Process queued rows in batches per frame */
-function processRowQueue(): void {
-  if (rowQueue.length === 0) {
-    isProcessingRows = false;
-    queuedRows.clear(); // Clear dedup set when queue empty
+/** Process queued sets in batches per frame */
+function processSetQueue(): void {
+  if (setQueue.length === 0) {
+    isProcessingSets = false;
+    queuedSets.clear(); // Clear dedup set when queue empty
     // Flush gradient batch when queue empty, then dispatch event in RAF
     // Set pendingFlush to prevent new queue processing until flush completes
     if (gradientBatch.length > 0) {
@@ -99,22 +99,22 @@ function processRowQueue(): void {
     return;
   }
 
-  isProcessingRows = true;
+  isProcessingSets = true;
 
-  // Process up to ROWS_PER_FRAME rows per frame
-  for (let i = 0; i < ROWS_PER_FRAME && rowQueue.length > 0; i++) {
-    const item = rowQueue.shift();
+  // Process up to SETS_PER_FRAME sets per frame
+  for (let i = 0; i < SETS_PER_FRAME && setQueue.length > 0; i++) {
+    const item = setQueue.shift();
     if (item) {
-      const { row, card } = item;
-      queuedRows.delete(row); // Remove from dedup set
-      // Check both row AND card are connected
+      const { set, card } = item;
+      queuedSets.delete(set); // Remove from dedup set
+      // Check both set AND card are connected
       if (
-        row.isConnected &&
+        set.isConnected &&
         card.isConnected &&
         !card.classList.contains("compact-mode")
       ) {
-        row.classList.remove("property-measured");
-        measureSideBySideRow(row, gradientBatch);
+        set.classList.remove("property-measured");
+        measureSideBySideSet(set, gradientBatch);
       }
     }
   }
@@ -133,16 +133,16 @@ function processRowQueue(): void {
   }
 
   // Continue processing
-  requestAnimationFrame(processRowQueue);
+  requestAnimationFrame(processSetQueue);
 }
 
 /** Width cache tolerance to avoid redundant measurements from rounding */
 const WIDTH_TOLERANCE = 0.5;
 
-/** Queue all rows from a card for measurement */
-function queueCardRows(
+/** Queue all sets from a card for measurement */
+function queueCardSets(
   cardEl: HTMLElement,
-  rows: NodeListOf<Element>,
+  sets: NodeListOf<Element>,
   cardProps: HTMLElement,
 ): void {
   // Only measure visible cards
@@ -164,24 +164,24 @@ function queueCardRows(
   }
   cardWidthCache.set(cardEl, currentWidth);
 
-  // Add each row to queue with O(1) dedup and size limit
-  rows.forEach((row) => {
-    const rowEl = row as HTMLElement;
+  // Add each set to queue with O(1) dedup and size limit
+  sets.forEach((setEl) => {
+    const set = setEl as HTMLElement;
     // O(1) duplicate check via Set
-    if (!queuedRows.has(rowEl)) {
+    if (!queuedSets.has(set)) {
       // Enforce queue size limit
-      if (rowQueue.length >= MAX_QUEUE_SIZE) {
+      if (setQueue.length >= MAX_QUEUE_SIZE) {
         console.warn("[property-measure] Queue overflow, skipping measurement");
         return;
       }
-      queuedRows.add(rowEl);
-      rowQueue.push({ row: rowEl, card: cardEl });
+      queuedSets.add(set);
+      setQueue.push({ set, card: cardEl });
     }
   });
 
   // Start processing if not already running and no flush pending
-  if (!isProcessingRows && !pendingFlush) {
-    requestAnimationFrame(processRowQueue);
+  if (!isProcessingSets && !pendingFlush) {
+    requestAnimationFrame(processSetQueue);
   }
 }
 
@@ -194,35 +194,35 @@ const EVEN_FIELD_SELECTOR =
   ".property-field-2, .property-field-4, .property-field-6, .property-field-8, .property-field-10, .property-field-12, .property-field-14";
 
 /**
- * Measures and applies optimal widths for a side-by-side property row
- * @param row - The property row element to measure
+ * Measures and applies optimal widths for a side-by-side property set
+ * @param set - The property set element to measure
  * @param gradientTargets - Optional array to collect fields needing gradient updates (for batching)
  */
-export function measureSideBySideRow(
-  row: HTMLElement,
+export function measureSideBySideSet(
+  set: HTMLElement,
   gradientTargets?: HTMLElement[],
 ): void {
   try {
-    const card = row.closest(".card") as HTMLElement;
-    const cardProperties = row.closest(".card-properties");
+    const card = set.closest(".card") as HTMLElement;
+    const cardProperties = set.closest(".card-properties");
     if (!card || !cardProperties) return;
 
     // Skip if already measured
-    if (row.classList.contains("property-measured")) return;
+    if (set.classList.contains("property-measured")) return;
 
     // Skip in compact mode - CSS overrides measurement with 100% width
     if (card.classList.contains("compact-mode")) return;
 
     // Query fields fresh each time (avoids stale references)
-    const field1 = row.querySelector(ODD_FIELD_SELECTOR) as HTMLElement;
-    const field2 = row.querySelector(EVEN_FIELD_SELECTOR) as HTMLElement;
+    const field1 = set.querySelector(ODD_FIELD_SELECTOR) as HTMLElement;
+    const field2 = set.querySelector(EVEN_FIELD_SELECTOR) as HTMLElement;
     if (!field1 || !field2) return;
 
     // Enter measuring state to remove constraints
-    row.classList.add("property-measuring");
+    set.classList.add("property-measuring");
 
     // Force reflow
-    void row.offsetWidth;
+    void set.offsetWidth;
 
     // Get wrapper references for scroll reset later
     const wrapper1 = field1.querySelector(
@@ -303,7 +303,7 @@ export function measureSideBySideRow(
 
       // Read field gap from CSS variable (use cached value)
       if (cachedFieldGap === null) {
-        cachedFieldGap = parseFloat(getComputedStyle(row).gap) || 8;
+        cachedFieldGap = parseFloat(getComputedStyle(set).gap) || 8;
       }
       const fieldGap = cachedFieldGap;
       const availableWidth = containerWidth - fieldGap;
@@ -331,9 +331,9 @@ export function measureSideBySideRow(
     }
 
     // Apply calculated values
-    row.style.setProperty("--field1-width", field1Width);
-    row.style.setProperty("--field2-width", field2Width);
-    row.classList.add("property-measured");
+    set.style.setProperty("--field1-width", field1Width);
+    set.style.setProperty("--field2-width", field2Width);
+    set.classList.add("property-measured");
 
     // Reset scroll position to 0 for both wrappers
     if (wrapper1) wrapper1.scrollLeft = 0;
@@ -344,7 +344,7 @@ export function measureSideBySideRow(
       if (!field1Empty) gradientTargets.push(field1);
       if (!field2Empty) gradientTargets.push(field2);
     } else {
-      // Fallback: schedule own RAF (for single-row calls)
+      // Fallback: schedule own RAF (for single-set calls)
       requestAnimationFrame(() => {
         if (!field1Empty) updateScrollGradient(field1);
         if (!field2Empty) updateScrollGradient(field2);
@@ -352,7 +352,7 @@ export function measureSideBySideRow(
     }
   } finally {
     // Always exit measuring state, even if error occurs
-    row.classList.remove("property-measuring");
+    set.classList.remove("property-measuring");
   }
 }
 
@@ -360,40 +360,40 @@ export function measureSideBySideRow(
 const MEASUREMENT_CHUNK_SIZE = 5;
 
 /**
- * Resets measurement state and re-measures all side-by-side rows in a container
+ * Resets measurement state and re-measures all side-by-side sets in a container
  * Call this when property label mode changes
- * Uses chunked processing to prevent frame drops with many rows
+ * Uses chunked processing to prevent frame drops with many sets
  */
 export function remeasurePropertyFields(container: HTMLElement): void {
   if (document.body.classList.contains("dynamic-views-property-width-50-50")) {
     return;
   }
 
-  const rows = Array.from(
+  const sets = Array.from(
     container.querySelectorAll<HTMLElement>(".property-set-sidebyside"),
   );
-  if (rows.length === 0) return;
+  if (sets.length === 0) return;
 
-  // Clear measured state for all rows first (batch DOM writes)
-  rows.forEach((row) => {
-    row.classList.remove("property-measured");
-    row.style.removeProperty("--field1-width");
-    row.style.removeProperty("--field2-width");
+  // Clear measured state for all sets first (batch DOM writes)
+  sets.forEach((set) => {
+    set.classList.remove("property-measured");
+    set.style.removeProperty("--field1-width");
+    set.style.removeProperty("--field2-width");
   });
 
-  // Process rows in chunks across frames to prevent freeze
+  // Process sets in chunks across frames to prevent freeze
   let index = 0;
   const gradientTargets: HTMLElement[] = [];
 
   function processChunk(): void {
-    const end = Math.min(index + MEASUREMENT_CHUNK_SIZE, rows.length);
+    const end = Math.min(index + MEASUREMENT_CHUNK_SIZE, sets.length);
     while (index < end) {
-      measureSideBySideRow(rows[index], gradientTargets);
+      measureSideBySideSet(sets[index], gradientTargets);
       index++;
     }
 
-    if (index < rows.length) {
-      // More rows to process - schedule next chunk
+    if (index < sets.length) {
+      // More sets to process - schedule next chunk
       requestAnimationFrame(processChunk);
     } else if (gradientTargets.length > 0) {
       // All done - update gradients
@@ -407,7 +407,7 @@ export function remeasurePropertyFields(container: HTMLElement): void {
 }
 
 /**
- * Measures all side-by-side property rows in a card element.
+ * Measures all side-by-side property sets in a card element.
  * Uses IntersectionObserver for visibility + ResizeObserver for size changes.
  * Returns observers for cleanup.
  */
@@ -417,8 +417,8 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
     return [];
   }
 
-  const rows = cardEl.querySelectorAll(".property-set-sidebyside");
-  if (rows.length === 0) return [];
+  const sets = cardEl.querySelectorAll(".property-set-sidebyside");
+  if (sets.length === 0) return [];
 
   // Card-properties container is inside the card
   const cardProps = cardEl.querySelector(".card-properties") as HTMLElement;
@@ -441,8 +441,8 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
       isFirstResize = false;
       visibleCards.add(cardEl);
     }
-    // Width cache in queueCardRows prevents redundant measurements
-    queueCardRows(cardEl, rows, cardProps);
+    // Width cache in queueCardSets prevents redundant measurements
+    queueCardSets(cardEl, sets, cardProps);
   });
   observer.observe(cardEl);
 

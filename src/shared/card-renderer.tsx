@@ -31,6 +31,7 @@ import {
   handleJsxImageLoad,
   handleJsxImageError,
   handleImageLoad,
+  DEFAULT_ASPECT_RATIO,
 } from "./image-loader";
 import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
 import {
@@ -626,9 +627,17 @@ function CoverSlideshow({
       ".slideshow-img-current",
     ) as HTMLImageElement;
     if (firstImg) {
+      const expectedFirstUrl = imageArray[0];
       firstImg.addEventListener(
         "error",
         () => {
+          // Ignore errors from src being cleared (resolves to index.html)
+          if (
+            !firstImg.src ||
+            !firstImg.src.includes(expectedFirstUrl.split("?")[0].slice(-30))
+          ) {
+            return;
+          }
           markExternalUrlAsFailed(firstImg.src);
           firstImg.style.display = "none";
           navigate(1, false, true);
@@ -1530,6 +1539,7 @@ function Card({
     return (
       <div
         className="card-title"
+        tabIndex={-1}
         ref={(el: HTMLElement | null) => {
           if (!el) return;
           if (isTitleScrollMode) {
@@ -1596,6 +1606,7 @@ function Card({
     return (
       <div
         className="card-subtitle"
+        tabIndex={-1}
         ref={(el: HTMLElement | null) => {
           if (!el) return;
           if (isSubtitleScrollMode) {
@@ -2119,43 +2130,94 @@ function Card({
                     alt=""
                     ref={(imgEl: HTMLImageElement | null) => {
                       handleJsxImageRef(imgEl, updateLayoutRef);
-                      // Add fallback error handler for multi-image cards
+                      // Multi-image fallback: use AbortController for proper cleanup
+                      type ImgWithController = HTMLImageElement & {
+                        _errorController?: AbortController;
+                      };
+                      // Always abort existing controller on re-render or unmount
+                      if (imgEl) {
+                        const existingController = (imgEl as ImgWithController)
+                          ._errorController;
+                        if (existingController) existingController.abort();
+                      }
+                      // Setup new controller only for multi-image arrays
                       if (imgEl && imageArray.length > 1) {
-                        let currentUrlIndex = 0;
-                        imgEl.addEventListener("error", () => {
-                          markExternalUrlAsFailed(imgEl.src);
-                          currentUrlIndex++;
-                          while (currentUrlIndex < imageArray.length) {
-                            if (
-                              !isFailedExternalUrl(imageArray[currentUrlIndex])
+                        const controller = new AbortController();
+                        (imgEl as ImgWithController)._errorController =
+                          controller;
+
+                        imgEl.addEventListener(
+                          "error",
+                          () => {
+                            if (imgEl.src) markExternalUrlAsFailed(imgEl.src);
+                            // Find current position by URL match (handles scrubbing)
+                            const failedSrc = imgEl.src;
+                            let startIndex = imageArray.findIndex(
+                              (url) =>
+                                getCachedBlobUrl(url) === failedSrc ||
+                                url === failedSrc,
+                            );
+                            if (startIndex === -1) startIndex = 0;
+                            // Try subsequent URLs
+                            for (
+                              let i = startIndex + 1;
+                              i < imageArray.length;
+                              i++
                             ) {
-                              imgEl.style.display = "";
-                              const effectiveUrl = getCachedBlobUrl(
-                                imageArray[currentUrlIndex],
-                              );
-                              imgEl.src = effectiveUrl;
-                              const embedEl = imgEl.closest(
-                                ".dynamic-views-image-embed",
-                              ) as HTMLElement;
-                              if (embedEl) {
-                                embedEl.style.setProperty(
-                                  "--cover-image-url",
-                                  `url("${effectiveUrl}")`,
+                              if (!isFailedExternalUrl(imageArray[i])) {
+                                imgEl.style.display = "";
+                                const effectiveUrl = getCachedBlobUrl(
+                                  imageArray[i],
                                 );
+                                imgEl.src = effectiveUrl;
+                                const embedEl = imgEl.closest(
+                                  ".dynamic-views-image-embed",
+                                ) as HTMLElement;
+                                if (embedEl) {
+                                  embedEl.style.setProperty(
+                                    "--cover-image-url",
+                                    `url("${effectiveUrl}")`,
+                                  );
+                                }
+                                return;
                               }
-                              return;
                             }
-                            currentUrlIndex++;
-                          }
-                          imgEl.style.display = "none";
-                        });
+                            // All images failed - complete cleanup
+                            imgEl.style.display = "none";
+                            const cardEl = imgEl.closest(
+                              ".card",
+                            ) as HTMLElement;
+                            if (
+                              cardEl &&
+                              !cardEl.classList.contains("cover-ready")
+                            ) {
+                              cardEl.classList.add("cover-ready");
+                              cardEl.style.setProperty(
+                                "--actual-aspect-ratio",
+                                DEFAULT_ASPECT_RATIO.toString(),
+                              );
+                              cardEl.removeAttribute("data-backdrop-theme");
+                              if (updateLayoutRef.current)
+                                updateLayoutRef.current();
+                            }
+                          },
+                          { signal: controller.signal },
+                        );
+                      } else if (imgEl) {
+                        // Abort any existing controller before clearing reference
+                        const existingCtrl = (imgEl as ImgWithController)
+                          ._errorController;
+                        if (existingCtrl) existingCtrl.abort();
+                        delete (imgEl as ImgWithController)._errorController;
                       }
                     }}
                     onLoad={(e: Event) =>
                       handleJsxImageLoad(e, updateLayoutRef)
                     }
-                    onError={(e: Event) =>
-                      handleJsxImageError(e, updateLayoutRef)
+                    onError={
+                      imageArray.length <= 1
+                        ? (e: Event) => handleJsxImageError(e, updateLayoutRef)
+                        : undefined
                     }
                   />
                 </div>
@@ -2167,7 +2229,7 @@ function Card({
         </div>
       )}
 
-      {/* Properties - 14-field rendering with 7-row layout, split by position */}
+      {/* Properties - 14-field rendering with 7-set layout, split by position */}
       {(() => {
         // Read settings once for all fields
         const hideEmptyMode = getHideEmptyMode();
@@ -2276,59 +2338,59 @@ function Card({
           ),
         ];
 
-        // Check if any row has content
-        // When labels are enabled, show row if property is configured (even if value is empty)
-        // When labels are hidden, only show row if value exists
-        const row1HasContent =
+        // Check if any property set has content
+        // When labels are enabled, show set if property is configured (even if value is empty)
+        // When labels are hidden, only show set if value exists
+        const set1HasContent =
           propertyLabels !== "hide"
             ? card.propertyName1 !== undefined ||
               card.propertyName2 !== undefined
             : card.property1 !== null || card.property2 !== null;
-        const row2HasContent =
+        const set2HasContent =
           propertyLabels !== "hide"
             ? card.propertyName3 !== undefined ||
               card.propertyName4 !== undefined
             : card.property3 !== null || card.property4 !== null;
-        const row3HasContent =
+        const set3HasContent =
           propertyLabels !== "hide"
             ? card.propertyName5 !== undefined ||
               card.propertyName6 !== undefined
             : card.property5 !== null || card.property6 !== null;
-        const row4HasContent =
+        const set4HasContent =
           propertyLabels !== "hide"
             ? card.propertyName7 !== undefined ||
               card.propertyName8 !== undefined
             : card.property7 !== null || card.property8 !== null;
-        const row5HasContent =
+        const set5HasContent =
           propertyLabels !== "hide"
             ? card.propertyName9 !== undefined ||
               card.propertyName10 !== undefined
             : card.property9 !== null || card.property10 !== null;
-        const row6HasContent =
+        const set6HasContent =
           propertyLabels !== "hide"
             ? card.propertyName11 !== undefined ||
               card.propertyName12 !== undefined
             : card.property11 !== null || card.property12 !== null;
-        const row7HasContent =
+        const set7HasContent =
           propertyLabels !== "hide"
             ? card.propertyName13 !== undefined ||
               card.propertyName14 !== undefined
             : card.property13 !== null || card.property14 !== null;
 
         if (
-          !row1HasContent &&
-          !row2HasContent &&
-          !row3HasContent &&
-          !row4HasContent &&
-          !row5HasContent &&
-          !row6HasContent &&
-          !row7HasContent
+          !set1HasContent &&
+          !set2HasContent &&
+          !set3HasContent &&
+          !set4HasContent &&
+          !set5HasContent &&
+          !set6HasContent &&
+          !set7HasContent
         )
           return null;
 
-        // Build row elements
+        // Build property set elements
 
-        const row1 = row1HasContent && (
+        const set1 = set1HasContent && (
           <div
             className={`property-set property-set-1${settings.propertySet1SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2361,7 +2423,7 @@ function Card({
           </div>
         );
 
-        const row2 = row2HasContent && (
+        const set2 = set2HasContent && (
           <div
             className={`property-set property-set-2${settings.propertySet2SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2394,7 +2456,7 @@ function Card({
           </div>
         );
 
-        const row3 = row3HasContent && (
+        const set3 = set3HasContent && (
           <div
             className={`property-set property-set-3${settings.propertySet3SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2427,7 +2489,7 @@ function Card({
           </div>
         );
 
-        const row4 = row4HasContent && (
+        const set4 = set4HasContent && (
           <div
             className={`property-set property-set-4${settings.propertySet4SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2460,7 +2522,7 @@ function Card({
           </div>
         );
 
-        const row5 = row5HasContent && (
+        const set5 = set5HasContent && (
           <div
             className={`property-set property-set-5${settings.propertySet5SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2493,7 +2555,7 @@ function Card({
           </div>
         );
 
-        const row6 = row6HasContent && (
+        const set6 = set6HasContent && (
           <div
             className={`property-set property-set-6${settings.propertySet6SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2526,7 +2588,7 @@ function Card({
           </div>
         );
 
-        const row7 = row7HasContent && (
+        const set7 = set7HasContent && (
           <div
             className={`property-set property-set-7${settings.propertySet7SideBySide ? " property-set-sidebyside" : ""}`}
           >
@@ -2559,49 +2621,49 @@ function Card({
           </div>
         );
 
-        // Split rows by position setting
-        const topRows: JSX.Element[] = [];
-        const bottomRows: JSX.Element[] = [];
+        // Split sets by position setting
+        const topSets: JSX.Element[] = [];
+        const bottomSets: JSX.Element[] = [];
 
-        if (row1) {
-          if (settings.propertySet1Position === "top") topRows.push(row1);
-          else bottomRows.push(row1);
+        if (set1) {
+          if (settings.propertySet1Position === "top") topSets.push(set1);
+          else bottomSets.push(set1);
         }
-        if (row2) {
-          if (settings.propertySet2Position === "top") topRows.push(row2);
-          else bottomRows.push(row2);
+        if (set2) {
+          if (settings.propertySet2Position === "top") topSets.push(set2);
+          else bottomSets.push(set2);
         }
-        if (row3) {
-          if (settings.propertySet3Position === "top") topRows.push(row3);
-          else bottomRows.push(row3);
+        if (set3) {
+          if (settings.propertySet3Position === "top") topSets.push(set3);
+          else bottomSets.push(set3);
         }
-        if (row4) {
-          if (settings.propertySet4Position === "top") topRows.push(row4);
-          else bottomRows.push(row4);
+        if (set4) {
+          if (settings.propertySet4Position === "top") topSets.push(set4);
+          else bottomSets.push(set4);
         }
-        if (row5) {
-          if (settings.propertySet5Position === "top") topRows.push(row5);
-          else bottomRows.push(row5);
+        if (set5) {
+          if (settings.propertySet5Position === "top") topSets.push(set5);
+          else bottomSets.push(set5);
         }
-        if (row6) {
-          if (settings.propertySet6Position === "top") topRows.push(row6);
-          else bottomRows.push(row6);
+        if (set6) {
+          if (settings.propertySet6Position === "top") topSets.push(set6);
+          else bottomSets.push(set6);
         }
-        if (row7) {
-          if (settings.propertySet7Position === "top") topRows.push(row7);
-          else bottomRows.push(row7);
+        if (set7) {
+          if (settings.propertySet7Position === "top") topSets.push(set7);
+          else bottomSets.push(set7);
         }
 
         return (
           <>
-            {topRows.length > 0 && (
+            {topSets.length > 0 && (
               <div className="card-properties card-properties-top">
-                {topRows}
+                {topSets}
               </div>
             )}
-            {bottomRows.length > 0 && (
+            {bottomSets.length > 0 && (
               <div className="card-properties card-properties-bottom">
-                {bottomRows}
+                {bottomSets}
               </div>
             )}
           </>

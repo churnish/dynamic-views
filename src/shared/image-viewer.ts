@@ -582,6 +582,14 @@ function openImageViewer(
     return;
   }
 
+  // Remove non-current slideshow image from clone (prevents duplicate display)
+  const nextImg = cloneEl.querySelector<HTMLImageElement>(
+    "img.slideshow-img-next",
+  );
+  if (nextImg) {
+    nextImg.remove();
+  }
+
   // Use cached blob URL for external images to avoid re-fetching
   if (isExternalUrl(imgEl.src)) {
     imgEl.src = getCachedBlobUrl(imgEl.src);

@@ -31,7 +31,7 @@ const imageMetadataCache = new Map<
 >();
 
 // Default aspect ratio for failed images to prevent layout issues
-const DEFAULT_ASPECT_RATIO = 0.75; // 4:3 landscape
+export const DEFAULT_ASPECT_RATIO = 0.75; // 4:3 landscape
 
 /**
  * Re-apply ambient colors to all cards using cached RGB with current opacity settings
@@ -360,6 +360,8 @@ export function setupImageLoadHandler(
       "--actual-aspect-ratio",
       DEFAULT_ASPECT_RATIO.toString(),
     );
+    // Clear any stale backdrop theme from previous image (consistency with handleJsxImageError)
+    cardEl.removeAttribute("data-backdrop-theme");
     if (onLayoutUpdate) {
       onLayoutUpdate();
     }

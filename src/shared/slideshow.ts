@@ -4,7 +4,11 @@
  */
 
 import { requestUrl } from "obsidian";
-import { SLIDESHOW_ANIMATION_MS, SWIPE_DETECT_THRESHOLD } from "./constants";
+import {
+  SLIDESHOW_ANIMATION_MS,
+  SWIPE_DETECT_THRESHOLD,
+  SCROLL_THROTTLE_MS,
+} from "./constants";
 import { isExternalUrl } from "../utils/image";
 
 // Blob URL cache for external images to prevent re-downloads
@@ -44,13 +48,6 @@ export function markExternalUrlAsFailed(url: string): void {
   if (isExternalUrl(url)) {
     failedUrls.add(url);
   }
-}
-
-/**
- * Filter out URLs that have failed to load
- */
-export function filterValidImageUrls(urls: string[]): string[] {
-  return urls.filter((url) => !failedUrls.has(url));
 }
 
 /**
@@ -95,8 +92,9 @@ export async function getExternalBlobUrl(url: string): Promise<string> {
     try {
       const response = await requestUrl(url);
       // Include content-type for proper rendering (especially SVGs)
+      // Safe access: headers may be undefined in edge cases
       const contentType =
-        response.headers["content-type"] || "application/octet-stream";
+        response.headers?.["content-type"] ?? "application/octet-stream";
       const blob = new Blob([response.arrayBuffer], { type: contentType });
       const blobUrl = URL.createObjectURL(blob);
 
@@ -181,6 +179,17 @@ export function createSlideshowNavigator(
   let isAnimating = false;
   let lastWrapFromFirstTimestamp: number | null = null;
 
+  // Track all pending timeouts for consolidated cleanup on abort
+  const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
+  signal.addEventListener(
+    "abort",
+    () => {
+      pendingTimeouts.forEach(clearTimeout);
+      pendingTimeouts.clear();
+    },
+    { once: true },
+  );
+
   const navigate = (
     direction: 1 | -1,
     honorGestureDirection = false,
@@ -233,17 +242,23 @@ export function createSlideshowNavigator(
       "error",
       () => {
         if (signal.aborted) return;
+        // Ignore errors from src being cleared (resolves to index.html) or changed
+        // Only handle errors for the URL we actually set
         const failedUrl = imageUrls[newIndex];
+        const expectedUrl = getCachedBlobUrl(failedUrl);
+        if (nextImg.src !== expectedUrl) return;
         failedUrls.add(failedUrl);
         nextImg.style.display = "none";
 
         // After animation completes, try to advance to next valid slide
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
+          pendingTimeouts.delete(timeoutId);
           if (!signal.aborted) {
             nextImg.style.display = "";
             navigate(direction, honorGestureDirection);
           }
         }, SLIDESHOW_ANIMATION_MS + 50);
+        pendingTimeouts.add(timeoutId);
       },
       { once: true, signal },
     );
@@ -317,7 +332,8 @@ export function createSlideshowNavigator(
     currImg.classList.add(exitClass);
     nextImg.classList.add(enterClass);
 
-    const timeoutId = setTimeout(() => {
+    const animTimeoutId = setTimeout(() => {
+      pendingTimeouts.delete(animTimeoutId);
       if (signal.aborted) return;
 
       // Remove animation classes
@@ -330,8 +346,8 @@ export function createSlideshowNavigator(
       nextImg.classList.remove("slideshow-img-next");
       nextImg.classList.add("slideshow-img-current");
 
-      // Clear src on the now-next element
-      currImg.src = "";
+      // Don't clear src - it triggers error events that consume { once: true } handlers
+      // The element is hidden via CSS anyway (visibility: hidden on .slideshow-img-next)
 
       currentIndex = newIndex;
       isAnimating = false;
@@ -340,12 +356,12 @@ export function createSlideshowNavigator(
         callbacks.onAnimationComplete();
       }
     }, SLIDESHOW_ANIMATION_MS);
+    pendingTimeouts.add(animTimeoutId);
 
-    // Clean up on abort: clear timeout and remove animation classes
+    // Remove animation classes on abort (timeout already cleared by central handler)
     signal.addEventListener(
       "abort",
       () => {
-        clearTimeout(timeoutId);
         currImg.classList.remove(exitClass);
         nextImg.classList.remove(enterClass);
       },
@@ -468,12 +484,17 @@ export function setupSwipeGestures(
   );
 
   // Show indicator again when view is scrolled vertically (mobile only)
+  // Throttle to prevent battery drain from high-frequency scroll events
   if (isMobile) {
     const viewContainer = coverEl.closest(".dynamic-views");
     if (viewContainer) {
+      let lastScrollTime = 0;
       viewContainer.addEventListener(
         "scroll",
         () => {
+          const now = Date.now();
+          if (now - lastScrollTime < SCROLL_THROTTLE_MS) return;
+          lastScrollTime = now;
           if (indicator) indicator.style.opacity = "1";
         },
         { signal, passive: true },

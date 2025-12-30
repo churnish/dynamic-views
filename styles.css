@@ -3971,83 +3971,72 @@ body.dynamic-views-cover-crop-bottom
   object-fit: contain;
   object-position: center;
   position: relative;
-  z-index: 1;
   border-radius: 0; /* Override theme styles; container handles border-radius */
 }
 
-/* Cover backgrounds for contain mode */
-
-/* Ambient background (default) - letterbox fill for contain mode
+/* Cover backgrounds (all modes)
    Base is opaque to block card bg; ambient overlay via ::after */
-.dynamic-views .card.card-cover-contain.image-format-cover .card-cover {
+.dynamic-views .card.image-format-cover .card-cover {
   background-color: var(--background-secondary);
-  position: relative;
 }
 
-/* Semi-transparent ambient overlay on top of opaque base */
-.dynamic-views .card.card-cover-contain.image-format-cover .card-cover::after {
+/* Ambient overlay behind image (for contain letterbox + transparent image areas) */
+.dynamic-views .card.image-format-cover .card-cover::after {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
   background-color: var(--ambient-color, transparent);
   transition: background-color var(--anim-duration-moderate, 300ms) ease;
   border-radius: inherit;
   pointer-events: none;
 }
 
-/* Plain background: default to --background-primary, no ambient overlay */
+/* Cover background variants */
 body.dynamic-views-cover-bg-plain
   .dynamic-views
-  .card.card-cover-contain.image-format-cover
+  .card.image-format-cover
   .card-cover {
   background-color: var(--background-primary);
 }
-body.dynamic-views-cover-bg-plain
-  .dynamic-views
-  .card.card-cover-contain.image-format-cover
-  .card-cover::after {
-  display: none;
-}
-
-/* Plain background + Custom/Transparent card = --bases-cards-cover-background */
 body.dynamic-views-cover-bg-plain.dynamic-views-card-background-custom
   .dynamic-views
-  .card.card-cover-contain.image-format-cover
+  .card.image-format-cover
   .card-cover,
 body.dynamic-views-cover-bg-plain.dynamic-views-card-background-transparent
   .dynamic-views
-  .card.card-cover-contain.image-format-cover
+  .card.image-format-cover
   .card-cover {
   background-color: var(--bases-cards-cover-background);
 }
-
-/* Transparent background: no ambient overlay */
 body.dynamic-views-cover-bg-transparent
   .dynamic-views
-  .card.card-cover-contain.image-format-cover
+  .card.image-format-cover
   .card-cover {
   background-color: transparent;
 }
-body.dynamic-views-cover-bg-transparent
-  .dynamic-views
-  .card.card-cover-contain.image-format-cover
-  .card-cover::after {
-  display: none;
-}
-
-/* Custom color background: no ambient overlay */
 body.dynamic-views-cover-bg-custom
   .dynamic-views
-  .card.card-cover-contain.image-format-cover
+  .card.image-format-cover
   .card-cover {
   background-color: var(
     --dynamic-views-cover-background-custom-color,
     var(--background-secondary)
   );
 }
+
+/* Hide ambient overlay for non-ambient background settings */
+body.dynamic-views-cover-bg-plain
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover::after,
+body.dynamic-views-cover-bg-transparent
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover::after,
 body.dynamic-views-cover-bg-custom
   .dynamic-views
-  .card.card-cover-contain.image-format-cover
+  .card.image-format-cover
   .card-cover::after {
   display: none;
 }
@@ -4465,6 +4454,7 @@ body.dynamic-views-show-cover-placeholder-none
   left: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
   object-fit: cover;
   object-position: center center;
   border-radius: 0; /* Override theme styles; container handles border-radius */
@@ -5291,6 +5281,26 @@ body:not(
   ).dynamic-views-backdrop-theme-disable
   .dynamic-views
   .card.image-format-backdrop[data-backdrop-theme="dark"]:has(.card-backdrop) {
+}
+
+/* ==================== SLIDESHOW STYLES ==================== */
+
+/* Dual stacked images for slideshow */
+.dynamic-views .slideshow-img {
+  position: absolute !important; /* Override contain mode's position:relative */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dynamic-views .slideshow-img-current {
+  z-index: 2 !important; /* Override contain mode's z-index:1 */
+}
+
+.dynamic-views .slideshow-img-next {
+  z-index: 1;
 }
 
 /* Hide next image when not animating (empty src shows broken icon) */

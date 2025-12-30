@@ -15,7 +15,11 @@ import {
 } from "obsidian";
 import { CardData } from "../shared/card-renderer";
 import { resolveBasesProperty } from "../shared/data-transform";
-import { setupImageLoadHandler, handleImageLoad } from "../shared/image-loader";
+import {
+  setupImageLoadHandler,
+  handleImageLoad,
+  DEFAULT_ASPECT_RATIO,
+} from "../shared/image-loader";
 import {
   showFileContextMenu,
   showExternalLinkContextMenu,
@@ -560,7 +564,6 @@ export class SharedCardRenderer {
       cardEl.addEventListener(
         "keydown",
         (e) => {
-          console.log("[keydown]", e.key, "on card", keyboardNav.index);
           if (e.key === "Enter" || e.key === " ") {
             // Open file (Mod+key handled by scope above)
             if (!e.metaKey && !e.ctrlKey) {
@@ -925,7 +928,7 @@ export class SharedCardRenderer {
 
     // Make card draggable when effectiveOpenFileAction is 'card'
     if (effectiveOpenFileAction === "card") {
-      cardEl.addEventListener("dragstart", handleDrag);
+      cardEl.addEventListener("dragstart", handleDrag, { signal });
     }
 
     // Prepare image URLs if applicable
@@ -1087,15 +1090,43 @@ export class SharedCardRenderer {
         },
         { signal },
       );
-      img.addEventListener(
-        "error",
-        () => {
-          markExternalUrlAsFailed(img.src);
+      // Fallback to next valid image if current fails (consistency with cover/thumbnail)
+      if (imageUrls.length > 1) {
+        let currentUrlIndex = 0;
+        const tryNextBackdropImage = () => {
+          // Mark current URL as failed
+          if (img.src) {
+            markExternalUrlAsFailed(img.src);
+          }
+          currentUrlIndex++;
+          // Try next valid URL
+          while (currentUrlIndex < imageUrls.length) {
+            if (!isFailedExternalUrl(imageUrls[currentUrlIndex])) {
+              img.style.display = "";
+              const effectiveUrl = getCachedBlobUrl(imageUrls[currentUrlIndex]);
+              img.src = effectiveUrl;
+              return;
+            }
+            currentUrlIndex++;
+          }
+          // All images failed
           img.style.display = "none";
+          cardEl.removeAttribute("data-backdrop-theme");
           this.updateLayoutRef.current?.();
-        },
-        { signal },
-      );
+        };
+        img.addEventListener("error", tryNextBackdropImage, { signal });
+      } else {
+        img.addEventListener(
+          "error",
+          () => {
+            markExternalUrlAsFailed(img.src);
+            img.style.display = "none";
+            cardEl.removeAttribute("data-backdrop-theme");
+            this.updateLayoutRef.current?.();
+          },
+          { signal },
+        );
+      }
     }
 
     // Determine if card-content will have children
@@ -1134,7 +1165,7 @@ export class SharedCardRenderer {
       }
     }
 
-    // Properties - 4-field rendering with 2-row layout
+    // Properties - 4-field rendering with 2-set layout
     this.renderProperties(cardEl, card, entry, settings, signal);
 
     // Card-level responsive behaviors (single ResizeObserver)
@@ -1307,9 +1338,17 @@ export class SharedCardRenderer {
     );
 
     // Auto-advance if first image fails to load (skip animation for instant display)
+    const expectedFirstUrl = imageUrls[0];
     currentImg.addEventListener(
       "error",
       () => {
+        // Ignore errors from src being cleared (resolves to index.html)
+        if (
+          !currentImg.src ||
+          !currentImg.src.includes(expectedFirstUrl.split("?")[0].slice(-30))
+        ) {
+          return;
+        }
         markExternalUrlAsFailed(currentImg.src);
         currentImg.style.display = "none";
         navigate(1, false, true);
@@ -1433,8 +1472,19 @@ export class SharedCardRenderer {
           }
           currentUrlIndex++;
         }
-        // All images failed - keep hidden
+        // All images failed - complete fallback handling
         imgEl.style.display = "none";
+        if (!cardEl.classList.contains("cover-ready")) {
+          cardEl.classList.add("cover-ready");
+          cardEl.style.setProperty(
+            "--actual-aspect-ratio",
+            DEFAULT_ASPECT_RATIO.toString(),
+          );
+          // Trigger layout update for cover format
+          if (format === "cover" && this.updateLayoutRef.current) {
+            this.updateLayoutRef.current();
+          }
+        }
       };
       imgEl.addEventListener(
         "error",
@@ -1458,10 +1508,21 @@ export class SharedCardRenderer {
         setupImagePreload(cardEl, scrubbableUrls, signal);
       }
 
+      // Cache bounding rect on mouseenter to avoid layout thrashing on every mousemove
+      let cachedRect: DOMRect | null = null;
+      imageEl.addEventListener(
+        "mouseenter",
+        () => {
+          cachedRect = imageEl.getBoundingClientRect();
+        },
+        { signal },
+      );
+
       imageEl.addEventListener(
         "mousemove",
         (e) => {
-          const rect = imageEl.getBoundingClientRect();
+          // Use cached rect, or cache on first mousemove if mouseenter didn't fire
+          const rect = (cachedRect ??= imageEl.getBoundingClientRect());
           const x = e.clientX - rect.left;
           const index = Math.max(
             0,
@@ -1482,12 +1543,14 @@ export class SharedCardRenderer {
             );
           }
         },
-        signal ? { signal } : undefined,
+        { signal },
       );
 
       imageEl.addEventListener(
         "mouseleave",
         () => {
+          // Invalidate cached rect for next hover (handles resize)
+          cachedRect = null;
           // Find first valid URL
           const firstValidUrl = scrubbableUrls.find(
             (url) => !isFailedExternalUrl(url),
@@ -1500,7 +1563,7 @@ export class SharedCardRenderer {
             `url("${targetUrl}")`,
           );
         },
-        signal ? { signal } : undefined,
+        { signal },
       );
     }
   }
@@ -1551,105 +1614,189 @@ export class SharedCardRenderer {
     const hideMissing = shouldHideMissingProperties();
     const hideEmptyMode = getHideEmptyMode();
 
-    // Check if any row has content
-    // Show row if property is configured, UNLESS labels hidden AND hideMissingProperties enabled
+    // Check if any set has content
+    // Show set if property is configured, UNLESS labels hidden AND hideMissingProperties enabled
     const showConfiguredProps =
       settings.propertyLabels !== "hide" || !hideMissing;
-    const row1HasContent = showConfiguredProps
+    const set1HasContent = showConfiguredProps
       ? effectiveProps[0] !== "" || effectiveProps[1] !== ""
       : values[0] !== null || values[1] !== null;
-    const row2HasContent = showConfiguredProps
+    const set2HasContent = showConfiguredProps
       ? effectiveProps[2] !== "" || effectiveProps[3] !== ""
       : values[2] !== null || values[3] !== null;
-    const row3HasContent = showConfiguredProps
+    const set3HasContent = showConfiguredProps
       ? effectiveProps[4] !== "" || effectiveProps[5] !== ""
       : values[4] !== null || values[5] !== null;
-    const row4HasContent = showConfiguredProps
+    const set4HasContent = showConfiguredProps
       ? effectiveProps[6] !== "" || effectiveProps[7] !== ""
       : values[6] !== null || values[7] !== null;
-    const row5HasContent = showConfiguredProps
+    const set5HasContent = showConfiguredProps
       ? effectiveProps[8] !== "" || effectiveProps[9] !== ""
       : values[8] !== null || values[9] !== null;
-    const row6HasContent = showConfiguredProps
+    const set6HasContent = showConfiguredProps
       ? effectiveProps[10] !== "" || effectiveProps[11] !== ""
       : values[10] !== null || values[11] !== null;
-    const row7HasContent = showConfiguredProps
+    const set7HasContent = showConfiguredProps
       ? effectiveProps[12] !== "" || effectiveProps[13] !== ""
       : values[12] !== null || values[13] !== null;
 
     if (
-      !row1HasContent &&
-      !row2HasContent &&
-      !row3HasContent &&
-      !row4HasContent &&
-      !row5HasContent &&
-      !row6HasContent &&
-      !row7HasContent
+      !set1HasContent &&
+      !set2HasContent &&
+      !set3HasContent &&
+      !set4HasContent &&
+      !set5HasContent &&
+      !set6HasContent &&
+      !set7HasContent
     )
       return;
 
-    // Determine which rows go to top vs bottom based on position settings
-    const row1IsTop = row1HasContent && settings.propertySet1Position === "top";
-    const row2IsTop = row2HasContent && settings.propertySet2Position === "top";
-    const row3IsTop = row3HasContent && settings.propertySet3Position === "top";
-    const row4IsTop = row4HasContent && settings.propertySet4Position === "top";
-    const row5IsTop = row5HasContent && settings.propertySet5Position === "top";
-    const row6IsTop = row6HasContent && settings.propertySet6Position === "top";
-    const row7IsTop = row7HasContent && settings.propertySet7Position === "top";
+    // Determine which sets go to top vs bottom based on position settings
+    const set1IsTop = set1HasContent && settings.propertySet1Position === "top";
+    const set2IsTop = set2HasContent && settings.propertySet2Position === "top";
+    const set3IsTop = set3HasContent && settings.propertySet3Position === "top";
+    const set4IsTop = set4HasContent && settings.propertySet4Position === "top";
+    const set5IsTop = set5HasContent && settings.propertySet5Position === "top";
+    const set6IsTop = set6HasContent && settings.propertySet6Position === "top";
+    const set7IsTop = set7HasContent && settings.propertySet7Position === "top";
 
-    const hasTopRows =
-      row1IsTop ||
-      row2IsTop ||
-      row3IsTop ||
-      row4IsTop ||
-      row5IsTop ||
-      row6IsTop ||
-      row7IsTop;
-    const hasBottomRows =
-      (row1HasContent && !row1IsTop) ||
-      (row2HasContent && !row2IsTop) ||
-      (row3HasContent && !row3IsTop) ||
-      (row4HasContent && !row4IsTop) ||
-      (row5HasContent && !row5IsTop) ||
-      (row6HasContent && !row6IsTop) ||
-      (row7HasContent && !row7IsTop);
+    const hasTopSets =
+      set1IsTop ||
+      set2IsTop ||
+      set3IsTop ||
+      set4IsTop ||
+      set5IsTop ||
+      set6IsTop ||
+      set7IsTop;
+    const hasBottomSets =
+      (set1HasContent && !set1IsTop) ||
+      (set2HasContent && !set2IsTop) ||
+      (set3HasContent && !set3IsTop) ||
+      (set4HasContent && !set4IsTop) ||
+      (set5HasContent && !set5IsTop) ||
+      (set6HasContent && !set6IsTop) ||
+      (set7HasContent && !set7IsTop);
 
     // Create containers as needed
-    const topPropertiesEl = hasTopRows
+    const topPropertiesEl = hasTopSets
       ? cardEl.createDiv("card-properties card-properties-top")
       : null;
-    const bottomPropertiesEl = hasBottomRows
+    const bottomPropertiesEl = hasBottomSets
       ? cardEl.createDiv("card-properties card-properties-bottom")
       : null;
 
-    // Helper to get the right container for each row
-    const getContainer = (rowNum: number): HTMLElement | null => {
-      const positions = [
-        row1IsTop,
-        row2IsTop,
-        row3IsTop,
-        row4IsTop,
-        row5IsTop,
-        row6IsTop,
-        row7IsTop,
-      ];
-      const isTop = positions[rowNum - 1];
-      return isTop ? topPropertiesEl : bottomPropertiesEl;
+    // Helper to check if element has rendered content
+    const hasRenderedContent = (el: HTMLElement): boolean =>
+      el.children.length > 0 || (el.textContent?.trim().length ?? 0) > 0;
+
+    // Helper to handle empty field (collapse or show marker)
+    const handleEmptyField = (
+      fieldEl: HTMLElement,
+      fieldIdx: number,
+      hasProp: boolean,
+    ): void => {
+      if (hasProp) {
+        if (
+          shouldCollapseField(
+            values[fieldIdx],
+            effectiveProps[fieldIdx],
+            hideMissing,
+            hideEmptyMode,
+            settings.propertyLabels,
+          )
+        ) {
+          fieldEl.addClass("property-field-collapsed");
+        } else {
+          const placeholderContent = fieldEl.createDiv("property-content");
+          const markerSpan =
+            placeholderContent.createSpan("empty-value-marker");
+          markerSpan.textContent = getEmptyValueMarker();
+        }
+      } else if (settings.propertyLabels === "hide") {
+        fieldEl.addClass("property-field-collapsed");
+      }
     };
 
-    // Row 1
-    if (row1HasContent) {
-      const row1El = getContainer(1)!.createDiv("property-set property-set-1");
-      if (settings.propertySet1SideBySide) {
-        row1El.addClass("property-set-sidebyside");
-      }
+    // Set configuration: each set has two fields with 0-based indices
+    const setConfigs = [
+      {
+        set: 1,
+        hasContent: set1HasContent,
+        isTop: set1IsTop,
+        sideBySide: settings.propertySet1SideBySide,
+        fieldIndices: [0, 1] as const,
+      },
+      {
+        set: 2,
+        hasContent: set2HasContent,
+        isTop: set2IsTop,
+        sideBySide: settings.propertySet2SideBySide,
+        fieldIndices: [2, 3] as const,
+      },
+      {
+        set: 3,
+        hasContent: set3HasContent,
+        isTop: set3IsTop,
+        sideBySide: settings.propertySet3SideBySide,
+        fieldIndices: [4, 5] as const,
+      },
+      {
+        set: 4,
+        hasContent: set4HasContent,
+        isTop: set4IsTop,
+        sideBySide: settings.propertySet4SideBySide,
+        fieldIndices: [6, 7] as const,
+      },
+      {
+        set: 5,
+        hasContent: set5HasContent,
+        isTop: set5IsTop,
+        sideBySide: settings.propertySet5SideBySide,
+        fieldIndices: [8, 9] as const,
+      },
+      {
+        set: 6,
+        hasContent: set6HasContent,
+        isTop: set6IsTop,
+        sideBySide: settings.propertySet6SideBySide,
+        fieldIndices: [10, 11] as const,
+      },
+      {
+        set: 7,
+        hasContent: set7HasContent,
+        isTop: set7IsTop,
+        sideBySide: settings.propertySet7SideBySide,
+        fieldIndices: [12, 13] as const,
+      },
+    ];
 
-      const field1El = row1El.createDiv("property-field property-field-1");
-      if (effectiveProps[0])
+    // Render each set
+    for (const {
+      set,
+      hasContent,
+      isTop,
+      sideBySide,
+      fieldIndices,
+    } of setConfigs) {
+      if (!hasContent) continue;
+
+      const [idx1, idx2] = fieldIndices;
+      const fieldNum1 = idx1 + 1;
+      const fieldNum2 = idx2 + 1;
+      const container = isTop ? topPropertiesEl : bottomPropertiesEl;
+
+      const setEl = container!.createDiv(`property-set property-set-${set}`);
+      if (sideBySide) setEl.addClass("property-set-sidebyside");
+
+      // Create and render field 1
+      const field1El = setEl.createDiv(
+        `property-field property-field-${fieldNum1}`,
+      );
+      if (effectiveProps[idx1]) {
         this.renderPropertyContent(
           field1El,
-          effectiveProps[0],
-          values[0],
+          effectiveProps[idx1],
+          values[idx1],
           card,
           entry,
           settings,
@@ -1657,13 +1804,17 @@ export class SharedCardRenderer {
           hideEmptyMode,
           signal,
         );
+      }
 
-      const field2El = row1El.createDiv("property-field property-field-2");
-      if (effectiveProps[1])
+      // Create and render field 2
+      const field2El = setEl.createDiv(
+        `property-field property-field-${fieldNum2}`,
+      );
+      if (effectiveProps[idx2]) {
         this.renderPropertyContent(
           field2El,
-          effectiveProps[1],
-          values[1],
+          effectiveProps[idx2],
+          values[idx2],
           card,
           entry,
           settings,
@@ -1671,608 +1822,21 @@ export class SharedCardRenderer {
           hideEmptyMode,
           signal,
         );
+      }
 
       // Check actual rendered content
-      const has1 =
-        field1El.children.length > 0 || field1El.textContent?.trim().length > 0;
-      const has2 =
-        field2El.children.length > 0 || field2El.textContent?.trim().length > 0;
+      const has1 = hasRenderedContent(field1El);
+      const has2 = hasRenderedContent(field2El);
+      const hasProp1 = effectiveProps[idx1] !== "";
+      const hasProp2 = effectiveProps[idx2] !== "";
 
-      // Check if properties are actually set (not empty string from duplicate/empty slots)
-      const field1HasProp = effectiveProps[0] !== "";
-      const field2HasProp = effectiveProps[1] !== "";
-
+      // Handle set removal or empty field display
       if (!has1 && !has2) {
-        row1El.remove();
+        setEl.remove();
       } else if (has1 && !has2) {
-        if (field2HasProp) {
-          if (
-            shouldCollapseField(
-              values[1],
-              effectiveProps[1],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field2El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field2El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field2El.addClass("property-field-collapsed");
-        }
+        handleEmptyField(field2El, idx2, hasProp2);
       } else if (!has1 && has2) {
-        if (field1HasProp) {
-          if (
-            shouldCollapseField(
-              values[0],
-              effectiveProps[0],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field1El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field1El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field1El.addClass("property-field-collapsed");
-        }
-      }
-    }
-
-    // Row 2
-    if (row2HasContent) {
-      const row2El = getContainer(2)!.createDiv("property-set property-set-2");
-      if (settings.propertySet2SideBySide) {
-        row2El.addClass("property-set-sidebyside");
-      }
-
-      const field3El = row2El.createDiv("property-field property-field-3");
-      if (effectiveProps[2])
-        this.renderPropertyContent(
-          field3El,
-          effectiveProps[2],
-          values[2],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const field4El = row2El.createDiv("property-field property-field-4");
-      if (effectiveProps[3])
-        this.renderPropertyContent(
-          field4El,
-          effectiveProps[3],
-          values[3],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      // Check actual rendered content
-      const has3 =
-        field3El.children.length > 0 || field3El.textContent?.trim().length > 0;
-      const has4 =
-        field4El.children.length > 0 || field4El.textContent?.trim().length > 0;
-
-      // Check if properties are actually set (not empty string from duplicate/empty slots)
-      const field3HasProp = effectiveProps[2] !== "";
-      const field4HasProp = effectiveProps[3] !== "";
-
-      if (!has3 && !has4) {
-        row2El.remove();
-      } else if (has3 && !has4) {
-        if (field4HasProp) {
-          if (
-            shouldCollapseField(
-              values[3],
-              effectiveProps[3],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field4El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field4El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field4El.addClass("property-field-collapsed");
-        }
-      } else if (!has3 && has4) {
-        if (field3HasProp) {
-          if (
-            shouldCollapseField(
-              values[2],
-              effectiveProps[2],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field3El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field3El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field3El.addClass("property-field-collapsed");
-        }
-      }
-    }
-
-    // Row 3
-    if (row3HasContent) {
-      const row3El = getContainer(3)!.createDiv("property-set property-set-3");
-      if (settings.propertySet3SideBySide) {
-        row3El.addClass("property-set-sidebyside");
-      }
-
-      const field5El = row3El.createDiv("property-field property-field-5");
-      if (effectiveProps[4])
-        this.renderPropertyContent(
-          field5El,
-          effectiveProps[4],
-          values[4],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const field6El = row3El.createDiv("property-field property-field-6");
-      if (effectiveProps[5])
-        this.renderPropertyContent(
-          field6El,
-          effectiveProps[5],
-          values[5],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const has5 =
-        field5El.children.length > 0 || field5El.textContent?.trim().length > 0;
-      const has6 =
-        field6El.children.length > 0 || field6El.textContent?.trim().length > 0;
-
-      const field5HasProp = effectiveProps[4] !== "";
-      const field6HasProp = effectiveProps[5] !== "";
-
-      if (!has5 && !has6) {
-        row3El.remove();
-      } else if (has5 && !has6) {
-        if (field6HasProp) {
-          if (
-            shouldCollapseField(
-              values[5],
-              effectiveProps[5],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field6El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field6El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field6El.addClass("property-field-collapsed");
-        }
-      } else if (!has5 && has6) {
-        if (field5HasProp) {
-          if (
-            shouldCollapseField(
-              values[4],
-              effectiveProps[4],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field5El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field5El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field5El.addClass("property-field-collapsed");
-        }
-      }
-    }
-
-    // Row 4
-    if (row4HasContent) {
-      const row4El = getContainer(4)!.createDiv("property-set property-set-4");
-      if (settings.propertySet4SideBySide) {
-        row4El.addClass("property-set-sidebyside");
-      }
-
-      const field7El = row4El.createDiv("property-field property-field-7");
-      if (effectiveProps[6])
-        this.renderPropertyContent(
-          field7El,
-          effectiveProps[6],
-          values[6],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const field8El = row4El.createDiv("property-field property-field-8");
-      if (effectiveProps[7])
-        this.renderPropertyContent(
-          field8El,
-          effectiveProps[7],
-          values[7],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const has7 =
-        field7El.children.length > 0 || field7El.textContent?.trim().length > 0;
-      const has8 =
-        field8El.children.length > 0 || field8El.textContent?.trim().length > 0;
-
-      const field7HasProp = effectiveProps[6] !== "";
-      const field8HasProp = effectiveProps[7] !== "";
-
-      if (!has7 && !has8) {
-        row4El.remove();
-      } else if (has7 && !has8) {
-        if (field8HasProp) {
-          if (
-            shouldCollapseField(
-              values[7],
-              effectiveProps[7],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field8El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field8El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field8El.addClass("property-field-collapsed");
-        }
-      } else if (!has7 && has8) {
-        if (field7HasProp) {
-          if (
-            shouldCollapseField(
-              values[6],
-              effectiveProps[6],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field7El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field7El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field7El.addClass("property-field-collapsed");
-        }
-      }
-    }
-
-    // Row 5
-    if (row5HasContent) {
-      const row5El = getContainer(5)!.createDiv("property-set property-set-5");
-      if (settings.propertySet5SideBySide) {
-        row5El.addClass("property-set-sidebyside");
-      }
-
-      const field9El = row5El.createDiv("property-field property-field-9");
-      if (effectiveProps[8])
-        this.renderPropertyContent(
-          field9El,
-          effectiveProps[8],
-          values[8],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const field10El = row5El.createDiv("property-field property-field-10");
-      if (effectiveProps[9])
-        this.renderPropertyContent(
-          field10El,
-          effectiveProps[9],
-          values[9],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const has9 =
-        field9El.children.length > 0 || field9El.textContent?.trim().length > 0;
-      const has10 =
-        field10El.children.length > 0 ||
-        field10El.textContent?.trim().length > 0;
-
-      const field9HasProp = effectiveProps[8] !== "";
-      const field10HasProp = effectiveProps[9] !== "";
-
-      if (!has9 && !has10) {
-        row5El.remove();
-      } else if (has9 && !has10) {
-        if (field10HasProp) {
-          if (
-            shouldCollapseField(
-              values[9],
-              effectiveProps[9],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field10El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field10El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field10El.addClass("property-field-collapsed");
-        }
-      } else if (!has9 && has10) {
-        if (field9HasProp) {
-          if (
-            shouldCollapseField(
-              values[8],
-              effectiveProps[8],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field9El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field9El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field9El.addClass("property-field-collapsed");
-        }
-      }
-    }
-
-    // Row 6
-    if (row6HasContent) {
-      const row6El = getContainer(6)!.createDiv("property-set property-set-6");
-      if (settings.propertySet6SideBySide) {
-        row6El.addClass("property-set-sidebyside");
-      }
-
-      const field11El = row6El.createDiv("property-field property-field-11");
-      if (effectiveProps[10])
-        this.renderPropertyContent(
-          field11El,
-          effectiveProps[10],
-          values[10],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const field12El = row6El.createDiv("property-field property-field-12");
-      if (effectiveProps[11])
-        this.renderPropertyContent(
-          field12El,
-          effectiveProps[11],
-          values[11],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const has11 =
-        field11El.children.length > 0 ||
-        field11El.textContent?.trim().length > 0;
-      const has12 =
-        field12El.children.length > 0 ||
-        field12El.textContent?.trim().length > 0;
-
-      const field11HasProp = effectiveProps[10] !== "";
-      const field12HasProp = effectiveProps[11] !== "";
-
-      if (!has11 && !has12) {
-        row6El.remove();
-      } else if (has11 && !has12) {
-        if (field12HasProp) {
-          if (
-            shouldCollapseField(
-              values[11],
-              effectiveProps[11],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field12El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field12El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field12El.addClass("property-field-collapsed");
-        }
-      } else if (!has11 && has12) {
-        if (field11HasProp) {
-          if (
-            shouldCollapseField(
-              values[10],
-              effectiveProps[10],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field11El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field11El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field11El.addClass("property-field-collapsed");
-        }
-      }
-    }
-
-    // Row 7
-    if (row7HasContent) {
-      const row7El = getContainer(7)!.createDiv("property-set property-set-7");
-      if (settings.propertySet7SideBySide) {
-        row7El.addClass("property-set-sidebyside");
-      }
-
-      const field13El = row7El.createDiv("property-field property-field-13");
-      if (effectiveProps[12])
-        this.renderPropertyContent(
-          field13El,
-          effectiveProps[12],
-          values[12],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const field14El = row7El.createDiv("property-field property-field-14");
-      if (effectiveProps[13])
-        this.renderPropertyContent(
-          field14El,
-          effectiveProps[13],
-          values[13],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-
-      const has13 =
-        field13El.children.length > 0 ||
-        field13El.textContent?.trim().length > 0;
-      const has14 =
-        field14El.children.length > 0 ||
-        field14El.textContent?.trim().length > 0;
-
-      const field13HasProp = effectiveProps[12] !== "";
-      const field14HasProp = effectiveProps[13] !== "";
-
-      if (!has13 && !has14) {
-        row7El.remove();
-      } else if (has13 && !has14) {
-        if (field14HasProp) {
-          if (
-            shouldCollapseField(
-              values[13],
-              effectiveProps[13],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field14El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field14El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field14El.addClass("property-field-collapsed");
-        }
-      } else if (!has13 && has14) {
-        if (field13HasProp) {
-          if (
-            shouldCollapseField(
-              values[12],
-              effectiveProps[12],
-              hideMissing,
-              hideEmptyMode,
-              settings.propertyLabels,
-            )
-          ) {
-            field13El.addClass("property-field-collapsed");
-          } else {
-            const placeholderContent = field13El.createDiv("property-content");
-            const markerSpan =
-              placeholderContent.createSpan("empty-value-marker");
-            markerSpan.textContent = getEmptyValueMarker();
-          }
-        } else if (settings.propertyLabels === "hide") {
-          field13El.addClass("property-field-collapsed");
-        }
+        handleEmptyField(field1El, idx1, hasProp1);
       }
     }
 
@@ -2292,7 +1856,7 @@ export class SharedCardRenderer {
       // Measure side-by-side field widths
       this.measurePropertyFieldsForCard(cardEl);
       // Setup scroll gradients for tags and paths
-      setupScrollGradients(cardEl, updateScrollGradient);
+      setupScrollGradients(cardEl, updateScrollGradient, signal);
     }
   }
 
