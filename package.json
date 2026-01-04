@@ -12,7 +12,13 @@
     "release": "npm version",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "knip": "knip"
+  },
+  "knip": {
+    "ignore": [
+      "archive/**"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -22,7 +28,7 @@
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/preact": "^3.2.3",
     "@types/jest": "^29.5.11",
-    "@types/node": "^16.11.6",
+    "@types/node": "^18.19.130",
     "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.3",
     "builtin-modules": "3.3.0",
@@ -31,6 +37,7 @@
     "eslint-plugin-obsidianmd": "^0.1.8",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "knip": "^5.79.0",
     "obsidian": "^1.11.0",
     "ts-jest": "^29.1.1",
     "tslib": "^2.8.1",
