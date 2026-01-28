@@ -419,6 +419,35 @@ export function Settings({
         <div
           className={`settings-section-content ${expandedSections.image ? "" : "collapsed"}`}
         >
+          {renderTextInput(
+            "Image property",
+            "imageProperty",
+            "Comma-separated if multiple",
+          )}
+          <div className="setting-item setting-item-dropdown">
+            <div className="setting-item-info">
+              <label>Show image embeds</label>
+            </div>
+            <select
+              value={settings.fallbackToEmbeds}
+              onChange={(e: unknown) => {
+                const evt = e as Event & { target: HTMLSelectElement };
+                onSettingsChange({
+                  fallbackToEmbeds: evt.target.value as
+                    | "always"
+                    | "if-unavailable"
+                    | "never",
+                });
+              }}
+              className="dropdown"
+            >
+              <option value="always">Always</option>
+              <option value="if-unavailable">
+                If no available property images
+              </option>
+              <option value="never">Never</option>
+            </select>
+          </div>
           <div className="setting-item setting-item-dropdown">
             <div className="setting-item-info">
               <label>Format</label>
@@ -491,39 +520,6 @@ export function Settings({
                 </select>
               </div>
             )}
-          {settings.imageFormat !== "none" && (
-            <>
-              {renderTextInput(
-                "Image property",
-                "imageProperty",
-                "Comma-separated if multiple",
-              )}
-              <div className="setting-item setting-item-dropdown">
-                <div className="setting-item-info">
-                  <label>Show image embeds</label>
-                </div>
-                <select
-                  value={settings.fallbackToEmbeds}
-                  onChange={(e: unknown) => {
-                    const evt = e as Event & { target: HTMLSelectElement };
-                    onSettingsChange({
-                      fallbackToEmbeds: evt.target.value as
-                        | "always"
-                        | "if-unavailable"
-                        | "never",
-                    });
-                  }}
-                  className="dropdown"
-                >
-                  <option value="always">Always</option>
-                  <option value="if-unavailable">
-                    If no available property images
-                  </option>
-                  <option value="never">Never</option>
-                </select>
-              </div>
-            </>
-          )}
           {settings.imageFormat !== "none" &&
             settings.imageFormat !== "backdrop" && (
               <>
@@ -614,9 +610,9 @@ export function Settings({
       {/* Property Sets 1-7 */}
       {PROPERTY_SETS.map(renderPropertySet)}
 
-      {/* More Section */}
+      {/* Other Section */}
       <div className="settings-section">
-        {renderSectionHeader("more", "More")}
+        {renderSectionHeader("more", "Other")}
         <div
           className={`settings-section-content ${expandedSections.more ? "" : "collapsed"}`}
         >

@@ -1647,17 +1647,11 @@ body {
 }
 
 /* Constrain element wrappers to normal width (Reading View) */
-.markdown-preview-view.datacore-wide
-  .markdown-preview-sizer
-  > *:not(.el-pre):not(:has(.block-language-datacorejsx)),
-.markdown-preview-view.datacore-max
-  .markdown-preview-sizer
-  > *:not(.el-pre):not(:has(.block-language-datacorejsx)),
-.markdown-reading-view.datacore-wide
-  .markdown-reading-sizer
-  > *:not(.el-pre):not(:has(.block-language-datacorejsx)),
-.markdown-reading-view.datacore-max
-  .markdown-reading-sizer
+:is(.markdown-preview-view, .markdown-reading-view):is(
+    .datacore-wide,
+    .datacore-max
+  )
+  :is(.markdown-preview-sizer, .markdown-reading-sizer)
   > *:not(.el-pre):not(:has(.block-language-datacorejsx)) {
   max-width: var(--file-line-width, 45rem) !important;
   margin-left: auto !important;
@@ -1665,16 +1659,16 @@ body {
 }
 
 /* Expand sizer in wide and max modes (Reading View) */
-.markdown-preview-view.datacore-wide .markdown-preview-sizer,
-.markdown-reading-view.datacore-wide .markdown-reading-sizer {
+:is(.markdown-preview-view, .markdown-reading-view).datacore-wide
+  :is(.markdown-preview-sizer, .markdown-reading-sizer) {
   max-width: min(
     calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
     96vw
   ) !important;
 }
 
-.markdown-preview-view.datacore-max .markdown-preview-sizer,
-.markdown-reading-view.datacore-max .markdown-reading-sizer {
+:is(.markdown-preview-view, .markdown-reading-view).datacore-max
+  :is(.markdown-preview-sizer, .markdown-reading-sizer) {
   max-width: 96vw !important;
 }
 
@@ -1682,26 +1676,17 @@ body {
 /* Only expand the specific code block wrapper below */
 
 /* Allow code block to overflow in wide/max modes */
-.markdown-source-view.datacore-wide .cm-contentContainer,
-.markdown-source-view.datacore-max .cm-contentContainer,
-.markdown-source-view.datacore-wide .cm-content,
-.markdown-source-view.datacore-max .cm-content {
+.markdown-source-view:is(.datacore-wide, .datacore-max)
+  :is(.cm-contentContainer, .cm-content) {
   overflow: visible !important;
 }
 
-/* Reading View wrappers */
-/* Wide mode: expand wrapper (sizer already expanded above) */
-.markdown-preview-view.datacore-wide .el-pre:has(.block-language-datacorejsx),
-.markdown-reading-view.datacore-wide .el-pre:has(.block-language-datacorejsx) {
-  max-width: var(--container-datacorejsx-max-width) !important;
-  width: var(--container-datacorejsx-width) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-/* Max mode: expand sizer, then expand wrapper */
-.markdown-preview-view.datacore-max .el-pre:has(.block-language-datacorejsx),
-.markdown-reading-view.datacore-max .el-pre:has(.block-language-datacorejsx) {
+/* Reading View wrappers: expand wrapper in wide/max modes */
+:is(.markdown-preview-view, .markdown-reading-view):is(
+    .datacore-wide,
+    .datacore-max
+  )
+  .el-pre:has(.block-language-datacorejsx) {
   max-width: var(--container-datacorejsx-max-width) !important;
   width: var(--container-datacorejsx-width) !important;
   margin-left: auto !important;
@@ -1739,12 +1724,11 @@ body {
 }
 
 /* Expand datacore block when wide/max active */
-.markdown-preview-view.datacore-wide .block-language-datacorejsx,
-.markdown-preview-view.datacore-max .block-language-datacorejsx,
-.markdown-reading-view.datacore-wide .block-language-datacorejsx,
-.markdown-reading-view.datacore-max .block-language-datacorejsx,
-.markdown-source-view.datacore-wide .block-language-datacorejsx,
-.markdown-source-view.datacore-max .block-language-datacorejsx {
+:is(.markdown-preview-view, .markdown-reading-view, .markdown-source-view):is(
+    .datacore-wide,
+    .datacore-max
+  )
+  .block-language-datacorejsx {
   width: var(--container-datacorejsx-width) !important;
   max-width: var(--container-datacorejsx-max-width) !important;
   margin: 0 auto !important;
@@ -1754,8 +1738,8 @@ body {
 .markdown-source-view.is-readable-line-width
   .cm-content
   > .block-language-datacorejsx,
-.markdown-preview-view.is-readable-line-width .block-language-datacorejsx,
-.markdown-reading-view.is-readable-line-width .block-language-datacorejsx {
+:is(.markdown-preview-view, .markdown-reading-view).is-readable-line-width
+  .block-language-datacorejsx {
   width: var(--container-datacorejsx-width);
   max-width: var(--container-datacorejsx-max-width);
   margin: 0 auto;
@@ -2041,20 +2025,19 @@ body.dynamic-views-disable-toolbar-shadow
 }
 
 @media (hover: hover) {
-  .results-count-wrapper:hover,
-  .results-count-wrapper-compact:hover {
+  :is(.results-count-wrapper, .results-count-wrapper-compact):hover {
     background-color: var(--background-modifier-hover);
     opacity: var(--icon-opacity-hover);
   }
 
-  .results-count-wrapper:has(.limited):hover,
-  .results-count-wrapper-compact:has(.limited):hover {
+  :is(.results-count-wrapper, .results-count-wrapper-compact):has(
+      .limited
+    ):hover {
     background-color: var(--background-modifier-active-hover);
   }
 }
 
-.results-count-wrapper.active,
-.results-count-wrapper-compact.active {
+:is(.results-count-wrapper, .results-count-wrapper-compact).active {
   background-color: var(--background-modifier-hover);
   opacity: var(--icon-opacity-hover);
 }
@@ -2171,8 +2154,17 @@ body.dynamic-views-disable-toolbar-shadow
    TOOLBAR BUTTONS
    ============================================ */
 
-.dynamic-views .create-note-button,
-.dynamic-views .create-note-button-compact {
+.dynamic-views
+  :is(
+    .create-note-button,
+    .create-note-button-compact,
+    .settings-btn,
+    .query-toggle-btn,
+    .shuffle-btn,
+    .open-random-btn,
+    .width-toggle-btn,
+    .pin-btn
+  ) {
   padding: 6px !important;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -2187,15 +2179,38 @@ body.dynamic-views-disable-toolbar-shadow
   box-sizing: border-box;
 }
 
-.dynamic-views .create-note-button svg,
-.dynamic-views .create-note-button-compact svg {
+.dynamic-views :is(.settings-btn, .query-toggle-btn) {
+  box-shadow: none;
+}
+
+.dynamic-views
+  :is(
+    .create-note-button,
+    .create-note-button-compact,
+    .settings-btn,
+    .query-toggle-btn,
+    .shuffle-btn,
+    .open-random-btn,
+    .width-toggle-btn,
+    .pin-btn
+  )
+  svg {
   width: 16px;
   height: 16px;
   color: var(--icon-color);
 }
 
-.dynamic-views .create-note-button:hover,
-.dynamic-views .create-note-button-compact:hover {
+.dynamic-views
+  :is(
+    .create-note-button,
+    .create-note-button-compact,
+    .settings-btn,
+    .query-toggle-btn,
+    .shuffle-btn,
+    .open-random-btn,
+    .width-toggle-btn,
+    .pin-btn
+  ):hover {
   border-color: var(--text-faint);
   background-color: var(--background-modifier-hover);
 }
@@ -2210,164 +2225,6 @@ body.dynamic-views-disable-toolbar-shadow
   gap: 8px;
   align-items: center;
   margin-left: auto;
-}
-
-.dynamic-views .settings-btn {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  box-shadow: none;
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
-
-.dynamic-views .settings-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
-
-.settings-btn:hover {
-  background-color: var(--background-modifier-hover);
-  border-color: var(--text-faint);
-}
-
-.dynamic-views .query-toggle-btn {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  box-shadow: none;
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
-
-.dynamic-views .query-toggle-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
-
-.query-toggle-btn:hover {
-  border-color: var(--text-faint);
-  background-color: var(--background-modifier-hover);
-}
-
-.dynamic-views .shuffle-btn {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
-
-.dynamic-views .shuffle-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
-
-.shuffle-btn:hover {
-  border-color: var(--text-faint);
-  background-color: var(--background-modifier-hover);
-}
-
-.dynamic-views .open-random-btn {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
-
-.dynamic-views .open-random-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
-
-.open-random-btn:hover {
-  border-color: var(--text-faint);
-  background-color: var(--background-modifier-hover);
-}
-
-.dynamic-views .width-toggle-btn {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
-
-.dynamic-views .width-toggle-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
-
-.width-toggle-btn:hover {
-  border-color: var(--text-faint);
-  background-color: var(--background-modifier-hover);
-}
-
-.dynamic-views .pin-btn {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
-
-.dynamic-views .pin-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
-
-.pin-btn:hover {
-  border-color: var(--text-faint);
-  background-color: var(--background-modifier-hover);
 }
 
 /* ============================================
@@ -2881,7 +2738,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Unified grid layout for all grid views (all width modes) */
-.bases-view[data-view-type="dynamic-views-grid"] .dynamic-views-grid,
 .dynamic-views .dynamic-views-grid {
   display: grid;
   grid-template-columns: repeat(var(--grid-columns, 1), 1fr);
@@ -2956,6 +2812,25 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 }
 
 /* Collapse empty cards (no visible content) - requires :has() (Electron 22+) */
+:is(.dynamic-views-grid, .dynamic-views-masonry)
+  .card:not(
+    :has(
+      .card-title,
+      .card-header,
+      .card-subtitle,
+      .card-cover img,
+      .card-thumbnail img,
+      .card-text-preview,
+      .card-properties
+    )
+  ) {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  line-height: 0;
+}
+
+/* Grid-specific: prevent empty cards from stretching */
 .dynamic-views-grid
   .card:not(
     :has(
@@ -2969,28 +2844,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
     )
   ) {
   align-self: start;
-  height: auto;
-  min-height: 0;
-  padding: 0;
-  line-height: 0;
-}
-
-.dynamic-views-masonry
-  .card:not(
-    :has(
-      .card-title,
-      .card-header,
-      .card-subtitle,
-      .card-cover img,
-      .card-thumbnail img,
-      .card-text-preview,
-      .card-properties
-    )
-  ) {
-  height: auto;
-  min-height: 0;
-  padding: 0;
-  line-height: 0;
 }
 
 /* Override vanilla Bases absolute positioning - we use static flow layout */
@@ -3250,6 +3103,13 @@ body.dynamic-views-adaptive-text .dynamic-views .card:focus-visible::after {
   margin-top: var(--size-4-2);
 }
 
+/* Collapse card-content when it only has a hidden thumbnail placeholder */
+body:not(.dynamic-views-show-thumbnail-placeholder)
+  .dynamic-views
+  .card-content:has(> .card-thumbnail-placeholder:only-child) {
+  display: none;
+}
+
 /* Fix spacing when title hidden: properties-top visually precedes card-content due to flexbox order,
    but the owl selector above applies margin based on DOM order, not visual order */
 .dynamic-views
@@ -3468,6 +3328,11 @@ body.dynamic-views-file-type-ext
   margin: -4px;
 }
 
+/* When URL icon is only child (no title/subtitle), push to right */
+.dynamic-views .card-header .card-title-url-icon:only-child {
+  margin-left: auto;
+}
+
 /* File type indicator styles */
 .dynamic-views .card-title-ext {
   display: none;
@@ -3617,12 +3482,13 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
   overflow-wrap: break-word;
 }
 
-.dynamic-views .card-subtitle .property-content,
-.dynamic-views .card-subtitle .text-wrapper,
 .dynamic-views
   .card-subtitle
-  .text-wrapper
-  > span:not(.internal-link):not(.external-link):not(.tag) {
+  :is(
+    .property-content,
+    .text-wrapper,
+    .text-wrapper > span:not(.internal-link, .external-link, .tag)
+  ) {
   display: block;
   width: 100%;
   height: auto;
@@ -3634,15 +3500,11 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
 body:not(.dynamic-views-subtitle-overflow-scroll)
   .dynamic-views
   .card-subtitle
-  .property-content-wrapper.scroll-gradient-left,
-body:not(.dynamic-views-subtitle-overflow-scroll)
-  .dynamic-views
-  .card-subtitle
-  .property-content-wrapper.scroll-gradient-right,
-body:not(.dynamic-views-subtitle-overflow-scroll)
-  .dynamic-views
-  .card-subtitle
-  .property-content-wrapper.scroll-gradient-both {
+  .property-content-wrapper:is(
+    .scroll-gradient-left,
+    .scroll-gradient-right,
+    .scroll-gradient-both
+  ) {
   mask-image: none !important;
   -webkit-mask-image: none !important;
 }
@@ -3668,16 +3530,11 @@ body.dynamic-views-subtitle-overflow-scroll
 body.dynamic-views-subtitle-overflow-scroll
   .dynamic-views
   .card-subtitle
-  .property-content,
-body.dynamic-views-subtitle-overflow-scroll
-  .dynamic-views
-  .card-subtitle
-  .text-wrapper,
-body.dynamic-views-subtitle-overflow-scroll
-  .dynamic-views
-  .card-subtitle
-  .text-wrapper
-  > span:not(.internal-link):not(.external-link):not(.tag) {
+  :is(
+    .property-content,
+    .text-wrapper,
+    .text-wrapper > span:not(.internal-link, .external-link, .tag)
+  ) {
   display: flex;
   width: max-content;
   white-space: nowrap;
@@ -4736,7 +4593,10 @@ body.dynamic-views-show-cover-border
 
 /* Placeholder background: follows cover background setting */
 /* Plain & Ambient (ambient falls back to plain since no image to extract from) */
-body.dynamic-views-cover-bg-plain .dynamic-views .card.image-format-cover .card-cover-placeholder,
+body.dynamic-views-cover-bg-plain
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-placeholder,
 body.dynamic-views-cover-bg-ambient
   .dynamic-views
   .card.image-format-cover

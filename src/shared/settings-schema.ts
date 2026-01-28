@@ -45,13 +45,6 @@ export function getBasesViewOptions(): any[] {
           placeholder: "Comma-separated if multiple",
           default: DEFAULT_VIEW_SETTINGS.subtitleProperty,
         },
-        {
-          type: "text",
-          displayName: "URL property",
-          key: "urlProperty",
-          placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.urlProperty,
-        },
       ],
     },
     {
@@ -78,6 +71,24 @@ export function getBasesViewOptions(): any[] {
       displayName: "Image",
       items: [
         {
+          type: "text",
+          displayName: "Image property",
+          key: "imageProperty",
+          placeholder: "Comma-separated if multiple",
+          default: DEFAULT_VIEW_SETTINGS.imageProperty,
+        },
+        {
+          type: "dropdown",
+          displayName: "Show image embeds",
+          key: "fallbackToEmbeds",
+          options: {
+            always: "Always",
+            "if-unavailable": "If no available property images",
+            never: "Never",
+          },
+          default: "always",
+        },
+        {
           type: "dropdown",
           displayName: "Format",
           key: "imageFormat",
@@ -99,24 +110,6 @@ export function getBasesViewOptions(): any[] {
             bottom: "Bottom",
           },
           default: "right",
-        },
-        {
-          type: "text",
-          displayName: "Image property",
-          key: "imageProperty",
-          placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.imageProperty,
-        },
-        {
-          type: "dropdown",
-          displayName: "Show image embeds",
-          key: "fallbackToEmbeds",
-          options: {
-            always: "Always",
-            "if-unavailable": "If no available property images",
-            never: "Never",
-          },
-          default: "always",
         },
         {
           type: "dropdown",
@@ -405,6 +398,13 @@ export function getBasesViewOptions(): any[] {
             hide: "Hide",
           },
           default: DEFAULT_VIEW_SETTINGS.propertyLabels,
+        },
+        {
+          type: "text",
+          displayName: "URL property",
+          key: "urlProperty",
+          placeholder: "Comma-separated if multiple",
+          default: DEFAULT_VIEW_SETTINGS.urlProperty,
         },
         {
           type: "text",

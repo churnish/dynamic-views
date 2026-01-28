@@ -543,24 +543,29 @@ export class SharedCardRenderer {
         | "bottom";
     }
 
-    // Add format class
-    if (format === "cover") {
-      cardEl.classList.add("image-format-cover");
-    } else if (format === "thumbnail") {
-      cardEl.classList.add("image-format-thumbnail");
-    } else if (format === "backdrop") {
-      cardEl.classList.add("image-format-backdrop");
-    }
+    // Check if any image source is configured (property or embeds)
+    const hasImageSource =
+      !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== "never";
 
-    // Add position class
-    if (format === "thumbnail") {
-      cardEl.classList.add(`card-thumbnail-${position}`);
-      cardEl.classList.add(`card-thumbnail-${settings.imageFit}`);
-    } else if (format === "cover") {
-      cardEl.classList.add(`card-cover-${position}`);
-      cardEl.classList.add(`card-cover-${settings.imageFit}`);
-    } else if (format === "backdrop") {
-      cardEl.classList.add(`card-cover-${settings.imageFit}`);
+    // Add format/position classes only when an image source is configured
+    if (hasImageSource) {
+      if (format === "cover") {
+        cardEl.classList.add("image-format-cover");
+      } else if (format === "thumbnail") {
+        cardEl.classList.add("image-format-thumbnail");
+      } else if (format === "backdrop") {
+        cardEl.classList.add("image-format-backdrop");
+      }
+
+      if (format === "thumbnail") {
+        cardEl.classList.add(`card-thumbnail-${position}`);
+        cardEl.classList.add(`card-thumbnail-${settings.imageFit}`);
+      } else if (format === "cover") {
+        cardEl.classList.add(`card-cover-${position}`);
+        cardEl.classList.add(`card-cover-${settings.imageFit}`);
+      } else if (format === "backdrop") {
+        cardEl.classList.add(`card-cover-${settings.imageFit}`);
+      }
     }
 
     cardEl.setAttribute("data-path", card.path);
@@ -932,7 +937,10 @@ export class SharedCardRenderer {
     };
 
     // Check if title or subtitle will be rendered
-    const normalized = normalizePropertyName(settings.titleProperty || "");
+    const normalized = normalizePropertyName(
+      this.app,
+      settings.titleProperty || "",
+    );
     const isFullname = normalized === "file.fullname";
     const displayTitle = isFullname
       ? stripExtFromTitle(card.title, card.path, true)
@@ -1012,7 +1020,7 @@ export class SharedCardRenderer {
     const hasImage = format !== "none" && imageUrls.length > 0;
 
     // ALL COVERS: wrapped in card-cover-wrapper for flexbox positioning
-    if (format === "cover") {
+    if (format === "cover" && (hasImage || hasImageSource)) {
       const coverWrapper = cardEl.createDiv(
         hasImage
           ? "card-cover-wrapper"
@@ -1147,10 +1155,11 @@ export class SharedCardRenderer {
     // Determine if card-content will have children
     const hasTextPreview = card.textPreview;
     const isThumbnailFormat = format === "thumbnail";
+    // Only show thumbnail placeholder when an image source is configured
+    const showThumbnail = isThumbnailFormat && (hasImage || hasImageSource);
 
     // Only create card-content if it will have children
-    // Always create for thumbnail format to allow placeholder rendering
-    if (hasTextPreview || isThumbnailFormat) {
+    if (hasTextPreview || showThumbnail) {
       const contentContainer = cardEl.createDiv("card-content");
 
       if (hasTextPreview) {
@@ -1162,7 +1171,7 @@ export class SharedCardRenderer {
       }
 
       // Thumbnail (all positions now inside card-content)
-      if (isThumbnailFormat) {
+      if (showThumbnail) {
         if (hasImage) {
           const imageEl = contentContainer.createDiv("card-thumbnail");
           this.renderImage(
