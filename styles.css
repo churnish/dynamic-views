@@ -5426,16 +5426,36 @@ body.dynamic-views-poster-theme-disable
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster: show content on hover */
+/* Poster: show content on hover (desktop) */
+@media (hover: hover) {
+  .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-title-group,
+  .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-content,
+  .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-properties-top,
+  .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-properties-bottom {
+    opacity: 1;
+  }
+}
+
+/* Poster: show content on tap (mobile) */
 .dynamic-views
-  .card.image-format-poster:has(.card-poster):hover
+  .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-title-group,
-.dynamic-views .card.image-format-poster:has(.card-poster):hover .card-content,
 .dynamic-views
-  .card.image-format-poster:has(.card-poster):hover
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-content,
+.dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-top,
 .dynamic-views
-  .card.image-format-poster:has(.card-poster):hover
+  .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-bottom {
   opacity: 1;
 }
@@ -5461,10 +5481,53 @@ body.dynamic-views-poster-theme-dark
   backdrop-filter: blur(0px);
 }
 
-/* Poster: show overlay on hover (restore configured strength) */
+/* Poster: show overlay on hover (desktop) */
+@media (hover: hover) {
+  body.dynamic-views-poster-theme-match.theme-dark
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    background: rgb(
+      0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
+    );
+    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
+  }
+
+  body.dynamic-views-poster-theme-match.theme-light
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    background: rgb(
+      255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
+    );
+    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
+  }
+
+  body.dynamic-views-poster-theme-light
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    background: rgb(
+      255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
+    );
+    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
+  }
+
+  body.dynamic-views-poster-theme-dark
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    background: rgb(
+      0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
+    );
+    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
+  }
+}
+
+/* Poster: show overlay on tap (mobile) */
 body.dynamic-views-poster-theme-match.theme-dark
   .dynamic-views
-  .card.image-format-poster:hover
+  .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
@@ -5474,7 +5537,7 @@ body.dynamic-views-poster-theme-match.theme-dark
 
 body.dynamic-views-poster-theme-match.theme-light
   .dynamic-views
-  .card.image-format-poster:hover
+  .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: rgb(
     255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
@@ -5484,7 +5547,7 @@ body.dynamic-views-poster-theme-match.theme-light
 
 body.dynamic-views-poster-theme-light
   .dynamic-views
-  .card.image-format-poster:hover
+  .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: rgb(
     255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
@@ -5494,7 +5557,7 @@ body.dynamic-views-poster-theme-light
 
 body.dynamic-views-poster-theme-dark
   .dynamic-views
-  .card.image-format-poster:hover
+  .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)

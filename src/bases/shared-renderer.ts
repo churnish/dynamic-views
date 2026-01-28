@@ -710,6 +710,28 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       "click",
       (e) => {
+        // Mobile poster tap-to-toggle: reveal/hide content
+        if (
+          this.app.isMobile &&
+          format === "poster" &&
+          cardEl.querySelector(".card-poster")
+        ) {
+          const target = e.target as HTMLElement;
+          const isInteractive = target.closest(
+            "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
+          );
+
+          if (!cardEl.classList.contains("poster-revealed")) {
+            e.stopPropagation();
+            cardEl.classList.add("poster-revealed");
+            return;
+          } else if (!isInteractive) {
+            e.stopPropagation();
+            cardEl.classList.remove("poster-revealed");
+            return;
+          }
+        }
+
         // Only handle card-level clicks when openFileAction is 'card'
         // When openFileAction is 'title', the title link handles its own clicks
         if (settings.openFileAction === "card") {
