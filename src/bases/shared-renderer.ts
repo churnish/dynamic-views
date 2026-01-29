@@ -545,6 +545,9 @@ export class SharedCardRenderer {
         | "bottom";
     }
 
+    // Mobile poster: force title-as-link and card context menu
+    const mobilePoster = this.app.isMobile && format === "poster";
+
     // Check if any image source is configured (property or embeds)
     const hasImageSource =
       !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== "never";
@@ -806,8 +809,8 @@ export class SharedCardRenderer {
       showFileContextMenu(e, this.app, entry.file, card.path);
     };
 
-    // Attach context menu to card when settings.openFileAction is 'card'
-    if (settings.openFileAction === "card") {
+    // Attach context menu to card when openFileAction is 'card' or mobile poster
+    if (settings.openFileAction === "card" || mobilePoster) {
       cardEl.addEventListener("contextmenu", handleContextMenu, { signal });
     }
 
@@ -840,7 +843,7 @@ export class SharedCardRenderer {
       }
 
       // Add title text
-      if (settings.openFileAction === "title") {
+      if (settings.openFileAction === "title" || mobilePoster) {
         // Render as clickable, draggable link
         const link = titleEl.createEl("a", {
           cls: "internal-link card-title-text",

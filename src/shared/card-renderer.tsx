@@ -1615,7 +1615,8 @@ function Card({
       >
         {renderFileTypeIcon(card.path)}
         {renderFileExt(extInfo)}
-        {settings.openFileAction === "title" ? (
+        {settings.openFileAction === "title" ||
+        (app.isMobile && format === "poster") ? (
           <span
             className="card-title-link"
             data-href={card.path}
@@ -1982,8 +1983,11 @@ function Card({
         (hoveredCardRef as { current: HTMLElement | null }).current = null;
       }}
       onContextMenu={(e: MouseEvent) => {
-        // Show file context menu when settings.openFileAction is 'card'
-        if (settings.openFileAction === "card") {
+        // Show file context menu when openFileAction is 'card' or mobile poster
+        if (
+          settings.openFileAction === "card" ||
+          (app.isMobile && format === "poster")
+        ) {
           const file = app.vault.getAbstractFileByPath(card.path);
           if (file instanceof TFile) {
             showFileContextMenu(e, app, file, card.path);
