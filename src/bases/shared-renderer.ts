@@ -545,8 +545,8 @@ export class SharedCardRenderer {
         | "bottom";
     }
 
-    // Mobile poster: force title-as-link and card context menu
-    const mobilePoster = this.app.isMobile && format === "poster";
+    // Poster: force title-as-link and card context menu (click toggles reveal, not file open)
+    const isPoster = format === "poster";
 
     // Check if any image source is configured (property or embeds)
     const hasImageSource =
@@ -713,12 +713,8 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       "click",
       (e) => {
-        // Mobile poster tap-to-toggle: reveal/hide content
-        if (
-          this.app.isMobile &&
-          format === "poster" &&
-          cardEl.querySelector(".card-poster")
-        ) {
+        // Poster click-to-toggle: reveal/hide content
+        if (format === "poster" && cardEl.querySelector(".card-poster")) {
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
             "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
@@ -810,7 +806,7 @@ export class SharedCardRenderer {
     };
 
     // Attach context menu to card when openFileAction is 'card' or mobile poster
-    if (settings.openFileAction === "card" || mobilePoster) {
+    if (settings.openFileAction === "card" || isPoster) {
       cardEl.addEventListener("contextmenu", handleContextMenu, { signal });
     }
 
@@ -843,7 +839,7 @@ export class SharedCardRenderer {
       }
 
       // Add title text
-      if (settings.openFileAction === "title" || mobilePoster) {
+      if (settings.openFileAction === "title" || isPoster) {
         // Render as clickable, draggable link
         const link = titleEl.createEl("a", {
           cls: "internal-link card-title-text",

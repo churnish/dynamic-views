@@ -1615,8 +1615,7 @@ function Card({
       >
         {renderFileTypeIcon(card.path)}
         {renderFileExt(extInfo)}
-        {settings.openFileAction === "title" ||
-        (app.isMobile && format === "poster") ? (
+        {settings.openFileAction === "title" || format === "poster" ? (
           <span
             className="card-title-link"
             data-href={card.path}
@@ -1865,8 +1864,8 @@ function Card({
       onDragStart={settings.openFileAction === "card" ? handleDrag : undefined}
       tabIndex={index === focusableCardIndex ? 0 : -1}
       onClick={(e: MouseEvent) => {
-        // Mobile poster tap-to-toggle: reveal/hide content
-        if (app.isMobile && format === "poster") {
+        // Poster click-to-toggle: reveal/hide content
+        if (format === "poster") {
           const cardEl = e.currentTarget as HTMLElement;
           if (cardEl.querySelector(".card-poster")) {
             const target = e.target as HTMLElement;
@@ -1983,11 +1982,8 @@ function Card({
         (hoveredCardRef as { current: HTMLElement | null }).current = null;
       }}
       onContextMenu={(e: MouseEvent) => {
-        // Show file context menu when openFileAction is 'card' or mobile poster
-        if (
-          settings.openFileAction === "card" ||
-          (app.isMobile && format === "poster")
-        ) {
+        // Show file context menu when openFileAction is 'card' or poster format
+        if (settings.openFileAction === "card" || format === "poster") {
           const file = app.vault.getAbstractFileByPath(card.path);
           if (file instanceof TFile) {
             showFileContextMenu(e, app, file, card.path);

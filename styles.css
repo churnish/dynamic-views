@@ -642,8 +642,8 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-poster-overlay-default
-        title: Show overlay by default
+        id: dynamic-views-poster-content-default
+        title: Show card content by default
         description: Overlay and content visible by default, hidden on hover/tap
         type: class-toggle
     -
@@ -3496,9 +3496,13 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 }
 
 @media (hover: hover) {
-  /* Underline title on hover when open action is "press on title" */
+  /* Underline title on hover when open action is "press on title" or poster format */
   body.dynamic-views-open-on-title
     .dynamic-views
+    .card-title
+    :is(a, .card-title-link):hover,
+  .dynamic-views
+    .card.image-format-poster
     .card-title
     :is(a, .card-title-link):hover {
     text-decoration: underline;
@@ -3508,6 +3512,12 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   /* Extension suffix underline on hover */
   body.dynamic-views-file-type-ext
     .dynamic-views
+    .card-title
+    :is(a, .card-title-link):hover
+    .card-title-ext-suffix,
+  body.dynamic-views-file-type-ext
+    .dynamic-views
+    .card.image-format-poster
     .card-title
     :is(a, .card-title-link):hover
     .card-title-ext-suffix {
@@ -5415,20 +5425,20 @@ body.dynamic-views-poster-theme-disable
   display: none;
 }
 
-/* Poster: content hidden until hover (baked in, only if card has image; skipped when "Show overlay by default" ON) */
-body:not(.dynamic-views-poster-overlay-default)
+/* Poster: content hidden until hover (baked in, only if card has image; skipped when "Show card content by default" ON) */
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-header,
-body:not(.dynamic-views-poster-overlay-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-content,
-body:not(.dynamic-views-poster-overlay-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-properties-top,
-body:not(.dynamic-views-poster-overlay-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-properties-bottom {
@@ -5436,20 +5446,20 @@ body:not(.dynamic-views-poster-overlay-default)
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster: content visible by default ("Show overlay by default" ON) */
-body.dynamic-views-poster-overlay-default
+/* Poster: content visible by default ("Show card content by default" ON) */
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-header,
-body.dynamic-views-poster-overlay-default
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-content,
-body.dynamic-views-poster-overlay-default
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-properties-top,
-body.dynamic-views-poster-overlay-default
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-properties-bottom {
@@ -5457,66 +5467,44 @@ body.dynamic-views-poster-overlay-default
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster: show content on hover (desktop, "Show overlay by default" OFF) */
-@media (hover: hover) {
-  body:not(.dynamic-views-poster-overlay-default)
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-header,
-  body:not(.dynamic-views-poster-overlay-default)
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-content,
-  body:not(.dynamic-views-poster-overlay-default)
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-properties-top,
-  body:not(.dynamic-views-poster-overlay-default)
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-properties-bottom {
-    opacity: 1;
-  }
-}
-
-/* Poster: show content on tap (mobile, "Show overlay by default" OFF) */
-body:not(.dynamic-views-poster-overlay-default)
+/* Poster: show content on click ("Show card content by default" OFF) */
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-header,
-body:not(.dynamic-views-poster-overlay-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-content,
-body:not(.dynamic-views-poster-overlay-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-top,
-body:not(.dynamic-views-poster-overlay-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-bottom {
   opacity: 1;
 }
 
-/* Poster: hide overlay by default (skipped when "Show overlay by default" is ON) */
+/* Poster: hide overlay by default (skipped when "Show card content by default" is ON) */
 body.dynamic-views-poster-theme-match.theme-dark:not(
-    .dynamic-views-poster-overlay-default
+    .dynamic-views-poster-content-default
   )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
 body.dynamic-views-poster-theme-match.theme-light:not(
-    .dynamic-views-poster-overlay-default
+    .dynamic-views-poster-content-default
   )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
-body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-overlay-default)
+body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
-body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-overlay-default)
+body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5524,60 +5512,9 @@ body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-overlay-default)
   backdrop-filter: blur(0px);
 }
 
-/* Poster: show overlay on hover (desktop, "Show overlay by default" OFF) */
-@media (hover: hover) {
-  body.dynamic-views-poster-theme-match.theme-dark:not(
-      .dynamic-views-poster-overlay-default
-    )
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after {
-    background: rgb(
-      0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
-    );
-    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
-  }
-
-  body.dynamic-views-poster-theme-match.theme-light:not(
-      .dynamic-views-poster-overlay-default
-    )
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after {
-    background: rgb(
-      255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
-    );
-    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
-  }
-
-  body.dynamic-views-poster-theme-light:not(
-      .dynamic-views-poster-overlay-default
-    )
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after {
-    background: rgb(
-      255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
-    );
-    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
-  }
-
-  body.dynamic-views-poster-theme-dark:not(
-      .dynamic-views-poster-overlay-default
-    )
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after {
-    background: rgb(
-      0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
-    );
-    backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
-  }
-}
-
-/* Poster: show overlay on tap (mobile, "Show overlay by default" OFF) */
+/* Poster: show overlay on click ("Show card content by default" OFF) */
 body.dynamic-views-poster-theme-match.theme-dark:not(
-    .dynamic-views-poster-overlay-default
+    .dynamic-views-poster-content-default
   )
   .dynamic-views
   .card.image-format-poster.poster-revealed
@@ -5589,7 +5526,7 @@ body.dynamic-views-poster-theme-match.theme-dark:not(
 }
 
 body.dynamic-views-poster-theme-match.theme-light:not(
-    .dynamic-views-poster-overlay-default
+    .dynamic-views-poster-content-default
   )
   .dynamic-views
   .card.image-format-poster.poster-revealed
@@ -5600,7 +5537,7 @@ body.dynamic-views-poster-theme-match.theme-light:not(
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-overlay-default)
+body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
@@ -5610,7 +5547,7 @@ body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-overlay-default)
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-overlay-default)
+body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
@@ -5620,85 +5557,40 @@ body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-overlay-default)
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-/* Poster: hide content on hover (desktop, "Show overlay by default" ON) */
-@media (hover: hover) {
-  body.dynamic-views-poster-overlay-default
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-header,
-  body.dynamic-views-poster-overlay-default
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-content,
-  body.dynamic-views-poster-overlay-default
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-properties-top,
-  body.dynamic-views-poster-overlay-default
-    .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
-    .card-properties-bottom {
-    opacity: 0;
-  }
-}
-
-/* Poster: hide content on tap (mobile, "Show overlay by default" ON) */
-body.dynamic-views-poster-overlay-default
+/* Poster: hide content on click ("Show card content by default" ON) */
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-header,
-body.dynamic-views-poster-overlay-default
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-content,
-body.dynamic-views-poster-overlay-default
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-top,
-body.dynamic-views-poster-overlay-default
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-bottom {
   opacity: 0;
 }
 
-/* Poster: hide overlay on hover (desktop, "Show overlay by default" ON) */
-@media (hover: hover) {
-  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-dark
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after,
-  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-light
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after,
-  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-light
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after,
-  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-dark
-    .dynamic-views
-    .card.image-format-poster:hover
-    .card-poster::after {
-    background: transparent;
-    backdrop-filter: blur(0px);
-  }
-}
-
-/* Poster: hide overlay on tap (mobile, "Show overlay by default" ON) */
-body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-dark
+/* Poster: hide overlay on click ("Show card content by default" ON) */
+body.dynamic-views-poster-content-default.dynamic-views-poster-theme-match.theme-dark
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after,
-body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-light
+body.dynamic-views-poster-content-default.dynamic-views-poster-theme-match.theme-light
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after,
-body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-light
+body.dynamic-views-poster-content-default.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after,
-body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-content-default.dynamic-views-poster-theme-dark
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
