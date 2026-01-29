@@ -2721,31 +2721,31 @@ function Card({
         const bottomSets: JSX.Element[] = [];
 
         if (set1) {
-          if (settings.propertySet1PositionOnTop) topSets.push(set1);
+          if (settings.propertySet1Above) topSets.push(set1);
           else bottomSets.push(set1);
         }
         if (set2) {
-          if (settings.propertySet2PositionOnTop) topSets.push(set2);
+          if (settings.propertySet2Above) topSets.push(set2);
           else bottomSets.push(set2);
         }
         if (set3) {
-          if (settings.propertySet3PositionOnTop) topSets.push(set3);
+          if (settings.propertySet3Above) topSets.push(set3);
           else bottomSets.push(set3);
         }
         if (set4) {
-          if (settings.propertySet4PositionOnTop) topSets.push(set4);
+          if (settings.propertySet4Above) topSets.push(set4);
           else bottomSets.push(set4);
         }
         if (set5) {
-          if (settings.propertySet5PositionOnTop) topSets.push(set5);
+          if (settings.propertySet5Above) topSets.push(set5);
           else bottomSets.push(set5);
         }
         if (set6) {
-          if (settings.propertySet6PositionOnTop) topSets.push(set6);
+          if (settings.propertySet6Above) topSets.push(set6);
           else bottomSets.push(set6);
         }
         if (set7) {
-          if (settings.propertySet7PositionOnTop) topSets.push(set7);
+          if (settings.propertySet7Above) topSets.push(set7);
           else bottomSets.push(set7);
         }
 

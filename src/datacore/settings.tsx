@@ -26,7 +26,7 @@ interface PropertySetConfig {
   firstLabel: string;
   secondLabel: string;
   sideBySide: keyof SettingsType;
-  positionOnTop: keyof SettingsType;
+  above: keyof SettingsType;
 }
 
 const PROPERTY_SETS: PropertySetConfig[] = [
@@ -38,7 +38,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 1",
     secondLabel: "Property 2",
     sideBySide: "propertySet1SideBySide",
-    positionOnTop: "propertySet1PositionOnTop",
+    above: "propertySet1Above",
   },
   {
     key: "propertySet2",
@@ -48,7 +48,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 3",
     secondLabel: "Property 4",
     sideBySide: "propertySet2SideBySide",
-    positionOnTop: "propertySet2PositionOnTop",
+    above: "propertySet2Above",
   },
   {
     key: "propertySet3",
@@ -58,7 +58,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 5",
     secondLabel: "Property 6",
     sideBySide: "propertySet3SideBySide",
-    positionOnTop: "propertySet3PositionOnTop",
+    above: "propertySet3Above",
   },
   {
     key: "propertySet4",
@@ -68,7 +68,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 7",
     secondLabel: "Property 8",
     sideBySide: "propertySet4SideBySide",
-    positionOnTop: "propertySet4PositionOnTop",
+    above: "propertySet4Above",
   },
   {
     key: "propertySet5",
@@ -78,7 +78,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 9",
     secondLabel: "Property 10",
     sideBySide: "propertySet5SideBySide",
-    positionOnTop: "propertySet5PositionOnTop",
+    above: "propertySet5Above",
   },
   {
     key: "propertySet6",
@@ -88,7 +88,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 11",
     secondLabel: "Property 12",
     sideBySide: "propertySet6SideBySide",
-    positionOnTop: "propertySet6PositionOnTop",
+    above: "propertySet6Above",
   },
   {
     key: "propertySet7",
@@ -98,7 +98,7 @@ const PROPERTY_SETS: PropertySetConfig[] = [
     firstLabel: "Property 13",
     secondLabel: "Property 14",
     sideBySide: "propertySet7SideBySide",
-    positionOnTop: "propertySet7PositionOnTop",
+    above: "propertySet7Above",
   },
 ];
 
@@ -187,13 +187,13 @@ export function Settings({
         propertySet5SideBySide: settings.propertySet5SideBySide,
         propertySet6SideBySide: settings.propertySet6SideBySide,
         propertySet7SideBySide: settings.propertySet7SideBySide,
-        propertySet1PositionOnTop: settings.propertySet1PositionOnTop,
-        propertySet2PositionOnTop: settings.propertySet2PositionOnTop,
-        propertySet3PositionOnTop: settings.propertySet3PositionOnTop,
-        propertySet4PositionOnTop: settings.propertySet4PositionOnTop,
-        propertySet5PositionOnTop: settings.propertySet5PositionOnTop,
-        propertySet6PositionOnTop: settings.propertySet6PositionOnTop,
-        propertySet7PositionOnTop: settings.propertySet7PositionOnTop,
+        propertySet1Above: settings.propertySet1Above,
+        propertySet2Above: settings.propertySet2Above,
+        propertySet3Above: settings.propertySet3Above,
+        propertySet4Above: settings.propertySet4Above,
+        propertySet5Above: settings.propertySet5Above,
+        propertySet6Above: settings.propertySet6Above,
+        propertySet7Above: settings.propertySet7Above,
         propertyLabels: settings.propertyLabels,
         fallbackToContent: settings.fallbackToContent,
         fallbackToEmbeds: settings.fallbackToEmbeds,
@@ -324,8 +324,8 @@ export function Settings({
           group.secondProp,
           "Enter property name",
         )}
-        {renderToggle("Position on top", group.positionOnTop)}
         {renderToggle("Show side-by-side", group.sideBySide)}
+        {renderToggle("Show above text preview", group.above)}
       </div>
     </div>
   );

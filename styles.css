@@ -2877,7 +2877,11 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
 /* Add padding-top only when content/header exists above (otherwise cover margin-bottom suffices) */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-top.image-format-cover:has(.card-header, .card-content, .card-properties-top)
+  .card.card-cover-top.image-format-cover:has(
+    .card-header,
+    .card-content,
+    .card-properties-top
+  )
   .card-properties-bottom {
   padding-top: var(--size-4-2);
 }
@@ -4357,20 +4361,20 @@ body.dynamic-views-show-cover-placeholder-none
 .dynamic-views
   .card.card-cover-top.image-format-cover:not(
     :has(
-        .card-header,
-        .card-content,
-        .card-properties-top,
-        .card-properties-bottom
-      )
+      .card-header,
+      .card-content,
+      .card-properties-top,
+      .card-properties-bottom
+    )
   ),
 .dynamic-views
   .card.card-cover-bottom.image-format-cover:not(
     :has(
-        .card-header,
-        .card-content,
-        .card-properties-top,
-        .card-properties-bottom
-      )
+      .card-header,
+      .card-content,
+      .card-properties-top,
+      .card-properties-bottom
+    )
   ) {
   padding: 0;
 }
@@ -4379,21 +4383,21 @@ body.dynamic-views-show-cover-placeholder-none
 .dynamic-views
   .card.card-cover-top.image-format-cover:not(
     :has(
-        .card-header,
-        .card-content,
-        .card-properties-top,
-        .card-properties-bottom
-      )
+      .card-header,
+      .card-content,
+      .card-properties-top,
+      .card-properties-bottom
+    )
   )
   .card-cover-wrapper,
 .dynamic-views
   .card.card-cover-bottom.image-format-cover:not(
     :has(
-        .card-header,
-        .card-content,
-        .card-properties-top,
-        .card-properties-bottom
-      )
+      .card-header,
+      .card-content,
+      .card-properties-top,
+      .card-properties-bottom
+    )
   )
   .card-cover-wrapper {
   margin: 0;
@@ -4500,7 +4504,9 @@ body.dynamic-views-show-cover-placeholder-none
 /* When no properties-bottom, spacer absorbs free space to push cover down */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover:not(:has(.card-properties-bottom))::before {
+  .card.card-cover-bottom.image-format-cover:not(
+    :has(.card-properties-bottom)
+  )::before {
   flex-grow: 1;
 }
 
@@ -5223,8 +5229,12 @@ body.dynamic-views-hide-card-border
 }
 
 /* Card content stacks above background image */
-.dynamic-views .card:is(.image-format-backdrop, .image-format-poster) .card-content,
-.dynamic-views .card:is(.image-format-backdrop, .image-format-poster) .card-header {
+.dynamic-views
+  .card:is(.image-format-backdrop, .image-format-poster)
+  .card-content,
+.dynamic-views
+  .card:is(.image-format-backdrop, .image-format-poster)
+  .card-header {
   position: relative;
   z-index: 1;
 }

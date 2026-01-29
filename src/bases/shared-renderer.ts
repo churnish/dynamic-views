@@ -1709,13 +1709,13 @@ export class SharedCardRenderer {
       return;
 
     // Determine which sets go to top vs bottom based on position settings
-    const set1IsTop = set1HasContent && settings.propertySet1PositionOnTop;
-    const set2IsTop = set2HasContent && settings.propertySet2PositionOnTop;
-    const set3IsTop = set3HasContent && settings.propertySet3PositionOnTop;
-    const set4IsTop = set4HasContent && settings.propertySet4PositionOnTop;
-    const set5IsTop = set5HasContent && settings.propertySet5PositionOnTop;
-    const set6IsTop = set6HasContent && settings.propertySet6PositionOnTop;
-    const set7IsTop = set7HasContent && settings.propertySet7PositionOnTop;
+    const set1IsTop = set1HasContent && settings.propertySet1Above;
+    const set2IsTop = set2HasContent && settings.propertySet2Above;
+    const set3IsTop = set3HasContent && settings.propertySet3Above;
+    const set4IsTop = set4HasContent && settings.propertySet4Above;
+    const set5IsTop = set5HasContent && settings.propertySet5Above;
+    const set6IsTop = set6HasContent && settings.propertySet6Above;
+    const set7IsTop = set7HasContent && settings.propertySet7Above;
 
     const hasTopSets =
       set1IsTop ||

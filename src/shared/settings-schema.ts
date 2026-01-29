@@ -153,9 +153,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet1PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet1PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet1Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet1Above,
         },
         {
           type: "toggle",
@@ -185,9 +185,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet2PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet2PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet2Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet2Above,
         },
         {
           type: "toggle",
@@ -217,9 +217,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet3PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet3PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet3Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet3Above,
         },
         {
           type: "toggle",
@@ -249,9 +249,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet4PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet4PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet4Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet4Above,
         },
         {
           type: "toggle",
@@ -281,9 +281,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet5PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet5PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet5Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet5Above,
         },
         {
           type: "toggle",
@@ -313,9 +313,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet6PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet6PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet6Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet6Above,
         },
         {
           type: "toggle",
@@ -345,9 +345,9 @@ export function getBasesViewOptions(): any[] {
         },
         {
           type: "toggle",
-          displayName: "Position on top",
-          key: "propertySet7PositionOnTop",
-          default: DEFAULT_VIEW_SETTINGS.propertySet7PositionOnTop,
+          displayName: "Show above text preview",
+          key: "propertySet7Above",
+          default: DEFAULT_VIEW_SETTINGS.propertySet7Above,
         },
         {
           type: "toggle",
@@ -544,34 +544,13 @@ export function readBasesSettings(
     ),
 
     // Property set position-on-top booleans (1-7)
-    propertySet1PositionOnTop: getBool(
-      "propertySet1PositionOnTop",
-      defaults.propertySet1PositionOnTop,
-    ),
-    propertySet2PositionOnTop: getBool(
-      "propertySet2PositionOnTop",
-      defaults.propertySet2PositionOnTop,
-    ),
-    propertySet3PositionOnTop: getBool(
-      "propertySet3PositionOnTop",
-      defaults.propertySet3PositionOnTop,
-    ),
-    propertySet4PositionOnTop: getBool(
-      "propertySet4PositionOnTop",
-      defaults.propertySet4PositionOnTop,
-    ),
-    propertySet5PositionOnTop: getBool(
-      "propertySet5PositionOnTop",
-      defaults.propertySet5PositionOnTop,
-    ),
-    propertySet6PositionOnTop: getBool(
-      "propertySet6PositionOnTop",
-      defaults.propertySet6PositionOnTop,
-    ),
-    propertySet7PositionOnTop: getBool(
-      "propertySet7PositionOnTop",
-      defaults.propertySet7PositionOnTop,
-    ),
+    propertySet1Above: getBool("propertySet1Above", defaults.propertySet1Above),
+    propertySet2Above: getBool("propertySet2Above", defaults.propertySet2Above),
+    propertySet3Above: getBool("propertySet3Above", defaults.propertySet3Above),
+    propertySet4Above: getBool("propertySet4Above", defaults.propertySet4Above),
+    propertySet5Above: getBool("propertySet5Above", defaults.propertySet5Above),
+    propertySet6Above: getBool("propertySet6Above", defaults.propertySet6Above),
+    propertySet7Above: getBool("propertySet7Above", defaults.propertySet7Above),
 
     // Enum: propertyLabels
     propertyLabels: (() => {
@@ -748,34 +727,13 @@ export function extractBasesSnapshot(
     ),
 
     // Property set position-on-top booleans (1-7)
-    propertySet1PositionOnTop: getBool(
-      "propertySet1PositionOnTop",
-      defaults.propertySet1PositionOnTop,
-    ),
-    propertySet2PositionOnTop: getBool(
-      "propertySet2PositionOnTop",
-      defaults.propertySet2PositionOnTop,
-    ),
-    propertySet3PositionOnTop: getBool(
-      "propertySet3PositionOnTop",
-      defaults.propertySet3PositionOnTop,
-    ),
-    propertySet4PositionOnTop: getBool(
-      "propertySet4PositionOnTop",
-      defaults.propertySet4PositionOnTop,
-    ),
-    propertySet5PositionOnTop: getBool(
-      "propertySet5PositionOnTop",
-      defaults.propertySet5PositionOnTop,
-    ),
-    propertySet6PositionOnTop: getBool(
-      "propertySet6PositionOnTop",
-      defaults.propertySet6PositionOnTop,
-    ),
-    propertySet7PositionOnTop: getBool(
-      "propertySet7PositionOnTop",
-      defaults.propertySet7PositionOnTop,
-    ),
+    propertySet1Above: getBool("propertySet1Above", defaults.propertySet1Above),
+    propertySet2Above: getBool("propertySet2Above", defaults.propertySet2Above),
+    propertySet3Above: getBool("propertySet3Above", defaults.propertySet3Above),
+    propertySet4Above: getBool("propertySet4Above", defaults.propertySet4Above),
+    propertySet5Above: getBool("propertySet5Above", defaults.propertySet5Above),
+    propertySet6Above: getBool("propertySet6Above", defaults.propertySet6Above),
+    propertySet7Above: getBool("propertySet7Above", defaults.propertySet7Above),
 
     // Enum: propertyLabels
     propertyLabels: (() => {
