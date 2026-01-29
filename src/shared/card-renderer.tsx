@@ -1875,6 +1875,11 @@ function Card({
 
             if (!cardEl.classList.contains("poster-revealed")) {
               e.stopPropagation();
+              // Dismiss any other revealed card in the same view
+              cardEl
+                .closest(".dynamic-views")
+                ?.querySelector(".card.poster-revealed")
+                ?.classList.remove("poster-revealed");
               cardEl.classList.add("poster-revealed");
               return;
             } else if (!isInteractive) {

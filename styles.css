@@ -4507,21 +4507,29 @@ body.dynamic-views-show-cover-placeholder-none
 }
 
 /* Grid cover-bottom: spacer between properties-bottom/content and cover.
-   min-height ensures minimum gap to cover. */
+   min-height ensures minimum gap to cover.
+   Only create spacer when card has content above the cover (header, text, or properties). */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover::before {
+  .card.card-cover-bottom.image-format-cover:has(
+    .card-header,
+    .card-content,
+    .card-properties-top,
+    .card-properties-bottom
+  )::before {
   content: "";
   order: 51;
-  min-height: var(--size-4-2);
+  min-height: var(--dynamic-views-card-padding, 8px);
 }
 
 /* When no properties-bottom, spacer absorbs free space to push cover down */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover:not(
-    :has(.card-properties-bottom)
-  )::before {
+  .card.card-cover-bottom.image-format-cover:has(
+    .card-header,
+    .card-content,
+    .card-properties-top
+  ):not(:has(.card-properties-bottom))::before {
   flex-grow: 1;
 }
 
@@ -5373,13 +5381,18 @@ body:not(.dynamic-views-backdrop-no-adaptive-text)
   inset: 0;
   pointer-events: none;
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
-  transition:
-    background var(--anim-duration-moderate, 300ms),
-    backdrop-filter var(--anim-duration-moderate, 300ms);
+  transition: background var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster overlay theme: Match theme (default) */
-body.dynamic-views-poster-theme-match.theme-dark
+/* Poster overlay theme: Match theme (default — also applies when no theme class set) */
+body:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-dark
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5388,7 +5401,14 @@ body.dynamic-views-poster-theme-match.theme-dark
   );
 }
 
-body.dynamic-views-poster-theme-match.theme-light
+body:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-light
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5488,15 +5508,25 @@ body:not(.dynamic-views-poster-content-default)
 }
 
 /* Poster: hide overlay by default (skipped when "Show card content by default" is ON) */
-body.dynamic-views-poster-theme-match.theme-dark:not(
-    .dynamic-views-poster-content-default
-  )
+body:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-dark:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
-body.dynamic-views-poster-theme-match.theme-light:not(
-    .dynamic-views-poster-content-default
-  )
+body:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-light:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
@@ -5509,32 +5539,39 @@ body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
   .card.image-format-poster
   .card-poster::after {
   background: transparent;
-  backdrop-filter: blur(0px);
 }
 
 /* Poster: show overlay on click ("Show card content by default" OFF) */
-body.dynamic-views-poster-theme-match.theme-dark:not(
-    .dynamic-views-poster-content-default
-  )
+body:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-dark:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
   );
-  backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-body.dynamic-views-poster-theme-match.theme-light:not(
-    .dynamic-views-poster-content-default
-  )
+body:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-light:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: rgb(
     255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
   );
-  backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
 body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-content-default)
@@ -5544,7 +5581,6 @@ body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-content-default)
   background: rgb(
     255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
   );
-  backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
 body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
@@ -5554,7 +5590,6 @@ body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
   );
-  backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
 /* Poster: hide content on click ("Show card content by default" ON) */
@@ -5578,11 +5613,25 @@ body.dynamic-views-poster-content-default
 }
 
 /* Poster: hide overlay on click ("Show card content by default" ON) */
-body.dynamic-views-poster-content-default.dynamic-views-poster-theme-match.theme-dark
+body.dynamic-views-poster-content-default:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-dark
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after,
-body.dynamic-views-poster-content-default.dynamic-views-poster-theme-match.theme-light
+body.dynamic-views-poster-content-default:is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-light
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after,
@@ -5595,7 +5644,6 @@ body.dynamic-views-poster-content-default.dynamic-views-poster-theme-dark
   .card.image-format-poster.poster-revealed
   .card-poster::after {
   background: transparent;
-  backdrop-filter: blur(0px);
 }
 
 /* Poster: card height determined by image ratio */
@@ -5617,7 +5665,14 @@ body:not(
   .card.image-format-poster:not([data-adaptive-text]):has(.card-poster),
 body:not(
     .dynamic-views-poster-no-adaptive-text
-  ).dynamic-views-poster-theme-match.theme-light
+  ):is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-light
   .dynamic-views
   .card.image-format-poster:not([data-adaptive-text]):has(.card-poster) {
   --text-normal: var(--dynamic-views-adaptive-text-dark-normal);
@@ -5631,7 +5686,14 @@ body:not(.dynamic-views-poster-no-adaptive-text).dynamic-views-poster-theme-dark
   .card.image-format-poster:not([data-adaptive-text]):has(.card-poster),
 body:not(
     .dynamic-views-poster-no-adaptive-text
-  ).dynamic-views-poster-theme-match.theme-dark
+  ):is(
+    .dynamic-views-poster-theme-match,
+    :not(
+        .dynamic-views-poster-theme-light,
+        .dynamic-views-poster-theme-dark,
+        .dynamic-views-poster-theme-disable
+      )
+  ).theme-dark
   .dynamic-views
   .card.image-format-poster:not([data-adaptive-text]):has(.card-poster) {
   --text-normal: var(--dynamic-views-adaptive-text-light-normal);
