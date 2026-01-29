@@ -642,6 +642,11 @@ settings:
         step: 1
         format: px
     -
+        id: dynamic-views-poster-overlay-default
+        title: Show overlay by default
+        description: Overlay and content visible by default, hidden on hover/tap
+        type: class-toggle
+    -
         id: dynamic-views-poster-no-adaptive-text
         title: Disable adaptive text colors
         description: Do not adjust text colors for readability
@@ -5410,63 +5415,108 @@ body.dynamic-views-poster-theme-disable
   display: none;
 }
 
-/* Poster: content hidden until hover (baked in, only if card has image) */
-.dynamic-views .card.image-format-poster:has(.card-poster) .card-header,
-.dynamic-views .card.image-format-poster:has(.card-poster) .card-content,
-.dynamic-views .card.image-format-poster:has(.card-poster) .card-properties-top,
-.dynamic-views
+/* Poster: content hidden until hover (baked in, only if card has image; skipped when "Show overlay by default" ON) */
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-header,
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-content,
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-properties-top,
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-properties-bottom {
   opacity: 0;
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster: show content on hover (desktop) */
-@media (hover: hover) {
-  .dynamic-views .card.image-format-poster:has(.card-poster):hover .card-header,
+/* Poster: content visible by default ("Show overlay by default" ON) */
+body.dynamic-views-poster-overlay-default
   .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-header,
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-content,
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-properties-top,
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-properties-bottom {
+  opacity: 1;
+  transition: opacity var(--anim-duration-moderate, 300ms);
+}
+
+/* Poster: show content on hover (desktop, "Show overlay by default" OFF) */
+@media (hover: hover) {
+  body:not(.dynamic-views-poster-overlay-default)
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-header,
+  body:not(.dynamic-views-poster-overlay-default)
+    .dynamic-views
     .card.image-format-poster:has(.card-poster):hover
     .card-content,
-  .dynamic-views
+  body:not(.dynamic-views-poster-overlay-default)
+    .dynamic-views
     .card.image-format-poster:has(.card-poster):hover
     .card-properties-top,
-  .dynamic-views
+  body:not(.dynamic-views-poster-overlay-default)
+    .dynamic-views
     .card.image-format-poster:has(.card-poster):hover
     .card-properties-bottom {
     opacity: 1;
   }
 }
 
-/* Poster: show content on tap (mobile) */
-.dynamic-views
+/* Poster: show content on tap (mobile, "Show overlay by default" OFF) */
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-header,
-.dynamic-views
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-content,
-.dynamic-views
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-top,
-.dynamic-views
+body:not(.dynamic-views-poster-overlay-default)
+  .dynamic-views
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-bottom {
   opacity: 1;
 }
 
-/* Poster: hide overlay by default, show on hover (all theme variants) */
-body.dynamic-views-poster-theme-match.theme-dark
+/* Poster: hide overlay by default (skipped when "Show overlay by default" is ON) */
+body.dynamic-views-poster-theme-match.theme-dark:not(
+    .dynamic-views-poster-overlay-default
+  )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
-body.dynamic-views-poster-theme-match.theme-light
+body.dynamic-views-poster-theme-match.theme-light:not(
+    .dynamic-views-poster-overlay-default
+  )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
-body.dynamic-views-poster-theme-light
+body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-overlay-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after,
-body.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-overlay-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5474,9 +5524,11 @@ body.dynamic-views-poster-theme-dark
   backdrop-filter: blur(0px);
 }
 
-/* Poster: show overlay on hover (desktop) */
+/* Poster: show overlay on hover (desktop, "Show overlay by default" OFF) */
 @media (hover: hover) {
-  body.dynamic-views-poster-theme-match.theme-dark
+  body.dynamic-views-poster-theme-match.theme-dark:not(
+      .dynamic-views-poster-overlay-default
+    )
     .dynamic-views
     .card.image-format-poster:hover
     .card-poster::after {
@@ -5486,7 +5538,9 @@ body.dynamic-views-poster-theme-dark
     backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
   }
 
-  body.dynamic-views-poster-theme-match.theme-light
+  body.dynamic-views-poster-theme-match.theme-light:not(
+      .dynamic-views-poster-overlay-default
+    )
     .dynamic-views
     .card.image-format-poster:hover
     .card-poster::after {
@@ -5496,7 +5550,9 @@ body.dynamic-views-poster-theme-dark
     backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
   }
 
-  body.dynamic-views-poster-theme-light
+  body.dynamic-views-poster-theme-light:not(
+      .dynamic-views-poster-overlay-default
+    )
     .dynamic-views
     .card.image-format-poster:hover
     .card-poster::after {
@@ -5506,7 +5562,9 @@ body.dynamic-views-poster-theme-dark
     backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
   }
 
-  body.dynamic-views-poster-theme-dark
+  body.dynamic-views-poster-theme-dark:not(
+      .dynamic-views-poster-overlay-default
+    )
     .dynamic-views
     .card.image-format-poster:hover
     .card-poster::after {
@@ -5517,8 +5575,10 @@ body.dynamic-views-poster-theme-dark
   }
 }
 
-/* Poster: show overlay on tap (mobile) */
-body.dynamic-views-poster-theme-match.theme-dark
+/* Poster: show overlay on tap (mobile, "Show overlay by default" OFF) */
+body.dynamic-views-poster-theme-match.theme-dark:not(
+    .dynamic-views-poster-overlay-default
+  )
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
@@ -5528,7 +5588,9 @@ body.dynamic-views-poster-theme-match.theme-dark
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-body.dynamic-views-poster-theme-match.theme-light
+body.dynamic-views-poster-theme-match.theme-light:not(
+    .dynamic-views-poster-overlay-default
+  )
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
@@ -5538,7 +5600,7 @@ body.dynamic-views-poster-theme-match.theme-light
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-body.dynamic-views-poster-theme-light
+body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-overlay-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
@@ -5548,7 +5610,7 @@ body.dynamic-views-poster-theme-light
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-body.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-overlay-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
@@ -5556,6 +5618,92 @@ body.dynamic-views-poster-theme-dark
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
   );
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
+}
+
+/* Poster: hide content on hover (desktop, "Show overlay by default" ON) */
+@media (hover: hover) {
+  body.dynamic-views-poster-overlay-default
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-header,
+  body.dynamic-views-poster-overlay-default
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-content,
+  body.dynamic-views-poster-overlay-default
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-properties-top,
+  body.dynamic-views-poster-overlay-default
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-properties-bottom {
+    opacity: 0;
+  }
+}
+
+/* Poster: hide content on tap (mobile, "Show overlay by default" ON) */
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-header,
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-content,
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-properties-top,
+body.dynamic-views-poster-overlay-default
+  .dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-properties-bottom {
+  opacity: 0;
+}
+
+/* Poster: hide overlay on hover (desktop, "Show overlay by default" ON) */
+@media (hover: hover) {
+  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-dark
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after,
+  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-light
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after,
+  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-light
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after,
+  body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-dark
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    background: transparent;
+    backdrop-filter: blur(0px);
+  }
+}
+
+/* Poster: hide overlay on tap (mobile, "Show overlay by default" ON) */
+body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-dark
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-poster::after,
+body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-match.theme-light
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-poster::after,
+body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-light
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-poster::after,
+body.dynamic-views-poster-overlay-default.dynamic-views-poster-theme-dark
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-poster::after {
+  background: transparent;
+  backdrop-filter: blur(0px);
 }
 
 /* Poster: card height determined by image ratio */
