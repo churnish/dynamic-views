@@ -128,7 +128,7 @@ export interface PluginData {
   defaultTemplateViews: {
     grid: SettingsTemplate | null;
     masonry: SettingsTemplate | null;
-    list: SettingsTemplate | null;
+    datacore: SettingsTemplate | null;
   };
 }
 

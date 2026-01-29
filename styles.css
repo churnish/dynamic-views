@@ -7957,3 +7957,48 @@ body:not(.is-mobile) .dynamic-views-end-indicator {
 body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
   display: none;
 }
+
+/* Conditional Style Settings visibility */
+body:not(.dynamic-views-card-background-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-background-custom-color"],
+body:not(.dynamic-views-card-background-hover-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-background-hover-custom-color"],
+body:not(.dynamic-views-cover-bg-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-cover-background-custom-color"],
+body.dynamic-views-image-viewer-disabled
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-image-viewer-disabled"]
+  ~ .setting-item,
+body:not(.dynamic-views-property-color-with-labels-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-color-with-labels-custom"],
+body:not(.dynamic-views-property-color-without-labels-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-color-without-labels-custom"],
+body:not(.dynamic-views-property-label-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-label-color-custom"],
+body.dynamic-views-slideshow-disabled
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-slideshow-disabled"]
+  ~ .setting-item,
+body:not(.dynamic-views-subtitle-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-subtitle-color-custom"],
+body:not(.dynamic-views-tag-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-tag-color-custom"],
+body:not(.dynamic-views-text-preview-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-text-preview-color-custom"],
+body.dynamic-views-disable-thumbnail-scrubbing
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-hide-thumbnail-shadow"],
+body:not(.dynamic-views-title-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-title-color-custom"] {
+  display: none !important;
+}

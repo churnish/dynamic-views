@@ -161,7 +161,7 @@ export class PersistenceManager {
   }
 
   getSettingsTemplate(
-    viewType: "grid" | "masonry" | "list",
+    viewType: "grid" | "masonry" | "datacore",
   ): SettingsTemplate | null {
     const template = this.data.defaultTemplateViews[viewType];
     if (!template) return null;
@@ -169,7 +169,7 @@ export class PersistenceManager {
   }
 
   async setSettingsTemplate(
-    viewType: "grid" | "masonry" | "list",
+    viewType: "grid" | "masonry" | "datacore",
     template: SettingsTemplate | null,
   ): Promise<void> {
     console.log(

@@ -132,8 +132,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           },
           default: d.imageFormat,
           shouldHide: (config: BasesConfig) =>
-            !config.get("imageProperty") &&
-            config.get("fallbackToEmbeds") === "never",
+            !(config.get("imageProperty") || d.imageProperty) &&
+            (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) === "never",
         },
         {
           type: "dropdown",
@@ -147,10 +147,11 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           },
           default: d.imagePosition,
           shouldHide: (config: BasesConfig) =>
-            config.get("imageFormat") === "poster" ||
-            config.get("imageFormat") === "backdrop" ||
-            (!config.get("imageProperty") &&
-              config.get("fallbackToEmbeds") === "never"),
+            (config.get("imageFormat") ?? d.imageFormat) === "poster" ||
+            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
+            (!(config.get("imageProperty") || d.imageProperty) &&
+              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
+                "never"),
         },
         {
           type: "dropdown",
@@ -162,9 +163,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           },
           default: d.imageFit,
           shouldHide: (config: BasesConfig) =>
-            config.get("imageFormat") === "backdrop" ||
-            (!config.get("imageProperty") &&
-              config.get("fallbackToEmbeds") === "never"),
+            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
+            (!(config.get("imageProperty") || d.imageProperty) &&
+              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
+                "never"),
         },
         {
           type: "slider",
@@ -175,9 +177,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           step: 0.05,
           default: d.imageAspectRatio,
           shouldHide: (config: BasesConfig) =>
-            config.get("imageFormat") === "backdrop" ||
-            (!config.get("imageProperty") &&
-              config.get("fallbackToEmbeds") === "never"),
+            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
+            (!(config.get("imageProperty") || d.imageProperty) &&
+              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
+                "never"),
         },
       ],
     },
@@ -205,7 +208,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet1Above",
           default: d.propertySet1Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay1") && !config.get("propertyDisplay2"),
+            !(config.get("propertyDisplay1") || d.propertyDisplay1) &&
+            !(config.get("propertyDisplay2") || d.propertyDisplay2),
         },
         {
           type: "toggle",
@@ -213,7 +217,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet1SideBySide",
           default: d.propertySet1SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay1") || !config.get("propertyDisplay2"),
+            !(config.get("propertyDisplay1") || d.propertyDisplay1) ||
+            !(config.get("propertyDisplay2") || d.propertyDisplay2),
         },
       ],
     },
@@ -226,14 +231,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Property 3",
           key: "propertyDisplay3",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay3,
         },
         {
           type: "property",
           displayName: "Property 4",
           key: "propertyDisplay4",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay4,
         },
         {
           type: "toggle",
@@ -241,7 +246,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet2Above",
           default: d.propertySet2Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay3") && !config.get("propertyDisplay4"),
+            !(config.get("propertyDisplay3") || d.propertyDisplay3) &&
+            !(config.get("propertyDisplay4") || d.propertyDisplay4),
         },
         {
           type: "toggle",
@@ -249,7 +255,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet2SideBySide",
           default: d.propertySet2SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay3") || !config.get("propertyDisplay4"),
+            !(config.get("propertyDisplay3") || d.propertyDisplay3) ||
+            !(config.get("propertyDisplay4") || d.propertyDisplay4),
         },
       ],
     },
@@ -262,14 +269,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Property 5",
           key: "propertyDisplay5",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay5,
         },
         {
           type: "property",
           displayName: "Property 6",
           key: "propertyDisplay6",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay6,
         },
         {
           type: "toggle",
@@ -277,7 +284,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet3Above",
           default: d.propertySet3Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay5") && !config.get("propertyDisplay6"),
+            !(config.get("propertyDisplay5") || d.propertyDisplay5) &&
+            !(config.get("propertyDisplay6") || d.propertyDisplay6),
         },
         {
           type: "toggle",
@@ -285,7 +293,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet3SideBySide",
           default: d.propertySet3SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay5") || !config.get("propertyDisplay6"),
+            !(config.get("propertyDisplay5") || d.propertyDisplay5) ||
+            !(config.get("propertyDisplay6") || d.propertyDisplay6),
         },
       ],
     },
@@ -298,14 +307,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Property 7",
           key: "propertyDisplay7",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay7,
         },
         {
           type: "property",
           displayName: "Property 8",
           key: "propertyDisplay8",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay8,
         },
         {
           type: "toggle",
@@ -313,7 +322,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet4Above",
           default: d.propertySet4Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay7") && !config.get("propertyDisplay8"),
+            !(config.get("propertyDisplay7") || d.propertyDisplay7) &&
+            !(config.get("propertyDisplay8") || d.propertyDisplay8),
         },
         {
           type: "toggle",
@@ -321,7 +331,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet4SideBySide",
           default: d.propertySet4SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay7") || !config.get("propertyDisplay8"),
+            !(config.get("propertyDisplay7") || d.propertyDisplay7) ||
+            !(config.get("propertyDisplay8") || d.propertyDisplay8),
         },
       ],
     },
@@ -334,14 +345,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Property 9",
           key: "propertyDisplay9",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay9,
         },
         {
           type: "property",
           displayName: "Property 10",
           key: "propertyDisplay10",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay10,
         },
         {
           type: "toggle",
@@ -349,7 +360,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet5Above",
           default: d.propertySet5Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay9") && !config.get("propertyDisplay10"),
+            !(config.get("propertyDisplay9") || d.propertyDisplay9) &&
+            !(config.get("propertyDisplay10") || d.propertyDisplay10),
         },
         {
           type: "toggle",
@@ -357,7 +369,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet5SideBySide",
           default: d.propertySet5SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay9") || !config.get("propertyDisplay10"),
+            !(config.get("propertyDisplay9") || d.propertyDisplay9) ||
+            !(config.get("propertyDisplay10") || d.propertyDisplay10),
         },
       ],
     },
@@ -370,14 +383,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Property 11",
           key: "propertyDisplay11",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay11,
         },
         {
           type: "property",
           displayName: "Property 12",
           key: "propertyDisplay12",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay12,
         },
         {
           type: "toggle",
@@ -385,8 +398,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet6Above",
           default: d.propertySet6Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay11") &&
-            !config.get("propertyDisplay12"),
+            !(config.get("propertyDisplay11") || d.propertyDisplay11) &&
+            !(config.get("propertyDisplay12") || d.propertyDisplay12),
         },
         {
           type: "toggle",
@@ -394,8 +407,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet6SideBySide",
           default: d.propertySet6SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay11") ||
-            !config.get("propertyDisplay12"),
+            !(config.get("propertyDisplay11") || d.propertyDisplay11) ||
+            !(config.get("propertyDisplay12") || d.propertyDisplay12),
         },
       ],
     },
@@ -408,14 +421,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Property 13",
           key: "propertyDisplay13",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay13,
         },
         {
           type: "property",
           displayName: "Property 14",
           key: "propertyDisplay14",
           placeholder: "Select property",
-          default: "",
+          default: d.propertyDisplay14,
         },
         {
           type: "toggle",
@@ -423,8 +436,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet7Above",
           default: d.propertySet7Above,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay13") &&
-            !config.get("propertyDisplay14"),
+            !(config.get("propertyDisplay13") || d.propertyDisplay13) &&
+            !(config.get("propertyDisplay14") || d.propertyDisplay14),
         },
         {
           type: "toggle",
@@ -432,8 +445,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "propertySet7SideBySide",
           default: d.propertySet7SideBySide,
           shouldHide: (config: BasesConfig) =>
-            !config.get("propertyDisplay13") ||
-            !config.get("propertyDisplay14"),
+            !(config.get("propertyDisplay13") || d.propertyDisplay13) ||
+            !(config.get("propertyDisplay14") || d.propertyDisplay14),
         },
       ],
     },
@@ -464,7 +477,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "cssclasses",
           key: "cssclasses",
           placeholder: "Comma-separated if multiple",
-          default: "",
+          default: d.cssclasses,
         },
         {
           type: "toggle",

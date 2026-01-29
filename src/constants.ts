@@ -116,7 +116,7 @@ export const DEFAULT_UI_STATE = {
 export const DEFAULT_TEMPLATE_VIEWS = {
   grid: null,
   masonry: null,
-  list: null,
+  datacore: null,
 };
 
 export const STORAGE_KEY_PREFIX = "dynamic-views";

@@ -145,9 +145,8 @@ export function Settings({
     }));
   };
 
-  // Datacore settings are per-file (shared across all view modes)
-  // Always use "grid" template (settings shared across card/masonry/list modes)
-  const templateType = "grid";
+  // Datacore has one template shared across all view modes (card/masonry/list)
+  const templateType = "datacore" as const;
 
   // Template toggle state - check if template exists
   const [isTemplate, setIsTemplate] = dc.useState(

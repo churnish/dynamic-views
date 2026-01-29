@@ -189,8 +189,14 @@ export function getFirstBasesPropertyValue(
     .filter((p) => p);
 
   for (const prop of properties) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-    let value = entry.getValue(prop as any);
+    let value: unknown;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
+      value = entry.getValue(prop as any);
+    } catch {
+      // Obsidian's getValue can throw when entry's internal property data is null
+      continue;
+    }
 
     // Check for date/datetime values first - they have { icon, date, time } structure
     // Validate date is actually a Date object to avoid passing malformed values
@@ -228,8 +234,12 @@ export function getFirstBasesPropertyValue(
       }
 
       // Not found in frontmatter - try as formula property
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-      value = entry.getValue(`formula.${prop}` as any);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
+        value = entry.getValue(`formula.${prop}` as any);
+      } catch {
+        continue;
+      }
     }
 
     // Return first valid value found (both regular and formula properties use {data: value} structure)

@@ -42,7 +42,7 @@ import {
   setGroupKeyDataset,
   initializeViewDefaults,
   tryGetAllConfig,
-  disableOtherViewTemplates,
+  clearOldTemplateToggles,
   isCurrentTemplateView,
 } from "./utils";
 import {
@@ -186,7 +186,6 @@ export class DynamicViewsGridView extends BasesView {
    * Called from onDataUpdated() since Obsidian calls that for config changes
    */
   private handleTemplateToggle(): void {
-    // Read current template state from config
     const isTemplate = this.config.get("__isTemplate") === true;
 
     // Only process if __isTemplate actually changed
@@ -195,76 +194,53 @@ export class DynamicViewsGridView extends BasesView {
     }
     this.previousIsTemplate = isTemplate;
 
-    // Read saved template
-    const savedTemplate =
-      this.plugin.persistenceManager.getSettingsTemplate("grid");
-    const hasTemplate = savedTemplate !== null;
-
-    // Make isTemplate mutable for validation logic
-    let currentIsTemplate = isTemplate;
-
-    // VALIDATION: Check if this view's toggle is stale (another view overrode template)
-    // Only validate if view already has a timestamp (was previously template)
-    // If no timestamp, user is intentionally making this the new template
-    if (currentIsTemplate && hasTemplate) {
-      const viewTimestamp = this.config.get("__templateSetAt") as
+    if (isTemplate) {
+      const existingTimestamp = this.config.get("__templateSetAt") as
         | number
         | undefined;
 
-      // Only validate views that were previously template (have timestamp)
-      if (viewTimestamp !== undefined) {
-        const isActualTemplate = isCurrentTemplateView(
+      if (existingTimestamp !== undefined) {
+        // View loaded with existing toggle — validate it's not stale
+        const isStale = !isCurrentTemplateView(
           this.config,
           "grid",
           this.plugin,
         );
-        if (!isActualTemplate) {
+        if (isStale) {
           console.log(
-            `[grid-view] Template toggle is stale - another view overrode template (view: ${viewTimestamp}, saved: ${savedTemplate.setAt}), disabling toggle`,
+            `[grid-view] Stale template toggle (view: ${existingTimestamp}), disabling`,
           );
-          // Disable stale toggle
           this.config.set("__isTemplate", false);
-          this.previousIsTemplate = false; // Update tracked state
-          currentIsTemplate = false; // Update local var to skip snapshot save
+          this.previousIsTemplate = false;
+          return;
         }
-      }
-    }
-
-    if (currentIsTemplate) {
-      // Get or create timestamp for this template
-      let timestamp = this.config.get("__templateSetAt") as number | undefined;
-      if (!timestamp) {
-        // First time this view became template - generate new timestamp
-        timestamp = Date.now();
+        // Valid template — no action needed on load
+      } else {
+        // User just enabled toggle — set timestamp + clear other views
+        const timestamp = Date.now();
         this.config.set("__templateSetAt", timestamp);
-        console.log(
-          `[grid-view] Generated new template timestamp: ${timestamp}`,
-        );
+        console.log(`[grid-view] New template timestamp: ${timestamp}`);
+        clearOldTemplateToggles(this.app, GRID_VIEW_TYPE, this);
+
+        // Save settings template
+        const defaults =
+          this.plugin.persistenceManager.getDefaultViewSettings();
+        const settings = extractBasesTemplate(this.config, defaults);
+        console.log("[grid-view] Saving settings template:", settings);
+        void this.plugin.persistenceManager.setSettingsTemplate("grid", {
+          settings,
+          setAt: timestamp,
+        });
       }
-
-      // MUTUAL EXCLUSION: Disable template in all other Grid views
-      disableOtherViewTemplates(this.app, GRID_VIEW_TYPE, this);
-
-      // Template enabled - extract current settings and save/update snapshot
-      const defaults = this.plugin.persistenceManager.getDefaultViewSettings();
-      const settings = extractBasesTemplate(this.config, defaults);
-      console.log("[grid-view] Saving settings template:", settings);
-      void this.plugin.persistenceManager.setSettingsTemplate("grid", {
-        settings,
-        setAt: timestamp,
-      });
-    } else if (!currentIsTemplate && hasTemplate) {
-      // Only clear snapshot if THIS view was the template
-      const wasThisViewTemplate =
-        this.config.get("__templateSetAt") !== undefined;
-      if (wasThisViewTemplate) {
-        // User disabled template in the view that was the template - clear snapshot and timestamp
+    } else {
+      // Toggle turned OFF — clear template if this view was the template
+      const hadTimestamp = this.config.get("__templateSetAt") !== undefined;
+      if (hadTimestamp) {
         console.log("[grid-view] Clearing settings template");
         this.config.set("__templateSetAt", undefined);
         void this.plugin.persistenceManager.setSettingsTemplate("grid", null);
       }
     }
-    // If !currentIsTemplate && !hasTemplate, no action needed (normal view)
   }
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {

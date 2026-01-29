@@ -941,13 +941,13 @@ export function isCurrentTemplateView(
  * @param viewType - Type identifier ("dynamic-views-grid" or "dynamic-views-masonry")
  * @param currentView - The view that should remain enabled (optional - skip this one)
  */
-export function disableOtherViewTemplates(
+export function clearOldTemplateToggles(
   app: App,
   viewType: "dynamic-views-grid" | "dynamic-views-masonry",
   currentView?: BasesView,
 ): void {
   console.log(
-    `[disableOtherViewTemplates] Disabling templates for type: ${viewType}`,
+    `[clearOldTemplateToggles] Disabling templates for type: ${viewType}`,
   );
 
   app.workspace.iterateAllLeaves((leaf) => {
@@ -973,10 +973,11 @@ export function disableOtherViewTemplates(
     const isTemplate = actualView.config.get("__isTemplate") === true;
     if (isTemplate) {
       console.log(
-        `[disableOtherViewTemplates] Disabling template in view`,
+        `[clearOldTemplateToggles] Disabling template in view`,
         actualView,
       );
-      // Setting config triggers setSettings() automatically
+      // Clear timestamp first so the cascading onDataUpdated() won't try to clear the global template
+      actualView.config.set("__templateSetAt", undefined);
       actualView.config.set("__isTemplate", false);
     }
   });
