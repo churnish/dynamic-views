@@ -2,7 +2,7 @@ import { ViewMode, Settings, WidthMode } from "../types";
 import { Settings as SettingsPanel } from "./settings";
 import type { DatacoreAPI, RefObject } from "./types";
 import type { App, TFile } from "obsidian";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 import { setupClickOutside } from "../utils/dropdown-position";
 
 interface ResultsDropdownMenuProps {
@@ -226,7 +226,7 @@ function SearchInput({
 interface ToolbarProps {
   dc: DatacoreAPI;
   app: App;
-  plugin: DynamicViewsPlugin;
+  plugin: DynamicViews;
   currentFile: TFile | null;
   // View mode
   viewMode: ViewMode;

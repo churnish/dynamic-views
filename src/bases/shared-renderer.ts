@@ -60,7 +60,7 @@ import {
   getFileTypeIcon,
   stripExtFromTitle,
 } from "../utils/file-extension";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 import type { Settings } from "../types";
 import {
   createSlideshowNavigator,
@@ -304,7 +304,7 @@ export class SharedCardRenderer {
 
   constructor(
     protected app: App,
-    protected plugin: DynamicViewsPlugin,
+    protected plugin: DynamicViews,
     protected updateLayoutRef: { current: ((source?: string) => void) | null },
   ) {}
 
@@ -524,26 +524,8 @@ export class SharedCardRenderer {
     // Create card element
     const cardEl = container.createDiv("card");
 
-    // Parse imageFormat to extract format and position
-    const imageFormat = settings.imageFormat;
-    let format: "none" | "thumbnail" | "cover" | "poster" | "backdrop" = "none";
-    let position: "left" | "right" | "top" | "bottom" = "right";
-
-    if (imageFormat === "poster") {
-      format = "poster";
-    } else if (imageFormat === "backdrop") {
-      format = "backdrop";
-    } else if (imageFormat.startsWith("thumbnail-")) {
-      format = "thumbnail";
-      position = imageFormat.split("-")[1] as "left" | "right";
-    } else if (imageFormat.startsWith("cover-")) {
-      format = "cover";
-      position = imageFormat.split("-")[1] as
-        | "left"
-        | "right"
-        | "top"
-        | "bottom";
-    }
+    const format = settings.imageFormat;
+    const position = settings.imagePosition;
 
     // Poster: force title-as-link and card context menu (click toggles reveal, not file open)
     const isPoster = format === "poster";
@@ -1037,7 +1019,7 @@ export class SharedCardRenderer {
         ),
       ),
     );
-    const hasImage = format !== "none" && imageUrls.length > 0;
+    const hasImage = imageUrls.length > 0;
 
     // ALL COVERS: wrapped in card-cover-wrapper for flexbox positioning
     if (format === "cover" && (hasImage || hasImageSource)) {

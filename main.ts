@@ -30,7 +30,7 @@ import {
 import { clearInFlightLoads } from "./src/shared/content-loader";
 import { invalidateCacheForFile } from "./src/shared/image-loader";
 
-export default class DynamicViewsPlugin extends Plugin {
+export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
 
   // Helper function for datacorejsx blocks

@@ -10,7 +10,7 @@ import { transformBasesEntries } from "../shared/data-transform";
 import {
   readBasesSettings,
   getBasesViewOptions,
-  extractBasesSnapshot,
+  extractBasesTemplate,
 } from "../shared/settings-schema";
 import {
   getMinGridColumns,
@@ -44,7 +44,6 @@ import {
   tryGetAllConfig,
   disableOtherViewTemplates,
   isCurrentTemplateView,
-  INIT_MARKER,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -54,7 +53,7 @@ import {
   ScrollPreservation,
   getLeafProps,
 } from "../shared/scroll-preservation";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 import type {
   Settings,
   ContentCache,
@@ -82,7 +81,7 @@ export class DynamicViewsGridView extends BasesView {
   private scrollEl: HTMLElement;
   private leafId: string;
   private containerEl: HTMLElement;
-  private plugin: DynamicViewsPlugin;
+  private plugin: DynamicViews;
   private scrollPreservation: ScrollPreservation | null = null;
   private cardRenderer: SharedCardRenderer;
   private _previousCustomClasses: string[] = [];
@@ -196,10 +195,10 @@ export class DynamicViewsGridView extends BasesView {
     }
     this.previousIsTemplate = isTemplate;
 
-    // Read saved snapshot
-    const savedSnapshot =
-      this.plugin.persistenceManager.getTemplateSnapshot("grid");
-    const hasSnapshot = savedSnapshot !== null;
+    // Read saved template
+    const savedTemplate =
+      this.plugin.persistenceManager.getSettingsTemplate("grid");
+    const hasTemplate = savedTemplate !== null;
 
     // Make isTemplate mutable for validation logic
     let currentIsTemplate = isTemplate;
@@ -207,7 +206,7 @@ export class DynamicViewsGridView extends BasesView {
     // VALIDATION: Check if this view's toggle is stale (another view overrode template)
     // Only validate if view already has a timestamp (was previously template)
     // If no timestamp, user is intentionally making this the new template
-    if (currentIsTemplate && hasSnapshot) {
+    if (currentIsTemplate && hasTemplate) {
       const viewTimestamp = this.config.get("__templateSetAt") as
         | number
         | undefined;
@@ -221,7 +220,7 @@ export class DynamicViewsGridView extends BasesView {
         );
         if (!isActualTemplate) {
           console.log(
-            `[grid-view] Template toggle is stale - another view overrode template (view: ${viewTimestamp}, snapshot: ${savedSnapshot.setAt}), disabling toggle`,
+            `[grid-view] Template toggle is stale - another view overrode template (view: ${viewTimestamp}, saved: ${savedTemplate.setAt}), disabling toggle`,
           );
           // Disable stale toggle
           this.config.set("__isTemplate", false);
@@ -248,66 +247,32 @@ export class DynamicViewsGridView extends BasesView {
 
       // Template enabled - extract current settings and save/update snapshot
       const defaults = this.plugin.persistenceManager.getDefaultViewSettings();
-      const settings = extractBasesSnapshot(this.config, defaults);
-      console.log("[grid-view] Saving template snapshot (full):", settings);
-      void this.plugin.persistenceManager.setTemplateSnapshot("grid", {
+      const settings = extractBasesTemplate(this.config, defaults);
+      console.log("[grid-view] Saving settings template:", settings);
+      void this.plugin.persistenceManager.setSettingsTemplate("grid", {
         settings,
         setAt: timestamp,
       });
-    } else if (!currentIsTemplate && hasSnapshot) {
+    } else if (!currentIsTemplate && hasTemplate) {
       // Only clear snapshot if THIS view was the template
       const wasThisViewTemplate =
         this.config.get("__templateSetAt") !== undefined;
       if (wasThisViewTemplate) {
         // User disabled template in the view that was the template - clear snapshot and timestamp
-        console.log("[grid-view] Clearing template snapshot");
+        console.log("[grid-view] Clearing settings template");
         this.config.set("__templateSetAt", undefined);
-        void this.plugin.persistenceManager.setTemplateSnapshot("grid", null);
+        void this.plugin.persistenceManager.setSettingsTemplate("grid", null);
       }
     }
-    // Note: If !currentIsTemplate && !hasSnapshot, no action needed (normal view)
+    // If !currentIsTemplate && !hasTemplate, no action needed (normal view)
   }
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
-    console.log("[grid-view] constructor - Creating new grid view");
     super(controller);
 
-    console.log("[grid-view] constructor - this.config exists?", !!this.config);
-    console.log(
-      "[grid-view] constructor - this.config type:",
-      typeof this.config,
-    );
-
-    // Initialize template defaults immediately for settings UI
-    // Settings UI reads config right after construction, before onDataUpdated
-    // Guard: config might not be initialized yet in constructor
-    if (this.config) {
-      const isNewView = this.config.get(INIT_MARKER) === undefined;
-      console.log("[grid-view] constructor - isNewView:", isNewView);
-      if (isNewView) {
-        console.log("[grid-view] constructor - NEW view, applying template");
-        // Access plugin from controller's app
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        const plugin = (this.app as any).plugins.plugins[
-          "dynamic-views"
-        ] as DynamicViewsPlugin;
-        const templateSnapshot =
-          plugin.persistenceManager.getTemplateSnapshot("grid");
-
-        if (templateSnapshot) {
-          const defaults = templateSnapshot.settings;
-          // Write key template values immediately so settings UI sees them
-          if (defaults.titleProperty !== undefined) {
-            this.config.set("titleProperty", defaults.titleProperty);
-          }
-          if (defaults.cardSize !== undefined) {
-            this.config.set("cardSize", defaults.cardSize);
-          }
-          // Mark as initialized so onDataUpdated knows to skip full initialization
-          this.config.set(INIT_MARKER, true);
-        }
-      }
-    }
+    // Note: this.config is undefined in constructor (assigned later by QueryController.update())
+    // Template defaults are applied via schema defaults in getBasesViewOptions()
+    // and via initializeViewDefaults() in onDataUpdated()
 
     // Store scroll parent reference
     this.scrollEl = scrollEl;
@@ -328,7 +293,7 @@ export class DynamicViewsGridView extends BasesView {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     this.plugin = (this.app as any).plugins.plugins[
       "dynamic-views"
-    ] as DynamicViewsPlugin;
+    ] as DynamicViews;
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
@@ -1289,4 +1254,5 @@ export class DynamicViewsGridView extends BasesView {
 }
 
 /** Export options for registration */
-export const cardViewOptions = getBasesViewOptions;
+// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Bases API requires any[] for options array structure
+export const cardViewOptions = () => getBasesViewOptions("grid");

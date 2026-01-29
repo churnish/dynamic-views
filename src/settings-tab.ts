@@ -7,15 +7,15 @@ import {
   Notice,
   setIcon,
 } from "obsidian";
-import type DynamicViewsPlugin from "../main";
+import type DynamicViews from "../main";
 import { ClearSettingsModal } from "./modals";
 import { DEFAULT_SETTINGS, DEFAULT_VIEW_SETTINGS } from "./constants";
 import type { Settings, DefaultViewSettings } from "./types";
 
 export class DynamicViewsSettingTab extends PluginSettingTab {
-  plugin: DynamicViewsPlugin;
+  plugin: DynamicViews;
 
-  constructor(app: App, plugin: DynamicViewsPlugin) {
+  constructor(app: App, plugin: DynamicViews) {
     super(app, plugin);
     this.plugin = plugin;
     this.icon = "database-zap";

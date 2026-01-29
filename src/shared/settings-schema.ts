@@ -14,9 +14,41 @@ interface BasesConfig {
 /**
  * Bases view options for card/masonry views
  * These options appear in the Bases view configuration menu
+ *
+ * Called by Obsidian BEFORE the view constructor — schema defaults determine
+ * what new views show in the settings GUI. When a template exists, its values
+ * replace the static defaults so new views immediately reflect template settings.
+ *
+ * @param viewType - "grid" or "masonry" to look up the correct settings template
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bases API requires any for options array structure
-export function getBasesViewOptions(): any[] {
+export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
+  // Merge settings template into defaults (if template exists)
+  // For new views: config is empty → controls show these defaults = template values
+  // For existing views: config has values → these defaults are ignored by Obsidian
+  const d = { ...DEFAULT_VIEW_SETTINGS };
+  if (viewType) {
+    try {
+      // Access plugin instance to read settings template
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+      const plugin = (window as any).app?.plugins?.plugins?.["dynamic-views"];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (plugin?.persistenceManager) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const template =
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+          plugin.persistenceManager.getSettingsTemplate(viewType);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (template?.settings) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          Object.assign(d, template.settings);
+        }
+      }
+    } catch {
+      // Plugin not ready yet — use static defaults
+    }
+  }
+
   const schema = [
     {
       type: "slider",
@@ -25,7 +57,7 @@ export function getBasesViewOptions(): any[] {
       min: 50,
       max: 800,
       step: 10,
-      default: DEFAULT_VIEW_SETTINGS.cardSize,
+      default: d.cardSize,
     },
     {
       type: "group",
@@ -36,14 +68,14 @@ export function getBasesViewOptions(): any[] {
           displayName: "Title property",
           key: "titleProperty",
           placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.titleProperty,
+          default: d.titleProperty,
         },
         {
           type: "text",
           displayName: "Subtitle property",
           key: "subtitleProperty",
           placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.subtitleProperty,
+          default: d.subtitleProperty,
         },
       ],
     },
@@ -56,13 +88,13 @@ export function getBasesViewOptions(): any[] {
           displayName: "Text preview property",
           key: "textPreviewProperty",
           placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.textPreviewProperty,
+          default: d.textPreviewProperty,
         },
         {
           type: "toggle",
           displayName: "Show note content if property missing or empty",
           key: "fallbackToContent",
-          default: DEFAULT_VIEW_SETTINGS.fallbackToContent,
+          default: d.fallbackToContent,
         },
       ],
     },
@@ -75,7 +107,7 @@ export function getBasesViewOptions(): any[] {
           displayName: "Image property",
           key: "imageProperty",
           placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.imageProperty,
+          default: d.imageProperty,
         },
         {
           type: "dropdown",
@@ -86,7 +118,7 @@ export function getBasesViewOptions(): any[] {
             "if-unavailable": "If no available property images",
             never: "Never",
           },
-          default: "always",
+          default: d.fallbackToEmbeds,
         },
         {
           type: "dropdown",
@@ -98,7 +130,7 @@ export function getBasesViewOptions(): any[] {
             poster: "Poster",
             backdrop: "Backdrop",
           },
-          default: "thumbnail",
+          default: d.imageFormat,
           shouldHide: (config: BasesConfig) =>
             !config.get("imageProperty") &&
             config.get("fallbackToEmbeds") === "never",
@@ -113,7 +145,7 @@ export function getBasesViewOptions(): any[] {
             top: "Top",
             bottom: "Bottom",
           },
-          default: "right",
+          default: d.imagePosition,
           shouldHide: (config: BasesConfig) =>
             config.get("imageFormat") === "poster" ||
             config.get("imageFormat") === "backdrop" ||
@@ -128,7 +160,7 @@ export function getBasesViewOptions(): any[] {
             crop: "Crop",
             contain: "Contain",
           },
-          default: "crop",
+          default: d.imageFit,
           shouldHide: (config: BasesConfig) =>
             config.get("imageFormat") === "backdrop" ||
             (!config.get("imageProperty") &&
@@ -141,7 +173,7 @@ export function getBasesViewOptions(): any[] {
           min: 0.25,
           max: 2.5,
           step: 0.05,
-          default: DEFAULT_VIEW_SETTINGS.imageAspectRatio,
+          default: d.imageAspectRatio,
           shouldHide: (config: BasesConfig) =>
             config.get("imageFormat") === "backdrop" ||
             (!config.get("imageProperty") &&
@@ -158,20 +190,20 @@ export function getBasesViewOptions(): any[] {
           displayName: "Property 1",
           key: "propertyDisplay1",
           placeholder: "Select property",
-          default: DEFAULT_VIEW_SETTINGS.propertyDisplay1,
+          default: d.propertyDisplay1,
         },
         {
           type: "property",
           displayName: "Property 2",
           key: "propertyDisplay2",
           placeholder: "Select property",
-          default: DEFAULT_VIEW_SETTINGS.propertyDisplay2,
+          default: d.propertyDisplay2,
         },
         {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet1Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet1Above,
+          default: d.propertySet1Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay1") && !config.get("propertyDisplay2"),
         },
@@ -179,7 +211,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet1SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet1SideBySide,
+          default: d.propertySet1SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay1") || !config.get("propertyDisplay2"),
         },
@@ -207,7 +239,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet2Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet2Above,
+          default: d.propertySet2Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay3") && !config.get("propertyDisplay4"),
         },
@@ -215,7 +247,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet2SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet2SideBySide,
+          default: d.propertySet2SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay3") || !config.get("propertyDisplay4"),
         },
@@ -243,7 +275,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet3Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet3Above,
+          default: d.propertySet3Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay5") && !config.get("propertyDisplay6"),
         },
@@ -251,7 +283,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet3SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet3SideBySide,
+          default: d.propertySet3SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay5") || !config.get("propertyDisplay6"),
         },
@@ -279,7 +311,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet4Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet4Above,
+          default: d.propertySet4Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay7") && !config.get("propertyDisplay8"),
         },
@@ -287,7 +319,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet4SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet4SideBySide,
+          default: d.propertySet4SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay7") || !config.get("propertyDisplay8"),
         },
@@ -315,7 +347,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet5Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet5Above,
+          default: d.propertySet5Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay9") && !config.get("propertyDisplay10"),
         },
@@ -323,7 +355,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet5SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet5SideBySide,
+          default: d.propertySet5SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay9") || !config.get("propertyDisplay10"),
         },
@@ -351,7 +383,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet6Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet6Above,
+          default: d.propertySet6Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay11") &&
             !config.get("propertyDisplay12"),
@@ -360,7 +392,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet6SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet6SideBySide,
+          default: d.propertySet6SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay11") ||
             !config.get("propertyDisplay12"),
@@ -389,7 +421,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show above text preview",
           key: "propertySet7Above",
-          default: DEFAULT_VIEW_SETTINGS.propertySet7Above,
+          default: d.propertySet7Above,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay13") &&
             !config.get("propertyDisplay14"),
@@ -398,7 +430,7 @@ export function getBasesViewOptions(): any[] {
           type: "toggle",
           displayName: "Show side-by-side",
           key: "propertySet7SideBySide",
-          default: DEFAULT_VIEW_SETTINGS.propertySet7SideBySide,
+          default: d.propertySet7SideBySide,
           shouldHide: (config: BasesConfig) =>
             !config.get("propertyDisplay13") ||
             !config.get("propertyDisplay14"),
@@ -418,14 +450,14 @@ export function getBasesViewOptions(): any[] {
             above: "On top",
             hide: "Hide",
           },
-          default: DEFAULT_VIEW_SETTINGS.propertyLabels,
+          default: d.propertyLabels,
         },
         {
           type: "text",
           displayName: "URL property",
           key: "urlProperty",
           placeholder: "Comma-separated if multiple",
-          default: DEFAULT_VIEW_SETTINGS.urlProperty,
+          default: d.urlProperty,
         },
         {
           type: "text",
@@ -451,7 +483,7 @@ export function getBasesViewOptions(): any[] {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Bases API requires any for options array structure
 export function getMasonryViewOptions(): any[] {
-  return getBasesViewOptions();
+  return getBasesViewOptions("masonry");
 }
 
 /**
@@ -488,29 +520,6 @@ export function readBasesSettings(
     return typeof value === "number" && Number.isFinite(value)
       ? value
       : fallback;
-  };
-
-  // Helper: get imageFormat from separate format and position dropdowns
-  const getImageFormat = (): Settings["imageFormat"] => {
-    const format = config.get("imageFormat");
-    const position = config.get("imagePosition");
-
-    if (format === "none") return "none";
-    if (format === "poster") return "poster";
-    if (format === "backdrop") return "backdrop";
-
-    // Combine format + position (e.g., "cover" + "top" → "cover-top")
-    if (
-      (format === "thumbnail" || format === "cover") &&
-      (position === "left" ||
-        position === "right" ||
-        position === "top" ||
-        position === "bottom")
-    ) {
-      return `${format}-${position}` as Settings["imageFormat"];
-    }
-
-    return defaults.imageFormat;
   };
 
   return {
@@ -609,7 +618,24 @@ export function readBasesSettings(
     })(),
 
     // Image settings
-    imageFormat: getImageFormat(),
+    imageFormat: (() => {
+      const value = config.get("imageFormat");
+      return value === "thumbnail" ||
+        value === "cover" ||
+        value === "poster" ||
+        value === "backdrop"
+        ? value
+        : defaults.imageFormat;
+    })(),
+    imagePosition: (() => {
+      const value = config.get("imagePosition");
+      return value === "left" ||
+        value === "right" ||
+        value === "top" ||
+        value === "bottom"
+        ? value
+        : defaults.imagePosition;
+    })(),
     imageFit: (() => {
       const value = config.get("imageFit");
       return value === "crop" || value === "contain"
@@ -644,13 +670,12 @@ export function readBasesSettings(
 }
 
 /**
- * Extract view-specific settings snapshot from Bases config
- * Used for template system - captures only view-specific settings
+ * Extract view-specific settings from Bases config for template storage
  * @param config Bases view configuration
  * @param defaults Default view settings for fallback values
  * @returns Partial settings object suitable for template storage
  */
-export function extractBasesSnapshot(
+export function extractBasesTemplate(
   config: BasesConfig,
   defaults: DefaultViewSettings,
 ): Partial<DefaultViewSettings> {
@@ -676,29 +701,6 @@ export function extractBasesSnapshot(
     return typeof value === "number" && Number.isFinite(value)
       ? value
       : fallback;
-  };
-
-  // Helper: get imageFormat from separate format and position dropdowns
-  const getImageFormat = (): Settings["imageFormat"] => {
-    const format = config.get("imageFormat");
-    const position = config.get("imagePosition");
-
-    if (format === "none") return "none";
-    if (format === "poster") return "poster";
-    if (format === "backdrop") return "backdrop";
-
-    // Combine format + position (e.g., "cover" + "top" → "cover-top")
-    if (
-      (format === "thumbnail" || format === "cover") &&
-      (position === "left" ||
-        position === "right" ||
-        position === "top" ||
-        position === "bottom")
-    ) {
-      return `${format}-${position}` as Settings["imageFormat"];
-    }
-
-    return defaults.imageFormat;
   };
 
   return {
@@ -792,7 +794,24 @@ export function extractBasesSnapshot(
     })(),
 
     // Image settings
-    imageFormat: getImageFormat(),
+    imageFormat: (() => {
+      const value = config.get("imageFormat");
+      return value === "thumbnail" ||
+        value === "cover" ||
+        value === "poster" ||
+        value === "backdrop"
+        ? value
+        : defaults.imageFormat;
+    })(),
+    imagePosition: (() => {
+      const value = config.get("imagePosition");
+      return value === "left" ||
+        value === "right" ||
+        value === "top" ||
+        value === "bottom"
+        ? value
+        : defaults.imagePosition;
+    })(),
     imageFit: (() => {
       const value = config.get("imageFit");
       return value === "crop" || value === "contain"

@@ -1546,24 +1546,8 @@ function Card({
   const enableScrubbing =
     !app.isMobile && isArray && imageArray.length > 1 && !scrubbingDisabled;
 
-  // Parse imageFormat to extract format and position
-  const imageFormat = settings.imageFormat;
-  let format: "none" | "thumbnail" | "cover" | "poster" | "backdrop" = "none";
-  let position: "left" | "right" | "top" | "bottom" = "right";
-
-  if (imageFormat === "none") {
-    format = "none";
-  } else if (imageFormat === "poster") {
-    format = "poster";
-  } else if (imageFormat === "backdrop") {
-    format = "backdrop";
-  } else if (imageFormat.startsWith("thumbnail-")) {
-    format = "thumbnail";
-    position = imageFormat.split("-")[1] as "left" | "right" | "top" | "bottom";
-  } else if (imageFormat.startsWith("cover-")) {
-    format = "cover";
-    position = imageFormat.split("-")[1] as "left" | "right" | "top" | "bottom";
-  }
+  const format = settings.imageFormat;
+  const position = settings.imagePosition;
 
   // Build card classes
   const cardClasses = ["card"];

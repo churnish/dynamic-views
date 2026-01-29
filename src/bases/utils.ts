@@ -22,7 +22,7 @@ import {
 } from "../utils/notebook-navigator";
 import type { Settings, DefaultViewSettings } from "../types";
 import { DEFAULT_VIEW_SETTINGS } from "../constants";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 
 // Bases config interface for initialization (get/set only - getAll handled by tryGetAllConfig)
 interface BasesConfigInit {
@@ -123,7 +123,7 @@ const PROPERTY_DISPLAY_KEYS = [
 export function initializeViewDefaults(
   config: BasesConfigInit,
   allKeys: Record<string, unknown>,
-  plugin: DynamicViewsPlugin,
+  plugin: DynamicViews,
   file: TFile | null,
   viewType: "grid" | "masonry",
 ): void {
@@ -145,28 +145,28 @@ export function initializeViewDefaults(
     return;
   }
 
-  // Fresh view - check for template snapshot or use defaults
+  // Fresh view - check for settings template or use defaults
   let defaults: Partial<DefaultViewSettings>;
-  const templateSnapshot =
-    plugin.persistenceManager.getTemplateSnapshot(viewType);
+  const settingsTemplate =
+    plugin.persistenceManager.getSettingsTemplate(viewType);
 
   console.log(
-    `[initializeViewDefaults] viewType=${viewType}, hasTemplate=${!!templateSnapshot}`,
+    `[initializeViewDefaults] viewType=${viewType}, hasTemplate=${!!settingsTemplate}`,
   );
-  if (templateSnapshot) {
+  if (settingsTemplate) {
     console.log(
-      "[initializeViewDefaults] Using template snapshot, titleProperty:",
-      templateSnapshot.settings.titleProperty,
+      "[initializeViewDefaults] Using settings template, titleProperty:",
+      settingsTemplate.settings.titleProperty,
     );
     console.log(
-      "[initializeViewDefaults] Using template snapshot, cardSize:",
-      templateSnapshot.settings.cardSize,
+      "[initializeViewDefaults] Using settings template, cardSize:",
+      settingsTemplate.settings.cardSize,
     );
   }
 
-  if (templateSnapshot) {
-    // Copy from template snapshot settings
-    defaults = templateSnapshot.settings;
+  if (settingsTemplate) {
+    // Copy from settings template
+    defaults = settingsTemplate.settings;
   } else {
     // Use global defaults
     console.log("[initializeViewDefaults] No template, using global defaults");
@@ -214,18 +214,10 @@ export function initializeViewDefaults(
     safeConfigSet(config, "cardSize", defaults.cardSize);
   }
   if (defaults?.imageFormat !== undefined) {
-    // Split combined format back to separate dropdowns
-    const format = defaults.imageFormat;
-    if (format === "none" || format === "backdrop") {
-      safeConfigSet(config, "imageFormat", format);
-    } else if (format.startsWith("thumbnail-") || format.startsWith("cover-")) {
-      const [baseFormat, position] = format.split("-") as [
-        "thumbnail" | "cover",
-        string,
-      ];
-      safeConfigSet(config, "imageFormat", baseFormat);
-      safeConfigSet(config, "imagePosition", position);
-    }
+    safeConfigSet(config, "imageFormat", defaults.imageFormat);
+  }
+  if (defaults?.imagePosition !== undefined) {
+    safeConfigSet(config, "imagePosition", defaults.imagePosition);
   }
   if (defaults?.imageFit !== undefined) {
     safeConfigSet(config, "imageFit", defaults.imageFit);
@@ -861,7 +853,7 @@ export async function loadContentForEntries(
   }
 
   // Load images for thumbnails
-  if (settings.imageFormat !== "none") {
+  {
     const imageEntries = entries
       .filter((entry) => !(entry.file.path in images))
       .map((entry) => {
@@ -926,12 +918,12 @@ interface BasesViewWrapper {
 export function isCurrentTemplateView(
   config: BasesConfigInit,
   viewType: "grid" | "masonry",
-  plugin: DynamicViewsPlugin,
+  plugin: DynamicViews,
 ): boolean {
-  const savedSnapshot = plugin.persistenceManager.getTemplateSnapshot(viewType);
+  const savedTemplate = plugin.persistenceManager.getSettingsTemplate(viewType);
 
-  // No snapshot exists - this can't be the template
-  if (!savedSnapshot) {
+  // No template exists - this can't be the template
+  if (!savedTemplate) {
     return false;
   }
 
@@ -939,7 +931,7 @@ export function isCurrentTemplateView(
   const viewTimestamp = config.get("__templateSetAt");
 
   // Compare timestamps - only the view that most recently became template should match
-  return viewTimestamp === savedSnapshot.setAt;
+  return viewTimestamp === savedTemplate.setAt;
 }
 
 /**

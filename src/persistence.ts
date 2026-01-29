@@ -4,7 +4,7 @@ import {
   Settings,
   UIState,
   DefaultViewSettings,
-  TemplateSnapshot,
+  SettingsTemplate,
 } from "./types";
 import {
   DEFAULT_SETTINGS,
@@ -33,22 +33,9 @@ export class PersistenceManager {
     const loadedData =
       (await this.plugin.loadData()) as Partial<PluginData> | null;
     if (loadedData) {
-      // Migrate old ctime-based references to null
-      let defaultTemplateViews = loadedData.defaultTemplateViews || {
+      const defaultTemplateViews = loadedData.defaultTemplateViews || {
         ...DEFAULT_TEMPLATE_VIEWS,
       };
-
-      // Check if any values are numbers (old format) and reset
-      if (
-        typeof defaultTemplateViews.grid === "number" ||
-        typeof defaultTemplateViews.masonry === "number" ||
-        typeof defaultTemplateViews.list === "number"
-      ) {
-        console.log(
-          "Migrating template storage format - clearing old references",
-        );
-        defaultTemplateViews = { grid: null, masonry: null, list: null };
-      }
 
       this.data = {
         globalSettings: {
@@ -173,69 +160,23 @@ export class PersistenceManager {
     await this.save();
   }
 
-  /**
-   * Get the template snapshot for a specific view type
-   * Handles migration from old format (plain settings) to new format (with timestamp)
-   */
-  getTemplateSnapshot(
+  getSettingsTemplate(
     viewType: "grid" | "masonry" | "list",
-  ): TemplateSnapshot | null {
-    const snapshot = this.data.defaultTemplateViews[viewType];
-
-    if (!snapshot) {
-      console.log(
-        `[PersistenceManager] getTemplateSnapshot(${viewType}): null`,
-      );
-      return null;
-    }
-
-    // Migration: Old format (plain settings object) → New format (TemplateSnapshot)
-    if (!("setAt" in snapshot)) {
-      console.log(
-        `[PersistenceManager] Migrating ${viewType} snapshot to new format with timestamp`,
-      );
-      // Wrap in TemplateSnapshot structure with current timestamp
-      const migrated: TemplateSnapshot = {
-        settings: snapshot as Partial<DefaultViewSettings>,
-        setAt: Date.now(),
-      };
-      // Save migrated format
-      this.data.defaultTemplateViews[viewType] = migrated;
-      void this.save();
-      return migrated;
-    }
-
-    console.log(
-      `[PersistenceManager] getTemplateSnapshot(${viewType}): exists (timestamp: ${snapshot.setAt})`,
-    );
-    return snapshot;
+  ): SettingsTemplate | null {
+    const template = this.data.defaultTemplateViews[viewType];
+    if (!template) return null;
+    return template;
   }
 
-  /**
-   * Set the template snapshot for a specific view type
-   * @param snapshot - Full snapshot with timestamp, or null to clear template
-   */
-  async setTemplateSnapshot(
+  async setSettingsTemplate(
     viewType: "grid" | "masonry" | "list",
-    snapshot: TemplateSnapshot | null,
+    template: SettingsTemplate | null,
   ): Promise<void> {
     console.log(
-      `[PersistenceManager] setTemplateSnapshot(${viewType}):`,
-      snapshot ? `saving snapshot (timestamp: ${snapshot.setAt})` : "clearing",
+      `[PersistenceManager] setSettingsTemplate(${viewType}):`,
+      template ? `saving (timestamp: ${template.setAt})` : "clearing",
     );
-    this.data.defaultTemplateViews[viewType] = snapshot;
+    this.data.defaultTemplateViews[viewType] = template;
     await this.save();
-  }
-
-  /**
-   * Check if a file is the template view for a specific view type
-   * @deprecated Template system now uses snapshots, not file references
-   * @returns Always returns false (kept for UI compatibility)
-   */
-  isTemplateView(
-    _file: TFile | null,
-    _viewType: "grid" | "masonry" | "list",
-  ): boolean {
-    return false;
   }
 }

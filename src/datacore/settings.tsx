@@ -5,14 +5,14 @@ import {
 } from "../types";
 import type { DatacoreAPI } from "./types";
 import type { TFile } from "obsidian";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 
 interface SettingsProps {
   dc: DatacoreAPI;
   settings: SettingsType;
   onSettingsChange: (settings: Partial<SettingsType>) => void;
   menuRef?: { current: HTMLDivElement | null };
-  plugin: DynamicViewsPlugin;
+  plugin: DynamicViews;
   currentFile: TFile | null;
   viewMode: ViewMode;
 }
@@ -149,9 +149,9 @@ export function Settings({
   // Always use "grid" template (settings shared across card/masonry/list modes)
   const templateType = "grid";
 
-  // Template toggle state - check if snapshot exists
+  // Template toggle state - check if template exists
   const [isTemplate, setIsTemplate] = dc.useState(
-    plugin.persistenceManager.getTemplateSnapshot(templateType) !== null,
+    plugin.persistenceManager.getSettingsTemplate(templateType) !== null,
   );
 
   const handleToggleTemplate = (enabled: boolean) => {
@@ -160,7 +160,7 @@ export function Settings({
     );
     if (enabled) {
       // Extract current settings
-      const settingsSnapshot: Partial<DefaultViewSettings> = {
+      const templateSettings: Partial<DefaultViewSettings> = {
         titleProperty: settings.titleProperty,
         textPreviewProperty: settings.textPreviewProperty,
         imageProperty: settings.imageProperty,
@@ -198,6 +198,7 @@ export function Settings({
         fallbackToContent: settings.fallbackToContent,
         fallbackToEmbeds: settings.fallbackToEmbeds,
         imageFormat: settings.imageFormat,
+        imagePosition: settings.imagePosition,
         imageFit: settings.imageFit,
         imageAspectRatio: settings.imageAspectRatio,
         queryHeight: settings.queryHeight,
@@ -206,19 +207,18 @@ export function Settings({
         cssclasses: settings.cssclasses,
       };
 
-      // Wrap in TemplateSnapshot with timestamp
       const timestamp = Date.now();
       console.log(
-        `[datacore-settings] Saving template snapshot with timestamp: ${timestamp}`,
+        `[datacore-settings] Saving settings template with timestamp: ${timestamp}`,
       );
-      void plugin.persistenceManager.setTemplateSnapshot(templateType, {
-        settings: settingsSnapshot,
+      void plugin.persistenceManager.setSettingsTemplate(templateType, {
+        settings: templateSettings,
         setAt: timestamp,
       });
     } else {
       // Clear template
-      console.log(`[datacore-settings] Clearing template snapshot`);
-      void plugin.persistenceManager.setTemplateSnapshot(templateType, null);
+      console.log(`[datacore-settings] Clearing settings template`);
+      void plugin.persistenceManager.setSettingsTemplate(templateType, null);
     }
     setIsTemplate(enabled);
   };
@@ -443,36 +443,13 @@ export function Settings({
                   <label>Format</label>
                 </div>
                 <select
-                  value={(() => {
-                    if (settings.imageFormat === "none") return "none";
-                    if (settings.imageFormat === "poster") return "poster";
-                    if (settings.imageFormat === "backdrop") return "backdrop";
-                    const imageFormatParts = settings.imageFormat.split("-");
-                    return imageFormatParts[0] as "thumbnail" | "cover";
-                  })()}
+                  value={settings.imageFormat}
                   onChange={(e: unknown) => {
                     const evt = e as Event & { target: HTMLSelectElement };
-                    const newFormat = evt.target.value;
-                    if (
-                      newFormat === "none" ||
-                      newFormat === "poster" ||
-                      newFormat === "backdrop"
-                    ) {
-                      onSettingsChange({
-                        imageFormat: newFormat as typeof settings.imageFormat,
-                      });
-                    } else {
-                      const currentPosition =
-                        settings.imageFormat === "none" ||
-                        settings.imageFormat === "poster" ||
-                        settings.imageFormat === "backdrop"
-                          ? "right"
-                          : settings.imageFormat.split("-")[1] || "right";
-                      onSettingsChange({
-                        imageFormat:
-                          `${newFormat}-${currentPosition}` as typeof settings.imageFormat,
-                      });
-                    }
+                    onSettingsChange({
+                      imageFormat: evt.target
+                        .value as typeof settings.imageFormat,
+                    });
                   }}
                   className="dropdown"
                 >
@@ -482,31 +459,19 @@ export function Settings({
                   <option value="backdrop">Backdrop</option>
                 </select>
               </div>
-              {settings.imageFormat !== "none" &&
-                settings.imageFormat !== "poster" &&
+              {settings.imageFormat !== "poster" &&
                 settings.imageFormat !== "backdrop" && (
                   <div className="setting-item setting-item-dropdown">
                     <div className="setting-item-info">
                       <label>Position</label>
                     </div>
                     <select
-                      value={(() => {
-                        const position = settings.imageFormat.split("-")[1] as
-                          | "left"
-                          | "right"
-                          | "top"
-                          | "bottom"
-                          | undefined;
-                        return position || "right";
-                      })()}
+                      value={settings.imagePosition}
                       onChange={(e: unknown) => {
                         const evt = e as Event & { target: HTMLSelectElement };
-                        const currentFormat = settings.imageFormat.split(
-                          "-",
-                        )[0] as "thumbnail" | "cover";
                         onSettingsChange({
-                          imageFormat:
-                            `${currentFormat}-${evt.target.value}` as typeof settings.imageFormat,
+                          imagePosition: evt.target
+                            .value as typeof settings.imagePosition,
                         });
                       }}
                       className="dropdown"
@@ -518,64 +483,62 @@ export function Settings({
                     </select>
                   </div>
                 )}
-              {settings.imageFormat !== "none" &&
-                settings.imageFormat !== "backdrop" && (
-                  <div className="setting-item setting-item-dropdown">
-                    <div className="setting-item-info">
-                      <label>Fit</label>
-                    </div>
-                    <select
-                      value={settings.imageFit}
+              {settings.imageFormat !== "backdrop" && (
+                <div className="setting-item setting-item-dropdown">
+                  <div className="setting-item-info">
+                    <label>Fit</label>
+                  </div>
+                  <select
+                    value={settings.imageFit}
+                    onChange={(e: unknown) => {
+                      const evt = e as Event & {
+                        target: HTMLSelectElement;
+                      };
+                      onSettingsChange({
+                        imageFit: evt.target.value as "crop" | "contain",
+                      });
+                    }}
+                    className="dropdown"
+                  >
+                    <option value="crop">Crop</option>
+                    <option value="contain">Contain</option>
+                  </select>
+                </div>
+              )}
+              {settings.imageFormat !== "backdrop" && (
+                <div className="setting-item">
+                  <div className="setting-item-info">
+                    <label>Ratio</label>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <input
+                      type="range"
+                      min="0.25"
+                      max="2.5"
+                      step="0.05"
+                      value={settings.imageAspectRatio}
                       onChange={(e: unknown) => {
                         const evt = e as Event & {
-                          target: HTMLSelectElement;
+                          target: HTMLInputElement;
                         };
                         onSettingsChange({
-                          imageFit: evt.target.value as "crop" | "contain",
+                          imageAspectRatio: parseFloat(evt.target.value),
                         });
                       }}
-                      className="dropdown"
-                    >
-                      <option value="crop">Crop</option>
-                      <option value="contain">Contain</option>
-                    </select>
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ minWidth: "40px" }}>
+                      {settings.imageAspectRatio.toFixed(2)}
+                    </span>
                   </div>
-                )}
-              {settings.imageFormat !== "none" &&
-                settings.imageFormat !== "backdrop" && (
-                  <div className="setting-item">
-                    <div className="setting-item-info">
-                      <label>Ratio</label>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <input
-                        type="range"
-                        min="0.25"
-                        max="2.5"
-                        step="0.05"
-                        value={settings.imageAspectRatio}
-                        onChange={(e: unknown) => {
-                          const evt = e as Event & {
-                            target: HTMLInputElement;
-                          };
-                          onSettingsChange({
-                            imageAspectRatio: parseFloat(evt.target.value),
-                          });
-                        }}
-                        style={{ flex: 1 }}
-                      />
-                      <span style={{ minWidth: "40px" }}>
-                        {settings.imageAspectRatio.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                </div>
+              )}
             </>
           )}
         </div>

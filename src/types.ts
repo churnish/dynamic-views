@@ -37,18 +37,8 @@ export interface Settings {
   propertySet7Above: boolean;
   cssclasses: string;
   propertyLabels: "hide" | "inline" | "above";
-  imageFormat:
-    | "none"
-    | "poster"
-    | "backdrop"
-    | "thumbnail-left"
-    | "thumbnail-right"
-    | "thumbnail-top"
-    | "thumbnail-bottom"
-    | "cover-top"
-    | "cover-bottom"
-    | "cover-left"
-    | "cover-right";
+  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
+  imagePosition: "left" | "right" | "top" | "bottom";
   imageFit: "crop" | "contain";
   imageAspectRatio: number;
   listMarker: string;
@@ -112,18 +102,8 @@ export interface DefaultViewSettings {
   subtitleProperty: string;
   fallbackToContent: boolean;
   fallbackToEmbeds: "always" | "if-unavailable" | "never";
-  imageFormat:
-    | "none"
-    | "poster"
-    | "backdrop"
-    | "thumbnail-left"
-    | "thumbnail-right"
-    | "thumbnail-top"
-    | "thumbnail-bottom"
-    | "cover-top"
-    | "cover-bottom"
-    | "cover-left"
-    | "cover-right";
+  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
+  imagePosition: "left" | "right" | "top" | "bottom";
   imageFit: "crop" | "contain";
   imageAspectRatio: number;
   queryHeight: number;
@@ -132,10 +112,10 @@ export interface DefaultViewSettings {
 }
 
 /**
- * Template snapshot with timestamp for validation
+ * Settings template with timestamp for validation
  * Timestamp identifies which view is the current template
  */
-export interface TemplateSnapshot {
+export interface SettingsTemplate {
   settings: Partial<DefaultViewSettings>;
   setAt: number; // Unix timestamp (milliseconds) when template was enabled
 }
@@ -146,9 +126,9 @@ export interface PluginData {
   queryStates: Record<string, UIState>;
   viewSettings: Record<string, Partial<DefaultViewSettings>>;
   defaultTemplateViews: {
-    grid: TemplateSnapshot | null;
-    masonry: TemplateSnapshot | null;
-    list: TemplateSnapshot | null;
+    grid: SettingsTemplate | null;
+    masonry: SettingsTemplate | null;
+    list: SettingsTemplate | null;
   };
 }
 

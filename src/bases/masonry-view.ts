@@ -9,7 +9,7 @@ import { transformBasesEntries } from "../shared/data-transform";
 import {
   readBasesSettings,
   getMasonryViewOptions,
-  extractBasesSnapshot,
+  extractBasesTemplate,
 } from "../shared/settings-schema";
 import {
   getMinMasonryColumns,
@@ -55,7 +55,6 @@ import {
   tryGetAllConfig,
   disableOtherViewTemplates,
   isCurrentTemplateView,
-  INIT_MARKER,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -70,7 +69,7 @@ import {
   cleanupVisibilityObserver,
   resetGapCache,
 } from "../shared/property-measure";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 import type {
   Settings,
   ContentCache,
@@ -95,7 +94,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private scrollEl: HTMLElement;
   private leafId: string;
   private containerEl: HTMLElement;
-  private plugin: DynamicViewsPlugin;
+  private plugin: DynamicViews;
   private scrollPreservation: ScrollPreservation | null = null;
   private cardRenderer: SharedCardRenderer;
   private _previousCustomClasses: string[] = [];
@@ -247,13 +246,13 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     this.previousIsTemplate = isTemplate;
 
-    // Read saved snapshot
-    const savedSnapshot =
-      this.plugin.persistenceManager.getTemplateSnapshot("masonry");
-    const hasSnapshot = savedSnapshot !== null;
+    // Read saved template
+    const savedTemplate =
+      this.plugin.persistenceManager.getSettingsTemplate("masonry");
+    const hasTemplate = savedTemplate !== null;
 
     console.log(
-      `[masonry-view] setSettings - isTemplate=${isTemplate}, hasSnapshot=${hasSnapshot}`,
+      `[masonry-view] setSettings - isTemplate=${isTemplate}, hasTemplate=${hasTemplate}`,
     );
 
     // Make isTemplate mutable for validation logic
@@ -262,7 +261,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // VALIDATION: Check if this view's toggle is stale (another view overrode template)
     // Only validate if view already has a timestamp (was previously template)
     // If no timestamp, user is intentionally making this the new template
-    if (currentIsTemplate && hasSnapshot) {
+    if (currentIsTemplate && hasTemplate) {
       const viewTimestamp = this.config.get("__templateSetAt") as
         | number
         | undefined;
@@ -276,12 +275,12 @@ export class DynamicViewsMasonryView extends BasesView {
         );
         if (!isActualTemplate) {
           console.log(
-            `[masonry-view] Template toggle is stale - another view overrode template (view: ${viewTimestamp}, snapshot: ${savedSnapshot.setAt}), disabling toggle`,
+            `[masonry-view] Template toggle is stale - another view overrode template (view: ${viewTimestamp}, saved: ${savedTemplate.setAt}), disabling toggle`,
           );
           // Disable stale toggle
           this.config.set("__isTemplate", false);
           this.previousIsTemplate = false; // Update tracked state
-          currentIsTemplate = false; // Update local var to skip snapshot save
+          currentIsTemplate = false; // Update local var to skip template save
         }
       }
     }
@@ -301,63 +300,37 @@ export class DynamicViewsMasonryView extends BasesView {
       // MUTUAL EXCLUSION: Disable template in all other Masonry views
       disableOtherViewTemplates(this.app, MASONRY_VIEW_TYPE, this);
 
-      // Template enabled - extract current settings and save/update snapshot
+      // Template enabled - extract current settings and save/update template
       const defaults = this.plugin.persistenceManager.getDefaultViewSettings();
-      const settings = extractBasesSnapshot(this.config, defaults);
-      console.log("[masonry-view] Saving template snapshot (full):", settings);
-      void this.plugin.persistenceManager.setTemplateSnapshot("masonry", {
+      const settings = extractBasesTemplate(this.config, defaults);
+      console.log("[masonry-view] Saving settings template:", settings);
+      void this.plugin.persistenceManager.setSettingsTemplate("masonry", {
         settings,
         setAt: timestamp,
       });
-    } else if (!currentIsTemplate && hasSnapshot) {
-      // Only clear snapshot if THIS view was the template
+    } else if (!currentIsTemplate && hasTemplate) {
+      // Only clear template if THIS view was the template
       const wasThisViewTemplate =
         this.config.get("__templateSetAt") !== undefined;
       if (wasThisViewTemplate) {
-        // User disabled template in the view that was the template - clear snapshot and timestamp
-        console.log("[masonry-view] Clearing template snapshot");
+        // User disabled template in the view that was the template - clear template and timestamp
+        console.log("[masonry-view] Clearing settings template");
         this.config.set("__templateSetAt", undefined);
-        void this.plugin.persistenceManager.setTemplateSnapshot(
+        void this.plugin.persistenceManager.setSettingsTemplate(
           "masonry",
           null,
         );
       }
     }
-    // Note: If !currentIsTemplate && !hasSnapshot, no action needed (normal view)
+    // If !currentIsTemplate && !hasTemplate, no action needed (normal view)
   }
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
     super(controller);
 
-    // Initialize template defaults immediately for settings UI
-    // Settings UI reads config right after construction, before onDataUpdated
-    // Guard: config might not be initialized yet in constructor
-    if (this.config) {
-      const isNewView = this.config.get(INIT_MARKER) === undefined;
-      if (isNewView) {
-        console.log("[masonry-view] constructor - NEW view, applying template");
-        // Access plugin from controller's app
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        const plugin = (this.app as any).plugins.plugins[
-          "dynamic-views"
-        ] as DynamicViewsPlugin;
-        const templateSnapshot =
-          plugin.persistenceManager.getTemplateSnapshot("masonry");
-
-        if (templateSnapshot) {
-          const defaults = templateSnapshot.settings;
-          // Write key template values immediately so settings UI sees them
-          if (defaults.titleProperty !== undefined) {
-            this.config.set("titleProperty", defaults.titleProperty);
-          }
-          if (defaults.cardSize !== undefined) {
-            this.config.set("cardSize", defaults.cardSize);
-          }
-          // Mark as initialized so onDataUpdated knows to skip full initialization
-          this.config.set(INIT_MARKER, true);
-        }
-      }
-    }
+    // Note: this.config is undefined in constructor (assigned later by QueryController.update())
+    // Template defaults are applied via schema defaults in getMasonryViewOptions()
+    // and via initializeViewDefaults() in onDataUpdated()
 
     // Store scroll parent reference
     this.scrollEl = scrollEl;
@@ -389,7 +362,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     this.plugin = (this.app as any).plugins.plugins[
       "dynamic-views"
-    ] as DynamicViewsPlugin;
+    ] as DynamicViews;
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,

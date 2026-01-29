@@ -43,7 +43,7 @@ settings:
         title: Dark overlay strength
         description: Opacity of the dark overlay
         type: variable-number-slider
-        default: 40
+        default: 50
         min: 0
         max: 100
         step: 1
@@ -628,7 +628,7 @@ settings:
         title: Dark overlay strength
         description: Opacity of the dark overlay
         type: variable-number-slider
-        default: 40
+        default: 50
         min: 0
         max: 100
         step: 1
@@ -5230,15 +5230,11 @@ body.dynamic-views-show-cover-placeholder-both
 }
 
 /* No border = no inset */
-body.dynamic-views-hide-card-border
-  .dynamic-views
-  .card.image-format-backdrop {
+body.dynamic-views-hide-card-border .dynamic-views .card.image-format-backdrop {
   --backdrop-inset: 0px;
 }
 
-body.dynamic-views-hide-card-border
-  .dynamic-views
-  .card.image-format-poster {
+body.dynamic-views-hide-card-border .dynamic-views .card.image-format-poster {
   --poster-inset: 0px;
 }
 
@@ -5299,7 +5295,7 @@ body.dynamic-views-backdrop-theme-match.theme-dark
   .card.image-format-backdrop
   .card-backdrop::after {
   background: rgb(
-    0 0 0 / calc(var(--dynamic-views-backdrop-overlay-dark, 40) * 1%)
+    0 0 0 / calc(var(--dynamic-views-backdrop-overlay-dark, 50) * 1%)
   );
 }
 
@@ -5328,7 +5324,7 @@ body.dynamic-views-backdrop-theme-dark
   .card.image-format-backdrop
   .card-backdrop::after {
   background: rgb(
-    0 0 0 / calc(var(--dynamic-views-backdrop-overlay-dark, 40) * 1%)
+    0 0 0 / calc(var(--dynamic-views-backdrop-overlay-dark, 50) * 1%)
   );
 }
 
@@ -5401,7 +5397,7 @@ body:not(.dynamic-views-backdrop-no-adaptive-text)
   inset: 0;
   pointer-events: none;
   backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
-  transition: background var(--anim-duration-moderate, 300ms);
+  transition: opacity var(--anim-duration-moderate, 300ms); /* opacity, not background — background toggle causes overlay flicker */
 }
 
 /* Poster overlay theme: Match theme (default — also applies when no theme class set) */
@@ -5417,7 +5413,7 @@ body:is(
   .card.image-format-poster
   .card-poster::after {
   background: rgb(
-    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
+    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 50) * 1%)
   );
 }
 
@@ -5453,7 +5449,7 @@ body.dynamic-views-poster-theme-dark
   .card.image-format-poster
   .card-poster::after {
   background: rgb(
-    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
+    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 50) * 1%)
   );
 }
 
@@ -5465,7 +5461,7 @@ body.dynamic-views-poster-theme-disable
   display: none;
 }
 
-/* Poster: content hidden until hover (baked in, only if card has image; skipped when "Show card content by default" ON) */
+/* Poster: content hidden until click (baked in, only if card has image; skipped when "Show card content by default" ON) */
 body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
@@ -5483,6 +5479,7 @@ body:not(.dynamic-views-poster-content-default)
   .card.image-format-poster:has(.card-poster)
   .card-properties-bottom {
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
@@ -5504,6 +5501,7 @@ body.dynamic-views-poster-content-default
   .card.image-format-poster:has(.card-poster)
   .card-properties-bottom {
   opacity: 1;
+  pointer-events: auto;
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
@@ -5525,91 +5523,25 @@ body:not(.dynamic-views-poster-content-default)
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-bottom {
   opacity: 1;
+  pointer-events: auto;
 }
 
-/* Poster: hide overlay by default (skipped when "Show card content by default" is ON) */
-body:is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-dark:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after,
-body:is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-light:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after,
-body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after,
-body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
+/* Poster: hide overlay by default (skipped when "Show card content by default" is ON)
+   Uses opacity instead of background:transparent to keep the compositing layer alive
+   and avoid cascade flicker from theme-variant background rules. */
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
-  background: transparent;
+  opacity: 0;
 }
 
 /* Poster: show overlay on click ("Show card content by default" OFF) */
-body:is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-dark:not(.dynamic-views-poster-content-default)
+body:not(.dynamic-views-poster-content-default)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
-  background: rgb(
-    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
-  );
-}
-
-body:is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-light:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after {
-  background: rgb(
-    255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
-  );
-}
-
-body.dynamic-views-poster-theme-light:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after {
-  background: rgb(
-    255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
-  );
-}
-
-body.dynamic-views-poster-theme-dark:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after {
-  background: rgb(
-    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 40) * 1%)
-  );
+  opacity: 1;
 }
 
 /* Poster: hide content on click ("Show card content by default" ON) */
@@ -5630,40 +5562,15 @@ body.dynamic-views-poster-content-default
   .card.image-format-poster.poster-revealed:has(.card-poster)
   .card-properties-bottom {
   opacity: 0;
+  pointer-events: none;
 }
 
 /* Poster: hide overlay on click ("Show card content by default" ON) */
-body.dynamic-views-poster-content-default:is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-dark
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after,
-body.dynamic-views-poster-content-default:is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-light
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after,
-body.dynamic-views-poster-content-default.dynamic-views-poster-theme-light
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after,
-body.dynamic-views-poster-content-default.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-content-default
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster::after {
-  background: transparent;
+  opacity: 0;
 }
 
 /* Poster: card height determined by image ratio */

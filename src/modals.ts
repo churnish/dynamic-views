@@ -1,15 +1,11 @@
 import { Modal, App } from "obsidian";
-import type DynamicViewsPlugin from "../main";
+import type DynamicViews from "../main";
 
 export class ClearSettingsModal extends Modal {
-  plugin: DynamicViewsPlugin;
+  plugin: DynamicViews;
   onConfirm: () => Promise<void>;
 
-  constructor(
-    app: App,
-    plugin: DynamicViewsPlugin,
-    onConfirm: () => Promise<void>,
-  ) {
+  constructor(app: App, plugin: DynamicViews, onConfirm: () => Promise<void>) {
     super(app);
     this.plugin = plugin;
     this.onConfirm = onConfirm;

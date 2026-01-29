@@ -1,6 +1,6 @@
 import { App, TFile, Keymap, Notice } from "obsidian";
 import type { PaneType } from "obsidian";
-import type DynamicViewsPlugin from "../../main";
+import type DynamicViews from "../../main";
 import {
   Settings,
   UIState,
@@ -78,7 +78,7 @@ declare module "obsidian" {
 }
 
 interface ViewProps {
-  plugin: DynamicViewsPlugin;
+  plugin: DynamicViews;
   app: App;
   dc: DatacoreAPI;
   USER_QUERY?: string;
@@ -154,6 +154,7 @@ export function View({
       "fallbackToContent",
       "fallbackToEmbeds",
       "imageFormat",
+      "imagePosition",
       "imageFit",
       "imageAspectRatio",
       "queryHeight",
@@ -546,6 +547,7 @@ export function View({
           fallbackToContent: settings.fallbackToContent,
           fallbackToEmbeds: settings.fallbackToEmbeds,
           imageFormat: settings.imageFormat,
+          imagePosition: settings.imagePosition,
           imageFit: settings.imageFit,
           imageAspectRatio: settings.imageAspectRatio,
           queryHeight: settings.queryHeight,
@@ -863,6 +865,7 @@ export function View({
       propertyDisplay14: settings.propertyDisplay14,
       propertyLabels: settings.propertyLabels,
       imageFormat: settings.imageFormat,
+      imagePosition: settings.imagePosition,
       imageFit: settings.imageFit,
       imageAspectRatio: settings.imageAspectRatio,
     });
@@ -892,6 +895,7 @@ export function View({
         propertyDisplay14: settings.propertyDisplay14,
         propertyLabels: settings.propertyLabels,
         imageFormat: settings.imageFormat,
+        imagePosition: settings.imagePosition,
         imageFit: settings.imageFit,
         imageAspectRatio: settings.imageAspectRatio,
       } as Settings;
@@ -962,17 +966,8 @@ export function View({
 
   // Load file contents asynchronously (only for displayed items)
   dc.useEffect(() => {
-    // Skip entirely if both previews and thumbnails are off
-    if (
-      !settings.textPreviewProperty &&
-      !settings.fallbackToContent &&
-      settings.imageFormat === "none"
-    ) {
-      setTextPreviews({});
-      setImages({});
-      setHasImageAvailable({});
-      return;
-    }
+    // Skip text loading if both text preview sources are off
+    // (images always load since there's always a format)
 
     const effectId = Math.random().toString(36).slice(2);
     currentContentLoadRef.current = effectId;
@@ -1084,7 +1079,7 @@ export function View({
       }
 
       // Prepare entries for image loading
-      if (settings.imageFormat !== "none") {
+      {
         // Copy existing cached entries that are still in results
         for (const path of currentPaths) {
           const cachedImage = images[path];
@@ -1155,6 +1150,7 @@ export function View({
     sorted,
     displayedCount,
     settings.imageFormat,
+    settings.imagePosition,
     settings.textPreviewProperty,
     settings.titleProperty,
     settings.imageProperty,
