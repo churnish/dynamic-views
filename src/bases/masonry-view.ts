@@ -98,7 +98,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private plugin: DynamicViews;
   private scrollPreservation: ScrollPreservation | null = null;
   private cardRenderer: SharedCardRenderer;
-  private _controller: QueryController & { currentFile: TFile | null };
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
   private _previousCustomClasses: string[] = [];
@@ -360,10 +359,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
     super(controller);
-    this._controller = controller as QueryController & {
-      currentFile: TFile | null;
-    };
-
     // Note: this.config is undefined in constructor (assigned later by QueryController.update())
     // Template defaults are applied via schema defaults in getMasonryViewOptions()
     // and via initializeViewDefaults() in onDataUpdated()

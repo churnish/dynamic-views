@@ -83,7 +83,6 @@ export class DynamicViewsGridView extends BasesView {
   private leafId: string;
   private containerEl: HTMLElement;
   private plugin: DynamicViews;
-  private _controller: QueryController & { currentFile: TFile | null };
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
   private scrollPreservation: ScrollPreservation | null = null;
@@ -306,10 +305,6 @@ export class DynamicViewsGridView extends BasesView {
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
     super(controller);
-    this._controller = controller as QueryController & {
-      currentFile: TFile | null;
-    };
-
     // Note: this.config is undefined in constructor (assigned later by QueryController.update())
     // Template defaults are applied via schema defaults in getBasesViewOptions()
     // and via initializeViewDefaults() in onDataUpdated()
