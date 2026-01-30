@@ -781,7 +781,11 @@ export class DynamicViewsMasonryView extends BasesView {
         "\0\0" +
         styleSettingsHash +
         "\0\0" +
-        collapsedHash;
+        collapsedHash +
+        "\0\0" +
+        String(this.sortState.isShuffled) +
+        "\0\0" +
+        this.sortState.order.join("\0");
 
       // Detect files with changed content (mtime changed but paths unchanged)
       const changedPaths = new Set<string>();
