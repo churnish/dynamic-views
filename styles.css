@@ -4739,8 +4739,13 @@ body.dynamic-views-cover-circular
   opacity: 1;
 }
 
-/* Skip cover fade-in during shuffle (rearrange, not fresh load) */
-.skip-cover-fade .card.image-format-cover .card-cover img {
+/* Skip image fade-in during shuffle (rearrange, not fresh load) */
+.skip-cover-fade .card.image-format-cover .card-cover img,
+.skip-cover-fade .card .card-thumbnail img,
+.skip-cover-fade
+  .card:is(.image-format-backdrop, .image-format-poster)
+  :is(.card-backdrop, .card-poster)
+  img {
   opacity: 1 !important;
   transition: none !important;
 }

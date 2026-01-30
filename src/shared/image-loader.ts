@@ -623,6 +623,20 @@ export function setupBackdropImageLoader(
   // Apply cached metadata immediately (prevents flash on re-render)
   applyCachedImageMetadata(imgEl.src, containerEl, cardEl, false, true);
 
+  // Handle already-loaded images synchronously (enables skip-cover-fade during shuffle)
+  if (
+    imgEl.complete &&
+    imgEl.naturalWidth > 0 &&
+    imgEl.naturalHeight > 0 &&
+    !cardEl.classList.contains("cover-ready")
+  ) {
+    if (!cardEl.closest(".skip-cover-fade")) {
+      void cardEl.offsetHeight;
+    }
+    handleImageLoad(imgEl, containerEl, cardEl, onLayoutUpdate, false, true);
+    return;
+  }
+
   // Load handler - handleImageLoad has internal double-rAF, just guard abort here
   imgEl.addEventListener(
     "load",
