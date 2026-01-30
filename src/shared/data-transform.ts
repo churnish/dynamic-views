@@ -19,6 +19,7 @@ import {
 import { hasUriScheme } from "../utils/link-parser";
 import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
+import { getListSeparator } from "../utils/style-settings";
 
 /**
  * Resolve file.links or file.embeds property from metadataCache
@@ -91,7 +92,7 @@ function resolveSubtitleToPlainText(
       settings.subtitleProperty === "tags" ||
       settings.subtitleProperty === "note.tags";
     const tags = isYamlOnly ? cardData.yamlTags : cardData.tags;
-    return tags.length > 0 ? tags.join(", ") : undefined;
+    return tags.length > 0 ? tags.join(getListSeparator()) : undefined;
   }
 
   // Handle array JSON (starts with specific prefix)
@@ -101,7 +102,7 @@ function resolveSubtitleToPlainText(
         type: string;
         items: string[];
       };
-      if (parsed.type === "array") return parsed.items.join(", ");
+      if (parsed.type === "array") return parsed.items.join(getListSeparator());
     } catch {
       /* fall through to return raw value */
     }
@@ -256,7 +257,7 @@ export function datacoreResultToCardData(
       }
       // Try regular property
       let rawTitle = getFirstDatacorePropertyValue(result, prop);
-      if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
+      if (Array.isArray(rawTitle)) rawTitle = rawTitle.join(getListSeparator());
       const propTitle = dc.coerce.string(rawTitle);
       if (propTitle) {
         title = propTitle;
@@ -443,6 +444,10 @@ export function basesEntryToCardData(
       // Try regular property via Bases API
       const titleValue = getFirstBasesPropertyValue(app, entry, normalizedProp);
       const titleData = (titleValue as { data?: unknown } | null)?.data;
+      if (Array.isArray(titleData) && titleData.length > 0) {
+        title = titleData.map(String).join(getListSeparator());
+        break;
+      }
       if (
         titleData != null &&
         titleData !== "" &&
