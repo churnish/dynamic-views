@@ -3029,10 +3029,9 @@ body:not(.dynamic-views-disable-sticky-group-header)
   grid-template-columns: subgrid;
 }
 
-/* Group headings span full grid width, remove grid gap below */
+/* Group headings span full grid width */
 .dynamic-views-group-section > .bases-group-heading {
   grid-column: 1 / -1;
-  margin-bottom: calc(-1 * var(--size-4-2));
 }
 
 /* Masonry group section wrappers span full width */
@@ -3050,7 +3049,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
 .dynamic-views .bases-group-count {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-  padding-left: var(--size-2-3);
+  padding-left: var(--size-2-2);
 }
 
 /* Hide group result count when toggle enabled */

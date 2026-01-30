@@ -193,20 +193,20 @@ export class DynamicViewsGridView extends BasesView {
       // Expanding: re-render to populate cards (group was emptied on collapse)
       this.onDataUpdated();
     } else {
-      // Collapsing: destroy cards to free memory (images, DOM nodes).
-      // Invalidate render hash so the next unfold triggers a full re-render
-      // (otherwise the hash matches the previous unfold's hash → early return).
+      // Collapsing: destroy cards, then scroll header to viewport top — all
+      // synchronous so no paint occurs between removing sticky and adjusting
+      // scroll (prevents flicker). Empty first so the measurement reflects
+      // the final layout (group content removed).
       if (groupEl) groupEl.empty();
       this.renderState.lastRenderHash = "";
-      // Trigger scroll check — collapsing reduces height, may need to load more.
-      // This may append cards (shifting layout), so scroll-to-header runs AFTER
-      // the batch settles to prevent drift.
-      this.scrollEl.dispatchEvent(new Event("scroll"));
-      requestAnimationFrame(() => {
-        const headerTop = headerEl.getBoundingClientRect().top;
-        const scrollTop = this.scrollEl.getBoundingClientRect().top;
+      const headerTop = headerEl.getBoundingClientRect().top;
+      const scrollTop = this.scrollEl.getBoundingClientRect().top;
+      // Only scroll when the header was stuck (now above the viewport)
+      if (headerTop < scrollTop) {
         this.scrollEl.scrollTop += headerTop - scrollTop;
-      });
+      }
+      // Trigger scroll check — collapsing reduces height, may need to load more
+      this.scrollEl.dispatchEvent(new Event("scroll"));
     }
   }
 
@@ -668,6 +668,9 @@ export class DynamicViewsGridView extends BasesView {
         this.sortState.order,
       );
 
+      // Determine grouping state early — collapse state only applies when grouped
+      const isGrouped = !!groupByProperty;
+
       // Collect visible entries across all groups (up to displayedCount), skipping collapsed
       const visibleEntries: BasesEntry[] = [];
       let remainingCount = this.displayedCount;
@@ -677,7 +680,11 @@ export class DynamicViewsGridView extends BasesView {
         const groupKey = processedGroup.group.hasKey()
           ? serializeGroupKey(processedGroup.group.key)
           : undefined;
-        if (this.collapsedGroups.has(this.getCollapseKey(groupKey))) continue;
+        if (
+          isGrouped &&
+          this.collapsedGroups.has(this.getCollapseKey(groupKey))
+        )
+          continue;
         const entriesToTake = Math.min(
           processedGroup.entries.length,
           remainingCount,
@@ -721,8 +728,7 @@ export class DynamicViewsGridView extends BasesView {
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
 
-      // Check if grouping is active and toggle is-grouped class
-      const isGrouped = !!groupByProperty;
+      // Toggle is-grouped class
       this.containerEl.toggleClass("is-grouped", isGrouped);
 
       // Create cards feed container
@@ -746,7 +752,10 @@ export class DynamicViewsGridView extends BasesView {
           ? serializeGroupKey(processedGroup.group.key)
           : undefined;
         const collapseKey = this.getCollapseKey(groupKey);
-        const isCollapsed = this.collapsedGroups.has(collapseKey);
+        // Collapse state only applies when grouped — ungrouped views use
+        // a single group with the sentinel key, which may match a previously
+        // collapsed group's persisted state.
+        const isCollapsed = isGrouped && this.collapsedGroups.has(collapseKey);
 
         // Budget check: stop rendering cards once limit reached,
         // but always render collapsed group headers (they cost 0 cards)
@@ -827,7 +836,7 @@ export class DynamicViewsGridView extends BasesView {
         const gk = pg.group.hasKey()
           ? serializeGroupKey(pg.group.key)
           : undefined;
-        if (!this.collapsedGroups.has(this.getCollapseKey(gk))) {
+        if (!isGrouped || !this.collapsedGroups.has(this.getCollapseKey(gk))) {
           effectiveTotal += pg.entries.length;
         }
       }
@@ -1028,12 +1037,14 @@ export class DynamicViewsGridView extends BasesView {
     // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
     const newEntries: BasesEntry[] = [];
     let currentCount = 0;
+    const isGrouped = hasGroupBy(this.config);
 
     for (const processedGroup of processedGroups) {
       const groupKey = processedGroup.group.hasKey()
         ? serializeGroupKey(processedGroup.group.key)
         : undefined;
-      if (this.collapsedGroups.has(this.getCollapseKey(groupKey))) continue;
+      if (isGrouped && this.collapsedGroups.has(this.getCollapseKey(groupKey)))
+        continue;
 
       const groupStart = currentCount;
       const groupEnd = currentCount + processedGroup.entries.length;
@@ -1091,8 +1102,11 @@ export class DynamicViewsGridView extends BasesView {
         ? serializeGroupKey(processedGroup.group.key)
         : undefined;
 
-      // Skip collapsed groups entirely
-      if (this.collapsedGroups.has(this.getCollapseKey(currentGroupKey)))
+      // Skip collapsed groups entirely (only when grouped)
+      if (
+        isGrouped &&
+        this.collapsedGroups.has(this.getCollapseKey(currentGroupKey))
+      )
         continue;
 
       const groupEntriesToDisplay = Math.min(
