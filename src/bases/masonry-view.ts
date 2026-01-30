@@ -221,9 +221,43 @@ export class DynamicViewsMasonryView extends BasesView {
       // (otherwise the hash matches the previous unfold's hash → early return).
       if (groupEl) groupEl.empty();
       this.renderState.lastRenderHash = "";
+      // Scroll the collapsed header to the top of the viewport so the user
+      // sees which group they just folded (prevents disorientation from sticky headers)
+      const headerTop = headerEl.getBoundingClientRect().top;
+      const scrollTop = this.scrollEl.getBoundingClientRect().top;
+      this.scrollEl.scrollTop += headerTop - scrollTop;
       // Trigger scroll check — collapsing reduces height, may need to load more
       this.scrollEl.dispatchEvent(new Event("scroll"));
     }
+  }
+
+  /** Whether this view has grouped data */
+  public get isGrouped(): boolean {
+    return hasGroupBy(this.config) && (this.data?.groupedData?.length ?? 0) > 0;
+  }
+
+  /** Fold all groups — called by command palette */
+  public foldAllGroups(): void {
+    if (!this.data) return;
+    // Collect all group keys from data (not DOM — infinite scroll may not have rendered all)
+    for (const g of this.data.groupedData) {
+      const groupKey = g.hasKey() ? serializeGroupKey(g.key) : undefined;
+      this.collapsedGroups.add(this.getCollapseKey(groupKey));
+    }
+    void this.plugin.persistenceManager.setUIState(this.currentFile, {
+      collapsedGroups: Array.from(this.collapsedGroups),
+    });
+    this.renderState.lastRenderHash = "";
+    this.onDataUpdated();
+  }
+
+  /** Unfold all groups — called by command palette */
+  public unfoldAllGroups(): void {
+    this.collapsedGroups.clear();
+    void this.plugin.persistenceManager.setUIState(this.currentFile, {
+      collapsedGroups: [],
+    });
+    this.onDataUpdated();
   }
 
   /** Calculate batch size based on current column count */

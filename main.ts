@@ -11,9 +11,14 @@ import { View } from "./src/datacore/view";
 import { setDatacorePreact } from "./src/jsx-runtime";
 import { getAvailablePath } from "./src/utils/file";
 import "./src/jsx-runtime"; // Ensure h and Fragment are globally available
-import { DynamicViewsGridView, cardViewOptions } from "./src/bases/grid-view";
+import {
+  DynamicViewsGridView,
+  GRID_VIEW_TYPE,
+  cardViewOptions,
+} from "./src/bases/grid-view";
 import {
   DynamicViewsMasonryView,
+  MASONRY_VIEW_TYPE,
   masonryViewOptions,
 } from "./src/bases/masonry-view";
 import { DynamicViewsSettingTab } from "./src/settings-tab";
@@ -178,6 +183,28 @@ export default class DynamicViews extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "fold-all-groups",
+      name: "Fold all groups",
+      checkCallback: (checking) => {
+        const view = this.getActiveDVGroupedView();
+        if (!view) return false;
+        if (!checking) view.foldAllGroups();
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "unfold-all-groups",
+      name: "Unfold all groups",
+      checkCallback: (checking) => {
+        const view = this.getActiveDVGroupedView();
+        if (!view) return false;
+        if (!checking) view.unfoldAllGroups();
+        return true;
+      },
+    });
+
     // Invalidate image metadata cache when vault files are modified (#17)
     // Only invalidate for image files to avoid unnecessary cache clears
     const IMAGE_EXTENSIONS = new Set([
@@ -278,6 +305,28 @@ return dv.createView(dc, USER_QUERY);
       new Notice(`Failed to create file. Check console for details.`);
       console.error("File creation failed:", error);
     }
+  }
+
+  private getActiveDVGroupedView():
+    | DynamicViewsGridView
+    | DynamicViewsMasonryView
+    | null {
+    const leaf = this.app.workspace.getMostRecentLeaf();
+    if (!leaf) return null;
+    const view = leaf.view as unknown as {
+      controller?: {
+        view?: DynamicViewsGridView | DynamicViewsMasonryView;
+      };
+    };
+    const dvView = view?.controller?.view;
+    if (!dvView) return null;
+    if (
+      (dvView.type === GRID_VIEW_TYPE || dvView.type === MASONRY_VIEW_TYPE) &&
+      dvView.isGrouped
+    ) {
+      return dvView;
+    }
+    return null;
   }
 
   onunload() {
