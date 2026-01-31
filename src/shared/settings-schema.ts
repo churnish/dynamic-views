@@ -186,273 +186,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
     },
     {
       type: "group",
-      displayName: "Property set 1",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 1",
-          key: "propertyDisplay1",
-          placeholder: "Select property",
-          default: d.propertyDisplay1,
-        },
-        {
-          type: "property",
-          displayName: "Property 2",
-          key: "propertyDisplay2",
-          placeholder: "Select property",
-          default: d.propertyDisplay2,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet1Above",
-          default: d.propertySet1Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay1") || d.propertyDisplay1) &&
-            !(config.get("propertyDisplay2") || d.propertyDisplay2),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet1SideBySide",
-          default: d.propertySet1SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay1") || d.propertyDisplay1) ||
-            !(config.get("propertyDisplay2") || d.propertyDisplay2),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Property set 2",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 3",
-          key: "propertyDisplay3",
-          placeholder: "Select property",
-          default: d.propertyDisplay3,
-        },
-        {
-          type: "property",
-          displayName: "Property 4",
-          key: "propertyDisplay4",
-          placeholder: "Select property",
-          default: d.propertyDisplay4,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet2Above",
-          default: d.propertySet2Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay3") || d.propertyDisplay3) &&
-            !(config.get("propertyDisplay4") || d.propertyDisplay4),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet2SideBySide",
-          default: d.propertySet2SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay3") || d.propertyDisplay3) ||
-            !(config.get("propertyDisplay4") || d.propertyDisplay4),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Property set 3",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 5",
-          key: "propertyDisplay5",
-          placeholder: "Select property",
-          default: d.propertyDisplay5,
-        },
-        {
-          type: "property",
-          displayName: "Property 6",
-          key: "propertyDisplay6",
-          placeholder: "Select property",
-          default: d.propertyDisplay6,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet3Above",
-          default: d.propertySet3Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay5") || d.propertyDisplay5) &&
-            !(config.get("propertyDisplay6") || d.propertyDisplay6),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet3SideBySide",
-          default: d.propertySet3SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay5") || d.propertyDisplay5) ||
-            !(config.get("propertyDisplay6") || d.propertyDisplay6),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Property set 4",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 7",
-          key: "propertyDisplay7",
-          placeholder: "Select property",
-          default: d.propertyDisplay7,
-        },
-        {
-          type: "property",
-          displayName: "Property 8",
-          key: "propertyDisplay8",
-          placeholder: "Select property",
-          default: d.propertyDisplay8,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet4Above",
-          default: d.propertySet4Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay7") || d.propertyDisplay7) &&
-            !(config.get("propertyDisplay8") || d.propertyDisplay8),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet4SideBySide",
-          default: d.propertySet4SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay7") || d.propertyDisplay7) ||
-            !(config.get("propertyDisplay8") || d.propertyDisplay8),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Property set 5",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 9",
-          key: "propertyDisplay9",
-          placeholder: "Select property",
-          default: d.propertyDisplay9,
-        },
-        {
-          type: "property",
-          displayName: "Property 10",
-          key: "propertyDisplay10",
-          placeholder: "Select property",
-          default: d.propertyDisplay10,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet5Above",
-          default: d.propertySet5Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay9") || d.propertyDisplay9) &&
-            !(config.get("propertyDisplay10") || d.propertyDisplay10),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet5SideBySide",
-          default: d.propertySet5SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay9") || d.propertyDisplay9) ||
-            !(config.get("propertyDisplay10") || d.propertyDisplay10),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Property set 6",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 11",
-          key: "propertyDisplay11",
-          placeholder: "Select property",
-          default: d.propertyDisplay11,
-        },
-        {
-          type: "property",
-          displayName: "Property 12",
-          key: "propertyDisplay12",
-          placeholder: "Select property",
-          default: d.propertyDisplay12,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet6Above",
-          default: d.propertySet6Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay11") || d.propertyDisplay11) &&
-            !(config.get("propertyDisplay12") || d.propertyDisplay12),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet6SideBySide",
-          default: d.propertySet6SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay11") || d.propertyDisplay11) ||
-            !(config.get("propertyDisplay12") || d.propertyDisplay12),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Property set 7",
-      items: [
-        {
-          type: "property",
-          displayName: "Property 13",
-          key: "propertyDisplay13",
-          placeholder: "Select property",
-          default: d.propertyDisplay13,
-        },
-        {
-          type: "property",
-          displayName: "Property 14",
-          key: "propertyDisplay14",
-          placeholder: "Select property",
-          default: d.propertyDisplay14,
-        },
-        {
-          type: "toggle",
-          displayName: "Show above text preview",
-          key: "propertySet7Above",
-          default: d.propertySet7Above,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay13") || d.propertyDisplay13) &&
-            !(config.get("propertyDisplay14") || d.propertyDisplay14),
-        },
-        {
-          type: "toggle",
-          displayName: "Show side-by-side",
-          key: "propertySet7SideBySide",
-          default: d.propertySet7SideBySide,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("propertyDisplay13") || d.propertyDisplay13) ||
-            !(config.get("propertyDisplay14") || d.propertyDisplay14),
-        },
-      ],
-    },
-    {
-      type: "group",
-      displayName: "Other",
+      displayName: "Properties",
       items: [
         {
           type: "dropdown",
@@ -466,12 +200,44 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           default: d.propertyLabels,
         },
         {
+          type: "toggle",
+          displayName: "Pair properties",
+          key: "pairProperties",
+          default: d.pairProperties,
+        },
+        {
+          type: "text",
+          displayName: "Invert pairing for property",
+          key: "invertPairingForProperty",
+          placeholder: "Comma-separated if multiple",
+          default: d.invertPairingForProperty,
+        },
+        {
+          type: "toggle",
+          displayName: "Show properties above text preview",
+          key: "showPropertiesAbove",
+          default: d.showPropertiesAbove,
+        },
+        {
+          type: "text",
+          displayName: "Invert position for property",
+          key: "invertPositionForProperty",
+          placeholder: "Comma-separated if multiple",
+          default: d.invertPositionForProperty,
+        },
+        {
           type: "text",
           displayName: "URL property",
           key: "urlProperty",
           placeholder: "Comma-separated if multiple",
           default: d.urlProperty,
         },
+      ],
+    },
+    {
+      type: "group",
+      displayName: "Other",
+      items: [
         {
           type: "text",
           displayName: "cssclasses",
@@ -559,68 +325,23 @@ export function readBasesSettings(
         : defaults.fallbackToEmbeds;
     })(),
 
-    // Property display strings (1-14)
-    // DEPENDENCY: initializeViewDefaults() must run before this to persist defaults.
-    // Fallback is "" (empty) because:
-    // - New views: initializeViewDefaults sets file.tags/file.mtime defaults for 1-2
-    // - Cleared fields: "" persists to JSON (undefined doesn't)
-    // - If init fails: shows empty (safe fallback, user can re-select)
-    propertyDisplay1: getString("propertyDisplay1", ""),
-    propertyDisplay2: getString("propertyDisplay2", ""),
-    propertyDisplay3: getString("propertyDisplay3", ""),
-    propertyDisplay4: getString("propertyDisplay4", ""),
-    propertyDisplay5: getString("propertyDisplay5", ""),
-    propertyDisplay6: getString("propertyDisplay6", ""),
-    propertyDisplay7: getString("propertyDisplay7", ""),
-    propertyDisplay8: getString("propertyDisplay8", ""),
-    propertyDisplay9: getString("propertyDisplay9", ""),
-    propertyDisplay10: getString("propertyDisplay10", ""),
-    propertyDisplay11: getString("propertyDisplay11", ""),
-    propertyDisplay12: getString("propertyDisplay12", ""),
-    propertyDisplay13: getString("propertyDisplay13", ""),
-    propertyDisplay14: getString("propertyDisplay14", ""),
+    // Property display settings
+    pairProperties: getBool("pairProperties", defaults.pairProperties),
+    invertPairingForProperty: getString(
+      "invertPairingForProperty",
+      defaults.invertPairingForProperty,
+    ),
+    showPropertiesAbove: getBool(
+      "showPropertiesAbove",
+      defaults.showPropertiesAbove,
+    ),
+    invertPositionForProperty: getString(
+      "invertPositionForProperty",
+      defaults.invertPositionForProperty,
+    ),
 
     // CSS classes for view container
     cssclasses: getString("cssclasses", defaults.cssclasses),
-
-    // Property set side-by-side booleans (1-7)
-    propertySet1SideBySide: getBool(
-      "propertySet1SideBySide",
-      defaults.propertySet1SideBySide,
-    ),
-    propertySet2SideBySide: getBool(
-      "propertySet2SideBySide",
-      defaults.propertySet2SideBySide,
-    ),
-    propertySet3SideBySide: getBool(
-      "propertySet3SideBySide",
-      defaults.propertySet3SideBySide,
-    ),
-    propertySet4SideBySide: getBool(
-      "propertySet4SideBySide",
-      defaults.propertySet4SideBySide,
-    ),
-    propertySet5SideBySide: getBool(
-      "propertySet5SideBySide",
-      defaults.propertySet5SideBySide,
-    ),
-    propertySet6SideBySide: getBool(
-      "propertySet6SideBySide",
-      defaults.propertySet6SideBySide,
-    ),
-    propertySet7SideBySide: getBool(
-      "propertySet7SideBySide",
-      defaults.propertySet7SideBySide,
-    ),
-
-    // Property set position-on-top booleans (1-7)
-    propertySet1Above: getBool("propertySet1Above", defaults.propertySet1Above),
-    propertySet2Above: getBool("propertySet2Above", defaults.propertySet2Above),
-    propertySet3Above: getBool("propertySet3Above", defaults.propertySet3Above),
-    propertySet4Above: getBool("propertySet4Above", defaults.propertySet4Above),
-    propertySet5Above: getBool("propertySet5Above", defaults.propertySet5Above),
-    propertySet6Above: getBool("propertySet6Above", defaults.propertySet6Above),
-    propertySet7Above: getBool("propertySet7Above", defaults.propertySet7Above),
 
     // Enum: propertyLabels
     propertyLabels: (() => {
@@ -740,63 +461,23 @@ export function extractBasesTemplate(
         : defaults.fallbackToEmbeds;
     })(),
 
-    // Property display strings (1-14)
-    propertyDisplay1: getString("propertyDisplay1", ""),
-    propertyDisplay2: getString("propertyDisplay2", ""),
-    propertyDisplay3: getString("propertyDisplay3", ""),
-    propertyDisplay4: getString("propertyDisplay4", ""),
-    propertyDisplay5: getString("propertyDisplay5", ""),
-    propertyDisplay6: getString("propertyDisplay6", ""),
-    propertyDisplay7: getString("propertyDisplay7", ""),
-    propertyDisplay8: getString("propertyDisplay8", ""),
-    propertyDisplay9: getString("propertyDisplay9", ""),
-    propertyDisplay10: getString("propertyDisplay10", ""),
-    propertyDisplay11: getString("propertyDisplay11", ""),
-    propertyDisplay12: getString("propertyDisplay12", ""),
-    propertyDisplay13: getString("propertyDisplay13", ""),
-    propertyDisplay14: getString("propertyDisplay14", ""),
+    // Property display settings
+    pairProperties: getBool("pairProperties", defaults.pairProperties),
+    invertPairingForProperty: getString(
+      "invertPairingForProperty",
+      defaults.invertPairingForProperty,
+    ),
+    showPropertiesAbove: getBool(
+      "showPropertiesAbove",
+      defaults.showPropertiesAbove,
+    ),
+    invertPositionForProperty: getString(
+      "invertPositionForProperty",
+      defaults.invertPositionForProperty,
+    ),
 
     // CSS classes for view container
     cssclasses: getString("cssclasses", defaults.cssclasses),
-
-    // Property set side-by-side booleans (1-7)
-    propertySet1SideBySide: getBool(
-      "propertySet1SideBySide",
-      defaults.propertySet1SideBySide,
-    ),
-    propertySet2SideBySide: getBool(
-      "propertySet2SideBySide",
-      defaults.propertySet2SideBySide,
-    ),
-    propertySet3SideBySide: getBool(
-      "propertySet3SideBySide",
-      defaults.propertySet3SideBySide,
-    ),
-    propertySet4SideBySide: getBool(
-      "propertySet4SideBySide",
-      defaults.propertySet4SideBySide,
-    ),
-    propertySet5SideBySide: getBool(
-      "propertySet5SideBySide",
-      defaults.propertySet5SideBySide,
-    ),
-    propertySet6SideBySide: getBool(
-      "propertySet6SideBySide",
-      defaults.propertySet6SideBySide,
-    ),
-    propertySet7SideBySide: getBool(
-      "propertySet7SideBySide",
-      defaults.propertySet7SideBySide,
-    ),
-
-    // Property set position-on-top booleans (1-7)
-    propertySet1Above: getBool("propertySet1Above", defaults.propertySet1Above),
-    propertySet2Above: getBool("propertySet2Above", defaults.propertySet2Above),
-    propertySet3Above: getBool("propertySet3Above", defaults.propertySet3Above),
-    propertySet4Above: getBool("propertySet4Above", defaults.propertySet4Above),
-    propertySet5Above: getBool("propertySet5Above", defaults.propertySet5Above),
-    propertySet6Above: getBool("propertySet6Above", defaults.propertySet6Above),
-    propertySet7Above: getBool("propertySet7Above", defaults.propertySet7Above),
 
     // Enum: propertyLabels
     propertyLabels: (() => {
