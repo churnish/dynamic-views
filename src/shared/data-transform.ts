@@ -337,6 +337,15 @@ export function datacoreResultToCardData(
       value: resolveDatacoreProperty(app, prop, result, cardData, settings, dc),
     }));
 
+  // Backward-compat: populate indexed fields for Datacore list-view
+  for (let i = 0; i < cardData.properties.length && i < 14; i++) {
+    const p = cardData.properties[i];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (cardData as any)[`propertyName${i + 1}`] = p.name;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (cardData as any)[`property${i + 1}`] = p.value;
+  }
+
   // Resolve subtitle property (supports comma-separated list)
   if (settings.subtitleProperty && processedSubtitleProps.length > 0) {
     for (const prop of processedSubtitleProps) {

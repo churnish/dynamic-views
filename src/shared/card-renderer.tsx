@@ -589,6 +589,35 @@ export interface CardData {
   hasValidUrl?: boolean;
   // Dynamic property list from config.getOrder() (Bases) or settings (Datacore)
   properties: Array<{ name: string; value: unknown }>;
+  // Datacore-only: indexed property accessors (kept until Datacore refactor)
+  property1?: unknown;
+  property2?: unknown;
+  property3?: unknown;
+  property4?: unknown;
+  property5?: unknown;
+  property6?: unknown;
+  property7?: unknown;
+  property8?: unknown;
+  property9?: unknown;
+  property10?: unknown;
+  property11?: unknown;
+  property12?: unknown;
+  property13?: unknown;
+  property14?: unknown;
+  propertyName1?: string;
+  propertyName2?: string;
+  propertyName3?: string;
+  propertyName4?: string;
+  propertyName5?: string;
+  propertyName6?: string;
+  propertyName7?: string;
+  propertyName8?: string;
+  propertyName9?: string;
+  propertyName10?: string;
+  propertyName11?: string;
+  propertyName12?: string;
+  propertyName13?: string;
+  propertyName14?: string;
 }
 
 export interface CardRendererProps {
