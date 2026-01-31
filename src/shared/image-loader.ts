@@ -119,7 +119,7 @@ function applyAmbientStyles(
   if (!cardEl.isConnected) return;
 
   // Card background uses setting-defined opacity, cover background uses 0.33
-  const cardOpacity = getCardAmbientOpacity();
+  const cardOpacity = getCardAmbientOpacity(cardEl);
   const coverOpacity = 0.33;
 
   const cardColor = formatAmbientColor(rgb, cardOpacity);
@@ -134,7 +134,7 @@ function applyAmbientStyles(
   // Card gets opacity based on card ambient setting
   cardEl.style.setProperty(
     "--ambient-color",
-    isCoverImage && !isCardBackgroundAmbient() ? coverColor : cardColor,
+    isCoverImage && !isCardBackgroundAmbient(cardEl) ? coverColor : cardColor,
   );
   cardEl.setAttribute("data-adaptive-text", theme);
   if (luminance !== undefined) {
@@ -245,7 +245,8 @@ export function handleImageLoad(
     isCoverImage ?? cardEl.classList.contains("image-format-cover");
   const needsAmbient =
     !isBackdropImage &&
-    (isCardBackgroundAmbient() || (isCover && isCoverBackgroundAmbient()));
+    (isCardBackgroundAmbient(cardEl) ||
+      (isCover && isCoverBackgroundAmbient()));
 
   // Backdrop/poster needs luminance when tint disabled or overlay transparent
   const needsBackdropLuminance =

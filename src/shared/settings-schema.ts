@@ -105,6 +105,9 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           max: 10,
           step: 1,
           default: d.textPreviewLines,
+          shouldHide: (config: BasesConfig) =>
+            !(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
+            (config.get("fallbackToContent") ?? d.fallbackToContent) === false,
         },
       ],
     },
@@ -144,6 +147,19 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           shouldHide: (config: BasesConfig) =>
             !(config.get("imageProperty") || d.imageProperty) &&
             (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) === "never",
+        },
+        {
+          type: "dropdown",
+          displayName: "Size",
+          key: "thumbnailSize",
+          options: {
+            compact: "Compact",
+            standard: "Standard",
+            expanded: "Expanded",
+          },
+          default: d.thumbnailSize,
+          shouldHide: (config: BasesConfig) =>
+            (config.get("imageFormat") ?? d.imageFormat) !== "thumbnail",
         },
         {
           type: "dropdown",
@@ -191,19 +207,6 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
             (!(config.get("imageProperty") || d.imageProperty) &&
               (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
                 "never"),
-        },
-        {
-          type: "dropdown",
-          displayName: "Size",
-          key: "thumbnailSize",
-          options: {
-            compact: "Compact (64px)",
-            standard: "Standard (80px)",
-            expanded: "Expanded (94.5px)",
-          },
-          default: d.thumbnailSize,
-          shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) !== "thumbnail",
         },
       ],
     },
@@ -264,6 +267,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
             "equal-width": "Equal width",
           },
           default: d.pairedPropertyLayout,
+          shouldHide: (config: BasesConfig) =>
+            (config.get("pairProperties") ?? d.pairProperties) === false,
         },
         {
           type: "text",
@@ -283,10 +288,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           displayName: "Minimum columns",
           key: "minimumColumns",
           options: {
-            1: "One",
-            2: "Two",
+            "1": "One",
+            "2": "Two",
           },
-          default: viewType === "masonry" ? 2 : (d.minimumColumns ?? 1),
+          default: viewType === "masonry" ? "2" : String(d.minimumColumns ?? 1),
         },
         {
           type: "dropdown",
@@ -465,10 +470,14 @@ export function readBasesSettings(
         ? value
         : defaults.pairedPropertyLayout;
     })(),
-    minimumColumns: getNumber(
-      "minimumColumns",
-      viewType === "masonry" ? 2 : defaults.minimumColumns,
-    ),
+    minimumColumns: (() => {
+      const value = config.get("minimumColumns");
+      const parsed = typeof value === "string" ? parseInt(value, 10) : value;
+      const fallback = viewType === "masonry" ? 2 : defaults.minimumColumns;
+      return typeof parsed === "number" && Number.isFinite(parsed)
+        ? parsed
+        : fallback;
+    })(),
     ambientBackground: (() => {
       const value = config.get("ambientBackground");
       return value === "subtle" || value === "dramatic" || value === "disable"
@@ -658,7 +667,13 @@ export function extractBasesTemplate(
         ? value
         : defaults.pairedPropertyLayout;
     })(),
-    minimumColumns: getNumber("minimumColumns", defaults.minimumColumns),
+    minimumColumns: (() => {
+      const value = config.get("minimumColumns");
+      const parsed = typeof value === "string" ? parseInt(value, 10) : value;
+      return typeof parsed === "number" && Number.isFinite(parsed)
+        ? parsed
+        : defaults.minimumColumns;
+    })(),
     ambientBackground: (() => {
       const value = config.get("ambientBackground");
       return value === "subtle" || value === "dramatic" || value === "disable"

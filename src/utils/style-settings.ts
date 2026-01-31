@@ -273,8 +273,17 @@ export function isThumbnailScrubbingDisabled(): boolean {
 
 /**
  * Check if Card background: Ambient is enabled (subtle or dramatic)
+ * Checks the closest .dynamic-views container for per-view ambient classes,
+ * falling back to body classes for Datacore views
  */
-export function isCardBackgroundAmbient(): boolean {
+export function isCardBackgroundAmbient(cardEl?: Element): boolean {
+  const container = cardEl?.closest(".dynamic-views");
+  if (container) {
+    return (
+      container.classList.contains("dynamic-views-ambient-bg-subtle") ||
+      container.classList.contains("dynamic-views-adaptive-text")
+    );
+  }
   return (
     hasBodyClass("dynamic-views-ambient-bg-subtle") ||
     hasBodyClass("dynamic-views-adaptive-text")
@@ -284,12 +293,20 @@ export function isCardBackgroundAmbient(): boolean {
 /**
  * Get ambient opacity for card backgrounds
  * Returns 0.17 for subtle, 0.9 for dramatic
+ * Checks the closest .dynamic-views container for per-view ambient classes,
+ * falling back to body classes for Datacore views
  */
-export function getCardAmbientOpacity(): number {
+export function getCardAmbientOpacity(cardEl?: Element): number {
+  const container = cardEl?.closest(".dynamic-views");
+  if (container) {
+    return container.classList.contains("dynamic-views-adaptive-text")
+      ? 0.9
+      : 0.17;
+  }
   if (hasBodyClass("dynamic-views-adaptive-text")) {
     return 0.9;
   }
-  return 0.17; // Subtle mode (also returned if ambient off, but not called in that case)
+  return 0.17;
 }
 
 /**
