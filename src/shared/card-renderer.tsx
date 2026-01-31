@@ -635,6 +635,17 @@ export interface CardRendererProps {
   onFocusChange?: (index: number) => void;
 }
 
+/** Parse comma-separated property names into a Set for O(1) lookup */
+function parsePropertyList(csv: string): Set<string> {
+  if (!csv) return new Set();
+  return new Set(
+    csv
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s),
+  );
+}
+
 /**
  * Wrapper for shouldCollapseField that handles Datacore-specific concerns:
  * - undefined propertyName (no property configured)
@@ -2320,424 +2331,132 @@ function Card({
         </div>
       )}
 
-      {/* Properties - 14-field rendering with 7-set layout, split by position */}
+      {/* Properties - dynamic rendering with pairing/positioning */}
       {(() => {
-        // Read settings once for all fields
+        const props = card.properties;
+        if (!props || props.length === 0) return null;
+
         const hideEmptyMode = getHideEmptyMode();
         const hideMissing = shouldHideMissingProperties();
         const { propertyLabels } = settings;
 
-        // Pre-compute collapse states for all fields
-        const collapse = [
-          shouldCollapseFieldDatacore(
-            card.propertyName1,
-            card.property1,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName2,
-            card.property2,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName3,
-            card.property3,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName4,
-            card.property4,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName5,
-            card.property5,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName6,
-            card.property6,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName7,
-            card.property7,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName8,
-            card.property8,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName9,
-            card.property9,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName10,
-            card.property10,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName11,
-            card.property11,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName12,
-            card.property12,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName13,
-            card.property13,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-          shouldCollapseFieldDatacore(
-            card.propertyName14,
-            card.property14,
-            propertyLabels,
-            hideEmptyMode,
-            hideMissing,
-          ),
-        ];
-
-        // Check if any property set has content (consistent with shared-renderer.ts)
-        // When labels are enabled, show set if property is configured (non-empty name)
-        // When labels are hidden, only show set if value exists
-        const showConfiguredProps = propertyLabels !== "hide" || !hideMissing;
-        const set1HasContent = showConfiguredProps
-          ? (card.propertyName1 ?? "") !== "" ||
-            (card.propertyName2 ?? "") !== ""
-          : card.property1 !== null || card.property2 !== null;
-        const set2HasContent = showConfiguredProps
-          ? (card.propertyName3 ?? "") !== "" ||
-            (card.propertyName4 ?? "") !== ""
-          : card.property3 !== null || card.property4 !== null;
-        const set3HasContent = showConfiguredProps
-          ? (card.propertyName5 ?? "") !== "" ||
-            (card.propertyName6 ?? "") !== ""
-          : card.property5 !== null || card.property6 !== null;
-        const set4HasContent = showConfiguredProps
-          ? (card.propertyName7 ?? "") !== "" ||
-            (card.propertyName8 ?? "") !== ""
-          : card.property7 !== null || card.property8 !== null;
-        const set5HasContent = showConfiguredProps
-          ? (card.propertyName9 ?? "") !== "" ||
-            (card.propertyName10 ?? "") !== ""
-          : card.property9 !== null || card.property10 !== null;
-        const set6HasContent = showConfiguredProps
-          ? (card.propertyName11 ?? "") !== "" ||
-            (card.propertyName12 ?? "") !== ""
-          : card.property11 !== null || card.property12 !== null;
-        const set7HasContent = showConfiguredProps
-          ? (card.propertyName13 ?? "") !== "" ||
-            (card.propertyName14 ?? "") !== ""
-          : card.property13 !== null || card.property14 !== null;
-
-        if (
-          !set1HasContent &&
-          !set2HasContent &&
-          !set3HasContent &&
-          !set4HasContent &&
-          !set5HasContent &&
-          !set6HasContent &&
-          !set7HasContent
-        )
-          return null;
-
-        // Build property set elements
-
-        const set1 = set1HasContent && (
-          <div
-            className={`property-set property-set-1${settings.propertySet1SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-1${collapse[0] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName1 &&
-                renderPropertyContent(
-                  card.propertyName1,
-                  card,
-                  card.property1 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-2${collapse[1] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName2 &&
-                renderPropertyContent(
-                  card.propertyName2,
-                  card,
-                  card.property2 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
+        // Parse override lists for O(1) lookup
+        const unpairSet = parsePropertyList(
+          settings.invertPairingForProperty,
+        );
+        const invertPositionSet = parsePropertyList(
+          settings.invertPositionForProperty,
         );
 
-        const set2 = set2HasContent && (
-          <div
-            className={`property-set property-set-2${settings.propertySet2SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-3${collapse[2] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName3 &&
-                renderPropertyContent(
-                  card.propertyName3,
-                  card,
-                  card.property3 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-4${collapse[3] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName4 &&
-                renderPropertyContent(
-                  card.propertyName4,
-                  card,
-                  card.property4 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
-        );
+        // Group properties into sets based on pairing settings
+        interface PropertySet {
+          props: Array<{
+            name: string;
+            value: unknown;
+            fieldIndex: number; // 1-based position in original order
+          }>;
+          paired: boolean;
+        }
 
-        const set3 = set3HasContent && (
-          <div
-            className={`property-set property-set-3${settings.propertySet3SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-5${collapse[4] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName5 &&
-                renderPropertyContent(
-                  card.propertyName5,
-                  card,
-                  card.property5 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-6${collapse[5] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName6 &&
-                renderPropertyContent(
-                  card.propertyName6,
-                  card,
-                  card.property6 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
-        );
+        const sets: PropertySet[] = [];
+        let i = 0;
+        while (i < props.length) {
+          const current = props[i];
+          const next = i + 1 < props.length ? props[i + 1] : null;
 
-        const set4 = set4HasContent && (
-          <div
-            className={`property-set property-set-4${settings.propertySet4SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-7${collapse[6] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName7 &&
-                renderPropertyContent(
-                  card.propertyName7,
-                  card,
-                  card.property7 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-8${collapse[7] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName8 &&
-                renderPropertyContent(
-                  card.propertyName8,
-                  card,
-                  card.property8 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
-        );
+          // Determine if this pair should be paired or solo
+          const currentInInvert = unpairSet.has(current.name);
+          const nextInInvert = next ? unpairSet.has(next.name) : false;
 
-        const set5 = set5HasContent && (
-          <div
-            className={`property-set property-set-5${settings.propertySet5SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-9${collapse[8] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName9 &&
-                renderPropertyContent(
-                  card.propertyName9,
-                  card,
-                  card.property9 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-10${collapse[9] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName10 &&
-                renderPropertyContent(
-                  card.propertyName10,
-                  card,
-                  card.property10 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
-        );
+          let shouldPair: boolean;
+          if (settings.pairProperties) {
+            // Global ON: pair unless either is inverted
+            shouldPair = next !== null && !currentInInvert && !nextInInvert;
+          } else {
+            // Global OFF: solo unless both are inverted
+            shouldPair =
+              next !== null && currentInInvert && nextInInvert;
+          }
 
-        const set6 = set6HasContent && (
-          <div
-            className={`property-set property-set-6${settings.propertySet6SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-11${collapse[10] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName11 &&
-                renderPropertyContent(
-                  card.propertyName11,
-                  card,
-                  card.property11 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-12${collapse[11] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName12 &&
-                renderPropertyContent(
-                  card.propertyName12,
-                  card,
-                  card.property12 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
-        );
+          if (shouldPair && next) {
+            sets.push({
+              props: [
+                { ...current, fieldIndex: i + 1 },
+                { ...next, fieldIndex: i + 2 },
+              ],
+              paired: true,
+            });
+            i += 2;
+          } else {
+            sets.push({
+              props: [{ ...current, fieldIndex: i + 1 }],
+              paired: false,
+            });
+            i += 1;
+          }
+        }
 
-        const set7 = set7HasContent && (
-          <div
-            className={`property-set property-set-7${settings.propertySet7SideBySide ? " property-set-sidebyside" : ""}`}
-          >
-            <div
-              className={`property-field property-field-13${collapse[12] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName13 &&
-                renderPropertyContent(
-                  card.propertyName13,
-                  card,
-                  card.property13 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-            <div
-              className={`property-field property-field-14${collapse[13] ? " property-field-collapsed" : ""}`}
-            >
-              {card.propertyName14 &&
-                renderPropertyContent(
-                  card.propertyName14,
-                  card,
-                  card.property14 ?? null,
-                  timeIcon,
-                  settings,
-                  app,
-                )}
-            </div>
-          </div>
-        );
-
-        // Split sets by position setting
+        // Build set elements with position assignment
         const topSets: JSX.Element[] = [];
         const bottomSets: JSX.Element[] = [];
 
-        if (set1) {
-          if (settings.propertySet1Above) topSets.push(set1);
-          else bottomSets.push(set1);
-        }
-        if (set2) {
-          if (settings.propertySet2Above) topSets.push(set2);
-          else bottomSets.push(set2);
-        }
-        if (set3) {
-          if (settings.propertySet3Above) topSets.push(set3);
-          else bottomSets.push(set3);
-        }
-        if (set4) {
-          if (settings.propertySet4Above) topSets.push(set4);
-          else bottomSets.push(set4);
-        }
-        if (set5) {
-          if (settings.propertySet5Above) topSets.push(set5);
-          else bottomSets.push(set5);
-        }
-        if (set6) {
-          if (settings.propertySet6Above) topSets.push(set6);
-          else bottomSets.push(set6);
-        }
-        if (set7) {
-          if (settings.propertySet7Above) topSets.push(set7);
-          else bottomSets.push(set7);
-        }
+        sets.forEach((set, setIdx) => {
+          // Check if set has content
+          const showConfiguredProps =
+            propertyLabels !== "hide" || !hideMissing;
+          const hasContent = set.props.some((p) =>
+            showConfiguredProps
+              ? p.name !== ""
+              : p.value !== null && p.value !== undefined,
+          );
+          if (!hasContent) return;
+
+          // Determine position: check if any property in this set is in the invert position list
+          const anyInvertedPosition = set.props.some((p) =>
+            invertPositionSet.has(p.name),
+          );
+          const isAbove = settings.showPropertiesAbove
+            ? !anyInvertedPosition
+            : anyInvertedPosition;
+
+          const setElement = (
+            <div
+              key={`set-${setIdx}`}
+              className={`property-set property-set-${setIdx + 1}${set.paired ? " property-set-paired" : ""}`}
+            >
+              {set.props.map((p) => {
+                const collapsed = shouldCollapseFieldDatacore(
+                  p.name || undefined,
+                  p.value,
+                  propertyLabels,
+                  hideEmptyMode,
+                  hideMissing,
+                );
+                return (
+                  <div
+                    key={`field-${p.fieldIndex}`}
+                    className={`property-field property-field-${p.fieldIndex}${collapsed ? " property-field-collapsed" : ""}`}
+                  >
+                    {p.name &&
+                      renderPropertyContent(
+                        p.name,
+                        card,
+                        (p.value as string | null) ?? null,
+                        timeIcon,
+                        settings,
+                        app,
+                      )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+
+          if (isAbove) topSets.push(setElement);
+          else bottomSets.push(setElement);
+        });
+
+        if (topSets.length === 0 && bottomSets.length === 0) return null;
 
         return (
           <>

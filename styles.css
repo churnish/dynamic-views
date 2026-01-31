@@ -6040,7 +6040,7 @@ body.dynamic-views-hide-slideshow-indicator
 
 /* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6071,7 +6071,7 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
 /* Center positioning: odd fields show icon on right ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-1,
     .property-field-3,
@@ -6090,7 +6090,7 @@ body.dynamic-views-timestamp-icon-center
 /* Center positioning: even fields show icon on left ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6109,7 +6109,7 @@ body.dynamic-views-timestamp-icon-center
 /* Left positioning: even fields reset to left ONLY in side-by-side (counters edge default) */
 body.dynamic-views-timestamp-icon-left
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6357,24 +6357,24 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   min-width: 0;
 }
 
-.dynamic-views .property-set.property-set-sidebyside {
+.dynamic-views .property-set.property-set-paired {
   flex-direction: row;
   gap: var(--size-4-2);
 }
 
 /* Compact mode: stack side-by-side properties on narrow cards */
-.dynamic-views .card.compact-mode .property-set.property-set-sidebyside {
+.dynamic-views .card.compact-mode .property-set.property-set-paired {
   flex-direction: column;
   gap: var(--size-2-2);
 }
 
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   .property-field,
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside.property-measured
+  .property-set.property-set-paired.property-measured
   .property-field {
   max-width: 100% !important;
   flex: none;
@@ -6384,7 +6384,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 /* Compact mode: left-align right-side properties when stacked */
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6400,7 +6400,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6417,7 +6417,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6434,7 +6434,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 /* Compact mode: reset inline label order (label before content) */
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6454,7 +6454,7 @@ body:not(.dynamic-views-timestamp-icon-center):not(
   )
   .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6477,7 +6477,7 @@ body:is(
   )
   .dynamic-views
   .card.compact-mode
-  .property-set.property-set-sidebyside
+  .property-set.property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -6496,7 +6496,7 @@ body:is(
 /* Right alignment for full-row properties with inline labels - value only */
 body.dynamic-views-full-row-align-right
   .dynamic-views
-  .property-set:not(.property-set-sidebyside)
+  .property-set:not(.property-set-paired)
   .property-field:has(.property-label-inline)
   .property-content-wrapper {
   flex: 0 1 auto;
@@ -6570,7 +6570,7 @@ body.dynamic-views-full-row-align-right
 
 /* During measurement: wrapper shouldn't constrain content */
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measuring
+  .property-set.property-set-paired.property-measuring
   .property-content-wrapper {
   width: auto !important;
   max-width: none !important;
@@ -6579,7 +6579,7 @@ body.dynamic-views-full-row-align-right
 }
 
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measuring
+  .property-set.property-set-paired.property-measuring
   .property-content {
   width: max-content !important;
   max-width: none !important;
@@ -6587,7 +6587,7 @@ body.dynamic-views-full-row-align-right
 
 /* During measurement: fields shouldn't constrain content */
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measuring
+  .property-set.property-set-paired.property-measuring
   .property-field {
   width: auto !important;
   max-width: none !important;
@@ -6596,13 +6596,13 @@ body.dynamic-views-full-row-align-right
 
 /* During measurement: remove min-width to allow natural sizing */
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measuring
+  .property-set.property-set-paired.property-measuring
   .property-content {
   min-width: 0 !important;
 }
 
 /* Default state: fields split space equally with 50% max */
-.dynamic-views .property-set.property-set-sidebyside .property-field {
+.dynamic-views .property-set.property-set-paired .property-field {
   flex: 1 1 0;
   max-width: 50%;
 }
@@ -6610,7 +6610,7 @@ body.dynamic-views-full-row-align-right
 /* Measured state: use calculated widths from CSS variables, remove 50% cap */
 /* Odd fields (left side) use --field1-width */
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measured
+  .property-set.property-set-paired.property-measured
   :is(
     .property-field-1,
     .property-field-3,
@@ -6627,7 +6627,7 @@ body.dynamic-views-full-row-align-right
 
 /* Even fields (right side) use --field2-width */
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measured
+  .property-set.property-set-paired.property-measured
   :is(
     .property-field-2,
     .property-field-4,
@@ -6644,7 +6644,7 @@ body.dynamic-views-full-row-align-right
 
 /* Measured state: wrapper fills calculated field width */
 .dynamic-views
-  .property-set.property-set-sidebyside.property-measured
+  .property-set.property-set-paired.property-measured
   .property-content-wrapper {
   flex: 1 1 auto;
   min-width: 0;
@@ -7347,7 +7347,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Even fields (right side) - label after content */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7363,7 +7363,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Even fields (right side) - content before label */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7379,7 +7379,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Odd fields (left side) - left-aligned labels */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-1,
     .property-field-3,
@@ -7395,7 +7395,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Even fields (right side) - right-aligned labels */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7437,7 +7437,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Even fields (right side) - content should fill wrapper width for proper alignment */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7479,7 +7479,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 /* Alignment via justify-content on property-content wrapper */
 /* Odd fields (left side) */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-1,
     .property-field-3,
@@ -7495,7 +7495,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Even fields (right side) - align content right when not scrollable */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7511,7 +7511,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Even fields (right side) - align content left when scrollable */
 .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7528,7 +7528,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 /* Left alignment for right-side properties */
 body.dynamic-views-paired-property-align-left
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7544,7 +7544,7 @@ body.dynamic-views-paired-property-align-left
 
 body.dynamic-views-paired-property-align-left
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7561,7 +7561,7 @@ body.dynamic-views-paired-property-align-left
 
 body.dynamic-views-paired-property-align-left
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7578,7 +7578,7 @@ body.dynamic-views-paired-property-align-left
 /* Reset inline property label order to place label before content */
 body.dynamic-views-paired-property-align-left
   .dynamic-views
-  .property-set-sidebyside
+  .property-set-paired
   :is(
     .property-field-2,
     .property-field-4,
@@ -7593,12 +7593,12 @@ body.dynamic-views-paired-property-align-left
 }
 
 /* Stacked layout */
-.dynamic-views .property-set:not(.property-set-sidebyside) .property-content {
+.dynamic-views .property-set:not(.property-set-paired) .property-content {
   justify-content: flex-start;
 }
 
 /* Hide scrollbar for side-by-side fields */
-.dynamic-views .property-set-sidebyside .property-field::-webkit-scrollbar {
+.dynamic-views .property-set-paired .property-field::-webkit-scrollbar {
   display: none;
 }
 

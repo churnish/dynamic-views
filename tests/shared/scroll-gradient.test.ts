@@ -483,7 +483,7 @@ describe("scroll-gradient", () => {
     it("✓ skips unmeasured side-by-side fields", () => {
       const container = document.createElement("div");
       const propertySet = document.createElement("div");
-      propertySet.className = "property-set property-set-sidebyside";
+      propertySet.className = "property-set property-set-paired";
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
@@ -502,7 +502,7 @@ describe("scroll-gradient", () => {
       const container = document.createElement("div");
       const propertySet = document.createElement("div");
       propertySet.className =
-        "property-set property-set-sidebyside property-measured";
+        "property-set property-set-paired property-measured";
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
@@ -523,7 +523,7 @@ describe("scroll-gradient", () => {
       card.className = "card compact-mode";
 
       const propertySet = document.createElement("div");
-      propertySet.className = "property-set property-set-sidebyside";
+      propertySet.className = "property-set property-set-paired";
 
       const field = createPropertyField({
         wrapperClientWidth: 100,

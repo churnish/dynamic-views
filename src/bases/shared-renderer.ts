@@ -90,6 +90,17 @@ import {
   shouldCollapseField,
 } from "../shared/property-helpers";
 
+/** Parse comma-separated property names into a Set for O(1) lookup */
+function parsePropertyList(csv: string): Set<string> {
+  if (!csv) return new Set();
+  return new Set(
+    csv
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s),
+  );
+}
+
 /**
  * Shared canvas for text measurement (avoids layout reads)
  */
@@ -1608,7 +1619,7 @@ export class SharedCardRenderer {
   }
 
   /**
-   * Renders property fields for a card
+   * Renders property fields for a card using dynamic property array
    */
   private renderProperties(
     cardEl: HTMLElement,
@@ -1617,116 +1628,82 @@ export class SharedCardRenderer {
     settings: Settings,
     signal: AbortSignal,
   ): void {
-    // Use property names from CardData (already processed by smart timestamp)
-    const effectiveProps = [
-      card.propertyName1 ?? "",
-      card.propertyName2 ?? "",
-      card.propertyName3 ?? "",
-      card.propertyName4 ?? "",
-      card.propertyName5 ?? "",
-      card.propertyName6 ?? "",
-      card.propertyName7 ?? "",
-      card.propertyName8 ?? "",
-      card.propertyName9 ?? "",
-      card.propertyName10 ?? "",
-      card.propertyName11 ?? "",
-      card.propertyName12 ?? "",
-      card.propertyName13 ?? "",
-      card.propertyName14 ?? "",
-    ];
+    const props = card.properties;
+    if (!props || props.length === 0) return;
 
-    // Use property values from CardData (already resolved)
-    const values: (string | null)[] = [
-      card.property1 as string | null,
-      card.property2 as string | null,
-      card.property3 as string | null,
-      card.property4 as string | null,
-      card.property5 as string | null,
-      card.property6 as string | null,
-      card.property7 as string | null,
-      card.property8 as string | null,
-      card.property9 as string | null,
-      card.property10 as string | null,
-      card.property11 as string | null,
-      card.property12 as string | null,
-      card.property13 as string | null,
-      card.property14 as string | null,
-    ];
+    // Parse override lists for O(1) lookup
+    const unpairSet = parsePropertyList(settings.invertPairingForProperty);
+    const invertPositionSet = parsePropertyList(
+      settings.invertPositionForProperty,
+    );
 
-    // Pre-compute hide settings (avoid repeated classList checks)
+    // Group properties into sets using pairing algorithm
+    const sets: Array<{
+      items: Array<{ name: string; value: unknown; fieldIndex: number }>;
+      paired: boolean;
+    }> = [];
+
+    let i = 0;
+    while (i < props.length) {
+      const current = props[i];
+      const next = i + 1 < props.length ? props[i + 1] : null;
+      const fieldIndex1 = i + 1; // 1-based
+
+      if (next) {
+        const currentInverted = unpairSet.has(current.name);
+        const nextInverted = unpairSet.has(next.name);
+        // Pair logic: pairProperties XOR inverted
+        const shouldPair = settings.pairProperties
+          ? !currentInverted && !nextInverted
+          : currentInverted && nextInverted;
+
+        if (shouldPair) {
+          sets.push({
+            items: [
+              { ...current, fieldIndex: fieldIndex1 },
+              { ...next, fieldIndex: fieldIndex1 + 1 },
+            ],
+            paired: true,
+          });
+          i += 2;
+          continue;
+        }
+      }
+
+      sets.push({
+        items: [{ ...current, fieldIndex: fieldIndex1 }],
+        paired: false,
+      });
+      i += 1;
+    }
+
+    // Pre-compute hide settings
     const hideMissing = shouldHideMissingProperties();
     const hideEmptyMode = getHideEmptyMode();
 
-    // Check if any set has content
-    // Show set if property is configured, UNLESS labels hidden AND hideMissingProperties enabled
-    const showConfiguredProps =
-      settings.propertyLabels !== "hide" || !hideMissing;
-    const set1HasContent = showConfiguredProps
-      ? effectiveProps[0] !== "" || effectiveProps[1] !== ""
-      : values[0] !== null || values[1] !== null;
-    const set2HasContent = showConfiguredProps
-      ? effectiveProps[2] !== "" || effectiveProps[3] !== ""
-      : values[2] !== null || values[3] !== null;
-    const set3HasContent = showConfiguredProps
-      ? effectiveProps[4] !== "" || effectiveProps[5] !== ""
-      : values[4] !== null || values[5] !== null;
-    const set4HasContent = showConfiguredProps
-      ? effectiveProps[6] !== "" || effectiveProps[7] !== ""
-      : values[6] !== null || values[7] !== null;
-    const set5HasContent = showConfiguredProps
-      ? effectiveProps[8] !== "" || effectiveProps[9] !== ""
-      : values[8] !== null || values[9] !== null;
-    const set6HasContent = showConfiguredProps
-      ? effectiveProps[10] !== "" || effectiveProps[11] !== ""
-      : values[10] !== null || values[11] !== null;
-    const set7HasContent = showConfiguredProps
-      ? effectiveProps[12] !== "" || effectiveProps[13] !== ""
-      : values[12] !== null || values[13] !== null;
+    // Position each set: top or bottom
+    const topSets: typeof sets = [];
+    const bottomSets: typeof sets = [];
 
-    if (
-      !set1HasContent &&
-      !set2HasContent &&
-      !set3HasContent &&
-      !set4HasContent &&
-      !set5HasContent &&
-      !set6HasContent &&
-      !set7HasContent
-    )
-      return;
+    for (const set of sets) {
+      const anyInverted = set.items.some((item) =>
+        invertPositionSet.has(item.name),
+      );
+      const isTop = settings.showPropertiesAbove ? !anyInverted : anyInverted;
+      (isTop ? topSets : bottomSets).push(set);
+    }
 
-    // Determine which sets go to top vs bottom based on position settings
-    const set1IsTop = set1HasContent && settings.propertySet1Above;
-    const set2IsTop = set2HasContent && settings.propertySet2Above;
-    const set3IsTop = set3HasContent && settings.propertySet3Above;
-    const set4IsTop = set4HasContent && settings.propertySet4Above;
-    const set5IsTop = set5HasContent && settings.propertySet5Above;
-    const set6IsTop = set6HasContent && settings.propertySet6Above;
-    const set7IsTop = set7HasContent && settings.propertySet7Above;
-
-    const hasTopSets =
-      set1IsTop ||
-      set2IsTop ||
-      set3IsTop ||
-      set4IsTop ||
-      set5IsTop ||
-      set6IsTop ||
-      set7IsTop;
-    const hasBottomSets =
-      (set1HasContent && !set1IsTop) ||
-      (set2HasContent && !set2IsTop) ||
-      (set3HasContent && !set3IsTop) ||
-      (set4HasContent && !set4IsTop) ||
-      (set5HasContent && !set5IsTop) ||
-      (set6HasContent && !set6IsTop) ||
-      (set7HasContent && !set7IsTop);
+    if (topSets.length === 0 && bottomSets.length === 0) return;
 
     // Create containers as needed
-    const topPropertiesEl = hasTopSets
-      ? cardEl.createDiv("card-properties card-properties-top")
-      : null;
-    const bottomPropertiesEl = hasBottomSets
-      ? cardEl.createDiv("card-properties card-properties-bottom")
-      : null;
+    const topPropertiesEl =
+      topSets.length > 0
+        ? cardEl.createDiv("card-properties card-properties-top")
+        : null;
+    const bottomPropertiesEl =
+      bottomSets.length > 0
+        ? cardEl.createDiv("card-properties card-properties-bottom")
+        : null;
 
     // Helper to check if element has rendered content
     const hasRenderedContent = (el: HTMLElement): boolean =>
@@ -1735,14 +1712,16 @@ export class SharedCardRenderer {
     // Helper to handle empty field (collapse or show marker)
     const handleEmptyField = (
       fieldEl: HTMLElement,
-      fieldIdx: number,
-      hasProp: boolean,
+      propName: string,
+      propValue: unknown,
     ): void => {
-      if (hasProp) {
+      if (propName) {
+        const stringValue =
+          typeof propValue === "string" ? propValue : null;
         if (
           shouldCollapseField(
-            values[fieldIdx],
-            effectiveProps[fieldIdx],
+            stringValue,
+            propName,
             hideMissing,
             hideEmptyMode,
             settings.propertyLabels,
@@ -1760,127 +1739,74 @@ export class SharedCardRenderer {
       }
     };
 
-    // Set configuration: each set has two fields with 0-based indices
-    const setConfigs = [
-      {
-        set: 1,
-        hasContent: set1HasContent,
-        isTop: set1IsTop,
-        sideBySide: settings.propertySet1SideBySide,
-        fieldIndices: [0, 1] as const,
-      },
-      {
-        set: 2,
-        hasContent: set2HasContent,
-        isTop: set2IsTop,
-        sideBySide: settings.propertySet2SideBySide,
-        fieldIndices: [2, 3] as const,
-      },
-      {
-        set: 3,
-        hasContent: set3HasContent,
-        isTop: set3IsTop,
-        sideBySide: settings.propertySet3SideBySide,
-        fieldIndices: [4, 5] as const,
-      },
-      {
-        set: 4,
-        hasContent: set4HasContent,
-        isTop: set4IsTop,
-        sideBySide: settings.propertySet4SideBySide,
-        fieldIndices: [6, 7] as const,
-      },
-      {
-        set: 5,
-        hasContent: set5HasContent,
-        isTop: set5IsTop,
-        sideBySide: settings.propertySet5SideBySide,
-        fieldIndices: [8, 9] as const,
-      },
-      {
-        set: 6,
-        hasContent: set6HasContent,
-        isTop: set6IsTop,
-        sideBySide: settings.propertySet6SideBySide,
-        fieldIndices: [10, 11] as const,
-      },
-      {
-        set: 7,
-        hasContent: set7HasContent,
-        isTop: set7IsTop,
-        sideBySide: settings.propertySet7SideBySide,
-        fieldIndices: [12, 13] as const,
-      },
-    ];
+    // Render sets into their containers
+    const renderSetsInto = (
+      container: HTMLElement,
+      setsToRender: typeof sets,
+      setIndexOffset: number,
+    ) => {
+      for (let s = 0; s < setsToRender.length; s++) {
+        const set = setsToRender[s];
+        const setNum = setIndexOffset + s + 1; // 1-based set number
 
-    // Render each set
-    for (const {
-      set,
-      hasContent,
-      isTop,
-      sideBySide,
-      fieldIndices,
-    } of setConfigs) {
-      if (!hasContent) continue;
-
-      const [idx1, idx2] = fieldIndices;
-      const fieldNum1 = idx1 + 1;
-      const fieldNum2 = idx2 + 1;
-      const container = isTop ? topPropertiesEl : bottomPropertiesEl;
-
-      const setEl = container!.createDiv(`property-set property-set-${set}`);
-      if (sideBySide) setEl.addClass("property-set-sidebyside");
-
-      // Create and render field 1
-      const field1El = setEl.createDiv(
-        `property-field property-field-${fieldNum1}`,
-      );
-      if (effectiveProps[idx1]) {
-        this.renderPropertyContent(
-          field1El,
-          effectiveProps[idx1],
-          values[idx1],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
+        const setEl = container.createDiv(
+          `property-set property-set-${setNum}`,
         );
-      }
+        if (set.paired) setEl.addClass("property-set-paired");
 
-      // Create and render field 2
-      const field2El = setEl.createDiv(
-        `property-field property-field-${fieldNum2}`,
-      );
-      if (effectiveProps[idx2]) {
-        this.renderPropertyContent(
-          field2El,
-          effectiveProps[idx2],
-          values[idx2],
-          card,
-          entry,
-          settings,
-          hideMissing,
-          hideEmptyMode,
-          signal,
-        );
-      }
+        const fieldEls: HTMLElement[] = [];
+        const hasContent: boolean[] = [];
 
-      // Check actual rendered content
-      const has1 = hasRenderedContent(field1El);
-      const has2 = hasRenderedContent(field2El);
-      const hasProp1 = effectiveProps[idx1] !== "";
-      const hasProp2 = effectiveProps[idx2] !== "";
+        for (const item of set.items) {
+          const fieldEl = setEl.createDiv(
+            `property-field property-field-${item.fieldIndex}`,
+          );
+          fieldEls.push(fieldEl);
 
-      // Handle set removal or empty field display
-      if (!has1 && !has2) {
-        setEl.remove();
-      } else if (has1 && !has2) {
-        handleEmptyField(field2El, idx2, hasProp2);
-      } else if (!has1 && has2) {
-        handleEmptyField(field1El, idx1, hasProp1);
+          if (item.name) {
+            this.renderPropertyContent(
+              fieldEl,
+              item.name,
+              item.value,
+              card,
+              entry,
+              settings,
+              hideMissing,
+              hideEmptyMode,
+              signal,
+            );
+          }
+          hasContent.push(hasRenderedContent(fieldEl));
+        }
+
+        // Handle empty fields
+        if (set.items.length === 2) {
+          if (!hasContent[0] && !hasContent[1]) {
+            setEl.remove();
+          } else if (hasContent[0] && !hasContent[1]) {
+            handleEmptyField(
+              fieldEls[1],
+              set.items[1].name,
+              set.items[1].value,
+            );
+          } else if (!hasContent[0] && hasContent[1]) {
+            handleEmptyField(
+              fieldEls[0],
+              set.items[0].name,
+              set.items[0].value,
+            );
+          }
+        } else if (!hasContent[0]) {
+          setEl.remove();
+        }
       }
+    };
+
+    if (topPropertiesEl && topSets.length > 0) {
+      renderSetsInto(topPropertiesEl, topSets, 0);
+    }
+    if (bottomPropertiesEl && bottomSets.length > 0) {
+      renderSetsInto(bottomPropertiesEl, bottomSets, topSets.length);
     }
 
     // Remove empty property containers
@@ -1896,7 +1822,7 @@ export class SharedCardRenderer {
       (topPropertiesEl && topPropertiesEl.children.length > 0) ||
       (bottomPropertiesEl && bottomPropertiesEl.children.length > 0)
     ) {
-      // Measure side-by-side field widths
+      // Measure paired field widths
       this.measurePropertyFieldsForCard(cardEl);
       // Setup scroll gradients for tags and paths
       setupScrollGradients(cardEl, updateScrollGradient, signal);
