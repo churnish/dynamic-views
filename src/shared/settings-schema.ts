@@ -9,6 +9,7 @@ import { DEFAULT_VIEW_SETTINGS } from "../constants";
 // Bases config object interface
 interface BasesConfig {
   get(key: string): unknown;
+  getOrder(): string[];
 }
 
 /**
@@ -386,6 +387,36 @@ export function readBasesSettings(
         ? value
         : defaults.listMarker;
     })(),
+
+    // Datacore-only: pass through from global settings (kept until Datacore refactor)
+    propertyDisplay1: globalSettings.propertyDisplay1,
+    propertyDisplay2: globalSettings.propertyDisplay2,
+    propertyDisplay3: globalSettings.propertyDisplay3,
+    propertyDisplay4: globalSettings.propertyDisplay4,
+    propertyDisplay5: globalSettings.propertyDisplay5,
+    propertyDisplay6: globalSettings.propertyDisplay6,
+    propertyDisplay7: globalSettings.propertyDisplay7,
+    propertyDisplay8: globalSettings.propertyDisplay8,
+    propertyDisplay9: globalSettings.propertyDisplay9,
+    propertyDisplay10: globalSettings.propertyDisplay10,
+    propertyDisplay11: globalSettings.propertyDisplay11,
+    propertyDisplay12: globalSettings.propertyDisplay12,
+    propertyDisplay13: globalSettings.propertyDisplay13,
+    propertyDisplay14: globalSettings.propertyDisplay14,
+    propertySet1SideBySide: globalSettings.propertySet1SideBySide,
+    propertySet2SideBySide: globalSettings.propertySet2SideBySide,
+    propertySet3SideBySide: globalSettings.propertySet3SideBySide,
+    propertySet4SideBySide: globalSettings.propertySet4SideBySide,
+    propertySet5SideBySide: globalSettings.propertySet5SideBySide,
+    propertySet6SideBySide: globalSettings.propertySet6SideBySide,
+    propertySet7SideBySide: globalSettings.propertySet7SideBySide,
+    propertySet1Above: globalSettings.propertySet1Above,
+    propertySet2Above: globalSettings.propertySet2Above,
+    propertySet3Above: globalSettings.propertySet3Above,
+    propertySet4Above: globalSettings.propertySet4Above,
+    propertySet5Above: globalSettings.propertySet5Above,
+    propertySet6Above: globalSettings.propertySet6Above,
+    propertySet7Above: globalSettings.propertySet7Above,
 
     // Global settings (not configurable per-view in Bases)
     omitFirstLine: globalSettings.omitFirstLine,

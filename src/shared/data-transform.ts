@@ -288,10 +288,10 @@ export function datacoreResultToCardData(
     folderPath,
     textPreview,
     imageUrl,
+    properties: [],
   };
 
-  // Resolve properties - include all subtitle properties for smart timestamp check
-  // (subtitle is comma-separated fallback list; any could be a timestamp)
+  // Resolve properties from Datacore settings (propertyDisplay1-14 on Settings)
   const subtitlePropsList =
     settings.subtitleProperty
       ?.split(",")
@@ -313,7 +313,7 @@ export function datacoreResultToCardData(
     settings.propertyDisplay12,
     settings.propertyDisplay13,
     settings.propertyDisplay14,
-    ...subtitlePropsList, // indices 14+: subtitle fallbacks participate in "both timestamps shown" check
+    ...subtitlePropsList,
   ];
 
   // Apply smart timestamp logic (includes subtitle fallbacks)
@@ -323,47 +323,28 @@ export function datacoreResultToCardData(
   const processedSubtitleProps = props.slice(14);
   props = props.slice(0, 14);
 
-  // Detect duplicates (priority: 1 > 2 > 3 > 4 > 5 > 6 > 7 > 8 > 9 > 10 > 11 > 12 > 13 > 14)
+  // Deduplicate
   const seen = new Set<string>();
-  const effectiveProps = props.map((prop) => {
-    if (!prop || prop === "") return "";
-    if (seen.has(prop)) return ""; // Duplicate, skip
-    seen.add(prop);
-    return prop;
-  });
-
-  // Store property names and resolve property values (loop for all 14 properties)
-  for (let i = 0; i < 14; i++) {
-    const propName = `propertyName${i + 1}` as keyof CardData;
-    const propValue = `property${i + 1}` as keyof CardData;
-
-    cardData[propName] = (effectiveProps[i] || undefined) as never;
-    cardData[propValue] = (
-      effectiveProps[i]
-        ? resolveDatacoreProperty(
-            app,
-            effectiveProps[i],
-            result,
-            cardData,
-            settings,
-            dc,
-          )
-        : null
-    ) as never;
-  }
+  cardData.properties = props
+    .filter((prop) => {
+      if (!prop || prop === "") return false;
+      if (seen.has(prop)) return false;
+      seen.add(prop);
+      return true;
+    })
+    .map((prop) => ({
+      name: prop,
+      value: resolveDatacoreProperty(app, prop, result, cardData, settings, dc),
+    }));
 
   // Resolve subtitle property (supports comma-separated list)
-  // All properties were already processed by smart timestamp above
-  // Timestamps use styled=false (full format like title)
   if (settings.subtitleProperty && processedSubtitleProps.length > 0) {
     for (const prop of processedSubtitleProps) {
-      // Try timestamp first with styled=false (full format)
       const timestamp = resolveTimestampProperty(prop, ctime, mtime, false);
       if (timestamp) {
         cardData.subtitle = timestamp;
         break;
       }
-      // Fall back to regular property resolution
       const resolved = resolveDatacoreProperty(
         app,
         prop,
@@ -409,6 +390,7 @@ export function basesEntryToCardData(
   settings: Settings,
   sortMethod: string,
   isShuffled: boolean,
+  visibleProperties: string[],
   textPreview?: string,
   imageUrl?: string | string[],
 ): CardData {
@@ -525,82 +507,48 @@ export function basesEntryToCardData(
     folderPath,
     textPreview,
     imageUrl,
+    properties: [],
   };
 
-  // Resolve properties - include all subtitle properties for smart timestamp check
-  // (subtitle is comma-separated fallback list; any could be a timestamp)
-  // Normalize for Bases API
+  // Resolve properties from config.getOrder() visible list
+  // Include subtitle properties for smart timestamp check
   const subtitlePropsList =
     settings.subtitleProperty
       ?.split(",")
       .map((p) => normalizePropertyName(app, p.trim()))
       .filter((p) => p) || [];
 
-  let props = [
-    settings.propertyDisplay1,
-    settings.propertyDisplay2,
-    settings.propertyDisplay3,
-    settings.propertyDisplay4,
-    settings.propertyDisplay5,
-    settings.propertyDisplay6,
-    settings.propertyDisplay7,
-    settings.propertyDisplay8,
-    settings.propertyDisplay9,
-    settings.propertyDisplay10,
-    settings.propertyDisplay11,
-    settings.propertyDisplay12,
-    settings.propertyDisplay13,
-    settings.propertyDisplay14,
-    ...subtitlePropsList, // indices 14+: subtitle fallbacks participate in "both timestamps shown" check
-  ];
+  let props = [...visibleProperties, ...subtitlePropsList];
 
   // Apply smart timestamp logic (includes subtitle fallbacks)
   props = applySmartTimestamp(props, sortMethod, settings);
 
-  // Extract processed subtitle props, then trim array back to 14
-  const processedSubtitleProps = props.slice(14);
-  props = props.slice(0, 14);
+  // Extract processed subtitle props back out
+  const processedSubtitleProps = props.slice(visibleProperties.length);
+  props = props.slice(0, visibleProperties.length);
 
-  // Detect duplicates (priority: 1 > 2 > 3 > 4 > 5 > 6 > 7 > 8 > 9 > 10 > 11 > 12 > 13 > 14)
+  // Deduplicate (earlier properties take priority)
   const seen = new Set<string>();
-  const effectiveProps = props.map((prop) => {
-    if (!prop || prop === "") return "";
-    if (seen.has(prop)) return ""; // Duplicate, skip
-    seen.add(prop);
-    return prop;
-  });
-
-  // Store property names and resolve property values (loop for all 14 properties)
-  for (let i = 0; i < 14; i++) {
-    const propName = `propertyName${i + 1}` as keyof CardData;
-    const propValue = `property${i + 1}` as keyof CardData;
-
-    cardData[propName] = (effectiveProps[i] || undefined) as never;
-    cardData[propValue] = (
-      effectiveProps[i]
-        ? resolveBasesProperty(
-            app,
-            effectiveProps[i],
-            entry,
-            cardData,
-            settings,
-          )
-        : null
-    ) as never;
-  }
+  cardData.properties = props
+    .filter((prop) => {
+      if (!prop || prop === "") return false;
+      if (seen.has(prop)) return false;
+      seen.add(prop);
+      return true;
+    })
+    .map((prop) => ({
+      name: prop,
+      value: resolveBasesProperty(app, prop, entry, cardData, settings),
+    }));
 
   // Resolve subtitle property (supports comma-separated list)
-  // All properties were already processed by smart timestamp above
-  // Timestamps use styled=false (full format like title)
   if (settings.subtitleProperty && processedSubtitleProps.length > 0) {
     for (const prop of processedSubtitleProps) {
-      // Try timestamp first with styled=false (full format)
       const timestamp = resolveTimestampProperty(prop, ctime, mtime, false);
       if (timestamp) {
         cardData.subtitle = timestamp;
         break;
       }
-      // Fall back to regular property resolution
       const resolved = resolveBasesProperty(
         app,
         prop,
@@ -696,6 +644,7 @@ export function transformBasesEntries(
   settings: Settings,
   sortMethod: string,
   isShuffled: boolean,
+  visibleProperties: string[],
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
   hasImageAvailable: Record<string, boolean>,
@@ -713,6 +662,7 @@ export function transformBasesEntries(
       settings,
       sortMethod,
       isShuffled,
+      visibleProperties,
       textPreviews[entry.file.path],
       images[entry.file.path],
     );
