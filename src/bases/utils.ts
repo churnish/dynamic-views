@@ -29,7 +29,6 @@ import {
   navigateToFolderInNotebookNavigator,
 } from "../utils/notebook-navigator";
 import type { Settings, DefaultViewSettings } from "../types";
-import { DEFAULT_VIEW_SETTINGS } from "../constants";
 import type DynamicViews from "../../main";
 
 // Bases config interface for initialization (get/set only - getAll handled by tryGetAllConfig)
@@ -90,37 +89,11 @@ function safeConfigSet(
 }
 
 /**
- * Check if value needs to be set to empty string (cleared or invalid type)
- */
-function needsEmptyString(value: unknown): boolean {
-  return value === undefined || typeof value !== "string";
-}
-
-/** All property display keys (1-14) for iteration */
-const PROPERTY_DISPLAY_KEYS = [
-  "propertyDisplay1",
-  "propertyDisplay2",
-  "propertyDisplay3",
-  "propertyDisplay4",
-  "propertyDisplay5",
-  "propertyDisplay6",
-  "propertyDisplay7",
-  "propertyDisplay8",
-  "propertyDisplay9",
-  "propertyDisplay10",
-  "propertyDisplay11",
-  "propertyDisplay12",
-  "propertyDisplay13",
-  "propertyDisplay14",
-] as const;
-
-/**
  * Initialize default property values for a new Bases view
  * Called once on view creation to persist defaults so clearing works correctly
  *
  * IMPORTANT: This function must run before readBasesSettings() to ensure
- * defaults are persisted. If initialization fails, propertyDisplay fields
- * fall back to "" (empty) in readBasesSettings.
+ * defaults are persisted.
  *
  * @param config - Bases config object with get/set methods
  * @param allKeys - Pre-fetched config keys from tryGetAllConfig()
@@ -141,15 +114,9 @@ export function initializeViewDefaults(
 
   // Check for initialization marker (persists even if user clears all settings)
   if (INIT_MARKER in allKeys) {
-    // View was initialized before - preserve existing state, don't apply template
     console.log(
       "[initializeViewDefaults] Already initialized, preserving state",
     );
-    for (const key of PROPERTY_DISPLAY_KEYS) {
-      if (needsEmptyString(allKeys[key])) {
-        safeConfigSet(config, key, "");
-      }
-    }
     return;
   }
 
@@ -161,22 +128,10 @@ export function initializeViewDefaults(
   console.log(
     `[initializeViewDefaults] viewType=${viewType}, hasTemplate=${!!settingsTemplate}`,
   );
-  if (settingsTemplate) {
-    console.log(
-      "[initializeViewDefaults] Using settings template, titleProperty:",
-      settingsTemplate.settings.titleProperty,
-    );
-    console.log(
-      "[initializeViewDefaults] Using settings template, cardSize:",
-      settingsTemplate.settings.cardSize,
-    );
-  }
 
   if (settingsTemplate) {
-    // Copy from settings template
     defaults = settingsTemplate.settings;
   } else {
-    // Use global defaults
     console.log("[initializeViewDefaults] No template, using global defaults");
     defaults = plugin.persistenceManager.getDefaultViewSettings();
   }
@@ -185,17 +140,8 @@ export function initializeViewDefaults(
   safeConfigSet(config, INIT_MARKER, true);
 
   // Apply all settings from template or global defaults
-  console.log(
-    "[initializeViewDefaults] About to apply titleProperty:",
-    defaults?.titleProperty,
-  );
   if (defaults?.titleProperty !== undefined) {
     safeConfigSet(config, "titleProperty", defaults.titleProperty);
-    console.log("[initializeViewDefaults] Applied titleProperty successfully");
-  } else {
-    console.log(
-      "[initializeViewDefaults] titleProperty is undefined, skipping",
-    );
   }
   if (defaults?.textPreviewProperty !== undefined) {
     safeConfigSet(config, "textPreviewProperty", defaults.textPreviewProperty);
@@ -240,70 +186,25 @@ export function initializeViewDefaults(
     safeConfigSet(config, "listMarker", defaults.listMarker);
   }
 
-  // Property display strings (1-14)
-  safeConfigSet(
-    config,
-    "propertyDisplay1",
-    defaults?.propertyDisplay1 ?? DEFAULT_VIEW_SETTINGS.propertyDisplay1,
-  );
-  safeConfigSet(
-    config,
-    "propertyDisplay2",
-    defaults?.propertyDisplay2 ?? DEFAULT_VIEW_SETTINGS.propertyDisplay2,
-  );
-  // Properties 3-14 default to "" (empty) - persist so clearing works
-  for (const key of PROPERTY_DISPLAY_KEYS.slice(2)) {
-    safeConfigSet(config, key, defaults?.[key] ?? "");
+  // New property settings
+  if (defaults?.pairProperties !== undefined) {
+    safeConfigSet(config, "pairProperties", defaults.pairProperties);
   }
-
-  // Property set side-by-side booleans (1-7)
-  if (defaults?.propertySet1SideBySide !== undefined) {
+  if (defaults?.invertPairingForProperty !== undefined) {
     safeConfigSet(
       config,
-      "propertySet1SideBySide",
-      defaults.propertySet1SideBySide,
+      "invertPairingForProperty",
+      defaults.invertPairingForProperty,
     );
   }
-  if (defaults?.propertySet2SideBySide !== undefined) {
-    safeConfigSet(
-      config,
-      "propertySet2SideBySide",
-      defaults.propertySet2SideBySide,
-    );
+  if (defaults?.showPropertiesAbove !== undefined) {
+    safeConfigSet(config, "showPropertiesAbove", defaults.showPropertiesAbove);
   }
-  if (defaults?.propertySet3SideBySide !== undefined) {
+  if (defaults?.invertPositionForProperty !== undefined) {
     safeConfigSet(
       config,
-      "propertySet3SideBySide",
-      defaults.propertySet3SideBySide,
-    );
-  }
-  if (defaults?.propertySet4SideBySide !== undefined) {
-    safeConfigSet(
-      config,
-      "propertySet4SideBySide",
-      defaults.propertySet4SideBySide,
-    );
-  }
-  if (defaults?.propertySet5SideBySide !== undefined) {
-    safeConfigSet(
-      config,
-      "propertySet5SideBySide",
-      defaults.propertySet5SideBySide,
-    );
-  }
-  if (defaults?.propertySet6SideBySide !== undefined) {
-    safeConfigSet(
-      config,
-      "propertySet6SideBySide",
-      defaults.propertySet6SideBySide,
-    );
-  }
-  if (defaults?.propertySet7SideBySide !== undefined) {
-    safeConfigSet(
-      config,
-      "propertySet7SideBySide",
-      defaults.propertySet7SideBySide,
+      "invertPositionForProperty",
+      defaults.invertPositionForProperty,
     );
   }
 }

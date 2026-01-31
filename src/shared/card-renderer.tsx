@@ -2341,9 +2341,7 @@ function Card({
         const { propertyLabels } = settings;
 
         // Parse override lists for O(1) lookup
-        const unpairSet = parsePropertyList(
-          settings.invertPairingForProperty,
-        );
+        const unpairSet = parsePropertyList(settings.invertPairingForProperty);
         const invertPositionSet = parsePropertyList(
           settings.invertPositionForProperty,
         );
@@ -2374,8 +2372,7 @@ function Card({
             shouldPair = next !== null && !currentInInvert && !nextInInvert;
           } else {
             // Global OFF: solo unless both are inverted
-            shouldPair =
-              next !== null && currentInInvert && nextInInvert;
+            shouldPair = next !== null && currentInInvert && nextInInvert;
           }
 
           if (shouldPair && next) {
@@ -2402,8 +2399,7 @@ function Card({
 
         sets.forEach((set, setIdx) => {
           // Check if set has content
-          const showConfiguredProps =
-            propertyLabels !== "hide" || !hideMissing;
+          const showConfiguredProps = propertyLabels !== "hide" || !hideMissing;
           const hasContent = set.props.some((p) =>
             showConfiguredProps
               ? p.name !== ""

@@ -1716,8 +1716,7 @@ export class SharedCardRenderer {
       propValue: unknown,
     ): void => {
       if (propName) {
-        const stringValue =
-          typeof propValue === "string" ? propValue : null;
+        const stringValue = typeof propValue === "string" ? propValue : null;
         if (
           shouldCollapseField(
             stringValue,

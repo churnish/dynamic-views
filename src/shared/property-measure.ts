@@ -370,7 +370,7 @@ export function remeasurePropertyFields(container: HTMLElement): void {
   }
 
   const sets = Array.from(
-    container.querySelectorAll<HTMLElement>(".property-set-sidebyside"),
+    container.querySelectorAll<HTMLElement>(".property-set-paired"),
   );
   if (sets.length === 0) return;
 
@@ -417,7 +417,7 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
     return [];
   }
 
-  const sets = cardEl.querySelectorAll(".property-set-sidebyside");
+  const sets = cardEl.querySelectorAll(".property-set-paired");
   if (sets.length === 0) return [];
 
   // Card-properties container is inside the card
