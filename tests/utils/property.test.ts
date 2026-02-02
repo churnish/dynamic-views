@@ -11,7 +11,11 @@ import {
   isCheckboxProperty,
   normalizePropertyName,
   isValidUri,
+  buildDisplayToSyntaxMap,
+  buildSyntaxToDisplayMap,
+  normalizeSettingsPropertyNames,
 } from "../../src/utils/property";
+import type { BasesViewConfig, BasesPropertyId } from "obsidian";
 import { App } from "obsidian";
 
 describe("property", () => {
@@ -434,6 +438,10 @@ describe("property", () => {
       expect(getPropertyLabel("note.title")).toBe("title");
     });
 
+    it("should strip formula. prefix", () => {
+      expect(getPropertyLabel("formula.myCalc")).toBe("myCalc");
+    });
+
     it("should preserve custom property names as-is", () => {
       expect(getPropertyLabel("MyCustomProperty")).toBe("MyCustomProperty");
       expect(getPropertyLabel("some_property")).toBe("some_property");
@@ -445,6 +453,34 @@ describe("property", () => {
       expect(getPropertyLabel("file.extension")).toBe("file extension");
       expect(getPropertyLabel("file.size")).toBe("file size");
       expect(getPropertyLabel("folder")).toBe("folder");
+    });
+
+    it("should use displayNameMap when provided", () => {
+      const displayNameMap = {
+        "formula.Untitled": "smile more",
+        "file.name": "filename123",
+        "note.prop123": "display-name",
+      };
+      expect(getPropertyLabel("formula.Untitled", displayNameMap)).toBe(
+        "smile more",
+      );
+      expect(getPropertyLabel("file.name", displayNameMap)).toBe("filename123");
+      expect(getPropertyLabel("note.prop123", displayNameMap)).toBe(
+        "display-name",
+      );
+    });
+
+    it("should fall back to default behavior when property not in displayNameMap", () => {
+      const displayNameMap = { "formula.Untitled": "smile more" };
+      // file.path not in map → falls back to PROPERTY_LABEL_MAP
+      expect(getPropertyLabel("file.path", displayNameMap)).toBe("file path");
+      // note.title not in map → falls back to prefix stripping
+      expect(getPropertyLabel("note.title", displayNameMap)).toBe("title");
+    });
+
+    it("should fall back to default behavior when displayNameMap is undefined", () => {
+      expect(getPropertyLabel("formula.Untitled", undefined)).toBe("Untitled");
+      expect(getPropertyLabel("file.name", undefined)).toBe("file name");
     });
   });
 
@@ -621,13 +657,39 @@ describe("property", () => {
       expect(normalizePropertyName(mockApp, "note.title")).toBe("note.title");
     });
 
-    it("should use hardcoded fallback when API unavailable", () => {
+    it("should use hardcoded fallback when no reverseMap (Datacore path)", () => {
       expect(normalizePropertyName(mockApp, "file name")).toBe("file.name");
       expect(normalizePropertyName(mockApp, "created time")).toBe("file.ctime");
       expect(normalizePropertyName(mockApp, "modified time")).toBe(
         "file.mtime",
       );
       expect(normalizePropertyName(mockApp, "folder")).toBe("file.folder");
+    });
+
+    it("should use reverseMap when provided (Bases path)", () => {
+      const reverseMap = {
+        "my title": "note.title",
+        "smile more": "formula.Untitled",
+        filename123: "file.name",
+      };
+      expect(normalizePropertyName(mockApp, "my title", reverseMap)).toBe(
+        "note.title",
+      );
+      expect(normalizePropertyName(mockApp, "smile more", reverseMap)).toBe(
+        "formula.Untitled",
+      );
+      expect(normalizePropertyName(mockApp, "filename123", reverseMap)).toBe(
+        "file.name",
+      );
+    });
+
+    it("should not fall back to hardcoded defaults when reverseMap is provided", () => {
+      const reverseMap = {};
+      // "file name" normally maps to "file.name" via hardcoded defaults
+      // but with an empty reverseMap, it should return as-is
+      expect(normalizePropertyName(mockApp, "file name", reverseMap)).toBe(
+        "file name",
+      );
     });
 
     it("should return custom properties as-is", () => {
@@ -676,6 +738,170 @@ describe("property", () => {
 
     it("should handle whitespace", () => {
       expect(isValidUri("  https://example.com  ")).toBe(true);
+    });
+  });
+
+  describe("buildDisplayToSyntaxMap", () => {
+    function mockConfig(
+      displayNames: Record<string, string>,
+    ): BasesViewConfig {
+      return {
+        getDisplayName: (id: string) => displayNames[id] ?? "",
+      } as unknown as BasesViewConfig;
+    }
+
+    it("should map display names to syntax names", () => {
+      const config = mockConfig({
+        "file.name": "filename123",
+        "note.prop123": "display-name",
+        "formula.Untitled": "smile more",
+      });
+      const allProperties = [
+        "file.name",
+        "note.prop123",
+        "formula.Untitled",
+      ] as BasesPropertyId[];
+
+      const map = buildDisplayToSyntaxMap(config, allProperties);
+
+      expect(map["filename123"]).toBe("file.name");
+      expect(map["display-name"]).toBe("note.prop123");
+      expect(map["smile more"]).toBe("formula.Untitled");
+    });
+
+    it("should not map bare formula names", () => {
+      const config = mockConfig({
+        "formula.Untitled": "smile more",
+      });
+      const allProperties = ["formula.Untitled"] as BasesPropertyId[];
+
+      const map = buildDisplayToSyntaxMap(config, allProperties);
+
+      // Only the display name maps, not the raw formula name
+      expect(map["smile more"]).toBe("formula.Untitled");
+      expect(map["Untitled"]).toBeUndefined();
+    });
+
+    it("should handle empty allProperties", () => {
+      const config = mockConfig({});
+      const map = buildDisplayToSyntaxMap(config, []);
+      expect(Object.keys(map)).toHaveLength(0);
+    });
+
+    it("should skip properties with empty display name", () => {
+      const config = mockConfig({ "file.name": "" });
+      const allProperties = ["file.name"] as BasesPropertyId[];
+
+      const map = buildDisplayToSyntaxMap(config, allProperties);
+
+      expect(Object.keys(map)).toHaveLength(0);
+    });
+  });
+
+  describe("buildSyntaxToDisplayMap", () => {
+    function mockConfig(
+      displayNames: Record<string, string>,
+    ): BasesViewConfig {
+      return {
+        getDisplayName: (id: string) => displayNames[id] ?? "",
+      } as unknown as BasesViewConfig;
+    }
+
+    it("should map syntax names to display names", () => {
+      const config = mockConfig({
+        "file.name": "filename123",
+        "formula.Untitled": "smile more",
+      });
+      const allProperties = [
+        "file.name",
+        "formula.Untitled",
+      ] as BasesPropertyId[];
+
+      const map = buildSyntaxToDisplayMap(config, allProperties);
+
+      expect(map["file.name"]).toBe("filename123");
+      expect(map["formula.Untitled"]).toBe("smile more");
+    });
+
+    it("should skip properties with empty display name", () => {
+      const config = mockConfig({ "file.name": "" });
+      const allProperties = ["file.name"] as BasesPropertyId[];
+
+      const map = buildSyntaxToDisplayMap(config, allProperties);
+
+      expect(Object.keys(map)).toHaveLength(0);
+    });
+  });
+
+  describe("normalizeSettingsPropertyNames", () => {
+    let mockApp: App;
+
+    beforeEach(() => {
+      mockApp = new App();
+    });
+
+    it("should normalize all property settings fields", () => {
+      const reverseMap = {
+        filename123: "file.name",
+        "smile more": "formula.Untitled",
+      };
+      const displayNameMap = {
+        "file.name": "filename123",
+        "formula.Untitled": "smile more",
+      };
+      const settings: Record<string, unknown> = {
+        titleProperty: "filename123",
+        subtitleProperty: "smile more",
+        textPreviewProperty: "",
+        imageProperty: "file.name",
+        urlProperty: "url",
+      };
+
+      normalizeSettingsPropertyNames(
+        mockApp,
+        settings as any,
+        reverseMap,
+        displayNameMap,
+      );
+
+      expect(settings.titleProperty).toBe("file.name");
+      expect(settings.subtitleProperty).toBe("formula.Untitled");
+      expect(settings.textPreviewProperty).toBe(""); // empty → untouched
+      expect(settings.imageProperty).toBe("file.name"); // already syntax → pass through
+      expect(settings.urlProperty).toBe("url"); // unknown → as-is
+    });
+
+    it("should handle comma-separated values", () => {
+      const reverseMap = {
+        filename123: "file.name",
+        "created time": "file.ctime",
+      };
+      const settings: Record<string, unknown> = {
+        titleProperty: "filename123, created time",
+      };
+
+      normalizeSettingsPropertyNames(
+        mockApp,
+        settings as any,
+        reverseMap,
+        {},
+      );
+
+      expect(settings.titleProperty).toBe("file.name,file.ctime");
+    });
+
+    it("should attach displayNameMap to settings", () => {
+      const displayNameMap = { "file.name": "filename123" };
+      const settings: Record<string, unknown> = {};
+
+      normalizeSettingsPropertyNames(
+        mockApp,
+        settings as any,
+        {},
+        displayNameMap,
+      );
+
+      expect((settings as any)._displayNameMap).toBe(displayNameMap);
     });
   });
 
