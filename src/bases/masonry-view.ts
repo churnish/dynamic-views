@@ -802,7 +802,13 @@ export class DynamicViewsMasonryView extends BasesView {
       const sortMethod = getSortMethod(this.config);
       const visibleProperties = this.config.getOrder();
       const settingsHash =
-        JSON.stringify(settings) + "\0" + visibleProperties.join("\0");
+        JSON.stringify(settings) +
+        "\0" +
+        visibleProperties.join("\0") +
+        "\0" +
+        sortMethod +
+        "\0" +
+        (groupByProperty ?? "");
       const styleSettingsHash = getStyleSettingsHash();
       // Include mtime and sortMethod in hash so content/sort changes trigger updates
       const collapsedHash = Array.from(this.collapsedGroups).sort().join("\0");
