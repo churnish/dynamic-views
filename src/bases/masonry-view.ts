@@ -72,7 +72,7 @@ import {
 } from "../shared/property-measure";
 import type DynamicViews from "../../main";
 import type {
-  Settings,
+  ResolvedSettings,
   ContentCache,
   RenderState,
   LastGroupState,
@@ -80,6 +80,7 @@ import type {
   SortState,
   FocusState,
 } from "../types";
+import { VIEW_DEFAULTS } from "../constants";
 
 // Extend Obsidian types
 declare module "obsidian" {
@@ -254,8 +255,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     const settings = readBasesSettings(
       this.config,
-      this.plugin.persistenceManager.getGlobalSettings(),
-      this.plugin.persistenceManager.getDefaultViewSettings(),
+      this.plugin.persistenceManager.getPluginSettings(),
       "masonry",
     );
     const sortMethod = getSortMethod(this.config);
@@ -365,7 +365,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Calculate batch size based on current column count */
-  private getBatchSize(settings: Settings): number {
+  private getBatchSize(settings: ResolvedSettings): number {
     if (!this.masonryContainer) return MAX_BATCH_SIZE;
     const minColumns = settings.minimumColumns;
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
@@ -383,7 +383,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: Settings): number {
+  private calculateInitialCount(settings: ResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
       this.containerEl.getBoundingClientRect().width,
@@ -406,7 +406,10 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Check if more content needed after layout completes, and load if so */
-  private checkAndLoadMore(totalEntries: number, settings: Settings): void {
+  private checkAndLoadMore(
+    totalEntries: number,
+    settings: ResolvedSettings,
+  ): void {
     // Skip if already loading or all items displayed
     if (this.isLoading || this.displayedCount >= totalEntries) return;
 
@@ -472,12 +475,16 @@ export class DynamicViewsMasonryView extends BasesView {
         clearOldTemplateToggles(this.app, MASONRY_VIEW_TYPE, this);
 
         // Save settings template
-        const defaults =
-          this.plugin.persistenceManager.getDefaultViewSettings();
-        const settings = extractBasesTemplate(this.config, defaults);
-        console.log("[masonry-view] Saving settings template:", settings);
+        const templateSettings = extractBasesTemplate(
+          this.config,
+          VIEW_DEFAULTS,
+        );
+        console.log(
+          "[masonry-view] Saving settings template:",
+          templateSettings,
+        );
         void this.plugin.persistenceManager.setSettingsTemplate("masonry", {
-          settings,
+          settings: templateSettings,
           setAt: timestamp,
         });
       }
@@ -539,8 +546,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.updateLayoutRef,
     );
 
-    // Get global settings for feature flags
-    const globalSettings = this.plugin.persistenceManager.getGlobalSettings();
+    // Get plugin settings for feature flags
+    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
 
     // Placeholder - calculated dynamically on first render
     this.displayedCount = 0;
@@ -549,7 +556,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.swipeAbortController = setupBasesSwipeInterception(
       this.containerEl,
       this.app,
-      globalSettings,
+      pluginSettings,
     );
 
     // Watch for Dynamic Views Style Settings changes only
@@ -725,11 +732,10 @@ export class DynamicViewsMasonryView extends BasesView {
       // Track total entries for end indicator
       this.totalEntries = allEntries.length;
 
-      // Read settings - template values are in config, global defaults as fallbacks
+      // Read settings - template values are in config, plugin settings as fallbacks
       const settings = readBasesSettings(
         this.config,
-        this.plugin.persistenceManager.getGlobalSettings(),
-        this.plugin.persistenceManager.getDefaultViewSettings(),
+        this.plugin.persistenceManager.getPluginSettings(),
         "masonry",
       );
 
@@ -1139,7 +1145,7 @@ export class DynamicViewsMasonryView extends BasesView {
     })();
   }
 
-  private setupMasonryLayout(settings: Settings): void {
+  private setupMasonryLayout(settings: ResolvedSettings): void {
     if (!this.masonryContainer) return;
 
     const minColumns = settings.minimumColumns;
@@ -1404,7 +1410,7 @@ export class DynamicViewsMasonryView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: Settings,
+    settings: ResolvedSettings,
   ): HTMLElement {
     return this.cardRenderer.renderCard(container, card, entry, settings, {
       index,
@@ -1426,7 +1432,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: Settings,
+    settings: ResolvedSettings,
   ): Promise<void> {
     // Capture old heights for masonry relayout check
     const heightsBefore = new Map<string, number>();
@@ -1495,7 +1501,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private async appendBatch(
     totalEntries: number,
-    settings: Settings,
+    settings: ResolvedSettings,
   ): Promise<void> {
     // Guard: return early if data not initialized or no masonry container
     if (!this.data || !this.masonryContainer) return;
@@ -1901,7 +1907,10 @@ export class DynamicViewsMasonryView extends BasesView {
     this.isLoading = false;
   }
 
-  private setupInfiniteScroll(totalEntries: number, settings?: Settings): void {
+  private setupInfiniteScroll(
+    totalEntries: number,
+    settings?: ResolvedSettings,
+  ): void {
     const scrollContainer = this.scrollEl;
     // Clean up existing listeners and timeouts (don't use this.register() since this method is called multiple times)
     if (this.scrollThrottle.listener) {

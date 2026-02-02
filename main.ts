@@ -64,7 +64,7 @@ export default class DynamicViews extends Plugin {
     await this.persistenceManager.load();
 
     // Set initial body classes for settings
-    const settings = this.persistenceManager.getGlobalSettings();
+    const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.add(
       `dynamic-views-open-on-${settings.openFileAction}`,
     );
@@ -137,7 +137,7 @@ export default class DynamicViews extends Plugin {
             el.classList.remove("is-zoomed");
           });
         const defaultInNewTab =
-          this.persistenceManager.getGlobalSettings().openRandomInNewTab;
+          this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
       },
     );
@@ -164,7 +164,7 @@ export default class DynamicViews extends Plugin {
             el.classList.remove("is-zoomed");
           });
         const openInNewPane =
-          this.persistenceManager.getGlobalSettings().openRandomInNewTab;
+          this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, openInNewPane);
       },
     });
@@ -331,7 +331,7 @@ return dv.createView(dc, USER_QUERY);
 
   onunload() {
     // Remove open-on class added during load
-    const settings = this.persistenceManager.getGlobalSettings();
+    const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(
       `dynamic-views-open-on-${settings.openFileAction}`,
     );

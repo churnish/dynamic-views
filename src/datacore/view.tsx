@@ -2,13 +2,18 @@ import { App, TFile, Keymap, Notice } from "obsidian";
 import type { PaneType } from "obsidian";
 import type DynamicViews from "../../main";
 import {
-  Settings,
+  ResolvedSettings,
   UIState,
   ViewMode,
   WidthMode,
-  DefaultViewSettings,
+  ViewDefaults,
+  DatacoreDefaults,
 } from "../types";
-import { DEFAULT_SETTINGS } from "../constants";
+import {
+  resolveSettings,
+  VIEW_DEFAULTS,
+  DATACORE_DEFAULTS,
+} from "../constants";
 import {
   BATCH_SIZE,
   PANE_MULTIPLIER,
@@ -103,73 +108,20 @@ export function View({
   const persistenceManager = plugin.persistenceManager;
 
   // Helper: get persisted settings
-  const getPersistedSettings = dc.useCallback((): Settings => {
-    if (!currentFile || !persistenceManager) return DEFAULT_SETTINGS;
+  const getPersistedSettings = dc.useCallback((): ResolvedSettings => {
+    if (!currentFile || !persistenceManager)
+      return resolveSettings(
+        persistenceManager?.getPluginSettings() ?? ({} as never),
+      );
 
-    const globalSettings = persistenceManager.getGlobalSettings();
-    const defaultViewSettings = persistenceManager.getDefaultViewSettings();
-    const viewSettings = persistenceManager.getViewSettings(currentFile);
+    const pluginSettings = persistenceManager.getPluginSettings();
+    const template = persistenceManager.getSettingsTemplate("datacore");
+    const viewOverrides = persistenceManager.getViewSettings(currentFile);
 
-    // Start with global settings as base
-    const baseSettings = { ...globalSettings };
-
-    // View-specific properties that can be overridden per-view
-    // Merge priority: viewSettings (persisted) > defaultViewSettings > globalSettings
-    // Using satisfies to validate at compile-time that all keys exist in both Settings and DefaultViewSettings
-    const viewSpecificKeys = [
-      "titleProperty",
-      "textPreviewProperty",
-      "imageProperty",
-      "urlProperty",
-      "subtitleProperty",
-      "propertyDisplay1",
-      "propertyDisplay2",
-      "propertyDisplay3",
-      "propertyDisplay4",
-      "propertyDisplay5",
-      "propertyDisplay6",
-      "propertyDisplay7",
-      "propertyDisplay8",
-      "propertyDisplay9",
-      "propertyDisplay10",
-      "propertyDisplay11",
-      "propertyDisplay12",
-      "propertyDisplay13",
-      "propertyDisplay14",
-      "propertySet1SideBySide",
-      "propertySet2SideBySide",
-      "propertySet3SideBySide",
-      "propertySet4SideBySide",
-      "propertySet5SideBySide",
-      "propertySet6SideBySide",
-      "propertySet7SideBySide",
-      "propertySet1Above",
-      "propertySet2Above",
-      "propertySet3Above",
-      "propertySet4Above",
-      "propertySet5Above",
-      "propertySet6Above",
-      "propertySet7Above",
-      "propertyLabels",
-      "fallbackToContent",
-      "fallbackToEmbeds",
-      "imageFormat",
-      "imagePosition",
-      "imageFit",
-      "imageAspectRatio",
-      "queryHeight",
-      "listMarker",
-      "cardSize",
-      "cssclasses",
-    ] as const satisfies readonly (keyof Settings &
-      keyof DefaultViewSettings)[];
-
-    for (const key of viewSpecificKeys) {
-      (baseSettings as Record<string, unknown>)[key] =
-        viewSettings[key] ?? defaultViewSettings[key];
-    }
-
-    return baseSettings;
+    return resolveSettings(pluginSettings, VIEW_DEFAULTS, DATACORE_DEFAULTS, {
+      ...template?.settings,
+      ...viewOverrides,
+    });
   }, [currentFile, persistenceManager]);
 
   // Helper: get persisted UI state value
@@ -502,60 +454,21 @@ export function View({
   }, [resultLimit, currentFile, persistenceManager]);
 
   // Persist settings changes (debounced)
+  // Only saves fields that differ from resolved defaults (ViewDefaults + DatacoreDefaults)
   dc.useEffect(() => {
     if (settingsTimeoutRef.current) {
       clearTimeout(settingsTimeoutRef.current);
     }
     settingsTimeoutRef.current = setTimeout(() => {
       if (currentFile && persistenceManager) {
-        // Extract only view-specific settings (those in DefaultViewSettings)
-        const viewSettings: Partial<DefaultViewSettings> = {
-          titleProperty: settings.titleProperty,
-          textPreviewProperty: settings.textPreviewProperty,
-          imageProperty: settings.imageProperty,
-          subtitleProperty: settings.subtitleProperty,
-          urlProperty: settings.urlProperty,
-          propertyDisplay1: settings.propertyDisplay1,
-          propertyDisplay2: settings.propertyDisplay2,
-          propertyDisplay3: settings.propertyDisplay3,
-          propertyDisplay4: settings.propertyDisplay4,
-          propertyDisplay5: settings.propertyDisplay5,
-          propertyDisplay6: settings.propertyDisplay6,
-          propertyDisplay7: settings.propertyDisplay7,
-          propertyDisplay8: settings.propertyDisplay8,
-          propertyDisplay9: settings.propertyDisplay9,
-          propertyDisplay10: settings.propertyDisplay10,
-          propertyDisplay11: settings.propertyDisplay11,
-          propertyDisplay12: settings.propertyDisplay12,
-          propertyDisplay13: settings.propertyDisplay13,
-          propertyDisplay14: settings.propertyDisplay14,
-          propertySet1SideBySide: settings.propertySet1SideBySide,
-          propertySet2SideBySide: settings.propertySet2SideBySide,
-          propertySet3SideBySide: settings.propertySet3SideBySide,
-          propertySet4SideBySide: settings.propertySet4SideBySide,
-          propertySet5SideBySide: settings.propertySet5SideBySide,
-          propertySet6SideBySide: settings.propertySet6SideBySide,
-          propertySet7SideBySide: settings.propertySet7SideBySide,
-          propertySet1Above: settings.propertySet1Above,
-          propertySet2Above: settings.propertySet2Above,
-          propertySet3Above: settings.propertySet3Above,
-          propertySet4Above: settings.propertySet4Above,
-          propertySet5Above: settings.propertySet5Above,
-          propertySet6Above: settings.propertySet6Above,
-          propertySet7Above: settings.propertySet7Above,
-          propertyLabels: settings.propertyLabels,
-          fallbackToContent: settings.fallbackToContent,
-          fallbackToEmbeds: settings.fallbackToEmbeds,
-          imageFormat: settings.imageFormat,
-          imagePosition: settings.imagePosition,
-          imageFit: settings.imageFit,
-          imageAspectRatio: settings.imageAspectRatio,
-          queryHeight: settings.queryHeight,
-          listMarker: settings.listMarker,
-          cardSize: settings.cardSize,
-          cssclasses: settings.cssclasses,
-        };
-        void persistenceManager.setViewSettings(currentFile, viewSettings);
+        const defaults = { ...VIEW_DEFAULTS, ...DATACORE_DEFAULTS };
+        const overrides: Partial<ViewDefaults & DatacoreDefaults> = {};
+        for (const key of Object.keys(defaults) as (keyof typeof defaults)[]) {
+          if (settings[key] !== defaults[key]) {
+            (overrides as Record<string, unknown>)[key] = settings[key];
+          }
+        }
+        void persistenceManager.setViewSettings(currentFile, overrides);
       }
     }, 300);
     return () => {
@@ -568,10 +481,10 @@ export function View({
   // Setup swipe interception on mobile if enabled (Datacore is always embedded)
   // Note: preventSidebarSwipe intentionally omitted from deps - global settings require restart
   dc.useEffect(() => {
-    const globalSettings = persistenceManager.getGlobalSettings();
+    const pluginSettings = persistenceManager.getPluginSettings();
     if (
       app.isMobile &&
-      globalSettings.preventSidebarSwipe === "all-views" &&
+      pluginSettings.preventSidebarSwipe === "all-views" &&
       explorerRef.current
     ) {
       const controller = new AbortController();
@@ -898,7 +811,7 @@ export function View({
         imagePosition: settings.imagePosition,
         imageFit: settings.imageFit,
         imageAspectRatio: settings.imageAspectRatio,
-      } as Settings;
+      } as ResolvedSettings;
     }
   }, [settings]);
 
@@ -1121,7 +1034,7 @@ export function View({
           })
           .filter((e): e is NonNullable<typeof e> => e !== null);
 
-        const globalSettings = persistenceManager.getGlobalSettings();
+        const pluginSettings = persistenceManager.getPluginSettings();
         await loadImagesForEntries(
           imageEntries,
           settings.fallbackToEmbeds,
@@ -1129,8 +1042,8 @@ export function View({
           newImages,
           newHasImageAvailable,
           {
-            includeYoutube: globalSettings.showYoutubeThumbnails,
-            includeCardLink: globalSettings.showCardLinkCovers,
+            includeYoutube: pluginSettings.showYoutubeThumbnails,
+            includeCardLink: pluginSettings.showCardLinkCovers,
           },
         );
       }
@@ -1433,11 +1346,9 @@ export function View({
 
       container.style.setProperty("--grid-columns", String(cols));
       // Set CSS variable for image aspect ratio
-      const imageAspectRatio =
-        plugin.persistenceManager.getGlobalSettings().imageAspectRatio;
       container.style.setProperty(
         "--dynamic-views-image-aspect-ratio",
-        String(imageAspectRatio),
+        String(settings.imageAspectRatio),
       );
     };
 
@@ -2006,7 +1917,7 @@ export function View({
   );
 
   const handleSettingsChange = dc.useCallback(
-    (newSettings: Partial<Settings>) => {
+    (newSettings: Partial<ResolvedSettings>) => {
       setSettings((prev) => ({ ...prev, ...newSettings }));
     },
     [],

@@ -56,7 +56,7 @@ import {
 } from "../shared/scroll-preservation";
 import type DynamicViews from "../../main";
 import type {
-  Settings,
+  ResolvedSettings,
   ContentCache,
   RenderState,
   LastGroupState,
@@ -64,6 +64,7 @@ import type {
   SortState,
   FocusState,
 } from "../types";
+import { VIEW_DEFAULTS } from "../constants";
 
 // Extend Obsidian types
 declare module "obsidian" {
@@ -232,8 +233,7 @@ export class DynamicViewsGridView extends BasesView {
 
     const settings = readBasesSettings(
       this.config,
-      this.plugin.persistenceManager.getGlobalSettings(),
-      this.plugin.persistenceManager.getDefaultViewSettings(),
+      this.plugin.persistenceManager.getPluginSettings(),
     );
     const sortMethod = getSortMethod(this.config);
 
@@ -338,7 +338,7 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: Settings): number {
+  private calculateInitialCount(settings: ResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
       this.containerEl.getBoundingClientRect().width,
@@ -417,12 +417,13 @@ export class DynamicViewsGridView extends BasesView {
         clearOldTemplateToggles(this.app, GRID_VIEW_TYPE, this);
 
         // Save settings template
-        const defaults =
-          this.plugin.persistenceManager.getDefaultViewSettings();
-        const settings = extractBasesTemplate(this.config, defaults);
-        console.log("[grid-view] Saving settings template:", settings);
+        const templateSettings = extractBasesTemplate(
+          this.config,
+          VIEW_DEFAULTS,
+        );
+        console.log("[grid-view] Saving settings template:", templateSettings);
         void this.plugin.persistenceManager.setSettingsTemplate("grid", {
-          settings,
+          settings: templateSettings,
           setAt: timestamp,
         });
       }
@@ -470,8 +471,8 @@ export class DynamicViewsGridView extends BasesView {
       this.updateLayoutRef,
     );
 
-    // Get global settings for feature flags
-    const globalSettings = this.plugin.persistenceManager.getGlobalSettings();
+    // Get plugin settings for feature flags
+    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
 
     // Placeholder - calculated dynamically on first render
     this.displayedCount = 0;
@@ -480,7 +481,7 @@ export class DynamicViewsGridView extends BasesView {
     this.swipeAbortController = setupBasesSwipeInterception(
       this.containerEl,
       this.app,
-      globalSettings,
+      pluginSettings,
     );
 
     // Watch for Dynamic Views Style Settings changes only
@@ -594,8 +595,7 @@ export class DynamicViewsGridView extends BasesView {
       // After that, only global defaults are used as fallbacks
       const settings = readBasesSettings(
         this.config,
-        this.plugin.persistenceManager.getGlobalSettings(),
-        this.plugin.persistenceManager.getDefaultViewSettings(),
+        this.plugin.persistenceManager.getPluginSettings(),
       );
 
       // Apply per-view CSS classes and variables to container
@@ -1065,7 +1065,7 @@ export class DynamicViewsGridView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: Settings,
+    settings: ResolvedSettings,
   ): HTMLElement {
     return this.cardRenderer.renderCard(container, card, entry, settings, {
       index,
@@ -1087,7 +1087,7 @@ export class DynamicViewsGridView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: Settings,
+    settings: ResolvedSettings,
   ): Promise<void> {
     // Clear cache for changed files only
     for (const path of changedPaths) {
@@ -1136,11 +1136,10 @@ export class DynamicViewsGridView extends BasesView {
 
     const groupedData = this.data.groupedData;
 
-    // Read settings - template values are in config, global defaults as fallbacks
+    // Read settings - template values are in config, plugin settings as fallbacks
     const settings = readBasesSettings(
       this.config,
-      this.plugin.persistenceManager.getGlobalSettings(),
-      this.plugin.persistenceManager.getDefaultViewSettings(),
+      this.plugin.persistenceManager.getPluginSettings(),
     );
 
     const sortMethod = getSortMethod(this.config);
@@ -1339,7 +1338,10 @@ export class DynamicViewsGridView extends BasesView {
     this.isLoading = false;
   }
 
-  private setupInfiniteScroll(totalEntries: number, settings?: Settings): void {
+  private setupInfiniteScroll(
+    totalEntries: number,
+    settings?: ResolvedSettings,
+  ): void {
     const scrollContainer = this.scrollEl;
 
     // Clean up existing listener (don't use this.register() since this method is called multiple times)

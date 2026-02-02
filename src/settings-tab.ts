@@ -4,13 +4,9 @@ import {
   PluginSettingTab,
   Setting,
   SettingGroup,
-  Notice,
   setIcon,
 } from "obsidian";
 import type DynamicViews from "../main";
-import { ClearSettingsModal } from "./modals";
-import { DEFAULT_SETTINGS, DEFAULT_VIEW_SETTINGS } from "./constants";
-import type { Settings, DefaultViewSettings } from "./types";
 
 export class DynamicViewsSettingTab extends PluginSettingTab {
   plugin: DynamicViews;
@@ -22,73 +18,30 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
   }
 
   /**
-   * Trim whitespace from all text field settings
+   * Trim whitespace from text field settings
    */
   private async trimTextFieldSettings(): Promise<void> {
-    const globalSettings = this.plugin.persistenceManager.getGlobalSettings();
-    const defaultViewSettings =
-      this.plugin.persistenceManager.getDefaultViewSettings();
-
-    // Trim global settings
-    const trimmedGlobalSettings: Partial<typeof globalSettings> = {};
-    let hasGlobalChanges = false;
+    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
+    const trimmed: Partial<typeof pluginSettings> = {};
+    let hasChanges = false;
 
     if (
-      globalSettings.createdTimeProperty.trim() !==
-      globalSettings.createdTimeProperty
+      pluginSettings.createdTimeProperty.trim() !==
+      pluginSettings.createdTimeProperty
     ) {
-      trimmedGlobalSettings.createdTimeProperty =
-        globalSettings.createdTimeProperty.trim();
-      hasGlobalChanges = true;
+      trimmed.createdTimeProperty = pluginSettings.createdTimeProperty.trim();
+      hasChanges = true;
     }
     if (
-      globalSettings.modifiedTimeProperty.trim() !==
-      globalSettings.modifiedTimeProperty
+      pluginSettings.modifiedTimeProperty.trim() !==
+      pluginSettings.modifiedTimeProperty
     ) {
-      trimmedGlobalSettings.modifiedTimeProperty =
-        globalSettings.modifiedTimeProperty.trim();
-      hasGlobalChanges = true;
+      trimmed.modifiedTimeProperty = pluginSettings.modifiedTimeProperty.trim();
+      hasChanges = true;
     }
 
-    // Trim default view settings
-    const trimmedDefaultViewSettings: Partial<typeof defaultViewSettings> = {};
-    let hasDefaultViewChanges = false;
-
-    if (
-      defaultViewSettings.titleProperty.trim() !==
-      defaultViewSettings.titleProperty
-    ) {
-      trimmedDefaultViewSettings.titleProperty =
-        defaultViewSettings.titleProperty.trim();
-      hasDefaultViewChanges = true;
-    }
-    if (
-      defaultViewSettings.textPreviewProperty.trim() !==
-      defaultViewSettings.textPreviewProperty
-    ) {
-      trimmedDefaultViewSettings.textPreviewProperty =
-        defaultViewSettings.textPreviewProperty.trim();
-      hasDefaultViewChanges = true;
-    }
-    if (
-      defaultViewSettings.imageProperty.trim() !==
-      defaultViewSettings.imageProperty
-    ) {
-      trimmedDefaultViewSettings.imageProperty =
-        defaultViewSettings.imageProperty.trim();
-      hasDefaultViewChanges = true;
-    }
-
-    // Save if changes detected
-    if (hasGlobalChanges) {
-      await this.plugin.persistenceManager.setGlobalSettings(
-        trimmedGlobalSettings,
-      );
-    }
-    if (hasDefaultViewChanges) {
-      await this.plugin.persistenceManager.setDefaultViewSettings(
-        trimmedDefaultViewSettings,
-      );
+    if (hasChanges) {
+      await this.plugin.persistenceManager.setPluginSettings(trimmed);
     }
   }
 
@@ -100,7 +53,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     // Trim whitespace from text fields on open
     void this.trimTextFieldSettings();
 
-    const settings = this.plugin.persistenceManager.getGlobalSettings();
+    const settings = this.plugin.persistenceManager.getPluginSettings();
 
     // Smart timestamp variables - declared before SettingGroup for use in callbacks
     let smartTimestampSetting: Setting | undefined;
@@ -155,7 +108,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               .addOption("title", "Press on title")
               .setValue(settings.openFileAction)
               .onChange(async (value: "card" | "title") => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   openFileAction: value,
                 });
                 // Update body classes for CSS and MutationObserver detection
@@ -178,7 +131,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               .addOption("never", "Never")
               .setValue(settings.omitFirstLine)
               .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   omitFirstLine: value as "always" | "ifMatchesTitle" | "never",
                 });
               }),
@@ -197,7 +150,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               .addOption("disabled", "Disabled")
               .setValue(settings.preventSidebarSwipe)
               .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   preventSidebarSwipe: value as
                     | "disabled"
                     | "base-files"
@@ -216,7 +169,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
             toggle
               .setValue(settings.openRandomInNewTab)
               .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   openRandomInNewTab: value,
                 });
               }),
@@ -227,7 +180,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
         smartTimestampSetting = s;
         s.setName("Smart timestamp").addToggle((toggle) =>
           toggle.setValue(settings.smartTimestamp).onChange(async (value) => {
-            await this.plugin.persistenceManager.setGlobalSettings({
+            await this.plugin.persistenceManager.setPluginSettings({
               smartTimestamp: value,
             });
             updateSmartTimestampVisibility(value);
@@ -261,7 +214,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           .setPlaceholder("created time")
           .setValue(settings.createdTimeProperty)
           .onChange(async (value) => {
-            await this.plugin.persistenceManager.setGlobalSettings({
+            await this.plugin.persistenceManager.setPluginSettings({
               createdTimeProperty: value,
             });
           }),
@@ -275,7 +228,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           .setPlaceholder("modified time")
           .setValue(settings.modifiedTimeProperty)
           .onChange(async (value) => {
-            await this.plugin.persistenceManager.setGlobalSettings({
+            await this.plugin.persistenceManager.setPluginSettings({
               modifiedTimeProperty: value,
             });
           }),
@@ -309,7 +262,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               .addOption("disable", "Disable")
               .setValue(settings.revealInNotebookNavigator)
               .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   revealInNotebookNavigator: value as
                     | "disable"
                     | "files-folders"
@@ -327,7 +280,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
             toggle
               .setValue(settings.showYoutubeThumbnails)
               .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   showYoutubeThumbnails: value,
                 });
               }),
@@ -354,217 +307,11 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
             toggle
               .setValue(settings.showCardLinkCovers)
               .onChange(async (value) => {
-                await this.plugin.persistenceManager.setGlobalSettings({
+                await this.plugin.persistenceManager.setPluginSettings({
                   showCardLinkCovers: value,
                 });
               }),
           ),
-      );
-
-    // Configuration section
-    new SettingGroup(containerEl)
-      .setHeading("Configuration")
-      .addSetting((s) =>
-        s
-          .setName("Manage settings")
-          .setDesc("Back up plugin settings to a file or restore from backup.")
-          .addButton((button) =>
-            button.setButtonText("Import...").onClick(() => {
-              const input = document.createElement("input");
-              input.setAttrs({
-                type: "file",
-                accept: ".json",
-              });
-
-              input.onchange = () => {
-                const selectedFile = input.files?.[0];
-
-                if (!selectedFile) {
-                  input.remove();
-                  return;
-                }
-
-                const reader = new FileReader();
-                reader.readAsText(selectedFile, "UTF-8");
-
-                reader.onerror = () => {
-                  new Notice("Failed to read import file");
-                  input.remove();
-                };
-
-                reader.onload = async (readerEvent) => {
-                  let importedJson:
-                    | {
-                        globalSettings?: Partial<Settings>;
-                        defaultViewSettings?: Partial<DefaultViewSettings>;
-                      }
-                    | undefined;
-                  const content = readerEvent.target?.result;
-                  if (typeof content === "string") {
-                    try {
-                      importedJson = JSON.parse(content) as {
-                        globalSettings?: Partial<Settings>;
-                        defaultViewSettings?: Partial<DefaultViewSettings>;
-                      };
-                    } catch {
-                      new Notice("Invalid import file");
-                      console.error("Invalid import file");
-                      input.remove();
-                      return;
-                    }
-                  }
-
-                  if (importedJson) {
-                    // Merge imported settings with DEFAULT_SETTINGS structure
-                    const newGlobalSettings: Settings = Object.assign(
-                      {},
-                      DEFAULT_SETTINGS,
-                    );
-                    const newDefaultViewSettings: DefaultViewSettings =
-                      Object.assign({}, DEFAULT_VIEW_SETTINGS);
-
-                    // Import global settings
-                    if (importedJson.globalSettings) {
-                      for (const setting in importedJson.globalSettings) {
-                        if (setting in newGlobalSettings) {
-                          (
-                            newGlobalSettings as unknown as Record<
-                              string,
-                              unknown
-                            >
-                          )[setting] = (
-                            importedJson.globalSettings as Record<
-                              string,
-                              unknown
-                            >
-                          )[setting];
-                        }
-                      }
-                    }
-
-                    // Import default view settings
-                    if (importedJson.defaultViewSettings) {
-                      for (const setting in importedJson.defaultViewSettings) {
-                        if (setting in newDefaultViewSettings) {
-                          (
-                            newDefaultViewSettings as unknown as Record<
-                              string,
-                              unknown
-                            >
-                          )[setting] = (
-                            importedJson.defaultViewSettings as Record<
-                              string,
-                              unknown
-                            >
-                          )[setting];
-                        }
-                      }
-                    }
-
-                    // Save both settings - need to set the full objects
-                    await this.plugin.persistenceManager.setGlobalSettings(
-                      newGlobalSettings,
-                    );
-                    await this.plugin.persistenceManager.setDefaultViewSettings(
-                      newDefaultViewSettings,
-                    );
-
-                    // Show notification
-                    new Notice("Settings imported");
-
-                    // Re-render settings tab
-                    this.display();
-                  }
-
-                  input.remove();
-                };
-              };
-
-              input.click();
-            }),
-          )
-          .addButton((button) =>
-            button.setButtonText("Export...").onClick(async () => {
-              const globalSettings =
-                this.plugin.persistenceManager.getGlobalSettings();
-              const defaultViewSettings =
-                this.plugin.persistenceManager.getDefaultViewSettings();
-
-              const settingsText = JSON.stringify(
-                {
-                  globalSettings,
-                  defaultViewSettings,
-                },
-                null,
-                2,
-              );
-              const fileName = "dynamic-views-settings.json";
-
-              // Try navigator.share() for mobile (iOS/Android)
-              if (navigator.share && navigator.canShare) {
-                try {
-                  const blob = new Blob([settingsText], {
-                    type: "application/json",
-                  });
-                  const file = new File([blob], fileName, {
-                    type: "application/json",
-                  });
-
-                  if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                      files: [file],
-                      title: "Dynamic Views Settings",
-                    });
-                    return;
-                  }
-                } catch (error) {
-                  console.error("Share failed:", error);
-                  // Fall through to download link
-                }
-              }
-
-              // Fallback for desktop: download link
-              const exportLink = document.createElement("a");
-              exportLink.setAttrs({
-                download: fileName,
-                href: `data:application/json;charset=utf-8,${encodeURIComponent(settingsText)}`,
-              });
-              exportLink.click();
-            }),
-          ),
-      )
-      .addSetting((s) =>
-        s
-          .setName("Clear settings")
-          .setDesc("Reset all plugin settings to their default values.")
-          .addButton((button) => {
-            button.buttonEl.addClass("mod-warning");
-            button.setButtonText("Clear").onClick(() => {
-              new ClearSettingsModal(this.app, this.plugin, async () => {
-                // Reset all settings to defaults with deep copy
-                const newGlobalSettings: Settings = JSON.parse(
-                  JSON.stringify(DEFAULT_SETTINGS),
-                ) as Settings;
-                const newDefaultViewSettings: DefaultViewSettings = JSON.parse(
-                  JSON.stringify(DEFAULT_VIEW_SETTINGS),
-                ) as DefaultViewSettings;
-
-                // Save the cleared settings
-                await this.plugin.persistenceManager.setGlobalSettings(
-                  newGlobalSettings,
-                );
-                await this.plugin.persistenceManager.setDefaultViewSettings(
-                  newDefaultViewSettings,
-                );
-
-                // Show notification
-                new Notice("Settings cleared");
-
-                // Re-render settings tab
-                this.display();
-              }).open();
-            });
-          }),
       );
 
     // Feedback button

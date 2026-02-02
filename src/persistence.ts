@@ -83,10 +83,7 @@ export class PersistenceManager {
     return state ? { ...state } : { ...DEFAULT_UI_STATE };
   }
 
-  async setUIState(
-    file: TFile | null,
-    state: Partial<UIState>,
-  ): Promise<void> {
+  async setUIState(file: TFile | null, state: Partial<UIState>): Promise<void> {
     const key = this.getFileKey(file);
     if (!key) return;
 

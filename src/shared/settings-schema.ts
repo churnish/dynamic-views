@@ -3,8 +3,8 @@
  * Defines settings structure for both Bases and Datacore views
  */
 
-import type { Settings, DefaultViewSettings } from "../types";
-import { DEFAULT_VIEW_SETTINGS } from "../constants";
+import type { PluginSettings, ViewDefaults, ResolvedSettings } from "../types";
+import { VIEW_DEFAULTS, DATACORE_DEFAULTS } from "../constants";
 
 // Bases config object interface
 interface BasesConfig {
@@ -27,7 +27,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
   // Merge settings template into defaults (if template exists)
   // For new views: config is empty → controls show these defaults = template values
   // For existing views: config has values → these defaults are ignored by Obsidian
-  const d = { ...DEFAULT_VIEW_SETTINGS };
+  const d = { ...VIEW_DEFAULTS };
   if (viewType) {
     try {
       // Access plugin instance to read settings template
@@ -333,16 +333,15 @@ export function getMasonryViewOptions(): any[] {
 
 /**
  * Read settings from Bases config
- * Maps Bases config values to Settings object
+ * Maps Bases config values to ResolvedSettings by merging:
+ *   VIEW_DEFAULTS (overridden by config) + DATACORE_DEFAULTS + pluginSettings
  */
 export function readBasesSettings(
   config: BasesConfig,
-  globalSettings: Settings,
-  defaultViewSettings: DefaultViewSettings,
+  pluginSettings: PluginSettings,
   viewType?: "grid" | "masonry",
-): Settings {
-  // Null guard
-  const defaults = defaultViewSettings || DEFAULT_VIEW_SETTINGS;
+): ResolvedSettings {
+  const defaults = VIEW_DEFAULTS;
 
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)
@@ -368,20 +367,17 @@ export function readBasesSettings(
       : fallback;
   };
 
-  return {
-    // Card size
+  // Read ViewDefaults from Bases config
+  const viewSettings: ViewDefaults = {
     cardSize: getNumber("cardSize", defaults.cardSize),
-    // Header
     titleProperty: getString("titleProperty", defaults.titleProperty),
     subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
-    // Text preview
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,
     ),
     fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
     textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
-    // Image
     imageProperty: getString("imageProperty", defaults.imageProperty),
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
@@ -422,7 +418,6 @@ export function readBasesSettings(
         : defaults.imageFit;
     })(),
     imageAspectRatio: getNumber("imageAspectRatio", defaults.imageAspectRatio),
-    // Properties
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
       return value === "hide" || value === "inline" || value === "above"
@@ -451,7 +446,6 @@ export function readBasesSettings(
       defaults.invertPositionForProperty,
     ),
     urlProperty: getString("urlProperty", defaults.urlProperty),
-    // Other
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
       const parsed = typeof value === "string" ? parseInt(value, 10) : value;
@@ -467,68 +461,24 @@ export function readBasesSettings(
         : defaults.ambientBackground;
     })(),
     cssclasses: getString("cssclasses", defaults.cssclasses),
-    // Non-UI
-    listMarker: (() => {
-      const value = config.get("listMarker");
-      return value === "bullet" || value === "number"
-        ? value
-        : defaults.listMarker;
-    })(),
-    queryHeight: 0, // Not configurable in Bases
-    // Datacore-only: pass through from global settings (kept until Datacore refactor)
-    propertyDisplay1: globalSettings.propertyDisplay1,
-    propertyDisplay2: globalSettings.propertyDisplay2,
-    propertyDisplay3: globalSettings.propertyDisplay3,
-    propertyDisplay4: globalSettings.propertyDisplay4,
-    propertyDisplay5: globalSettings.propertyDisplay5,
-    propertyDisplay6: globalSettings.propertyDisplay6,
-    propertyDisplay7: globalSettings.propertyDisplay7,
-    propertyDisplay8: globalSettings.propertyDisplay8,
-    propertyDisplay9: globalSettings.propertyDisplay9,
-    propertyDisplay10: globalSettings.propertyDisplay10,
-    propertyDisplay11: globalSettings.propertyDisplay11,
-    propertyDisplay12: globalSettings.propertyDisplay12,
-    propertyDisplay13: globalSettings.propertyDisplay13,
-    propertyDisplay14: globalSettings.propertyDisplay14,
-    propertySet1SideBySide: globalSettings.propertySet1SideBySide,
-    propertySet2SideBySide: globalSettings.propertySet2SideBySide,
-    propertySet3SideBySide: globalSettings.propertySet3SideBySide,
-    propertySet4SideBySide: globalSettings.propertySet4SideBySide,
-    propertySet5SideBySide: globalSettings.propertySet5SideBySide,
-    propertySet6SideBySide: globalSettings.propertySet6SideBySide,
-    propertySet7SideBySide: globalSettings.propertySet7SideBySide,
-    propertySet1Above: globalSettings.propertySet1Above,
-    propertySet2Above: globalSettings.propertySet2Above,
-    propertySet3Above: globalSettings.propertySet3Above,
-    propertySet4Above: globalSettings.propertySet4Above,
-    propertySet5Above: globalSettings.propertySet5Above,
-    propertySet6Above: globalSettings.propertySet6Above,
-    propertySet7Above: globalSettings.propertySet7Above,
-    // Settings-only (not configurable per-view in Bases)
-    omitFirstLine: globalSettings.omitFirstLine,
-    randomizeAction: globalSettings.randomizeAction,
-    openFileAction: globalSettings.openFileAction,
-    openRandomInNewTab: globalSettings.openRandomInNewTab,
-    smartTimestamp: globalSettings.smartTimestamp,
-    createdTimeProperty: globalSettings.createdTimeProperty,
-    modifiedTimeProperty: globalSettings.modifiedTimeProperty,
-    showYoutubeThumbnails: globalSettings.showYoutubeThumbnails,
-    showCardLinkCovers: globalSettings.showCardLinkCovers,
-    preventSidebarSwipe: globalSettings.preventSidebarSwipe,
-    revealInNotebookNavigator: globalSettings.revealInNotebookNavigator,
+  };
+
+  // Merge: pluginSettings + config-derived ViewDefaults + DATACORE_DEFAULTS
+  return {
+    ...pluginSettings,
+    ...viewSettings,
+    ...DATACORE_DEFAULTS,
   };
 }
 
 /**
  * Extract view-specific settings from Bases config for template storage
- * @param config Bases view configuration
- * @param defaults Default view settings for fallback values
- * @returns Partial settings object suitable for template storage
+ * Only extracts ViewDefaults keys (no Datacore-specific fields)
  */
 export function extractBasesTemplate(
   config: BasesConfig,
-  defaults: DefaultViewSettings,
-): Partial<DefaultViewSettings> {
+  defaults: ViewDefaults,
+): Partial<ViewDefaults> {
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)
   const getString = (key: string, fallback: string): string => {
@@ -554,19 +504,15 @@ export function extractBasesTemplate(
   };
 
   return {
-    // Card size
     cardSize: getNumber("cardSize", defaults.cardSize),
-    // Header
     titleProperty: getString("titleProperty", defaults.titleProperty),
     subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
-    // Text preview
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,
     ),
     fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
     textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
-    // Image
     imageProperty: getString("imageProperty", defaults.imageProperty),
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
@@ -607,7 +553,6 @@ export function extractBasesTemplate(
         : defaults.imageFit;
     })(),
     imageAspectRatio: getNumber("imageAspectRatio", defaults.imageAspectRatio),
-    // Properties
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
       return value === "hide" || value === "inline" || value === "above"
@@ -636,7 +581,6 @@ export function extractBasesTemplate(
       defaults.invertPositionForProperty,
     ),
     urlProperty: getString("urlProperty", defaults.urlProperty),
-    // Other
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
       const parsed = typeof value === "string" ? parseInt(value, 10) : value;
@@ -651,13 +595,5 @@ export function extractBasesTemplate(
         : defaults.ambientBackground;
     })(),
     cssclasses: getString("cssclasses", defaults.cssclasses),
-    // Non-UI
-    listMarker: (() => {
-      const value = config.get("listMarker");
-      return value === "bullet" || value === "number"
-        ? value
-        : defaults.listMarker;
-    })(),
-    queryHeight: 0,
   };
 }

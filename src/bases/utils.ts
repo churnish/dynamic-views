@@ -28,7 +28,8 @@ import {
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
 } from "../utils/notebook-navigator";
-import type { Settings, DefaultViewSettings } from "../types";
+import type { PluginSettings, ResolvedSettings } from "../types";
+import { VIEW_DEFAULTS } from "../constants";
 import type DynamicViews from "../../main";
 
 // Bases config interface for initialization (get/set only - getAll handled by tryGetAllConfig)
@@ -120,8 +121,8 @@ export function initializeViewDefaults(
     return;
   }
 
-  // Fresh view - check for settings template or use defaults
-  let defaults: Partial<DefaultViewSettings>;
+  // Fresh view - check for settings template or use VIEW_DEFAULTS
+  let defaults: Partial<typeof VIEW_DEFAULTS>;
   const settingsTemplate =
     plugin.persistenceManager.getSettingsTemplate(viewType);
 
@@ -132,8 +133,8 @@ export function initializeViewDefaults(
   if (settingsTemplate) {
     defaults = settingsTemplate.settings;
   } else {
-    console.log("[initializeViewDefaults] No template, using global defaults");
-    defaults = plugin.persistenceManager.getDefaultViewSettings();
+    console.log("[initializeViewDefaults] No template, using VIEW_DEFAULTS");
+    defaults = VIEW_DEFAULTS;
   }
 
   // Initialize with defaults
@@ -182,10 +183,6 @@ export function initializeViewDefaults(
   if (defaults?.propertyLabels !== undefined) {
     safeConfigSet(config, "propertyLabels", defaults.propertyLabels);
   }
-  if (defaults?.listMarker !== undefined) {
-    safeConfigSet(config, "listMarker", defaults.listMarker);
-  }
-
   // New property settings
   if (defaults?.pairProperties !== undefined) {
     safeConfigSet(config, "pairProperties", defaults.pairProperties);
@@ -273,13 +270,13 @@ export function isEmbeddedView(containerEl: HTMLElement): boolean {
 export function setupBasesSwipeInterception(
   containerEl: HTMLElement,
   app: App,
-  globalSettings: Settings,
+  pluginSettings: PluginSettings,
 ): AbortController | null {
   const isEmbedded = isEmbeddedView(containerEl);
   const shouldIntercept =
     app.isMobile &&
-    (globalSettings.preventSidebarSwipe === "all-views" ||
-      (globalSettings.preventSidebarSwipe === "base-files" && !isEmbedded));
+    (pluginSettings.preventSidebarSwipe === "all-views" ||
+      (pluginSettings.preventSidebarSwipe === "base-files" && !isEmbedded));
 
   if (shouldIntercept) {
     const controller = new AbortController();
@@ -707,7 +704,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
  */
 export async function loadContentForEntries(
   entries: BasesEntry[],
-  settings: Settings,
+  settings: ResolvedSettings,
   app: App,
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
