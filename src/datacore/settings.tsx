@@ -151,7 +151,7 @@ export function Settings({
 
   // Template toggle state - check if template exists
   const [isTemplate, setIsTemplate] = dc.useState(
-    plugin.persistenceManager.getSettingsTemplate(templateType) !== null,
+    plugin.persistenceManager.getSettingsTemplate(templateType) != null,
   );
 
   const handleToggleTemplate = (enabled: boolean) => {

@@ -7,11 +7,7 @@ import type {
   UIState,
   SettingsTemplate,
 } from "./types";
-import {
-  PLUGIN_SETTINGS,
-  DEFAULT_UI_STATE,
-  DEFAULT_TEMPLATE_VIEWS,
-} from "./constants";
+import { PLUGIN_SETTINGS, DEFAULT_UI_STATE } from "./constants";
 import { sanitizeObject, sanitizeString } from "./utils/sanitize";
 
 export class PersistenceManager {
@@ -22,7 +18,7 @@ export class PersistenceManager {
     this.plugin = plugin;
     this.data = {
       pluginSettings: {},
-      templates: { ...DEFAULT_TEMPLATE_VIEWS },
+      templates: {},
       queryStates: {},
       viewSettings: {},
     };
@@ -34,7 +30,7 @@ export class PersistenceManager {
     if (loadedData) {
       this.data = {
         pluginSettings: loadedData.pluginSettings || {},
-        templates: loadedData.templates || { ...DEFAULT_TEMPLATE_VIEWS },
+        templates: loadedData.templates || {},
         queryStates: loadedData.queryStates || {},
         viewSettings: loadedData.viewSettings || {},
       };
@@ -151,10 +147,8 @@ export class PersistenceManager {
 
   getSettingsTemplate(
     viewType: "grid" | "masonry" | "datacore",
-  ): SettingsTemplate | null {
-    const template = this.data.templates[viewType];
-    if (!template) return null;
-    return template;
+  ): SettingsTemplate | undefined {
+    return this.data.templates[viewType];
   }
 
   async setSettingsTemplate(
@@ -165,7 +159,11 @@ export class PersistenceManager {
       `[PersistenceManager] setSettingsTemplate(${viewType}):`,
       template ? `saving (timestamp: ${template.setAt})` : "clearing",
     );
-    this.data.templates[viewType] = template;
+    if (template) {
+      this.data.templates[viewType] = template;
+    } else {
+      delete this.data.templates[viewType];
+    }
     await this.save();
   }
 }

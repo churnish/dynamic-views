@@ -109,11 +109,7 @@ export interface SettingsTemplate {
 
 export interface PluginData {
   pluginSettings: Partial<PluginSettings>;
-  templates: {
-    grid: SettingsTemplate | null;
-    masonry: SettingsTemplate | null;
-    datacore: SettingsTemplate | null;
-  };
+  templates: Partial<Record<"grid" | "masonry" | "datacore", SettingsTemplate>>;
   queryStates: Record<string, UIState>;
   viewSettings: Record<string, Partial<ViewDefaults & DatacoreDefaults>>;
 }

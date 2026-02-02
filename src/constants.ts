@@ -111,10 +111,4 @@ export const DEFAULT_UI_STATE = {
   collapsedGroups: [] as string[],
 };
 
-export const DEFAULT_TEMPLATE_VIEWS = {
-  grid: null,
-  masonry: null,
-  datacore: null,
-};
-
 export const STORAGE_KEY_PREFIX = "dynamic-views";
