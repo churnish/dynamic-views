@@ -257,14 +257,6 @@ export function getFirstBasesPropertyValue(
           }
         }
       }
-
-      // Not found in frontmatter - try as formula property
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-        value = entry.getValue(`formula.${prop}` as any);
-      } catch {
-        continue;
-      }
     }
 
     // Return first valid value found (both regular and formula properties use {data: value} structure)
@@ -320,21 +312,8 @@ export function getFirstBasesDatePropertyValue(
     .filter((p) => p);
 
   for (const prop of properties) {
-    // Try property as-is first, then with formula. prefix if not found
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-    let value = entry.getValue(prop as any);
-
-    // If property not found (error object with icon), try as formula property
-    if (
-      value &&
-      typeof value === "object" &&
-      "icon" in value &&
-      !("data" in value) &&
-      !("date" in value)
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-      value = entry.getValue(`formula.${prop}` as any);
-    }
+    const value = entry.getValue(prop as any);
 
     // Return first valid date value found
     if (
@@ -397,20 +376,8 @@ export function getAllBasesImagePropertyValues(
   const allImages: string[] = [];
 
   for (const prop of properties) {
-    // Try property as-is first, then with formula. prefix if not found
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-    let value = entry.getValue(prop as any);
-
-    // If property not found (error object with icon), try as formula property
-    if (
-      value &&
-      typeof value === "object" &&
-      "icon" in value &&
-      !("data" in value)
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-      value = entry.getValue(`formula.${prop}` as any);
-    }
+    const value = entry.getValue(prop as any);
 
     // Extract data from {data: value} structure (both regular and formula properties use this)
     if (!value || !(typeof value === "object" && "data" in value)) continue;

@@ -49,11 +49,8 @@ describe("property", () => {
       expect(result).toEqual({ data: "test value" });
     });
 
-    it("should try formula prefix if property not found", () => {
-      mockEntry.getValue = jest
-        .fn()
-        .mockReturnValueOnce({ icon: "error" }) // Property not found (error object)
-        .mockReturnValueOnce({ data: "formula value" }); // Formula property exists
+    it("should not try formula prefix for bare names", () => {
+      mockEntry.getValue = jest.fn().mockReturnValue({ icon: "error" });
 
       const result = getFirstBasesPropertyValue(
         mockApp,
@@ -61,8 +58,8 @@ describe("property", () => {
         "customProp",
       );
       expect(mockEntry.getValue).toHaveBeenCalledWith("customProp");
-      expect(mockEntry.getValue).toHaveBeenCalledWith("formula.customProp");
-      expect(result).toEqual({ data: "formula value" });
+      expect(mockEntry.getValue).not.toHaveBeenCalledWith("formula.customProp");
+      expect(result).toBeNull();
     });
 
     it("should handle comma-separated properties", () => {
@@ -186,14 +183,17 @@ describe("property", () => {
       expect(result.date).toBeInstanceOf(Date);
     });
 
-    it("should try formula prefix for date properties", () => {
-      mockEntry.getValue = jest
-        .fn()
-        .mockReturnValueOnce({ icon: "error" })
-        .mockReturnValueOnce({ date: new Date() });
+    it("should not try formula prefix for bare names", () => {
+      mockEntry.getValue = jest.fn().mockReturnValue({ icon: "error" });
 
-      getFirstBasesDatePropertyValue(mockApp, mockEntry, "dateProp");
-      expect(mockEntry.getValue).toHaveBeenCalledWith("formula.dateProp");
+      const result = getFirstBasesDatePropertyValue(
+        mockApp,
+        mockEntry,
+        "dateProp",
+      );
+      expect(mockEntry.getValue).toHaveBeenCalledWith("dateProp");
+      expect(mockEntry.getValue).not.toHaveBeenCalledWith("formula.dateProp");
+      expect(result).toBeNull();
     });
   });
 
@@ -329,14 +329,13 @@ describe("property", () => {
       expect(result).toEqual(["img1.png", "42", "img2.jpg"]);
     });
 
-    it("should try formula properties", () => {
-      mockEntry.getValue = jest
-        .fn()
-        .mockReturnValueOnce({ icon: "error" })
-        .mockReturnValueOnce({ data: "formula-img.png" });
+    it("should not try formula prefix for bare names", () => {
+      mockEntry.getValue = jest.fn().mockReturnValue({ icon: "error" });
 
       const result = getAllBasesImagePropertyValues(mockApp, mockEntry, "img");
-      expect(result).toEqual(["formula-img.png"]);
+      expect(mockEntry.getValue).toHaveBeenCalledWith("img");
+      expect(mockEntry.getValue).not.toHaveBeenCalledWith("formula.img");
+      expect(result).toEqual([]);
     });
   });
 
