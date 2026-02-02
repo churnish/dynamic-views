@@ -479,9 +479,6 @@ export class DynamicViewsMasonryView extends BasesView {
           this.plugin,
         );
         if (isStale) {
-          console.log(
-            `[masonry-view] Stale template toggle (view: ${existingTimestamp}), disabling`,
-          );
           this.config.set("__isTemplate", false);
           this.previousIsTemplate = false;
           return;
@@ -491,17 +488,12 @@ export class DynamicViewsMasonryView extends BasesView {
         // User just enabled toggle — set timestamp + clear other views
         const timestamp = Date.now();
         this.config.set("__templateSetAt", timestamp);
-        console.log(`[masonry-view] New template timestamp: ${timestamp}`);
         clearOldTemplateToggles(this.app, MASONRY_VIEW_TYPE, this);
 
         // Save settings template
         const templateSettings = extractBasesTemplate(
           this.config,
           VIEW_DEFAULTS,
-        );
-        console.log(
-          "[masonry-view] Saving settings template:",
-          templateSettings,
         );
         void this.plugin.persistenceManager.setSettingsTemplate("masonry", {
           settings: templateSettings,
@@ -512,7 +504,6 @@ export class DynamicViewsMasonryView extends BasesView {
       // Toggle turned OFF — clear template if this view was the template
       const hadTimestamp = this.config.get("__templateSetAt") !== undefined;
       if (hadTimestamp) {
-        console.log("[masonry-view] Clearing settings template");
         this.config.set("__templateSetAt", undefined);
         void this.plugin.persistenceManager.setSettingsTemplate(
           "masonry",
@@ -538,22 +529,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     });
 
-    // DEBUG: Log scrollEl state before creating new container
-    console.log(
-      "[masonry-view] Constructor - scrollEl children count:",
-      scrollEl.children.length,
-    );
-
     // Create container inside scroll parent
     this.containerEl = scrollEl.createDiv({
       cls: "dynamic-views dynamic-views-bases-container",
     });
-
-    // DEBUG: Log after creating new container
-    console.log(
-      "[masonry-view] Constructor - containerEl created, scrollEl children count:",
-      scrollEl.children.length,
-    );
     // Access plugin from controller's app
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     this.plugin = (this.app as any).plugins.plugins[
@@ -674,10 +653,6 @@ export class DynamicViewsMasonryView extends BasesView {
     // Initialize view defaults on first render (config is now available)
     if (!this.hasInitializedDefaults) {
       const allKeys = tryGetAllConfig(this.config);
-      console.log(
-        "[masonry-view] onDataUpdated - First render, allKeys:",
-        allKeys,
-      );
       if (allKeys) {
         try {
           initializeViewDefaults(
@@ -2063,16 +2038,6 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   onunload(): void {
-    // DEBUG: Log before cleanup
-    console.log(
-      "[masonry-view] onunload - START, scrollEl children count:",
-      this.scrollEl.children.length,
-    );
-    console.log(
-      "[masonry-view] onunload - containerEl isConnected:",
-      this.containerEl?.isConnected,
-    );
-
     this.scrollPreservation?.cleanup();
     this.swipeAbortController?.abort();
     this.renderState.abortController?.abort();
@@ -2096,16 +2061,6 @@ export class DynamicViewsMasonryView extends BasesView {
     cleanupVisibilityObserver();
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
-
-    // DEBUG: Log after cleanup (before potential DOM removal)
-    console.log(
-      "[masonry-view] onunload - END, scrollEl children count:",
-      this.scrollEl.children.length,
-    );
-    console.log(
-      "[masonry-view] onunload - containerEl still isConnected:",
-      this.containerEl?.isConnected,
-    );
   }
 
   focus(): void {
