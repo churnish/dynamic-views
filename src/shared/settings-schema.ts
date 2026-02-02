@@ -291,7 +291,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
             one: "One",
             two: "Two",
           },
-          default: viewType === "masonry" ? "two" : (d.minimumColumns ?? "one"),
+          default: viewType === "masonry" ? "two" : "one",
         },
         {
           type: "dropdown",
