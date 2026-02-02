@@ -1,14 +1,38 @@
 import { Settings, DefaultViewSettings } from "./types";
 
 export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
+  // Card size
+  cardSize: 400,
+  // Header
   titleProperty: "file.name",
+  subtitleProperty: "file.folder",
+  // Text preview
   textPreviewProperty: "",
+  fallbackToContent: true,
+  textPreviewLines: 5,
+  // Image
   imageProperty: "",
-  urlProperty: "url",
+  fallbackToEmbeds: "always",
+  imageFormat: "thumbnail",
+  thumbnailSize: "standard",
+  imagePosition: "right",
+  imageFit: "crop",
+  imageAspectRatio: 1.0,
+  // Properties
+  propertyLabels: "hide",
   pairProperties: true,
+  pairedPropertyLayout: "snap-to-edges",
   invertPairingForProperty: "",
   showPropertiesAbove: false,
   invertPositionForProperty: "",
+  urlProperty: "url",
+  // Other
+  minimumColumns: 1,
+  ambientBackground: "disable",
+  cssclasses: "",
+  // Non-UI
+  listMarker: "bullet",
+  queryHeight: 0,
   // Datacore-only defaults (kept until Datacore refactor)
   propertyDisplay1: "file.tags",
   propertyDisplay2: "file.mtime",
@@ -38,38 +62,41 @@ export const DEFAULT_VIEW_SETTINGS: DefaultViewSettings = {
   propertySet5Above: false,
   propertySet6Above: false,
   propertySet7Above: false,
-  cssclasses: "",
-  propertyLabels: "hide",
-  subtitleProperty: "file.folder",
-  fallbackToContent: true,
-  fallbackToEmbeds: "always",
-  imageFormat: "thumbnail",
-  imagePosition: "right",
-  imageFit: "crop",
-  imageAspectRatio: 1.0,
-  queryHeight: 0,
-  listMarker: "bullet",
-  cardSize: 400,
-  textPreviewLines: 5,
-  thumbnailSize: "standard",
-  pairedPropertyLayout: "snap-to-edges",
-  minimumColumns: 1,
-  ambientBackground: "disable",
 };
 
 export const DEFAULT_SETTINGS: Settings = {
+  // Card size
+  cardSize: 400,
+  // Header
   titleProperty: "file.name",
-  textPreviewProperty: "",
-  imageProperty: "",
-  urlProperty: "url",
-  omitFirstLine: "ifMatchesTitle",
   subtitleProperty: "file.folder",
+  // Text preview
+  textPreviewProperty: "",
   fallbackToContent: true,
+  textPreviewLines: 5,
+  // Image
+  imageProperty: "",
   fallbackToEmbeds: "always",
+  imageFormat: "thumbnail",
+  thumbnailSize: "standard",
+  imagePosition: "right",
+  imageFit: "crop",
+  imageAspectRatio: 1.0,
+  // Properties
+  propertyLabels: "hide",
   pairProperties: true,
+  pairedPropertyLayout: "snap-to-edges",
   invertPairingForProperty: "",
   showPropertiesAbove: false,
   invertPositionForProperty: "",
+  urlProperty: "url",
+  // Other
+  minimumColumns: 1,
+  ambientBackground: "disable",
+  cssclasses: "",
+  // Non-UI
+  listMarker: "bullet",
+  queryHeight: 0,
   // Datacore-only defaults (kept until Datacore refactor)
   propertyDisplay1: "file.tags",
   propertyDisplay2: "file.mtime",
@@ -99,30 +126,18 @@ export const DEFAULT_SETTINGS: Settings = {
   propertySet5Above: false,
   propertySet6Above: false,
   propertySet7Above: false,
-  cssclasses: "",
-  propertyLabels: "hide",
-  imageFormat: "thumbnail",
-  imagePosition: "right",
-  imageFit: "crop",
-  imageAspectRatio: 1.0,
-  listMarker: "bullet",
+  // Settings-only
+  omitFirstLine: "ifMatchesTitle",
   randomizeAction: "shuffle",
-  queryHeight: 0,
   openFileAction: "card",
   openRandomInNewTab: true,
   smartTimestamp: true,
   createdTimeProperty: "created time",
   modifiedTimeProperty: "modified time",
-  cardSize: 400,
   preventSidebarSwipe: "disabled",
   revealInNotebookNavigator: "disable",
   showYoutubeThumbnails: true,
   showCardLinkCovers: true,
-  textPreviewLines: 5,
-  thumbnailSize: "standard",
-  pairedPropertyLayout: "snap-to-edges",
-  minimumColumns: 1,
-  ambientBackground: "disable",
 };
 
 export const DEFAULT_UI_STATE = {

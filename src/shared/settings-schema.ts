@@ -369,20 +369,20 @@ export function readBasesSettings(
   };
 
   return {
-    // String properties
+    // Card size
+    cardSize: getNumber("cardSize", defaults.cardSize),
+    // Header
     titleProperty: getString("titleProperty", defaults.titleProperty),
+    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
+    // Text preview
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,
     ),
-    imageProperty: getString("imageProperty", defaults.imageProperty),
-    urlProperty: getString("urlProperty", defaults.urlProperty),
-    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
-
-    // Boolean properties
     fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
-
-    // Enum: fallbackToEmbeds
+    textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
+    // Image
+    imageProperty: getString("imageProperty", defaults.imageProperty),
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
       return value === "always" ||
@@ -391,34 +391,6 @@ export function readBasesSettings(
         ? value
         : defaults.fallbackToEmbeds;
     })(),
-
-    // Property display settings
-    pairProperties: getBool("pairProperties", defaults.pairProperties),
-    invertPairingForProperty: getString(
-      "invertPairingForProperty",
-      defaults.invertPairingForProperty,
-    ),
-    showPropertiesAbove: getBool(
-      "showPropertiesAbove",
-      defaults.showPropertiesAbove,
-    ),
-    invertPositionForProperty: getString(
-      "invertPositionForProperty",
-      defaults.invertPositionForProperty,
-    ),
-
-    // CSS classes for view container
-    cssclasses: getString("cssclasses", defaults.cssclasses),
-
-    // Enum: propertyLabels
-    propertyLabels: (() => {
-      const value = config.get("propertyLabels");
-      return value === "hide" || value === "inline" || value === "above"
-        ? value
-        : defaults.propertyLabels;
-    })(),
-
-    // Image settings
     imageFormat: (() => {
       const value = config.get("imageFormat");
       return value === "thumbnail" ||
@@ -427,6 +399,12 @@ export function readBasesSettings(
         value === "backdrop"
         ? value
         : defaults.imageFormat;
+    })(),
+    thumbnailSize: (() => {
+      const value = config.get("thumbnailSize");
+      return value === "compact" || value === "standard" || value === "expanded"
+        ? value
+        : defaults.thumbnailSize;
     })(),
     imagePosition: (() => {
       const value = config.get("imagePosition");
@@ -444,24 +422,14 @@ export function readBasesSettings(
         : defaults.imageFit;
     })(),
     imageAspectRatio: getNumber("imageAspectRatio", defaults.imageAspectRatio),
-    cardSize: getNumber("cardSize", defaults.cardSize),
-
-    // Enum: listMarker
-    listMarker: (() => {
-      const value = config.get("listMarker");
-      return value === "bullet" || value === "number"
+    // Properties
+    propertyLabels: (() => {
+      const value = config.get("propertyLabels");
+      return value === "hide" || value === "inline" || value === "above"
         ? value
-        : defaults.listMarker;
+        : defaults.propertyLabels;
     })(),
-
-    // Per-view settings (migrated from Style Settings)
-    textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
-    thumbnailSize: (() => {
-      const value = config.get("thumbnailSize");
-      return value === "compact" || value === "standard" || value === "expanded"
-        ? value
-        : defaults.thumbnailSize;
-    })(),
+    pairProperties: getBool("pairProperties", defaults.pairProperties),
     pairedPropertyLayout: (() => {
       const value = config.get("pairedPropertyLayout");
       return value === "align-left" ||
@@ -470,6 +438,20 @@ export function readBasesSettings(
         ? value
         : defaults.pairedPropertyLayout;
     })(),
+    invertPairingForProperty: getString(
+      "invertPairingForProperty",
+      defaults.invertPairingForProperty,
+    ),
+    showPropertiesAbove: getBool(
+      "showPropertiesAbove",
+      defaults.showPropertiesAbove,
+    ),
+    invertPositionForProperty: getString(
+      "invertPositionForProperty",
+      defaults.invertPositionForProperty,
+    ),
+    urlProperty: getString("urlProperty", defaults.urlProperty),
+    // Other
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
       const parsed = typeof value === "string" ? parseInt(value, 10) : value;
@@ -484,7 +466,15 @@ export function readBasesSettings(
         ? value
         : defaults.ambientBackground;
     })(),
-
+    cssclasses: getString("cssclasses", defaults.cssclasses),
+    // Non-UI
+    listMarker: (() => {
+      const value = config.get("listMarker");
+      return value === "bullet" || value === "number"
+        ? value
+        : defaults.listMarker;
+    })(),
+    queryHeight: 0, // Not configurable in Bases
     // Datacore-only: pass through from global settings (kept until Datacore refactor)
     propertyDisplay1: globalSettings.propertyDisplay1,
     propertyDisplay2: globalSettings.propertyDisplay2,
@@ -514,11 +504,9 @@ export function readBasesSettings(
     propertySet5Above: globalSettings.propertySet5Above,
     propertySet6Above: globalSettings.propertySet6Above,
     propertySet7Above: globalSettings.propertySet7Above,
-
-    // Global settings (not configurable per-view in Bases)
+    // Settings-only (not configurable per-view in Bases)
     omitFirstLine: globalSettings.omitFirstLine,
     randomizeAction: globalSettings.randomizeAction,
-    queryHeight: 0, // Not configurable in Bases
     openFileAction: globalSettings.openFileAction,
     openRandomInNewTab: globalSettings.openRandomInNewTab,
     smartTimestamp: globalSettings.smartTimestamp,
@@ -566,20 +554,20 @@ export function extractBasesTemplate(
   };
 
   return {
-    // String properties
+    // Card size
+    cardSize: getNumber("cardSize", defaults.cardSize),
+    // Header
     titleProperty: getString("titleProperty", defaults.titleProperty),
+    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
+    // Text preview
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,
     ),
-    imageProperty: getString("imageProperty", defaults.imageProperty),
-    urlProperty: getString("urlProperty", defaults.urlProperty),
-    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
-
-    // Boolean properties
     fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
-
-    // Enum: fallbackToEmbeds
+    textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
+    // Image
+    imageProperty: getString("imageProperty", defaults.imageProperty),
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
       return value === "always" ||
@@ -588,34 +576,6 @@ export function extractBasesTemplate(
         ? value
         : defaults.fallbackToEmbeds;
     })(),
-
-    // Property display settings
-    pairProperties: getBool("pairProperties", defaults.pairProperties),
-    invertPairingForProperty: getString(
-      "invertPairingForProperty",
-      defaults.invertPairingForProperty,
-    ),
-    showPropertiesAbove: getBool(
-      "showPropertiesAbove",
-      defaults.showPropertiesAbove,
-    ),
-    invertPositionForProperty: getString(
-      "invertPositionForProperty",
-      defaults.invertPositionForProperty,
-    ),
-
-    // CSS classes for view container
-    cssclasses: getString("cssclasses", defaults.cssclasses),
-
-    // Enum: propertyLabels
-    propertyLabels: (() => {
-      const value = config.get("propertyLabels");
-      return value === "hide" || value === "inline" || value === "above"
-        ? value
-        : defaults.propertyLabels;
-    })(),
-
-    // Image settings
     imageFormat: (() => {
       const value = config.get("imageFormat");
       return value === "thumbnail" ||
@@ -624,6 +584,12 @@ export function extractBasesTemplate(
         value === "backdrop"
         ? value
         : defaults.imageFormat;
+    })(),
+    thumbnailSize: (() => {
+      const value = config.get("thumbnailSize");
+      return value === "compact" || value === "standard" || value === "expanded"
+        ? value
+        : defaults.thumbnailSize;
     })(),
     imagePosition: (() => {
       const value = config.get("imagePosition");
@@ -641,24 +607,14 @@ export function extractBasesTemplate(
         : defaults.imageFit;
     })(),
     imageAspectRatio: getNumber("imageAspectRatio", defaults.imageAspectRatio),
-    cardSize: getNumber("cardSize", defaults.cardSize),
-
-    // Enum: listMarker
-    listMarker: (() => {
-      const value = config.get("listMarker");
-      return value === "bullet" || value === "number"
+    // Properties
+    propertyLabels: (() => {
+      const value = config.get("propertyLabels");
+      return value === "hide" || value === "inline" || value === "above"
         ? value
-        : defaults.listMarker;
+        : defaults.propertyLabels;
     })(),
-
-    // Per-view settings (migrated from Style Settings)
-    textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
-    thumbnailSize: (() => {
-      const value = config.get("thumbnailSize");
-      return value === "compact" || value === "standard" || value === "expanded"
-        ? value
-        : defaults.thumbnailSize;
-    })(),
+    pairProperties: getBool("pairProperties", defaults.pairProperties),
     pairedPropertyLayout: (() => {
       const value = config.get("pairedPropertyLayout");
       return value === "align-left" ||
@@ -667,6 +623,20 @@ export function extractBasesTemplate(
         ? value
         : defaults.pairedPropertyLayout;
     })(),
+    invertPairingForProperty: getString(
+      "invertPairingForProperty",
+      defaults.invertPairingForProperty,
+    ),
+    showPropertiesAbove: getBool(
+      "showPropertiesAbove",
+      defaults.showPropertiesAbove,
+    ),
+    invertPositionForProperty: getString(
+      "invertPositionForProperty",
+      defaults.invertPositionForProperty,
+    ),
+    urlProperty: getString("urlProperty", defaults.urlProperty),
+    // Other
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
       const parsed = typeof value === "string" ? parseInt(value, 10) : value;
@@ -680,8 +650,14 @@ export function extractBasesTemplate(
         ? value
         : defaults.ambientBackground;
     })(),
-
-    // queryHeight set to 0 (not configurable in Bases)
+    cssclasses: getString("cssclasses", defaults.cssclasses),
+    // Non-UI
+    listMarker: (() => {
+      const value = config.get("listMarker");
+      return value === "bullet" || value === "number"
+        ? value
+        : defaults.listMarker;
+    })(),
     queryHeight: 0,
   };
 }

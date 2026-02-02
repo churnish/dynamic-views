@@ -1,16 +1,36 @@
 export interface Settings {
+  // Card size
+  cardSize: number;
+  // Header
   titleProperty: string;
-  textPreviewProperty: string;
-  imageProperty: string;
-  urlProperty: string;
-  omitFirstLine: "always" | "ifMatchesTitle" | "never";
   subtitleProperty: string;
+  // Text preview
+  textPreviewProperty: string;
   fallbackToContent: boolean;
+  textPreviewLines: number;
+  // Image
+  imageProperty: string;
   fallbackToEmbeds: "always" | "if-unavailable" | "never";
+  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
+  thumbnailSize: "compact" | "standard" | "expanded";
+  imagePosition: "left" | "right" | "top" | "bottom";
+  imageFit: "crop" | "contain";
+  imageAspectRatio: number;
+  // Properties
+  propertyLabels: "hide" | "inline" | "above";
   pairProperties: boolean;
+  pairedPropertyLayout: "align-left" | "snap-to-edges" | "equal-width";
   invertPairingForProperty: string;
   showPropertiesAbove: boolean;
   invertPositionForProperty: string;
+  urlProperty: string;
+  // Other
+  minimumColumns: number;
+  ambientBackground: "subtle" | "dramatic" | "disable";
+  cssclasses: string;
+  // Non-UI
+  listMarker: string;
+  queryHeight: number;
   // Datacore-only: property display fields (kept until Datacore refactor)
   propertyDisplay1: string;
   propertyDisplay2: string;
@@ -40,30 +60,18 @@ export interface Settings {
   propertySet5Above: boolean;
   propertySet6Above: boolean;
   propertySet7Above: boolean;
-  cssclasses: string;
-  propertyLabels: "hide" | "inline" | "above";
-  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
-  imagePosition: "left" | "right" | "top" | "bottom";
-  imageFit: "crop" | "contain";
-  imageAspectRatio: number;
-  listMarker: string;
+  // Settings-only (not in DefaultViewSettings)
+  omitFirstLine: "always" | "ifMatchesTitle" | "never";
   randomizeAction: string;
-  queryHeight: number;
   openFileAction: "card" | "title";
   openRandomInNewTab: boolean;
   smartTimestamp: boolean;
   createdTimeProperty: string;
   modifiedTimeProperty: string;
-  cardSize: number;
   preventSidebarSwipe: "disabled" | "base-files" | "all-views";
   revealInNotebookNavigator: "disable" | "files-folders" | "tags" | "all";
   showYoutubeThumbnails: boolean;
   showCardLinkCovers: boolean;
-  textPreviewLines: number;
-  thumbnailSize: "compact" | "standard" | "expanded";
-  pairedPropertyLayout: "align-left" | "snap-to-edges" | "equal-width";
-  minimumColumns: number;
-  ambientBackground: "subtle" | "dramatic" | "disable";
 }
 
 export interface UIState {
@@ -76,14 +84,38 @@ export interface UIState {
 }
 
 export interface DefaultViewSettings {
+  // Card size
+  cardSize: number;
+  // Header
   titleProperty: string;
+  subtitleProperty: string;
+  // Text preview
   textPreviewProperty: string;
+  fallbackToContent: boolean;
+  textPreviewLines: number;
+  // Image
   imageProperty: string;
-  urlProperty: string;
+  fallbackToEmbeds: "always" | "if-unavailable" | "never";
+  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
+  thumbnailSize: "compact" | "standard" | "expanded";
+  imagePosition: "left" | "right" | "top" | "bottom";
+  imageFit: "crop" | "contain";
+  imageAspectRatio: number;
+  // Properties
+  propertyLabels: "hide" | "inline" | "above";
   pairProperties: boolean;
+  pairedPropertyLayout: "align-left" | "snap-to-edges" | "equal-width";
   invertPairingForProperty: string;
   showPropertiesAbove: boolean;
   invertPositionForProperty: string;
+  urlProperty: string;
+  // Other
+  minimumColumns: number;
+  ambientBackground: "subtle" | "dramatic" | "disable";
+  cssclasses: string;
+  // Non-UI
+  listMarker: string;
+  queryHeight: number;
   // Datacore-only: property display fields (kept until Datacore refactor)
   propertyDisplay1: string;
   propertyDisplay2: string;
@@ -113,23 +145,6 @@ export interface DefaultViewSettings {
   propertySet5Above: boolean;
   propertySet6Above: boolean;
   propertySet7Above: boolean;
-  cssclasses: string;
-  propertyLabels: "hide" | "inline" | "above";
-  subtitleProperty: string;
-  fallbackToContent: boolean;
-  fallbackToEmbeds: "always" | "if-unavailable" | "never";
-  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
-  imagePosition: "left" | "right" | "top" | "bottom";
-  imageFit: "crop" | "contain";
-  imageAspectRatio: number;
-  queryHeight: number;
-  listMarker: string;
-  cardSize: number;
-  textPreviewLines: number;
-  thumbnailSize: "compact" | "standard" | "expanded";
-  pairedPropertyLayout: "align-left" | "snap-to-edges" | "equal-width";
-  minimumColumns: number;
-  ambientBackground: "subtle" | "dramatic" | "disable";
 }
 
 /**
