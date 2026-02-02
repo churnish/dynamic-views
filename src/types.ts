@@ -89,12 +89,6 @@ export interface DatacoreDefaults {
 /** Fully resolved settings — the merge of PluginSettings + ViewDefaults + DatacoreDefaults */
 export type ResolvedSettings = PluginSettings & ViewDefaults & DatacoreDefaults;
 
-/** @deprecated Use ResolvedSettings — temporary alias for migration */
-export type Settings = ResolvedSettings;
-
-/** @deprecated Use ViewDefaults & DatacoreDefaults — temporary alias for migration */
-export type DefaultViewSettings = ViewDefaults & DatacoreDefaults;
-
 export interface UIState {
   sortMethod: string;
   viewMode: string;

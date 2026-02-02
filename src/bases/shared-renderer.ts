@@ -61,7 +61,7 @@ import {
   stripExtFromTitle,
 } from "../utils/file-extension";
 import type DynamicViews from "../../main";
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 import {
   createSlideshowNavigator,
   getCachedBlobUrl,
@@ -188,7 +188,7 @@ const AMBIENT_CLASSES = [
  */
 export function applyViewContainerStyles(
   container: HTMLElement,
-  settings: Settings,
+  settings: ResolvedSettings,
 ): void {
   // Paired property layout
   container.classList.remove(...PAIRED_PROPERTY_CLASSES);
@@ -597,7 +597,7 @@ export class SharedCardRenderer {
     container: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: Settings,
+    settings: ResolvedSettings,
     keyboardNav?: {
       index: number;
       focusableCardIndex: number;
@@ -1372,7 +1372,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     format: "thumbnail" | "cover",
     position: "left" | "right" | "top" | "bottom",
-    settings: Settings,
+    settings: ResolvedSettings,
     cardPath: string,
   ): void {
     // Create AbortController for cleanup
@@ -1540,7 +1540,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     format: "thumbnail" | "cover",
     position: "left" | "right" | "top" | "bottom",
-    settings: Settings,
+    settings: ResolvedSettings,
     cardEl: HTMLElement,
     signal?: AbortSignal,
   ): void {
@@ -1700,7 +1700,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: Settings,
+    settings: ResolvedSettings,
     signal: AbortSignal,
   ): void {
     const props = card.properties;
@@ -1912,7 +1912,7 @@ export class SharedCardRenderer {
     resolvedValue: unknown,
     card: CardData,
     entry: BasesEntry,
-    settings: Settings,
+    settings: ResolvedSettings,
     hideMissing: boolean,
     hideEmptyMode: HideEmptyMode,
     signal: AbortSignal,

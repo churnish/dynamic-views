@@ -3,7 +3,7 @@
  * Pure functions used by both Bases (DOM) and Datacore (JSX) views
  */
 
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 
 /**
  * Interface for date values from Datacore/Bases
@@ -103,7 +103,7 @@ export function shouldShowTimestampIcon(): boolean {
  */
 export function getTimestampIcon(
   propertyName: string,
-  settings: Settings,
+  settings: ResolvedSettings,
 ): "calendar" | "clock" {
   // Check if property is created time (calendar icon)
   if (

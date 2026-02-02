@@ -1,10 +1,10 @@
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 import { CardRenderer, type CardData } from "../shared/card-renderer";
 import type { App, PaneType } from "obsidian";
 
 interface CardViewProps {
   cards: CardData[];
-  settings: Settings;
+  settings: ResolvedSettings;
   viewMode: "card" | "masonry";
   sortMethod: string;
   isShuffled: boolean;

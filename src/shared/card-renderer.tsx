@@ -5,7 +5,7 @@
 
 import type { App, PaneType } from "obsidian";
 import { TFile, TFolder, setIcon, Menu, Keymap } from "obsidian";
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 import type { RefObject } from "../datacore/types";
 import {
   showTagHashPrefix,
@@ -622,7 +622,7 @@ export interface CardData {
 
 export interface CardRendererProps {
   cards: CardData[];
-  settings: Settings;
+  settings: ResolvedSettings;
   viewMode: "card" | "masonry";
   sortMethod: string;
   isShuffled: boolean;
@@ -681,7 +681,7 @@ function renderPropertyContent(
   card: CardData,
   resolvedValue: unknown,
   timeIcon: "calendar" | "clock",
-  settings: Settings,
+  settings: ResolvedSettings,
   app: App,
 ): unknown {
   // Coerce unknown to string for rendering
@@ -917,7 +917,7 @@ function renderProperty(
   propertyName: string,
   propertyValue: unknown,
   resolvedValue: string | null,
-  settings: Settings,
+  settings: ResolvedSettings,
   card: CardData,
   app: App,
   timeIcon: "calendar" | "clock",
@@ -1493,7 +1493,7 @@ interface CardProps {
   key?: string; // React/Preact key for element reconciliation
   card: CardData;
   index: number;
-  settings: Settings;
+  settings: ResolvedSettings;
   viewMode: "card" | "masonry";
   sortMethod: string;
   isShuffled: boolean;

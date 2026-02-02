@@ -5,10 +5,6 @@ import type {
   ResolvedSettings,
 } from "./types";
 
-// Re-export deprecated aliases so existing `import { Settings } from "./types"` still works
-// These will be removed in Phase 8
-export type { Settings, DefaultViewSettings } from "./types";
-
 export const PLUGIN_SETTINGS: PluginSettings = {
   omitFirstLine: "ifMatchesTitle",
   randomizeAction: "shuffle",
@@ -86,19 +82,6 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
   propertySet5Above: false,
   propertySet6Above: false,
   propertySet7Above: false,
-};
-
-/** Fully resolved defaults — merge of all three setting groups */
-export const DEFAULT_SETTINGS: ResolvedSettings = {
-  ...PLUGIN_SETTINGS,
-  ...VIEW_DEFAULTS,
-  ...DATACORE_DEFAULTS,
-};
-
-/** @deprecated Use VIEW_DEFAULTS — temporary alias for migration */
-export const DEFAULT_VIEW_SETTINGS: ViewDefaults & DatacoreDefaults = {
-  ...VIEW_DEFAULTS,
-  ...DATACORE_DEFAULTS,
 };
 
 /**

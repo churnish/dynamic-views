@@ -1,4 +1,4 @@
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 import { getFirstDatacorePropertyValue } from "../utils/property";
 import type { DatacoreAPI, DatacoreFile } from "./types";
 import type { App } from "obsidian";
@@ -28,7 +28,7 @@ declare module "obsidian" {
 interface ListViewProps {
   results: DatacoreFile[];
   displayedCount: number;
-  settings: Settings;
+  settings: ResolvedSettings;
   containerRef: { current: HTMLElement | null };
   app: App;
   dc: DatacoreAPI;

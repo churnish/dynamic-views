@@ -1,5 +1,5 @@
 import { App, TFile, TFolder } from "obsidian";
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 
 /** Delay after storage-ready for NN view to render */
 const VIEW_RENDER_DELAY_MS = 200;
@@ -61,13 +61,13 @@ async function waitForStorageReady(api: NotebookNavigatorAPI): Promise<void> {
  */
 function getCurrentSetting(
   app: App,
-): Settings["revealInNotebookNavigator"] | null {
+): ResolvedSettings["revealInNotebookNavigator"] | null {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
   const plugin = (app as any).plugins?.plugins?.["dynamic-views"] as
-    | { persistenceManager?: { getGlobalSettings(): Settings } }
+    | { persistenceManager?: { getPluginSettings(): ResolvedSettings } }
     | undefined;
   return (
-    plugin?.persistenceManager?.getGlobalSettings()
+    plugin?.persistenceManager?.getPluginSettings()
       ?.revealInNotebookNavigator ?? null
   );
 }

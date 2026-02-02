@@ -1,11 +1,11 @@
 import { CardView } from "./card-view";
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 import type { CardData } from "../shared/card-renderer";
 import type { App } from "obsidian";
 
 interface MasonryViewProps {
   cards: CardData[];
-  settings: Settings;
+  settings: ResolvedSettings;
   sortMethod: string;
   isShuffled: boolean;
   focusableCardIndex: number;

@@ -6,7 +6,7 @@
 import { TFile, type App, type BasesEntry } from "obsidian";
 import { getFileExtInfo } from "../utils/file-extension";
 import type { CardData } from "./card-renderer";
-import type { Settings } from "../types";
+import type { ResolvedSettings } from "../types";
 import type { DatacoreAPI, DatacoreFile } from "../datacore/types";
 import {
   getFirstDatacorePropertyValue,
@@ -58,7 +58,7 @@ function stripTagHashes(tags: string[]): string[] {
  */
 function isCustomTimestampProperty(
   propertyName: string,
-  settings: Settings,
+  settings: ResolvedSettings,
 ): boolean {
   const stripped = stripNotePrefix(propertyName);
 
@@ -81,7 +81,7 @@ function isCustomTimestampProperty(
  */
 function resolveSubtitleToPlainText(
   subtitleValue: string | null,
-  settings: Settings,
+  settings: ResolvedSettings,
   cardData: CardData,
 ): string | undefined {
   if (!subtitleValue) return undefined;
@@ -119,7 +119,7 @@ function resolveSubtitleToPlainText(
 function applySmartTimestamp(
   props: string[],
   sortMethod: string,
-  settings: Settings,
+  settings: ResolvedSettings,
 ): string[] {
   // Only apply if smart timestamp is enabled
   if (!settings.smartTimestamp) {
@@ -224,7 +224,7 @@ export function datacoreResultToCardData(
   app: App,
   result: DatacoreFile,
   dc: DatacoreAPI,
-  settings: Settings,
+  settings: ResolvedSettings,
   sortMethod: string,
   isShuffled: boolean,
   textPreview?: string,
@@ -396,7 +396,7 @@ export function datacoreResultToCardData(
 export function basesEntryToCardData(
   app: App,
   entry: BasesEntry,
-  settings: Settings,
+  settings: ResolvedSettings,
   sortMethod: string,
   isShuffled: boolean,
   visibleProperties: string[],
@@ -612,7 +612,7 @@ export function transformDatacoreResults(
   app: App,
   results: DatacoreFile[],
   dc: DatacoreAPI,
-  settings: Settings,
+  settings: ResolvedSettings,
   sortMethod: string,
   isShuffled: boolean,
   textPreviews: Record<string, string>,
@@ -650,7 +650,7 @@ export function transformDatacoreResults(
 export function transformBasesEntries(
   app: App,
   entries: BasesEntry[],
-  settings: Settings,
+  settings: ResolvedSettings,
   sortMethod: string,
   isShuffled: boolean,
   visibleProperties: string[],
@@ -687,7 +687,7 @@ export function resolveBasesProperty(
   propertyName: string,
   entry: BasesEntry,
   cardData: CardData,
-  settings: Settings,
+  settings: ResolvedSettings,
 ): string | null {
   if (!propertyName || propertyName === "") {
     return null;
@@ -864,7 +864,7 @@ export function resolveDatacoreProperty(
   propertyName: string,
   result: DatacoreFile,
   cardData: CardData,
-  settings: Settings,
+  settings: ResolvedSettings,
   dc: DatacoreAPI,
 ): string | null {
   if (!propertyName || propertyName === "") return null;

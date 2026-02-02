@@ -1,7 +1,8 @@
 import {
-  Settings as SettingsType,
+  ResolvedSettings,
   ViewMode,
-  DefaultViewSettings,
+  ViewDefaults,
+  DatacoreDefaults,
 } from "../types";
 import type { DatacoreAPI } from "./types";
 import type { TFile } from "obsidian";
@@ -9,8 +10,8 @@ import type DynamicViews from "../../main";
 
 interface SettingsProps {
   dc: DatacoreAPI;
-  settings: SettingsType;
-  onSettingsChange: (settings: Partial<SettingsType>) => void;
+  settings: ResolvedSettings;
+  onSettingsChange: (settings: Partial<ResolvedSettings>) => void;
   menuRef?: { current: HTMLDivElement | null };
   plugin: DynamicViews;
   currentFile: TFile | null;
@@ -21,12 +22,12 @@ interface SettingsProps {
 interface PropertySetConfig {
   key: string;
   label: string;
-  firstProp: keyof SettingsType;
-  secondProp: keyof SettingsType;
+  firstProp: keyof ResolvedSettings;
+  secondProp: keyof ResolvedSettings;
   firstLabel: string;
   secondLabel: string;
-  sideBySide: keyof SettingsType;
-  above: keyof SettingsType;
+  sideBySide: keyof ResolvedSettings;
+  above: keyof ResolvedSettings;
 }
 
 const PROPERTY_SETS: PropertySetConfig[] = [
@@ -262,7 +263,7 @@ export function Settings({
   // Helper to render a toggle (checkbox) setting
   const renderToggle = (
     label: string,
-    settingKey: keyof SettingsType,
+    settingKey: keyof ResolvedSettings,
   ): JSX.Element => (
     <div className="setting-item setting-item-toggle">
       <div className="setting-item-info">
@@ -286,7 +287,7 @@ export function Settings({
   // Helper to render a text input setting
   const renderTextInput = (
     label: string,
-    settingKey: keyof SettingsType,
+    settingKey: keyof ResolvedSettings,
     placeholder?: string,
   ): JSX.Element => (
     <div className="setting-item setting-item-text">

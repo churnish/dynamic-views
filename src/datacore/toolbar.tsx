@@ -1,4 +1,4 @@
-import { ViewMode, Settings, WidthMode } from "../types";
+import { ViewMode, ResolvedSettings, WidthMode } from "../types";
 import { Settings as SettingsPanel } from "./settings";
 import type { DatacoreAPI, RefObject } from "./types";
 import type { App, TFile } from "obsidian";
@@ -255,7 +255,7 @@ interface ToolbarProps {
   onClearSearch: () => void;
 
   // Shuffle
-  settings: Settings;
+  settings: ResolvedSettings;
   onShuffle: () => void;
   onOpenRandom: (event: MouseEvent) => void;
 
@@ -291,7 +291,7 @@ interface ToolbarProps {
 
   // Settings panel
   showSettings: boolean;
-  onSettingsChange: (settings: Partial<Settings>) => void;
+  onSettingsChange: (settings: Partial<ResolvedSettings>) => void;
 }
 
 export function Toolbar({
