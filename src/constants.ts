@@ -38,8 +38,8 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   imageFit: "crop",
   imageAspectRatio: 1.0,
   // Properties
-  propertyLabels: "hide",
-  pairProperties: true,
+  propertyLabels: "inline",
+  pairProperties: false,
   pairedPropertyLayout: "right",
   invertPairingForProperty: "",
   showPropertiesAbove: false,
