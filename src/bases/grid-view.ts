@@ -43,6 +43,7 @@ import {
   UNDEFINED_GROUP_KEY_SENTINEL,
   initializeViewDefaults,
   tryGetAllConfig,
+  cleanupBaseFile,
   clearOldTemplateToggles,
   isCurrentTemplateView,
 } from "./utils";
@@ -549,9 +550,9 @@ export class DynamicViewsGridView extends BasesView {
             this.currentFile,
             "grid",
           );
-          console.log(
-            "[grid-view] onDataUpdated - initializeViewDefaults completed",
-          );
+          // Clean up stale keys/values across ALL views in this .base file
+          void cleanupBaseFile(this.app, this.currentFile);
+          this.hasInitializedDefaults = true;
         } catch (e) {
           console.warn(
             "[dynamic-views] Failed to initialize view defaults:",
@@ -559,7 +560,6 @@ export class DynamicViewsGridView extends BasesView {
           );
         }
       }
-      this.hasInitializedDefaults = true;
     }
 
     void (async () => {

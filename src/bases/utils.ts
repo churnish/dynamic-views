@@ -11,6 +11,8 @@ import {
   App,
   BasesView,
   setIcon,
+  parseYaml,
+  stringifyYaml,
 } from "obsidian";
 import { resolveTimestampProperty } from "../shared/data-transform";
 import {
@@ -28,7 +30,7 @@ import {
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
 } from "../utils/notebook-navigator";
-import type { PluginSettings, ResolvedSettings } from "../types";
+import type { PluginSettings, ResolvedSettings, ViewDefaults } from "../types";
 import { VIEW_DEFAULTS } from "../constants";
 import type DynamicViews from "../../main";
 
@@ -227,6 +229,101 @@ export function initializeViewDefaults(
   }
   if (defaults?.ambientBackground !== undefined) {
     safeConfigSet(config, "ambientBackground", defaults.ambientBackground);
+  }
+}
+
+/** Valid enum values for ViewDefaults fields — used by cleanup to detect stale values */
+const VALID_VIEW_VALUES: Partial<
+  Record<keyof ViewDefaults, readonly string[]>
+> = {
+  fallbackToEmbeds: ["always", "if-unavailable", "never"],
+  imageFormat: ["thumbnail", "cover", "poster", "backdrop"],
+  thumbnailSize: ["compact", "standard", "expanded"],
+  imagePosition: ["left", "right", "top", "bottom"],
+  imageFit: ["crop", "contain"],
+  propertyLabels: ["hide", "inline", "above"],
+  pairedPropertyLayout: ["left", "column", "right"],
+  ambientBackground: ["subtle", "dramatic", "disable"],
+};
+
+/** Keys allowed in Dynamic Views .base view entries */
+const ALLOWED_VIEW_KEYS = new Set<string>([
+  // Bases-native keys
+  "type",
+  "name",
+  "filters",
+  "groupBy",
+  "order",
+  "sort",
+  "columnSize",
+  "limit",
+  "summaries",
+  // Dynamic Views settings (ViewDefaults)
+  ...(Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]),
+  // Internal markers
+  INIT_MARKER,
+  "__isTemplate",
+  "__templateSetAt",
+]);
+
+/**
+ * Clean ALL Dynamic Views view entries in a .base file at once.
+ * Removes stale keys (e.g. DatacoreDefaults that leaked) and resets invalid enum values.
+ * Called once when any view in the file initializes — cleans siblings too.
+ */
+export async function cleanupBaseFile(
+  app: App,
+  file: TFile | null,
+): Promise<void> {
+  if (!file || !file.path.endsWith(".base")) return;
+
+  let changeCount = 0;
+
+  await app.vault.process(file, (content) => {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = parseYaml(content) as Record<string, unknown>;
+    } catch {
+      return content;
+    }
+
+    const views = parsed?.views;
+    if (!Array.isArray(views)) return content;
+
+    for (const view of views) {
+      if (typeof view !== "object" || view === null) continue;
+      const viewObj = view as Record<string, unknown>;
+      if (!String(viewObj.type ?? "").startsWith("dynamic-views-")) continue;
+
+      for (const key of Object.keys(viewObj)) {
+        // Remove unrecognized keys
+        if (!ALLOWED_VIEW_KEYS.has(key)) {
+          delete viewObj[key];
+          changeCount++;
+          continue;
+        }
+
+        // Reset stale enum values to defaults
+        const validValues = VALID_VIEW_VALUES[key as keyof ViewDefaults];
+        if (
+          validValues &&
+          typeof viewObj[key] === "string" &&
+          !validValues.includes(viewObj[key] as string)
+        ) {
+          viewObj[key] = VIEW_DEFAULTS[key as keyof ViewDefaults];
+          changeCount++;
+        }
+      }
+    }
+
+    if (changeCount === 0) return content;
+    return stringifyYaml(parsed);
+  });
+
+  if (changeCount > 0) {
+    console.log(
+      `[dynamic-views] File cleanup: fixed ${changeCount} stale entries in ${file.path}`,
+    );
   }
 }
 
