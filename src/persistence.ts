@@ -7,8 +7,69 @@ import type {
   UIState,
   SettingsTemplate,
 } from "./types";
-import { PLUGIN_SETTINGS, DEFAULT_UI_STATE } from "./constants";
+import {
+  PLUGIN_SETTINGS,
+  VIEW_DEFAULTS,
+  DATACORE_DEFAULTS,
+  DEFAULT_UI_STATE,
+} from "./constants";
 import { sanitizeObject, sanitizeString } from "./utils/sanitize";
+
+/** Valid enum values for ViewDefaults fields — shared with cleanupBaseFile in utils.ts */
+const VALID_VIEW_VALUES: Partial<
+  Record<keyof ViewDefaults, readonly string[]>
+> = {
+  fallbackToEmbeds: ["always", "if-unavailable", "never"],
+  imageFormat: ["thumbnail", "cover", "poster", "backdrop"],
+  thumbnailSize: ["compact", "standard", "expanded"],
+  imagePosition: ["left", "right", "top", "bottom"],
+  imageFit: ["crop", "contain"],
+  propertyLabels: ["hide", "inline", "above"],
+  pairedPropertyLayout: ["left", "column", "right"],
+  ambientBackground: ["subtle", "dramatic", "disable"],
+};
+
+const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
+const DATACORE_DEFAULTS_KEYS = new Set(Object.keys(DATACORE_DEFAULTS));
+
+/**
+ * Strip stale keys and invalid enum values from a template's settings.
+ * Grid/masonry templates: only ViewDefaults keys allowed.
+ * Datacore templates: ViewDefaults + DatacoreDefaults keys allowed.
+ * Returns true if any changes were made.
+ */
+function cleanupTemplateSettings(
+  settings: Record<string, unknown>,
+  viewType: "grid" | "masonry" | "datacore",
+): boolean {
+  let changed = false;
+  const allowDatacore = viewType === "datacore";
+
+  for (const key of Object.keys(settings)) {
+    // Remove keys not in allowed set
+    if (
+      !VIEW_DEFAULTS_KEYS.has(key) &&
+      !(allowDatacore && DATACORE_DEFAULTS_KEYS.has(key))
+    ) {
+      delete settings[key];
+      changed = true;
+      continue;
+    }
+
+    // Reset stale enum values to defaults
+    const validValues = VALID_VIEW_VALUES[key as keyof ViewDefaults];
+    if (
+      validValues &&
+      typeof settings[key] === "string" &&
+      !validValues.includes(settings[key] as string)
+    ) {
+      settings[key] = VIEW_DEFAULTS[key as keyof ViewDefaults];
+      changed = true;
+    }
+  }
+
+  return changed;
+}
 
 export class PersistenceManager {
   private plugin: Plugin;
@@ -34,6 +95,28 @@ export class PersistenceManager {
         queryStates: loadedData.queryStates || {},
         viewSettings: loadedData.viewSettings || {},
       };
+    }
+
+    // Clean up stale keys/values in templates
+    let templatesDirty = false;
+    for (const viewType of ["grid", "masonry", "datacore"] as const) {
+      const template = this.data.templates[viewType];
+      if (!template?.settings) continue;
+      if (
+        cleanupTemplateSettings(
+          template.settings as Record<string, unknown>,
+          viewType,
+        )
+      ) {
+        // Remove template entirely if no settings remain after cleanup
+        if (Object.keys(template.settings).length === 0) {
+          delete this.data.templates[viewType];
+        }
+        templatesDirty = true;
+      }
+    }
+    if (templatesDirty) {
+      await this.save();
     }
   }
 
