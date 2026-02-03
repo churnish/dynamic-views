@@ -3535,10 +3535,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   order: -90;
   color: var(--text-faint);
   font-family: var(--dynamic-views-subtitle-font);
-  font-size: var(
-    --dynamic-views-subtitle-font-size,
-    var(--bases-table-font-size)
-  );
+  font-size: var(--dynamic-views-subtitle-font-size, var(--font-ui-small));
   max-width: 100%;
   word-break: break-word;
   text-align: left;
@@ -5912,10 +5909,7 @@ body.dynamic-views-hide-slideshow-indicator
 
 /* Base properties container styles */
 .dynamic-views .card-properties {
-  font-size: var(
-    --dynamic-views-property-font-size,
-    var(--bases-table-font-size)
-  );
+  font-size: var(--dynamic-views-property-font-size, var(--font-ui-small));
   color: var(--text-faint);
   line-height: var(--line-height-tight);
   white-space: nowrap;
