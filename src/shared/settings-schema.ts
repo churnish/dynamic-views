@@ -471,6 +471,7 @@ export function readBasesSettings(
 /**
  * Extract view-specific settings from Bases config for template storage
  * Only extracts ViewDefaults keys (no Datacore-specific fields)
+ * Returns sparse object — only includes values that differ from defaults
  */
 export function extractBasesTemplate(
   config: BasesConfig,
@@ -500,7 +501,8 @@ export function extractBasesTemplate(
       : fallback;
   };
 
-  return {
+  // Extract all values with type coercion
+  const full: ViewDefaults = {
     cardSize: getNumber("cardSize", defaults.cardSize),
     titleProperty: getString("titleProperty", defaults.titleProperty),
     subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
@@ -590,4 +592,13 @@ export function extractBasesTemplate(
     })(),
     cssclasses: getString("cssclasses", defaults.cssclasses),
   };
+
+  // Filter to only non-default values (sparse)
+  const result: Partial<ViewDefaults> = {};
+  for (const key of Object.keys(full) as (keyof ViewDefaults)[]) {
+    if (full[key] !== defaults[key]) {
+      (result as Record<string, unknown>)[key] = full[key];
+    }
+  }
+  return result;
 }

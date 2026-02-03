@@ -65,6 +65,27 @@ function cleanupTemplateSettings(
     }
   }
 
+  // Remove keys that match VIEW_DEFAULTS (sparse templates)
+  for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
+    if (settings[key] === undefined) continue;
+
+    // minimumColumns: view-type-specific default (templates store numbers)
+    if (key === "minimumColumns") {
+      const minColDefault = viewType === "masonry" ? 2 : 1;
+      if (settings[key] === minColDefault) {
+        delete settings[key];
+        changed = true;
+      }
+      continue;
+    }
+
+    // All other keys: compare to VIEW_DEFAULTS
+    if (settings[key] === VIEW_DEFAULTS[key]) {
+      delete settings[key];
+      changed = true;
+    }
+  }
+
   return changed;
 }
 

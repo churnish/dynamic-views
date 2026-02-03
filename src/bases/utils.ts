@@ -107,6 +107,8 @@ export async function cleanupBaseFile(
       )
         continue;
 
+      const isMasonry = viewType === "dynamic-views-masonry";
+
       for (const key of Object.keys(viewObj)) {
         // Remove unrecognized keys
         if (!ALLOWED_VIEW_KEYS.has(key)) {
@@ -122,6 +124,28 @@ export async function cleanupBaseFile(
           !validValues.includes(String(viewObj[key]) as never)
         ) {
           viewObj[key] = validValues[0];
+          changeCount++;
+        }
+      }
+
+      // Remove keys that match VIEW_DEFAULTS (sparse YAML)
+      for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
+        const value = viewObj[key];
+        if (value === undefined) continue;
+
+        // minimumColumns: view-type-specific default (YAML stores "one"/"two" strings)
+        if (key === "minimumColumns") {
+          const minColDefault = isMasonry ? "two" : "one";
+          if (value === minColDefault) {
+            delete viewObj[key];
+            changeCount++;
+          }
+          continue;
+        }
+
+        // All other keys: compare to VIEW_DEFAULTS
+        if (value === VIEW_DEFAULTS[key]) {
+          delete viewObj[key];
           changeCount++;
         }
       }
