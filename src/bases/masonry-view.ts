@@ -221,28 +221,39 @@ export class DynamicViewsMasonryView extends BasesView {
       fileCtime,
     );
 
+    let oldHash: string | undefined;
+    let isRename = false;
+
     if (idField) {
       const [hash, storedName] = idField.split(":");
+      oldHash = hash;
       console.debug(
         `ensureViewId parsed: hash=`,
         hash,
         `storedName=`,
         storedName,
       );
+      const nameMismatch = storedName !== viewName;
+      const ctimeMismatch = storedCtime !== fileCtime;
       console.debug(
         `ensureViewId match: name=`,
-        storedName === viewName,
+        !nameMismatch,
         `ctime=`,
-        storedCtime === fileCtime,
+        !ctimeMismatch,
       );
-      if (storedName === viewName && storedCtime === fileCtime) {
+      if (!nameMismatch && !ctimeMismatch) {
         // All match — use existing hash
         console.debug(`ensureViewId using existing hash:`, hash);
         this.viewId = hash;
         return;
       }
-      // Mismatch — view or file duplicate, fall through to regenerate
-      console.debug(`ensureViewId mismatch, regenerating`);
+      // Rename = name changed but ctime same (not file duplicate)
+      isRename = nameMismatch && !ctimeMismatch;
+      console.debug(
+        `ensureViewId mismatch, regenerating (isRename:`,
+        isRename,
+        `)`,
+      );
     }
 
     // Generate new id and write via Bases config API
@@ -250,6 +261,14 @@ export class DynamicViewsMasonryView extends BasesView {
     console.debug(`ensureViewId generated new:`, this.viewId);
     this.config.set("id", `${this.viewId}:${viewName}`);
     this.config.set("ctime", fileCtime);
+
+    // Migrate state on rename (oldHash → new viewId)
+    if (isRename && oldHash) {
+      void this.plugin.persistenceManager.migrateBasesState(
+        oldHash,
+        this.viewId,
+      );
+    }
 
     // Schedule key reorder after Bases persists
     scheduleViewKeyReorder(this.app, file, viewName);
