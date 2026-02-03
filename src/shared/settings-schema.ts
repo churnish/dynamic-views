@@ -77,6 +77,8 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "subtitleProperty",
           placeholder: "Comma-separated if multiple",
           default: d.subtitleProperty,
+          shouldHide: (config: BasesConfig) =>
+            !(config.get("titleProperty") ?? d.titleProperty),
         },
       ],
     },
@@ -224,12 +226,14 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
             hide: "Hide",
           },
           default: d.propertyLabels,
+          shouldHide: (config: BasesConfig) => config.getOrder().length === 0,
         },
         {
           type: "toggle",
           displayName: "Pair properties",
           key: "pairProperties",
           default: d.pairProperties,
+          shouldHide: (config: BasesConfig) => config.getOrder().length <= 1,
         },
         {
           type: "dropdown",
@@ -242,6 +246,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           },
           default: d.rightPropertyPosition,
           shouldHide: (config: BasesConfig) =>
+            config.getOrder().length <= 1 ||
             (config.get("pairProperties") ?? d.pairProperties) === false,
         },
         {
@@ -250,6 +255,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "invertPropertyPairing",
           placeholder: "Comma-separated if multiple",
           default: d.invertPropertyPairing,
+          shouldHide: (config: BasesConfig) => config.getOrder().length <= 1,
         },
         {
           type: "toggle",
@@ -257,8 +263,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "showPropertiesAbove",
           default: d.showPropertiesAbove,
           shouldHide: (config: BasesConfig) =>
-            !(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
-            (config.get("fallbackToContent") ?? d.fallbackToContent) === false,
+            config.getOrder().length === 0 ||
+            (!(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
+              (config.get("fallbackToContent") ?? d.fallbackToContent) ===
+                false),
         },
         {
           type: "text",
@@ -267,8 +275,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           placeholder: "Comma-separated if multiple",
           default: d.invertPropertyPosition,
           shouldHide: (config: BasesConfig) =>
-            !(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
-            (config.get("fallbackToContent") ?? d.fallbackToContent) === false,
+            config.getOrder().length === 0 ||
+            (!(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
+              (config.get("fallbackToContent") ?? d.fallbackToContent) ===
+                false),
         },
         {
           type: "text",
@@ -305,7 +315,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           default: d.ambientBackground,
           shouldHide: (config: BasesConfig) =>
             (config.get("imageFormat") ?? d.imageFormat) === "poster" ||
-            (config.get("imageFormat") ?? d.imageFormat) === "backdrop",
+            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
+            (!(config.get("imageProperty") || d.imageProperty) &&
+              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
+                "never"),
         },
         {
           type: "text",
