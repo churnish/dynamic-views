@@ -9,7 +9,7 @@ import {
 import { PersistenceManager } from "./src/persistence";
 import { View } from "./src/datacore/view";
 import { setDatacorePreact } from "./src/jsx-runtime";
-import { getAvailablePath } from "./src/utils/file";
+import { getAvailablePath, getAvailableBasePath } from "./src/utils/file";
 import "./src/jsx-runtime"; // Ensure h and Fragment are globally available
 import {
   DynamicViewsGridView,
@@ -216,6 +216,14 @@ export default class DynamicViews extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "create-base-grid-view",
+      name: "Create new base with Grid view",
+      callback: async () => {
+        await this.createBaseFile();
+      },
+    });
+
     // Invalidate image metadata cache when vault files are modified (#17)
     // Only invalidate for image files to avoid unnecessary cache clears
     const IMAGE_EXTENSIONS = new Set([
@@ -316,6 +324,25 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, ID);
     } catch (error) {
       new Notice(`Failed to create file. Check console for details.`);
       console.error("File creation failed:", error);
+    }
+  }
+
+  async createBaseFile() {
+    try {
+      const folderPath = this.app.fileManager.getNewFileParent("").path;
+      const filePath = getAvailableBasePath(this.app, folderPath, "Untitled");
+      const content = `views:\n  - type: dynamic-views-grid\n    name: Grid\n`;
+
+      await this.app.vault.create(filePath, content);
+
+      const file = this.app.vault.getFileByPath(filePath);
+      if (file) {
+        const leaf = this.app.workspace.getLeaf("tab");
+        await leaf.openFile(file);
+      }
+    } catch (error) {
+      new Notice(`Failed to create base file. Check console for details.`);
+      console.error("Base file creation failed:", error);
     }
   }
 

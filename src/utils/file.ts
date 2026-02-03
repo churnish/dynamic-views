@@ -46,3 +46,31 @@ export function getAvailablePath(
 
   return filePath;
 }
+
+/**
+ * Get an available base file path with automatic deduplication
+ * @param app - Obsidian App instance
+ * @param folderPath - The folder path where the file should be created
+ * @param baseName - The base name for the file (without .base extension)
+ * @returns A normalized, unique file path
+ */
+export function getAvailableBasePath(
+  app: App,
+  folderPath: string,
+  baseName: string,
+): string {
+  const name = baseName.replace(/\.base$/, "");
+  let filePath = folderPath ? `${folderPath}/${name}.base` : `${name}.base`;
+  filePath = normalizePath(filePath);
+
+  let counter = 1;
+  while (app.vault.getFileByPath(filePath)) {
+    const unnormalizedPath = folderPath
+      ? `${folderPath}/${name} ${counter}.base`
+      : `${name} ${counter}.base`;
+    filePath = normalizePath(unnormalizedPath);
+    counter++;
+  }
+
+  return filePath;
+}
