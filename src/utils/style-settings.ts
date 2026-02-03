@@ -530,26 +530,6 @@ export function setupStyleSettingsObserver(
         const dynamicViewsChanged = oldJoined !== newJoined;
 
         if (dynamicViewsChanged) {
-          console.log("[style-settings] DIFFERENCE DETECTED");
-
-          // Find which classes are in new but not old
-          const addedClasses = newFiltered.filter(
-            (c) => !oldFiltered.includes(c),
-          );
-          // Find which classes are in old but not new
-          const removedClasses = oldFiltered.filter(
-            (c) => !newFiltered.includes(c),
-          );
-
-          console.log(
-            "[style-settings] Added classes (after filtering):",
-            addedClasses,
-          );
-          console.log(
-            "[style-settings] Removed classes (after filtering):",
-            removedClasses,
-          );
-
           // Check if ambient settings specifically changed (including subtle↔dramatic)
           const oldAmbientSet = ambientClasses
             .filter((c) => oldClasses.includes(c))
@@ -562,15 +542,9 @@ export function setupStyleSettingsObserver(
           const ambientChanged = oldAmbientSet !== newAmbientSet;
 
           if (ambientChanged && onAmbientSettingChange) {
-            console.log(
-              "[style-settings] Ambient setting changed, calling onAmbientSettingChange",
-            );
             // Ambient-only change: call dedicated handler, skip full re-render
             onAmbientSettingChange();
           } else {
-            console.log(
-              "[style-settings] Non-ambient change, calling onStyleChange -> onDataUpdated",
-            );
             // Non-ambient change: full style refresh
             onStyleChange();
           }

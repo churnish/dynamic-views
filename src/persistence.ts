@@ -206,6 +206,19 @@ export class PersistenceManager {
     await this.save();
   }
 
+  /**
+   * Migrate basesState from old view ID to new ID (used for view renames).
+   * Moves the state and deletes the old key.
+   */
+  async migrateBasesState(oldId: string, newId: string): Promise<void> {
+    const oldState = this.data.basesStates[oldId];
+    if (!oldState) return;
+
+    this.data.basesStates[newId] = oldState;
+    delete this.data.basesStates[oldId];
+    await this.save();
+  }
+
   // ============================================================================
   // Datacore State (UI + settings, keyed by queryId only)
   // ============================================================================
@@ -269,10 +282,6 @@ export class PersistenceManager {
     viewType: "grid" | "masonry" | "datacore",
     template: SettingsTemplate | null,
   ): Promise<void> {
-    console.log(
-      `[PersistenceManager] setSettingsTemplate(${viewType}):`,
-      template ? `saving (timestamp: ${template.setAt})` : "clearing",
-    );
     if (template) {
       this.data.templates[viewType] = template;
     } else {

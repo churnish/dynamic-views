@@ -90,14 +90,17 @@ const PREFERRED_KEY_ORDER = [
  * Clean ALL Dynamic Views view entries in a .base file at once.
  * Removes stale keys (e.g. DatacoreDefaults that leaked) and resets invalid enum values.
  * Called once when any view in the file initializes — cleans siblings too.
+ * Also migrates basesState when a view is renamed (not duplicated).
  */
 export async function cleanupBaseFile(
   app: App,
   file: TFile | null,
+  plugin: DynamicViews,
 ): Promise<void> {
   if (!file || !file.path.endsWith(".base")) return;
 
   let changeCount = 0;
+  const migrations: Array<{ oldHash: string; newHash: string }> = [];
 
   await app.vault.process(file, (content) => {
     let parsed: Record<string, unknown>;
@@ -110,6 +113,21 @@ export async function cleanupBaseFile(
     const views = parsed?.views;
     if (!Array.isArray(views)) return content;
 
+    const fileCtime = file.stat.ctime;
+
+    // First pass: count hash occurrences to detect duplicates
+    const hashCounts = new Map<string, number>();
+    for (const view of views) {
+      if (typeof view !== "object" || view === null) continue;
+      const idField = (view as Record<string, unknown>).id as
+        | string
+        | undefined;
+      if (idField) {
+        const [hash] = idField.split(":");
+        hashCounts.set(hash, (hashCounts.get(hash) || 0) + 1);
+      }
+    }
+
     for (const view of views) {
       if (typeof view !== "object" || view === null) continue;
       const viewObj = view as Record<string, unknown>;
@@ -121,6 +139,44 @@ export async function cleanupBaseFile(
         continue;
 
       const isMasonry = viewType === "dynamic-views-masonry";
+      const viewName = viewObj.name as string | undefined;
+
+      // Dedupe: validate id matches current view name and file ctime
+      if (viewName) {
+        const idField = viewObj.id as string | undefined;
+        const storedCtime = viewObj.ctime as number | undefined;
+
+        let needsNewId = false;
+        let oldHash: string | undefined;
+        let isRename = false;
+
+        if (idField) {
+          const [hash, storedName] = idField.split(":");
+          oldHash = hash;
+          const nameMismatch = storedName !== viewName;
+          const ctimeMismatch = storedCtime !== fileCtime;
+
+          if (nameMismatch || ctimeMismatch) {
+            needsNewId = true;
+            // Rename = unique hash + name changed + ctime same (not file duplicate)
+            isRename =
+              hashCounts.get(hash) === 1 && nameMismatch && !ctimeMismatch;
+          }
+        } else {
+          needsNewId = true;
+        }
+
+        if (needsNewId) {
+          const newHash = Math.random().toString(36).substring(2, 8);
+          viewObj.id = `${newHash}:${viewName}`;
+          viewObj.ctime = fileCtime;
+          changeCount++;
+
+          if (isRename && oldHash) {
+            migrations.push({ oldHash, newHash });
+          }
+        }
+      }
 
       for (const key of Object.keys(viewObj)) {
         // Remove unrecognized keys
@@ -200,10 +256,9 @@ export async function cleanupBaseFile(
     return stringifyYaml(parsed);
   });
 
-  if (changeCount > 0) {
-    console.log(
-      `[dynamic-views] File cleanup: fixed ${changeCount} stale entries in ${file.path}`,
-    );
+  // Run migrations after file processing completes (async allowed here)
+  for (const { oldHash, newHash } of migrations) {
+    await plugin.persistenceManager.migrateBasesState(oldHash, newHash);
   }
 }
 
@@ -929,10 +984,6 @@ export function clearOldTemplateToggles(
   viewType: "dynamic-views-grid" | "dynamic-views-masonry",
   currentView?: BasesView,
 ): void {
-  console.log(
-    `[clearOldTemplateToggles] Disabling templates for type: ${viewType}`,
-  );
-
   app.workspace.iterateAllLeaves((leaf) => {
     const view = leaf.view as BasesViewWrapper;
     const actualView = view.controller?.view;
@@ -955,10 +1006,6 @@ export function clearOldTemplateToggles(
     // Check if this view has template enabled
     const isTemplate = actualView.config.get("isTemplate") === true;
     if (isTemplate) {
-      console.log(
-        `[clearOldTemplateToggles] Disabling template in view`,
-        actualView,
-      );
       // Clear timestamp first so the cascading onDataUpdated() won't try to clear the global template
       actualView.config.set("templateSetAt", undefined);
       actualView.config.set("isTemplate", false);

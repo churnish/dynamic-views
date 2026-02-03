@@ -180,10 +180,9 @@ export class DynamicViewsGridView extends BasesView {
    * Handles duplicate detection via view name and ctime checks.
    */
   private ensureViewId(): void {
-    if (this.viewId) return;
-
     const file = this.currentFile;
     const viewName = this.config?.name;
+    console.debug(`ensureViewId file:`, file?.path, `viewName:`, viewName);
     if (!file || !viewName) return;
 
     // Read existing fields via Bases config API
@@ -191,18 +190,42 @@ export class DynamicViewsGridView extends BasesView {
     const storedCtime = this.config.get("ctime") as number | undefined;
     const fileCtime = file.stat.ctime;
 
+    console.debug(
+      `ensureViewId idField:`,
+      idField,
+      `storedCtime:`,
+      storedCtime,
+      `fileCtime:`,
+      fileCtime,
+    );
+
     if (idField) {
       const [hash, storedName] = idField.split(":");
+      console.debug(
+        `ensureViewId parsed: hash=`,
+        hash,
+        `storedName=`,
+        storedName,
+      );
+      console.debug(
+        `ensureViewId match: name=`,
+        storedName === viewName,
+        `ctime=`,
+        storedCtime === fileCtime,
+      );
       if (storedName === viewName && storedCtime === fileCtime) {
         // All match — use existing hash
+        console.debug(`ensureViewId using existing hash:`, hash);
         this.viewId = hash;
         return;
       }
       // Mismatch — view or file duplicate, fall through to regenerate
+      console.debug(`ensureViewId mismatch, regenerating`);
     }
 
     // Generate new id and write via Bases config API
     this.viewId = this.plugin.generateViewId();
+    console.debug(`ensureViewId generated new:`, this.viewId);
     this.config.set("id", `${this.viewId}:${viewName}`);
     this.config.set("ctime", fileCtime);
 
@@ -469,9 +492,6 @@ export class DynamicViewsGridView extends BasesView {
           this.plugin,
         );
         if (isStale) {
-          console.log(
-            `[grid-view] Stale template toggle (view: ${existingTimestamp}), disabling`,
-          );
           this.config.set("isTemplate", false);
           this.previousIsTemplate = false;
           return;
@@ -481,7 +501,6 @@ export class DynamicViewsGridView extends BasesView {
         // User just enabled toggle — set timestamp + clear other views
         const timestamp = Date.now();
         this.config.set("templateSetAt", timestamp);
-        console.log(`[grid-view] New template timestamp: ${timestamp}`);
         clearOldTemplateToggles(this.app, GRID_VIEW_TYPE, this);
 
         // Save settings template
@@ -489,7 +508,6 @@ export class DynamicViewsGridView extends BasesView {
           this.config,
           VIEW_DEFAULTS,
         );
-        console.log("[grid-view] Saving settings template:", templateSettings);
         void this.plugin.persistenceManager.setSettingsTemplate("grid", {
           settings: templateSettings,
           setAt: timestamp,
@@ -499,7 +517,6 @@ export class DynamicViewsGridView extends BasesView {
       // Toggle turned OFF — clear template if this view was the template
       const hadTimestamp = this.config.get("templateSetAt") !== undefined;
       if (hadTimestamp) {
-        console.log("[grid-view] Clearing settings template");
         this.config.set("templateSetAt", undefined);
         void this.plugin.persistenceManager.setSettingsTemplate("grid", null);
       }
@@ -605,7 +622,7 @@ export class DynamicViewsGridView extends BasesView {
 
     // Clean up stale keys/values across ALL views in this .base file (run once)
     if (!this.hasRunCleanup) {
-      void cleanupBaseFile(this.app, this.currentFile);
+      void cleanupBaseFile(this.app, this.currentFile, this.plugin);
       this.hasRunCleanup = true;
     }
 
@@ -1117,14 +1134,6 @@ export class DynamicViewsGridView extends BasesView {
       });
 
       // Note: Don't reset isLoading here - scroll listener may have started a batch
-
-      // DEBUG: Log render completion
-      console.log(
-        "[grid-view] onDataUpdated - RENDER COMPLETE, version:",
-        currentVersion,
-        "containerEl children:",
-        this.containerEl.children.length,
-      );
     })();
   }
 
@@ -1538,16 +1547,6 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   onunload(): void {
-    // DEBUG: Log before cleanup
-    console.log(
-      "[grid-view] onunload - START, scrollEl children count:",
-      this.scrollEl.children.length,
-    );
-    console.log(
-      "[grid-view] onunload - containerEl isConnected:",
-      this.containerEl?.isConnected,
-    );
-
     this.scrollPreservation?.cleanup();
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
@@ -1566,16 +1565,6 @@ export class DynamicViewsGridView extends BasesView {
     this.renderState.abortController?.abort();
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
-
-    // DEBUG: Log after cleanup (before potential DOM removal)
-    console.log(
-      "[grid-view] onunload - END, scrollEl children count:",
-      this.scrollEl.children.length,
-    );
-    console.log(
-      "[grid-view] onunload - containerEl still isConnected:",
-      this.containerEl?.isConnected,
-    );
   }
 
   focus(): void {

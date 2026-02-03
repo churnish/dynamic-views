@@ -155,9 +155,6 @@ export function Settings({
   );
 
   const handleToggleTemplate = (enabled: boolean) => {
-    console.log(
-      `[datacore-settings] handleToggleTemplate called: enabled=${enabled}`,
-    );
     if (enabled) {
       // Extract current settings
       const templateSettings: Partial<ViewDefaults & DatacoreDefaults> = {
@@ -208,16 +205,12 @@ export function Settings({
       };
 
       const timestamp = Date.now();
-      console.log(
-        `[datacore-settings] Saving settings template with timestamp: ${timestamp}`,
-      );
       void plugin.persistenceManager.setSettingsTemplate(templateType, {
         settings: templateSettings,
         setAt: timestamp,
       });
     } else {
       // Clear template
-      console.log(`[datacore-settings] Clearing settings template`);
       void plugin.persistenceManager.setSettingsTemplate(templateType, null);
     }
     setIsTemplate(enabled);

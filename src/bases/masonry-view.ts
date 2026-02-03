@@ -202,10 +202,9 @@ export class DynamicViewsMasonryView extends BasesView {
    * Handles duplicate detection via view name and ctime checks.
    */
   private ensureViewId(): void {
-    if (this.viewId) return;
-
     const file = this.currentFile;
     const viewName = this.config?.name;
+    console.debug(`ensureViewId file:`, file?.path, `viewName:`, viewName);
     if (!file || !viewName) return;
 
     // Read existing fields via Bases config API
@@ -213,18 +212,42 @@ export class DynamicViewsMasonryView extends BasesView {
     const storedCtime = this.config.get("ctime") as number | undefined;
     const fileCtime = file.stat.ctime;
 
+    console.debug(
+      `ensureViewId idField:`,
+      idField,
+      `storedCtime:`,
+      storedCtime,
+      `fileCtime:`,
+      fileCtime,
+    );
+
     if (idField) {
       const [hash, storedName] = idField.split(":");
+      console.debug(
+        `ensureViewId parsed: hash=`,
+        hash,
+        `storedName=`,
+        storedName,
+      );
+      console.debug(
+        `ensureViewId match: name=`,
+        storedName === viewName,
+        `ctime=`,
+        storedCtime === fileCtime,
+      );
       if (storedName === viewName && storedCtime === fileCtime) {
         // All match — use existing hash
+        console.debug(`ensureViewId using existing hash:`, hash);
         this.viewId = hash;
         return;
       }
       // Mismatch — view or file duplicate, fall through to regenerate
+      console.debug(`ensureViewId mismatch, regenerating`);
     }
 
     // Generate new id and write via Bases config API
     this.viewId = this.plugin.generateViewId();
+    console.debug(`ensureViewId generated new:`, this.viewId);
     this.config.set("id", `${this.viewId}:${viewName}`);
     this.config.set("ctime", fileCtime);
 
@@ -702,7 +725,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Clean up stale keys/values across ALL views in this .base file (run once)
     if (!this.hasRunCleanup) {
-      void cleanupBaseFile(this.app, this.currentFile);
+      void cleanupBaseFile(this.app, this.currentFile, this.plugin);
       this.hasRunCleanup = true;
     }
 
