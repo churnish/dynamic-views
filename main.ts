@@ -220,7 +220,15 @@ export default class DynamicViews extends Plugin {
       id: "create-base-grid-view",
       name: "Create new base with Grid view",
       callback: async () => {
-        await this.createBaseFile();
+        await this.createBaseFile("dynamic-views-grid", "Grid");
+      },
+    });
+
+    this.addCommand({
+      id: "create-base-masonry-view",
+      name: "Create new base with Masonry view",
+      callback: async () => {
+        await this.createBaseFile("dynamic-views-masonry", "Masonry");
       },
     });
 
@@ -327,11 +335,11 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, ID);
     }
   }
 
-  async createBaseFile() {
+  async createBaseFile(viewType: string, viewName: string) {
     try {
       const folderPath = this.app.fileManager.getNewFileParent("").path;
       const filePath = getAvailableBasePath(this.app, folderPath, "Untitled");
-      const content = `views:\n  - type: dynamic-views-grid\n    name: Grid\n`;
+      const content = `views:\n  - type: ${viewType}\n    name: ${viewName}\n`;
 
       await this.app.vault.create(filePath, content);
 
