@@ -139,32 +139,6 @@ export default class DynamicViews extends Plugin {
 
     // Add ribbon icons
     this.addRibbonIcon(
-      "dices",
-      "Open random file from base",
-      async (evt: MouseEvent) => {
-        // Close any zoomed images
-        document
-          .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
-          .forEach((el) => {
-            el.classList.remove("is-zoomed");
-          });
-        const defaultInNewTab =
-          this.persistenceManager.getPluginSettings().openRandomInNewTab;
-        await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
-      },
-    );
-
-    this.addRibbonIcon("shuffle", "Shuffle base", () => {
-      // Close any zoomed images
-      document
-        .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
-        .forEach((el) => {
-          el.classList.remove("is-zoomed");
-        });
-      toggleShuffleActiveView(this.app);
-    });
-
-    this.addRibbonIcon(
       "lucide-grid-2x-2",
       "Create new base with Grid view",
       async (evt: MouseEvent) => {
@@ -185,6 +159,32 @@ export default class DynamicViews extends Plugin {
           "Masonry",
           getPaneType(evt, false),
         );
+      },
+    );
+
+    this.addRibbonIcon("shuffle", "Shuffle base", () => {
+      // Close any zoomed images
+      document
+        .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
+        .forEach((el) => {
+          el.classList.remove("is-zoomed");
+        });
+      toggleShuffleActiveView(this.app);
+    });
+
+    this.addRibbonIcon(
+      "dices",
+      "Open random file from base",
+      async (evt: MouseEvent) => {
+        // Close any zoomed images
+        document
+          .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
+          .forEach((el) => {
+            el.classList.remove("is-zoomed");
+          });
+        const defaultInNewTab =
+          this.persistenceManager.getPluginSettings().openRandomInNewTab;
+        await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
       },
     );
 
