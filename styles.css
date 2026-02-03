@@ -3721,10 +3721,7 @@ body.dynamic-views-subtitle-above
 .dynamic-views .card-text-preview {
   color: var(--dynamic-views-text-preview-color, var(--text-muted));
   font-family: var(--dynamic-views-text-preview-font, inherit);
-  font-size: var(
-    --dynamic-views-text-preview-font-size,
-    var(--bases-table-font-size)
-  );
+  font-size: var(--dynamic-views-text-preview-font-size, var(--font-ui-small));
   display: -webkit-box;
   -webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
   -webkit-box-orient: vertical;
