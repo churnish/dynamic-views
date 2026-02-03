@@ -922,14 +922,39 @@ export const DATA_UPDATE_THROTTLE_MS = 250;
  * Check if an onDataUpdated call should be throttled.
  * Returns true if the call should proceed, false if it should be skipped.
  * Updates lastTime in-place when proceeding.
+ *
+ * Hybrid throttle: Leading-edge for immediate response, optional trailing
+ * to catch coalesced updates (Obsidian batches rapid config.set calls).
  */
-export function shouldProcessDataUpdate(lastTimeRef: {
-  value: number;
-}): boolean {
+export function shouldProcessDataUpdate(
+  lastTimeRef: { value: number },
+  trailingRef?: { timeoutId: number | null; callback: (() => void) | null },
+): boolean {
   const now = Date.now();
+
   if (now - lastTimeRef.value < DATA_UPDATE_THROTTLE_MS) {
+    // Schedule trailing call if callback provided
+    if (trailingRef?.callback) {
+      if (trailingRef.timeoutId !== null) {
+        window.clearTimeout(trailingRef.timeoutId);
+      }
+      const remaining =
+        DATA_UPDATE_THROTTLE_MS - (now - lastTimeRef.value) + 10;
+      trailingRef.timeoutId = window.setTimeout(() => {
+        trailingRef.timeoutId = null;
+        // Don't update lastTimeRef here - let callback's throttle check do it
+        trailingRef.callback?.();
+      }, remaining);
+    }
     return false;
   }
+
+  // Clear any pending trailing call (leading call won)
+  if (trailingRef && trailingRef.timeoutId !== null) {
+    window.clearTimeout(trailingRef.timeoutId);
+    trailingRef.timeoutId = null;
+  }
+
   lastTimeRef.value = now;
   return true;
 }

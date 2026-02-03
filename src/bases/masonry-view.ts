@@ -176,6 +176,13 @@ export class DynamicViewsMasonryView extends BasesView {
   private displayedSoFar: number = 0;
   private propertyMeasuredTimeout: number | null = null;
   private lastDataUpdateTime = { value: 0 };
+  private trailingUpdate: {
+    timeoutId: number | null;
+    callback: (() => void) | null;
+  } = {
+    timeoutId: null,
+    callback: null,
+  };
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
 
@@ -465,6 +472,27 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
+  /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
+  private applyCssOnlySettings(): void {
+    if (!this.config || !this.containerEl) return;
+
+    const textPreviewLines = this.config.get("textPreviewLines");
+    if (typeof textPreviewLines === "number") {
+      this.containerEl.style.setProperty(
+        "--dynamic-views-text-preview-lines",
+        String(textPreviewLines),
+      );
+    }
+
+    const imageRatio = this.config.get("imageRatio");
+    if (typeof imageRatio === "number") {
+      this.containerEl.style.setProperty(
+        "--dynamic-views-image-aspect-ratio",
+        String(imageRatio),
+      );
+    }
+  }
+
   /**
    * Handle template toggle changes
    * Called from onDataUpdated() since Obsidian calls that for config changes
@@ -649,6 +677,12 @@ export class DynamicViewsMasonryView extends BasesView {
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
     this.handleTemplateToggle();
 
+    // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
+    this.applyCssOnlySettings();
+
+    // Set callback for trailing calls (hybrid throttle)
+    this.trailingUpdate.callback = () => this.onDataUpdated();
+
     void (async () => {
       // Ensure all views in file have valid ids, get this view's id
       const viewIds = await cleanupBaseFile(
@@ -682,9 +716,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }
 
       // Guard: throttle rapid-fire calls (prevents infinite loop and stale config).
-      // Obsidian fires duplicate onDataUpdated calls with stale config ~150-200ms
-      // after the correct call. Leading-edge throttle accepts first call only.
-      if (!shouldProcessDataUpdate(this.lastDataUpdateTime)) {
+      // Hybrid throttle: leading-edge for immediate response, trailing to catch coalesced updates.
+      if (
+        !shouldProcessDataUpdate(this.lastDataUpdateTime, this.trailingUpdate)
+      ) {
         return;
       }
 
@@ -2041,6 +2076,9 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (this.resizeThrottleTimeout !== null) {
       window.clearTimeout(this.resizeThrottleTimeout);
+    }
+    if (this.trailingUpdate.timeoutId !== null) {
+      window.clearTimeout(this.trailingUpdate.timeoutId);
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {

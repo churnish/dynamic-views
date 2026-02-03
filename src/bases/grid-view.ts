@@ -157,6 +157,13 @@ export class DynamicViewsGridView extends BasesView {
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
   private lastDataUpdateTime = { value: 0 };
+  private trailingUpdate: {
+    timeoutId: number | null;
+    callback: (() => void) | null;
+  } = {
+    timeoutId: null,
+    callback: null,
+  };
 
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
@@ -547,16 +554,46 @@ export class DynamicViewsGridView extends BasesView {
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
     this.handleTemplateToggle();
 
+    // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
+    this.applyCssOnlySettings();
+
     // Delay reading config - Obsidian may fire onDataUpdated before updating config.getOrder()
     // Using queueMicrotask gives Obsidian time to finish updating config state.
     queueMicrotask(() => this.processDataUpdate());
   }
 
+  /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
+  private applyCssOnlySettings(): void {
+    if (!this.config || !this.containerEl) return;
+
+    const textPreviewLines = this.config.get("textPreviewLines");
+    if (typeof textPreviewLines === "number") {
+      this.containerEl.style.setProperty(
+        "--dynamic-views-text-preview-lines",
+        String(textPreviewLines),
+      );
+    }
+
+    const imageRatio = this.config.get("imageRatio");
+    if (typeof imageRatio === "number") {
+      this.containerEl.style.setProperty(
+        "--dynamic-views-image-aspect-ratio",
+        String(imageRatio),
+      );
+    }
+  }
+
   /** Internal handler after config has settled */
   private processDataUpdate(): void {
+    // Set callback for trailing calls (hybrid throttle)
+    // Must call onDataUpdated (not processDataUpdate) to include CSS fast-path
+    this.trailingUpdate.callback = () => this.onDataUpdated();
+
     // Throttle: Obsidian fires duplicate onDataUpdated calls with stale config.
-    // Leading-edge throttle accepts first call and ignores subsequent calls within window.
-    if (!shouldProcessDataUpdate(this.lastDataUpdateTime)) {
+    // Hybrid throttle: leading-edge for immediate response, trailing to catch coalesced updates.
+    if (
+      !shouldProcessDataUpdate(this.lastDataUpdateTime, this.trailingUpdate)
+    ) {
       return;
     }
 
@@ -1524,6 +1561,9 @@ export class DynamicViewsGridView extends BasesView {
     }
     if (this.resizeRafId !== null) {
       cancelAnimationFrame(this.resizeRafId);
+    }
+    if (this.trailingUpdate.timeoutId !== null) {
+      window.clearTimeout(this.trailingUpdate.timeoutId);
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {
