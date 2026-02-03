@@ -52,8 +52,6 @@ import {
   setGroupKeyDataset,
   getGroupKeyDataset,
   UNDEFINED_GROUP_KEY_SENTINEL,
-  initializeViewDefaults,
-  tryGetAllConfig,
   cleanupBaseFile,
   clearOldTemplateToggles,
   isCurrentTemplateView,
@@ -135,7 +133,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
   private previousIsTemplate: boolean | undefined = undefined;
-  private hasInitializedDefaults = false;
+  private hasRunCleanup = false;
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -521,7 +519,6 @@ export class DynamicViewsMasonryView extends BasesView {
     super(controller);
     // Note: this.config is undefined in constructor (assigned later by QueryController.update())
     // Template defaults are applied via schema defaults in getMasonryViewOptions()
-    // and via initializeViewDefaults() in onDataUpdated()
 
     // Store scroll parent reference
     this.scrollEl = scrollEl;
@@ -654,28 +651,10 @@ export class DynamicViewsMasonryView extends BasesView {
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
     this.handleTemplateToggle();
 
-    // Initialize view defaults on first render (config is now available)
-    if (!this.hasInitializedDefaults) {
-      const allKeys = tryGetAllConfig(this.config);
-      if (allKeys) {
-        try {
-          initializeViewDefaults(
-            this.config,
-            allKeys,
-            this.plugin,
-            this.currentFile,
-            "masonry",
-          );
-          // Clean up stale keys/values across ALL views in this .base file
-          void cleanupBaseFile(this.app, this.currentFile);
-          this.hasInitializedDefaults = true;
-        } catch (e) {
-          console.warn(
-            "[dynamic-views] Failed to initialize view defaults:",
-            e,
-          );
-        }
-      }
+    // Clean up stale keys/values across ALL views in this .base file (run once)
+    if (!this.hasRunCleanup) {
+      void cleanupBaseFile(this.app, this.currentFile);
+      this.hasRunCleanup = true;
     }
 
     void (async () => {
@@ -716,7 +695,7 @@ export class DynamicViewsMasonryView extends BasesView {
       // Track total entries for end indicator
       this.totalEntries = allEntries.length;
 
-      // Read settings - template values are in config, plugin settings as fallbacks
+      // Read settings (schema defaults include template values)
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getPluginSettings(),
