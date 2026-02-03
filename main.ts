@@ -338,7 +338,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, ID);
       const file = this.app.vault.getFileByPath(filePath);
       if (file) {
         const leaf = this.app.workspace.getLeaf("tab");
-        await leaf.openFile(file);
+        await leaf.openFile(file, { eState: { rename: "all" } });
       }
     } catch (error) {
       new Notice(`Failed to create base file. Check console for details.`);
