@@ -55,7 +55,6 @@ import {
   cleanupBaseFile,
   clearOldTemplateToggles,
   isCurrentTemplateView,
-  scheduleViewKeyReorder,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -239,8 +238,6 @@ export class DynamicViewsMasonryView extends BasesView {
         this.viewId,
       );
     }
-
-    scheduleViewKeyReorder(this.app, file, viewName);
   }
 
   /** Get the collapse key for a group (sentinel for undefined keys) */

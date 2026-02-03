@@ -76,16 +76,6 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
   "ctime",
 ]);
 
-/** Preferred key order for Dynamic Views view entries (keys not listed come after) */
-const PREFERRED_KEY_ORDER = [
-  "type",
-  "name",
-  "limit",
-  "id",
-  "ctime",
-  // All other keys follow in their original order
-];
-
 /**
  * Clean ALL Dynamic Views view entries in a .base file at once.
  * Removes stale keys (e.g. DatacoreDefaults that leaked) and resets invalid enum values.
@@ -218,38 +208,6 @@ export async function cleanupBaseFile(
           changeCount++;
         }
       }
-
-      // Reorder keys: preferred keys first, then remaining in original order
-      const currentKeys = Object.keys(viewObj);
-      const orderedKeys: string[] = [];
-
-      // Add preferred keys in order (if they exist)
-      for (const key of PREFERRED_KEY_ORDER) {
-        if (key in viewObj) {
-          orderedKeys.push(key);
-        }
-      }
-
-      // Add remaining keys in their original order
-      for (const key of currentKeys) {
-        if (!orderedKeys.includes(key)) {
-          orderedKeys.push(key);
-        }
-      }
-
-      // Check if reorder is needed
-      const needsReorder = currentKeys.some((k, i) => k !== orderedKeys[i]);
-      if (needsReorder) {
-        // Rebuild object with correct key order
-        const reordered: Record<string, unknown> = {};
-        for (const key of orderedKeys) {
-          reordered[key] = viewObj[key];
-        }
-        // Replace view entry in array
-        const viewIndex = views.indexOf(view);
-        views[viewIndex] = reordered;
-        changeCount++;
-      }
     }
 
     if (changeCount === 0) return content;
@@ -260,77 +218,6 @@ export async function cleanupBaseFile(
   for (const { oldHash, newHash } of migrations) {
     await plugin.persistenceManager.migrateBasesState(oldHash, newHash);
   }
-}
-
-/**
- * Reorder keys in a specific view entry to match PREFERRED_KEY_ORDER.
- * Called after ensureViewId() sets id/ctime to fix key positioning.
- * Uses a delay to allow Bases to persist config changes first.
- */
-export function scheduleViewKeyReorder(
-  app: App,
-  file: TFile | null,
-  viewName: string,
-): void {
-  if (!file || !file.path.endsWith(".base")) return;
-
-  // Delay to allow Bases to persist config.set() changes
-  setTimeout(() => {
-    void app.vault.process(file, (content) => {
-      let parsed: Record<string, unknown>;
-      try {
-        parsed = parseYaml(content) as Record<string, unknown>;
-      } catch {
-        return content;
-      }
-
-      const views = parsed?.views;
-      if (!Array.isArray(views)) return content;
-
-      let changed = false;
-      for (const view of views) {
-        if (typeof view !== "object" || view === null) continue;
-        const viewObj = view as Record<string, unknown>;
-
-        // Only process the specific view
-        if (viewObj.name !== viewName) continue;
-        if (
-          typeof viewObj.type !== "string" ||
-          !viewObj.type.startsWith("dynamic-views-")
-        )
-          continue;
-
-        // Reorder keys
-        const currentKeys = Object.keys(viewObj);
-        const orderedKeys: string[] = [];
-
-        for (const key of PREFERRED_KEY_ORDER) {
-          if (key in viewObj) {
-            orderedKeys.push(key);
-          }
-        }
-        for (const key of currentKeys) {
-          if (!orderedKeys.includes(key)) {
-            orderedKeys.push(key);
-          }
-        }
-
-        const needsReorder = currentKeys.some((k, i) => k !== orderedKeys[i]);
-        if (needsReorder) {
-          const reordered: Record<string, unknown> = {};
-          for (const key of orderedKeys) {
-            reordered[key] = viewObj[key];
-          }
-          const viewIndex = views.indexOf(view);
-          views[viewIndex] = reordered;
-          changed = true;
-        }
-      }
-
-      if (!changed) return content;
-      return stringifyYaml(parsed);
-    });
-  }, 500); // Wait for Bases to persist
 }
 
 /** CSS selector for embedded view detection - centralized for maintainability */
