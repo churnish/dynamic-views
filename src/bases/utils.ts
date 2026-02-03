@@ -79,18 +79,19 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
 /**
  * Clean ALL Dynamic Views view entries in a .base file at once.
  * Removes stale keys (e.g. DatacoreDefaults that leaked) and resets invalid enum values.
- * Called once when any view in the file initializes — cleans siblings too.
+ * Called when any view in the file renders — handles all views, returns viewName → viewId map.
  * Also migrates basesState when a view is renamed (not duplicated).
  */
 export async function cleanupBaseFile(
   app: App,
   file: TFile | null,
   plugin: DynamicViews,
-): Promise<void> {
-  if (!file || !file.path.endsWith(".base")) return;
+): Promise<Map<string, string> | null> {
+  if (!file || !file.path.endsWith(".base")) return null;
 
   let changeCount = 0;
   const migrations: Array<{ oldHash: string; newHash: string }> = [];
+  const viewIds = new Map<string, string>();
 
   await app.vault.process(file, (content) => {
     let parsed: Record<string, unknown>;
@@ -139,6 +140,7 @@ export async function cleanupBaseFile(
         let needsNewId = false;
         let oldHash: string | undefined;
         let isRename = false;
+        let finalHash: string | undefined;
 
         if (idField) {
           const [hash, storedName] = idField.split(":");
@@ -161,10 +163,17 @@ export async function cleanupBaseFile(
           viewObj.id = `${newHash}:${viewName}`;
           viewObj.ctime = fileCtime;
           changeCount++;
+          finalHash = newHash;
 
           if (isRename && oldHash) {
             migrations.push({ oldHash, newHash });
           }
+        } else {
+          finalHash = oldHash;
+        }
+
+        if (finalHash) {
+          viewIds.set(viewName, finalHash);
         }
       }
 
@@ -218,6 +227,8 @@ export async function cleanupBaseFile(
   for (const { oldHash, newHash } of migrations) {
     await plugin.persistenceManager.migrateBasesState(oldHash, newHash);
   }
+
+  return viewIds;
 }
 
 /** CSS selector for embedded view detection - centralized for maintainability */

@@ -120,7 +120,6 @@ export class DynamicViewsGridView extends BasesView {
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
   private previousIsTemplate: boolean | undefined = undefined;
-  private hasRunCleanup = false;
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -172,50 +171,6 @@ export class DynamicViewsGridView extends BasesView {
       }
     });
     return this._resolvedFile;
-  }
-
-  /**
-   * Ensure viewId is set for persistence. Reads from .base YAML or generates new.
-   * Handles duplicate detection via view name and ctime checks.
-   */
-  private ensureViewId(): void {
-    const file = this.currentFile;
-    const viewName = this.config?.name;
-    if (!file || !viewName) return;
-
-    const idField = this.config.get("id") as string | undefined;
-    const storedCtime = this.config.get("ctime") as number | undefined;
-    const fileCtime = file.stat.ctime;
-
-    let oldHash: string | undefined;
-    let isRename = false;
-
-    if (idField) {
-      const [hash, storedName] = idField.split(":");
-      oldHash = hash;
-      const nameMismatch = storedName !== viewName;
-      const ctimeMismatch = storedCtime !== fileCtime;
-
-      if (!nameMismatch && !ctimeMismatch) {
-        this.viewId = hash;
-        return;
-      }
-      // Rename = name changed but ctime same (not file duplicate)
-      isRename = nameMismatch && !ctimeMismatch;
-    }
-
-    // Generate new id and write via Bases config API
-    this.viewId = this.plugin.generateViewId();
-    this.config.set("id", `${this.viewId}:${viewName}`);
-    this.config.set("ctime", fileCtime);
-
-    // Migrate state on rename (oldHash → new viewId)
-    if (isRename && oldHash) {
-      void this.plugin.persistenceManager.migrateBasesState(
-        oldHash,
-        this.viewId,
-      );
-    }
   }
 
   /** Get the collapse key for a group (sentinel for undefined keys) */
@@ -587,31 +542,31 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   onDataUpdated(): void {
-    // Ensure viewId is set before any persistence operations
-    this.ensureViewId();
-
-    // Load collapsed groups from persisted UI state only on first render.
-    // After that, the in-memory Set is authoritative (toggleGroupCollapse persists changes).
-    // Reloading on every onDataUpdated is unsafe: style-settings triggers onDataUpdated
-    // with stale persistence or wrong-file lookups, wiping the in-memory state.
-    if (!this._collapsedGroupsLoaded) {
-      const basesState = this.plugin.persistenceManager.getBasesState(
-        this.viewId ?? undefined,
-      );
-      this.collapsedGroups = new Set(basesState.collapsedGroups ?? []);
-      this._collapsedGroupsLoaded = true;
-    }
-
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
     this.handleTemplateToggle();
 
-    // Clean up stale keys/values across ALL views in this .base file (run once)
-    if (!this.hasRunCleanup) {
-      void cleanupBaseFile(this.app, this.currentFile, this.plugin);
-      this.hasRunCleanup = true;
-    }
-
     void (async () => {
+      // Ensure all views in file have valid ids, get this view's id
+      const viewIds = await cleanupBaseFile(
+        this.app,
+        this.currentFile,
+        this.plugin,
+      );
+      const viewName = this.config?.name;
+      this.viewId = (viewName && viewIds?.get(viewName)) ?? null;
+
+      // Load collapsed groups from persisted UI state only on first render.
+      // After that, the in-memory Set is authoritative (toggleGroupCollapse persists changes).
+      // Reloading on every onDataUpdated is unsafe: style-settings triggers onDataUpdated
+      // with stale persistence or wrong-file lookups, wiping the in-memory state.
+      if (!this._collapsedGroupsLoaded) {
+        const basesState = this.plugin.persistenceManager.getBasesState(
+          this.viewId ?? undefined,
+        );
+        this.collapsedGroups = new Set(basesState.collapsedGroups ?? []);
+        this._collapsedGroupsLoaded = true;
+      }
+
       // Guard: return early if data not yet initialized (race condition with MutationObserver)
       if (!this.data) {
         return;
