@@ -44,6 +44,7 @@ import {
   cleanupBaseFile,
   clearOldTemplateToggles,
   isCurrentTemplateView,
+  scheduleViewKeyReorder,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -204,6 +205,9 @@ export class DynamicViewsGridView extends BasesView {
     this.viewId = this.plugin.generateViewId();
     this.config.set("id", `${this.viewId}:${viewName}`);
     this.config.set("ctime", fileCtime);
+
+    // Schedule key reorder after Bases persists
+    scheduleViewKeyReorder(this.app, file, viewName);
   }
 
   /** Get the collapse key for a group (sentinel for undefined keys) */
