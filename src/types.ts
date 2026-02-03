@@ -47,7 +47,7 @@ export interface ViewDefaults {
   invertPositionForProperty: string;
   urlProperty: string;
   // Other
-  minimumColumns: number;
+  minimumColumns: 1 | 2;
   ambientBackground: "subtle" | "dramatic" | "disable";
   cssclasses: string;
 }

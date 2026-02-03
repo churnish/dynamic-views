@@ -46,7 +46,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   invertPositionForProperty: "",
   urlProperty: "url",
   // Other
-  minimumColumns: 1,
+  minimumColumns: 1 as const,
   ambientBackground: "disable",
   cssclasses: "",
 };

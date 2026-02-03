@@ -1168,7 +1168,7 @@ export class SharedCardRenderer {
 
           // Create ResizeObserver to update wrapper width when card resizes
           const resizeObserver = new ResizeObserver((entries) => {
-            if (signal.aborted) return; // Guard against race with cleanup
+            if (signal.aborted || !cardEl.isConnected) return;
             for (const entry of entries) {
               const target = entry.target as HTMLElement;
               const newCardWidth = target.offsetWidth;
@@ -1463,7 +1463,7 @@ export class SharedCardRenderer {
     currentImg.addEventListener(
       "error",
       (e) => {
-        if (signal.aborted) return;
+        if (signal.aborted || !cardEl.isConnected) return;
         // Only handle errors for the URL we set (ignore cleared src or changed URL)
         const targetSrc = (e.target as HTMLImageElement).src;
         if (targetSrc !== expectedFirstUrl) return;
