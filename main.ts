@@ -108,6 +108,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "create-dynamic-view",
       name: "Create note with Datacore query",
+      icon: "lucide-database",
       callback: async () => {
         await this.createExplorerFile();
       },
@@ -116,6 +117,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "insert-dynamic-view-at-cursor",
       name: "Insert Datacore query",
+      icon: "lucide-database",
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
@@ -192,6 +194,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "random-file-from-bases",
       name: "Open random file from base",
+      icon: "dices",
       callback: async () => {
         // Close any zoomed images
         document
@@ -208,6 +211,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "shuffle-bases-view",
       name: "Shuffle base",
+      icon: "shuffle",
       callback: () => {
         // Close any zoomed images
         document
@@ -222,6 +226,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "fold-all-groups",
       name: "Fold all groups",
+      icon: "chevrons-down-up",
       checkCallback: (checking) => {
         const view = this.getActiveDVGroupedView();
         if (!view) return false;
@@ -233,6 +238,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "unfold-all-groups",
       name: "Unfold all groups",
+      icon: "chevrons-up-down",
       checkCallback: (checking) => {
         const view = this.getActiveDVGroupedView();
         if (!view) return false;
@@ -244,6 +250,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "create-base-grid-view",
       name: "Create new base with Grid view",
+      icon: "lucide-grid-2x-2",
       callback: async () => {
         await this.createBaseFile("dynamic-views-grid", "Grid", false);
       },
@@ -252,6 +259,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "create-base-masonry-view",
       name: "Create new base with Masonry view",
+      icon: "panels-right-bottom",
       callback: async () => {
         await this.createBaseFile("dynamic-views-masonry", "Masonry", false);
       },
