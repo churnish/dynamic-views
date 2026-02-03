@@ -226,7 +226,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "fold-all-groups",
       name: "Fold all groups",
-      icon: "chevrons-down-up",
+      icon: "lucide-minimize-2",
       checkCallback: (checking) => {
         const view = this.getActiveDVGroupedView();
         if (!view) return false;
@@ -238,7 +238,7 @@ export default class DynamicViews extends Plugin {
     this.addCommand({
       id: "unfold-all-groups",
       name: "Unfold all groups",
-      icon: "chevrons-up-down",
+      icon: "lucide-maximize-2",
       checkCallback: (checking) => {
         const view = this.getActiveDVGroupedView();
         if (!view) return false;
