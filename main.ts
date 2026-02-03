@@ -280,13 +280,13 @@ export default class DynamicViews extends Plugin {
   getQueryTemplate(): string {
     const queryId = this.generateQueryId();
     return `\`\`\`datacorejsx
-const ID = '${queryId}';
 const QUERY = \`
 // –––– DQL QUERY START ––––
 
 // ––––– DQL QUERY END –––––
 \`;
 
+const ID = '${queryId}';
 return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, ID);
 \`\`\`\n`;
   }
