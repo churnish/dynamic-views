@@ -163,6 +163,22 @@ export default class DynamicViews extends Plugin {
       toggleShuffleActiveView(this.app);
     });
 
+    this.addRibbonIcon(
+      "lucide-grid-2x-2",
+      "Create new base with Grid view",
+      async () => {
+        await this.createBaseFile("dynamic-views-grid", "Grid");
+      },
+    );
+
+    this.addRibbonIcon(
+      "panels-right-bottom",
+      "Create new base with Masonry view",
+      async () => {
+        await this.createBaseFile("dynamic-views-masonry", "Masonry");
+      },
+    );
+
     // Add commands for Random and Shuffle
     this.addCommand({
       id: "random-file-from-bases",
