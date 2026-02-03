@@ -328,7 +328,8 @@ export default class DynamicViews extends Plugin {
 
   getQueryTemplate(): string {
     const queryId = this.generateQueryId();
-    return `\`\`\`datacorejsx
+    return `
+\`\`\`datacorejsx
 const QUERY = \`
 // –––– DQL QUERY START ––––
 
