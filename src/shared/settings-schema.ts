@@ -77,8 +77,6 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           key: "subtitleProperty",
           placeholder: "Comma-separated if multiple",
           default: d.subtitleProperty,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get("titleProperty") ?? d.titleProperty),
         },
       ],
     },
