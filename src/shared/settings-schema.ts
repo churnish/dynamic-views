@@ -159,7 +159,10 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           },
           default: d.thumbnailSize,
           shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) !== "thumbnail",
+            (config.get("imageFormat") ?? d.imageFormat) !== "thumbnail" ||
+            (!(config.get("imageProperty") || d.imageProperty) &&
+              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
+                "never"),
         },
         {
           type: "dropdown",
