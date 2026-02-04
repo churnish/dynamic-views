@@ -779,17 +779,17 @@ settings:
         description: How to display properties with empty values
         type: class-select
         allowEmpty: false
-        default: dynamic-views-hide-empty-labels-hidden
+        default: dynamic-views-empty-properties-hide-with-labels
         options:
             -
-				label: Show empty value markers
-                value: dynamic-views-hide-empty-show
+                label: Show
+                value: dynamic-views-empty-properties-show
             -
                 label: Hide if labels hidden
-                value: dynamic-views-hide-empty-labels-hidden
+                value: dynamic-views-empty-properties-hide-with-labels
             -
-                label: Hide all
-                value: dynamic-views-hide-empty-all
+                label: Hide
+                value: dynamic-views-empty-properties-hide
     -
         id: dynamic-views-full-row-property-alignment
         title: Full-row property alignment

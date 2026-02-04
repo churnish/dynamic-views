@@ -374,12 +374,12 @@ describe("style-settings", () => {
     });
 
     it("should return show when show class is present", () => {
-      mockClassList.add("dynamic-views-hide-empty-show");
+      mockClassList.add("dynamic-views-empty-properties-show");
       expect(getHideEmptyMode()).toBe("show");
     });
 
     it("should return all when all class is present", () => {
-      mockClassList.add("dynamic-views-hide-empty-all");
+      mockClassList.add("dynamic-views-empty-properties-hide");
       expect(getHideEmptyMode()).toBe("all");
     });
   });

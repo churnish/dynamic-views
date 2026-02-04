@@ -137,8 +137,8 @@ export type HideEmptyMode = "show" | "labels-hidden" | "all";
  * Get empty properties display mode from Style Settings dropdown
  */
 export function getHideEmptyMode(): HideEmptyMode {
-  if (hasBodyClass("dynamic-views-hide-empty-show")) return "show";
-  if (hasBodyClass("dynamic-views-hide-empty-all")) return "all";
+  if (hasBodyClass("dynamic-views-empty-properties-show")) return "show";
+  if (hasBodyClass("dynamic-views-empty-properties-hide")) return "all";
   return "labels-hidden"; // default
 }
 
