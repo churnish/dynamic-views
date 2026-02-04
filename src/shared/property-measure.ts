@@ -190,13 +190,11 @@ function queueCardSets(
   }
 }
 
-/** Field selector for odd fields (left side) */
-const ODD_FIELD_SELECTOR =
-  ".property-field-1, .property-field-3, .property-field-5, .property-field-7, .property-field-9, .property-field-11, .property-field-13";
+/** Field selector for left side of pair */
+const LEFT_FIELD_SELECTOR = ".pair-left";
 
-/** Field selector for even fields (right side) */
-const EVEN_FIELD_SELECTOR =
-  ".property-field-2, .property-field-4, .property-field-6, .property-field-8, .property-field-10, .property-field-12, .property-field-14";
+/** Field selector for right side of pair */
+const RIGHT_FIELD_SELECTOR = ".pair-right";
 
 /**
  * Measures and applies optimal widths for a side-by-side property set
@@ -219,8 +217,8 @@ export function measureSideBySideSet(
     if (card.classList.contains("compact-mode")) return;
 
     // Query fields fresh each time (avoids stale references)
-    const field1 = set.querySelector(ODD_FIELD_SELECTOR) as HTMLElement;
-    const field2 = set.querySelector(EVEN_FIELD_SELECTOR) as HTMLElement;
+    const field1 = set.querySelector(LEFT_FIELD_SELECTOR) as HTMLElement;
+    const field2 = set.querySelector(RIGHT_FIELD_SELECTOR) as HTMLElement;
     if (!field1 || !field2) return;
 
     // Enter measuring state to remove constraints
@@ -379,7 +377,7 @@ export function remeasurePropertyFields(container: HTMLElement): void {
   }
 
   const sets = Array.from(
-    container.querySelectorAll<HTMLElement>(".property-set-paired"),
+    container.querySelectorAll<HTMLElement>(".property-pair"),
   );
   if (sets.length === 0) return;
 
@@ -429,7 +427,7 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
     return [];
   }
 
-  const sets = cardEl.querySelectorAll(".property-set-paired");
+  const sets = cardEl.querySelectorAll(".property-pair");
   if (sets.length === 0) return [];
 
   // Card-properties container is inside the card

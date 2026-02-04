@@ -1777,7 +1777,7 @@ export class SharedCardRenderer {
             settings.propertyLabels,
           )
         ) {
-          fieldEl.addClass("property-field-collapsed");
+          fieldEl.addClass("property-collapsed");
         } else {
           const placeholderContent = fieldEl.createDiv("property-content");
           const markerSpan =
@@ -1785,33 +1785,76 @@ export class SharedCardRenderer {
           markerSpan.textContent = getEmptyValueMarker();
         }
       } else if (settings.propertyLabels === "hide") {
-        fieldEl.addClass("property-field-collapsed");
+        fieldEl.addClass("property-collapsed");
       }
     };
 
     // Render sets into their containers
+    // Returns pair count for offset tracking across top/bottom
     const renderSetsInto = (
       container: HTMLElement,
       setsToRender: typeof sets,
-      setIndexOffset: number,
-    ) => {
-      for (let s = 0; s < setsToRender.length; s++) {
-        const set = setsToRender[s];
-        const setNum = setIndexOffset + s + 1; // 1-based set number
+      pairIndexOffset: number,
+    ): number => {
+      let pairNum = pairIndexOffset;
 
-        const setEl = container.createDiv(
-          `property-set property-set-${setNum}`,
-        );
-        if (set.paired) setEl.addClass("property-set-paired");
-
-        const fieldEls: HTMLElement[] = [];
-        const hasContent: boolean[] = [];
-
-        for (const item of set.items) {
-          const fieldEl = setEl.createDiv(
-            `property-field property-field-${item.fieldIndex}`,
+      for (const set of setsToRender) {
+        if (set.paired) {
+          // Paired: create wrapper
+          pairNum++;
+          const pairEl = container.createDiv(
+            `property-pair property-pair-${pairNum}`,
           );
-          fieldEls.push(fieldEl);
+
+          const fieldEls: HTMLElement[] = [];
+          const hasContent: boolean[] = [];
+
+          for (let i = 0; i < set.items.length; i++) {
+            const item = set.items[i];
+            const posClass = i === 0 ? "pair-left" : "pair-right";
+            const fieldEl = pairEl.createDiv(
+              `property property-${item.fieldIndex} ${posClass}`,
+            );
+            fieldEls.push(fieldEl);
+
+            if (item.name) {
+              this.renderPropertyContent(
+                fieldEl,
+                item.name,
+                item.value,
+                card,
+                entry,
+                settings,
+                hideMissing,
+                hideEmptyMode,
+                signal,
+              );
+            }
+            hasContent.push(hasRenderedContent(fieldEl));
+          }
+
+          // Handle empty fields in pair
+          if (!hasContent[0] && !hasContent[1]) {
+            pairEl.remove();
+          } else if (hasContent[0] && !hasContent[1]) {
+            handleEmptyField(
+              fieldEls[1],
+              set.items[1].name,
+              set.items[1].value,
+            );
+          } else if (!hasContent[0] && hasContent[1]) {
+            handleEmptyField(
+              fieldEls[0],
+              set.items[0].name,
+              set.items[0].value,
+            );
+          }
+        } else {
+          // Unpaired: direct child, no wrapper
+          const item = set.items[0];
+          const fieldEl = container.createDiv(
+            `property property-${item.fieldIndex}`,
+          );
 
           if (item.name) {
             this.renderPropertyContent(
@@ -1826,37 +1869,24 @@ export class SharedCardRenderer {
               signal,
             );
           }
-          hasContent.push(hasRenderedContent(fieldEl));
-        }
 
-        // Handle empty fields
-        if (set.items.length === 2) {
-          if (!hasContent[0] && !hasContent[1]) {
-            setEl.remove();
-          } else if (hasContent[0] && !hasContent[1]) {
-            handleEmptyField(
-              fieldEls[1],
-              set.items[1].name,
-              set.items[1].value,
-            );
-          } else if (!hasContent[0] && hasContent[1]) {
-            handleEmptyField(
-              fieldEls[0],
-              set.items[0].name,
-              set.items[0].value,
-            );
+          // Handle empty unpaired field
+          if (!hasRenderedContent(fieldEl)) {
+            fieldEl.remove();
           }
-        } else if (!hasContent[0]) {
-          setEl.remove();
         }
       }
+
+      return pairNum;
     };
 
     if (topPropertiesEl && topSets.length > 0) {
-      renderSetsInto(topPropertiesEl, topSets, 0);
-    }
-    if (bottomPropertiesEl && bottomSets.length > 0) {
-      renderSetsInto(bottomPropertiesEl, bottomSets, topSets.length);
+      const topPairCount = renderSetsInto(topPropertiesEl, topSets, 0);
+      if (bottomPropertiesEl && bottomSets.length > 0) {
+        renderSetsInto(bottomPropertiesEl, bottomSets, topPairCount);
+      }
+    } else if (bottomPropertiesEl && bottomSets.length > 0) {
+      renderSetsInto(bottomPropertiesEl, bottomSets, 0);
     }
 
     // Remove empty property containers

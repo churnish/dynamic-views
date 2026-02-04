@@ -2393,9 +2393,12 @@ function Card({
           }
         }
 
-        // Build set elements with position assignment
-        const topSets: JSX.Element[] = [];
-        const bottomSets: JSX.Element[] = [];
+        // Build elements with position assignment
+        // topElements/bottomElements contain either pair wrappers or individual property divs
+        const topElements: JSX.Element[] = [];
+        const bottomElements: JSX.Element[] = [];
+        let topPairNum = 0;
+        let bottomPairNum = 0;
 
         sets.forEach((set, setIdx) => {
           // Check if set has content
@@ -2415,55 +2418,90 @@ function Card({
             ? !anyInvertedPosition
             : anyInvertedPosition;
 
-          const setElement = (
-            <div
-              key={`set-${setIdx}`}
-              className={`property-set property-set-${setIdx + 1}${set.paired ? " property-set-paired" : ""}`}
-            >
-              {set.props.map((p) => {
-                const collapsed = shouldCollapseFieldDatacore(
-                  p.name || undefined,
-                  p.value,
-                  propertyLabels,
-                  hideEmptyMode,
-                  hideMissing,
-                );
-                return (
-                  <div
-                    key={`field-${p.fieldIndex}`}
-                    className={`property-field property-field-${p.fieldIndex}${collapsed ? " property-field-collapsed" : ""}`}
-                  >
-                    {p.name &&
-                      renderPropertyContent(
-                        p.name,
-                        card,
-                        (p.value as string | null) ?? null,
-                        timeIcon,
-                        settings,
-                        app,
-                      )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-
-          if (isAbove) topSets.push(setElement);
-          else bottomSets.push(setElement);
+          if (set.paired) {
+            // Paired: create wrapper with pair-left/pair-right children
+            const pairNum = isAbove
+              ? ++topPairNum
+              : topPairNum + ++bottomPairNum;
+            const pairElement = (
+              <div
+                key={`pair-${setIdx}`}
+                className={`property-pair property-pair-${pairNum}`}
+              >
+                {set.props.map((p, i) => {
+                  const collapsed = shouldCollapseFieldDatacore(
+                    p.name || undefined,
+                    p.value,
+                    propertyLabels,
+                    hideEmptyMode,
+                    hideMissing,
+                  );
+                  const posClass = i === 0 ? "pair-left" : "pair-right";
+                  return (
+                    <div
+                      key={`field-${p.fieldIndex}`}
+                      className={`property property-${p.fieldIndex} ${posClass}${collapsed ? " property-collapsed" : ""}`}
+                    >
+                      {p.name &&
+                        renderPropertyContent(
+                          p.name,
+                          card,
+                          (p.value as string | null) ?? null,
+                          timeIcon,
+                          settings,
+                          app,
+                        )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+            if (isAbove) topElements.push(pairElement);
+            else bottomElements.push(pairElement);
+          } else {
+            // Unpaired: direct element, no wrapper
+            const p = set.props[0];
+            const collapsed = shouldCollapseFieldDatacore(
+              p.name || undefined,
+              p.value,
+              propertyLabels,
+              hideEmptyMode,
+              hideMissing,
+            );
+            const fieldElement = (
+              <div
+                key={`field-${p.fieldIndex}`}
+                className={`property property-${p.fieldIndex}${collapsed ? " property-collapsed" : ""}`}
+              >
+                {p.name &&
+                  renderPropertyContent(
+                    p.name,
+                    card,
+                    (p.value as string | null) ?? null,
+                    timeIcon,
+                    settings,
+                    app,
+                  )}
+              </div>
+            );
+            if (isAbove) topElements.push(fieldElement);
+            else bottomElements.push(fieldElement);
+          }
         });
 
-        if (topSets.length === 0 && bottomSets.length === 0) return null;
+        if (topElements.length === 0 && bottomElements.length === 0)
+          return null;
 
         return (
           <>
-            {topSets.length > 0 && (
+            {topElements.length > 0 && (
               <div className="card-properties card-properties-top">
-                {topSets}
+                {topElements}
               </div>
             )}
-            {bottomSets.length > 0 && (
+            {bottomElements.length > 0 && (
               <div className="card-properties card-properties-bottom">
-                {bottomSets}
+                {bottomElements}
               </div>
             )}
           </>

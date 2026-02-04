@@ -5940,18 +5940,7 @@ body.dynamic-views-hide-slideshow-indicator
 }
 
 /* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .timestamp-icon {
+.dynamic-views .property-pair .pair-right .timestamp-icon {
   order: 2;
   margin-right: 0;
   margin-left: var(--size-2-2);
@@ -5972,16 +5961,8 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
 /* Center positioning: odd fields show icon on right ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-1,
-    .property-field-3,
-    .property-field-5,
-    .property-field-7,
-    .property-field-9,
-    .property-field-11,
-    .property-field-13
-  )
+  .property-pair
+  .pair-left
   .timestamp-icon {
   order: 2;
   margin-right: 0;
@@ -5991,16 +5972,8 @@ body.dynamic-views-timestamp-icon-center
 /* Center positioning: even fields show icon on left ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .timestamp-icon {
   order: 0;
   margin-right: var(--size-2-2);
@@ -6010,16 +5983,8 @@ body.dynamic-views-timestamp-icon-center
 /* Left positioning: even fields reset to left ONLY in side-by-side (counters edge default) */
 body.dynamic-views-timestamp-icon-left
   .dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .timestamp-icon {
   order: 0;
   margin-right: var(--size-2-2);
@@ -6250,33 +6215,22 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
    PROPERTY ROW SYSTEM
    ============================================ */
 
-.dynamic-views .property-set {
+.dynamic-views .property-pair {
   display: flex;
-  flex-direction: column;
-  gap: var(--size-2-2);
+  flex-direction: row;
+  gap: var(--size-4-2);
   width: 100%;
   min-width: 0;
 }
 
-.dynamic-views .property-set.property-set-paired {
-  flex-direction: row;
-  gap: var(--size-4-2);
-}
-
 /* Compact mode: stack side-by-side properties on narrow cards */
-.dynamic-views .card.compact-mode .property-set.property-set-paired {
+.dynamic-views .card.compact-mode .property-pair {
   flex-direction: column;
   gap: var(--size-2-2);
 }
 
-.dynamic-views
-  .card.compact-mode
-  .property-set.property-set-paired
-  .property-field,
-.dynamic-views
-  .card.compact-mode
-  .property-set.property-set-paired.property-measured
-  .property-field {
+.dynamic-views .card.compact-mode .property-pair .property,
+.dynamic-views .card.compact-mode .property-pair.property-measured .property {
   max-width: 100% !important;
   flex: none;
   width: 100% !important;
@@ -6285,66 +6239,26 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 /* Compact mode: left-align right-side properties when stacked */
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .property-content-wrapper {
   justify-content: flex-start;
 }
 
-.dynamic-views
-  .card.compact-mode
-  .property-set.property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-content {
+.dynamic-views .card.compact-mode .property-pair .pair-right .property-content {
   justify-content: flex-start;
   order: 0;
 }
 
-.dynamic-views
-  .card.compact-mode
-  .property-set.property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-label {
+.dynamic-views .card.compact-mode .property-pair .pair-right .property-label {
   text-align: left;
 }
 
 /* Compact mode: reset inline label order (label before content) */
 .dynamic-views
   .card.compact-mode
-  .property-set.property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .property-label-inline {
   order: 0;
 }
@@ -6355,16 +6269,8 @@ body:not(.dynamic-views-timestamp-icon-center):not(
   )
   .dynamic-views
   .card.compact-mode
-  .property-set.property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .timestamp-icon {
   order: 0;
   margin-right: var(--size-2-2);
@@ -6378,16 +6284,8 @@ body:is(
   )
   .dynamic-views
   .card.compact-mode
-  .property-set.property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .timestamp-icon {
   order: 2;
   margin-right: 0;
@@ -6397,15 +6295,15 @@ body:is(
 /* Right alignment for full-row properties with inline labels - value only */
 body.dynamic-views-full-row-align-right
   .dynamic-views
-  .property-set:not(.property-set-paired)
-  .property-field:has(.property-label-inline)
+  .card-properties
+  > .property:has(.property-label-inline)
   .property-content-wrapper {
   flex: 0 1 auto;
   margin-left: auto;
 }
 
 /* Meta-field: scrollable container */
-.dynamic-views .property-field {
+.dynamic-views .property {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -6418,24 +6316,24 @@ body.dynamic-views-full-row-align-right
 }
 
 /* Collapsed field: hidden entirely */
-.dynamic-views .property-field.property-field-collapsed {
+.dynamic-views .property.property-collapsed {
   display: none;
 }
 
 /* Gap between inline property label and content */
-.dynamic-views .property-field:has(.property-label-inline) {
+.dynamic-views .property:has(.property-label-inline) {
   gap: var(--size-2-2);
 }
 
 /* Vertical layout when property labels are on top */
-.dynamic-views .property-field:has(.property-label) {
+.dynamic-views .property:has(.property-label) {
   flex-direction: column;
   align-items: stretch;
   overflow-x: visible; /* Override overflow - labels should not scroll */
 }
 
 /* Property labels should never scroll */
-.dynamic-views .property-field:has(.property-label) .property-label {
+.dynamic-views .property:has(.property-label) .property-label {
   flex-shrink: 0;
   overflow: visible;
 }
@@ -6454,106 +6352,72 @@ body.dynamic-views-full-row-align-right
 }
 
 /* For inline labels: wrapper takes remaining space after label */
-.dynamic-views
-  .property-field:has(.property-label-inline)
-  .property-content-wrapper {
+.dynamic-views .property:has(.property-label-inline) .property-content-wrapper {
   flex: 1 1 0;
   min-width: 0;
 }
 
 /* For property labels above or no property labels: wrapper takes full width */
-.dynamic-views .property-field:has(.property-label) .property-content-wrapper,
+.dynamic-views .property:has(.property-label) .property-content-wrapper,
 .dynamic-views
-  .property-field:not(:has(.property-label)):not(:has(.property-label-inline))
+  .property:not(:has(.property-label)):not(:has(.property-label-inline))
   .property-content-wrapper {
   width: 100%;
 }
 
 /* During measurement: wrapper shouldn't constrain content */
-.dynamic-views
-  .property-set.property-set-paired.property-measuring
-  .property-content-wrapper {
+.dynamic-views .property-pair.property-measuring .property-content-wrapper {
   width: auto !important;
   max-width: none !important;
   overflow-x: visible !important;
   flex: 0 1 auto !important; /* Override flex: 1 1 0 from inline label mode to allow natural sizing */
 }
 
-.dynamic-views
-  .property-set.property-set-paired.property-measuring
-  .property-content {
+.dynamic-views .property-pair.property-measuring .property-content {
   width: max-content !important;
   max-width: none !important;
 }
 
 /* During measurement: fields shouldn't constrain content */
-.dynamic-views
-  .property-set.property-set-paired.property-measuring
-  .property-field {
+.dynamic-views .property-pair.property-measuring .property {
   width: auto !important;
   max-width: none !important;
   flex: 0 0 auto !important; /* Override flex: 1 1 0 to prevent equal distribution */
 }
 
 /* During measurement: remove min-width to allow natural sizing */
-.dynamic-views
-  .property-set.property-set-paired.property-measuring
-  .property-content {
+.dynamic-views .property-pair.property-measuring .property-content {
   min-width: 0 !important;
 }
 
 /* Default unmeasured state: natural content width to avoid snap when measurement applies */
-.dynamic-views .property-set.property-set-paired .property-field {
+.dynamic-views .property-pair .property {
   flex: 0 1 auto;
   max-width: 50%;
 }
 
 /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
-.dynamic-views.dynamic-views-paired-property-column
-  .property-set.property-set-paired
-  .property-field {
+.dynamic-views.dynamic-views-paired-property-column .property-pair .property {
   flex: 1 1 0;
 }
 
 /* Measured state: use calculated widths from CSS variables, remove 50% cap */
 /* Odd fields (left side) use --field1-width */
-.dynamic-views
-  .property-set.property-set-paired.property-measured
-  :is(
-    .property-field-1,
-    .property-field-3,
-    .property-field-5,
-    .property-field-7,
-    .property-field-9,
-    .property-field-11,
-    .property-field-13
-  ) {
+.dynamic-views .property-pair.property-measured .pair-left {
   width: var(--field1-width);
   flex: 0 0 auto;
   max-width: none;
 }
 
 /* Even fields (right side) use --field2-width */
-.dynamic-views
-  .property-set.property-set-paired.property-measured
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  ) {
+.dynamic-views .property-pair.property-measured .pair-right {
   width: var(--field2-width);
   flex: 0 0 auto;
   max-width: none;
 }
 
 /* Measured state: wrapper fills calculated field width */
-.dynamic-views
-  .property-set.property-set-paired.property-measured
-  .property-content-wrapper {
+.dynamic-views .property-pair.property-measured .property-content-wrapper {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -6682,17 +6546,17 @@ body.dynamic-views-property-label-color-custom
 /* Property text color presets - with labels - semantic colors for ambient compatibility */
 body.dynamic-views-property-color-with-labels-faint
   .dynamic-views
-  .property-field:has(:is(.property-label, .property-label-inline)) {
+  .property:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-faint);
 }
 body.dynamic-views-property-color-with-labels-muted
   .dynamic-views
-  .property-field:has(:is(.property-label, .property-label-inline)) {
+  .property:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-muted);
 }
 body.dynamic-views-property-color-with-labels-normal
   .dynamic-views
-  .property-field:has(:is(.property-label, .property-label-inline)) {
+  .property:has(:is(.property-label, .property-label-inline)) {
   color: var(--text-normal);
 }
 
@@ -6732,7 +6596,7 @@ body.dynamic-views-property-color-with-labels-custom {
 /* Custom fallback with ambient compatibility */
 body.dynamic-views-property-color-with-labels-custom
   .dynamic-views
-  .property-field:has(:is(.property-label, .property-label-inline)) {
+  .property:has(:is(.property-label, .property-label-inline)) {
   color: var(
     --dynamic-views-property-color-with-labels-custom,
     var(--text-faint)
@@ -6740,8 +6604,7 @@ body.dynamic-views-property-color-with-labels-custom
 }
 
 /* Property text color application - with labels */
-.dynamic-views
-  .property-field:has(:is(.property-label, .property-label-inline)) {
+.dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
   color: var(
     --dynamic-views-property-with-label-color-value,
     var(--text-muted)
@@ -6751,17 +6614,17 @@ body.dynamic-views-property-color-with-labels-custom
 /* Property text color presets - without labels - semantic colors for ambient compatibility */
 body.dynamic-views-property-color-without-labels-faint
   .dynamic-views
-  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  .property:not(:has(:is(.property-label, .property-label-inline))) {
   color: var(--text-faint);
 }
 body.dynamic-views-property-color-without-labels-muted
   .dynamic-views
-  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  .property:not(:has(:is(.property-label, .property-label-inline))) {
   color: var(--text-muted);
 }
 body.dynamic-views-property-color-without-labels-normal
   .dynamic-views
-  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  .property:not(:has(:is(.property-label, .property-label-inline))) {
   color: var(--text-normal);
 }
 
@@ -6801,7 +6664,7 @@ body.dynamic-views-property-color-without-labels-custom {
 /* Custom fallback with ambient compatibility */
 body.dynamic-views-property-color-without-labels-custom
   .dynamic-views
-  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  .property:not(:has(:is(.property-label, .property-label-inline))) {
   color: var(
     --dynamic-views-property-color-without-labels-custom,
     var(--text-faint)
@@ -6810,21 +6673,21 @@ body.dynamic-views-property-color-without-labels-custom
 
 /* Property text color application - without labels */
 .dynamic-views
-  .property-field:not(:has(:is(.property-label, .property-label-inline))) {
+  .property:not(:has(:is(.property-label, .property-label-inline))) {
   color: var(--dynamic-views-property-no-label-color-value, var(--text-faint));
 }
 
 /* Links in properties use Obsidian default colors (not property text color) */
-.dynamic-views .property-field a.internal-link {
+.dynamic-views .property a.internal-link {
   color: var(--link-color);
 }
-.dynamic-views .property-field a.internal-link:hover {
+.dynamic-views .property a.internal-link:hover {
   color: var(--link-color-hover);
 }
-.dynamic-views .property-field a.external-link {
+.dynamic-views .property a.external-link {
   color: var(--link-external-color);
 }
-.dynamic-views .property-field a.external-link:hover {
+.dynamic-views .property a.external-link:hover {
   color: var(--link-external-color-hover);
 }
 
@@ -7103,7 +6966,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   /* Property hover colors - with labels */
   body.dynamic-views-property-color-with-labels-faint
     .dynamic-views
-    .property-field:has(:is(.property-label, .property-label-inline))
+    .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7114,7 +6977,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   }
   body.dynamic-views-property-color-with-labels-muted
     .dynamic-views
-    .property-field:has(:is(.property-label, .property-label-inline))
+    .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7126,7 +6989,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   /* Normal - no hover color change */
   body.dynamic-views-property-color-with-labels-accent
     .dynamic-views
-    .property-field:has(:is(.property-label, .property-label-inline))
+    .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7147,7 +7010,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
       .dynamic-views-property-color-with-labels-pink
     )
     .dynamic-views
-    .property-field:has(:is(.property-label, .property-label-inline))
+    .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7163,7 +7026,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   /* Custom uses pre-computed hover variable */
   body.dynamic-views-property-color-with-labels-custom
     .dynamic-views
-    .property-field:has(:is(.property-label, .property-label-inline))
+    .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7179,7 +7042,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   /* Property hover colors - without labels */
   body.dynamic-views-property-color-without-labels-faint
     .dynamic-views
-    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7190,7 +7053,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   }
   body.dynamic-views-property-color-without-labels-muted
     .dynamic-views
-    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7202,7 +7065,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   /* Normal - no hover color change */
   body.dynamic-views-property-color-without-labels-accent
     .dynamic-views
-    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7223,7 +7086,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
       .dynamic-views-property-color-without-labels-pink
     )
     .dynamic-views
-    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7239,7 +7102,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
   /* Custom uses pre-computed hover variable */
   body.dynamic-views-property-color-without-labels-custom
     .dynamic-views
-    .property-field:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -7254,66 +7117,22 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 }
 
 /* Even fields (right side) - label after content */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-label-inline {
+.dynamic-views .property-pair .pair-right .property-label-inline {
   order: 2;
 }
 
 /* Even fields (right side) - content before label */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-content {
+.dynamic-views .property-pair .pair-right .property-content {
   order: 1;
 }
 
 /* Odd fields (left side) - left-aligned labels */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-1,
-    .property-field-3,
-    .property-field-5,
-    .property-field-7,
-    .property-field-9,
-    .property-field-11,
-    .property-field-13
-  )
-  .property-label {
+.dynamic-views .property-pair .pair-left .property-label {
   text-align: left;
 }
 
 /* Even fields (right side) - right-aligned labels */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-label {
+.dynamic-views .property-pair .pair-right .property-label {
   text-align: right;
 }
 
@@ -7344,18 +7163,7 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 }
 
 /* Even fields (right side) - content should fill wrapper width for proper alignment */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
-  .property-content {
+.dynamic-views .property-pair .pair-right .property-content {
   min-width: 100%;
   width: max-content;
   justify-content: flex-end;
@@ -7386,49 +7194,22 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
 
 /* Alignment via justify-content on property-content wrapper */
 /* Odd fields (left side) */
-.dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-1,
-    .property-field-3,
-    .property-field-5,
-    .property-field-7,
-    .property-field-9,
-    .property-field-11,
-    .property-field-13
-  )
-  .property-content {
+.dynamic-views .property-pair .pair-left .property-content {
   justify-content: flex-start;
 }
 
 /* Even fields (right side) - align content right when not scrollable */
 .dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  ):not(.is-scrollable)
+  .property-pair
+  .pair-right:not(.is-scrollable)
   .property-content-wrapper {
   justify-content: flex-end;
 }
 
 /* Even fields (right side) - align content left when scrollable */
 .dynamic-views
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  ).is-scrollable
+  .property-pair
+  .pair-right.is-scrollable
   .property-content-wrapper {
   justify-content: flex-start;
 }
@@ -7438,16 +7219,8 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
     .dynamic-views-paired-property-left,
     .dynamic-views-paired-property-column
   )
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .property-content-wrapper {
   justify-content: flex-start;
 }
@@ -7456,16 +7229,8 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
     .dynamic-views-paired-property-left,
     .dynamic-views-paired-property-column
   )
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .property-content {
   justify-content: flex-start;
   order: 0;
@@ -7475,16 +7240,8 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
     .dynamic-views-paired-property-left,
     .dynamic-views-paired-property-column
   )
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .property-label {
   text-align: left;
 }
@@ -7494,27 +7251,19 @@ body.dynamic-views-title-color-custom .dynamic-views .card-title {
     .dynamic-views-paired-property-left,
     .dynamic-views-paired-property-column
   )
-  .property-set-paired
-  :is(
-    .property-field-2,
-    .property-field-4,
-    .property-field-6,
-    .property-field-8,
-    .property-field-10,
-    .property-field-12,
-    .property-field-14
-  )
+  .property-pair
+  .pair-right
   .property-label-inline {
   order: 0;
 }
 
-/* Stacked layout */
-.dynamic-views .property-set:not(.property-set-paired) .property-content {
+/* Stacked layout (unpaired properties are direct children of card-properties) */
+.dynamic-views .card-properties > .property .property-content {
   justify-content: flex-start;
 }
 
 /* Hide scrollbar for side-by-side fields */
-.dynamic-views .property-set-paired .property-field::-webkit-scrollbar {
+.dynamic-views .property-pair .property::-webkit-scrollbar {
   display: none;
 }
 
@@ -7613,7 +7362,7 @@ body.dynamic-views-no-fade-truncated-text
 }
 
 /* Hide empty fields */
-.dynamic-views .property-field:empty {
+.dynamic-views .property:empty {
   display: none;
 }
 

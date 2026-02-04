@@ -50,7 +50,7 @@ function createPropertyField(options: {
   isConnected?: boolean;
 }): HTMLElement {
   const field = document.createElement("div");
-  field.className = "property-field";
+  field.className = "property";
   Object.defineProperty(field, "isConnected", {
     value: options.isConnected ?? true,
     configurable: true,
@@ -290,7 +290,7 @@ describe("scroll-gradient", () => {
 
     it("✓ skips when wrapper not found", () => {
       const field = document.createElement("div");
-      field.className = "property-field";
+      field.className = "property";
       Object.defineProperty(field, "isConnected", {
         value: true,
         configurable: true,
@@ -301,7 +301,7 @@ describe("scroll-gradient", () => {
 
     it("✓ skips when content not found", () => {
       const field = document.createElement("div");
-      field.className = "property-field";
+      field.className = "property";
       Object.defineProperty(field, "isConnected", {
         value: true,
         configurable: true,
@@ -427,7 +427,7 @@ describe("scroll-gradient", () => {
     it("✓ skips fields without wrapper", () => {
       const container = document.createElement("div");
       const field = document.createElement("div");
-      field.className = "property-field";
+      field.className = "property";
       container.appendChild(field);
 
       expect(() =>
@@ -482,16 +482,17 @@ describe("scroll-gradient", () => {
 
     it("✓ skips unmeasured side-by-side fields", () => {
       const container = document.createElement("div");
-      const propertySet = document.createElement("div");
-      propertySet.className = "property-set property-set-paired";
+      const propertyPair = document.createElement("div");
+      propertyPair.className = "property-pair";
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
         contentClientWidth: 200,
       });
-      propertySet.appendChild(field);
-      container.appendChild(propertySet);
+      field.classList.add("pair-left");
+      propertyPair.appendChild(field);
+      container.appendChild(propertyPair);
 
       initializeScrollGradients(container);
 
@@ -500,17 +501,17 @@ describe("scroll-gradient", () => {
 
     it("✓ processes measured side-by-side fields", () => {
       const container = document.createElement("div");
-      const propertySet = document.createElement("div");
-      propertySet.className =
-        "property-set property-set-paired property-measured";
+      const propertyPair = document.createElement("div");
+      propertyPair.className = "property-pair property-measured";
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
         contentClientWidth: 200,
       });
-      propertySet.appendChild(field);
-      container.appendChild(propertySet);
+      field.classList.add("pair-left");
+      propertyPair.appendChild(field);
+      container.appendChild(propertyPair);
 
       initializeScrollGradients(container);
 
@@ -522,16 +523,17 @@ describe("scroll-gradient", () => {
       const card = document.createElement("div");
       card.className = "card compact-mode";
 
-      const propertySet = document.createElement("div");
-      propertySet.className = "property-set property-set-paired";
+      const propertyPair = document.createElement("div");
+      propertyPair.className = "property-pair";
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
         contentClientWidth: 200,
       });
-      propertySet.appendChild(field);
-      card.appendChild(propertySet);
+      field.classList.add("pair-left");
+      propertyPair.appendChild(field);
+      card.appendChild(propertyPair);
       container.appendChild(card);
 
       initializeScrollGradients(container);

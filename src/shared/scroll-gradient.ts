@@ -200,8 +200,8 @@ export function setupScrollGradients(
   updateGradientFn: (element: HTMLElement) => void,
   signal?: AbortSignal,
 ): void {
-  // Find all property field containers (both side-by-side and full-width)
-  const scrollables = container.querySelectorAll(".property-field");
+  // Find all property containers (both paired and unpaired)
+  const scrollables = container.querySelectorAll(".property");
 
   scrollables.forEach((el) => {
     const element = el as HTMLElement;
@@ -234,7 +234,7 @@ export function setupScrollGradients(
  * @param container - The container element with property fields
  */
 export function initializeScrollGradients(container: HTMLElement): void {
-  const fields = container.querySelectorAll<HTMLElement>(".property-field");
+  const fields = container.querySelectorAll<HTMLElement>(".property");
 
   // Phase 1: Read all dimensions (single forced layout)
   const measurements: Array<{
@@ -247,9 +247,10 @@ export function initializeScrollGradients(container: HTMLElement): void {
   fields.forEach((field) => {
     // Skip paired fields that haven't been measured yet
     // (unless in compact mode where measurement isn't needed)
-    const set = field.closest(".property-set");
-    const isPaired = set?.classList.contains("property-set-paired");
-    const isMeasured = set?.classList.contains("property-measured");
+    // With new DOM: no wrapper for unpaired, so closest(".property-pair") is null = unpaired
+    const pair = field.closest(".property-pair");
+    const isPaired = !!pair;
+    const isMeasured = pair?.classList.contains("property-measured") ?? false;
     const isCompact = field
       .closest(".card")
       ?.classList.contains("compact-mode");
