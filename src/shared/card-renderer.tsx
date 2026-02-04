@@ -18,6 +18,7 @@ import {
   isSlideshowIndicatorEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
+  getUrlIcon,
 } from "../utils/style-settings";
 import {
   getPropertyLabel,
@@ -2063,31 +2064,17 @@ function Card({
           )}
           {card.hasValidUrl && card.urlValue && (
             <span
-              className="card-title-url-icon text-icon-button"
+              className="card-title-url-icon text-icon-button svg-icon"
               aria-label={card.urlValue}
               onClick={(e: MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
                 window.open(card.urlValue!, "_blank", "noopener,noreferrer");
               }}
-            >
-              <svg
-                className="svg-icon"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"></path>
-                <path d="m21 3-9 9"></path>
-                <path d="M15 3h6v6"></path>
-              </svg>
-            </span>
+              ref={(el: HTMLElement | null) => {
+                if (el) setIcon(el, getUrlIcon());
+              }}
+            />
           )}
         </div>
       )}
