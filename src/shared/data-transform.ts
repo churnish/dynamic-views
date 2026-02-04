@@ -290,37 +290,23 @@ export function datacoreResultToCardData(
     properties: [],
   };
 
-  // Resolve properties from Datacore settings (propertyDisplay1-14 on Settings)
+  // PLACEHOLDER FOR FUTURE REWORK - DO NOT MODIFY UNTIL EXPLICIT USER INSTRUCTION
+  // Hard-coded file.tags + file.mtime is temporary. Will be replaced with
+  // configurable property list matching Bases implementation.
   const subtitlePropsList =
     settings.subtitleProperty
       ?.split(",")
       .map((p) => p.trim())
       .filter((p) => p) || [];
 
-  let props = [
-    settings.propertyDisplay1,
-    settings.propertyDisplay2,
-    settings.propertyDisplay3,
-    settings.propertyDisplay4,
-    settings.propertyDisplay5,
-    settings.propertyDisplay6,
-    settings.propertyDisplay7,
-    settings.propertyDisplay8,
-    settings.propertyDisplay9,
-    settings.propertyDisplay10,
-    settings.propertyDisplay11,
-    settings.propertyDisplay12,
-    settings.propertyDisplay13,
-    settings.propertyDisplay14,
-    ...subtitlePropsList,
-  ];
+  let props = ["file.tags", "file.mtime", ...subtitlePropsList];
 
   // Apply smart timestamp logic (includes subtitle fallbacks)
   props = applySmartTimestamp(props, sortMethod, settings);
 
-  // Extract processed subtitle props, then trim array back to 14
-  const processedSubtitleProps = props.slice(14);
-  props = props.slice(0, 14);
+  // Extract processed subtitle props, then trim array back to 2 (hard-coded count)
+  const processedSubtitleProps = props.slice(2);
+  props = props.slice(0, 2);
 
   // Deduplicate
   const seen = new Set<string>();

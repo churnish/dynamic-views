@@ -28,6 +28,7 @@ jest.mock("../src/constants", () => ({
   DATACORE_DEFAULTS: {
     listMarker: "bullet",
     queryHeight: 0,
+    pairProperties: true,
   },
   DEFAULT_BASES_STATE: {
     collapsedGroups: [],

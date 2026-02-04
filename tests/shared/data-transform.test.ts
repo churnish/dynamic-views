@@ -29,15 +29,12 @@ describe("data-transform", () => {
       titleProperty: "title",
       textPreviewProperty: "description",
       imageProperty: "cover",
-      propertyDisplay1: "prop1",
-      propertyDisplay2: "prop2",
-      propertyDisplay3: "",
-      propertyDisplay4: "",
       smartTimestamp: false,
       createdTimeProperty: "created time",
       modifiedTimeProperty: "modified time",
       fallbackToInNote: true,
       omitFirstLine: "ifMatchesTitle",
+      pairProperties: true,
     } as Settings;
 
     mockApp = new App();

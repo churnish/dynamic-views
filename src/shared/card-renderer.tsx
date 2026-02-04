@@ -587,7 +587,10 @@ export interface CardData {
   imageUrl?: string | string[];
   urlValue?: string | null;
   hasValidUrl?: boolean;
-  // Dynamic property list from config.getOrder() (Bases) or settings (Datacore)
+  /**
+   * PRESERVED FOR FUTURE REWORK - DO NOT REMOVE UNTIL EXPLICIT USER INSTRUCTION
+   * Property array structure retained for future Bases-like property configuration.
+   */
   properties: Array<{ name: string; value: unknown }>;
   // Datacore-only: indexed property accessors (kept until Datacore refactor)
   property1?: unknown;
@@ -718,7 +721,9 @@ function shouldCollapseFieldDatacore(
 }
 
 /**
- * Helper function to render property content based on display type
+ * PRESERVED FOR FUTURE REWORK - DO NOT REMOVE UNTIL EXPLICIT USER INSTRUCTION
+ * This function renders property content and will be extended to match Bases
+ * implementation when Datacore property configuration is reworked.
  */
 function renderPropertyContent(
   propertyName: string,

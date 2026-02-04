@@ -54,34 +54,9 @@ export const VIEW_DEFAULTS: ViewDefaults = {
 export const DATACORE_DEFAULTS: DatacoreDefaults = {
   listMarker: "bullet",
   queryHeight: 0,
-  propertyDisplay1: "file.tags",
-  propertyDisplay2: "file.mtime",
-  propertyDisplay3: "",
-  propertyDisplay4: "",
-  propertyDisplay5: "",
-  propertyDisplay6: "",
-  propertyDisplay7: "",
-  propertyDisplay8: "",
-  propertyDisplay9: "",
-  propertyDisplay10: "",
-  propertyDisplay11: "",
-  propertyDisplay12: "",
-  propertyDisplay13: "",
-  propertyDisplay14: "",
-  propertySet1SideBySide: true,
-  propertySet2SideBySide: false,
-  propertySet3SideBySide: false,
-  propertySet4SideBySide: false,
-  propertySet5SideBySide: false,
-  propertySet6SideBySide: false,
-  propertySet7SideBySide: false,
-  propertySet1Above: false,
-  propertySet2Above: false,
-  propertySet3Above: false,
-  propertySet4Above: false,
-  propertySet5Above: false,
-  propertySet6Above: false,
-  propertySet7Above: false,
+  // PLACEHOLDER: pairProperties forces side-by-side for hard-coded tags+mtime
+  // Will be revisited during Bases-style property rework
+  pairProperties: true,
 };
 
 /**

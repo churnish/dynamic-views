@@ -18,91 +18,6 @@ interface SettingsProps {
   viewMode: ViewMode;
 }
 
-// Property set configuration
-interface PropertySetConfig {
-  key: string;
-  label: string;
-  firstProp: keyof ResolvedSettings;
-  secondProp: keyof ResolvedSettings;
-  firstLabel: string;
-  secondLabel: string;
-  sideBySide: keyof ResolvedSettings;
-  above: keyof ResolvedSettings;
-}
-
-const PROPERTY_SETS: PropertySetConfig[] = [
-  {
-    key: "propertySet1",
-    label: "Property set 1",
-    firstProp: "propertyDisplay1",
-    secondProp: "propertyDisplay2",
-    firstLabel: "Property 1",
-    secondLabel: "Property 2",
-    sideBySide: "propertySet1SideBySide",
-    above: "propertySet1Above",
-  },
-  {
-    key: "propertySet2",
-    label: "Property set 2",
-    firstProp: "propertyDisplay3",
-    secondProp: "propertyDisplay4",
-    firstLabel: "Property 3",
-    secondLabel: "Property 4",
-    sideBySide: "propertySet2SideBySide",
-    above: "propertySet2Above",
-  },
-  {
-    key: "propertySet3",
-    label: "Property set 3",
-    firstProp: "propertyDisplay5",
-    secondProp: "propertyDisplay6",
-    firstLabel: "Property 5",
-    secondLabel: "Property 6",
-    sideBySide: "propertySet3SideBySide",
-    above: "propertySet3Above",
-  },
-  {
-    key: "propertySet4",
-    label: "Property set 4",
-    firstProp: "propertyDisplay7",
-    secondProp: "propertyDisplay8",
-    firstLabel: "Property 7",
-    secondLabel: "Property 8",
-    sideBySide: "propertySet4SideBySide",
-    above: "propertySet4Above",
-  },
-  {
-    key: "propertySet5",
-    label: "Property set 5",
-    firstProp: "propertyDisplay9",
-    secondProp: "propertyDisplay10",
-    firstLabel: "Property 9",
-    secondLabel: "Property 10",
-    sideBySide: "propertySet5SideBySide",
-    above: "propertySet5Above",
-  },
-  {
-    key: "propertySet6",
-    label: "Property set 6",
-    firstProp: "propertyDisplay11",
-    secondProp: "propertyDisplay12",
-    firstLabel: "Property 11",
-    secondLabel: "Property 12",
-    sideBySide: "propertySet6SideBySide",
-    above: "propertySet6Above",
-  },
-  {
-    key: "propertySet7",
-    label: "Property set 7",
-    firstProp: "propertyDisplay13",
-    secondProp: "propertyDisplay14",
-    firstLabel: "Property 13",
-    secondLabel: "Property 14",
-    sideBySide: "propertySet7SideBySide",
-    above: "propertySet7Above",
-  },
-];
-
 // Keyboard handler for Enter/Space activation
 const handleKeyboardActivate = (action: () => void) => (e: unknown) => {
   const evt = e as KeyboardEvent;
@@ -129,13 +44,6 @@ export function Settings({
     textPreview: false,
     image: false,
     properties: false,
-    propertySet1: false,
-    propertySet2: false,
-    propertySet3: false,
-    propertySet4: false,
-    propertySet5: false,
-    propertySet6: false,
-    propertySet7: false,
     more: false,
   });
 
@@ -163,34 +71,6 @@ export function Settings({
         imageProperty: settings.imageProperty,
         urlProperty: settings.urlProperty,
         subtitleProperty: settings.subtitleProperty,
-        propertyDisplay1: settings.propertyDisplay1,
-        propertyDisplay2: settings.propertyDisplay2,
-        propertyDisplay3: settings.propertyDisplay3,
-        propertyDisplay4: settings.propertyDisplay4,
-        propertyDisplay5: settings.propertyDisplay5,
-        propertyDisplay6: settings.propertyDisplay6,
-        propertyDisplay7: settings.propertyDisplay7,
-        propertyDisplay8: settings.propertyDisplay8,
-        propertyDisplay9: settings.propertyDisplay9,
-        propertyDisplay10: settings.propertyDisplay10,
-        propertyDisplay11: settings.propertyDisplay11,
-        propertyDisplay12: settings.propertyDisplay12,
-        propertyDisplay13: settings.propertyDisplay13,
-        propertyDisplay14: settings.propertyDisplay14,
-        propertySet1SideBySide: settings.propertySet1SideBySide,
-        propertySet2SideBySide: settings.propertySet2SideBySide,
-        propertySet3SideBySide: settings.propertySet3SideBySide,
-        propertySet4SideBySide: settings.propertySet4SideBySide,
-        propertySet5SideBySide: settings.propertySet5SideBySide,
-        propertySet6SideBySide: settings.propertySet6SideBySide,
-        propertySet7SideBySide: settings.propertySet7SideBySide,
-        propertySet1Above: settings.propertySet1Above,
-        propertySet2Above: settings.propertySet2Above,
-        propertySet3Above: settings.propertySet3Above,
-        propertySet4Above: settings.propertySet4Above,
-        propertySet5Above: settings.propertySet5Above,
-        propertySet6Above: settings.propertySet6Above,
-        propertySet7Above: settings.propertySet7Above,
         propertyLabels: settings.propertyLabels,
         fallbackToContent: settings.fallbackToContent,
         fallbackToEmbeds: settings.fallbackToEmbeds,
@@ -300,32 +180,6 @@ export function Settings({
         placeholder={placeholder}
         className="setting-text-input"
       />
-    </div>
-  );
-
-  // Render a property set section
-  const renderPropertySet = (group: PropertySetConfig): JSX.Element => (
-    <div className="settings-section" key={group.key}>
-      {renderSectionHeader(group.key, group.label)}
-      <div
-        className={`settings-section-content ${expandedSections[group.key] ? "" : "collapsed"}`}
-      >
-        {renderTextInput(
-          group.firstLabel,
-          group.firstProp,
-          "Enter property name",
-        )}
-        {renderTextInput(
-          group.secondLabel,
-          group.secondProp,
-          "Enter property name",
-        )}
-        {(settings[group.firstProp] || settings[group.secondProp]) &&
-          renderToggle("Show above text preview", group.above)}
-        {settings[group.firstProp] &&
-          settings[group.secondProp] &&
-          renderToggle("Show side-by-side", group.sideBySide)}
-      </div>
     </div>
   );
 
@@ -617,9 +471,6 @@ export function Settings({
           )}
         </div>
       </div>
-
-      {/* Property Sets 1-7 */}
-      {PROPERTY_SETS.map(renderPropertySet)}
 
       {/* Other Section */}
       <div className="settings-section">
