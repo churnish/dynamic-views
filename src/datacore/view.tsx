@@ -49,8 +49,6 @@ import {
   getAllDatacoreImagePropertyValues,
 } from "../utils/property";
 import {
-  getMinMasonryColumns,
-  getMinGridColumns,
   getCardSpacing,
   setupStyleSettingsObserver,
 } from "../utils/style-settings";
@@ -1139,7 +1137,7 @@ export function View({
         if (containerWidth < 100) return;
 
         const cardSize = settings.cardSize;
-        const minColumns = getMinMasonryColumns();
+        const minColumns = settings.minimumColumns;
         const gap = getCardSpacing();
 
         const lastResult = lastLayoutResultRef.current;
@@ -1178,6 +1176,11 @@ export function View({
             "--masonry-height",
             `${result.containerHeight}px`,
           );
+          // Set CSS variable for text preview line count
+          container.style.setProperty(
+            "--dynamic-views-text-preview-lines",
+            String(settings.textPreviewLines),
+          );
 
           lastLayoutResultRef.current = result;
           prevMasonryCountRef.current = cards.length;
@@ -1196,6 +1199,12 @@ export function View({
         });
 
         applyMasonryLayout(container, cards, result);
+
+        // Set CSS variable for text preview line count
+        container.style.setProperty(
+          "--dynamic-views-text-preview-lines",
+          String(settings.textPreviewLines),
+        );
 
         // Store for incremental updates
         lastLayoutResultRef.current = result;
@@ -1319,6 +1328,8 @@ export function View({
   }, [
     viewMode,
     settings.cardSize,
+    settings.minimumColumns,
+    settings.textPreviewLines,
     _styleRevision,
     sorted.length,
     propertySettingsKey,
@@ -1342,7 +1353,7 @@ export function View({
       if (containerWidth < 100) return;
       // Card size represents minimum width; actual width may be larger to fill space
       const cardSize = settings.cardSize;
-      const minColumns = getMinGridColumns();
+      const minColumns = settings.minimumColumns;
       const gap = getCardSpacing();
       const cols = Math.max(
         minColumns,
@@ -1354,6 +1365,11 @@ export function View({
       container.style.setProperty(
         "--dynamic-views-image-aspect-ratio",
         String(settings.imageRatio),
+      );
+      // Set CSS variable for text preview line count
+      container.style.setProperty(
+        "--dynamic-views-text-preview-lines",
+        String(settings.textPreviewLines),
       );
     };
 
@@ -1378,7 +1394,14 @@ export function View({
       if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
       resizeObserver.disconnect();
     };
-  }, [viewMode, settings.cardSize, _styleRevision, dc]);
+  }, [
+    viewMode,
+    settings.cardSize,
+    settings.minimumColumns,
+    settings.textPreviewLines,
+    _styleRevision,
+    dc,
+  ]);
 
   // Initialize scroll gradients and title truncation after cards render
   // Uses double-RAF to ensure layout calculations complete first
@@ -2025,8 +2048,19 @@ export function View({
         ? "wide-width"
         : "";
 
+  // Apply ambient background class
+  const ambientClass =
+    settings.ambientBackground === "subtle"
+      ? "dynamic-views-ambient-bg-subtle"
+      : settings.ambientBackground === "dramatic"
+        ? "dynamic-views-adaptive-text"
+        : "dynamic-views-ambient-bg-off";
+
   return (
-    <div ref={explorerRef} className={`dynamic-views ${widthClass}`}>
+    <div
+      ref={explorerRef}
+      className={`dynamic-views ${widthClass} ${ambientClass}`}
+    >
       <div
         ref={toolbarRef}
         className={`controls-wrapper${isResultsScrolled ? " scrolled" : ""}`}

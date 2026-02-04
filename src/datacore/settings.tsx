@@ -202,6 +202,9 @@ export function Settings({
         listMarker: settings.listMarker,
         cardSize: settings.cardSize,
         cssclasses: settings.cssclasses,
+        minimumColumns: settings.minimumColumns,
+        textPreviewLines: settings.textPreviewLines,
+        ambientBackground: settings.ambientBackground,
       };
 
       const timestamp = Date.now();
@@ -366,11 +369,6 @@ export function Settings({
             "subtitleProperty",
             "Comma-separated if multiple",
           )}
-          {renderTextInput(
-            "URL property",
-            "urlProperty",
-            "Comma-separated if multiple",
-          )}
         </div>
       </div>
 
@@ -389,6 +387,28 @@ export function Settings({
             "Use note content if property missing or empty",
             "fallbackToContent",
           )}
+          <div className="setting-item">
+            <div className="setting-item-info">
+              <label>Lines</label>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                value={settings.textPreviewLines}
+                onChange={(e: unknown) => {
+                  const evt = e as Event & { target: HTMLInputElement };
+                  onSettingsChange({
+                    textPreviewLines: parseInt(evt.target.value),
+                  });
+                }}
+                style={{ flex: 1 }}
+              />
+              <span className="slider-value">{settings.textPreviewLines}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -532,6 +552,31 @@ export function Settings({
                   </div>
                 </div>
               )}
+              {(settings.imageFormat === "thumbnail" ||
+                settings.imageFormat === "cover") && (
+                <div className="setting-item setting-item-dropdown">
+                  <div className="setting-item-info">
+                    <label>Ambient background</label>
+                  </div>
+                  <select
+                    value={settings.ambientBackground}
+                    onChange={(e: unknown) => {
+                      const evt = e as Event & { target: HTMLSelectElement };
+                      onSettingsChange({
+                        ambientBackground: evt.target.value as
+                          | "subtle"
+                          | "dramatic"
+                          | "disable",
+                      });
+                    }}
+                    className="dropdown"
+                  >
+                    <option value="subtle">Subtle</option>
+                    <option value="dramatic">Dramatic</option>
+                    <option value="disable">Disable</option>
+                  </select>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -565,6 +610,11 @@ export function Settings({
               <option value="hide">Hide</option>
             </select>
           </div>
+          {renderTextInput(
+            "URL property",
+            "urlProperty",
+            "Comma-separated if multiple",
+          )}
         </div>
       </div>
 
@@ -582,6 +632,24 @@ export function Settings({
             "cssclasses",
             "Comma-separated if multiple",
           )}
+          <div className="setting-item setting-item-dropdown">
+            <div className="setting-item-info">
+              <label>Minimum columns</label>
+            </div>
+            <select
+              value={settings.minimumColumns}
+              onChange={(e: unknown) => {
+                const evt = e as Event & { target: HTMLSelectElement };
+                onSettingsChange({
+                  minimumColumns: parseInt(evt.target.value) as 1 | 2,
+                });
+              }}
+              className="dropdown"
+            >
+              <option value={1}>One</option>
+              <option value={2}>Two</option>
+            </select>
+          </div>
           <div className="setting-item setting-item-toggle">
             <div className="setting-item-info">
               <label>Use these settings for new views</label>
