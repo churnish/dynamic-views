@@ -241,28 +241,34 @@ export function Settings({
             "Use note content if property missing or empty",
             "fallbackToContent",
           )}
-          <div className="setting-item">
-            <div className="setting-item-info">
-              <label>Lines</label>
+          {(settings.textPreviewProperty || settings.fallbackToContent) && (
+            <div className="setting-item">
+              <div className="setting-item-info">
+                <label>Lines</label>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={settings.textPreviewLines}
+                  onChange={(e: unknown) => {
+                    const evt = e as Event & { target: HTMLInputElement };
+                    onSettingsChange({
+                      textPreviewLines: parseInt(evt.target.value),
+                    });
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <span className="slider-value">
+                  {settings.textPreviewLines}
+                </span>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                step="1"
-                value={settings.textPreviewLines}
-                onChange={(e: unknown) => {
-                  const evt = e as Event & { target: HTMLInputElement };
-                  onSettingsChange({
-                    textPreviewLines: parseInt(evt.target.value),
-                  });
-                }}
-                style={{ flex: 1 }}
-              />
-              <span className="slider-value">{settings.textPreviewLines}</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -501,6 +507,67 @@ export function Settings({
               <option value={2}>Two</option>
             </select>
           </div>
+          <div className="setting-item setting-item-dropdown">
+            <div className="setting-item-info">
+              <label>List marker</label>
+            </div>
+            <select
+              value={settings.listMarker}
+              onChange={(e: unknown) => {
+                const evt = e as Event & { target: HTMLSelectElement };
+                onSettingsChange({
+                  listMarker: evt.target.value as "bullet" | "number" | "none",
+                });
+              }}
+              className="dropdown"
+            >
+              <option value="bullet">Bullet</option>
+              <option value="number">Number</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <div className="setting-item setting-item-text">
+            <div className="setting-item-info">
+              <label>View height</label>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button
+                className="clickable-icon"
+                aria-label="Restore default"
+                onClick={() => onSettingsChange({ queryHeight: 0 })}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-rotate-ccw"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+              <input
+                type="number"
+                min="0"
+                placeholder="500"
+                value={settings.queryHeight}
+                onChange={(e: unknown) => {
+                  const evt = e as Event & { target: HTMLInputElement };
+                  const val = parseInt(evt.target.value);
+                  if (!isNaN(val) && val >= 0) {
+                    onSettingsChange({ queryHeight: val });
+                  }
+                }}
+                style={{ width: "80px" }}
+              />
+            </div>
+          </div>
           <div className="setting-item setting-item-toggle">
             <div className="setting-item-info">
               <label>Use these settings for new views</label>
@@ -513,70 +580,6 @@ export function Settings({
               aria-checked={isTemplate}
             />
           </div>
-        </div>
-      </div>
-
-      {/* Datacore-specific settings */}
-      <div className="setting-item setting-item-dropdown">
-        <div className="setting-item-info">
-          <label>List marker</label>
-        </div>
-        <select
-          value={settings.listMarker}
-          onChange={(e: unknown) => {
-            const evt = e as Event & { target: HTMLSelectElement };
-            onSettingsChange({
-              listMarker: evt.target.value as "bullet" | "number" | "none",
-            });
-          }}
-          className="dropdown"
-        >
-          <option value="bullet">Bullet</option>
-          <option value="number">Number</option>
-          <option value="none">None</option>
-        </select>
-      </div>
-
-      <div className="setting-item setting-item-text">
-        <div className="setting-item-info">
-          <label>View height</label>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <button
-            className="clickable-icon"
-            aria-label="Restore default"
-            onClick={() => onSettingsChange({ queryHeight: 0 })}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-rotate-ccw"
-            >
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-          </button>
-          <input
-            type="number"
-            min="0"
-            placeholder="500"
-            value={settings.queryHeight}
-            onChange={(e: unknown) => {
-              const evt = e as Event & { target: HTMLInputElement };
-              const val = parseInt(evt.target.value);
-              if (!isNaN(val) && val >= 0) {
-                onSettingsChange({ queryHeight: val });
-              }
-            }}
-            style={{ width: "80px" }}
-          />
         </div>
       </div>
     </div>
