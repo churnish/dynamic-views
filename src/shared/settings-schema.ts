@@ -273,7 +273,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
           placeholder: "Comma-separated if multiple",
           default: d.invertPropertyPosition,
           shouldHide: (config: BasesConfig) =>
-            config.getOrder().length === 0 ||
+            config.getOrder().length <= 1 ||
             (!(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
               (config.get("fallbackToContent") ?? d.fallbackToContent) ===
                 false),
