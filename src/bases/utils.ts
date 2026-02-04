@@ -75,7 +75,7 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
   // Internal markers
   "isTemplate",
   "templateSetAt",
-  // Persistence ID (hash-ctime-viewName)
+  // Persistence ID (ctime-hash-viewName)
   "id",
 ]);
 
@@ -117,7 +117,7 @@ export async function cleanupBaseFile(
         | string
         | undefined;
       if (idField) {
-        const hashMatch = idField.match(/^([a-z0-9]{6})-/);
+        const hashMatch = idField.match(/^\d{13}-([a-z0-9]{6})-/);
         if (hashMatch) {
           hashCounts.set(hashMatch[1], (hashCounts.get(hashMatch[1]) || 0) + 1);
         }
@@ -145,10 +145,10 @@ export async function cleanupBaseFile(
         let oldHash: string | undefined;
 
         if (idField) {
-          const match = idField.match(/^([a-z0-9]{6})-(\d{13})-(.+)$/);
+          const match = idField.match(/^(\d{13})-([a-z0-9]{6})-(.+)$/);
           if (match) {
-            oldHash = match[1];
-            storedCtime = parseInt(match[2], 10);
+            storedCtime = parseInt(match[1], 10);
+            oldHash = match[2];
             storedName = match[3];
           }
         }
@@ -172,7 +172,7 @@ export async function cleanupBaseFile(
 
         if (needsNewId) {
           const newHash = Math.random().toString(36).substring(2, 8);
-          viewObj.id = `${newHash}-${fileCtime}-${viewName}`;
+          viewObj.id = `${fileCtime}-${newHash}-${viewName}`;
           changeCount++;
           finalHash = newHash;
 
