@@ -216,6 +216,7 @@ describe("data-transform", () => {
         mockSettings,
         "alphabetical",
         false,
+        [],
       );
 
       expect(result.path).toBe("test/file.md");
@@ -240,6 +241,7 @@ describe("data-transform", () => {
         mockSettings,
         "alphabetical",
         false,
+        [],
       );
 
       expect(result.folderPath).toBe("folder/subfolder");
@@ -261,6 +263,7 @@ describe("data-transform", () => {
         mockSettings,
         "alphabetical",
         false,
+        [],
       );
 
       expect(result.folderPath).toBe("");
@@ -282,6 +285,7 @@ describe("data-transform", () => {
         mockSettings,
         "alphabetical",
         false,
+        [],
         "test textPreview",
         ["img1.png", "img2.png"],
       );
@@ -445,6 +449,7 @@ describe("data-transform", () => {
         mockSettings,
         "alphabetical",
         false,
+        [],
         textPreviews,
         images,
         hasImageAvailable,
@@ -464,6 +469,7 @@ describe("data-transform", () => {
         mockSettings,
         "alphabetical",
         false,
+        [],
         {},
         {},
         {},

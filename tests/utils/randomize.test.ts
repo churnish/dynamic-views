@@ -468,7 +468,7 @@ describe("randomize", () => {
       expect(mockOnDataUpdated).toHaveBeenCalled();
     });
 
-    it("should disable shuffle when toggling off", () => {
+    it("should reshuffle when toggling on already shuffled view", () => {
       const mockOnDataUpdated = jest.fn();
       const mockView = {
         type: "dynamic-views-masonry",
@@ -488,8 +488,9 @@ describe("randomize", () => {
 
       toggleShuffleActiveView(mockApp);
 
-      expect(mockView.isShuffled).toBe(false);
-      expect(mockView.shuffledOrder).toEqual([]);
+      // Always reshuffles - original sort restores on view reopen
+      expect(mockView.isShuffled).toBe(true);
+      expect(mockView.shuffledOrder).toHaveLength(1);
       expect(mockOnDataUpdated).toHaveBeenCalled();
     });
 
