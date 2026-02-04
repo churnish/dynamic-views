@@ -2,6 +2,7 @@ import type {
   PluginSettings,
   ViewDefaults,
   DatacoreDefaults,
+  BasesDefaults,
   ResolvedSettings,
 } from "./types";
 
@@ -57,6 +58,10 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
   // PLACEHOLDER: pairProperties forces side-by-side for hard-coded tags+mtime
   // Will be revisited during Bases-style property rework
   pairProperties: true,
+};
+
+export const BASES_DEFAULTS: BasesDefaults = {
+  propertyLabels: "inline",
 };
 
 /**

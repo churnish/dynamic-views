@@ -8,7 +8,7 @@ import type {
   ViewDefaults,
   BasesResolvedSettings,
 } from "../types";
-import { VIEW_DEFAULTS } from "../constants";
+import { VIEW_DEFAULTS, BASES_DEFAULTS } from "../constants";
 
 // Bases config object interface
 interface BasesConfig {
@@ -31,7 +31,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
   // Merge settings template into defaults (if template exists)
   // For new views: config is empty → controls show these defaults = template values
   // For existing views: config has values → these defaults are ignored by Obsidian
-  const d = { ...VIEW_DEFAULTS };
+  const d = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
   if (viewType) {
     try {
       // Access plugin instance to read settings template
@@ -362,7 +362,7 @@ export function readBasesSettings(
   pluginSettings: PluginSettings,
   viewType?: "grid" | "masonry",
 ): BasesResolvedSettings {
-  const defaults = VIEW_DEFAULTS;
+  const defaults = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
 
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)

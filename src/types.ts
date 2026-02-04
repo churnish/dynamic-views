@@ -60,6 +60,11 @@ export interface DatacoreDefaults {
   pairProperties: boolean;
 }
 
+/** Bases-only defaults (overrides VIEW_DEFAULTS for Bases views) */
+export interface BasesDefaults {
+  propertyLabels: "hide" | "inline" | "above";
+}
+
 /** Fully resolved settings — the merge of PluginSettings + ViewDefaults + DatacoreDefaults */
 export type ResolvedSettings = PluginSettings &
   ViewDefaults &
