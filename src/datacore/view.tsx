@@ -1089,6 +1089,16 @@ export function View({
         const minColumns = settings.minimumColumns;
         const gap = getCardSpacing();
 
+        // Set CSS variables (same for both incremental and full paths)
+        container.style.setProperty(
+          "--dynamic-views-text-preview-lines",
+          String(settings.textPreviewLines),
+        );
+        container.style.setProperty(
+          "--dynamic-views-thumbnail-size",
+          THUMBNAIL_SIZE_MAP[settings.thumbnailSize] ?? "80px",
+        );
+
         const lastResult = lastLayoutResultRef.current;
         const prevCount = prevMasonryCountRef.current ?? 0;
 
@@ -1125,16 +1135,6 @@ export function View({
             "--masonry-height",
             `${result.containerHeight}px`,
           );
-          // Set CSS variable for text preview line count
-          container.style.setProperty(
-            "--dynamic-views-text-preview-lines",
-            String(settings.textPreviewLines),
-          );
-          // Set CSS variable for thumbnail size
-          container.style.setProperty(
-            "--dynamic-views-thumbnail-size",
-            THUMBNAIL_SIZE_MAP[settings.thumbnailSize] ?? "80px",
-          );
 
           lastLayoutResultRef.current = result;
           prevMasonryCountRef.current = cards.length;
@@ -1153,17 +1153,6 @@ export function View({
         });
 
         applyMasonryLayout(container, cards, result);
-
-        // Set CSS variable for text preview line count
-        container.style.setProperty(
-          "--dynamic-views-text-preview-lines",
-          String(settings.textPreviewLines),
-        );
-        // Set CSS variable for thumbnail size
-        container.style.setProperty(
-          "--dynamic-views-thumbnail-size",
-          THUMBNAIL_SIZE_MAP[settings.thumbnailSize] ?? "80px",
-        );
 
         // Store for incremental updates
         lastLayoutResultRef.current = result;
