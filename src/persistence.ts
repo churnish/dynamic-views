@@ -304,14 +304,29 @@ export class PersistenceManager {
   getSettingsTemplate(
     viewType: "grid" | "masonry" | "datacore",
   ): SettingsTemplate | undefined {
-    return this.data.templates[viewType];
+    const template = this.data.templates[viewType];
+    if (!template?.settings) return template;
+
+    // Convert minimumColumns string to number for internal use (Bases parity)
+    const val = template.settings.minimumColumns as unknown;
+    if (val === "one") template.settings.minimumColumns = 1;
+    else if (val === "two") template.settings.minimumColumns = 2;
+
+    return template;
   }
 
   async setSettingsTemplate(
     viewType: "grid" | "masonry" | "datacore",
     template: SettingsTemplate | null,
   ): Promise<void> {
-    if (template) {
+    if (template?.settings) {
+      // Convert minimumColumns to string for Bases parity
+      if (typeof template.settings.minimumColumns === "number") {
+        (template.settings as Record<string, unknown>).minimumColumns =
+          template.settings.minimumColumns === 1 ? "one" : "two";
+      }
+      this.data.templates[viewType] = template;
+    } else if (template) {
       this.data.templates[viewType] = template;
     } else {
       delete this.data.templates[viewType];
