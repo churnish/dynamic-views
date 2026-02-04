@@ -50,22 +50,23 @@ export function shouldCollapseField(
   hideEmptyMode: "show" | "labels-hidden" | "all",
   propertyLabels: "hide" | "inline" | "above",
 ): boolean {
-  const isTag = isTagProperty(propertyName);
-  const isFile = isFileProperty(propertyName);
-  const isFormula = isFormulaProperty(propertyName);
+  // 1. FIRST: Missing handling (only YAML/note properties can be "missing")
+  if (
+    value === null &&
+    hideMissing &&
+    !isFileProperty(propertyName) &&
+    !isFormulaProperty(propertyName) &&
+    !isTagProperty(propertyName)
+  ) {
+    return true;
+  }
 
-  // Empty handling (applies to all property types uniformly)
-  const isEmpty = value === "" || (isTag && !value);
+  // 2. THEN: Empty handling - no displayable value
+  const isEmpty = !value;
   if (isEmpty) {
     if (hideEmptyMode === "all") return true;
     if (hideEmptyMode === "labels-hidden" && propertyLabels === "hide")
       return true;
-    return false; // "show" mode - don't collapse empty fields
-  }
-
-  // Missing handling (only YAML properties can be "missing")
-  if (value === null && !isFile && !isFormula && !isTag) {
-    return hideMissing;
   }
 
   return false;

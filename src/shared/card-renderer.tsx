@@ -987,7 +987,7 @@ function renderProperty(
   }
 
   // Check if this is an empty property that should be hidden based on dropdown mode
-  const isEmpty = resolvedValue === "" || (isTag && !resolvedValue);
+  const isEmpty = !resolvedValue;
   const hideEmptyMode = getHideEmptyMode();
   if (isEmpty) {
     if (hideEmptyMode === "all") return null;
