@@ -29,7 +29,11 @@ import {
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
 } from "../utils/notebook-navigator";
-import type { PluginSettings, ResolvedSettings, ViewDefaults } from "../types";
+import type {
+  PluginSettings,
+  BasesResolvedSettings,
+  ViewDefaults,
+} from "../types";
 import { VIEW_DEFAULTS } from "../constants";
 import type DynamicViews from "../../main";
 
@@ -705,7 +709,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
  */
 export async function loadContentForEntries(
   entries: BasesEntry[],
-  settings: ResolvedSettings,
+  settings: BasesResolvedSettings,
   app: App,
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,

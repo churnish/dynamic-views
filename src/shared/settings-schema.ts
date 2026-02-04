@@ -3,8 +3,12 @@
  * Defines settings structure for both Bases and Datacore views
  */
 
-import type { PluginSettings, ViewDefaults, ResolvedSettings } from "../types";
-import { VIEW_DEFAULTS, DATACORE_DEFAULTS } from "../constants";
+import type {
+  PluginSettings,
+  ViewDefaults,
+  BasesResolvedSettings,
+} from "../types";
+import { VIEW_DEFAULTS } from "../constants";
 
 // Bases config object interface
 interface BasesConfig {
@@ -350,14 +354,14 @@ export function getMasonryViewOptions(): any[] {
 
 /**
  * Read settings from Bases config
- * Maps Bases config values to ResolvedSettings by merging:
- *   VIEW_DEFAULTS (overridden by config) + DATACORE_DEFAULTS + pluginSettings
+ * Maps Bases config values to BasesResolvedSettings by merging:
+ *   VIEW_DEFAULTS (overridden by config) + pluginSettings
  */
 export function readBasesSettings(
   config: BasesConfig,
   pluginSettings: PluginSettings,
   viewType?: "grid" | "masonry",
-): ResolvedSettings {
+): BasesResolvedSettings {
   const defaults = VIEW_DEFAULTS;
 
   // Helper: get string property with fallback
@@ -477,11 +481,10 @@ export function readBasesSettings(
     cssclasses: getString("cssclasses", defaults.cssclasses),
   };
 
-  // Merge: pluginSettings + config-derived ViewDefaults + DATACORE_DEFAULTS
+  // Merge: pluginSettings + config-derived ViewDefaults
   return {
     ...pluginSettings,
     ...viewSettings,
-    ...DATACORE_DEFAULTS,
   };
 }
 

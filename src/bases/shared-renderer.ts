@@ -53,7 +53,7 @@ import {
 } from "../shared/image-viewer";
 import { getFileExtInfo, getFileTypeIcon } from "../utils/file-extension";
 import type DynamicViews from "../../main";
-import type { ResolvedSettings } from "../types";
+import type { BasesResolvedSettings } from "../types";
 import {
   createSlideshowNavigator,
   getCachedBlobUrl,
@@ -223,7 +223,7 @@ const AMBIENT_CLASSES = [
  */
 export function applyViewContainerStyles(
   container: HTMLElement,
-  settings: ResolvedSettings,
+  settings: BasesResolvedSettings,
 ): void {
   // Paired property layout
   container.classList.remove(...PAIRED_PROPERTY_CLASSES);
@@ -623,7 +623,7 @@ export class SharedCardRenderer {
     container: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
     keyboardNav?: {
       index: number;
       focusableCardIndex: number;
@@ -1392,7 +1392,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     format: "thumbnail" | "cover",
     position: "left" | "right" | "top" | "bottom",
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
     cardPath: string,
   ): void {
     // Create AbortController for cleanup
@@ -1560,7 +1560,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     format: "thumbnail" | "cover",
     position: "left" | "right" | "top" | "bottom",
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
     cardEl: HTMLElement,
     signal?: AbortSignal,
   ): void {
@@ -1720,7 +1720,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
     signal: AbortSignal,
   ): void {
     const props = card.properties;
@@ -1969,7 +1969,7 @@ export class SharedCardRenderer {
     resolvedValue: unknown,
     card: CardData,
     entry: BasesEntry,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
     hideMissing: boolean,
     hideEmptyMode: HideEmptyMode,
     signal: AbortSignal,

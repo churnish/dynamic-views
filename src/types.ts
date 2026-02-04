@@ -68,6 +68,12 @@ export type ResolvedSettings = PluginSettings &
     _displayNameMap?: Record<string, string>;
   };
 
+/** Bases-only resolved settings — no Datacore fields */
+export type BasesResolvedSettings = PluginSettings &
+  ViewDefaults & {
+    _displayNameMap?: Record<string, string>;
+  };
+
 /** Bases-only UI state (persisted per .base file by ctime) */
 export interface BasesUIState {
   collapsedGroups: string[];

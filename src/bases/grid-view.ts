@@ -61,7 +61,7 @@ import {
 } from "../utils/property";
 import type DynamicViews from "../../main";
 import type {
-  ResolvedSettings,
+  BasesResolvedSettings,
   ContentCache,
   RenderState,
   LastGroupState,
@@ -378,7 +378,7 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: ResolvedSettings): number {
+  private calculateInitialCount(settings: BasesResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
       this.containerEl.getBoundingClientRect().width,
@@ -1150,7 +1150,7 @@ export class DynamicViewsGridView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
   ): HTMLElement {
     return this.cardRenderer.renderCard(container, card, entry, settings, {
       index,
@@ -1172,7 +1172,7 @@ export class DynamicViewsGridView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
   ): Promise<void> {
     // Clear cache for changed files only
     for (const path of changedPaths) {
@@ -1438,7 +1438,7 @@ export class DynamicViewsGridView extends BasesView {
 
   private setupInfiniteScroll(
     totalEntries: number,
-    settings?: ResolvedSettings,
+    settings?: BasesResolvedSettings,
   ): void {
     const scrollContainer = this.scrollEl;
 

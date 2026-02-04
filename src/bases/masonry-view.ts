@@ -77,7 +77,7 @@ import {
 } from "../utils/property";
 import type DynamicViews from "../../main";
 import type {
-  ResolvedSettings,
+  BasesResolvedSettings,
   ContentCache,
   RenderState,
   LastGroupState,
@@ -404,7 +404,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Calculate batch size based on current column count */
-  private getBatchSize(settings: ResolvedSettings): number {
+  private getBatchSize(settings: BasesResolvedSettings): number {
     if (!this.masonryContainer) return MAX_BATCH_SIZE;
     const minColumns = settings.minimumColumns;
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
@@ -422,7 +422,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: ResolvedSettings): number {
+  private calculateInitialCount(settings: BasesResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
       this.containerEl.getBoundingClientRect().width,
@@ -447,7 +447,7 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Check if more content needed after layout completes, and load if so */
   private checkAndLoadMore(
     totalEntries: number,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
   ): void {
     // Skip if already loading or all items displayed
     if (this.isLoading || this.displayedCount >= totalEntries) return;
@@ -1174,7 +1174,7 @@ export class DynamicViewsMasonryView extends BasesView {
     })();
   }
 
-  private setupMasonryLayout(settings: ResolvedSettings): void {
+  private setupMasonryLayout(settings: BasesResolvedSettings): void {
     if (!this.masonryContainer) return;
 
     const minColumns = settings.minimumColumns;
@@ -1439,7 +1439,7 @@ export class DynamicViewsMasonryView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
   ): HTMLElement {
     return this.cardRenderer.renderCard(container, card, entry, settings, {
       index,
@@ -1461,7 +1461,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
   ): Promise<void> {
     // Capture old heights for masonry relayout check
     const heightsBefore = new Map<string, number>();
@@ -1530,7 +1530,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private async appendBatch(
     totalEntries: number,
-    settings: ResolvedSettings,
+    settings: BasesResolvedSettings,
   ): Promise<void> {
     // Guard: return early if data not initialized or no masonry container
     if (!this.data || !this.masonryContainer) return;
@@ -1938,7 +1938,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private setupInfiniteScroll(
     totalEntries: number,
-    settings?: ResolvedSettings,
+    settings?: BasesResolvedSettings,
   ): void {
     const scrollContainer = this.scrollEl;
     // Clean up existing listeners and timeouts (don't use this.register() since this method is called multiple times)
