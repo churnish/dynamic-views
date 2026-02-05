@@ -1079,18 +1079,23 @@ export function Toolbar({
                       target: HTMLTextAreaElement;
                     };
                     onDraftQueryChange(evt.target.value);
-                    evt.target.style.setProperty("height", "auto");
-                    evt.target.style.setProperty(
-                      "height",
-                      `${evt.target.scrollHeight}px`,
-                    );
+                    evt.target.setCssProps({
+                      "--dynamic-views-query-height": "auto",
+                    });
+                    evt.target.setCssProps({
+                      "--dynamic-views-query-height": `${evt.target.scrollHeight}px`,
+                    });
                   }}
                   className="query-input"
                   placeholder='#tag&#10;path("path/to/folder")&#10;key = "value"'
                   ref={(el: HTMLTextAreaElement | null) => {
                     if (el) {
-                      el.style.setProperty("height", "auto");
-                      el.style.setProperty("height", `${el.scrollHeight}px`);
+                      el.setCssProps({
+                        "--dynamic-views-query-height": "auto",
+                      });
+                      el.setCssProps({
+                        "--dynamic-views-query-height": `${el.scrollHeight}px`,
+                      });
                     }
                   }}
                 />

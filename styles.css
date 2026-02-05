@@ -7732,9 +7732,6 @@ body:not(.dynamic-views-title-color-custom)
 }
 
 /* Utility classes for programmatic style changes (replaces inline style manipulation) */
-.dynamic-views-hidden {
-  display: none;
-}
 .dynamic-views-height-preserved {
   min-height: var(--dynamic-views-preserve-height);
 }
@@ -7750,4 +7747,11 @@ body:not(.dynamic-views-title-color-custom)
 }
 .dynamic-views-menu-positioning {
   visibility: hidden;
+}
+.dynamic-views-query-results-constrained {
+  max-height: var(--dynamic-views-query-max-height);
+  overflow-y: auto;
+}
+.dynamic-views .query-input {
+  height: var(--dynamic-views-query-height, auto);
 }

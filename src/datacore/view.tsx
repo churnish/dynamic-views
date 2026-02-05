@@ -1406,14 +1406,12 @@ export function View({
     if (!resultsContainer) return;
 
     if (settings.queryHeight > 0) {
-      resultsContainer.style.setProperty(
-        "max-height",
-        `${settings.queryHeight}px`,
-      );
-      resultsContainer.style.setProperty("overflow-y", "auto");
+      resultsContainer.setCssProps({
+        "--dynamic-views-query-max-height": `${settings.queryHeight}px`,
+      });
+      resultsContainer.addClass("dynamic-views-query-results-constrained");
     } else {
-      resultsContainer.style.removeProperty("max-height");
-      resultsContainer.style.removeProperty("overflow-y");
+      resultsContainer.removeClass("dynamic-views-query-results-constrained");
     }
   }, [settings.queryHeight]);
 
