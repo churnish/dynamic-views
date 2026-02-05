@@ -6297,6 +6297,17 @@ body.dynamic-views-full-row-align-right
   max-width: 50%;
 }
 
+/* Collapsed pair partner: expand visible property to full width */
+.dynamic-views .property-pair:has(> .property-collapsed) > .property:not(.property-collapsed) {
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+
+/* Both pair properties collapsed: hide the empty wrapper */
+.dynamic-views .property-pair:not(:has(> .property:not(.property-collapsed))) {
+  display: none;
+}
+
 /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
 .dynamic-views.dynamic-views-paired-property-column .property-pair .property {
   flex: 1 1 0;
