@@ -1,54 +1,51 @@
 # Dynamic Views
 
-Elegant card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
-
-> [!NOTE]  
-> Looking for a princpial plugin maintainer. Get equal seat at the helm, author credit, the sole funding link, and eternal user gratitude.
-
-### Masonry
-
-<img src="https://github.com/user-attachments/assets/a5997474-03ac-4c5c-a0bf-c9c302954d63" />
+Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
 
 ### Grid
 
 <img src="https://github.com/user-attachments/assets/4643b0da-97b0-4428-8779-012dc69d7069" />
 
-### Datacore view
+### Masonry
 
-Add to note via Command palette > Dynamic Views: Insert query.
+<img src="https://github.com/user-attachments/assets/a5997474-03ac-4c5c-a0bf-c9c302954d63" />
+
+### Datacore
+
+Add to note via Command palette > Dynamic Views: Insert Datacore query.
 
 <img height="600" src="https://github.com/user-attachments/assets/b2541773-5fb8-4851-920c-ae2afa116fb5" />
 
-## ⚡️ Features
+## Features
 
 - Native look and feel.
-- Fetch image preview from note content or property.
 - Fetch text preview from first few lines of notes.
-- Infinite scroll: items load as you scroll rather than all at once.
+- Fetch image preview from note content or property.
+- Open image previews in fullscreen image viewer.
+- Display up to 14 properties in each card — either stacked or side-by-side.
+- Infinite scroll: cards load while scrolling rather than all at once.
 - Optimized performance.
-- Fine-tuned customization, including [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support.
-- Full keyboard navigation.
+- Extensive customization options, including [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support.
+- Full keyboard navigation support.
 
-## ✅ Install
+
+## Installation
 
 > [!IMPORTANT]  
 > The plugin is in active development — things can break, or change drastically between releases.
 >
-> **Ensure your files are regularly [backed up](https://help.obsidian.md/backup).**
+> **Please ensure your files are regularly [backed up](https://help.obsidian.md/backup).**
 
-Untill _Dynamic Views_ is [made availiable](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, follow the steps below to install it.
+Until _Dynamic Views_ is [made available](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, follow the steps below to install it:
 
-### BRAT (recommended)
+1. Download and enable the [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) plugin.
+2. Run _Add a beta plugin for testing_ in Command palette.
+3. Paste https://github.com/greetclammy/dynamic-views in the text field.
+4. Select _Latest version_.
+5. Check _Enable after installing the plugin_.
+6. Press _Add Plugin_.
 
-1. Download and enable the community plugin [BRAT](https://obsidian.md/plugins?id=obsidian42-brat).
-2. Open _BRAT_ settings.
-3. Press _Add Beta Plugin_.
-4. Paste https://github.com/greetclammy/dynamic-views in the text field.
-5. Select _Latest version_.
-6. Check _Enable after installing the plugin_.
-7. Press _Add Plugin_.
-
-### Install manually
+<details><summary>Install manually</summary>
 
 Note: to get updates for _Dynamic Views_, you will have to check for and install them manually.
 
@@ -57,27 +54,10 @@ Note: to get updates for _Dynamic Views_, you will have to check for and install
 3. Reload plugins or app.
 4. Enable _Dynamic Views_ in Obsidian settings > Community plugins > Installed plugins.
 
-## 💡 Tips
+</details>
 
-In a Datacore view:
+## Support
 
-- `@pages and` is automatically prepended to each query — need not add it in query editor.
-- Press Ctrl/Cmd when hovering over card to bring up page preview.
-- Hover over thumbnails that have shadow to view up to first seven images in note, or to animate GIFs.
-- Right click (long press on mobile) on card title to open link context menu.
-- Card title can be drag and dropped to another note or open tabs.
-- Press on thumbnail to enlarge it (if [Image Toolkit](https://obsidian.md/plugins?id=obsidian-image-toolkit) or [snippet](https://forum.obsidian.md/t/image-zoom-click-hold-to-expand-images/5164) is enabled).
-- Search filter accepts #tags (use -#tag to exclude).
-- File path and tags in cards are horizontally scrollable.
-- In case of errors, edit your query at top of code block in Source view.
-- Explore settings to configure things to your liking.
-- Cards can be keyboard navigated with arrows keys.
-
-## ⭐️ Support
-
-- [Report bugs](https://github.com/greetclammy/dynamic-views/issues)
-- [Request features](https://github.com/greetclammy/dynamic-views/issues)
-- [Contribute improvements](https://github.com/greetclammy/dynamic-views/pulls)
-- Discuss on:
-  - [r/ObsidianMD](https://www.reddit.com/r/ObsidianMD/comments/1ordkkf/working_on_an_alternative_card_view_for_bases_and/)
-  - [GitHub discussions](https://github.com/greetclammy/dynamic-views/discussions)
+- Please [open an issue](https://github.com/greetclammy/dynamic-views/issues) if you run into a problem.
+- Feature requests considered but not prioritized; further development focused on stability and performance.
+- PRs welcome. Reach out if you're interested in helping maintain the plugin — get author credit and the sole funding URL in return.
