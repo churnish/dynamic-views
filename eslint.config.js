@@ -17,6 +17,7 @@ export default [
       "tests/**",
       "coverage/**",
       "archive/**",
+      "scripts/**",
     ],
   },
 

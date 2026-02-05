@@ -40,6 +40,3 @@ export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
 
 /** Thumbnail stacking threshold multiplier (card stacks when width < thumbnail * this) */
 export const THUMBNAIL_STACK_MULTIPLIER = 3;
-
-/** Luminance threshold for light/dark theme detection (values above = light background) */
-export const LUMINANCE_LIGHT_THRESHOLD = 0.333;
