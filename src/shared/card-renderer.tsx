@@ -41,9 +41,6 @@ import {
 import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
 import {
   createSlideshowNavigator,
-  getCachedBlobUrl,
-  getExternalBlobUrl,
-  isCachedOrInternal,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,

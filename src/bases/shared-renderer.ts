@@ -56,9 +56,6 @@ import type DynamicViews from "../../main";
 import type { BasesResolvedSettings } from "../types";
 import {
   createSlideshowNavigator,
-  getCachedBlobUrl,
-  getExternalBlobUrl,
-  isCachedOrInternal,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -211,12 +208,6 @@ const PAIRED_PROPERTY_CLASSES = [
   "dynamic-views-paired-property-column",
 ] as const;
 
-const AMBIENT_CLASSES = [
-  "dynamic-views-ambient-bg-subtle",
-  "dynamic-views-adaptive-text",
-  "dynamic-views-ambient-bg-off",
-] as const;
-
 /**
  * Apply per-view CSS classes and variables from settings to the view container
  * Replaces body-level Style Settings classes with view-scoped equivalents
@@ -236,20 +227,6 @@ export function applyViewContainerStyles(
       break;
     case "column":
       container.classList.add("dynamic-views-paired-property-column");
-      break;
-  }
-
-  // Ambient background
-  container.classList.remove(...AMBIENT_CLASSES);
-  switch (settings.ambientBackground) {
-    case "subtle":
-      container.classList.add("dynamic-views-ambient-bg-subtle");
-      break;
-    case "dramatic":
-      container.classList.add("dynamic-views-adaptive-text");
-      break;
-    case "disable":
-      container.classList.add("dynamic-views-ambient-bg-off");
       break;
   }
 
