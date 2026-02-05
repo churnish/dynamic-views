@@ -1564,13 +1564,11 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
 }
 
 /* Scroll fade gradient at bottom of scrollable results */
-.dynamic-views .results-container,
-.dynamic-views-bases-container {
+.dynamic-views .results-container {
   position: relative;
 }
 
-.dynamic-views .results-container::after,
-.dynamic-views-bases-container::after {
+.dynamic-views .results-container::after {
   content: "";
   position: sticky;
   bottom: 0;
@@ -1588,16 +1586,45 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
   transition: opacity var(--anim-duration-fast, 140ms);
 }
 
-.dynamic-views .results-container.with-fade::after,
-.dynamic-views-bases-container.with-fade::after {
+.dynamic-views .results-container.with-fade::after {
   opacity: 1;
 }
 
 /* Style Settings: disable fade gradient */
 body.dynamic-views-disable-fade-gradient
   .dynamic-views
-  .results-container::after,
-body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
+  .results-container::after {
+  display: none;
+}
+
+/* Bases: absolute-positioned gradient overlay on non-scrolling parent */
+.view-content:has(.bases-view) {
+  position: relative;
+}
+
+.view-content:has(.bases-view)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 80px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--background-primary)
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--anim-duration-fast, 140ms);
+}
+
+.view-content:has(.bases-view.with-scroll-fade)::after {
+  opacity: 1;
+}
+
+body.dynamic-views-disable-fade-gradient .view-content:has(.bases-view)::after {
   display: none;
 }
 

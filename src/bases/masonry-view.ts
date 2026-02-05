@@ -41,6 +41,7 @@ import {
 } from "../shared/constants";
 import {
   setupBasesSwipeInterception,
+  setupScrollFadeGradient,
   setupStyleSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
@@ -596,6 +597,9 @@ export class DynamicViewsMasonryView extends BasesView {
       this.app,
       pluginSettings,
     );
+
+    // Fade gradient at bottom of scrollable content
+    this.register(setupScrollFadeGradient(this.scrollEl, this.containerEl));
 
     // Watch for Dynamic Views Style Settings changes only
     const disconnectObserver = setupStyleSettingsObserver(() => {

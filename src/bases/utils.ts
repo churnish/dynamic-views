@@ -288,6 +288,38 @@ export function setupBasesSwipeInterception(
   return null;
 }
 
+/**
+ * Toggle `with-scroll-fade` on scrollEl so its `::after` pseudo shows a
+ * fade gradient at the bottom of scrollable results. Hides at bottom.
+ * Returns a cleanup function.
+ */
+export function setupScrollFadeGradient(
+  scrollEl: HTMLElement,
+  containerEl: HTMLElement,
+): () => void {
+  const update = () => {
+    const isScrollable = scrollEl.scrollHeight > scrollEl.clientHeight;
+    const isAtBottom =
+      scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < 1;
+    scrollEl.classList.toggle("with-scroll-fade", isScrollable && !isAtBottom);
+  };
+
+  // Initial check after layout settles
+  const rafId = requestAnimationFrame(update);
+  scrollEl.addEventListener("scroll", update, { passive: true });
+
+  // Re-check when content changes size (cards lazy-load, infinite scroll)
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(containerEl);
+
+  return () => {
+    cancelAnimationFrame(rafId);
+    scrollEl.removeEventListener("scroll", update);
+    resizeObserver.disconnect();
+    scrollEl.classList.remove("with-scroll-fade");
+  };
+}
+
 // Re-export from shared location
 export {
   setupStyleSettingsObserver,
