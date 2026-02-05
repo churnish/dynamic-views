@@ -1604,121 +1604,12 @@ body.dynamic-views-disable-fade-gradient
   container-type: inline-size;
 }
 
-/* Minimal-style width system: CSS variables control container width */
-body {
-  --container-datacorejsx-width: 100%;
-  --container-datacorejsx-max-width: 100%;
-  /* Wide mode expansion multiplier (default: 1.75x line width) */
-  --datacore-wide-multiplier: 1.75;
-  /* Transform offset for centering: (multiplier - 1) / 2 */
-  --datacore-wide-offset: calc(
-    (var(--datacore-wide-multiplier) - 1) / 2 * var(--file-line-width, 700px)
-  );
-}
+/* Width system: JS applies inline styles per-query for wide/max modes */
 
-/* Helper classes set width variables (applied to section) */
-.datacore-wide {
-  --container-datacorejsx-width: min(
-    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
-    100%
-  );
-  --container-datacorejsx-max-width: min(
-    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
-    100%
-  );
-}
-
-.datacore-max {
-  --container-datacorejsx-width: 100%;
-  --container-datacorejsx-max-width: 100%;
-}
-
-/* Constrain element wrappers to normal width (Reading View) */
-:is(.markdown-preview-view, .markdown-reading-view):is(
-    .datacore-wide,
-    .datacore-max
-  )
-  :is(.markdown-preview-sizer, .markdown-reading-sizer)
-  > *:not(.el-pre):not(:has(.block-language-datacorejsx)) {
-  max-width: var(--file-line-width, 45rem) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-/* Expand sizer in wide and max modes (Reading View) */
-:is(.markdown-preview-view, .markdown-reading-view).datacore-wide
-  :is(.markdown-preview-sizer, .markdown-reading-sizer) {
-  max-width: min(
-    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
-    96vw
-  ) !important;
-}
-
-:is(.markdown-preview-view, .markdown-reading-view).datacore-max
-  :is(.markdown-preview-sizer, .markdown-reading-sizer) {
-  max-width: 96vw !important;
-}
-
-/* Live Preview: DON'T expand cm-sizer/cm-content (would affect whole note) */
-/* Only expand the specific code block wrapper below */
-
-/* Allow code block to overflow in wide/max modes */
-.markdown-source-view:is(.datacore-wide, .datacore-max)
+/* Allow code block to overflow in Live Preview (for transform-based centering) */
+.markdown-source-view:has(.block-language-datacorejsx)
   :is(.cm-contentContainer, .cm-content) {
   overflow: visible !important;
-}
-
-/* Reading View wrappers: expand wrapper in wide/max modes */
-:is(.markdown-preview-view, .markdown-reading-view):is(
-    .datacore-wide,
-    .datacore-max
-  )
-  .el-pre:has(.block-language-datacorejsx) {
-  max-width: var(--container-datacorejsx-max-width) !important;
-  width: var(--container-datacorejsx-width) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-/* Live Preview: .cm-preview-code-block - use transform to center since parent is narrower */
-.markdown-source-view.datacore-wide
-  .cm-preview-code-block:has(.block-language-datacorejsx) {
-  width: min(
-    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
-    96vw
-  ) !important;
-  max-width: min(
-    calc(var(--datacore-wide-multiplier) * var(--file-line-width, 700px)),
-    96vw
-  ) !important;
-  /* Center with transform using pre-calculated offset */
-  transform: translateX(calc(-1 * var(--datacore-wide-offset))) !important;
-}
-
-/* Max mode in Live Preview: JS handles width/transform dynamically based on pane size */
-/* CSS fallback for when JS hasn't run yet */
-.markdown-source-view.datacore-max
-  .cm-preview-code-block:has(.block-language-datacorejsx) {
-  /* Will be overridden by JS with pane-aware values */
-  width: calc(100vw - var(--file-margins, 32px) * 2) !important;
-  max-width: calc(100vw - var(--file-margins, 32px) * 2) !important;
-  transform: translateX(
-    calc(
-      (var(--file-line-width, 700px) - 100vw + var(--file-margins, 32px) * 2) /
-        2
-    )
-  ) !important;
-}
-
-/* Expand datacore block when wide/max active */
-:is(.markdown-preview-view, .markdown-reading-view, .markdown-source-view):is(
-    .datacore-wide,
-    .datacore-max
-  )
-  .block-language-datacorejsx {
-  width: var(--container-datacorejsx-width) !important;
-  max-width: var(--container-datacorejsx-max-width) !important;
-  margin: 0 auto !important;
 }
 
 /* Default width for datacorejsx blocks (readable line width) */
@@ -1727,8 +1618,8 @@ body {
   > .block-language-datacorejsx,
 :is(.markdown-preview-view, .markdown-reading-view).is-readable-line-width
   .block-language-datacorejsx {
-  width: var(--container-datacorejsx-width);
-  max-width: var(--container-datacorejsx-max-width);
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -7626,13 +7517,6 @@ body.dynamic-views-no-fade-truncated-text
 
   .dynamic-views .settings-panel {
     max-width: 100%;
-  }
-
-  /* Switch to single column at narrow widths (Datacore only - bases uses CSS grid) */
-  .datacore-wide .dynamic-views .dynamic-views-grid,
-  .datacore-max .dynamic-views .dynamic-views-grid {
-    display: flex;
-    flex-direction: column;
   }
 
   /* Stack properties on narrow cards */

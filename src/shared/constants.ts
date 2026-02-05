@@ -26,7 +26,7 @@ export const RESIZE_THROTTLE_MS = 100;
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 
-/** Wide mode multiplier for expanded width (must match CSS --datacore-wide-multiplier) */
+/** Wide mode multiplier for expanded width */
 export const WIDE_MODE_MULTIPLIER = 1.75;
 
 /** Minimum movement in pixels to determine swipe direction */

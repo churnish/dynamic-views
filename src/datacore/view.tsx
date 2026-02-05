@@ -277,40 +277,15 @@ export function View({
     }
   }, [widthMode, QUERY_ID, persistenceManager]);
 
-  // Apply width mode class to section on mount and when widthMode changes
-  dc.useEffect(() => {
-    if (!explorerRef.current) return;
-
-    const section = explorerRef.current.closest(
-      ".markdown-source-view, .markdown-preview-view, .markdown-reading-view",
-    );
-    if (!section) return;
-
-    // Remove existing width classes
-    section.classList.remove("datacore-wide", "datacore-max");
-
-    // Apply new class based on widthMode
-    if (widthMode === "wide") {
-      section.classList.add("datacore-wide");
-    } else if (widthMode === "max") {
-      section.classList.add("datacore-max");
-    }
-
-    // Cleanup on unmount or mode change
-    return () => {
-      section.classList.remove("datacore-wide", "datacore-max");
-    };
-  }, [widthMode]);
-
-  // Live Preview: constrain expanded width to pane when pane is narrower than expanded width
+  // Live Preview: apply inline width styles to this query's code block
   dc.useEffect(() => {
     if (widthMode === "normal" || !explorerRef.current) return;
 
     const section = explorerRef.current.closest(".markdown-source-view");
     if (!section) return; // Only applies to Live Preview
 
-    const codeBlock = section.querySelector<HTMLElement>(
-      ".cm-preview-code-block:has(.block-language-datacorejsx)",
+    const codeBlock = explorerRef.current.closest<HTMLElement>(
+      ".cm-preview-code-block",
     );
     if (!codeBlock) return;
 
@@ -325,73 +300,35 @@ export function View({
         parseFloat(cs.getPropertyValue("--file-line-width")) || 700;
       const fileMargins =
         parseFloat(cs.getPropertyValue("--file-margins")) || 16;
-
-      // Max mode: always fill pane (minus margins)
-      // Wide mode: use WIDE_MODE_MULTIPLIER x line width, constrain if pane is narrower
-      if (widthMode === "max") {
-        // Max = fill pane width with margins
-        const constrainedWidth = sectionRect.width - fileMargins * 2;
-        const offsetLeft = sectionRect.left - contentRect.left + fileMargins;
-        codeBlock.style.setProperty(
-          "width",
-          `${constrainedWidth}px`,
-          "important",
-        );
-        codeBlock.style.setProperty(
-          "max-width",
-          `${constrainedWidth}px`,
-          "important",
-        );
-        codeBlock.style.setProperty(
-          "transform",
-          `translateX(${offsetLeft}px)`,
-          "important",
-        );
-        return;
-      }
-
-      // Wide mode: target is WIDE_MODE_MULTIPLIER x line width
+      const availableWidth = sectionRect.width - fileMargins * 2;
       const targetWidth = WIDE_MODE_MULTIPLIER * fileLineWidth;
 
-      // Available space is pane width minus margins on both sides
-      const availableWidth = sectionRect.width - fileMargins * 2;
-
-      // Update whether we can expand to max (has room to grow beyond wide)
       setCanExpandToMax(availableWidth > targetWidth);
 
-      // Check if currently constrained (has inline width set)
-      const isConstrained = codeBlock.style.width !== "";
-
-      // Constrain when available space < target width
-      // When constrained, require 40px more available space to expand back (hysteresis)
-      const buffer = isConstrained ? 40 : 0;
-
-      // Check if available space is less than target + buffer
-      if (availableWidth < targetWidth + buffer) {
-        // Constrain to pane width with margins
-        const constrainedWidth = sectionRect.width - fileMargins * 2;
-        const offsetLeft = sectionRect.left - contentRect.left + fileMargins;
-        codeBlock.style.setProperty(
-          "width",
-          `${constrainedWidth}px`,
-          "important",
-        );
-        codeBlock.style.setProperty(
-          "max-width",
-          `${constrainedWidth}px`,
-          "important",
-        );
-        codeBlock.style.setProperty(
-          "transform",
-          `translateX(${offsetLeft}px)`,
-          "important",
-        );
+      // Determine effective width and offset
+      let effectiveWidth: number;
+      if (widthMode === "max") {
+        effectiveWidth = availableWidth;
       } else {
-        // Remove inline overrides, let CSS handle it
-        codeBlock.style.removeProperty("width");
-        codeBlock.style.removeProperty("max-width");
-        codeBlock.style.removeProperty("transform");
+        // Wide mode: use target width, constrained to available space (with hysteresis)
+        const isConstrained = codeBlock.style.width !== "";
+        const buffer = isConstrained ? 40 : 0;
+        effectiveWidth =
+          availableWidth < targetWidth + buffer ? availableWidth : targetWidth;
       }
+
+      const offsetLeft = sectionRect.left - contentRect.left + fileMargins;
+      codeBlock.style.setProperty("width", `${effectiveWidth}px`, "important");
+      codeBlock.style.setProperty(
+        "max-width",
+        `${effectiveWidth}px`,
+        "important",
+      );
+      codeBlock.style.setProperty(
+        "transform",
+        `translateX(${offsetLeft}px)`,
+        "important",
+      );
     };
 
     updateWidth();
@@ -410,19 +347,29 @@ export function View({
     };
   }, [widthMode]);
 
-  // Track canExpandToMax for Reading View (Live Preview is handled above)
+  // Reading View: apply inline width styles to this query's .el-pre block
   dc.useEffect(() => {
     if (!explorerRef.current) return;
 
     // Skip if in Live Preview (handled by the effect above)
     if (explorerRef.current.closest(".markdown-source-view")) return;
 
+    const elPre = explorerRef.current.closest<HTMLElement>(".el-pre");
+    if (!elPre) return;
+
     const section = explorerRef.current.closest(
       ".markdown-preview-view, .markdown-reading-view",
     );
     if (!section) return;
 
-    const checkCanExpand = () => {
+    if (widthMode === "normal") {
+      elPre.style.removeProperty("width");
+      elPre.style.removeProperty("max-width");
+      elPre.style.removeProperty("margin-left");
+      return;
+    }
+
+    const updateWidth = () => {
       const cs = getComputedStyle(section);
       const fileLineWidth =
         parseFloat(cs.getPropertyValue("--file-line-width")) || 700;
@@ -431,15 +378,31 @@ export function View({
       const targetWidth = WIDE_MODE_MULTIPLIER * fileLineWidth;
       const availableWidth =
         section.getBoundingClientRect().width - fileMargins * 2;
+
       setCanExpandToMax(availableWidth > targetWidth);
+
+      const effectiveWidth =
+        widthMode === "max"
+          ? availableWidth
+          : Math.min(targetWidth, availableWidth);
+      const offset = (effectiveWidth - fileLineWidth) / 2;
+
+      elPre.style.setProperty("width", `${effectiveWidth}px`, "important");
+      elPre.style.setProperty("max-width", `${effectiveWidth}px`, "important");
+      elPre.style.setProperty("margin-left", `-${offset}px`, "important");
     };
 
-    checkCanExpand();
+    updateWidth();
 
-    const resizeObserver = new ResizeObserver(checkCanExpand);
+    const resizeObserver = new ResizeObserver(updateWidth);
     resizeObserver.observe(section);
 
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      elPre.style.removeProperty("width");
+      elPre.style.removeProperty("max-width");
+      elPre.style.removeProperty("margin-left");
+    };
   }, [widthMode]);
 
   dc.useEffect(() => {
@@ -1602,37 +1565,15 @@ export function View({
 
   // Handlers
   const handleToggleWidth = dc.useCallback(() => {
-    // Determine next mode based on current mode and whether we can expand
     let nextMode: WidthMode;
     if (widthMode === "normal") {
       nextMode = "wide";
     } else if (widthMode === "wide") {
-      // Skip max if there's no room to expand beyond wide
       nextMode = canExpandToMax ? "max" : "normal";
     } else {
-      // max -> normal
       nextMode = "normal";
     }
     setWidthMode(nextMode);
-
-    // Find all sections containing dynamic views (handles multiple views/splits)
-    const sections = document.querySelectorAll(
-      ".markdown-source-view, .markdown-preview-view, .markdown-reading-view",
-    );
-    sections.forEach((section) => {
-      // Only apply to sections that contain a dynamic view
-      if (section.querySelector(".dynamic-views")) {
-        // Remove all width helper classes
-        section.classList.remove("datacore-wide", "datacore-max");
-
-        // Apply new helper class (Minimal pattern)
-        if (nextMode === "wide") {
-          section.classList.add("datacore-wide");
-        } else if (nextMode === "max") {
-          section.classList.add("datacore-max");
-        }
-      }
-    });
   }, [widthMode, canExpandToMax]);
 
   const handleToggleSettings = dc.useCallback(() => {
