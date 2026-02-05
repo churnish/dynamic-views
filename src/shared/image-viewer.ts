@@ -635,8 +635,7 @@ function openImageViewer(
         };
 
         // Set fixed positioning with bounds matching the container
-        cloneEl.style.inset = "auto"; // Reset inset first
-        cloneEl.style.position = "fixed";
+        cloneEl.addClass("dynamic-views-viewer-fixed");
         updateBounds();
         // Append to body (not view-content) to survive React re-renders
         document.body.appendChild(cloneEl);
@@ -664,7 +663,7 @@ function openImageViewer(
             if (isFullscreen) {
               closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
             } else {
-              cloneEl.style.zIndex = "0";
+              cloneEl.addClass("dynamic-views-viewer-behind-modal");
             }
             return;
           }

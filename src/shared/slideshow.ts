@@ -261,20 +261,20 @@ export function createSlideshowNavigator(
 
     // For uncached external images: show placeholder, fetch in background
     if (isUncachedExternal) {
-      nextImg.style.display = "none";
+      nextImg.addClass("dynamic-views-hidden");
       void getExternalBlobUrl(newUrl).then((blobUrl) => {
         if (signal.aborted) return;
         if (!blobUrl) {
           // Fetch failed - track and auto-advance (unless all failed)
           failedIndices.add(newIndex);
           if (failedIndices.size >= imageUrls.length) return; // All failed, stop
-          nextImg.style.display = "";
+          nextImg.removeClass("dynamic-views-hidden");
           isAnimating = false;
           navigate(direction);
           return;
         }
         nextImg.src = blobUrl;
-        nextImg.style.display = "";
+        nextImg.removeClass("dynamic-views-hidden");
       });
     }
 
@@ -310,13 +310,13 @@ export function createSlideshowNavigator(
           return;
         }
 
-        nextImg.style.display = "none";
+        nextImg.addClass("dynamic-views-hidden");
 
         // After animation completes, try to advance to next slide
         const timeoutId = setTimeout(() => {
           pendingTimeouts.delete(timeoutId);
           if (!signal.aborted) {
-            nextImg.style.display = "";
+            nextImg.removeClass("dynamic-views-hidden");
             isAnimating = false;
             navigate(direction, honorGestureDirection);
           }
@@ -329,7 +329,7 @@ export function createSlideshowNavigator(
     // Skip animation: directly update current image
     if (skipAnimation) {
       currImg.src = effectiveUrl;
-      currImg.style.display = "";
+      currImg.removeClass("dynamic-views-hidden");
       currentIndex = newIndex;
       isAnimating = false;
       if (callbacks?.onSlideChange) {
@@ -551,8 +551,12 @@ export function setupSwipeGestures(
         e.stopImmediatePropagation();
 
         // Hide indicator on horizontal swipe (mobile only)
-        if (isMobile && indicator && indicator.style.opacity !== "0") {
-          indicator.style.opacity = "0";
+        if (
+          isMobile &&
+          indicator &&
+          !indicator.hasClass("dynamic-views-indicator-hidden")
+        ) {
+          indicator.addClass("dynamic-views-indicator-hidden");
         }
 
         // Navigate once threshold is hit
@@ -578,7 +582,8 @@ export function setupSwipeGestures(
           const now = Date.now();
           if (now - lastScrollTime < SCROLL_THROTTLE_MS) return;
           lastScrollTime = now;
-          if (indicator) indicator.style.opacity = "1";
+          if (indicator)
+            indicator.removeClass("dynamic-views-indicator-hidden");
         },
         { signal, passive: true },
       );

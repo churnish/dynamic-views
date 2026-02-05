@@ -567,7 +567,7 @@ export class SharedCardRenderer {
         "error",
         () => {
           if (signal?.aborted) return; // Guard against race with cleanup
-          img.style.display = "none";
+          img.addClass("dynamic-views-hidden");
         },
         { signal, once: true },
       );
@@ -1515,7 +1515,7 @@ export class SharedCardRenderer {
         // Only handle errors for the URL we set (ignore cleared src or changed URL)
         const targetSrc = (e.target as HTMLImageElement).src;
         if (targetSrc !== expectedFirstUrl) return;
-        currentImg.style.display = "none";
+        currentImg.addClass("dynamic-views-hidden");
         navigate(1, false, true);
       },
       { once: true, signal },
@@ -1613,7 +1613,7 @@ export class SharedCardRenderer {
         // Try next URL (pre-validated, should not fail)
         if (currentUrlIndex < imageUrls.length) {
           if (signal?.aborted || !imgEl.isConnected) return; // Guard before DOM mutation
-          imgEl.style.display = ""; // Unhide
+          imgEl.removeClass("dynamic-views-hidden"); // Unhide
           imgEl.src = getCachedBlobUrl(imageUrls[currentUrlIndex]);
           return;
         }
@@ -1623,7 +1623,7 @@ export class SharedCardRenderer {
           if (signal?.aborted || !cardEl.isConnected) return;
           requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected) return;
-            imgEl.style.display = "none";
+            imgEl.addClass("dynamic-views-hidden");
             if (!cardEl.classList.contains("cover-ready")) {
               cardEl.classList.add("cover-ready");
               cardEl.style.setProperty(
@@ -1687,14 +1687,14 @@ export class SharedCardRenderer {
           );
           const rawUrl = scrubbableUrls[index];
           if (isCachedOrInternal(rawUrl)) {
-            imgEl.style.display = "";
+            imgEl.removeClass("dynamic-views-hidden");
             const targetUrl = getCachedBlobUrl(rawUrl);
             if (imgEl.src !== targetUrl) {
               imgEl.src = targetUrl;
             }
           } else {
             // Uncached external: show placeholder, fetch in background
-            imgEl.style.display = "none";
+            imgEl.addClass("dynamic-views-hidden");
             void getExternalBlobUrl(rawUrl);
           }
         },
@@ -1709,7 +1709,7 @@ export class SharedCardRenderer {
           const firstUrl = scrubbableUrls[0];
           if (!firstUrl) return;
           // First image is pre-validated, always show it
-          imgEl.style.display = "";
+          imgEl.removeClass("dynamic-views-hidden");
           imgEl.src = getCachedBlobUrl(firstUrl);
         },
         { signal },

@@ -7730,3 +7730,24 @@ body:not(.dynamic-views-title-color-custom)
   .setting-item[data-id="dynamic-views-title-color-custom"] {
   display: none !important;
 }
+
+/* Utility classes for programmatic style changes (replaces inline style manipulation) */
+.dynamic-views-hidden {
+  display: none;
+}
+.dynamic-views-height-preserved {
+  min-height: var(--dynamic-views-preserve-height);
+}
+.dynamic-views-indicator-hidden {
+  opacity: 0;
+}
+.dynamic-views-viewer-fixed {
+  position: fixed;
+  inset: auto;
+}
+.dynamic-views-viewer-behind-modal {
+  z-index: 0;
+}
+.dynamic-views-menu-positioning {
+  visibility: hidden;
+}

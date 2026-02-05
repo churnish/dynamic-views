@@ -862,7 +862,7 @@ function CoverSlideshow({
           if (!targetSrc || targetSrc !== expectedSrc) {
             return;
           }
-          firstImg.style.display = "none";
+          firstImg.addClass("dynamic-views-hidden");
           navigate(1, false, true);
         },
         { once: true, signal },
@@ -2210,14 +2210,14 @@ function Card({
                         ).querySelector("img");
                         if (imgEl) {
                           if (isCachedOrInternal(rawUrl)) {
-                            imgEl.style.display = "";
+                            imgEl.removeClass("dynamic-views-hidden");
                             const newSrc = getCachedBlobUrl(rawUrl);
                             if (imgEl.src !== newSrc) {
                               imgEl.src = newSrc;
                             }
                           } else {
                             // Uncached external: show placeholder, fetch in background
-                            imgEl.style.display = "none";
+                            imgEl.addClass("dynamic-views-hidden");
                             void getExternalBlobUrl(rawUrl);
                           }
                         }
@@ -2235,7 +2235,7 @@ function Card({
                         const firstSrc = getCachedBlobUrl(firstUrl);
                         if (imgEl && firstSrc) {
                           // First image is pre-validated, always show it
-                          imgEl.style.display = "";
+                          imgEl.removeClass("dynamic-views-hidden");
                           imgEl.src = firstSrc;
                         }
                       }
@@ -2297,7 +2297,7 @@ function Card({
                                 !imgEl.isConnected
                               )
                                 return;
-                              imgEl.style.display = "";
+                              imgEl.removeClass("dynamic-views-hidden");
                               const effectiveUrl = getCachedBlobUrl(
                                 imageArray[nextIndex],
                               );
@@ -2326,7 +2326,7 @@ function Card({
                                     !imgEl.isConnected
                                   )
                                     return;
-                                  imgEl.style.display = "none";
+                                  imgEl.addClass("dynamic-views-hidden");
                                   cardEl.style.setProperty(
                                     "--actual-aspect-ratio",
                                     DEFAULT_ASPECT_RATIO.toString(),

@@ -950,7 +950,10 @@ export class DynamicViewsGridView extends BasesView {
 
       // Preserve height during clear to prevent parent scroll reset
       const currentHeight = this.containerEl.scrollHeight;
-      this.containerEl.style.minHeight = `${currentHeight}px`;
+      this.containerEl.setCssProps({
+        "--dynamic-views-preserve-height": `${currentHeight}px`,
+      });
+      this.containerEl.addClass("dynamic-views-height-preserved");
 
       // Clear and re-render
       this.containerEl.empty();
@@ -1163,7 +1166,7 @@ export class DynamicViewsGridView extends BasesView {
       this.scrollPreservation?.restoreAfterRender();
 
       // Remove height preservation now that scroll is restored
-      this.containerEl.style.minHeight = "";
+      this.containerEl.removeClass("dynamic-views-height-preserved");
 
       // Clear skip-cover-fade after cached image load events have fired.
       // Double-rAF lets the browser process queued load events for cached images
@@ -1621,5 +1624,4 @@ export class DynamicViewsGridView extends BasesView {
 }
 
 /** Export options for registration */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Bases API requires any[] for options array structure
 export const cardViewOptions = () => getBasesViewOptions("grid");

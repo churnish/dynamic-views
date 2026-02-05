@@ -422,7 +422,7 @@ export function setupImageLoadHandler(
       requestAnimationFrame(() => {
         if (!cardEl.isConnected || !imgEl.isConnected) return;
         // Hide broken image to prevent placeholder icon
-        imgEl.style.display = "none";
+        imgEl.addClass("dynamic-views-hidden");
         cardEl.classList.add("cover-ready");
         // Set default aspect ratio on error
         cardEl.style.setProperty(
@@ -580,7 +580,7 @@ export function handleJsxImageError(
   const imgEl = e.currentTarget as HTMLImageElement;
 
   // Hide broken image to prevent placeholder icon
-  imgEl.style.display = "none";
+  imgEl.addClass("dynamic-views-hidden");
 
   // Fix null assertions
   const cardEl = imgEl.closest(".card");
@@ -657,7 +657,7 @@ export function setupBackdropImageLoader(
       if (currentIndex < imageUrls.length) {
         if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
           return;
-        imgEl.style.display = "";
+        imgEl.removeClass("dynamic-views-hidden");
         imgEl.src = getCachedBlobUrl(imageUrls[currentIndex]);
         return;
       }
@@ -669,7 +669,7 @@ export function setupBackdropImageLoader(
         requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
             return;
-          imgEl.style.display = "none";
+          imgEl.addClass("dynamic-views-hidden");
           cardEl.removeAttribute("data-adaptive-text");
           cardEl.classList.add("cover-ready");
           onLayoutUpdate?.();
@@ -689,7 +689,7 @@ export function setupBackdropImageLoader(
           requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
               return;
-            imgEl.style.display = "none";
+            imgEl.addClass("dynamic-views-hidden");
             cardEl.removeAttribute("data-adaptive-text");
             cardEl.classList.add("cover-ready");
             onLayoutUpdate?.();

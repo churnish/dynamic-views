@@ -195,7 +195,7 @@ export function showFileContextMenu(
   if (!menuEl) return;
 
   // Hide menu during processing to prevent flicker
-  menuEl.style.visibility = "hidden";
+  menuEl.addClass("dynamic-views-menu-positioning");
 
   // Platform-specific titles to remove (desktop-only items not shown on mobile)
   const titlesToRemove = isMobile
@@ -543,7 +543,7 @@ export function showFileContextMenu(
       menuEl.style.top = `${top}px`;
       menuEl.style.left = `${left}px`;
     } finally {
-      menuEl.style.visibility = "visible";
+      menuEl.removeClass("dynamic-views-menu-positioning");
     }
   });
 }
