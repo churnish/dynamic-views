@@ -3,7 +3,7 @@
  * Used by both Bases and Datacore views
  */
 
-import { App, Menu, Notice, Platform, TFile } from "obsidian";
+import { App, Menu, Notice, Platform, TFile, setIcon } from "obsidian";
 
 /**
  * Show context menu for external links (URLs)
