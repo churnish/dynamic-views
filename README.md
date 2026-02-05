@@ -28,7 +28,6 @@ Add to note via Command palette > Dynamic Views: Insert Datacore query.
 - Extensive customization options, including [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support.
 - Full keyboard navigation support.
 
-
 ## Installation
 
 > [!IMPORTANT]  

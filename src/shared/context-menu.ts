@@ -308,7 +308,7 @@ export function showFileContextMenu(
         if (!itemsByTitle.has("Open in new tab")) {
           itemsByTitle.set(
             "Open in new tab",
-            createMenuItem("Open in new tab", ICONS.filePlus, () => {
+            createMenuItem("Open in new tab", ICON_NAMES.filePlus, () => {
               void app.workspace.openLinkText(path, "", "tab");
             }),
           );
@@ -317,16 +317,20 @@ export function showFileContextMenu(
         if (!itemsByTitle.has("Open to the right")) {
           itemsByTitle.set(
             "Open to the right",
-            createMenuItem("Open to the right", ICONS.splitVertical, () => {
-              void app.workspace.openLinkText(path, "", "split");
-            }),
+            createMenuItem(
+              "Open to the right",
+              ICON_NAMES.splitVertical,
+              () => {
+                void app.workspace.openLinkText(path, "", "split");
+              },
+            ),
           );
         }
 
         if (!itemsByTitle.has("Rename...")) {
           itemsByTitle.set(
             "Rename...",
-            createMenuItem("Rename...", ICONS.edit, () => {
+            createMenuItem("Rename...", ICON_NAMES.edit, () => {
               app.fileManager.promptForFileRename(file).catch(() => {
                 new Notice("Failed to rename file");
               });
@@ -337,34 +341,9 @@ export function showFileContextMenu(
         // Create custom "Open in default app" (native can freeze)
         const openInDefaultApp = createMenuItem(
           "Open in default app",
-          ICONS.arrowUpRight,
+          ICON_NAMES.arrowUpRight,
           () => {
-            const fullPath = app.vault.adapter.getFullPath(path);
-            if (!fullPath) {
-              new Notice("Cannot open file: path not found");
-              return;
-            }
-            const { spawn } =
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              require("child_process") as typeof import("child_process");
-            const onSpawnError = () => new Notice("Failed to open file");
-            if (process.platform === "darwin") {
-              spawn("open", [fullPath], {
-                detached: true,
-                stdio: "ignore",
-              }).on("error", onSpawnError);
-            } else if (process.platform === "win32") {
-              // Use explorer.exe directly to avoid shell injection risks
-              spawn("explorer.exe", [fullPath], {
-                detached: true,
-                stdio: "ignore",
-              }).on("error", onSpawnError);
-            } else {
-              spawn("xdg-open", [fullPath], {
-                detached: true,
-                stdio: "ignore",
-              }).on("error", onSpawnError);
-            }
+            app.openWithDefaultApp(path);
           },
         );
         itemsByTitle.set("Open in default app", openInDefaultApp);
@@ -374,7 +353,7 @@ export function showFileContextMenu(
             "Delete file",
             createMenuItem(
               "Delete file",
-              ICONS.trash,
+              ICON_NAMES.trash,
               () => {
                 app.fileManager.trashFile(file).catch(() => {
                   new Notice("Failed to delete file");

@@ -20,8 +20,7 @@ interface NotebookNavigatorAPI {
 }
 
 function getNotebookNavigatorAPI(app: App): NotebookNavigatorAPI | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-  const api = (app as any).plugins?.plugins?.["notebook-navigator"]?.api as
+  const api = app.plugins?.plugins?.["notebook-navigator"]?.api as
     | NotebookNavigatorAPI
     | undefined;
   return api ?? null;
@@ -62,8 +61,7 @@ async function waitForStorageReady(api: NotebookNavigatorAPI): Promise<void> {
 function getCurrentSetting(
   app: App,
 ): ResolvedSettings["revealInNotebookNavigator"] | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-  const plugin = (app as any).plugins?.plugins?.["dynamic-views"] as
+  const plugin = app.plugins?.plugins?.["dynamic-views"] as
     | { persistenceManager?: { getPluginSettings(): ResolvedSettings } }
     | undefined;
   return (

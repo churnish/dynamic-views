@@ -39,7 +39,7 @@ export function formatTimestamp(
   isDateOnly: boolean = false,
   styled: boolean = false,
 ): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment -- Dynamic require for moment.js dependency
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- moment.js requires dynamic import
   const moment = require("moment");
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require to avoid circular dependency
   const styleSettings = require("../utils/style-settings") as {
@@ -52,7 +52,6 @@ export function formatTimestamp(
 
   // For date-only properties, use date format
   if (isDateOnly) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
     return moment(timestamp).format(styleSettings.getDateFormat()) as string;
   }
 

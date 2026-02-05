@@ -7,7 +7,7 @@
  * Documentation: https://github.com/blacksmithgu/datacore
  */
 
-import { TFile } from "obsidian";
+import { TFile, Plugin } from "obsidian";
 
 /**
  * Extend Obsidian types with undocumented APIs used by this plugin
@@ -20,10 +20,24 @@ declare module "obsidian" {
   interface App {
     /** Open file with system default app (undocumented API) */
     openWithDefaultApp(path: string): void;
+    /** Access installed plugins by ID (undocumented API) */
+    plugins: {
+      plugins: Record<string, Plugin | undefined>;
+    };
+  }
+  interface MetadataCache {
+    /** Get all known property types across the vault (undocumented API) */
+    getAllPropertyInfos(): Record<string, { type?: string; widget?: string }> | undefined;
   }
   interface DataAdapter {
     /** Get absolute filesystem path (undocumented API) */
     getFullPath(path: string): string | undefined;
+  }
+}
+
+declare global {
+  interface Window {
+    app: App;
   }
 }
 

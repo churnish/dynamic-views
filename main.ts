@@ -114,7 +114,7 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "create-dynamic-view",
-      name: "Create note with Datacore query",
+      name: `Create note with ${DATACORE} query`,
       icon: "lucide-file-plus-corner",
       callback: async () => {
         await this.createExplorerFile();
@@ -123,7 +123,7 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "insert-dynamic-view-at-cursor",
-      name: "Insert Datacore query",
+      name: `Insert ${DATACORE} query`,
       icon: "lucide-list-plus",
       editorCheckCallback: (
         checking: boolean,
@@ -149,7 +149,7 @@ export default class DynamicViews extends Plugin {
     // Add ribbon icons
     this.addRibbonIcon(
       "lucide-grid-2x-2",
-      "Create new base with Grid view",
+      `Create new base with ${GRID_VIEW}`,
       async (evt: MouseEvent) => {
         await this.createBaseFile(
           "dynamic-views-grid",
@@ -161,7 +161,7 @@ export default class DynamicViews extends Plugin {
 
     this.addRibbonIcon(
       "panels-right-bottom",
-      "Create new base with Masonry view",
+      `Create new base with ${MASONRY_VIEW}`,
       async (evt: MouseEvent) => {
         await this.createBaseFile(
           "dynamic-views-masonry",
@@ -256,7 +256,7 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "create-base-grid-view",
-      name: "Create new base with Grid view",
+      name: `Create new base with ${GRID_VIEW}`,
       icon: "lucide-grid-2x-2",
       callback: async () => {
         await this.createBaseFile("dynamic-views-grid", "Grid", false);
@@ -265,7 +265,7 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "create-base-masonry-view",
-      name: "Create new base with Masonry view",
+      name: `Create new base with ${MASONRY_VIEW}`,
       icon: "panels-right-bottom",
       callback: async () => {
         await this.createBaseFile("dynamic-views-masonry", "Masonry", false);

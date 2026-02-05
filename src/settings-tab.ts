@@ -8,6 +8,12 @@ import {
 } from "obsidian";
 import type DynamicViews from "../main";
 
+// Plugin names (proper nouns, not subject to sentence case)
+const PLUGIN_STYLE_SETTINGS = "Style Settings";
+const PLUGIN_NOTEBOOK_NAVIGATOR = "Notebook Navigator";
+const PLUGIN_AUTO_CARD_LINK = "Auto Card Link";
+const PLUGIN_LINK_EMBED = "Link Embed";
+
 export class DynamicViewsSettingTab extends PluginSettingTab {
   plugin: DynamicViews;
 
@@ -58,7 +64,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     // Smart timestamp variables - declared before SettingGroup for use in callbacks
     let smartTimestampSetting: Setting | undefined;
     let conditionalText: HTMLSpanElement;
-    // eslint-disable-next-line prefer-const
     let smartTimestampSubSettingsEl: HTMLDivElement;
 
     // Helper function to update smart timestamp visibility
@@ -80,7 +85,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       });
       appearanceDesc.appendText("Appearance settings can be configured in ");
       appearanceDesc.createEl("a", {
-        text: "Style Settings",
+        text: PLUGIN_STYLE_SETTINGS,
         href: "obsidian://show-plugin?id=obsidian-style-settings",
       });
       appearanceDesc.appendText(".");
@@ -241,7 +246,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .setHeading("Integrations")
       .addSetting((s) =>
         s
-          .setName("Reveal in Notebook Navigator")
+          .setName(`Reveal in ${PLUGIN_NOTEBOOK_NAVIGATOR}`)
           .then((s) => {
             const desc = s.descEl;
             desc.empty();
@@ -249,7 +254,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               "When pressing tags or file path segments, reveal in ",
             );
             desc.createEl("a", {
-              text: "Notebook Navigator",
+              text: PLUGIN_NOTEBOOK_NAVIGATOR,
               href: "obsidian://show-plugin?id=notebook-navigator",
             });
             desc.appendText(" instead of the default file explorer.");
@@ -293,12 +298,12 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
             const desc = s.descEl;
             desc.appendText("Extract cover images from ");
             desc.createEl("a", {
-              text: "Auto Card Link",
+              text: PLUGIN_AUTO_CARD_LINK,
               href: "obsidian://show-plugin?id=auto-card-link",
             });
             desc.appendText(" or ");
             desc.createEl("a", {
-              text: "Link Embed",
+              text: PLUGIN_LINK_EMBED,
               href: "obsidian://show-plugin?id=obsidian-link-embed",
             });
             desc.appendText(" blocks in notes.");

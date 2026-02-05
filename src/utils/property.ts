@@ -216,8 +216,7 @@ export function getFirstBasesPropertyValue(
   for (const prop of properties) {
     let value: unknown;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-      value = entry.getValue(prop as any);
+      value = entry.getValue(prop as unknown as BasesPropertyId);
     } catch {
       // Obsidian's getValue can throw when entry's internal property data is null
       continue;
@@ -312,8 +311,7 @@ export function getFirstBasesDatePropertyValue(
     .filter((p) => p);
 
   for (const prop of properties) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-    const value = entry.getValue(prop as any);
+    const value = entry.getValue(prop as unknown as BasesPropertyId);
 
     // Return first valid date value found
     if (
@@ -376,8 +374,7 @@ export function getAllBasesImagePropertyValues(
   const allImages: string[] = [];
 
   for (const prop of properties) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Bases getValue requires any for property names
-    const value = entry.getValue(prop as any);
+    const value = entry.getValue(prop as unknown as BasesPropertyId);
 
     // Extract data from {data: value} structure (both regular and formula properties use this)
     if (!value || !(typeof value === "object" && "data" in value)) continue;
@@ -550,14 +547,11 @@ export function getAllVaultProperties(app: App): string[] {
   properties.add("created time");
   properties.add("modified time");
 
-  // Get all properties from metadata cache using type assertion
+  // Get all properties from metadata cache
   // getAllPropertyInfos was added in Obsidian 1.4.0+
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- MetadataCache lacks getAllPropertyInfos in type definitions
-  const metadataCache = app.metadataCache as any;
+  const metadataCache = app.metadataCache;
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- getAllPropertyInfos not in official types
   if (typeof metadataCache.getAllPropertyInfos === "function") {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- getAllPropertyInfos not in official types
     const allPropertyInfos = metadataCache.getAllPropertyInfos() as Record<
       string,
       unknown
