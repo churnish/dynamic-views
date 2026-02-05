@@ -17,7 +17,7 @@ const logMasonry = (
         .map(([k, v]) => `${k}=${String(v)}`)
         .join(", ")
     : "";
-  console.log(`[masonry:${source}] ${msg}${dataStr}`);
+  console.debug(`[masonry:${source}] ${msg}${dataStr}`);
 };
 
 export interface MasonryPosition {
