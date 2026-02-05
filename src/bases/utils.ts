@@ -134,7 +134,6 @@ export async function cleanupBaseFile(
       )
         continue;
 
-      const isMasonry = viewType === "dynamic-views-masonry";
       const viewName = viewObj.name as string | undefined;
 
       // Dedupe: validate id matches current view name and file ctime
@@ -212,17 +211,8 @@ export async function cleanupBaseFile(
         const value = viewObj[key];
         if (value === undefined) continue;
 
-        // minimumColumns: view-type-specific default (YAML stores "one"/"two" strings)
-        if (key === "minimumColumns") {
-          const minColDefault = isMasonry ? "two" : "one";
-          if (value === minColDefault) {
-            delete viewObj[key];
-            changeCount++;
-          }
-          continue;
-        }
-
         // All other keys: compare to VIEW_DEFAULTS
+        // (minimumColumns: YAML "one"/"two" never === VIEW_DEFAULTS number, so naturally preserved)
         if (value === VIEW_DEFAULTS[key]) {
           delete viewObj[key];
           changeCount++;
