@@ -483,49 +483,6 @@ settings:
         type: class-toggle
         default: false
     -
-        id: header-heading
-        title: Header
-        type: heading
-        level: 2
-        collapsed: true
-    -
-        id: dynamic-views-hidden-file-extensions
-        title: Hide file formats
-        description: Comma-separated list of formats to hide (e.g., md, base, canvas)
-        type: variable-text
-        default: md
-    -
-        id: dynamic-views-file-type-indicator
-        title: File format indicator
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-file-type-badge
-        options:
-            -
-                label: Extension
-                value: dynamic-views-file-type-ext
-            -
-                label: Badge
-                value: dynamic-views-file-type-badge
-            -
-                label: Icon
-                value: dynamic-views-file-type-icon
-            -
-                label: None
-                value: dynamic-views-file-type-none
-    -
-        id: dynamic-views-url-icon
-        title: "'Open URL' button icon"
-        description: Lucide icon name
-        type: variable-text
-        default: 'square-arrow-out-up-right'
-    -
-        id: dynamic-views-header-divider
-        title: Divider line
-        description: Show a horizontal rule below the card header
-        type: class-toggle
-        default: false
-    -
         id: image-viewer-heading
         title: Image viewer
         type: heading
@@ -631,6 +588,12 @@ settings:
         type: heading
         level: 2
         collapsed: true
+    -
+        id: dynamic-views-url-icon
+        title: "'Open URL' button icon"
+        description: Lucide icon name
+        type: variable-text
+        default: 'square-arrow-out-up-right'
     -
         id: dynamic-views-list-separator
         title: List item separator
@@ -1297,6 +1260,37 @@ settings:
         type: heading
         level: 2
         collapsed: true
+    -
+        id: dynamic-views-hidden-file-extensions
+        title: Hide file formats
+        description: Comma-separated list of formats to hide (e.g., md, base, canvas)
+        type: variable-text
+        default: md
+    -
+        id: dynamic-views-file-type-indicator
+        title: File format indicator
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-file-type-badge
+        options:
+            -
+                label: Extension
+                value: dynamic-views-file-type-ext
+            -
+                label: Badge
+                value: dynamic-views-file-type-badge
+            -
+                label: Icon
+                value: dynamic-views-file-type-icon
+            -
+                label: None
+                value: dynamic-views-file-type-none
+    -
+        id: dynamic-views-title-divider
+        title: Divider line
+        description: Show a horizontal rule below the card title
+        type: class-toggle
+        default: false
     -
         id: dynamic-views-title-font
         title: Title font
@@ -3563,9 +3557,9 @@ body.dynamic-views-subtitle-overflow-scroll
   white-space: nowrap;
 }
 
-/* Header divider line (shown when class-toggle is ON) */
-/* Only show divider when card has content below header (excludes cover-bottom-only cards) */
-body.dynamic-views-header-divider
+/* Title divider line (shown when class-toggle is ON) */
+/* Only show divider when card has content below title (excludes cover-bottom-only cards) */
+body.dynamic-views-title-divider
   .dynamic-views
   .card:has(.card-content, .card-properties-top, .card-properties-bottom)
   > .card-header {

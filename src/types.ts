@@ -23,7 +23,7 @@ export interface PluginSettings {
 export interface ViewDefaults {
   // Card size
   cardSize: number;
-  // Header
+  // Title
   titleProperty: string;
   titleLines: number;
   subtitleProperty: string;

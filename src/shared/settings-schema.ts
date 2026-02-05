@@ -66,7 +66,7 @@ export function getBasesViewOptions(viewType?: "grid" | "masonry"): any[] {
     },
     {
       type: "group",
-      displayName: "Header",
+      displayName: "Title",
       items: [
         {
           type: "text",

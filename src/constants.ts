@@ -23,7 +23,7 @@ export const PLUGIN_SETTINGS: PluginSettings = {
 export const VIEW_DEFAULTS: ViewDefaults = {
   // Card size
   cardSize: 300,
-  // Header
+  // Title
   titleProperty: "file.name",
   titleLines: 2,
   subtitleProperty: "file.folder",

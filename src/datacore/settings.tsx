@@ -210,9 +210,9 @@ export function Settings({
         </div>
       </div>
 
-      {/* Header Section */}
+      {/* Title Section */}
       <div className="settings-section">
-        {renderSectionHeader("title", "Header")}
+        {renderSectionHeader("title", "Title")}
         <div
           className={`settings-section-content ${expandedSections.title ? "" : "collapsed"}`}
         >
