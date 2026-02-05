@@ -1,5 +1,5 @@
 /**
- * Bases Card View
+ * Bases Grid View
  * Primary implementation using Bases API
  */
 

@@ -55,7 +55,7 @@ export function Settings({
     }));
   };
 
-  // Datacore has one template shared across all view modes (card/masonry/list)
+  // Datacore has one template shared across all view modes (grid/masonry/list)
   const templateType = "datacore" as const;
 
   // Template toggle state - check if template exists

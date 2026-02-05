@@ -35,7 +35,7 @@ jest.mock("../src/constants", () => ({
   },
   DEFAULT_DATACORE_STATE: {
     sortMethod: "mtime-desc",
-    viewMode: "card",
+    viewMode: "grid",
     searchQuery: "",
     resultLimit: "",
     widthMode: "normal",
@@ -242,14 +242,14 @@ describe("PersistenceManager", () => {
     it("should return default state when no queryId", () => {
       const state = manager.getDatacoreState();
       expect(state.sortMethod).toBe("mtime-desc");
-      expect(state.viewMode).toBe("card");
+      expect(state.viewMode).toBe("grid");
     });
 
     it("should return default state for unknown queryId", () => {
       const state = manager.getDatacoreState("unknown-query");
       expect(state).toEqual({
         sortMethod: "mtime-desc",
-        viewMode: "card",
+        viewMode: "grid",
         searchQuery: "",
         resultLimit: "",
         widthMode: "normal",
@@ -264,7 +264,7 @@ describe("PersistenceManager", () => {
 
       const state = manager.getDatacoreState("query-1");
       expect(state.sortMethod).toBe("alphabetical");
-      expect(state.viewMode).toBe("card"); // Default preserved
+      expect(state.viewMode).toBe("grid"); // Default preserved
     });
   });
 
