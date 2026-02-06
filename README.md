@@ -2,31 +2,56 @@
 
 Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
 
-### Grid
-
-<img src="https://github.com/user-attachments/assets/4643b0da-97b0-4428-8779-012dc69d7069" />
-
-### Masonry
-
-<img src="https://github.com/user-attachments/assets/a5997474-03ac-4c5c-a0bf-c9c302954d63" />
-
-### Datacore
-
-Add to note via Command palette > Dynamic Views: Insert Datacore query.
-
-<img height="600" src="https://github.com/user-attachments/assets/b2541773-5fb8-4851-920c-ae2afa116fb5" />
+<img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
+<img src="https://github.com/user-attachments/assets/d367680e-9857-4d28-8a8a-ce7c279d02a2" />
+<img src="https://github.com/user-attachments/assets/5eda2513-c0dc-4d08-975d-931eb3afb99d" />
+<img src="https://github.com/user-attachments/assets/f811aec9-8885-4783-afa6-c937f3617b98" />
 
 ## Features
 
-- Native look and feel.
-- Fetch text preview from first few lines of notes.
-- Fetch image preview from note content or property.
-- Open image previews in fullscreen image viewer.
-- Display up to 14 properties in each card — either stacked or side-by-side.
-- Infinite scroll: cards load while scrolling rather than all at once.
-- Optimized performance.
-- Extensive customization options, including [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support.
-- Full keyboard navigation support.
+- Show text previews from first few lines of notes
+- Show image previews from note content or property
+- Display images as covers, thumbnails, posters, or card backdrops
+- Cover slideshow
+- Wrap long titles to new line
+- Scroll long properties horizontally
+- Cards load while scrolling rather than all at once
+- Fullscreen image viewer
+
+### Extra
+
+- Display properties stacked or side-by-side
+- Property labels can be above, inline, or hidden
+- Interactive checkbox properties
+- Position card images on top, bottom, left or right
+- Select and copy card text
+- Hover across thumbnail to preview other images
+- *Open URL* card button
+- *Shuffle view* button
+- *Open random file* button
+- Fold sections when grouping by property
+- Show result count for each group
+- Full keyboard navigation support
+- Endless customization possibilities with custom CSS
+- Apply CSS snippets to individual views
+- Datacore views: Grid, Masonry, List
+
+And numerous other QoL improvements over the default Bases card view.
+
+### Integrations
+
+- Extensive [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support
+- Fetch YouTube thumbnails
+- Fetch [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) cover images
+- Reveal files, folders and tags in [Notebook Navigator](https://obsidian.md/plugins?id=notebook-navigator)
+
+## Perfect for
+
+- Image galleries
+- Mood boards
+- Media libraries
+- Everyday notes
+- [Web Clipper](https://obsidian.md/clipper)
 
 ## Installation
 
@@ -59,4 +84,4 @@ Note: to get updates for _Dynamic Views_, you will have to check for and install
 
 - Please [open an issue](https://github.com/churnish/dynamic-views/issues) if you run into a problem.
 - Feature requests considered but not prioritized; further development focused on stability and performance.
-- PRs welcome. Reach out if you're interested in helping maintain the plugin — get author credit and the sole funding URL in return.
+- PRs welcome. Please reach out if you'd like to help maintain the plugin.
