@@ -497,8 +497,8 @@ export function Settings({
               }}
               className="dropdown"
             >
-              <option value="inline">Inline</option>
               <option value="above">Above</option>
+              <option value="inline">Inline</option>
               <option value="hide">Hide</option>
             </select>
           </div>

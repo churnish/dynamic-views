@@ -242,8 +242,8 @@ export function getBasesViewOptions(
           displayName: "Property labels",
           key: "propertyLabels",
           options: {
-            inline: "Inline",
             above: "Above",
+            inline: "Inline",
             hide: "Hide",
           },
           default: d.propertyLabels,
