@@ -41,14 +41,14 @@ export function isFormulaProperty(propertyName: string | undefined): boolean {
  * @param propertyName - The property name
  * @param hideMissing - Whether to hide missing (null) properties
  * @param hideEmptyMode - How to handle empty values: "show" | "labels-hidden" | "all"
- * @param propertyLabels - Label display mode: "none" | "inline" | "above"
+ * @param propertyLabels - Label display mode: "hide" | "inline" | "above"
  */
 export function shouldCollapseField(
   value: string | null,
   propertyName: string,
   hideMissing: boolean,
   hideEmptyMode: "show" | "labels-hidden" | "all",
-  propertyLabels: "none" | "inline" | "above",
+  propertyLabels: "hide" | "inline" | "above",
 ): boolean {
   // 1. FIRST: Missing handling (only YAML/note properties can be "missing")
   if (
@@ -65,7 +65,7 @@ export function shouldCollapseField(
   const isEmpty = !value;
   if (isEmpty) {
     if (hideEmptyMode === "all") return true;
-    if (hideEmptyMode === "labels-hidden" && propertyLabels === "none")
+    if (hideEmptyMode === "labels-hidden" && propertyLabels === "hide")
       return true;
   }
 

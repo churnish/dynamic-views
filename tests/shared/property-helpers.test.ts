@@ -65,7 +65,7 @@ describe("property-helpers", () => {
 
     it("collapses empty string with hideEmptyMode='labels-hidden' when labels hidden", () => {
       expect(
-        shouldCollapseField("", "title", false, "labels-hidden", "none"),
+        shouldCollapseField("", "title", false, "labels-hidden", "hide"),
       ).toBe(true);
     });
 

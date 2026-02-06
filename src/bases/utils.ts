@@ -34,7 +34,7 @@ import type {
   BasesResolvedSettings,
   ViewDefaults,
 } from "../types";
-import { VIEW_DEFAULTS } from "../constants";
+import { BASES_DEFAULTS, VIEW_DEFAULTS } from "../constants";
 import type DynamicViews from "../../main";
 
 /** Bases config interface for get/set operations (used by template validation) */
@@ -52,7 +52,7 @@ const VALID_VIEW_VALUES: Partial<
   thumbnailSize: ["compact", "standard", "expanded"],
   imagePosition: ["left", "right", "top", "bottom"],
   imageFit: ["crop", "contain"],
-  propertyLabels: ["none", "inline", "above"],
+  propertyLabels: ["hide", "inline", "above"],
   rightPropertyPosition: ["left", "column", "right"],
   minimumColumns: ["one", "two"],
 };
@@ -205,12 +205,14 @@ export async function cleanupBaseFile(
         }
       }
 
-      // Remove keys that match VIEW_DEFAULTS (sparse YAML)
+      // Remove keys that match VIEW_DEFAULTS (sparse YAML).
+      // Skip keys where BASES_DEFAULTS overrides VIEW_DEFAULTS — for those,
+      // the VIEW_DEFAULTS value is a meaningful non-default choice in Bases context.
       for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
+        if (key in BASES_DEFAULTS) continue;
         const value = viewObj[key];
         if (value === undefined) continue;
 
-        // All other keys: compare to VIEW_DEFAULTS
         // (minimumColumns: YAML "one"/"two" never === VIEW_DEFAULTS number, so naturally preserved)
         if (value === VIEW_DEFAULTS[key]) {
           delete viewObj[key];

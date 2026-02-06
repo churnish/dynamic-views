@@ -40,7 +40,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   imageFit: "crop",
   imageRatio: 1.0,
   // Properties
-  propertyLabels: "none",
+  propertyLabels: "hide",
   pairProperties: false,
   rightPropertyPosition: "right",
   invertPropertyPairing: "",

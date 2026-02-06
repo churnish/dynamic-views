@@ -699,13 +699,13 @@ function computeInvertPairs(
 function shouldCollapseFieldDatacore(
   propertyName: string | undefined,
   resolvedValue: unknown,
-  propertyLabels: "none" | "inline" | "above",
+  propertyLabels: "hide" | "inline" | "above",
   hideEmptyMode: "show" | "labels-hidden" | "all",
   hideMissing: boolean,
 ): boolean {
   // No property configured - collapse if labels hidden (for layout)
   if (!propertyName) {
-    return propertyLabels === "none";
+    return propertyLabels === "hide";
   }
   // Convert unknown to string | null for shared function
   const stringValue = typeof resolvedValue === "string" ? resolvedValue : null;
@@ -991,7 +991,7 @@ function renderProperty(
   const hideEmptyMode = getHideEmptyMode();
   if (isEmpty) {
     if (hideEmptyMode === "all") return null;
-    if (hideEmptyMode === "labels-hidden" && settings.propertyLabels === "none")
+    if (hideEmptyMode === "labels-hidden" && settings.propertyLabels === "hide")
       return null;
   }
 
@@ -1134,7 +1134,7 @@ function renderProperty(
         <div className="property-content-wrapper" tabIndex={-1}>
           <div className="property-content">
             <span>
-              {showTimestampIcon() && settings.propertyLabels === "none" && (
+              {showTimestampIcon() && settings.propertyLabels === "hide" && (
                 <svg
                   className="timestamp-icon"
                   xmlns="http://www.w3.org/2000/svg"
@@ -1731,7 +1731,7 @@ function Card({
           settings.subtitleProperty,
           null,
           card.subtitle,
-          { ...settings, propertyLabels: "none" },
+          { ...settings, propertyLabels: "hide" },
           card,
           app,
           timeIcon,
@@ -2443,7 +2443,7 @@ function Card({
 
         sets.forEach((set, setIdx) => {
           // Check if set has content
-          const showConfiguredProps = propertyLabels !== "none" || !hideMissing;
+          const showConfiguredProps = propertyLabels !== "hide" || !hideMissing;
           const hasContent = set.props.some((p) =>
             showConfiguredProps
               ? p.name !== ""

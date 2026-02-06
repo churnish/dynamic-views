@@ -244,7 +244,7 @@ export function getBasesViewOptions(
           options: {
             inline: "Inline",
             above: "On top",
-            none: "Hide",
+            hide: "Hide",
           },
           default: d.propertyLabels,
           shouldHide: (config: BasesConfig) => config.getOrder().length === 0,
@@ -455,7 +455,7 @@ export function readBasesSettings(
     imageRatio: getNumber("imageRatio", defaults.imageRatio),
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
-      if (value === "none" || value === "inline" || value === "above") {
+      if (value === "hide" || value === "inline" || value === "above") {
         return value;
       }
       // Stale config guard: use previous value if available
@@ -588,7 +588,7 @@ export function extractBasesTemplate(
     imageRatio: getNumber("imageRatio", defaults.imageRatio),
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
-      return value === "none" || value === "inline" || value === "above"
+      return value === "hide" || value === "inline" || value === "above"
         ? value
         : defaults.propertyLabels;
     })(),

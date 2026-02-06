@@ -490,7 +490,7 @@ export function Settings({
                 const evt = e as Event & { target: HTMLSelectElement };
                 onSettingsChange({
                   propertyLabels: evt.target.value as
-                    | "none"
+                    | "hide"
                     | "inline"
                     | "above",
                 });
@@ -499,7 +499,7 @@ export function Settings({
             >
               <option value="inline">Inline</option>
               <option value="above">On top</option>
-              <option value="none">Hide</option>
+              <option value="hide">Hide</option>
             </select>
           </div>
           {renderTextInput(
