@@ -108,6 +108,8 @@ export class DynamicViewsGridView extends BasesView {
     lastSettingsHash: null,
     lastMtimes: new Map(),
   };
+  // Track last rendered settings to detect stale config (see readBasesSettings)
+  private lastRenderedSettings: BasesResolvedSettings | null = null;
   private lastGroup: LastGroupState = { key: undefined, container: null };
   private scrollThrottle: ScrollThrottleState = {
     listener: null,
@@ -252,6 +254,8 @@ export class DynamicViewsGridView extends BasesView {
     const settings = readBasesSettings(
       this.config,
       this.plugin.persistenceManager.getPluginSettings(),
+      "grid",
+      this.lastRenderedSettings ?? undefined,
     );
 
     // Normalize property names once — downstream code uses pre-normalized values
@@ -593,8 +597,8 @@ export class DynamicViewsGridView extends BasesView {
 
   /** Internal handler after config has settled */
   private processDataUpdate(): void {
-    // Capture trailing flag before reset — used to detect stale-settings reverts
-    const isTrailing = this.trailingUpdate.isTrailing ?? false;
+    // Capture trailing flag before reset (kept for future debugging if needed)
+    const _isTrailing = this.trailingUpdate.isTrailing ?? false;
     this.trailingUpdate.isTrailing = false;
 
     // Set callback for trailing calls (hybrid throttle)
@@ -658,11 +662,15 @@ export class DynamicViewsGridView extends BasesView {
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
 
-      // Read settings from Bases config (schema defaults include template values)
+      // Read settings (schema defaults include template values)
+      // Pass lastRenderedSettings to prevent stale config from reverting to defaults
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getPluginSettings(),
+        "grid",
+        this.lastRenderedSettings ?? undefined,
       );
+      this.lastRenderedSettings = settings;
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(
@@ -823,13 +831,18 @@ export class DynamicViewsGridView extends BasesView {
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
 
-      // Skip stale trailing: settings changed but no data changes
-      // Prevents Obsidian's stale duplicate events from reverting user's setting changes
+      // Skip stale config updates: Obsidian may fire onDataUpdated with stale config
+      // where previously-set values read as undefined (reverting to defaults).
+      // Detect by checking if settings "changed" to match defaults with no data change.
+      // This catches stale updates while allowing valid user changes through.
+      const isRevertingToDefaults =
+        settings.propertyLabels === "inline" &&
+        this.config.get("propertyLabels") === undefined;
       if (
-        isTrailing &&
         settingsChanged &&
         pathsUnchanged &&
-        changedPaths.size === 0
+        changedPaths.size === 0 &&
+        isRevertingToDefaults
       ) {
         return;
       }
@@ -1261,6 +1274,8 @@ export class DynamicViewsGridView extends BasesView {
     const settings = readBasesSettings(
       this.config,
       this.plugin.persistenceManager.getPluginSettings(),
+      "grid",
+      this.lastRenderedSettings ?? undefined,
     );
 
     // Normalize property names once — downstream code uses pre-normalized values

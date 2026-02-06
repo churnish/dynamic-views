@@ -356,11 +356,16 @@ export function getMasonryViewOptions(): ViewOption[] {
  * Read settings from Bases config
  * Maps Bases config values to BasesResolvedSettings by merging:
  *   VIEW_DEFAULTS (overridden by config) + pluginSettings
+ *
+ * @param previousSettings - Optional previous settings to use as fallback when
+ *   config.get() returns undefined. This prevents stale Obsidian updates from
+ *   reverting user settings to defaults.
  */
 export function readBasesSettings(
   config: BasesConfig,
   pluginSettings: PluginSettings,
   viewType?: "grid" | "masonry",
+  previousSettings?: Partial<BasesResolvedSettings>,
 ): BasesResolvedSettings {
   const defaults = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
 
@@ -389,6 +394,7 @@ export function readBasesSettings(
   };
 
   // Read ViewDefaults from Bases config
+  // Note: propertyLabels and imageFormat use previousSettings for stale config fallback
   const viewSettings: ViewDefaults = {
     cardSize: getNumber("cardSize", defaults.cardSize),
     titleProperty: getString("titleProperty", defaults.titleProperty),
@@ -411,12 +417,19 @@ export function readBasesSettings(
     })(),
     imageFormat: (() => {
       const value = config.get("imageFormat");
-      return value === "thumbnail" ||
+      if (
+        value === "thumbnail" ||
         value === "cover" ||
         value === "poster" ||
         value === "backdrop"
-        ? value
-        : defaults.imageFormat;
+      ) {
+        return value;
+      }
+      // Stale config guard: use previous value if available
+      if (previousSettings?.imageFormat !== undefined) {
+        return previousSettings.imageFormat;
+      }
+      return defaults.imageFormat;
     })(),
     thumbnailSize: (() => {
       const value = config.get("thumbnailSize");
@@ -442,9 +455,14 @@ export function readBasesSettings(
     imageRatio: getNumber("imageRatio", defaults.imageRatio),
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
-      return value === "hide" || value === "inline" || value === "above"
-        ? value
-        : defaults.propertyLabels;
+      if (value === "hide" || value === "inline" || value === "above") {
+        return value;
+      }
+      // Stale config guard: use previous value if available
+      if (previousSettings?.propertyLabels !== undefined) {
+        return previousSettings.propertyLabels;
+      }
+      return defaults.propertyLabels;
     })(),
     pairProperties: getBool("pairProperties", defaults.pairProperties),
     rightPropertyPosition: (() => {

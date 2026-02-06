@@ -119,6 +119,8 @@ export class DynamicViewsMasonryView extends BasesView {
     lastSettingsHash: null,
     lastMtimes: new Map(),
   };
+  // Track last rendered settings to detect stale config (see readBasesSettings)
+  private lastRenderedSettings: BasesResolvedSettings | null = null;
   private lastGroup: LastGroupState = { key: undefined, container: null };
   private scrollThrottle: ScrollThrottleState = {
     listener: null,
@@ -694,8 +696,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Internal handler after config has settled */
   private processDataUpdate(): void {
-    // Capture trailing flag before reset — used to detect stale-settings reverts
-    const isTrailing = this.trailingUpdate.isTrailing ?? false;
+    // Capture trailing flag before reset (kept for future debugging if needed)
+    const _isTrailing = this.trailingUpdate.isTrailing ?? false;
     this.trailingUpdate.isTrailing = false;
 
     // Set callback for trailing calls (hybrid throttle)
@@ -762,11 +764,14 @@ export class DynamicViewsMasonryView extends BasesView {
       this.totalEntries = allEntries.length;
 
       // Read settings (schema defaults include template values)
+      // Pass lastRenderedSettings to prevent stale config from reverting to defaults
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getPluginSettings(),
         "masonry",
+        this.lastRenderedSettings ?? undefined,
       );
+      this.lastRenderedSettings = settings;
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(
@@ -899,13 +904,15 @@ export class DynamicViewsMasonryView extends BasesView {
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
 
-      // Skip stale trailing: settings changed but no data changes
-      // Prevents Obsidian's stale duplicate events from reverting user's setting changes
+      // Skip stale updates: if settings "changed" but no data changed, and
+      // config.get returns undefined for a key, this is a stale Obsidian update.
+      // The readBasesSettings fix uses previousSettings to preserve values, but
+      // we still skip the render to avoid unnecessary work.
       if (
-        isTrailing &&
         settingsChanged &&
         pathsUnchanged &&
-        changedPaths.size === 0
+        changedPaths.size === 0 &&
+        this.config.get("propertyLabels") === undefined
       ) {
         return;
       }
