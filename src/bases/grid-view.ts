@@ -830,22 +830,6 @@ export class DynamicViewsGridView extends BasesView {
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
 
-      // Skip stale config updates: Obsidian may fire onDataUpdated with stale config
-      // where previously-set values read as undefined (reverting to defaults).
-      // Detect by checking if settings "changed" to match defaults with no data change.
-      // This catches stale updates while allowing valid user changes through.
-      const isRevertingToDefaults =
-        settings.propertyLabels === "inline" &&
-        this.config.get("propertyLabels") === undefined;
-      if (
-        settingsChanged &&
-        pathsUnchanged &&
-        changedPaths.size === 0 &&
-        isRevertingToDefaults
-      ) {
-        return;
-      }
-
       // If only content changed (not paths/settings), update in-place
       if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {
         await this.updateCardsInPlace(changedPaths, allEntries, settings);
