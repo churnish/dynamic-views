@@ -64,7 +64,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     // Smart timestamp variables - declared before SettingGroup for use in callbacks
     let smartTimestampSetting: Setting | undefined;
     let conditionalText: HTMLSpanElement;
-    // eslint-disable-next-line prefer-const -- assigned after declaration via DOM query fallback
     let smartTimestampSubSettingsEl: HTMLDivElement;
 
     // Helper function to update smart timestamp visibility

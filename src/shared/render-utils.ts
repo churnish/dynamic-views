@@ -39,7 +39,7 @@ export function formatTimestamp(
   isDateOnly: boolean = false,
   styled: boolean = false,
 ): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment -- moment.js loaded via Obsidian's bundled require
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, import/no-extraneous-dependencies -- moment.js loaded via Obsidian's bundled require
   const moment = require("moment");
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require to avoid circular dependency
   const styleSettings = require("../utils/style-settings") as {

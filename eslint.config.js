@@ -1,8 +1,8 @@
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
+import globals from "globals";
 import obsidianmd from "eslint-plugin-obsidianmd";
 
-export default [
+export default defineConfig([
   // Ignore generated files, configs, and test files
   {
     ignores: [
@@ -21,15 +21,16 @@ export default [
     ],
   },
 
-  // Base JavaScript recommended rules
-  js.configs.recommended,
+  // Obsidian recommended rules (includes JS recommended, TS type-checked,
+  // obsidianmd/*, @microsoft/sdl/*, import/*, depend/*)
+  ...obsidianmd.configs.recommended,
 
-  // TypeScript type-checked recommended rules
-  ...tseslint.configs.recommendedTypeChecked,
-
-  // Language options for TypeScript
+  // Browser globals and TypeScript parser options
   {
     languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
@@ -37,26 +38,26 @@ export default [
     },
   },
 
-  // Obsidian plugin rules (manual config due to plugin bug)
+  // Project-specific overrides for TypeScript
   {
-    plugins: {
-      obsidianmd: obsidianmd,
-    },
+    files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      // Core Obsidian rules
-      "obsidianmd/no-sample-code": "error",
-      "obsidianmd/detach-leaves": "error",
-      "obsidianmd/no-tfile-tfolder-cast": "error",
-      "obsidianmd/prefer-file-manager-trash-file": "warn",
-      "obsidianmd/platform": "error",
-
-      // TypeScript overrides
+      // Keep varsIgnorePattern for underscore-prefixed variables
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { args: "none", varsIgnorePattern: "^_" },
       ],
-      "@typescript-eslint/ban-ts-comment": "off",
-      "no-prototype-builtins": "off",
+      // TypeScript handles undefined variable checking; no-undef false positives on JSX namespace
+      "no-undef": "off",
     },
   },
-];
+
+  // Package.json overrides
+  {
+    files: ["package.json"],
+    rules: {
+      // builtin-modules is used by esbuild config and has no direct replacement
+      "depend/ban-dependencies": "off",
+    },
+  },
+]);
