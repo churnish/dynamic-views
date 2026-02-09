@@ -78,11 +78,10 @@ body:
       description: |-
         To share your plugin settings:
 
-        1. Open Dynamic Views settings.
-        2. Scroll down to 'Configuration'.
-        3. Press Export.
-        4. Attach the file here.
-      placeholder: Paste plugin settings here...
+        1. Open the vault folder in the system file manager.
+        2. Open your Obsidian configuration folder (`.obsidian` by default, hidden on most OSes).
+        3. Open `plugins/dynamic-views`.
+        4. Attach the `data.json` file below.
     validations:
       required: false
   - type: textarea

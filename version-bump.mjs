@@ -36,7 +36,7 @@ try {
   }
   if (info) {
     console.log(
-      `\nUpdating eslint-plugin-obsidianmd: ${info.current} → ${info.latest}`
+      `\nUpdating eslint-plugin-obsidianmd: ${info.current} → ${info.latest}`,
     );
     execSync("npm update eslint-plugin-obsidianmd", { stdio: "inherit" });
     execSync("git add package.json package-lock.json", { stdio: "inherit" });
@@ -47,7 +47,7 @@ try {
       console.log("ESLint passed with updated plugin\n");
     } catch {
       console.error(
-        "\n⚠ ESLint failed after updating eslint-plugin-obsidianmd. Fix lint errors before releasing.\n"
+        "\n⚠ ESLint failed after updating eslint-plugin-obsidianmd. Fix lint errors before releasing.\n",
       );
       process.exit(1);
     }

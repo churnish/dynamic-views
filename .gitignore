@@ -3,7 +3,6 @@ main.js
 *.map
 node_modules
 .DS_Store
-CLAUDE.md
 data.json
 *.zip
 .claude
