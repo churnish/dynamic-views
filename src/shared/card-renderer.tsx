@@ -100,7 +100,7 @@ function renderFileTypeIcon(path: string) {
 }
 
 /**
- * Render file format indicator as JSX (for Badge mode)
+ * Render file format indicator as JSX (for Flair mode)
  * Text content not rendered - CSS uses data-ext via ::before
  */
 function renderFileExt(extInfo: { ext: string } | null) {

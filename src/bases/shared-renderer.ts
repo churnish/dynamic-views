@@ -902,7 +902,7 @@ export class SharedCardRenderer {
         setIcon(iconEl, icon);
       }
 
-      // Add file format indicator before title text (for Badge mode float:left)
+      // Add file format indicator before title text (for Flair mode float:left)
       const isFullname = (settings.titleProperty || "") === "file.fullname";
       const extInfo = getFileExtInfo(card.path, isFullname);
       const extNoDot = extInfo?.ext.slice(1) || "";

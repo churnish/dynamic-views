@@ -1253,14 +1253,14 @@ settings:
         title: File format indicator
         type: class-select
         allowEmpty: false
-        default: dynamic-views-file-type-badge
+        default: dynamic-views-file-type-flair
         options:
             -
                 label: Extension
                 value: dynamic-views-file-type-ext
             -
-                label: Badge
-                value: dynamic-views-file-type-badge
+                label: Flair
+                value: dynamic-views-file-type-flair
             -
                 label: Icon
                 value: dynamic-views-file-type-icon
@@ -3246,8 +3246,10 @@ body.dynamic-views-file-type-ext
   stroke-width: var(--icon-xs-stroke-width);
 }
 
-/* File type indicator: Badge (box before title) */
-body.dynamic-views-file-type-badge .dynamic-views .card-title-ext {
+/* File type indicator: Flair (box before title) — default when Style Settings OFF */
+body.dynamic-views-file-type-flair .dynamic-views .card-title-ext,
+body:not(.dynamic-views-file-type-flair):not(.dynamic-views-file-type-icon):not(.dynamic-views-file-type-none)
+  .dynamic-views .card-title-ext {
   display: flex;
   align-items: center;
   height: calc(
@@ -3261,14 +3263,16 @@ body.dynamic-views-file-type-badge .dynamic-views .card-title-ext {
   margin-right: var(--size-2-2);
 }
 
-body.dynamic-views-file-type-badge .dynamic-views .card-title-ext::before {
+body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before,
+body:not(.dynamic-views-file-type-flair):not(.dynamic-views-file-type-icon):not(.dynamic-views-file-type-none)
+  .dynamic-views .card-title-ext::before {
   content: attr(data-ext);
   color: var(--text-muted);
   font-family: var(--font-interface, var(--font-text));
   font-size: var(--font-ui-smaller);
   line-height: var(--dynamic-views-title-font-size, var(--font-ui-medium));
   padding: 0 0.33em 0 0.38em; /* Extra 0.05em left to offset letter-spacing trailing space */
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   background-color: var(--background-modifier-border);
   font-weight: var(--nav-tag-weight);
   letter-spacing: 0.05em;
@@ -3506,8 +3510,17 @@ body.dynamic-views-subtitle-above
 }
 
 /* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
-.dynamic-views .card.card-thumbnail-left .card-content:has(.card-text-preview-wrapper) {
+.dynamic-views
+  .card.card-thumbnail-left
+  .card-content:has(.card-text-preview-wrapper) {
   flex-direction: row-reverse;
+}
+
+/* Thumbnail right: align thumbnail to the right when no text preview */
+.dynamic-views
+  .card.card-thumbnail-right
+  .card-content:not(:has(.card-text-preview-wrapper)) {
+  justify-content: flex-end;
 }
 
 .dynamic-views .card-text-preview-wrapper {
@@ -7219,7 +7232,10 @@ body.dynamic-views-no-fade-truncated-text
   flex-direction: row;
 }
 
-.dynamic-views .dynamic-views-masonry .card.card-thumbnail-left .card-content:has(.card-text-preview-wrapper) {
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-thumbnail-left
+  .card-content:has(.card-text-preview-wrapper) {
   flex-direction: row-reverse;
 }
 
