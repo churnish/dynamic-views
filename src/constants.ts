@@ -61,6 +61,8 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
 };
 
 export const BASES_DEFAULTS: BasesDefaults = {
+  titleProperty: "file base name",
+  subtitleProperty: "folder",
   propertyLabels: "inline",
 };
 

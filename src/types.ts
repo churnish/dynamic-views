@@ -62,6 +62,8 @@ export interface DatacoreDefaults {
 
 /** Bases-only defaults (overrides VIEW_DEFAULTS for Bases views) */
 export interface BasesDefaults {
+  titleProperty: string;
+  subtitleProperty: string;
   propertyLabels: "hide" | "inline" | "above";
 }
 
