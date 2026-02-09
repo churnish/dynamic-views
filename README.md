@@ -26,9 +26,9 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Position card images on top, bottom, left or right
 - Select and copy card text
 - Hover across thumbnail to preview other images
-- _Open URL_ card button
-- _Shuffle view_ button
-- _Open random file_ button
+- *Open URL* card button
+- *Shuffle view* button
+- *Open random file* button
 - Fold sections when grouping by property
 - Show result count for each group
 - Full keyboard navigation support
@@ -74,9 +74,11 @@ Until _Dynamic Views_ is [made available](https://github.com/obsidianmd/obsidian
 Note: to get updates for _Dynamic Views_, you will have to check for and install them manually.
 
 1. Download `dynamic-views.zip` in the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
-2. Unzip the folder and place it in the `.obsidian/plugins` folder (hidden on most OSes) at the root of your vault.
-3. Reload plugins or app.
-4. Enable _Dynamic Views_ in Obsidian settings > Community plugins > Installed plugins.
+2. Open the vault folder in the system file manager.
+3. Open your Obsidian configuration folder (`.obsidian` by default, hidden on most OSes).
+5. Unzip `dynamic-views.zip` and place it in the `plugins` folder.
+6. Reload plugins or app.
+7. Enable _Dynamic Views_ in Obsidian settings > Community plugins > Installed plugins.
 
 </details>
 
@@ -85,3 +87,7 @@ Note: to get updates for _Dynamic Views_, you will have to check for and install
 - Please [open an issue](https://github.com/churnish/dynamic-views/issues) if you run into a problem.
 - Feature requests considered but not prioritized; further development focused on stability and performance.
 - PRs welcome. Please reach out if you'd like to help maintain the plugin.
+
+## Credits
+
+The theme in the screenshots is [Cupertino](https://github.com/aaaaalexis/obsidian-cupertino).
