@@ -57,13 +57,13 @@ jobs:
 
           BODY=""
           if [ -n "$PRS" ]; then
-            printf -v BODY '### Merged PRs\n%s' "$PRS"
+            printf -v BODY '### Merged PRs\n\n%s' "$PRS"
           fi
           if [ -n "$ISSUES" ]; then
             if [ -n "$BODY" ]; then
-              printf -v BODY '%s\n\n### Closed issues\n%s' "$BODY" "$ISSUES"
+              printf -v BODY '%s\n\n### Closed issues\n\n%s' "$BODY" "$ISSUES"
             else
-              printf -v BODY '### Closed issues\n%s' "$ISSUES"
+              printf -v BODY '### Closed issues\n\n%s' "$ISSUES"
             fi
           fi
 
