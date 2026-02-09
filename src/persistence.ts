@@ -17,28 +17,13 @@ import {
   DEFAULT_DATACORE_STATE,
 } from "./constants";
 import { sanitizeObject, sanitizeString } from "./utils/sanitize";
-
-/** Valid enum values for ViewDefaults fields — shared with cleanupBaseFile in utils.ts */
-const VALID_VIEW_VALUES: Partial<
-  Record<keyof ViewDefaults, readonly string[]>
-> = {
-  fallbackToEmbeds: ["always", "if-unavailable", "never"],
-  imageFormat: ["thumbnail", "cover", "poster", "backdrop"],
-  imagePosition: ["left", "right", "top", "bottom"],
-  imageFit: ["crop", "contain"],
-  propertyLabels: ["hide", "inline", "above"],
-  rightPropertyPosition: ["left", "column", "right"],
-  minimumColumns: ["one", "two"],
-};
+import {
+  VALID_VIEW_VALUES,
+  VIEW_DEFAULTS_TYPES,
+} from "./shared/view-validation";
 
 const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
 const DATACORE_DEFAULTS_KEYS = new Set(Object.keys(DATACORE_DEFAULTS));
-
-/** Expected runtime types for ViewDefaults fields, derived from VIEW_DEFAULTS */
-const VIEW_DEFAULTS_TYPES: Record<string, string> = {};
-for (const [key, value] of Object.entries(VIEW_DEFAULTS)) {
-  VIEW_DEFAULTS_TYPES[key] = typeof value;
-}
 
 /**
  * Strip stale keys, wrong-typed values, and invalid enum values from a template's settings.

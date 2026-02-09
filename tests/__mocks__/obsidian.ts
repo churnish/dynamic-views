@@ -38,6 +38,11 @@ export class Vault {
     return Promise.resolve("");
   }
 
+  async process(file: TFile, fn: (content: string) => string): Promise<string> {
+    const content = await this.read(file);
+    return fn(content);
+  }
+
   getAbstractFileByPath(path: string): TAbstractFile | null {
     return null;
   }
@@ -266,6 +271,15 @@ export function normalizePath(path: string): string {
 // Mock setIcon
 export function setIcon(parent: HTMLElement, iconId: string): void {
   parent.setAttribute("data-icon", iconId);
+}
+
+// Mock YAML helpers — use JSON for test simplicity
+export function parseYaml(content: string): unknown {
+  return JSON.parse(content);
+}
+
+export function stringifyYaml(obj: unknown): string {
+  return JSON.stringify(obj);
 }
 
 // Export commonly used types

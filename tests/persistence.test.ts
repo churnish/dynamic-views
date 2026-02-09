@@ -22,13 +22,39 @@ jest.mock("../src/constants", () => ({
     showCardLinkCovers: true,
   },
   VIEW_DEFAULTS: {
-    cardSize: 400,
+    cardSize: 300,
     titleProperty: "file.name",
+    titleLines: 2,
+    subtitleProperty: "file.folder",
+    textPreviewProperty: "",
+    fallbackToContent: true,
+    textPreviewLines: 5,
+    imageProperty: "",
+    fallbackToEmbeds: "always",
+    imageFormat: "thumbnail",
+    thumbnailSize: 80,
+    imagePosition: "right",
+    imageFit: "crop",
+    imageRatio: 1.0,
+    propertyLabels: "hide",
+    pairProperties: false,
+    rightPropertyPosition: "right",
+    invertPropertyPairing: "",
+    showPropertiesAbove: false,
+    invertPropertyPosition: "",
+    urlProperty: "url",
+    minimumColumns: 1,
+    cssclasses: "",
   },
   DATACORE_DEFAULTS: {
     listMarker: "bullet",
     queryHeight: 0,
     pairProperties: true,
+  },
+  BASES_DEFAULTS: {
+    titleProperty: "file base name",
+    subtitleProperty: "folder",
+    propertyLabels: "inline",
   },
   DEFAULT_BASES_STATE: {
     collapsedGroups: [],
@@ -398,6 +424,281 @@ describe("PersistenceManager", () => {
 
       expect(state1.collapsedGroups).toEqual(["g1"]);
       expect(state2.collapsedGroups).toEqual(["g2", "g3"]);
+    });
+  });
+
+  describe("cleanupTemplateSettings (via load)", () => {
+    it("should remove stale keys not in ViewDefaults or DatacoreDefaults", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { cardSize: 400, deletedSetting: "stale" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings).not.toHaveProperty("deletedSetting");
+      expect(template?.settings.cardSize).toBe(400);
+      expect(mockPlugin.saveData).toHaveBeenCalled();
+    });
+
+    it("should delete values with wrong type (string instead of number)", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { thumbnailSize: "compact", cardSize: 400 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings).not.toHaveProperty("thumbnailSize");
+      expect(template?.settings.cardSize).toBe(400);
+    });
+
+    it("should delete values with wrong type (number instead of string)", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { imageProperty: 123, cardSize: 400 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings).not.toHaveProperty("imageProperty");
+      expect(template?.settings.cardSize).toBe(400);
+    });
+
+    it("should delete values with wrong type (string instead of boolean)", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          masonry: {
+            settings: { fallbackToContent: "yes", cardSize: 400 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("masonry");
+      expect(template?.settings).not.toHaveProperty("fallbackToContent");
+      expect(template?.settings.cardSize).toBe(400);
+    });
+
+    it("should delete null values (typeof null !== any expected type)", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { cardSize: null, imageProperty: null },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      // Template removed entirely since all settings cleaned
+      const template = manager.getSettingsTemplate("grid");
+      expect(template).toBeUndefined();
+    });
+
+    it("should reset invalid enum values to first valid value", async () => {
+      // imagePosition: first valid is "left", VIEW_DEFAULTS is "right" — reset is observable
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { imagePosition: "invalid-pos" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings.imagePosition).toBe("left");
+    });
+
+    it("should keep valid enum values", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { imageFormat: "cover" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings.imageFormat).toBe("cover");
+    });
+
+    it("should skip minimumColumns for type and enum checks", async () => {
+      // minimumColumns stores numbers in templates, but VIEW_DEFAULTS type is number
+      // and VALID_VIEW_VALUES has strings ["one", "two"] — skip both checks
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          masonry: {
+            settings: { minimumColumns: 2 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("masonry");
+      // minimumColumns=2 is the masonry default, so it gets removed by sparse cleanup
+      expect(template).toBeUndefined();
+    });
+
+    it("should preserve non-default minimumColumns in grid templates", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { minimumColumns: 2 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      // Grid default is 1, so 2 is non-default and preserved
+      expect(template?.settings.minimumColumns).toBe(2);
+    });
+
+    it("should remove keys matching VIEW_DEFAULTS (sparse cleanup)", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            // cardSize=300 matches VIEW_DEFAULTS, imageFormat="cover" doesn't
+            settings: { cardSize: 300, imageFormat: "cover" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings).not.toHaveProperty("cardSize");
+      expect(template?.settings.imageFormat).toBe("cover");
+    });
+
+    it("should remove template entirely when all settings cleaned", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { deletedKey: "stale" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template).toBeUndefined();
+    });
+
+    it("should allow DatacoreDefaults keys in datacore templates", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          datacore: {
+            settings: { listMarker: "checkbox" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("datacore");
+      expect(template?.settings.listMarker).toBe("checkbox");
+    });
+
+    it("should reject DatacoreDefaults keys in grid templates", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { listMarker: "checkbox", cardSize: 400 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      expect(template?.settings).not.toHaveProperty("listMarker");
+      expect(template?.settings.cardSize).toBe(400);
+    });
+
+    it("should skip sparse cleanup for BASES_DEFAULTS keys in grid/masonry", async () => {
+      // titleProperty in BASES_DEFAULTS has different default than VIEW_DEFAULTS.
+      // For Bases (grid/masonry), titleProperty matching VIEW_DEFAULTS should NOT be removed
+      // because BASES_DEFAULTS overrides it.
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { titleProperty: "file.name" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("grid");
+      // "file.name" matches VIEW_DEFAULTS but titleProperty is in BASES_DEFAULTS,
+      // so sparse cleanup skips it — value preserved
+      expect(template?.settings.titleProperty).toBe("file.name");
+    });
+
+    it("should not skip sparse cleanup for BASES_DEFAULTS keys in datacore", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          datacore: {
+            settings: { titleProperty: "file.name" },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("datacore");
+      // Datacore is not Bases, so titleProperty="file.name" matches VIEW_DEFAULTS
+      // and gets cleaned as sparse default
+      expect(template).toBeUndefined();
+    });
+
+    it("should not trigger save when no cleanup needed", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: {
+            settings: { cardSize: 400 },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      // No save call from cleanup — only loadData was called
+      expect(mockPlugin.saveData).not.toHaveBeenCalled();
+    });
+
+    it("should handle templates with no settings", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          grid: { setAt: 1000 },
+        },
+      });
+      await manager.load();
+
+      // No crash, template preserved as-is
+      expect(mockPlugin.saveData).not.toHaveBeenCalled();
     });
   });
 });
