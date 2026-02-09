@@ -14,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -39,10 +41,11 @@ jobs:
         run: |
           PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]' | sed -n '2p')
           if [ -z "$PREV_TAG" ]; then
-            SINCE="2020-01-01"
-          else
-            SINCE=$(git log -1 --format=%aI "$PREV_TAG" | cut -dT -f1)
+            echo "No previous tag found, skipping release notes."
+            echo "BODY=" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          SINCE=$(git log -1 --format=%aI "$PREV_TAG" | cut -dT -f1)
 
           PRS=$(gh pr list --state merged --search "merged:>=${SINCE}" --limit 200 \
             --json number,title,author \
