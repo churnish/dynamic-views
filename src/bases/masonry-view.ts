@@ -833,7 +833,7 @@ export class DynamicViewsMasonryView extends BasesView {
       const settingsHash =
         JSON.stringify(settings) +
         "\0\0" +
-        visibleProperties.join("\0") +
+        JSON.stringify(visibleProperties) +
         "\0\0" +
         sortMethod +
         "\0\0" +
@@ -860,7 +860,7 @@ export class DynamicViewsMasonryView extends BasesView {
         "\0\0" +
         this.sortState.order.join("\0") +
         "\0\0" +
-        visibleProperties.join("\0");
+        JSON.stringify(visibleProperties);
 
       // Detect files with changed content (mtime changed but paths unchanged)
       const changedPaths = new Set<string>();

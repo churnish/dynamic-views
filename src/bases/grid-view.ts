@@ -731,7 +731,7 @@ export class DynamicViewsGridView extends BasesView {
       const settingsHash =
         JSON.stringify(settings) +
         "\0\0" +
-        visibleProperties.join("\0") +
+        JSON.stringify(visibleProperties) +
         "\0\0" +
         sortMethod +
         "\0\0" +
@@ -758,7 +758,7 @@ export class DynamicViewsGridView extends BasesView {
         "\0\0" +
         this.sortState.order.join("\0") +
         "\0\0" +
-        visibleProperties.join("\0");
+        JSON.stringify(visibleProperties);
 
       // Detect files with changed content (mtime changed but paths unchanged)
       const changedPaths = new Set<string>();
@@ -792,12 +792,12 @@ export class DynamicViewsGridView extends BasesView {
       ) {
         // Obsidian may fire onDataUpdated before config.getOrder() is updated.
         // Schedule delayed re-checks at increasing intervals to catch late config updates.
-        const propsSnapshot = visibleProperties.join("\0");
+        const propsSnapshot = JSON.stringify(visibleProperties);
         const recheckDelays = [100, 250, 500];
         for (const delay of recheckDelays) {
           setTimeout(() => {
             const currentProps = this.config?.getOrder?.() ?? [];
-            const currentPropsStr = currentProps.join("\0");
+            const currentPropsStr = JSON.stringify(currentProps);
             if (currentPropsStr !== propsSnapshot) {
               // Reset throttle to allow this re-render
               this.lastDataUpdateTime.value = 0;
