@@ -37,6 +37,24 @@ declare module "obsidian" {
   }
 }
 
+/** Opaque reference returned by Datacore's core.on() for unsubscribing */
+export interface DatacoreEventRef {
+  readonly _brand?: "DatacoreEventRef";
+}
+
+/** Datacore's internal event emitter core (subset used for index subscriptions) */
+export interface DatacoreCore {
+  on(event: "update", callback: () => void): DatacoreEventRef;
+  offref(ref: DatacoreEventRef): void;
+}
+
+/** Datacore plugin shape (subset accessed via app.plugins.plugins) */
+export interface DatacorePluginInstance {
+  api?: {
+    core?: DatacoreCore;
+  };
+}
+
 declare global {
   interface Window {
     app: import("obsidian").App;

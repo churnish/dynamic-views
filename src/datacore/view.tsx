@@ -1,6 +1,7 @@
 import { App, TFile, Keymap, Notice } from "obsidian";
 import type { PaneType } from "obsidian";
 import type DynamicViews from "../../main";
+import type { DatacorePluginInstance } from "./types";
 import {
   ResolvedSettings,
   DatacoreState,
@@ -557,8 +558,10 @@ export function View({
     runQuery();
 
     // Subscribe to index updates with debounce
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-    const core = (app as any).plugins?.plugins?.datacore?.api?.core;
+    const datacorePlugin = app.plugins.plugins["datacore"] as
+      | DatacorePluginInstance
+      | undefined;
+    const core = datacorePlugin?.api?.core;
     if (!core) {
       return () => {}; // Empty cleanup when core unavailable
     }
@@ -572,7 +575,6 @@ export function View({
       if (debounceTimeout) clearTimeout(debounceTimeout);
       core.offref(updateRef);
     };
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
   }, [validatedQuery, app, dc]);
 
   const pages = stablePages;

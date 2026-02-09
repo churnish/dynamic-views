@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
+/* eslint-disable @typescript-eslint/no-misused-promises -- Obsidian Setting API expects sync callbacks but our handlers are async */
 import {
   App,
   PluginSettingTab,
@@ -64,7 +64,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     // Smart timestamp variables - declared before SettingGroup for use in callbacks
     let smartTimestampSetting: Setting | undefined;
     let conditionalText: HTMLSpanElement;
-    // eslint-disable-next-line prefer-const -- assigned after declaration, not reassigned
+    // eslint-disable-next-line prefer-const -- assigned after declaration via DOM query fallback
     let smartTimestampSubSettingsEl: HTMLDivElement;
 
     // Helper function to update smart timestamp visibility
@@ -217,7 +217,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .setDesc("Property with creation timestamps.")
       .addText((text) =>
         text
-          .setPlaceholder("created time")
+          .setPlaceholder("Created time")
           .setValue(settings.createdTimeProperty)
           .onChange(async (value) => {
             await this.plugin.persistenceManager.setPluginSettings({
@@ -231,7 +231,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .setDesc("Property with modification timestamps.")
       .addText((text) =>
         text
-          .setPlaceholder("modified time")
+          .setPlaceholder("Modified time")
           .setValue(settings.modifiedTimeProperty)
           .onChange(async (value) => {
             await this.plugin.persistenceManager.setPluginSettings({
@@ -342,4 +342,4 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     void this.trimTextFieldSettings();
   }
 }
-/* eslint-enable @typescript-eslint/no-misused-promises */
+/* eslint-enable @typescript-eslint/no-misused-promises -- end setting tab async handlers */

@@ -34,7 +34,7 @@ const markdownPatterns = [
   /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, // Embedded wikilinks (images, etc.)
   /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g, // Wikilinks with alias → keep alias
   /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, // Wikilinks → keep link text
-  /(?<=\s|^)#[a-zA-Z0-9_\-/]+/g, // Tags (require whitespace/line-start before #)
+  /(^|\s)#[a-zA-Z0-9_\-/]+/g, // Tags (require whitespace/line-start before #)
   /^\s*[-*+]\s*\[[ xX]\]\s+/gm, // Task list markers (bullet-style) - before bare checkbox
   /^\s*(\d+[.)]\s*)\[[ xX]\]\s+/gm, // Task list markers (numbered) - preserves number
   /\[[ xX]\]\s+/g, // Bare task checkboxes (after task markers)
@@ -225,7 +225,7 @@ export function sanitizeForPreview(
 
   // Normalize whitespace and remove block IDs
   const normalized = stripped
-    .replace(/(?<=\s|^)\^[a-zA-Z0-9-]+/g, "") // Remove block IDs (require whitespace/line-start before ^)
+    .replace(/(^|\s)\^[a-zA-Z0-9-]+/g, "$1") // Remove block IDs (require whitespace/line-start before ^)
     .split(/\s+/)
     .filter((word) => word)
     .join(" ")

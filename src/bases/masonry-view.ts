@@ -583,10 +583,7 @@ export class DynamicViewsMasonryView extends BasesView {
       cls: "dynamic-views dynamic-views-bases-container",
     });
     // Access plugin from controller's app
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    this.plugin = (this.app as any).plugins.plugins[
-      "dynamic-views"
-    ] as DynamicViews;
+    this.plugin = this.app.plugins.plugins["dynamic-views"] as DynamicViews;
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
@@ -697,8 +694,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Internal handler after config has settled */
   private processDataUpdate(): void {
-    // Capture trailing flag before reset (kept for future debugging if needed)
-    const _isTrailing = this.trailingUpdate.isTrailing ?? false;
     this.trailingUpdate.isTrailing = false;
 
     // Set callback for trailing calls (hybrid throttle)

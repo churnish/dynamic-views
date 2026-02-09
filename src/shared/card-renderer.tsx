@@ -1084,7 +1084,7 @@ function renderProperty(
           if (!(file instanceof TFile)) return;
           const fmProp = stripNotePrefix(propertyName);
           void app.fileManager.processFrontMatter(file, (frontmatter) => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- processFrontMatter callback receives any
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- processFrontMatter types frontmatter as Record<string, unknown> but ESLint infers any
             frontmatter[fmProp] = input.checked;
           });
         };

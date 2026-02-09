@@ -86,7 +86,7 @@ export function getActiveBasesView(
       return {
         type: viewInstanceType,
         data: wrapper.controller.view.data,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- .bind() returns any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- .bind() returns any per TS lib typing
         onDataUpdated: wrapper.controller.view.onDataUpdated?.bind(
           wrapper.controller.view,
         ),
