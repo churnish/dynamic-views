@@ -1882,7 +1882,7 @@ body.dynamic-views-disable-toolbar-shadow
 }
 
 .dynamic-views .results-count.limited {
-  color: var(--interactive-accent);
+  color: var(--icon-color-active);
 }
 
 .dynamic-views .results-count-chevron {
@@ -3505,8 +3505,8 @@ body.dynamic-views-subtitle-above
   flex-direction: column;
 }
 
-/* Thumbnail left: reverse row to place thumbnail on left */
-.dynamic-views .card.card-thumbnail-left .card-content {
+/* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
+.dynamic-views .card.card-thumbnail-left .card-content:has(.card-text-preview-wrapper) {
   flex-direction: row-reverse;
 }
 
@@ -7219,7 +7219,7 @@ body.dynamic-views-no-fade-truncated-text
   flex-direction: row;
 }
 
-.dynamic-views .dynamic-views-masonry .card.card-thumbnail-left .card-content {
+.dynamic-views .dynamic-views-masonry .card.card-thumbnail-left .card-content:has(.card-text-preview-wrapper) {
   flex-direction: row-reverse;
 }
 
