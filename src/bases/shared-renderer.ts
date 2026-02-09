@@ -196,12 +196,6 @@ function truncateTitleWithCanvas(
   textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
 }
 
-const THUMBNAIL_SIZE_MAP: Record<string, string> = {
-  compact: "64px",
-  standard: "80px",
-  expanded: "94.5px",
-};
-
 const PAIRED_PROPERTY_CLASSES = [
   "dynamic-views-paired-property-left",
   "dynamic-views-paired-property-right",
@@ -233,7 +227,7 @@ export function applyViewContainerStyles(
   // CSS variables
   container.style.setProperty(
     "--dynamic-views-thumbnail-size",
-    THUMBNAIL_SIZE_MAP[settings.thumbnailSize] ?? "80px",
+    `${settings.thumbnailSize}px`,
   );
   container.style.setProperty(
     "--dynamic-views-text-preview-lines",

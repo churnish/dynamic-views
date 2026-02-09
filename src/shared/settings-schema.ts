@@ -169,14 +169,12 @@ export function getBasesViewOptions(
             (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) === "never",
         },
         {
-          type: "dropdown",
+          type: "slider",
           displayName: "Size",
           key: "thumbnailSize",
-          options: {
-            compact: "Compact",
-            standard: "Standard",
-            expanded: "Expanded",
-          },
+          min: 50,
+          max: 100,
+          step: 1,
           default: d.thumbnailSize,
           shouldHide: (config: BasesConfig) =>
             (config.get("imageFormat") ?? d.imageFormat) !== "thumbnail" ||
@@ -431,12 +429,7 @@ export function readBasesSettings(
       }
       return defaults.imageFormat;
     })(),
-    thumbnailSize: (() => {
-      const value = config.get("thumbnailSize");
-      return value === "compact" || value === "standard" || value === "expanded"
-        ? value
-        : defaults.thumbnailSize;
-    })(),
+    thumbnailSize: getNumber("thumbnailSize", defaults.thumbnailSize),
     imagePosition: (() => {
       const value = config.get("imagePosition");
       return value === "left" ||
@@ -564,12 +557,7 @@ export function extractBasesTemplate(
         ? value
         : defaults.imageFormat;
     })(),
-    thumbnailSize: (() => {
-      const value = config.get("thumbnailSize");
-      return value === "compact" || value === "standard" || value === "expanded"
-        ? value
-        : defaults.thumbnailSize;
-    })(),
+    thumbnailSize: getNumber("thumbnailSize", defaults.thumbnailSize),
     imagePosition: (() => {
       const value = config.get("imagePosition");
       return value === "left" ||

@@ -366,27 +366,35 @@ export function Settings({
                 </select>
               </div>
               {settings.imageFormat === "thumbnail" && (
-                <div className="setting-item setting-item-dropdown">
+                <div className="setting-item">
                   <div className="setting-item-info">
                     <label>Size</label>
                   </div>
-                  <select
-                    value={settings.thumbnailSize}
-                    onChange={(e: unknown) => {
-                      const evt = e as Event & { target: HTMLSelectElement };
-                      onSettingsChange({
-                        thumbnailSize: evt.target.value as
-                          | "compact"
-                          | "standard"
-                          | "expanded",
-                      });
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
                     }}
-                    className="dropdown"
                   >
-                    <option value="compact">Compact</option>
-                    <option value="standard">Standard</option>
-                    <option value="expanded">Expanded</option>
-                  </select>
+                    <input
+                      type="range"
+                      min="50"
+                      max="100"
+                      step="1"
+                      value={settings.thumbnailSize}
+                      onChange={(e: unknown) => {
+                        const evt = e as Event & { target: HTMLInputElement };
+                        onSettingsChange({
+                          thumbnailSize: parseInt(evt.target.value),
+                        });
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <span className="slider-value">
+                      {settings.thumbnailSize}
+                    </span>
+                  </div>
                 </div>
               )}
               {settings.imageFormat !== "poster" &&

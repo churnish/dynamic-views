@@ -35,7 +35,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   imageProperty: "",
   fallbackToEmbeds: "always",
   imageFormat: "thumbnail",
-  thumbnailSize: "standard",
+  thumbnailSize: 80,
   imagePosition: "right",
   imageFit: "crop",
   imageRatio: 1.0,

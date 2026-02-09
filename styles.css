@@ -4430,7 +4430,9 @@ body.dynamic-views-cover-circular
     .card-cover:not(.card-cover-slideshow)
     .dynamic-views-image-embed
     img,
-  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(
+      .dynamic-views-cover-hover-zoom-card
+    ):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover
     .card-cover:not(.card-cover-slideshow)
@@ -4454,7 +4456,9 @@ body.dynamic-views-cover-circular
     .card-cover-slideshow
     .dynamic-views-image-embed
     img,
-  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(
+      .dynamic-views-cover-hover-zoom-card
+    ):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover
     .card-cover-slideshow
@@ -4492,7 +4496,9 @@ body.dynamic-views-cover-circular
     .card-cover:not(.card-cover-slideshow)
     .dynamic-views-image-embed
     img,
-  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(
+      .dynamic-views-cover-hover-zoom-card
+    ):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover:hover
     .card-cover:not(.card-cover-slideshow)
@@ -4508,7 +4514,9 @@ body.dynamic-views-cover-circular
     .card-cover-slideshow
     .dynamic-views-image-embed
     img.hover-zoom-eligible,
-  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(
+      .dynamic-views-cover-hover-zoom-card
+    ):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover:hover
     .card-cover-slideshow

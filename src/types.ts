@@ -35,7 +35,7 @@ export interface ViewDefaults {
   imageProperty: string;
   fallbackToEmbeds: "always" | "if-unavailable" | "never";
   imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
-  thumbnailSize: "compact" | "standard" | "expanded";
+  thumbnailSize: number;
   imagePosition: "left" | "right" | "top" | "bottom";
   imageFit: "crop" | "contain";
   imageRatio: number;

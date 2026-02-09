@@ -74,13 +74,6 @@ import {
   syncResponsiveClasses,
 } from "../bases/shared-renderer";
 
-// Thumbnail size CSS values
-const THUMBNAIL_SIZE_MAP: Record<string, string> = {
-  compact: "64px",
-  standard: "80px",
-  expanded: "94.5px",
-};
-
 /** Shared width parameters computed from section CSS variables and dimensions. */
 function calculateWidthParams(section: Element): {
   fileLineWidth: number;
@@ -1083,7 +1076,7 @@ export function View({
         );
         container.style.setProperty(
           "--dynamic-views-thumbnail-size",
-          THUMBNAIL_SIZE_MAP[settings.thumbnailSize] ?? "80px",
+          `${settings.thumbnailSize}px`,
         );
 
         const lastResult = lastLayoutResultRef.current;
@@ -1315,7 +1308,7 @@ export function View({
       // Set CSS variable for thumbnail size
       container.style.setProperty(
         "--dynamic-views-thumbnail-size",
-        THUMBNAIL_SIZE_MAP[settings.thumbnailSize] ?? "80px",
+        `${settings.thumbnailSize}px`,
       );
     };
 
