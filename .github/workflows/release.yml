@@ -34,6 +34,44 @@ jobs:
           git diff --staged --quiet || git commit -m "build: Update repository for ${GITHUB_REF_NAME}"
           git push origin HEAD:main
 
+      - name: Generate release notes
+        id: notes
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]' | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            SINCE="2020-01-01"
+          else
+            SINCE=$(git log -1 --format=%aI "$PREV_TAG" | cut -dT -f1)
+          fi
+
+          PRS=$(gh pr list --state merged --search "merged:>=${SINCE}" --limit 200 \
+            --json number,title,author \
+            --jq '.[] | "- \(.title) #\(.number) by @\(.author.login)"')
+
+          ISSUES=$(gh issue list --state closed --limit 200 \
+            --json number,title,closedAt,stateReason \
+            --jq "[.[] | select(.stateReason == \"COMPLETED\" and .closedAt >= \"${SINCE}\")] | .[] | \"- \(.title) #\(.number)\"")
+
+          BODY=""
+          if [ -n "$PRS" ]; then
+            printf -v BODY '### Merged PRs\n%s' "$PRS"
+          fi
+          if [ -n "$ISSUES" ]; then
+            if [ -n "$BODY" ]; then
+              printf -v BODY '%s\n\n### Closed issues\n%s' "$BODY" "$ISSUES"
+            else
+              printf -v BODY '### Closed issues\n%s' "$ISSUES"
+            fi
+          fi
+
+          {
+            echo 'BODY<<EOF'
+            echo "$BODY"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create release bundle
         run: |
           mkdir release
@@ -44,6 +82,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          body: ${{ steps.notes.outputs.BODY }}
           files: |
             main.js
             manifest.json
