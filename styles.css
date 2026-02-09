@@ -4414,7 +4414,8 @@ body.dynamic-views-cover-circular
   transition: none !important;
 }
 
-/* Hover zoom for cover images (only when enabled via Style Settings, desktop only) */
+/* Hover zoom for cover images (desktop only).
+   Default: "hover over card". The :not() fallback covers when Style Settings plugin is off. */
 @media (hover: hover) {
   /* Base transition for single-image covers */
   body.dynamic-views-cover-hover-zoom-cover
@@ -4424,6 +4425,12 @@ body.dynamic-views-cover-circular
     .dynamic-views-image-embed
     img,
   body.dynamic-views-cover-hover-zoom-card
+    .dynamic-views
+    .card.image-format-cover
+    .card-cover:not(.card-cover-slideshow)
+    .dynamic-views-image-embed
+    img,
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover
     .card-cover:not(.card-cover-slideshow)
@@ -4442,6 +4449,12 @@ body.dynamic-views-cover-circular
     .dynamic-views-image-embed
     img,
   body.dynamic-views-cover-hover-zoom-card
+    .dynamic-views
+    .card.image-format-cover
+    .card-cover-slideshow
+    .dynamic-views-image-embed
+    img,
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover
     .card-cover-slideshow
@@ -4478,12 +4491,24 @@ body.dynamic-views-cover-circular
     .card.image-format-cover:hover
     .card-cover:not(.card-cover-slideshow)
     .dynamic-views-image-embed
+    img,
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
+    .dynamic-views
+    .card.image-format-cover:hover
+    .card-cover:not(.card-cover-slideshow)
+    .dynamic-views-image-embed
     img {
     transform: scale(1.05);
   }
 
   /* Hover over card: zoom when hovering anywhere on card (slideshow - only eligible image) */
   body.dynamic-views-cover-hover-zoom-card
+    .dynamic-views
+    .card.image-format-cover:hover
+    .card-cover-slideshow
+    .dynamic-views-image-embed
+    img.hover-zoom-eligible,
+  body:not(.dynamic-views-cover-hover-zoom-cover):not(.dynamic-views-cover-hover-zoom-card):not(.dynamic-views-cover-hover-zoom-off)
     .dynamic-views
     .card.image-format-cover:hover
     .card-cover-slideshow
