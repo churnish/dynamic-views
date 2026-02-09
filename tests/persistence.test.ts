@@ -217,29 +217,23 @@ describe("PersistenceManager", () => {
 
   describe("migrateBasesState", () => {
     it("should move state from old to new ID", async () => {
-      await manager.setBasesState("1770630208975-Old Name", {
+      await manager.setBasesState("abc123-Old Name", {
         collapsedGroups: ["group1"],
       });
 
-      await manager.migrateBasesState(
-        "1770630208975-Old Name",
-        "1770630208975-New Name",
-      );
+      await manager.migrateBasesState("abc123-Old Name", "abc123-New Name");
 
-      const oldState = manager.getBasesState("1770630208975-Old Name");
-      const newState = manager.getBasesState("1770630208975-New Name");
+      const oldState = manager.getBasesState("abc123-Old Name");
+      const newState = manager.getBasesState("abc123-New Name");
 
       expect(oldState).toEqual({ collapsedGroups: [] }); // Cleared
       expect(newState.collapsedGroups).toEqual(["group1"]);
     });
 
     it("should do nothing if old state doesn't exist", async () => {
-      await manager.migrateBasesState(
-        "1770630208975-Nonexistent",
-        "1770630208975-New Name",
-      );
+      await manager.migrateBasesState("abc123-Nonexistent", "abc123-New Name");
 
-      const state = manager.getBasesState("1770630208975-New Name");
+      const state = manager.getBasesState("abc123-New Name");
       expect(state).toEqual({ collapsedGroups: [] });
     });
   });

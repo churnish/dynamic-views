@@ -74,7 +74,7 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
   // Internal markers
   "isTemplate",
   "templateSetAt",
-  // Persistence ID (ctime-viewName)
+  // Persistence ID ({hash}-{viewName})
   "id",
 ]);
 
@@ -106,20 +106,6 @@ export async function cleanupBaseFile(
     const views = parsed?.views;
     if (!Array.isArray(views)) return content;
 
-    const fileCtime = file.stat.ctime;
-
-    // First pass: count ID occurrences to detect duplicates
-    const idCounts = new Map<string, number>();
-    for (const view of views) {
-      if (typeof view !== "object" || view === null) continue;
-      const idField = (view as Record<string, unknown>).id as
-        | string
-        | undefined;
-      if (idField) {
-        idCounts.set(idField, (idCounts.get(idField) || 0) + 1);
-      }
-    }
-
     for (const view of views) {
       if (typeof view !== "object" || view === null) continue;
       const viewObj = view as Record<string, unknown>;
@@ -132,37 +118,30 @@ export async function cleanupBaseFile(
 
       const viewName = viewObj.name as string | undefined;
 
-      // Dedupe: validate id matches current view name and file ctime
+      // Validate id matches current view name
       if (viewName) {
         const idField = viewObj.id as string | undefined;
-        let storedCtime: number | undefined;
         let storedName: string | undefined;
 
         if (idField) {
-          const match = idField.match(/^(\d{13})-(.+)$/);
-          if (match) {
-            storedCtime = parseInt(match[1], 10);
-            storedName = match[2];
-          }
+          const dashIndex = idField.indexOf("-");
+          if (dashIndex > 0) storedName = idField.slice(dashIndex + 1);
         }
 
         const nameMismatch = storedName !== viewName;
-        const ctimeMismatch = storedCtime !== fileCtime;
 
         let needsNewId = false;
         let isRename = false;
 
-        if (nameMismatch || ctimeMismatch) {
+        if (nameMismatch) {
           needsNewId = true;
-          // Rename = unique ID + name changed + ctime same (not file duplicate)
-          isRename =
-            idField !== undefined &&
-            idCounts.get(idField) === 1 &&
-            nameMismatch &&
-            !ctimeMismatch;
+          // Rename = had an existing ID whose name portion changed
+          isRename = idField !== undefined;
         }
 
-        const newId = `${fileCtime}-${viewName}`;
+        // Generate random 6-char alphanumeric hash
+        const hash = Math.random().toString(36).substring(2, 8);
+        const newId = `${hash}-${viewName}`;
 
         if (needsNewId) {
           viewObj.id = newId;
@@ -173,7 +152,7 @@ export async function cleanupBaseFile(
           }
         }
 
-        viewIds.set(viewName, newId);
+        viewIds.set(viewName, viewObj.id as string);
       }
 
       for (const key of Object.keys(viewObj)) {

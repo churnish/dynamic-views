@@ -709,14 +709,18 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     void (async () => {
-      // Ensure all views in file have valid ids, get this view's id
-      const viewIds = await cleanupBaseFile(
-        this.app,
-        this.currentFile,
-        this.plugin,
-      );
+      // Only run cleanup on first render or when view is renamed.
+      // Skipping on subsequent renders avoids vault.process() racing with
+      // Obsidian's debounced config.set() file writes (overwrites pending settings).
       const viewName = this.config?.name;
-      this.viewId = (viewName && viewIds?.get(viewName)) ?? null;
+      if (!this.viewId || (viewName && !this.viewId.endsWith(`-${viewName}`))) {
+        const viewIds = await cleanupBaseFile(
+          this.app,
+          this.currentFile,
+          this.plugin,
+        );
+        this.viewId = (viewName && viewIds?.get(viewName)) ?? null;
+      }
 
       // Load collapsed groups from persisted UI state only on first render.
       // After that, the in-memory Set is authoritative (toggleGroupCollapse persists changes).
