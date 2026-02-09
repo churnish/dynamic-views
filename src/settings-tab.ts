@@ -14,6 +14,10 @@ const PLUGIN_NOTEBOOK_NAVIGATOR = "Notebook Navigator";
 const PLUGIN_AUTO_CARD_LINK = "Auto Card Link";
 const PLUGIN_LINK_EMBED = "Link Embed";
 
+// Default property names (lowercase by Obsidian convention, not subject to sentence case)
+const DEFAULT_CREATED_TIME_PROPERTY = "created time";
+const DEFAULT_MODIFIED_TIME_PROPERTY = "modified time";
+
 export class DynamicViewsSettingTab extends PluginSettingTab {
   plugin: DynamicViews;
 
@@ -216,7 +220,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .setDesc("Property with creation timestamps.")
       .addText((text) =>
         text
-          .setPlaceholder("Created time")
+          .setPlaceholder(DEFAULT_CREATED_TIME_PROPERTY)
           .setValue(settings.createdTimeProperty)
           .onChange(async (value) => {
             await this.plugin.persistenceManager.setPluginSettings({
@@ -230,7 +234,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .setDesc("Property with modification timestamps.")
       .addText((text) =>
         text
-          .setPlaceholder("Modified time")
+          .setPlaceholder(DEFAULT_MODIFIED_TIME_PROPERTY)
           .setValue(settings.modifiedTimeProperty)
           .onChange(async (value) => {
             await this.plugin.persistenceManager.setPluginSettings({
