@@ -171,6 +171,12 @@ export async function cleanupBaseFile(
           viewObj[key] = validValues[0];
           changeCount++;
         }
+
+        // thumbnailSize is numeric — delete if wrong type
+        if (key === "thumbnailSize" && typeof viewObj[key] !== "number") {
+          delete viewObj[key];
+          changeCount++;
+        }
       }
 
       // Remove keys that match VIEW_DEFAULTS (sparse YAML).

@@ -69,6 +69,12 @@ function cleanupTemplateSettings(
       settings[key] = validValues[0];
       changed = true;
     }
+
+    // thumbnailSize is numeric — delete if wrong type
+    if (key === "thumbnailSize" && typeof settings[key] !== "number") {
+      delete settings[key];
+      changed = true;
+    }
   }
 
   // Remove keys that match VIEW_DEFAULTS (sparse templates).
