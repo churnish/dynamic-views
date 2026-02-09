@@ -74,7 +74,7 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
   // Internal markers
   "isTemplate",
   "templateSetAt",
-  // Persistence ID (ctime-hash-viewName)
+  // Persistence ID (ctime-viewName)
   "id",
 ]);
 
@@ -92,7 +92,7 @@ export async function cleanupBaseFile(
   if (!file || !file.path.endsWith(".base")) return null;
 
   let changeCount = 0;
-  const migrations: Array<{ oldHash: string; newHash: string }> = [];
+  const migrations: Array<{ oldId: string; newId: string }> = [];
   const viewIds = new Map<string, string>();
 
   await app.vault.process(file, (content) => {
@@ -108,18 +108,15 @@ export async function cleanupBaseFile(
 
     const fileCtime = file.stat.ctime;
 
-    // First pass: count hash occurrences to detect duplicates
-    const hashCounts = new Map<string, number>();
+    // First pass: count ID occurrences to detect duplicates
+    const idCounts = new Map<string, number>();
     for (const view of views) {
       if (typeof view !== "object" || view === null) continue;
       const idField = (view as Record<string, unknown>).id as
         | string
         | undefined;
       if (idField) {
-        const hashMatch = idField.match(/^\d{13}-([a-z0-9]{6})-/);
-        if (hashMatch) {
-          hashCounts.set(hashMatch[1], (hashCounts.get(hashMatch[1]) || 0) + 1);
-        }
+        idCounts.set(idField, (idCounts.get(idField) || 0) + 1);
       }
     }
 
@@ -140,14 +137,12 @@ export async function cleanupBaseFile(
         const idField = viewObj.id as string | undefined;
         let storedCtime: number | undefined;
         let storedName: string | undefined;
-        let oldHash: string | undefined;
 
         if (idField) {
-          const match = idField.match(/^(\d{13})-([a-z0-9]{6})-(.+)$/);
+          const match = idField.match(/^(\d{13})-(.+)$/);
           if (match) {
             storedCtime = parseInt(match[1], 10);
-            oldHash = match[2];
-            storedName = match[3];
+            storedName = match[2];
           }
         }
 
@@ -156,34 +151,29 @@ export async function cleanupBaseFile(
 
         let needsNewId = false;
         let isRename = false;
-        let finalHash: string | undefined;
 
         if (nameMismatch || ctimeMismatch) {
           needsNewId = true;
-          // Rename = unique hash + name changed + ctime same (not file duplicate)
+          // Rename = unique ID + name changed + ctime same (not file duplicate)
           isRename =
-            oldHash !== undefined &&
-            hashCounts.get(oldHash) === 1 &&
+            idField !== undefined &&
+            idCounts.get(idField) === 1 &&
             nameMismatch &&
             !ctimeMismatch;
         }
 
+        const newId = `${fileCtime}-${viewName}`;
+
         if (needsNewId) {
-          const newHash = Math.random().toString(36).substring(2, 8);
-          viewObj.id = `${fileCtime}-${newHash}-${viewName}`;
+          viewObj.id = newId;
           changeCount++;
-          finalHash = newHash;
 
-          if (isRename && oldHash) {
-            migrations.push({ oldHash, newHash });
+          if (isRename && idField) {
+            migrations.push({ oldId: idField, newId });
           }
-        } else {
-          finalHash = oldHash;
         }
 
-        if (finalHash) {
-          viewIds.set(viewName, finalHash);
-        }
+        viewIds.set(viewName, newId);
       }
 
       for (const key of Object.keys(viewObj)) {
@@ -226,8 +216,8 @@ export async function cleanupBaseFile(
   });
 
   // Run migrations after file processing completes (async allowed here)
-  for (const { oldHash, newHash } of migrations) {
-    await plugin.persistenceManager.migrateBasesState(oldHash, newHash);
+  for (const { oldId, newId } of migrations) {
+    await plugin.persistenceManager.migrateBasesState(oldId, newId);
   }
 
   return viewIds;
