@@ -4813,6 +4813,27 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-properties,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-header,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   > .card-properties {
   max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
   margin-left: var(--dynamic-views-side-cover-content-padding);
@@ -4827,6 +4848,12 @@ body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
 body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
@@ -4875,6 +4902,27 @@ body.dynamic-views-show-cover-placeholder-both
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-properties,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-header,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   > .card-properties {
   max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
 }
@@ -4888,6 +4936,12 @@ body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
 body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
