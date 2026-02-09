@@ -51,13 +51,4 @@ export default defineConfig([
       "no-undef": "off",
     },
   },
-
-  // Package.json overrides
-  {
-    files: ["package.json"],
-    rules: {
-      // builtin-modules is used by esbuild config and has no direct replacement
-      "depend/ban-dependencies": "off",
-    },
-  },
 ]);
