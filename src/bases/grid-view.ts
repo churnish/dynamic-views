@@ -698,7 +698,7 @@ export class DynamicViewsGridView extends BasesView {
 
       // Only update if classes changed (prevents unnecessary DOM mutations)
       const classesChanged =
-        !this._previousCustomClasses ||
+        this._previousCustomClasses.length === 0 ||
         this._previousCustomClasses.length !== customClasses.length ||
         !this._previousCustomClasses.every(
           (cls, i) => cls === customClasses[i],
@@ -706,7 +706,7 @@ export class DynamicViewsGridView extends BasesView {
 
       if (classesChanged) {
         // Clear previous custom classes
-        if (this._previousCustomClasses) {
+        if (this._previousCustomClasses.length > 0) {
           this._previousCustomClasses.forEach((cls: string) => {
             this.scrollEl.removeClass(cls);
           });

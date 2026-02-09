@@ -81,12 +81,12 @@ export type BasesResolvedSettings = PluginSettings &
     _displayNameMap?: Record<string, string>;
   };
 
-/** Bases-only UI state (persisted per .base file by ctime) */
+/** Bases-only UI state (persisted per .base file by view ID) */
 export interface BasesUIState {
   collapsedGroups: string[];
 }
 
-/** Datacore-only state: UI + view settings (persisted per query by ctime:queryId) */
+/** Datacore-only state: UI + view settings (persisted per query by queryId) */
 export interface DatacoreState {
   // UI state
   sortMethod: string;

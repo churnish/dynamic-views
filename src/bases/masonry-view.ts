@@ -800,7 +800,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Only update if classes changed (prevents unnecessary DOM mutations)
       const classesChanged =
-        !this._previousCustomClasses ||
+        this._previousCustomClasses.length === 0 ||
         this._previousCustomClasses.length !== customClasses.length ||
         !this._previousCustomClasses.every(
           (cls, i) => cls === customClasses[i],
@@ -808,7 +808,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       if (classesChanged) {
         // Clear previous custom classes
-        if (this._previousCustomClasses) {
+        if (this._previousCustomClasses.length > 0) {
           this._previousCustomClasses.forEach((cls: string) => {
             this.scrollEl.removeClass(cls);
           });
@@ -892,6 +892,20 @@ export class DynamicViewsMasonryView extends BasesView {
         renderHash === this.renderState.lastRenderHash &&
         this.masonryContainer?.children.length
       ) {
+        // Obsidian may fire onDataUpdated before config.getOrder() is updated.
+        // Schedule delayed re-checks at increasing intervals to catch late config updates.
+        const propsSnapshot = JSON.stringify(visibleProperties);
+        const recheckDelays = [100, 250, 500];
+        for (const delay of recheckDelays) {
+          setTimeout(() => {
+            const currentProps = this.config?.getOrder?.() ?? [];
+            const currentPropsStr = JSON.stringify(currentProps);
+            if (currentPropsStr !== propsSnapshot) {
+              this.lastDataUpdateTime.value = 0;
+              this.processDataUpdate();
+            }
+          }, delay);
+        }
         this.scrollPreservation?.restoreAfterRender();
         return;
       }
@@ -903,19 +917,6 @@ export class DynamicViewsMasonryView extends BasesView {
       const settingsChanged =
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
-
-      // Skip stale updates: if settings "changed" but no data changed, and
-      // config.get returns undefined for a key, this is a stale Obsidian update.
-      // The readBasesSettings fix uses previousSettings to preserve values, but
-      // we still skip the render to avoid unnecessary work.
-      if (
-        settingsChanged &&
-        pathsUnchanged &&
-        changedPaths.size === 0 &&
-        this.config.get("propertyLabels") === undefined
-      ) {
-        return;
-      }
 
       // If only content changed (not paths/settings), update in-place
       if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {

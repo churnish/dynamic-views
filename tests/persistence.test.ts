@@ -23,7 +23,7 @@ jest.mock("../src/constants", () => ({
   },
   VIEW_DEFAULTS: {
     cardSize: 400,
-    titleProperty: "file base name",
+    titleProperty: "file.name",
   },
   DATACORE_DEFAULTS: {
     listMarker: "bullet",
@@ -333,12 +333,12 @@ describe("PersistenceManager", () => {
 
     it("should return stored template", async () => {
       await manager.setSettingsTemplate("grid", {
-        name: "My Template",
         settings: { cardSize: 300 },
+        setAt: 1000,
       });
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.name).toBe("My Template");
+      expect(template?.setAt).toBe(1000);
       expect(template?.settings.cardSize).toBe(300);
     });
   });
@@ -346,18 +346,18 @@ describe("PersistenceManager", () => {
   describe("setSettingsTemplate", () => {
     it("should store template", async () => {
       await manager.setSettingsTemplate("masonry", {
-        name: "Masonry Template",
         settings: { cardSize: 250 },
+        setAt: 2000,
       });
 
       const template = manager.getSettingsTemplate("masonry");
-      expect(template?.name).toBe("Masonry Template");
+      expect(template?.setAt).toBe(2000);
     });
 
     it("should delete template when null", async () => {
       await manager.setSettingsTemplate("grid", {
-        name: "Test",
         settings: {},
+        setAt: 3000,
       });
       await manager.setSettingsTemplate("grid", null);
 
@@ -367,8 +367,8 @@ describe("PersistenceManager", () => {
 
     it("should save after updating", async () => {
       await manager.setSettingsTemplate("datacore", {
-        name: "DC Template",
         settings: {},
+        setAt: 4000,
       });
 
       expect(mockPlugin.saveData).toHaveBeenCalled();

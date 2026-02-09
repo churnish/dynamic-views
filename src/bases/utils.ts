@@ -111,6 +111,14 @@ export async function cleanupBaseFile(
     const views = parsed?.views;
     if (!Array.isArray(views)) return content;
 
+    // Pre-scan: count occurrences of each ID for duplicate detection
+    const idCounts = new Map<string, number>();
+    for (const v of views) {
+      if (typeof v !== "object" || v === null) continue;
+      const id = (v as Record<string, unknown>).id;
+      if (typeof id === "string") idCounts.set(id, (idCounts.get(id) ?? 0) + 1);
+    }
+
     for (const view of views) {
       if (typeof view !== "object" || view === null) continue;
       const viewObj = view as Record<string, unknown>;
@@ -140,15 +148,13 @@ export async function cleanupBaseFile(
 
         if (nameMismatch) {
           needsNewId = true;
-          // Rename = had an existing ID whose name portion changed
-          isRename = idField !== undefined;
+          // Rename = had an existing unique ID whose name portion changed
+          isRename = idField !== undefined && idCounts.get(idField) === 1;
         }
 
-        // Generate random 6-char alphanumeric hash
-        const hash = Math.random().toString(36).substring(2, 8);
-        const newId = `${hash}-${viewName}`;
-
         if (needsNewId) {
+          const hash = Math.random().toString(36).substring(2, 8);
+          const newId = `${hash}-${viewName}`;
           viewObj.id = newId;
           changeCount++;
 
