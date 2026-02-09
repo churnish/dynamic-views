@@ -56,6 +56,12 @@ const VALID_VIEW_VALUES: Partial<
   minimumColumns: ["one", "two"],
 };
 
+/** Expected runtime types for ViewDefaults fields, derived from VIEW_DEFAULTS */
+const VIEW_DEFAULTS_TYPES: Record<string, string> = {};
+for (const [key, value] of Object.entries(VIEW_DEFAULTS)) {
+  VIEW_DEFAULTS_TYPES[key] = typeof value;
+}
+
 /** Keys allowed in Dynamic Views .base view entries */
 const ALLOWED_VIEW_KEYS = new Set<string>([
   // Bases-native keys
@@ -162,6 +168,19 @@ export async function cleanupBaseFile(
           continue;
         }
 
+        // Delete values whose type doesn't match VIEW_DEFAULTS
+        // (skipping minimumColumns — Bases YAML stores strings, VIEW_DEFAULTS stores numbers)
+        const expectedType = VIEW_DEFAULTS_TYPES[key];
+        if (
+          expectedType &&
+          key !== "minimumColumns" &&
+          typeof viewObj[key] !== expectedType
+        ) {
+          delete viewObj[key];
+          changeCount++;
+          continue;
+        }
+
         // Reset stale enum values to config-level defaults
         const validValues = VALID_VIEW_VALUES[key as keyof ViewDefaults];
         if (
@@ -169,12 +188,6 @@ export async function cleanupBaseFile(
           !validValues.includes(String(viewObj[key]) as never)
         ) {
           viewObj[key] = validValues[0];
-          changeCount++;
-        }
-
-        // thumbnailSize is numeric — delete if wrong type
-        if (key === "thumbnailSize" && typeof viewObj[key] !== "number") {
-          delete viewObj[key];
           changeCount++;
         }
       }

@@ -34,8 +34,14 @@ const VALID_VIEW_VALUES: Partial<
 const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
 const DATACORE_DEFAULTS_KEYS = new Set(Object.keys(DATACORE_DEFAULTS));
 
+/** Expected runtime types for ViewDefaults fields, derived from VIEW_DEFAULTS */
+const VIEW_DEFAULTS_TYPES: Record<string, string> = {};
+for (const [key, value] of Object.entries(VIEW_DEFAULTS)) {
+  VIEW_DEFAULTS_TYPES[key] = typeof value;
+}
+
 /**
- * Strip stale keys and invalid enum values from a template's settings.
+ * Strip stale keys, wrong-typed values, and invalid enum values from a template's settings.
  * Grid/masonry templates: only ViewDefaults keys allowed.
  * Datacore templates: ViewDefaults + DatacoreDefaults keys allowed.
  * Returns true if any changes were made.
@@ -58,6 +64,19 @@ function cleanupTemplateSettings(
       continue;
     }
 
+    // Delete values whose type doesn't match VIEW_DEFAULTS
+    // (skipping minimumColumns — has special handling below)
+    const expectedType = VIEW_DEFAULTS_TYPES[key];
+    if (
+      expectedType &&
+      key !== "minimumColumns" &&
+      typeof settings[key] !== expectedType
+    ) {
+      delete settings[key];
+      changed = true;
+      continue;
+    }
+
     // Reset stale enum values to first valid value
     // Skip minimumColumns - Bases uses strings, Datacore uses numbers
     const validValues = VALID_VIEW_VALUES[key as keyof ViewDefaults];
@@ -67,12 +86,6 @@ function cleanupTemplateSettings(
       !validValues.includes(String(settings[key]) as never)
     ) {
       settings[key] = validValues[0];
-      changed = true;
-    }
-
-    // thumbnailSize is numeric — delete if wrong type
-    if (key === "thumbnailSize" && typeof settings[key] !== "number") {
-      delete settings[key];
       changed = true;
     }
   }
