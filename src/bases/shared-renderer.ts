@@ -618,7 +618,8 @@ export class SharedCardRenderer {
     const isPoster = format === "poster";
     const isPosterHoverMode =
       isPoster &&
-      document.body.classList.contains("dynamic-views-poster-reveal-hover");
+      document.body.classList.contains("dynamic-views-poster-reveal-hover") &&
+      window.matchMedia("(hover: hover)").matches;
 
     // Check if any image source is configured (property or embeds)
     const hasImageSource =
