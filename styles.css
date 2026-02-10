@@ -2751,6 +2751,21 @@ body:not(.dynamic-views-disable-sticky-group-header)
   z-index: 10;
   overflow: visible;
   background: var(--background-primary);
+  container-type: scroll-state;
+  container-name: group-heading;
+}
+
+/* Border below sticky group headers when stuck — spans full pane width */
+@container group-heading scroll-state(stuck: top) {
+  .bases-group-count::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: calc(-1 * var(--bases-view-padding));
+    right: calc(-1 * var(--bases-view-padding));
+    height: 1px;
+    background: var(--bases-table-border-color);
+  }
 }
 
 /* Group headings - flex layout for collapse chevron + content */
