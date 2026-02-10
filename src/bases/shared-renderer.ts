@@ -1094,14 +1094,51 @@ export class SharedCardRenderer {
       }
     };
 
+    // Prepare image URLs if applicable
+    const rawUrls = card.imageUrl
+      ? Array.isArray(card.imageUrl)
+        ? card.imageUrl
+        : [card.imageUrl]
+      : [];
+
+    // Filter and deduplicate URLs
+    const imageUrls = Array.from(
+      new Set(
+        rawUrls.filter(
+          (url) => url && typeof url === "string" && url.trim().length > 0,
+        ),
+      ),
+    );
+    const hasImage = imageUrls.length > 0;
+
     // Check if title or subtitle will be rendered
     const displayTitle = card.title;
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
+    // Covers: create wrapper BEFORE .card-content for top/left position
+    if (
+      format === "cover" &&
+      (hasImage || hasImageSource) &&
+      (position === "top" || position === "left")
+    ) {
+      this.renderCoverWrapper(
+        cardEl,
+        imageUrls,
+        hasImage,
+        position,
+        settings,
+        card,
+        signal,
+      );
+    }
+
+    // Universal content wrapper: header + body
+    const cardContent = cardEl.createDiv("card-content");
+
     // Title, Subtitle, and URL button — always wrapped in card-header
     if (hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) {
-      const headerEl = cardEl.createDiv("card-header");
+      const headerEl = cardContent.createDiv("card-header");
 
       if (hasTitle || hasSubtitle) {
         const groupEl = headerEl.createDiv("card-title-block");
@@ -1141,140 +1178,6 @@ export class SharedCardRenderer {
       cardEl.addEventListener("dragstart", handleDrag, { signal });
     }
 
-    // Prepare image URLs if applicable
-    const rawUrls = card.imageUrl
-      ? Array.isArray(card.imageUrl)
-        ? card.imageUrl
-        : [card.imageUrl]
-      : [];
-
-    // Filter and deduplicate URLs
-    const imageUrls = Array.from(
-      new Set(
-        rawUrls.filter(
-          (url) => url && typeof url === "string" && url.trim().length > 0,
-        ),
-      ),
-    );
-    const hasImage = imageUrls.length > 0;
-
-    // ALL COVERS: wrapped in card-cover-wrapper for flexbox positioning
-    if (format === "cover" && (hasImage || hasImageSource)) {
-      const coverWrapper = cardEl.createDiv(
-        hasImage
-          ? "card-cover-wrapper"
-          : "card-cover-wrapper card-cover-wrapper-placeholder",
-      );
-
-      if (hasImage) {
-        const maxSlideshow = getSlideshowMaxImages();
-        const slideshowUrls = imageUrls.slice(0, maxSlideshow);
-        const shouldShowSlideshow =
-          isSlideshowEnabled() &&
-          (position === "top" || position === "bottom") &&
-          slideshowUrls.length >= 2;
-
-        if (shouldShowSlideshow) {
-          const slideshowEl = coverWrapper.createDiv(
-            "card-cover card-cover-slideshow",
-          );
-          this.renderSlideshow(
-            slideshowEl,
-            slideshowUrls,
-            format,
-            position,
-            settings,
-            card.path,
-          );
-        } else {
-          const imageEl = coverWrapper.createDiv("card-cover");
-          this.renderImage(
-            imageEl,
-            imageUrls,
-            format,
-            position,
-            settings,
-            cardEl,
-            signal,
-          );
-        }
-      } else {
-        coverWrapper.createDiv("card-cover-placeholder");
-      }
-
-      // Set CSS custom properties for side cover dimensions
-      if (format === "cover" && (position === "left" || position === "right")) {
-        // Get aspect ratio from settings
-        const aspectRatio =
-          typeof settings.imageRatio === "string"
-            ? parseFloat(settings.imageRatio)
-            : settings.imageRatio || 1.0;
-        const wrapperRatio = aspectRatio / (aspectRatio + 1);
-
-        // Set wrapper ratio for potential CSS calc usage
-        cardEl.style.setProperty(
-          "--dynamic-views-wrapper-ratio",
-          wrapperRatio.toString(),
-        );
-
-        // Function to calculate and set wrapper dimensions
-        const updateWrapperDimensions = () => {
-          const cardWidth = cardEl.offsetWidth; // Border box width (includes padding)
-          const targetWidth = Math.floor(wrapperRatio * cardWidth);
-          // Cover is positioned at padding edge (right: 0), so card padding provides the gap
-          const paddingValue = targetWidth;
-
-          // Set CSS custom properties on the card element
-          cardEl.style.setProperty(
-            "--dynamic-views-side-cover-width",
-            `${targetWidth}px`,
-          );
-          cardEl.style.setProperty(
-            "--dynamic-views-side-cover-content-padding",
-            `${paddingValue}px`,
-          );
-
-          return { cardWidth, targetWidth, paddingValue };
-        };
-
-        // Initial calculation
-        requestAnimationFrame(() => {
-          updateWrapperDimensions();
-
-          // Create ResizeObserver to update wrapper width when card resizes
-          const resizeObserver = new ResizeObserver((entries) => {
-            if (signal.aborted || !cardEl.isConnected) return;
-            for (const entry of entries) {
-              const target = entry.target as HTMLElement;
-              const newCardWidth = target.offsetWidth;
-
-              // Skip if card not yet rendered (width <= 0)
-              if (newCardWidth <= 0) {
-                continue;
-              }
-
-              const newTargetWidth = Math.floor(wrapperRatio * newCardWidth);
-              const newPaddingValue = newTargetWidth;
-
-              cardEl.style.setProperty(
-                "--dynamic-views-side-cover-width",
-                `${newTargetWidth}px`,
-              );
-              cardEl.style.setProperty(
-                "--dynamic-views-side-cover-content-padding",
-                `${newPaddingValue}px`,
-              );
-            }
-          });
-
-          // Observe the card element for size changes
-          // Cleanup via this.propertyObservers.forEach(obs => obs.disconnect()) in cleanup()
-          resizeObserver.observe(cardEl);
-          this.propertyObservers.push(resizeObserver);
-        });
-      }
-    }
-
     // POSTER: absolute-positioned image fills entire card, content hidden until hover
     if (format === "poster" && hasImage) {
       const bgWrapper = cardEl.createDiv("card-poster");
@@ -1305,36 +1208,48 @@ export class SharedCardRenderer {
       );
     }
 
-    // Poster: scrollable content wrapper (card body below header)
-    const contentParent =
-      format === "poster" ? cardEl.createDiv("card-body") : cardEl;
+    // Universal card-body: contains properties and previews
+    const bodyEl = cardContent.createDiv("card-body");
 
+    // Poster: vertical scroll gradient on card-body
     if (format === "poster") {
-      setupVerticalScrollGradient(contentParent, signal);
+      setupVerticalScrollGradient(bodyEl, signal);
     }
 
-    // Determine if card-content will have children
+    // Properties - 4-field rendering with 2-set layout (creates top/bottom containers)
+    this.renderProperties(bodyEl, card, entry, settings, signal);
+
+    // Determine if card-previews will have children
     const hasTextPreview = card.textPreview;
     const isThumbnailFormat = format === "thumbnail";
     // Only show thumbnail placeholder when an image source is configured
     const showThumbnail = isThumbnailFormat && (hasImage || hasImageSource);
 
-    // Only create card-content if it will have children
+    // Only create card-previews if it will have children
+    let previewsEl: HTMLElement | null = null;
     if (hasTextPreview || showThumbnail) {
-      const contentContainer = contentParent.createDiv("card-content");
+      // Insert before .card-properties-bottom if it exists (DOM order: top → previews → bottom)
+      const bottomProps = bodyEl.querySelector(".card-properties-bottom");
+      previewsEl = document.createElement("div");
+      previewsEl.className = "card-previews";
+      if (bottomProps) {
+        bodyEl.insertBefore(previewsEl, bottomProps);
+      } else {
+        bodyEl.appendChild(previewsEl);
+      }
 
       if (hasTextPreview) {
-        const wrapper = contentContainer.createDiv("card-text-preview-wrapper");
+        const wrapper = previewsEl.createDiv("card-text-preview-wrapper");
         wrapper.createDiv({
           cls: "card-text-preview",
           text: card.textPreview,
         });
       }
 
-      // Thumbnail (all positions now inside card-content)
+      // Thumbnail (all positions now inside card-previews)
       if (showThumbnail) {
         if (hasImage) {
-          const imageEl = contentContainer.createDiv("card-thumbnail");
+          const imageEl = previewsEl.createDiv("card-thumbnail");
           this.renderImage(
             imageEl,
             imageUrls,
@@ -1345,13 +1260,27 @@ export class SharedCardRenderer {
             signal,
           );
         } else {
-          contentContainer.createDiv("card-thumbnail-placeholder");
+          previewsEl.createDiv("card-thumbnail-placeholder");
         }
       }
     }
 
-    // Properties - 4-field rendering with 2-set layout
-    this.renderProperties(contentParent, card, entry, settings, signal);
+    // Covers: create wrapper AFTER .card-content for bottom/right position
+    if (
+      format === "cover" &&
+      (hasImage || hasImageSource) &&
+      (position === "bottom" || position === "right")
+    ) {
+      this.renderCoverWrapper(
+        cardEl,
+        imageUrls,
+        hasImage,
+        position,
+        settings,
+        card,
+        signal,
+      );
+    }
 
     // Card-level responsive behaviors (single ResizeObserver)
     // Use cached breakpoint to avoid getComputedStyle per card
@@ -1364,16 +1293,11 @@ export class SharedCardRenderer {
       card.textPreview;
 
     const thumbnailEl = needsThumbnailStacking
-      ? (cardEl.querySelector(".card-thumbnail") as HTMLElement)
-      : null;
-    const contentEl = needsThumbnailStacking
-      ? (cardEl.querySelector(".card-content") as HTMLElement)
+      ? (bodyEl.querySelector(".card-thumbnail") as HTMLElement)
       : null;
 
-    // Initialize isStacked based on actual DOM state
-    // Thumbnail starts inside content, so isStacked = false means "inside content" (not stacked as sibling)
-    // We need to track whether thumbnail is currently a direct child of card (stacked) or inside content
-    let isStacked = thumbnailEl?.parentElement === cardEl;
+    // Thumbnail starts inside previews; stacking moves it to a sibling of previews in card-body
+    let isStacked = thumbnailEl?.parentElement === bodyEl;
 
     const cardObserver = new ResizeObserver((entries) => {
       // Guard against race with cleanup or element removal
@@ -1389,24 +1313,24 @@ export class SharedCardRenderer {
           cardEl.classList.toggle("compact-mode", cardWidth < breakpoint);
         }
 
-        // Thumbnail stacking (consistent threshold with syncResponsiveClasses)
-        if (thumbnailEl && contentEl && thumbnailEl.isConnected) {
+        // Thumbnail stacking: move between .card-previews (inside) and .card-body (sibling)
+        if (thumbnailEl && previewsEl && thumbnailEl.isConnected) {
           const thumbnailWidth = thumbnailEl.offsetWidth;
           const shouldStack =
             thumbnailWidth > 0 &&
             cardWidth < thumbnailWidth * THUMBNAIL_STACK_MULTIPLIER;
 
           if (shouldStack && !isStacked) {
-            // Left: thumbnail above content, Right: thumbnail below content
+            // Left: thumbnail above previews, Right: thumbnail below previews
             if (cardEl.classList.contains("card-thumbnail-left")) {
-              cardEl.insertBefore(thumbnailEl, contentEl);
+              bodyEl.insertBefore(thumbnailEl, previewsEl);
             } else {
-              contentEl.after(thumbnailEl);
+              previewsEl.after(thumbnailEl);
             }
             cardEl.classList.add("thumbnail-stack");
             isStacked = true;
           } else if (!shouldStack && isStacked) {
-            contentEl.appendChild(thumbnailEl);
+            previewsEl.appendChild(thumbnailEl);
             cardEl.classList.remove("thumbnail-stack");
             isStacked = false;
           }
@@ -1418,6 +1342,122 @@ export class SharedCardRenderer {
     this.propertyObservers.push(cardObserver);
 
     return cardEl;
+  }
+
+  /**
+   * Creates a cover wrapper element on the card with image/slideshow/placeholder.
+   * Also sets up side cover dimension observers for left/right positions.
+   */
+  /** Creates cover wrapper. Only called when format === "cover". */
+  private renderCoverWrapper(
+    cardEl: HTMLElement,
+    imageUrls: string[],
+    hasImage: boolean,
+    position: "left" | "right" | "top" | "bottom",
+    settings: BasesResolvedSettings,
+    card: CardData,
+    signal: AbortSignal,
+  ): void {
+    const coverWrapper = cardEl.createDiv(
+      hasImage
+        ? "card-cover-wrapper"
+        : "card-cover-wrapper card-cover-wrapper-placeholder",
+    );
+
+    if (hasImage) {
+      const maxSlideshow = getSlideshowMaxImages();
+      const slideshowUrls = imageUrls.slice(0, maxSlideshow);
+      const shouldShowSlideshow =
+        isSlideshowEnabled() &&
+        (position === "top" || position === "bottom") &&
+        slideshowUrls.length >= 2;
+
+      if (shouldShowSlideshow) {
+        const slideshowEl = coverWrapper.createDiv(
+          "card-cover card-cover-slideshow",
+        );
+        this.renderSlideshow(
+          slideshowEl,
+          slideshowUrls,
+          "cover",
+          position,
+          settings,
+          card.path,
+        );
+      } else {
+        const imageEl = coverWrapper.createDiv("card-cover");
+        this.renderImage(
+          imageEl,
+          imageUrls,
+          "cover",
+          position,
+          settings,
+          cardEl,
+          signal,
+        );
+      }
+    } else {
+      coverWrapper.createDiv("card-cover-placeholder");
+    }
+
+    // Set CSS custom properties for side cover dimensions
+    if (position === "left" || position === "right") {
+      const aspectRatio =
+        typeof settings.imageRatio === "string"
+          ? parseFloat(settings.imageRatio)
+          : settings.imageRatio || 1.0;
+      const wrapperRatio = aspectRatio / (aspectRatio + 1);
+
+      cardEl.style.setProperty(
+        "--dynamic-views-wrapper-ratio",
+        wrapperRatio.toString(),
+      );
+
+      const updateWrapperDimensions = () => {
+        const cardWidth = cardEl.offsetWidth;
+        const targetWidth = Math.floor(wrapperRatio * cardWidth);
+        const paddingValue = targetWidth;
+
+        cardEl.style.setProperty(
+          "--dynamic-views-side-cover-width",
+          `${targetWidth}px`,
+        );
+        cardEl.style.setProperty(
+          "--dynamic-views-side-cover-content-padding",
+          `${paddingValue}px`,
+        );
+
+        return { cardWidth, targetWidth, paddingValue };
+      };
+
+      requestAnimationFrame(() => {
+        updateWrapperDimensions();
+
+        const resizeObserver = new ResizeObserver((entries) => {
+          if (signal.aborted || !cardEl.isConnected) return;
+          for (const entry of entries) {
+            const target = entry.target as HTMLElement;
+            const newCardWidth = target.offsetWidth;
+            if (newCardWidth <= 0) continue;
+
+            const newTargetWidth = Math.floor(wrapperRatio * newCardWidth);
+            const newPaddingValue = newTargetWidth;
+
+            cardEl.style.setProperty(
+              "--dynamic-views-side-cover-width",
+              `${newTargetWidth}px`,
+            );
+            cardEl.style.setProperty(
+              "--dynamic-views-side-cover-content-padding",
+              `${newPaddingValue}px`,
+            );
+          }
+        });
+
+        resizeObserver.observe(cardEl);
+        this.propertyObservers.push(resizeObserver);
+      });
+    }
   }
 
   /**
