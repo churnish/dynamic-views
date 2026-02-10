@@ -2968,8 +2968,10 @@ body.dynamic-views-hide-group-property-labels
   cursor: pointer;
 }
 
-/* Poster cards are always clickable (reveal toggle) regardless of openFileAction */
-.dynamic-views .card.image-format-poster:has(.card-poster) {
+/* Poster toggle mode: cards are always clickable (reveal toggle) regardless of openFileAction */
+body:not(.dynamic-views-poster-reveal-hover)
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
   cursor: pointer;
 }
 
