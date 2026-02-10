@@ -5146,6 +5146,17 @@ body.dynamic-views-show-cover-placeholder-both
   display: none;
 }
 
+/* Desktop: scroll gated by hover intent to prevent capturing view scroll */
+@media (hover: hover) {
+  .dynamic-views .card.image-format-poster .card-body {
+    overflow-y: hidden;
+  }
+
+  .dynamic-views .card.image-format-poster.poster-hover-active .card-body {
+    overflow-y: auto;
+  }
+}
+
 body.dynamic-views-poster-disable-scroll
   .dynamic-views
   .card.image-format-poster

@@ -870,8 +870,9 @@ export class SharedCardRenderer {
       );
     }
 
-    // Poster hover intent: require mousemove to reveal (ignores scroll-triggered hovers)
-    if (isPosterHoverMode) {
+    // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
+    // In hover mode: gates content reveal + scroll. In toggle mode: gates scroll only.
+    if (isPoster && window.matchMedia("(hover: hover)").matches) {
       let hasMoved = false;
 
       cardEl.addEventListener(
