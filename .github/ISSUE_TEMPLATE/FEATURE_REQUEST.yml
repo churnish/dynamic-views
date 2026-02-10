@@ -1,7 +1,7 @@
-name: Enhancement
-description: Suggest an improvement or new feature for the Dynamic Views plugin.
+name: Feature request
+description: Suggest an improvement or new feature for the Dynamic Views plugin
 labels:
-  - enhancement
+  - Feature request
 body:
   - type: markdown
     attributes:
@@ -82,6 +82,7 @@ body:
         2. Open your Obsidian configuration folder (`.obsidian` by default, hidden on most OSes).
         3. Open `plugins/dynamic-views`.
         4. Attach the `data.json` file below.
+      placeholder: Attach data.json here...
     validations:
       required: false
   - type: textarea

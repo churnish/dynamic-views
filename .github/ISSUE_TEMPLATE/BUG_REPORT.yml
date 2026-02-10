@@ -1,7 +1,7 @@
 name: Bug report
-description: Report something that is not working as expected in the Dynamic Views plugin.
+description: Report something that is not working as expected in the Dynamic Views plugin
 labels:
-  - bug
+  - Bug report
 body:
   - type: markdown
     attributes:
@@ -52,6 +52,22 @@ body:
     validations:
       required: true
   - type: textarea
+    id: console-logs
+    attributes:
+      label: Console logs (optional)
+      description: |-
+        To share console logs:
+
+        1. Open developer tools in Obsidian (`Ctrl+Shift+I` on Windows/Linux, `Cmd+Option+I` on macOS).
+        2. Open the **Console** tab.
+        3. Reproduce the bug.
+        4. Share any console output that appears below.
+
+        **Note:** Console logs can contain file paths, note titles, and other vault details. Please review before sharing.
+      placeholder: Add console logs here...
+    validations:
+      required: false
+  - type: textarea
     id: additional-info
     attributes:
       label: Additional information (optional)
@@ -85,6 +101,7 @@ body:
         2. Open your Obsidian configuration folder (`.obsidian` by default, hidden on most OSes).
         3. Open `plugins/dynamic-views`.
         4. Attach the `data.json` file below.
+      placeholder: Attach data.json here...
     validations:
       required: false
   - type: textarea
