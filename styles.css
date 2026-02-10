@@ -565,6 +565,11 @@ settings:
         description: Overlay and content visible by default, hidden on hover/tap
         type: class-toggle
     -
+        id: dynamic-views-poster-reveal-hover
+        title: Reveal on hover
+        description: Show card content on hover over card on desktop
+        type: class-toggle
+    -
         id: properties-heading
         title: Properties
         type: heading
@@ -2960,6 +2965,11 @@ body.dynamic-views-hide-group-property-labels
 
 /* Clickable card cursor */
 .dynamic-views .card.clickable-card {
+  cursor: pointer;
+}
+
+/* Poster cards are always clickable (reveal toggle) regardless of openFileAction */
+.dynamic-views .card.image-format-poster:has(.card-poster) {
   cursor: pointer;
 }
 
@@ -5463,6 +5473,77 @@ body.dynamic-views-poster-content-default
   .card.image-format-poster.poster-revealed
   .card-poster::after {
   opacity: 0;
+}
+
+/* Poster: reveal content on hover (desktop only) */
+@media (hover: hover) {
+  /* Show content on hover ("Show card content by default" OFF) */
+  body.dynamic-views-poster-reveal-hover:not(
+      .dynamic-views-poster-content-default
+    )
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-header,
+  body.dynamic-views-poster-reveal-hover:not(
+      .dynamic-views-poster-content-default
+    )
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-content,
+  body.dynamic-views-poster-reveal-hover:not(
+      .dynamic-views-poster-content-default
+    )
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-properties-top,
+  body.dynamic-views-poster-reveal-hover:not(
+      .dynamic-views-poster-content-default
+    )
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-properties-bottom {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Show overlay on hover ("Show card content by default" OFF) */
+  body.dynamic-views-poster-reveal-hover:not(
+      .dynamic-views-poster-content-default
+    )
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    opacity: 1;
+  }
+
+  /* Hide content on hover ("Show card content by default" ON, inverse) */
+  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-header,
+  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-content,
+  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-properties-top,
+  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
+    .dynamic-views
+    .card.image-format-poster:hover:has(.card-poster)
+    .card-properties-bottom {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Hide overlay on hover ("Show card content by default" ON, inverse) */
+  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
+    .dynamic-views
+    .card.image-format-poster:hover
+    .card-poster::after {
+    opacity: 0;
+  }
 }
 
 /* Poster: card height determined by image ratio */
