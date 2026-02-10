@@ -816,9 +816,8 @@ export class SharedCardRenderer {
           }
         }
 
-        // Only handle card-level clicks when openFileAction is 'card'
-        // When openFileAction is 'title', the title link handles its own clicks
-        if (settings.openFileAction === "card") {
+        // Card-level click-to-open: desktop only (mobile always uses title)
+        if (settings.openFileAction === "card" && !this.app.isMobile) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === "A" || target.closest("a");
