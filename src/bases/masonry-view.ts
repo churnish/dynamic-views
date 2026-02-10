@@ -501,6 +501,14 @@ export class DynamicViewsMasonryView extends BasesView {
         String(imageRatio),
       );
     }
+
+    const thumbnailSize = this.config.get("thumbnailSize");
+    if (typeof thumbnailSize === "number") {
+      this.containerEl.style.setProperty(
+        "--dynamic-views-thumbnail-size",
+        `${thumbnailSize}px`,
+      );
+    }
   }
 
   /**
@@ -830,8 +838,17 @@ export class DynamicViewsMasonryView extends BasesView {
         : undefined;
       const sortMethod = getSortMethod(this.config);
       const visibleProperties = this.config.getOrder();
+      // Exclude CSS-only settings from hash — they're applied instantly via
+      // applyCssOnlySettings() and don't need a full DOM rebuild
+      const {
+        textPreviewLines: _tpl,
+        titleLines: _tl,
+        imageRatio: _ir,
+        thumbnailSize: _ts,
+        ...hashableSettings
+      } = settings;
       const settingsHash =
-        JSON.stringify(settings) +
+        JSON.stringify(hashableSettings) +
         "\0\0" +
         JSON.stringify(visibleProperties) +
         "\0\0" +
