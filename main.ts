@@ -417,10 +417,16 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
   }
 
   onunload() {
-    // Remove open-on class added during load
+    // Remove body classes added during load
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(
       `dynamic-views-open-on-${settings.openFileAction}`,
+    );
+    document.body.classList.remove(
+      "dynamic-views-file-type-ext",
+      "dynamic-views-file-type-flair",
+      "dynamic-views-file-type-icon",
+      "dynamic-views-file-type-none",
     );
 
     clearInFlightLoads();

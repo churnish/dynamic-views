@@ -27,10 +27,12 @@ jest.mock("../../src/constants", () => ({
     urlProperty: "url",
     minimumColumns: 1,
     cssclasses: "",
+    formatFirstAsTitle: false,
+    formatSecondAsSubtitle: false,
   },
   BASES_DEFAULTS: {
-    titleProperty: "file base name",
-    subtitleProperty: "folder",
+    formatFirstAsTitle: true,
+    formatSecondAsSubtitle: false,
     propertyLabels: "inline",
   },
 }));
@@ -208,9 +210,9 @@ describe("cleanupBaseFile", () => {
           type: "dynamic-views-grid",
           name: "Test",
           id: "abc-Test",
-          // VIEW_DEFAULTS.titleProperty = "file.name", but BASES_DEFAULTS overrides it
+          // VIEW_DEFAULTS.formatFirstAsTitle = false, but BASES_DEFAULTS overrides to true
           // so this value should NOT be removed by sparse cleanup
-          titleProperty: "file.name",
+          formatFirstAsTitle: false,
         },
       ],
     });
@@ -218,7 +220,7 @@ describe("cleanupBaseFile", () => {
     await cleanupBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0].titleProperty).toBe("file.name");
+    expect(result.views[0].formatFirstAsTitle).toBe(false);
   });
 
   it("should preserve minimumColumns (YAML strings not type-checked)", async () => {
