@@ -52,7 +52,11 @@ import {
   handleImageViewerClick,
   cleanupAllViewers,
 } from "../shared/image-viewer";
-import { getFileExtInfo, getFileTypeIcon } from "../utils/file-extension";
+import {
+  getFileExtInfo,
+  getFileTypeIcon,
+  stripExtFromTitle,
+} from "../utils/file-extension";
 import type DynamicViews from "../../main";
 import type { BasesResolvedSettings } from "../types";
 import {
@@ -951,7 +955,6 @@ export class SharedCardRenderer {
       }
 
       // Add file format indicator before title text (for Flair mode float:left)
-      const isFullname = (settings.titleProperty || "") === "file.fullname";
       const extInfo = getFileExtInfo(card.path, isFullname);
       const extNoDot = extInfo?.ext.slice(1) || "";
       if (extInfo) {
@@ -1104,7 +1107,15 @@ export class SharedCardRenderer {
     const hasImage = imageUrls.length > 0;
 
     // Check if title or subtitle will be rendered
-    const displayTitle = card.title;
+    // Strip extension from title in Extension mode to prevent duplication
+    // (the extension suffix is appended separately by renderTitleContent)
+    const isExtMode = document.body.classList.contains(
+      "dynamic-views-file-type-ext",
+    );
+    const isFullname = (settings.titleProperty || "") === "file.fullname";
+    const displayTitle = isExtMode
+      ? stripExtFromTitle(card.title, card.path, isFullname)
+      : card.title;
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
