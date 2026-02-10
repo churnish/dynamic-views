@@ -5136,20 +5136,6 @@ body.dynamic-views-show-cover-placeholder-both
   overflow-y: auto;
 }
 
-.dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar {
-  width: 4px;
-}
-
-.dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 4px;
-  transition: background 0.3s;
-}
-
-.dynamic-views .card.image-format-poster .card-body:hover::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.4);
-}
-
 .dynamic-views .card.image-format-backdrop .card-backdrop {
   position: absolute;
   inset: calc(var(--backdrop-inset) - var(--dynamic-views-card-padding, 8px));
