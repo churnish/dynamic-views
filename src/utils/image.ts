@@ -29,6 +29,24 @@ export function isExternalUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
+/**
+ * Extract vault-relative file path from an Obsidian resource URL.
+ * Handles both modern `app://random-id/path` and legacy `app://local/path` formats.
+ * @returns Decoded vault path, or null for non-app:// URLs
+ */
+export function getVaultPathFromResourceUrl(src: string): string | null {
+  try {
+    const url = new URL(src);
+    if (url.protocol !== "app:") return null;
+    // pathname: /<id>/<vault-path> — skip empty first segment and vault id
+    const firstSlash = url.pathname.indexOf("/", 1);
+    if (firstSlash === -1) return null;
+    return decodeURIComponent(url.pathname.slice(firstSlash + 1));
+  } catch {
+    return null;
+  }
+}
+
 // Generate regex from VALID_IMAGE_EXTENSIONS to ensure they stay in sync
 // Combines jpeg/jpg as jpe?g for efficiency (order-independent)
 const IMAGE_EXTENSION_REGEX = new RegExp(

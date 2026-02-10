@@ -3903,6 +3903,17 @@ body.dynamic-views-image-viewer-fullscreen
   user-select: none;
 }
 
+/* Allow drag when Alt is held (is-alt-drag class added by JS) */
+.dynamic-views-image-embed.is-zoomed.is-alt-drag img {
+  -webkit-user-drag: auto;
+  user-drag: auto;
+  cursor: grab;
+}
+
+.dynamic-views-image-embed.is-zoomed.is-alt-drag img:active {
+  cursor: grabbing;
+}
+
 /* Thumbnail crop alignment overrides */
 body.dynamic-views-thumbnail-crop-top .dynamic-views .card-thumbnail img {
   object-position: center top;

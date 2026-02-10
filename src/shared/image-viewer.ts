@@ -2,7 +2,7 @@
  * Shared image viewer handler - eliminates code duplication across card renderers
  */
 
-import { Notice, type App } from "obsidian";
+import { Notice, TFile, type App } from "obsidian";
 import Panzoom, { PanzoomObject } from "@panzoom/panzoom";
 import { setupSwipeInterception } from "../bases/swipe-interceptor";
 import { GESTURE_TIMEOUT_MS } from "./constants";
@@ -11,6 +11,17 @@ import {
   getZoomSensitivityMobile,
 } from "../utils/style-settings";
 import { showTipOnce } from "../utils/tips";
+import { getVaultPathFromResourceUrl, isExternalUrl } from "../utils/image";
+
+// Extend App type for undocumented dragManager API
+declare module "obsidian" {
+  interface App {
+    dragManager: {
+      dragFile(evt: DragEvent, file: TFile): unknown;
+      onDragStart(evt: DragEvent, dragData: unknown): void;
+    };
+  }
+}
 
 /** Long-press detection threshold in ms */
 const LONG_PRESS_THRESHOLD = 500;
@@ -132,18 +143,23 @@ export function handleImageViewerClick(
   }
 }
 
+interface ViewerGestureControls {
+  cleanup: () => void;
+  /** Exclude image from Panzoom event handling so native drag can proceed. */
+  setAltDragMode: (enabled: boolean) => void;
+}
+
 /**
  * Setup zoom and pan gestures for an image in the viewer
  * @param imgEl - The image element
  * @param container - The container element (overlay or embed)
  * @param isMobile - Whether running on mobile device
- * @returns Cleanup function
  */
 function setupImageViewerGestures(
   imgEl: HTMLImageElement,
   container: HTMLElement,
   isMobile: boolean,
-): () => void {
+): ViewerGestureControls {
   let panzoomInstance: PanzoomObject | null = null;
   let spacebarHandler: ((e: KeyboardEvent) => void) | null = null;
   let loadHandler: (() => void) | null = null;
@@ -494,53 +510,57 @@ function setupImageViewerGestures(
     imgEl.addEventListener("error", errorHandler, { once: true });
   }
 
-  // Return cleanup function
-  return () => {
-    if (panzoomInstance) {
-      const wheelHandler = containerWheelHandlers.get(container);
-      if (wheelHandler) {
-        container.removeEventListener("wheel", wheelHandler, WHEEL_OPTIONS);
-        containerWheelHandlers.delete(container);
+  return {
+    cleanup: () => {
+      if (panzoomInstance) {
+        const wheelHandler = containerWheelHandlers.get(container);
+        if (wheelHandler) {
+          container.removeEventListener("wheel", wheelHandler, WHEEL_OPTIONS);
+          containerWheelHandlers.delete(container);
+        }
+        panzoomInstance.destroy();
       }
-      panzoomInstance.destroy();
-    }
-    if (spacebarHandler) {
-      document.removeEventListener("keydown", spacebarHandler, true);
-    }
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-    }
-    if (pointerdownHandler) {
-      container.removeEventListener("pointerdown", pointerdownHandler, true);
-    }
-    if (pointermoveHandler) {
-      container.removeEventListener("pointermove", pointermoveHandler, true);
-    }
-    if (pointerupHandler) {
-      container.removeEventListener("pointerup", pointerupHandler, true);
-    }
-    if (pointercancelHandler) {
-      container.removeEventListener(
-        "pointercancel",
-        pointercancelHandler,
-        true,
-      );
-    }
-    if (contextmenuHandler) {
-      container.removeEventListener("contextmenu", contextmenuHandler, true);
-    }
-    if (loadHandler) {
-      imgEl.removeEventListener("load", loadHandler);
-    }
-    if (errorHandler) {
-      imgEl.removeEventListener("error", errorHandler);
-    }
-    if (resizeHandler) {
-      window.removeEventListener("resize", resizeHandler);
-    }
-    if (containerResizeObserver) {
-      containerResizeObserver.disconnect();
-    }
+      if (spacebarHandler) {
+        document.removeEventListener("keydown", spacebarHandler, true);
+      }
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+      if (pointerdownHandler) {
+        container.removeEventListener("pointerdown", pointerdownHandler, true);
+      }
+      if (pointermoveHandler) {
+        container.removeEventListener("pointermove", pointermoveHandler, true);
+      }
+      if (pointerupHandler) {
+        container.removeEventListener("pointerup", pointerupHandler, true);
+      }
+      if (pointercancelHandler) {
+        container.removeEventListener(
+          "pointercancel",
+          pointercancelHandler,
+          true,
+        );
+      }
+      if (contextmenuHandler) {
+        container.removeEventListener("contextmenu", contextmenuHandler, true);
+      }
+      if (loadHandler) {
+        imgEl.removeEventListener("load", loadHandler);
+      }
+      if (errorHandler) {
+        imgEl.removeEventListener("error", errorHandler);
+      }
+      if (resizeHandler) {
+        window.removeEventListener("resize", resizeHandler);
+      }
+      if (containerResizeObserver) {
+        containerResizeObserver.disconnect();
+      }
+    },
+    setAltDragMode: (enabled: boolean) => {
+      panzoomInstance?.setOptions({ exclude: enabled ? [imgEl] : [] });
+    },
   };
 }
 
@@ -674,8 +694,11 @@ function openImageViewer(
     const isDismissDisabled = document.body.classList.contains(
       "dynamic-views-image-viewer-disable-dismiss-on-click",
     );
+    // Track gesture controls for Alt+drag coordination (set when Panzoom active)
+    let gestureControls: ViewerGestureControls | null = null;
+
     if (!isPinchZoomDisabled) {
-      const gestureCleanup = setupImageViewerGestures(imgEl, cloneEl, isMobile);
+      gestureControls = setupImageViewerGestures(imgEl, cloneEl, isMobile);
 
       // On mobile, disable all touch gestures (sidebar swipes + pull-down) while panning
       // Desktop uses simpler cleanup since swipe interception not needed
@@ -683,11 +706,11 @@ function openImageViewer(
         const swipeController = new AbortController();
         setupSwipeInterception(cloneEl, swipeController.signal, true);
         viewerCleanupFns.set(cloneEl, () => {
-          gestureCleanup();
+          gestureControls!.cleanup();
           swipeController.abort();
         });
       } else {
-        viewerCleanupFns.set(cloneEl, gestureCleanup);
+        viewerCleanupFns.set(cloneEl, gestureControls.cleanup);
       }
     } else if (!isMobile) {
       // Desktop only: trackpad pinch to maximize/restore (when panzoom disabled)
@@ -900,6 +923,76 @@ function openImageViewer(
     document.addEventListener("keydown", onCopy);
     cloneEl.addEventListener("click", onOverlayClick);
 
+    // Desktop-only: Alt+drag to drag image out of viewer
+    let onAltKeyDown: ((e: KeyboardEvent) => void) | null = null;
+    let onAltKeyUp: ((e: KeyboardEvent) => void) | null = null;
+    let onAltBlur: (() => void) | null = null;
+    let onDragStart: ((e: DragEvent) => void) | null = null;
+    let onDragEnd: (() => void) | null = null;
+
+    if (!isMobile && gestureControls) {
+      let altHeld = false;
+
+      const enableAltDrag = () => {
+        altHeld = true;
+        gestureControls.setAltDragMode(true);
+        imgEl.draggable = true;
+        cloneEl.classList.add("is-alt-drag");
+      };
+
+      const disableAltDrag = () => {
+        altHeld = false;
+        gestureControls.setAltDragMode(false);
+        imgEl.draggable = false;
+        cloneEl.classList.remove("is-alt-drag");
+      };
+
+      onAltKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Alt" && !altHeld) enableAltDrag();
+      };
+
+      onAltKeyUp = (e: KeyboardEvent) => {
+        if (e.key === "Alt" && altHeld) disableAltDrag();
+      };
+
+      // Reset on window blur (handles Alt+Tab leaving Alt stuck)
+      onAltBlur = () => {
+        if (altHeld) disableAltDrag();
+      };
+
+      onDragStart = (e: DragEvent) => {
+        if (!altHeld) {
+          e.preventDefault();
+          return;
+        }
+
+        const src = imgEl.src;
+        const vaultPath = getVaultPathFromResourceUrl(src);
+
+        if (vaultPath) {
+          const file = app.vault.getAbstractFileByPath(vaultPath);
+          if (file instanceof TFile) {
+            const dragData = app.dragManager.dragFile(e, file);
+            app.dragManager.onDragStart(e, dragData);
+          }
+        } else if (isExternalUrl(src)) {
+          e.dataTransfer?.clearData();
+          e.dataTransfer?.setData("text/plain", `![](${src})`);
+        }
+      };
+
+      onDragEnd = () => {
+        // Clean up even if user releases Alt during drag
+        disableAltDrag();
+      };
+
+      document.addEventListener("keydown", onAltKeyDown);
+      document.addEventListener("keyup", onAltKeyUp);
+      window.addEventListener("blur", onAltBlur);
+      imgEl.addEventListener("dragstart", onDragStart);
+      imgEl.addEventListener("dragend", onDragEnd);
+    }
+
     // Cleanup removes all listeners (removeEventListener is no-op if never added)
     viewerListenerCleanups.set(cloneEl, () => {
       document.removeEventListener("keydown", onEscape);
@@ -908,6 +1001,21 @@ function openImageViewer(
       if (isMobile) {
         cloneEl.removeEventListener("touchstart", onTouchStart);
         cloneEl.removeEventListener("touchend", onTouchEnd);
+      }
+      if (onAltKeyDown) {
+        document.removeEventListener("keydown", onAltKeyDown);
+      }
+      if (onAltKeyUp) {
+        document.removeEventListener("keyup", onAltKeyUp);
+      }
+      if (onAltBlur) {
+        window.removeEventListener("blur", onAltBlur);
+      }
+      if (onDragStart) {
+        imgEl.removeEventListener("dragstart", onDragStart);
+      }
+      if (onDragEnd) {
+        imgEl.removeEventListener("dragend", onDragEnd);
       }
       // Clear pending gesture timeout to prevent dangling callbacks
       if (gestureTimeoutId !== null) {
@@ -925,7 +1033,7 @@ function openImageViewer(
     if (!isMobile) {
       showTipOnce(
         "tipImageViewer",
-        "Tip: Press Space to maximize. Long press or right click to reset zoom.",
+        "Tip: Press Space to maximize. Long press or right click to reset zoom. Hold Alt to drag.",
       );
     }
   } catch (error) {
