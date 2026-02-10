@@ -97,8 +97,19 @@ export default class DynamicViews extends Plugin {
       options: masonryViewOptions,
     });
 
-    // Notify Style Settings to parse our CSS
+    // Notify Style Settings to parse our CSS (overrides default class below if installed)
     this.app.workspace.trigger("parse-style-settings");
+
+    // Default file format indicator when Style Settings is not installed
+    const fileTypeClasses = [
+      "dynamic-views-file-type-ext",
+      "dynamic-views-file-type-flair",
+      "dynamic-views-file-type-icon",
+      "dynamic-views-file-type-none",
+    ];
+    if (!fileTypeClasses.some((c) => document.body.classList.contains(c))) {
+      document.body.classList.add("dynamic-views-file-type-ext");
+    }
 
     this.addCommand({
       id: "create-dynamic-view",
