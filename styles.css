@@ -5141,8 +5141,13 @@ body.dynamic-views-show-cover-placeholder-both
 }
 
 .dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.4);
+  background: transparent;
   border-radius: 4px;
+  transition: background 0.3s;
+}
+
+.dynamic-views .card.image-format-poster .card-body:hover::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.4);
 }
 
 .dynamic-views .card.image-format-backdrop .card-backdrop {
