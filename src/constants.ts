@@ -65,7 +65,7 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
 
 export const BASES_DEFAULTS: BasesDefaults = {
   formatFirstAsTitle: true,
-  formatSecondAsSubtitle: true,
+  formatSecondAsSubtitle: false,
   propertyLabels: "inline",
 };
 
