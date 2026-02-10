@@ -28,6 +28,7 @@ import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
+  setupVerticalScrollGradient,
 } from "../shared/scroll-gradient";
 import { getTimestampIcon } from "../shared/render-utils";
 import {
@@ -1307,6 +1308,10 @@ export class SharedCardRenderer {
     // Poster: scrollable content wrapper (card body below header)
     const contentParent =
       format === "poster" ? cardEl.createDiv("card-body") : cardEl;
+
+    if (format === "poster") {
+      setupVerticalScrollGradient(contentParent, signal);
+    }
 
     // Determine if card-content will have children
     const hasTextPreview = card.textPreview;

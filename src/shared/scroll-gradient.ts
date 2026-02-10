@@ -14,6 +14,16 @@ const contentCache = new WeakMap<HTMLElement, HTMLElement | null>();
 /** Cache for current gradient class to skip no-op updates */
 const gradientClassCache = new WeakMap<HTMLElement, string | null>();
 
+/** Vertical gradient class names */
+const VERTICAL_GRADIENT_CLASSES = [
+  "scroll-gradient-top",
+  "scroll-gradient-bottom",
+  "scroll-gradient-vertical-both",
+] as const;
+
+/** Separate cache for vertical gradient classes (element can have both horizontal + vertical) */
+const verticalGradientClassCache = new WeakMap<HTMLElement, string | null>();
+
 /**
  * Creates a throttled version of a function using requestAnimationFrame.
  * Limits execution to once per animation frame for smooth updates.
@@ -301,4 +311,76 @@ export function initializeScrollGradients(container: HTMLElement): void {
     }
     setGradientClasses(wrapper, targetClass);
   }
+}
+
+/**
+ * Determines the vertical gradient class based on scroll position.
+ * Returns null if not scrollable or scrolled to both ends.
+ */
+function getVerticalGradientClass(
+  scrollTop: number,
+  scrollHeight: number,
+  clientHeight: number,
+): string | null {
+  const atTop = scrollTop <= SCROLL_TOLERANCE;
+  const atBottom = scrollTop + clientHeight >= scrollHeight - SCROLL_TOLERANCE;
+
+  if (atTop && !atBottom) return "scroll-gradient-bottom";
+  if (atBottom && !atTop) return "scroll-gradient-top";
+  if (!atTop && !atBottom) return "scroll-gradient-vertical-both";
+  return null;
+}
+
+/**
+ * Sets the appropriate vertical gradient class on an element.
+ * Uses a separate cache from horizontal gradients.
+ */
+function setVerticalGradientClasses(
+  element: HTMLElement,
+  targetClass: string | null,
+): void {
+  const currentClass = verticalGradientClassCache.get(element);
+  if (currentClass === targetClass) return;
+
+  verticalGradientClassCache.set(element, targetClass);
+  for (const cls of VERTICAL_GRADIENT_CLASSES) {
+    element.classList.toggle(cls, cls === targetClass);
+  }
+}
+
+/**
+ * Updates vertical scroll gradient classes for a scrollable element.
+ */
+function updateVerticalScrollGradient(element: HTMLElement): void {
+  if (!element.isConnected || element.clientHeight === 0) return;
+
+  const isScrollable = element.scrollHeight > element.clientHeight;
+  const targetClass = isScrollable
+    ? getVerticalGradientClass(
+        element.scrollTop,
+        element.scrollHeight,
+        element.clientHeight,
+      )
+    : null;
+
+  setVerticalGradientClasses(element, targetClass);
+}
+
+/**
+ * Sets up vertical scroll gradient for a poster card body.
+ * Attaches throttled scroll listener with cleanup via AbortSignal.
+ */
+export function setupVerticalScrollGradient(
+  element: HTMLElement,
+  signal: AbortSignal,
+): void {
+  requestAnimationFrame(() => {
+    updateVerticalScrollGradient(element);
+  });
+
+  const throttledUpdate = throttleRAF(() => {
+    updateVerticalScrollGradient(element);
+  });
+
+  element.addEventListener("scroll", throttledUpdate, { signal });
 }

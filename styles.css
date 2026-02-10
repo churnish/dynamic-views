@@ -525,7 +525,7 @@ settings:
     -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
-        description: Prevent scrolling card content when it doesn't fit
+        description: Prevent vertically scrolling card content when it doesn't fit
         type: class-toggle
     -
         id: dynamic-views-poster-overlay-tint
