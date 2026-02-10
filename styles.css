@@ -5134,7 +5134,6 @@ body.dynamic-views-show-cover-placeholder-both
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar {
