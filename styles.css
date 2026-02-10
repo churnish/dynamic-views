@@ -5479,20 +5479,20 @@ body.dynamic-views-poster-content-default
   opacity: 0;
 }
 
-/* Poster: reveal content on hover (desktop only) */
+/* Poster: reveal content on hover intent (desktop only) */
 @media (hover: hover) {
   /* Show content on hover ("Show card content by default" OFF) */
   body.dynamic-views-poster-reveal-hover:not(
       .dynamic-views-poster-content-default
     )
     .dynamic-views
-    .card.image-format-poster:hover:has(.card-poster)
+    .card.image-format-poster.poster-hover-active:has(.card-poster)
     .card-header,
   body.dynamic-views-poster-reveal-hover:not(
       .dynamic-views-poster-content-default
     )
     .dynamic-views
-    .card.image-format-poster:hover:has(.card-poster)
+    .card.image-format-poster.poster-hover-active:has(.card-poster)
     .card-body {
     opacity: 1;
     pointer-events: auto;
@@ -5503,7 +5503,7 @@ body.dynamic-views-poster-content-default
       .dynamic-views-poster-content-default
     )
     .dynamic-views
-    .card.image-format-poster:hover
+    .card.image-format-poster.poster-hover-active
     .card-poster::after {
     opacity: 1;
   }
@@ -5511,11 +5511,11 @@ body.dynamic-views-poster-content-default
   /* Hide content on hover ("Show card content by default" ON, inverse) */
   body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
     .dynamic-views
-    .card.image-format-poster:hover:has(.card-poster)
+    .card.image-format-poster.poster-hover-active:has(.card-poster)
     .card-header,
   body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
     .dynamic-views
-    .card.image-format-poster:hover:has(.card-poster)
+    .card.image-format-poster.poster-hover-active:has(.card-poster)
     .card-body {
     opacity: 0;
     pointer-events: none;
@@ -5524,7 +5524,7 @@ body.dynamic-views-poster-content-default
   /* Hide overlay on hover ("Show card content by default" ON, inverse) */
   body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
     .dynamic-views
-    .card.image-format-poster:hover
+    .card.image-format-poster.poster-hover-active
     .card-poster::after {
     opacity: 0;
   }

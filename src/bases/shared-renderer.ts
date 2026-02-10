@@ -870,6 +870,43 @@ export class SharedCardRenderer {
       );
     }
 
+    // Poster hover intent: require mousemove to reveal (ignores scroll-triggered hovers)
+    if (isPosterHoverMode && cardEl.querySelector(".card-poster")) {
+      let hasMoved = false;
+
+      cardEl.addEventListener(
+        "mouseenter",
+        () => {
+          hasMoved = false;
+        },
+        { signal },
+      );
+
+      cardEl.addEventListener(
+        "mousemove",
+        () => {
+          if (!hasMoved) {
+            hasMoved = true;
+            cardEl
+              .closest(".dynamic-views")
+              ?.querySelector(".card.poster-hover-active")
+              ?.classList.remove("poster-hover-active");
+            cardEl.classList.add("poster-hover-active");
+          }
+        },
+        { signal },
+      );
+
+      cardEl.addEventListener(
+        "mouseleave",
+        () => {
+          hasMoved = false;
+          cardEl.classList.remove("poster-hover-active");
+        },
+        { signal },
+      );
+    }
+
     // Handle hover for page preview (only on card when openFileAction is 'card')
     // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
     if (settings.openFileAction === "card") {
