@@ -3904,14 +3904,15 @@ body.dynamic-views-image-viewer-fullscreen
 }
 
 /* Allow drag when Alt is held (is-alt-drag class added by JS) */
+/* !important overrides Panzoom's inline cursor: move */
 .dynamic-views-image-embed.is-zoomed.is-alt-drag img {
   -webkit-user-drag: auto;
   user-drag: auto;
-  cursor: grab;
+  cursor: grab !important;
 }
 
 .dynamic-views-image-embed.is-zoomed.is-alt-drag img:active {
-  cursor: grabbing;
+  cursor: grabbing !important;
 }
 
 /* Thumbnail crop alignment overrides */
