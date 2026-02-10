@@ -204,7 +204,7 @@ settings:
     -
         id: dynamic-views-no-fade-truncated-text
         title: Hide scroll gradient
-        description: Hide gradient fade effect on titles, subtitles and properties when they can be scrolled horizontally
+        description: Hide gradient fade on scrollable titles, subtitles, properties, and poster card content
         type: class-toggle
     -
         id: covers-heading
@@ -5240,9 +5240,9 @@ body:is(
   )
   .dynamic-views
   .card.image-format-poster
-  .card-body {
+  .card-content {
   flex: 0 1 auto;
-  max-height: 60%;
+  max-height: 70%;
 }
 
 /* Gradient: disable backdrop blur (incompatible with gradient — blur would show through transparent top) */
@@ -5374,11 +5374,7 @@ body.dynamic-views-poster-theme-disable
 body.dynamic-views-poster-disable-raise
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
-  .card-header,
-body.dynamic-views-poster-disable-raise
-  .dynamic-views
-  .card.image-format-poster:has(.card-poster)
-  .card-body {
+  .card-content {
   transform: none;
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
@@ -7106,7 +7102,16 @@ body.dynamic-views-no-fade-truncated-text
   .card-title.scroll-gradient-right,
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
-  .card-title.scroll-gradient-both {
+  .card-title.scroll-gradient-both,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-body.scroll-gradient-top,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-body.scroll-gradient-bottom,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-body.scroll-gradient-vertical-both {
   mask-image: none;
   -webkit-mask-image: none;
 }

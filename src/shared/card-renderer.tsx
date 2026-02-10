@@ -53,6 +53,7 @@ import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
+  setupVerticalScrollGradient,
 } from "./scroll-gradient";
 import {
   handleArrowNavigation,
@@ -2184,7 +2185,14 @@ function Card({
         )}
 
         {/* Universal card-body: properties + previews */}
-        <div className="card-body">
+        <div
+          className="card-body"
+          ref={(el: HTMLElement | null) => {
+            if (el && format === "poster") {
+              setupVerticalScrollGradient(el, scrollController.signal);
+            }
+          }}
+        >
           {/* Properties and previews in correct DOM order */}
           {(() => {
             const props = card.properties;
