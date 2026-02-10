@@ -7148,7 +7148,8 @@ body.dynamic-views-no-fade-truncated-text
   position: relative;
   width: 100%;
   max-width: 100%;
-  overflow: clip;
+  overflow-x: visible;
+  overflow-y: clip;
 }
 
 /* Reset Bases' mobile margin - applied to parent instead to include end indicator */
