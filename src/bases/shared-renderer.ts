@@ -621,10 +621,6 @@ export class SharedCardRenderer {
 
     // Poster: force title-as-link and card context menu (click toggles reveal, not file open)
     const isPoster = format === "poster";
-    const isPosterHoverMode =
-      isPoster &&
-      document.body.classList.contains("dynamic-views-poster-reveal-hover") &&
-      window.matchMedia("(hover: hover)").matches;
 
     // Check if any image source is configured (property or embeds)
     const hasImageSource =
@@ -796,8 +792,7 @@ export class SharedCardRenderer {
         // Poster toggle mode: click reveals/hides content (skipped in hover mode)
         if (
           format === "poster" &&
-          cardEl.querySelector(".card-poster") &&
-          !isPosterHoverMode
+          cardEl.querySelector(".card-poster")
         ) {
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
@@ -872,7 +867,7 @@ export class SharedCardRenderer {
     }
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
-    // In hover mode: gates content reveal + scroll. In toggle mode: gates scroll only.
+    // Gates content reveal (via CSS) and scroll access on desktop.
     if (isPoster && window.matchMedia("(hover: hover)").matches) {
       let hasMoved = false;
 
@@ -967,10 +962,7 @@ export class SharedCardRenderer {
       }
 
       // Add title text
-      if (
-        settings.openFileAction === "title" ||
-        (isPoster && !isPosterHoverMode)
-      ) {
+      if (settings.openFileAction === "title" || isPoster) {
         // Render as clickable, draggable link
         const link = titleEl.createEl("a", {
           cls: "internal-link card-title-text",

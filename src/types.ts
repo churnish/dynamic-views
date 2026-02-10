@@ -110,7 +110,6 @@ export interface SettingsTemplate {
 /** One-time interaction flags (tips, onboarding, etc. — separate from user settings) */
 export interface Flags {
   tipImageViewer: boolean;
-  tipPosterFormat: boolean;
 }
 
 export interface PluginData {

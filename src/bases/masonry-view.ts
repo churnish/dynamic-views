@@ -84,7 +84,6 @@ import type {
 } from "../types";
 import { VIEW_DEFAULTS } from "../constants";
 import { setupContentVisibility } from "../shared/content-visibility";
-import { showTipOnce } from "../utils/tips";
 
 // Extend Obsidian types
 declare module "obsidian" {
@@ -956,12 +955,6 @@ export class DynamicViewsMasonryView extends BasesView {
           this.displayedCount = 0;
           this.scrollEl.scrollTop = 0;
           this.scrollPreservation?.clearSavedPosition();
-        }
-        if (settings.imageFormat === "poster") {
-          showTipOnce(
-            "tipPosterFormat",
-            "Tip: Press on poster card to view details. Press again to hide.",
-          );
         }
       }
       this.renderState.lastSettingsHash = settingsHash;

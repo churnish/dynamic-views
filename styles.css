@@ -513,16 +513,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-poster-reveal-hover
-        title: Reveal on hover
-        description: Show card content on hover over card on desktop
-        type: class-toggle
-    -
-        id: dynamic-views-poster-content-default
-        title: Show card content by default
-        description: Overlay and content visible by default, hidden on hover/tap
-        type: class-toggle
-    -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
         description: Prevent vertically scrolling card content when it doesn't fit
@@ -2983,10 +2973,8 @@ body.dynamic-views-hide-group-property-labels
   cursor: pointer;
 }
 
-/* Poster toggle mode: cards are always clickable (reveal toggle) regardless of openFileAction */
-body:not(.dynamic-views-poster-reveal-hover)
-  .dynamic-views
-  .card.image-format-poster:has(.card-poster) {
+/* Poster: cards are always clickable (reveal toggle) regardless of openFileAction */
+.dynamic-views .card.image-format-poster:has(.card-poster) {
   cursor: pointer;
 }
 
@@ -5332,15 +5320,10 @@ body.dynamic-views-poster-theme-disable
   display: none;
 }
 
-/* Poster: content hidden until click (baked in, only if card has image; skipped when "Show card content by default" ON) */
-body:not(.dynamic-views-poster-content-default)
-  .dynamic-views
+/* Poster: content hidden by default (only if card has image) */
+.dynamic-views
   .card.image-format-poster:has(.card-poster)
-  .card-header,
-body:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster:has(.card-poster)
-  .card-body {
+  .card-content {
   opacity: 0;
   pointer-events: none;
   transform: translateY(0.75rem);
@@ -5349,127 +5332,41 @@ body:not(.dynamic-views-poster-content-default)
     transform var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster: content visible by default ("Show card content by default" ON) */
-body.dynamic-views-poster-content-default
-  .dynamic-views
-  .card.image-format-poster:has(.card-poster)
-  .card-header,
-body.dynamic-views-poster-content-default
-  .dynamic-views
-  .card.image-format-poster:has(.card-poster)
-  .card-body {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-  transition:
-    opacity var(--anim-duration-moderate, 300ms),
-    transform var(--anim-duration-moderate, 300ms);
-}
-
-/* Poster: show content on click ("Show card content by default" OFF) */
-body:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster.poster-revealed:has(.card-poster)
-  .card-header,
-body:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster.poster-revealed:has(.card-poster)
-  .card-body {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-/* Poster: hide overlay by default (skipped when "Show card content by default" is ON)
+/* Poster: overlay hidden by default.
    Uses opacity instead of background:transparent to keep the compositing layer alive
    and avoid cascade flicker from theme-variant background rules. */
-body:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after {
+.dynamic-views .card.image-format-poster .card-poster::after {
   opacity: 0;
 }
 
-/* Poster: show overlay on click ("Show card content by default" OFF) */
-body:not(.dynamic-views-poster-content-default)
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after {
+/* Poster: show content on click (tap toggle) */
+.dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-content {
   opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
-/* Poster: hide content on click ("Show card content by default" ON) */
-body.dynamic-views-poster-content-default
-  .dynamic-views
-  .card.image-format-poster.poster-revealed:has(.card-poster)
-  .card-header,
-body.dynamic-views-poster-content-default
-  .dynamic-views
-  .card.image-format-poster.poster-revealed:has(.card-poster)
-  .card-body {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(0.75rem);
-}
-
-/* Poster: hide overlay on click ("Show card content by default" ON) */
-body.dynamic-views-poster-content-default
-  .dynamic-views
-  .card.image-format-poster.poster-revealed
-  .card-poster::after {
-  opacity: 0;
+/* Poster: show overlay on click */
+.dynamic-views .card.image-format-poster.poster-revealed .card-poster::after {
+  opacity: 1;
 }
 
 /* Poster: reveal content on hover intent (desktop only) */
 @media (hover: hover) {
-  /* Show content on hover ("Show card content by default" OFF) */
-  body.dynamic-views-poster-reveal-hover:not(
-      .dynamic-views-poster-content-default
-    )
-    .dynamic-views
+  .dynamic-views
     .card.image-format-poster.poster-hover-active:has(.card-poster)
-    .card-header,
-  body.dynamic-views-poster-reveal-hover:not(
-      .dynamic-views-poster-content-default
-    )
-    .dynamic-views
-    .card.image-format-poster.poster-hover-active:has(.card-poster)
-    .card-body {
+    .card-content {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
   }
 
-  /* Show overlay on hover ("Show card content by default" OFF) */
-  body.dynamic-views-poster-reveal-hover:not(
-      .dynamic-views-poster-content-default
-    )
-    .dynamic-views
+  .dynamic-views
     .card.image-format-poster.poster-hover-active
     .card-poster::after {
     opacity: 1;
-  }
-
-  /* Hide content on hover ("Show card content by default" ON, inverse) */
-  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
-    .dynamic-views
-    .card.image-format-poster.poster-hover-active:has(.card-poster)
-    .card-header,
-  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
-    .dynamic-views
-    .card.image-format-poster.poster-hover-active:has(.card-poster)
-    .card-body {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(0.75rem);
-  }
-
-  /* Hide overlay on hover ("Show card content by default" ON, inverse) */
-  body.dynamic-views-poster-reveal-hover.dynamic-views-poster-content-default
-    .dynamic-views
-    .card.image-format-poster.poster-hover-active
-    .card-poster::after {
-    opacity: 0;
   }
 }
 
