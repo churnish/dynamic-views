@@ -6,7 +6,7 @@ import {
   resolveBasesProperty,
   resolveDatacoreProperty,
 } from "../../src/shared/data-transform";
-import type { Settings } from "../../src/types";
+
 import { App, TFile } from "obsidian";
 
 // Mock dependencies
@@ -21,7 +21,7 @@ jest.mock("../../src/shared/render-utils", () => ({
 }));
 
 describe("data-transform", () => {
-  let mockSettings: Settings;
+  let mockSettings: any;
   let mockApp: App;
 
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe("data-transform", () => {
       fallbackToInNote: true,
       omitFirstLine: "ifMatchesTitle",
       pairProperties: true,
-    } as Settings;
+    } as any;
 
     mockApp = new App();
   });
@@ -289,6 +289,82 @@ describe("data-transform", () => {
 
       expect(result.textPreview).toBe("test textPreview");
       expect(result.imageUrl).toEqual(["img1.png", "img2.png"]);
+    });
+
+    describe("_skipLeadingProperties slicing", () => {
+      const createEntry = (): any => ({
+        file: {
+          path: "test/file.md",
+          basename: "file",
+          stat: { ctime: 0, mtime: 0 },
+        },
+        getValue: jest.fn(),
+      });
+
+      it("should include all properties when _skipLeadingProperties is 0", () => {
+        const settings = { ...mockSettings, _skipLeadingProperties: 0 };
+        const result = basesEntryToCardData(
+          mockApp,
+          createEntry(),
+          settings,
+          "alphabetical",
+          false,
+          ["file.path", "file.ctime"],
+        );
+        expect(result.properties.map((p: any) => p.name)).toEqual([
+          "file.path",
+          "file.ctime",
+        ]);
+      });
+
+      it("should skip first property when _skipLeadingProperties is 1", () => {
+        const settings = { ...mockSettings, _skipLeadingProperties: 1 };
+        const result = basesEntryToCardData(
+          mockApp,
+          createEntry(),
+          settings,
+          "alphabetical",
+          false,
+          ["file.path", "file.ctime"],
+        );
+        expect(result.properties.map((p: any) => p.name)).toEqual([
+          "file.ctime",
+        ]);
+      });
+
+      it("should skip first two properties when _skipLeadingProperties is 2", () => {
+        const settings = { ...mockSettings, _skipLeadingProperties: 2 };
+        const result = basesEntryToCardData(
+          mockApp,
+          createEntry(),
+          settings,
+          "alphabetical",
+          false,
+          ["file.path", "file.ctime", "file.mtime"],
+        );
+        expect(result.properties.map((p: any) => p.name)).toEqual([
+          "file.mtime",
+        ]);
+      });
+
+      it("should default to 0 when _skipLeadingProperties is undefined", () => {
+        const { _skipLeadingProperties, ...settings } = {
+          ...mockSettings,
+          _skipLeadingProperties: undefined,
+        };
+        const result = basesEntryToCardData(
+          mockApp,
+          createEntry(),
+          settings,
+          "alphabetical",
+          false,
+          ["file.path", "file.ctime"],
+        );
+        expect(result.properties.map((p: any) => p.name)).toEqual([
+          "file.path",
+          "file.ctime",
+        ]);
+      });
     });
   });
 

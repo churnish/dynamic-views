@@ -140,6 +140,29 @@ describe("cleanupBaseFile", () => {
     expect(result.views[0].cardSize).toBe(400);
   });
 
+  it("should delete stale titleProperty/subtitleProperty keys", async () => {
+    const file = createMockFile("test.base");
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: "dynamic-views-grid",
+          name: "My View",
+          id: "abc123-My View",
+          cardSize: 400,
+          titleProperty: "file.name",
+          subtitleProperty: "note.author",
+        },
+      ],
+    });
+
+    await cleanupBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    expect(result.views[0]).not.toHaveProperty("titleProperty");
+    expect(result.views[0]).not.toHaveProperty("subtitleProperty");
+    expect(result.views[0].cardSize).toBe(400);
+  });
+
   it("should delete values with wrong type", async () => {
     const file = createMockFile("test.base");
     const getResult = setupVaultProcess(app, {
