@@ -3269,8 +3269,8 @@ body.dynamic-views-file-type-ext
 /* File type indicator: Flair (box before title) — default when Style Settings OFF */
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext,
 body:not(.dynamic-views-file-type-flair):not(.dynamic-views-file-type-icon):not(
-    .dynamic-views-file-type-none
-  )
+    .dynamic-views-file-type-ext
+  ):not(.dynamic-views-file-type-none)
   .dynamic-views
   .card-title-ext {
   display: flex;
@@ -3288,8 +3288,8 @@ body:not(.dynamic-views-file-type-flair):not(.dynamic-views-file-type-icon):not(
 
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before,
 body:not(.dynamic-views-file-type-flair):not(.dynamic-views-file-type-icon):not(
-    .dynamic-views-file-type-none
-  )
+    .dynamic-views-file-type-ext
+  ):not(.dynamic-views-file-type-none)
   .dynamic-views
   .card-title-ext::before {
   content: attr(data-ext);
