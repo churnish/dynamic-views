@@ -789,9 +789,10 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       "click",
       (e) => {
-        // Poster toggle mode: click reveals/hides content (skipped in hover mode)
+        // Poster tap toggle: mobile only (desktop uses hover intent)
         if (
           format === "poster" &&
+          this.app.isMobile &&
           cardEl.querySelector(".card-poster")
         ) {
           const target = e.target as HTMLElement;

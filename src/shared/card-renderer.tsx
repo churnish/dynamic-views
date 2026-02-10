@@ -1797,9 +1797,7 @@ function Card({
                   ref={(imgEl: HTMLImageElement | null) =>
                     handleJsxImageRef(imgEl, updateLayoutRef)
                   }
-                  onLoad={(e: Event) =>
-                    handleJsxImageLoad(e, updateLayoutRef)
-                  }
+                  onLoad={(e: Event) => handleJsxImageLoad(e, updateLayoutRef)}
                   onError={(e: Event) =>
                     handleJsxImageError(e, updateLayoutRef)
                   }
@@ -1978,8 +1976,8 @@ function Card({
       onDragStart={settings.openFileAction === "card" ? handleDrag : undefined}
       tabIndex={index === focusableCardIndex ? 0 : -1}
       onClick={(e: MouseEvent) => {
-        // Poster click-to-toggle: reveal/hide content
-        if (format === "poster") {
+        // Poster tap toggle: mobile only (desktop uses hover intent)
+        if (format === "poster" && app.isMobile) {
           const cardEl = e.currentTarget as HTMLElement;
           if (cardEl.querySelector(".card-poster")) {
             const target = e.target as HTMLElement;
@@ -2201,9 +2199,7 @@ function Card({
             const { propertyLabels } = settings;
 
             // Parse override lists for O(1) lookup
-            const unpairSet = parsePropertyList(
-              settings.invertPropertyPairing,
-            );
+            const unpairSet = parsePropertyList(settings.invertPropertyPairing);
             const invertPositionSet = parsePropertyList(
               settings.invertPropertyPosition,
             );
@@ -2452,8 +2448,9 @@ function Card({
                                 }
                                 if (imgEl && imageArray.length > 1) {
                                   const controller = new AbortController();
-                                  (imgEl as ImgWithController)._errorController =
-                                    controller;
+                                  (
+                                    imgEl as ImgWithController
+                                  )._errorController = controller;
 
                                   imgEl.addEventListener(
                                     "error",
