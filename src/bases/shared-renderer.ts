@@ -1260,6 +1260,10 @@ export class SharedCardRenderer {
       );
     }
 
+    // Poster: scrollable content wrapper (card body below header)
+    const contentParent =
+      format === "poster" ? cardEl.createDiv("card-body") : cardEl;
+
     // Determine if card-content will have children
     const hasTextPreview = card.textPreview;
     const isThumbnailFormat = format === "thumbnail";
@@ -1268,7 +1272,7 @@ export class SharedCardRenderer {
 
     // Only create card-content if it will have children
     if (hasTextPreview || showThumbnail) {
-      const contentContainer = cardEl.createDiv("card-content");
+      const contentContainer = contentParent.createDiv("card-content");
 
       if (hasTextPreview) {
         const wrapper = contentContainer.createDiv("card-text-preview-wrapper");
@@ -1298,7 +1302,7 @@ export class SharedCardRenderer {
     }
 
     // Properties - 4-field rendering with 2-set layout
-    this.renderProperties(cardEl, card, entry, settings, signal);
+    this.renderProperties(contentParent, card, entry, settings, signal);
 
     // Card-level responsive behaviors (single ResizeObserver)
     // Use cached breakpoint to avoid getComputedStyle per card
