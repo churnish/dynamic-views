@@ -204,7 +204,7 @@ settings:
     -
         id: dynamic-views-no-fade-truncated-text
         title: Hide scroll gradient
-        description: Hide gradient fade on scrollable titles, subtitles, properties, and poster card content
+        description: Don't show gradient fade on scrollable text elements
         type: class-toggle
     -
         id: covers-heading
@@ -523,7 +523,7 @@ settings:
         description: Color of the poster overlay
         type: class-select
         allowEmpty: false
-        default: dynamic-views-poster-theme-match
+        default: dynamic-views-poster-theme-dark
         options:
             -
                 label: Light
@@ -580,6 +580,7 @@ settings:
     -
         id: dynamic-views-poster-disable-raise
         title: Disable raise animation
+        description: Content fades in without sliding up on reveal
         type: class-toggle
     -
         id: properties-heading
@@ -3225,7 +3226,7 @@ body.dynamic-views-file-type-ext
   .dynamic-views
     .card.image-format-poster
     .card-title-url-icon:hover {
-    background-color: rgb(0 0 0 / 0.15);
+    background-color: rgb(0 0 0 / 0.35);
     border-radius: var(--radius-s);
   }
 }
@@ -4938,6 +4939,11 @@ body.dynamic-views-show-cover-placeholder-both
 }
 
 /* Poster: scrollable card body when content overflows fixed-height card */
+/* overflow: hidden on .card-content constrains height so .card-body can scroll */
+.dynamic-views .card.image-format-poster .card-content {
+  overflow: hidden;
+}
+
 .dynamic-views .card.image-format-poster .card-body {
   position: relative;
   z-index: 1;
@@ -4945,6 +4951,11 @@ body.dynamic-views-show-cover-placeholder-both
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
+}
+
+/* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
+.dynamic-views .card.image-format-poster .card-body > * {
+  flex-shrink: 0;
 }
 
 .dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar {
@@ -4967,6 +4978,19 @@ body.dynamic-views-poster-disable-scroll
   .card.image-format-poster
   .card-body {
   overflow-y: hidden;
+}
+
+/* No scroll = no scroll gradient (false affordance) */
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster
+  .card-body:is(
+    .scroll-gradient-top,
+    .scroll-gradient-bottom,
+    .scroll-gradient-vertical-both
+  ) {
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
 .dynamic-views .card.image-format-backdrop .card-backdrop {
@@ -5241,7 +5265,7 @@ body:is(
     :not(.dynamic-views-poster-overlay-flat)
   )
   .dynamic-views
-  .card.image-format-poster {
+  .card.image-format-poster:has(.card-poster) {
   justify-content: flex-end;
 }
 
@@ -5250,7 +5274,7 @@ body:is(
     :not(.dynamic-views-poster-overlay-flat)
   )
   .dynamic-views
-  .card.image-format-poster
+  .card.image-format-poster:has(.card-poster)
   .card-content {
   flex: 0 1 auto;
   max-height: 70%;
@@ -7114,12 +7138,15 @@ body.dynamic-views-no-fade-truncated-text
   .card-title.scroll-gradient-both,
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
+  .card.image-format-poster
   .card-body.scroll-gradient-top,
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
+  .card.image-format-poster
   .card-body.scroll-gradient-bottom,
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
+  .card.image-format-poster
   .card-body.scroll-gradient-vertical-both {
   mask-image: none;
   -webkit-mask-image: none;
