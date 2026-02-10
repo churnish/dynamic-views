@@ -2611,6 +2611,9 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   height: 100%;
   min-width: 0;
   overflow: hidden;
+  /* Skip rendering off-screen cards to reduce DOM rendering cost */
+  content-visibility: auto;
+  contain-intrinsic-height: auto 300px;
 }
 
 /* Card element ordering for flexbox layout
@@ -3043,10 +3046,19 @@ body .dynamic-views .card:focus-visible::after {
   left: var(--masonry-left, 0);
   top: var(--masonry-top, 0);
   contain: layout style paint;
+  /* Skip rendering off-screen cards to reduce DOM rendering cost */
+  content-visibility: auto;
+  contain-intrinsic-height: auto 300px;
   transition:
     opacity var(--anim-duration-superfast, 70ms) ease,
     box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
     background-color var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Force content rendering during masonry height measurement (content-visibility: auto
+   makes off-screen cards return stale offsetHeight after width changes on resize) */
+.masonry-measuring .card.masonry-positioned {
+  content-visibility: visible;
 }
 
 /* Global spacing between card elements (exclude cover-format cards which use flexbox gap) */

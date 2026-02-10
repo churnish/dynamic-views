@@ -189,6 +189,9 @@ function setupImageViewerGestures(
   // Delta tracking for desktop transform (outer scope so resetDesktopPan can clear it)
   let desktopLastX: number | undefined;
   let desktopLastY: number | undefined;
+  // Cached image layout dimensions (avoid forced reflow on every panzoom frame)
+  let cachedImgWidth = 0;
+  let cachedImgHeight = 0;
 
   /** Reset desktop pan tracking (called when entering/exiting maximized) */
   function resetDesktopPan(): void {
@@ -197,6 +200,8 @@ function setupImageViewerGestures(
     desktopLastScale = 1;
     desktopLastX = undefined;
     desktopLastY = undefined;
+    cachedImgWidth = 0;
+    cachedImgHeight = 0;
   }
 
   function attachPanzoom(): void {
@@ -219,6 +224,9 @@ function setupImageViewerGestures(
           cachedContainerWidth = entry.contentRect.width;
           cachedContainerHeight = entry.contentRect.height;
         }
+        // Invalidate image dimension cache (layout may change on resize)
+        cachedImgWidth = 0;
+        cachedImgHeight = 0;
       });
       containerResizeObserver.observe(container);
     }
@@ -236,9 +244,13 @@ function setupImageViewerGestures(
           }
 
           // Maximized: clamp pan so edges stay at container boundaries
-          // Use cached dimensions (updated via ResizeObserver) to avoid stale bounds
-          const imgWidth = elem.offsetWidth;
-          const imgHeight = elem.offsetHeight;
+          // Cache image dimensions on first call (avoids forced reflow on every transform)
+          if (cachedImgWidth === 0) {
+            cachedImgWidth = elem.offsetWidth;
+            cachedImgHeight = elem.offsetHeight;
+          }
+          const imgWidth = cachedImgWidth;
+          const imgHeight = cachedImgHeight;
 
           const scaledWidth = imgWidth * scale;
           const scaledHeight = imgHeight * scale;
