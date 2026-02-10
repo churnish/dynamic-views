@@ -3783,6 +3783,8 @@ body:not(.dynamic-views-image-viewer-disabled)
   top: 0;
   bottom: 0;
   pointer-events: auto;
+  /* Isolate from document: child transform changes won't trigger full-page style recalc */
+  contain: strict;
 }
 
 /* Ensure drag ghost appears above image viewer overlay */

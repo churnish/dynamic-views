@@ -421,7 +421,7 @@ function setupImageViewerGestures(
           }
         } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
           e.preventDefault();
-          e.stopPropagation();
+          e.stopImmediatePropagation();
           if (isMaximized) setMaximized(false);
           panzoomInstance?.reset();
         }
@@ -750,7 +750,7 @@ function openImageViewer(
           cloneEl.classList.toggle("is-maximized");
         } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
           e.preventDefault();
-          e.stopPropagation();
+          e.stopImmediatePropagation();
           cloneEl.classList.remove("is-maximized");
         }
       };
