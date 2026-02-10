@@ -1746,6 +1746,73 @@ function Card({
     );
   };
 
+  const renderCoverWrapper = () => (
+    <div
+      className={
+        imageArray.length > 0
+          ? "card-cover-wrapper"
+          : "card-cover-wrapper card-cover-wrapper-placeholder"
+      }
+    >
+      {imageArray.length > 0 ? (
+        (() => {
+          const maxSlideshow = getSlideshowMaxImages();
+          const slideshowUrls = imageArray.slice(0, maxSlideshow);
+          const shouldShowSlideshow =
+            isSlideshowEnabled() &&
+            (position === "top" || position === "bottom") &&
+            slideshowUrls.length >= 2;
+
+          if (shouldShowSlideshow) {
+            return (
+              <CoverSlideshow
+                imageArray={slideshowUrls}
+                updateLayoutRef={updateLayoutRef}
+                cardPath={card.path}
+                app={app}
+                openFileAction={settings.openFileAction}
+              />
+            );
+          }
+
+          return (
+            <div className="card-cover">
+              <div
+                className="dynamic-views-image-embed"
+                onClick={(e: MouseEvent) => {
+                  handleImageViewerClick(
+                    e,
+                    card.path,
+                    app,
+                    viewerCleanupFns,
+                    viewerClones,
+                    settings.openFileAction,
+                  );
+                }}
+              >
+                <img
+                  src={imageArray[0] || ""}
+                  alt=""
+                  ref={(imgEl: HTMLImageElement | null) =>
+                    handleJsxImageRef(imgEl, updateLayoutRef)
+                  }
+                  onLoad={(e: Event) =>
+                    handleJsxImageLoad(e, updateLayoutRef)
+                  }
+                  onError={(e: Event) =>
+                    handleJsxImageError(e, updateLayoutRef)
+                  }
+                />
+              </div>
+            </div>
+          );
+        })()
+      ) : (
+        <div className="card-cover-placeholder"></div>
+      )}
+    </div>
+  );
+
   // Check if title or subtitle will be rendered
   const hasTitle = !!displayTitle;
   const hasSubtitle = settings.subtitleProperty && card.subtitle;
@@ -2054,101 +2121,12 @@ function Card({
         cursor: settings.openFileAction === "card" ? "pointer" : "default",
       }}
     >
-      {/* Title, Subtitle, and URL button — always wrapped in card-header */}
-      {(hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) && (
-        <div className="card-header">
-          {(hasTitle || hasSubtitle) && (
-            <div className="card-title-block">
-              {hasTitle && renderTitle()}
-              {renderSubtitle()}
-            </div>
-          )}
-          {card.hasValidUrl && card.urlValue && (
-            <span
-              className="card-title-url-icon text-icon-button svg-icon"
-              aria-label={card.urlValue}
-              onClick={(e: MouseEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.open(card.urlValue!, "_blank", "noopener,noreferrer");
-              }}
-              ref={(el: HTMLElement | null) => {
-                if (el) setIcon(el, getUrlIcon());
-              }}
-            />
-          )}
-        </div>
-      )}
+      {/* Cover: before .card-content for top/left position */}
+      {format === "cover" &&
+        (position === "top" || position === "left") &&
+        renderCoverWrapper()}
 
-      {/* Covers: wrapped in card-cover-wrapper for flexbox positioning */}
-      {format === "cover" && (
-        <div
-          className={
-            imageArray.length > 0
-              ? "card-cover-wrapper"
-              : "card-cover-wrapper card-cover-wrapper-placeholder"
-          }
-        >
-          {imageArray.length > 0 ? (
-            (() => {
-              const maxSlideshow = getSlideshowMaxImages();
-              const slideshowUrls = imageArray.slice(0, maxSlideshow);
-              const shouldShowSlideshow =
-                isSlideshowEnabled() &&
-                (position === "top" || position === "bottom") &&
-                slideshowUrls.length >= 2;
-
-              if (shouldShowSlideshow) {
-                return (
-                  <CoverSlideshow
-                    imageArray={slideshowUrls}
-                    updateLayoutRef={updateLayoutRef}
-                    cardPath={card.path}
-                    app={app}
-                    openFileAction={settings.openFileAction}
-                  />
-                );
-              }
-
-              return (
-                <div className="card-cover">
-                  <div
-                    className="dynamic-views-image-embed"
-                    onClick={(e: MouseEvent) => {
-                      handleImageViewerClick(
-                        e,
-                        card.path,
-                        app,
-                        viewerCleanupFns,
-                        viewerClones,
-                        settings.openFileAction,
-                      );
-                    }}
-                  >
-                    <img
-                      src={imageArray[0] || ""}
-                      alt=""
-                      ref={(imgEl: HTMLImageElement | null) =>
-                        handleJsxImageRef(imgEl, updateLayoutRef)
-                      }
-                      onLoad={(e: Event) =>
-                        handleJsxImageLoad(e, updateLayoutRef)
-                      }
-                      onError={(e: Event) =>
-                        handleJsxImageError(e, updateLayoutRef)
-                      }
-                    />
-                  </div>
-                </div>
-              );
-            })()
-          ) : (
-            <div className="card-cover-placeholder"></div>
-          )}
-        </div>
-      )}
-
-      {/* Backdrop: absolute-positioned image fills entire card */}
+      {/* Poster: absolute-positioned image fills entire card */}
       {format === "poster" && imageArray.length > 0 && (
         <div className="card-poster">
           <img
@@ -2177,311 +2155,180 @@ function Card({
         </div>
       )}
 
-      {/* Content container - only render if it will have children */}
-      {/* Always create for thumbnail format to allow placeholder rendering */}
-      {(card.textPreview || format === "thumbnail") && (
-        <div className="card-content">
-          {card.textPreview && (
-            <div className="card-text-preview-wrapper">
-              <div className="card-text-preview">{card.textPreview}</div>
-            </div>
-          )}
-          {/* Thumbnail (all positions now inside card-content) */}
-          {format === "thumbnail" &&
-            (imageArray.length > 0 ? (
-              <div
-                className={`card-thumbnail ${enableScrubbing ? "multi-image" : ""}`}
-                onMouseMove={
-                  enableScrubbing
-                    ? (e: MouseEvent) => {
-                        const rect = (
-                          e.currentTarget as HTMLElement
-                        ).getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const section = Math.floor(
-                          (x / rect.width) * imageArray.length,
-                        );
-                        const newIndex = Math.max(
-                          0,
-                          Math.min(section, imageArray.length - 1),
-                        );
-                        const rawUrl = imageArray[newIndex];
-                        const imgEl = (
-                          e.currentTarget as HTMLElement
-                        ).querySelector("img");
-                        if (imgEl) {
-                          imgEl.removeClass("dynamic-views-hidden");
-                          if (imgEl.src !== rawUrl) {
-                            imgEl.src = rawUrl;
-                          }
-                        }
-                      }
-                    : undefined
-                }
-                onMouseLeave={
-                  enableScrubbing
-                    ? (e: MouseEvent) => {
-                        const firstUrl = imageArray[0];
-                        if (!firstUrl) return;
-                        const imgEl = (
-                          e.currentTarget as HTMLElement
-                        ).querySelector("img");
-                        if (imgEl && firstUrl) {
-                          // First image is pre-validated, always show it
-                          imgEl.removeClass("dynamic-views-hidden");
-                          imgEl.src = firstUrl;
-                        }
-                      }
-                    : undefined
-                }
-              >
-                <div
-                  className="dynamic-views-image-embed"
-                  onClick={(e: MouseEvent) => {
-                    handleImageViewerClick(
-                      e,
-                      card.path,
-                      app,
-                      viewerCleanupFns,
-                      viewerClones,
-                      settings.openFileAction,
-                    );
-                  }}
-                >
-                  <img
-                    src={imageArray[0] || ""}
-                    alt=""
-                    ref={(imgEl: HTMLImageElement | null) => {
-                      handleJsxImageRef(imgEl, updateLayoutRef);
-                      // Multi-image fallback: use AbortController for proper cleanup
-                      type ImgWithController = HTMLImageElement & {
-                        _errorController?: AbortController;
-                      };
-                      // Always abort existing controller on re-render or unmount
-                      if (imgEl) {
-                        const existingController = (imgEl as ImgWithController)
-                          ._errorController;
-                        if (existingController) existingController.abort();
-                      }
-                      // Setup new controller only for multi-image arrays
-                      if (imgEl && imageArray.length > 1) {
-                        const controller = new AbortController();
-                        (imgEl as ImgWithController)._errorController =
-                          controller;
-
-                        imgEl.addEventListener(
-                          "error",
-                          () => {
-                            if (controller.signal.aborted) return;
-                            // Find current position by URL match (handles scrubbing)
-                            const failedSrc = imgEl.src;
-                            let startIndex = imageArray.findIndex(
-                              (url) => url === failedSrc,
-                            );
-                            if (startIndex === -1) startIndex = 0;
-                            // Try next URL (pre-validated, should not fail)
-                            const nextIndex = startIndex + 1;
-                            if (nextIndex < imageArray.length) {
-                              // Guard before DOM mutation
-                              if (
-                                controller.signal.aborted ||
-                                !imgEl.isConnected
-                              )
-                                return;
-                              imgEl.removeClass("dynamic-views-hidden");
-                              imgEl.src = imageArray[nextIndex];
-                              return;
-                            }
-                            // All images failed - complete cleanup with double rAF
-                            const cardEl = imgEl.closest(
-                              ".card",
-                            ) as HTMLElement;
-                            if (
-                              cardEl &&
-                              !cardEl.classList.contains("cover-ready")
-                            ) {
-                              requestAnimationFrame(() => {
-                                if (
-                                  controller.signal.aborted ||
-                                  !cardEl.isConnected ||
-                                  !imgEl.isConnected
-                                )
-                                  return;
-                                requestAnimationFrame(() => {
-                                  if (
-                                    controller.signal.aborted ||
-                                    !cardEl.isConnected ||
-                                    !imgEl.isConnected
-                                  )
-                                    return;
-                                  imgEl.addClass("dynamic-views-hidden");
-                                  cardEl.style.setProperty(
-                                    "--actual-aspect-ratio",
-                                    DEFAULT_ASPECT_RATIO.toString(),
-                                  );
-                                  cardEl.classList.add("cover-ready");
-                                  if (updateLayoutRef.current)
-                                    updateLayoutRef.current();
-                                });
-                              });
-                            }
-                          },
-                          { signal: controller.signal },
-                        );
-                      } else if (imgEl) {
-                        // Abort any existing controller before clearing reference
-                        const existingCtrl = (imgEl as ImgWithController)
-                          ._errorController;
-                        if (existingCtrl) existingCtrl.abort();
-                        delete (imgEl as ImgWithController)._errorController;
-                      }
-                    }}
-                    onLoad={(e: Event) =>
-                      handleJsxImageLoad(e, updateLayoutRef)
-                    }
-                    onError={
-                      imageArray.length <= 1
-                        ? (e: Event) => handleJsxImageError(e, updateLayoutRef)
-                        : undefined
-                    }
-                  />
-                </div>
+      {/* Universal content wrapper: header + body */}
+      <div className="card-content">
+        {/* Title, Subtitle, and URL button */}
+        {(hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) && (
+          <div className="card-header">
+            {(hasTitle || hasSubtitle) && (
+              <div className="card-title-block">
+                {hasTitle && renderTitle()}
+                {renderSubtitle()}
               </div>
-            ) : (
-              // Always render placeholder when no image - CSS controls visibility
-              <div className="card-thumbnail-placeholder"></div>
-            ))}
-        </div>
-      )}
+            )}
+            {card.hasValidUrl && card.urlValue && (
+              <span
+                className="card-title-url-icon text-icon-button svg-icon"
+                aria-label={card.urlValue}
+                onClick={(e: MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open(card.urlValue!, "_blank", "noopener,noreferrer");
+                }}
+                ref={(el: HTMLElement | null) => {
+                  if (el) setIcon(el, getUrlIcon());
+                }}
+              />
+            )}
+          </div>
+        )}
 
-      {/* Properties - dynamic rendering with pairing/positioning */}
-      {(() => {
-        const props = card.properties;
-        if (!props || props.length === 0) return null;
+        {/* Universal card-body: properties + previews */}
+        <div className="card-body">
+          {/* Properties and previews in correct DOM order */}
+          {(() => {
+            const props = card.properties;
+            const hideEmptyMode = getHideEmptyMode();
+            const hideMissing = shouldHideMissingProperties();
+            const { propertyLabels } = settings;
 
-        const hideEmptyMode = getHideEmptyMode();
-        const hideMissing = shouldHideMissingProperties();
-        const { propertyLabels } = settings;
+            // Parse override lists for O(1) lookup
+            const unpairSet = parsePropertyList(
+              settings.invertPropertyPairing,
+            );
+            const invertPositionSet = parsePropertyList(
+              settings.invertPropertyPosition,
+            );
 
-        // Parse override lists for O(1) lookup
-        const unpairSet = parsePropertyList(settings.invertPropertyPairing);
-        const invertPositionSet = parsePropertyList(
-          settings.invertPropertyPosition,
-        );
+            // Group properties into sets based on pairing settings
+            interface PropertySet {
+              props: Array<{
+                name: string;
+                value: unknown;
+                fieldIndex: number;
+              }>;
+              paired: boolean;
+            }
 
-        // Group properties into sets based on pairing settings
-        interface PropertySet {
-          props: Array<{
-            name: string;
-            value: unknown;
-            fieldIndex: number; // 1-based position in original order
-          }>;
-          paired: boolean;
-        }
+            // Build top/bottom property elements
+            const topElements: JSX.Element[] = [];
+            const bottomElements: JSX.Element[] = [];
 
-        // Pre-filter: exclude properties that will be collapsed
-        const visibleProps: Array<{
-          name: string;
-          value: unknown;
-          fieldIndex: number;
-        }> = [];
-        for (let idx = 0; idx < props.length; idx++) {
-          const prop = props[idx];
-          if (
-            shouldCollapseFieldDatacore(
-              prop.name || undefined,
-              prop.value,
-              propertyLabels,
-              hideEmptyMode,
-              hideMissing,
-            )
-          ) {
-            continue;
-          }
-          visibleProps.push({ ...prop, fieldIndex: idx + 1 });
-        }
+            if (props && props.length > 0) {
+              // Pre-filter: exclude properties that will be collapsed
+              const visibleProps: Array<{
+                name: string;
+                value: unknown;
+                fieldIndex: number;
+              }> = [];
+              for (let idx = 0; idx < props.length; idx++) {
+                const prop = props[idx];
+                if (
+                  shouldCollapseFieldDatacore(
+                    prop.name || undefined,
+                    prop.value,
+                    propertyLabels,
+                    hideEmptyMode,
+                    hideMissing,
+                  )
+                ) {
+                  continue;
+                }
+                visibleProps.push({ ...prop, fieldIndex: idx + 1 });
+              }
 
-        // Pre-compute pairs when pairProperties OFF
-        const invertPairs = settings.pairProperties
-          ? null
-          : computeInvertPairs(props, unpairSet);
+              // Pre-compute pairs when pairProperties OFF
+              const invertPairs = settings.pairProperties
+                ? null
+                : computeInvertPairs(props, unpairSet);
 
-        const sets: PropertySet[] = [];
-        let i = 0;
-        while (i < visibleProps.length) {
-          const current = visibleProps[i];
-          const next = i + 1 < visibleProps.length ? visibleProps[i + 1] : null;
+              const sets: PropertySet[] = [];
+              let i = 0;
+              while (i < visibleProps.length) {
+                const current = visibleProps[i];
+                const next =
+                  i + 1 < visibleProps.length ? visibleProps[i + 1] : null;
 
-          let shouldPair = false;
-          if (settings.pairProperties) {
-            // ON: pair unless either inverted
-            shouldPair =
-              next !== null &&
-              !unpairSet.has(current.name) &&
-              !unpairSet.has(next.name);
-          } else if (invertPairs) {
-            // OFF: check pre-computed pairs (uses original indices)
-            shouldPair =
-              next !== null &&
-              invertPairs.get(current.fieldIndex - 1) === next.fieldIndex - 1;
-          }
+                let shouldPair = false;
+                if (settings.pairProperties) {
+                  shouldPair =
+                    next !== null &&
+                    !unpairSet.has(current.name) &&
+                    !unpairSet.has(next.name);
+                } else if (invertPairs) {
+                  shouldPair =
+                    next !== null &&
+                    invertPairs.get(current.fieldIndex - 1) ===
+                      next.fieldIndex - 1;
+                }
 
-          if (shouldPair && next) {
-            sets.push({
-              props: [current, next],
-              paired: true,
-            });
-            i += 2;
-          } else {
-            sets.push({
-              props: [current],
-              paired: false,
-            });
-            i += 1;
-          }
-        }
+                if (shouldPair && next) {
+                  sets.push({ props: [current, next], paired: true });
+                  i += 2;
+                } else {
+                  sets.push({ props: [current], paired: false });
+                  i += 1;
+                }
+              }
 
-        // Build elements with position assignment
-        // topElements/bottomElements contain either pair wrappers or individual property divs
-        const topElements: JSX.Element[] = [];
-        const bottomElements: JSX.Element[] = [];
-        let topPairNum = 0;
-        let bottomPairNum = 0;
+              let topPairNum = 0;
+              let bottomPairNum = 0;
 
-        sets.forEach((set, setIdx) => {
-          // Check if set has content
-          const showConfiguredProps = propertyLabels !== "hide" || !hideMissing;
-          const hasContent = set.props.some((p) =>
-            showConfiguredProps
-              ? p.name !== ""
-              : p.value !== null && p.value !== undefined,
-          );
-          if (!hasContent) return;
+              sets.forEach((set, setIdx) => {
+                const showConfiguredProps =
+                  propertyLabels !== "hide" || !hideMissing;
+                const hasContent = set.props.some((p) =>
+                  showConfiguredProps
+                    ? p.name !== ""
+                    : p.value !== null && p.value !== undefined,
+                );
+                if (!hasContent) return;
 
-          // Determine position: check if any property in this set is in the invert position list
-          const anyInvertedPosition = set.props.some((p) =>
-            invertPositionSet.has(p.name),
-          );
-          const isAbove = settings.showPropertiesAbove
-            ? !anyInvertedPosition
-            : anyInvertedPosition;
+                const anyInvertedPosition = set.props.some((p) =>
+                  invertPositionSet.has(p.name),
+                );
+                const isAbove = settings.showPropertiesAbove
+                  ? !anyInvertedPosition
+                  : anyInvertedPosition;
 
-          if (set.paired) {
-            // Paired: create wrapper with pair-left/pair-right children
-            const pairNum = isAbove
-              ? ++topPairNum
-              : topPairNum + ++bottomPairNum;
-            const pairElement = (
-              <div
-                key={`pair-${setIdx}`}
-                className={`property-pair property-pair-${pairNum}`}
-              >
-                {set.props.map((p, i) => {
-                  const posClass = i === 0 ? "pair-left" : "pair-right";
-                  return (
+                if (set.paired) {
+                  const pairNum = isAbove
+                    ? ++topPairNum
+                    : topPairNum + ++bottomPairNum;
+                  const pairElement = (
+                    <div
+                      key={`pair-${setIdx}`}
+                      className={`property-pair property-pair-${pairNum}`}
+                    >
+                      {set.props.map((p, pi) => {
+                        const posClass = pi === 0 ? "pair-left" : "pair-right";
+                        return (
+                          <div
+                            key={`field-${p.fieldIndex}`}
+                            className={`property property-${p.fieldIndex} ${posClass}`}
+                          >
+                            {p.name &&
+                              renderPropertyContent(
+                                p.name,
+                                card,
+                                (p.value as string | null) ?? null,
+                                timeIcon,
+                                settings,
+                                app,
+                              )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                  if (isAbove) topElements.push(pairElement);
+                  else bottomElements.push(pairElement);
+                } else {
+                  const p = set.props[0];
+                  const fieldElement = (
                     <div
                       key={`field-${p.fieldIndex}`}
-                      className={`property property-${p.fieldIndex} ${posClass}`}
+                      className={`property property-${p.fieldIndex}`}
                     >
                       {p.name &&
                         renderPropertyContent(
@@ -2494,53 +2341,215 @@ function Card({
                         )}
                     </div>
                   );
-                })}
-              </div>
-            );
-            if (isAbove) topElements.push(pairElement);
-            else bottomElements.push(pairElement);
-          } else {
-            // Unpaired: direct element, no wrapper
-            const p = set.props[0];
-            const fieldElement = (
-              <div
-                key={`field-${p.fieldIndex}`}
-                className={`property property-${p.fieldIndex}`}
-              >
-                {p.name &&
-                  renderPropertyContent(
-                    p.name,
-                    card,
-                    (p.value as string | null) ?? null,
-                    timeIcon,
-                    settings,
-                    app,
-                  )}
-              </div>
-            );
-            if (isAbove) topElements.push(fieldElement);
-            else bottomElements.push(fieldElement);
-          }
-        });
+                  if (isAbove) topElements.push(fieldElement);
+                  else bottomElements.push(fieldElement);
+                }
+              });
+            }
 
-        if (topElements.length === 0 && bottomElements.length === 0)
-          return null;
+            // DOM order: properties-top → previews → properties-bottom
+            return (
+              <>
+                {topElements.length > 0 && (
+                  <div className="card-properties card-properties-top">
+                    {topElements}
+                  </div>
+                )}
 
-        return (
-          <>
-            {topElements.length > 0 && (
-              <div className="card-properties card-properties-top">
-                {topElements}
-              </div>
-            )}
-            {bottomElements.length > 0 && (
-              <div className="card-properties card-properties-bottom">
-                {bottomElements}
-              </div>
-            )}
-          </>
-        );
-      })()}
+                {/* Previews container (text preview + thumbnail) */}
+                {(card.textPreview || format === "thumbnail") && (
+                  <div className="card-previews">
+                    {card.textPreview && (
+                      <div className="card-text-preview-wrapper">
+                        <div className="card-text-preview">
+                          {card.textPreview}
+                        </div>
+                      </div>
+                    )}
+                    {/* Thumbnail */}
+                    {format === "thumbnail" &&
+                      (imageArray.length > 0 ? (
+                        <div
+                          className={`card-thumbnail ${enableScrubbing ? "multi-image" : ""}`}
+                          onMouseMove={
+                            enableScrubbing
+                              ? (e: MouseEvent) => {
+                                  const rect = (
+                                    e.currentTarget as HTMLElement
+                                  ).getBoundingClientRect();
+                                  const x = e.clientX - rect.left;
+                                  const section = Math.floor(
+                                    (x / rect.width) * imageArray.length,
+                                  );
+                                  const newIndex = Math.max(
+                                    0,
+                                    Math.min(section, imageArray.length - 1),
+                                  );
+                                  const rawUrl = imageArray[newIndex];
+                                  const imgEl = (
+                                    e.currentTarget as HTMLElement
+                                  ).querySelector("img");
+                                  if (imgEl) {
+                                    imgEl.removeClass("dynamic-views-hidden");
+                                    if (imgEl.src !== rawUrl) {
+                                      imgEl.src = rawUrl;
+                                    }
+                                  }
+                                }
+                              : undefined
+                          }
+                          onMouseLeave={
+                            enableScrubbing
+                              ? (e: MouseEvent) => {
+                                  const firstUrl = imageArray[0];
+                                  if (!firstUrl) return;
+                                  const imgEl = (
+                                    e.currentTarget as HTMLElement
+                                  ).querySelector("img");
+                                  if (imgEl && firstUrl) {
+                                    imgEl.removeClass("dynamic-views-hidden");
+                                    imgEl.src = firstUrl;
+                                  }
+                                }
+                              : undefined
+                          }
+                        >
+                          <div
+                            className="dynamic-views-image-embed"
+                            onClick={(e: MouseEvent) => {
+                              handleImageViewerClick(
+                                e,
+                                card.path,
+                                app,
+                                viewerCleanupFns,
+                                viewerClones,
+                                settings.openFileAction,
+                              );
+                            }}
+                          >
+                            <img
+                              src={imageArray[0] || ""}
+                              alt=""
+                              ref={(imgEl: HTMLImageElement | null) => {
+                                handleJsxImageRef(imgEl, updateLayoutRef);
+                                type ImgWithController = HTMLImageElement & {
+                                  _errorController?: AbortController;
+                                };
+                                if (imgEl) {
+                                  const existingController = (
+                                    imgEl as ImgWithController
+                                  )._errorController;
+                                  if (existingController)
+                                    existingController.abort();
+                                }
+                                if (imgEl && imageArray.length > 1) {
+                                  const controller = new AbortController();
+                                  (imgEl as ImgWithController)._errorController =
+                                    controller;
+
+                                  imgEl.addEventListener(
+                                    "error",
+                                    () => {
+                                      if (controller.signal.aborted) return;
+                                      const failedSrc = imgEl.src;
+                                      let startIndex = imageArray.findIndex(
+                                        (url) => url === failedSrc,
+                                      );
+                                      if (startIndex === -1) startIndex = 0;
+                                      const nextIndex = startIndex + 1;
+                                      if (nextIndex < imageArray.length) {
+                                        if (
+                                          controller.signal.aborted ||
+                                          !imgEl.isConnected
+                                        )
+                                          return;
+                                        imgEl.removeClass(
+                                          "dynamic-views-hidden",
+                                        );
+                                        imgEl.src = imageArray[nextIndex];
+                                        return;
+                                      }
+                                      const cardEl = imgEl.closest(
+                                        ".card",
+                                      ) as HTMLElement;
+                                      if (
+                                        cardEl &&
+                                        !cardEl.classList.contains(
+                                          "cover-ready",
+                                        )
+                                      ) {
+                                        requestAnimationFrame(() => {
+                                          if (
+                                            controller.signal.aborted ||
+                                            !cardEl.isConnected ||
+                                            !imgEl.isConnected
+                                          )
+                                            return;
+                                          requestAnimationFrame(() => {
+                                            if (
+                                              controller.signal.aborted ||
+                                              !cardEl.isConnected ||
+                                              !imgEl.isConnected
+                                            )
+                                              return;
+                                            imgEl.addClass(
+                                              "dynamic-views-hidden",
+                                            );
+                                            cardEl.style.setProperty(
+                                              "--actual-aspect-ratio",
+                                              DEFAULT_ASPECT_RATIO.toString(),
+                                            );
+                                            cardEl.classList.add("cover-ready");
+                                            if (updateLayoutRef.current)
+                                              updateLayoutRef.current();
+                                          });
+                                        });
+                                      }
+                                    },
+                                    { signal: controller.signal },
+                                  );
+                                } else if (imgEl) {
+                                  const existingCtrl = (
+                                    imgEl as ImgWithController
+                                  )._errorController;
+                                  if (existingCtrl) existingCtrl.abort();
+                                  delete (imgEl as ImgWithController)
+                                    ._errorController;
+                                }
+                              }}
+                              onLoad={(e: Event) =>
+                                handleJsxImageLoad(e, updateLayoutRef)
+                              }
+                              onError={
+                                imageArray.length <= 1
+                                  ? (e: Event) =>
+                                      handleJsxImageError(e, updateLayoutRef)
+                                  : undefined
+                              }
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="card-thumbnail-placeholder"></div>
+                      ))}
+                  </div>
+                )}
+
+                {bottomElements.length > 0 && (
+                  <div className="card-properties card-properties-bottom">
+                    {bottomElements}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* Cover: after .card-content for bottom/right position */}
+      {format === "cover" &&
+        (position === "bottom" || position === "right") &&
+        renderCoverWrapper()}
     </div>
   );
 }
