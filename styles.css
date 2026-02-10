@@ -2759,7 +2759,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
 /* Border below sticky group headers when stuck — spans full pane width */
 @container dynamic-views-group-heading scroll-state(stuck: top) {
   .bases-group-count::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: calc(-1 * var(--bases-view-padding));

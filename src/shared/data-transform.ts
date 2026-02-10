@@ -499,6 +499,11 @@ export function basesEntryToCardData(
   };
 
   // Resolve properties from config.getOrder() visible list
+  // Skip leading properties rendered as title/subtitle
+  const displayProperties = visibleProperties.slice(
+    settings._skipLeadingProperties ?? 0,
+  );
+
   // Include subtitle properties for smart timestamp check
   const subtitlePropsList =
     settings.subtitleProperty
@@ -506,14 +511,14 @@ export function basesEntryToCardData(
       .map((p) => p.trim())
       .filter((p) => p) || [];
 
-  let props = [...visibleProperties, ...subtitlePropsList];
+  let props = [...displayProperties, ...subtitlePropsList];
 
   // Apply smart timestamp logic (includes subtitle fallbacks)
   props = applySmartTimestamp(props, sortMethod, settings);
 
   // Extract processed subtitle props back out
-  const processedSubtitleProps = props.slice(visibleProperties.length);
-  props = props.slice(0, visibleProperties.length);
+  const processedSubtitleProps = props.slice(displayProperties.length);
+  props = props.slice(0, displayProperties.length);
 
   // Deduplicate (earlier properties take priority)
   const seen = new Set<string>();

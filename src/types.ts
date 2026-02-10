@@ -27,6 +27,9 @@ export interface ViewDefaults {
   titleProperty: string;
   titleLines: number;
   subtitleProperty: string;
+  // Position-based title/subtitle (Bases only; false = no-op for Datacore)
+  formatFirstAsTitle: boolean;
+  formatSecondAsSubtitle: boolean;
   // Text preview
   textPreviewProperty: string;
   fallbackToContent: boolean;
@@ -62,8 +65,8 @@ export interface DatacoreDefaults {
 
 /** Bases-only defaults (overrides VIEW_DEFAULTS for Bases views) */
 export interface BasesDefaults {
-  titleProperty: string;
-  subtitleProperty: string;
+  formatFirstAsTitle: boolean;
+  formatSecondAsSubtitle: boolean;
   propertyLabels: "hide" | "inline" | "above";
 }
 
@@ -79,6 +82,8 @@ export type ResolvedSettings = PluginSettings &
 export type BasesResolvedSettings = PluginSettings &
   ViewDefaults & {
     _displayNameMap?: Record<string, string>;
+    /** Count of leading getOrder() properties rendered as title/subtitle (0–2) */
+    _skipLeadingProperties?: number;
   };
 
 /** Bases-only UI state (persisted per .base file by view ID) */

@@ -74,11 +74,10 @@ export function getBasesViewOptions(
       displayName: "Title",
       items: [
         {
-          type: "text",
-          displayName: "Title property",
-          key: "titleProperty",
-          placeholder: "Comma-separated if multiple",
-          default: d.titleProperty,
+          type: "toggle",
+          displayName: "Format first property as title",
+          key: "formatFirstAsTitle",
+          default: d.formatFirstAsTitle,
         },
         {
           type: "slider",
@@ -89,14 +88,17 @@ export function getBasesViewOptions(
           step: 1,
           default: d.titleLines,
           shouldHide: (config: BasesConfig) =>
-            !(config.get("titleProperty") ?? d.titleProperty),
+            (config.get("formatFirstAsTitle") ?? d.formatFirstAsTitle) ===
+            false,
         },
         {
-          type: "text",
-          displayName: "Subtitle property",
-          key: "subtitleProperty",
-          placeholder: "Comma-separated if multiple",
-          default: d.subtitleProperty,
+          type: "toggle",
+          displayName: "Format second property as subtitle",
+          key: "formatSecondAsSubtitle",
+          default: d.formatSecondAsSubtitle,
+          shouldHide: (config: BasesConfig) =>
+            (config.get("formatFirstAsTitle") ?? d.formatFirstAsTitle) ===
+            false,
         },
       ],
     },
@@ -391,13 +393,37 @@ export function readBasesSettings(
       : fallback;
   };
 
+  // Position-based title/subtitle: derive from getOrder() positions
+  const formatFirstAsTitle = getBool(
+    "formatFirstAsTitle",
+    defaults.formatFirstAsTitle,
+  );
+  const formatSecondAsSubtitle = getBool(
+    "formatSecondAsSubtitle",
+    defaults.formatSecondAsSubtitle,
+  );
+  const order = config.getOrder();
+  let titleProperty = "";
+  let subtitleProperty = "";
+  let _skipLeadingProperties = 0;
+  if (formatFirstAsTitle && order[0]) {
+    titleProperty = order[0];
+    _skipLeadingProperties = 1;
+    if (formatSecondAsSubtitle && order[1]) {
+      subtitleProperty = order[1];
+      _skipLeadingProperties = 2;
+    }
+  }
+
   // Read ViewDefaults from Bases config
   // Note: propertyLabels and imageFormat use previousSettings for stale config fallback
   const viewSettings: ViewDefaults = {
     cardSize: getNumber("cardSize", defaults.cardSize),
-    titleProperty: getString("titleProperty", defaults.titleProperty),
+    titleProperty,
     titleLines: getNumber("titleLines", defaults.titleLines),
-    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
+    subtitleProperty,
+    formatFirstAsTitle,
+    formatSecondAsSubtitle,
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,
@@ -487,10 +513,11 @@ export function readBasesSettings(
     cssclasses: getString("cssclasses", defaults.cssclasses),
   };
 
-  // Merge: pluginSettings + config-derived ViewDefaults
+  // Merge: pluginSettings + config-derived ViewDefaults + computed fields
   return {
     ...pluginSettings,
     ...viewSettings,
+    _skipLeadingProperties,
   };
 }
 
@@ -530,9 +557,17 @@ export function extractBasesTemplate(
   // Extract all values with type coercion
   const full: ViewDefaults = {
     cardSize: getNumber("cardSize", defaults.cardSize),
-    titleProperty: getString("titleProperty", defaults.titleProperty),
+    titleProperty: defaults.titleProperty,
     titleLines: getNumber("titleLines", defaults.titleLines),
-    subtitleProperty: getString("subtitleProperty", defaults.subtitleProperty),
+    subtitleProperty: defaults.subtitleProperty,
+    formatFirstAsTitle: getBool(
+      "formatFirstAsTitle",
+      defaults.formatFirstAsTitle,
+    ),
+    formatSecondAsSubtitle: getBool(
+      "formatSecondAsSubtitle",
+      defaults.formatSecondAsSubtitle,
+    ),
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,

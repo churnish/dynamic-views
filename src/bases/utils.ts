@@ -183,6 +183,15 @@ export async function cleanupBaseFile(
         }
       }
 
+      // Delete stale titleProperty/subtitleProperty — Bases views now use
+      // position-based formatFirstAsTitle/formatSecondAsSubtitle toggles
+      for (const staleKey of ["titleProperty", "subtitleProperty"]) {
+        if (staleKey in viewObj) {
+          delete viewObj[staleKey];
+          changeCount++;
+        }
+      }
+
       // Remove keys that match VIEW_DEFAULTS (sparse YAML).
       // Skip keys where BASES_DEFAULTS overrides VIEW_DEFAULTS — for those,
       // the VIEW_DEFAULTS value is a meaningful non-default choice in Bases context.

@@ -27,6 +27,9 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   titleProperty: "file.name",
   titleLines: 2,
   subtitleProperty: "file.folder",
+  // Position-based title/subtitle (Bases only; false = no-op for Datacore)
+  formatFirstAsTitle: false,
+  formatSecondAsSubtitle: false,
   // Text preview
   textPreviewProperty: "",
   fallbackToContent: true,
@@ -61,8 +64,8 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
 };
 
 export const BASES_DEFAULTS: BasesDefaults = {
-  titleProperty: "file base name",
-  subtitleProperty: "folder",
+  formatFirstAsTitle: true,
+  formatSecondAsSubtitle: true,
   propertyLabels: "inline",
 };
 
