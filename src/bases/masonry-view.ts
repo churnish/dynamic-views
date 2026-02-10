@@ -83,6 +83,7 @@ import type {
   FocusState,
 } from "../types";
 import { VIEW_DEFAULTS } from "../constants";
+import { setupContentVisibility } from "../shared/content-visibility";
 import { showTipOnce } from "../utils/tips";
 
 // Extend Obsidian types
@@ -166,6 +167,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private containerRef: { current: HTMLElement | null } = { current: null };
   private swipeAbortController: AbortController | null = null;
   private previousDisplayedCount: number = 0;
+  private contentVisibility: ReturnType<typeof setupContentVisibility> | null =
+    null;
   private layoutResizeObserver: ResizeObserver | null = null;
   private resizeRafId: number | null = null;
   private resizeThrottleTimeout: number | null = null;
@@ -1503,20 +1506,28 @@ export class DynamicViewsMasonryView extends BasesView {
     index: number,
     settings: BasesResolvedSettings,
   ): HTMLElement {
-    return this.cardRenderer.renderCard(container, card, entry, settings, {
-      index,
-      focusableCardIndex: this.focusState.cardIndex,
-      containerRef: this.containerRef,
-      onFocusChange: (newIndex: number) => {
-        this.focusState.cardIndex = newIndex;
+    const cardEl = this.cardRenderer.renderCard(
+      container,
+      card,
+      entry,
+      settings,
+      {
+        index,
+        focusableCardIndex: this.focusState.cardIndex,
+        containerRef: this.containerRef,
+        onFocusChange: (newIndex: number) => {
+          this.focusState.cardIndex = newIndex;
+        },
+        onHoverStart: (el: HTMLElement) => {
+          this.focusState.hoveredEl = el;
+        },
+        onHoverEnd: () => {
+          this.focusState.hoveredEl = null;
+        },
       },
-      onHoverStart: (el: HTMLElement) => {
-        this.focusState.hoveredEl = el;
-      },
-      onHoverEnd: () => {
-        this.focusState.hoveredEl = null;
-      },
-    });
+    );
+    this.contentVisibility?.observe(cardEl);
+    return cardEl;
   }
 
   /** Update only changed cards in-place without full re-render */
@@ -2001,6 +2012,17 @@ export class DynamicViewsMasonryView extends BasesView {
     settings?: BasesResolvedSettings,
   ): void {
     const scrollContainer = this.scrollEl;
+
+    // Recreate content-visibility observer (old IO entries auto-cleaned on DOM wipe)
+    this.contentVisibility?.disconnect();
+    this.contentVisibility = setupContentVisibility(scrollContainer);
+    // Observe all cards already rendered (initial render happens before this call)
+    for (const card of this.containerEl.querySelectorAll<HTMLElement>(
+      ".card",
+    )) {
+      this.contentVisibility.observe(card);
+    }
+
     // Clean up existing listeners and timeouts (don't use this.register() since this method is called multiple times)
     if (this.scrollThrottle.listener) {
       scrollContainer.removeEventListener(
@@ -2160,6 +2182,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     // Clean up property measurement observer
     cleanupVisibilityObserver();
+    this.contentVisibility?.disconnect();
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }

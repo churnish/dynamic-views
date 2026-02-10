@@ -548,6 +548,19 @@ settings:
                 label: Disable
                 value: dynamic-views-poster-theme-disable
     -
+        id: dynamic-views-poster-overlay-style
+        title: Overlay style
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-overlay-gradient
+        options:
+            -
+                label: Gradient
+                value: dynamic-views-poster-overlay-gradient
+            -
+                label: Flat
+                value: dynamic-views-poster-overlay-flat
+    -
         id: dynamic-views-poster-overlay-light
         title: Light overlay strength
         description: Opacity of the light overlay
@@ -574,6 +587,10 @@ settings:
         max: 20
         step: 1
         format: px
+    -
+        id: dynamic-views-poster-disable-raise
+        title: Disable raise animation
+        type: class-toggle
     -
         id: properties-heading
         title: Properties
@@ -2611,9 +2628,6 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   height: 100%;
   min-width: 0;
   overflow: hidden;
-  /* Skip rendering off-screen cards to reduce DOM rendering cost */
-  content-visibility: auto;
-  contain-intrinsic-height: auto 300px;
 }
 
 /* Card element ordering for flexbox layout
@@ -3046,18 +3060,20 @@ body .dynamic-views .card:focus-visible::after {
   left: var(--masonry-left, 0);
   top: var(--masonry-top, 0);
   contain: layout style paint;
-  /* Skip rendering off-screen cards to reduce DOM rendering cost */
-  content-visibility: auto;
-  contain-intrinsic-height: auto 300px;
   transition:
     opacity var(--anim-duration-superfast, 70ms) ease,
     box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
     background-color var(--anim-duration-fast, 140ms) ease;
 }
 
-/* Force content rendering during masonry height measurement (content-visibility: auto
-   makes off-screen cards return stale offsetHeight after width changes on resize) */
-.masonry-measuring .card.masonry-positioned {
+/* Cards outside scrollport margin: skip rendering to reduce DOM cost */
+.dynamic-views .card.content-hidden {
+  content-visibility: hidden;
+  contain-intrinsic-height: auto 300px;
+}
+
+/* Force content rendering during masonry height measurement */
+.masonry-measuring .card.content-hidden {
   content-visibility: visible;
 }
 
@@ -5366,8 +5382,132 @@ body:is(
   transition: opacity var(--anim-duration-moderate, 300ms); /* opacity, not background — background toggle causes overlay flicker */
 }
 
-/* Poster overlay theme: Match theme (default — also applies when no theme class set) */
+/* Poster overlay: Gradient style (default — also applies when no style class set) */
+
+/* Gradient + Match theme (dark) */
 body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  ):is(
+    .dynamic-views-poster-theme-match,
+    :not(
+      .dynamic-views-poster-theme-light,
+      .dynamic-views-poster-theme-dark,
+      .dynamic-views-poster-theme-disable
+    )
+  ).theme-dark
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)) 0%,
+    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 0.43%)) 50%,
+    rgb(0 0 0 / 0%) 100%
+  );
+}
+
+/* Gradient + Match theme (light) */
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  ):is(
+    .dynamic-views-poster-theme-match,
+    :not(
+      .dynamic-views-poster-theme-light,
+      .dynamic-views-poster-theme-dark,
+      .dynamic-views-poster-theme-disable
+    )
+  ).theme-light
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: linear-gradient(
+    to top,
+    rgb(255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%))
+      0%,
+    rgb(
+        255 255 255 /
+          calc(var(--dynamic-views-poster-overlay-light, 70) * 0.43%)
+      )
+      50%,
+    rgb(255 255 255 / 0%) 100%
+  );
+}
+
+/* Gradient + Light (forced) */
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  ).dynamic-views-poster-theme-light
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: linear-gradient(
+    to top,
+    rgb(255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%))
+      0%,
+    rgb(
+        255 255 255 /
+          calc(var(--dynamic-views-poster-overlay-light, 70) * 0.43%)
+      )
+      50%,
+    rgb(255 255 255 / 0%) 100%
+  );
+}
+
+/* Gradient + Dark (forced) */
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  ).dynamic-views-poster-theme-dark
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)) 0%,
+    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 0.43%)) 50%,
+    rgb(0 0 0 / 0%) 100%
+  );
+}
+
+/* Gradient: bottom-align content where tint provides contrast */
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  )
+  .dynamic-views
+  .card.image-format-poster {
+  justify-content: flex-end;
+}
+
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  )
+  .dynamic-views
+  .card.image-format-poster
+  .card-body {
+  flex: 0 1 auto;
+  max-height: 60%;
+}
+
+/* Gradient: disable backdrop blur (incompatible with gradient — blur would show through transparent top) */
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  )
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  backdrop-filter: none;
+}
+
+/* Poster overlay: Flat style */
+
+/* Flat + Match theme (dark) */
+body.dynamic-views-poster-overlay-flat:is(
     .dynamic-views-poster-theme-match,
     :not(
       .dynamic-views-poster-theme-light,
@@ -5383,7 +5523,8 @@ body:is(
   );
 }
 
-body:is(
+/* Flat + Match theme (light) */
+body.dynamic-views-poster-overlay-flat:is(
     .dynamic-views-poster-theme-match,
     :not(
       .dynamic-views-poster-theme-light,
@@ -5399,8 +5540,8 @@ body:is(
   );
 }
 
-/* Poster overlay theme: Light (forced) */
-body.dynamic-views-poster-theme-light
+/* Flat + Light (forced) */
+body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5409,8 +5550,8 @@ body.dynamic-views-poster-theme-light
   );
 }
 
-/* Poster overlay theme: Dark (forced) */
-body.dynamic-views-poster-theme-dark
+/* Flat + Dark (forced) */
+body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5438,7 +5579,10 @@ body:not(.dynamic-views-poster-content-default)
   .card-body {
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--anim-duration-moderate, 300ms);
+  transform: translateY(0.75rem);
+  transition:
+    opacity var(--anim-duration-moderate, 300ms),
+    transform var(--anim-duration-moderate, 300ms);
 }
 
 /* Poster: content visible by default ("Show card content by default" ON) */
@@ -5452,7 +5596,10 @@ body.dynamic-views-poster-content-default
   .card-body {
   opacity: 1;
   pointer-events: auto;
-  transition: opacity var(--anim-duration-moderate, 300ms);
+  transform: translateY(0);
+  transition:
+    opacity var(--anim-duration-moderate, 300ms),
+    transform var(--anim-duration-moderate, 300ms);
 }
 
 /* Poster: show content on click ("Show card content by default" OFF) */
@@ -5466,6 +5613,7 @@ body:not(.dynamic-views-poster-content-default)
   .card-body {
   opacity: 1;
   pointer-events: auto;
+  transform: translateY(0);
 }
 
 /* Poster: hide overlay by default (skipped when "Show card content by default" is ON)
@@ -5497,6 +5645,7 @@ body.dynamic-views-poster-content-default
   .card-body {
   opacity: 0;
   pointer-events: none;
+  transform: translateY(0.75rem);
 }
 
 /* Poster: hide overlay on click ("Show card content by default" ON) */
@@ -5524,6 +5673,7 @@ body.dynamic-views-poster-content-default
     .card-body {
     opacity: 1;
     pointer-events: auto;
+    transform: translateY(0);
   }
 
   /* Show overlay on hover ("Show card content by default" OFF) */
@@ -5547,6 +5697,7 @@ body.dynamic-views-poster-content-default
     .card-body {
     opacity: 0;
     pointer-events: none;
+    transform: translateY(0.75rem);
   }
 
   /* Hide overlay on hover ("Show card content by default" ON, inverse) */
@@ -5556,6 +5707,19 @@ body.dynamic-views-poster-content-default
     .card-poster::after {
     opacity: 0;
   }
+}
+
+/* Poster: disable raise animation */
+body.dynamic-views-poster-disable-raise
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-header,
+body.dynamic-views-poster-disable-raise
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-body {
+  transform: none;
+  transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
 /* Poster: card height determined by image ratio */
@@ -7286,6 +7450,64 @@ body.dynamic-views-no-fade-truncated-text
   -webkit-mask-image: none;
 }
 
+/* Vertical gradient masks for poster card body scroll */
+.dynamic-views .card.image-format-poster .card-body.scroll-gradient-top {
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+}
+
+.dynamic-views .card.image-format-poster .card-body.scroll-gradient-bottom {
+  mask-image: linear-gradient(
+    to bottom,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.dynamic-views
+  .card.image-format-poster
+  .card-body.scroll-gradient-vertical-both {
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
 /* Hide empty fields */
 .dynamic-views .property:empty {
   display: none;
@@ -7759,7 +7981,13 @@ body.dynamic-views-disable-thumbnail-scrubbing
   .setting-item[data-id="dynamic-views-hide-thumbnail-shadow"],
 body:not(.dynamic-views-title-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-title-color-custom"] {
+  .setting-item[data-id="dynamic-views-title-color-custom"],
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  )
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-blur"] {
   display: none !important;
 }
 

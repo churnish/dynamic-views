@@ -69,6 +69,7 @@ import type {
   FocusState,
 } from "../types";
 import { VIEW_DEFAULTS } from "../constants";
+import { setupContentVisibility } from "../shared/content-visibility";
 import { showTipOnce } from "../utils/tips";
 
 // Extend Obsidian types
@@ -155,6 +156,8 @@ export class DynamicViewsGridView extends BasesView {
   private lastColumnCount: number = 0;
   private resizeRafId: number | null = null;
   private lastObservedWidth: number = 0;
+  private contentVisibility: ReturnType<typeof setupContentVisibility> | null =
+    null;
   private hasBatchAppended: boolean = false;
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
@@ -1201,20 +1204,28 @@ export class DynamicViewsGridView extends BasesView {
     index: number,
     settings: BasesResolvedSettings,
   ): HTMLElement {
-    return this.cardRenderer.renderCard(container, card, entry, settings, {
-      index,
-      focusableCardIndex: this.focusState.cardIndex,
-      containerRef: this.feedContainerRef,
-      onFocusChange: (newIndex: number) => {
-        this.focusState.cardIndex = newIndex;
+    const cardEl = this.cardRenderer.renderCard(
+      container,
+      card,
+      entry,
+      settings,
+      {
+        index,
+        focusableCardIndex: this.focusState.cardIndex,
+        containerRef: this.feedContainerRef,
+        onFocusChange: (newIndex: number) => {
+          this.focusState.cardIndex = newIndex;
+        },
+        onHoverStart: (el: HTMLElement) => {
+          this.focusState.hoveredEl = el;
+        },
+        onHoverEnd: () => {
+          this.focusState.hoveredEl = null;
+        },
       },
-      onHoverStart: (el: HTMLElement) => {
-        this.focusState.hoveredEl = el;
-      },
-      onHoverEnd: () => {
-        this.focusState.hoveredEl = null;
-      },
-    });
+    );
+    this.contentVisibility?.observe(cardEl);
+    return cardEl;
   }
 
   /** Update only changed cards in-place without full re-render */
@@ -1493,6 +1504,16 @@ export class DynamicViewsGridView extends BasesView {
   ): void {
     const scrollContainer = this.scrollEl;
 
+    // Recreate content-visibility observer (old IO entries auto-cleaned on DOM wipe)
+    this.contentVisibility?.disconnect();
+    this.contentVisibility = setupContentVisibility(scrollContainer);
+    // Observe all cards already rendered (initial render happens before this call)
+    for (const card of this.containerEl.querySelectorAll<HTMLElement>(
+      ".card",
+    )) {
+      this.contentVisibility.observe(card);
+    }
+
     // Clean up existing listener (don't use this.register() since this method is called multiple times)
     if (this.scrollThrottle.listener) {
       scrollContainer.removeEventListener(
@@ -1625,6 +1646,7 @@ export class DynamicViewsGridView extends BasesView {
     if (this.scrollThrottle.timeoutId !== null) {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
+    this.contentVisibility?.disconnect();
     this.swipeAbortController?.abort();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();

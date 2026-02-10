@@ -10,6 +10,8 @@
  * Visible focus requires explicit activation via keyboard interaction.
  */
 
+import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
+
 const CARD_SELECTOR = ".card";
 
 /** Tolerance in pixels for same-column detection (handles floating point variance) */
@@ -143,6 +145,8 @@ export function handleArrowNavigation(
     if (onNavigate) {
       onNavigate(targetCard, targetIndex);
     }
+    // Ensure card is rendered before focusing (content-visibility: hidden skips rendering)
+    targetCard.classList.remove(CONTENT_HIDDEN_CLASS);
     targetCard.focus();
     targetCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
