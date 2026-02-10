@@ -1083,10 +1083,12 @@ function renderProperty(
           const file = app.vault.getAbstractFileByPath(card.path);
           if (!(file instanceof TFile)) return;
           const fmProp = stripNotePrefix(propertyName);
-          void app.fileManager.processFrontMatter(file, (frontmatter) => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- processFrontMatter types frontmatter as Record<string, unknown> but ESLint infers any
-            frontmatter[fmProp] = input.checked;
-          });
+          void app.fileManager.processFrontMatter(
+            file,
+            (frontmatter: Record<string, unknown>) => {
+              frontmatter[fmProp] = input.checked;
+            },
+          );
         };
         const handleCheckboxRef = (el: HTMLInputElement | null): void => {
           if (el && checkboxData.indeterminate) {

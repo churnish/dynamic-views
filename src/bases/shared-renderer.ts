@@ -2086,8 +2086,7 @@ export class SharedCardRenderer {
               checkboxEl.dataset.indeterminate = "false";
               void this.app.fileManager.processFrontMatter(
                 file,
-                (frontmatter) => {
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- processFrontMatter types frontmatter as Record<string, unknown> but ESLint infers any
+                (frontmatter: Record<string, unknown>) => {
                   frontmatter[fmProp] = checkboxEl.checked;
                 },
               );

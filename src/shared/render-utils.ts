@@ -39,8 +39,8 @@ export function formatTimestamp(
   isDateOnly: boolean = false,
   styled: boolean = false,
 ): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, import/no-extraneous-dependencies -- moment.js loaded via Obsidian's bundled require
-  const moment = require("moment");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-extraneous-dependencies -- moment.js loaded via Obsidian's bundled require
+  const moment = require("moment") as typeof import("moment");
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require to avoid circular dependency
   const styleSettings = require("../utils/style-settings") as {
     shouldShowRecentTimeOnly(): boolean;
@@ -52,16 +52,12 @@ export function formatTimestamp(
 
   // For date-only properties, use date format
   if (isDateOnly) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
-    return moment(timestamp).format(styleSettings.getDateFormat()) as string;
+    return moment(timestamp).format(styleSettings.getDateFormat());
   }
 
   // For non-styled properties, use full datetime format
   if (!styled) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
-    return moment(timestamp).format(
-      styleSettings.getDatetimeFormat(),
-    ) as string;
+    return moment(timestamp).format(styleSettings.getDatetimeFormat());
   }
 
   // Determine whether to show time-only or date-only format
@@ -73,17 +69,14 @@ export function formatTimestamp(
     !isToday && !isFuture && styleSettings.shouldShowOlderDateOnly();
 
   if (showTimeOnly) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
-    return moment(timestamp).format(styleSettings.getTimeFormat()) as string;
+    return moment(timestamp).format(styleSettings.getTimeFormat());
   }
   if (showDateOnly) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
-    return moment(timestamp).format(styleSettings.getDateFormat()) as string;
+    return moment(timestamp).format(styleSettings.getDateFormat());
   }
 
   // Full datetime for styled
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- moment.js untyped API
-  return moment(timestamp).format(styleSettings.getDatetimeFormat()) as string;
+  return moment(timestamp).format(styleSettings.getDatetimeFormat());
 }
 
 /**
