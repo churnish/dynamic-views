@@ -5134,6 +5134,11 @@ body.dynamic-views-show-cover-placeholder-both
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar {
+  display: none;
 }
 
 .dynamic-views .card.image-format-backdrop .card-backdrop {
