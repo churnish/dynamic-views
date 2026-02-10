@@ -52,11 +52,7 @@ import {
   handleImageViewerClick,
   cleanupAllViewers,
 } from "../shared/image-viewer";
-import {
-  getFileExtInfo,
-  getFileTypeIcon,
-  stripExtFromTitle,
-} from "../utils/file-extension";
+import { getFileExtInfo, getFileTypeIcon } from "../utils/file-extension";
 import type DynamicViews from "../../main";
 import type { BasesResolvedSettings } from "../types";
 import {
@@ -1107,15 +1103,17 @@ export class SharedCardRenderer {
     const hasImage = imageUrls.length > 0;
 
     // Check if title or subtitle will be rendered
-    // Strip extension from title in Extension mode to prevent duplication
+    // In Extension mode, use basename when title property includes an extension
     // (the extension suffix is appended separately by renderTitleContent)
     const isExtMode = document.body.classList.contains(
       "dynamic-views-file-type-ext",
     );
-    const isFullname = (settings.titleProperty || "") === "file.fullname";
-    const displayTitle = isExtMode
-      ? stripExtFromTitle(card.title, card.path, isFullname)
-      : card.title;
+    const titleProp = settings.titleProperty || "";
+    const titleHasExtension =
+      titleProp === "file.name" || titleProp === "file.fullname";
+    const isFullname = titleProp === "file.fullname";
+    const displayTitle =
+      isExtMode && titleHasExtension ? entry.file.basename : card.title;
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
