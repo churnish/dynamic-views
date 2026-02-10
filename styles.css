@@ -560,14 +560,14 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-poster-content-default
-        title: Show card content by default
-        description: Overlay and content visible by default, hidden on hover/tap
-        type: class-toggle
-    -
         id: dynamic-views-poster-reveal-hover
         title: Reveal on hover
         description: Show card content on hover over card on desktop
+        type: class-toggle
+    -
+        id: dynamic-views-poster-content-default
+        title: Show card content by default
+        description: Overlay and content visible by default, hidden on hover/tap
         type: class-toggle
     -
         id: properties-heading

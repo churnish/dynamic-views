@@ -784,6 +784,16 @@ export class SharedCardRenderer {
       (e) => {
         // Poster click-to-toggle: reveal/hide content
         if (format === "poster" && cardEl.querySelector(".card-poster")) {
+          // Skip click-to-toggle when hover-reveal handles content visibility
+          if (
+            document.body.classList.contains(
+              "dynamic-views-poster-reveal-hover",
+            )
+          ) {
+            e.stopPropagation();
+            return;
+          }
+
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
             "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
