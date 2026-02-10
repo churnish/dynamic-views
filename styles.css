@@ -2751,7 +2751,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
   z-index: 10;
   overflow: visible;
   background: var(--background-primary);
-  padding-bottom: var(--size-2-2);
+  padding-bottom: calc(var(--size-2-2) + 1px);
   container-type: scroll-state;
   container-name: dynamic-views-group-heading;
 }
