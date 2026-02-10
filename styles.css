@@ -3220,6 +3220,16 @@ body.dynamic-views-file-type-ext
   margin: -4px;
 }
 
+/* Poster: darken button on hover (no card background for --background-modifier-hover to show against) */
+@media (hover: hover) {
+  .dynamic-views
+    .card.image-format-poster
+    .card-title-url-icon:hover {
+    background-color: rgb(0 0 0 / 0.15);
+    border-radius: var(--radius-s);
+  }
+}
+
 /* When URL icon is only child (no title/subtitle), push to right */
 .dynamic-views .card-header .card-title-url-icon:only-child {
   margin-left: auto;
