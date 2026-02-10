@@ -2753,11 +2753,11 @@ body:not(.dynamic-views-disable-sticky-group-header)
   background: var(--background-primary);
   padding-bottom: var(--size-2-2);
   container-type: scroll-state;
-  container-name: group-heading;
+  container-name: dynamic-views-group-heading;
 }
 
 /* Border below sticky group headers when stuck — spans full pane width */
-@container group-heading scroll-state(stuck: top) {
+@container dynamic-views-group-heading scroll-state(stuck: top) {
   .bases-group-count::after {
     content: '';
     position: absolute;
