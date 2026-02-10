@@ -3,7 +3,7 @@
 - **Backwards compatibility**: Always ask before adding backwards compatibility or migration code.
 - **Naming prefix**: Never use the `dv-` prefix as a shorthand for Dynamic Views. Only use the full `dynamic-views-` prefix in all contexts.
 - **Plugin name**: Never abbreviate the plugin name to 'DV' in the codebase, stylesheet, or any user-facing text. Always use the full name 'Dynamic Views'. It's OK to use the 'DV' shorthand in fleeting chat contexts only.
-- **Verify changes via Chrome DevTools MCP** whenever possible — inspect DOM, run scripts, take screenshots. Only defer to the user when human judgement is required. The user always does final verification.
+- **Test and verify changes via Chrome DevTools MCP** whenever possible — inspect DOM, run scripts, take screenshots etc. Only defer to the user when human judgement is required. The user always performs final verification.
 
 ## Terminology
 

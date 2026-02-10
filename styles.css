@@ -3862,6 +3862,9 @@ body:not(.dynamic-views-image-viewer-disabled)
   object-fit: contain;
   opacity: 1;
   border-radius: 0;
+  /* Pre-promote to compositor layer so panzoom transform changes
+     bypass main-thread Layerize (80ms→<1ms per frame) */
+  will-change: transform;
   transition:
     max-height var(--anim-duration-fast, 140ms) ease,
     max-width var(--anim-duration-fast, 140ms) ease;
