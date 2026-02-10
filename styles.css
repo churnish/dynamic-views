@@ -518,6 +518,24 @@ settings:
         description: Prevent vertically scrolling card content when it doesn't fit
         type: class-toggle
     -
+        id: dynamic-views-poster-disable-raise
+        title: Disable raise animation
+        description: Content fades in without sliding up on reveal
+        type: class-toggle
+    -
+        id: dynamic-views-poster-overlay-style
+        title: Display mode
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-overlay-gradient
+        options:
+            -
+                label: Gradient
+                value: dynamic-views-poster-overlay-gradient
+            -
+                label: Overlay
+                value: dynamic-views-poster-overlay-flat
+    -
         id: dynamic-views-poster-overlay-tint
         title: Overlay tint
         description: Color of the poster overlay
@@ -534,19 +552,6 @@ settings:
             -
                 label: Match theme
                 value: dynamic-views-poster-theme-match
-    -
-        id: dynamic-views-poster-overlay-style
-        title: Display mode
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-poster-overlay-gradient
-        options:
-            -
-                label: Gradient
-                value: dynamic-views-poster-overlay-gradient
-            -
-                label: Overlay
-                value: dynamic-views-poster-overlay-flat
     -
         id: dynamic-views-poster-overlay-light
         title: Light overlay strength
@@ -574,11 +579,6 @@ settings:
         max: 20
         step: 1
         format: px
-    -
-        id: dynamic-views-poster-disable-raise
-        title: Disable raise animation
-        description: Content fades in without sliding up on reveal
-        type: class-toggle
     -
         id: properties-heading
         title: Properties
@@ -7148,7 +7148,7 @@ body.dynamic-views-no-fade-truncated-text
   position: relative;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  overflow: clip;
 }
 
 /* Reset Bases' mobile margin - applied to parent instead to include end indicator */
