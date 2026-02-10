@@ -871,7 +871,7 @@ export class SharedCardRenderer {
     }
 
     // Poster hover intent: require mousemove to reveal (ignores scroll-triggered hovers)
-    if (isPosterHoverMode && cardEl.querySelector(".card-poster")) {
+    if (isPosterHoverMode) {
       let hasMoved = false;
 
       cardEl.addEventListener(
