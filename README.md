@@ -36,13 +36,13 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Apply CSS snippets to individual views
 - Datacore views: Grid, Masonry, List
 
-And numerous other QoL improvements over the default Bases card view.
+And numerous other quality‑of‑life improvements over the default Bases card view.
 
 ### Integrations
 
 - Extensive [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support
-- Fetch YouTube thumbnails
-- Fetch [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) cover images
+- Show YouTube thumbnails
+- Show [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) cover images
 - Reveal files, folders and tags in [Notebook Navigator](https://obsidian.md/plugins?id=notebook-navigator)
 
 ## Perfect for
@@ -63,7 +63,7 @@ And numerous other QoL improvements over the default Bases card view.
 Until _Dynamic Views_ is [made available](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, follow the steps below to install it:
 
 1. Download and enable the [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) plugin.
-2. Run _Add a beta plugin for testing_ in Command palette.
+2. Run _Add a beta plugin for testing_ in the Command palette.
 3. Paste https://github.com/churnish/dynamic-views in the text field.
 4. Select _Latest version_.
 5. Check _Enable after installing the plugin_.
