@@ -60,7 +60,11 @@ import {
   setupImagePreload,
   setupSwipeGestures,
 } from "../shared/slideshow";
-import { handleArrowNavigation, isArrowKey } from "../shared/keyboard-nav";
+import {
+  handleArrowNavigation,
+  isArrowKey,
+  isImageViewerBlockingNav,
+} from "../shared/keyboard-nav";
 import {
   CHECKBOX_MARKER_PREFIX,
   THUMBNAIL_STACK_MULTIPLIER,
@@ -726,6 +730,8 @@ export class SharedCardRenderer {
               void this.app.workspace.openLinkText(card.path, "", false);
             }
           } else if (isArrowKey(e.key)) {
+            if (isImageViewerBlockingNav(keyboardNav.containerRef.current))
+              return;
             // Arrow key navigation
             e.preventDefault();
             const container = keyboardNav.containerRef.current as

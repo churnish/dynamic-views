@@ -54,7 +54,11 @@ import {
   setupScrollGradients,
   setupElementScrollGradient,
 } from "./scroll-gradient";
-import { handleArrowNavigation, isArrowKey } from "./keyboard-nav";
+import {
+  handleArrowNavigation,
+  isArrowKey,
+  isImageViewerBlockingNav,
+} from "./keyboard-nav";
 import { CHECKBOX_MARKER_PREFIX } from "./constants";
 
 import {
@@ -1975,6 +1979,7 @@ function Card({
           const paneType = Keymap.isModEvent(e);
           void app.workspace.openLinkText(card.path, "", paneType || false);
         } else if (isArrowKey(e.key)) {
+          if (isImageViewerBlockingNav(containerRef.current)) return;
           e.preventDefault();
           const container = containerRef.current as CardContainerElement | null;
           if (container) {

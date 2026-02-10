@@ -401,18 +401,29 @@ function setupImageViewerGestures(
         return Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
       }
 
-      // Spacebar to toggle maximize
+      // Spacebar to toggle maximize, R/ArrowDown to reset zoom
       spacebarHandler = (e: KeyboardEvent) => {
-        if (e.code !== "Space") return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (isMaximized) {
-          setMaximized(false);
+        // Constrained viewer: only handle keys when the associated leaf is active
+        if (container.classList.contains("dynamic-views-viewer-fixed")) {
+          const orig = (container as CloneElement).__originalEmbed;
+          if (!orig?.closest(".workspace-leaf.mod-active")) return;
+        }
+        if (e.code === "Space") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (isMaximized) {
+            setMaximized(false);
+            panzoomInstance?.reset();
+          } else {
+            const containScale = getContainScale();
+            setMaximized(true, containScale);
+            panzoomInstance?.zoom(containScale, { animate: true });
+          }
+        } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (isMaximized) setMaximized(false);
           panzoomInstance?.reset();
-        } else {
-          const containScale = getContainScale();
-          setMaximized(true, containScale);
-          panzoomInstance?.zoom(containScale, { animate: true });
         }
       };
       document.addEventListener("keydown", spacebarHandler, true);
@@ -726,20 +737,52 @@ function openImageViewer(
       };
       cloneEl.addEventListener("wheel", onPinchWheel, { passive: false });
 
-      // Desktop only: spacebar to toggle maximize (when panzoom disabled)
+      // Desktop only: spacebar to toggle maximize, R/ArrowDown to reset (when panzoom disabled)
       const onSpacebar = (e: KeyboardEvent) => {
-        if (e.code !== "Space") return;
-        e.preventDefault();
-        e.stopPropagation();
-        cloneEl.classList.toggle("is-maximized");
+        // Constrained viewer: only handle keys when the associated leaf is active
+        if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+          const orig = cloneEl.__originalEmbed;
+          if (!orig?.closest(".workspace-leaf.mod-active")) return;
+        }
+        if (e.code === "Space") {
+          e.preventDefault();
+          e.stopPropagation();
+          cloneEl.classList.toggle("is-maximized");
+        } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
+          e.preventDefault();
+          e.stopPropagation();
+          cloneEl.classList.remove("is-maximized");
+        }
       };
       document.addEventListener("keydown", onSpacebar, true);
+
+      // Image is always draggable when panzoom is off (no pan to conflict with)
+      imgEl.draggable = true;
+
+      const onPanzoomOffDragStart = (e: DragEvent) => {
+        const src = imgEl.src;
+        const vaultPath = getVaultPathFromResourceUrl(src);
+
+        if (vaultPath) {
+          const file = app.vault.getAbstractFileByPath(vaultPath);
+          if (file instanceof TFile) {
+            const dragData = app.dragManager.dragFile(e, file);
+            app.dragManager.onDragStart(e, dragData);
+          }
+        } else if (isExternalUrl(src)) {
+          e.dataTransfer?.clearData();
+          e.dataTransfer?.setData("text/plain", `![](${src})`);
+        }
+      };
+
+      imgEl.addEventListener("dragstart", onPanzoomOffDragStart);
 
       const existingGestureCleanup = viewerCleanupFns.get(cloneEl);
       viewerCleanupFns.set(cloneEl, () => {
         existingGestureCleanup?.();
         cloneEl.removeEventListener("wheel", onPinchWheel);
         document.removeEventListener("keydown", onSpacebar, true);
+        imgEl.removeEventListener("dragstart", onPanzoomOffDragStart);
       });
     }
 
@@ -1033,7 +1076,7 @@ function openImageViewer(
     if (!isMobile) {
       showTipOnce(
         "tipImageViewer",
-        "Tip: Press Space to maximize. Long press or right click to reset zoom. Hold Alt to drag.",
+        "Tip: Press Space to maximize. Long press to reset zoom. Hold Alt to drag.",
       );
     }
   } catch (error) {

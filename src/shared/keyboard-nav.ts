@@ -155,6 +155,21 @@ export function isArrowKey(key: string): boolean {
   return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key);
 }
 
+/** Check if image viewer should block keyboard navigation for a container. */
+export function isImageViewerBlockingNav(
+  container: HTMLElement | null,
+): boolean {
+  const viewer = document.querySelector(".dynamic-views-image-embed.is-zoomed");
+  if (!viewer) return false;
+  // Fullscreen viewer → block all nav
+  if (!viewer.classList.contains("dynamic-views-viewer-fixed")) return true;
+  // Constrained viewer → block only if original embed is in the same view
+  const originalEmbed = (viewer as unknown as { __originalEmbed?: HTMLElement })
+    .__originalEmbed;
+  if (!originalEmbed || !container) return false;
+  return container.contains(originalEmbed);
+}
+
 /**
  * Container element with focus management properties
  *
@@ -229,6 +244,7 @@ export function setupHoverKeyboardNavigation(
   setFocusableIndex: (index: number) => void,
 ): () => void {
   const handleKeydown = (e: KeyboardEvent) => {
+    if (isImageViewerBlockingNav(getContainerRef())) return;
     if (!isArrowKey(e.key)) return;
 
     const hoveredCard = getHoveredCard();
