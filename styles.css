@@ -534,12 +534,9 @@ settings:
             -
                 label: Match theme
                 value: dynamic-views-poster-theme-match
-            -
-                label: Disable
-                value: dynamic-views-poster-theme-disable
     -
         id: dynamic-views-poster-overlay-style
-        title: Overlay mode
+        title: Display mode
         type: class-select
         allowEmpty: false
         default: dynamic-views-poster-overlay-gradient
@@ -548,7 +545,7 @@ settings:
                 label: Gradient
                 value: dynamic-views-poster-overlay-gradient
             -
-                label: Flat
+                label: Overlay
                 value: dynamic-views-poster-overlay-flat
     -
         id: dynamic-views-poster-overlay-light
@@ -3223,9 +3220,7 @@ body.dynamic-views-file-type-ext
 
 /* Poster: darken button on hover (no card background for --background-modifier-hover to show against) */
 @media (hover: hover) {
-  .dynamic-views
-    .card.image-format-poster
-    .card-title-url-icon:hover {
+  .dynamic-views .card.image-format-poster .card-title-url-icon:hover {
     background-color: rgb(0 0 0 / 0.35);
     border-radius: var(--radius-s);
   }
@@ -5169,92 +5164,18 @@ body:is(
   transition: opacity var(--anim-duration-moderate, 300ms); /* opacity, not background — background toggle causes overlay flicker */
 }
 
-/* Poster overlay: Gradient style (default — also applies when no style class set) */
-
-/* Gradient + Match theme (dark) */
+/* Poster overlay: Gradient (default — hardcoded dark at 85%) */
 body:is(
     .dynamic-views-poster-overlay-gradient,
     :not(.dynamic-views-poster-overlay-flat)
-  ):is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-dark
+  )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
   background: linear-gradient(
     to top,
-    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)) 0%,
-    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 0.43%)) 50%,
-    rgb(0 0 0 / 0%) 100%
-  );
-}
-
-/* Gradient + Match theme (light) */
-body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
-  ):is(
-    .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
-  ).theme-light
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after {
-  background: linear-gradient(
-    to top,
-    rgb(255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%))
-      0%,
-    rgb(
-        255 255 255 /
-          calc(var(--dynamic-views-poster-overlay-light, 70) * 0.43%)
-      )
-      50%,
-    rgb(255 255 255 / 0%) 100%
-  );
-}
-
-/* Gradient + Light (forced) */
-body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
-  ).dynamic-views-poster-theme-light
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after {
-  background: linear-gradient(
-    to top,
-    rgb(255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%))
-      0%,
-    rgb(
-        255 255 255 /
-          calc(var(--dynamic-views-poster-overlay-light, 70) * 0.43%)
-      )
-      50%,
-    rgb(255 255 255 / 0%) 100%
-  );
-}
-
-/* Gradient + Dark (forced) */
-body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
-  ).dynamic-views-poster-theme-dark
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after {
-  background: linear-gradient(
-    to top,
-    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)) 0%,
-    rgb(0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 0.43%)) 50%,
+    rgb(0 0 0 / 85%) 0%,
+    rgb(0 0 0 / 36.55%) 50%,
     rgb(0 0 0 / 0%) 100%
   );
 }
@@ -5291,16 +5212,12 @@ body:is(
   backdrop-filter: none;
 }
 
-/* Poster overlay: Flat style */
+/* Poster overlay: Overlay mode (flat tint) */
 
-/* Flat + Match theme (dark) */
+/* Overlay + Match theme (dark) */
 body.dynamic-views-poster-overlay-flat:is(
     .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-dark
   .dynamic-views
   .card.image-format-poster
@@ -5310,14 +5227,10 @@ body.dynamic-views-poster-overlay-flat:is(
   );
 }
 
-/* Flat + Match theme (light) */
+/* Overlay + Match theme (light) */
 body.dynamic-views-poster-overlay-flat:is(
     .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-light
   .dynamic-views
   .card.image-format-poster
@@ -5327,7 +5240,7 @@ body.dynamic-views-poster-overlay-flat:is(
   );
 }
 
-/* Flat + Light (forced) */
+/* Overlay + Light (forced) */
 body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster
@@ -5337,7 +5250,7 @@ body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
   );
 }
 
-/* Flat + Dark (forced) */
+/* Overlay + Dark (forced) */
 body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
   .dynamic-views
   .card.image-format-poster
@@ -5345,14 +5258,6 @@ body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)
   );
-}
-
-/* Poster overlay theme: Disable */
-body.dynamic-views-poster-theme-disable
-  .dynamic-views
-  .card.image-format-poster
-  .card-poster::after {
-  display: none;
 }
 
 /* Poster: content hidden by default (only if card has image) */
@@ -5423,17 +5328,25 @@ body.dynamic-views-poster-disable-raise
   aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
 }
 
-/* Poster text color overrides (light overlay → dark text) */
-body.dynamic-views-poster-theme-light
+/* Gradient: always light text (hardcoded dark overlay) */
+body:is(
+    .dynamic-views-poster-overlay-gradient,
+    :not(.dynamic-views-poster-overlay-flat)
+  )
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
+  --text-normal: #fafafa;
+  --text-muted: #f5f5f5;
+  --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+}
+
+/* Overlay: text color overrides (light tint → dark text) */
+body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster:has(.card-poster),
-body:is(
+body.dynamic-views-poster-overlay-flat:is(
     .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-light
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
@@ -5442,17 +5355,13 @@ body:is(
   --text-faint: color-mix(in srgb, #333333 60%, transparent);
 }
 
-/* Poster text color overrides (dark overlay → light text) */
-body.dynamic-views-poster-theme-dark
+/* Overlay: text color overrides (dark tint → light text) */
+body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
   .dynamic-views
   .card.image-format-poster:has(.card-poster),
-body:is(
+body.dynamic-views-poster-overlay-flat:is(
     .dynamic-views-poster-theme-match,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-disable
-    )
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-dark
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
@@ -7690,7 +7599,22 @@ body:is(
     :not(.dynamic-views-poster-overlay-flat)
   )
   .style-settings-container
-  .setting-item[data-id="dynamic-views-poster-overlay-blur"] {
+  .setting-item:is(
+    [data-id="dynamic-views-poster-overlay-tint"],
+    [data-id="dynamic-views-poster-overlay-light"],
+    [data-id="dynamic-views-poster-overlay-dark"],
+    [data-id="dynamic-views-poster-overlay-blur"]
+  ) {
+  display: none !important;
+}
+
+/* Overlay mode: hide irrelevant strength slider based on tint */
+body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-light"],
+body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-dark"] {
   display: none !important;
 }
 
