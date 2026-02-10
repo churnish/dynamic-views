@@ -3908,11 +3908,7 @@ body.dynamic-views-image-viewer-fullscreen
 .dynamic-views-image-embed.is-zoomed.is-alt-drag img {
   -webkit-user-drag: auto;
   user-drag: auto;
-  cursor: grab !important;
-}
-
-.dynamic-views-image-embed.is-zoomed.is-alt-drag img:active {
-  cursor: grabbing !important;
+  cursor: default !important;
 }
 
 /* Thumbnail crop alignment overrides */
