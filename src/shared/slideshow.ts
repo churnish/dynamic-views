@@ -17,8 +17,18 @@ const UNDO_WINDOW_MS = 2500;
 
 // Gesture detection thresholds
 const WHEEL_SWIPE_THRESHOLD = 5; // Accumulated deltaX to trigger navigation
-const WHEEL_GESTURE_GAP_MS = 150; // Quiet period to detect gesture boundary
+const WHEEL_GESTURE_GAP_MS = 150; // Quiet period fallback to detect gesture end
 const TOUCH_SWIPE_THRESHOLD = 30; // Distance to trigger navigation
+
+// Gesture boundary detection via peak + decay phase:
+// After navigating, track peak |deltaX|. Enter "decay" when |dX| drops below
+// peak × DECAY_RATIO. After DECAY_MIN_EVENTS in decay, detect new gesture when
+// |dX| rises to ≥ decay minimum × RESUME_RATIO and ≥ RESUME_DELTA.
+// Brief dips (< DECAY_MIN_EVENTS) are ignored as fluctuations in sustained swipes.
+const WHEEL_DECAY_RATIO = 0.3;
+const WHEEL_DECAY_MIN_EVENTS = 5;
+const WHEEL_RESUME_RATIO = 3;
+const WHEEL_RESUME_DELTA = 15;
 
 export interface SlideshowElements {
   imageEmbed: HTMLElement;
@@ -310,6 +320,18 @@ export function setupSwipeGestures(
   let lastDeltaX = 0;
   let navigatedThisGesture = false;
   let gestureResetTimeout: ReturnType<typeof setTimeout> | null = null;
+  // Peak + decay tracking for gesture boundary detection
+  let peakSinceNav = 0;
+  let inDecayPhase = false;
+  let decayEventCount = 0;
+  let minSinceDecay = Infinity;
+
+  const resetGestureState = () => {
+    peakSinceNav = 0;
+    inDecayPhase = false;
+    decayEventCount = 0;
+    minSinceDecay = Infinity;
+  };
 
   // Clean up gesture timeout on abort
   signal.addEventListener(
@@ -328,14 +350,49 @@ export function setupSwipeGestures(
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
 
       const deltaX = e.deltaX;
+      const absDelta = Math.abs(deltaX);
 
       // Quiet period: no wheel events for 150ms = gesture ended
       if (gestureResetTimeout) clearTimeout(gestureResetTimeout);
       gestureResetTimeout = setTimeout(() => {
         accumulatedDeltaX = 0;
         navigatedThisGesture = false;
+        resetGestureState();
         gestureResetTimeout = null;
       }, WHEEL_GESTURE_GAP_MS);
+
+      // Track peak |deltaX| since last navigation
+      if (absDelta > peakSinceNav) peakSinceNav = absDelta;
+
+      // Decay phase detection: |deltaX| dropped below 30% of peak
+      const decayThreshold = peakSinceNav * WHEEL_DECAY_RATIO;
+      if (!inDecayPhase && navigatedThisGesture && absDelta < decayThreshold) {
+        inDecayPhase = true;
+        decayEventCount = 0;
+        minSinceDecay = absDelta;
+      } else if (inDecayPhase) {
+        decayEventCount++;
+        if (absDelta < minSinceDecay) minSinceDecay = absDelta;
+
+        // Brief fluctuation: delta rises back before enough events — not real decay
+        if (
+          absDelta >= decayThreshold &&
+          decayEventCount < WHEEL_DECAY_MIN_EVENTS
+        ) {
+          inDecayPhase = false;
+        }
+
+        // Boundary: sustained decay + meaningful acceleration = new gesture
+        if (
+          decayEventCount >= WHEEL_DECAY_MIN_EVENTS &&
+          absDelta >= minSinceDecay * WHEEL_RESUME_RATIO &&
+          absDelta >= WHEEL_RESUME_DELTA
+        ) {
+          accumulatedDeltaX = 0;
+          navigatedThisGesture = false;
+          resetGestureState();
+        }
+      }
 
       // Direction change within a gesture is always intentional
       const directionChanged =
@@ -343,6 +400,7 @@ export function setupSwipeGestures(
       if (directionChanged) {
         accumulatedDeltaX = 0;
         navigatedThisGesture = false;
+        resetGestureState();
       }
 
       lastDeltaX = deltaX;
