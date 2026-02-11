@@ -16,3 +16,4 @@ When a reference file listed below is relevant to your current work, you MUST re
 
 - Read **ref/obsidian-review-bot.md** before fixing bot-reported issues, adding/modifying eslint-disable comments, or preparing a PR for the Obsidian plugin review.
 - Read **ref/eslint-config.md** before modifying `eslint.config.js`, adding eslint overrides, or troubleshooting lint errors.
+- Read **ref/ios-webkit-quirks.md** before modifying content-visibility, IntersectionObserver, or scroll-state container queries — iOS WebKit has platform-specific bugs.

@@ -3061,7 +3061,14 @@ body .dynamic-views .card:focus-visible::after {
     background-color var(--anim-duration-fast, 140ms) ease;
 }
 
-/* Cards outside scrollport margin: skip rendering to reduce DOM cost */
+/* Mobile: browser-managed content-visibility (IO-based toggling causes
+   infinite reflow loop on iOS WebKit — see 998b856) */
+body.is-mobile .dynamic-views .card {
+  content-visibility: auto;
+  contain-intrinsic-height: auto 300px;
+}
+
+/* Desktop: cards outside scrollport margin hidden by IO-based system */
 .dynamic-views .card.content-hidden {
   content-visibility: hidden;
   contain-intrinsic-height: auto 300px;
