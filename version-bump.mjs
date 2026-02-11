@@ -23,7 +23,7 @@ console.log(`Updated manifest.json to version ${targetVersion}`);
 // Catch any console.debug that isn't behind a DEBUG_ gate
 try {
   execSync(
-    'npx eslint src/ --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
+    'npx eslint . --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
     { stdio: "inherit" },
   );
 } catch {
