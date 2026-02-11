@@ -137,7 +137,7 @@ settings:
                 label: Transparent
                 value: dynamic-views-card-background-transparent
             -
-                label: Custom color
+                label: Custom
                 value: dynamic-views-card-background-custom
     -
         id: dynamic-views-card-background-color-custom
@@ -164,7 +164,7 @@ settings:
                 label: Transparent
                 value: dynamic-views-card-background-hover-transparent
             -
-                label: Custom color
+                label: Custom
                 value: dynamic-views-card-background-hover-custom
     -
         id: dynamic-views-card-background-color-hover-custom
@@ -333,7 +333,7 @@ settings:
                 label: Transparent
                 value: dynamic-views-cover-bg-transparent
             -
-                label: Custom color
+                label: Custom
                 value: dynamic-views-cover-bg-custom
     -
         id: dynamic-views-cover-background-color-custom
