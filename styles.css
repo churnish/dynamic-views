@@ -3242,10 +3242,10 @@ body.dynamic-views-file-type-ext
   margin: -4px;
 }
 
-/* Poster: darken button on hover (no card background for --background-modifier-hover to show against) */
+/* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
 @media (hover: hover) {
   .dynamic-views .card.image-format-poster .card-title-url-icon:hover {
-    background-color: rgb(0 0 0 / 0.35);
+    background-color: color-mix(in srgb, currentColor 20%, transparent);
     border-radius: var(--radius-s);
   }
 }
@@ -4126,14 +4126,27 @@ body.dynamic-views-show-cover-placeholder-none
 
 /* ==================== COVER WRAPPER POSITIONING ==================== */
 
-/* Cover wrapper: use cover-specific border-radius, card overflow:hidden clips at corners */
+/* Cover wrapper: match card corner rounding where wrapper meets card edge.
+   Card overflow:hidden alone doesn't reliably clip at rounded corners in Chromium. */
+.dynamic-views .card.image-format-cover {
+  --cover-inner-radius: max(
+    var(--dynamic-views-cover-border-radius, 0px),
+    calc(
+      var(--dynamic-views-card-border-radius, 8px) -
+        var(--cover-inset-computed, 1px)
+    )
+  );
+  --cover-non-edge-radius: var(--dynamic-views-cover-border-radius, 0px);
+}
+
 .dynamic-views .card.image-format-cover .card-cover-wrapper {
-  border-radius: var(--dynamic-views-cover-border-radius, 0);
   overflow: hidden;
 }
 
 /* Cover-top: wrapper with negative margins to bleed to edges */
 .dynamic-views .card.card-cover-top.image-format-cover .card-cover-wrapper {
+  border-radius: var(--cover-inner-radius) var(--cover-inner-radius)
+    var(--cover-non-edge-radius) var(--cover-non-edge-radius);
   margin: calc(
       var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
     )
@@ -4171,6 +4184,8 @@ body.dynamic-views-show-cover-placeholder-none
 .dynamic-views
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper:not(.card-cover-wrapper-placeholder) {
+  border-radius: var(--cover-non-edge-radius) var(--cover-non-edge-radius)
+    var(--cover-inner-radius) var(--cover-inner-radius);
   margin-top: var(--dynamic-views-card-padding, 8px);
   margin-right: calc(
     var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
@@ -4234,6 +4249,8 @@ body.dynamic-views-show-cover-placeholder-none
 
 /* Cover-left: wrapper positioned at edges */
 .dynamic-views .card.card-cover-left.image-format-cover .card-cover-wrapper {
+  border-radius: var(--cover-inner-radius) var(--cover-non-edge-radius)
+    var(--cover-non-edge-radius) var(--cover-inner-radius);
   position: absolute;
   top: var(--cover-inset-computed);
   left: var(--cover-inset-computed);
@@ -4247,6 +4264,8 @@ body.dynamic-views-show-cover-placeholder-none
 
 /* Cover-right: wrapper positioned at edges */
 .dynamic-views .card.card-cover-right.image-format-cover .card-cover-wrapper {
+  border-radius: var(--cover-non-edge-radius) var(--cover-inner-radius)
+    var(--cover-inner-radius) var(--cover-non-edge-radius);
   position: absolute;
   top: var(--cover-inset-computed);
   right: var(--cover-inset-computed);
