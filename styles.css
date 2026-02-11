@@ -123,6 +123,58 @@ settings:
         step: 1
         format: px
     -
+        id: dynamic-views-card-background
+        title: Card background
+        description: Card background appearance
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-tinted
+        options:
+            -
+                label: Tinted
+                value: dynamic-views-card-background-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-transparent
+            -
+                label: Custom color
+                value: dynamic-views-card-background-custom
+    -
+        id: dynamic-views-card-background-color-custom
+        title: Custom card background
+        description: Custom color for card backgrounds (only used when Card background is set to Custom color)
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-background-hover
+        title: Card background on hover
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-hover-none
+        options:
+            -
+                label: No change
+                value: dynamic-views-card-background-hover-none
+            -
+                label: Tinted
+                value: dynamic-views-card-background-hover-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-hover-transparent
+            -
+                label: Custom color
+                value: dynamic-views-card-background-hover-custom
+    -
+        id: dynamic-views-card-background-color-hover-custom
+        title: Custom card background on hover
+        description: Custom color for card backgrounds on hover (only used when Card background on hover is set to Custom color)
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
         id: dynamic-views-card-border-color
         title: Card border color
         description: Theme color preset for card borders
@@ -234,58 +286,6 @@ settings:
         id: dynamic-views-card-border-color-hover-custom
         title: Custom card border color on hover
         description: Custom color for card borders on hover (only used when Card border color on hover is set to Custom)
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
-    -
-        id: dynamic-views-card-background
-        title: Card background
-        description: Card background appearance
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-background-tinted
-        options:
-            -
-                label: Tinted
-                value: dynamic-views-card-background-tinted
-            -
-                label: Transparent
-                value: dynamic-views-card-background-transparent
-            -
-                label: Custom color
-                value: dynamic-views-card-background-custom
-    -
-        id: dynamic-views-card-background-color-custom
-        title: Custom card background
-        description: Custom color for card backgrounds (only used when Card background is set to Custom color)
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
-    -
-        id: dynamic-views-card-background-hover
-        title: Card background on hover
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-background-hover-none
-        options:
-            -
-                label: No change
-                value: dynamic-views-card-background-hover-none
-            -
-                label: Tinted
-                value: dynamic-views-card-background-hover-tinted
-            -
-                label: Transparent
-                value: dynamic-views-card-background-hover-transparent
-            -
-                label: Custom color
-                value: dynamic-views-card-background-hover-custom
-    -
-        id: dynamic-views-card-background-color-hover-custom
-        title: Custom card background on hover
-        description: Custom color for card backgrounds on hover (only used when Card background on hover is set to Custom color)
         type: variable-themed-color
         format: hex
         default-light: '#'
