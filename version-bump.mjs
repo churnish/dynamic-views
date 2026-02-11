@@ -20,6 +20,19 @@ writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t") + "\n");
 
 console.log(`Updated manifest.json to version ${targetVersion}`);
 
+// Catch any console.debug that isn't behind a DEBUG_ gate
+try {
+  execSync(
+    'npx eslint src/ --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
+    { stdio: "inherit" },
+  );
+} catch {
+  console.error(
+    "\n⚠ Ungated console.debug found. Remove debug logs before releasing.\n",
+  );
+  process.exit(1);
+}
+
 // Auto-update eslint-plugin-obsidianmd if outdated (review bot uses this plugin)
 try {
   // npm outdated exits 0 when everything is current — nothing to do
