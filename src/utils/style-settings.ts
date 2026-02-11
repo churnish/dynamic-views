@@ -334,6 +334,15 @@ export function getStyleSettingsHash(): string {
 export function setupStyleSettingsObserver(
   onStyleChange: () => void,
 ): () => void {
+  // Mutually exclusive class-select groups that must always have one active member.
+  // When Style Settings is disabled it strips all managed classes — re-add the default.
+  const FILE_TYPE_CLASSES = [
+    "dynamic-views-file-type-ext",
+    "dynamic-views-file-type-flair",
+    "dynamic-views-file-type-icon",
+    "dynamic-views-file-type-none",
+  ];
+
   // Dynamic classes that should NOT trigger re-renders (added/removed by plugin at runtime)
   const ignoredDynamicClasses = [
     "dynamic-views-backdrop-theme-match", // Style Settings default
@@ -347,6 +356,13 @@ export function setupStyleSettingsObserver(
         mutation.type === "attributes" &&
         mutation.attributeName === "class"
       ) {
+        // Re-apply default when Style Settings strips all file-type classes
+        if (
+          !FILE_TYPE_CLASSES.some((c) => document.body.classList.contains(c))
+        ) {
+          document.body.classList.add("dynamic-views-file-type-ext");
+        }
+
         // Check if any dynamic-views class changed (excluding runtime-only classes)
         const oldClasses = mutation.oldValue?.split(" ") || [];
         const newClasses = document.body.className.split(" ");
