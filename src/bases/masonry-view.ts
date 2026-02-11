@@ -37,7 +37,7 @@ import {
   RESIZE_THROTTLE_MS,
 } from "../shared/constants";
 import {
-  setupBasesSwipeInterception,
+  setupBasesSwipePrevention,
   setupStyleSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
@@ -164,7 +164,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private isLoading: boolean = false;
   private scrollResizeObserver: ResizeObserver | null = null;
   private containerRef: { current: HTMLElement | null } = { current: null };
-  private swipeAbortController: AbortController | null = null;
   private previousDisplayedCount: number = 0;
   private contentVisibility: ReturnType<typeof setupContentVisibility> | null =
     null;
@@ -607,12 +606,8 @@ export class DynamicViewsMasonryView extends BasesView {
     // Placeholder - calculated dynamically on first render
     this.displayedCount = 0;
 
-    // Setup swipe interception on mobile if enabled
-    this.swipeAbortController = setupBasesSwipeInterception(
-      this.containerEl,
-      this.app,
-      pluginSettings,
-    );
+    // Setup swipe prevention on mobile if enabled
+    setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
     // Watch for Dynamic Views Style Settings changes only
     const disconnectObserver = setupStyleSettingsObserver(() => {
@@ -2152,7 +2147,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
   onunload(): void {
     this.scrollPreservation?.cleanup();
-    this.swipeAbortController?.abort();
     this.renderState.abortController?.abort();
     if (this.resizeRafId !== null) {
       cancelAnimationFrame(this.resizeRafId);

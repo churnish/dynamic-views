@@ -66,7 +66,6 @@ import {
   datacoreResultToCardData,
 } from "../shared/data-transform";
 import type { CardData } from "../shared/card-renderer";
-import { setupSwipeInterception } from "../bases/swipe-interceptor";
 import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
 import { initializeScrollGradients } from "../shared/scroll-gradient";
 import {
@@ -464,7 +463,7 @@ export function View({
     };
   }, [settings, QUERY_ID, persistenceManager]);
 
-  // Setup swipe interception on mobile if enabled (Datacore is always embedded)
+  // Setup swipe prevention on mobile if enabled (Datacore is always embedded)
   // Note: preventSidebarSwipe intentionally omitted from deps - global settings require restart
   dc.useEffect(() => {
     const pluginSettings = persistenceManager.getPluginSettings();
@@ -473,9 +472,8 @@ export function View({
       pluginSettings.preventSidebarSwipe === "all-views" &&
       explorerRef.current
     ) {
-      const controller = new AbortController();
-      setupSwipeInterception(explorerRef.current, controller.signal);
-      return () => controller.abort();
+      explorerRef.current.dataset.ignoreSwipe = "true";
+      return () => explorerRef.current?.removeAttribute("data-ignore-swipe");
     }
   }, [app.isMobile, persistenceManager]);
 

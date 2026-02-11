@@ -17,8 +17,7 @@ const UNDO_WINDOW_MS = 2500;
 
 // Gesture detection thresholds
 const WHEEL_SWIPE_THRESHOLD = 5; // Accumulated deltaX to trigger navigation
-const WHEEL_ACCEL_THRESHOLD = 5; // Minimum deltaX to detect acceleration
-const WHEEL_ACCEL_OFFSET = 2; // Delta increase to count as acceleration
+const WHEEL_GESTURE_GAP_MS = 150; // Quiet period to detect gesture boundary
 const TOUCH_SWIPE_THRESHOLD = 30; // Distance to trigger navigation
 
 export interface SlideshowElements {
@@ -69,9 +68,52 @@ export function createSlideshowNavigator(
 
   // Track all pending timeouts for consolidated cleanup on abort
   const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
+  // Track active animation state for cancel-and-restart
+  let activeAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
+  let activeExitClass = "";
+  let activeEnterClass = "";
+  let activeNewIndex = 0;
+
+  /**
+   * Finishes the current animation immediately: removes classes, swaps image roles,
+   * updates state. Called by normal timeout completion, cancel-and-restart, and abort.
+   */
+  const finishAnimation = () => {
+    const els = getElements();
+    if (!els) {
+      isAnimating = false;
+      return;
+    }
+    const { currImg, nextImg } = els;
+
+    // Clear the animation timeout
+    if (activeAnimationTimeout !== null) {
+      clearTimeout(activeAnimationTimeout);
+      activeAnimationTimeout = null;
+    }
+
+    // Remove animation classes
+    currImg.classList.remove(activeExitClass);
+    nextImg.classList.remove(activeEnterClass);
+
+    // Swap roles
+    currImg.classList.remove("slideshow-img-current");
+    currImg.classList.add("slideshow-img-next");
+    nextImg.classList.remove("slideshow-img-next");
+    nextImg.classList.add("slideshow-img-current");
+
+    // Clear src on the now-next element
+    currImg.src = "";
+
+    currentIndex = activeNewIndex;
+    isAnimating = false;
+  };
+
   signal.addEventListener(
     "abort",
     () => {
+      finishAnimation();
       pendingTimeouts.forEach(clearTimeout);
       pendingTimeouts.clear();
     },
@@ -86,7 +128,12 @@ export function createSlideshowNavigator(
     honorGestureDirection = false,
     skipAnimation = false,
   ) => {
-    if (isAnimating || signal.aborted || imageUrls.length <= 1) return;
+    if (signal.aborted || imageUrls.length <= 1) return;
+
+    // Cancel-and-restart: snap current animation to end state
+    if (isAnimating) {
+      finishAnimation();
+    }
 
     // Calculate next index with wraparound
     const current = currentIndex;
@@ -101,6 +148,7 @@ export function createSlideshowNavigator(
     const newUrl = imageUrls[newIndex];
 
     isAnimating = true;
+    activeNewIndex = newIndex;
 
     // Notify about slide change
     if (callbacks?.onSlideChange) {
@@ -203,51 +251,26 @@ export function createSlideshowNavigator(
 
     // Normal: next=left, prev=right. Last→first wrap: reverse direction
     const slideLeft = direction === 1 && !isWrapToFirst;
-    const exitClass = slideLeft
+    activeExitClass = slideLeft
       ? "slideshow-exit-left"
       : "slideshow-exit-right";
-    const enterClass = slideLeft
+    activeEnterClass = slideLeft
       ? "slideshow-enter-left"
       : "slideshow-enter-right";
 
-    currImg.classList.add(exitClass);
-    nextImg.classList.add(enterClass);
+    currImg.classList.add(activeExitClass);
+    nextImg.classList.add(activeEnterClass);
 
-    const animTimeoutId = setTimeout(() => {
-      pendingTimeouts.delete(animTimeoutId);
+    activeAnimationTimeout = setTimeout(() => {
+      activeAnimationTimeout = null;
       if (signal.aborted) return;
 
-      // Remove animation classes
-      currImg.classList.remove(exitClass);
-      nextImg.classList.remove(enterClass);
-
-      // Swap roles
-      currImg.classList.remove("slideshow-img-current");
-      currImg.classList.add("slideshow-img-next");
-      nextImg.classList.remove("slideshow-img-next");
-      nextImg.classList.add("slideshow-img-current");
-
-      // Clear src on the now-next element
-      currImg.src = "";
-
-      currentIndex = newIndex;
-      isAnimating = false;
+      finishAnimation();
 
       if (callbacks?.onAnimationComplete) {
         callbacks.onAnimationComplete();
       }
     }, animationDuration);
-    pendingTimeouts.add(animTimeoutId);
-
-    // Remove animation classes on abort (timeout already cleared by central handler)
-    signal.addEventListener(
-      "abort",
-      () => {
-        currImg.classList.remove(exitClass);
-        nextImg.classList.remove(enterClass);
-      },
-      { once: true },
-    );
   };
 
   // Reset to first slide (called when view becomes visible)
@@ -286,6 +309,16 @@ export function setupSwipeGestures(
   let accumulatedDeltaX = 0;
   let lastDeltaX = 0;
   let navigatedThisGesture = false;
+  let gestureResetTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Clean up gesture timeout on abort
+  signal.addEventListener(
+    "abort",
+    () => {
+      if (gestureResetTimeout) clearTimeout(gestureResetTimeout);
+    },
+    { once: true },
+  );
 
   // Wheel events capture trackpad swipes
   coverEl.addEventListener(
@@ -296,14 +329,18 @@ export function setupSwipeGestures(
 
       const deltaX = e.deltaX;
 
-      // Detect new gesture: direction change or acceleration (new swipe starts faster)
+      // Quiet period: no wheel events for 150ms = gesture ended
+      if (gestureResetTimeout) clearTimeout(gestureResetTimeout);
+      gestureResetTimeout = setTimeout(() => {
+        accumulatedDeltaX = 0;
+        navigatedThisGesture = false;
+        gestureResetTimeout = null;
+      }, WHEEL_GESTURE_GAP_MS);
+
+      // Direction change within a gesture is always intentional
       const directionChanged =
         lastDeltaX !== 0 && Math.sign(deltaX) !== Math.sign(lastDeltaX);
-      const accelerated =
-        Math.abs(deltaX) > Math.abs(lastDeltaX) + WHEEL_ACCEL_OFFSET &&
-        Math.abs(deltaX) > WHEEL_ACCEL_THRESHOLD;
-
-      if (directionChanged || accelerated) {
+      if (directionChanged) {
         accumulatedDeltaX = 0;
         navigatedThisGesture = false;
       }

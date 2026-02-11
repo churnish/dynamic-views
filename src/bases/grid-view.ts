@@ -29,7 +29,7 @@ import {
   SCROLL_THROTTLE_MS,
 } from "../shared/constants";
 import {
-  setupBasesSwipeInterception,
+  setupBasesSwipePrevention,
   setupStyleSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
@@ -149,7 +149,6 @@ export class DynamicViewsGridView extends BasesView {
   private currentCardSize: number = 400;
   private currentMinColumns: number = 1;
   private feedContainerRef: { current: HTMLElement | null } = { current: null };
-  private swipeAbortController: AbortController | null = null;
   private previousDisplayedCount: number = 0;
   private isUpdatingColumns: boolean = false;
   private lastColumnCount: number = 0;
@@ -514,12 +513,8 @@ export class DynamicViewsGridView extends BasesView {
     // Placeholder - calculated dynamically on first render
     this.displayedCount = 0;
 
-    // Setup swipe interception on mobile if enabled
-    this.swipeAbortController = setupBasesSwipeInterception(
-      this.containerEl,
-      this.app,
-      pluginSettings,
-    );
+    // Setup swipe prevention on mobile if enabled
+    setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
     // Watch for Dynamic Views Style Settings changes only
     const disconnectObserver = setupStyleSettingsObserver(() =>
@@ -1640,7 +1635,6 @@ export class DynamicViewsGridView extends BasesView {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
     this.contentVisibility?.disconnect();
-    this.swipeAbortController?.abort();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction

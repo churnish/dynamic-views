@@ -23,7 +23,6 @@ import {
   loadTextPreviewsForEntries,
   loadImagesForEntries,
 } from "../shared/content-loader";
-import { setupSwipeInterception } from "./swipe-interceptor";
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
@@ -254,26 +253,23 @@ export function isEmbeddedView(containerEl: HTMLElement): boolean {
 }
 
 /**
- * Setup swipe interception on mobile if enabled based on settings
- * @returns AbortController if interception was set up, null otherwise
+ * Setup swipe prevention on mobile if enabled based on settings
+ * Uses Obsidian's native data-ignore-swipe attribute to opt out of sidebar swipe detection
  */
-export function setupBasesSwipeInterception(
+export function setupBasesSwipePrevention(
   containerEl: HTMLElement,
   app: App,
   pluginSettings: PluginSettings,
-): AbortController | null {
+): void {
   const isEmbedded = isEmbeddedView(containerEl);
-  const shouldIntercept =
+  const shouldPrevent =
     app.isMobile &&
     (pluginSettings.preventSidebarSwipe === "all-views" ||
       (pluginSettings.preventSidebarSwipe === "base-files" && !isEmbedded));
 
-  if (shouldIntercept) {
-    const controller = new AbortController();
-    setupSwipeInterception(containerEl, controller.signal);
-    return controller;
+  if (shouldPrevent) {
+    containerEl.dataset.ignoreSwipe = "true";
   }
-  return null;
 }
 
 // Re-export from shared location

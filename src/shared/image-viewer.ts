@@ -4,7 +4,7 @@
 
 import { Notice, TFile, type App } from "obsidian";
 import Panzoom, { PanzoomObject } from "@panzoom/panzoom";
-import { setupSwipeInterception } from "../bases/swipe-interceptor";
+import { setupTouchInterceptAll } from "../bases/swipe-interceptor";
 import { GESTURE_TIMEOUT_MS } from "./constants";
 import {
   getZoomSensitivityDesktop,
@@ -724,10 +724,11 @@ function openImageViewer(
       gestureControls = setupImageViewerGestures(imgEl, cloneEl, isMobile);
 
       // On mobile, disable all touch gestures (sidebar swipes + pull-down) while panning
-      // Desktop uses simpler cleanup since swipe interception not needed
+      // Desktop uses simpler cleanup since touch interception not needed
       if (isMobile) {
+        cloneEl.dataset.ignoreSwipe = "true";
         const swipeController = new AbortController();
-        setupSwipeInterception(cloneEl, swipeController.signal, true);
+        setupTouchInterceptAll(cloneEl, swipeController.signal);
         viewerCleanupFns.set(cloneEl, () => {
           gestureControls!.cleanup();
           swipeController.abort();

@@ -1,61 +1,25 @@
 /**
- * Touch swipe interceptor for mobile
- * Prevents Obsidian sidebar gestures from triggering when interacting with Bases views
+ * Touch interception for image viewer panzoom on mobile
+ * Blocks all touch propagation so panzoom gets exclusive control
  */
-
-import { SWIPE_DETECT_THRESHOLD } from "../shared/constants";
 
 /**
- * Setup touch event interception for a container
- * Intercepts horizontal swipes to prevent sidebar gestures
- *
- * @param container - The container element to intercept swipes on
- * @param signal - AbortSignal for cleanup
- * @param interceptAll - If true, intercept all touch gestures (horizontal + vertical)
+ * Intercept all touch gestures on a container (for zoomed images)
+ * Blocks touch propagation on non-IMG elements so panzoom handles pinch gestures
  */
-export function setupSwipeInterception(
+export function setupTouchInterceptAll(
   container: HTMLElement,
   signal: AbortSignal,
-  interceptAll = false,
 ): void {
-  let touchStartX = 0;
-  let touchStartY = 0;
-
-  const handleTouchStart = (e: TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (e.touches.length !== 1) return;
-
-    if (interceptAll) {
-      // Intercept all touch gestures (for zoomed images)
-      // But don't block touch on images - let panzoom handle pinch gestures
+  container.addEventListener(
+    "touchmove",
+    (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
       const target = e.target as HTMLElement;
       if (target.tagName !== "IMG") {
         e.stopPropagation();
       }
-      return;
-    }
-
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - touchStartX);
-    const deltaY = Math.abs(touch.clientY - touchStartY);
-
-    // Only intercept if horizontal movement dominates
-    if (deltaX > SWIPE_DETECT_THRESHOLD && deltaX > deltaY) {
-      e.stopPropagation();
-    }
-  };
-
-  container.addEventListener("touchstart", handleTouchStart, {
-    passive: true,
-    signal,
-  });
-  container.addEventListener("touchmove", handleTouchMove, {
-    passive: false,
-    signal,
-  });
+    },
+    { passive: false, signal },
+  );
 }
