@@ -123,15 +123,59 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-card-border
-        title: Card border
-        description: Show border around cards
-        type: variable-boolean
-        default: true
-    -
         id: dynamic-views-card-border-color
         title: Card border color
-        description: Color of card borders
+        description: Theme color preset for card borders
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-border-color-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-card-border-color-faint
+            -
+                label: Muted
+                value: dynamic-views-card-border-color-muted
+            -
+                label: Normal
+                value: dynamic-views-card-border-color-normal
+            -
+                label: Accent
+                value: dynamic-views-card-border-color-accent
+            -
+                label: Red
+                value: dynamic-views-card-border-color-red
+            -
+                label: Orange
+                value: dynamic-views-card-border-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-border-color-yellow
+            -
+                label: Green
+                value: dynamic-views-card-border-color-green
+            -
+                label: Cyan
+                value: dynamic-views-card-border-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-border-color-blue
+            -
+                label: Purple
+                value: dynamic-views-card-border-color-purple
+            -
+                label: Pink
+                value: dynamic-views-card-border-color-pink
+            -
+                label: Transparent
+                value: dynamic-views-card-border-color-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-border-color-custom
+    -
+        id: dynamic-views-card-border-color-custom
+        title: Custom card border color
+        description: Custom color for card borders (only used when Card border color is set to Custom)
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -139,16 +183,61 @@ settings:
     -
         id: dynamic-views-card-border-color-hover
         title: Card border color on hover
-        description: Color of card borders when hovering
+        description: Theme color preset for card borders on hover
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-border-color-hover-normal
+        options:
+            -
+                label: Faint
+                value: dynamic-views-card-border-color-hover-faint
+            -
+                label: Muted
+                value: dynamic-views-card-border-color-hover-muted
+            -
+                label: Normal
+                value: dynamic-views-card-border-color-hover-normal
+            -
+                label: Accent
+                value: dynamic-views-card-border-color-hover-accent
+            -
+                label: Red
+                value: dynamic-views-card-border-color-hover-red
+            -
+                label: Orange
+                value: dynamic-views-card-border-color-hover-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-border-color-hover-yellow
+            -
+                label: Green
+                value: dynamic-views-card-border-color-hover-green
+            -
+                label: Cyan
+                value: dynamic-views-card-border-color-hover-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-border-color-hover-blue
+            -
+                label: Purple
+                value: dynamic-views-card-border-color-hover-purple
+            -
+                label: Pink
+                value: dynamic-views-card-border-color-hover-pink
+            -
+                label: Transparent
+                value: dynamic-views-card-border-color-hover-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-border-color-hover-custom
+    -
+        id: dynamic-views-card-border-color-hover-custom
+        title: Custom card border color on hover
+        description: Custom color for card borders on hover (only used when Card border color on hover is set to Custom)
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
-    -
-        id: dynamic-views-hide-card-border
-        title: Hide card border
-        description: Remove borders from cards
-        type: class-toggle
     -
         id: dynamic-views-card-background
         title: Card background
@@ -167,7 +256,7 @@ settings:
                 label: Custom color
                 value: dynamic-views-card-background-custom
     -
-        id: dynamic-views-card-background-custom-color
+        id: dynamic-views-card-background-color-custom
         title: Custom card background
         description: Custom color for card backgrounds (only used when Card background is set to Custom color)
         type: variable-themed-color
@@ -194,7 +283,7 @@ settings:
                 label: Custom color
                 value: dynamic-views-card-background-hover-custom
     -
-        id: dynamic-views-card-background-hover-custom-color
+        id: dynamic-views-card-background-color-hover-custom
         title: Custom card background on hover
         description: Custom color for card backgrounds on hover (only used when Card background on hover is set to Custom color)
         type: variable-themed-color
@@ -247,7 +336,7 @@ settings:
                 label: Custom color
                 value: dynamic-views-cover-bg-custom
     -
-        id: dynamic-views-cover-background-custom-color
+        id: dynamic-views-cover-background-color-custom
         title: Custom cover background
         description: Background color for "Custom color" mode
         type: variable-themed-color
@@ -2943,8 +3032,7 @@ body.dynamic-views-hide-group-property-labels
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px
-    var(--dynamic-views-card-border-color, var(--background-modifier-border));
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
   pointer-events: none;
 }
 
@@ -2992,14 +3080,54 @@ body.dynamic-views-hide-group-property-labels
   cursor: pointer;
 }
 
-/* Hide card border - explicit setting */
-body.dynamic-views-hide-card-border .dynamic-views .card::after {
-  box-shadow: none;
+/* Card border color presets */
+/* Faint (default) — no rule needed, base ::after uses --background-modifier-border */
+body.dynamic-views-card-border-color-muted .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
+}
+body.dynamic-views-card-border-color-normal .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
+}
+body.dynamic-views-card-border-color-accent .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--text-accent);
+}
+body.dynamic-views-card-border-color-red .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-red);
+}
+body.dynamic-views-card-border-color-orange .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-orange);
+}
+body.dynamic-views-card-border-color-yellow .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-yellow);
+}
+body.dynamic-views-card-border-color-green .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-green);
+}
+body.dynamic-views-card-border-color-cyan .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-cyan);
+}
+body.dynamic-views-card-border-color-blue .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+body.dynamic-views-card-border-color-purple .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-purple);
+}
+body.dynamic-views-card-border-color-pink .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px var(--color-pink);
 }
 
-/* When border hidden: no inset adjustment */
-body.dynamic-views-hide-card-border .dynamic-views .card {
+/* Transparent: hide border, drop cover 1px inset */
+body.dynamic-views-card-border-color-transparent .dynamic-views .card::after {
+  box-shadow: none;
+}
+body.dynamic-views-card-border-color-transparent .dynamic-views .card {
   --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
+}
+
+/* Custom: use user-provided color variable */
+body.dynamic-views-card-border-color-custom .dynamic-views .card::after {
+  box-shadow: inset 0 0 0 1px
+    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
 }
 
 /* Focus ring - appears after hiding rules to win via cascade */
@@ -3106,7 +3234,7 @@ body.dynamic-views-card-background-transparent .dynamic-views .card {
 
 body.dynamic-views-card-background-custom .dynamic-views .card {
   background-color: var(
-    --dynamic-views-card-background-custom-color,
+    --dynamic-views-card-background-color-custom,
     var(--background-primary-alt)
   );
 }
@@ -3124,7 +3252,7 @@ body.dynamic-views-card-background-hover-transparent
 
 body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
   background-color: var(
-    --dynamic-views-card-background-hover-custom-color,
+    --dynamic-views-card-background-color-hover-custom,
     var(--background-primary-alt)
   );
 }
@@ -3161,13 +3289,52 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
   flex: 0 1 auto;
 }
 
+/* Card border color on hover presets */
 @media (hover: hover) {
+  /* Normal (default) — base hover uses --background-modifier-border-focus */
   .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
+  }
+
+  body.dynamic-views-card-border-color-hover-faint .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  }
+  body.dynamic-views-card-border-color-hover-muted .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
+  }
+  body.dynamic-views-card-border-color-hover-accent .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--text-accent);
+  }
+  body.dynamic-views-card-border-color-hover-red .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-red);
+  }
+  body.dynamic-views-card-border-color-hover-orange .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-orange);
+  }
+  body.dynamic-views-card-border-color-hover-yellow .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-yellow);
+  }
+  body.dynamic-views-card-border-color-hover-green .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-green);
+  }
+  body.dynamic-views-card-border-color-hover-cyan .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-cyan);
+  }
+  body.dynamic-views-card-border-color-hover-blue .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-blue);
+  }
+  body.dynamic-views-card-border-color-hover-purple .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-purple);
+  }
+  body.dynamic-views-card-border-color-hover-pink .dynamic-views .card:hover::after {
+    box-shadow: inset 0 0 0 1px var(--color-pink);
+  }
+  body.dynamic-views-card-border-color-hover-transparent .dynamic-views .card:hover::after {
+    box-shadow: none;
+  }
+  body.dynamic-views-card-border-color-hover-custom .dynamic-views .card:hover::after {
     box-shadow: inset 0 0 0 1px
-      var(
-        --dynamic-views-card-border-color-hover,
-        var(--background-modifier-border-focus)
-      );
+      var(--dynamic-views-card-border-color-hover-custom, var(--background-modifier-border-focus));
   }
 }
 
@@ -3978,7 +4145,7 @@ body.dynamic-views-cover-bg-custom
   .card.image-format-cover
   .card-cover {
   background-color: var(
-    --dynamic-views-cover-background-custom-color,
+    --dynamic-views-cover-background-color-custom,
     var(--dynamic-views-image-background-plain)
   );
 }
@@ -4552,7 +4719,7 @@ body.dynamic-views-show-cover-border
   .card.card-cover-top.image-format-cover
   .card-cover-wrapper {
   border-bottom: 1px solid
-    var(--dynamic-views-card-border-color, var(--background-modifier-border));
+    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
 }
 
 body.dynamic-views-show-cover-border
@@ -4560,7 +4727,7 @@ body.dynamic-views-show-cover-border
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper {
   border-top: 1px solid
-    var(--dynamic-views-card-border-color, var(--background-modifier-border));
+    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
 }
 
 body.dynamic-views-show-cover-border
@@ -4568,7 +4735,7 @@ body.dynamic-views-show-cover-border
   .card.card-cover-left.image-format-cover
   .card-cover-wrapper {
   border-right: 1px solid
-    var(--dynamic-views-card-border-color, var(--background-modifier-border));
+    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
 }
 
 body.dynamic-views-show-cover-border
@@ -4576,7 +4743,7 @@ body.dynamic-views-show-cover-border
   .card.card-cover-right.image-format-cover
   .card-cover-wrapper {
   border-left: 1px solid
-    var(--dynamic-views-card-border-color, var(--background-modifier-border));
+    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
 }
 
 /* ==================== COVER PLACEHOLDERS ==================== */
@@ -4601,7 +4768,7 @@ body.dynamic-views-cover-bg-custom
   .card.image-format-cover
   .card-cover-placeholder {
   background-color: var(
-    --dynamic-views-cover-background-custom-color,
+    --dynamic-views-cover-background-color-custom,
     var(--dynamic-views-image-background-plain)
   );
 }
@@ -5037,12 +5204,16 @@ body.dynamic-views-poster-disable-scroll
   pointer-events: none;
 }
 
-/* No border = no inset */
-body.dynamic-views-hide-card-border .dynamic-views .card.image-format-backdrop {
+/* Transparent border = no inset */
+body.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-backdrop {
   --backdrop-inset: 0px;
 }
 
-body.dynamic-views-hide-card-border .dynamic-views .card.image-format-poster {
+body.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-poster {
   --poster-inset: 0px;
 }
 
@@ -7591,13 +7762,19 @@ body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
 /* Conditional Style Settings visibility */
 body:not(.dynamic-views-card-background-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-background-custom-color"],
+  .setting-item[data-id="dynamic-views-card-background-color-custom"],
 body:not(.dynamic-views-card-background-hover-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-background-hover-custom-color"],
+  .setting-item[data-id="dynamic-views-card-background-color-hover-custom"],
+body:not(.dynamic-views-card-border-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-border-color-custom"],
+body:not(.dynamic-views-card-border-color-hover-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-border-color-hover-custom"],
 body:not(.dynamic-views-cover-bg-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-cover-background-custom-color"],
+  .setting-item[data-id="dynamic-views-cover-background-color-custom"],
 body.dynamic-views-image-viewer-disabled
   .style-settings-container
   .setting-item[data-id="dynamic-views-image-viewer-disabled"]
