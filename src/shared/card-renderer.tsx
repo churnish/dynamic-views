@@ -60,7 +60,10 @@ import {
   isArrowKey,
   isImageViewerBlockingNav,
 } from "./keyboard-nav";
-import { CHECKBOX_MARKER_PREFIX } from "./constants";
+import {
+  CHECKBOX_MARKER_PREFIX,
+  THUMBNAIL_STACK_MULTIPLIER,
+} from "./constants";
 
 import {
   isTagProperty,
@@ -1609,6 +1612,9 @@ function Card({
   const enableScrubbing =
     !app.isMobile && isArray && imageArray.length > 1 && !scrubbingDisabled;
 
+  const hasImageSource =
+    !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== "never";
+
   const format = settings.imageFormat;
   const position = settings.imagePosition;
 
@@ -1963,7 +1969,8 @@ function Card({
               const thumbnailEl = cardEl.querySelector(".card-thumbnail");
               if (thumbnailEl) {
                 const thumbnailWidth = (thumbnailEl as HTMLElement).offsetWidth;
-                const isStacked = cardWidth < thumbnailWidth * 3;
+                const isStacked =
+                  cardWidth < thumbnailWidth * THUMBNAIL_STACK_MULTIPLIER;
                 cardEl.classList.toggle("thumbnail-stack", isStacked);
               }
             }
@@ -1986,6 +1993,7 @@ function Card({
             );
 
             if (!cardEl.classList.contains("poster-revealed")) {
+              e.preventDefault();
               e.stopPropagation();
               // Dismiss any other revealed card in the same view
               cardEl
@@ -2094,9 +2102,25 @@ function Card({
           (imgEl as HTMLImageElement).src = firstImage;
         }
       }}
-      onMouseLeave={() => {
-        // Clear hovered card reference
+      onMouseLeave={(e: MouseEvent) => {
         (hoveredCardRef as { current: HTMLElement | null }).current = null;
+        if (format === "poster") {
+          (e.currentTarget as HTMLElement).classList.remove(
+            "poster-hover-active",
+          );
+        }
+      }}
+      onMouseMove={(e: MouseEvent) => {
+        if (format === "poster") {
+          const cardEl = e.currentTarget as HTMLElement;
+          if (!cardEl.classList.contains("poster-hover-active")) {
+            cardEl
+              .closest(".dynamic-views")
+              ?.querySelector(".card.poster-hover-active")
+              ?.classList.remove("poster-hover-active");
+            cardEl.classList.add("poster-hover-active");
+          }
+        }
       }}
       onContextMenu={(e: MouseEvent) => {
         // Show file context menu when openFileAction is 'card' or poster format
@@ -2121,6 +2145,7 @@ function Card({
     >
       {/* Cover: before .card-content for top/left position */}
       {format === "cover" &&
+        (imageArray.length > 0 || hasImageSource) &&
         (position === "top" || position === "left") &&
         renderCoverWrapper()}
 
@@ -2360,7 +2385,9 @@ function Card({
                 )}
 
                 {/* Previews container (text preview + thumbnail) */}
-                {(card.textPreview || format === "thumbnail") && (
+                {(card.textPreview ||
+                  (format === "thumbnail" &&
+                    (imageArray.length > 0 || hasImageSource))) && (
                   <div className="card-previews">
                     {card.textPreview && (
                       <div className="card-text-preview-wrapper">
@@ -2371,6 +2398,7 @@ function Card({
                     )}
                     {/* Thumbnail */}
                     {format === "thumbnail" &&
+                      (imageArray.length > 0 || hasImageSource) &&
                       (imageArray.length > 0 ? (
                         <div
                           className={`card-thumbnail ${enableScrubbing ? "multi-image" : ""}`}
@@ -2552,6 +2580,7 @@ function Card({
 
       {/* Cover: after .card-content for bottom/right position */}
       {format === "cover" &&
+        (imageArray.length > 0 || hasImageSource) &&
         (position === "bottom" || position === "right") &&
         renderCoverWrapper()}
     </div>

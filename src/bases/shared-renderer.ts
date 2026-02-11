@@ -801,6 +801,7 @@ export class SharedCardRenderer {
           );
 
           if (!cardEl.classList.contains("poster-revealed")) {
+            e.preventDefault();
             e.stopPropagation();
             // Dismiss any other revealed card in the same view
             cardEl
