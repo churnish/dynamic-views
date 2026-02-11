@@ -1855,6 +1855,10 @@ export class DynamicViewsMasonryView extends BasesView {
         // Sync responsive classes before measuring (ResizeObservers are async)
         syncResponsiveClasses(newCards);
 
+        // Force content rendering for accurate measurement
+        // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
+        this.masonryContainer?.classList.add("masonry-measuring");
+
         // Force synchronous reflow so heights reflect new widths
         void targetContainer.offsetHeight;
 
@@ -1876,6 +1880,9 @@ export class DynamicViewsMasonryView extends BasesView {
           card.style.setProperty("--masonry-left", `${pos.left}px`);
           card.style.setProperty("--masonry-top", `${pos.top}px`);
         });
+
+        // Restore content-visibility (CSS takes over for off-screen cards)
+        this.masonryContainer?.classList.remove("masonry-measuring");
 
         // Track expected height so ResizeObserver can skip this change
         this.expectedIncrementalHeight = result.containerHeight;

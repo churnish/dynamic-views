@@ -3074,9 +3074,10 @@ body.is-mobile .dynamic-views .card {
   contain-intrinsic-height: auto 300px;
 }
 
-/* Force content rendering during masonry height measurement */
-.masonry-measuring .card.content-hidden {
-  content-visibility: visible;
+/* Force content rendering during masonry height measurement
+   (overrides both IO-based .content-hidden and CSS content-visibility: auto) */
+.masonry-measuring .card {
+  content-visibility: visible !important;
 }
 
 /* Spacing between card-header and card-body inside .card-content */
