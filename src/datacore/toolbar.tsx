@@ -172,7 +172,7 @@ function SearchInput({
       </svg>
       <input
         type="text"
-        placeholder="Filter..."
+        placeholder="Find..."
         value={searchQuery}
         onChange={(e: unknown) => {
           const evt = e as InputEvent & { target: HTMLInputElement };
