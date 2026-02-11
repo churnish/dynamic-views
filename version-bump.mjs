@@ -3,6 +3,23 @@ import { execSync } from "child_process";
 
 const targetVersion = process.env.npm_package_version;
 
+// ── Pre-flight check (abort before any side effects) ─────────────────
+
+// Full lint + catch any console.debug that isn't behind a DEBUG_ gate
+try {
+  execSync(
+    'npx eslint . --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
+    { stdio: "inherit" },
+  );
+} catch {
+  console.error(
+    "\n⚠ ESLint failed. Fix lint errors (or ungated console.debug) before releasing.\n",
+  );
+  process.exit(1);
+}
+
+// ── Side effects ─────────────────────────────────────────────────────
+
 // Fetch latest README from GitHub
 try {
   execSync("git fetch origin && git checkout origin/main -- README.md", {
@@ -19,19 +36,6 @@ manifest.version = targetVersion;
 writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t") + "\n");
 
 console.log(`Updated manifest.json to version ${targetVersion}`);
-
-// Catch any console.debug that isn't behind a DEBUG_ gate
-try {
-  execSync(
-    'npx eslint . --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
-    { stdio: "inherit" },
-  );
-} catch {
-  console.error(
-    "\n⚠ Ungated console.debug found. Remove debug logs before releasing.\n",
-  );
-  process.exit(1);
-}
 
 // Auto-update eslint-plugin-obsidianmd if outdated (review bot uses this plugin)
 try {
