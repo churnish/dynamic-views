@@ -518,23 +518,23 @@ settings:
         description: Prevent vertically scrolling card content when it doesn't fit
         type: class-toggle
     -
+        id: dynamic-views-poster-mode
+        title: Display mode
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-mode-gradient
+        options:
+            -
+                label: Gradient
+                value: dynamic-views-poster-mode-gradient
+            -
+                label: Overlay
+                value: dynamic-views-poster-mode-overlay
+    -
         id: dynamic-views-poster-disable-raise
         title: Disable raise animation
         description: Content fades in without sliding up on reveal
         type: class-toggle
-    -
-        id: dynamic-views-poster-overlay-style
-        title: Display mode
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-poster-overlay-gradient
-        options:
-            -
-                label: Gradient
-                value: dynamic-views-poster-overlay-gradient
-            -
-                label: Overlay
-                value: dynamic-views-poster-overlay-flat
     -
         id: dynamic-views-poster-overlay-tint
         title: Overlay tint
@@ -4947,10 +4947,12 @@ body.dynamic-views-show-cover-placeholder-both
   --poster-inset: 1px;
 }
 
-/* Poster: scrollable card body when content overflows fixed-height card */
-/* overflow: hidden on .card-content constrains height so .card-body can scroll */
+/* Poster: constrain height so .card-body can scroll.
+   overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
+   without clipping its border-radius. */
 .dynamic-views .card.image-format-poster .card-content {
-  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: 4px;
 }
 
 .dynamic-views .card.image-format-poster .card-body {
@@ -5180,8 +5182,8 @@ body:is(
 
 /* Poster overlay: Gradient (default — hardcoded dark at 85%) */
 body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
+    .dynamic-views-poster-mode-gradient,
+    :not(.dynamic-views-poster-mode-overlay)
   )
   .dynamic-views
   .card.image-format-poster
@@ -5196,8 +5198,8 @@ body:is(
 
 /* Gradient: bottom-align content where tint provides contrast */
 body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
+    .dynamic-views-poster-mode-gradient,
+    :not(.dynamic-views-poster-mode-overlay)
   )
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
@@ -5205,8 +5207,8 @@ body:is(
 }
 
 body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
+    .dynamic-views-poster-mode-gradient,
+    :not(.dynamic-views-poster-mode-overlay)
   )
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
@@ -5217,8 +5219,8 @@ body:is(
 
 /* Gradient: disable backdrop blur (incompatible with gradient — blur would show through transparent top) */
 body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
+    .dynamic-views-poster-mode-gradient,
+    :not(.dynamic-views-poster-mode-overlay)
   )
   .dynamic-views
   .card.image-format-poster
@@ -5229,7 +5231,7 @@ body:is(
 /* Poster overlay: Overlay mode (flat tint) */
 
 /* Overlay + Match theme (dark) */
-body.dynamic-views-poster-overlay-flat:is(
+body.dynamic-views-poster-mode-overlay:is(
     .dynamic-views-poster-theme-match,
     :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-dark
@@ -5242,7 +5244,7 @@ body.dynamic-views-poster-overlay-flat:is(
 }
 
 /* Overlay + Match theme (light) */
-body.dynamic-views-poster-overlay-flat:is(
+body.dynamic-views-poster-mode-overlay:is(
     .dynamic-views-poster-theme-match,
     :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-light
@@ -5255,7 +5257,7 @@ body.dynamic-views-poster-overlay-flat:is(
 }
 
 /* Overlay + Light (forced) */
-body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5265,7 +5267,7 @@ body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
 }
 
 /* Overlay + Dark (forced) */
-body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5344,8 +5346,8 @@ body.dynamic-views-poster-disable-raise
 
 /* Gradient: always light text (hardcoded dark overlay) */
 body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
+    .dynamic-views-poster-mode-gradient,
+    :not(.dynamic-views-poster-mode-overlay)
   )
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
@@ -5355,10 +5357,10 @@ body:is(
 }
 
 /* Overlay: text color overrides (light tint → dark text) */
-body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster:has(.card-poster),
-body.dynamic-views-poster-overlay-flat:is(
+body.dynamic-views-poster-mode-overlay:is(
     .dynamic-views-poster-theme-match,
     :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-light
@@ -5370,10 +5372,10 @@ body.dynamic-views-poster-overlay-flat:is(
 }
 
 /* Overlay: text color overrides (dark tint → light text) */
-body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
   .dynamic-views
   .card.image-format-poster:has(.card-poster),
-body.dynamic-views-poster-overlay-flat:is(
+body.dynamic-views-poster-mode-overlay:is(
     .dynamic-views-poster-theme-match,
     :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
   ).theme-dark
@@ -7610,8 +7612,8 @@ body:not(.dynamic-views-title-color-custom)
   .style-settings-container
   .setting-item[data-id="dynamic-views-title-color-custom"],
 body:is(
-    .dynamic-views-poster-overlay-gradient,
-    :not(.dynamic-views-poster-overlay-flat)
+    .dynamic-views-poster-mode-gradient,
+    :not(.dynamic-views-poster-mode-overlay)
   )
   .style-settings-container
   .setting-item:is(
@@ -7623,11 +7625,18 @@ body:is(
   display: none !important;
 }
 
+/* Overlay mode: hide raise toggle (raise only applies to gradient) */
+body.dynamic-views-poster-mode-overlay
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-disable-raise"] {
+  display: none !important;
+}
+
 /* Overlay mode: hide irrelevant strength slider based on tint */
-body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
   .style-settings-container
   .setting-item[data-id="dynamic-views-poster-overlay-light"],
-body.dynamic-views-poster-overlay-flat.dynamic-views-poster-theme-light
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
   .style-settings-container
   .setting-item[data-id="dynamic-views-poster-overlay-dark"] {
   display: none !important;
