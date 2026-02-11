@@ -112,17 +112,11 @@ export interface SettingsTemplate {
   setAt: number; // Unix timestamp (milliseconds) when template was enabled
 }
 
-/** One-time interaction flags (tips, onboarding, etc. — separate from user settings) */
-export interface Flags {
-  tipImageViewer: boolean;
-}
-
 export interface PluginData {
   pluginSettings: Partial<PluginSettings>;
   templates: Partial<Record<"grid" | "masonry" | "datacore", SettingsTemplate>>;
   basesStates: Record<string, BasesUIState>; // Bases only: { collapsedGroups }
   datacoreStates: Record<string, DatacoreState>; // Datacore only: UI + settings
-  flags: Partial<Flags>;
 }
 
 export type ViewMode = "grid" | "masonry" | "list";

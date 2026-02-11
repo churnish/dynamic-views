@@ -31,7 +31,6 @@ import {
 } from "./src/utils/randomize";
 import { clearInFlightLoads } from "./src/shared/content-loader";
 import { invalidateCacheForFile } from "./src/shared/image-loader";
-import { initTips, cleanupTips } from "./src/utils/tips";
 
 // Plugin/feature names (proper nouns, not subject to sentence case)
 const DATACORE = "Datacore";
@@ -68,7 +67,6 @@ export default class DynamicViews extends Plugin {
   async onload() {
     this.persistenceManager = new PersistenceManager(this);
     await this.persistenceManager.load();
-    initTips(this.persistenceManager);
 
     // Set initial body classes for settings
     const settings = this.persistenceManager.getPluginSettings();
@@ -430,6 +428,5 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     );
 
     clearInFlightLoads();
-    cleanupTips();
   }
 }

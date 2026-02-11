@@ -10,7 +10,6 @@ import {
   getZoomSensitivityDesktop,
   getZoomSensitivityMobile,
 } from "../utils/style-settings";
-import { showTipOnce } from "../utils/tips";
 import { getVaultPathFromResourceUrl, isExternalUrl } from "../utils/image";
 
 // Extend App type for undocumented dragManager API
@@ -1085,13 +1084,6 @@ function openImageViewer(
 
     // Register in tracking map AFTER all setup succeeds (prevents partial state)
     viewerClones.set(embedEl, cloneEl);
-
-    if (!isMobile) {
-      showTipOnce(
-        "tipImageViewer",
-        "Tip: Press Space to maximize. Long press to reset zoom. Hold Alt to drag.",
-      );
-    }
   } catch (error) {
     // Comprehensive cleanup in reverse order of allocation
     console.error("Failed to setup image viewer", error);
