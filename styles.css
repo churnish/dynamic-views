@@ -3291,8 +3291,8 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
 
 /* Card border color on hover presets */
 @media (hover: hover) {
-  /* Normal (default) — base hover uses --background-modifier-border-focus */
-  .dynamic-views .card:hover::after {
+  /* Normal (default) — body class needed for specificity over border presets */
+  body.dynamic-views-card-border-color-hover-normal .dynamic-views .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
   }
 
