@@ -3198,13 +3198,8 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
   display: none;
 }
 
-/* Extension mode (+ fallback when Style Settings OFF): use max-height for JS truncation measurement */
-body.dynamic-views-file-type-ext .dynamic-views .card-title,
-body:not(.dynamic-views-file-type-ext):not(.dynamic-views-file-type-flair):not(
-    .dynamic-views-file-type-icon
-  ):not(.dynamic-views-file-type-none)
-  .dynamic-views
-  .card-title {
+/* Extension mode: use max-height for JS truncation measurement */
+body.dynamic-views-file-type-ext .dynamic-views .card-title {
   display: block;
   -webkit-line-clamp: unset;
   -webkit-box-orient: unset;
@@ -3213,13 +3208,8 @@ body:not(.dynamic-views-file-type-ext):not(.dynamic-views-file-type-flair):not(
   );
 }
 
-/* Show extension suffix inline in Extension mode (+ fallback) */
-body.dynamic-views-file-type-ext .dynamic-views .card-title-ext-suffix,
-body:not(.dynamic-views-file-type-ext):not(.dynamic-views-file-type-flair):not(
-    .dynamic-views-file-type-icon
-  ):not(.dynamic-views-file-type-none)
-  .dynamic-views
-  .card-title-ext-suffix {
+/* Show extension suffix inline in Extension mode */
+body.dynamic-views-file-type-ext .dynamic-views .card-title-ext-suffix {
   display: inline;
   opacity: 0.6;
   font-weight: normal;
@@ -3227,13 +3217,6 @@ body:not(.dynamic-views-file-type-ext):not(.dynamic-views-file-type-flair):not(
 
 /* Extension inside link - use color-mix for text, underline only on hover */
 body.dynamic-views-file-type-ext
-  .dynamic-views
-  .card-title
-  a
-  .card-title-ext-suffix,
-body:not(.dynamic-views-file-type-ext):not(.dynamic-views-file-type-flair):not(
-    .dynamic-views-file-type-icon
-  ):not(.dynamic-views-file-type-none)
   .dynamic-views
   .card-title
   a
