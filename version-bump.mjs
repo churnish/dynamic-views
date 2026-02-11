@@ -18,25 +18,6 @@ try {
   process.exit(1);
 }
 
-// ── Side effects ─────────────────────────────────────────────────────
-
-// Fetch latest README from GitHub
-try {
-  execSync("git fetch origin && git checkout origin/main -- README.md", {
-    stdio: "inherit",
-  });
-  console.log("Updated README.md from GitHub");
-} catch {
-  console.warn("Could not fetch README.md from GitHub");
-}
-
-// Update manifest.json
-let manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
-manifest.version = targetVersion;
-writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t") + "\n");
-
-console.log(`Updated manifest.json to version ${targetVersion}`);
-
 // Auto-update eslint-plugin-obsidianmd if outdated (review bot uses this plugin)
 try {
   // npm outdated exits 0 when everything is current — nothing to do
@@ -70,3 +51,22 @@ try {
     }
   }
 }
+
+// ── Side effects ─────────────────────────────────────────────────────
+
+// Fetch latest README from GitHub
+try {
+  execSync("git fetch origin && git checkout origin/main -- README.md", {
+    stdio: "inherit",
+  });
+  console.log("Updated README.md from GitHub");
+} catch {
+  console.warn("Could not fetch README.md from GitHub");
+}
+
+// Update manifest.json
+let manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
+manifest.version = targetVersion;
+writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t") + "\n");
+
+console.log(`Updated manifest.json to version ${targetVersion}`);
