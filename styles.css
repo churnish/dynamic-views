@@ -3062,7 +3062,7 @@ body .dynamic-views .card:focus-visible::after {
 }
 
 /* Mobile: browser-managed content-visibility (IO-based toggling causes
-   infinite reflow loop on iOS WebKit — see 998b856) */
+   infinite reflow loop on iOS WebKit) */
 body.is-mobile .dynamic-views .card {
   content-visibility: auto;
   contain-intrinsic-height: auto 300px;
