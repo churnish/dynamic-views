@@ -1288,18 +1288,19 @@ export class SharedCardRenderer {
     // Use cached breakpoint to avoid getComputedStyle per card
     const breakpoint = getCompactBreakpoint();
 
-    // Check if thumbnail stacking is applicable
+    // Check if thumbnail stacking is applicable (class toggle for all, DOM move only with text preview)
     const needsThumbnailStacking =
-      format === "thumbnail" &&
-      (position === "left" || position === "right") &&
-      card.textPreview;
+      format === "thumbnail" && (position === "left" || position === "right");
 
     const thumbnailEl = needsThumbnailStacking
       ? (bodyEl.querySelector(".card-thumbnail") as HTMLElement)
       : null;
 
+    // DOM movement only when text preview exists (otherwise card-previews would be left empty)
+    const canMoveThumbnail = needsThumbnailStacking && card.textPreview;
+
     // Thumbnail starts inside previews; stacking moves it to a sibling of previews in card-body
-    let isStacked = thumbnailEl?.parentElement === bodyEl;
+    let isStacked = canMoveThumbnail && thumbnailEl?.parentElement === bodyEl;
 
     const cardObserver = new ResizeObserver((entries) => {
       // Guard against race with cleanup or element removal
@@ -1315,27 +1316,29 @@ export class SharedCardRenderer {
           cardEl.classList.toggle("compact-mode", cardWidth < breakpoint);
         }
 
-        // Thumbnail stacking: move between .card-previews (inside) and .card-body (sibling)
-        if (thumbnailEl && previewsEl && thumbnailEl.isConnected) {
+        // Thumbnail stacking: class toggle + optional DOM move
+        if (thumbnailEl && thumbnailEl.isConnected) {
           const thumbnailWidth = thumbnailEl.offsetWidth;
           const shouldStack =
             thumbnailWidth > 0 &&
             cardWidth < thumbnailWidth * THUMBNAIL_STACK_MULTIPLIER;
 
-          if (shouldStack && !isStacked) {
-            // Left: thumbnail above previews, Right: thumbnail below previews
-            if (cardEl.classList.contains("card-thumbnail-left")) {
-              bodyEl.insertBefore(thumbnailEl, previewsEl);
-            } else {
-              previewsEl.after(thumbnailEl);
+          if (canMoveThumbnail && previewsEl) {
+            // Cards with text preview: move thumbnail between card-previews and card-body
+            if (shouldStack && !isStacked) {
+              if (cardEl.classList.contains("card-thumbnail-left")) {
+                bodyEl.insertBefore(thumbnailEl, previewsEl);
+              } else {
+                previewsEl.after(thumbnailEl);
+              }
+              isStacked = true;
+            } else if (!shouldStack && isStacked) {
+              previewsEl.appendChild(thumbnailEl);
+              isStacked = false;
             }
-            cardEl.classList.add("thumbnail-stack");
-            isStacked = true;
-          } else if (!shouldStack && isStacked) {
-            previewsEl.appendChild(thumbnailEl);
-            cardEl.classList.remove("thumbnail-stack");
-            isStacked = false;
           }
+
+          cardEl.classList.toggle("thumbnail-stack", shouldStack);
         }
       }
     });
