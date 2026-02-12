@@ -627,6 +627,7 @@ export class DynamicViewsGridView extends BasesView {
           this.app,
           this.currentFile,
           this.plugin,
+          viewName,
         );
         this.viewId = (viewName && viewIds?.get(viewName)) ?? null;
       }
@@ -670,15 +671,35 @@ export class DynamicViewsGridView extends BasesView {
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
 
-      // Read settings (schema defaults include template values)
-      // Pass lastRenderedSettings to prevent stale config from reverting to defaults
+      // Template overrides for first render (config not yet populated from YAML).
+      // For existing views, config.get() returns saved values so overrides are never reached.
+      const templateOverrides = !this.lastRenderedSettings
+        ? this.plugin.persistenceManager.getSettingsTemplate("grid")?.settings
+        : undefined;
+
+      // Read settings — pass lastRenderedSettings for stale config fallback,
+      // and templateOverrides so new views render with template values immediately
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getPluginSettings(),
         "grid",
         this.lastRenderedSettings ?? undefined,
+        templateOverrides,
       );
       this.lastRenderedSettings = settings;
+
+      // Auto-update template when settings change on a template-source view
+      if (this.config.get("isTemplate") === true) {
+        const extracted = extractBasesTemplate(this.config, VIEW_DEFAULTS);
+        const current =
+          this.plugin.persistenceManager.getSettingsTemplate("grid");
+        if (JSON.stringify(extracted) !== JSON.stringify(current?.settings)) {
+          void this.plugin.persistenceManager.setSettingsTemplate("grid", {
+            settings: extracted,
+            setAt: current?.setAt ?? Date.now(),
+          });
+        }
+      }
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(

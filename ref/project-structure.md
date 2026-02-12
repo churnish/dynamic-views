@@ -103,22 +103,7 @@ dynamic-views/
 |           |-- style-settings.test.ts
 |           \-- text-preview.test.ts
 |
-|-- ref/                               # Reference docs
-|     |-- project-structure.md         # This file
-|     |-- obsidian-review-bot.md       # Plugin review bot rules
-|     |-- eslint-config.md             # ESLint config reference
-|     \-- ios-webkit-quirks.md         # iOS WebKit platform bugs
-|
-|-- archive/                           # Archived code
-|     |-- image-color.ts
-|     \-- image-color.test.ts
-|
-\-- .github/
-      |-- workflows/
-      |     |-- release.yml
-      |     \-- issue-labels.yml
-      \-- ISSUE_TEMPLATE/
-            |-- BUG_REPORT.yml
-            |-- ENHANCEMENT.yml
-            \-- FEATURE_REQUEST.yml
+|-- ref/                               # Reference docs (files not listed here)
+|-- archive/                           # Archived code (files not listed here)
+\-- .github/                           # CI workflows, issue templates (files not listed here)
 ```

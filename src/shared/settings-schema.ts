@@ -366,8 +366,14 @@ export function readBasesSettings(
   pluginSettings: PluginSettings,
   viewType?: "grid" | "masonry",
   previousSettings?: Partial<BasesResolvedSettings>,
+  templateOverrides?: Partial<ViewDefaults>,
 ): BasesResolvedSettings {
-  const defaults = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
+  // Template overrides serve as fallbacks for new views whose config isn't populated yet
+  const defaults = {
+    ...VIEW_DEFAULTS,
+    ...BASES_DEFAULTS,
+    ...templateOverrides,
+  };
 
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)

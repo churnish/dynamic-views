@@ -77,6 +77,7 @@ export async function cleanUpBaseFile(
   app: App,
   file: TFile | null,
   plugin: DynamicViews,
+  callerViewName?: string,
 ): Promise<Map<string, string> | null> {
   if (!file || !file.path.endsWith(".base")) return null;
 
@@ -94,6 +95,21 @@ export async function cleanUpBaseFile(
 
     const views = parsed?.views;
     if (!Array.isArray(views)) return content;
+
+    // Guard: abort if the calling view isn't in the file yet.
+    // vault.process() reads from disk — Obsidian may not have flushed a newly
+    // created view, so rewriting now would overwrite the in-memory view.
+    if (
+      callerViewName &&
+      !views.some(
+        (v) =>
+          typeof v === "object" &&
+          v !== null &&
+          (v as Record<string, unknown>).name === callerViewName,
+      )
+    ) {
+      return content;
+    }
 
     // Pre-scan: count occurrences of each ID for duplicate detection
     const idCounts = new Map<string, number>();
@@ -149,9 +165,7 @@ export async function cleanUpBaseFile(
           // New view (not rename) — apply template defaults to YAML
           if (!isRename) {
             const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
-            const template = plugin.persistenceManager.getSettingsTemplate(
-              vt,
-            );
+            const template = plugin.persistenceManager.getSettingsTemplate(vt);
             if (template?.settings) {
               for (const [key, value] of Object.entries(template.settings)) {
                 if (!(key in viewObj)) {
