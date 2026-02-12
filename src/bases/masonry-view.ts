@@ -1385,11 +1385,11 @@ export class DynamicViewsMasonryView extends BasesView {
           this.groupLayoutResults.set(undefined, result);
         }
 
-        // Phase 5: Restore content-visibility (CSS rule takes over for off-screen cards)
-        this.masonryContainer.classList.remove("masonry-measuring");
-
         this.lastLayoutWidth = containerWidth;
       } finally {
+        // Restore content-visibility (CSS rule takes over for off-screen cards)
+        this.masonryContainer?.classList.remove("masonry-measuring");
+
         if (!skipHiding && this.masonryContainer?.isConnected) {
           this.masonryContainer.classList.remove("masonry-resizing");
         }
@@ -1858,31 +1858,32 @@ export class DynamicViewsMasonryView extends BasesView {
         // Force content rendering for accurate measurement
         // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
         this.masonryContainer?.classList.add("masonry-measuring");
+        let result: MasonryLayoutResult;
+        try {
+          // Force synchronous reflow so heights reflect new widths
+          void targetContainer.offsetHeight;
 
-        // Force synchronous reflow so heights reflect new widths
-        void targetContainer.offsetHeight;
+          const gap = getCardSpacing(this.containerEl);
 
-        const gap = getCardSpacing(this.containerEl);
+          result = calculateIncrementalMasonryLayout({
+            newCards,
+            columnHeights: currentPrevLayout.columnHeights,
+            containerWidth: currentPrevLayout.containerWidth,
+            cardWidth: currentPrevLayout.cardWidth,
+            columns: currentPrevLayout.columns,
+            gap,
+          });
 
-        const result = calculateIncrementalMasonryLayout({
-          newCards,
-          columnHeights: currentPrevLayout.columnHeights,
-          containerWidth: currentPrevLayout.containerWidth,
-          cardWidth: currentPrevLayout.cardWidth,
-          columns: currentPrevLayout.columns,
-          gap,
-        });
-
-        // Apply positions to new cards only (width already set above)
-        newCards.forEach((card, index) => {
-          const pos = result.positions[index];
-          card.classList.add("masonry-positioned");
-          card.style.setProperty("--masonry-left", `${pos.left}px`);
-          card.style.setProperty("--masonry-top", `${pos.top}px`);
-        });
-
-        // Restore content-visibility (CSS takes over for off-screen cards)
-        this.masonryContainer?.classList.remove("masonry-measuring");
+          // Apply positions to new cards only (width already set above)
+          newCards.forEach((card, index) => {
+            const pos = result.positions[index];
+            card.classList.add("masonry-positioned");
+            card.style.setProperty("--masonry-left", `${pos.left}px`);
+            card.style.setProperty("--masonry-top", `${pos.top}px`);
+          });
+        } finally {
+          this.masonryContainer?.classList.remove("masonry-measuring");
+        }
 
         // Track expected height so ResizeObserver can skip this change
         this.expectedIncrementalHeight = result.containerHeight;

@@ -1096,28 +1096,37 @@ export function View({
             ),
           );
 
-          const result = calculateIncrementalMasonryLayout({
-            newCards,
-            columnHeights: lastResult.columnHeights,
-            containerWidth: lastResult.containerWidth,
-            cardWidth: lastResult.cardWidth,
-            columns: lastResult.columns,
-            gap,
-          });
+          // Force content rendering for accurate measurement
+          // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
+          container.classList.add("masonry-measuring");
+          try {
+            void newCards[0]?.offsetHeight;
 
-          // Apply to new cards only
-          applyMasonryLayout(container, newCards, result);
+            const result = calculateIncrementalMasonryLayout({
+              newCards,
+              columnHeights: lastResult.columnHeights,
+              containerWidth: lastResult.containerWidth,
+              cardWidth: lastResult.cardWidth,
+              columns: lastResult.columns,
+              gap,
+            });
 
-          // Update container height (applyMasonryLayout sets it, but we update it explicitly)
-          container.style.setProperty(
-            "--masonry-height",
-            `${result.containerHeight}px`,
-          );
+            // Apply to new cards only
+            applyMasonryLayout(container, newCards, result);
 
-          lastLayoutResultRef.current = result;
-          prevMasonryCountRef.current = cards.length;
-          columnCountRef.current = result.columns;
-          lastLayoutWidthRef.current = containerWidth;
+            // Update container height (applyMasonryLayout sets it, but we update it explicitly)
+            container.style.setProperty(
+              "--masonry-height",
+              `${result.containerHeight}px`,
+            );
+
+            lastLayoutResultRef.current = result;
+            prevMasonryCountRef.current = cards.length;
+            columnCountRef.current = result.columns;
+            lastLayoutWidthRef.current = containerWidth;
+          } finally {
+            container.classList.remove("masonry-measuring");
+          }
           return;
         }
 

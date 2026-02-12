@@ -90,6 +90,8 @@ export function createSlideshowNavigator(
    * updates state. Called by normal timeout completion, cancel-and-restart, and abort.
    */
   const finishAnimation = () => {
+    if (!isAnimating) return;
+
     const els = getElements();
     if (!els) {
       isAnimating = false;
@@ -104,8 +106,8 @@ export function createSlideshowNavigator(
     }
 
     // Remove animation classes
-    currImg.classList.remove(activeExitClass);
-    nextImg.classList.remove(activeEnterClass);
+    if (activeExitClass) currImg.classList.remove(activeExitClass);
+    if (activeEnterClass) nextImg.classList.remove(activeEnterClass);
 
     // Swap roles
     currImg.classList.remove("slideshow-img-current");

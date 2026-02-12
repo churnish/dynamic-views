@@ -4363,10 +4363,10 @@ body.dynamic-views-show-cover-placeholder-none
     calc(var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px));
 }
 
-/* Cover-bottom placeholder: margin-top auto to push to bottom */
-.dynamic-views
-  .card.card-cover-bottom.image-format-cover
-  .card-cover-wrapper.card-cover-wrapper-placeholder {
+/* Cover-bottom: wrapper at end with edge-bleeding margins */
+.dynamic-views .card.card-cover-bottom.image-format-cover .card-cover-wrapper {
+  border-radius: var(--cover-non-edge-radius) var(--cover-non-edge-radius)
+    var(--cover-inner-radius) var(--cover-inner-radius);
   margin-top: var(--dynamic-views-card-padding, 8px);
   margin-right: calc(
     var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
@@ -4383,27 +4383,8 @@ body.dynamic-views-show-cover-placeholder-none
 .dynamic-views
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper.card-cover-wrapper-placeholder {
-  margin-top: var(--dynamic-views-card-padding, 8px);
   flex-grow: 1;
   min-height: 0;
-}
-
-/* Cover-bottom: wrapper at end with edge-bleeding margins */
-.dynamic-views
-  .card.card-cover-bottom.image-format-cover
-  .card-cover-wrapper:not(.card-cover-wrapper-placeholder) {
-  border-radius: var(--cover-non-edge-radius) var(--cover-non-edge-radius)
-    var(--cover-inner-radius) var(--cover-inner-radius);
-  margin-top: var(--dynamic-views-card-padding, 8px);
-  margin-right: calc(
-    var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-  );
-  margin-bottom: calc(
-    var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-  );
-  margin-left: calc(
-    var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-  );
 }
 
 /* ==================== COVER-ONLY CARDS ==================== */
@@ -5188,7 +5169,9 @@ body.dynamic-views-show-cover-placeholder-both
 
 /* Poster: constrain height so .card-body can scroll.
    overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
-   without clipping its border-radius. */
+   without clipping its border-radius. overflow-clip-margin is unsupported in WebKit
+   (standards-positions#427) — iOS falls back to clip without margin (no regression).
+   Will work automatically once WebKit adopts it. */
 .dynamic-views .card.image-format-poster .card-content {
   overflow: clip;
   overflow-clip-margin: 4px;
