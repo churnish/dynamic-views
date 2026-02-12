@@ -1351,6 +1351,8 @@ export class SharedCardRenderer {
     const cardObserver = new ResizeObserver((entries) => {
       // Guard against race with cleanup or element removal
       if (signal.aborted || !cardEl.isConnected) return;
+      // Skip content-hidden cards (dimension reads trigger Chromium warnings)
+      if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
       for (const entry of entries) {
         const cardWidth = entry.contentRect.width;
 
@@ -1486,6 +1488,8 @@ export class SharedCardRenderer {
 
         const resizeObserver = new ResizeObserver((entries) => {
           if (signal.aborted || !cardEl.isConnected) return;
+          // Skip content-hidden cards (dimension reads trigger Chromium warnings)
+          if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
           for (const entry of entries) {
             const target = entry.target as HTMLElement;
             const newCardWidth = target.offsetWidth;

@@ -110,8 +110,11 @@ export function updateElementScrollGradient(element: HTMLElement): void {
  * @param element - The property field element (parent container)
  */
 export function updateScrollGradient(element: HTMLElement): void {
-  // Guard: skip if element disconnected
-  if (!element.isConnected) {
+  // Guard: skip if element disconnected or in content-hidden card
+  if (
+    !element.isConnected ||
+    element.closest(".card")?.classList.contains(CONTENT_HIDDEN_CLASS)
+  ) {
     return;
   }
 

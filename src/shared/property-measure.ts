@@ -2,6 +2,7 @@
  * Shared utility for measuring side-by-side property field widths
  */
 
+import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
 import { updateScrollGradient } from "./scroll-gradient";
 
 /** Cache of last measured container width per card (auto-cleans via WeakMap) */
@@ -209,6 +210,9 @@ export function measureSideBySideSet(
     const card = set.closest(".card") as HTMLElement;
     const cardProperties = set.closest(".card-properties");
     if (!card || !cardProperties) return;
+
+    // Skip content-hidden cards (dimension reads trigger Chromium warnings)
+    if (card.classList.contains(CONTENT_HIDDEN_CLASS)) return;
 
     // Skip if already measured
     if (set.classList.contains("property-measured")) return;
@@ -442,6 +446,8 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
 
   // ResizeObserver handles size changes
   const observer = new ResizeObserver(() => {
+    // Skip content-hidden cards (dimension reads trigger Chromium warnings)
+    if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
     // Skip in compact mode or if container has no width
     if (cardEl.classList.contains("compact-mode")) return;
     if (cardProps.clientWidth <= 0) return;
