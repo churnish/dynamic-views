@@ -234,10 +234,7 @@ export function shouldHideMissingProperties(): boolean {
  * Get zoom sensitivity from Style Settings (desktop)
  */
 export function getZoomSensitivityDesktop(): number {
-  return getCSSVariableAsNumber(
-    "--dynamic-views-zoom-sensitivity-desktop",
-    0.08,
-  );
+  return getCSSVariableAsNumber("--dynamic-views-zoom-sensitivity", 0.08);
 }
 
 /**

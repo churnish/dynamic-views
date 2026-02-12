@@ -1965,7 +1965,9 @@ function Card({
 
             // Thumbnail stacking via CSS class only (CSS order handles positioning)
             if (needsThumbnailStacking) {
-              const thumbnailEl = cardEl.querySelector(".card-thumbnail");
+              const thumbnailEl = cardEl.querySelector(
+                ".card-thumbnail, .card-thumbnail-placeholder",
+              );
               if (thumbnailEl) {
                 const thumbnailWidth = (thumbnailEl as HTMLElement).offsetWidth;
                 const isStacked =

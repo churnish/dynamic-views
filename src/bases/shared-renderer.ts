@@ -341,7 +341,9 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
     const cardWidth = card.offsetWidth;
     if (cardWidth <= 0) continue;
 
-    const thumb = card.querySelector<HTMLElement>(".card-thumbnail");
+    const thumb = card.querySelector<HTMLElement>(
+      ".card-thumbnail, .card-thumbnail-placeholder",
+    );
     const thumbWidth = thumb?.offsetWidth ?? 0;
     const wasCompact = card.classList.contains("compact-mode");
     const wasStacked = card.classList.contains("thumbnail-stack");
@@ -1293,7 +1295,9 @@ export class SharedCardRenderer {
       format === "thumbnail" && (position === "left" || position === "right");
 
     const thumbnailEl = needsThumbnailStacking
-      ? (bodyEl.querySelector(".card-thumbnail") as HTMLElement)
+      ? (bodyEl.querySelector(
+          ".card-thumbnail, .card-thumbnail-placeholder",
+        ) as HTMLElement)
       : null;
 
     // DOM movement only when text preview exists (otherwise card-previews would be left empty)

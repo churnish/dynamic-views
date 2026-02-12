@@ -8,6 +8,7 @@ jest.mock("../../src/utils/style-settings", () => ({
 function createCard(opts: {
   width: number;
   thumbnailWidth?: number;
+  placeholder?: boolean;
 }): HTMLElement {
   const card = document.createElement("div");
   Object.defineProperty(card, "offsetWidth", {
@@ -17,7 +18,9 @@ function createCard(opts: {
 
   if (opts.thumbnailWidth !== undefined) {
     const thumb = document.createElement("div");
-    thumb.classList.add("card-thumbnail");
+    thumb.classList.add(
+      opts.placeholder ? "card-thumbnail-placeholder" : "card-thumbnail",
+    );
     Object.defineProperty(thumb, "offsetWidth", {
       configurable: true,
       value: opts.thumbnailWidth,
@@ -71,6 +74,16 @@ describe("syncResponsiveClasses", () => {
       cardWithText.appendChild(textPreview);
       syncResponsiveClasses([cardWithText]);
       expect(cardWithText.classList.contains("thumbnail-stack")).toBe(true);
+    });
+
+    it("applies thumbnail-stack to placeholder thumbnails", () => {
+      const card = createCard({
+        width: 200,
+        thumbnailWidth: 80,
+        placeholder: true,
+      });
+      syncResponsiveClasses([card]);
+      expect(card.classList.contains("thumbnail-stack")).toBe(true);
     });
 
     it("does not add thumbnail-stack when no thumbnail element", () => {
