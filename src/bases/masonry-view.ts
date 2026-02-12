@@ -9,7 +9,6 @@ import { transformBasesEntries } from "../shared/data-transform";
 import {
   readBasesSettings,
   getMasonryViewOptions,
-  extractBasesTemplate,
 } from "../shared/settings-schema";
 import {
   getCardSpacing,
@@ -54,9 +53,9 @@ import {
   getGroupKeyDataset,
   UNDEFINED_GROUP_KEY_SENTINEL,
   cleanUpBaseFile,
-  clearOldTemplateToggles,
-  isCurrentTemplateView,
   shouldProcessDataUpdate,
+  autoUpdateSettingsTemplate,
+  handleTemplateToggle,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -86,8 +85,10 @@ import type {
   SortState,
   FocusState,
 } from "../types";
-import { VIEW_DEFAULTS } from "../constants";
-import { setupContentVisibility } from "../shared/content-visibility";
+import {
+  setupContentVisibility,
+  CONTENT_HIDDEN_CLASS,
+} from "../shared/content-visibility";
 
 // Extend Obsidian types
 declare module "obsidian" {
@@ -137,7 +138,7 @@ export class DynamicViewsMasonryView extends BasesView {
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
-  private previousIsTemplate: boolean | undefined = undefined;
+  private previousIsTemplateRef = { value: undefined as boolean | undefined };
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -520,60 +521,16 @@ export class DynamicViewsMasonryView extends BasesView {
    * Handle template toggle changes
    * Called from onDataUpdated() since Obsidian calls that for config changes
    */
-  private handleTemplateToggle(): void {
-    const isTemplate = this.config.get("isTemplate") === true;
-
-    // Only process if isTemplate actually changed
-    if (this.previousIsTemplate === isTemplate) {
-      return;
-    }
-    this.previousIsTemplate = isTemplate;
-
-    if (isTemplate) {
-      const existingTimestamp = this.config.get("templateSetAt") as
-        | number
-        | undefined;
-
-      if (existingTimestamp !== undefined) {
-        // View loaded with existing toggle — validate it's not stale
-        const isStale = !isCurrentTemplateView(
-          this.config,
-          "masonry",
-          this.plugin,
-        );
-        if (isStale) {
-          this.config.set("isTemplate", false);
-          this.previousIsTemplate = false;
-          return;
-        }
-        // Valid template — no action needed on load
-      } else {
-        // User just enabled toggle — set timestamp + clear other views
-        const timestamp = Date.now();
-        this.config.set("templateSetAt", timestamp);
-        clearOldTemplateToggles(this.app, MASONRY_VIEW_TYPE, this);
-
-        // Save settings template
-        const templateSettings = extractBasesTemplate(
-          this.config,
-          VIEW_DEFAULTS,
-        );
-        void this.plugin.persistenceManager.setSettingsTemplate("masonry", {
-          settings: templateSettings,
-          setAt: timestamp,
-        });
-      }
-    } else {
-      // Toggle turned OFF — clear template if this view was the template
-      const hadTimestamp = this.config.get("templateSetAt") !== undefined;
-      if (hadTimestamp) {
-        this.config.set("templateSetAt", undefined);
-        void this.plugin.persistenceManager.setSettingsTemplate(
-          "masonry",
-          null,
-        );
-      }
-    }
+  private handleTemplateToggleLocal(): void {
+    handleTemplateToggle(
+      this.config,
+      "masonry",
+      MASONRY_VIEW_TYPE,
+      this.plugin,
+      this.app,
+      this,
+      this.previousIsTemplateRef,
+    );
   }
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
@@ -691,7 +648,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   onDataUpdated(): void {
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
-    this.handleTemplateToggle();
+    this.handleTemplateToggleLocal();
 
     // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
     this.applyCssOnlySettings();
@@ -791,18 +748,7 @@ export class DynamicViewsMasonryView extends BasesView {
       );
       this.lastRenderedSettings = settings;
 
-      // Auto-update template when settings change on a template-source view
-      if (this.config.get("isTemplate") === true) {
-        const extracted = extractBasesTemplate(this.config, VIEW_DEFAULTS);
-        const current =
-          this.plugin.persistenceManager.getSettingsTemplate("masonry");
-        if (JSON.stringify(extracted) !== JSON.stringify(current?.settings)) {
-          void this.plugin.persistenceManager.setSettingsTemplate("masonry", {
-            settings: extracted,
-            setAt: current?.setAt ?? Date.now(),
-          });
-        }
-      }
+      autoUpdateSettingsTemplate(this.config, "masonry", this.plugin);
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(
@@ -1928,9 +1874,13 @@ export class DynamicViewsMasonryView extends BasesView {
           // Store for next incremental append
           this.groupLayoutResults.set(layoutKey, result);
 
-          // Initialize gradients for new cards only
-          initializeScrollGradientsForCards(newCardEls);
-          initializeTitleTruncationForCards(newCardEls);
+          // Initialize gradients for new cards only (filter out cards that
+          // became content-hidden during the double-RAF wait for image load)
+          const visibleNewCards = newCardEls.filter(
+            (c) => !c.classList.contains(CONTENT_HIDDEN_CLASS),
+          );
+          initializeScrollGradientsForCards(visibleNewCards);
+          initializeTitleTruncationForCards(visibleNewCards);
 
           // After layout completes, check if more content needed
           // (ResizeObserver skips expected heights, so we check here)
