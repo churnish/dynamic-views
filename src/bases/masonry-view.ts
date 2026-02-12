@@ -1596,411 +1596,420 @@ export class DynamicViewsMasonryView extends BasesView {
     // Guard: return early if data not initialized or no masonry container
     if (!this.data || !this.masonryContainer) return;
 
-    // Increment render version to cancel any stale onDataUpdated renders
-    this.renderState.version++;
-    const currentVersion = this.renderState.version;
+    try {
+      // Increment render version to cancel any stale onDataUpdated renders
+      this.renderState.version++;
+      const currentVersion = this.renderState.version;
 
-    const groupedData = this.data.groupedData;
-    const sortMethod = getSortMethod(this.config);
+      const groupedData = this.data.groupedData;
+      const sortMethod = getSortMethod(this.config);
 
-    // Process groups with shuffle logic
-    const processedGroups = processGroups(
-      groupedData,
-      this.sortState.isShuffled,
-      this.sortState.order,
-    );
-
-    // Capture state at start - these may change during async operations
-    const prevCount = this.previousDisplayedCount;
-    const currCount = this.displayedCount;
-
-    // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
-    const newEntries: BasesEntry[] = [];
-    let currentCount = 0;
-    const isGrouped = hasGroupBy(this.config);
-
-    for (const processedGroup of processedGroups) {
-      const groupKey = processedGroup.group.hasKey()
-        ? serializeGroupKey(processedGroup.group.key)
-        : undefined;
-      if (isGrouped && this.collapsedGroups.has(this.getCollapseKey(groupKey)))
-        continue;
-
-      const groupStart = currentCount;
-      const groupEnd = currentCount + processedGroup.entries.length;
-
-      // Determine which entries from this group are new
-      const newStartInGroup = Math.max(0, prevCount - groupStart);
-      const newEndInGroup = Math.min(
-        processedGroup.entries.length,
-        currCount - groupStart,
+      // Process groups with shuffle logic
+      const processedGroups = processGroups(
+        groupedData,
+        this.sortState.isShuffled,
+        this.sortState.order,
       );
 
-      if (
-        newEndInGroup > newStartInGroup &&
-        newStartInGroup < processedGroup.entries.length
-      ) {
-        newEntries.push(
-          ...processedGroup.entries.slice(newStartInGroup, newEndInGroup),
-        );
-      }
+      // Capture state at start - these may change during async operations
+      const prevCount = this.previousDisplayedCount;
+      const currCount = this.displayedCount;
 
-      currentCount = groupEnd;
-    }
+      // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
+      const newEntries: BasesEntry[] = [];
+      let currentCount = 0;
+      const isGrouped = hasGroupBy(this.config);
 
-    // Load content ONLY for new entries
-    await loadContentForEntries(
-      newEntries,
-      settings,
-      this.app,
-      this.contentCache.textPreviews,
-      this.contentCache.images,
-      this.contentCache.hasImageAvailable,
-    );
+      for (const processedGroup of processedGroups) {
+        const groupKey = processedGroup.group.hasKey()
+          ? serializeGroupKey(processedGroup.group.key)
+          : undefined;
+        if (
+          isGrouped &&
+          this.collapsedGroups.has(this.getCollapseKey(groupKey))
+        )
+          continue;
 
-    // Abort if renderVersion changed during loading
-    if (this.renderState.version !== currentVersion) {
-      this.containerEl.querySelector(".dynamic-views-end-indicator")?.remove();
-      this.isLoading = false;
-      return;
-    }
+        const groupStart = currentCount;
+        const groupEnd = currentCount + processedGroup.entries.length;
 
-    // Clear CSS variable cache for this batch
-    clearStyleSettingsCache();
-
-    // Render new cards, handling group boundaries
-    // Use captured prevCount/currCount to avoid race conditions
-    let displayedSoFar = 0;
-    let newCardsRendered = 0;
-    const startIndex = prevCount;
-    let groupsWithNewCards = 0; // Track how many groups received cards
-
-    for (const processedGroup of processedGroups) {
-      if (displayedSoFar >= currCount) break;
-
-      const currentGroupKey = processedGroup.group.hasKey()
-        ? serializeGroupKey(processedGroup.group.key)
-        : undefined;
-
-      // Skip collapsed groups entirely (only when grouped)
-      if (
-        isGrouped &&
-        this.collapsedGroups.has(this.getCollapseKey(currentGroupKey))
-      )
-        continue;
-
-      const groupEntriesToDisplay = Math.min(
-        processedGroup.entries.length,
-        currCount - displayedSoFar,
-      );
-
-      // Skip groups that were fully rendered before
-      if (displayedSoFar + groupEntriesToDisplay <= prevCount) {
-        displayedSoFar += groupEntriesToDisplay;
-        continue;
-      }
-
-      // Determine entries to render in this group
-      // startInGroup: skip already-rendered entries
-      // endInGroup: stop at currCount boundary
-      const startInGroup = Math.max(0, prevCount - displayedSoFar);
-      const endInGroup = groupEntriesToDisplay; // Already capped by currCount
-      const groupEntries = processedGroup.entries.slice(
-        startInGroup,
-        endInGroup,
-      );
-
-      // Get or create group container
-      let groupEl: HTMLElement;
-
-      // Check if we can reuse the last group container
-      if (
-        currentGroupKey === this.lastGroup.key &&
-        this.lastGroup.container?.isConnected
-      ) {
-        // Same group as last - append to existing container
-        groupEl = this.lastGroup.container;
-      } else {
-        // Wrap header + group in a section so sticky scopes to the group's content
-        const sectionEl = this.masonryContainer.createDiv(
-          "dynamic-views-group-section",
-        );
-
-        // Render group header
-        const collapseKey = this.getCollapseKey(currentGroupKey);
-        const headerEl = renderGroupHeader(
-          sectionEl,
-          processedGroup.group,
-          this.config,
-          this.app,
+        // Determine which entries from this group are new
+        const newStartInGroup = Math.max(0, prevCount - groupStart);
+        const newEndInGroup = Math.min(
           processedGroup.entries.length,
-          false, // not collapsed (we skipped collapsed groups above)
-          () => {
-            if (headerEl) this.toggleGroupCollapse(collapseKey, headerEl);
-          },
+          currCount - groupStart,
         );
 
-        // New group - create container for cards
-        groupEl = sectionEl.createDiv(
-          "dynamic-views-group bases-cards-group masonry-container",
-        );
-        setGroupKeyDataset(groupEl, currentGroupKey);
+        if (
+          newEndInGroup > newStartInGroup &&
+          newStartInGroup < processedGroup.entries.length
+        ) {
+          newEntries.push(
+            ...processedGroup.entries.slice(newStartInGroup, newEndInGroup),
+          );
+        }
 
-        // Update last group tracking
-        this.lastGroup.key = currentGroupKey;
-        this.lastGroup.container = groupEl;
+        currentCount = groupEnd;
       }
 
-      // Transform and render cards
-      const cards = transformBasesEntries(
-        this.app,
-        groupEntries,
+      // Load content ONLY for new entries
+      await loadContentForEntries(
+        newEntries,
         settings,
-        sortMethod,
-        false,
-        this.config.getOrder(),
+        this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
         this.contentCache.hasImageAvailable,
       );
 
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
-        const entry = groupEntries[i];
-        this.renderCard(
-          groupEl,
-          card,
-          entry,
-          startIndex + newCardsRendered,
+      // Abort if renderVersion changed during loading
+      if (this.renderState.version !== currentVersion) {
+        this.containerEl
+          .querySelector(".dynamic-views-end-indicator")
+          ?.remove();
+        return;
+      }
+
+      // Clear CSS variable cache for this batch
+      clearStyleSettingsCache();
+
+      // Render new cards, handling group boundaries
+      // Use captured prevCount/currCount to avoid race conditions
+      let displayedSoFar = 0;
+      let newCardsRendered = 0;
+      const startIndex = prevCount;
+      let groupsWithNewCards = 0; // Track how many groups received cards
+
+      for (const processedGroup of processedGroups) {
+        if (displayedSoFar >= currCount) break;
+
+        const currentGroupKey = processedGroup.group.hasKey()
+          ? serializeGroupKey(processedGroup.group.key)
+          : undefined;
+
+        // Skip collapsed groups entirely (only when grouped)
+        if (
+          isGrouped &&
+          this.collapsedGroups.has(this.getCollapseKey(currentGroupKey))
+        )
+          continue;
+
+        const groupEntriesToDisplay = Math.min(
+          processedGroup.entries.length,
+          currCount - displayedSoFar,
+        );
+
+        // Skip groups that were fully rendered before
+        if (displayedSoFar + groupEntriesToDisplay <= prevCount) {
+          displayedSoFar += groupEntriesToDisplay;
+          continue;
+        }
+
+        // Determine entries to render in this group
+        // startInGroup: skip already-rendered entries
+        // endInGroup: stop at currCount boundary
+        const startInGroup = Math.max(0, prevCount - displayedSoFar);
+        const endInGroup = groupEntriesToDisplay; // Already capped by currCount
+        const groupEntries = processedGroup.entries.slice(
+          startInGroup,
+          endInGroup,
+        );
+
+        // Get or create group container
+        let groupEl: HTMLElement;
+
+        // Check if we can reuse the last group container
+        if (
+          currentGroupKey === this.lastGroup.key &&
+          this.lastGroup.container?.isConnected
+        ) {
+          // Same group as last - append to existing container
+          groupEl = this.lastGroup.container;
+        } else {
+          // Wrap header + group in a section so sticky scopes to the group's content
+          const sectionEl = this.masonryContainer.createDiv(
+            "dynamic-views-group-section",
+          );
+
+          // Render group header
+          const collapseKey = this.getCollapseKey(currentGroupKey);
+          const headerEl = renderGroupHeader(
+            sectionEl,
+            processedGroup.group,
+            this.config,
+            this.app,
+            processedGroup.entries.length,
+            false, // not collapsed (we skipped collapsed groups above)
+            () => {
+              if (headerEl) this.toggleGroupCollapse(collapseKey, headerEl);
+            },
+          );
+
+          // New group - create container for cards
+          groupEl = sectionEl.createDiv(
+            "dynamic-views-group bases-cards-group masonry-container",
+          );
+          setGroupKeyDataset(groupEl, currentGroupKey);
+
+          // Update last group tracking
+          this.lastGroup.key = currentGroupKey;
+          this.lastGroup.container = groupEl;
+        }
+
+        // Transform and render cards
+        const cards = transformBasesEntries(
+          this.app,
+          groupEntries,
           settings,
-        );
-        newCardsRendered++;
-      }
-
-      if (cards.length > 0) {
-        groupsWithNewCards++;
-      }
-
-      displayedSoFar += groupEntriesToDisplay;
-    }
-
-    // Update state for next append - use currCount (captured at start)
-    // to ensure consistency even if this.displayedCount changed during async
-    this.previousDisplayedCount = currCount;
-    this.displayedSoFar = displayedSoFar;
-
-    // Use incremental layout if we have previous state, otherwise fall back to full recalc
-    // For grouped mode, use lastGroupKey; for ungrouped, use undefined
-    const layoutKey = this.lastGroup.container ? this.lastGroup.key : undefined;
-    const prevLayout = this.groupLayoutResults.get(layoutKey);
-    const targetContainer = this.lastGroup.container ?? this.masonryContainer;
-
-    // Ensure target container has masonry-container class for CSS height rule
-    if (
-      targetContainer &&
-      !targetContainer.classList.contains("masonry-container")
-    ) {
-      targetContainer.classList.add("masonry-container");
-    }
-
-    if (groupsWithNewCards > 1) {
-      // Batch spanned multiple groups - trigger full recalc to position all
-      this.updateLayoutRef.current?.("multi-group-fallback");
-      // Initialize gradients for ALL groups (not just last) when batch spans multiple
-      if (this.masonryContainer) {
-        initializeScrollGradients(this.masonryContainer);
-        initializeTitleTruncation(this.masonryContainer);
-      }
-    } else if (!prevLayout && newCardsRendered > 0) {
-      // No previous layout for this container (new group) - trigger full recalc
-      this.updateLayoutRef.current?.("new-group-fallback");
-      // Initialize gradients after layout (use targetContainer for grouped layouts)
-      if (targetContainer) {
-        initializeScrollGradients(targetContainer);
-        initializeTitleTruncation(targetContainer);
-      }
-    } else if (prevLayout && newCardsRendered > 0 && targetContainer) {
-      // Get only the newly rendered cards from the target container
-      const allCards = Array.from(
-        targetContainer.querySelectorAll<HTMLElement>(".card"),
-      );
-      const newCards =
-        newCardsRendered > 0 ? allCards.slice(-newCardsRendered) : [];
-
-      // Pre-set width on new cards BEFORE measuring heights
-      // This ensures text wrapping is correct when we read offsetHeight
-      const cardWidth = prevLayout.cardWidth;
-      newCards.forEach((card) => {
-        card.style.setProperty("--masonry-width", `${cardWidth}px`);
-      });
-
-      // Function to run incremental layout
-      const runIncrementalLayout = () => {
-        // Never hide during incremental layout - cards already positioned
-
-        // Re-read prevLayout in case it was updated during async operations
-        const currentPrevLayout = this.groupLayoutResults.get(layoutKey);
-
-        // Validate refs are still valid after async delay
-        if (!targetContainer?.isConnected || !currentPrevLayout) {
-          return;
-        }
-
-        // If any card was disconnected, fall back to full recalc
-        if (newCards.some((c) => !c.isConnected)) {
-          this.updateLayoutRef.current?.("card-disconnected-fallback");
-          return;
-        }
-
-        // Sync responsive classes before measuring (ResizeObservers are async)
-        syncResponsiveClasses(newCards);
-
-        // Force content rendering for accurate measurement
-        // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
-        this.masonryContainer?.classList.add("masonry-measuring");
-        let result: MasonryLayoutResult;
-        try {
-          // Force synchronous reflow so heights reflect new widths
-          void targetContainer.offsetHeight;
-
-          const gap = getCardSpacing(this.containerEl);
-
-          result = calculateIncrementalMasonryLayout({
-            newCards,
-            columnHeights: currentPrevLayout.columnHeights,
-            containerWidth: currentPrevLayout.containerWidth,
-            cardWidth: currentPrevLayout.cardWidth,
-            columns: currentPrevLayout.columns,
-            gap,
-          });
-
-          // Apply positions to new cards only (width already set above)
-          newCards.forEach((card, index) => {
-            const pos = result.positions[index];
-            card.classList.add("masonry-positioned");
-            card.style.setProperty("--masonry-left", `${pos.left}px`);
-            card.style.setProperty("--masonry-top", `${pos.top}px`);
-          });
-        } finally {
-          this.masonryContainer?.classList.remove("masonry-measuring");
-        }
-
-        // Track expected height so ResizeObserver can skip this change
-        this.expectedIncrementalHeight = result.containerHeight;
-
-        // Update container height (group container or main container)
-        targetContainer.style.setProperty(
-          "--masonry-height",
-          `${result.containerHeight}px`,
+          sortMethod,
+          false,
+          this.config.getOrder(),
+          this.contentCache.textPreviews,
+          this.contentCache.images,
+          this.contentCache.hasImageAvailable,
         );
 
-        // Store for next incremental append
-        this.groupLayoutResults.set(layoutKey, result);
+        for (let i = 0; i < cards.length; i++) {
+          const card = cards[i];
+          const entry = groupEntries[i];
+          this.renderCard(
+            groupEl,
+            card,
+            entry,
+            startIndex + newCardsRendered,
+            settings,
+          );
+          newCardsRendered++;
+        }
 
-        // Initialize scroll gradients for new cards
+        if (cards.length > 0) {
+          groupsWithNewCards++;
+        }
+
+        displayedSoFar += groupEntriesToDisplay;
+      }
+
+      // Update state for next append - use currCount (captured at start)
+      // to ensure consistency even if this.displayedCount changed during async
+      this.previousDisplayedCount = currCount;
+      this.displayedSoFar = displayedSoFar;
+
+      // Use incremental layout if we have previous state, otherwise fall back to full recalc
+      // For grouped mode, use lastGroupKey; for ungrouped, use undefined
+      const layoutKey = this.lastGroup.container
+        ? this.lastGroup.key
+        : undefined;
+      const prevLayout = this.groupLayoutResults.get(layoutKey);
+      const targetContainer = this.lastGroup.container ?? this.masonryContainer;
+
+      // Ensure target container has masonry-container class for CSS height rule
+      if (
+        targetContainer &&
+        !targetContainer.classList.contains("masonry-container")
+      ) {
+        targetContainer.classList.add("masonry-container");
+      }
+
+      if (groupsWithNewCards > 1) {
+        // Batch spanned multiple groups - trigger full recalc to position all
+        this.updateLayoutRef.current?.("multi-group-fallback");
+        // Initialize gradients for ALL groups (not just last) when batch spans multiple
+        if (this.masonryContainer) {
+          initializeScrollGradients(this.masonryContainer);
+          initializeTitleTruncation(this.masonryContainer);
+        }
+      } else if (!prevLayout && newCardsRendered > 0) {
+        // No previous layout for this container (new group) - trigger full recalc
+        this.updateLayoutRef.current?.("new-group-fallback");
+        // Initialize gradients after layout (use targetContainer for grouped layouts)
         if (targetContainer) {
           initializeScrollGradients(targetContainer);
           initializeTitleTruncation(targetContainer);
         }
+      } else if (prevLayout && newCardsRendered > 0 && targetContainer) {
+        // Get only the newly rendered cards from the target container
+        const allCards = Array.from(
+          targetContainer.querySelectorAll<HTMLElement>(".card"),
+        );
+        const newCards =
+          newCardsRendered > 0 ? allCards.slice(-newCardsRendered) : [];
 
-        // After layout completes, check if more content needed
-        // (ResizeObserver skips expected heights, so we check here)
-        // Guard: skip if render was cancelled while waiting for layout
-        if (this.renderState.version === currentVersion) {
-          this.checkAndLoadMore(totalEntries, settings);
-          // Show end indicator if all items displayed (skip if 0 results)
-          if (
-            this.displayedSoFar >= this.totalEntries &&
-            this.totalEntries > 0
-          ) {
-            this.showEndIndicator();
+        // Pre-set width on new cards BEFORE measuring heights
+        // This ensures text wrapping is correct when we read offsetHeight
+        const cardWidth = prevLayout.cardWidth;
+        newCards.forEach((card) => {
+          card.style.setProperty("--masonry-width", `${cardWidth}px`);
+        });
+
+        // Function to run incremental layout
+        const runIncrementalLayout = () => {
+          // Never hide during incremental layout - cards already positioned
+
+          // Re-read prevLayout in case it was updated during async operations
+          const currentPrevLayout = this.groupLayoutResults.get(layoutKey);
+
+          // Validate refs are still valid after async delay
+          if (!targetContainer?.isConnected || !currentPrevLayout) {
+            return;
           }
-        }
-      };
 
-      // Check if fixed cover height is enabled (heights are CSS-determined)
-      const isFixedCoverHeight = document.body.classList.contains(
-        "dynamic-views-masonry-fixed-cover-height",
-      );
+          // If any card was disconnected, fall back to full recalc
+          if (newCards.some((c) => !c.isConnected)) {
+            this.updateLayoutRef.current?.("card-disconnected-fallback");
+            return;
+          }
 
-      // Double RAF ensures browser has completed layout calculation:
-      // First RAF waits for pending style recalc, second ensures paint is complete
-      // and all ResizeObserver callbacks have fired
-      // Both RAFs guarded with isConnected to prevent execution on destroyed view
-      const runAfterLayout = (fn: () => void) => {
-        requestAnimationFrame(() => {
-          if (!this.containerEl?.isConnected) return;
+          // Sync responsive classes before measuring (ResizeObservers are async)
+          syncResponsiveClasses(newCards);
+
+          // Force content rendering for accurate measurement
+          // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
+          this.masonryContainer?.classList.add("masonry-measuring");
+          let result: MasonryLayoutResult;
+          try {
+            // Force synchronous reflow so heights reflect new widths
+            void targetContainer.offsetHeight;
+
+            const gap = getCardSpacing(this.containerEl);
+
+            result = calculateIncrementalMasonryLayout({
+              newCards,
+              columnHeights: currentPrevLayout.columnHeights,
+              containerWidth: currentPrevLayout.containerWidth,
+              cardWidth: currentPrevLayout.cardWidth,
+              columns: currentPrevLayout.columns,
+              gap,
+            });
+
+            // Apply positions to new cards only (width already set above)
+            newCards.forEach((card, index) => {
+              const pos = result.positions[index];
+              card.classList.add("masonry-positioned");
+              card.style.setProperty("--masonry-left", `${pos.left}px`);
+              card.style.setProperty("--masonry-top", `${pos.top}px`);
+            });
+          } finally {
+            this.masonryContainer?.classList.remove("masonry-measuring");
+          }
+
+          // Track expected height so ResizeObserver can skip this change
+          this.expectedIncrementalHeight = result.containerHeight;
+
+          // Update container height (group container or main container)
+          targetContainer.style.setProperty(
+            "--masonry-height",
+            `${result.containerHeight}px`,
+          );
+
+          // Store for next incremental append
+          this.groupLayoutResults.set(layoutKey, result);
+
+          // Initialize scroll gradients for new cards
+          if (targetContainer) {
+            initializeScrollGradients(targetContainer);
+            initializeTitleTruncation(targetContainer);
+          }
+
+          // After layout completes, check if more content needed
+          // (ResizeObserver skips expected heights, so we check here)
+          // Guard: skip if render was cancelled while waiting for layout
+          if (this.renderState.version === currentVersion) {
+            this.checkAndLoadMore(totalEntries, settings);
+            // Show end indicator if all items displayed (skip if 0 results)
+            if (
+              this.displayedSoFar >= this.totalEntries &&
+              this.totalEntries > 0
+            ) {
+              this.showEndIndicator();
+            }
+          }
+        };
+
+        // Check if fixed cover height is enabled (heights are CSS-determined)
+        const isFixedCoverHeight = document.body.classList.contains(
+          "dynamic-views-masonry-fixed-cover-height",
+        );
+
+        // Double RAF ensures browser has completed layout calculation:
+        // First RAF waits for pending style recalc, second ensures paint is complete
+        // and all ResizeObserver callbacks have fired
+        // Both RAFs guarded with isConnected to prevent execution on destroyed view
+        const runAfterLayout = (fn: () => void) => {
           requestAnimationFrame(() => {
             if (!this.containerEl?.isConnected) return;
-            fn();
+            requestAnimationFrame(() => {
+              if (!this.containerEl?.isConnected) return;
+              fn();
+            });
           });
-        });
-      };
+        };
 
-      if (isFixedCoverHeight) {
-        // Heights are CSS-determined, position after layout
-        runAfterLayout(runIncrementalLayout);
-      } else {
-        // Need to wait for image heights to be known (covers and thumbnails)
-        const newCardImages = newCards
-          .flatMap((card) => [
-            card.querySelector<HTMLImageElement>(
-              ".dynamic-views-image-embed img",
-            ),
-            card.querySelector<HTMLImageElement>(".card-thumbnail img"),
-          ])
-          .filter((img): img is HTMLImageElement => img !== null);
-
-        // Apply cached aspect ratios and collect images that need to load
-        const uncachedImages = newCardImages.filter((img) => {
-          const cachedRatio = getCachedAspectRatio(img.src);
-          if (cachedRatio !== undefined) {
-            // Apply cached aspect ratio - height will be correct for layout
-            const card = img.closest<HTMLElement>(".card");
-            if (card) {
-              card.style.setProperty(
-                "--actual-aspect-ratio",
-                cachedRatio.toString(),
-              );
-            }
-            return false; // Don't need to wait for layout (ratio is known)
-          }
-          return true; // Need to wait for load
-        });
-
-        if (uncachedImages.length === 0) {
-          // All images have cached aspect ratios (or no images)
+        if (isFixedCoverHeight) {
+          // Heights are CSS-determined, position after layout
           runAfterLayout(runIncrementalLayout);
         } else {
-          // Wait for uncached images to load/error
-          void Promise.all(
-            uncachedImages.map(
-              (img) =>
-                new Promise<void>((resolve) => {
-                  if (img.complete) {
-                    resolve();
-                    return;
-                  }
-                  img.addEventListener("load", () => resolve(), { once: true });
-                  img.addEventListener("error", () => resolve(), {
-                    once: true,
-                  });
-                }),
-            ),
-          ).then(() => {
-            // Guard against view destruction or renderVersion change while waiting for images
-            if (!this.containerEl?.isConnected) return;
-            if (this.renderState.version !== currentVersion) return;
-            runAfterLayout(runIncrementalLayout);
+          // Need to wait for image heights to be known (covers and thumbnails)
+          const newCardImages = newCards
+            .flatMap((card) => [
+              card.querySelector<HTMLImageElement>(
+                ".dynamic-views-image-embed img",
+              ),
+              card.querySelector<HTMLImageElement>(".card-thumbnail img"),
+            ])
+            .filter((img): img is HTMLImageElement => img !== null);
+
+          // Apply cached aspect ratios and collect images that need to load
+          const uncachedImages = newCardImages.filter((img) => {
+            const cachedRatio = getCachedAspectRatio(img.src);
+            if (cachedRatio !== undefined) {
+              // Apply cached aspect ratio - height will be correct for layout
+              const card = img.closest<HTMLElement>(".card");
+              if (card) {
+                card.style.setProperty(
+                  "--actual-aspect-ratio",
+                  cachedRatio.toString(),
+                );
+              }
+              return false; // Don't need to wait for layout (ratio is known)
+            }
+            return true; // Need to wait for load
           });
+
+          if (uncachedImages.length === 0) {
+            // All images have cached aspect ratios (or no images)
+            runAfterLayout(runIncrementalLayout);
+          } else {
+            // Wait for uncached images to load/error
+            void Promise.all(
+              uncachedImages.map(
+                (img) =>
+                  new Promise<void>((resolve) => {
+                    if (img.complete) {
+                      resolve();
+                      return;
+                    }
+                    img.addEventListener("load", () => resolve(), {
+                      once: true,
+                    });
+                    img.addEventListener("error", () => resolve(), {
+                      once: true,
+                    });
+                  }),
+              ),
+            ).then(() => {
+              // Guard against view destruction or renderVersion change while waiting for images
+              if (!this.containerEl?.isConnected) return;
+              if (this.renderState.version !== currentVersion) return;
+              runAfterLayout(runIncrementalLayout);
+            });
+          }
         }
       }
+      // Note: else cases (newCardsRendered === 0 or missing targetContainer) are valid no-ops
+    } finally {
+      // Always clear loading flag — ResizeObserver handles future loads
+      this.isLoading = false;
     }
-    // Note: else cases (newCardsRendered === 0 or missing targetContainer) are valid no-ops
-
-    // Clear loading flag after layout completes
-    // ResizeObserver on masonry container will trigger checkAndLoad when height changes
-    this.isLoading = false;
   }
 
   private setupInfiniteScroll(

@@ -429,58 +429,68 @@ export function basesEntryToCardData(
     }
   }
 
-  // Get YAML tags only from 'tags' property
-  const yamlTagsValue = entry.getValue("note.tags") as {
-    data?: unknown;
-  } | null;
+  // Only fetch tags when needed for display or subtitle
+  const TAG_PROPERTY_NAMES = ["tags", "note.tags", "file.tags", "file tags"];
+  const needsTags =
+    visibleProperties.some((p) => TAG_PROPERTY_NAMES.includes(p)) ||
+    TAG_PROPERTY_NAMES.includes(settings.subtitleProperty);
+
   let yamlTags: string[] = [];
-
-  if (yamlTagsValue && yamlTagsValue.data != null) {
-    const tagData = yamlTagsValue.data;
-    const rawTags = Array.isArray(tagData)
-      ? tagData
-          .map((t: unknown) => {
-            // Handle Bases tag objects - extract the actual tag string
-            if (t && typeof t === "object" && "data" in t) {
-              return String((t as { data: unknown }).data);
-            }
-            // Fallback to string/number conversion
-            return typeof t === "string" || typeof t === "number"
-              ? String(t)
-              : "";
-          })
-          .filter((t) => t)
-      : typeof tagData === "string" || typeof tagData === "number"
-        ? [String(tagData)]
-        : [];
-
-    yamlTags = stripTagHashes(rawTags);
-  }
-
-  // Get tags in YAML + note body from file.tags property
-  const allTagsValue = entry.getValue("file.tags") as { data?: unknown } | null;
   let tags: string[] = [];
 
-  if (allTagsValue && allTagsValue.data != null) {
-    const tagData = allTagsValue.data;
-    const rawTags = Array.isArray(tagData)
-      ? tagData
-          .map((t: unknown) => {
-            // Handle Bases tag objects - extract the actual tag string
-            if (t && typeof t === "object" && "data" in t) {
-              return String((t as { data: unknown }).data);
-            }
-            // Fallback to string/number conversion
-            return typeof t === "string" || typeof t === "number"
-              ? String(t)
-              : "";
-          })
-          .filter((t) => t)
-      : typeof tagData === "string" || typeof tagData === "number"
-        ? [String(tagData)]
-        : [];
+  if (needsTags) {
+    // Bases getValue can throw on malformed property data (e.g. null in tags array)
+    try {
+      const yamlTagsValue = entry.getValue("note.tags") as {
+        data?: unknown;
+      } | null;
+      if (yamlTagsValue && yamlTagsValue.data != null) {
+        const tagData = yamlTagsValue.data;
+        const rawTags = Array.isArray(tagData)
+          ? tagData
+              .map((t: unknown) => {
+                if (t && typeof t === "object" && "data" in t) {
+                  return String((t as { data: unknown }).data);
+                }
+                return typeof t === "string" || typeof t === "number"
+                  ? String(t)
+                  : "";
+              })
+              .filter((t) => t)
+          : typeof tagData === "string" || typeof tagData === "number"
+            ? [String(tagData)]
+            : [];
+        yamlTags = stripTagHashes(rawTags);
+      }
+    } catch {
+      // Obsidian's getValue can throw when tag data contains null values
+    }
 
-    tags = stripTagHashes(rawTags);
+    try {
+      const allTagsValue = entry.getValue("file.tags") as {
+        data?: unknown;
+      } | null;
+      if (allTagsValue && allTagsValue.data != null) {
+        const tagData = allTagsValue.data;
+        const rawTags = Array.isArray(tagData)
+          ? tagData
+              .map((t: unknown) => {
+                if (t && typeof t === "object" && "data" in t) {
+                  return String((t as { data: unknown }).data);
+                }
+                return typeof t === "string" || typeof t === "number"
+                  ? String(t)
+                  : "";
+              })
+              .filter((t) => t)
+          : typeof tagData === "string" || typeof tagData === "number"
+            ? [String(tagData)]
+            : [];
+        tags = stripTagHashes(rawTags);
+      }
+    } catch {
+      // Obsidian's getValue can throw when tag data contains null values
+    }
   }
 
   // Create base card data

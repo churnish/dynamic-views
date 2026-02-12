@@ -1263,227 +1263,237 @@ export class DynamicViewsGridView extends BasesView {
     // Guard: return early if data not initialized or no feed container
     if (!this.data || !this.feedContainerRef.current) return;
 
-    // Increment render version to cancel any stale onDataUpdated renders
-    this.renderState.version++;
-    const currentVersion = this.renderState.version;
+    try {
+      // Increment render version to cancel any stale onDataUpdated renders
+      this.renderState.version++;
+      const currentVersion = this.renderState.version;
 
-    const groupedData = this.data.groupedData;
+      const groupedData = this.data.groupedData;
 
-    // Read settings (schema defaults include template values)
-    const settings = readBasesSettings(
-      this.config,
-      this.plugin.persistenceManager.getPluginSettings(),
-      "grid",
-      this.lastRenderedSettings ?? undefined,
-    );
-
-    // Normalize property names once — downstream code uses pre-normalized values
-    const reverseMap = buildDisplayToSyntaxMap(this.config, this.allProperties);
-    const displayNameMap = buildSyntaxToDisplayMap(
-      this.config,
-      this.allProperties,
-    );
-    normalizeSettingsPropertyNames(
-      this.app,
-      settings,
-      reverseMap,
-      displayNameMap,
-    );
-
-    const sortMethod = getSortMethod(this.config);
-
-    // Process groups with shuffle logic
-    const processedGroups = processGroups(
-      groupedData,
-      this.sortState.isShuffled,
-      this.sortState.order,
-    );
-
-    // Capture state at start - these may change during async operations
-    const prevCount = this.previousDisplayedCount;
-    const currCount = this.displayedCount;
-
-    // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
-    const newEntries: BasesEntry[] = [];
-    let currentCount = 0;
-    const isGrouped = hasGroupBy(this.config);
-
-    for (const processedGroup of processedGroups) {
-      const groupKey = processedGroup.group.hasKey()
-        ? serializeGroupKey(processedGroup.group.key)
-        : undefined;
-      if (isGrouped && this.collapsedGroups.has(this.getCollapseKey(groupKey)))
-        continue;
-
-      const groupStart = currentCount;
-      const groupEnd = currentCount + processedGroup.entries.length;
-
-      // Determine which entries from this group are new
-      const newStartInGroup = Math.max(0, prevCount - groupStart);
-      const newEndInGroup = Math.min(
-        processedGroup.entries.length,
-        currCount - groupStart,
+      // Read settings (schema defaults include template values)
+      const settings = readBasesSettings(
+        this.config,
+        this.plugin.persistenceManager.getPluginSettings(),
+        "grid",
+        this.lastRenderedSettings ?? undefined,
       );
 
-      if (
-        newEndInGroup > newStartInGroup &&
-        newStartInGroup < processedGroup.entries.length
-      ) {
-        newEntries.push(
-          ...processedGroup.entries.slice(newStartInGroup, newEndInGroup),
-        );
-      }
-
-      currentCount = groupEnd;
-    }
-
-    // Load content ONLY for new entries
-    await loadContentForEntries(
-      newEntries,
-      settings,
-      this.app,
-      this.contentCache.textPreviews,
-      this.contentCache.images,
-      this.contentCache.hasImageAvailable,
-    );
-
-    // Abort if renderVersion changed during loading
-    if (this.renderState.version !== currentVersion) {
-      this.containerEl.querySelector(".dynamic-views-end-indicator")?.remove();
-      this.isLoading = false;
-      return;
-    }
-
-    // Clear CSS variable cache for this batch
-    clearStyleSettingsCache();
-
-    // Render new cards, handling group boundaries
-    // Use captured prevCount/currCount to avoid race conditions
-    let displayedSoFar = 0;
-    let newCardsRendered = 0;
-    const startIndex = prevCount;
-    const newCardEls: HTMLElement[] = [];
-
-    for (const processedGroup of processedGroups) {
-      if (displayedSoFar >= currCount) break;
-
-      const currentGroupKey = processedGroup.group.hasKey()
-        ? serializeGroupKey(processedGroup.group.key)
-        : undefined;
-
-      // Skip collapsed groups entirely (only when grouped)
-      if (
-        isGrouped &&
-        this.collapsedGroups.has(this.getCollapseKey(currentGroupKey))
-      )
-        continue;
-
-      const groupEntriesToDisplay = Math.min(
-        processedGroup.entries.length,
-        currCount - displayedSoFar,
+      // Normalize property names once — downstream code uses pre-normalized values
+      const reverseMap = buildDisplayToSyntaxMap(
+        this.config,
+        this.allProperties,
       );
-
-      // Skip groups that were fully rendered before
-      if (displayedSoFar + groupEntriesToDisplay <= prevCount) {
-        displayedSoFar += groupEntriesToDisplay;
-        continue;
-      }
-
-      // Determine entries to render in this group
-      const startInGroup = Math.max(0, prevCount - displayedSoFar);
-      const groupEntries = processedGroup.entries.slice(
-        startInGroup,
-        groupEntriesToDisplay,
+      const displayNameMap = buildSyntaxToDisplayMap(
+        this.config,
+        this.allProperties,
       );
-
-      // Get or create group container
-      let groupEl: HTMLElement;
-
-      if (
-        currentGroupKey === this.lastGroup.key &&
-        this.lastGroup.container?.isConnected
-      ) {
-        // Same group as last - append to existing container
-        groupEl = this.lastGroup.container;
-      } else {
-        // Wrap header + group in a section so sticky scopes to the group's content
-        const sectionEl = this.feedContainerRef.current.createDiv(
-          "dynamic-views-group-section",
-        );
-
-        // Render group header
-        const collapseKey = this.getCollapseKey(currentGroupKey);
-        const headerEl = renderGroupHeader(
-          sectionEl,
-          processedGroup.group,
-          this.config,
-          this.app,
-          processedGroup.entries.length,
-          false, // not collapsed (we skipped collapsed groups above)
-          () => {
-            if (headerEl) this.toggleGroupCollapse(collapseKey, headerEl);
-          },
-        );
-
-        // New group - create container for cards
-        groupEl = sectionEl.createDiv("dynamic-views-group bases-cards-group");
-        setGroupKeyDataset(groupEl, currentGroupKey);
-
-        // Update last group tracking
-        this.lastGroup.key = currentGroupKey;
-        this.lastGroup.container = groupEl;
-      }
-
-      // Transform and render cards, collecting refs for batch init
-      const cards = transformBasesEntries(
+      normalizeSettingsPropertyNames(
         this.app,
-        groupEntries,
         settings,
-        sortMethod,
-        false,
-        this.config.getOrder(),
+        reverseMap,
+        displayNameMap,
+      );
+
+      const sortMethod = getSortMethod(this.config);
+
+      // Process groups with shuffle logic
+      const processedGroups = processGroups(
+        groupedData,
+        this.sortState.isShuffled,
+        this.sortState.order,
+      );
+
+      // Capture state at start - these may change during async operations
+      const prevCount = this.previousDisplayedCount;
+      const currCount = this.displayedCount;
+
+      // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
+      const newEntries: BasesEntry[] = [];
+      let currentCount = 0;
+      const isGrouped = hasGroupBy(this.config);
+
+      for (const processedGroup of processedGroups) {
+        const groupKey = processedGroup.group.hasKey()
+          ? serializeGroupKey(processedGroup.group.key)
+          : undefined;
+        if (
+          isGrouped &&
+          this.collapsedGroups.has(this.getCollapseKey(groupKey))
+        )
+          continue;
+
+        const groupStart = currentCount;
+        const groupEnd = currentCount + processedGroup.entries.length;
+
+        // Determine which entries from this group are new
+        const newStartInGroup = Math.max(0, prevCount - groupStart);
+        const newEndInGroup = Math.min(
+          processedGroup.entries.length,
+          currCount - groupStart,
+        );
+
+        if (
+          newEndInGroup > newStartInGroup &&
+          newStartInGroup < processedGroup.entries.length
+        ) {
+          newEntries.push(
+            ...processedGroup.entries.slice(newStartInGroup, newEndInGroup),
+          );
+        }
+
+        currentCount = groupEnd;
+      }
+
+      // Load content ONLY for new entries
+      await loadContentForEntries(
+        newEntries,
+        settings,
+        this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
         this.contentCache.hasImageAvailable,
       );
 
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
-        const entry = groupEntries[i];
-        const cardEl = this.renderCard(
-          groupEl,
-          card,
-          entry,
-          startIndex + newCardsRendered,
-          settings,
+      // Abort if renderVersion changed during loading
+      if (this.renderState.version !== currentVersion) {
+        this.containerEl
+          .querySelector(".dynamic-views-end-indicator")
+          ?.remove();
+        return;
+      }
+
+      // Clear CSS variable cache for this batch
+      clearStyleSettingsCache();
+
+      // Render new cards, handling group boundaries
+      // Use captured prevCount/currCount to avoid race conditions
+      let displayedSoFar = 0;
+      let newCardsRendered = 0;
+      const startIndex = prevCount;
+      const newCardEls: HTMLElement[] = [];
+
+      for (const processedGroup of processedGroups) {
+        if (displayedSoFar >= currCount) break;
+
+        const currentGroupKey = processedGroup.group.hasKey()
+          ? serializeGroupKey(processedGroup.group.key)
+          : undefined;
+
+        // Skip collapsed groups entirely (only when grouped)
+        if (
+          isGrouped &&
+          this.collapsedGroups.has(this.getCollapseKey(currentGroupKey))
+        )
+          continue;
+
+        const groupEntriesToDisplay = Math.min(
+          processedGroup.entries.length,
+          currCount - displayedSoFar,
         );
-        newCardEls.push(cardEl);
-        newCardsRendered++;
+
+        // Skip groups that were fully rendered before
+        if (displayedSoFar + groupEntriesToDisplay <= prevCount) {
+          displayedSoFar += groupEntriesToDisplay;
+          continue;
+        }
+
+        // Determine entries to render in this group
+        const startInGroup = Math.max(0, prevCount - displayedSoFar);
+        const groupEntries = processedGroup.entries.slice(
+          startInGroup,
+          groupEntriesToDisplay,
+        );
+
+        // Get or create group container
+        let groupEl: HTMLElement;
+
+        if (
+          currentGroupKey === this.lastGroup.key &&
+          this.lastGroup.container?.isConnected
+        ) {
+          // Same group as last - append to existing container
+          groupEl = this.lastGroup.container;
+        } else {
+          // Wrap header + group in a section so sticky scopes to the group's content
+          const sectionEl = this.feedContainerRef.current.createDiv(
+            "dynamic-views-group-section",
+          );
+
+          // Render group header
+          const collapseKey = this.getCollapseKey(currentGroupKey);
+          const headerEl = renderGroupHeader(
+            sectionEl,
+            processedGroup.group,
+            this.config,
+            this.app,
+            processedGroup.entries.length,
+            false, // not collapsed (we skipped collapsed groups above)
+            () => {
+              if (headerEl) this.toggleGroupCollapse(collapseKey, headerEl);
+            },
+          );
+
+          // New group - create container for cards
+          groupEl = sectionEl.createDiv(
+            "dynamic-views-group bases-cards-group",
+          );
+          setGroupKeyDataset(groupEl, currentGroupKey);
+
+          // Update last group tracking
+          this.lastGroup.key = currentGroupKey;
+          this.lastGroup.container = groupEl;
+        }
+
+        // Transform and render cards, collecting refs for batch init
+        const cards = transformBasesEntries(
+          this.app,
+          groupEntries,
+          settings,
+          sortMethod,
+          false,
+          this.config.getOrder(),
+          this.contentCache.textPreviews,
+          this.contentCache.images,
+          this.contentCache.hasImageAvailable,
+        );
+
+        for (let i = 0; i < cards.length; i++) {
+          const card = cards[i];
+          const entry = groupEntries[i];
+          const cardEl = this.renderCard(
+            groupEl,
+            card,
+            entry,
+            startIndex + newCardsRendered,
+            settings,
+          );
+          newCardEls.push(cardEl);
+          newCardsRendered++;
+        }
+
+        displayedSoFar += groupEntriesToDisplay;
       }
 
-      displayedSoFar += groupEntriesToDisplay;
-    }
+      // Update state for next append - use currCount (captured at start)
+      // to ensure consistency even if this.displayedCount changed during async
+      this.previousDisplayedCount = currCount;
 
-    // Update state for next append - use currCount (captured at start)
-    // to ensure consistency even if this.displayedCount changed during async
-    this.previousDisplayedCount = currCount;
-
-    // Batch-initialize scroll gradients and title truncation for newly rendered cards only
-    if (newCardEls.length > 0) {
-      // Sync responsive classes before gradient init (ResizeObservers are async)
-      syncResponsiveClasses(newCardEls);
-      // Initialize gradients/truncation (uses caching to skip already-processed fields)
-      if (this.feedContainerRef.current) {
-        initializeScrollGradients(this.feedContainerRef.current);
-        initializeTitleTruncation(this.feedContainerRef.current);
+      // Batch-initialize scroll gradients and title truncation for newly rendered cards only
+      if (newCardEls.length > 0) {
+        // Sync responsive classes before gradient init (ResizeObservers are async)
+        syncResponsiveClasses(newCardEls);
+        // Initialize gradients/truncation (uses caching to skip already-processed fields)
+        if (this.feedContainerRef.current) {
+          initializeScrollGradients(this.feedContainerRef.current);
+          initializeTitleTruncation(this.feedContainerRef.current);
+        }
       }
+
+      // Mark that batch append occurred (for end indicator)
+      this.hasBatchAppended = true;
+    } finally {
+      this.isLoading = false;
     }
-
-    // Mark that batch append occurred (for end indicator)
-    this.hasBatchAppended = true;
-
-    // Clear loading flag - existing scroll listener handles future loads
-    this.isLoading = false;
   }
 
   private setupInfiniteScroll(
