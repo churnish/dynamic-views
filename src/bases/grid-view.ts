@@ -15,10 +15,14 @@ import {
   getCardSpacing,
   clearStyleSettingsCache,
 } from "../utils/style-settings";
-import { initializeScrollGradients } from "../shared/scroll-gradient";
+import {
+  initializeScrollGradients,
+  initializeScrollGradientsForCards,
+} from "../shared/scroll-gradient";
 import {
   SharedCardRenderer,
   initializeTitleTruncation,
+  initializeTitleTruncationForCards,
   syncResponsiveClasses,
   applyViewContainerStyles,
 } from "./shared-renderer";
@@ -1482,11 +1486,10 @@ export class DynamicViewsGridView extends BasesView {
       if (newCardEls.length > 0) {
         // Sync responsive classes before gradient init (ResizeObservers are async)
         syncResponsiveClasses(newCardEls);
-        // Initialize gradients/truncation (uses caching to skip already-processed fields)
-        if (this.feedContainerRef.current) {
-          initializeScrollGradients(this.feedContainerRef.current);
-          initializeTitleTruncation(this.feedContainerRef.current);
-        }
+        // Initialize gradients/truncation for new cards only (avoids
+        // re-scanning old content-hidden cards in the container)
+        initializeScrollGradientsForCards(newCardEls);
+        initializeTitleTruncationForCards(newCardEls);
       }
 
       // Mark that batch append occurred (for end indicator)

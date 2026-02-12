@@ -77,6 +77,7 @@ import {
   revealFileInNotebookNavigator,
 } from "../utils/notebook-navigator";
 import { measurePropertyFields } from "../shared/property-measure";
+import { CONTENT_HIDDEN_CLASS } from "../shared/content-visibility";
 import {
   isTagProperty,
   isFileProperty,
@@ -252,20 +253,11 @@ export function applyViewContainerStyles(
  *
  * Only runs when extension mode is ON (CSS can't preserve extension).
  */
-export function initializeTitleTruncation(container: HTMLElement): void {
-  // Only run when extension mode is enabled
-  if (!document.body.classList.contains("dynamic-views-file-type-ext")) {
-    return;
-  }
-
-  // Skip if scroll mode is enabled (no truncation)
-  if (document.body.classList.contains("dynamic-views-title-overflow-scroll")) {
-    return;
-  }
-
-  const titles = container.querySelectorAll<HTMLElement>(".card-title");
-  if (titles.length === 0) return;
-
+/**
+ * Core title truncation for a set of title elements.
+ * Uses read-then-write pattern to avoid layout thrashing.
+ */
+function truncateTitleElements(titles: Iterable<HTMLElement>): void {
   // Phase 1: Read all dimensions (forces 1 layout recalc)
   const measurements: Array<{
     textEl: HTMLElement;
@@ -276,6 +268,10 @@ export function initializeTitleTruncation(container: HTMLElement): void {
   }> = [];
 
   for (const titleEl of titles) {
+    // Skip titles in content-hidden cards (dimension reads trigger Chromium warnings)
+    if (titleEl.closest(".card")?.classList.contains(CONTENT_HIDDEN_CLASS))
+      continue;
+
     const textEl = titleEl.querySelector<HTMLElement>(".card-title-text");
     if (!textEl) continue;
 
@@ -302,6 +298,50 @@ export function initializeTitleTruncation(container: HTMLElement): void {
   for (const m of measurements) {
     truncateTitleWithCanvas(m.textEl, m.fullText, m.width, m.font, m.maxLines);
   }
+}
+
+export function initializeTitleTruncation(container: HTMLElement): void {
+  // Only run when extension mode is enabled
+  if (!document.body.classList.contains("dynamic-views-file-type-ext")) {
+    return;
+  }
+
+  // Skip if scroll mode is enabled (no truncation)
+  if (document.body.classList.contains("dynamic-views-title-overflow-scroll")) {
+    return;
+  }
+
+  const titles = container.querySelectorAll<HTMLElement>(".card-title");
+  if (titles.length === 0) return;
+
+  truncateTitleElements(titles);
+}
+
+/**
+ * Card-scoped variant — truncates titles for specific cards only.
+ * Use in appendBatch to avoid re-scanning old hidden cards in the container.
+ */
+export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
+  if (cards.length === 0) return;
+
+  // Only run when extension mode is enabled
+  if (!document.body.classList.contains("dynamic-views-file-type-ext")) {
+    return;
+  }
+
+  // Skip if scroll mode is enabled (no truncation)
+  if (document.body.classList.contains("dynamic-views-title-overflow-scroll")) {
+    return;
+  }
+
+  const titles: HTMLElement[] = [];
+  for (const card of cards) {
+    const title = card.querySelector<HTMLElement>(".card-title");
+    if (title) titles.push(title);
+  }
+
+  if (titles.length === 0) return;
+  truncateTitleElements(titles);
 }
 
 // Extend App type to include dragManager
@@ -338,6 +378,8 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
   }> = [];
 
   for (const card of cards) {
+    // Skip content-hidden cards (dimension reads trigger Chromium warnings)
+    if (card.classList.contains(CONTENT_HIDDEN_CLASS)) continue;
     const cardWidth = card.offsetWidth;
     if (cardWidth <= 0) continue;
 

@@ -1,3 +1,4 @@
+import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
 import { SCROLL_TOLERANCE } from "./constants";
 
 /** Gradient class names */
@@ -243,16 +244,14 @@ export function setupScrollGradients(
  *
  * @param container - The container element with property fields
  */
-export function initializeScrollGradients(container: HTMLElement): void {
-  const fields = container.querySelectorAll<HTMLElement>(".property");
-
-  // Column mode skips JS measurement (CSS handles 50% widths),
-  // so paired fields never get "property-measured" — allow gradient init directly
-  const isColumnMode =
-    container
-      .closest(".dynamic-views")
-      ?.classList.contains("dynamic-views-paired-property-column") ?? false;
-
+/**
+ * Core gradient initialization for a set of property fields.
+ * Uses read-then-write pattern to avoid layout thrashing.
+ */
+function initializeGradientFields(
+  fields: Iterable<HTMLElement>,
+  isColumnMode: boolean,
+): void {
   // Phase 1: Read all dimensions (single forced layout)
   const measurements: Array<{
     field: HTMLElement;
@@ -261,7 +260,7 @@ export function initializeScrollGradients(container: HTMLElement): void {
     targetClass: string | null;
   }> = [];
 
-  fields.forEach((field) => {
+  for (const field of fields) {
     // Skip paired fields that haven't been measured yet
     // (unless in compact/column mode where JS measurement isn't needed)
     const pair = field.closest(".property-pair");
@@ -270,7 +269,7 @@ export function initializeScrollGradients(container: HTMLElement): void {
     const isCompact = field
       .closest(".card")
       ?.classList.contains("compact-mode");
-    if (isPaired && !isMeasured && !isCompact && !isColumnMode) return;
+    if (isPaired && !isMeasured && !isCompact && !isColumnMode) continue;
 
     // Get cached refs or query and cache (only cache successful finds)
     let wrapper = wrapperCache.get(field);
@@ -285,14 +284,14 @@ export function initializeScrollGradients(container: HTMLElement): void {
       if (content) contentCache.set(field, content);
     }
 
-    if (!wrapper || !content) return;
+    if (!wrapper || !content) continue;
 
     // Read dimensions
     const wrapperWidth = wrapper.clientWidth;
     const contentScrollWidth = content.scrollWidth;
 
     // Skip unmeasured elements
-    if (wrapperWidth === 0 || content.clientWidth === 0) return;
+    if (wrapperWidth === 0 || content.clientWidth === 0) continue;
 
     const isScrollable = contentScrollWidth > wrapperWidth;
     const targetClass = isScrollable
@@ -300,7 +299,7 @@ export function initializeScrollGradients(container: HTMLElement): void {
       : null;
 
     measurements.push({ field, wrapper, isScrollable, targetClass });
-  });
+  }
 
   // Phase 2: Apply all classes (no layout reads)
   for (const { field, wrapper, isScrollable, targetClass } of measurements) {
@@ -311,6 +310,45 @@ export function initializeScrollGradients(container: HTMLElement): void {
     }
     setGradientClasses(wrapper, targetClass);
   }
+}
+
+export function initializeScrollGradients(container: HTMLElement): void {
+  const allFields = container.querySelectorAll<HTMLElement>(".property");
+
+  // Column mode skips JS measurement (CSS handles 50% widths),
+  // so paired fields never get "property-measured" — allow gradient init directly
+  const isColumnMode =
+    container
+      .closest(".dynamic-views")
+      ?.classList.contains("dynamic-views-paired-property-column") ?? false;
+
+  // Skip fields in content-hidden cards (dimension reads trigger
+  // Chromium "subtree hidden by content-visibility" warnings)
+  const fields = Array.from(allFields).filter(
+    (f) => !f.closest(".card")?.classList.contains(CONTENT_HIDDEN_CLASS),
+  );
+
+  initializeGradientFields(fields, isColumnMode);
+}
+
+/**
+ * Card-scoped variant — initializes gradients for specific cards only.
+ * Use in appendBatch to avoid re-scanning old hidden cards in the container.
+ */
+export function initializeScrollGradientsForCards(cards: HTMLElement[]): void {
+  if (cards.length === 0) return;
+
+  const isColumnMode =
+    cards[0]
+      .closest(".dynamic-views")
+      ?.classList.contains("dynamic-views-paired-property-column") ?? false;
+
+  const fields: HTMLElement[] = [];
+  for (const card of cards) {
+    fields.push(...card.querySelectorAll<HTMLElement>(".property"));
+  }
+
+  initializeGradientFields(fields, isColumnMode);
 }
 
 /**

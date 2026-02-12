@@ -15,7 +15,10 @@ import {
   getCardSpacing,
   clearStyleSettingsCache,
 } from "../utils/style-settings";
-import { initializeScrollGradients } from "../shared/scroll-gradient";
+import {
+  initializeScrollGradients,
+  initializeScrollGradientsForCards,
+} from "../shared/scroll-gradient";
 import {
   calculateMasonryLayout,
   calculateMasonryDimensions,
@@ -25,6 +28,7 @@ import {
 import {
   SharedCardRenderer,
   initializeTitleTruncation,
+  initializeTitleTruncationForCards,
   syncResponsiveClasses,
   applyViewContainerStyles,
 } from "./shared-renderer";
@@ -1679,6 +1683,7 @@ export class DynamicViewsMasonryView extends BasesView {
       let newCardsRendered = 0;
       const startIndex = prevCount;
       let groupsWithNewCards = 0; // Track how many groups received cards
+      const newCardEls: HTMLElement[] = [];
 
       for (const processedGroup of processedGroups) {
         if (displayedSoFar >= currCount) break;
@@ -1772,13 +1777,14 @@ export class DynamicViewsMasonryView extends BasesView {
         for (let i = 0; i < cards.length; i++) {
           const card = cards[i];
           const entry = groupEntries[i];
-          this.renderCard(
+          const cardEl = this.renderCard(
             groupEl,
             card,
             entry,
             startIndex + newCardsRendered,
             settings,
           );
+          newCardEls.push(cardEl);
           newCardsRendered++;
         }
 
@@ -1813,19 +1819,15 @@ export class DynamicViewsMasonryView extends BasesView {
       if (groupsWithNewCards > 1) {
         // Batch spanned multiple groups - trigger full recalc to position all
         this.updateLayoutRef.current?.("multi-group-fallback");
-        // Initialize gradients for ALL groups (not just last) when batch spans multiple
-        if (this.masonryContainer) {
-          initializeScrollGradients(this.masonryContainer);
-          initializeTitleTruncation(this.masonryContainer);
-        }
+        // Initialize gradients for new cards only (avoids re-scanning old hidden cards)
+        initializeScrollGradientsForCards(newCardEls);
+        initializeTitleTruncationForCards(newCardEls);
       } else if (!prevLayout && newCardsRendered > 0) {
         // No previous layout for this container (new group) - trigger full recalc
         this.updateLayoutRef.current?.("new-group-fallback");
-        // Initialize gradients after layout (use targetContainer for grouped layouts)
-        if (targetContainer) {
-          initializeScrollGradients(targetContainer);
-          initializeTitleTruncation(targetContainer);
-        }
+        // Initialize gradients for new cards only
+        initializeScrollGradientsForCards(newCardEls);
+        initializeTitleTruncationForCards(newCardEls);
       } else if (prevLayout && newCardsRendered > 0 && targetContainer) {
         // Get only the newly rendered cards from the target container
         const allCards = Array.from(
@@ -1904,11 +1906,9 @@ export class DynamicViewsMasonryView extends BasesView {
           // Store for next incremental append
           this.groupLayoutResults.set(layoutKey, result);
 
-          // Initialize scroll gradients for new cards
-          if (targetContainer) {
-            initializeScrollGradients(targetContainer);
-            initializeTitleTruncation(targetContainer);
-          }
+          // Initialize gradients for new cards only
+          initializeScrollGradientsForCards(newCardEls);
+          initializeTitleTruncationForCards(newCardEls);
 
           // After layout completes, check if more content needed
           // (ResizeObserver skips expected heights, so we check here)
