@@ -3713,6 +3713,13 @@ body.dynamic-views-subtitle-above
   justify-content: flex-end;
 }
 
+/* Compact mode: left-align thumbnail when no text preview */
+.dynamic-views
+  .card.compact-mode.card-thumbnail-right
+  .card-previews:not(:has(.card-text-preview-wrapper)) {
+  justify-content: flex-start;
+}
+
 .dynamic-views .card-text-preview-wrapper {
   flex: 1;
   min-width: 0;
