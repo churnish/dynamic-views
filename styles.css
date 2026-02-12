@@ -607,6 +607,11 @@ settings:
         description: Prevent vertically scrolling card content when it doesn't fit
         type: class-toggle
     -
+        id: dynamic-views-poster-disable-raise
+        title: Disable raise animation
+        description: Content fades in without sliding up on reveal
+        type: class-toggle
+    -
         id: dynamic-views-poster-mode
         title: Display mode
         type: class-select
@@ -619,11 +624,6 @@ settings:
             -
                 label: Overlay
                 value: dynamic-views-poster-mode-overlay
-    -
-        id: dynamic-views-poster-disable-raise
-        title: Disable raise animation
-        description: Content fades in without sliding up on reveal
-        type: class-toggle
     -
         id: dynamic-views-poster-overlay-tint
         title: Overlay tint
@@ -7818,13 +7818,6 @@ body:is(
     [data-id="dynamic-views-poster-overlay-dark"],
     [data-id="dynamic-views-poster-overlay-blur"]
   ) {
-  display: none !important;
-}
-
-/* Overlay mode: hide raise toggle (raise only applies to gradient) */
-body.dynamic-views-poster-mode-overlay
-  .style-settings-container
-  .setting-item[data-id="dynamic-views-poster-disable-raise"] {
   display: none !important;
 }
 
