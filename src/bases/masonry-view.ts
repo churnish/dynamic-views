@@ -53,7 +53,7 @@ import {
   setGroupKeyDataset,
   getGroupKeyDataset,
   UNDEFINED_GROUP_KEY_SENTINEL,
-  cleanupBaseFile,
+  cleanUpBaseFile,
   clearOldTemplateToggles,
   isCurrentTemplateView,
   shouldProcessDataUpdate,
@@ -723,7 +723,7 @@ export class DynamicViewsMasonryView extends BasesView {
       // Obsidian's debounced config.set() file writes (overwrites pending settings).
       const viewName = this.config?.name;
       if (!this.viewId || (viewName && !this.viewId.endsWith(`-${viewName}`))) {
-        const viewIds = await cleanupBaseFile(
+        const viewIds = await cleanUpBaseFile(
           this.app,
           this.currentFile,
           this.plugin,

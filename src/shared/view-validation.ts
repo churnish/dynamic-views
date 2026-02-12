@@ -1,6 +1,6 @@
 /**
  * Shared validation constants for ViewDefaults cleanup.
- * Used by cleanupTemplateSettings (persistence.ts) and cleanupBaseFile (bases/utils.ts).
+ * Used by cleanupTemplateSettings (persistence.ts) and cleanUpBaseFile (bases/utils.ts).
  */
 
 import type { ViewDefaults } from "../types";

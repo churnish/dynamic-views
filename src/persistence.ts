@@ -76,7 +76,7 @@ function cleanupTemplateSettings(
 
   // Remove keys that match VIEW_DEFAULTS (sparse templates).
   // For Bases views, skip keys where BASES_DEFAULTS overrides VIEW_DEFAULTS
-  // (same guard as cleanupBaseFile in utils.ts).
+  // (same guard as cleanUpBaseFile in utils.ts).
   const isBases = viewType !== "datacore";
   for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
     if (isBases && key in BASES_DEFAULTS) continue;

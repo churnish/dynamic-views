@@ -73,7 +73,7 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
  * Called when any view in the file renders — handles all views, returns viewName → viewId map.
  * Also migrates basesState when a view is renamed (not duplicated).
  */
-export async function cleanupBaseFile(
+export async function cleanUpBaseFile(
   app: App,
   file: TFile | null,
   plugin: DynamicViews,
@@ -144,6 +144,22 @@ export async function cleanupBaseFile(
 
           if (isRename && idField) {
             migrations.push({ oldId: idField, newId });
+          }
+
+          // New view (not rename) — apply template defaults to YAML
+          if (!isRename) {
+            const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
+            const template = plugin.persistenceManager.getSettingsTemplate(
+              vt,
+            );
+            if (template?.settings) {
+              for (const [key, value] of Object.entries(template.settings)) {
+                if (!(key in viewObj)) {
+                  viewObj[key] = value;
+                  changeCount++;
+                }
+              }
+            }
           }
         }
 

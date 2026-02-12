@@ -1,5 +1,5 @@
 import { App, TFile } from "obsidian";
-import { cleanupBaseFile } from "../../src/bases/utils";
+import { cleanUpBaseFile } from "../../src/bases/utils";
 
 // Mock all constants used by utils.ts (imported transitively via view-validation)
 jest.mock("../../src/constants", () => ({
@@ -56,13 +56,14 @@ function createMockPlugin() {
   return {
     persistenceManager: {
       migrateBasesState: jest.fn().mockResolvedValue(undefined),
+      getSettingsTemplate: jest.fn().mockReturnValue(undefined),
     },
   } as any;
 }
 
 /**
  * Set up vault.process to capture the callback transformation.
- * Returns a function that retrieves the transformed data after cleanupBaseFile runs.
+ * Returns a function that retrieves the transformed data after cleanUpBaseFile runs.
  */
 function setupVaultProcess(app: App, data: unknown): () => unknown {
   const content = JSON.stringify(data);
@@ -84,7 +85,7 @@ function setupVaultProcess(app: App, data: unknown): () => unknown {
   };
 }
 
-describe("cleanupBaseFile", () => {
+describe("cleanUpBaseFile", () => {
   let app: App;
   let plugin: ReturnType<typeof createMockPlugin>;
 
@@ -95,12 +96,12 @@ describe("cleanupBaseFile", () => {
 
   it("should return null for non-.base files", async () => {
     const file = createMockFile("test.md");
-    const result = await cleanupBaseFile(app, file, plugin);
+    const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toBeNull();
   });
 
   it("should return null for null file", async () => {
-    const result = await cleanupBaseFile(app, null, plugin);
+    const result = await cleanUpBaseFile(app, null, plugin);
     expect(result).toBeNull();
   });
 
@@ -108,7 +109,7 @@ describe("cleanupBaseFile", () => {
     const file = createMockFile("test.base");
     setupVaultProcess(app, { views: [] });
 
-    const result = await cleanupBaseFile(app, file, plugin);
+    const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toEqual(new Map());
   });
 
@@ -118,7 +119,7 @@ describe("cleanupBaseFile", () => {
       views: [{ type: "table", name: "Table View" }],
     });
 
-    const result = await cleanupBaseFile(app, file, plugin);
+    const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toEqual(new Map());
   });
 
@@ -137,7 +138,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0]).not.toHaveProperty("deletedSetting");
@@ -160,7 +161,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0]).not.toHaveProperty("titleProperty");
@@ -182,7 +183,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0]).not.toHaveProperty("thumbnailSize");
@@ -202,7 +203,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     // First valid value for imagePosition is "left"
@@ -223,7 +224,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0]).not.toHaveProperty("cardSize");
@@ -245,7 +246,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0].formatFirstAsTitle).toBe(false);
@@ -264,7 +265,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
     // minimumColumns skipped for type check, "two" is valid enum, and
@@ -283,7 +284,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    const viewIds = await cleanupBaseFile(app, file, plugin);
+    const viewIds = await cleanUpBaseFile(app, file, plugin);
 
     expect(viewIds?.get("New View")).toBeDefined();
     const result = getResult() as { views: Record<string, unknown>[] };
@@ -302,7 +303,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     expect(plugin.persistenceManager.migrateBasesState).toHaveBeenCalledWith(
       "abc123-Old Name",
@@ -327,7 +328,7 @@ describe("cleanupBaseFile", () => {
       ],
     });
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     // No migration for duplicated IDs (it's a copy, not a rename)
     expect(plugin.persistenceManager.migrateBasesState).not.toHaveBeenCalled();
@@ -341,7 +342,7 @@ describe("cleanupBaseFile", () => {
       },
     );
 
-    const result = await cleanupBaseFile(app, file, plugin);
+    const result = await cleanUpBaseFile(app, file, plugin);
     // parseYaml (mocked as JSON.parse) throws, callback returns original content
     expect(result).toEqual(new Map());
   });
@@ -350,7 +351,7 @@ describe("cleanupBaseFile", () => {
     const file = createMockFile("test.base");
     setupVaultProcess(app, { otherKey: "value" });
 
-    const result = await cleanupBaseFile(app, file, plugin);
+    const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toEqual(new Map());
   });
 
@@ -368,7 +369,7 @@ describe("cleanupBaseFile", () => {
     };
     const getResult = setupVaultProcess(app, originalData);
 
-    await cleanupBaseFile(app, file, plugin);
+    await cleanUpBaseFile(app, file, plugin);
 
     // When changeCount is 0, callback returns original content string (not stringifyYaml)
     const result = getResult();

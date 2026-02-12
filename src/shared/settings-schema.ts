@@ -369,31 +369,6 @@ export function readBasesSettings(
 ): BasesResolvedSettings {
   const defaults = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
 
-  // Merge template defaults so config-absent keys fall back to template values
-  // (mirrors getBasesViewOptions which sets schema defaults from templates)
-  if (viewType) {
-    try {
-      const plugin = window.app?.plugins?.plugins?.["dynamic-views"];
-      const pm = (
-        plugin as unknown as {
-          persistenceManager?: {
-            getSettingsTemplate(
-              viewType: string,
-            ): { settings?: Record<string, unknown> } | undefined;
-          };
-        }
-      )?.persistenceManager;
-      const template = pm?.getSettingsTemplate(viewType);
-      if (template?.settings) {
-        for (const [key, value] of Object.entries(template.settings)) {
-          (defaults as Record<string, unknown>)[key] = value;
-        }
-      }
-    } catch {
-      // Plugin not ready — use static defaults
-    }
-  }
-
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)
   const getString = (key: string, fallback: string): string => {
