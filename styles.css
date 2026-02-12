@@ -3127,7 +3127,10 @@ body.dynamic-views-card-border-color-transparent .dynamic-views .card {
 /* Custom: use user-provided color variable */
 body.dynamic-views-card-border-color-custom .dynamic-views .card::after {
   box-shadow: inset 0 0 0 1px
-    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
+    var(
+      --dynamic-views-card-border-color-custom,
+      var(--background-modifier-border)
+    );
 }
 
 /* Focus ring - appears after hiding rules to win via cascade */
@@ -3292,49 +3295,80 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
 /* Card border color on hover presets */
 @media (hover: hover) {
   /* Normal (default) — body class needed for specificity over border presets */
-  body.dynamic-views-card-border-color-hover-normal .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-normal
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
   }
 
-  body.dynamic-views-card-border-color-hover-faint .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-faint
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--background-modifier-border);
   }
-  body.dynamic-views-card-border-color-hover-muted .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-muted
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
   }
-  body.dynamic-views-card-border-color-hover-accent .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-accent
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--text-accent);
   }
-  body.dynamic-views-card-border-color-hover-red .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-red
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-red);
   }
-  body.dynamic-views-card-border-color-hover-orange .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-orange
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-orange);
   }
-  body.dynamic-views-card-border-color-hover-yellow .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-yellow
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-yellow);
   }
-  body.dynamic-views-card-border-color-hover-green .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-green
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-green);
   }
-  body.dynamic-views-card-border-color-hover-cyan .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-cyan
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-cyan);
   }
-  body.dynamic-views-card-border-color-hover-blue .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-blue
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-blue);
   }
-  body.dynamic-views-card-border-color-hover-purple .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-purple
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-purple);
   }
-  body.dynamic-views-card-border-color-hover-pink .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-pink
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px var(--color-pink);
   }
-  body.dynamic-views-card-border-color-hover-transparent .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-transparent
+    .dynamic-views
+    .card:hover::after {
     box-shadow: none;
   }
-  body.dynamic-views-card-border-color-hover-custom .dynamic-views .card:hover::after {
+  body.dynamic-views-card-border-color-hover-custom
+    .dynamic-views
+    .card:hover::after {
     box-shadow: inset 0 0 0 1px
-      var(--dynamic-views-card-border-color-hover-custom, var(--background-modifier-border-focus));
+      var(
+        --dynamic-views-card-border-color-hover-custom,
+        var(--background-modifier-border-focus)
+      );
   }
 }
 
@@ -3713,9 +3747,9 @@ body.dynamic-views-subtitle-above
   justify-content: flex-end;
 }
 
-/* Compact mode: left-align thumbnail when no text preview */
+/* Stacked: left-align thumbnail when no text preview */
 .dynamic-views
-  .card.compact-mode.card-thumbnail-right
+  .card.thumbnail-stack.card-thumbnail-right
   .card-previews:not(:has(.card-text-preview-wrapper)) {
   justify-content: flex-start;
 }
@@ -4726,7 +4760,10 @@ body.dynamic-views-show-cover-border
   .card.card-cover-top.image-format-cover
   .card-cover-wrapper {
   border-bottom: 1px solid
-    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
+    var(
+      --dynamic-views-card-border-color-custom,
+      var(--background-modifier-border)
+    );
 }
 
 body.dynamic-views-show-cover-border
@@ -4734,7 +4771,10 @@ body.dynamic-views-show-cover-border
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper {
   border-top: 1px solid
-    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
+    var(
+      --dynamic-views-card-border-color-custom,
+      var(--background-modifier-border)
+    );
 }
 
 body.dynamic-views-show-cover-border
@@ -4742,7 +4782,10 @@ body.dynamic-views-show-cover-border
   .card.card-cover-left.image-format-cover
   .card-cover-wrapper {
   border-right: 1px solid
-    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
+    var(
+      --dynamic-views-card-border-color-custom,
+      var(--background-modifier-border)
+    );
 }
 
 body.dynamic-views-show-cover-border
@@ -4750,7 +4793,10 @@ body.dynamic-views-show-cover-border
   .card.card-cover-right.image-format-cover
   .card-cover-wrapper {
   border-left: 1px solid
-    var(--dynamic-views-card-border-color-custom, var(--background-modifier-border));
+    var(
+      --dynamic-views-card-border-color-custom,
+      var(--background-modifier-border)
+    );
 }
 
 /* ==================== COVER PLACEHOLDERS ==================== */

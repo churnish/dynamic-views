@@ -1952,8 +1952,7 @@ function Card({
 
         const needsThumbnailStacking =
           format === "thumbnail" &&
-          (position === "left" || position === "right") &&
-          card.textPreview;
+          (position === "left" || position === "right");
 
         const responsiveObserver = new ResizeObserver((entries) => {
           for (const entry of entries) {
