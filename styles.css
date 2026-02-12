@@ -26,9 +26,6 @@ settings:
             -
                 label: Match theme
                 value: dynamic-views-backdrop-theme-match
-            -
-                label: Disable
-                value: dynamic-views-backdrop-theme-disable
     -
         id: dynamic-views-backdrop-overlay-light
         title: Light overlay strength
@@ -64,7 +61,7 @@ settings:
         collapsed: true
     -
         id: dynamic-views-card-spacing-desktop
-        title: Card spacing (desktop)
+        title: Card spacing
         description: Spacing between cards on desktop.
         type: variable-number-slider
         default: 8
@@ -74,7 +71,7 @@ settings:
         format: px
     -
         id: dynamic-views-card-spacing-mobile
-        title: Card spacing (mobile)
+        title: Card spacing
         description: Spacing between cards on mobile.
         type: variable-number-slider
         default: 6
@@ -122,6 +119,11 @@ settings:
         max: 32
         step: 1
         format: px
+    -
+        id: dynamic-views-no-fade-truncated-text
+        title: Hide scroll gradient
+        description: Don't show gradient fade on scrollable text elements.
+        type: class-toggle
     -
         id: dynamic-views-card-background
         title: Card background
@@ -290,11 +292,6 @@ settings:
         format: hex
         default-light: '#'
         default-dark: '#'
-    -
-        id: dynamic-views-no-fade-truncated-text
-        title: Hide scroll gradient
-        description: Don't show gradient fade on scrollable text elements.
-        type: class-toggle
     -
         id: covers-heading
         title: Covers
@@ -1156,15 +1153,9 @@ settings:
                 label: Theme style
                 value: dynamic-views-tag-style-theme
     -
-        id: dynamic-views-show-tag-hash
-        title: Show hash
-        description: Show hash prefix (#).
-        type: class-toggle
-        default: false
-    -
         id: dynamic-views-tag-color
         title: Tag color
-        description: Theme color preset for Outline, Fill, and Plaintext tag styles.
+        description: Color preset for tags.
         type: class-select
         allowEmpty: false
         default: dynamic-views-tag-color-faint
@@ -1216,6 +1207,12 @@ settings:
         format: hsl-split
         default-light: '#'
         default-dark: '#'
+    -
+        id: dynamic-views-show-tag-hash
+        title: Show hash
+        description: Show hash prefix (#).
+        type: class-toggle
+        default: false
     -
         id: text-preview-heading
         title: Text preview
@@ -1347,12 +1344,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-hidden-file-extensions
-        title: Hide file formats
-        description: Comma-separated list of formats to hide (e.g., md, base, canvas).
-        type: variable-text
-        default: md
-    -
         id: dynamic-views-file-type-indicator
         title: File format indicator
         type: class-select
@@ -1371,6 +1362,12 @@ settings:
             -
                 label: None
                 value: dynamic-views-file-type-none
+    -
+        id: dynamic-views-hidden-file-extensions
+        title: Hide file formats
+        description: Comma-separated list of formats to hide (e.g., md, base, canvas).
+        type: variable-text
+        default: md
     -
         id: dynamic-views-title-divider
         title: Divider line
@@ -3024,6 +3021,8 @@ body.dynamic-views-hide-group-property-labels
     background-color var(--anim-duration-fast, 140ms) ease;
   /* Cover inset: user setting + 1px offset for border */
   --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + 1px);
+  /* Resolved card border color — shared by ::after and cover-content divider */
+  --card-border-color: var(--background-modifier-border);
 }
 
 /* Border as pseudo-element so it appears on top of covers */
@@ -3032,7 +3031,7 @@ body.dynamic-views-hide-group-property-labels
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  box-shadow: inset 0 0 0 1px var(--card-border-color);
   pointer-events: none;
 }
 
@@ -3080,57 +3079,53 @@ body.dynamic-views-hide-group-property-labels
   cursor: pointer;
 }
 
-/* Card border color presets */
-/* Faint (default) — no rule needed, base ::after uses --background-modifier-border */
-body.dynamic-views-card-border-color-muted .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
+/* Card border color presets — set shared variable, consumed by ::after and cover-content divider */
+/* Faint (default) — no rule needed, base uses --background-modifier-border */
+body.dynamic-views-card-border-color-muted .dynamic-views .card {
+  --card-border-color: var(--background-modifier-border-hover);
 }
-body.dynamic-views-card-border-color-normal .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
+body.dynamic-views-card-border-color-normal .dynamic-views .card {
+  --card-border-color: var(--background-modifier-border-focus);
 }
-body.dynamic-views-card-border-color-accent .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--text-accent);
+body.dynamic-views-card-border-color-accent .dynamic-views .card {
+  --card-border-color: var(--text-accent);
 }
-body.dynamic-views-card-border-color-red .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-red);
+body.dynamic-views-card-border-color-red .dynamic-views .card {
+  --card-border-color: var(--color-red);
 }
-body.dynamic-views-card-border-color-orange .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-orange);
+body.dynamic-views-card-border-color-orange .dynamic-views .card {
+  --card-border-color: var(--color-orange);
 }
-body.dynamic-views-card-border-color-yellow .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-yellow);
+body.dynamic-views-card-border-color-yellow .dynamic-views .card {
+  --card-border-color: var(--color-yellow);
 }
-body.dynamic-views-card-border-color-green .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-green);
+body.dynamic-views-card-border-color-green .dynamic-views .card {
+  --card-border-color: var(--color-green);
 }
-body.dynamic-views-card-border-color-cyan .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-cyan);
+body.dynamic-views-card-border-color-cyan .dynamic-views .card {
+  --card-border-color: var(--color-cyan);
 }
-body.dynamic-views-card-border-color-blue .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-blue);
+body.dynamic-views-card-border-color-blue .dynamic-views .card {
+  --card-border-color: var(--color-blue);
 }
-body.dynamic-views-card-border-color-purple .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-purple);
+body.dynamic-views-card-border-color-purple .dynamic-views .card {
+  --card-border-color: var(--color-purple);
 }
-body.dynamic-views-card-border-color-pink .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px var(--color-pink);
+body.dynamic-views-card-border-color-pink .dynamic-views .card {
+  --card-border-color: var(--color-pink);
 }
-
-/* Transparent: hide border, drop cover 1px inset */
+body.dynamic-views-card-border-color-transparent .dynamic-views .card {
+  --card-border-color: transparent;
+  --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
+}
 body.dynamic-views-card-border-color-transparent .dynamic-views .card::after {
   box-shadow: none;
 }
-body.dynamic-views-card-border-color-transparent .dynamic-views .card {
-  --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
-}
-
-/* Custom: use user-provided color variable */
-body.dynamic-views-card-border-color-custom .dynamic-views .card::after {
-  box-shadow: inset 0 0 0 1px
-    var(
-      --dynamic-views-card-border-color-custom,
-      var(--background-modifier-border)
-    );
+body.dynamic-views-card-border-color-custom .dynamic-views .card {
+  --card-border-color: var(
+    --dynamic-views-card-border-color-custom,
+    var(--background-modifier-border)
+  );
 }
 
 /* Focus ring - appears after hiding rules to win via cascade */
@@ -3295,80 +3290,57 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
 /* Card border color on hover presets */
 @media (hover: hover) {
   /* Normal (default) — body class needed for specificity over border presets */
-  body.dynamic-views-card-border-color-hover-normal
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
+  body.dynamic-views-card-border-color-hover-normal .dynamic-views .card:hover {
+    --card-border-color: var(--background-modifier-border-focus);
   }
-
-  body.dynamic-views-card-border-color-hover-faint
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  body.dynamic-views-card-border-color-hover-faint .dynamic-views .card:hover {
+    --card-border-color: var(--background-modifier-border);
   }
-  body.dynamic-views-card-border-color-hover-muted
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
+  body.dynamic-views-card-border-color-hover-muted .dynamic-views .card:hover {
+    --card-border-color: var(--background-modifier-border-hover);
   }
-  body.dynamic-views-card-border-color-hover-accent
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--text-accent);
+  body.dynamic-views-card-border-color-hover-accent .dynamic-views .card:hover {
+    --card-border-color: var(--text-accent);
   }
-  body.dynamic-views-card-border-color-hover-red
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-red);
+  body.dynamic-views-card-border-color-hover-red .dynamic-views .card:hover {
+    --card-border-color: var(--color-red);
   }
-  body.dynamic-views-card-border-color-hover-orange
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-orange);
+  body.dynamic-views-card-border-color-hover-orange .dynamic-views .card:hover {
+    --card-border-color: var(--color-orange);
   }
-  body.dynamic-views-card-border-color-hover-yellow
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-yellow);
+  body.dynamic-views-card-border-color-hover-yellow .dynamic-views .card:hover {
+    --card-border-color: var(--color-yellow);
   }
-  body.dynamic-views-card-border-color-hover-green
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-green);
+  body.dynamic-views-card-border-color-hover-green .dynamic-views .card:hover {
+    --card-border-color: var(--color-green);
   }
-  body.dynamic-views-card-border-color-hover-cyan
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-cyan);
+  body.dynamic-views-card-border-color-hover-cyan .dynamic-views .card:hover {
+    --card-border-color: var(--color-cyan);
   }
-  body.dynamic-views-card-border-color-hover-blue
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-blue);
+  body.dynamic-views-card-border-color-hover-blue .dynamic-views .card:hover {
+    --card-border-color: var(--color-blue);
   }
-  body.dynamic-views-card-border-color-hover-purple
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-purple);
+  body.dynamic-views-card-border-color-hover-purple .dynamic-views .card:hover {
+    --card-border-color: var(--color-purple);
   }
-  body.dynamic-views-card-border-color-hover-pink
+  body.dynamic-views-card-border-color-hover-pink .dynamic-views .card:hover {
+    --card-border-color: var(--color-pink);
+  }
+  body.dynamic-views-card-border-color-hover-transparent
     .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px var(--color-pink);
+    .card:hover {
+    --card-border-color: transparent;
   }
   body.dynamic-views-card-border-color-hover-transparent
     .dynamic-views
     .card:hover::after {
     box-shadow: none;
   }
-  body.dynamic-views-card-border-color-hover-custom
-    .dynamic-views
-    .card:hover::after {
-    box-shadow: inset 0 0 0 1px
-      var(
-        --dynamic-views-card-border-color-hover-custom,
-        var(--background-modifier-border-focus)
-      );
+  body.dynamic-views-card-border-color-hover-custom .dynamic-views .card:hover {
+    --card-border-color: var(
+      --dynamic-views-card-border-color-hover-custom,
+      var(--background-modifier-border-focus)
+    );
   }
 }
 
@@ -3707,7 +3679,7 @@ body.dynamic-views-title-divider
   .card:has(.card-previews, .card-properties-top, .card-properties-bottom)
   .card-header {
   padding-bottom: var(--size-4-2);
-  border-bottom: 1px solid var(--hr-color);
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* Subtitle above title - flip visual order with CSS order */
@@ -4737,49 +4709,38 @@ body.dynamic-views-cover-circular
 
 /* ==================== COVER-CONTENT BORDER ==================== */
 
-/* Border between cover and card content (when enabled via Style Settings) */
+/* Border between cover and card content — inherits --card-border-color from card */
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-top.image-format-cover
   .card-cover-wrapper {
-  border-bottom: 1px solid
-    var(
-      --dynamic-views-card-border-color-custom,
-      var(--background-modifier-border)
-    );
+  border-bottom: 1px solid var(--card-border-color);
 }
-
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper {
-  border-top: 1px solid
-    var(
-      --dynamic-views-card-border-color-custom,
-      var(--background-modifier-border)
-    );
+  border-top: 1px solid var(--card-border-color);
 }
-
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-left.image-format-cover
   .card-cover-wrapper {
-  border-right: 1px solid
-    var(
-      --dynamic-views-card-border-color-custom,
-      var(--background-modifier-border)
-    );
+  border-right: 1px solid var(--card-border-color);
 }
-
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-right.image-format-cover
   .card-cover-wrapper {
-  border-left: 1px solid
-    var(
-      --dynamic-views-card-border-color-custom,
-      var(--background-modifier-border)
-    );
+  border-left: 1px solid var(--card-border-color);
+}
+
+/* Transparent card border: cover-content divider stays visible using --hr-color */
+body.dynamic-views-show-cover-border.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-wrapper {
+  border-color: var(--background-modifier-border);
 }
 
 /* ==================== COVER PLACEHOLDERS ==================== */
@@ -5302,8 +5263,7 @@ body:is(
     .dynamic-views-backdrop-theme-match,
     :not(
       .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark,
-      .dynamic-views-backdrop-theme-disable
+      .dynamic-views-backdrop-theme-dark
     )
   ).theme-dark
   .dynamic-views
@@ -5318,8 +5278,7 @@ body:is(
     .dynamic-views-backdrop-theme-match,
     :not(
       .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark,
-      .dynamic-views-backdrop-theme-disable
+      .dynamic-views-backdrop-theme-dark
     )
   ).theme-light
   .dynamic-views
@@ -5350,14 +5309,6 @@ body.dynamic-views-backdrop-theme-dark
   );
 }
 
-/* Overlay theme: Disable */
-body.dynamic-views-backdrop-theme-disable
-  .dynamic-views
-  .card.image-format-backdrop
-  .card-backdrop::after {
-  display: none;
-}
-
 /* Backdrop text color overrides (light overlay → dark text) */
 body.dynamic-views-backdrop-theme-light
   .dynamic-views
@@ -5366,8 +5317,7 @@ body:is(
     .dynamic-views-backdrop-theme-match,
     :not(
       .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark,
-      .dynamic-views-backdrop-theme-disable
+      .dynamic-views-backdrop-theme-dark
     )
   ).theme-light
   .dynamic-views
@@ -5385,8 +5335,7 @@ body:is(
     .dynamic-views-backdrop-theme-match,
     :not(
       .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark,
-      .dynamic-views-backdrop-theme-disable
+      .dynamic-views-backdrop-theme-dark
     )
   ).theme-dark
   .dynamic-views
@@ -7833,6 +7782,15 @@ body.dynamic-views-slideshow-disabled
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
   .setting-item[data-id="dynamic-views-subtitle-color-custom"],
+body.dynamic-views-file-type-none
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-hidden-file-extensions"],
+body.dynamic-views-tag-style-theme
+  .style-settings-container
+  .setting-item:is(
+    [data-id="dynamic-views-tag-color"],
+    [data-id="dynamic-views-tag-color-custom"]
+  ),
 body:not(.dynamic-views-tag-color-custom)
   .style-settings-container
   .setting-item[data-id="dynamic-views-tag-color-custom"],
@@ -7842,6 +7800,12 @@ body:not(.dynamic-views-text-preview-color-custom)
 body.dynamic-views-cover-circular
   .style-settings-container
   .setting-item[data-id="dynamic-views-cover-border-radius"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-spacing-desktop"],
+body:not(.is-mobile)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-spacing-mobile"],
 body.is-mobile
   .style-settings-container
   .setting-item[data-id="dynamic-views-image-viewer-fullscreen"],
