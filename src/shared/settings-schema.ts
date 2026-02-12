@@ -369,6 +369,31 @@ export function readBasesSettings(
 ): BasesResolvedSettings {
   const defaults = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
 
+  // Merge template defaults so config-absent keys fall back to template values
+  // (mirrors getBasesViewOptions which sets schema defaults from templates)
+  if (viewType) {
+    try {
+      const plugin = window.app?.plugins?.plugins?.["dynamic-views"];
+      const pm = (
+        plugin as unknown as {
+          persistenceManager?: {
+            getSettingsTemplate(
+              viewType: string,
+            ): { settings?: Record<string, unknown> } | undefined;
+          };
+        }
+      )?.persistenceManager;
+      const template = pm?.getSettingsTemplate(viewType);
+      if (template?.settings) {
+        for (const [key, value] of Object.entries(template.settings)) {
+          (defaults as Record<string, unknown>)[key] = value;
+        }
+      }
+    } catch {
+      // Plugin not ready — use static defaults
+    }
+  }
+
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)
   const getString = (key: string, fallback: string): string => {
@@ -530,6 +555,9 @@ export function extractBasesTemplate(
   config: BasesConfig,
   defaults: ViewDefaults,
 ): Partial<ViewDefaults> {
+  // Merge BASES_DEFAULTS so fallbacks and sparse filter use actual Bases defaults
+  const mergedDefaults = { ...defaults, ...BASES_DEFAULTS };
+
   // Helper: get string property with fallback
   // Empty string "" is a valid user choice (intentionally cleared field)
   const getString = (key: string, fallback: string): string => {
@@ -556,32 +584,38 @@ export function extractBasesTemplate(
 
   // Extract all values with type coercion
   const full: ViewDefaults = {
-    cardSize: getNumber("cardSize", defaults.cardSize),
-    titleProperty: defaults.titleProperty,
-    titleLines: getNumber("titleLines", defaults.titleLines),
-    subtitleProperty: defaults.subtitleProperty,
+    cardSize: getNumber("cardSize", mergedDefaults.cardSize),
+    titleProperty: mergedDefaults.titleProperty,
+    titleLines: getNumber("titleLines", mergedDefaults.titleLines),
+    subtitleProperty: mergedDefaults.subtitleProperty,
     formatFirstAsTitle: getBool(
       "formatFirstAsTitle",
-      defaults.formatFirstAsTitle,
+      mergedDefaults.formatFirstAsTitle,
     ),
     formatSecondAsSubtitle: getBool(
       "formatSecondAsSubtitle",
-      defaults.formatSecondAsSubtitle,
+      mergedDefaults.formatSecondAsSubtitle,
     ),
     textPreviewProperty: getString(
       "textPreviewProperty",
-      defaults.textPreviewProperty,
+      mergedDefaults.textPreviewProperty,
     ),
-    fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
-    textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
-    imageProperty: getString("imageProperty", defaults.imageProperty),
+    fallbackToContent: getBool(
+      "fallbackToContent",
+      mergedDefaults.fallbackToContent,
+    ),
+    textPreviewLines: getNumber(
+      "textPreviewLines",
+      mergedDefaults.textPreviewLines,
+    ),
+    imageProperty: getString("imageProperty", mergedDefaults.imageProperty),
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
       return value === "always" ||
         value === "if-unavailable" ||
         value === "never"
         ? value
-        : defaults.fallbackToEmbeds;
+        : mergedDefaults.fallbackToEmbeds;
     })(),
     imageFormat: (() => {
       const value = config.get("imageFormat");
@@ -590,9 +624,9 @@ export function extractBasesTemplate(
         value === "poster" ||
         value === "backdrop"
         ? value
-        : defaults.imageFormat;
+        : mergedDefaults.imageFormat;
     })(),
-    thumbnailSize: getNumber("thumbnailSize", defaults.thumbnailSize),
+    thumbnailSize: getNumber("thumbnailSize", mergedDefaults.thumbnailSize),
     imagePosition: (() => {
       const value = config.get("imagePosition");
       return value === "left" ||
@@ -600,54 +634,54 @@ export function extractBasesTemplate(
         value === "top" ||
         value === "bottom"
         ? value
-        : defaults.imagePosition;
+        : mergedDefaults.imagePosition;
     })(),
     imageFit: (() => {
       const value = config.get("imageFit");
       return value === "crop" || value === "contain"
         ? value
-        : defaults.imageFit;
+        : mergedDefaults.imageFit;
     })(),
-    imageRatio: getNumber("imageRatio", defaults.imageRatio),
+    imageRatio: getNumber("imageRatio", mergedDefaults.imageRatio),
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
       return value === "hide" || value === "inline" || value === "above"
         ? value
-        : defaults.propertyLabels;
+        : mergedDefaults.propertyLabels;
     })(),
-    pairProperties: getBool("pairProperties", defaults.pairProperties),
+    pairProperties: getBool("pairProperties", mergedDefaults.pairProperties),
     rightPropertyPosition: (() => {
       const value = config.get("rightPropertyPosition");
       return value === "left" || value === "column" || value === "right"
         ? value
-        : defaults.rightPropertyPosition;
+        : mergedDefaults.rightPropertyPosition;
     })(),
     invertPropertyPairing: getString(
       "invertPropertyPairing",
-      defaults.invertPropertyPairing,
+      mergedDefaults.invertPropertyPairing,
     ),
     showPropertiesAbove: getBool(
       "showPropertiesAbove",
-      defaults.showPropertiesAbove,
+      mergedDefaults.showPropertiesAbove,
     ),
     invertPropertyPosition: getString(
       "invertPropertyPosition",
-      defaults.invertPropertyPosition,
+      mergedDefaults.invertPropertyPosition,
     ),
-    urlProperty: getString("urlProperty", defaults.urlProperty),
+    urlProperty: getString("urlProperty", mergedDefaults.urlProperty),
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
       if (value === "one") return 1;
       if (value === "two") return 2;
-      return defaults.minimumColumns;
+      return mergedDefaults.minimumColumns;
     })(),
-    cssclasses: getString("cssclasses", defaults.cssclasses),
+    cssclasses: getString("cssclasses", mergedDefaults.cssclasses),
   };
 
   // Filter to only non-default values (sparse)
   const result: Partial<ViewDefaults> = {};
   for (const key of Object.keys(full) as (keyof ViewDefaults)[]) {
-    if (full[key] !== defaults[key]) {
+    if (full[key] !== mergedDefaults[key]) {
       (result as Record<string, unknown>)[key] = full[key];
     }
   }

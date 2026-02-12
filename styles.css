@@ -2842,7 +2842,8 @@ body:not(.dynamic-views-disable-sticky-group-header)
   container-name: dynamic-views-group-heading;
 }
 
-/* Border below sticky group headers when stuck — spans full pane width */
+/* Border below sticky group headers when stuck — spans full pane width.
+   Progressive enhancement: iOS WebKit doesn't yet support scroll-state() container queries. */
 @container dynamic-views-group-heading scroll-state(stuck: top) {
   .bases-group-count::after {
     content: "";
@@ -5132,9 +5133,7 @@ body.dynamic-views-show-cover-placeholder-both
 
 /* Poster: constrain height so .card-body can scroll.
    overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
-   without clipping its border-radius. overflow-clip-margin is unsupported in WebKit
-   (standards-positions#427) — iOS falls back to clip without margin (no regression).
-   Will work automatically once WebKit adopts it. */
+   without clipping its border-radius. */
 .dynamic-views .card.image-format-poster .card-content {
   overflow: clip;
   overflow-clip-margin: 4px;
