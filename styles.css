@@ -149,7 +149,7 @@ settings:
         default-dark: '#'
     -
         id: dynamic-views-card-background-hover
-        title: Card background on hover
+        title: Card background (hover)
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-background-hover-none
@@ -168,7 +168,7 @@ settings:
                 value: dynamic-views-card-background-hover-custom
     -
         id: dynamic-views-card-background-color-hover-custom
-        title: Custom card background on hover
+        title: Custom card background (hover)
         description: Custom color for card backgrounds on hover (only used when Card background on hover is set to Custom color).
         type: variable-themed-color
         format: hex
@@ -234,7 +234,7 @@ settings:
         default-dark: '#'
     -
         id: dynamic-views-card-border-color-hover
-        title: Card border color on hover
+        title: Card border color (hover)
         description: Theme color preset for card borders on hover.
         type: class-select
         allowEmpty: false
@@ -284,7 +284,7 @@ settings:
                 value: dynamic-views-card-border-color-hover-custom
     -
         id: dynamic-views-card-border-color-hover-custom
-        title: Custom card border color on hover
+        title: Custom card border color (hover)
         description: Custom color for card borders on hover (only used when Card border color on hover is set to Custom).
         type: variable-themed-color
         format: hex
