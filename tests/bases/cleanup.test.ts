@@ -30,6 +30,11 @@ jest.mock("../../src/constants", () => ({
     formatFirstAsTitle: false,
     formatSecondAsSubtitle: false,
   },
+  DATACORE_DEFAULTS: {
+    listMarker: "bullet",
+    queryHeight: 0,
+    pairProperties: true,
+  },
   BASES_DEFAULTS: {
     formatFirstAsTitle: true,
     formatSecondAsSubtitle: false,

@@ -4,7 +4,7 @@
  */
 
 import type { ViewDefaults } from "../types";
-import { VIEW_DEFAULTS } from "../constants";
+import { DATACORE_DEFAULTS, VIEW_DEFAULTS } from "../constants";
 
 /** Valid enum values for ViewDefaults string-enum fields */
 export const VALID_VIEW_VALUES: Partial<
@@ -19,8 +19,11 @@ export const VALID_VIEW_VALUES: Partial<
   minimumColumns: ["one", "two"],
 };
 
-/** Expected runtime types for ViewDefaults fields, derived from VIEW_DEFAULTS */
+/** Expected runtime types for ViewDefaults + DatacoreDefaults fields */
 export const VIEW_DEFAULTS_TYPES: Record<string, string> = {};
-for (const [key, value] of Object.entries(VIEW_DEFAULTS)) {
+for (const [key, value] of Object.entries({
+  ...VIEW_DEFAULTS,
+  ...DATACORE_DEFAULTS,
+})) {
   VIEW_DEFAULTS_TYPES[key] = typeof value;
 }

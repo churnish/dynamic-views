@@ -623,6 +623,29 @@ describe("PersistenceManager", () => {
       expect(template?.settings.listMarker).toBe("checkbox");
     });
 
+    it("should type-check DatacoreDefaults values in datacore templates", async () => {
+      mockPlugin.loadData = jest.fn().mockResolvedValue({
+        templates: {
+          datacore: {
+            settings: {
+              queryHeight: "tall", // string instead of number
+              pairProperties: "yes", // string instead of boolean
+              listMarker: "checkbox", // correct type (string)
+              cardSize: 400,
+            },
+            setAt: 1000,
+          },
+        },
+      });
+      await manager.load();
+
+      const template = manager.getSettingsTemplate("datacore");
+      expect(template?.settings).not.toHaveProperty("queryHeight");
+      expect(template?.settings).not.toHaveProperty("pairProperties");
+      expect(template?.settings.listMarker).toBe("checkbox");
+      expect(template?.settings.cardSize).toBe(400);
+    });
+
     it("should reject DatacoreDefaults keys in grid templates", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
         templates: {
