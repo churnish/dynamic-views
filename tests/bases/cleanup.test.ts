@@ -252,6 +252,29 @@ describe("cleanUpBaseFile", () => {
     expect(result.views[0].formatFirstAsTitle).toBe(false);
   });
 
+  it("should preserve BASES_DEFAULTS key even when matching VIEW_DEFAULTS, while removing non-BASES_DEFAULTS key", async () => {
+    const file = createMockFile("test.base");
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: "dynamic-views-grid",
+          name: "Test",
+          id: "abc-Test",
+          // propertyLabels: "hide" matches VIEW_DEFAULTS, but it's in BASES_DEFAULTS — preserve
+          propertyLabels: "hide",
+          // cardSize: 300 matches VIEW_DEFAULTS and is NOT in BASES_DEFAULTS — remove
+          cardSize: 300,
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    expect(result.views[0].propertyLabels).toBe("hide");
+    expect(result.views[0]).not.toHaveProperty("cardSize");
+  });
+
   it("should preserve minimumColumns (YAML strings not type-checked)", async () => {
     const file = createMockFile("test.base");
     const getResult = setupVaultProcess(app, {

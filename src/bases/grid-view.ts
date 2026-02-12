@@ -9,7 +9,6 @@ import { transformBasesEntries } from "../shared/data-transform";
 import {
   readBasesSettings,
   getBasesViewOptions,
-  extractBasesTemplate,
 } from "../shared/settings-schema";
 import {
   getCardSpacing,
@@ -45,9 +44,9 @@ import {
   setGroupKeyDataset,
   UNDEFINED_GROUP_KEY_SENTINEL,
   cleanUpBaseFile,
-  clearOldTemplateToggles,
-  isCurrentTemplateView,
   shouldProcessDataUpdate,
+  autoUpdateSettingsTemplate,
+  handleTemplateToggle,
 } from "./utils";
 import {
   initializeContainerFocus,
@@ -72,7 +71,6 @@ import type {
   SortState,
   FocusState,
 } from "../types";
-import { VIEW_DEFAULTS } from "../constants";
 import { setupContentVisibility } from "../shared/content-visibility";
 
 // Extend Obsidian types
@@ -126,7 +124,7 @@ export class DynamicViewsGridView extends BasesView {
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
-  private previousIsTemplate: boolean | undefined = undefined;
+  private previousIsTemplateRef = { value: undefined as boolean | undefined };
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -429,57 +427,16 @@ export class DynamicViewsGridView extends BasesView {
    * Handle template toggle changes
    * Called from onDataUpdated() since Obsidian calls that for config changes
    */
-  private handleTemplateToggle(): void {
-    const isTemplate = this.config.get("isTemplate") === true;
-
-    // Only process if isTemplate actually changed
-    if (this.previousIsTemplate === isTemplate) {
-      return;
-    }
-    this.previousIsTemplate = isTemplate;
-
-    if (isTemplate) {
-      const existingTimestamp = this.config.get("templateSetAt") as
-        | number
-        | undefined;
-
-      if (existingTimestamp !== undefined) {
-        // View loaded with existing toggle — validate it's not stale
-        const isStale = !isCurrentTemplateView(
-          this.config,
-          "grid",
-          this.plugin,
-        );
-        if (isStale) {
-          this.config.set("isTemplate", false);
-          this.previousIsTemplate = false;
-          return;
-        }
-        // Valid template — no action needed on load
-      } else {
-        // User just enabled toggle — set timestamp + clear other views
-        const timestamp = Date.now();
-        this.config.set("templateSetAt", timestamp);
-        clearOldTemplateToggles(this.app, GRID_VIEW_TYPE, this);
-
-        // Save settings template
-        const templateSettings = extractBasesTemplate(
-          this.config,
-          VIEW_DEFAULTS,
-        );
-        void this.plugin.persistenceManager.setSettingsTemplate("grid", {
-          settings: templateSettings,
-          setAt: timestamp,
-        });
-      }
-    } else {
-      // Toggle turned OFF — clear template if this view was the template
-      const hadTimestamp = this.config.get("templateSetAt") !== undefined;
-      if (hadTimestamp) {
-        this.config.set("templateSetAt", undefined);
-        void this.plugin.persistenceManager.setSettingsTemplate("grid", null);
-      }
-    }
+  private handleTemplateToggleLocal(): void {
+    handleTemplateToggle(
+      this.config,
+      "grid",
+      GRID_VIEW_TYPE,
+      this.plugin,
+      this.app,
+      this,
+      this.previousIsTemplateRef,
+    );
   }
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
@@ -554,7 +511,7 @@ export class DynamicViewsGridView extends BasesView {
 
   onDataUpdated(): void {
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
-    this.handleTemplateToggle();
+    this.handleTemplateToggleLocal();
 
     // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
     this.applyCssOnlySettings();
@@ -688,18 +645,7 @@ export class DynamicViewsGridView extends BasesView {
       );
       this.lastRenderedSettings = settings;
 
-      // Auto-update template when settings change on a template-source view
-      if (this.config.get("isTemplate") === true) {
-        const extracted = extractBasesTemplate(this.config, VIEW_DEFAULTS);
-        const current =
-          this.plugin.persistenceManager.getSettingsTemplate("grid");
-        if (JSON.stringify(extracted) !== JSON.stringify(current?.settings)) {
-          void this.plugin.persistenceManager.setSettingsTemplate("grid", {
-            settings: extracted,
-            setAt: current?.setAt ?? Date.now(),
-          });
-        }
-      }
+      autoUpdateSettingsTemplate(this.config, "grid", this.plugin);
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(

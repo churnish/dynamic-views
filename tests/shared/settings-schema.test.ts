@@ -1,4 +1,7 @@
-import { readBasesSettings } from "../../src/shared/settings-schema";
+import {
+  readBasesSettings,
+  extractBasesTemplate,
+} from "../../src/shared/settings-schema";
 
 // Mock constants (same pattern as cleanup.test.ts)
 jest.mock("../../src/constants", () => ({
@@ -43,6 +46,34 @@ function createMockConfig(values: Record<string, unknown>, order: string[]) {
     getOrder: () => order,
   };
 }
+
+const MOCK_VIEW_DEFAULTS: any = {
+  cardSize: 300,
+  titleProperty: "file.name",
+  titleLines: 2,
+  subtitleProperty: "file.folder",
+  formatFirstAsTitle: false,
+  formatSecondAsSubtitle: false,
+  textPreviewProperty: "",
+  fallbackToContent: true,
+  textPreviewLines: 5,
+  imageProperty: "",
+  fallbackToEmbeds: "always",
+  imageFormat: "thumbnail",
+  thumbnailSize: 80,
+  imagePosition: "right",
+  imageFit: "crop",
+  imageRatio: 1.0,
+  propertyLabels: "hide",
+  pairProperties: false,
+  rightPropertyPosition: "right",
+  invertPropertyPairing: "",
+  showPropertiesAbove: false,
+  invertPropertyPosition: "",
+  urlProperty: "url",
+  minimumColumns: 1,
+  cssclasses: "",
+};
 
 const MOCK_PLUGIN_SETTINGS: any = {
   omitFirstLine: "ifMatchesTitle",
@@ -118,5 +149,74 @@ describe("readBasesSettings — position-based title/subtitle", () => {
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
     expect(result.titleProperty).toBe("note.title");
     expect(result._skipLeadingProperties).toBe(1);
+  });
+});
+
+describe("readBasesSettings — templateOverrides", () => {
+  it("should use templateOverrides when config has no value", () => {
+    const config = createMockConfig({}, []);
+    const result = readBasesSettings(
+      config,
+      MOCK_PLUGIN_SETTINGS,
+      "grid",
+      undefined,
+      { cardSize: 500 },
+    );
+    expect(result.cardSize).toBe(500);
+  });
+
+  it("should prefer config values over templateOverrides", () => {
+    const config = createMockConfig({ cardSize: 600 }, []);
+    const result = readBasesSettings(
+      config,
+      MOCK_PLUGIN_SETTINGS,
+      "grid",
+      undefined,
+      { cardSize: 500 },
+    );
+    expect(result.cardSize).toBe(600);
+  });
+
+  it("should apply templateOverrides to enum fallbacks", () => {
+    const config = createMockConfig({}, []);
+    const result = readBasesSettings(
+      config,
+      MOCK_PLUGIN_SETTINGS,
+      "grid",
+      undefined,
+      { propertyLabels: "above" },
+    );
+    expect(result.propertyLabels).toBe("above");
+  });
+});
+
+describe("extractBasesTemplate", () => {
+  // VIEW_DEFAULTS from mock: cardSize=300, formatFirstAsTitle=false, propertyLabels="hide"
+  // BASES_DEFAULTS from mock: formatFirstAsTitle=true, propertyLabels="inline"
+  // mergedDefaults: cardSize=300, formatFirstAsTitle=true, propertyLabels="inline"
+
+  it("should return only non-default values (sparse)", () => {
+    const config = createMockConfig({ cardSize: 400 }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    expect(result).toEqual({ cardSize: 400 });
+  });
+
+  it("should detect BASES_DEFAULTS differences from VIEW_DEFAULTS", () => {
+    // formatFirstAsTitle: false in config — differs from mergedDefaults (true from BASES_DEFAULTS)
+    const config = createMockConfig({ formatFirstAsTitle: false }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    expect(result.formatFirstAsTitle).toBe(false);
+  });
+
+  it("should return empty object when all values match defaults", () => {
+    const config = createMockConfig({}, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    expect(result).toEqual({});
+  });
+
+  it("should coerce minimumColumns string to number", () => {
+    const config = createMockConfig({ minimumColumns: "two" }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    expect(result.minimumColumns).toBe(2);
   });
 });

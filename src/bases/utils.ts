@@ -38,12 +38,14 @@ import {
   VALID_VIEW_VALUES,
   VIEW_DEFAULTS_TYPES,
 } from "../shared/view-validation";
+import { extractBasesTemplate } from "../shared/settings-schema";
 import type DynamicViews from "../../main";
 
-/** Bases config interface for get/set operations (used by template validation) */
+/** Bases config interface — matches the config object on BasesView subclasses */
 interface BasesConfigInit {
   get(key: string): unknown;
   set(key: string, value: unknown): void;
+  getOrder(): string[];
 }
 
 /** Keys allowed in Dynamic Views .base view entries */
@@ -979,4 +981,76 @@ export function shouldProcessDataUpdate(
 
   lastTimeRef.value = now;
   return true;
+}
+
+/**
+ * Auto-update the stored template when settings change on a template-source view.
+ * Compares current config against saved template and persists if different.
+ */
+export function autoUpdateSettingsTemplate(
+  config: BasesConfigInit,
+  viewType: "grid" | "masonry",
+  plugin: DynamicViews,
+): void {
+  if (config.get("isTemplate") !== true) return;
+  const extracted = extractBasesTemplate(config, VIEW_DEFAULTS);
+  const current = plugin.persistenceManager.getSettingsTemplate(viewType);
+  if (JSON.stringify(extracted) !== JSON.stringify(current?.settings)) {
+    void plugin.persistenceManager.setSettingsTemplate(viewType, {
+      settings: extracted,
+      setAt: current?.setAt ?? Date.now(),
+    });
+  }
+}
+
+/**
+ * Handle isTemplate toggle changes — validates staleness, sets timestamps,
+ * clears competing toggles, and persists/clears the global template.
+ */
+export function handleTemplateToggle(
+  config: BasesConfigInit,
+  viewType: "grid" | "masonry",
+  fullViewType: string,
+  plugin: DynamicViews,
+  app: App,
+  currentView: BasesView,
+  previousIsTemplateRef: { value: boolean | undefined },
+): void {
+  const isTemplate = config.get("isTemplate") === true;
+  if (previousIsTemplateRef.value === isTemplate) return;
+  previousIsTemplateRef.value = isTemplate;
+
+  if (isTemplate) {
+    const existingTimestamp = config.get("templateSetAt") as number | undefined;
+
+    if (existingTimestamp !== undefined) {
+      // View loaded with existing toggle — validate it's not stale
+      if (!isCurrentTemplateView(config, viewType, plugin)) {
+        config.set("isTemplate", false);
+        previousIsTemplateRef.value = false;
+        return;
+      }
+      // Valid template — no action needed on load
+    } else {
+      // User just enabled toggle — set timestamp + clear other views
+      const timestamp = Date.now();
+      config.set("templateSetAt", timestamp);
+      clearOldTemplateToggles(
+        app,
+        fullViewType as "dynamic-views-grid" | "dynamic-views-masonry",
+        currentView,
+      );
+      const templateSettings = extractBasesTemplate(config, VIEW_DEFAULTS);
+      void plugin.persistenceManager.setSettingsTemplate(viewType, {
+        settings: templateSettings,
+        setAt: timestamp,
+      });
+    }
+  } else {
+    const hadTimestamp = config.get("templateSetAt") !== undefined;
+    if (hadTimestamp) {
+      config.set("templateSetAt", undefined);
+      void plugin.persistenceManager.setSettingsTemplate(viewType, null);
+    }
+  }
 }

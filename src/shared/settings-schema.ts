@@ -352,6 +352,30 @@ export function getMasonryViewOptions(): ViewOption[] {
   return getBasesViewOptions("masonry");
 }
 
+/** Type-safe config value getters with fallback to defaults */
+function createConfigGetters(config: BasesConfig) {
+  return {
+    // Empty string "" is a valid user choice (intentionally cleared field)
+    getString: (key: string, fallback: string): string => {
+      const value = config.get(key);
+      if (value !== undefined && value !== null) {
+        return typeof value === "string" ? value : fallback;
+      }
+      return fallback;
+    },
+    getBool: (key: string, fallback: boolean): boolean => {
+      const value = config.get(key);
+      return typeof value === "boolean" ? value : fallback;
+    },
+    getNumber: (key: string, fallback: number): number => {
+      const value = config.get(key);
+      return typeof value === "number" && Number.isFinite(value)
+        ? value
+        : fallback;
+    },
+  };
+}
+
 /**
  * Read settings from Bases config
  * Maps Bases config values to BasesResolvedSettings by merging:
@@ -375,29 +399,7 @@ export function readBasesSettings(
     ...templateOverrides,
   };
 
-  // Helper: get string property with fallback
-  // Empty string "" is a valid user choice (intentionally cleared field)
-  const getString = (key: string, fallback: string): string => {
-    const value = config.get(key);
-    if (value !== undefined && value !== null) {
-      return typeof value === "string" ? value : fallback;
-    }
-    return fallback;
-  };
-
-  // Helper: get boolean property with fallback
-  const getBool = (key: string, fallback: boolean): boolean => {
-    const value = config.get(key);
-    return typeof value === "boolean" ? value : fallback;
-  };
-
-  // Helper: get number property with fallback
-  const getNumber = (key: string, fallback: number): number => {
-    const value = config.get(key);
-    return typeof value === "number" && Number.isFinite(value)
-      ? value
-      : fallback;
-  };
+  const { getString, getBool, getNumber } = createConfigGetters(config);
 
   // Position-based title/subtitle: derive from getOrder() positions
   const formatFirstAsTitle = getBool(
@@ -539,29 +541,7 @@ export function extractBasesTemplate(
   // Merge BASES_DEFAULTS so fallbacks and sparse filter use actual Bases defaults
   const mergedDefaults = { ...defaults, ...BASES_DEFAULTS };
 
-  // Helper: get string property with fallback
-  // Empty string "" is a valid user choice (intentionally cleared field)
-  const getString = (key: string, fallback: string): string => {
-    const value = config.get(key);
-    if (value !== undefined && value !== null) {
-      return typeof value === "string" ? value : fallback;
-    }
-    return fallback;
-  };
-
-  // Helper: get boolean property with fallback
-  const getBool = (key: string, fallback: boolean): boolean => {
-    const value = config.get(key);
-    return typeof value === "boolean" ? value : fallback;
-  };
-
-  // Helper: get number property with fallback
-  const getNumber = (key: string, fallback: number): number => {
-    const value = config.get(key);
-    return typeof value === "number" && Number.isFinite(value)
-      ? value
-      : fallback;
-  };
+  const { getString, getBool, getNumber } = createConfigGetters(config);
 
   // Extract all values with type coercion
   const full: ViewDefaults = {
