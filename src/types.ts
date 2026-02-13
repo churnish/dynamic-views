@@ -103,14 +103,8 @@ export interface DatacoreState {
   settings?: Partial<ViewDefaults & DatacoreDefaults>;
 }
 
-/**
- * Settings template with timestamp for validation
- * Timestamp identifies which view is the current template
- */
-export interface SettingsTemplate {
-  settings: Partial<ViewDefaults & DatacoreDefaults>;
-  setAt: number; // Unix timestamp (milliseconds) when template was enabled
-}
+/** Saved settings snapshot applied as defaults to new views of the same type */
+export type SettingsTemplate = Partial<ViewDefaults & DatacoreDefaults>;
 
 export interface PluginData {
   pluginSettings: Partial<PluginSettings>;

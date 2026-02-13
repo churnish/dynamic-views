@@ -50,8 +50,8 @@ export function getBasesViewOptions(
       )?.persistenceManager;
       if (pm) {
         const template = pm.getSettingsTemplate(viewType);
-        if (template?.settings) {
-          Object.assign(d, template.settings);
+        if (template) {
+          Object.assign(d, template);
         }
       }
     } catch {
@@ -333,7 +333,7 @@ export function getBasesViewOptions(
         },
         {
           type: "toggle",
-          displayName: "Use these settings for new views",
+          displayName: "Save settings as default",
           key: "isTemplate",
           default: false,
         },

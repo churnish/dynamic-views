@@ -54,7 +54,6 @@ import {
   UNDEFINED_GROUP_KEY_SENTINEL,
   cleanUpBaseFile,
   shouldProcessDataUpdate,
-  autoUpdateSettingsTemplate,
   handleTemplateToggle,
 } from "./utils";
 import {
@@ -138,7 +137,10 @@ export class DynamicViewsMasonryView extends BasesView {
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
-  private previousIsTemplateRef = { value: undefined as boolean | undefined };
+  private templateInitializedRef = { value: false };
+  private templateCooldownRef = {
+    value: null as ReturnType<typeof setTimeout> | null,
+  };
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -525,11 +527,9 @@ export class DynamicViewsMasonryView extends BasesView {
     handleTemplateToggle(
       this.config,
       "masonry",
-      MASONRY_VIEW_TYPE,
       this.plugin,
-      this.app,
-      this,
-      this.previousIsTemplateRef,
+      this.templateInitializedRef,
+      this.templateCooldownRef,
     );
   }
 
@@ -734,7 +734,6 @@ export class DynamicViewsMasonryView extends BasesView {
       // For existing views, config.get() returns saved values so overrides are never reached.
       const templateOverrides = !this.lastRenderedSettings
         ? this.plugin.persistenceManager.getSettingsTemplate("masonry")
-            ?.settings
         : undefined;
 
       // Read settings — pass lastRenderedSettings for stale config fallback,
@@ -747,8 +746,6 @@ export class DynamicViewsMasonryView extends BasesView {
         templateOverrides,
       );
       this.lastRenderedSettings = settings;
-
-      autoUpdateSettingsTemplate(this.config, "masonry", this.plugin);
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(
@@ -2145,6 +2142,9 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);
+    }
+    if (this.templateCooldownRef.value !== null) {
+      clearTimeout(this.templateCooldownRef.value);
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {

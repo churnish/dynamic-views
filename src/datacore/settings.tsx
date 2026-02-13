@@ -88,11 +88,10 @@ export function Settings({
         textPreviewLines: settings.textPreviewLines,
       };
 
-      const timestamp = Date.now();
-      void plugin.persistenceManager.setSettingsTemplate(templateType, {
-        settings: templateSettings,
-        setAt: timestamp,
-      });
+      void plugin.persistenceManager.setSettingsTemplate(
+        templateType,
+        templateSettings,
+      );
     } else {
       // Clear template
       void plugin.persistenceManager.setSettingsTemplate(templateType, null);

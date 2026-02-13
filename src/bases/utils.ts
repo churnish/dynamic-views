@@ -9,10 +9,10 @@ import {
   TFolder,
   Menu,
   App,
-  BasesView,
   setIcon,
   parseYaml,
   stringifyYaml,
+  Notice,
 } from "obsidian";
 import { resolveTimestampProperty } from "../shared/data-transform";
 import {
@@ -64,7 +64,6 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
   ...(Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]),
   // Internal markers
   "isTemplate",
-  "templateSetAt",
   // Persistence ID ({hash}-{viewName})
   "id",
 ]);
@@ -168,8 +167,8 @@ export async function cleanUpBaseFile(
           if (!isRename) {
             const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
             const template = plugin.persistenceManager.getSettingsTemplate(vt);
-            if (template?.settings) {
-              for (const [key, value] of Object.entries(template.settings)) {
+            if (template) {
+              for (const [key, value] of Object.entries(template)) {
                 if (!(key in viewObj)) {
                   viewObj[key] = value;
                   changeCount++;
@@ -847,87 +846,6 @@ export async function loadContentForEntries(
   }
 }
 
-/** Interface for accessing Bases view through Obsidian's view wrapper */
-interface BasesViewWrapper {
-  controller?: {
-    view?: {
-      type?: string;
-      config: {
-        get(key: string): unknown;
-        set(key: string, value: unknown): void;
-      };
-    };
-  };
-}
-
-/**
- * Check if a view is the current template by comparing timestamps
- * Used to validate template toggle state on view load
- * @param config - View's config object
- * @param viewType - "grid" or "masonry"
- * @param plugin - Plugin instance for accessing persistence manager
- * @returns true if this view is the current template, false if stale
- */
-export function isCurrentTemplateView(
-  config: BasesConfigInit,
-  viewType: "grid" | "masonry",
-  plugin: DynamicViews,
-): boolean {
-  const savedTemplate = plugin.persistenceManager.getSettingsTemplate(viewType);
-
-  // No template exists - this can't be the template
-  if (!savedTemplate) {
-    return false;
-  }
-
-  // Get this view's timestamp
-  const viewTimestamp = config.get("templateSetAt");
-
-  // Compare timestamps - only the view that most recently became template should match
-  return viewTimestamp === savedTemplate.setAt;
-}
-
-/**
- * Disable isTemplate toggle in all other views of the same type
- * Implements mutual exclusion - only one view of each type can be template
- * @param app - Obsidian App instance
- * @param viewType - Type identifier ("dynamic-views-grid" or "dynamic-views-masonry")
- * @param currentView - The view that should remain enabled (optional - skip this one)
- */
-export function clearOldTemplateToggles(
-  app: App,
-  viewType: "dynamic-views-grid" | "dynamic-views-masonry",
-  currentView?: BasesView,
-): void {
-  app.workspace.iterateAllLeaves((leaf) => {
-    const view = leaf.view as BasesViewWrapper;
-    const actualView = view.controller?.view;
-
-    // Skip if not a dynamic-views view
-    if (!actualView?.type?.startsWith("dynamic-views-")) {
-      return;
-    }
-
-    // Skip if different view type (e.g., masonry when we're processing grid)
-    if (actualView.type !== viewType) {
-      return;
-    }
-
-    // Skip the current view (the one being enabled)
-    if (currentView && actualView === currentView) {
-      return;
-    }
-
-    // Check if this view has template enabled
-    const isTemplate = actualView.config.get("isTemplate") === true;
-    if (isTemplate) {
-      // Clear timestamp first so the cascading onDataUpdated() won't try to clear the global template
-      actualView.config.set("templateSetAt", undefined);
-      actualView.config.set("isTemplate", false);
-    }
-  });
-}
-
 /**
  * Throttle window for onDataUpdated calls (ms).
  * Obsidian fires duplicate calls with stale config ~150-200ms after the correct call.
@@ -984,73 +902,60 @@ export function shouldProcessDataUpdate(
 }
 
 /**
- * Auto-update the stored template when settings change on a template-source view.
- * Compares current config against saved template and persists if different.
- */
-export function autoUpdateSettingsTemplate(
-  config: BasesConfigInit,
-  viewType: "grid" | "masonry",
-  plugin: DynamicViews,
-): void {
-  if (config.get("isTemplate") !== true) return;
-  const extracted = extractBasesTemplate(config, VIEW_DEFAULTS);
-  const current = plugin.persistenceManager.getSettingsTemplate(viewType);
-  if (JSON.stringify(extracted) !== JSON.stringify(current?.settings)) {
-    void plugin.persistenceManager.setSettingsTemplate(viewType, {
-      settings: extracted,
-      setAt: current?.setAt ?? Date.now(),
-    });
-  }
-}
-
-/**
- * Handle isTemplate toggle changes — validates staleness, sets timestamps,
- * clears competing toggles, and persists/clears the global template.
+ * One-shot template snapshot — saves current settings as defaults for new views.
+ * On first render, resets stale toggles from previous sessions or duplicated files.
+ * User toggles OFF→ON to re-save. No auto-update between saves.
+ *
+ * A 3s cooldown after each transition prevents phantom flicker from Bases'
+ * debounced config writes racing with file-watcher-triggered config reloads.
  */
 export function handleTemplateToggle(
   config: BasesConfigInit,
   viewType: "grid" | "masonry",
-  fullViewType: string,
   plugin: DynamicViews,
-  app: App,
-  currentView: BasesView,
-  previousIsTemplateRef: { value: boolean | undefined },
+  initializedRef: { value: boolean },
+  cooldownTimerRef: { value: ReturnType<typeof setTimeout> | null },
 ): void {
   const isTemplate = config.get("isTemplate") === true;
-  if (previousIsTemplateRef.value === isTemplate) return;
-  previousIsTemplateRef.value = isTemplate;
 
-  if (isTemplate) {
-    const existingTimestamp = config.get("templateSetAt") as number | undefined;
+  // First call: reset stale toggles from previous sessions or duplicated files.
+  // Start cooldown to suppress phantom re-fires from the debounced-write/file-reload race.
+  if (!initializedRef.value) {
+    initializedRef.value = true;
+    if (isTemplate) {
+      config.set("isTemplate", undefined);
+      cooldownTimerRef.value = setTimeout(() => {
+        cooldownTimerRef.value = null;
+      }, 3000);
+    }
+    return;
+  }
 
-    if (existingTimestamp !== undefined) {
-      // View loaded with existing toggle — validate it's not stale
-      if (!isCurrentTemplateView(config, viewType, plugin)) {
-        config.set("isTemplate", false);
-        previousIsTemplateRef.value = false;
-        return;
-      }
-      // Valid template — no action needed on load
-    } else {
-      // User just enabled toggle — set timestamp + clear other views
-      const timestamp = Date.now();
-      config.set("templateSetAt", timestamp);
-      clearOldTemplateToggles(
-        app,
-        fullViewType as "dynamic-views-grid" | "dynamic-views-masonry",
-        currentView,
-      );
-      const templateSettings = extractBasesTemplate(config, VIEW_DEFAULTS);
-      void plugin.persistenceManager.setSettingsTemplate(viewType, {
-        settings: templateSettings,
-        setAt: timestamp,
-      });
-    }
-  } else {
-    const hadTimestamp = config.get("templateSetAt") !== undefined;
-    if (hadTimestamp) {
-      config.set("templateSetAt", undefined);
-      void plugin.persistenceManager.setSettingsTemplate(viewType, null);
-    }
+  // Only act when the toggle is ON
+  if (!isTemplate) return;
+
+  // One-shot: immediately reset (transient action, not persistent state)
+  config.set("isTemplate", undefined);
+
+  // During cooldown, skip — phantom re-fires from debounced-write/file-reload race
+  if (cooldownTimerRef.value !== null) return;
+
+  cooldownTimerRef.value = setTimeout(() => {
+    cooldownTimerRef.value = null;
+  }, 3000);
+
+  const extracted = extractBasesTemplate(config, VIEW_DEFAULTS);
+  void plugin.persistenceManager.setSettingsTemplate(viewType, extracted);
+  const label = viewType === "grid" ? "Grid" : "Masonry";
+  const notice = new Notice(
+    `Saved as default settings for new ${label} views. Enable again to update.`,
+  );
+
+  // Obsidian caches the notice-container per window but doesn't clear the cache
+  // when the container is detached (after the last notice fades). Re-attach if stale.
+  const nc = (notice as { containerEl?: HTMLElement }).containerEl
+    ?.parentElement;
+  if (nc && !nc.isConnected) {
+    activeWindow.document.body.appendChild(nc);
   }
 }

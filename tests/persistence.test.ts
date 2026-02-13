@@ -360,33 +360,23 @@ describe("PersistenceManager", () => {
     });
 
     it("should return stored template", async () => {
-      await manager.setSettingsTemplate("grid", {
-        settings: { cardSize: 300 },
-        setAt: 1000,
-      });
+      await manager.setSettingsTemplate("grid", { cardSize: 300 });
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.setAt).toBe(1000);
-      expect(template?.settings.cardSize).toBe(300);
+      expect(template?.cardSize).toBe(300);
     });
   });
 
   describe("setSettingsTemplate", () => {
     it("should store template", async () => {
-      await manager.setSettingsTemplate("masonry", {
-        settings: { cardSize: 250 },
-        setAt: 2000,
-      });
+      await manager.setSettingsTemplate("masonry", { cardSize: 250 });
 
       const template = manager.getSettingsTemplate("masonry");
-      expect(template?.setAt).toBe(2000);
+      expect(template?.cardSize).toBe(250);
     });
 
     it("should delete template when null", async () => {
-      await manager.setSettingsTemplate("grid", {
-        settings: {},
-        setAt: 3000,
-      });
+      await manager.setSettingsTemplate("grid", { cardSize: 300 });
       await manager.setSettingsTemplate("grid", null);
 
       const template = manager.getSettingsTemplate("grid");
@@ -394,10 +384,7 @@ describe("PersistenceManager", () => {
     });
 
     it("should save after updating", async () => {
-      await manager.setSettingsTemplate("datacore", {
-        settings: {},
-        setAt: 4000,
-      });
+      await manager.setSettingsTemplate("datacore", { cardSize: 300 });
 
       expect(mockPlugin.saveData).toHaveBeenCalled();
     });
@@ -432,77 +419,52 @@ describe("PersistenceManager", () => {
   describe("cleanupTemplateSettings (via load)", () => {
     it("should remove stale keys not in ViewDefaults or DatacoreDefaults", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { cardSize: 400, deletedSetting: "stale" },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { cardSize: 400, deletedSetting: "stale" } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings).not.toHaveProperty("deletedSetting");
-      expect(template?.settings.cardSize).toBe(400);
+      expect(template).not.toHaveProperty("deletedSetting");
+      expect(template?.cardSize).toBe(400);
       expect(mockPlugin.saveData).toHaveBeenCalled();
     });
 
     it("should delete values with wrong type (string instead of number)", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { thumbnailSize: "compact", cardSize: 400 },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { thumbnailSize: "compact", cardSize: 400 } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings).not.toHaveProperty("thumbnailSize");
-      expect(template?.settings.cardSize).toBe(400);
+      expect(template).not.toHaveProperty("thumbnailSize");
+      expect(template?.cardSize).toBe(400);
     });
 
     it("should delete values with wrong type (number instead of string)", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { imageProperty: 123, cardSize: 400 },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { imageProperty: 123, cardSize: 400 } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings).not.toHaveProperty("imageProperty");
-      expect(template?.settings.cardSize).toBe(400);
+      expect(template).not.toHaveProperty("imageProperty");
+      expect(template?.cardSize).toBe(400);
     });
 
     it("should delete values with wrong type (string instead of boolean)", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          masonry: {
-            settings: { fallbackToContent: "yes", cardSize: 400 },
-            setAt: 1000,
-          },
-        },
+        templates: { masonry: { fallbackToContent: "yes", cardSize: 400 } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("masonry");
-      expect(template?.settings).not.toHaveProperty("fallbackToContent");
-      expect(template?.settings.cardSize).toBe(400);
+      expect(template).not.toHaveProperty("fallbackToContent");
+      expect(template?.cardSize).toBe(400);
     });
 
     it("should delete null values (typeof null !== any expected type)", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { cardSize: null, imageProperty: null },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { cardSize: null, imageProperty: null } },
       });
       await manager.load();
 
@@ -514,44 +476,29 @@ describe("PersistenceManager", () => {
     it("should reset invalid enum values to first valid value", async () => {
       // imagePosition: first valid is "left", VIEW_DEFAULTS is "right" — reset is observable
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { imagePosition: "invalid-pos" },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { imagePosition: "invalid-pos" } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings.imagePosition).toBe("left");
+      expect(template?.imagePosition).toBe("left");
     });
 
     it("should keep valid enum values", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { imageFormat: "cover" },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { imageFormat: "cover" } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings.imageFormat).toBe("cover");
+      expect(template?.imageFormat).toBe("cover");
     });
 
     it("should skip minimumColumns for type and enum checks", async () => {
       // minimumColumns stores numbers in templates, but VIEW_DEFAULTS type is number
       // and VALID_VIEW_VALUES has strings ["one", "two"] — skip both checks
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          masonry: {
-            settings: { minimumColumns: 2 },
-            setAt: 1000,
-          },
-        },
+        templates: { masonry: { minimumColumns: 2 } },
       });
       await manager.load();
 
@@ -562,45 +509,30 @@ describe("PersistenceManager", () => {
 
     it("should preserve non-default minimumColumns in grid templates", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { minimumColumns: 2 },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { minimumColumns: 2 } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
       // Grid default is 1, so 2 is non-default and preserved
-      expect(template?.settings.minimumColumns).toBe(2);
+      expect(template?.minimumColumns).toBe(2);
     });
 
     it("should remove keys matching VIEW_DEFAULTS (sparse cleanup)", async () => {
+      // cardSize=300 matches VIEW_DEFAULTS, imageFormat="cover" doesn't
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            // cardSize=300 matches VIEW_DEFAULTS, imageFormat="cover" doesn't
-            settings: { cardSize: 300, imageFormat: "cover" },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { cardSize: 300, imageFormat: "cover" } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings).not.toHaveProperty("cardSize");
-      expect(template?.settings.imageFormat).toBe("cover");
+      expect(template).not.toHaveProperty("cardSize");
+      expect(template?.imageFormat).toBe("cover");
     });
 
     it("should remove template entirely when all settings cleaned", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { deletedKey: "stale" },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { deletedKey: "stale" } },
       });
       await manager.load();
 
@@ -610,56 +542,43 @@ describe("PersistenceManager", () => {
 
     it("should allow DatacoreDefaults keys in datacore templates", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          datacore: {
-            settings: { listMarker: "checkbox" },
-            setAt: 1000,
-          },
-        },
+        templates: { datacore: { listMarker: "checkbox" } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("datacore");
-      expect(template?.settings.listMarker).toBe("checkbox");
+      expect(template?.listMarker).toBe("checkbox");
     });
 
     it("should type-check DatacoreDefaults values in datacore templates", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
         templates: {
           datacore: {
-            settings: {
-              queryHeight: "tall", // string instead of number
-              pairProperties: "yes", // string instead of boolean
-              listMarker: "checkbox", // correct type (string)
-              cardSize: 400,
-            },
-            setAt: 1000,
+            queryHeight: "tall", // string instead of number
+            pairProperties: "yes", // string instead of boolean
+            listMarker: "checkbox", // correct type (string)
+            cardSize: 400,
           },
         },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("datacore");
-      expect(template?.settings).not.toHaveProperty("queryHeight");
-      expect(template?.settings).not.toHaveProperty("pairProperties");
-      expect(template?.settings.listMarker).toBe("checkbox");
-      expect(template?.settings.cardSize).toBe(400);
+      expect(template).not.toHaveProperty("queryHeight");
+      expect(template).not.toHaveProperty("pairProperties");
+      expect(template?.listMarker).toBe("checkbox");
+      expect(template?.cardSize).toBe(400);
     });
 
     it("should reject DatacoreDefaults keys in grid templates", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { listMarker: "checkbox", cardSize: 400 },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { listMarker: "checkbox", cardSize: 400 } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      expect(template?.settings).not.toHaveProperty("listMarker");
-      expect(template?.settings.cardSize).toBe(400);
+      expect(template).not.toHaveProperty("listMarker");
+      expect(template?.cardSize).toBe(400);
     });
 
     it("should skip sparse cleanup for BASES_DEFAULTS keys in grid/masonry", async () => {
@@ -667,29 +586,19 @@ describe("PersistenceManager", () => {
       // For Bases (grid/masonry), false matching VIEW_DEFAULTS should NOT be removed
       // because BASES_DEFAULTS overrides it.
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { formatFirstAsTitle: false },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { formatFirstAsTitle: false } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
       // false matches VIEW_DEFAULTS but formatFirstAsTitle is in BASES_DEFAULTS,
       // so sparse cleanup skips it — value preserved
-      expect(template?.settings.formatFirstAsTitle).toBe(false);
+      expect(template?.formatFirstAsTitle).toBe(false);
     });
 
     it("should not skip sparse cleanup for BASES_DEFAULTS keys in datacore", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          datacore: {
-            settings: { formatFirstAsTitle: false },
-            setAt: 1000,
-          },
-        },
+        templates: { datacore: { formatFirstAsTitle: false } },
       });
       await manager.load();
 
@@ -701,12 +610,7 @@ describe("PersistenceManager", () => {
 
     it("should not trigger save when no cleanup needed", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: {
-            settings: { cardSize: 400 },
-            setAt: 1000,
-          },
-        },
+        templates: { grid: { cardSize: 400 } },
       });
       await manager.load();
 
@@ -714,15 +618,13 @@ describe("PersistenceManager", () => {
       expect(mockPlugin.saveData).not.toHaveBeenCalled();
     });
 
-    it("should handle templates with no settings", async () => {
+    it("should handle empty templates", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: {
-          grid: { setAt: 1000 },
-        },
+        templates: { grid: {} },
       });
       await manager.load();
 
-      // No crash, template preserved as-is
+      // Empty template is harmless (no overrides) — no cleanup triggered
       expect(mockPlugin.saveData).not.toHaveBeenCalled();
     });
   });

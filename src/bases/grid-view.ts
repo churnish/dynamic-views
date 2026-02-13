@@ -45,7 +45,6 @@ import {
   UNDEFINED_GROUP_KEY_SENTINEL,
   cleanUpBaseFile,
   shouldProcessDataUpdate,
-  autoUpdateSettingsTemplate,
   handleTemplateToggle,
 } from "./utils";
 import {
@@ -124,7 +123,10 @@ export class DynamicViewsGridView extends BasesView {
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
-  private previousIsTemplateRef = { value: undefined as boolean | undefined };
+  private templateInitializedRef = { value: false };
+  private templateCooldownRef = {
+    value: null as ReturnType<typeof setTimeout> | null,
+  };
 
   // Public accessors for sortState (used by randomize.ts)
   get isShuffled(): boolean {
@@ -431,11 +433,9 @@ export class DynamicViewsGridView extends BasesView {
     handleTemplateToggle(
       this.config,
       "grid",
-      GRID_VIEW_TYPE,
       this.plugin,
-      this.app,
-      this,
-      this.previousIsTemplateRef,
+      this.templateInitializedRef,
+      this.templateCooldownRef,
     );
   }
 
@@ -631,7 +631,7 @@ export class DynamicViewsGridView extends BasesView {
       // Template overrides for first render (config not yet populated from YAML).
       // For existing views, config.get() returns saved values so overrides are never reached.
       const templateOverrides = !this.lastRenderedSettings
-        ? this.plugin.persistenceManager.getSettingsTemplate("grid")?.settings
+        ? this.plugin.persistenceManager.getSettingsTemplate("grid")
         : undefined;
 
       // Read settings — pass lastRenderedSettings for stale config fallback,
@@ -644,8 +644,6 @@ export class DynamicViewsGridView extends BasesView {
         templateOverrides,
       );
       this.lastRenderedSettings = settings;
-
-      autoUpdateSettingsTemplate(this.config, "grid", this.plugin);
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(
@@ -1232,7 +1230,12 @@ export class DynamicViewsGridView extends BasesView {
 
   private async appendBatch(totalEntries: number): Promise<void> {
     // Guard: return early if data not initialized or no feed container
-    if (!this.data || !this.feedContainerRef.current) return;
+    if (
+      !this.data ||
+      !this.feedContainerRef.current ||
+      !this.lastRenderedSettings
+    )
+      return;
 
     try {
       // Increment render version to cancel any stale onDataUpdated renders
@@ -1241,29 +1244,9 @@ export class DynamicViewsGridView extends BasesView {
 
       const groupedData = this.data.groupedData;
 
-      // Read settings (schema defaults include template values)
-      const settings = readBasesSettings(
-        this.config,
-        this.plugin.persistenceManager.getPluginSettings(),
-        "grid",
-        this.lastRenderedSettings ?? undefined,
-      );
-
-      // Normalize property names once — downstream code uses pre-normalized values
-      const reverseMap = buildDisplayToSyntaxMap(
-        this.config,
-        this.allProperties,
-      );
-      const displayNameMap = buildSyntaxToDisplayMap(
-        this.config,
-        this.allProperties,
-      );
-      normalizeSettingsPropertyNames(
-        this.app,
-        settings,
-        reverseMap,
-        displayNameMap,
-      );
+      // Reuse settings from the initial render — they don't change between batches.
+      // Re-reading from config would miss templateOverrides (not yet written to YAML).
+      const settings = this.lastRenderedSettings;
 
       const sortMethod = getSortMethod(this.config);
 
@@ -1606,6 +1589,9 @@ export class DynamicViewsGridView extends BasesView {
     }
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);
+    }
+    if (this.templateCooldownRef.value !== null) {
+      clearTimeout(this.templateCooldownRef.value);
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {

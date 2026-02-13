@@ -133,15 +133,12 @@ export class PersistenceManager {
     let templatesDirty = false;
     for (const viewType of ["grid", "masonry", "datacore"] as const) {
       const template = this.data.templates[viewType];
-      if (!template?.settings) continue;
+      if (!template) continue;
       if (
-        cleanupTemplateSettings(
-          template.settings as Record<string, unknown>,
-          viewType,
-        )
+        cleanupTemplateSettings(template as Record<string, unknown>, viewType)
       ) {
         // Remove template entirely if no settings remain after cleanup
-        if (Object.keys(template.settings).length === 0) {
+        if (Object.keys(template).length === 0) {
           delete this.data.templates[viewType];
         }
         templatesDirty = true;

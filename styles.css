@@ -513,7 +513,7 @@ settings:
     -
         id: dynamic-views-timestamp-icon
         title: Timestamp icon
-        description: Show icon next to timestamp to distinguish between modified and created time when property labels hidden.
+        description: Show icon next to timestamp to distinguish between modified and created time when property labels are hidden.
         type: class-select
         allowEmpty: false
         default: dynamic-views-timestamp-icon-edge
@@ -552,7 +552,7 @@ settings:
     -
         id: dynamic-views-disable-sticky-group-header
         title: Disable sticky group header
-        description: Do not freeze group headers when scrolling.
+        description: Don't freeze group headers when scrolling.
         type: class-toggle
         default: false
     -
@@ -585,7 +585,7 @@ settings:
     -
         id: dynamic-views-zoom-sensitivity
         title: Zoom sensitivity
-        description: Set how quickly images zoom on desktop.
+        description: How quickly images zoom on desktop.
         type: variable-number-slider
         default: 0.08
         min: 0.01
@@ -601,12 +601,12 @@ settings:
     -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
-        description: Prevent vertically scrolling card content when it doesn't fit.
+        description: Don't vertically scroll card content when it doesn't fit.
         type: class-toggle
     -
         id: dynamic-views-poster-disable-raise
         title: Disable raise animation
-        description: Content fades in without sliding up on reveal.
+        description: Fade in without sliding up on reveal.
         type: class-toggle
     -
         id: dynamic-views-poster-mode
@@ -753,7 +753,7 @@ settings:
     -
         id: dynamic-views-property-color-with-labels-custom
         title: Custom text color (labels shown)
-        description: Custom color for property text when property labels are shown.
+        description: Set a custom color for properties that have labels.
         type: variable-themed-color
         format: hsl-split
         default-light: '#'
@@ -808,7 +808,7 @@ settings:
     -
         id: dynamic-views-property-color-without-labels-custom
         title: Custom text color (labels hidden)
-        description: Custom color for property text when property labels are hidden.
+        description: Set a custom color.
         type: variable-themed-color
         format: hsl-split
         default-light: '#'
@@ -925,7 +925,7 @@ settings:
     -
         id: dynamic-views-property-label-color-custom
         title: Custom text color
-        description: Color of property labels (when Text color is set to Custom).
+        description: Set a custom color.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -978,7 +978,7 @@ settings:
     -
         id: dynamic-views-hide-slideshow-arrows
         title: Hide navigation arrows
-        description: Hide left/right arrows on slideshow covers (use swipe gestures instead).
+        description: Hide left/right arrows on slideshow covers (use touchscreen/trackpad swipe gestures instead).
         type: class-toggle
         default: false
     -
@@ -1077,7 +1077,7 @@ settings:
     -
         id: dynamic-views-subtitle-color-custom
         title: Custom text color
-        description: Custom color for subtitles (when Text color is set to Custom).
+        description: Set a custom color.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -1281,7 +1281,7 @@ settings:
     -
         id: dynamic-views-text-preview-color-custom
         title: Custom text color
-        description: Custom color for text previews (when Text color is set to Custom).
+        description: Set a custom color.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -1328,13 +1328,13 @@ settings:
     -
         id: dynamic-views-disable-thumbnail-scrubbing
         title: Disable thumbnail scrubbing
-        description: Disable scrubbing through multiple images on hover.
+        description: Don't show other images on hover over thumbnail.
         type: class-toggle
         default: false
     -
         id: dynamic-views-hide-thumbnail-shadow
         title: Hide scrubbing shadow
-        description: Hide the shadow below thumbnails with multiple images.
+        description: Don't show the shadow/glow below thumbnails with multiple images.
         type: class-toggle
         default: false
     -
@@ -1436,7 +1436,7 @@ settings:
     -
         id: dynamic-views-title-color-custom
         title: Custom text color
-        description: Custom color for titles (when Text color is set to Custom).
+        description: Set a custom color.
         type: variable-themed-color
         format: hex
         default-light: '#'

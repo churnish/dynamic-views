@@ -140,7 +140,7 @@ export function View({
     const datacoreState = persistenceManager.getDatacoreState(QUERY_ID);
 
     return resolveSettings(pluginSettings, VIEW_DEFAULTS, DATACORE_DEFAULTS, {
-      ...template?.settings,
+      ...template,
       ...datacoreState.settings,
     });
   }, [persistenceManager, QUERY_ID]);
