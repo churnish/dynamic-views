@@ -1261,7 +1261,7 @@ export class DynamicViewsMasonryView extends BasesView {
         });
 
         // Phase 1: Set all widths + force content rendering for accurate measurement
-        // masonry-measuring overrides content-visibility: auto on positioned cards
+        // masonry-measuring overrides content-visibility (hidden on desktop, auto on mobile)
         // so off-screen cards render their content for accurate offsetHeight reads
         this.masonryContainer.classList.add("masonry-measuring");
         for (const card of allCards) {

@@ -282,5 +282,21 @@ export function stringifyYaml(obj: unknown): string {
   return JSON.stringify(obj);
 }
 
+// Mock Platform
+export const Platform = {
+  isMobile: false,
+  isDesktop: true,
+  isDesktopApp: true,
+  isMobileApp: false,
+  isIosApp: false,
+  isAndroidApp: false,
+  isPhone: false,
+  isTablet: false,
+  isMacOS: false,
+  isWin: false,
+  isLinux: false,
+  isSafari: false,
+};
+
 // Export commonly used types
 export type { CachedMetadata };

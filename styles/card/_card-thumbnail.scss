@@ -42,6 +42,7 @@
     line-height: var(--line-height-tight);
     word-break: break-word;
     overflow-wrap: break-word;
+    -webkit-user-select: text;
     user-select: text;
   }
 }
@@ -55,6 +56,7 @@ body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
    Datacore inherits it from CodeMirror's cm-content, but Bases sits
    directly under view-content (user-select: none) */
 body.dynamic-views-open-on-title .dynamic-views-bases-container {
+  -webkit-user-select: text;
   user-select: text;
 }
 
@@ -64,6 +66,7 @@ body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
 body.dynamic-views-open-on-title .dynamic-views .property-label,
 body.dynamic-views-open-on-title .dynamic-views .property-label-inline,
 body.dynamic-views-open-on-title .dynamic-views .property-content {
+  -webkit-user-select: text;
   user-select: text;
   cursor: text;
 }
@@ -71,20 +74,20 @@ body.dynamic-views-open-on-title .dynamic-views .property-content {
 /* Title link: selectable text */
 body.dynamic-views-open-on-title .dynamic-views .card-title a,
 body.dynamic-views-open-on-title .dynamic-views .card-title .card-title-link {
-  user-select: text;
   -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Filename segment in file path property: selectable when openFileAction is 'title' */
 body.dynamic-views-open-on-title .dynamic-views .filename-segment {
-  user-select: text;
   -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Path separator: selectable when openFileAction is 'title' for full path copy */
 body.dynamic-views-open-on-title .dynamic-views .path-separator {
-  user-select: text;
   -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Hide thumbnail placeholder by default */

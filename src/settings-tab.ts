@@ -172,7 +172,8 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
         s
           .setName("Open random file in new tab")
           .setDesc(
-            "When opening a random file, open it in a new tab instead of the same tab.",
+            // eslint-disable-next-line obsidianmd/ui/sentence-case -- new sentence
+            "When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.",
           )
           .addToggle((toggle) =>
             toggle

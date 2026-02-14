@@ -83,6 +83,7 @@ dynamic-views/
 |     |     \-- utils.test.ts
 |     |-- persistence.test.ts
 |     |-- shared/
+|     |     |-- content-visibility.test.ts
 |     |     |-- content-loader.test.ts
 |     |     |-- data-transform.test.ts
 |     |     |-- image-loader.test.ts
