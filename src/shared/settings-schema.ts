@@ -3,7 +3,7 @@
  * Defines settings structure for both Bases and Datacore views
  */
 
-import type { ViewOption } from "obsidian";
+import type { BasesViewConfig, ViewOption } from "obsidian";
 import type {
   PluginSettings,
   ViewDefaults,
@@ -11,7 +11,7 @@ import type {
 } from "../types";
 import { VIEW_DEFAULTS, BASES_DEFAULTS } from "../constants";
 
-// Bases config object interface
+/** Minimal Bases config interface — subset of BasesViewConfig used by settings readers */
 interface BasesConfig {
   get(key: string): unknown;
   getOrder(): string[];
@@ -26,9 +26,11 @@ interface BasesConfig {
  * replace the static defaults so new views immediately reflect template settings.
  *
  * @param viewType - "grid" or "masonry" to look up the correct settings template
+ * @param config - Runtime config passed by Obsidian (undocumented — official type says no param)
  */
 export function getBasesViewOptions(
   viewType?: "grid" | "masonry",
+  config?: BasesViewConfig,
 ): ViewOption[] {
   // Merge settings template into defaults (if template exists)
   // For new views: config is empty → controls show these defaults = template values
@@ -76,8 +78,8 @@ export function getBasesViewOptions(
         {
           type: "toggle",
           displayName: "Display first property as title",
-          key: "formatFirstAsTitle",
-          default: d.formatFirstAsTitle,
+          key: "displayFirstAsTitle",
+          default: d.displayFirstAsTitle,
         },
         {
           type: "slider",
@@ -88,16 +90,16 @@ export function getBasesViewOptions(
           step: 1,
           default: d.titleLines,
           shouldHide: (config: BasesConfig) =>
-            (config.get("formatFirstAsTitle") ?? d.formatFirstAsTitle) ===
+            (config.get("displayFirstAsTitle") ?? d.displayFirstAsTitle) ===
             false,
         },
         {
           type: "toggle",
           displayName: "Display second property as subtitle",
-          key: "formatSecondAsSubtitle",
-          default: d.formatSecondAsSubtitle,
+          key: "displaySecondAsSubtitle",
+          default: d.displaySecondAsSubtitle,
           shouldHide: (config: BasesConfig) =>
-            (config.get("formatFirstAsTitle") ?? d.formatFirstAsTitle) ===
+            (config.get("displayFirstAsTitle") ?? d.displayFirstAsTitle) ===
             false,
         },
       ],
@@ -107,11 +109,14 @@ export function getBasesViewOptions(
       displayName: "Text preview",
       items: [
         {
-          type: "text",
+          type: "property",
           displayName: "Text preview property",
           key: "textPreviewProperty",
-          placeholder: "Comma-separated if multiple",
           default: d.textPreviewProperty,
+          filter: (prop: string) =>
+            config
+              ? config.getOrder().some((id) => String(id) === String(prop))
+              : true,
         },
         {
           type: "toggle",
@@ -250,34 +255,14 @@ export function getBasesViewOptions(
           shouldHide: (config: BasesConfig) => config.getOrder().length === 0,
         },
         {
-          type: "text",
+          type: "property",
           displayName: "URL property",
           key: "urlProperty",
-          placeholder: "Comma-separated if multiple",
           default: d.urlProperty,
-        },
-        {
-          type: "toggle",
-          displayName: "Show properties above text preview",
-          key: "showPropertiesAbove",
-          default: d.showPropertiesAbove,
-          shouldHide: (config: BasesConfig) =>
-            config.getOrder().length === 0 ||
-            (!(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
-              (config.get("fallbackToContent") ?? d.fallbackToContent) ===
-                false),
-        },
-        {
-          type: "text",
-          displayName: "Invert position for property",
-          key: "invertPropertyPosition",
-          placeholder: "Comma-separated if multiple",
-          default: d.invertPropertyPosition,
-          shouldHide: (config: BasesConfig) =>
-            config.getOrder().length <= 1 ||
-            (!(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
-              (config.get("fallbackToContent") ?? d.fallbackToContent) ===
-                false),
+          filter: (prop: string) =>
+            config
+              ? config.getOrder().some((id) => String(id) === String(prop))
+              : true,
         },
         {
           type: "toggle",
@@ -348,8 +333,8 @@ export function getBasesViewOptions(
 /**
  * Additional options specific to masonry view
  */
-export function getMasonryViewOptions(): ViewOption[] {
-  return getBasesViewOptions("masonry");
+export function getMasonryViewOptions(config?: BasesViewConfig): ViewOption[] {
+  return getBasesViewOptions("masonry", config);
 }
 
 /** Type-safe config value getters with fallback to defaults */
@@ -402,22 +387,22 @@ export function readBasesSettings(
   const { getString, getBool, getNumber } = createConfigGetters(config);
 
   // Position-based title/subtitle: derive from getOrder() positions
-  const formatFirstAsTitle = getBool(
-    "formatFirstAsTitle",
-    defaults.formatFirstAsTitle,
+  const displayFirstAsTitle = getBool(
+    "displayFirstAsTitle",
+    defaults.displayFirstAsTitle,
   );
-  const formatSecondAsSubtitle = getBool(
-    "formatSecondAsSubtitle",
-    defaults.formatSecondAsSubtitle,
+  const displaySecondAsSubtitle = getBool(
+    "displaySecondAsSubtitle",
+    defaults.displaySecondAsSubtitle,
   );
   const order = config.getOrder();
   let titleProperty = "";
   let subtitleProperty = "";
   let _skipLeadingProperties = 0;
-  if (formatFirstAsTitle && order[0]) {
+  if (displayFirstAsTitle && order[0]) {
     titleProperty = order[0];
     _skipLeadingProperties = 1;
-    if (formatSecondAsSubtitle && order[1]) {
+    if (displaySecondAsSubtitle && order[1]) {
       subtitleProperty = order[1];
       _skipLeadingProperties = 2;
     }
@@ -430,8 +415,8 @@ export function readBasesSettings(
     titleProperty,
     titleLines: getNumber("titleLines", defaults.titleLines),
     subtitleProperty,
-    formatFirstAsTitle,
-    formatSecondAsSubtitle,
+    displayFirstAsTitle,
+    displaySecondAsSubtitle,
     textPreviewProperty: getString(
       "textPreviewProperty",
       defaults.textPreviewProperty,
@@ -502,14 +487,8 @@ export function readBasesSettings(
       "invertPropertyPairing",
       defaults.invertPropertyPairing,
     ),
-    showPropertiesAbove: getBool(
-      "showPropertiesAbove",
-      defaults.showPropertiesAbove,
-    ),
-    invertPropertyPosition: getString(
-      "invertPropertyPosition",
-      defaults.invertPropertyPosition,
-    ),
+    showPropertiesAbove: defaults.showPropertiesAbove,
+    invertPropertyPosition: defaults.invertPropertyPosition,
     urlProperty: getString("urlProperty", defaults.urlProperty),
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
@@ -549,13 +528,13 @@ export function extractBasesTemplate(
     titleProperty: mergedDefaults.titleProperty,
     titleLines: getNumber("titleLines", mergedDefaults.titleLines),
     subtitleProperty: mergedDefaults.subtitleProperty,
-    formatFirstAsTitle: getBool(
-      "formatFirstAsTitle",
-      mergedDefaults.formatFirstAsTitle,
+    displayFirstAsTitle: getBool(
+      "displayFirstAsTitle",
+      mergedDefaults.displayFirstAsTitle,
     ),
-    formatSecondAsSubtitle: getBool(
-      "formatSecondAsSubtitle",
-      mergedDefaults.formatSecondAsSubtitle,
+    displaySecondAsSubtitle: getBool(
+      "displaySecondAsSubtitle",
+      mergedDefaults.displaySecondAsSubtitle,
     ),
     textPreviewProperty: getString(
       "textPreviewProperty",
@@ -621,14 +600,8 @@ export function extractBasesTemplate(
       "invertPropertyPairing",
       mergedDefaults.invertPropertyPairing,
     ),
-    showPropertiesAbove: getBool(
-      "showPropertiesAbove",
-      mergedDefaults.showPropertiesAbove,
-    ),
-    invertPropertyPosition: getString(
-      "invertPropertyPosition",
-      mergedDefaults.invertPropertyPosition,
-    ),
+    showPropertiesAbove: mergedDefaults.showPropertiesAbove,
+    invertPropertyPosition: mergedDefaults.invertPropertyPosition,
     urlProperty: getString("urlProperty", mergedDefaults.urlProperty),
     minimumColumns: (() => {
       const value = config.get("minimumColumns");

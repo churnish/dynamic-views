@@ -28,8 +28,8 @@ export interface ViewDefaults {
   titleLines: number;
   subtitleProperty: string;
   // Position-based title/subtitle (Bases only; false = no-op for Datacore)
-  formatFirstAsTitle: boolean;
-  formatSecondAsSubtitle: boolean;
+  displayFirstAsTitle: boolean;
+  displaySecondAsSubtitle: boolean;
   // Text preview
   textPreviewProperty: string;
   fallbackToContent: boolean;
@@ -65,8 +65,8 @@ export interface DatacoreDefaults {
 
 /** Bases-only defaults (overrides VIEW_DEFAULTS for Bases views) */
 export interface BasesDefaults {
-  formatFirstAsTitle: boolean;
-  formatSecondAsSubtitle: boolean;
+  displayFirstAsTitle: boolean;
+  displaySecondAsSubtitle: boolean;
   propertyLabels: "hide" | "inline" | "above";
 }
 

@@ -3,6 +3,7 @@
  * Primary implementation using Bases API
  */
 
+import type { BasesViewConfig, ViewOption } from "obsidian";
 import { BasesView, BasesEntry, QueryController, TFile } from "obsidian";
 import { CardData } from "../shared/card-renderer";
 import { transformBasesEntries } from "../shared/data-transform";
@@ -1616,5 +1617,7 @@ export class DynamicViewsGridView extends BasesView {
   }
 }
 
-/** Export options for registration */
-export const cardViewOptions = () => getBasesViewOptions("grid");
+/** Export options for registration — type assertion needed because Obsidian's
+ * official type is `() => ViewOption[]` but runtime passes BasesViewConfig */
+export const cardViewOptions = ((config: BasesViewConfig) =>
+  getBasesViewOptions("grid", config)) as unknown as () => ViewOption[];

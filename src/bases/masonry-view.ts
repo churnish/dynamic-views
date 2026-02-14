@@ -3,6 +3,7 @@
  * Masonry layout view using Bases API
  */
 
+import type { BasesViewConfig, ViewOption } from "obsidian";
 import { BasesView, BasesEntry, QueryController, TFile } from "obsidian";
 import { CardData } from "../shared/card-renderer";
 import { transformBasesEntries } from "../shared/data-transform";
@@ -2168,5 +2169,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 }
 
-/** Export options for registration */
-export const masonryViewOptions = getMasonryViewOptions;
+/** Export options for registration — type assertion needed because Obsidian's
+ * official type is `() => ViewOption[]` but runtime passes BasesViewConfig */
+export const masonryViewOptions = ((config: BasesViewConfig) =>
+  getMasonryViewOptions(config)) as unknown as () => ViewOption[];

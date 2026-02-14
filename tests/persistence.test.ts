@@ -45,8 +45,8 @@ jest.mock("../src/constants", () => ({
     urlProperty: "url",
     minimumColumns: 1,
     cssclasses: "",
-    formatFirstAsTitle: false,
-    formatSecondAsSubtitle: false,
+    displayFirstAsTitle: false,
+    displaySecondAsSubtitle: false,
   },
   DATACORE_DEFAULTS: {
     listMarker: "bullet",
@@ -54,8 +54,8 @@ jest.mock("../src/constants", () => ({
     pairProperties: true,
   },
   BASES_DEFAULTS: {
-    formatFirstAsTitle: true,
-    formatSecondAsSubtitle: false,
+    displayFirstAsTitle: true,
+    displaySecondAsSubtitle: false,
     propertyLabels: "inline",
   },
   DEFAULT_BASES_STATE: {
@@ -582,28 +582,28 @@ describe("PersistenceManager", () => {
     });
 
     it("should skip sparse cleanup for BASES_DEFAULTS keys in grid/masonry", async () => {
-      // formatFirstAsTitle in BASES_DEFAULTS defaults to true, VIEW_DEFAULTS to false.
+      // displayFirstAsTitle in BASES_DEFAULTS defaults to true, VIEW_DEFAULTS to false.
       // For Bases (grid/masonry), false matching VIEW_DEFAULTS should NOT be removed
       // because BASES_DEFAULTS overrides it.
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: { grid: { formatFirstAsTitle: false } },
+        templates: { grid: { displayFirstAsTitle: false } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("grid");
-      // false matches VIEW_DEFAULTS but formatFirstAsTitle is in BASES_DEFAULTS,
+      // false matches VIEW_DEFAULTS but displayFirstAsTitle is in BASES_DEFAULTS,
       // so sparse cleanup skips it — value preserved
-      expect(template?.formatFirstAsTitle).toBe(false);
+      expect(template?.displayFirstAsTitle).toBe(false);
     });
 
     it("should not skip sparse cleanup for BASES_DEFAULTS keys in datacore", async () => {
       mockPlugin.loadData = jest.fn().mockResolvedValue({
-        templates: { datacore: { formatFirstAsTitle: false } },
+        templates: { datacore: { displayFirstAsTitle: false } },
       });
       await manager.load();
 
       const template = manager.getSettingsTemplate("datacore");
-      // Datacore is not Bases, so formatFirstAsTitle=false matches VIEW_DEFAULTS
+      // Datacore is not Bases, so displayFirstAsTitle=false matches VIEW_DEFAULTS
       // and gets cleaned as sparse default
       expect(template).toBeUndefined();
     });

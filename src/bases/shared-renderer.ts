@@ -1856,24 +1856,36 @@ export class SharedCardRenderer {
 
     // Parse override lists for O(1) lookup
     const unpairSet = parsePropertyList(settings.invertPropertyPairing);
-    const invertPositionSet = parsePropertyList(
-      settings.invertPropertyPosition,
-    );
+
+    // Properties rendered elsewhere — exclude from property rows
+    const excludeSet = new Set<string>();
+    if (settings.textPreviewProperty)
+      excludeSet.add(settings.textPreviewProperty);
+    if (settings.urlProperty) excludeSet.add(settings.urlProperty);
 
     // Pre-compute hide settings (needed before pairing to exclude collapsed)
     const hideMissing = shouldHideMissingProperties();
     const hideEmptyMode = getHideEmptyMode();
 
-    // Pre-filter: exclude properties that will be collapsed, preserving original indices
+    // Find text preview property position in the original property list (before filtering)
+    // Used for position-based top/bottom split
+    const textPreviewIndex = settings.textPreviewProperty
+      ? props.findIndex((p) => p.name === settings.textPreviewProperty)
+      : -1;
+
+    // Pre-filter: exclude collapsed, excluded, and padding properties
     const visibleProps: Array<{
       name: string;
       value: unknown;
       fieldIndex: number;
+      originalIndex: number;
     }> = [];
     for (let idx = 0; idx < props.length; idx++) {
       const prop = props[idx];
       // Empty-name properties are padding slots — exclude them
       if (!prop.name) continue;
+      // Skip properties rendered elsewhere (text preview, URL button)
+      if (excludeSet.has(prop.name)) continue;
       const stringValue = typeof prop.value === "string" ? prop.value : null;
       if (
         shouldCollapseField(
@@ -1886,12 +1898,17 @@ export class SharedCardRenderer {
       ) {
         continue;
       }
-      visibleProps.push({ ...prop, fieldIndex: idx + 1 }); // 1-based
+      visibleProps.push({ ...prop, fieldIndex: idx + 1, originalIndex: idx }); // fieldIndex is 1-based
     }
 
     // Group visible properties into sets using pairing algorithm
     const sets: Array<{
-      items: Array<{ name: string; value: unknown; fieldIndex: number }>;
+      items: Array<{
+        name: string;
+        value: unknown;
+        fieldIndex: number;
+        originalIndex: number;
+      }>;
       paired: boolean;
     }> = [];
 
@@ -1934,15 +1951,16 @@ export class SharedCardRenderer {
       }
     }
 
-    // Position each set: top or bottom
+    // Position-based split: properties before textPreviewProperty → top, rest → bottom
     const topSets: typeof sets = [];
     const bottomSets: typeof sets = [];
 
     for (const set of sets) {
-      const anyInverted = set.items.some((item) =>
-        invertPositionSet.has(item.name),
-      );
-      const isTop = settings.showPropertiesAbove ? !anyInverted : anyInverted;
+      // When textPreviewProperty is selected, properties appearing before it in the
+      // property picker order go above the text preview, the rest go below
+      const isTop =
+        textPreviewIndex >= 0 &&
+        set.items.every((item) => item.originalIndex < textPreviewIndex);
       (isTop ? topSets : bottomSets).push(set);
     }
 

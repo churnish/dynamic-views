@@ -10,8 +10,8 @@ jest.mock("../../src/constants", () => ({
     titleProperty: "file.name",
     titleLines: 2,
     subtitleProperty: "file.folder",
-    formatFirstAsTitle: false,
-    formatSecondAsSubtitle: false,
+    displayFirstAsTitle: false,
+    displaySecondAsSubtitle: false,
     textPreviewProperty: "",
     fallbackToContent: true,
     textPreviewLines: 5,
@@ -33,8 +33,8 @@ jest.mock("../../src/constants", () => ({
     cssclasses: "",
   },
   BASES_DEFAULTS: {
-    formatFirstAsTitle: true,
-    formatSecondAsSubtitle: false,
+    displayFirstAsTitle: true,
+    displaySecondAsSubtitle: false,
     propertyLabels: "inline",
   },
 }));
@@ -52,8 +52,8 @@ const MOCK_VIEW_DEFAULTS: any = {
   titleProperty: "file.name",
   titleLines: 2,
   subtitleProperty: "file.folder",
-  formatFirstAsTitle: false,
-  formatSecondAsSubtitle: false,
+  displayFirstAsTitle: false,
+  displaySecondAsSubtitle: false,
   textPreviewProperty: "",
   fallbackToContent: true,
   textPreviewLines: 5,
@@ -90,8 +90,8 @@ const MOCK_PLUGIN_SETTINGS: any = {
 };
 
 describe("readBasesSettings — position-based title/subtitle", () => {
-  it("should derive titleProperty from order[0] when formatFirstAsTitle is true", () => {
-    const config = createMockConfig({ formatFirstAsTitle: true }, [
+  it("should derive titleProperty from order[0] when displayFirstAsTitle is true", () => {
+    const config = createMockConfig({ displayFirstAsTitle: true }, [
       "note.director",
       "note.year",
     ]);
@@ -103,7 +103,7 @@ describe("readBasesSettings — position-based title/subtitle", () => {
 
   it("should derive both title and subtitle when both toggles are true", () => {
     const config = createMockConfig(
-      { formatFirstAsTitle: true, formatSecondAsSubtitle: true },
+      { displayFirstAsTitle: true, displaySecondAsSubtitle: true },
       ["note.director", "note.year", "note.genre"],
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
@@ -114,7 +114,7 @@ describe("readBasesSettings — position-based title/subtitle", () => {
 
   it("should not derive subtitle when order has only one item", () => {
     const config = createMockConfig(
-      { formatFirstAsTitle: true, formatSecondAsSubtitle: true },
+      { displayFirstAsTitle: true, displaySecondAsSubtitle: true },
       ["note.director"],
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
@@ -123,8 +123,8 @@ describe("readBasesSettings — position-based title/subtitle", () => {
     expect(result._skipLeadingProperties).toBe(1);
   });
 
-  it("should not derive title or subtitle when formatFirstAsTitle is false", () => {
-    const config = createMockConfig({ formatFirstAsTitle: false }, [
+  it("should not derive title or subtitle when displayFirstAsTitle is false", () => {
+    const config = createMockConfig({ displayFirstAsTitle: false }, [
       "note.director",
       "note.year",
     ]);
@@ -135,15 +135,15 @@ describe("readBasesSettings — position-based title/subtitle", () => {
   });
 
   it("should not derive title when order is empty", () => {
-    const config = createMockConfig({ formatFirstAsTitle: true }, []);
+    const config = createMockConfig({ displayFirstAsTitle: true }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
     expect(result.titleProperty).toBe("");
     expect(result._skipLeadingProperties).toBe(0);
   });
 
-  it("should use BASES_DEFAULTS (formatFirstAsTitle: true) when config has no override", () => {
+  it("should use BASES_DEFAULTS (displayFirstAsTitle: true) when config has no override", () => {
     const config = createMockConfig(
-      {}, // no formatFirstAsTitle override — falls back to BASES_DEFAULTS.formatFirstAsTitle (true)
+      {}, // no displayFirstAsTitle override — falls back to BASES_DEFAULTS.displayFirstAsTitle (true)
       ["note.title", "note.author"],
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
@@ -191,9 +191,9 @@ describe("readBasesSettings — templateOverrides", () => {
 });
 
 describe("extractBasesTemplate", () => {
-  // VIEW_DEFAULTS from mock: cardSize=300, formatFirstAsTitle=false, propertyLabels="hide"
-  // BASES_DEFAULTS from mock: formatFirstAsTitle=true, propertyLabels="inline"
-  // mergedDefaults: cardSize=300, formatFirstAsTitle=true, propertyLabels="inline"
+  // VIEW_DEFAULTS from mock: cardSize=300, displayFirstAsTitle=false, propertyLabels="hide"
+  // BASES_DEFAULTS from mock: displayFirstAsTitle=true, propertyLabels="inline"
+  // mergedDefaults: cardSize=300, displayFirstAsTitle=true, propertyLabels="inline"
 
   it("should return only non-default values (sparse)", () => {
     const config = createMockConfig({ cardSize: 400 }, []);
@@ -202,10 +202,10 @@ describe("extractBasesTemplate", () => {
   });
 
   it("should detect BASES_DEFAULTS differences from VIEW_DEFAULTS", () => {
-    // formatFirstAsTitle: false in config — differs from mergedDefaults (true from BASES_DEFAULTS)
-    const config = createMockConfig({ formatFirstAsTitle: false }, []);
+    // displayFirstAsTitle: false in config — differs from mergedDefaults (true from BASES_DEFAULTS)
+    const config = createMockConfig({ displayFirstAsTitle: false }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
-    expect(result.formatFirstAsTitle).toBe(false);
+    expect(result.displayFirstAsTitle).toBe(false);
   });
 
   it("should return empty object when all values match defaults", () => {

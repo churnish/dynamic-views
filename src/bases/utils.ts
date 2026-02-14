@@ -214,7 +214,7 @@ export async function cleanUpBaseFile(
       }
 
       // Delete stale titleProperty/subtitleProperty — Bases views now use
-      // position-based formatFirstAsTitle/formatSecondAsSubtitle toggles
+      // position-based displayFirstAsTitle/displaySecondAsSubtitle toggles
       for (const staleKey of ["titleProperty", "subtitleProperty"]) {
         if (staleKey in viewObj) {
           delete viewObj[staleKey];

@@ -73,6 +73,15 @@ import {
   syncResponsiveClasses,
 } from "../bases/shared-renderer";
 
+/** Displayed-count cache: survives component remounts (reading ↔ editing) and
+ *  hot-reload (which re-evaluates the module, creating a new scope). Stored on
+ *  the global object so all module instances share one Map. Resets on app restart. */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment -- singleton cache across module reloads */
+const displayedCountCache: Map<string, number> =
+  (globalThis as any).__dvDisplayedCountCache ??
+  ((globalThis as any).__dvDisplayedCountCache = new Map<string, number>());
+/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
+
 /** Shared width parameters computed from section CSS variables and dimensions. */
 function calculateWidthParams(section: Element): {
   fileLineWidth: number;
@@ -197,9 +206,8 @@ export function View({
   const [showSortDropdown, setShowSortDropdown] = dc.useState(false);
   const [showViewDropdown, setShowViewDropdown] = dc.useState(false);
   const [queryError, setQueryError] = dc.useState<string | null>(null);
-  const [displayedCount, setDisplayedCount] = dc.useState(
-    app.isMobile ? BATCH_SIZE * 0.5 : BATCH_SIZE,
-  );
+  const defaultBatch = app.isMobile ? BATCH_SIZE * 0.5 : BATCH_SIZE;
+  const [displayedCount, setDisplayedCount] = dc.useState(defaultBatch);
   const [focusableCardIndex, setFocusableCardIndex] = dc.useState(0);
   const [isResultsScrolled, setIsResultsScrolled] = dc.useState(false);
   const [isScrolledToBottom, setIsScrolledToBottom] = dc.useState(true);
@@ -261,6 +269,9 @@ export function View({
         setWidthMode(state.widthMode as WidthMode);
       if (state.searchQuery !== undefined) setSearchQuery(state.searchQuery);
       if (state.resultLimit !== undefined) setResultLimit(state.resultLimit);
+      // Sync displayedCount from in-memory cache (not persisted to disk)
+      const cached = displayedCountCache.get(QUERY_ID);
+      if (cached !== undefined) setDisplayedCount(cached);
     };
 
     app.workspace.on("layout-change", handleLayoutChange);
@@ -296,6 +307,11 @@ export function View({
       }
     }
   }, [widthMode, QUERY_ID, persistenceManager]);
+
+  // Cache displayedCount in memory so it survives reading ↔ editing remounts
+  dc.useEffect(() => {
+    if (QUERY_ID) displayedCountCache.set(QUERY_ID, displayedCount);
+  }, [displayedCount, QUERY_ID]);
 
   // Live Preview: apply inline width styles to this query's code block
   dc.useEffect(() => {

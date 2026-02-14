@@ -27,8 +27,8 @@ jest.mock("../../src/constants", () => ({
     urlProperty: "url",
     minimumColumns: 1,
     cssclasses: "",
-    formatFirstAsTitle: false,
-    formatSecondAsSubtitle: false,
+    displayFirstAsTitle: false,
+    displaySecondAsSubtitle: false,
   },
   DATACORE_DEFAULTS: {
     listMarker: "bullet",
@@ -36,8 +36,8 @@ jest.mock("../../src/constants", () => ({
     pairProperties: true,
   },
   BASES_DEFAULTS: {
-    formatFirstAsTitle: true,
-    formatSecondAsSubtitle: false,
+    displayFirstAsTitle: true,
+    displaySecondAsSubtitle: false,
     propertyLabels: "inline",
   },
 }));
@@ -239,9 +239,9 @@ describe("cleanUpBaseFile", () => {
           type: "dynamic-views-grid",
           name: "Test",
           id: "abc-Test",
-          // VIEW_DEFAULTS.formatFirstAsTitle = false, but BASES_DEFAULTS overrides to true
+          // VIEW_DEFAULTS.displayFirstAsTitle = false, but BASES_DEFAULTS overrides to true
           // so this value should NOT be removed by sparse cleanup
-          formatFirstAsTitle: false,
+          displayFirstAsTitle: false,
         },
       ],
     });
@@ -249,7 +249,7 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0].formatFirstAsTitle).toBe(false);
+    expect(result.views[0].displayFirstAsTitle).toBe(false);
   });
 
   it("should preserve BASES_DEFAULTS key even when matching VIEW_DEFAULTS, while removing non-BASES_DEFAULTS key", async () => {
