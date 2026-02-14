@@ -1444,6 +1444,11 @@ export class DynamicViewsGridView extends BasesView {
 
       // Mark that batch append occurred (for end indicator)
       this.hasBatchAppended = true;
+
+      // Show end indicator if all items displayed (skip if 0 results)
+      if (this.displayedCount >= totalEntries && totalEntries > 0) {
+        this.showEndIndicator();
+      }
     } finally {
       this.isLoading = false;
     }
