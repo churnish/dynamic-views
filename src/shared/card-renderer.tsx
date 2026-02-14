@@ -1668,7 +1668,8 @@ function Card({
       >
         {renderFileTypeIcon(card.path)}
         {renderFileExt(extInfo)}
-        {settings.openFileAction === "title" || format === "poster" ? (
+        {settings.openFileAction === "title" ||
+        (format === "poster" && app.isMobile && card.imageUrl) ? (
           <span
             className="card-title-link"
             data-href={card.path}
@@ -2011,8 +2012,11 @@ function Card({
           }
         }
 
-        // Card-level click-to-open: desktop only (mobile always uses title)
-        if (settings.openFileAction === "card" && !app.isMobile) {
+        // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
+        if (
+          settings.openFileAction === "card" &&
+          !(app.isMobile && format === "poster" && card.imageUrl)
+        ) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === "A" || target.closest("a");
@@ -2124,8 +2128,8 @@ function Card({
         }
       }}
       onContextMenu={(e: MouseEvent) => {
-        // Show file context menu when openFileAction is 'card' or poster format
-        if (settings.openFileAction === "card" || format === "poster") {
+        // Show file context menu when openFileAction is 'card'
+        if (settings.openFileAction === "card") {
           const file = app.vault.getAbstractFileByPath(card.path);
           if (file instanceof TFile) {
             showFileContextMenu(e, app, file, card.path);

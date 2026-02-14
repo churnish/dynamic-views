@@ -75,7 +75,7 @@ export function getBasesViewOptions(
       items: [
         {
           type: "toggle",
-          displayName: "Format first property as title",
+          displayName: "Display first property as title",
           key: "formatFirstAsTitle",
           default: d.formatFirstAsTitle,
         },
@@ -93,7 +93,7 @@ export function getBasesViewOptions(
         },
         {
           type: "toggle",
-          displayName: "Format second property as subtitle",
+          displayName: "Display second property as subtitle",
           key: "formatSecondAsSubtitle",
           default: d.formatSecondAsSubtitle,
           shouldHide: (config: BasesConfig) =>

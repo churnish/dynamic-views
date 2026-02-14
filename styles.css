@@ -3075,11 +3075,6 @@ body.dynamic-views-hide-group-property-labels
   cursor: pointer;
 }
 
-/* Poster: cards are always clickable (reveal toggle) regardless of openFileAction */
-.dynamic-views .card.image-format-poster:has(.card-poster) {
-  cursor: pointer;
-}
-
 /* Card border color presets — set shared variable, consumed by ::after and cover-content divider */
 /* Faint (default) — no rule needed, base uses --background-modifier-border */
 body.dynamic-views-card-border-color-muted .dynamic-views .card {
@@ -3500,16 +3495,19 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   color: inherit;
   font-weight: inherit;
   cursor: pointer;
+  /* Match Bases backend <a> tag transition for consistent touch feedback */
+  transition: opacity var(--anim-duration-fast) ease-in-out;
+}
+
+/* Dim on touch/press for visual feedback (matches Bases backend <a> tag behavior) */
+.dynamic-views .card-title .card-title-link:active {
+  opacity: 0.5;
 }
 
 @media (hover: hover) {
-  /* Underline title on hover when open action is "press on title" or poster format */
+  /* Underline title on hover when open action is "press on title" */
   body.dynamic-views-open-on-title
     .dynamic-views
-    .card-title
-    :is(a, .card-title-link):hover,
-  .dynamic-views
-    .card.image-format-poster
     .card-title
     :is(a, .card-title-link):hover {
     text-decoration: underline;
@@ -3519,12 +3517,6 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   /* Extension suffix underline on hover */
   body.dynamic-views-file-type-ext
     .dynamic-views
-    .card-title
-    :is(a, .card-title-link):hover
-    .card-title-ext-suffix,
-  body.dynamic-views-file-type-ext
-    .dynamic-views
-    .card.image-format-poster
     .card-title
     :is(a, .card-title-link):hover
     .card-title-ext-suffix {
@@ -5356,11 +5348,8 @@ body:is(
   transition: opacity var(--anim-duration-moderate, 300ms); /* opacity, not background — background toggle causes overlay flicker */
 }
 
-/* Poster overlay: Gradient (default — hardcoded dark at 85%) */
-body:is(
-    .dynamic-views-poster-mode-gradient,
-    :not(.dynamic-views-poster-mode-overlay)
-  )
+/* Poster mode — Gradient (default — hardcoded dark at 85%) */
+body.dynamic-views-poster-mode-gradient
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -5372,20 +5361,17 @@ body:is(
   );
 }
 
-/* Gradient: bottom-align content where tint provides contrast */
-body:is(
-    .dynamic-views-poster-mode-gradient,
-    :not(.dynamic-views-poster-mode-overlay)
-  )
+/* Gradient: bottom-align content where tint provides contrast, with light text (hardcoded dark gradient) */
+body.dynamic-views-poster-mode-gradient
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
   justify-content: flex-end;
+  --text-normal: #fafafa;
+  --text-muted: #f5f5f5;
+  --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }
 
-body:is(
-    .dynamic-views-poster-mode-gradient,
-    :not(.dynamic-views-poster-mode-overlay)
-  )
+body.dynamic-views-poster-mode-gradient
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-content {
@@ -5394,17 +5380,14 @@ body:is(
 }
 
 /* Gradient: disable backdrop blur (incompatible with gradient — blur would show through transparent top) */
-body:is(
-    .dynamic-views-poster-mode-gradient,
-    :not(.dynamic-views-poster-mode-overlay)
-  )
+body.dynamic-views-poster-mode-gradient
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
   backdrop-filter: none;
 }
 
-/* Poster overlay: Overlay mode (flat tint) */
+/* Poster mode — Overlay (flat tint) */
 
 /* Overlay + Match theme (dark) */
 body.dynamic-views-poster-mode-overlay:is(
@@ -5509,27 +5492,32 @@ body.dynamic-views-poster-disable-raise
   transition: opacity var(--anim-duration-moderate, 300ms);
 }
 
-/* Poster: card height determined by image ratio */
-.dynamic-views .card.image-format-poster:has(.card-poster) {
-  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
-}
-
-/* Grid: all poster cards share ratio-based height (override height:100% to prevent width expansion) */
+/* Grid: all poster cards get aspect-ratio (override height:100% to prevent width expansion) */
 .dynamic-views .dynamic-views-grid .card.image-format-poster {
   height: auto;
   aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
 }
 
-/* Gradient: always light text (hardcoded dark overlay) */
-body:is(
-    .dynamic-views-poster-mode-gradient,
-    :not(.dynamic-views-poster-mode-overlay)
-  )
+/* Masonry: only cards with images get aspect-ratio */
+.dynamic-views:not(.dynamic-views-grid)
+  .card.image-format-poster:has(.card-poster) {
+  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+}
+
+/* Card mode: cards with images have pointer cursor */
+body.dynamic-views-open-on-card
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
-  --text-normal: #fafafa;
-  --text-muted: #f5f5f5;
-  --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+  cursor: pointer;
+}
+
+/* Mobile: always pointer cursor for reveal toggle, even in title mode */
+@media (hover: none) {
+  body.dynamic-views-open-on-title
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster) {
+    cursor: pointer;
+  }
 }
 
 /* Overlay: text color overrides (light tint → dark text) */
@@ -7817,10 +7805,7 @@ body.dynamic-views-disable-thumbnail-scrubbing
 body:not(.dynamic-views-title-color-custom)
   .style-settings-container
   .setting-item[data-id="dynamic-views-title-color-custom"],
-body:is(
-    .dynamic-views-poster-mode-gradient,
-    :not(.dynamic-views-poster-mode-overlay)
-  )
+body.dynamic-views-poster-mode-gradient
   .style-settings-container
   .setting-item:is(
     [data-id="dynamic-views-poster-overlay-tint"],

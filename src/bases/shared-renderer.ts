@@ -817,12 +817,19 @@ export class SharedCardRenderer {
     if (keyboardNav?.containerRef) {
       cardEl.addEventListener(
         "mousedown",
-        () => {
+        (e: MouseEvent) => {
           const container = keyboardNav.containerRef.current as
             | (HTMLElement & { _keyboardNavActive?: boolean })
             | null;
           if (container) {
             container._keyboardNavActive = false;
+          }
+          // Stop propagation in capture phase to prevent CodeMirror's capture-phase
+          // handler on cm-scroller from intercepting text selection
+          // when openFileAction is 'title' (card content should be selectable)
+          if (settings.openFileAction === "title") {
+            console.debug("Stopping mousedown propagation for text selection");
+            e.stopPropagation();
           }
         },
         { signal, capture: true },
@@ -861,8 +868,11 @@ export class SharedCardRenderer {
           }
         }
 
-        // Card-level click-to-open: desktop only (mobile always uses title)
-        if (settings.openFileAction === "card" && !this.app.isMobile) {
+        // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
+        if (
+          settings.openFileAction === "card" &&
+          !(this.app.isMobile && isPoster && card.imageUrl)
+        ) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === "A" || target.closest("a");
@@ -972,8 +982,8 @@ export class SharedCardRenderer {
       showFileContextMenu(e, this.app, entry.file, card.path);
     };
 
-    // Attach context menu to card when openFileAction is 'card' or mobile poster
-    if (settings.openFileAction === "card" || isPoster) {
+    // Attach context menu to card when openFileAction is 'card'
+    if (settings.openFileAction === "card") {
       cardEl.addEventListener("contextmenu", handleContextMenu, { signal });
     }
 
@@ -1006,7 +1016,10 @@ export class SharedCardRenderer {
       }
 
       // Add title text
-      if (settings.openFileAction === "title" || isPoster) {
+      if (
+        settings.openFileAction === "title" ||
+        (isPoster && this.app.isMobile && card.imageUrl)
+      ) {
         // Render as clickable, draggable link
         const link = titleEl.createEl("a", {
           cls: "internal-link card-title-text",
