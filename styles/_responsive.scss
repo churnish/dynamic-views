@@ -28,6 +28,11 @@
 }
 
 @container (max-width: 700px) and (min-width: 51px) {
+  /* Stack properties on narrow cards */
+  /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
+  /* Thumbnail order for stacked layout - left goes above text, right stays below */
+  /* Only applies inside card-content; DOM manipulation handles position when moved outside */
+  /* Settings panel responsive */
   .dynamic-views {
     .controls-wrapper {
       padding: 3px 0 8px;
@@ -69,7 +74,6 @@
       max-width: 100%;
     }
 
-    /* Stack properties on narrow cards */
     .card-properties {
       justify-content: flex-start !important;
       flex-wrap: nowrap;
@@ -81,21 +85,17 @@
       flex-wrap: wrap;
     }
 
-    /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
     .card.thumbnail-stack .card-previews {
       flex-direction: column;
       flex-grow: 0;
     }
 
-    /* Thumbnail order for stacked layout - left goes above text, right stays below */
-    /* Only applies inside card-content; DOM manipulation handles position when moved outside */
     .card.thumbnail-stack.card-thumbnail-left
       .card-previews
       :is(.card-thumbnail, .card-thumbnail-placeholder) {
       order: -1;
     }
 
-    /* Settings panel responsive */
     .setting-item-text {
       flex-direction: column !important;
       gap: var(--size-2-2);

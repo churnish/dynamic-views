@@ -1,6 +1,11 @@
 /* ==================== BACKDROP + POSTER SHARED ==================== */
 
 /* Shared base styles for fullbleed image formats (backdrop + poster) */
+/* Constrain height so .card-body can scroll.
+   overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
+   without clipping its border-radius. */
+/* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
+/* Card content stacks above background image */
 .dynamic-views {
   .card.image-format-backdrop {
     position: relative;
@@ -22,9 +27,6 @@
     overflow: hidden;
     --poster-inset: 1px;
 
-    /* Constrain height so .card-body can scroll.
-       overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
-       without clipping its border-radius. */
     .card-content {
       overflow: clip;
       overflow-clip-margin: 4px;
@@ -38,7 +40,6 @@
       overflow-y: auto;
       scrollbar-width: none;
 
-      /* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
       > * {
         flex-shrink: 0;
       }
@@ -74,7 +75,6 @@
       opacity: 1;
     }
 
-    /* Card content stacks above background image */
     .card-content {
       position: relative;
       z-index: 1;

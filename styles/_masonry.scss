@@ -2,6 +2,15 @@
    MASONRY VIEW
    ============================================ */
 
+/* Override flex-direction for cover formats in Masonry - text should be side-by-side */
+/* Override flex-direction for no-image cards in Masonry */
+/* Masonry: Thumbnail top/bottom positioning */
+/* Masonry thumbnail-bottom: no extra margins needed — card-content gap
+   handles spacing above, card padding handles spacing below. */
+/* Masonry: push bottom properties to bottom of card when it has siblings above */
+/* Masonry: only-child pushes to bottom but needs no padding (no sibling above) */
+/* Masonry cover-bottom: properties-bottom needs spacing from content above.
+   margin-top: auto has no effect in masonry (no fixed height), so use a fixed margin. */
 .dynamic-views {
   .dynamic-views-masonry {
     position: relative;
@@ -24,7 +33,6 @@
       flex-direction: row-reverse;
     }
 
-    /* Override flex-direction for cover formats in Masonry - text should be side-by-side */
     .card.card-cover-right .card-previews,
     .card.card-cover-left .card-previews,
     .card.card-cover-top .card-previews,
@@ -32,40 +40,31 @@
       flex-direction: row;
     }
 
-    /* Override flex-direction for no-image cards in Masonry */
     .card:not([class*="card-thumbnail-"]):not([class*="card-cover-"])
       .card-previews {
       flex-direction: row;
     }
 
-    /* Masonry: Thumbnail top/bottom positioning */
     .card.card-thumbnail-top .card-thumbnail {
       margin-top: var(--size-4-2);
       margin-bottom: var(--size-4-2);
     }
-
-    /* Masonry thumbnail-bottom: no extra margins needed — card-content gap
-       handles spacing above, card padding handles spacing below. */
 
     .card .card-text-preview {
       flex: 1 1 0;
       min-width: 0;
     }
 
-    /* Masonry: push bottom properties to bottom of card when it has siblings above */
     .card:not(.card-cover-bottom) .card-properties-bottom:not(:first-child) {
       margin-top: auto;
       padding-top: var(--size-4-2);
     }
 
-    /* Masonry: only-child pushes to bottom but needs no padding (no sibling above) */
     .card:not(.card-cover-bottom) .card-properties-bottom:only-child {
       margin-top: auto;
       padding-top: 0;
     }
 
-    /* Masonry cover-bottom: properties-bottom needs spacing from content above.
-       margin-top: auto has no effect in masonry (no fixed height), so use a fixed margin. */
     .card.card-cover-bottom .card-properties-bottom:not(:first-child) {
       margin-top: var(--size-4-2);
     }

@@ -188,8 +188,26 @@ body.dynamic-views-hide-group-property-labels
   padding-bottom: 0;
 }
 
+/* Unified grid layout for all grid views (all width modes) */
+/* Universal content wrapper: contains header + body */
+/* Universal card body: contains properties + previews */
+/* Grid view: push bottom properties to bottom of card when it has siblings above */
+/* Exclude cover-bottom and cover-top cover-format which have their own rules */
+/* Grid view: only-child pushes to bottom but needs no padding (no sibling above) */
+/* Grid view: cover-top — fixed cover height, gap absorbs remaining space */
+/* Content stays natural height with text top-aligned */
+/* Grid view cover-top with properties-bottom: push properties down */
+/* Add padding-top only when content/header exists above (otherwise cover margin-bottom suffices) */
+/* Override vanilla Bases absolute positioning - we use static flow layout */
+/* Group headings - flex layout for collapse chevron + content */
+/* Clickable region: chevron + property + value */
+/* Group collapse chevron */
+/* Rotate + accent color when collapsed */
+/* Hide card container when heading is collapsed (adjacent sibling) */
+/* Group header property label */
+/* Group header result count - match property label style */
+/* Group header value containers - match vanilla Bases structure */
 .dynamic-views {
-  /* Unified grid layout for all grid views (all width modes) */
   .dynamic-views-grid {
     display: grid;
     grid-template-columns: repeat(var(--dynamic-views-grid-columns, 1), 1fr);
@@ -200,7 +218,6 @@ body.dynamic-views-hide-group-property-labels
     box-sizing: border-box;
   }
 
-  /* Universal content wrapper: contains header + body */
   .card .card-content {
     display: flex;
     flex-direction: column;
@@ -208,7 +225,6 @@ body.dynamic-views-hide-group-property-labels
     flex-grow: 1;
   }
 
-  /* Universal card body: contains properties + previews */
   .card .card-body {
     display: flex;
     flex-direction: column;
@@ -216,8 +232,6 @@ body.dynamic-views-hide-group-property-labels
     flex-grow: 1;
   }
 
-  /* Grid view: push bottom properties to bottom of card when it has siblings above */
-  /* Exclude cover-bottom and cover-top cover-format which have their own rules */
   .dynamic-views-grid
     .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
     .card-properties-bottom:not(:first-child) {
@@ -225,7 +239,6 @@ body.dynamic-views-hide-group-property-labels
     padding-top: var(--size-4-2);
   }
 
-  /* Grid view: only-child pushes to bottom but needs no padding (no sibling above) */
   .dynamic-views-grid
     .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
     .card-properties-bottom:only-child {
@@ -233,8 +246,6 @@ body.dynamic-views-hide-group-property-labels
     padding-top: 0;
   }
 
-  /* Grid view: cover-top — fixed cover height, gap absorbs remaining space */
-  /* Content stays natural height with text top-aligned */
   .dynamic-views-grid .card.card-cover-top .card-previews {
     flex-grow: 0;
   }
@@ -245,14 +256,12 @@ body.dynamic-views-hide-group-property-labels
     flex-grow: 0;
   }
 
-  /* Grid view cover-top with properties-bottom: push properties down */
   .dynamic-views-grid
     .card.card-cover-top.image-format-cover:has(.card-properties-bottom)
     .card-properties-bottom {
     margin-top: auto;
   }
 
-  /* Add padding-top only when content/header exists above (otherwise cover margin-bottom suffices) */
   .dynamic-views-grid
     .card.card-cover-top.image-format-cover:has(
       .card-header,
@@ -271,26 +280,22 @@ body.dynamic-views-hide-group-property-labels
     padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
   }
 
-  /* Override vanilla Bases absolute positioning - we use static flow layout */
   .bases-cards-group {
     position: static;
     gap: inherit;
   }
 
-  /* Override vanilla Bases absolute positioning - we use static flow layout */
   &.is-grouped .bases-cards-container .bases-group-heading {
     position: static;
     gap: inherit;
   }
 
-  /* Group headings - flex layout for collapse chevron + content */
   .bases-group-heading {
     display: flex;
     align-items: center;
     gap: var(--size-2-2);
   }
 
-  /* Clickable region: chevron + property + value */
   .bases-group-collapse-region {
     display: flex;
     align-items: center;
@@ -298,7 +303,6 @@ body.dynamic-views-hide-group-property-labels
     cursor: pointer;
   }
 
-  /* Group collapse chevron */
   .bases-group-collapse-btn {
     display: flex;
     align-items: center;
@@ -312,31 +316,26 @@ body.dynamic-views-hide-group-property-labels
     }
   }
 
-  /* Rotate + accent color when collapsed */
   .bases-group-heading.collapsed .bases-group-collapse-btn svg {
     transform: rotate(-90deg);
     color: var(--color-accent);
   }
 
-  /* Hide card container when heading is collapsed (adjacent sibling) */
   .bases-group-heading.collapsed + .dynamic-views-group {
     display: none !important;
   }
 
-  /* Group header property label */
   .bases-group-property {
     color: var(--text-muted);
     font-size: var(--font-ui-small);
   }
 
-  /* Group header result count - match property label style */
   .bases-group-count {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
     padding-left: var(--size-2-2);
   }
 
-  /* Group header value containers - match vanilla Bases structure */
   .bases-group-value .value-list-container {
     display: flex;
     flex-wrap: wrap;

@@ -2,6 +2,39 @@
    PROPERTY ROW SYSTEM
    ============================================ */
 
+/* Compact mode: stack side-by-side properties on narrow cards */
+/* Compact mode: left-align right-side properties when stacked */
+/* Compact mode: reset inline label order (label before content) */
+/* Meta-field: scrollable container */
+/* Collapsed field: hidden entirely */
+/* Gap between inline property label and content */
+/* Vertical layout when property labels are on top */
+/* Property labels should never scroll */
+/* Property content wrapper - handles scrolling and masking */
+/* For inline labels: wrapper takes remaining space after label */
+/* For property labels above or no property labels: wrapper takes full width */
+/* During measurement: wrapper shouldn't constrain content */
+/* During measurement: fields shouldn't constrain content */
+/* During measurement: remove min-width to allow natural sizing */
+/* Default unmeasured state: natural content width to avoid snap when measurement applies */
+/* Collapsed pair partner: expand visible property to full width.
+   Safety net for Bases imperative-DOM path where handleEmptyField applies
+   property-collapsed after async rendering. Datacore pre-filters instead. */
+/* Both pair properties collapsed: hide the empty wrapper */
+/* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
+/* Measured state: use calculated widths from CSS variables, remove 50% cap */
+/* Odd fields (left side) use --field1-width */
+/* Even fields (right side) use --field2-width */
+/* Measured state: wrapper fills calculated field width */
+/* Property label (above mode) */
+/* Property label inline - as sibling of property-content */
+/* Property label color application */
+/* Property text color application - with labels */
+/* Property text color application - without labels */
+/* Links in properties use Obsidian default colors (not property text color) */
+/* Subtitle color application */
+/* Text preview color application */
+/* Title color application */
 .dynamic-views {
   .property-pair {
     display: flex;
@@ -11,7 +44,6 @@
     min-width: 0;
   }
 
-  /* Compact mode: stack side-by-side properties on narrow cards */
   .card.compact-mode .property-pair {
     flex-direction: column;
     gap: var(--size-2-2);
@@ -24,7 +56,6 @@
     width: 100% !important;
   }
 
-  /* Compact mode: left-align right-side properties when stacked */
   .card.compact-mode .property-pair .pair-right .property-content-wrapper {
     justify-content: flex-start;
   }
@@ -38,12 +69,10 @@
     text-align: left;
   }
 
-  /* Compact mode: reset inline label order (label before content) */
   .card.compact-mode .property-pair .pair-right .property-label-inline {
     order: 0;
   }
 
-  /* Meta-field: scrollable container */
   .property {
     display: flex;
     align-items: center;
@@ -57,30 +86,25 @@
     font-family: var(--dynamic-views-property-font, inherit);
   }
 
-  /* Collapsed field: hidden entirely */
   .property.property-collapsed {
     display: none;
   }
 
-  /* Gap between inline property label and content */
   .property:has(.property-label-inline) {
     gap: var(--size-2-2);
   }
 
-  /* Vertical layout when property labels are on top */
   .property:has(.property-label) {
     flex-direction: column;
     align-items: stretch;
     overflow-x: visible; /* Override overflow - labels should not scroll */
   }
 
-  /* Property labels should never scroll */
   .property:has(.property-label) .property-label {
     flex-shrink: 0;
     overflow: visible;
   }
 
-  /* Property content wrapper - handles scrolling and masking */
   .property-content-wrapper {
     display: flex;
     min-width: 0;
@@ -93,20 +117,17 @@
     display: none;
   }
 
-  /* For inline labels: wrapper takes remaining space after label */
   .property:has(.property-label-inline) .property-content-wrapper {
     flex: 1 1 0;
     min-width: 0;
   }
 
-  /* For property labels above or no property labels: wrapper takes full width */
   .property:has(.property-label) .property-content-wrapper,
   .property:not(:has(.property-label)):not(:has(.property-label-inline))
     .property-content-wrapper {
     width: 100%;
   }
 
-  /* During measurement: wrapper shouldn't constrain content */
   .property-pair.property-measuring .property-content-wrapper {
     width: auto !important;
     max-width: none !important;
@@ -119,65 +140,52 @@
     max-width: none !important;
   }
 
-  /* During measurement: fields shouldn't constrain content */
   .property-pair.property-measuring .property {
     width: auto !important;
     max-width: none !important;
     flex: 0 0 auto !important; /* Override flex: 1 1 0 to prevent equal distribution */
   }
 
-  /* During measurement: remove min-width to allow natural sizing */
   .property-pair.property-measuring .property-content {
     min-width: 0 !important;
   }
 
-  /* Default unmeasured state: natural content width to avoid snap when measurement applies */
   .property-pair .property {
     flex: 0 1 auto;
     max-width: 50%;
   }
 
-  /* Collapsed pair partner: expand visible property to full width.
-     Safety net for Bases imperative-DOM path where handleEmptyField applies
-     property-collapsed after async rendering. Datacore pre-filters instead. */
   .property-pair:has(> .property-collapsed)
     > .property:not(.property-collapsed) {
     max-width: 100%;
     flex: 1 1 auto;
   }
 
-  /* Both pair properties collapsed: hide the empty wrapper */
   .property-pair:not(:has(> .property:not(.property-collapsed))) {
     display: none;
   }
 
-  /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
   &.dynamic-views-paired-property-column .property-pair .property {
     flex: 1 1 0;
   }
 
-  /* Measured state: use calculated widths from CSS variables, remove 50% cap */
-  /* Odd fields (left side) use --field1-width */
   .property-pair.property-measured .pair-left {
     width: var(--field1-width);
     flex: 0 0 auto;
     max-width: none;
   }
 
-  /* Even fields (right side) use --field2-width */
   .property-pair.property-measured .pair-right {
     width: var(--field2-width);
     flex: 0 0 auto;
     max-width: none;
   }
 
-  /* Measured state: wrapper fills calculated field width */
   .property-pair.property-measured .property-content-wrapper {
     flex: 1 1 auto;
     min-width: 0;
   }
 
-  /* Property label (above mode) */
   .property-label {
     font-size: var(
       --dynamic-views-property-label-font-size,
@@ -190,7 +198,6 @@
     text-overflow: ellipsis;
   }
 
-  /* Property label inline - as sibling of property-content */
   .property-label-inline {
     font-size: var(
       --dynamic-views-property-label-font-size,
@@ -207,12 +214,10 @@
     align-items: center;
   }
 
-  /* Property label color application */
   :is(.property-label, .property-label-inline) {
     color: var(--dynamic-views-property-label-color-value, var(--text-faint));
   }
 
-  /* Property text color application - with labels */
   .property:has(:is(.property-label, .property-label-inline)) {
     color: var(
       --dynamic-views-property-with-label-color-value,
@@ -220,7 +225,6 @@
     );
   }
 
-  /* Property text color application - without labels */
   .property:not(:has(:is(.property-label, .property-label-inline))) {
     color: var(
       --dynamic-views-property-no-label-color-value,
@@ -228,7 +232,6 @@
     );
   }
 
-  /* Links in properties use Obsidian default colors (not property text color) */
   .property a.internal-link {
     color: var(--link-color);
   }
@@ -242,12 +245,10 @@
     color: var(--link-external-color-hover);
   }
 
-  /* Subtitle color application */
   .card-subtitle {
     color: var(--dynamic-views-subtitle-color-value, var(--text-faint));
   }
 
-  /* Text preview color application */
   .card-text-preview {
     --dynamic-views-text-preview-color: var(
       --dynamic-views-text-preview-color-value,
@@ -255,7 +256,6 @@
     );
   }
 
-  /* Title color application */
   .card-title {
     --dynamic-views-title-color: var(
       --dynamic-views-title-color-value,

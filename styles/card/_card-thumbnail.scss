@@ -185,6 +185,7 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
   box-shadow: none;
 }
 
+/* Thumbnail contain mode */
 .dynamic-views {
   .card-thumbnail .dynamic-views-image-embed {
     width: 100%;
@@ -206,7 +207,6 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
     opacity: 1;
   }
 
-  /* Thumbnail contain mode */
   .card.card-thumbnail-contain .card-thumbnail img {
     object-fit: contain;
   }

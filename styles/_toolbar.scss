@@ -242,6 +242,8 @@ body.dynamic-views-disable-toolbar-shadow
    RESULTS COUNT & LIMIT CONTROLS
    ============================================ */
 
+/* Normal variant has additional transitions for search animation */
+/* Hide compact variant by default (shown via container query) */
 .dynamic-views {
   .results-count-wrapper,
   .results-count-wrapper-compact {
@@ -257,7 +259,6 @@ body.dynamic-views-disable-toolbar-shadow
       opacity var(--anim-duration-fast, 140ms);
   }
 
-  /* Normal variant has additional transitions for search animation */
   .results-count-wrapper {
     transition:
       background-color var(--anim-duration-fast, 140ms),
@@ -266,7 +267,6 @@ body.dynamic-views-disable-toolbar-shadow
       margin var(--anim-duration-moderate, 300ms) ease;
   }
 
-  /* Hide compact variant by default (shown via container query) */
   .results-count-wrapper-compact {
     display: none;
   }
@@ -408,6 +408,7 @@ body.dynamic-views-disable-toolbar-shadow
    TOOLBAR BUTTONS
    ============================================ */
 
+/* Hide compact variant by default (shown via container query) */
 .dynamic-views {
   :is(
     .create-note-button,
@@ -467,7 +468,6 @@ body.dynamic-views-disable-toolbar-shadow
     background-color: var(--background-modifier-hover);
   }
 
-  /* Hide compact variant by default (shown via container query) */
   .create-note-button-compact {
     display: none;
   }
@@ -492,7 +492,9 @@ body.dynamic-views-hide-search .dynamic-views .search-controls-compact {
 
 /* Hide result count when toggle is on */
 body.dynamic-views-hide-result-count .dynamic-views .results-count-wrapper,
-body.dynamic-views-hide-result-count .dynamic-views .results-count-wrapper-compact {
+body.dynamic-views-hide-result-count
+  .dynamic-views
+  .results-count-wrapper-compact {
   display: none !important;
 }
 

@@ -2,6 +2,7 @@
    SETTINGS PANEL
    ============================================ */
 
+/* Collapsible settings sections */
 .dynamic-views {
   .settings-dropdown-wrapper {
     position: relative;
@@ -101,7 +102,6 @@
     text-align: left !important;
   }
 
-  /* Collapsible settings sections */
   .settings-section {
     width: 100%;
     border: 1px solid var(--background-modifier-border);

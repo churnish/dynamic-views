@@ -2,6 +2,14 @@
 
 /* Cover-top/bottom: aspect ratio using padding-top hack */
 /* Cover-top: fixed aspect ratio using padding-top trick */
+/* Cover-bottom: expands to fill remaining space */
+/* Cover-bottom placeholder: expands to match cover dimensions */
+/* Grid view: cover-bottom — fixed cover height */
+/* Grid cover-bottom wrapper: fixed size, no margins (spacer handles top gap) */
+/* Grid cover-bottom: push properties-bottom to bottom of card */
+/* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
+/* Compensate: card bottom padding = inset (instead of card-padding) */
+/* All covers: border radius */
 .dynamic-views {
   .card.card-cover-top.image-format-cover .card-cover {
     width: 100%;
@@ -11,7 +19,6 @@
     overflow: hidden;
   }
 
-  /* Cover-bottom: expands to fill remaining space */
   .card.card-cover-bottom.image-format-cover .card-cover {
     width: 100%;
     height: 100%;
@@ -20,18 +27,15 @@
     overflow: hidden;
   }
 
-  /* Cover-bottom placeholder: expands to match cover dimensions */
   .card.card-cover-bottom.image-format-cover .card-cover-placeholder {
     height: 100%;
     min-height: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
   }
 
-  /* Grid view: cover-bottom — fixed cover height */
   .dynamic-views-grid .card.card-cover-bottom .card-previews {
     flex-grow: 0;
   }
 
-  /* Grid cover-bottom wrapper: fixed size, no margins (spacer handles top gap) */
   .dynamic-views-grid
     .card.card-cover-bottom.image-format-cover
     .card-cover-wrapper {
@@ -41,7 +45,6 @@
     margin-bottom: 0;
   }
 
-  /* Grid cover-bottom: push properties-bottom to bottom of card */
   .dynamic-views-grid
     .card.card-cover-bottom.image-format-cover
     .card-properties-bottom:not(:first-child) {
@@ -56,9 +59,6 @@
     padding-top: 0;
   }
 
-  /* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
-
-  /* Compensate: card bottom padding = inset (instead of card-padding) */
   .dynamic-views-grid .card.card-cover-bottom.image-format-cover {
     padding-bottom: var(--cover-inset-computed);
   }
@@ -77,7 +77,6 @@
     padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
   }
 
-  /* All covers: border radius */
   .card.image-format-cover .card-cover {
     border-radius: var(--dynamic-views-cover-border-radius, 0);
   }
