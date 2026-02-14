@@ -1,0 +1,248 @@
+/* When card-content only has text preview (no thumbnails), use column layout */
+.dynamic-views
+  .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(
+    :has(.card-cover)
+  ) {
+  flex-direction: column;
+}
+
+/* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
+.dynamic-views
+  .card.card-thumbnail-left
+  .card-previews:has(.card-text-preview-wrapper) {
+  flex-direction: row-reverse;
+}
+
+/* Thumbnail right: align thumbnail to the right when no text preview */
+.dynamic-views
+  .card.card-thumbnail-right
+  .card-previews:not(:has(.card-text-preview-wrapper)) {
+  justify-content: flex-end;
+}
+
+/* Stacked: left-align thumbnail when no text preview */
+.dynamic-views
+  .card.thumbnail-stack.card-thumbnail-right
+  .card-previews:not(:has(.card-text-preview-wrapper)) {
+  justify-content: flex-start;
+}
+
+.dynamic-views .card-text-preview-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.dynamic-views .card-text-preview {
+  color: var(--dynamic-views-text-preview-color, var(--text-muted));
+  font-family: var(--dynamic-views-text-preview-font, inherit);
+  font-size: var(--dynamic-views-text-preview-font-size, var(--font-ui-small));
+  display: -webkit-box;
+  -webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: var(--line-height-tight);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  user-select: text;
+}
+
+/* Text cursor on text preview when openFileAction is 'title' */
+body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
+  cursor: text;
+}
+
+/* Make all card text selectable when openFileAction is 'title' */
+body.dynamic-views-open-on-title .dynamic-views .card-title,
+body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
+body.dynamic-views-open-on-title .dynamic-views .property-label,
+body.dynamic-views-open-on-title .dynamic-views .property-label-inline,
+body.dynamic-views-open-on-title .dynamic-views .property-content {
+  user-select: text;
+  cursor: text;
+}
+
+/* Title link: selectable text */
+body.dynamic-views-open-on-title .dynamic-views .card-title a,
+body.dynamic-views-open-on-title .dynamic-views .card-title .card-title-link {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Filename segment in file path property: selectable when openFileAction is 'title' */
+body.dynamic-views-open-on-title .dynamic-views .filename-segment {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Path separator: selectable when openFileAction is 'title' for full path copy */
+body.dynamic-views-open-on-title .dynamic-views .path-separator {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.dynamic-views .card-thumbnail {
+  flex-shrink: 0;
+  width: var(--dynamic-views-thumbnail-size, 80px);
+  height: calc(
+    var(--dynamic-views-thumbnail-size, 80px) /
+      var(--dynamic-views-image-aspect-ratio, 1)
+  );
+  overflow: hidden;
+  border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+  pointer-events: none;
+}
+
+/* Hide thumbnail placeholder by default */
+.dynamic-views .card-thumbnail-placeholder {
+  display: none;
+}
+
+/* Show thumbnail placeholder when enabled in Style Settings */
+body.dynamic-views-show-thumbnail-placeholder
+  .dynamic-views
+  .card-thumbnail-placeholder {
+  display: block;
+  flex-shrink: 0;
+  width: var(--dynamic-views-thumbnail-size, 80px);
+  height: calc(
+    var(--dynamic-views-thumbnail-size, 80px) /
+      var(--dynamic-views-image-aspect-ratio, 1)
+  );
+  border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+  background-color: var(--dynamic-views-image-background-plain);
+}
+
+/* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */
+.dynamic-views .card-thumbnail.multi-image {
+  overflow: visible; /* Allow drop-shadow to extend outside */
+}
+
+.dynamic-views .card-thumbnail.multi-image img {
+  filter: var(--drop-shadow-l-light-mode);
+  border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+}
+
+.theme-dark .dynamic-views .card-thumbnail.multi-image img {
+  filter: var(--drop-shadow-l-dark-mode);
+}
+
+.is-mobile .dynamic-views .card-thumbnail.multi-image {
+  pointer-events: none;
+}
+
+.is-mobile .dynamic-views .card-thumbnail.multi-image img {
+  filter: none;
+}
+
+/* Bottom spacing for phone to push view end indicator above mobile toolbar */
+.is-phone
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views-bases-container {
+  margin-bottom: var(--view-bottom-spacing);
+}
+
+/* Hide multi-image thumbnail shadow when setting enabled */
+body.dynamic-views-hide-thumbnail-shadow
+  .dynamic-views
+  .card-thumbnail.multi-image
+  img {
+  filter: none;
+}
+
+/* Placeholder still uses box-shadow (no img element) */
+body.dynamic-views-show-thumbnail-placeholder
+  .dynamic-views
+  .card-thumbnail-placeholder.multi-image {
+  box-shadow: var(--shadow-l-light-mode);
+}
+
+body.dynamic-views-show-thumbnail-placeholder.theme-dark
+  .dynamic-views
+  .card-thumbnail-placeholder.multi-image {
+  box-shadow: var(--shadow-l-dark-mode);
+}
+
+body.dynamic-views-show-thumbnail-placeholder.is-mobile
+  .dynamic-views
+  .card-thumbnail-placeholder.multi-image {
+  box-shadow: none;
+}
+
+body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholder
+  .dynamic-views
+  .card-thumbnail-placeholder.multi-image {
+  box-shadow: none;
+}
+
+.dynamic-views .card-thumbnail .dynamic-views-image-embed {
+  width: 100%;
+  height: 100%;
+}
+
+.dynamic-views .card-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  pointer-events: auto;
+  border-radius: 0; /* Override theme styles; container handles border-radius */
+  opacity: 0;
+  transition: opacity var(--anim-duration-fast, 140ms) ease;
+}
+
+.dynamic-views .card.cover-ready .card-thumbnail img {
+  opacity: 1;
+}
+
+/* Thumbnail contain mode */
+.dynamic-views .card.card-thumbnail-contain .card-thumbnail img {
+  object-fit: contain;
+}
+
+/* Thumbnail expand on click - Toggle mode */
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card-thumbnail
+  img {
+  cursor: zoom-in;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card-thumbnail
+  .dynamic-views-image-embed {
+  cursor: zoom-in;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover
+  .dynamic-views-image-embed {
+  cursor: zoom-in;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .dynamic-views-image-embed {
+  pointer-events: auto;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .dynamic-views-image-embed
+  img {
+  pointer-events: none;
+  cursor: zoom-in;
+}
+
+/* When image viewer disabled, images inherit card cursor (overrides third-party plugins like Image Toolkit) */
+body.dynamic-views-image-viewer-disabled
+  .dynamic-views
+  .dynamic-views-image-embed,
+body.dynamic-views-image-viewer-disabled
+  .dynamic-views
+  .dynamic-views-image-embed
+  img {
+  cursor: inherit !important;
+}

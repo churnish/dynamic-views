@@ -1,0 +1,205 @@
+/* ==================== COVER PLACEHOLDERS ==================== */
+
+/* Placeholder base styles: hidden by default, with border radius and background */
+.dynamic-views .card.image-format-cover .card-cover-placeholder {
+  display: none;
+  border-radius: var(--dynamic-views-cover-border-radius, 0);
+  background-color: var(--dynamic-views-image-background-plain);
+}
+
+/* Placeholder background: follows cover background setting */
+body.dynamic-views-cover-bg-plain
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-placeholder {
+  background-color: var(--dynamic-views-image-background-plain);
+}
+/* Custom */
+body.dynamic-views-cover-bg-custom
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-placeholder {
+  background-color: var(
+    --dynamic-views-cover-background-color-custom,
+    var(--dynamic-views-image-background-plain)
+  );
+}
+/* Transparent */
+body.dynamic-views-cover-bg-transparent
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-placeholder {
+  background-color: transparent;
+}
+
+/* Show placeholder in grid view by default (when no Style Settings class present) */
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder {
+  display: block;
+  width: 100%;
+  height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover
+  .card-cover-placeholder,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover
+  .card-cover-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Show placeholder for top/bottom covers in grid view */
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder {
+  display: block;
+  width: 100%;
+  height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Show placeholder for top/bottom covers in masonry view */
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder {
+  display: block;
+  width: 100%;
+  height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Show placeholder for left/right covers in grid view */
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover
+  .card-cover-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Show placeholder for left/right covers in masonry view */
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover
+  .card-cover-placeholder,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover
+  .card-cover-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Hide placeholder-only wrappers when placeholder shouldn't show */
+
+/* Grid view: hide when setting is "In Masonry view" or "Don't show" */
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-grid
+  .card-cover-wrapper.card-cover-wrapper-placeholder,
+body.dynamic-views-show-cover-placeholder-none
+  .dynamic-views
+  .dynamic-views-grid
+  .card-cover-wrapper.card-cover-wrapper-placeholder {
+  display: none;
+}
+
+/* Masonry view: hide when setting is "In Grid view" or "Don't show" */
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-masonry
+  .card-cover-wrapper.card-cover-wrapper-placeholder,
+body.dynamic-views-show-cover-placeholder-none
+  .dynamic-views
+  .dynamic-views-masonry
+  .card-cover-wrapper.card-cover-wrapper-placeholder {
+  display: none;
+}

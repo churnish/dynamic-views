@@ -1,0 +1,239 @@
+/* ============================================
+   SETTINGS PANEL
+   ============================================ */
+
+.dynamic-views .settings-dropdown-wrapper {
+  position: relative;
+}
+
+.dynamic-views .settings-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+  z-index: 1000;
+  min-width: 300px;
+  max-width: min(500px, calc(100vw - 16px));
+  max-height: min(500px, calc(100vh - 100px));
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.dynamic-views .settings-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--background-primary-alt);
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  text-align: left !important;
+  align-items: flex-start !important;
+  max-width: 900px;
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.dynamic-views .setting-item {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--size-2-2);
+  align-items: flex-start !important;
+  width: 100%;
+  max-width: 100%;
+  text-align: left !important;
+  box-sizing: border-box;
+}
+
+.dynamic-views .setting-item-toggle {
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.dynamic-views .setting-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  text-align: left !important;
+}
+
+.dynamic-views .setting-item label {
+  font-size: 0.9em;
+  color: var(--text-normal);
+  font-weight: 500;
+  text-align: left !important;
+}
+
+.dynamic-views .setting-item input[type="text"] {
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+  box-sizing: border-box;
+}
+
+.dynamic-views .setting-item select {
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 0.9em;
+  box-sizing: border-box;
+}
+
+.dynamic-views .setting-desc {
+  font-size: 0.8em;
+  color: var(--text-faint);
+  text-align: left !important;
+}
+
+/* Collapsible settings sections */
+.dynamic-views .settings-section {
+  width: 100%;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.dynamic-views .settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--background-secondary);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  font-size: 0.9em;
+  color: var(--text-normal);
+  border-radius: 5px 5px 0 0;
+}
+
+.dynamic-views .settings-section-header.collapsed {
+  border-radius: 5px;
+}
+
+.dynamic-views .settings-section-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.dynamic-views .settings-section-header .chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--anim-duration-fast, 140ms) ease;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.dynamic-views .settings-section-header.collapsed .chevron {
+  transform: rotate(-90deg);
+}
+
+.dynamic-views .settings-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--background-primary);
+  border-radius: 0 0 5px 5px;
+}
+
+.dynamic-views .settings-section-content.collapsed {
+  display: none;
+}
+
+.dynamic-views .slider-value {
+  min-width: 32px;
+}
+
+.dynamic-views .setting-item-text {
+  flex-direction: row !important;
+  gap: 16px;
+  align-items: flex-start !important;
+}
+
+.dynamic-views .setting-item-text .setting-item-info {
+  flex: 1;
+  min-width: 150px;
+}
+
+.dynamic-views .setting-text-input {
+  width: 180px;
+  max-width: 180px;
+  flex-shrink: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  box-sizing: border-box;
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+}
+
+.dynamic-views .dropdown {
+  width: 180px;
+  max-width: 180px;
+  flex-shrink: 1;
+}
+
+.dynamic-views .toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.dynamic-views .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.dynamic-views .toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--background-modifier-border);
+  transition: var(--anim-duration-moderate, 300ms);
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--background-primary);
+  transition: var(--anim-duration-moderate, 300ms);
+  border-radius: 50%;
+}
+
+label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
+  background-color: var(--interactive-accent) !important;
+}
+
+.dynamic-views .toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-switch:hover .toggle-slider {
+  opacity: 0.9;
+}

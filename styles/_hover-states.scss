@@ -1,0 +1,573 @@
+/* ============================================
+   HOVER COLOR RULES FOR CLICKABLE ELEMENTS
+   ============================================ */
+
+@media (hover: hover) {
+  /* Title hover colors (when open-on-title enabled) */
+  body.dynamic-views-open-on-title.dynamic-views-title-color-faint
+    .dynamic-views
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-open-on-title.dynamic-views-title-color-muted
+    .dynamic-views
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-normal);
+  }
+  /* Normal - no hover color change */
+  body.dynamic-views-open-on-title.dynamic-views-title-color-accent
+    .dynamic-views
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-accent-hover);
+  }
+  /* Title color variants (red-pink, custom): 15% white mix using --dynamic-views-title-color-value */
+  body.dynamic-views-open-on-title:is(
+      .dynamic-views-title-color-red,
+      .dynamic-views-title-color-orange,
+      .dynamic-views-title-color-yellow,
+      .dynamic-views-title-color-green,
+      .dynamic-views-title-color-cyan,
+      .dynamic-views-title-color-blue,
+      .dynamic-views-title-color-purple,
+      .dynamic-views-title-color-pink,
+      .dynamic-views-title-color-custom
+    )
+    .dynamic-views
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: color-mix(in hsl, var(--dynamic-views-title-color-value), white 15%);
+  }
+
+  /* Subtitle hover colors (when clickable) — exclude real links which keep default hover */
+  body.dynamic-views-subtitle-color-faint
+    .dynamic-views
+    .card-subtitle
+    :is(
+      a:not(.internal-link, .external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-subtitle-color-muted
+    .dynamic-views
+    .card-subtitle
+    :is(
+      a:not(.internal-link, .external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-normal);
+  }
+  /* Normal - no hover color change */
+  body.dynamic-views-subtitle-color-accent
+    .dynamic-views
+    .card-subtitle
+    :is(
+      a:not(.internal-link, .external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-accent-hover);
+  }
+  /* Subtitle color variants: 15% white mix using --dynamic-views-subtitle-color-value */
+  body:is(
+      .dynamic-views-subtitle-color-red,
+      .dynamic-views-subtitle-color-orange,
+      .dynamic-views-subtitle-color-yellow,
+      .dynamic-views-subtitle-color-green,
+      .dynamic-views-subtitle-color-cyan,
+      .dynamic-views-subtitle-color-blue,
+      .dynamic-views-subtitle-color-purple,
+      .dynamic-views-subtitle-color-pink,
+      .dynamic-views-subtitle-color-custom
+    )
+    .dynamic-views
+    .card-subtitle
+    :is(
+      a:not(.internal-link, .external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(
+      in hsl,
+      var(--dynamic-views-subtitle-color-value),
+      white 15%
+    );
+  }
+
+  /* Property hover colors - with labels */
+  body.dynamic-views-property-color-with-labels-faint
+    .dynamic-views
+    .property:has(:is(.property-label, .property-label-inline))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-property-color-with-labels-muted
+    .dynamic-views
+    .property:has(:is(.property-label, .property-label-inline))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-normal);
+  }
+  /* Normal - no hover color change */
+  body.dynamic-views-property-color-with-labels-accent
+    .dynamic-views
+    .property:has(:is(.property-label, .property-label-inline))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-accent-hover);
+  }
+  /* Property with labels color variants: 15% white mix using --dynamic-views-property-with-label-color-value */
+  body:is(
+      .dynamic-views-property-color-with-labels-red,
+      .dynamic-views-property-color-with-labels-orange,
+      .dynamic-views-property-color-with-labels-yellow,
+      .dynamic-views-property-color-with-labels-green,
+      .dynamic-views-property-color-with-labels-cyan,
+      .dynamic-views-property-color-with-labels-blue,
+      .dynamic-views-property-color-with-labels-purple,
+      .dynamic-views-property-color-with-labels-pink
+    )
+    .dynamic-views
+    .property:has(:is(.property-label, .property-label-inline))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(
+      in hsl,
+      var(--dynamic-views-property-with-label-color-value),
+      white 15%
+    );
+  }
+  /* Custom uses pre-computed hover variable */
+  body.dynamic-views-property-color-with-labels-custom
+    .dynamic-views
+    .property:has(:is(.property-label, .property-label-inline))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(
+      --dynamic-views-property-color-with-labels-custom-hover,
+      var(--text-muted)
+    );
+  }
+
+  /* Property hover colors - without labels */
+  body.dynamic-views-property-color-without-labels-faint
+    .dynamic-views
+    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-property-color-without-labels-muted
+    .dynamic-views
+    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-normal);
+  }
+  /* Normal - no hover color change */
+  body.dynamic-views-property-color-without-labels-accent
+    .dynamic-views
+    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(--text-accent-hover);
+  }
+  /* Property without labels color variants: 15% white mix using --dynamic-views-property-no-label-color-value */
+  body:is(
+      .dynamic-views-property-color-without-labels-red,
+      .dynamic-views-property-color-without-labels-orange,
+      .dynamic-views-property-color-without-labels-yellow,
+      .dynamic-views-property-color-without-labels-green,
+      .dynamic-views-property-color-without-labels-cyan,
+      .dynamic-views-property-color-without-labels-blue,
+      .dynamic-views-property-color-without-labels-purple,
+      .dynamic-views-property-color-without-labels-pink
+    )
+    .dynamic-views
+    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: color-mix(
+      in hsl,
+      var(--dynamic-views-property-no-label-color-value),
+      white 15%
+    );
+  }
+  /* Custom uses pre-computed hover variable */
+  body.dynamic-views-property-color-without-labels-custom
+    .dynamic-views
+    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property-content
+    :is(
+      a:not(.tag):not(.internal-link):not(.external-link),
+      .folder-segment,
+      .filename-segment
+    ):hover {
+    color: var(
+      --dynamic-views-property-color-without-labels-custom-hover,
+      var(--text-muted)
+    );
+  }
+}
+
+/* Even fields (right side) - label after content */
+.dynamic-views .property-pair .pair-right .property-label-inline {
+  order: 2;
+}
+
+/* Even fields (right side) - content before label */
+.dynamic-views .property-pair .pair-right .property-content {
+  order: 1;
+}
+
+/* Odd fields (left side) - left-aligned labels */
+.dynamic-views .property-pair .pair-left .property-label {
+  text-align: left;
+}
+
+/* Even fields (right side) - right-aligned labels */
+.dynamic-views .property-pair .pair-right .property-label {
+  text-align: right;
+}
+
+/* Universal property-content wrapper */
+.dynamic-views .property-content {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-height: var(--dynamic-views-property-content-height, 20px);
+  color: inherit;
+  min-width: 0;
+  flex: 0 0 auto;
+  width: max-content;
+}
+
+/* Empty value marker styling - 0.6 opacity of property value color */
+.dynamic-views .property-content > span.empty-value-marker {
+  color: inherit;
+  opacity: 0.6;
+}
+
+/* Checkbox property - remove extra padding */
+.dynamic-views .property-content > .metadata-input-checkbox {
+  margin: 0;
+  padding: 0;
+}
+
+/* Even fields (right side) - content should fill wrapper width for proper alignment */
+.dynamic-views .property-pair .pair-right .property-content {
+  min-width: 100%;
+  width: max-content;
+  justify-content: flex-end;
+}
+
+/* Array list wrapper - ensure items display inline */
+.dynamic-views .property-content .list-wrapper {
+  display: inline;
+}
+
+.dynamic-views .property-content .list-wrapper > span {
+  display: inline;
+}
+
+.dynamic-views .property-content .list-item {
+  display: inline;
+}
+
+.dynamic-views .property-content .list-separator {
+  display: inline;
+}
+
+/* List separator styling - 0.6 opacity of property value color */
+.dynamic-views .list-separator {
+  color: inherit;
+  opacity: 0.6;
+}
+
+/* Alignment via justify-content on property-content wrapper */
+/* Odd fields (left side) */
+.dynamic-views .property-pair .pair-left .property-content {
+  justify-content: flex-start;
+}
+
+/* Even fields (right side) - align content right when not scrollable */
+.dynamic-views
+  .property-pair
+  .pair-right:not(.is-scrollable)
+  .property-content-wrapper {
+  justify-content: flex-end;
+}
+
+/* Even fields (right side) - align content left when scrollable */
+.dynamic-views
+  .property-pair
+  .pair-right.is-scrollable
+  .property-content-wrapper {
+  justify-content: flex-start;
+}
+
+/* Left alignment for right-side properties */
+.dynamic-views:is(
+    .dynamic-views-paired-property-left,
+    .dynamic-views-paired-property-column
+  )
+  .property-pair
+  .pair-right
+  .property-content-wrapper {
+  justify-content: flex-start;
+}
+
+.dynamic-views:is(
+    .dynamic-views-paired-property-left,
+    .dynamic-views-paired-property-column
+  )
+  .property-pair
+  .pair-right
+  .property-content {
+  justify-content: flex-start;
+  order: 0;
+}
+
+.dynamic-views:is(
+    .dynamic-views-paired-property-left,
+    .dynamic-views-paired-property-column
+  )
+  .property-pair
+  .pair-right
+  .property-label {
+  text-align: left;
+}
+
+/* Reset inline property label order to place label before content */
+.dynamic-views:is(
+    .dynamic-views-paired-property-left,
+    .dynamic-views-paired-property-column
+  )
+  .property-pair
+  .pair-right
+  .property-label-inline {
+  order: 0;
+}
+
+/* Stacked layout (unpaired properties are direct children of card-properties) */
+.dynamic-views .card-properties > .property .property-content {
+  justify-content: flex-start;
+}
+
+/* Hide scrollbar for side-by-side fields */
+.dynamic-views .property-pair .property::-webkit-scrollbar {
+  display: none;
+}
+
+/* Gradient masks for scrollable content (ON by default) */
+.dynamic-views .property-content-wrapper.scroll-gradient-left,
+.dynamic-views .card-subtitle.scroll-gradient-left,
+.dynamic-views .card-title.scroll-gradient-left {
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+}
+
+.dynamic-views .property-content-wrapper.scroll-gradient-right,
+.dynamic-views .card-subtitle.scroll-gradient-right,
+.dynamic-views .card-title.scroll-gradient-right {
+  mask-image: linear-gradient(
+    to right,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.dynamic-views .property-content-wrapper.scroll-gradient-both,
+.dynamic-views .card-subtitle.scroll-gradient-both,
+.dynamic-views .card-title.scroll-gradient-both {
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* Remove gradient masks when toggle ON */
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .property-content-wrapper.scroll-gradient-left,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .property-content-wrapper.scroll-gradient-right,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .property-content-wrapper.scroll-gradient-both,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-subtitle.scroll-gradient-left,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-subtitle.scroll-gradient-right,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-subtitle.scroll-gradient-both,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-title.scroll-gradient-left,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-title.scroll-gradient-right,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card-title.scroll-gradient-both,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card.image-format-poster
+  .card-body.scroll-gradient-top,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card.image-format-poster
+  .card-body.scroll-gradient-bottom,
+body.dynamic-views-no-fade-truncated-text
+  .dynamic-views
+  .card.image-format-poster
+  .card-body.scroll-gradient-vertical-both {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* Vertical gradient masks for poster card body scroll */
+.dynamic-views .card.image-format-poster .card-body.scroll-gradient-top {
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black 100%
+  );
+}
+
+.dynamic-views .card.image-format-poster .card-body.scroll-gradient-bottom {
+  mask-image: linear-gradient(
+    to bottom,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.dynamic-views
+  .card.image-format-poster
+  .card-body.scroll-gradient-vertical-both {
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.3) 4px,
+    black 28px,
+    black calc(100% - 28px),
+    rgba(0, 0, 0, 0.3) calc(100% - 4px),
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* Hide empty fields */
+.dynamic-views .property:empty {
+  display: none;
+}

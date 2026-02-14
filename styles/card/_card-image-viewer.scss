@@ -1,0 +1,154 @@
+/* Image viewer clone (appended to body with is-zoomed class) */
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed {
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50; /* Below Obsidian's notice layer */
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: auto;
+  /* Isolate from document: child transform changes won't trigger full-page style recalc */
+  contain: strict;
+}
+
+/* Ensure drag ghost appears above image viewer overlay */
+body:has(.dynamic-views-image-embed.is-zoomed) {
+  --layer-dragged-item: 51;
+}
+
+/* Constrained mode: overlay styling (desktop, fullscreen toggle off) */
+body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
+    .dynamic-views-image-viewer-fullscreen
+  )
+  > .dynamic-views-image-embed.is-zoomed {
+  background: color-mix(
+    in srgb,
+    var(--background-primary) calc(var(--overlay-opacity, 0.4) * 100%),
+    transparent
+  );
+  transition: background var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Constrained mode: solid background when maximized */
+body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
+    .dynamic-views-image-viewer-fullscreen
+  )
+  > .dynamic-views-image-embed.is-zoomed.is-maximized {
+  background: var(--background-primary);
+}
+
+/* Hide mobile navbar when fullscreen image viewer is active (mobile is always fullscreen) */
+body.is-mobile:has(.dynamic-views-image-embed.is-zoomed) .mobile-navbar {
+  display: none;
+}
+
+/* Fullscreen image viewer: mobile (always) or desktop with toggle on */
+body:not(.dynamic-views-image-viewer-disabled).is-mobile
+  > .dynamic-views-image-embed.is-zoomed,
+body:not(
+    .dynamic-views-image-viewer-disabled
+  ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
+  > .dynamic-views-image-embed.is-zoomed {
+  background: var(--background-modifier-cover);
+  position: fixed;
+  transition: background var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Fullscreen mode: solid background when maximized */
+body:not(.dynamic-views-image-viewer-disabled).is-mobile
+  > .dynamic-views-image-embed.is-zoomed.is-maximized,
+body:not(
+    .dynamic-views-image-viewer-disabled
+  ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
+  > .dynamic-views-image-embed.is-zoomed.is-maximized {
+  background: var(--background-primary);
+}
+
+/* Scale image when maximized with panzoom disabled (desktop fullscreen only) */
+body.dynamic-views-zoom-disabled.dynamic-views-image-viewer-fullscreen:not(
+    .is-mobile
+  )
+  > .dynamic-views-image-embed.is-zoomed.is-maximized
+  img {
+  max-height: 100vh;
+  max-width: 100vw;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  img {
+  padding: 0;
+  margin: 0;
+  width: auto;
+  height: auto;
+  max-height: 100vh;
+  max-width: 100vw;
+  object-fit: contain;
+  opacity: 1;
+  border-radius: 0;
+  /* Pre-promote to compositor layer so panzoom transform changes
+     bypass main-thread Layerize (80ms→<1ms per frame) */
+  will-change: transform;
+  transition:
+    max-height var(--anim-duration-fast, 140ms) ease,
+    max-width var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Limit zoomed images to 90% viewport (desktop) / 80vh height (mobile, width inherits 100vw from base) */
+body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
+  > .dynamic-views-image-embed.is-zoomed
+  img {
+  max-height: 90vh;
+  max-width: 90vw;
+}
+body:not(.dynamic-views-image-viewer-disabled).is-mobile
+  > .dynamic-views-image-embed.is-zoomed
+  img {
+  max-height: 80vh;
+}
+
+/* Constrained mode (desktop, toggle off): limit to 90% of view */
+body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
+    .dynamic-views-image-viewer-fullscreen
+  )
+  > .dynamic-views-image-embed.is-zoomed
+  img {
+  max-height: 90%;
+  max-width: 90%;
+}
+
+/* Constrained mode maximized (desktop, panzoom disabled): scale to 100% */
+body.dynamic-views-zoom-disabled:not(.is-mobile):not(
+    .dynamic-views-image-viewer-fullscreen
+  )
+  > .dynamic-views-image-embed.is-zoomed.is-maximized
+  img {
+  max-height: 100%;
+  max-width: 100%;
+}
+
+/* Disable drag in fullscreen mode */
+body.is-mobile > .dynamic-views-image-embed.is-zoomed img,
+body.dynamic-views-image-viewer-fullscreen
+  > .dynamic-views-image-embed.is-zoomed
+  img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  user-select: none;
+}
+
+/* Allow drag when Alt is held (is-alt-drag class added by JS) */
+/* !important overrides Panzoom's inline cursor: move */
+.dynamic-views-image-embed.is-zoomed.is-alt-drag img {
+  -webkit-user-drag: auto;
+  user-drag: auto;
+  cursor: default !important;
+}

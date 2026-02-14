@@ -1,0 +1,47 @@
+// Dynamic Views — SCSS entry point.
+// All partials loaded in dependency order.
+
+// Settings block (Style Settings plugin YAML) — must be first.
+@use "settings-block";
+
+// Foundation.
+@use "variables";
+@use "accessibility";
+@use "layout";
+
+// Controls.
+@use "toolbar";
+@use "query-editor";
+@use "settings-panel";
+@use "search";
+
+// Card view.
+@use "card/grid";
+@use "card/card-base";
+@use "card/card-content";
+@use "card/card-header";
+@use "card/card-thumbnail";
+@use "card/card-image-viewer";
+@use "card/card-masonry-covers";
+
+// Image formats.
+@use "cover-format";
+@use "cover-elements";
+@use "cover-placeholders";
+@use "side-cover-spacing";
+@use "backdrop-poster-shared";
+@use "background-format";
+@use "poster-format";
+@use "slideshow";
+
+// Data display.
+@use "properties";
+@use "hover-states";
+
+// View types.
+@use "masonry";
+@use "list-view";
+
+// Overrides.
+@use "responsive";
+@use "utilities";

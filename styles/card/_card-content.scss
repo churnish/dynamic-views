@@ -1,0 +1,77 @@
+/* Thumbnail-top: column layout with thumbnail first */
+.dynamic-views .card.card-thumbnail-top .card-previews {
+  flex-direction: column;
+}
+
+.dynamic-views .card.card-thumbnail-top .card-previews .card-thumbnail {
+  order: -1;
+}
+
+/* Thumbnail-bottom: column layout, content aligned to top */
+.dynamic-views .card.card-thumbnail-bottom .card-previews {
+  flex-direction: column;
+}
+
+.dynamic-views
+  .card.card-thumbnail-bottom
+  .card-previews
+  .card-text-preview-wrapper {
+  flex: 0 1 auto;
+}
+
+/* Card border color on hover presets */
+@media (hover: hover) {
+  /* Normal (default) — body class needed for specificity over border presets */
+  body.dynamic-views-card-border-color-hover-normal .dynamic-views .card:hover {
+    --card-border-color: var(--background-modifier-border-focus);
+  }
+  body.dynamic-views-card-border-color-hover-faint .dynamic-views .card:hover {
+    --card-border-color: var(--background-modifier-border);
+  }
+  body.dynamic-views-card-border-color-hover-muted .dynamic-views .card:hover {
+    --card-border-color: var(--background-modifier-border-hover);
+  }
+  body.dynamic-views-card-border-color-hover-accent .dynamic-views .card:hover {
+    --card-border-color: var(--text-accent);
+  }
+  body.dynamic-views-card-border-color-hover-red .dynamic-views .card:hover {
+    --card-border-color: var(--color-red);
+  }
+  body.dynamic-views-card-border-color-hover-orange .dynamic-views .card:hover {
+    --card-border-color: var(--color-orange);
+  }
+  body.dynamic-views-card-border-color-hover-yellow .dynamic-views .card:hover {
+    --card-border-color: var(--color-yellow);
+  }
+  body.dynamic-views-card-border-color-hover-green .dynamic-views .card:hover {
+    --card-border-color: var(--color-green);
+  }
+  body.dynamic-views-card-border-color-hover-cyan .dynamic-views .card:hover {
+    --card-border-color: var(--color-cyan);
+  }
+  body.dynamic-views-card-border-color-hover-blue .dynamic-views .card:hover {
+    --card-border-color: var(--color-blue);
+  }
+  body.dynamic-views-card-border-color-hover-purple .dynamic-views .card:hover {
+    --card-border-color: var(--color-purple);
+  }
+  body.dynamic-views-card-border-color-hover-pink .dynamic-views .card:hover {
+    --card-border-color: var(--color-pink);
+  }
+  body.dynamic-views-card-border-color-hover-transparent
+    .dynamic-views
+    .card:hover {
+    --card-border-color: transparent;
+  }
+  body.dynamic-views-card-border-color-hover-transparent
+    .dynamic-views
+    .card:hover::after {
+    box-shadow: none;
+  }
+  body.dynamic-views-card-border-color-hover-custom .dynamic-views .card:hover {
+    --card-border-color: var(
+      --dynamic-views-card-border-color-hover-custom,
+      var(--background-modifier-border-focus)
+    );
+  }
+}

@@ -1,0 +1,71 @@
+/* ============================================
+   COLOR VARIABLES
+   ============================================ */
+
+/* Derived CSS variables and custom color compositions */
+body {
+  /* Clamp thumbnail aspect ratio to 0.5-2.0 range */
+  --dynamic-views-thumbnail-aspect-ratio: clamp(
+    0.5,
+    var(--dynamic-views-image-aspect-ratio, 1),
+    2
+  );
+  --dynamic-views-list-separator: ", ";
+  --dynamic-views-empty-value-marker: "—";
+  /* Custom colors from HSL components (when undefined, falls back) */
+  --dynamic-views-property-color-with-labels-custom: hsl(
+    var(--dynamic-views-property-color-with-labels-custom-h),
+    var(--dynamic-views-property-color-with-labels-custom-s),
+    var(--dynamic-views-property-color-with-labels-custom-l)
+  );
+  --dynamic-views-property-color-with-labels-custom-hover: hsl(
+    calc(var(--dynamic-views-property-color-with-labels-custom-h) - 3),
+    calc(var(--dynamic-views-property-color-with-labels-custom-s) * 1.02),
+    calc(var(--dynamic-views-property-color-with-labels-custom-l) * 1.15)
+  );
+  --dynamic-views-property-color-without-labels-custom: hsl(
+    var(--dynamic-views-property-color-without-labels-custom-h),
+    var(--dynamic-views-property-color-without-labels-custom-s),
+    var(--dynamic-views-property-color-without-labels-custom-l)
+  );
+  --dynamic-views-property-color-without-labels-custom-hover: hsl(
+    calc(var(--dynamic-views-property-color-without-labels-custom-h) - 3),
+    calc(var(--dynamic-views-property-color-without-labels-custom-s) * 1.02),
+    calc(var(--dynamic-views-property-color-without-labels-custom-l) * 1.15)
+  );
+  --dynamic-views-tag-color-custom: hsl(
+    var(--dynamic-views-tag-color-custom-h),
+    var(--dynamic-views-tag-color-custom-s),
+    var(--dynamic-views-tag-color-custom-l)
+  );
+  --dynamic-views-tag-color-custom-hover: hsl(
+    calc(var(--dynamic-views-tag-color-custom-h) - 3),
+    calc(var(--dynamic-views-tag-color-custom-s) * 1.02),
+    calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
+  );
+  /* Plain background for covers/thumbnails without images */
+  --dynamic-views-image-background-plain: #eeeeee;
+}
+.theme-dark {
+  --dynamic-views-image-background-plain: #1a1a1a;
+}
+
+/* Appearance section description styling */
+.dynamic-views-appearance-group .setting-item-description {
+  padding-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:first-child {
+  margin-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:last-child {
+  margin-bottom: 0;
+}
+
+.dynamic-views-appearance-group .setting-items {
+  margin-bottom: 0;
+  background-color: transparent;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+}

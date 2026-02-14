@@ -1,0 +1,129 @@
+/* ==================== BACKDROP + POSTER SHARED ==================== */
+
+/* Shared base styles for fullbleed image formats (backdrop + poster) */
+.dynamic-views .card.image-format-backdrop {
+  position: relative;
+  overflow: hidden;
+  --backdrop-inset: 1px;
+}
+
+.dynamic-views .card.image-format-poster {
+  position: relative;
+  overflow: hidden;
+  --poster-inset: 1px;
+}
+
+/* Poster: constrain height so .card-body can scroll.
+   overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
+   without clipping its border-radius. */
+.dynamic-views .card.image-format-poster .card-content {
+  overflow: clip;
+  overflow-clip-margin: 4px;
+}
+
+.dynamic-views .card.image-format-poster .card-body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+/* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
+.dynamic-views .card.image-format-poster .card-body > * {
+  flex-shrink: 0;
+}
+
+.dynamic-views .card.image-format-poster .card-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Desktop: scroll gated by hover intent to prevent capturing view scroll */
+@media (hover: hover) {
+  .dynamic-views .card.image-format-poster .card-body {
+    overflow-y: hidden;
+  }
+
+  .dynamic-views .card.image-format-poster.poster-hover-active .card-body {
+    overflow-y: auto;
+  }
+}
+
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster
+  .card-body {
+  overflow-y: hidden;
+}
+
+/* No scroll = no scroll gradient (false affordance) */
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster
+  .card-body:is(
+    .scroll-gradient-top,
+    .scroll-gradient-bottom,
+    .scroll-gradient-vertical-both
+  ) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.dynamic-views .card.image-format-backdrop .card-backdrop {
+  position: absolute;
+  inset: calc(var(--backdrop-inset) - var(--dynamic-views-card-padding, 8px));
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dynamic-views .card.image-format-poster .card-poster {
+  position: absolute;
+  inset: calc(var(--poster-inset) - var(--dynamic-views-card-padding, 8px));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Transparent border = no inset */
+body.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-backdrop {
+  --backdrop-inset: 0px;
+}
+
+body.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-poster {
+  --poster-inset: 0px;
+}
+
+.dynamic-views
+  .card:is(.image-format-backdrop, .image-format-poster)
+  :is(.card-backdrop, .card-poster)
+  img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity var(--anim-duration-fast, 140ms) ease;
+}
+
+.dynamic-views
+  .card:is(.image-format-backdrop, .image-format-poster).cover-ready
+  :is(.card-backdrop, .card-poster)
+  img {
+  opacity: 1;
+}
+
+.dynamic-views .card.image-format-poster.card-cover-contain .card-poster img {
+  object-fit: contain;
+}
+
+/* Card content stacks above background image */
+.dynamic-views
+  .card:is(.image-format-backdrop, .image-format-poster)
+  .card-content {
+  position: relative;
+  z-index: 1;
+}

@@ -1,0 +1,116 @@
+/* ============================================
+   QUERY EDITOR
+   ============================================ */
+
+.dynamic-views .query-dropdown-wrapper {
+  position: relative;
+}
+
+.dynamic-views .query-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+  z-index: 1000;
+  min-width: 400px;
+  max-width: min(675px, calc(100vw - 16px));
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.dynamic-views .query-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--background-primary-alt);
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: 0;
+  box-sizing: border-box;
+}
+
+.dynamic-views .query-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.9em;
+  font-family: var(--font-monospace);
+  resize: none;
+  overflow: hidden;
+  min-height: 32px;
+}
+
+.dynamic-views .query-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.dynamic-views .query-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 0.9em;
+  transition:
+    background-color var(--anim-duration-fast, 140ms),
+    border-color var(--anim-duration-fast, 140ms);
+}
+
+.query-btn:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.dynamic-views .query-apply-btn {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.dynamic-views .query-apply-btn:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+.dynamic-views .query-clear-btn {
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  border-color: var(--background-modifier-border);
+}
+
+.dynamic-views .query-clear-btn:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.dynamic-views .query-tip {
+  font-size: 0.8em;
+  color: var(--text-faint);
+  flex: 1;
+  text-align: left;
+}
+
+.dynamic-views .query-error {
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 16px 0;
+  padding: 0;
+  color: var(--text-muted);
+  overflow-x: auto;
+}

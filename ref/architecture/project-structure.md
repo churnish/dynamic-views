@@ -3,8 +3,8 @@
 ```
 dynamic-views/
 |-- main.ts                            # Plugin entry point — registers views, commands, API
-|-- styles.css                         # All plugin CSS
-|-- esbuild.config.mjs                 # Build config
+|-- styles.css                         # Compiled CSS (build artifact, gitignored)
+|-- esbuild.config.mjs                 # Build config (JS/TS only)
 |-- eslint.config.js                   # Lint rules (obsidianmd plugin)
 |-- jest.config.cjs                    # Test config (ts-jest, jsdom)
 |-- version-bump.mjs                   # Version bump + lint pre-check
@@ -102,6 +102,39 @@ dynamic-views/
 |           |-- storage.test.ts
 |           |-- style-settings.test.ts
 |           \-- text-preview.test.ts
+|
+|-- styles/                            # SCSS source (compiled to styles.css)
+|     |-- main.scss                    # Entry point — @use's all partials in order
+|     |-- _settings-block.scss         # @settings YAML comment block (Style Settings)
+|     |-- _variables.scss              # Derived CSS custom properties
+|     |-- _accessibility.scss          # Focus rings, focus-visible
+|     |-- _layout.scss                 # Container queries, width system, scroll fade
+|     |-- _toolbar.scss                # Toolbar, dropdowns, buttons, visibility toggles
+|     |-- _query-editor.scss           # Query dropdown and editor
+|     |-- _settings-panel.scss         # Settings UI panel
+|     |-- _search.scss                 # Search controls
+|     |-- card/                        # Card view partials
+|     |     |-- _grid.scss             # Grid layout, groups, subgrid
+|     |     |-- _card-base.scss        # Card container, borders, backgrounds
+|     |     |-- _card-content.scss     # Thumbnail position layouts
+|     |     |-- _card-header.scss      # Title, subtitle, file type indicators
+|     |     |-- _card-thumbnail.scss   # Thumbnail sizing, crop/contain modes
+|     |     |-- _card-image-viewer.scss # Image viewer overlay, panzoom
+|     |     \-- _card-masonry-covers.scss # Masonry cover height variants
+|     |-- _cover-format.scss           # Cover flexbox system, wrapper positioning
+|     |-- _cover-elements.scss         # Cover element styling, cover-content border
+|     |-- _cover-placeholders.scss     # Placeholder/skeleton styles
+|     |-- _side-cover-spacing.scss     # Side cover layout adjustments
+|     |-- _backdrop-poster-shared.scss # Shared backdrop/poster base
+|     |-- _background-format.scss      # Background image format
+|     |-- _poster-format.scss          # Poster image format
+|     |-- _slideshow.scss              # Slideshow animations
+|     |-- _properties.scss             # Property row system
+|     |-- _hover-states.scss           # Hover color rules
+|     |-- _masonry.scss                # Masonry-specific styles
+|     |-- _list-view.scss              # List view styles
+|     |-- _responsive.scss             # Compact viewport, mobile overrides
+|     \-- _utilities.scss              # Utility classes
 |
 |-- ref/                               # Reference docs (files not listed here)
 |-- archive/                           # Archived code (files not listed here)

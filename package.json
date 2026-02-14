@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "css": "sass styles/main.scss styles.css --style=expanded --no-source-map",
+    "css:watch": "sass styles/main.scss styles.css --style=expanded --no-source-map --watch",
+    "build": "npm run css && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json",
     "postversion": "git push origin main --follow-tags --force",
     "release": "npm version",
@@ -17,7 +19,8 @@
   },
   "knip": {
     "ignore": [
-      "archive/**"
+      "archive/**",
+      "styles/**"
     ],
     "ignoreDependencies": [
       "moment"
@@ -39,6 +42,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "knip": "^5.79.0",
     "obsidian": "^1.11.0",
+    "sass": "^1.97.3",
     "ts-jest": "^29.1.1",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",

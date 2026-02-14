@@ -1,0 +1,86 @@
+/* ============================================
+   SEARCH CONTROLS
+   ============================================ */
+
+.dynamic-views .search-controls {
+  flex: 1;
+  transition:
+    opacity var(--anim-duration-moderate, 300ms) ease,
+    flex var(--anim-duration-moderate, 300ms) ease,
+    margin var(--anim-duration-moderate, 300ms) ease;
+  overflow: hidden;
+  margin: 0 -3px;
+  max-width: 400px;
+}
+
+.dynamic-views .search-input-container {
+  position: relative;
+  flex: 1;
+  --search-icon-size: 16px;
+  --search-icon-color: var(--text-normal);
+  padding: 2px 3px;
+}
+
+.dynamic-views .search-input-container:before {
+  display: none;
+}
+
+.dynamic-views .search-input-loupe-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dynamic-views .desktop-search {
+  width: 100%;
+  padding: 6px 28px 6px 32px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--text-normal);
+  font-size: 0.9em;
+  transition: all var(--anim-duration-fast, 140ms);
+  height: 30px;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.dynamic-views .search-input-clear-button {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0.7;
+  transition:
+    opacity var(--anim-duration-fast, 140ms),
+    color var(--anim-duration-fast, 140ms);
+  display: block;
+}
+
+.search-input-clear-button:hover {
+  opacity: 1;
+  color: var(--text-normal);
+}
+
+.desktop-search:hover {
+  border-color: var(--text-muted);
+}
+
+.desktop-search:focus {
+  border-color: var(--interactive-accent);
+}
+
+.dynamic-views .desktop-search::placeholder {
+  color: var(--text-faint);
+}

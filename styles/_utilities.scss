@@ -1,0 +1,218 @@
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+@media (hover: hover) {
+  .markdown-source-view.mod-cm6
+    .cm-embed-block:not(.cm-table-widget, .cm-lang-base):has(
+      .dynamic-views
+    ):hover {
+    box-shadow: none;
+  }
+  .markdown-source-view.mod-cm6
+    .cm-embed-block:not(.cm-table-widget, .cm-lang-base):has(
+      .dynamic-views
+    ):hover
+    .edit-block-button {
+    display: none;
+  }
+}
+
+/* Hidden utility class */
+.dynamic-views-hidden {
+  display: none;
+}
+
+/* Indented sub-settings */
+.setting-sub-items {
+  margin-inline-start: 20px;
+  padding-left: 1em;
+  position: relative;
+}
+
+.setting-sub-items::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+/* Add padding only when visible and not last.
+   Currently inactive as sub-items is last child; retained for future structure changes. */
+.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
+  padding-bottom: var(--size-4-4, 16px);
+}
+
+.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item)::before {
+  bottom: var(--size-4-4, 16px);
+}
+
+/* Remove bottom padding from setting when sub-items hidden and last in group */
+.setting-items
+  > .setting-item:has(+ .setting-sub-items.dynamic-views-hidden:last-child) {
+  padding-bottom: 0;
+}
+
+/* Feedback button */
+.dynamic-views-feedback-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 20px;
+  margin-bottom: 0;
+  padding: var(--size-2-2) 0;
+  overflow: visible;
+}
+
+.dynamic-views-feedback-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--size-4-2);
+  line-height: 1;
+}
+
+/* Hide scrollbar during scroll restoration (prevents distracting flicker) */
+.dynamic-views-restoring-scroll {
+  scrollbar-width: none !important;
+}
+.dynamic-views-restoring-scroll::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* End of content indicator */
+.dynamic-views-end-indicator {
+  width: 100%;
+  margin-top: var(--size-4-4);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+body:not(.is-mobile) .dynamic-views-end-indicator {
+  height: 31px;
+}
+
+body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
+  display: none;
+}
+
+/* Conditional Style Settings visibility */
+body:not(.dynamic-views-card-background-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-background-color-custom"],
+body:not(.dynamic-views-card-background-hover-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-background-color-hover-custom"],
+body:not(.dynamic-views-card-border-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-border-color-custom"],
+body:not(.dynamic-views-card-border-color-hover-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-border-color-hover-custom"],
+body:not(.dynamic-views-cover-bg-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-cover-background-color-custom"],
+body.dynamic-views-image-viewer-disabled
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-image-viewer-disabled"]
+  ~ .setting-item,
+body:not(.dynamic-views-property-color-with-labels-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-color-with-labels-custom"],
+body:not(.dynamic-views-property-color-without-labels-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-color-without-labels-custom"],
+body:not(.dynamic-views-property-label-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-label-color-custom"],
+body.dynamic-views-slideshow-disabled
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-slideshow-disabled"]
+  ~ .setting-item,
+body:not(.dynamic-views-subtitle-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-subtitle-color-custom"],
+body.dynamic-views-file-type-none
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-hidden-file-extensions"],
+body.dynamic-views-tag-style-theme
+  .style-settings-container
+  .setting-item:is(
+    [data-id="dynamic-views-tag-color"],
+    [data-id="dynamic-views-tag-color-custom"]
+  ),
+body:not(.dynamic-views-tag-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-tag-color-custom"],
+body:not(.dynamic-views-text-preview-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-text-preview-color-custom"],
+body.dynamic-views-cover-circular
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-cover-border-radius"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-spacing-desktop"],
+body:not(.is-mobile)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-spacing-mobile"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-image-viewer-fullscreen"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-zoom-sensitivity"],
+body.dynamic-views-disable-thumbnail-scrubbing
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-hide-thumbnail-shadow"],
+body:not(.dynamic-views-title-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-title-color-custom"],
+body.dynamic-views-poster-mode-gradient
+  .style-settings-container
+  .setting-item:is(
+    [data-id="dynamic-views-poster-overlay-tint"],
+    [data-id="dynamic-views-poster-overlay-light"],
+    [data-id="dynamic-views-poster-overlay-dark"],
+    [data-id="dynamic-views-poster-overlay-blur"]
+  ) {
+  display: none !important;
+}
+
+/* Overlay mode: hide irrelevant strength slider based on tint */
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-light"],
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-dark"] {
+  display: none !important;
+}
+
+/* Utility classes for programmatic style changes (replaces inline style manipulation) */
+.dynamic-views-height-preserved {
+  min-height: var(--dynamic-views-preserve-height);
+}
+.dynamic-views-indicator-hidden {
+  opacity: 0;
+}
+.dynamic-views-viewer-fixed {
+  position: fixed;
+  inset: auto;
+}
+.dynamic-views-viewer-behind-modal {
+  z-index: 0;
+}
+.dynamic-views-menu-positioning {
+  visibility: hidden;
+}
+.dynamic-views-query-results-constrained {
+  max-height: var(--dynamic-views-query-max-height);
+  overflow-y: auto;
+}
+.dynamic-views .query-input {
+  height: var(--dynamic-views-query-height, auto);
+}

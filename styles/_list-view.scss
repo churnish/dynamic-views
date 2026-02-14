@@ -1,0 +1,64 @@
+/* ============================================
+   VIEW-SPECIFIC STYLES: LIST VIEW
+   ============================================ */
+
+.dynamic-views .list-view {
+  margin: 0;
+  padding-left: 0;
+}
+
+.dynamic-views .list-view.marker-bullet {
+  list-style-type: disc !important;
+  list-style-position: outside;
+  padding-left: 20px;
+}
+
+.dynamic-views .list-view.marker-bullet .list-item {
+  display: list-item !important;
+}
+
+.dynamic-views .list-view.marker-number {
+  list-style-type: decimal !important;
+  list-style-position: outside;
+  padding-left: 20px;
+}
+
+.dynamic-views .list-view.marker-number .list-item {
+  display: list-item !important;
+}
+
+.dynamic-views .list-view.marker-none {
+  list-style-type: none !important;
+  padding-left: 0 !important;
+}
+
+.dynamic-views .list-view.marker-none .list-item {
+  display: list-item !important;
+}
+
+.dynamic-views .list-item {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.dynamic-views .list-link {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.list-link:hover {
+  color: var(--link-color-hover);
+}
+
+.dynamic-views .list-properties {
+  display: inline-flex;
+  gap: var(--size-2-2);
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.9em;
+  margin-left: var(--size-4-2);
+}
+
+.dynamic-views .list-properties.list-path {
+  color: var(--text-faint);
+}

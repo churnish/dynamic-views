@@ -1,0 +1,512 @@
+/* ==================== SLIDESHOW STYLES ==================== */
+
+/* Dual stacked images for slideshow */
+.dynamic-views .slideshow-img {
+  position: absolute !important; /* !important required - without it, images stack vertically causing blank slides */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Higher specificity to override .card.image-format-cover .card-cover img z-index */
+.dynamic-views .card.image-format-cover .card-cover .slideshow-img-current {
+  z-index: 2 !important; /* !important required - ensures current image displays above next image */
+}
+
+.dynamic-views .card.image-format-cover .card-cover .slideshow-img-next {
+  z-index: 1;
+}
+
+/* Hide next image when not animating (empty src shows broken icon) */
+.dynamic-views
+  .slideshow-img-next:not(.slideshow-enter-left):not(.slideshow-enter-right) {
+  visibility: hidden;
+}
+
+/* Slideshow animations - dual image choreography */
+@keyframes slideshow-exit-left {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideshow-exit-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideshow-enter-left {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideshow-enter-right {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.dynamic-views .slideshow-exit-left {
+  animation: slideshow-exit-left var(--anim-duration-moderate, 300ms) ease
+    forwards;
+}
+
+.dynamic-views .slideshow-exit-right {
+  animation: slideshow-exit-right var(--anim-duration-moderate, 300ms) ease
+    forwards;
+}
+
+.dynamic-views .slideshow-enter-left {
+  animation: slideshow-enter-left var(--anim-duration-moderate, 300ms) ease
+    forwards;
+}
+
+.dynamic-views .slideshow-enter-right {
+  animation: slideshow-enter-right var(--anim-duration-moderate, 300ms) ease
+    forwards;
+}
+
+/* Navigation arrows */
+.dynamic-views .slideshow-nav-left,
+.dynamic-views .slideshow-nav-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity var(--anim-duration-moderate, 300ms) ease;
+}
+
+.dynamic-views .slideshow-nav-left {
+  left: var(--size-2-2);
+}
+
+.dynamic-views .slideshow-nav-right {
+  right: var(--size-2-2);
+}
+
+/* Show arrows on hover (desktop only - mobile uses swipe gestures) */
+@media (hover: hover) {
+  .dynamic-views .card-cover-slideshow:hover .slideshow-nav-left,
+  .dynamic-views .card-cover-slideshow:hover .slideshow-nav-right {
+    opacity: 1;
+  }
+}
+
+/* Arrow icons */
+.dynamic-views .slideshow-nav-left svg,
+.dynamic-views .slideshow-nav-right svg {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+
+.theme-light .dynamic-views .slideshow-nav-left svg,
+.theme-light .dynamic-views .slideshow-nav-right svg {
+  color: white;
+}
+
+.theme-dark .dynamic-views .slideshow-nav-left svg,
+.theme-dark .dynamic-views .slideshow-nav-right svg {
+  color: var(--color-base-100);
+}
+
+/* Mobile: Hide nav arrows (use swipe gestures instead) */
+.is-mobile .dynamic-views .slideshow-nav-left,
+.is-mobile .dynamic-views .slideshow-nav-right {
+  display: none;
+}
+
+/* Hide nav arrows when setting enabled */
+body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-left,
+body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
+  display: none;
+}
+
+/* Slideshow indicator */
+.dynamic-views .slideshow-indicator {
+  position: absolute;
+  right: max(calc(var(--dynamic-views-card-padding, 8px) - 4px), 4px);
+  bottom: max(calc(var(--dynamic-views-card-padding, 8px) - 4px), 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  z-index: 3;
+  pointer-events: none;
+  transition: opacity var(--anim-duration-moderate, 300ms) ease;
+}
+
+/* Hide slideshow indicator when toggle is on */
+body.dynamic-views-hide-slideshow-indicator
+  .dynamic-views
+  .slideshow-indicator {
+  display: none;
+}
+
+/* Hide indicator when nav buttons appear on hover */
+.dynamic-views .card-cover-slideshow:hover .slideshow-indicator {
+  opacity: 0;
+}
+
+.dynamic-views .slideshow-indicator svg {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+
+.theme-light .dynamic-views .slideshow-indicator svg {
+  color: white;
+}
+
+.theme-dark .dynamic-views .slideshow-indicator svg {
+  color: var(--color-base-100);
+}
+
+/* Mobile: Larger indicator */
+.is-mobile .dynamic-views .slideshow-indicator {
+  width: 22px;
+  height: 22px;
+}
+
+.is-mobile .dynamic-views .slideshow-indicator svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Base properties container styles */
+.dynamic-views .card-properties {
+  font-size: var(--dynamic-views-property-font-size, var(--font-ui-small));
+  color: var(--text-faint);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+/* Timestamp wrapper - flex container for icon positioning */
+.dynamic-views .property-content > span:has(.timestamp-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Timestamp icon - visible by default with "edge" positioning */
+.dynamic-views .timestamp-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: center;
+  opacity: 0.7;
+  width: 1em;
+  height: 1em;
+  margin-right: var(--size-2-2);
+}
+
+/* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
+.dynamic-views .property-pair .pair-right .timestamp-icon {
+  order: 2;
+  margin-right: 0;
+  margin-left: var(--size-2-2);
+}
+
+/* Hide icon when "hide" option selected */
+body.dynamic-views-timestamp-icon-hide .dynamic-views .timestamp-icon {
+  display: none;
+}
+
+/* When icon is on right for all fields */
+body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
+  order: 2;
+  margin-right: 0;
+  margin-left: var(--size-2-2);
+}
+
+/* Center positioning: odd fields show icon on right ONLY in side-by-side */
+body.dynamic-views-timestamp-icon-center
+  .dynamic-views
+  .property-pair
+  .pair-left
+  .timestamp-icon {
+  order: 2;
+  margin-right: 0;
+  margin-left: var(--size-2-2);
+}
+
+/* Center positioning: even fields show icon on left ONLY in side-by-side */
+body.dynamic-views-timestamp-icon-center
+  .dynamic-views
+  .property-pair
+  .pair-right
+  .timestamp-icon {
+  order: 0;
+  margin-right: var(--size-2-2);
+  margin-left: 0;
+}
+
+/* Left positioning: even fields reset to left ONLY in side-by-side (counters edge default) */
+body.dynamic-views-timestamp-icon-left
+  .dynamic-views
+  .property-pair
+  .pair-right
+  .timestamp-icon {
+  order: 0;
+  margin-right: var(--size-2-2);
+  margin-left: 0;
+}
+
+/* Subtitle timestamp icon: center/right moves icon to right side */
+body:is(
+    .dynamic-views-timestamp-icon-center,
+    .dynamic-views-timestamp-icon-right
+  )
+  .dynamic-views
+  .card-subtitle
+  .timestamp-icon {
+  order: 2;
+  margin-right: 0;
+  margin-left: var(--size-2-2);
+}
+
+.dynamic-views .timestamp-icon svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.dynamic-views .tags-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 20px;
+}
+
+.dynamic-views .path-wrapper {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: 20px;
+}
+
+.dynamic-views .text-wrapper {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: 20px;
+}
+
+/* Preserve whitespace in text spans within flex containers */
+.dynamic-views
+  .text-wrapper
+  > span:not(.internal-link):not(.external-link):not(.tag) {
+  white-space: pre;
+}
+
+/* Path segment wrappers - inline-block needed for drag support on filename */
+.dynamic-views .path-wrapper > span,
+.dynamic-views .path-segment-wrapper {
+  display: inline-block;
+}
+
+/* Tag style: Outline (default) - reset all theme styles, apply only plugin styles */
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
+  all: unset;
+  border-radius: var(--pill-radius);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  color: var(--tag-text-color);
+  font-size: 0.875em;
+  line-height: 1;
+  padding: calc(0.25em - 1px) calc(0.65em - 1px);
+  cursor: pointer;
+}
+
+body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+  .dynamic-views
+  .card-properties
+  .tag:hover,
+body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+  .dynamic-views
+  .card-subtitle
+  .tag:hover,
+body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+  .dynamic-views
+  .list-properties
+  .tag:hover {
+  color: color-mix(in hsl, var(--tag-text-color), white 15%);
+}
+
+/* Tag style: Fill - colored background based on text color */
+body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag,
+body.dynamic-views-tag-style-fill .dynamic-views .card-subtitle .tag,
+body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
+  border: none;
+  padding: 0.25em 0.65em;
+  background-color: color-mix(in srgb, var(--tag-text-color) 10%, transparent);
+  color: var(--tag-text-color);
+}
+
+body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag:hover,
+body.dynamic-views-tag-style-fill .dynamic-views .card-subtitle .tag:hover,
+body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
+  background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
+}
+
+/* Tag style: Theme style - no overrides, inherits Obsidian's a.tag styles */
+
+/* Tag style: Plaintext */
+body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag,
+body.dynamic-views-tag-style-plaintext .dynamic-views .card-subtitle .tag,
+body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+body.dynamic-views-tag-style-plaintext
+  .dynamic-views
+  .card-properties
+  .tag:hover,
+body.dynamic-views-tag-style-plaintext .dynamic-views .card-subtitle .tag:hover,
+body.dynamic-views-tag-style-plaintext
+  .dynamic-views
+  .list-properties
+  .tag:hover {
+  text-decoration: underline;
+}
+
+/* Tag color presets - semantic colors applied at element level via semantic color tokens */
+body.dynamic-views-tag-color-faint:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-faint);
+}
+body.dynamic-views-tag-color-muted:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-muted);
+}
+body.dynamic-views-tag-color-normal:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-normal);
+}
+
+body.dynamic-views-tag-color-accent {
+  --dynamic-views-tag-color-value: var(--text-accent);
+}
+body.dynamic-views-tag-color-red {
+  --dynamic-views-tag-color-value: var(--color-red);
+}
+body.dynamic-views-tag-color-orange {
+  --dynamic-views-tag-color-value: var(--color-orange);
+}
+body.dynamic-views-tag-color-yellow {
+  --dynamic-views-tag-color-value: var(--color-yellow);
+}
+body.dynamic-views-tag-color-green {
+  --dynamic-views-tag-color-value: var(--color-green);
+}
+body.dynamic-views-tag-color-cyan {
+  --dynamic-views-tag-color-value: var(--color-cyan);
+}
+body.dynamic-views-tag-color-blue {
+  --dynamic-views-tag-color-value: var(--color-blue);
+}
+body.dynamic-views-tag-color-purple {
+  --dynamic-views-tag-color-value: var(--color-purple);
+}
+body.dynamic-views-tag-color-pink {
+  --dynamic-views-tag-color-value: var(--color-pink);
+}
+body.dynamic-views-tag-color-custom {
+  --dynamic-views-tag-color-value: var(
+    --dynamic-views-tag-color-custom,
+    var(--text-faint)
+  );
+}
+/* Custom fallback via semantic color tokens */
+body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--dynamic-views-tag-color-custom, var(--text-faint));
+}
+
+/* Tag color application (skip when using theme styling) */
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
+  --tag-text-color: var(--dynamic-views-tag-color-value, var(--text-faint));
+}
+
+.dynamic-views .folder-segment,
+.dynamic-views .filename-segment {
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dynamic-views .folder-segment:hover,
+.dynamic-views .filename-segment:hover {
+  text-decoration: underline;
+}
+
+.dynamic-views .path-separator {
+  color: inherit;
+  margin: 0 2px;
+  user-select: none;
+  opacity: 0.5;
+}
+
+.dynamic-views .bases-group-heading .path-separator {
+  color: var(--text-faint);
+  opacity: 1;
+}

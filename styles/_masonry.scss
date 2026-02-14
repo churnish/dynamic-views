@@ -1,0 +1,107 @@
+/* ============================================
+   MASONRY VIEW
+   ============================================ */
+
+.dynamic-views .dynamic-views-masonry {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: visible;
+  overflow-y: clip;
+}
+
+/* Reset Bases' mobile margin - applied to parent instead to include end indicator */
+.is-phone
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views-masonry.bases-cards-container {
+  margin-bottom: 0;
+}
+
+.dynamic-views .dynamic-views-masonry .card,
+.workspace-leaf-content[data-type="bases"]
+  .dynamic-views
+  .dynamic-views-masonry
+  .card {
+  position: absolute;
+  /* Width set explicitly via --masonry-width, no max-width needed */
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dynamic-views .dynamic-views-masonry .card .card-previews {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-thumbnail-right
+  .card-previews {
+  flex-direction: row;
+}
+
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-thumbnail-left
+  .card-previews:has(.card-text-preview-wrapper) {
+  flex-direction: row-reverse;
+}
+
+/* Override flex-direction for cover formats in Masonry - text should be side-by-side */
+.dynamic-views .dynamic-views-masonry .card.card-cover-right .card-previews,
+.dynamic-views .dynamic-views-masonry .card.card-cover-left .card-previews,
+.dynamic-views .dynamic-views-masonry .card.card-cover-top .card-previews,
+.dynamic-views .dynamic-views-masonry .card.card-cover-bottom .card-previews {
+  flex-direction: row;
+}
+
+/* Override flex-direction for no-image cards in Masonry */
+.dynamic-views
+  .dynamic-views-masonry
+  .card:not([class*="card-thumbnail-"]):not([class*="card-cover-"])
+  .card-previews {
+  flex-direction: row;
+}
+
+/* Masonry: Thumbnail top/bottom positioning */
+.dynamic-views .dynamic-views-masonry .card.card-thumbnail-top .card-thumbnail {
+  margin-top: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+}
+
+/* Masonry thumbnail-bottom: no extra margins needed — card-content gap
+   handles spacing above, card padding handles spacing below. */
+
+.dynamic-views .dynamic-views-masonry .card .card-text-preview {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Masonry: push bottom properties to bottom of card when it has siblings above */
+.dynamic-views
+  .dynamic-views-masonry
+  .card:not(.card-cover-bottom)
+  .card-properties-bottom:not(:first-child) {
+  margin-top: auto;
+  padding-top: var(--size-4-2);
+}
+
+/* Masonry: only-child pushes to bottom but needs no padding (no sibling above) */
+.dynamic-views
+  .dynamic-views-masonry
+  .card:not(.card-cover-bottom)
+  .card-properties-bottom:only-child {
+  margin-top: auto;
+  padding-top: 0;
+}
+
+/* Masonry cover-bottom: properties-bottom needs spacing from content above.
+   margin-top: auto has no effect in masonry (no fixed height), so use a fixed margin. */
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-bottom
+  .card-properties-bottom:not(:first-child) {
+  margin-top: var(--size-4-2);
+}

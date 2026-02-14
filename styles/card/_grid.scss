@@ -1,0 +1,383 @@
+/* ============================================
+   VIEW-SPECIFIC STYLES: CARD VIEW
+   ============================================ */
+
+/* Enable container queries and set view padding variable for Obsidian's default .bases-view */
+.bases-view[data-view-type="dynamic-views-grid"],
+.bases-view[data-view-type="dynamic-views-masonry"] {
+  container-type: inline-size;
+  --bases-view-padding: var(--size-4-3);
+}
+
+/* View background - Bases files only (not embeds) */
+.workspace-leaf-content[data-type="bases"]
+  .bases-view[data-view-type="dynamic-views-grid"],
+.workspace-leaf-content[data-type="bases"]
+  .bases-view[data-view-type="dynamic-views-masonry"] {
+  background-color: var(--dynamic-views-view-background);
+}
+
+/* Unified grid layout for all grid views (all width modes) */
+.dynamic-views .dynamic-views-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--dynamic-views-grid-columns, 1), 1fr);
+  gap: var(--size-4-2);
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Card spacing setting - Bases files only */
+.workspace-leaf-content[data-type="bases"] .dynamic-views .dynamic-views-grid {
+  gap: var(--dynamic-views-card-spacing-desktop, 8px);
+}
+
+.is-mobile
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views
+  .dynamic-views-grid {
+  gap: var(--dynamic-views-card-spacing-mobile, 6px);
+}
+
+/* Grid view: remove margins (gap handles spacing) and set flexbox layout */
+.dynamic-views-grid .card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* DOM order now matches visual order — no flexbox ordering needed */
+
+/* Universal content wrapper: contains header + body */
+.dynamic-views .card .card-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-grow: 1;
+}
+
+/* Universal card body: contains properties + previews */
+.dynamic-views .card .card-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-grow: 1;
+}
+
+/* Grid view: push bottom properties to bottom of card when it has siblings above */
+/* Exclude cover-bottom and cover-top cover-format which have their own rules */
+.dynamic-views
+  .dynamic-views-grid
+  .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
+  .card-properties-bottom:not(:first-child) {
+  margin-top: auto;
+  padding-top: var(--size-4-2);
+}
+
+/* Grid view: only-child pushes to bottom but needs no padding (no sibling above) */
+.dynamic-views
+  .dynamic-views-grid
+  .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
+  .card-properties-bottom:only-child {
+  margin-top: auto;
+  padding-top: 0;
+}
+
+/* Grid view: cover-top — fixed cover height, gap absorbs remaining space */
+/* Content stays natural height with text top-aligned */
+.dynamic-views .dynamic-views-grid .card.card-cover-top .card-previews {
+  flex-grow: 0;
+}
+
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-wrapper {
+  flex-grow: 0;
+}
+
+/* Grid view cover-top with properties-bottom: push properties down */
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover:has(.card-properties-bottom)
+  .card-properties-bottom {
+  margin-top: auto;
+}
+
+/* Add padding-top only when content/header exists above (otherwise cover margin-bottom suffices) */
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover:has(
+    .card-header,
+    .card-previews,
+    .card-properties-top
+  )
+  .card-properties-bottom {
+  padding-top: var(--size-4-2);
+}
+
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover,
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder {
+  height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Collapse empty cards (no visible content) - requires :has() (Electron 22+) */
+:is(.dynamic-views-grid, .dynamic-views-masonry)
+  .card:not(
+    :has(
+      .card-header,
+      .card-cover img,
+      .card-thumbnail img,
+      .card-text-preview,
+      .card-properties
+    )
+  ) {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  line-height: 0;
+}
+
+/* Grid-specific: prevent empty cards from stretching */
+.dynamic-views-grid
+  .card:not(
+    :has(
+      .card-header,
+      .card-cover img,
+      .card-thumbnail img,
+      .card-text-preview,
+      .card-properties
+    )
+  ) {
+  align-self: start;
+}
+
+/* Override vanilla Bases absolute positioning - we use static flow layout */
+.dynamic-views .bases-cards-group,
+.dynamic-views.is-grouped .bases-cards-container .bases-group-heading {
+  position: static;
+  gap: inherit;
+}
+
+/* Sticky group headers (default: on) — collapsed headers should not stick.
+   Headers are inside .dynamic-views-group-section wrappers so sticky
+   scopes to each group's content height, not the entire feed. */
+body:not(.dynamic-views-disable-sticky-group-header)
+  .dynamic-views.is-grouped
+  .bases-cards-container
+  .dynamic-views-group-section
+  > .bases-group-heading:not(.collapsed) {
+  position: sticky;
+  top: -12px;
+  z-index: 10;
+  overflow: visible;
+  background: var(--background-primary);
+  padding-bottom: calc(var(--size-2-2) + 1px);
+  container-type: scroll-state;
+  container-name: dynamic-views-group-heading;
+}
+
+/* Border below sticky group headers when stuck — spans full pane width.
+   Progressive enhancement: iOS WebKit doesn't yet support scroll-state() container queries. */
+@container dynamic-views-group-heading scroll-state(stuck: top) {
+  .bases-group-count::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: calc(-1 * var(--bases-view-padding));
+    right: calc(-1 * var(--bases-view-padding));
+    height: 1px;
+    background: var(--bases-table-border-color);
+  }
+}
+
+/* Group headings - flex layout for collapse chevron + content */
+.dynamic-views .bases-group-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+/* Clickable region: chevron + property + value */
+.dynamic-views .bases-group-collapse-region {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  cursor: pointer;
+}
+
+/* Group collapse chevron */
+.dynamic-views .bases-group-collapse-btn {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.dynamic-views .bases-group-collapse-btn svg {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Rotate + accent color when collapsed */
+.dynamic-views .bases-group-heading.collapsed .bases-group-collapse-btn svg {
+  transform: rotate(-90deg);
+  color: var(--color-accent);
+}
+
+/* Hide card container when heading is collapsed (adjacent sibling) */
+.dynamic-views .bases-group-heading.collapsed + .dynamic-views-group {
+  display: none !important;
+}
+
+/* Group section wrappers span full grid width and use subgrid */
+.dynamic-views-grid > .dynamic-views-group-section {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+/* Group headings span full grid width */
+.dynamic-views-group-section > .bases-group-heading {
+  grid-column: 1 / -1;
+}
+
+/* Masonry group section wrappers span full width */
+.dynamic-views-masonry > .dynamic-views-group-section {
+  width: 100%;
+}
+
+/* Group header property label */
+.dynamic-views .bases-group-property {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Group header result count - match property label style */
+.dynamic-views .bases-group-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding-left: var(--size-2-2);
+}
+
+/* Hide group result count when toggle enabled */
+body.dynamic-views-hide-group-count .dynamic-views .bases-group-count {
+  display: none;
+}
+
+/* Hide group property labels when toggle enabled */
+body.dynamic-views-hide-group-property-labels
+  .dynamic-views
+  .bases-group-property {
+  display: none;
+}
+
+/* Group header value containers - match vanilla Bases structure */
+.dynamic-views .bases-group-value .value-list-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.dynamic-views .bases-group-value .value-list-element {
+  display: inline-flex;
+}
+
+/* Masonry groups are their own positioning context for cards.
+   box-sizing: content-box ensures height calculation excludes padding,
+   which is critical for masonry layout measuring card positions */
+.dynamic-views-masonry .bases-cards-group {
+  position: relative;
+  box-sizing: content-box;
+}
+
+/* Group containers in grid - use subgrid to maintain grid layout */
+.dynamic-views-group-section > .dynamic-views-group {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  row-gap: var(--size-4-2);
+  padding: 0 0 var(--size-4-4) 0;
+  border-color: var(--background-modifier-border);
+  border-width: 0 0 1px 0;
+  border-style: solid;
+}
+
+/* Card spacing setting - Bases files only */
+.workspace-leaf-content[data-type="bases"]
+  .dynamic-views-grid
+  .dynamic-views-group-section
+  > .dynamic-views-group {
+  gap: var(--dynamic-views-card-spacing-desktop, 8px);
+}
+
+.is-mobile
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views-grid
+  .dynamic-views-group-section
+  > .dynamic-views-group {
+  gap: var(--dynamic-views-card-spacing-mobile, 6px);
+}
+
+/* Group containers in masonry - simple block layout */
+.dynamic-views-masonry .dynamic-views-group-section > .dynamic-views-group {
+  padding: 0 0 var(--size-4-4) 0;
+  border-color: var(--background-modifier-border);
+  border-width: 0 0 1px 0;
+  border-style: solid;
+}
+
+/* Last group section has no border */
+.dynamic-views-grid
+  > .dynamic-views-group-section:last-child
+  > .dynamic-views-group,
+.dynamic-views-masonry
+  > .dynamic-views-group-section:last-child
+  > .dynamic-views-group {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dynamic-views .card {
+  position: relative;
+  container-type: inline-size;
+  box-sizing: border-box;
+  border: none;
+  border-radius: var(--dynamic-views-card-border-radius, 8px);
+  overflow: hidden; /* Clip covers at rounded corners */
+  padding: var(--dynamic-views-card-padding, 8px);
+  margin: var(--size-4-2) 0;
+  background-color: var(--background-primary-alt);
+  break-inside: avoid;
+  page-break-inside: avoid;
+  transition:
+    box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
+    background-color var(--anim-duration-fast, 140ms) ease;
+  /* Cover inset: user setting + 1px offset for border */
+  --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + 1px);
+  /* Resolved card border color — shared by ::after and cover-content divider */
+  --card-border-color: var(--background-modifier-border);
+}
+
+/* Border as pseudo-element so it appears on top of covers */
+.dynamic-views .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--card-border-color);
+  pointer-events: none;
+}

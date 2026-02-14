@@ -1,0 +1,107 @@
+/* ============================================
+   CONTAINER & LAYOUT STYLES
+   ============================================ */
+
+/* Title alignment (left is default in base CSS) */
+body.dynamic-views-title-align-center .dynamic-views .card-title {
+  text-align: center;
+}
+
+body.dynamic-views-title-align-right .dynamic-views .card-title {
+  text-align: right;
+}
+
+/* Title scroll mode */
+body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* Scroll fade gradient at bottom of scrollable results */
+.dynamic-views .results-container,
+.dynamic-views-bases-container {
+  position: relative;
+}
+
+.dynamic-views .results-container::after,
+.dynamic-views-bases-container::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: block;
+  height: 80px;
+  margin-top: -80px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--background-primary)
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--anim-duration-fast, 140ms);
+}
+
+.dynamic-views .results-container.with-fade::after,
+.dynamic-views-bases-container.with-fade::after {
+  opacity: 1;
+}
+
+/* Style Settings: disable fade gradient */
+body.dynamic-views-disable-fade-gradient
+  .dynamic-views
+  .results-container::after,
+body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
+  display: none;
+}
+
+/* Enable container queries for responsive button visibility */
+.markdown-preview-view,
+.markdown-reading-view,
+.markdown-source-view {
+  container-type: inline-size;
+}
+
+/* Width system: JS applies inline styles per-query for wide/max modes */
+
+/* Allow code block to overflow in Live Preview (for transform-based centering) */
+.markdown-source-view:has(.block-language-datacorejsx)
+  :is(.cm-contentContainer, .cm-content) {
+  overflow: visible !important;
+}
+
+/* Default width for datacorejsx blocks (readable line width) */
+.markdown-source-view.is-readable-line-width
+  .cm-content
+  > .block-language-datacorejsx,
+:is(.markdown-preview-view, .markdown-reading-view).is-readable-line-width
+  .block-language-datacorejsx {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.dynamic-views {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 270px;
+  overflow: visible;
+  --shadow-l-light-mode:
+    0px 0px 8px rgba(0, 0, 0, 0.12), 0px 0px 20px rgba(0, 0, 0, 0.15),
+    0px 0px 32px rgba(0, 0, 0, 0.12);
+  --shadow-l-dark-mode:
+    0px 0px 8px rgba(255, 255, 255, 0.12),
+    0px 0px 20px rgba(255, 255, 255, 0.15),
+    0px 0px 32px rgba(255, 255, 255, 0.12);
+  --drop-shadow-l-light-mode: drop-shadow(0 0 4px rgba(0, 0, 0, 0.12))
+    drop-shadow(0 0 10px rgba(0, 0, 0, 0.15))
+    drop-shadow(0 0 16px rgba(0, 0, 0, 0.12));
+  --drop-shadow-l-dark-mode: drop-shadow(0 0 4px rgba(255, 255, 255, 0.12))
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.15))
+    drop-shadow(0 0 16px rgba(255, 255, 255, 0.12));
+}

@@ -1,4 +1,5 @@
 main.js
+styles.css
 *.js.map
 *.map
 node_modules

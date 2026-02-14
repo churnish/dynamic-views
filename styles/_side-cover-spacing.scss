@@ -1,0 +1,165 @@
+/* ==================== CONDITIONAL SIDE COVER SPACING ==================== */
+
+/* Grid view: spacing for cards with actual covers OR when placeholder should show */
+
+/* Cover-left: content padding */
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-content {
+  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
+  margin-left: var(--dynamic-views-side-cover-content-padding);
+}
+
+/* Cover-left: minimum card height */
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover),
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
+}
+
+/* Cover-right: content padding */
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-content {
+  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
+}
+
+/* Cover-right: minimum card height */
+.dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover),
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
+body:not(.dynamic-views-show-cover-placeholder-masonry):not(
+    .dynamic-views-show-cover-placeholder-both
+  ):not(.dynamic-views-show-cover-placeholder-none)
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
+}
+
+/* Masonry view: spacing for cards with actual covers OR when placeholder should show */
+
+/* Cover-left: content padding */
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  > .card-content {
+  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
+  margin-left: var(--dynamic-views-side-cover-content-padding);
+}
+
+/* Cover-left: minimum card height */
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover),
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
+}
+
+/* Cover-right: content padding */
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-content,
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  > .card-content {
+  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
+}
+
+/* Cover-right: minimum card height */
+.dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover),
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
+body.dynamic-views-show-cover-placeholder-both
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
+  min-height: var(--dynamic-views-side-cover-min-height, 150px);
+}

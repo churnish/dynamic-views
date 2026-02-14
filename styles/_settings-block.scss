@@ -1,0 +1,1476 @@
+/* @settings
+
+name: Dynamic Views
+id: dynamic-views
+settings:
+    -
+        id: backdrop-heading
+        title: Backdrop
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-backdrop-overlay-tint
+        title: Overlay tint
+        description: Color of the backdrop overlay.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-backdrop-theme-match
+        options:
+            -
+                label: Light
+                value: dynamic-views-backdrop-theme-light
+            -
+                label: Dark
+                value: dynamic-views-backdrop-theme-dark
+            -
+                label: Match theme
+                value: dynamic-views-backdrop-theme-match
+    -
+        id: dynamic-views-backdrop-overlay-light
+        title: Light overlay strength
+        description: Opacity of the light overlay.
+        type: variable-number-slider
+        default: 70
+        min: 0
+        max: 100
+        step: 1
+    -
+        id: dynamic-views-backdrop-overlay-dark
+        title: Dark overlay strength
+        description: Opacity of the dark overlay.
+        type: variable-number-slider
+        default: 70
+        min: 0
+        max: 100
+        step: 1
+    -
+        id: dynamic-views-backdrop-overlay-blur
+        title: Overlay blur
+        type: variable-number-slider
+        default: 0
+        min: 0
+        max: 20
+        step: 1
+        format: px
+    -
+        id: layout-heading
+        title: Card layout
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-card-spacing-desktop
+        title: Card spacing
+        description: Spacing between cards on desktop.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-card-spacing-mobile
+        title: Card spacing
+        description: Spacing between cards on mobile.
+        type: variable-number-slider
+        default: 6
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-view-background
+        title: View background
+        description: Background color for card views.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-hide-end-indicator
+        title: Hide end of view indicator
+        description: Do not show the horizontal rule at view bottom.
+        type: class-toggle
+        default: false
+    -
+        id: cards-heading
+        title: Cards
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-card-padding
+        title: Card padding
+        description: Padding from card edges to content.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 24
+        step: 1
+        format: px
+    -
+        id: dynamic-views-card-border-radius
+        title: Card border radius
+        description: Corner roundness of cards.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-no-fade-truncated-text
+        title: Hide scroll gradient
+        description: Don't show gradient fade on scrollable text elements.
+        type: class-toggle
+    -
+        id: dynamic-views-card-background
+        title: Card background
+        description: Card background appearance.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-tinted
+        options:
+            -
+                label: Tinted
+                value: dynamic-views-card-background-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-background-custom
+    -
+        id: dynamic-views-card-background-color-custom
+        title: Custom card background
+        description: Custom color for card backgrounds (only used when Card background is set to Custom color).
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-background-hover
+        title: Card background (hover)
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-hover-none
+        options:
+            -
+                label: No change
+                value: dynamic-views-card-background-hover-none
+            -
+                label: Tinted
+                value: dynamic-views-card-background-hover-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-hover-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-background-hover-custom
+    -
+        id: dynamic-views-card-background-color-hover-custom
+        title: Custom card background (hover)
+        description: Custom color for card backgrounds on hover (only used when Card background on hover is set to Custom color).
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-border-color
+        title: Card border color
+        description: Theme color preset for card borders.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-border-color-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-card-border-color-faint
+            -
+                label: Muted
+                value: dynamic-views-card-border-color-muted
+            -
+                label: Normal
+                value: dynamic-views-card-border-color-normal
+            -
+                label: Accent
+                value: dynamic-views-card-border-color-accent
+            -
+                label: Red
+                value: dynamic-views-card-border-color-red
+            -
+                label: Orange
+                value: dynamic-views-card-border-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-border-color-yellow
+            -
+                label: Green
+                value: dynamic-views-card-border-color-green
+            -
+                label: Cyan
+                value: dynamic-views-card-border-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-border-color-blue
+            -
+                label: Purple
+                value: dynamic-views-card-border-color-purple
+            -
+                label: Pink
+                value: dynamic-views-card-border-color-pink
+            -
+                label: Transparent
+                value: dynamic-views-card-border-color-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-border-color-custom
+    -
+        id: dynamic-views-card-border-color-custom
+        title: Custom card border color
+        description: Custom color for card borders (only used when Card border color is set to Custom).
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-border-color-hover
+        title: Card border color (hover)
+        description: Theme color preset for card borders on hover.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-border-color-hover-normal
+        options:
+            -
+                label: Faint
+                value: dynamic-views-card-border-color-hover-faint
+            -
+                label: Muted
+                value: dynamic-views-card-border-color-hover-muted
+            -
+                label: Normal
+                value: dynamic-views-card-border-color-hover-normal
+            -
+                label: Accent
+                value: dynamic-views-card-border-color-hover-accent
+            -
+                label: Red
+                value: dynamic-views-card-border-color-hover-red
+            -
+                label: Orange
+                value: dynamic-views-card-border-color-hover-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-border-color-hover-yellow
+            -
+                label: Green
+                value: dynamic-views-card-border-color-hover-green
+            -
+                label: Cyan
+                value: dynamic-views-card-border-color-hover-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-border-color-hover-blue
+            -
+                label: Purple
+                value: dynamic-views-card-border-color-hover-purple
+            -
+                label: Pink
+                value: dynamic-views-card-border-color-hover-pink
+            -
+                label: Transparent
+                value: dynamic-views-card-border-color-hover-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-border-color-hover-custom
+    -
+        id: dynamic-views-card-border-color-hover-custom
+        title: Custom card border color (hover)
+        description: Custom color for card borders on hover (only used when Card border color on hover is set to Custom).
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: covers-heading
+        title: Covers
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-cover-crop
+        title: Cover crop alignment
+        description: How to crop cover images when aspect ratios don't match.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-cover-crop-center
+        options:
+            -
+                label: Top
+                value: dynamic-views-cover-crop-top
+            -
+                label: Center
+                value: dynamic-views-cover-crop-center
+            -
+                label: Bottom
+                value: dynamic-views-cover-crop-bottom
+    -
+        id: dynamic-views-cover-background
+        title: Cover background
+        description: Background style for Contain fit and placeholders.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-cover-bg-plain
+        options:
+            -
+                label: Plain
+                value: dynamic-views-cover-bg-plain
+            -
+                label: Transparent
+                value: dynamic-views-cover-bg-transparent
+            -
+                label: Custom
+                value: dynamic-views-cover-bg-custom
+    -
+        id: dynamic-views-cover-background-color-custom
+        title: Custom cover background
+        description: Background color for "Custom color" mode.
+        type: variable-themed-color
+        format: rgb
+        opacity: false
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-masonry-fixed-cover-height
+        title: Fixed cover height
+        description: Keep top/bottom letterbox bars visible in contain mode in Masonry.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-show-cover-placeholder
+        title: Show placeholder for cards with no image
+        description: If covers are enabled but a file doesn't have an image, show an empty cover. If disabled, card content will fill all available space.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-show-cover-placeholder-grid
+        options:
+            -
+                label: In Grid view
+                value: dynamic-views-show-cover-placeholder-grid
+            -
+                label: In Masonry view
+                value: dynamic-views-show-cover-placeholder-masonry
+            -
+                label: In Grid and Masonry views
+                value: dynamic-views-show-cover-placeholder-both
+            -
+                label: Don't show
+                value: dynamic-views-show-cover-placeholder-none
+    -
+        id: dynamic-views-side-cover-min-height
+        title: Minimum left/right cover height
+        description: Minimum height for cards with left or right cover position.
+        type: variable-text
+        default: 150px
+    -
+        id: dynamic-views-cover-circular
+        title: Round covers
+        description: Make cover corners perfectly rounded.
+        type: class-toggle
+    -
+        id: dynamic-views-cover-border-radius
+        title: Cover border radius
+        description: Corner roundness of cover images.
+        type: variable-number-slider
+        default: 0
+        min: 0
+        max: 48
+        step: 1
+        format: px
+    -
+        id: dynamic-views-cover-inset
+        title: Cover inset
+        description: Distance from card edge to cover.
+        type: variable-number-slider
+        default: 0
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-cover-hover-zoom
+        title: Hover zoom
+        description: Subtle zoom effect when hovering over covers.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-cover-hover-zoom-card
+        options:
+            -
+                label: On hover over cover
+                value: dynamic-views-cover-hover-zoom-cover
+            -
+                label: On hover over card
+                value: dynamic-views-cover-hover-zoom-card
+            -
+                label: Disabled
+                value: dynamic-views-cover-hover-zoom-off
+    -
+        id: dynamic-views-show-cover-border
+        title: Show border between cover and card content
+        description: Show divider line between cover and card content.
+        type: class-toggle
+    -
+        id: datacore-heading
+        title: Datacore
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-hide-search
+        title: Hide search filter
+        description: Hide search input field in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-result-count
+        title: Hide result count
+        description: Hide result count and limit dropdown in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-create-note
+        title: Hide 'Create new note' button
+        description: Hide button to create new note in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-shuffle
+        title: Hide 'Shuffle' button
+        description: Hide shuffle button in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-random
+        title: Hide 'Open random file' button
+        description: Hide random file button in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-edit-query
+        title: Hide 'Edit query' button
+        description: Hide edit query button in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-pin-toolbar
+        title: Hide 'Pin toolbar' button
+        description: Hide pin toolbar button.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-expand-width
+        title: Hide 'Expand' button
+        description: Hide expand button in toolbar.
+        type: class-toggle
+    -
+        id: dynamic-views-disable-toolbar-shadow
+        title: Disable toolbar shadow
+        description: Hide shadow below toolbar when results are scrolled (applies when View height > 0).
+        type: class-toggle
+    -
+        id: dynamic-views-disable-fade-gradient
+        title: Disable fade gradient at query bottom
+        description: Hide fade-out gradient at bottom of scrollable results (applies when View height > 0).
+        type: class-toggle
+    -
+        id: dates-heading
+        title: Dates
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-date-format
+        title: Date format
+        description: Moment.js format for date-only properties.
+        type: variable-text
+        default: YYYY-MM-DD
+    -
+        id: dynamic-views-time-format
+        title: Time format
+        description: Moment.js format for time-only display.
+        type: variable-text
+        default: HH:mm
+    -
+        id: dynamic-views-datetime-format
+        title: Datetime format
+        description: Moment.js format for datetime properties.
+        type: variable-text
+        default: YYYY-MM-DD, HH:mm
+    -
+        id: dynamic-views-timestamp-recent-full
+        title: Show full recent timestamps
+        description: Show date for today's created and modified timestamps.
+        type: class-toggle
+    -
+        id: dynamic-views-timestamp-past-full
+        title: Show full past timestamps
+        description: Show time for created and modified timestamps older than today.
+        type: class-toggle
+    -
+        id: dynamic-views-timestamp-icon
+        title: Timestamp icon
+        description: Show icon next to timestamp to distinguish between modified and created time when property labels are hidden.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-timestamp-icon-edge
+        options:
+            -
+                label: Align left
+                value: dynamic-views-timestamp-icon-left
+            -
+                label: Align right
+                value: dynamic-views-timestamp-icon-right
+            -
+                label: Align to card center
+                value: dynamic-views-timestamp-icon-center
+            -
+                label: Align to card edge
+                value: dynamic-views-timestamp-icon-edge
+            -
+                label: Hide
+                value: dynamic-views-timestamp-icon-hide
+    -
+        id: groups-heading
+        title: Grouping
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-hide-group-count
+        title: Hide result count
+        description: Hide result count in group headings.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-group-property-labels
+        title: Hide property labels
+        description: Hide property labels in group headings.
+        type: class-toggle
+    -
+        id: dynamic-views-disable-sticky-group-header
+        title: Disable sticky group header
+        description: Don't freeze group headers when scrolling.
+        type: class-toggle
+        default: false
+    -
+        id: image-viewer-heading
+        title: Image viewer
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-image-viewer-disabled
+        title: Disable image viewer
+        description: Disable image viewer feature.
+        type: class-toggle
+    -
+        id: dynamic-views-zoom-disabled
+        title: Disable pan & zoom
+        description: Disable pinch-to-zoom and pan gestures.
+        type: class-toggle
+    -
+        id: dynamic-views-image-viewer-disable-dismiss-on-click
+        title: Don't dismiss on press
+        description: Prevent image viewer from closing when pressing on image.
+        type: class-toggle
+    -
+        id: dynamic-views-image-viewer-fullscreen
+        title: Open in fullscreen
+        description: Open images in fullscreen on desktop.
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-zoom-sensitivity
+        title: Zoom sensitivity
+        description: How quickly images zoom on desktop.
+        type: variable-number-slider
+        default: 0.08
+        min: 0.01
+        max: 1
+        step: 0.01
+        format: ''
+    -
+        id: poster-heading
+        title: Poster
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-poster-disable-scroll
+        title: Disable scroll
+        description: Don't vertically scroll card content when it doesn't fit.
+        type: class-toggle
+    -
+        id: dynamic-views-poster-disable-raise
+        title: Disable raise animation
+        description: Fade in without sliding up on reveal.
+        type: class-toggle
+    -
+        id: dynamic-views-poster-mode
+        title: Display mode
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-mode-gradient
+        options:
+            -
+                label: Gradient
+                value: dynamic-views-poster-mode-gradient
+            -
+                label: Overlay
+                value: dynamic-views-poster-mode-overlay
+    -
+        id: dynamic-views-poster-overlay-tint
+        title: Overlay tint
+        description: Color of the poster overlay.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-theme-dark
+        options:
+            -
+                label: Light
+                value: dynamic-views-poster-theme-light
+            -
+                label: Dark
+                value: dynamic-views-poster-theme-dark
+            -
+                label: Match theme
+                value: dynamic-views-poster-theme-match
+    -
+        id: dynamic-views-poster-overlay-light
+        title: Light overlay strength
+        description: Opacity of the light overlay.
+        type: variable-number-slider
+        default: 70
+        min: 0
+        max: 100
+        step: 1
+    -
+        id: dynamic-views-poster-overlay-dark
+        title: Dark overlay strength
+        description: Opacity of the dark overlay.
+        type: variable-number-slider
+        default: 70
+        min: 0
+        max: 100
+        step: 1
+    -
+        id: dynamic-views-poster-overlay-blur
+        title: Overlay blur
+        type: variable-number-slider
+        default: 0
+        min: 0
+        max: 20
+        step: 1
+        format: px
+    -
+        id: properties-heading
+        title: Properties
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-url-icon
+        title: "'Open URL' button icon"
+        description: Lucide icon name.
+        type: variable-text
+        default: 'square-arrow-out-up-right'
+    -
+        id: dynamic-views-list-separator
+        title: List item separator
+        description: Separator between items in list-type properties. Whitespace preserved.
+        type: variable-text
+        default: ", "
+        quotes: true
+    -
+        id: dynamic-views-empty-value-marker
+        title: Empty value marker
+        description: What to show for empty property values. Whitespace preserved.
+        type: variable-text
+        default: "—"
+        quotes: true
+    -
+        id: dynamic-views-property-font
+        title: Property font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-property-font-size
+        title: Property font size
+        description: Font size of property values (e.g., 0.8em, 13px, 0.8125rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-property-color-with-labels
+        title: Text color (labels shown)
+        description: Theme color preset for property text when property labels are shown.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-color-with-labels-muted
+        options:
+            -
+                label: Faint
+                value: dynamic-views-property-color-with-labels-faint
+            -
+                label: Muted
+                value: dynamic-views-property-color-with-labels-muted
+            -
+                label: Normal
+                value: dynamic-views-property-color-with-labels-normal
+            -
+                label: Accent
+                value: dynamic-views-property-color-with-labels-accent
+            -
+                label: Red
+                value: dynamic-views-property-color-with-labels-red
+            -
+                label: Orange
+                value: dynamic-views-property-color-with-labels-orange
+            -
+                label: Yellow
+                value: dynamic-views-property-color-with-labels-yellow
+            -
+                label: Green
+                value: dynamic-views-property-color-with-labels-green
+            -
+                label: Cyan
+                value: dynamic-views-property-color-with-labels-cyan
+            -
+                label: Blue
+                value: dynamic-views-property-color-with-labels-blue
+            -
+                label: Purple
+                value: dynamic-views-property-color-with-labels-purple
+            -
+                label: Pink
+                value: dynamic-views-property-color-with-labels-pink
+            -
+                label: Custom
+                value: dynamic-views-property-color-with-labels-custom
+    -
+        id: dynamic-views-property-color-with-labels-custom
+        title: Custom text color (labels shown)
+        description: Set a custom color for properties that have labels.
+        type: variable-themed-color
+        format: hsl-split
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-property-color-without-labels
+        title: Text color (labels hidden)
+        description: Theme color preset for property text when property labels are hidden.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-color-without-labels-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-property-color-without-labels-faint
+            -
+                label: Muted
+                value: dynamic-views-property-color-without-labels-muted
+            -
+                label: Normal
+                value: dynamic-views-property-color-without-labels-normal
+            -
+                label: Accent
+                value: dynamic-views-property-color-without-labels-accent
+            -
+                label: Red
+                value: dynamic-views-property-color-without-labels-red
+            -
+                label: Orange
+                value: dynamic-views-property-color-without-labels-orange
+            -
+                label: Yellow
+                value: dynamic-views-property-color-without-labels-yellow
+            -
+                label: Green
+                value: dynamic-views-property-color-without-labels-green
+            -
+                label: Cyan
+                value: dynamic-views-property-color-without-labels-cyan
+            -
+                label: Blue
+                value: dynamic-views-property-color-without-labels-blue
+            -
+                label: Purple
+                value: dynamic-views-property-color-without-labels-purple
+            -
+                label: Pink
+                value: dynamic-views-property-color-without-labels-pink
+            -
+                label: Custom
+                value: dynamic-views-property-color-without-labels-custom
+    -
+        id: dynamic-views-property-color-without-labels-custom
+        title: Custom text color (labels hidden)
+        description: Set a custom color.
+        type: variable-themed-color
+        format: hsl-split
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-hide-missing-properties
+        title: Hide missing properties
+        description: Hide properties that don't exist in note frontmatter.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-hide-empty-properties
+        title: Empty properties
+        description: How to display properties with empty values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-empty-properties-hide-with-labels
+        options:
+            -
+                label: Show
+                value: dynamic-views-empty-properties-show
+            -
+                label: Hide if labels hidden
+                value: dynamic-views-empty-properties-hide-with-labels
+            -
+                label: Hide
+                value: dynamic-views-empty-properties-hide
+    -
+        id: dynamic-views-full-row-property-alignment
+        title: Full-row property alignment
+        description: How to align values with inline property labels when not shown side-by-side.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-full-row-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-full-row-align-left
+            -
+                label: Right
+                value: dynamic-views-full-row-align-right
+    -
+        id: dynamic-views-compact-breakpoint
+        title: Compact breakpoint
+        description: Card width in pixels at which side-by-side properties stack vertically. Set to 0 to disable.
+        type: variable-number
+        default: 390
+        format: px
+    -
+        id: property-labels-heading
+        title: Property labels
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-property-label-font
+        title: Property label font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-property-label-font-size
+        title: Property label text size
+        description: Font size for property labels (e.g., 0.8em, 13px, 0.8125rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-property-label-color
+        title: Text color
+        description: Theme color preset for property labels.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-label-color-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-property-label-color-faint
+            -
+                label: Muted
+                value: dynamic-views-property-label-color-muted
+            -
+                label: Normal
+                value: dynamic-views-property-label-color-normal
+            -
+                label: Accent
+                value: dynamic-views-property-label-color-accent
+            -
+                label: Red
+                value: dynamic-views-property-label-color-red
+            -
+                label: Orange
+                value: dynamic-views-property-label-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-property-label-color-yellow
+            -
+                label: Green
+                value: dynamic-views-property-label-color-green
+            -
+                label: Cyan
+                value: dynamic-views-property-label-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-property-label-color-blue
+            -
+                label: Purple
+                value: dynamic-views-property-label-color-purple
+            -
+                label: Pink
+                value: dynamic-views-property-label-color-pink
+            -
+                label: Custom
+                value: dynamic-views-property-label-color-custom
+    -
+        id: dynamic-views-property-label-color-custom
+        title: Custom text color
+        description: Set a custom color.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-property-label-case
+        title: Property label case
+        description: Text case transformation for property labels.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-label-case-preserve
+        options:
+            -
+                label: Preserve case
+                value: dynamic-views-property-label-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-property-label-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-property-label-case-uppercase
+    -
+        id: dynamic-views-property-label-bold
+        title: Bold
+        description: Make property labels bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-label-small-caps
+        title: Small caps
+        description: Use small caps for property labels.
+        type: class-toggle
+        default: false
+    -
+        id: slideshow
+        title: Slideshow
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-slideshow-disabled
+        title: Disable slideshow
+        description: Don't cycle through images on cards with multiple images.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-slideshow-indicator
+        title: Hide slideshow indicator
+        description: Hide indicator icon when card has multiple images.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-slideshow-arrows
+        title: Hide navigation arrows
+        description: Hide left/right arrows on slideshow covers (use touchscreen/trackpad swipe gestures instead).
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-slideshow-max-images
+        title: Maximum slideshow images
+        description: Limit number of images in cover slideshows.
+        type: variable-number-slider
+        default: 10
+        min: 2
+        max: 24
+        step: 1
+        format: ''
+    -
+        id: subtitle
+        title: Subtitle
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-subtitle-font
+        title: Subtitle font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-subtitle-font-size
+        title: Subtitle font size
+        description: Font size for subtitles (e.g., 0.9em, 14px).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-subtitle-bold
+        title: Bold
+        description: Make subtitle text bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-subtitle-italic
+        title: Italic
+        description: Make subtitle text italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-subtitle-small-caps
+        title: Small caps
+        description: Display subtitle text in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-subtitle-color
+        title: Text color
+        description: Theme color preset for subtitles.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-color-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-subtitle-color-faint
+            -
+                label: Muted
+                value: dynamic-views-subtitle-color-muted
+            -
+                label: Normal
+                value: dynamic-views-subtitle-color-normal
+            -
+                label: Accent
+                value: dynamic-views-subtitle-color-accent
+            -
+                label: Red
+                value: dynamic-views-subtitle-color-red
+            -
+                label: Orange
+                value: dynamic-views-subtitle-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-subtitle-color-yellow
+            -
+                label: Green
+                value: dynamic-views-subtitle-color-green
+            -
+                label: Cyan
+                value: dynamic-views-subtitle-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-subtitle-color-blue
+            -
+                label: Purple
+                value: dynamic-views-subtitle-color-purple
+            -
+                label: Pink
+                value: dynamic-views-subtitle-color-pink
+            -
+                label: Custom
+                value: dynamic-views-subtitle-color-custom
+    -
+        id: dynamic-views-subtitle-color-custom
+        title: Custom text color
+        description: Set a custom color.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-subtitle-position
+        title: Subtitle position
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-below
+        options:
+            -
+                label: Above title
+                value: dynamic-views-subtitle-above
+            -
+                label: Below title
+                value: dynamic-views-subtitle-below
+    -
+        id: dynamic-views-subtitle-alignment
+        title: Subtitle alignment
+        description: Horizontal alignment of subtitles.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-subtitle-align-left
+            -
+                label: Center
+                value: dynamic-views-subtitle-align-center
+            -
+                label: Right
+                value: dynamic-views-subtitle-align-right
+    -
+        id: dynamic-views-subtitle-overflow
+        title: Overflow behavior
+        description: How to handle long subtitle text.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-overflow-wrap
+        options:
+            -
+                label: Wrap
+                value: dynamic-views-subtitle-overflow-wrap
+            -
+                label: Scroll
+                value: dynamic-views-subtitle-overflow-scroll
+    -
+        id: tags-heading
+        title: Tags
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-tag-style
+        title: Tag style
+        description: Visual appearance of tags.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-style-outline
+        options:
+            -
+                label: Outline
+                value: dynamic-views-tag-style-outline
+            -
+                label: Fill
+                value: dynamic-views-tag-style-fill
+            -
+                label: Plaintext
+                value: dynamic-views-tag-style-plaintext
+            -
+                label: Theme style
+                value: dynamic-views-tag-style-theme
+    -
+        id: dynamic-views-tag-color
+        title: Tag color
+        description: Color preset for tags.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-color-faint
+        options:
+            -
+                label: Faint
+                value: dynamic-views-tag-color-faint
+            -
+                label: Muted
+                value: dynamic-views-tag-color-muted
+            -
+                label: Normal
+                value: dynamic-views-tag-color-normal
+            -
+                label: Accent
+                value: dynamic-views-tag-color-accent
+            -
+                label: Red
+                value: dynamic-views-tag-color-red
+            -
+                label: Orange
+                value: dynamic-views-tag-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-tag-color-yellow
+            -
+                label: Green
+                value: dynamic-views-tag-color-green
+            -
+                label: Cyan
+                value: dynamic-views-tag-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-tag-color-blue
+            -
+                label: Purple
+                value: dynamic-views-tag-color-purple
+            -
+                label: Pink
+                value: dynamic-views-tag-color-pink
+            -
+                label: Custom
+                value: dynamic-views-tag-color-custom
+    -
+        id: dynamic-views-tag-color-custom
+        title: Custom tag color
+        description: Applied when Tag color is set to Custom.
+        type: variable-themed-color
+        format: hsl-split
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-show-tag-hash
+        title: Show hash
+        description: Show hash prefix (#).
+        type: class-toggle
+        default: false
+    -
+        id: text-preview-heading
+        title: Text preview
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-text-preview-font
+        title: Text preview font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-text-preview-font-size
+        title: Text preview font size
+        description: Font size for text previews (e.g., 0.9em, 14px, 0.875rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-text-preview-color
+        title: Text color
+        description: Theme color preset for text previews.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-text-preview-color-muted
+        options:
+            -
+                label: Faint
+                value: dynamic-views-text-preview-color-faint
+            -
+                label: Muted
+                value: dynamic-views-text-preview-color-muted
+            -
+                label: Normal
+                value: dynamic-views-text-preview-color-normal
+            -
+                label: Accent
+                value: dynamic-views-text-preview-color-accent
+            -
+                label: Red
+                value: dynamic-views-text-preview-color-red
+            -
+                label: Orange
+                value: dynamic-views-text-preview-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-text-preview-color-yellow
+            -
+                label: Green
+                value: dynamic-views-text-preview-color-green
+            -
+                label: Cyan
+                value: dynamic-views-text-preview-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-text-preview-color-blue
+            -
+                label: Purple
+                value: dynamic-views-text-preview-color-purple
+            -
+                label: Pink
+                value: dynamic-views-text-preview-color-pink
+            -
+                label: Custom
+                value: dynamic-views-text-preview-color-custom
+    -
+        id: dynamic-views-text-preview-color-custom
+        title: Custom text color
+        description: Set a custom color.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: thumbnails-heading
+        title: Thumbnails
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-thumbnail-border-radius
+        title: Thumbnail border radius
+        description: Corner roundness of thumbnails.
+        type: variable-number-slider
+        default: 4
+        min: 0
+        max: 48
+        step: 1
+        format: px
+    -
+        id: dynamic-views-thumbnail-crop
+        title: Thumbnail crop alignment
+        description: How to crop thumbnail images when aspect ratios don't match.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-thumbnail-crop-center
+        options:
+            -
+                label: Top
+                value: dynamic-views-thumbnail-crop-top
+            -
+                label: Center
+                value: dynamic-views-thumbnail-crop-center
+            -
+                label: Bottom
+                value: dynamic-views-thumbnail-crop-bottom
+    -
+        id: dynamic-views-show-thumbnail-placeholder
+        title: Show placeholder for files with no images
+        description: Show empty thumbnail placeholder for files without images.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-disable-thumbnail-scrubbing
+        title: Disable thumbnail scrubbing
+        description: Don't show other images on hover over thumbnail.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-hide-thumbnail-shadow
+        title: Hide scrubbing shadow
+        description: Don't show the shadow/glow below thumbnails with multiple images.
+        type: class-toggle
+        default: false
+    -
+        id: title-heading
+        title: Title
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-file-type-indicator
+        title: File format indicator
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-file-type-ext
+        options:
+            -
+                label: Extension
+                value: dynamic-views-file-type-ext
+            -
+                label: Flair
+                value: dynamic-views-file-type-flair
+            -
+                label: Icon
+                value: dynamic-views-file-type-icon
+            -
+                label: None
+                value: dynamic-views-file-type-none
+    -
+        id: dynamic-views-hidden-file-extensions
+        title: Hide file formats
+        description: Comma-separated list of formats to hide (e.g., md, base, canvas).
+        type: variable-text
+        default: md
+    -
+        id: dynamic-views-title-divider
+        title: Divider line
+        description: Show a horizontal rule below the card title.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-title-font
+        title: Title font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-title-font-size
+        title: Title font size
+        description: Font size for card titles (e.g., 1em, 16px, 1.2rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-title-color
+        title: Text color
+        description: Theme color preset for titles.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-color-normal
+        options:
+            -
+                label: Faint
+                value: dynamic-views-title-color-faint
+            -
+                label: Muted
+                value: dynamic-views-title-color-muted
+            -
+                label: Normal
+                value: dynamic-views-title-color-normal
+            -
+                label: Accent
+                value: dynamic-views-title-color-accent
+            -
+                label: Red
+                value: dynamic-views-title-color-red
+            -
+                label: Orange
+                value: dynamic-views-title-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-title-color-yellow
+            -
+                label: Green
+                value: dynamic-views-title-color-green
+            -
+                label: Cyan
+                value: dynamic-views-title-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-title-color-blue
+            -
+                label: Purple
+                value: dynamic-views-title-color-purple
+            -
+                label: Pink
+                value: dynamic-views-title-color-pink
+            -
+                label: Custom
+                value: dynamic-views-title-color-custom
+    -
+        id: dynamic-views-title-color-custom
+        title: Custom text color
+        description: Set a custom color.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-title-alignment
+        title: Title alignment
+        description: Horizontal alignment of card titles.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-title-align-left
+            -
+                label: Center
+                value: dynamic-views-title-align-center
+            -
+                label: Right
+                value: dynamic-views-title-align-right
+    -
+        id: dynamic-views-title-overflow
+        title: Overflow behavior
+        description: How to handle long title text.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-overflow-wrap
+        options:
+            -
+                label: Wrap
+                value: dynamic-views-title-overflow-wrap
+            -
+                label: Scroll
+                value: dynamic-views-title-overflow-scroll
+
+*/

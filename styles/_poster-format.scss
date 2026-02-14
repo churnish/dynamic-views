@@ -1,0 +1,213 @@
+/* ==================== POSTER FORMAT ==================== */
+
+/* Poster overlay for text readability (includes transition, unlike backdrop) */
+.dynamic-views .card.image-format-poster .card-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  backdrop-filter: blur(var(--dynamic-views-poster-overlay-blur, 0px));
+  transition: opacity var(--anim-duration-moderate, 300ms); /* opacity, not background — background toggle causes overlay flicker */
+}
+
+/* Poster mode — Gradient (default — hardcoded dark at 85%) */
+body.dynamic-views-poster-mode-gradient
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 85%) 0%,
+    rgb(0 0 0 / 36.55%) 50%,
+    rgb(0 0 0 / 0%) 100%
+  );
+}
+
+/* Gradient: bottom-align content where tint provides contrast, with light text (hardcoded dark gradient) */
+body.dynamic-views-poster-mode-gradient
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
+  justify-content: flex-end;
+  --text-normal: #fafafa;
+  --text-muted: #f5f5f5;
+  --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+}
+
+body.dynamic-views-poster-mode-gradient
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-content {
+  flex: 0 1 auto;
+  max-height: 70%;
+}
+
+/* Gradient: disable backdrop blur (incompatible with gradient — blur would show through transparent top) */
+body.dynamic-views-poster-mode-gradient
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  backdrop-filter: none;
+}
+
+/* Poster mode — Overlay (flat tint) */
+
+/* Overlay + Match theme (dark) */
+body.dynamic-views-poster-mode-overlay:is(
+    .dynamic-views-poster-theme-match,
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
+  ).theme-dark
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: rgb(
+    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)
+  );
+}
+
+/* Overlay + Match theme (light) */
+body.dynamic-views-poster-mode-overlay:is(
+    .dynamic-views-poster-theme-match,
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
+  ).theme-light
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: rgb(
+    255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
+  );
+}
+
+/* Overlay + Light (forced) */
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: rgb(
+    255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
+  );
+}
+
+/* Overlay + Dark (forced) */
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster::after {
+  background: rgb(
+    0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)
+  );
+}
+
+/* Poster: content hidden by default (only if card has image) */
+.dynamic-views .card.image-format-poster:has(.card-poster) .card-content {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.75rem);
+  transition:
+    opacity var(--anim-duration-moderate, 300ms),
+    transform var(--anim-duration-moderate, 300ms);
+}
+
+/* Poster: overlay hidden by default.
+   Uses opacity instead of background:transparent to keep the compositing layer alive
+   and avoid cascade flicker from theme-variant background rules. */
+.dynamic-views .card.image-format-poster .card-poster::after {
+  opacity: 0;
+}
+
+/* Poster: show content on click (tap toggle) */
+.dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster)
+  .card-content {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Poster: show overlay on click */
+.dynamic-views .card.image-format-poster.poster-revealed .card-poster::after {
+  opacity: 1;
+}
+
+/* Poster: reveal content on hover intent (desktop only) */
+@media (hover: hover) {
+  .dynamic-views
+    .card.image-format-poster.poster-hover-active:has(.card-poster)
+    .card-content {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .dynamic-views
+    .card.image-format-poster.poster-hover-active
+    .card-poster::after {
+    opacity: 1;
+  }
+}
+
+/* Poster: disable raise animation */
+body.dynamic-views-poster-disable-raise
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster)
+  .card-content {
+  transform: none;
+  transition: opacity var(--anim-duration-moderate, 300ms);
+}
+
+/* Grid: all poster cards get aspect-ratio (override height:100% to prevent width expansion) */
+.dynamic-views .dynamic-views-grid .card.image-format-poster {
+  height: auto;
+  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+}
+
+/* Masonry: only cards with images get aspect-ratio */
+.dynamic-views:not(.dynamic-views-grid)
+  .card.image-format-poster:has(.card-poster) {
+  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+}
+
+/* Card mode: cards with images have pointer cursor */
+body.dynamic-views-open-on-card
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
+  cursor: pointer;
+}
+
+/* Mobile: always pointer cursor for reveal toggle, even in title mode */
+@media (hover: none) {
+  body.dynamic-views-open-on-title
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster) {
+    cursor: pointer;
+  }
+}
+
+/* Overlay: text color overrides (light tint → dark text) */
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster),
+body.dynamic-views-poster-mode-overlay:is(
+    .dynamic-views-poster-theme-match,
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
+  ).theme-light
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
+  --text-normal: #222222;
+  --text-muted: #333333;
+  --text-faint: color-mix(in srgb, #333333 60%, transparent);
+}
+
+/* Overlay: text color overrides (dark tint → light text) */
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster),
+body.dynamic-views-poster-mode-overlay:is(
+    .dynamic-views-poster-theme-match,
+    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
+  ).theme-dark
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
+  --text-normal: #fafafa;
+  --text-muted: #f5f5f5;
+  --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+}

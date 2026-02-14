@@ -1,0 +1,44 @@
+/* ============================================
+   DATACORE & BASES VIEW STYLES
+   ============================================ */
+
+/* ============================================
+   FOCUS & ACCESSIBILITY STYLES
+   ============================================ */
+
+.dynamic-views button:not(.clickable-icon) {
+  box-shadow: none !important;
+}
+
+.dynamic-views button:focus-visible,
+.dynamic-views [role="button"]:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 2px;
+}
+
+.dynamic-views [role="menuitem"]:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
+.dynamic-views [role="menuitem"]:first-child:focus-visible {
+  border-radius: 5px 5px 0 0;
+}
+
+.dynamic-views [role="menuitem"]:last-child:focus-visible {
+  border-radius: 0 0 5px 5px;
+}
+
+.dynamic-views [role="menuitem"]:only-child:focus-visible {
+  border-radius: 5px;
+}
+
+.dynamic-views [role="checkbox"]:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 2px;
+}
+
+.dynamic-views .card:focus-visible {
+  outline: none;
+}
