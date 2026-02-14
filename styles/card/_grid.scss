@@ -355,7 +355,7 @@ body.dynamic-views-hide-group-property-labels
     border-radius: var(--dynamic-views-card-border-radius, 8px);
     overflow: hidden; /* Clip covers at rounded corners */
     padding: var(--dynamic-views-card-padding, 8px);
-    margin: var(--size-4-2) 0;
+    margin: 0;
     background-color: var(--background-primary-alt);
     break-inside: avoid;
     page-break-inside: avoid;

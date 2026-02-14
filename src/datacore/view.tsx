@@ -85,8 +85,11 @@ function calculateWidthParams(section: Element): {
   const fileLineWidth =
     parseFloat(cs.getPropertyValue("--file-line-width")) || 700;
   const fileMargins = parseFloat(cs.getPropertyValue("--file-margins")) || 16;
+  // Use at least --size-4-3 (Bases view padding) so Datacore matches Bases width on mobile
+  const basesViewPadding = parseFloat(cs.getPropertyValue("--size-4-3")) || 12;
+  const effectiveMargins = Math.max(fileMargins, basesViewPadding);
   const availableWidth =
-    section.getBoundingClientRect().width - fileMargins * 2;
+    section.getBoundingClientRect().width - effectiveMargins * 2;
   const targetWidth = WIDE_MODE_MULTIPLIER * fileLineWidth;
   return {
     fileLineWidth,
@@ -331,11 +334,13 @@ export function View({
             : params.targetWidth;
       }
 
-      // Max: align to pane edges; Wide: center relative to content
+      // Max: align to pane edges; Wide: center within content
+      // Use measured content width (not CSS variable) so offset stays correct
+      // when pane is narrower than --file-line-width
       const offsetLeft =
         widthMode === "max"
           ? sectionRect.left - contentRect.left + params.fileMargins
-          : -(effectiveWidth - params.fileLineWidth) / 2;
+          : -(effectiveWidth - contentRect.width) / 2;
       codeBlock.style.setProperty("width", `${effectiveWidth}px`, "important");
       codeBlock.style.setProperty(
         "max-width",
@@ -396,8 +401,13 @@ export function View({
         widthMode === "max"
           ? params.availableWidth
           : Math.min(params.targetWidth, params.availableWidth);
-      // Guard: when pane is narrower than line width, don't shift right
-      const offset = Math.max(0, (effectiveWidth - params.fileLineWidth) / 2);
+      // Use measured sizer width (not CSS variable) so offset stays correct
+      // when pane is narrower than --file-line-width
+      const sizer = section.querySelector(".markdown-preview-sizer");
+      const sizerWidth = sizer
+        ? sizer.getBoundingClientRect().width
+        : params.fileLineWidth;
+      const offset = Math.max(0, (effectiveWidth - sizerWidth) / 2);
 
       elPre.style.setProperty("width", `${effectiveWidth}px`, "important");
       elPre.style.setProperty("max-width", `${effectiveWidth}px`, "important");

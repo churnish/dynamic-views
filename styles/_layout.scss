@@ -74,6 +74,12 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
   overflow: visible !important;
 }
 
+/* Constrain code block wrapper in reading view (Obsidian makes it wider than sizer) */
+:is(.markdown-preview-view, .markdown-reading-view)
+  .el-pre:has(.block-language-datacorejsx) {
+  max-width: 100%;
+}
+
 /* Default width for datacorejsx blocks (readable line width) */
 .markdown-source-view.is-readable-line-width
   .cm-content
