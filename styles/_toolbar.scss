@@ -486,19 +486,19 @@ body.dynamic-views-disable-toolbar-shadow
 
 /* Hide search filter when toggle is on */
 body.dynamic-views-hide-search .dynamic-views .search-controls,
-body.dynamic-views-hide-search .search-controls-compact {
+body.dynamic-views-hide-search .dynamic-views .search-controls-compact {
   display: none !important;
 }
 
 /* Hide result count when toggle is on */
 body.dynamic-views-hide-result-count .dynamic-views .results-count-wrapper,
-body.dynamic-views-hide-result-count .results-count-wrapper-compact {
+body.dynamic-views-hide-result-count .dynamic-views .results-count-wrapper-compact {
   display: none !important;
 }
 
 /* Hide create note button when toggle is on */
 body.dynamic-views-hide-create-note .dynamic-views .create-note-button,
-body.dynamic-views-hide-create-note .create-note-button-compact {
+body.dynamic-views-hide-create-note .dynamic-views .create-note-button-compact {
   display: none !important;
 }
 

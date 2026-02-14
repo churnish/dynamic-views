@@ -51,6 +51,13 @@ body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
   cursor: text;
 }
 
+/* Bases needs user-select: text on the container for mobile WebKit —
+   Datacore inherits it from CodeMirror's cm-content, but Bases sits
+   directly under view-content (user-select: none) */
+body.dynamic-views-open-on-title .dynamic-views-bases-container {
+  user-select: text;
+}
+
 /* Make all card text selectable when openFileAction is 'title' */
 body.dynamic-views-open-on-title .dynamic-views .card-title,
 body.dynamic-views-open-on-title .dynamic-views .card-subtitle,

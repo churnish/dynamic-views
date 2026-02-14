@@ -817,19 +817,12 @@ export class SharedCardRenderer {
     if (keyboardNav?.containerRef) {
       cardEl.addEventListener(
         "mousedown",
-        (e: MouseEvent) => {
+        () => {
           const container = keyboardNav.containerRef.current as
             | (HTMLElement & { _keyboardNavActive?: boolean })
             | null;
           if (container) {
             container._keyboardNavActive = false;
-          }
-          // Stop propagation in capture phase to prevent CodeMirror's capture-phase
-          // handler on cm-scroller from intercepting text selection
-          // when openFileAction is 'title' (card content should be selectable)
-          if (settings.openFileAction === "title") {
-            console.debug("Stopping mousedown propagation for text selection");
-            e.stopPropagation();
           }
         },
         { signal, capture: true },

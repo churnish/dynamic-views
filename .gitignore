@@ -1,10 +1,10 @@
 main.js
 styles.css
+data.json
 *.js.map
 *.map
 node_modules
 .DS_Store
-data.json
 *.zip
 .claude
 coverage/
