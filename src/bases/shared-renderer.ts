@@ -1656,7 +1656,7 @@ export class SharedCardRenderer {
     // Multi-image indicator
     if (isSlideshowIndicatorEnabled()) {
       const indicator = slideshowEl.createDiv("slideshow-indicator");
-      setIcon(indicator, "lucide-images");
+      setIcon(indicator, "lucide-circle-small");
     }
 
     // Navigation arrows
