@@ -1,42 +1,174 @@
 /* ==================== CARD COVER FORMAT - FLEXBOX SYSTEM ==================== */
 
 /* Base card setup for cover format */
-.dynamic-views .card.image-format-cover {
-  position: relative;
-  overflow: hidden;
-  padding: var(--dynamic-views-card-padding, 8px);
-  display: flex;
-  flex-direction: column;
-}
-
 /* Card content flex setup */
-.dynamic-views .card.image-format-cover .card-previews {
-  flex-direction: row;
-  gap: var(--size-4-2);
-}
-
 /* Cover format: spacing between cover wrapper and content wrapper is handled
    by cover wrapper margins (negative edge-bleed + positive spacing margins) */
-
 /* Remove spacing from properties-top when it's first visible element (no header) */
-.dynamic-views
-  .card.image-format-cover:not(:has(.card-header))
-  .card-properties-top {
-  margin-top: 0;
+/* Title-subtitle: explicitly zero gap (owl selector would add spacing; title and subtitle should sit flush) */
+/* ==================== COVER WRAPPER POSITIONING ==================== */
+/* Cover wrapper: match card corner rounding where wrapper meets card edge.
+   Card overflow:hidden alone doesn't reliably clip at rounded corners in Chromium. */
+/* Cover-top: wrapper with negative margins to bleed to edges */
+/* Cover-bottom: wrapper at end with edge-bleeding margins */
+/* Cover-bottom placeholder: expands to fill remaining space like actual cover */
+/* ==================== COVER-ONLY CARDS ==================== */
+/* When cover is the only visible element, fill entire card */
+/* Cover-only cards: zero padding, reset wrapper margins */
+/* Reset negative margins since padding is 0 */
+/* Cover-left: wrapper positioned at edges */
+/* Cover-right: wrapper positioned at edges */
+.dynamic-views {
+  .card.image-format-cover {
+    position: relative;
+    overflow: hidden;
+    padding: var(--dynamic-views-card-padding, 8px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card.image-format-cover .card-previews {
+    flex-direction: row;
+    gap: var(--size-4-2);
+  }
+
+  .card.image-format-cover:not(:has(.card-header)) .card-properties-top {
+    margin-top: 0;
+  }
+
+  .card.image-format-cover:has(
+      .card-cover-wrapper:not(.card-cover-wrapper-placeholder)
+    )
+    .card-title
+    + .card-subtitle,
+  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
+    .card-title
+    + .card-subtitle {
+    margin-top: 0;
+  }
+
+  .card.image-format-cover {
+    --cover-inner-radius: max(
+      var(--dynamic-views-cover-border-radius, 0px),
+      calc(
+        var(--dynamic-views-card-border-radius, 8px) - var(
+            --cover-inset-computed,
+            1px
+          )
+      )
+    );
+    --cover-non-edge-radius: var(--dynamic-views-cover-border-radius, 0px);
+  }
+
+  .card.image-format-cover .card-cover-wrapper {
+    overflow: hidden;
+  }
+
+  .card.card-cover-top.image-format-cover .card-cover-wrapper {
+    border-radius: var(--cover-inner-radius) var(--cover-inner-radius)
+      var(--cover-non-edge-radius) var(--cover-non-edge-radius);
+    margin: calc(
+        var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
+      )
+      calc(var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px))
+      var(--dynamic-views-card-padding, 8px)
+      calc(var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px));
+  }
+
+  .card.card-cover-bottom.image-format-cover .card-cover-wrapper {
+    border-radius: var(--cover-non-edge-radius) var(--cover-non-edge-radius)
+      var(--cover-inner-radius) var(--cover-inner-radius);
+    margin-top: var(--dynamic-views-card-padding, 8px);
+    margin-right: calc(
+      var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
+    );
+    margin-bottom: calc(
+      var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
+    );
+    margin-left: calc(
+      var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
+    );
+  }
+
+  .card.card-cover-bottom.image-format-cover
+    .card-cover-wrapper.card-cover-wrapper-placeholder {
+    flex-grow: 1;
+    min-height: 0;
+  }
+
+  .card.card-cover-top.image-format-cover:not(
+      :has(
+        .card-header,
+        .card-previews,
+        .card-properties-top,
+        .card-properties-bottom
+      )
+    ),
+  .card.card-cover-bottom.image-format-cover:not(
+      :has(
+        .card-header,
+        .card-previews,
+        .card-properties-top,
+        .card-properties-bottom
+      )
+    ) {
+    padding: 0;
+  }
+
+  .card.card-cover-top.image-format-cover:not(
+      :has(
+        .card-header,
+        .card-previews,
+        .card-properties-top,
+        .card-properties-bottom
+      )
+    )
+    .card-cover-wrapper,
+  .card.card-cover-bottom.image-format-cover:not(
+      :has(
+        .card-header,
+        .card-previews,
+        .card-properties-top,
+        .card-properties-bottom
+      )
+    )
+    .card-cover-wrapper {
+    margin: 0;
+  }
+
+  .card.card-cover-left.image-format-cover .card-cover-wrapper {
+    border-radius: var(--cover-inner-radius) var(--cover-non-edge-radius)
+      var(--cover-non-edge-radius) var(--cover-inner-radius);
+    position: absolute;
+    top: var(--cover-inset-computed);
+    left: var(--cover-inset-computed);
+    bottom: var(--cover-inset-computed);
+    right: auto !important;
+    width: calc(
+      var(--dynamic-views-side-cover-width, 200px) - var(
+          --dynamic-views-cover-inset,
+          0px
+        )
+    );
+  }
+
+  .card.card-cover-right.image-format-cover .card-cover-wrapper {
+    border-radius: var(--cover-non-edge-radius) var(--cover-inner-radius)
+      var(--cover-inner-radius) var(--cover-non-edge-radius);
+    position: absolute;
+    top: var(--cover-inset-computed);
+    right: var(--cover-inset-computed);
+    bottom: var(--cover-inset-computed);
+    left: auto !important;
+    width: calc(
+      var(--dynamic-views-side-cover-width, 200px) - var(
+          --dynamic-views-cover-inset,
+          0px
+        )
+    );
+  }
 }
 
-/* Title-subtitle: explicitly zero gap (owl selector would add spacing; title and subtitle should sit flush) */
-.dynamic-views
-  .card.image-format-cover:has(
-    .card-cover-wrapper:not(.card-cover-wrapper-placeholder)
-  )
-  .card-title
-  + .card-subtitle,
-/* Also apply to placeholder cards */
-.dynamic-views
-  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
-  .card-title
-  + .card-subtitle,
 /* Masonry hidden placeholders (higher specificity to beat owl selector) */
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
@@ -51,144 +183,4 @@ body.dynamic-views-show-cover-placeholder-none
   .card-title
   + .card-subtitle {
   margin-top: 0;
-}
-
-/* ==================== COVER WRAPPER POSITIONING ==================== */
-
-/* Cover wrapper: match card corner rounding where wrapper meets card edge.
-   Card overflow:hidden alone doesn't reliably clip at rounded corners in Chromium. */
-.dynamic-views .card.image-format-cover {
-  --cover-inner-radius: max(
-    var(--dynamic-views-cover-border-radius, 0px),
-    calc(
-      var(--dynamic-views-card-border-radius, 8px) - var(
-          --cover-inset-computed,
-          1px
-        )
-    )
-  );
-  --cover-non-edge-radius: var(--dynamic-views-cover-border-radius, 0px);
-}
-
-.dynamic-views .card.image-format-cover .card-cover-wrapper {
-  overflow: hidden;
-}
-
-/* Cover-top: wrapper with negative margins to bleed to edges */
-.dynamic-views .card.card-cover-top.image-format-cover .card-cover-wrapper {
-  border-radius: var(--cover-inner-radius) var(--cover-inner-radius)
-    var(--cover-non-edge-radius) var(--cover-non-edge-radius);
-  margin: calc(
-      var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-    )
-    calc(var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px))
-    var(--dynamic-views-card-padding, 8px)
-    calc(var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px));
-}
-
-/* Cover-bottom: wrapper at end with edge-bleeding margins */
-.dynamic-views .card.card-cover-bottom.image-format-cover .card-cover-wrapper {
-  border-radius: var(--cover-non-edge-radius) var(--cover-non-edge-radius)
-    var(--cover-inner-radius) var(--cover-inner-radius);
-  margin-top: var(--dynamic-views-card-padding, 8px);
-  margin-right: calc(
-    var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-  );
-  margin-bottom: calc(
-    var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-  );
-  margin-left: calc(
-    var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px)
-  );
-}
-
-/* Cover-bottom placeholder: expands to fill remaining space like actual cover */
-.dynamic-views
-  .card.card-cover-bottom.image-format-cover
-  .card-cover-wrapper.card-cover-wrapper-placeholder {
-  flex-grow: 1;
-  min-height: 0;
-}
-
-/* ==================== COVER-ONLY CARDS ==================== */
-/* When cover is the only visible element, fill entire card */
-
-/* Cover-only cards: zero padding, reset wrapper margins */
-.dynamic-views
-  .card.card-cover-top.image-format-cover:not(
-    :has(
-      .card-header,
-      .card-previews,
-      .card-properties-top,
-      .card-properties-bottom
-    )
-  ),
-.dynamic-views
-  .card.card-cover-bottom.image-format-cover:not(
-    :has(
-      .card-header,
-      .card-previews,
-      .card-properties-top,
-      .card-properties-bottom
-    )
-  ) {
-  padding: 0;
-}
-
-/* Reset negative margins since padding is 0 */
-.dynamic-views
-  .card.card-cover-top.image-format-cover:not(
-    :has(
-      .card-header,
-      .card-previews,
-      .card-properties-top,
-      .card-properties-bottom
-    )
-  )
-  .card-cover-wrapper,
-.dynamic-views
-  .card.card-cover-bottom.image-format-cover:not(
-    :has(
-      .card-header,
-      .card-previews,
-      .card-properties-top,
-      .card-properties-bottom
-    )
-  )
-  .card-cover-wrapper {
-  margin: 0;
-}
-
-/* Cover-left: wrapper positioned at edges */
-.dynamic-views .card.card-cover-left.image-format-cover .card-cover-wrapper {
-  border-radius: var(--cover-inner-radius) var(--cover-non-edge-radius)
-    var(--cover-non-edge-radius) var(--cover-inner-radius);
-  position: absolute;
-  top: var(--cover-inset-computed);
-  left: var(--cover-inset-computed);
-  bottom: var(--cover-inset-computed);
-  right: auto !important;
-  width: calc(
-    var(--dynamic-views-side-cover-width, 200px) - var(
-        --dynamic-views-cover-inset,
-        0px
-      )
-  );
-}
-
-/* Cover-right: wrapper positioned at edges */
-.dynamic-views .card.card-cover-right.image-format-cover .card-cover-wrapper {
-  border-radius: var(--cover-non-edge-radius) var(--cover-inner-radius)
-    var(--cover-inner-radius) var(--cover-non-edge-radius);
-  position: absolute;
-  top: var(--cover-inset-computed);
-  right: var(--cover-inset-computed);
-  bottom: var(--cover-inset-computed);
-  left: auto !important;
-  width: calc(
-    var(--dynamic-views-side-cover-width, 200px) - var(
-        --dynamic-views-cover-inset,
-        0px
-      )
-  );
 }

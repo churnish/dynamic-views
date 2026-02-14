@@ -25,16 +25,18 @@ body.dynamic-views-cover-crop-bottom
 }
 
 /* Cover fit mode: Contain mode - images use object-fit: contain */
-.dynamic-views .card.card-cover-contain.image-format-cover .card-cover img {
-  object-fit: contain;
-  object-position: center;
-  position: relative;
-  border-radius: 0; /* Override theme styles; container handles border-radius */
-}
-
 /* Cover backgrounds (all modes) */
-.dynamic-views .card.image-format-cover .card-cover {
-  background-color: var(--background-secondary);
+.dynamic-views {
+  .card.card-cover-contain.image-format-cover .card-cover img {
+    object-fit: contain;
+    object-position: center;
+    position: relative;
+    border-radius: 0; /* Override theme styles; container handles border-radius */
+  }
+
+  .card.image-format-cover .card-cover {
+    background-color: var(--background-secondary);
+  }
 }
 
 /* Cover background variants */

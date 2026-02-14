@@ -1,22 +1,21 @@
 /* Thumbnail-top: column layout with thumbnail first */
-.dynamic-views .card.card-thumbnail-top .card-previews {
-  flex-direction: column;
-}
-
-.dynamic-views .card.card-thumbnail-top .card-previews .card-thumbnail {
-  order: -1;
-}
-
 /* Thumbnail-bottom: column layout, content aligned to top */
-.dynamic-views .card.card-thumbnail-bottom .card-previews {
-  flex-direction: column;
-}
+.dynamic-views {
+  .card.card-thumbnail-top .card-previews {
+    flex-direction: column;
+  }
 
-.dynamic-views
-  .card.card-thumbnail-bottom
-  .card-previews
-  .card-text-preview-wrapper {
-  flex: 0 1 auto;
+  .card.card-thumbnail-top .card-previews .card-thumbnail {
+    order: -1;
+  }
+
+  .card.card-thumbnail-bottom .card-previews {
+    flex-direction: column;
+  }
+
+  .card.card-thumbnail-bottom .card-previews .card-text-preview-wrapper {
+    flex: 0 1 auto;
+  }
 }
 
 /* Card border color on hover presets */

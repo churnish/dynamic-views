@@ -2,46 +2,48 @@
    TOOLBAR & CONTROLS STYLES
    ============================================ */
 
-.dynamic-views .controls-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 100%;
-  padding: 3px 0 8px;
-  position: relative;
-  background-color: var(--background-primary);
-}
+.dynamic-views {
+  .controls-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 100%;
+    padding: 3px 0 8px;
+    position: relative;
+    background-color: var(--background-primary);
+  }
 
-.dynamic-views .controls-wrapper.scrolled::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.08) 0%,
-    rgba(0, 0, 0, 0.04) 40%,
-    rgba(0, 0, 0, 0.01) 70%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0px,
-    black 40px,
-    black calc(100% - 40px),
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0px,
-    black 40px,
-    black calc(100% - 40px),
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 10;
+  .controls-wrapper.scrolled::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.08) 0%,
+      rgba(0, 0, 0, 0.04) 40%,
+      rgba(0, 0, 0, 0.01) 70%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0px,
+      black 40px,
+      black calc(100% - 40px),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0px,
+      black 40px,
+      black calc(100% - 40px),
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
 }
 
 .theme-dark .dynamic-views .controls-wrapper.scrolled::after {
@@ -61,50 +63,54 @@ body.dynamic-views-disable-toolbar-shadow
   display: none;
 }
 
-.dynamic-views .bottom-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-sizing: border-box;
-}
+.dynamic-views {
+  .bottom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+  }
 
-.dynamic-views .view-controls-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  .view-controls-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 /* ============================================
    VIEW DROPDOWN
    ============================================ */
 
-.dynamic-views .view-dropdown-wrapper {
-  position: relative;
-}
+.dynamic-views {
+  .view-dropdown-wrapper {
+    position: relative;
+  }
 
-.dynamic-views .view-dropdown-btn {
-  padding: 6px 12px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all var(--anim-duration-fast, 140ms);
-  font-size: 0.9em;
-  color: var(--text-normal);
-  box-shadow: none;
-  height: 30px;
-  box-sizing: border-box;
-}
+  .view-dropdown-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all var(--anim-duration-fast, 140ms);
+    font-size: 0.9em;
+    color: var(--text-normal);
+    box-shadow: none;
+    height: 30px;
+    box-sizing: border-box;
+  }
 
-.dynamic-views .view-dropdown-btn svg {
-  color: var(--icon-color);
-}
+  .view-dropdown-btn svg {
+    color: var(--icon-color);
+  }
 
-.dynamic-views .view-dropdown-btn .chevron {
-  opacity: 0.6;
+  .view-dropdown-btn .chevron {
+    opacity: 0.6;
+  }
 }
 
 .view-dropdown-btn:hover {
@@ -112,27 +118,29 @@ body.dynamic-views-disable-toolbar-shadow
   border-color: var(--text-faint);
 }
 
-.dynamic-views .view-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
-  z-index: 1000;
-  min-width: 120px;
-  overflow: hidden;
-}
+.dynamic-views {
+  .view-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+    z-index: 1000;
+    min-width: 120px;
+    overflow: hidden;
+  }
 
-.dynamic-views .view-option {
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color var(--anim-duration-fast, 140ms);
-  font-size: 0.9em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  .view-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color var(--anim-duration-fast, 140ms);
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .view-option:hover {
@@ -143,37 +151,39 @@ body.dynamic-views-disable-toolbar-shadow
    SORT DROPDOWN
    ============================================ */
 
-.dynamic-views .sort-dropdown-wrapper {
-  position: relative;
-}
+.dynamic-views {
+  .sort-dropdown-wrapper {
+    position: relative;
+  }
 
-.dynamic-views .sort-dropdown-btn {
-  padding: 6px 8px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  transition: all var(--anim-duration-fast, 140ms);
-  color: var(--text-normal);
-  box-shadow: none;
-  height: 30px;
-  box-sizing: border-box;
-}
+  .sort-dropdown-btn {
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    transition: all var(--anim-duration-fast, 140ms);
+    color: var(--text-normal);
+    box-shadow: none;
+    height: 30px;
+    box-sizing: border-box;
+  }
 
-.dynamic-views .sort-dropdown-btn svg {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
+  .sort-dropdown-btn svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--icon-color);
+  }
 
-.dynamic-views .sort-dropdown-btn .chevron {
-  width: 12px;
-  height: 12px;
-  opacity: 0.6;
+  .sort-dropdown-btn .chevron {
+    width: 12px;
+    height: 12px;
+    opacity: 0.6;
+  }
 }
 
 .sort-dropdown-btn:hover {
@@ -181,37 +191,41 @@ body.dynamic-views-disable-toolbar-shadow
   border-color: var(--text-faint);
 }
 
-.dynamic-views .sort-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
-  z-index: 1000;
-  min-width: 240px;
-  overflow: hidden;
-}
+.dynamic-views {
+  .sort-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+    z-index: 1000;
+    min-width: 240px;
+    overflow: hidden;
+  }
 
-.dynamic-views .sort-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color var(--anim-duration-fast, 140ms);
-  font-size: 0.9em;
+  .sort-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color var(--anim-duration-fast, 140ms);
+    font-size: 0.9em;
+  }
 }
 
 .sort-option:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.dynamic-views .view-option svg,
-.dynamic-views .sort-option svg {
-  flex-shrink: 0;
-  color: var(--icon-color);
+.dynamic-views {
+  .view-option svg,
+  .sort-option svg {
+    flex-shrink: 0;
+    color: var(--icon-color);
+  }
 }
 
 .view-option.active,
@@ -228,32 +242,34 @@ body.dynamic-views-disable-toolbar-shadow
    RESULTS COUNT & LIMIT CONTROLS
    ============================================ */
 
-.dynamic-views .results-count-wrapper,
-.dynamic-views .results-count-wrapper-compact {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition:
-    background-color var(--anim-duration-fast, 140ms),
-    opacity var(--anim-duration-fast, 140ms);
-}
+.dynamic-views {
+  .results-count-wrapper,
+  .results-count-wrapper-compact {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition:
+      background-color var(--anim-duration-fast, 140ms),
+      opacity var(--anim-duration-fast, 140ms);
+  }
 
-/* Normal variant has additional transitions for search animation */
-.dynamic-views .results-count-wrapper {
-  transition:
-    background-color var(--anim-duration-fast, 140ms),
-    opacity var(--anim-duration-fast, 140ms),
-    transform var(--anim-duration-fast, 140ms) ease,
-    margin var(--anim-duration-moderate, 300ms) ease;
-}
+  /* Normal variant has additional transitions for search animation */
+  .results-count-wrapper {
+    transition:
+      background-color var(--anim-duration-fast, 140ms),
+      opacity var(--anim-duration-fast, 140ms),
+      transform var(--anim-duration-fast, 140ms) ease,
+      margin var(--anim-duration-moderate, 300ms) ease;
+  }
 
-/* Hide compact variant by default (shown via container query) */
-.dynamic-views .results-count-wrapper-compact {
-  display: none;
+  /* Hide compact variant by default (shown via container query) */
+  .results-count-wrapper-compact {
+    display: none;
+  }
 }
 
 @media (hover: hover) {
@@ -274,61 +290,63 @@ body.dynamic-views-disable-toolbar-shadow
   opacity: var(--icon-opacity-hover);
 }
 
-.dynamic-views .results-count {
-  font-size: 0.85em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
+.dynamic-views {
+  .results-count {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
 
-.dynamic-views .results-count.limited {
-  color: var(--icon-color-active);
-}
+  .results-count.limited {
+    color: var(--icon-color-active);
+  }
 
-.dynamic-views .results-count-chevron {
-  color: var(--text-muted);
-  opacity: 0.6;
-  flex-shrink: 0;
-}
+  .results-count-chevron {
+    color: var(--text-muted);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
 
-.dynamic-views .limit-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
-  z-index: 1000;
-  min-width: 200px;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  cursor: default;
-}
+  .limit-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+    z-index: 1000;
+    min-width: 200px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    cursor: default;
+  }
 
-.dynamic-views .limit-dropdown-menu > *:not(:last-child) {
-  margin-bottom: 8px;
-}
+  .limit-dropdown-menu > *:not(:last-child) {
+    margin-bottom: 8px;
+  }
 
-.dynamic-views .limit-dropdown-menu .limit-reset-button {
-  margin-bottom: 0 !important;
-}
+  .limit-dropdown-menu .limit-reset-button {
+    margin-bottom: 0 !important;
+  }
 
-.dynamic-views .limit-dropdown-label {
-  font-size: 0.85em;
-  color: var(--text-normal);
-  font-weight: 500;
-  cursor: default;
-}
+  .limit-dropdown-label {
+    font-size: 0.85em;
+    color: var(--text-normal);
+    font-weight: 500;
+    cursor: default;
+  }
 
-.dynamic-views .limit-dropdown-input {
-  padding: 6px 10px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
-  font-size: 0.9em;
+  .limit-dropdown-input {
+    padding: 6px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+  }
 }
 
 .limit-dropdown-input:focus {
@@ -336,15 +354,17 @@ body.dynamic-views-disable-toolbar-shadow
   border-color: var(--interactive-accent);
 }
 
-.dynamic-views .limit-reset-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background-color var(--anim-duration-fast, 140ms);
-  font-size: 0.9em;
+.dynamic-views {
+  .limit-reset-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color var(--anim-duration-fast, 140ms);
+    font-size: 0.9em;
+  }
 }
 
 .limit-reset-button:hover {
@@ -356,37 +376,39 @@ body.dynamic-views-disable-toolbar-shadow
   cursor: default;
 }
 
-.dynamic-views .limit-reset-button svg {
-  flex-shrink: 0;
-  color: var(--icon-color);
-}
+.dynamic-views {
+  .limit-reset-button svg {
+    flex-shrink: 0;
+    color: var(--icon-color);
+  }
 
-.dynamic-views .limit-dropdown-menu .bases-toolbar-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background-color var(--anim-duration-fast, 140ms);
-  font-size: 0.9em;
-}
+  .limit-dropdown-menu .bases-toolbar-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color var(--anim-duration-fast, 140ms);
+    font-size: 0.9em;
+  }
 
-.dynamic-views .limit-dropdown-menu .bases-toolbar-menu-item:hover {
-  background-color: var(--background-modifier-hover);
-}
+  .limit-dropdown-menu .bases-toolbar-menu-item:hover {
+    background-color: var(--background-modifier-hover);
+  }
 
-.dynamic-views .bases-toolbar-menu-item svg {
-  flex-shrink: 0;
-  color: var(--icon-color);
+  .bases-toolbar-menu-item svg {
+    flex-shrink: 0;
+    color: var(--icon-color);
+  }
 }
 
 /* ============================================
    TOOLBAR BUTTONS
    ============================================ */
 
-.dynamic-views
+.dynamic-views {
   :is(
     .create-note-button,
     .create-note-button-compact,
@@ -397,42 +419,40 @@ body.dynamic-views-disable-toolbar-shadow
     .width-toggle-btn,
     .pin-btn
   ) {
-  padding: 6px !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--anim-duration-fast, 140ms);
-  height: 30px;
-  width: 30px;
-  box-sizing: border-box;
-}
+    padding: 6px !important;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--anim-duration-fast, 140ms);
+    height: 30px;
+    width: 30px;
+    box-sizing: border-box;
+  }
 
-.dynamic-views :is(.settings-btn, .query-toggle-btn) {
-  box-shadow: none;
-}
+  :is(.settings-btn, .query-toggle-btn) {
+    box-shadow: none;
+  }
 
-.dynamic-views
   :is(
-    .create-note-button,
-    .create-note-button-compact,
-    .settings-btn,
-    .query-toggle-btn,
-    .shuffle-btn,
-    .open-random-btn,
-    .width-toggle-btn,
-    .pin-btn
-  )
-  svg {
-  width: 16px;
-  height: 16px;
-  color: var(--icon-color);
-}
+      .create-note-button,
+      .create-note-button-compact,
+      .settings-btn,
+      .query-toggle-btn,
+      .shuffle-btn,
+      .open-random-btn,
+      .width-toggle-btn,
+      .pin-btn
+    )
+    svg {
+    width: 16px;
+    height: 16px;
+    color: var(--icon-color);
+  }
 
-.dynamic-views
   :is(
     .create-note-button,
     .create-note-button-compact,
@@ -443,20 +463,21 @@ body.dynamic-views-disable-toolbar-shadow
     .width-toggle-btn,
     .pin-btn
   ):hover {
-  border-color: var(--text-faint);
-  background-color: var(--background-modifier-hover);
-}
+    border-color: var(--text-faint);
+    background-color: var(--background-modifier-hover);
+  }
 
-/* Hide compact variant by default (shown via container query) */
-.dynamic-views .create-note-button-compact {
-  display: none;
-}
+  /* Hide compact variant by default (shown via container query) */
+  .create-note-button-compact {
+    display: none;
+  }
 
-.dynamic-views .property-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-left: auto;
+  .property-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+  }
 }
 
 /* ============================================

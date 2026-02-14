@@ -2,52 +2,266 @@
    PROPERTY ROW SYSTEM
    ============================================ */
 
-.dynamic-views .property-pair {
-  display: flex;
-  flex-direction: row;
-  gap: var(--size-4-2);
-  width: 100%;
-  min-width: 0;
-}
+.dynamic-views {
+  .property-pair {
+    display: flex;
+    flex-direction: row;
+    gap: var(--size-4-2);
+    width: 100%;
+    min-width: 0;
+  }
 
-/* Compact mode: stack side-by-side properties on narrow cards */
-.dynamic-views .card.compact-mode .property-pair {
-  flex-direction: column;
-  gap: var(--size-2-2);
-}
+  /* Compact mode: stack side-by-side properties on narrow cards */
+  .card.compact-mode .property-pair {
+    flex-direction: column;
+    gap: var(--size-2-2);
+  }
 
-.dynamic-views .card.compact-mode .property-pair .property,
-.dynamic-views .card.compact-mode .property-pair.property-measured .property {
-  max-width: 100% !important;
-  flex: none;
-  width: 100% !important;
-}
+  .card.compact-mode .property-pair .property,
+  .card.compact-mode .property-pair.property-measured .property {
+    max-width: 100% !important;
+    flex: none;
+    width: 100% !important;
+  }
 
-/* Compact mode: left-align right-side properties when stacked */
-.dynamic-views
-  .card.compact-mode
-  .property-pair
-  .pair-right
+  /* Compact mode: left-align right-side properties when stacked */
+  .card.compact-mode .property-pair .pair-right .property-content-wrapper {
+    justify-content: flex-start;
+  }
+
+  .card.compact-mode .property-pair .pair-right .property-content {
+    justify-content: flex-start;
+    order: 0;
+  }
+
+  .card.compact-mode .property-pair .pair-right .property-label {
+    text-align: left;
+  }
+
+  /* Compact mode: reset inline label order (label before content) */
+  .card.compact-mode .property-pair .pair-right .property-label-inline {
+    order: 0;
+  }
+
+  /* Meta-field: scrollable container */
+  .property {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: visible; /* Field doesn't scroll, wrapper does */
+    scrollbar-width: none;
+    position: relative;
+    direction: ltr;
+    color: var(--text-faint);
+    font-family: var(--dynamic-views-property-font, inherit);
+  }
+
+  /* Collapsed field: hidden entirely */
+  .property.property-collapsed {
+    display: none;
+  }
+
+  /* Gap between inline property label and content */
+  .property:has(.property-label-inline) {
+    gap: var(--size-2-2);
+  }
+
+  /* Vertical layout when property labels are on top */
+  .property:has(.property-label) {
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: visible; /* Override overflow - labels should not scroll */
+  }
+
+  /* Property labels should never scroll */
+  .property:has(.property-label) .property-label {
+    flex-shrink: 0;
+    overflow: visible;
+  }
+
+  /* Property content wrapper - handles scrolling and masking */
   .property-content-wrapper {
-  justify-content: flex-start;
-}
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+  }
 
-.dynamic-views .card.compact-mode .property-pair .pair-right .property-content {
-  justify-content: flex-start;
-  order: 0;
-}
+  .property-content-wrapper::-webkit-scrollbar {
+    display: none;
+  }
 
-.dynamic-views .card.compact-mode .property-pair .pair-right .property-label {
-  text-align: left;
-}
+  /* For inline labels: wrapper takes remaining space after label */
+  .property:has(.property-label-inline) .property-content-wrapper {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 
-/* Compact mode: reset inline label order (label before content) */
-.dynamic-views
-  .card.compact-mode
-  .property-pair
-  .pair-right
+  /* For property labels above or no property labels: wrapper takes full width */
+  .property:has(.property-label) .property-content-wrapper,
+  .property:not(:has(.property-label)):not(:has(.property-label-inline))
+    .property-content-wrapper {
+    width: 100%;
+  }
+
+  /* During measurement: wrapper shouldn't constrain content */
+  .property-pair.property-measuring .property-content-wrapper {
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: visible !important;
+    flex: 0 1 auto !important; /* Override flex: 1 1 0 from inline label mode to allow natural sizing */
+  }
+
+  .property-pair.property-measuring .property-content {
+    width: max-content !important;
+    max-width: none !important;
+  }
+
+  /* During measurement: fields shouldn't constrain content */
+  .property-pair.property-measuring .property {
+    width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important; /* Override flex: 1 1 0 to prevent equal distribution */
+  }
+
+  /* During measurement: remove min-width to allow natural sizing */
+  .property-pair.property-measuring .property-content {
+    min-width: 0 !important;
+  }
+
+  /* Default unmeasured state: natural content width to avoid snap when measurement applies */
+  .property-pair .property {
+    flex: 0 1 auto;
+    max-width: 50%;
+  }
+
+  /* Collapsed pair partner: expand visible property to full width.
+     Safety net for Bases imperative-DOM path where handleEmptyField applies
+     property-collapsed after async rendering. Datacore pre-filters instead. */
+  .property-pair:has(> .property-collapsed)
+    > .property:not(.property-collapsed) {
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  /* Both pair properties collapsed: hide the empty wrapper */
+  .property-pair:not(:has(> .property:not(.property-collapsed))) {
+    display: none;
+  }
+
+  /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
+  &.dynamic-views-paired-property-column .property-pair .property {
+    flex: 1 1 0;
+  }
+
+  /* Measured state: use calculated widths from CSS variables, remove 50% cap */
+  /* Odd fields (left side) use --field1-width */
+  .property-pair.property-measured .pair-left {
+    width: var(--field1-width);
+    flex: 0 0 auto;
+    max-width: none;
+  }
+
+  /* Even fields (right side) use --field2-width */
+  .property-pair.property-measured .pair-right {
+    width: var(--field2-width);
+    flex: 0 0 auto;
+    max-width: none;
+  }
+
+  /* Measured state: wrapper fills calculated field width */
+  .property-pair.property-measured .property-content-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Property label (above mode) */
+  .property-label {
+    font-size: var(
+      --dynamic-views-property-label-font-size,
+      var(--font-ui-smaller)
+    );
+    font-family: var(--dynamic-views-property-label-font, inherit);
+    color: var(--text-faint);
+    margin-bottom: var(--size-2-1);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Property label inline - as sibling of property-content */
   .property-label-inline {
-  order: 0;
+    font-size: var(
+      --dynamic-views-property-label-font-size,
+      var(--font-ui-smaller)
+    );
+    font-family: var(--dynamic-views-property-label-font, inherit);
+    color: var(--text-faint);
+    white-space: nowrap;
+    flex-shrink: 0;
+    z-index: 2;
+    background: inherit;
+    min-height: var(--dynamic-views-property-content-height, 20px);
+    display: flex;
+    align-items: center;
+  }
+
+  /* Property label color application */
+  :is(.property-label, .property-label-inline) {
+    color: var(--dynamic-views-property-label-color-value, var(--text-faint));
+  }
+
+  /* Property text color application - with labels */
+  .property:has(:is(.property-label, .property-label-inline)) {
+    color: var(
+      --dynamic-views-property-with-label-color-value,
+      var(--text-muted)
+    );
+  }
+
+  /* Property text color application - without labels */
+  .property:not(:has(:is(.property-label, .property-label-inline))) {
+    color: var(
+      --dynamic-views-property-no-label-color-value,
+      var(--text-faint)
+    );
+  }
+
+  /* Links in properties use Obsidian default colors (not property text color) */
+  .property a.internal-link {
+    color: var(--link-color);
+  }
+  .property a.internal-link:hover {
+    color: var(--link-color-hover);
+  }
+  .property a.external-link {
+    color: var(--link-external-color);
+  }
+  .property a.external-link:hover {
+    color: var(--link-external-color-hover);
+  }
+
+  /* Subtitle color application */
+  .card-subtitle {
+    color: var(--dynamic-views-subtitle-color-value, var(--text-faint));
+  }
+
+  /* Text preview color application */
+  .card-text-preview {
+    --dynamic-views-text-preview-color: var(
+      --dynamic-views-text-preview-color-value,
+      var(--text-muted)
+    );
+  }
+
+  /* Title color application */
+  .card-title {
+    --dynamic-views-title-color: var(
+      --dynamic-views-title-color-value,
+      var(--text-normal)
+    );
+  }
 }
 
 /* Compact mode: reset timestamp icon to left for even fields (edge mode only) */
@@ -87,172 +301,6 @@ body.dynamic-views-full-row-align-right
   .property-content-wrapper {
   flex: 0 1 auto;
   margin-left: auto;
-}
-
-/* Meta-field: scrollable container */
-.dynamic-views .property {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: visible; /* Field doesn't scroll, wrapper does */
-  scrollbar-width: none;
-  position: relative;
-  direction: ltr;
-  color: var(--text-faint);
-  font-family: var(--dynamic-views-property-font, inherit);
-}
-
-/* Collapsed field: hidden entirely */
-.dynamic-views .property.property-collapsed {
-  display: none;
-}
-
-/* Gap between inline property label and content */
-.dynamic-views .property:has(.property-label-inline) {
-  gap: var(--size-2-2);
-}
-
-/* Vertical layout when property labels are on top */
-.dynamic-views .property:has(.property-label) {
-  flex-direction: column;
-  align-items: stretch;
-  overflow-x: visible; /* Override overflow - labels should not scroll */
-}
-
-/* Property labels should never scroll */
-.dynamic-views .property:has(.property-label) .property-label {
-  flex-shrink: 0;
-  overflow: visible;
-}
-
-/* Property content wrapper - handles scrolling and masking */
-.dynamic-views .property-content-wrapper {
-  display: flex;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  position: relative;
-}
-
-.dynamic-views .property-content-wrapper::-webkit-scrollbar {
-  display: none;
-}
-
-/* For inline labels: wrapper takes remaining space after label */
-.dynamic-views .property:has(.property-label-inline) .property-content-wrapper {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-/* For property labels above or no property labels: wrapper takes full width */
-.dynamic-views .property:has(.property-label) .property-content-wrapper,
-.dynamic-views
-  .property:not(:has(.property-label)):not(:has(.property-label-inline))
-  .property-content-wrapper {
-  width: 100%;
-}
-
-/* During measurement: wrapper shouldn't constrain content */
-.dynamic-views .property-pair.property-measuring .property-content-wrapper {
-  width: auto !important;
-  max-width: none !important;
-  overflow-x: visible !important;
-  flex: 0 1 auto !important; /* Override flex: 1 1 0 from inline label mode to allow natural sizing */
-}
-
-.dynamic-views .property-pair.property-measuring .property-content {
-  width: max-content !important;
-  max-width: none !important;
-}
-
-/* During measurement: fields shouldn't constrain content */
-.dynamic-views .property-pair.property-measuring .property {
-  width: auto !important;
-  max-width: none !important;
-  flex: 0 0 auto !important; /* Override flex: 1 1 0 to prevent equal distribution */
-}
-
-/* During measurement: remove min-width to allow natural sizing */
-.dynamic-views .property-pair.property-measuring .property-content {
-  min-width: 0 !important;
-}
-
-/* Default unmeasured state: natural content width to avoid snap when measurement applies */
-.dynamic-views .property-pair .property {
-  flex: 0 1 auto;
-  max-width: 50%;
-}
-
-/* Collapsed pair partner: expand visible property to full width.
-   Safety net for Bases imperative-DOM path where handleEmptyField applies
-   property-collapsed after async rendering. Datacore pre-filters instead. */
-.dynamic-views
-  .property-pair:has(> .property-collapsed)
-  > .property:not(.property-collapsed) {
-  max-width: 100%;
-  flex: 1 1 auto;
-}
-
-/* Both pair properties collapsed: hide the empty wrapper */
-.dynamic-views .property-pair:not(:has(> .property:not(.property-collapsed))) {
-  display: none;
-}
-
-/* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
-.dynamic-views.dynamic-views-paired-property-column .property-pair .property {
-  flex: 1 1 0;
-}
-
-/* Measured state: use calculated widths from CSS variables, remove 50% cap */
-/* Odd fields (left side) use --field1-width */
-.dynamic-views .property-pair.property-measured .pair-left {
-  width: var(--field1-width);
-  flex: 0 0 auto;
-  max-width: none;
-}
-
-/* Even fields (right side) use --field2-width */
-.dynamic-views .property-pair.property-measured .pair-right {
-  width: var(--field2-width);
-  flex: 0 0 auto;
-  max-width: none;
-}
-
-/* Measured state: wrapper fills calculated field width */
-.dynamic-views .property-pair.property-measured .property-content-wrapper {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Property label (above mode) */
-.dynamic-views .property-label {
-  font-size: var(
-    --dynamic-views-property-label-font-size,
-    var(--font-ui-smaller)
-  );
-  font-family: var(--dynamic-views-property-label-font, inherit);
-  color: var(--text-faint);
-  margin-bottom: var(--size-2-1);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* Property label inline - as sibling of property-content */
-.dynamic-views .property-label-inline {
-  font-size: var(
-    --dynamic-views-property-label-font-size,
-    var(--font-ui-smaller)
-  );
-  font-family: var(--dynamic-views-property-label-font, inherit);
-  color: var(--text-faint);
-  white-space: nowrap;
-  flex-shrink: 0;
-  z-index: 2;
-  background: inherit;
-  min-height: var(--dynamic-views-property-content-height, 20px);
-  display: flex;
-  align-items: center;
 }
 
 /* Property label case transformations */
@@ -341,11 +389,6 @@ body.dynamic-views-property-label-color-custom
   color: var(--dynamic-views-property-label-color-custom, var(--text-faint));
 }
 
-/* Property label color application */
-.dynamic-views :is(.property-label, .property-label-inline) {
-  color: var(--dynamic-views-property-label-color-value, var(--text-faint));
-}
-
 /* Property text color presets - with labels - semantic colors via semantic color tokens */
 body.dynamic-views-property-color-with-labels-faint
   .dynamic-views
@@ -403,14 +446,6 @@ body.dynamic-views-property-color-with-labels-custom
   color: var(
     --dynamic-views-property-color-with-labels-custom,
     var(--text-faint)
-  );
-}
-
-/* Property text color application - with labels */
-.dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
-  color: var(
-    --dynamic-views-property-with-label-color-value,
-    var(--text-muted)
   );
 }
 
@@ -474,26 +509,6 @@ body.dynamic-views-property-color-without-labels-custom
   );
 }
 
-/* Property text color application - without labels */
-.dynamic-views
-  .property:not(:has(:is(.property-label, .property-label-inline))) {
-  color: var(--dynamic-views-property-no-label-color-value, var(--text-faint));
-}
-
-/* Links in properties use Obsidian default colors (not property text color) */
-.dynamic-views .property a.internal-link {
-  color: var(--link-color);
-}
-.dynamic-views .property a.internal-link:hover {
-  color: var(--link-color-hover);
-}
-.dynamic-views .property a.external-link {
-  color: var(--link-external-color);
-}
-.dynamic-views .property a.external-link:hover {
-  color: var(--link-external-color-hover);
-}
-
 /* Subtitle color presets - semantic colors applied at element level via semantic color tokens */
 body.dynamic-views-subtitle-color-faint .dynamic-views .card-subtitle {
   color: var(--text-faint);
@@ -541,11 +556,6 @@ body.dynamic-views-subtitle-color-custom {
 /* Custom fallback via semantic color tokens */
 body.dynamic-views-subtitle-color-custom .dynamic-views .card-subtitle {
   color: var(--dynamic-views-subtitle-color-custom, var(--text-faint));
-}
-
-/* Subtitle color application */
-.dynamic-views .card-subtitle {
-  color: var(--dynamic-views-subtitle-color-value, var(--text-faint));
 }
 
 /* Text preview color presets - semantic colors applied at element level via semantic color tokens */
@@ -597,14 +607,6 @@ body.dynamic-views-text-preview-color-custom .dynamic-views .card-text-preview {
   color: var(--dynamic-views-text-preview-color-custom, var(--text-muted));
 }
 
-/* Text preview color application */
-.dynamic-views .card-text-preview {
-  --dynamic-views-text-preview-color: var(
-    --dynamic-views-text-preview-color-value,
-    var(--text-muted)
-  );
-}
-
 /* Title color presets - semantic colors applied at element level via semantic color tokens */
 body.dynamic-views-title-color-faint .dynamic-views .card-title {
   --dynamic-views-title-color: var(--text-faint);
@@ -653,14 +655,6 @@ body.dynamic-views-title-color-custom {
 body.dynamic-views-title-color-custom .dynamic-views .card-title {
   --dynamic-views-title-color: var(
     --dynamic-views-title-color-custom,
-    var(--text-normal)
-  );
-}
-
-/* Title color application */
-.dynamic-views .card-title {
-  --dynamic-views-title-color: var(
-    --dynamic-views-title-color-value,
     var(--text-normal)
   );
 }

@@ -1,10 +1,12 @@
 /* ==================== COVER PLACEHOLDERS ==================== */
 
 /* Placeholder base styles: hidden by default, with border radius and background */
-.dynamic-views .card.image-format-cover .card-cover-placeholder {
-  display: none;
-  border-radius: var(--dynamic-views-cover-border-radius, 0);
-  background-color: var(--dynamic-views-image-background-plain);
+.dynamic-views {
+  .card.image-format-cover .card-cover-placeholder {
+    display: none;
+    border-radius: var(--dynamic-views-cover-border-radius, 0);
+    background-color: var(--dynamic-views-image-background-plain);
+  }
 }
 
 /* Placeholder background: follows cover background setting */

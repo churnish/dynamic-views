@@ -253,216 +253,273 @@
 }
 
 /* Even fields (right side) - label after content */
-.dynamic-views .property-pair .pair-right .property-label-inline {
-  order: 2;
-}
-
 /* Even fields (right side) - content before label */
-.dynamic-views .property-pair .pair-right .property-content {
-  order: 1;
-}
-
 /* Odd fields (left side) - left-aligned labels */
-.dynamic-views .property-pair .pair-left .property-label {
-  text-align: left;
-}
-
 /* Even fields (right side) - right-aligned labels */
-.dynamic-views .property-pair .pair-right .property-label {
-  text-align: right;
-}
-
 /* Universal property-content wrapper */
-.dynamic-views .property-content {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  flex-shrink: 0;
-  white-space: nowrap;
-  min-height: var(--dynamic-views-property-content-height, 20px);
-  color: inherit;
-  min-width: 0;
-  flex: 0 0 auto;
-  width: max-content;
-}
-
 /* Empty value marker styling - 0.6 opacity of property value color */
-.dynamic-views .property-content > span.empty-value-marker {
-  color: inherit;
-  opacity: 0.6;
-}
-
 /* Checkbox property - remove extra padding */
-.dynamic-views .property-content > .metadata-input-checkbox {
-  margin: 0;
-  padding: 0;
-}
-
 /* Even fields (right side) - content should fill wrapper width for proper alignment */
-.dynamic-views .property-pair .pair-right .property-content {
-  min-width: 100%;
-  width: max-content;
-  justify-content: flex-end;
-}
-
 /* Array list wrapper - ensure items display inline */
-.dynamic-views .property-content .list-wrapper {
-  display: inline;
-}
-
-.dynamic-views .property-content .list-wrapper > span {
-  display: inline;
-}
-
-.dynamic-views .property-content .list-item {
-  display: inline;
-}
-
-.dynamic-views .property-content .list-separator {
-  display: inline;
-}
-
 /* List separator styling - 0.6 opacity of property value color */
-.dynamic-views .list-separator {
-  color: inherit;
-  opacity: 0.6;
-}
-
 /* Alignment via justify-content on property-content wrapper */
 /* Odd fields (left side) */
-.dynamic-views .property-pair .pair-left .property-content {
-  justify-content: flex-start;
-}
-
 /* Even fields (right side) - align content right when not scrollable */
-.dynamic-views
-  .property-pair
-  .pair-right:not(.is-scrollable)
-  .property-content-wrapper {
-  justify-content: flex-end;
-}
-
 /* Even fields (right side) - align content left when scrollable */
-.dynamic-views
-  .property-pair
-  .pair-right.is-scrollable
-  .property-content-wrapper {
-  justify-content: flex-start;
-}
-
 /* Left alignment for right-side properties */
-.dynamic-views:is(
-    .dynamic-views-paired-property-left,
-    .dynamic-views-paired-property-column
-  )
-  .property-pair
-  .pair-right
-  .property-content-wrapper {
-  justify-content: flex-start;
-}
-
-.dynamic-views:is(
-    .dynamic-views-paired-property-left,
-    .dynamic-views-paired-property-column
-  )
-  .property-pair
-  .pair-right
-  .property-content {
-  justify-content: flex-start;
-  order: 0;
-}
-
-.dynamic-views:is(
-    .dynamic-views-paired-property-left,
-    .dynamic-views-paired-property-column
-  )
-  .property-pair
-  .pair-right
-  .property-label {
-  text-align: left;
-}
-
 /* Reset inline property label order to place label before content */
-.dynamic-views:is(
-    .dynamic-views-paired-property-left,
-    .dynamic-views-paired-property-column
-  )
-  .property-pair
-  .pair-right
-  .property-label-inline {
-  order: 0;
-}
-
 /* Stacked layout (unpaired properties are direct children of card-properties) */
-.dynamic-views .card-properties > .property .property-content {
-  justify-content: flex-start;
-}
-
 /* Hide scrollbar for side-by-side fields */
-.dynamic-views .property-pair .property::-webkit-scrollbar {
-  display: none;
-}
-
 /* Gradient masks for scrollable content (ON by default) */
-.dynamic-views .property-content-wrapper.scroll-gradient-left,
-.dynamic-views .card-subtitle.scroll-gradient-left,
-.dynamic-views .card-title.scroll-gradient-left {
-  mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black 100%
-  );
-}
+/* Vertical gradient masks for poster card body scroll */
+/* Hide empty fields */
+.dynamic-views {
+  .property-pair .pair-right .property-label-inline {
+    order: 2;
+  }
 
-.dynamic-views .property-content-wrapper.scroll-gradient-right,
-.dynamic-views .card-subtitle.scroll-gradient-right,
-.dynamic-views .card-title.scroll-gradient-right {
-  mask-image: linear-gradient(
-    to right,
-    black 0,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    black 0,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-}
+  .property-pair .pair-right .property-content {
+    order: 1;
+  }
 
-.dynamic-views .property-content-wrapper.scroll-gradient-both,
-.dynamic-views .card-subtitle.scroll-gradient-both,
-.dynamic-views .card-title.scroll-gradient-both {
-  mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
+  .property-pair .pair-left .property-label {
+    text-align: left;
+  }
+
+  .property-pair .pair-right .property-label {
+    text-align: right;
+  }
+
+  .property-content {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: var(--dynamic-views-property-content-height, 20px);
+    color: inherit;
+    min-width: 0;
+    flex: 0 0 auto;
+    width: max-content;
+  }
+
+  .property-content > span.empty-value-marker {
+    color: inherit;
+    opacity: 0.6;
+  }
+
+  .property-content > .metadata-input-checkbox {
+    margin: 0;
+    padding: 0;
+  }
+
+  .property-pair .pair-right .property-content {
+    min-width: 100%;
+    width: max-content;
+    justify-content: flex-end;
+  }
+
+  .property-content .list-wrapper {
+    display: inline;
+  }
+
+  .property-content .list-wrapper > span {
+    display: inline;
+  }
+
+  .property-content .list-item {
+    display: inline;
+  }
+
+  .property-content .list-separator {
+    display: inline;
+  }
+
+  .list-separator {
+    color: inherit;
+    opacity: 0.6;
+  }
+
+  .property-pair .pair-left .property-content {
+    justify-content: flex-start;
+  }
+
+  .property-pair .pair-right:not(.is-scrollable) .property-content-wrapper {
+    justify-content: flex-end;
+  }
+
+  .property-pair .pair-right.is-scrollable .property-content-wrapper {
+    justify-content: flex-start;
+  }
+
+  &:is(
+      .dynamic-views-paired-property-left,
+      .dynamic-views-paired-property-column
+    )
+    .property-pair
+    .pair-right
+    .property-content-wrapper {
+    justify-content: flex-start;
+  }
+
+  &:is(
+      .dynamic-views-paired-property-left,
+      .dynamic-views-paired-property-column
+    )
+    .property-pair
+    .pair-right
+    .property-content {
+    justify-content: flex-start;
+    order: 0;
+  }
+
+  &:is(
+      .dynamic-views-paired-property-left,
+      .dynamic-views-paired-property-column
+    )
+    .property-pair
+    .pair-right
+    .property-label {
+    text-align: left;
+  }
+
+  &:is(
+      .dynamic-views-paired-property-left,
+      .dynamic-views-paired-property-column
+    )
+    .property-pair
+    .pair-right
+    .property-label-inline {
+    order: 0;
+  }
+
+  .card-properties > .property .property-content {
+    justify-content: flex-start;
+  }
+
+  .property-pair .property::-webkit-scrollbar {
+    display: none;
+  }
+
+  .property-content-wrapper.scroll-gradient-left,
+  .card-subtitle.scroll-gradient-left,
+  .card-title.scroll-gradient-left {
+    mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black 100%
+    );
+  }
+
+  .property-content-wrapper.scroll-gradient-right,
+  .card-subtitle.scroll-gradient-right,
+  .card-title.scroll-gradient-right {
+    mask-image: linear-gradient(
+      to right,
+      black 0,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      black 0,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .property-content-wrapper.scroll-gradient-both,
+  .card-subtitle.scroll-gradient-both,
+  .card-title.scroll-gradient-both {
+    mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .card.image-format-poster .card-body.scroll-gradient-top {
+    mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black 100%
+    );
+  }
+
+  .card.image-format-poster .card-body.scroll-gradient-bottom {
+    mask-image: linear-gradient(
+      to bottom,
+      black 0,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .card.image-format-poster .card-body.scroll-gradient-vertical-both {
+    mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.3) 4px,
+      black 28px,
+      black calc(100% - 28px),
+      rgba(0, 0, 0, 0.3) calc(100% - 4px),
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .property:empty {
+    display: none;
+  }
 }
 
 /* Remove gradient masks when toggle ON */
@@ -507,67 +564,4 @@ body.dynamic-views-no-fade-truncated-text
   .card-body.scroll-gradient-vertical-both {
   mask-image: none;
   -webkit-mask-image: none;
-}
-
-/* Vertical gradient masks for poster card body scroll */
-.dynamic-views .card.image-format-poster .card-body.scroll-gradient-top {
-  mask-image: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black 100%
-  );
-}
-
-.dynamic-views .card.image-format-poster .card-body.scroll-gradient-bottom {
-  mask-image: linear-gradient(
-    to bottom,
-    black 0,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    black 0,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-}
-
-.dynamic-views
-  .card.image-format-poster
-  .card-body.scroll-gradient-vertical-both {
-  mask-image: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0,
-    rgba(0, 0, 0, 0.3) 4px,
-    black 28px,
-    black calc(100% - 28px),
-    rgba(0, 0, 0, 0.3) calc(100% - 4px),
-    rgba(0, 0, 0, 0) 100%
-  );
-}
-
-/* Hide empty fields */
-.dynamic-views .property:empty {
-  display: none;
 }

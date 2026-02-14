@@ -1,12 +1,14 @@
 /* ==================== BACKGROUND FORMAT ==================== */
 
 /* Overlay for text readability */
-.dynamic-views .card.image-format-backdrop .card-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  backdrop-filter: blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
+.dynamic-views {
+  .card.image-format-backdrop .card-backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    backdrop-filter: blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
+  }
 }
 
 /* Overlay theme: Match theme (default — also applies when no theme class set) */

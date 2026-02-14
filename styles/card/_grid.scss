@@ -17,17 +17,6 @@
   background-color: var(--dynamic-views-view-background);
 }
 
-/* Unified grid layout for all grid views (all width modes) */
-.dynamic-views .dynamic-views-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--dynamic-views-grid-columns, 1), 1fr);
-  gap: var(--size-4-2);
-  align-items: stretch;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
 /* Card spacing setting - Bases files only */
 .workspace-leaf-content[data-type="bases"] .dynamic-views .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
@@ -51,86 +40,6 @@
 }
 
 /* DOM order now matches visual order — no flexbox ordering needed */
-
-/* Universal content wrapper: contains header + body */
-.dynamic-views .card .card-content {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex-grow: 1;
-}
-
-/* Universal card body: contains properties + previews */
-.dynamic-views .card .card-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex-grow: 1;
-}
-
-/* Grid view: push bottom properties to bottom of card when it has siblings above */
-/* Exclude cover-bottom and cover-top cover-format which have their own rules */
-.dynamic-views
-  .dynamic-views-grid
-  .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-  .card-properties-bottom:not(:first-child) {
-  margin-top: auto;
-  padding-top: var(--size-4-2);
-}
-
-/* Grid view: only-child pushes to bottom but needs no padding (no sibling above) */
-.dynamic-views
-  .dynamic-views-grid
-  .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-  .card-properties-bottom:only-child {
-  margin-top: auto;
-  padding-top: 0;
-}
-
-/* Grid view: cover-top — fixed cover height, gap absorbs remaining space */
-/* Content stays natural height with text top-aligned */
-.dynamic-views .dynamic-views-grid .card.card-cover-top .card-previews {
-  flex-grow: 0;
-}
-
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-top.image-format-cover
-  .card-cover-wrapper {
-  flex-grow: 0;
-}
-
-/* Grid view cover-top with properties-bottom: push properties down */
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-top.image-format-cover:has(.card-properties-bottom)
-  .card-properties-bottom {
-  margin-top: auto;
-}
-
-/* Add padding-top only when content/header exists above (otherwise cover margin-bottom suffices) */
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-top.image-format-cover:has(
-    .card-header,
-    .card-previews,
-    .card-properties-top
-  )
-  .card-properties-bottom {
-  padding-top: var(--size-4-2);
-}
-
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-top.image-format-cover
-  .card-cover,
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-top.image-format-cover
-  .card-cover-placeholder {
-  height: 0;
-  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-}
 
 /* Collapse empty cards (no visible content) - requires :has() (Electron 22+) */
 :is(.dynamic-views-grid, .dynamic-views-masonry)
@@ -161,13 +70,6 @@
     )
   ) {
   align-self: start;
-}
-
-/* Override vanilla Bases absolute positioning - we use static flow layout */
-.dynamic-views .bases-cards-group,
-.dynamic-views.is-grouped .bases-cards-container .bases-group-heading {
-  position: static;
-  gap: inherit;
 }
 
 /* Sticky group headers (default: on) — collapsed headers should not stick.
@@ -202,46 +104,6 @@ body:not(.dynamic-views-disable-sticky-group-header)
   }
 }
 
-/* Group headings - flex layout for collapse chevron + content */
-.dynamic-views .bases-group-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-}
-
-/* Clickable region: chevron + property + value */
-.dynamic-views .bases-group-collapse-region {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  cursor: pointer;
-}
-
-/* Group collapse chevron */
-.dynamic-views .bases-group-collapse-btn {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.dynamic-views .bases-group-collapse-btn svg {
-  width: 16px;
-  height: 16px;
-  transition: transform var(--anim-duration-fast, 140ms) ease;
-}
-
-/* Rotate + accent color when collapsed */
-.dynamic-views .bases-group-heading.collapsed .bases-group-collapse-btn svg {
-  transform: rotate(-90deg);
-  color: var(--color-accent);
-}
-
-/* Hide card container when heading is collapsed (adjacent sibling) */
-.dynamic-views .bases-group-heading.collapsed + .dynamic-views-group {
-  display: none !important;
-}
-
 /* Group section wrappers span full grid width and use subgrid */
 .dynamic-views-grid > .dynamic-views-group-section {
   grid-column: 1 / -1;
@@ -259,19 +121,6 @@ body:not(.dynamic-views-disable-sticky-group-header)
   width: 100%;
 }
 
-/* Group header property label */
-.dynamic-views .bases-group-property {
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-}
-
-/* Group header result count - match property label style */
-.dynamic-views .bases-group-count {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  padding-left: var(--size-2-2);
-}
-
 /* Hide group result count when toggle enabled */
 body.dynamic-views-hide-group-count .dynamic-views .bases-group-count {
   display: none;
@@ -282,18 +131,6 @@ body.dynamic-views-hide-group-property-labels
   .dynamic-views
   .bases-group-property {
   display: none;
-}
-
-/* Group header value containers - match vanilla Bases structure */
-.dynamic-views .bases-group-value .value-list-container {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--size-2-2);
-}
-
-.dynamic-views .bases-group-value .value-list-element {
-  display: inline-flex;
 }
 
 /* Masonry groups are their own positioning context for cards.
@@ -351,33 +188,194 @@ body.dynamic-views-hide-group-property-labels
   padding-bottom: 0;
 }
 
-.dynamic-views .card {
-  position: relative;
-  container-type: inline-size;
-  box-sizing: border-box;
-  border: none;
-  border-radius: var(--dynamic-views-card-border-radius, 8px);
-  overflow: hidden; /* Clip covers at rounded corners */
-  padding: var(--dynamic-views-card-padding, 8px);
-  margin: var(--size-4-2) 0;
-  background-color: var(--background-primary-alt);
-  break-inside: avoid;
-  page-break-inside: avoid;
-  transition:
-    box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-    background-color var(--anim-duration-fast, 140ms) ease;
-  /* Cover inset: user setting + 1px offset for border */
-  --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + 1px);
-  /* Resolved card border color — shared by ::after and cover-content divider */
-  --card-border-color: var(--background-modifier-border);
-}
+.dynamic-views {
+  /* Unified grid layout for all grid views (all width modes) */
+  .dynamic-views-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--dynamic-views-grid-columns, 1), 1fr);
+    gap: var(--size-4-2);
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 
-/* Border as pseudo-element so it appears on top of covers */
-.dynamic-views .card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 1px var(--card-border-color);
-  pointer-events: none;
+  /* Universal content wrapper: contains header + body */
+  .card .card-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex-grow: 1;
+  }
+
+  /* Universal card body: contains properties + previews */
+  .card .card-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex-grow: 1;
+  }
+
+  /* Grid view: push bottom properties to bottom of card when it has siblings above */
+  /* Exclude cover-bottom and cover-top cover-format which have their own rules */
+  .dynamic-views-grid
+    .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
+    .card-properties-bottom:not(:first-child) {
+    margin-top: auto;
+    padding-top: var(--size-4-2);
+  }
+
+  /* Grid view: only-child pushes to bottom but needs no padding (no sibling above) */
+  .dynamic-views-grid
+    .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
+    .card-properties-bottom:only-child {
+    margin-top: auto;
+    padding-top: 0;
+  }
+
+  /* Grid view: cover-top — fixed cover height, gap absorbs remaining space */
+  /* Content stays natural height with text top-aligned */
+  .dynamic-views-grid .card.card-cover-top .card-previews {
+    flex-grow: 0;
+  }
+
+  .dynamic-views-grid
+    .card.card-cover-top.image-format-cover
+    .card-cover-wrapper {
+    flex-grow: 0;
+  }
+
+  /* Grid view cover-top with properties-bottom: push properties down */
+  .dynamic-views-grid
+    .card.card-cover-top.image-format-cover:has(.card-properties-bottom)
+    .card-properties-bottom {
+    margin-top: auto;
+  }
+
+  /* Add padding-top only when content/header exists above (otherwise cover margin-bottom suffices) */
+  .dynamic-views-grid
+    .card.card-cover-top.image-format-cover:has(
+      .card-header,
+      .card-previews,
+      .card-properties-top
+    )
+    .card-properties-bottom {
+    padding-top: var(--size-4-2);
+  }
+
+  .dynamic-views-grid .card.card-cover-top.image-format-cover .card-cover,
+  .dynamic-views-grid
+    .card.card-cover-top.image-format-cover
+    .card-cover-placeholder {
+    height: 0;
+    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+  }
+
+  /* Override vanilla Bases absolute positioning - we use static flow layout */
+  .bases-cards-group {
+    position: static;
+    gap: inherit;
+  }
+
+  /* Override vanilla Bases absolute positioning - we use static flow layout */
+  &.is-grouped .bases-cards-container .bases-group-heading {
+    position: static;
+    gap: inherit;
+  }
+
+  /* Group headings - flex layout for collapse chevron + content */
+  .bases-group-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+  }
+
+  /* Clickable region: chevron + property + value */
+  .bases-group-collapse-region {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    cursor: pointer;
+  }
+
+  /* Group collapse chevron */
+  .bases-group-collapse-btn {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+
+    svg {
+      width: 16px;
+      height: 16px;
+      transition: transform var(--anim-duration-fast, 140ms) ease;
+    }
+  }
+
+  /* Rotate + accent color when collapsed */
+  .bases-group-heading.collapsed .bases-group-collapse-btn svg {
+    transform: rotate(-90deg);
+    color: var(--color-accent);
+  }
+
+  /* Hide card container when heading is collapsed (adjacent sibling) */
+  .bases-group-heading.collapsed + .dynamic-views-group {
+    display: none !important;
+  }
+
+  /* Group header property label */
+  .bases-group-property {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+  }
+
+  /* Group header result count - match property label style */
+  .bases-group-count {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    padding-left: var(--size-2-2);
+  }
+
+  /* Group header value containers - match vanilla Bases structure */
+  .bases-group-value .value-list-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-2-2);
+  }
+
+  .bases-group-value .value-list-element {
+    display: inline-flex;
+  }
+
+  .card {
+    position: relative;
+    container-type: inline-size;
+    box-sizing: border-box;
+    border: none;
+    border-radius: var(--dynamic-views-card-border-radius, 8px);
+    overflow: hidden; /* Clip covers at rounded corners */
+    padding: var(--dynamic-views-card-padding, 8px);
+    margin: var(--size-4-2) 0;
+    background-color: var(--background-primary-alt);
+    break-inside: avoid;
+    page-break-inside: avoid;
+    transition:
+      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
+      background-color var(--anim-duration-fast, 140ms) ease;
+    /* Cover inset: user setting + 1px offset for border */
+    --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + 1px);
+    /* Resolved card border color — shared by ::after and cover-content divider */
+    --card-border-color: var(--background-modifier-border);
+
+    /* Border as pseudo-element so it appears on top of covers */
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 0 0 0 1px var(--card-border-color);
+      pointer-events: none;
+    }
+  }
 }

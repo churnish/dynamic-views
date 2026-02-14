@@ -2,92 +2,85 @@
 
 /* Cover-top/bottom: aspect ratio using padding-top hack */
 /* Cover-top: fixed aspect ratio using padding-top trick */
-.dynamic-views .card.card-cover-top.image-format-cover .card-cover {
-  width: 100%;
-  height: 0;
-  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-  position: relative;
-  overflow: hidden;
-}
+.dynamic-views {
+  .card.card-cover-top.image-format-cover .card-cover {
+    width: 100%;
+    height: 0;
+    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+    position: relative;
+    overflow: hidden;
+  }
 
-/* Cover-bottom: expands to fill remaining space */
-.dynamic-views .card.card-cover-bottom.image-format-cover .card-cover {
-  width: 100%;
-  height: 100%;
-  min-height: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-  position: relative;
-  overflow: hidden;
-}
+  /* Cover-bottom: expands to fill remaining space */
+  .card.card-cover-bottom.image-format-cover .card-cover {
+    width: 100%;
+    height: 100%;
+    min-height: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+    position: relative;
+    overflow: hidden;
+  }
 
-/* Cover-bottom placeholder: expands to match cover dimensions */
-.dynamic-views
-  .card.card-cover-bottom.image-format-cover
-  .card-cover-placeholder {
-  height: 100%;
-  min-height: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-}
+  /* Cover-bottom placeholder: expands to match cover dimensions */
+  .card.card-cover-bottom.image-format-cover .card-cover-placeholder {
+    height: 100%;
+    min-height: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+  }
 
-/* Grid view: cover-bottom — fixed cover height */
-.dynamic-views .dynamic-views-grid .card.card-cover-bottom .card-previews {
-  flex-grow: 0;
-}
+  /* Grid view: cover-bottom — fixed cover height */
+  .dynamic-views-grid .card.card-cover-bottom .card-previews {
+    flex-grow: 0;
+  }
 
-/* Grid cover-bottom wrapper: fixed size, no margins (spacer handles top gap) */
-.dynamic-views
+  /* Grid cover-bottom wrapper: fixed size, no margins (spacer handles top gap) */
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover
-  .card-cover-wrapper {
-  flex-grow: 0;
-  flex-shrink: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-}
+    .card.card-cover-bottom.image-format-cover
+    .card-cover-wrapper {
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
 
-/* Grid cover-bottom: push properties-bottom to bottom of card */
-.dynamic-views
+  /* Grid cover-bottom: push properties-bottom to bottom of card */
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover
-  .card-properties-bottom:not(:first-child) {
-  margin-top: auto;
-  padding-top: var(--size-4-2);
-}
+    .card.card-cover-bottom.image-format-cover
+    .card-properties-bottom:not(:first-child) {
+    margin-top: auto;
+    padding-top: var(--size-4-2);
+  }
 
-.dynamic-views
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover
-  .card-properties-bottom:only-child {
-  margin-top: auto;
-  padding-top: 0;
-}
+    .card.card-cover-bottom.image-format-cover
+    .card-properties-bottom:only-child {
+    margin-top: auto;
+    padding-top: 0;
+  }
 
-/* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
+  /* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
 
-/* Compensate: card bottom padding = inset (instead of card-padding) */
-.dynamic-views .dynamic-views-grid .card.card-cover-bottom.image-format-cover {
-  padding-bottom: var(--cover-inset-computed);
-}
+  /* Compensate: card bottom padding = inset (instead of card-padding) */
+  .dynamic-views-grid .card.card-cover-bottom.image-format-cover {
+    padding-bottom: var(--cover-inset-computed);
+  }
 
-.dynamic-views
+  .dynamic-views-grid .card.card-cover-bottom.image-format-cover .card-cover {
+    height: 0;
+    min-height: 0;
+    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+  }
+
   .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover
-  .card-cover {
-  height: 0;
-  min-height: 0;
-  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-}
+    .card.card-cover-bottom.image-format-cover
+    .card-cover-placeholder {
+    height: 0;
+    min-height: 0;
+    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+  }
 
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-bottom.image-format-cover
-  .card-cover-placeholder {
-  height: 0;
-  min-height: 0;
-  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-}
-
-/* All covers: border radius */
-.dynamic-views .card.image-format-cover .card-cover {
-  border-radius: var(--dynamic-views-cover-border-radius, 0);
+  /* All covers: border radius */
+  .card.image-format-cover .card-cover {
+    border-radius: var(--dynamic-views-cover-border-radius, 0);
+  }
 }
 
 /* Circular cover: 50% makes any shape circular */
@@ -107,39 +100,41 @@ body.dynamic-views-cover-circular
 }
 
 /* Cover-left/right: full height */
-.dynamic-views .card.card-cover-left.image-format-cover .card-cover,
-.dynamic-views .card.card-cover-right.image-format-cover .card-cover {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-}
-
 /* Image element inside cover */
-.dynamic-views .card.image-format-cover .card-cover .dynamic-views-image-embed {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
+.dynamic-views {
+  .card.card-cover-left.image-format-cover .card-cover,
+  .card.card-cover-right.image-format-cover .card-cover {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
 
-.dynamic-views .card.image-format-cover .card-cover img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  object-fit: cover;
-  object-position: center center;
-  border-radius: 0; /* Override theme styles; container handles border-radius */
-  opacity: 0;
-  transition: opacity var(--anim-duration-fast, 140ms) ease;
-}
+  .card.image-format-cover .card-cover .dynamic-views-image-embed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
 
-.dynamic-views .card.image-format-cover.cover-ready .card-cover img {
-  opacity: 1;
+  .card.image-format-cover .card-cover img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    object-fit: cover;
+    object-position: center center;
+    border-radius: 0; /* Override theme styles; container handles border-radius */
+    opacity: 0;
+    transition: opacity var(--anim-duration-fast, 140ms) ease;
+  }
+
+  .card.image-format-cover.cover-ready .card-cover img {
+    opacity: 1;
+  }
 }
 
 /* Skip image fade-in during shuffle (rearrange, not fresh load) */

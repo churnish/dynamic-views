@@ -213,6 +213,9 @@ body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
   max-height: var(--dynamic-views-query-max-height);
   overflow-y: auto;
 }
-.dynamic-views .query-input {
-  height: var(--dynamic-views-query-height, auto);
+
+.dynamic-views {
+  .query-input {
+    height: var(--dynamic-views-query-height, auto);
+  }
 }

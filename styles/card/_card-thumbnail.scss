@@ -1,49 +1,49 @@
 /* When card-content only has text preview (no thumbnails), use column layout */
-.dynamic-views
-  .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(
-    :has(.card-cover)
-  ) {
-  flex-direction: column;
-}
-
 /* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
-.dynamic-views
-  .card.card-thumbnail-left
-  .card-previews:has(.card-text-preview-wrapper) {
-  flex-direction: row-reverse;
-}
-
 /* Thumbnail right: align thumbnail to the right when no text preview */
-.dynamic-views
-  .card.card-thumbnail-right
-  .card-previews:not(:has(.card-text-preview-wrapper)) {
-  justify-content: flex-end;
-}
-
 /* Stacked: left-align thumbnail when no text preview */
-.dynamic-views
+.dynamic-views {
+  .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(
+      :has(.card-cover)
+    ) {
+    flex-direction: column;
+  }
+
+  .card.card-thumbnail-left .card-previews:has(.card-text-preview-wrapper) {
+    flex-direction: row-reverse;
+  }
+
+  .card.card-thumbnail-right
+    .card-previews:not(:has(.card-text-preview-wrapper)) {
+    justify-content: flex-end;
+  }
+
   .card.thumbnail-stack.card-thumbnail-right
-  .card-previews:not(:has(.card-text-preview-wrapper)) {
-  justify-content: flex-start;
-}
+    .card-previews:not(:has(.card-text-preview-wrapper)) {
+    justify-content: flex-start;
+  }
 
-.dynamic-views .card-text-preview-wrapper {
-  flex: 1;
-  min-width: 0;
-}
+  .card-text-preview-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
 
-.dynamic-views .card-text-preview {
-  color: var(--dynamic-views-text-preview-color, var(--text-muted));
-  font-family: var(--dynamic-views-text-preview-font, inherit);
-  font-size: var(--dynamic-views-text-preview-font-size, var(--font-ui-small));
-  display: -webkit-box;
-  -webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: var(--line-height-tight);
-  word-break: break-word;
-  overflow-wrap: break-word;
-  user-select: text;
+  .card-text-preview {
+    color: var(--dynamic-views-text-preview-color, var(--text-muted));
+    font-family: var(--dynamic-views-text-preview-font, inherit);
+    font-size: var(
+      --dynamic-views-text-preview-font-size,
+      var(--font-ui-small)
+    );
+    display: -webkit-box;
+    -webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: var(--line-height-tight);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    user-select: text;
+  }
 }
 
 /* Text cursor on text preview when openFileAction is 'title' */
@@ -80,21 +80,24 @@ body.dynamic-views-open-on-title .dynamic-views .path-separator {
   -webkit-user-select: text;
 }
 
-.dynamic-views .card-thumbnail {
-  flex-shrink: 0;
-  width: var(--dynamic-views-thumbnail-size, 80px);
-  height: calc(
-    var(--dynamic-views-thumbnail-size, 80px) /
-      var(--dynamic-views-image-aspect-ratio, 1)
-  );
-  overflow: hidden;
-  border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
-  pointer-events: none;
-}
-
 /* Hide thumbnail placeholder by default */
-.dynamic-views .card-thumbnail-placeholder {
-  display: none;
+/* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */
+.dynamic-views {
+  .card-thumbnail {
+    flex-shrink: 0;
+    width: var(--dynamic-views-thumbnail-size, 80px);
+    height: calc(
+      var(--dynamic-views-thumbnail-size, 80px) /
+        var(--dynamic-views-image-aspect-ratio, 1)
+    );
+    overflow: hidden;
+    border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+    pointer-events: none;
+  }
+
+  .card-thumbnail-placeholder {
+    display: none;
+  }
 }
 
 /* Show thumbnail placeholder when enabled in Style Settings */
@@ -112,14 +115,15 @@ body.dynamic-views-show-thumbnail-placeholder
   background-color: var(--dynamic-views-image-background-plain);
 }
 
-/* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */
-.dynamic-views .card-thumbnail.multi-image {
-  overflow: visible; /* Allow drop-shadow to extend outside */
-}
+.dynamic-views {
+  .card-thumbnail.multi-image {
+    overflow: visible; /* Allow drop-shadow to extend outside */
+  }
 
-.dynamic-views .card-thumbnail.multi-image img {
-  filter: var(--drop-shadow-l-light-mode);
-  border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+  .card-thumbnail.multi-image img {
+    filter: var(--drop-shadow-l-light-mode);
+    border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+  }
 }
 
 .theme-dark .dynamic-views .card-thumbnail.multi-image img {
@@ -174,29 +178,31 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
   box-shadow: none;
 }
 
-.dynamic-views .card-thumbnail .dynamic-views-image-embed {
-  width: 100%;
-  height: 100%;
-}
+.dynamic-views {
+  .card-thumbnail .dynamic-views-image-embed {
+    width: 100%;
+    height: 100%;
+  }
 
-.dynamic-views .card-thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center;
-  pointer-events: auto;
-  border-radius: 0; /* Override theme styles; container handles border-radius */
-  opacity: 0;
-  transition: opacity var(--anim-duration-fast, 140ms) ease;
-}
+  .card-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    pointer-events: auto;
+    border-radius: 0; /* Override theme styles; container handles border-radius */
+    opacity: 0;
+    transition: opacity var(--anim-duration-fast, 140ms) ease;
+  }
 
-.dynamic-views .card.cover-ready .card-thumbnail img {
-  opacity: 1;
-}
+  .card.cover-ready .card-thumbnail img {
+    opacity: 1;
+  }
 
-/* Thumbnail contain mode */
-.dynamic-views .card.card-thumbnail-contain .card-thumbnail img {
-  object-fit: contain;
+  /* Thumbnail contain mode */
+  .card.card-thumbnail-contain .card-thumbnail img {
+    object-fit: contain;
+  }
 }
 
 /* Thumbnail expand on click - Toggle mode */

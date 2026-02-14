@@ -1,36 +1,38 @@
-.dynamic-views .card .card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--size-4-2);
-}
-
-.dynamic-views .card-title-block {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.dynamic-views .card-title {
-  font-weight: calc(var(--font-weight) + var(--bold-modifier));
-  color: var(--dynamic-views-title-color, var(--text-normal));
-  font-family: var(--dynamic-views-title-font, inherit);
-  font-size: var(--dynamic-views-title-font-size, var(--font-ui-medium));
-  max-width: 100%;
-  word-break: break-word;
-  text-align: left;
-  margin: 0;
-  line-height: var(--line-height-tight);
-  display: -webkit-box;
-  -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
 /* Extension suffix element (hidden by default, shown in Extension mode) */
-.dynamic-views .card-title-ext-suffix {
-  display: none;
+.dynamic-views {
+  .card .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--size-4-2);
+  }
+
+  .card-title-block {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .card-title {
+    font-weight: calc(var(--font-weight) + var(--bold-modifier));
+    color: var(--dynamic-views-title-color, var(--text-normal));
+    font-family: var(--dynamic-views-title-font, inherit);
+    font-size: var(--dynamic-views-title-font-size, var(--font-ui-medium));
+    max-width: 100%;
+    word-break: break-word;
+    text-align: left;
+    margin: 0;
+    line-height: var(--line-height-tight);
+    display: -webkit-box;
+    -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-title-ext-suffix {
+    display: none;
+  }
 }
 
 /* Extension mode: use max-height for JS truncation measurement */
@@ -63,13 +65,17 @@ body.dynamic-views-file-type-ext
   text-decoration: none;
 }
 
-.dynamic-views .card-title-url-icon {
-  flex-shrink: 0;
-  /* Compensate for wrapper padding: (26px wrapper - 18px icon) / 2 = 4px */
-  margin: -4px;
+/* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
+/* When URL icon is only child (no title/subtitle), push to right */
+/* File type indicator styles */
+.dynamic-views {
+  .card-title-url-icon {
+    flex-shrink: 0;
+    /* Compensate for wrapper padding: (26px wrapper - 18px icon) / 2 = 4px */
+    margin: -4px;
+  }
 }
 
-/* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
 @media (hover: hover) {
   .dynamic-views .card.image-format-poster .card-title-url-icon:hover {
     background-color: color-mix(in srgb, currentColor 20%, transparent);
@@ -77,28 +83,28 @@ body.dynamic-views-file-type-ext
   }
 }
 
-/* When URL icon is only child (no title/subtitle), push to right */
-.dynamic-views .card-header .card-title-url-icon:only-child {
-  margin-left: auto;
-}
+.dynamic-views {
+  .card-header .card-title-url-icon:only-child {
+    margin-left: auto;
+  }
 
-/* File type indicator styles */
-.dynamic-views .card-title-ext {
-  display: none;
-}
+  .card-title-ext {
+    display: none;
+  }
 
-.dynamic-views .card-title-icon {
-  float: left;
-  margin-right: var(--size-2-2);
-  display: none;
-}
+  .card-title-icon {
+    float: left;
+    margin-right: var(--size-2-2);
+    display: none;
+  }
 
-.dynamic-views .card-title-icon svg {
-  width: 1em;
-  height: calc(1em * var(--line-height-tight));
-  vertical-align: bottom;
-  color: var(--text-normal);
-  stroke-width: var(--icon-xs-stroke-width);
+  .card-title-icon svg {
+    width: 1em;
+    height: calc(1em * var(--line-height-tight));
+    vertical-align: bottom;
+    color: var(--text-normal);
+    stroke-width: var(--icon-xs-stroke-width);
+  }
 }
 
 /* File type indicator: Flair (box before title) */
@@ -147,19 +153,21 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   display: none;
 }
 
-.dynamic-views .card-title a,
-.dynamic-views .card-title .card-title-link {
-  text-decoration: none;
-  color: inherit;
-  font-weight: inherit;
-  cursor: pointer;
-  /* Match Bases backend <a> tag transition for consistent touch feedback */
-  transition: opacity var(--anim-duration-fast) ease-in-out;
-}
-
 /* Dim on touch/press for visual feedback (matches Bases backend <a> tag behavior) */
-.dynamic-views .card-title .card-title-link:active {
-  opacity: 0.5;
+.dynamic-views {
+  .card-title a,
+  .card-title .card-title-link {
+    text-decoration: none;
+    color: inherit;
+    font-weight: inherit;
+    cursor: pointer;
+    /* Match Bases backend <a> tag transition for consistent touch feedback */
+    transition: opacity var(--anim-duration-fast) ease-in-out;
+  }
+
+  .card-title .card-title-link:active {
+    opacity: 0.5;
+  }
 }
 
 @media (hover: hover) {
@@ -183,31 +191,30 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   }
 }
 
-.dynamic-views .card-subtitle {
-  color: var(--text-faint);
-  font-family: var(--dynamic-views-subtitle-font);
-  font-size: var(--dynamic-views-subtitle-font-size, var(--font-ui-small));
-  max-width: 100%;
-  word-break: break-word;
-  text-align: left;
-  margin: 0;
-  display: block;
-  overflow: hidden;
-  line-height: var(--line-height-tight);
-}
-
 /* Subtitle property content inherits color from subtitle (exclude links) */
-.dynamic-views .card-subtitle .property-content,
-.dynamic-views
-  .card-subtitle
-  .property-content
-  *:not(.internal-link, .external-link, a) {
-  color: inherit;
-}
-
 /* Subtitle property-content: use line-height instead of fixed min-height */
-.dynamic-views .card-subtitle .property-content {
-  min-height: 0;
+.dynamic-views {
+  .card-subtitle {
+    color: var(--text-faint);
+    font-family: var(--dynamic-views-subtitle-font);
+    font-size: var(--dynamic-views-subtitle-font-size, var(--font-ui-small));
+    max-width: 100%;
+    word-break: break-word;
+    text-align: left;
+    margin: 0;
+    display: block;
+    overflow: hidden;
+    line-height: var(--line-height-tight);
+  }
+
+  .card-subtitle .property-content,
+  .card-subtitle .property-content *:not(.internal-link, .external-link, a) {
+    color: inherit;
+  }
+
+  .card-subtitle .property-content {
+    min-height: 0;
+  }
 }
 
 /* Subtitle bold */
@@ -235,11 +242,15 @@ body.dynamic-views-subtitle-align-right .dynamic-views .card-subtitle {
 }
 
 /* Subtitle wrap mode (default) - override property-content-wrapper's overflow */
-.dynamic-views .card-subtitle .property-content-wrapper {
-  overflow: hidden;
-  flex-wrap: wrap;
-}
 /* Allow path-wrapper to wrap in subtitle */
+/* Allow path segments to word-break in subtitle */
+.dynamic-views {
+  .card-subtitle .property-content-wrapper {
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+}
+
 body:not(.dynamic-views-subtitle-overflow-scroll)
   .dynamic-views
   .card-subtitle
@@ -248,7 +259,7 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
   white-space: normal;
   flex-wrap: wrap;
 }
-/* Allow path segments to word-break in subtitle */
+
 body:not(.dynamic-views-subtitle-overflow-scroll)
   .dynamic-views
   .card-subtitle
@@ -257,17 +268,18 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
   overflow-wrap: break-word;
 }
 
-.dynamic-views
+.dynamic-views {
   .card-subtitle
-  :is(
-    .property-content,
-    .text-wrapper,
-    .text-wrapper > span:not(.internal-link, .external-link, .tag)
-  ) {
-  display: block;
-  width: 100%;
-  height: auto;
-  word-break: break-word;
+    :is(
+      .property-content,
+      .text-wrapper,
+      .text-wrapper > span:not(.internal-link, .external-link, .tag)
+    ) {
+    display: block;
+    width: 100%;
+    height: auto;
+    word-break: break-word;
+  }
 }
 
 /* Subtitle wrap: override white-space: pre from text-wrapper span rule (needs higher specificity) */
@@ -344,8 +356,10 @@ body.dynamic-views-subtitle-above
   order: 1;
 }
 
-.dynamic-views .card-previews {
-  display: flex;
-  flex-direction: row;
-  gap: var(--size-4-2);
+.dynamic-views {
+  .card-previews {
+    display: flex;
+    flex-direction: row;
+    gap: var(--size-4-2);
+  }
 }

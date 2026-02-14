@@ -1,6 +1,91 @@
 /* Fade-in animation for batch-appended cards */
-.dynamic-views .card.card-fade-in {
-  animation: cardFadeIn var(--anim-duration-fast, 140ms) ease-out;
+/* Card spacing setting - Bases files only */
+/* Grid uses row-gap for spacing; zero out card margins to prevent grid row inflation.
+   Scoped to Bases to match specificity of the Bases-only card margin rules above. */
+/* Clickable card cursor */
+/* Masonry container */
+/* Hide cards during layout recalc - fade out with opacity transition */
+/* Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container) */
+/* Hide end indicator during resize - use display:none to fully remove from flow */
+/* Hide cards until masonry positions them (prevents flash at 0,0) */
+/* Must match positioned cards' CSS context (position + containment) for accurate height measurement */
+/* height: auto overrides grid's height: 100% which causes incorrect 148px skeleton height */
+/* Masonry positioned cards */
+/* Desktop: cards outside scrollport margin hidden by IO-based system */
+/* Spacing between card-header and card-body inside .card-content */
+/* Spacing between elements inside card-body (properties-top, previews, properties-bottom) */
+/* Grid view: card-content fills available space, aligns children to top */
+/* Grid view: title-group grows horizontally inside card-header to fill space beside URL icon */
+.dynamic-views {
+  .card.card-fade-in {
+    animation: cardFadeIn var(--anim-duration-fast, 140ms) ease-out;
+  }
+
+  .card.clickable-card {
+    cursor: pointer;
+  }
+
+  .masonry-container {
+    position: relative;
+    height: var(--masonry-height, auto);
+    contain: layout style;
+  }
+
+  .masonry-container.masonry-resizing .card,
+  .masonry-resizing .masonry-container .card {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--anim-duration-superfast, 70ms) ease,
+      visibility 0s var(--anim-duration-superfast, 70ms);
+  }
+
+  &:has(.masonry-resizing) .dynamic-views-end-indicator {
+    display: none;
+  }
+
+  .masonry-container .card:not(.masonry-positioned) {
+    position: absolute;
+    opacity: 0;
+    width: var(--masonry-width, auto);
+    height: auto;
+    contain: layout style paint;
+  }
+
+  .card.masonry-positioned {
+    position: absolute;
+    width: var(--masonry-width, auto);
+    height: auto;
+    left: var(--masonry-left, 0);
+    top: var(--masonry-top, 0);
+    contain: layout style paint;
+    transition:
+      opacity var(--anim-duration-superfast, 70ms) ease,
+      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
+      background-color var(--anim-duration-fast, 140ms) ease;
+  }
+
+  .card.content-hidden {
+    content-visibility: hidden;
+    contain-intrinsic-height: auto 300px;
+  }
+
+  .card .card-content > * + * {
+    margin-top: var(--size-4-2);
+  }
+
+  .card .card-body > * + * {
+    margin-top: var(--size-4-2);
+  }
+
+  .dynamic-views-grid .card-previews {
+    flex-grow: 1;
+    align-items: flex-start;
+  }
+
+  .dynamic-views-grid .card-header .card-title-block {
+    flex-grow: 1;
+  }
 }
 
 @keyframes cardFadeIn {
@@ -12,7 +97,6 @@
   }
 }
 
-/* Card spacing setting - Bases files only */
 .workspace-leaf-content[data-type="bases"] .dynamic-views .card {
   margin: var(--dynamic-views-card-spacing-desktop, 8px) 0;
 }
@@ -21,8 +105,6 @@
   margin: var(--dynamic-views-card-spacing-mobile, 6px) 0;
 }
 
-/* Grid uses row-gap for spacing; zero out card margins to prevent grid row inflation.
-   Scoped to Bases to match specificity of the Bases-only card margin rules above. */
 .workspace-leaf-content[data-type="bases"]
   .dynamic-views
   .dynamic-views-grid
@@ -30,11 +112,6 @@
   > .card {
   margin-top: 0;
   margin-bottom: 0;
-}
-
-/* Clickable card cursor */
-.dynamic-views .card.clickable-card {
-  cursor: pointer;
 }
 
 /* Card border color presets — set shared variable, consumed by ::after and cover-content divider */
@@ -97,64 +174,10 @@ body .dynamic-views .card:focus-visible::after {
   z-index: 10;
 }
 
-/* Masonry container */
-.dynamic-views .masonry-container {
-  position: relative;
-  height: var(--masonry-height, auto);
-  contain: layout style;
-}
-
-/* Hide cards during layout recalc - fade out with opacity transition */
-/* Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container) */
-.dynamic-views .masonry-container.masonry-resizing .card,
-.dynamic-views .masonry-resizing .masonry-container .card {
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity var(--anim-duration-superfast, 70ms) ease,
-    visibility 0s var(--anim-duration-superfast, 70ms);
-}
-
-/* Hide end indicator during resize - use display:none to fully remove from flow */
-.dynamic-views:has(.masonry-resizing) .dynamic-views-end-indicator {
-  display: none;
-}
-
-/* Hide cards until masonry positions them (prevents flash at 0,0) */
-/* Must match positioned cards' CSS context (position + containment) for accurate height measurement */
-/* height: auto overrides grid's height: 100% which causes incorrect 148px skeleton height */
-.dynamic-views .masonry-container .card:not(.masonry-positioned) {
-  position: absolute;
-  opacity: 0;
-  width: var(--masonry-width, auto);
-  height: auto;
-  contain: layout style paint;
-}
-
-/* Masonry positioned cards */
-.dynamic-views .card.masonry-positioned {
-  position: absolute;
-  width: var(--masonry-width, auto);
-  height: auto;
-  left: var(--masonry-left, 0);
-  top: var(--masonry-top, 0);
-  contain: layout style paint;
-  transition:
-    opacity var(--anim-duration-superfast, 70ms) ease,
-    box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-    background-color var(--anim-duration-fast, 140ms) ease;
-}
-
 /* Mobile: browser-managed content-visibility (IO-based toggling causes
    infinite reflow loop on iOS WebKit) */
 body.is-mobile .dynamic-views .card {
   content-visibility: auto;
-  contain-intrinsic-height: auto 300px;
-}
-
-/* Desktop: cards outside scrollport margin hidden by IO-based system */
-.dynamic-views .card.content-hidden {
-  content-visibility: hidden;
   contain-intrinsic-height: auto 300px;
 }
 
@@ -164,24 +187,12 @@ body.is-mobile .dynamic-views .card {
   content-visibility: visible !important;
 }
 
-/* Spacing between card-header and card-body inside .card-content */
-.dynamic-views .card .card-content > * + * {
-  margin-top: var(--size-4-2);
-}
-
-/* Spacing between elements inside card-body (properties-top, previews, properties-bottom) */
-.dynamic-views .card .card-body > * + * {
-  margin-top: var(--size-4-2);
-}
-
 /* Collapse card-content when it only has a hidden thumbnail placeholder */
 body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
   .card-previews:has(> .card-thumbnail-placeholder:only-child) {
   display: none;
 }
-
-/* Owl-pattern margin fixes no longer needed — DOM order matches visual order */
 
 /* Card background options */
 body.dynamic-views-card-background-transparent .dynamic-views .card {
@@ -211,15 +222,4 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
     --dynamic-views-card-background-color-hover-custom,
     var(--background-primary-alt)
   );
-}
-
-/* Grid view: card-content fills available space, aligns children to top */
-.dynamic-views .dynamic-views-grid .card-previews {
-  flex-grow: 1;
-  align-items: flex-start;
-}
-
-/* Grid view: title-group grows horizontally inside card-header to fill space beside URL icon */
-.dynamic-views .dynamic-views-grid .card-header .card-title-block {
-  flex-grow: 1;
 }
