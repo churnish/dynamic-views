@@ -4,7 +4,7 @@ description: >-
   Undocumented Obsidian API behaviors discovered during Dynamic Views
   development. Covers file write timing, race conditions, and workarounds.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-15
+last updated: 2026-02-16
 ---
 
 ## Debounced disk writes (~2 seconds)
@@ -79,3 +79,11 @@ if (Array.isArray(data)) {
 ### Fragility
 
 This relies on Obsidian's internal `Value` implementation. If the internal property is renamed or restructured, access breaks silently (returns `undefined`). There is no public API alternative for extracting raw values beyond `toString()`.
+
+## Datacore Preact component reuse across view mode switches
+
+When switching between reading and editing (Live Preview) view, Obsidian replaces the DOM container but Datacore reuses the same Preact component instance — it re-renders rather than remounting. This means `useState` values (e.g., `displayedCount` for infinite scroll) naturally survive view mode switches without external caching.
+
+### Implication
+
+Do not add external state caches (localStorage, module-level variables) to preserve Preact state across reading ↔ editing switches. The component instance persists — `useState` is sufficient.

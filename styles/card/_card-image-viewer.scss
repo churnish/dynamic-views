@@ -24,6 +24,16 @@ body:has(.dynamic-views-image-embed.is-zoomed) {
   --layer-dragged-item: 51;
 }
 
+/* Suppress card focus ring while viewer is open — keyboard events trigger
+   :focus-visible on the still-focused card, which is a visual artifact.
+   Reset to normal card border instead of none (::after is shared). */
+body:has(.dynamic-views-image-embed.is-zoomed)
+  .dynamic-views
+  .card:focus-visible::after {
+  box-shadow: inset 0 0 0 1px
+    var(--card-border-color, var(--background-modifier-border));
+}
+
 /* Constrained mode: overlay styling (desktop, fullscreen toggle off) */
 body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
     .dynamic-views-image-viewer-fullscreen

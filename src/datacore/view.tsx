@@ -74,7 +74,10 @@ import {
 } from "../bases/shared-renderer";
 
 /** Shared width parameters computed from section CSS variables and dimensions. */
-function calculateWidthParams(section: Element): {
+function calculateWidthParams(
+  section: Element,
+  container?: Element | null,
+): {
   fileLineWidth: number;
   effectiveMargins: number;
   availableWidth: number;
@@ -85,8 +88,10 @@ function calculateWidthParams(section: Element): {
   const fileLineWidth =
     parseFloat(cs.getPropertyValue("--file-line-width")) || 700;
   const fileMargins = parseFloat(cs.getPropertyValue("--file-margins")) || 16;
-  // Use at least --size-4-3 (Bases view padding) so Datacore matches Bases width on mobile
-  const basesViewPadding = parseFloat(cs.getPropertyValue("--size-4-3")) || 12;
+  // Use at least --bases-view-padding so Datacore matches Bases width on mobile
+  const containerCs = container ? getComputedStyle(container) : cs;
+  const basesViewPadding =
+    parseFloat(containerCs.getPropertyValue("--bases-view-padding")) || 12;
   const effectiveMargins = Math.max(fileMargins, basesViewPadding);
   const availableWidth =
     section.getBoundingClientRect().width - effectiveMargins * 2;
@@ -298,7 +303,7 @@ export function View({
 
   // Live Preview: apply inline width styles to this query's code block
   dc.useEffect(() => {
-    if (widthMode === "normal" || !explorerRef.current) return;
+    if (!explorerRef.current) return;
 
     const section = explorerRef.current.closest(".markdown-source-view");
     if (!section) return; // Only applies to Live Preview
@@ -312,7 +317,7 @@ export function View({
     if (!cmContent) return;
 
     const updateWidth = () => {
-      const params = calculateWidthParams(section);
+      const params = calculateWidthParams(section, explorerRef.current);
       const sectionRect = section.getBoundingClientRect();
       const contentRect = cmContent.getBoundingClientRect();
 
@@ -322,7 +327,7 @@ export function View({
       let effectiveWidth: number;
       if (widthMode === "max") {
         effectiveWidth = params.availableWidth;
-      } else {
+      } else if (widthMode === "wide") {
         // Hysteresis: 40px buffer prevents oscillation when available width
         // hovers near target during rapid CodeMirror resize events
         const isConstrained = codeBlock.style.width !== "";
@@ -331,6 +336,11 @@ export function View({
           params.availableWidth < params.targetWidth + buffer
             ? params.availableWidth
             : params.targetWidth;
+      } else {
+        // Normal: match readable line width, but break out when cm-content
+        // is narrower than availableWidth (mobile: --file-margins horizontal
+        // > --bases-view-padding)
+        effectiveWidth = Math.min(params.fileLineWidth, params.availableWidth);
       }
 
       // Max: align to pane edges; Wide: center within content
@@ -388,13 +398,13 @@ export function View({
     const sizer = section.querySelector(".markdown-preview-sizer");
 
     const updateWidth = () => {
-      const params = calculateWidthParams(section);
+      const params = calculateWidthParams(section, explorerRef.current);
 
       setCanExpandToMax(params.canExpandToMax);
 
       // Normal: match readable line width, but break out of sizer when it's
       // narrower than availableWidth (mobile: sizer uses --file-margins 24px
-      // horizontal while Bases uses --size-4-3 12px padding).
+      // horizontal while Bases uses --bases-view-padding 12px).
       // Wide: 1.15× fileLineWidth. Max: full available width.
       const effectiveWidth =
         widthMode === "max"
@@ -1628,7 +1638,7 @@ export function View({
         ".markdown-source-view, .markdown-preview-view, .markdown-reading-view",
       );
       const canExpand = section
-        ? calculateWidthParams(section).canExpandToMax
+        ? calculateWidthParams(section, explorerRef.current).canExpandToMax
         : canExpandToMax;
       nextMode = canExpand ? "max" : "normal";
     } else {
@@ -1636,6 +1646,14 @@ export function View({
     }
     setWidthMode(nextMode);
   }, [widthMode, canExpandToMax]);
+
+  const closeAllDropdowns = dc.useCallback(() => {
+    setShowSettings(false);
+    setShowViewDropdown(false);
+    setShowSortDropdown(false);
+    setShowLimitDropdown(false);
+    setShowQueryEditor(false);
+  }, []);
 
   const handleToggleSettings = dc.useCallback(() => {
     setShowSettings((prev) => !prev);
@@ -2053,6 +2071,7 @@ export function View({
           onTogglePin={() => {}}
           onToggleWidth={handleToggleWidth}
           onToggleSettings={handleToggleSettings}
+          onCloseAllDropdowns={closeAllDropdowns}
           showSettings={showSettings}
           onSettingsChange={handleSettingsChange}
         />

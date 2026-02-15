@@ -8,6 +8,7 @@
 }
 
 .compact-bottom-row {
+  position: relative;
   display: none;
 }
 
@@ -20,14 +21,14 @@
 }
 
 /* Hide grid during 0-width tab transitions (prevents single-column flash) */
-@container (max-width: 50px) {
+@container dynamic-views-pane (max-width: 50px) {
   .dynamic-views-grid,
   .dynamic-views-masonry {
     visibility: hidden;
   }
 }
 
-@container (max-width: 700px) and (min-width: 51px) {
+@container dynamic-views-pane (max-width: 700px) and (min-width: 51px) {
   /* Stack properties on narrow cards */
   /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
   /* Thumbnail order for stacked layout - left goes above text, right stays below */
@@ -40,6 +41,17 @@
 
     .width-toggle-btn {
       display: none;
+    }
+
+    /* Re-anchor query dropdown to controls-wrapper (button is too narrow) */
+    .query-dropdown-wrapper {
+      position: static;
+    }
+
+    .query-dropdown-menu {
+      left: 0;
+      right: 0;
+      min-width: 0;
     }
 
     &.wide,

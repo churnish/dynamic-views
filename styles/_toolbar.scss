@@ -10,6 +10,7 @@
     max-width: 100%;
     padding: 3px 0 8px;
     position: relative;
+    z-index: 2;
     background-color: var(--background-primary);
   }
 
@@ -65,6 +66,7 @@ body.dynamic-views-disable-toolbar-shadow
 
 .dynamic-views {
   .bottom-controls {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -287,7 +289,6 @@ body.dynamic-views-disable-toolbar-shadow
 
 :is(.results-count-wrapper, .results-count-wrapper-compact).active {
   background-color: var(--background-modifier-hover);
-  opacity: var(--icon-opacity-hover);
 }
 
 .dynamic-views {
@@ -310,7 +311,7 @@ body.dynamic-views-disable-toolbar-shadow
   .limit-dropdown-menu {
     position: absolute;
     top: calc(100% + 4px);
-    right: 0;
+    left: 0;
     background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
@@ -468,6 +469,16 @@ body.dynamic-views-disable-toolbar-shadow
     background-color: var(--background-modifier-hover);
   }
 
+  :is(
+    .view-dropdown-btn,
+    .sort-dropdown-btn,
+    .query-toggle-btn,
+    .settings-btn
+  ).active {
+    border-color: var(--text-faint);
+    background-color: var(--background-modifier-hover);
+  }
+
   .create-note-button-compact {
     display: none;
   }
@@ -519,9 +530,17 @@ body.dynamic-views-hide-edit-query .dynamic-views .query-toggle-btn {
   display: none !important;
 }
 
-/* Hide pin toolbar button when toggle is on */
-body.dynamic-views-hide-pin-toolbar .dynamic-views .pin-btn {
+/* Pin button hidden by default (even without Style Settings plugin) */
+.dynamic-views .pin-btn {
   display: none !important;
+}
+
+/* Style Settings: show pin button only when user explicitly unchecks the toggle.
+   .css-settings-manager = Style Settings active, so :not() means toggle is OFF. */
+body.css-settings-manager:not(.dynamic-views-hide-pin-toolbar)
+  .dynamic-views
+  .pin-btn {
+  display: flex !important;
 }
 
 /* Hide expand width button when toggle is on */

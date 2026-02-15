@@ -288,6 +288,7 @@ interface ToolbarProps {
   onTogglePin: () => void;
   onToggleWidth: () => void;
   onToggleSettings: () => void;
+  onCloseAllDropdowns: () => void;
 
   // Settings panel
   showSettings: boolean;
@@ -344,6 +345,7 @@ export function Toolbar({
   onTogglePin,
   onToggleWidth,
   onToggleSettings,
+  onCloseAllDropdowns,
   showSettings,
   onSettingsChange,
 }: ToolbarProps): unknown {
@@ -355,45 +357,47 @@ export function Toolbar({
   const settingsButtonRef = dc.useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = dc.useRef<HTMLDivElement | null>(null);
 
-  // Setup click-outside for each dropdown
+  // Close all dropdowns when clicking outside any open one.
+  // Uses closeAll (not toggle) for robustness — toggle with functional
+  // updaters could re-open a just-closed dropdown if state and event
+  // ordering interact unexpectedly.
   dc.useEffect(() => {
     if (showViewDropdown && viewMenuRef.current) {
-      return setupClickOutside(viewMenuRef.current, onToggleViewDropdown);
+      return setupClickOutside(viewMenuRef.current, onCloseAllDropdowns);
     }
-  }, [showViewDropdown, onToggleViewDropdown]);
+  }, [showViewDropdown, onCloseAllDropdowns]);
 
   dc.useEffect(() => {
     if (showSortDropdown && sortMenuRef.current) {
-      return setupClickOutside(sortMenuRef.current, onToggleSortDropdown);
+      return setupClickOutside(sortMenuRef.current, onCloseAllDropdowns);
     }
-  }, [showSortDropdown, onToggleSortDropdown]);
+  }, [showSortDropdown, onCloseAllDropdowns]);
 
   dc.useEffect(() => {
     if (showLimitDropdown && limitMenuRef.current) {
-      return setupClickOutside(limitMenuRef.current, onToggleLimitDropdown);
+      return setupClickOutside(limitMenuRef.current, onCloseAllDropdowns);
     }
-  }, [showLimitDropdown, onToggleLimitDropdown]);
+  }, [showLimitDropdown, onCloseAllDropdowns]);
 
   dc.useEffect(() => {
     if (showQueryEditor && queryMenuRef.current) {
-      return setupClickOutside(queryMenuRef.current, onToggleCode);
+      return setupClickOutside(queryMenuRef.current, onCloseAllDropdowns);
     }
-  }, [showQueryEditor, onToggleCode]);
+  }, [showQueryEditor, onCloseAllDropdowns]);
 
   dc.useEffect(() => {
     if (showSettings && settingsButtonRef.current) {
-      // Settings click-outside needs special handling - check wrapper
       const settingsWrapper = settingsButtonRef.current.closest(
         ".settings-dropdown-wrapper",
       );
       if (settingsWrapper) {
         return setupClickOutside(
           settingsWrapper as HTMLElement,
-          onToggleSettings,
+          onCloseAllDropdowns,
         );
       }
     }
-  }, [showSettings, onToggleSettings]);
+  }, [showSettings, onCloseAllDropdowns]);
 
   return (
     <>
@@ -402,8 +406,11 @@ export function Toolbar({
         <div className="view-controls-wrapper">
           <div className="view-dropdown-wrapper">
             <button
-              className="view-dropdown-btn"
-              onClick={onToggleViewDropdown}
+              className={`view-dropdown-btn${showViewDropdown ? " active" : ""}`}
+              onClick={(e: unknown) => {
+                (e as Event).stopPropagation();
+                onToggleViewDropdown();
+              }}
               aria-label="Switch view"
               tabIndex={0}
             >
@@ -558,8 +565,11 @@ export function Toolbar({
           {/* Sort Dropdown */}
           <div className="sort-dropdown-wrapper">
             <button
-              className="sort-dropdown-btn"
-              onClick={onToggleSortDropdown}
+              className={`sort-dropdown-btn${showSortDropdown ? " active" : ""}`}
+              onClick={(e: unknown) => {
+                (e as Event).stopPropagation();
+                onToggleSortDropdown();
+              }}
               aria-label="Change sort order"
               tabIndex={0}
             >
@@ -921,7 +931,10 @@ export function Toolbar({
         {/* Results Count Wrapper */}
         <div
           className={`results-count-wrapper${showLimitDropdown ? " active" : ""}`}
-          onClick={onToggleLimitDropdown}
+          onClick={(e: unknown) => {
+            (e as Event).stopPropagation();
+            onToggleLimitDropdown();
+          }}
           onKeyDown={(e: unknown) => {
             const evt = e as KeyboardEvent;
             if (evt.key === "Enter" || evt.key === " ") {
@@ -1048,8 +1061,11 @@ export function Toolbar({
           </button>
           <div className="query-dropdown-wrapper">
             <button
-              className="query-toggle-btn"
-              onClick={onToggleCode}
+              className={`query-toggle-btn${showQueryEditor ? " active" : ""}`}
+              onClick={(e: unknown) => {
+                (e as Event).stopPropagation();
+                onToggleCode();
+              }}
               aria-label={showQueryEditor ? "Hide query" : "Edit query"}
               tabIndex={0}
             >
@@ -1168,8 +1184,11 @@ export function Toolbar({
           <div className="settings-dropdown-wrapper">
             <button
               ref={settingsButtonRef}
-              className="settings-btn"
-              onClick={onToggleSettings}
+              className={`settings-btn${showSettings ? " active" : ""}`}
+              onClick={(e: unknown) => {
+                (e as Event).stopPropagation();
+                onToggleSettings();
+              }}
               aria-label="Settings"
               tabIndex={0}
             >
@@ -1266,7 +1285,10 @@ export function Toolbar({
           {/* Results Count Wrapper (Compact) */}
           <div
             className={`results-count-wrapper-compact${showLimitDropdown ? " active" : ""}`}
-            onClick={onToggleLimitDropdown}
+            onClick={(e: unknown) => {
+              (e as Event).stopPropagation();
+              onToggleLimitDropdown();
+            }}
             onKeyDown={(e: unknown) => {
               const evt = e as KeyboardEvent;
               if (evt.key === "Enter" || evt.key === " ") {

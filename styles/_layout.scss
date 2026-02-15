@@ -21,6 +21,11 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
   scrollbar-width: none;
 }
 
+/* Mirror Obsidian's --bases-view-padding (scoped to .bases-view) for width parity */
+.dynamic-views {
+  --bases-view-padding: var(--size-4-3);
+}
+
 /* Scroll fade gradient at bottom of scrollable results */
 .dynamic-views .results-container,
 .dynamic-views-bases-container {
@@ -60,10 +65,10 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
 }
 
 /* Enable container queries for responsive button visibility */
-.markdown-preview-view,
 .markdown-reading-view,
 .markdown-source-view {
   container-type: inline-size;
+  container-name: dynamic-views-pane;
 }
 
 /* Width system: JS applies inline styles per-query for wide/max modes */

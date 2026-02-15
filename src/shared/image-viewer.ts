@@ -414,10 +414,14 @@ function setupImageViewerGestures(
 
       // Spacebar to toggle maximize, R/ArrowDown to reset zoom
       spacebarHandler = (e: KeyboardEvent) => {
-        // Constrained viewer: only handle keys when the associated leaf is active
+        // Constrained viewer: only handle keys when the viewer has focus or its leaf is active
         if (container.classList.contains("dynamic-views-viewer-fixed")) {
           const orig = (container as CloneElement).__originalEmbed;
-          if (!orig?.closest(".workspace-leaf.mod-active")) return;
+          if (
+            document.activeElement !== container &&
+            !orig?.closest(".workspace-leaf.mod-active")
+          )
+            return;
         }
         if (e.code === "Space") {
           e.preventDefault();
@@ -430,11 +434,13 @@ function setupImageViewerGestures(
             setMaximized(true, containScale);
             panzoomInstance?.zoom(containScale, { animate: true });
           }
+          container.dataset.lastKeyTime = String(Date.now());
         } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
           e.preventDefault();
           e.stopImmediatePropagation();
           if (isMaximized) setMaximized(false);
           panzoomInstance?.reset();
+          container.dataset.lastKeyTime = String(Date.now());
         }
       };
       document.addEventListener("keydown", spacebarHandler, true);
@@ -751,19 +757,25 @@ function openImageViewer(
 
       // Desktop only: spacebar to toggle maximize, R/ArrowDown to reset (when panzoom disabled)
       const onSpacebar = (e: KeyboardEvent) => {
-        // Constrained viewer: only handle keys when the associated leaf is active
+        // Constrained viewer: only handle keys when the viewer has focus or its leaf is active
         if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
           const orig = cloneEl.__originalEmbed;
-          if (!orig?.closest(".workspace-leaf.mod-active")) return;
+          if (
+            document.activeElement !== cloneEl &&
+            !orig?.closest(".workspace-leaf.mod-active")
+          )
+            return;
         }
         if (e.code === "Space") {
           e.preventDefault();
           e.stopPropagation();
           cloneEl.classList.toggle("is-maximized");
+          cloneEl.dataset.lastKeyTime = String(Date.now());
         } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
           e.preventDefault();
           e.stopImmediatePropagation();
           cloneEl.classList.remove("is-maximized");
+          cloneEl.dataset.lastKeyTime = String(Date.now());
         }
       };
       document.addEventListener("keydown", onSpacebar, true);
@@ -824,6 +836,9 @@ function openImageViewer(
       }
     };
 
+    // Trackpad ghost clicks arrive up to ~1200ms after keypress (observed range: 179–1162ms)
+    const GHOST_CLICK_WINDOW = 1500;
+
     // Click-to-dismiss (unless disabled) - works with or without panzoom
     if (!isDismissDisabled) {
       imgEl.addEventListener("pointerdown", onPointerDown);
@@ -832,6 +847,16 @@ function openImageViewer(
       const onImageClick = (e: MouseEvent) => {
         if (pointerMoved) return;
         if (cloneEl.dataset.longPressTriggered) return;
+        // Ignore trackpad ghost clicks shortly after keyboard events (R, Space, etc.)
+        const timeSinceKey =
+          Date.now() - Number(cloneEl.dataset.lastKeyTime || 0);
+        if (timeSinceKey < GHOST_CLICK_WINDOW) {
+          console.debug(
+            `onImageClick blocked: ${timeSinceKey}ms since last key`,
+          );
+          return;
+        }
+        console.debug(`onImageClick passed: ${timeSinceKey}ms since last key`);
         e.stopPropagation();
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       };
@@ -902,20 +927,46 @@ function openImageViewer(
       if (isMobile && gestureInProgress) return;
       // Ignore overlay click after long press reset (cursor may end over overlay)
       if (cloneEl.dataset.longPressTriggered) return;
+      // Ignore trackpad ghost clicks shortly after keyboard events (R, Space, etc.)
+      const timeSinceKey =
+        Date.now() - Number(cloneEl.dataset.lastKeyTime || 0);
+      if (timeSinceKey < GHOST_CLICK_WINDOW) {
+        console.debug(
+          `onOverlayClick blocked: ${timeSinceKey}ms since last key`,
+        );
+        return;
+      }
       if (e.target === cloneEl) {
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       }
     };
 
     const onEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
+      if (e.key !== "Escape") return;
+      // Constrained viewer: only handle Escape when the viewer has focus or its leaf is active
+      if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+        const orig = cloneEl.__originalEmbed;
+        if (
+          document.activeElement !== cloneEl &&
+          !orig?.closest(".workspace-leaf.mod-active")
+        )
+          return;
       }
+      closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
     };
 
     const onCopy = (e: KeyboardEvent) => {
       const isCopyShortcut = (e.metaKey || e.ctrlKey) && e.key === "c";
       if (!isCopyShortcut) return;
+      // Constrained viewer: only handle copy when the viewer has focus or its leaf is active
+      if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+        const orig = cloneEl.__originalEmbed;
+        if (
+          document.activeElement !== cloneEl &&
+          !orig?.closest(".workspace-leaf.mod-active")
+        )
+          return;
+      }
 
       e.preventDefault();
       e.stopPropagation();
@@ -974,8 +1025,8 @@ function openImageViewer(
     };
 
     // Add all listeners synchronously (isOpening flag prevents immediate trigger)
-    document.addEventListener("keydown", onEscape);
-    document.addEventListener("keydown", onCopy);
+    document.addEventListener("keydown", onEscape, true);
+    document.addEventListener("keydown", onCopy, true);
     cloneEl.addEventListener("click", onOverlayClick);
 
     // Desktop-only: Alt+drag to drag image out of viewer
@@ -1003,11 +1054,22 @@ function openImageViewer(
       };
 
       onAltKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Alt" && !altHeld) enableAltDrag();
+        if (e.key !== "Alt" || altHeld) return;
+        // Constrained viewer: only handle Alt when the viewer has focus or its leaf is active
+        if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+          const orig = cloneEl.__originalEmbed;
+          if (
+            document.activeElement !== cloneEl &&
+            !orig?.closest(".workspace-leaf.mod-active")
+          )
+            return;
+        }
+        enableAltDrag();
       };
 
       onAltKeyUp = (e: KeyboardEvent) => {
-        if (e.key === "Alt" && altHeld) disableAltDrag();
+        if (e.key !== "Alt" || !altHeld) return;
+        disableAltDrag();
       };
 
       // Reset on window blur (handles Alt+Tab leaving Alt stuck)
@@ -1041,8 +1103,8 @@ function openImageViewer(
         disableAltDrag();
       };
 
-      document.addEventListener("keydown", onAltKeyDown);
-      document.addEventListener("keyup", onAltKeyUp);
+      document.addEventListener("keydown", onAltKeyDown, true);
+      document.addEventListener("keyup", onAltKeyUp, true);
       window.addEventListener("blur", onAltBlur);
       imgEl.addEventListener("dragstart", onDragStart);
       imgEl.addEventListener("dragend", onDragEnd);
@@ -1050,18 +1112,18 @@ function openImageViewer(
 
     // Cleanup removes all listeners (removeEventListener is no-op if never added)
     viewerListenerCleanups.set(cloneEl, () => {
-      document.removeEventListener("keydown", onEscape);
-      document.removeEventListener("keydown", onCopy);
+      document.removeEventListener("keydown", onEscape, true);
+      document.removeEventListener("keydown", onCopy, true);
       cloneEl.removeEventListener("click", onOverlayClick);
       if (isMobile) {
         cloneEl.removeEventListener("touchstart", onTouchStart);
         cloneEl.removeEventListener("touchend", onTouchEnd);
       }
       if (onAltKeyDown) {
-        document.removeEventListener("keydown", onAltKeyDown);
+        document.removeEventListener("keydown", onAltKeyDown, true);
       }
       if (onAltKeyUp) {
-        document.removeEventListener("keyup", onAltKeyUp);
+        document.removeEventListener("keyup", onAltKeyUp, true);
       }
       if (onAltBlur) {
         window.removeEventListener("blur", onAltBlur);
@@ -1081,6 +1143,19 @@ function openImageViewer(
       }
       modalObserver?.disconnect();
     });
+
+    // Focus viewer clone to prevent :focus-visible on cards during keyboard input.
+    // Card loses focus → no focus ring while viewer is open or after it closes.
+    // Capture-phase pointerdown re-focuses after tab switches (before panzoom stops propagation).
+    if (!isMobile) {
+      cloneEl.addEventListener(
+        "pointerdown",
+        () => cloneEl.focus({ preventScroll: true }),
+        true,
+      );
+      cloneEl.setAttribute("tabindex", "-1");
+      cloneEl.focus({ preventScroll: true });
+    }
 
     // Register in tracking map AFTER all setup succeeds (prevents partial state)
     viewerClones.set(embedEl, cloneEl);
