@@ -11,6 +11,7 @@ import {
   getZoomSensitivityMobile,
 } from "../utils/style-settings";
 import { getVaultPathFromResourceUrl, isExternalUrl } from "../utils/image";
+import { getCachedBlobUrl } from "./slideshow";
 
 // Extend App type for undocumented dragManager API
 declare module "obsidian" {
@@ -637,6 +638,11 @@ function openImageViewer(
     nextImg.remove();
   }
 
+  // Use cached blob URL for external images to avoid re-fetching
+  if (isExternalUrl(imgEl.src)) {
+    imgEl.src = getCachedBlobUrl(imgEl.src);
+  }
+
   // Append clone to appropriate container based on fullscreen setting
   // Mobile: always fullscreen. Desktop: fullscreen if toggle is on
   const isMobile = app.isMobile;
@@ -837,7 +843,7 @@ function openImageViewer(
     };
 
     // Trackpad ghost clicks arrive up to ~1200ms after keypress (observed range: 179–1162ms)
-    const GHOST_CLICK_WINDOW = 1500;
+    const GHOST_CLICK_WINDOW = 0; // TODO: restore to 1500
 
     // Click-to-dismiss (unless disabled) - works with or without panzoom
     if (!isDismissDisabled) {
@@ -848,15 +854,11 @@ function openImageViewer(
         if (pointerMoved) return;
         if (cloneEl.dataset.longPressTriggered) return;
         // Ignore trackpad ghost clicks shortly after keyboard events (R, Space, etc.)
-        const timeSinceKey =
-          Date.now() - Number(cloneEl.dataset.lastKeyTime || 0);
-        if (timeSinceKey < GHOST_CLICK_WINDOW) {
-          console.debug(
-            `onImageClick blocked: ${timeSinceKey}ms since last key`,
-          );
+        if (
+          Date.now() - Number(cloneEl.dataset.lastKeyTime || 0) <
+          GHOST_CLICK_WINDOW
+        )
           return;
-        }
-        console.debug(`onImageClick passed: ${timeSinceKey}ms since last key`);
         e.stopPropagation();
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       };
@@ -928,14 +930,11 @@ function openImageViewer(
       // Ignore overlay click after long press reset (cursor may end over overlay)
       if (cloneEl.dataset.longPressTriggered) return;
       // Ignore trackpad ghost clicks shortly after keyboard events (R, Space, etc.)
-      const timeSinceKey =
-        Date.now() - Number(cloneEl.dataset.lastKeyTime || 0);
-      if (timeSinceKey < GHOST_CLICK_WINDOW) {
-        console.debug(
-          `onOverlayClick blocked: ${timeSinceKey}ms since last key`,
-        );
+      if (
+        Date.now() - Number(cloneEl.dataset.lastKeyTime || 0) <
+        GHOST_CLICK_WINDOW
+      )
         return;
-      }
       if (e.target === cloneEl) {
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       }

@@ -1,4 +1,5 @@
 import type { RefObject } from "../datacore/types";
+import { cacheExternalImage } from "./slideshow";
 
 // Cache aspect ratio by image URL to avoid layout flash on re-render
 // Unbounded cache growth is intentional and harmless - entries are small (~20 bytes each)
@@ -81,6 +82,9 @@ export function handleImageLoad(
 ): void {
   // Guard against null/empty src
   if (!imgEl.src) return;
+
+  // Cache external images as blob URLs for future slideshow navigation
+  cacheExternalImage(imgEl);
 
   // Calculate aspect ratio with validation (always needed for masonry)
   // Require minimum 1px dimensions to catch broken/corrupt images

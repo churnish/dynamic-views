@@ -3,11 +3,144 @@
  * Extracts common logic between card-renderer.tsx and shared-renderer.ts
  */
 
+import { requestUrl } from "obsidian";
 import {
   SLIDESHOW_ANIMATION_MS,
   SWIPE_DETECT_THRESHOLD,
   SCROLL_THROTTLE_MS,
 } from "./constants";
+import { isExternalUrl } from "../utils/image";
+
+// Blob URL cache for external images to prevent re-downloads
+// Obsidian's Electron sends Cache-Control: no-cache on cross-origin requests,
+// making browser HTTP caching ineffective. This cache uses requestUrl (Obsidian's
+// API, bypasses CORS) to fetch once and serve as same-origin blob: URLs.
+const externalBlobCache = new Map<string, string>();
+const BLOB_CACHE_LIMIT = 150;
+// Deduplicate concurrent fetch requests for the same URL
+const pendingFetches = new Map<string, Promise<string | null>>();
+// Track URLs that failed validation to prevent retrying broken images
+const failedValidationUrls = new Set<string>();
+// Prevent orphaned blob URLs from in-flight fetches during cleanup
+let isCleanedUp = false;
+
+/**
+ * Validate blob URL loads as an image
+ * Returns true if image loads successfully with valid dimensions
+ */
+function validateBlobUrl(blobUrl: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const cleanup = (result: boolean) => {
+      img.onload = null;
+      img.onerror = null;
+      img.src = "";
+      resolve(result);
+    };
+    img.onload = () => cleanup(img.naturalWidth > 0 && img.naturalHeight > 0);
+    img.onerror = () => cleanup(false);
+    img.src = blobUrl;
+  });
+}
+
+/**
+ * Get cached blob URL for external image (sync)
+ * Returns cached blob URL if available, otherwise original URL
+ */
+export function getCachedBlobUrl(url: string): string {
+  return externalBlobCache.get(url) ?? url;
+}
+
+/** Initialize blob URL cache state — call on plugin load */
+export function initExternalBlobCache(): void {
+  isCleanedUp = false;
+}
+
+/**
+ * Clean up blob URL cache and revoke all blob URLs — call on plugin unload
+ * Sets cleanup flag to prevent orphaned blob URLs from in-flight fetches
+ */
+export function cleanupExternalBlobCache(): void {
+  isCleanedUp = true;
+  externalBlobCache.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+  externalBlobCache.clear();
+  pendingFetches.clear();
+  failedValidationUrls.clear();
+}
+
+/**
+ * Get blob URL for external image, fetching and caching if needed
+ * Uses requestUrl to bypass CORS. Deduplicates concurrent requests.
+ * Returns blob URL on success, null on failure, original URL for non-external
+ */
+export async function getExternalBlobUrl(url: string): Promise<string | null> {
+  if (isCleanedUp) return null;
+  if (!isExternalUrl(url)) return url;
+  if (externalBlobCache.has(url)) return externalBlobCache.get(url)!;
+  if (failedValidationUrls.has(url)) return null;
+
+  if (pendingFetches.has(url)) {
+    if (isCleanedUp) return null;
+    return pendingFetches.get(url)!;
+  }
+
+  const fetchPromise = (async (): Promise<string | null> => {
+    try {
+      const response = await requestUrl(url);
+      const contentType =
+        response.headers?.["content-type"] ?? "application/octet-stream";
+      const blob = new Blob([response.arrayBuffer], { type: contentType });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const isValid = await validateBlobUrl(blobUrl);
+      if (!isValid) {
+        URL.revokeObjectURL(blobUrl);
+        failedValidationUrls.add(url);
+        return null;
+      }
+
+      if (isCleanedUp) {
+        URL.revokeObjectURL(blobUrl);
+        return null;
+      }
+
+      // Safe eviction: only revoke blob URLs not currently displayed by any <img>
+      if (externalBlobCache.size >= BLOB_CACHE_LIMIT) {
+        for (const [origUrl, cachedBlobUrl] of externalBlobCache) {
+          if (
+            !document.querySelector(`img[src="${CSS.escape(cachedBlobUrl)}"]`)
+          ) {
+            URL.revokeObjectURL(cachedBlobUrl);
+            externalBlobCache.delete(origUrl);
+            break;
+          }
+        }
+        // If all entries are in-use, allow cache to temporarily exceed limit
+      }
+
+      externalBlobCache.set(url, blobUrl);
+      return blobUrl;
+    } catch {
+      return null;
+    } finally {
+      pendingFetches.delete(url);
+    }
+  })();
+
+  pendingFetches.set(url, fetchPromise);
+  return fetchPromise;
+}
+
+/**
+ * Cache an external image by fetching as blob (fire-and-forget)
+ * Called on image load to proactively cache for future slideshow navigation
+ */
+export function cacheExternalImage(imgEl: HTMLImageElement): void {
+  const url = imgEl.src;
+  if (url && isExternalUrl(url) && !externalBlobCache.has(url)) {
+    void getExternalBlobUrl(url);
+  }
+}
 
 // Time window to detect "undo" navigation (First→Last→First)
 // If user wraps backward (First→Last) then forward (Last→First) within this window,
@@ -61,6 +194,8 @@ export function createSlideshowNavigator(
   let currentIndex = 0;
   let isAnimating = false;
   let lastWrapFromFirstTimestamp: number | null = null;
+  // One-shot: on first navigation, preload all uncached external images (covers mobile)
+  let preloadTriggered = false;
 
   // Read animation duration from CSS variable at runtime
   // Falls back to SLIDESHOW_ANIMATION_MS if variable not defined or invalid
@@ -158,9 +293,22 @@ export function createSlideshowNavigator(
 
     const { currImg, nextImg } = elements;
     const newUrl = imageUrls[newIndex];
+    // Use cached blob URL if available, raw URL otherwise
+    const effectiveUrl = getCachedBlobUrl(newUrl);
 
     isAnimating = true;
     activeNewIndex = newIndex;
+
+    // On first navigation, preload all uncached external images
+    // Covers mobile where hover preload never fires
+    if (!preloadTriggered) {
+      preloadTriggered = true;
+      imageUrls.forEach((url) => {
+        if (isExternalUrl(url) && !externalBlobCache.has(url)) {
+          void getExternalBlobUrl(url);
+        }
+      });
+    }
 
     // Notify about slide change
     if (callbacks?.onSlideChange) {
@@ -184,7 +332,7 @@ export function createSlideshowNavigator(
         // Ignore errors from src being cleared (resolves to index.html) or changed
         // Only handle errors for the URL we actually set (use event target, not element ref)
         const targetSrc = (e.target as HTMLImageElement).src;
-        if (targetSrc !== newUrl) return;
+        if (targetSrc !== effectiveUrl) return;
 
         // Track failed index to prevent infinite loop
         failedIndices.add(newIndex);
@@ -212,7 +360,7 @@ export function createSlideshowNavigator(
 
     // Skip animation: directly update current image
     if (skipAnimation) {
-      currImg.src = newUrl;
+      currImg.src = effectiveUrl;
       currImg.removeClass("dynamic-views-hidden");
       currentIndex = newIndex;
       isAnimating = false;
@@ -230,7 +378,7 @@ export function createSlideshowNavigator(
       return;
     }
 
-    nextImg.src = newUrl;
+    nextImg.src = effectiveUrl;
 
     // Check if this is an "undo" of recent First→Last navigation
     // Must check BEFORE updating the timestamp
@@ -293,7 +441,7 @@ export function createSlideshowNavigator(
     failedIndices.clear();
     const elements = getElements();
     if (elements) {
-      elements.currImg.src = imageUrls[0];
+      elements.currImg.src = getCachedBlobUrl(imageUrls[0]);
       // Trigger onSlideChange callback on reset
       if (callbacks?.onSlideChange) {
         elements.currImg.addEventListener(
@@ -509,8 +657,10 @@ export function setupSwipeGestures(
 }
 
 /**
- * Preload images on first hover
- * Uses browser's native image cache for both internal and external URLs
+ * Preload images on hover intent (mousemove after mouseenter)
+ * Prevents preloading when card scrolls under stationary cursor
+ * External images: cached as blob URLs via requestUrl
+ * Internal images: browser preload via Image()
  */
 export function setupImagePreload(
   cardEl: HTMLElement,
@@ -518,18 +668,34 @@ export function setupImagePreload(
   signal: AbortSignal,
 ): void {
   let preloaded = false;
+  let hasMoved = false;
 
   cardEl.addEventListener(
     "mouseenter",
     () => {
-      if (!preloaded) {
-        preloaded = true;
-        imageUrls.slice(1).forEach((url) => {
-          new Image().src = url;
-        });
+      hasMoved = false;
+    },
+    { signal },
+  );
+
+  cardEl.addEventListener(
+    "mousemove",
+    () => {
+      if (!hasMoved) {
+        hasMoved = true;
+        if (!preloaded) {
+          preloaded = true;
+          imageUrls.slice(1).forEach((url) => {
+            if (isExternalUrl(url)) {
+              void getExternalBlobUrl(url);
+            } else {
+              new Image().src = url;
+            }
+          });
+        }
       }
     },
-    { once: true, signal },
+    { signal },
   );
 }
 

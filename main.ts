@@ -25,6 +25,10 @@ import {
 import { DynamicViewsSettingTab } from "./src/settings-tab";
 import type { DatacoreAPI } from "./src/datacore/types";
 import {
+  initExternalBlobCache,
+  cleanupExternalBlobCache,
+} from "./src/shared/slideshow";
+import {
   openRandomFile,
   toggleShuffleActiveView,
   getPaneType,
@@ -65,6 +69,7 @@ export default class DynamicViews extends Plugin {
   }
 
   async onload() {
+    initExternalBlobCache();
     this.persistenceManager = new PersistenceManager(this);
     await this.persistenceManager.load();
 
@@ -428,5 +433,6 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     );
 
     clearInFlightLoads();
+    cleanupExternalBlobCache();
   }
 }
