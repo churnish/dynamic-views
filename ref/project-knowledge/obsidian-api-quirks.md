@@ -4,7 +4,7 @@ description: >-
   Undocumented Obsidian API behaviors discovered during Dynamic Views
   development. Covers file write timing, race conditions, and workarounds.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-13
+last updated: 2026-02-15
 ---
 
 ## Debounced disk writes (~2 seconds)
@@ -50,3 +50,32 @@ if (nc && !nc.isConnected) {
 ### Where applied
 
 `handleTemplateToggle()` in `src/bases/utils.ts` — the one-shot template save notice.
+
+## `BasesEntry.getValue()` undocumented `.data` property
+
+> Observed in Obsidian **1.12.1** (Catalyst), installer 1.11.4.
+
+`BasesEntry.getValue(propertyId)` returns `Value | null`. The official `Value` class hierarchy only exposes `toString()`, `isTruthy()`, `equals()`, `looseEquals()`, and `renderTo()`. No `.data` accessor is typed.
+
+At runtime, `Value` subclasses store their raw data in an undocumented `.data` property:
+
+- `PrimitiveValue<T>` (StringValue, NumberValue, BooleanValue, etc.): `.data` is the primitive value (`string`, `number`, `boolean`).
+- `ListValue` (multitext properties like `tags`, `aliases`): `.data` is an array of `Value` objects or primitives.
+
+### Accessing raw data
+
+The plugin accesses `.data` via type assertion since it's not in the type definitions:
+
+```typescript
+const value = entry.getValue("note.author") as { data?: unknown } | null;
+const data = value?.data;
+if (Array.isArray(data)) {
+  // multitext: data is an array
+} else if (typeof data === "string") {
+  // text: data is a string
+}
+```
+
+### Fragility
+
+This relies on Obsidian's internal `Value` implementation. If the internal property is renamed or restructured, access breaks silently (returns `undefined`). There is no public API alternative for extracting raw values beyond `toString()`.

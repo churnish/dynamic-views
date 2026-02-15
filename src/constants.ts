@@ -49,7 +49,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   invertPropertyPairing: "",
   showPropertiesAbove: false,
   invertPropertyPosition: "",
-  urlProperty: "url",
+  urlProperty: "",
   // Other
   minimumColumns: 1 as const,
   cssclasses: "",

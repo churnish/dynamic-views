@@ -73,19 +73,10 @@ import {
   syncResponsiveClasses,
 } from "../bases/shared-renderer";
 
-/** Displayed-count cache: survives component remounts (reading ↔ editing) and
- *  hot-reload (which re-evaluates the module, creating a new scope). Stored on
- *  the global object so all module instances share one Map. Resets on app restart. */
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment -- singleton cache across module reloads */
-const displayedCountCache: Map<string, number> =
-  (globalThis as any).__dvDisplayedCountCache ??
-  ((globalThis as any).__dvDisplayedCountCache = new Map<string, number>());
-/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
-
 /** Shared width parameters computed from section CSS variables and dimensions. */
 function calculateWidthParams(section: Element): {
   fileLineWidth: number;
-  fileMargins: number;
+  effectiveMargins: number;
   availableWidth: number;
   targetWidth: number;
   canExpandToMax: boolean;
@@ -102,7 +93,7 @@ function calculateWidthParams(section: Element): {
   const targetWidth = WIDE_MODE_MULTIPLIER * fileLineWidth;
   return {
     fileLineWidth,
-    fileMargins,
+    effectiveMargins,
     availableWidth,
     targetWidth,
     canExpandToMax: availableWidth > targetWidth,
@@ -269,9 +260,6 @@ export function View({
         setWidthMode(state.widthMode as WidthMode);
       if (state.searchQuery !== undefined) setSearchQuery(state.searchQuery);
       if (state.resultLimit !== undefined) setResultLimit(state.resultLimit);
-      // Sync displayedCount from in-memory cache (not persisted to disk)
-      const cached = displayedCountCache.get(QUERY_ID);
-      if (cached !== undefined) setDisplayedCount(cached);
     };
 
     app.workspace.on("layout-change", handleLayoutChange);
@@ -307,11 +295,6 @@ export function View({
       }
     }
   }, [widthMode, QUERY_ID, persistenceManager]);
-
-  // Cache displayedCount in memory so it survives reading ↔ editing remounts
-  dc.useEffect(() => {
-    if (QUERY_ID) displayedCountCache.set(QUERY_ID, displayedCount);
-  }, [displayedCount, QUERY_ID]);
 
   // Live Preview: apply inline width styles to this query's code block
   dc.useEffect(() => {
@@ -355,7 +338,7 @@ export function View({
       // when pane is narrower than --file-line-width
       const offsetLeft =
         widthMode === "max"
-          ? sectionRect.left - contentRect.left + params.fileMargins
+          ? sectionRect.left - contentRect.left + params.effectiveMargins
           : -(effectiveWidth - contentRect.width) / 2;
       codeBlock.style.setProperty("width", `${effectiveWidth}px`, "important");
       codeBlock.style.setProperty(
@@ -401,25 +384,26 @@ export function View({
     );
     if (!section) return;
 
-    if (widthMode === "normal") {
-      elPre.style.removeProperty("width");
-      elPre.style.removeProperty("max-width");
-      elPre.style.removeProperty("margin-left");
-      return;
-    }
+    // Query sizer once (stable across resizes)
+    const sizer = section.querySelector(".markdown-preview-sizer");
 
     const updateWidth = () => {
       const params = calculateWidthParams(section);
 
       setCanExpandToMax(params.canExpandToMax);
 
+      // Normal: match readable line width, but break out of sizer when it's
+      // narrower than availableWidth (mobile: sizer uses --file-margins 24px
+      // horizontal while Bases uses --size-4-3 12px padding).
+      // Wide: 1.15× fileLineWidth. Max: full available width.
       const effectiveWidth =
         widthMode === "max"
           ? params.availableWidth
-          : Math.min(params.targetWidth, params.availableWidth);
+          : widthMode === "wide"
+            ? Math.min(params.targetWidth, params.availableWidth)
+            : Math.min(params.fileLineWidth, params.availableWidth);
       // Use measured sizer width (not CSS variable) so offset stays correct
       // when pane is narrower than --file-line-width
-      const sizer = section.querySelector(".markdown-preview-sizer");
       const sizerWidth = sizer
         ? sizer.getBoundingClientRect().width
         : params.fileLineWidth;
@@ -481,6 +465,9 @@ export function View({
             (overrides as Record<string, unknown>)[key] = settings[key];
           }
         }
+        // Explicit `undefined` (not key omission) clears stored settings —
+        // setDatacoreState spreads into current state, and Object.entries
+        // includes the key so the sparse filter strips it
         void persistenceManager.setDatacoreState(QUERY_ID, {
           settings: Object.keys(overrides).length > 0 ? overrides : undefined,
         });

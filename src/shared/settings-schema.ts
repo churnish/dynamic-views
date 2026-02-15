@@ -3,7 +3,7 @@
  * Defines settings structure for both Bases and Datacore views
  */
 
-import type { BasesViewConfig, ViewOption } from "obsidian";
+import type { BasesPropertyId, BasesViewConfig, ViewOption } from "obsidian";
 import type {
   PluginSettings,
   ViewDefaults,
@@ -61,6 +61,11 @@ export function getBasesViewOptions(
     }
   }
 
+  // Cache property registry once (used by imageProperty filter)
+  const propertyInfos = window.app?.metadataCache?.getAllPropertyInfos?.() as
+    | Record<string, { widget?: string }>
+    | undefined;
+
   const schema = [
     {
       type: "slider",
@@ -112,8 +117,9 @@ export function getBasesViewOptions(
           type: "property",
           displayName: "Text preview property",
           key: "textPreviewProperty",
+          placeholder: "Visible property",
           default: d.textPreviewProperty,
-          filter: (prop: string) =>
+          filter: (prop: BasesPropertyId) =>
             config
               ? config.getOrder().some((id) => String(id) === String(prop))
               : true,
@@ -143,11 +149,18 @@ export function getBasesViewOptions(
       displayName: "Image",
       items: [
         {
-          type: "text",
+          type: "property",
           displayName: "Image property",
           key: "imageProperty",
-          placeholder: "Comma-separated if multiple",
+          placeholder: "Property",
           default: d.imageProperty,
+          filter: (prop: BasesPropertyId) => {
+            if (prop.startsWith("file.")) return false;
+            if (prop.startsWith("formula.")) return true;
+            if (!propertyInfos) return true;
+            const widget = propertyInfos[prop.slice(5)]?.widget;
+            return !widget || widget === "text" || widget === "multitext";
+          },
         },
         {
           type: "dropdown",
@@ -258,8 +271,9 @@ export function getBasesViewOptions(
           type: "property",
           displayName: "URL property",
           key: "urlProperty",
+          placeholder: "Visible property",
           default: d.urlProperty,
-          filter: (prop: string) =>
+          filter: (prop: BasesPropertyId) =>
             config
               ? config.getOrder().some((id) => String(id) === String(prop))
               : true,
@@ -386,7 +400,16 @@ export function readBasesSettings(
 
   const { getString, getBool, getNumber } = createConfigGetters(config);
 
+  // Read special-purpose properties first (needed to exclude from title/subtitle)
+  let textPreviewProperty = getString(
+    "textPreviewProperty",
+    defaults.textPreviewProperty,
+  );
+  let urlProperty = getString("urlProperty", defaults.urlProperty);
+  const imageProperty = getString("imageProperty", defaults.imageProperty);
+
   // Position-based title/subtitle: derive from getOrder() positions
+  // Skip properties with special roles (text preview, URL button, image)
   const displayFirstAsTitle = getBool(
     "displayFirstAsTitle",
     defaults.displayFirstAsTitle,
@@ -396,17 +419,29 @@ export function readBasesSettings(
     defaults.displaySecondAsSubtitle,
   );
   const order = config.getOrder();
+  const specialProps = new Set(
+    [textPreviewProperty, urlProperty, imageProperty].filter(Boolean),
+  );
+  const candidateOrder = specialProps.size
+    ? order.filter((id) => !specialProps.has(String(id)))
+    : order;
   let titleProperty = "";
   let subtitleProperty = "";
   let _skipLeadingProperties = 0;
-  if (displayFirstAsTitle && order[0]) {
-    titleProperty = order[0];
-    _skipLeadingProperties = 1;
-    if (displaySecondAsSubtitle && order[1]) {
-      subtitleProperty = order[1];
-      _skipLeadingProperties = 2;
+  if (displayFirstAsTitle && candidateOrder[0]) {
+    titleProperty = String(candidateOrder[0]);
+    _skipLeadingProperties = order.indexOf(candidateOrder[0]) + 1;
+    if (displaySecondAsSubtitle && candidateOrder[1]) {
+      subtitleProperty = String(candidateOrder[1]);
+      _skipLeadingProperties = order.indexOf(candidateOrder[1]) + 1;
     }
   }
+
+  // Properties hidden from the view remain in config but aren't resolved
+  const orderSet = new Set(order.map(String));
+  if (textPreviewProperty && !orderSet.has(textPreviewProperty))
+    textPreviewProperty = "";
+  if (urlProperty && !orderSet.has(urlProperty)) urlProperty = "";
 
   // Read ViewDefaults from Bases config
   // Note: propertyLabels and imageFormat use previousSettings for stale config fallback
@@ -417,13 +452,10 @@ export function readBasesSettings(
     subtitleProperty,
     displayFirstAsTitle,
     displaySecondAsSubtitle,
-    textPreviewProperty: getString(
-      "textPreviewProperty",
-      defaults.textPreviewProperty,
-    ),
+    textPreviewProperty,
     fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
     textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
-    imageProperty: getString("imageProperty", defaults.imageProperty),
+    imageProperty,
     fallbackToEmbeds: (() => {
       const value = config.get("fallbackToEmbeds");
       return value === "always" ||
@@ -489,7 +521,7 @@ export function readBasesSettings(
     ),
     showPropertiesAbove: defaults.showPropertiesAbove,
     invertPropertyPosition: defaults.invertPropertyPosition,
-    urlProperty: getString("urlProperty", defaults.urlProperty),
+    urlProperty,
     minimumColumns: (() => {
       const value = config.get("minimumColumns");
       if (value === "one") return 1;

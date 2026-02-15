@@ -238,9 +238,9 @@ export async function loadTextPreviewForEntry(
   // Composite key includes all parameters that affect output:
   // - fallbackToContent: determines whether file content is used as fallback
   // - omitFirstLine: affects whether first line is stripped from preview
-  // - hasPreview: whether textPreviewData is provided (affects output source)
+  // - hasTextPreview: whether textPreviewData is provided (affects output source)
   // - fileName/titleString: included when omitFirstLine="ifMatchesTitle" (affects first-line comparison)
-  const hasPreview =
+  const hasTextPreview =
     textPreviewData != null &&
     (typeof textPreviewData === "string" ||
       typeof textPreviewData === "number") &&
@@ -251,7 +251,7 @@ export async function loadTextPreviewForEntry(
     omitFirstLine === "ifMatchesTitle"
       ? `|${fileName ?? ""}|${titleString ?? ""}`
       : "";
-  const cacheKey = `${path}|${fallbackToContent}|${omitFirstLine}|${hasPreview}${titleKey}`;
+  const cacheKey = `${path}|${fallbackToContent}|${omitFirstLine}|${hasTextPreview}${titleKey}`;
   const existing = inFlightTextPreviews.get(cacheKey);
   if (existing) {
     textPreviewCache[path] = await existing;

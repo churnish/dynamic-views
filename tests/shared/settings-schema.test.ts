@@ -150,6 +150,42 @@ describe("readBasesSettings — position-based title/subtitle", () => {
     expect(result.titleProperty).toBe("note.title");
     expect(result._skipLeadingProperties).toBe(1);
   });
+  it("should skip special properties in position-based title/subtitle derivation", () => {
+    const config = createMockConfig(
+      {
+        displayFirstAsTitle: true,
+        displaySecondAsSubtitle: true,
+        textPreviewProperty: "note.summary",
+      },
+      ["note.summary", "note.title", "note.author"],
+    );
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.titleProperty).toBe("note.title");
+    expect(result.subtitleProperty).toBe("note.author");
+    expect(result._skipLeadingProperties).toBe(3);
+  });
+});
+
+describe("readBasesSettings — hidden property visibility", () => {
+  it("should clear urlProperty and textPreviewProperty when not in getOrder()", () => {
+    const config = createMockConfig(
+      { urlProperty: "note.url", textPreviewProperty: "note.summary" },
+      ["note.title", "note.author"],
+    );
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.urlProperty).toBe("");
+    expect(result.textPreviewProperty).toBe("");
+  });
+
+  it("should keep urlProperty and textPreviewProperty when in getOrder()", () => {
+    const config = createMockConfig(
+      { urlProperty: "note.url", textPreviewProperty: "note.summary" },
+      ["note.title", "note.url", "note.summary"],
+    );
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.urlProperty).toBe("note.url");
+    expect(result.textPreviewProperty).toBe("note.summary");
+  });
 });
 
 describe("readBasesSettings — templateOverrides", () => {

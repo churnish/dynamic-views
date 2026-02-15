@@ -759,6 +759,10 @@ export async function loadContentForEntries(
               prop,
             ) as { data?: unknown } | null;
             const data = textPreviewValue?.data;
+            if (Array.isArray(data) && data.length > 0) {
+              textPreviewData = data.map(String).join(", ");
+              break;
+            }
             if (
               data != null &&
               data !== "" &&

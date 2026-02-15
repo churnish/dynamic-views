@@ -1862,6 +1862,7 @@ export class SharedCardRenderer {
     if (settings.textPreviewProperty)
       excludeSet.add(settings.textPreviewProperty);
     if (settings.urlProperty) excludeSet.add(settings.urlProperty);
+    if (settings.imageProperty) excludeSet.add(settings.imageProperty);
 
     // Pre-compute hide settings (needed before pairing to exclude collapsed)
     const hideMissing = shouldHideMissingProperties();
