@@ -462,24 +462,28 @@ export function View({
   }, [resultLimit, QUERY_ID, persistenceManager]);
 
   // Persist settings changes (debounced)
-  // Only saves fields that differ from resolved defaults (ViewDefaults + DatacoreDefaults)
+  // Only saves fields that differ from effective defaults (raw defaults + template)
   dc.useEffect(() => {
     if (settingsTimeoutRef.current) {
       clearTimeout(settingsTimeoutRef.current);
     }
     settingsTimeoutRef.current = setTimeout(() => {
       if (QUERY_ID && persistenceManager) {
-        const defaults = { ...VIEW_DEFAULTS, ...DATACORE_DEFAULTS };
+        const template = persistenceManager.getSettingsTemplate("datacore");
+        const defaults = {
+          ...VIEW_DEFAULTS,
+          ...DATACORE_DEFAULTS,
+          ...template,
+        };
         const overrides: Partial<ViewDefaults & DatacoreDefaults> = {};
         for (const key of Object.keys(defaults) as (keyof typeof defaults)[]) {
           if (settings[key] !== defaults[key]) {
             (overrides as Record<string, unknown>)[key] = settings[key];
           }
         }
-        void persistenceManager.setDatacoreState(
-          QUERY_ID,
-          Object.keys(overrides).length > 0 ? { settings: overrides } : {},
-        );
+        void persistenceManager.setDatacoreState(QUERY_ID, {
+          settings: Object.keys(overrides).length > 0 ? overrides : undefined,
+        });
       }
     }, 300);
     return () => {
@@ -892,6 +896,15 @@ export function View({
                     p,
                     prop,
                   );
+                  if (
+                    Array.isArray(textPreviewPropValue) &&
+                    textPreviewPropValue.length > 0
+                  ) {
+                    textPreviewValue = textPreviewPropValue
+                      .map(String)
+                      .join(", ");
+                    break;
+                  }
                   if (
                     typeof textPreviewPropValue === "string" ||
                     typeof textPreviewPropValue === "number"
@@ -1486,14 +1499,14 @@ export function View({
     if (settings.queryHeight > 0 && resultsContainerRef.current) {
       scrollableElement = resultsContainerRef.current;
     } else {
-      // Walk up DOM to find scrollable ancestor
+      // Walk up DOM to find scrollable ancestor (overflow: auto/scroll).
+      // Don't require scrollHeight > clientHeight — content may not overflow
+      // yet at mount time but will once more cards load via infinite scroll.
       let element: HTMLElement | null = containerRef.current;
       while (element && !scrollableElement) {
         const style = window.getComputedStyle(element);
         const overflowY = style.overflowY;
-        const hasOverflow = overflowY === "auto" || overflowY === "scroll";
-
-        if (hasOverflow && element.scrollHeight > element.clientHeight) {
+        if (overflowY === "auto" || overflowY === "scroll") {
           scrollableElement = element;
         }
         element = element.parentElement;
