@@ -1,5 +1,5 @@
 import type { RefObject } from "../datacore/types";
-import { cacheExternalImage } from "./slideshow";
+import { cacheExternalImage, markImageBroken } from "./slideshow";
 
 // Cache aspect ratio by image URL to avoid layout flash on re-render
 // Unbounded cache growth is intentional and harmless - entries are small (~20 bytes each)
@@ -175,6 +175,7 @@ export function setupImageLoadHandler(
   };
   const errorHandler = () => {
     if (cardEl.classList.contains("cover-ready")) return;
+    markImageBroken(imgEl.src);
 
     // Double rAF for cover-ready (consistent with multi-image error handlers)
     requestAnimationFrame(() => {
@@ -355,6 +356,7 @@ export function setupBackdropImageLoader(
     let currentIndex = 0;
     const tryNextImage = () => {
       if (signal?.aborted) return;
+      markImageBroken(imgEl.src);
       currentIndex++;
       if (currentIndex < imageUrls.length) {
         if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
@@ -384,6 +386,7 @@ export function setupBackdropImageLoader(
       "error",
       () => {
         if (signal?.aborted) return;
+        markImageBroken(imgEl.src);
         requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
             return;

@@ -21,6 +21,10 @@ const BLOB_CACHE_LIMIT = 150;
 const pendingFetches = new Map<string, Promise<string | null>>();
 // Track URLs that failed validation to prevent retrying broken images
 const failedValidationUrls = new Set<string>();
+// Track URLs that failed to load — filtered out on subsequent renders
+// Session-scoped: cleared on plugin reload/unload. Unbounded growth is intentional
+// and harmless — bounded by user's vault broken image count.
+const brokenImageUrls = new Set<string>();
 // Prevent orphaned blob URLs from in-flight fetches during cleanup
 let isCleanedUp = false;
 
@@ -51,9 +55,21 @@ export function getCachedBlobUrl(url: string): string {
   return externalBlobCache.get(url) ?? url;
 }
 
+/** Mark a URL as broken — filtered out on subsequent renders */
+export function markImageBroken(url: string): void {
+  brokenImageUrls.add(url);
+}
+
+/** Filter known-broken URLs from an image URL array */
+export function filterBrokenUrls(urls: string[]): string[] {
+  if (brokenImageUrls.size === 0) return urls;
+  return urls.filter((url) => !brokenImageUrls.has(url));
+}
+
 /** Initialize blob URL cache state — call on plugin load */
 export function initExternalBlobCache(): void {
   isCleanedUp = false;
+  brokenImageUrls.clear();
 }
 
 /**
@@ -66,6 +82,7 @@ export function cleanupExternalBlobCache(): void {
   externalBlobCache.clear();
   pendingFetches.clear();
   failedValidationUrls.clear();
+  brokenImageUrls.clear();
 }
 
 /**
@@ -288,6 +305,17 @@ export function createSlideshowNavigator(
     if (newIndex < 0) newIndex = imageUrls.length - 1;
     if (newIndex >= imageUrls.length) newIndex = 0;
 
+    // Skip known-failed indices (instant skip vs visible error→advance)
+    let skipped = 0;
+    while (failedIndices.has(newIndex) && skipped < imageUrls.length) {
+      newIndex += direction;
+      if (newIndex < 0) newIndex = imageUrls.length - 1;
+      if (newIndex >= imageUrls.length) newIndex = 0;
+      skipped++;
+    }
+    // All alternatives exhausted or landed back on current index
+    if (skipped >= imageUrls.length || newIndex === current) return;
+
     const elements = getElements();
     if (!elements) return;
 
@@ -336,6 +364,7 @@ export function createSlideshowNavigator(
 
         // Track failed index to prevent infinite loop
         failedIndices.add(newIndex);
+        markImageBroken(imageUrls[newIndex]);
         if (failedIndices.size >= imageUrls.length) {
           // All images failed - stop trying
           isAnimating = false;

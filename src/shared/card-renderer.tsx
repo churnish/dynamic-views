@@ -41,6 +41,8 @@ import {
 import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
 import {
   createSlideshowNavigator,
+  filterBrokenUrls,
+  markImageBroken,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -864,6 +866,7 @@ function CoverSlideshow({
           if (!targetSrc || targetSrc !== expectedSrc) {
             return;
           }
+          markImageBroken(expectedSrc);
           firstImg.addClass("dynamic-views-hidden");
           navigate(1, false, true);
         },
@@ -1598,16 +1601,18 @@ function Card({
   // Handle images
   const isArray = Array.isArray(card.imageUrl);
   const scrubbingDisabled = isThumbnailScrubbingDisabled();
-  const imageArray: string[] = isArray
-    ? (card.imageUrl as (string | string[])[])
-        .flat()
-        .filter(
-          (url): url is string => typeof url === "string" && url.length > 0,
-        )
-        .slice(0, scrubbingDisabled ? 1 : 10)
-    : card.imageUrl
-      ? [card.imageUrl as string]
-      : [];
+  const imageArray: string[] = filterBrokenUrls(
+    isArray
+      ? (card.imageUrl as (string | string[])[])
+          .flat()
+          .filter(
+            (url): url is string => typeof url === "string" && url.length > 0,
+          )
+          .slice(0, scrubbingDisabled ? 1 : 10)
+      : card.imageUrl
+        ? [card.imageUrl as string]
+        : [],
+  );
   // Enable scrubbing only on desktop with multiple images and setting enabled
   const enableScrubbing =
     !app.isMobile && isArray && imageArray.length > 1 && !scrubbingDisabled;
@@ -2484,17 +2489,33 @@ function Card({
                                     imgEl as ImgWithController
                                   )._errorController = controller;
 
+                                  // Preload scrubbable images on hover intent
+                                  if (enableScrubbing) {
+                                    const cardEl = imgEl.closest(
+                                      ".card",
+                                    ) as HTMLElement;
+                                    if (cardEl) {
+                                      setupImagePreload(
+                                        cardEl,
+                                        imageArray,
+                                        controller.signal,
+                                      );
+                                    }
+                                  }
+
                                   imgEl.addEventListener(
                                     "error",
                                     () => {
                                       if (controller.signal.aborted) return;
                                       const failedSrc = imgEl.src;
-                                      let startIndex = imageArray.findIndex(
-                                        (url) => url === failedSrc,
-                                      );
-                                      if (startIndex === -1) startIndex = 0;
-                                      const nextIndex = startIndex + 1;
-                                      if (nextIndex < imageArray.length) {
+                                      markImageBroken(failedSrc);
+                                      // Splice broken URL for immediate scrub update
+                                      const failedIdx =
+                                        imageArray.indexOf(failedSrc);
+                                      if (failedIdx !== -1)
+                                        imageArray.splice(failedIdx, 1);
+                                      // After splice, failedIdx points to next element
+                                      if (failedIdx < imageArray.length) {
                                         if (
                                           controller.signal.aborted ||
                                           !imgEl.isConnected
@@ -2503,7 +2524,7 @@ function Card({
                                         imgEl.removeClass(
                                           "dynamic-views-hidden",
                                         );
-                                        imgEl.src = imageArray[nextIndex];
+                                        imgEl.src = imageArray[failedIdx];
                                         return;
                                       }
                                       const cardEl = imgEl.closest(

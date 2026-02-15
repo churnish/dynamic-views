@@ -57,6 +57,8 @@ import type DynamicViews from "../../main";
 import type { BasesResolvedSettings } from "../types";
 import {
   createSlideshowNavigator,
+  filterBrokenUrls,
+  markImageBroken,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -1143,11 +1145,13 @@ export class SharedCardRenderer {
         : [card.imageUrl]
       : [];
 
-    // Filter and deduplicate URLs
-    const imageUrls = Array.from(
-      new Set(
-        rawUrls.filter(
-          (url) => url && typeof url === "string" && url.trim().length > 0,
+    // Filter broken, empty, and duplicate URLs
+    const imageUrls = filterBrokenUrls(
+      Array.from(
+        new Set(
+          rawUrls.filter(
+            (url) => url && typeof url === "string" && url.trim().length > 0,
+          ),
         ),
       ),
     );
@@ -1647,6 +1651,7 @@ export class SharedCardRenderer {
         // Only handle errors for the URL we set (ignore cleared src or changed URL)
         const targetSrc = (e.target as HTMLImageElement).src;
         if (targetSrc !== expectedFirstUrl) return;
+        markImageBroken(expectedFirstUrl);
         currentImg.addClass("dynamic-views-hidden");
         navigate(1, false, true);
       },
