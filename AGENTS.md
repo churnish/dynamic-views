@@ -5,14 +5,23 @@
 
 ## Reference files
 
-Use @ref/architecture/project-structure.md to navigate the codebase — it maps every codebase and stylesheet file and its responsibility. Always keep it up-to-date as the structure evolves.
-
 When a reference file listed below is relevant to your current work, you MUST read it before proceeding. Do NOT rely on assumptions — consult the reference first.
 
-All paths below are relative to `ref/project-knowledge/`.
+Proactively keep these files up-to-date as the codebase evolves by running /document.
 
-- Read **obsidian-review-bot.md** before fixing bot-reported issues, adding/modifying eslint-disable comments, or preparing a PR for the Obsidian plugin review.
-- Read **eslint-config.md** before modifying `eslint.config.js`, adding eslint overrides, or troubleshooting lint errors.
-- Read **ios-webkit-quirks.md** before modifying content-visibility, IntersectionObserver, or scroll-state container queries — iOS WebKit has platform-specific bugs.
-- Read **obsidian-api-quirks.md** before using `vault.process()`, `vault.modify()`, `new Notice()`, or any file I/O that could race with Obsidian's debounced writes.
-- Read **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.
+### ref/architecture
+
+Read...
+
+- **project-structure.md** to navigate the codebase — it maps every codebase and stylesheet file and its responsibility.
+- **masonry-layout.md** before working on masonry layout, virtual scrolling, resize handling, or infinite scroll — it documents the full architecture, data structures, render pipeline, guard system, and invariants.
+
+### ref/project-knowledge
+
+Read...
+
+- **obsidian-review-bot.md** before fixing bot-reported issues, adding/modifying eslint-disable comments, or preparing a PR for the Obsidian plugin review.
+- **eslint-config.md** before modifying `eslint.config.js`, adding eslint overrides, or troubleshooting lint errors.
+- **ios-webkit-quirks.md** before modifying content-visibility, IntersectionObserver, or scroll-state container queries — iOS WebKit has platform-specific bugs.
+- **obsidian-api-quirks.md** before using `vault.process()`, `vault.modify()`, `new Notice()`, or any file I/O that could race with Obsidian's debounced writes.
+- **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.

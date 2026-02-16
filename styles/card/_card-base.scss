@@ -61,6 +61,8 @@
     contain: layout style paint;
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
+      top var(--anim-duration-fast, 140ms) ease,
+      left var(--anim-duration-fast, 140ms) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }

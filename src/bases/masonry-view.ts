@@ -39,7 +39,6 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
-  RESIZE_THROTTLE_MS,
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
@@ -180,7 +179,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private previousDisplayedCount: number = 0;
   private layoutResizeObserver: ResizeObserver | null = null;
   private resizeRafId: number | null = null;
-  private resizeThrottleTimeout: number | null = null;
   private groupLayoutResults: Map<string | undefined, MasonryLayoutResult> =
     new Map();
   private virtualItems: VirtualItem[] = [];
@@ -1259,12 +1257,21 @@ export class DynamicViewsMasonryView extends BasesView {
       const hasUnmountedItems = this.virtualItems.some(
         (v) => !v.el && v.height > 0,
       );
+
+      console.debug("[masonry-perf]", source, {
+        virtualCount: this.virtualItems.length,
+        mounted: this.virtualItems.filter((v) => v.el).length,
+        hasUnmountedItems,
+      });
+
+      let remountedAll = false;
       if (hasUnmountedItems) {
         if (
           source === "resize-deferred-measurement" ||
           source === "expand-group"
         ) {
           // Remount all items for accurate full-DOM measurement
+          const tRemount = performance.now();
           for (const item of this.virtualItems) {
             if (!item.el && item.height > 0) {
               const container = this.groupContainers.get(item.groupKey);
@@ -1277,6 +1284,13 @@ export class DynamicViewsMasonryView extends BasesView {
               }
             }
           }
+          console.debug("[masonry-perf] remount-all (guard)", {
+            ms: Math.round(performance.now() - tRemount),
+          });
+          remountedAll = true;
+        } else if (source === "resize-observer") {
+          // Allow through — tryProportionalResize is virtual-aware.
+          // If it falls through to full measurement, remount happens below.
         } else {
           return;
         }
@@ -1340,13 +1354,22 @@ export class DynamicViewsMasonryView extends BasesView {
           );
         }
 
+        // After remount, DOM order differs from virtualItems order (remounted
+        // cards are appended at container end). Override with virtualItems order
+        // so updateVirtualItemPositions index mapping stays consistent.
+        if (remountedAll) {
+          allCards = this.virtualItems
+            .filter((v) => v.el != null)
+            .map((v) => v.el!);
+        }
+
         if (allCards.length === 0) {
           this.isUpdatingLayout = false;
           return;
         }
 
         // Calculate dimensions
-        const { cardWidth, columns } = calculateMasonryDimensions({
+        const { cardWidth } = calculateMasonryDimensions({
           containerWidth,
           cardSize: settings.cardSize,
           minColumns,
@@ -1354,18 +1377,21 @@ export class DynamicViewsMasonryView extends BasesView {
         });
 
         // Fast path: proportional scaling on resize (skip DOM measurement)
-        if (source === "resize-observer" || source === "resize-trailing") {
-          if (
-            this.tryProportionalResize(
-              groups,
-              isGrouped,
-              containerWidth,
-              cardWidth,
-              columns,
-              gap,
-              settings,
-            )
-          ) {
+        if (source === "resize-observer") {
+          const tProp = performance.now();
+          const propSuccess = this.tryProportionalResize(
+            groups,
+            isGrouped,
+            containerWidth,
+            cardWidth,
+            gap,
+            settings,
+          );
+          console.debug("[masonry-perf] proportional", {
+            ms: Math.round(performance.now() - tProp),
+            success: propSuccess,
+          });
+          if (propSuccess) {
             this.lastLayoutWidth = containerWidth;
             // Schedule deferred full measurement after resize ends
             if (this.deferredMeasurementTimeout !== null) {
@@ -1375,14 +1401,39 @@ export class DynamicViewsMasonryView extends BasesView {
               this.deferredMeasurementTimeout = null;
               this.updateLayoutRef.current?.("resize-deferred-measurement");
             }, 300);
+            // Don't sync virtual scroll during live resize — mounted cards
+            // get CSS updates from proportional resize, unmounted cards stay
+            // within 800px buffer. Deferred measurement syncs after resize ends.
             return;
           }
-          // Fall through to full measurement if proportional scaling not possible
+          // Proportional scaling failed (e.g., column count change). Remount
+          // all unmounted items so full measurement can see the complete DOM.
+          if (hasUnmountedItems) {
+            for (const item of this.virtualItems) {
+              if (!item.el && item.height > 0) {
+                const container = this.groupContainers.get(item.groupKey);
+                if (container && this.lastRenderedSettings) {
+                  this.mountVirtualItem(
+                    item,
+                    container,
+                    this.lastRenderedSettings,
+                  );
+                }
+              }
+            }
+            // Use virtualItems order (remounted cards appended at DOM end)
+            allCards = this.virtualItems
+              .filter((v) => v.el != null)
+              .map((v) => v.el!);
+            remountedAll = true;
+          }
+          // Fall through to full measurement
         }
 
         // Phase 1: Set all widths + force content rendering for accurate measurement
         // masonry-measuring overrides content-visibility (hidden on desktop, auto on mobile)
         // so off-screen cards render their content for accurate offsetHeight reads
+        const tMeasure = performance.now();
         this.masonryContainer.classList.add("masonry-measuring");
         for (const card of allCards) {
           if (!skipHiding) {
@@ -1400,11 +1451,23 @@ export class DynamicViewsMasonryView extends BasesView {
         // Phase 4: Calculate and apply layout
         if (isGrouped && groups) {
           const groupCardsMap = new Map<HTMLElement, HTMLElement[]>();
-          for (const groupEl of groups) {
-            groupCardsMap.set(
-              groupEl,
-              Array.from(groupEl.querySelectorAll<HTMLElement>(".card")),
-            );
+          if (remountedAll) {
+            // After remount, build per-group card lists from virtualItems
+            // to preserve ordering (DOM order differs after remount)
+            for (const groupEl of groups) {
+              const groupKey = getGroupKeyDataset(groupEl);
+              const groupCards = this.virtualItems
+                .filter((v) => v.groupKey === groupKey && v.el != null)
+                .map((v) => v.el!);
+              groupCardsMap.set(groupEl, groupCards);
+            }
+          } else {
+            for (const groupEl of groups) {
+              groupCardsMap.set(
+                groupEl,
+                Array.from(groupEl.querySelectorAll<HTMLElement>(".card")),
+              );
+            }
           }
 
           let cardIndex = 0;
@@ -1474,10 +1537,16 @@ export class DynamicViewsMasonryView extends BasesView {
           );
 
           result.measuredAtCardWidth = cardWidth;
+
           this.groupLayoutResults.set(undefined, result);
           this.updateVirtualItemPositions(undefined, result);
         }
 
+        console.debug("[masonry-perf] full-measurement", {
+          ms: Math.round(performance.now() - tMeasure),
+          cardCount: allCards.length,
+          source,
+        });
         this.lastLayoutWidth = containerWidth;
       } finally {
         this.masonryContainer?.classList.remove("masonry-measuring");
@@ -1487,7 +1556,11 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Unmount off-screen cards after layout positions are finalized
+        const tSync = performance.now();
         this.syncVirtualScroll();
+        console.debug("[masonry-perf] syncVirtualScroll", {
+          ms: Math.round(performance.now() - tSync),
+        });
 
         // Show end indicator if all items displayed (skip if 0 results)
         requestAnimationFrame(() => {
@@ -1513,55 +1586,21 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     };
 
-    // Throttled resize handler - recalculates every RESIZE_THROTTLE_MS during resize
-    // Uses trailing call pattern: if resize events arrive during throttle, trigger layout when throttle expires
-    let pendingTrailingLayout = false;
-
+    // RAF-debounced resize handler — runs proportional resize every frame (~60fps).
+    // Cancel-and-reschedule pattern ensures at most one layout per frame.
     const throttledResize = (entries: ResizeObserverEntry[]) => {
       if (entries.length === 0) return;
-      const entry = entries[0];
-      const newWidth = Math.floor(entry.contentRect.width);
+      const newWidth = Math.floor(entries[0].contentRect.width);
+      if (newWidth === this.lastLayoutWidth) return;
 
-      // Skip if width unchanged
-      if (newWidth === this.lastLayoutWidth) {
-        return;
+      if (this.resizeRafId !== null) {
+        cancelAnimationFrame(this.resizeRafId);
       }
-
-      // Throttle: only update if not in cooldown
-      if (this.resizeThrottleTimeout === null) {
-        pendingTrailingLayout = false;
-
-        // Cancel any pending RAF
-        if (this.resizeRafId !== null) {
-          cancelAnimationFrame(this.resizeRafId);
-        }
-
-        // Update via double-RAF for smooth rendering
-        this.resizeRafId = requestAnimationFrame(() => {
-          if (!this.masonryContainer?.isConnected) return;
-          this.resizeRafId = requestAnimationFrame(() => {
-            if (!this.masonryContainer?.isConnected) return;
-            if (this.updateLayoutRef.current) {
-              this.updateLayoutRef.current("resize-observer");
-            }
-          });
-        });
-
-        // Start throttle cooldown with trailing call
-        this.resizeThrottleTimeout = window.setTimeout(() => {
-          this.resizeThrottleTimeout = null;
-          // If resize events arrived during throttle, trigger layout now
-          if (pendingTrailingLayout) {
-            pendingTrailingLayout = false;
-            if (this.updateLayoutRef.current) {
-              this.updateLayoutRef.current("resize-trailing");
-            }
-          }
-        }, RESIZE_THROTTLE_MS);
-      } else {
-        // Throttled - mark that we need a trailing layout
-        pendingTrailingLayout = true;
-      }
+      this.resizeRafId = requestAnimationFrame(() => {
+        this.resizeRafId = null;
+        if (!this.masonryContainer?.isConnected) return;
+        this.updateLayoutRef.current?.("resize-observer");
+      });
     };
 
     // Setup resize observer (only once, not per render)
@@ -1593,7 +1632,6 @@ export class DynamicViewsMasonryView extends BasesView {
     isGrouped: boolean,
     containerWidth: number,
     cardWidth: number,
-    columns: number,
     gap: number,
     settings: BasesResolvedSettings,
   ): boolean {
@@ -1609,7 +1647,6 @@ export class DynamicViewsMasonryView extends BasesView {
         if (
           !prev?.heights ||
           !prev.measuredAtCardWidth ||
-          prev.columns !== columns ||
           prev.heights.length !== groupVirtualCount
         ) {
           return false;
@@ -1678,7 +1715,6 @@ export class DynamicViewsMasonryView extends BasesView {
     if (
       !prev?.heights ||
       !prev.measuredAtCardWidth ||
-      prev.columns !== columns ||
       prev.heights.length !== virtualCount
     ) {
       return false;
@@ -2305,10 +2341,8 @@ export class DynamicViewsMasonryView extends BasesView {
             `${result.containerHeight}px`,
           );
 
-          // Store for next incremental append
-          this.groupLayoutResults.set(layoutKey, result);
-
           // Update virtual item positions for newly appended cards
+          // (uses batch-local heights — must run BEFORE height merge below)
           for (let i = 0; i < newCards.length; i++) {
             const item = this.virtualItems.find((v) => v.el === newCards[i]);
             if (item) {
@@ -2323,6 +2357,14 @@ export class DynamicViewsMasonryView extends BasesView {
               }
             }
           }
+
+          // Merge all heights so tryProportionalResize can scale the full set.
+          // Must happen AFTER virtual item loop (which uses batch-local indices).
+          const prevHeights = currentPrevLayout.heights ?? [];
+          result.heights = [...prevHeights, ...(result.heights ?? [])];
+
+          // Store for next incremental append
+          this.groupLayoutResults.set(layoutKey, result);
 
           // Clear batch state — must be AFTER groupLayoutResults.set (so stored
           // result is correct) and BEFORE checkAndLoadMore (so it can proceed)
@@ -2610,9 +2652,6 @@ export class DynamicViewsMasonryView extends BasesView {
     this.renderState.abortController?.abort();
     if (this.resizeRafId !== null) {
       cancelAnimationFrame(this.resizeRafId);
-    }
-    if (this.resizeThrottleTimeout !== null) {
-      window.clearTimeout(this.resizeThrottleTimeout);
     }
     if (this.deferredMeasurementTimeout !== null) {
       clearTimeout(this.deferredMeasurementTimeout);

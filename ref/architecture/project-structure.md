@@ -1,3 +1,10 @@
+---
+title: Project structure
+description:
+author: 🤖 Generated with Claude Code
+last updated: 2026-02-16
+---
+
 # Project structure
 
 ```
@@ -138,7 +145,10 @@ dynamic-views/
 |     |-- _responsive.scss             # Compact viewport, mobile overrides
 |     \-- _utilities.scss              # Utility classes
 |
-|-- ref/                               # Reference docs (files not listed here)
-|-- archive/                           # Archived code (files not listed here)
-\-- .github/                           # CI workflows, issue templates (files not listed here)
+|-- ref/                               # Reference docs
+|     |-- ...
+|-- archive/                           # Preserved deprecated code
+|     |-- ...
+\-- .github/                           # CI workflows, issue templates
+      |-- ...
 ```

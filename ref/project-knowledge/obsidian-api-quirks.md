@@ -7,6 +7,8 @@ author: 🤖 Generated with Claude Code
 last updated: 2026-02-16
 ---
 
+# Obsidian API quirks
+
 ## Debounced disk writes (~2 seconds)
 
 Obsidian debounces all file writes via `TextFileView.requestSave` with a **2-second** delay (documented in the TypeScript API). This applies globally — Markdown files, `.base` files, and any file managed by Obsidian's editor system.
