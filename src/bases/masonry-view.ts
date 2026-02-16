@@ -172,6 +172,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private isLoading: boolean = false;
   private batchLayoutPending: boolean = false;
   private pendingImageRelayout: boolean = false;
+  private deferredMeasurementTimeout: number | null = null;
   private scrollResizeObserver: ResizeObserver | null = null;
   private containerRef: { current: HTMLElement | null } = { current: null };
   private previousDisplayedCount: number = 0;
@@ -1277,12 +1278,40 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Calculate dimensions
-        const { cardWidth } = calculateMasonryDimensions({
+        const { cardWidth, columns } = calculateMasonryDimensions({
           containerWidth,
           cardSize: settings.cardSize,
           minColumns,
           gap,
         });
+
+        // Fast path: proportional scaling on resize (skip DOM measurement)
+        if (source === "resize-observer" || source === "resize-trailing") {
+          if (
+            this.tryProportionalResize(
+              allCards,
+              groups,
+              isGrouped,
+              containerWidth,
+              cardWidth,
+              columns,
+              gap,
+              settings,
+            )
+          ) {
+            this.lastLayoutWidth = containerWidth;
+            // Schedule deferred full measurement after resize ends
+            if (this.deferredMeasurementTimeout !== null) {
+              clearTimeout(this.deferredMeasurementTimeout);
+            }
+            this.deferredMeasurementTimeout = window.setTimeout(() => {
+              this.deferredMeasurementTimeout = null;
+              this.updateLayoutRef.current?.("resize-deferred-measurement");
+            }, 300);
+            return;
+          }
+          // Fall through to full measurement if proportional scaling not possible
+        }
 
         // Phase 1: Set all widths + force content rendering for accurate measurement
         // masonry-measuring overrides content-visibility (hidden on desktop, auto on mobile)
@@ -1348,6 +1377,7 @@ export class DynamicViewsMasonryView extends BasesView {
               `${result.containerHeight}px`,
             );
 
+            result.measuredAtCardWidth = cardWidth;
             this.groupLayoutResults.set(groupKey, result);
             cardIndex += groupCards.length;
           }
@@ -1375,6 +1405,7 @@ export class DynamicViewsMasonryView extends BasesView {
             `${result.containerHeight}px`,
           );
 
+          result.measuredAtCardWidth = cardWidth;
           this.groupLayoutResults.set(undefined, result);
         }
 
@@ -1478,6 +1509,119 @@ export class DynamicViewsMasonryView extends BasesView {
       this.layoutResizeObserver.disconnect();
       this.layoutResizeObserver.observe(this.masonryContainer);
     }
+  }
+
+  /**
+   * Attempt proportional height scaling instead of DOM measurement.
+   * Scales previously-measured card heights by newCardWidth / measuredCardWidth
+   * and recalculates positions using pure math — no forced reflow.
+   * Returns true if scaling was applied, false if full measurement is needed.
+   */
+  private tryProportionalResize(
+    allCards: HTMLElement[],
+    groups: HTMLElement[] | null,
+    isGrouped: boolean,
+    containerWidth: number,
+    cardWidth: number,
+    columns: number,
+    gap: number,
+    settings: BasesResolvedSettings,
+  ): boolean {
+    if (isGrouped && groups) {
+      // Check ALL groups can scale before modifying any
+      const groupCardsMap = new Map<HTMLElement, HTMLElement[]>();
+      for (const groupEl of groups) {
+        groupCardsMap.set(
+          groupEl,
+          Array.from(groupEl.querySelectorAll<HTMLElement>(".card")),
+        );
+        const groupKey = getGroupKeyDataset(groupEl);
+        const prev = this.groupLayoutResults.get(groupKey);
+        if (
+          !prev?.heights ||
+          !prev.measuredAtCardWidth ||
+          prev.columns !== columns ||
+          prev.heights.length !== (groupCardsMap.get(groupEl)?.length ?? 0)
+        ) {
+          return false;
+        }
+      }
+
+      // Scale each group
+      for (const groupEl of groups) {
+        const groupCards = groupCardsMap.get(groupEl) ?? [];
+        const groupKey = getGroupKeyDataset(groupEl);
+        const prev = this.groupLayoutResults.get(groupKey)!;
+        const scale = cardWidth / prev.measuredAtCardWidth!;
+        const scaledHeights = prev.heights!.map((h) => h * scale);
+
+        const result = calculateMasonryLayout({
+          cards: groupCards,
+          containerWidth,
+          cardSize: settings.cardSize,
+          minColumns: settings.minimumColumns,
+          gap,
+          heights: scaledHeights,
+        });
+
+        for (let i = 0; i < groupCards.length; i++) {
+          const pos = result.positions[i];
+          groupCards[i].style.setProperty("--masonry-width", `${cardWidth}px`);
+          groupCards[i].style.setProperty("--masonry-left", `${pos.left}px`);
+          groupCards[i].style.setProperty("--masonry-top", `${pos.top}px`);
+        }
+        groupEl.style.setProperty(
+          "--masonry-height",
+          `${result.containerHeight}px`,
+        );
+
+        // Preserve original measured data for future scaling
+        result.heights = prev.heights;
+        result.measuredAtCardWidth = prev.measuredAtCardWidth;
+        this.groupLayoutResults.set(groupKey, result);
+      }
+      return true;
+    }
+
+    // Ungrouped mode
+    const prev = this.groupLayoutResults.get(undefined);
+    if (
+      !prev?.heights ||
+      !prev.measuredAtCardWidth ||
+      prev.columns !== columns ||
+      prev.heights.length !== allCards.length
+    ) {
+      return false;
+    }
+
+    const scale = cardWidth / prev.measuredAtCardWidth;
+    const scaledHeights = prev.heights.map((h) => h * scale);
+
+    const result = calculateMasonryLayout({
+      cards: allCards,
+      containerWidth,
+      cardSize: settings.cardSize,
+      minColumns: settings.minimumColumns,
+      gap,
+      heights: scaledHeights,
+    });
+
+    for (let i = 0; i < allCards.length; i++) {
+      const pos = result.positions[i];
+      allCards[i].style.setProperty("--masonry-width", `${cardWidth}px`);
+      allCards[i].style.setProperty("--masonry-left", `${pos.left}px`);
+      allCards[i].style.setProperty("--masonry-top", `${pos.top}px`);
+    }
+    this.masonryContainer!.style.setProperty(
+      "--masonry-height",
+      `${result.containerHeight}px`,
+    );
+
+    // Preserve original measured data for future scaling
+    result.heights = prev.heights;
+    result.measuredAtCardWidth = prev.measuredAtCardWidth;
+    this.groupLayoutResults.set(undefined, result);
+    return true;
   }
 
   private renderCard(
@@ -2198,6 +2342,10 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (this.resizeThrottleTimeout !== null) {
       window.clearTimeout(this.resizeThrottleTimeout);
+    }
+    if (this.deferredMeasurementTimeout !== null) {
+      clearTimeout(this.deferredMeasurementTimeout);
+      this.deferredMeasurementTimeout = null;
     }
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);

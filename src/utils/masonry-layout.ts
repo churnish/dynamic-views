@@ -53,6 +53,8 @@ export interface MasonryLayoutResult {
   containerWidth: number;
   cardWidth: number;
   columns: number;
+  heights?: number[]; // Card heights used in this layout
+  measuredAtCardWidth?: number; // cardWidth when heights were DOM-measured (not scaled)
 }
 
 /**
@@ -196,6 +198,7 @@ export function calculateMasonryLayout(
     containerWidth,
     cardWidth,
     columns,
+    heights,
   };
 }
 
