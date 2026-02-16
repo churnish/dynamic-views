@@ -54,7 +54,8 @@ dynamic-views/
 |     |     |-- scroll-preservation.ts # Scroll position save/restore
 |     |     |-- settings-schema.ts     # Universal settings schema parser
 |     |     |-- slideshow.ts           # Card image slideshow (animation + swipe)
-|     |     \-- view-validation.ts     # ViewDefaults validation + cleanup
+|     |     |-- view-validation.ts     # ViewDefaults validation + cleanup
+|     |     \-- virtual-scroll.ts      # Virtual scrolling: VirtualItem, syncVisibleItems
 |     |
 |     \-- utils/                       # Pure utility functions
 |           |-- dropdown-position.ts   # Click-outside detection for dropdowns

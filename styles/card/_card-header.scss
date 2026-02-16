@@ -76,6 +76,11 @@ body.dynamic-views-file-type-ext
     /* Extra -1px aligns URL icon top with slideshow indicator edge distance */
     margin-top: -5px;
   }
+
+  .card-title-url-icon svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 @media (hover: hover) {

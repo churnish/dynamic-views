@@ -330,5 +330,7 @@ export function calculateIncrementalMasonryLayout(
     containerWidth,
     cardWidth,
     columns,
+    heights,
+    measuredAtCardWidth: cardWidth,
   };
 }

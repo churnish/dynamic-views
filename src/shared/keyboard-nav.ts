@@ -27,6 +27,16 @@ interface CardRect {
   centerY: number;
 }
 
+/** Stored card position for virtual scrolling keyboard navigation */
+export interface VirtualCardRect {
+  index: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  el: HTMLElement | null;
+}
+
 /**
  * Calculate weighted distance between current position and target
  * Primary axis distance + weighted cross-axis distance
@@ -43,19 +53,40 @@ function isSameColumn(leftA: number, leftB: number): boolean {
 }
 
 /**
- * Handle arrow key navigation between cards using 2D spatial positioning
+ * Handle arrow key navigation between cards using 2D spatial positioning.
+ *
+ * When `virtualRects` is provided, uses stored positions for all items
+ * (including unmounted ones) instead of querying the DOM. If the target card
+ * is unmounted, calls `onMountItem` to mount it before focusing.
  *
  * @param e - KeyboardEvent from keydown handler
  * @param currentCard - Currently focused card element
  * @param container - Parent container holding all cards
  * @param onNavigate - Optional callback when navigation occurs
+ * @param virtualRects - Stored positions for all cards (virtual scrolling)
+ * @param onMountItem - Callback to mount an unmounted card (returns mounted element)
  */
 export function handleArrowNavigation(
   e: KeyboardEvent,
   currentCard: HTMLElement,
   container: HTMLElement,
   onNavigate?: (targetCard: HTMLElement, index: number) => void,
+  virtualRects?: VirtualCardRect[],
+  onMountItem?: (index: number) => HTMLElement | null,
 ): void {
+  // Virtual scrolling path: use stored positions for all items
+  if (virtualRects?.length) {
+    handleVirtualArrowNavigation(
+      e,
+      currentCard,
+      virtualRects,
+      onNavigate,
+      onMountItem,
+    );
+    return;
+  }
+
+  // DOM-based path: query mounted cards
   const cards = Array.from(
     container.querySelectorAll<HTMLElement>(CARD_SELECTOR),
   );
@@ -75,18 +106,40 @@ export function handleArrowNavigation(
   });
 
   const current = cardRects[currentIndex];
-  let targetCard: HTMLElement | null = null;
+  const targetIdx = findBestTargetIndex(
+    e.key,
+    current,
+    cardRects,
+    currentIndex,
+  );
+
+  if (targetIdx >= 0) {
+    const targetCard = cards[targetIdx];
+    onNavigate?.(targetCard, targetIdx);
+    targetCard.classList.remove(CONTENT_HIDDEN_CLASS);
+    targetCard.focus();
+    targetCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+
+/** Find index of best navigation target from a list of positional rects */
+function findBestTargetIndex(
+  key: string,
+  current: { left: number; centerX: number; centerY: number },
+  candidates: { left: number; centerX: number; centerY: number }[],
+  currentIndex: number,
+): number {
+  let bestIndex = -1;
   let minDistance = Infinity;
 
-  // Find best target based on direction
-  for (let i = 0; i < cardRects.length; i++) {
+  for (let i = 0; i < candidates.length; i++) {
     if (i === currentIndex) continue;
 
-    const candidate = cardRects[i];
+    const candidate = candidates[i];
     let isValid = false;
     let distance = 0;
 
-    switch (e.key) {
+    switch (key) {
       case "ArrowDown":
         if (
           candidate.centerY > current.centerY &&
@@ -136,20 +189,49 @@ export function handleArrowNavigation(
 
     if (isValid && distance < minDistance) {
       minDistance = distance;
-      targetCard = candidate.card;
+      bestIndex = i;
     }
   }
 
-  if (targetCard) {
-    const targetIndex = cards.indexOf(targetCard);
-    if (onNavigate) {
-      onNavigate(targetCard, targetIndex);
-    }
-    // Ensure card is rendered before focusing (content-visibility: hidden skips rendering)
-    targetCard.classList.remove(CONTENT_HIDDEN_CLASS);
-    targetCard.focus();
-    targetCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  return bestIndex;
+}
+
+/** Arrow navigation using stored virtual positions (works with unmounted cards) */
+function handleVirtualArrowNavigation(
+  e: KeyboardEvent,
+  currentCard: HTMLElement,
+  virtualRects: VirtualCardRect[],
+  onNavigate?: (targetCard: HTMLElement, index: number) => void,
+  onMountItem?: (index: number) => HTMLElement | null,
+): void {
+  // Find current card in virtual rects
+  const currentIdx = virtualRects.findIndex((r) => r.el === currentCard);
+  if (currentIdx === -1 || virtualRects.length <= 1) return;
+
+  // Build card rects from stored positions (container-relative coordinates)
+  const rects = virtualRects.map((r) => ({
+    left: r.x,
+    centerX: r.x + r.width / 2,
+    centerY: r.y + r.height / 2,
+  }));
+
+  const current = rects[currentIdx];
+  const targetIdx = findBestTargetIndex(e.key, current, rects, currentIdx);
+  if (targetIdx < 0) return;
+
+  const targetVirt = virtualRects[targetIdx];
+
+  // Mount if unmounted
+  let targetEl = targetVirt.el;
+  if (!targetEl && onMountItem) {
+    targetEl = onMountItem(targetVirt.index);
   }
+  if (!targetEl) return;
+
+  onNavigate?.(targetEl, targetVirt.index);
+  targetEl.classList.remove(CONTENT_HIDDEN_CLASS);
+  targetEl.focus();
+  targetEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
 /**

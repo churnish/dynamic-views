@@ -25,6 +25,7 @@ import {
   initializeTitleTruncationForCards,
   syncResponsiveClasses,
   applyViewContainerStyles,
+  type CardHandle,
 } from "./shared-renderer";
 import {
   PANE_MULTIPLIER,
@@ -1161,8 +1162,8 @@ export class DynamicViewsGridView extends BasesView {
     entry: BasesEntry,
     index: number,
     settings: BasesResolvedSettings,
-  ): HTMLElement {
-    const cardEl = this.cardRenderer.renderCard(
+  ): CardHandle {
+    const handle = this.cardRenderer.renderCard(
       container,
       card,
       entry,
@@ -1182,8 +1183,8 @@ export class DynamicViewsGridView extends BasesView {
         },
       },
     );
-    this.contentVisibility?.observe(cardEl);
-    return cardEl;
+    this.contentVisibility?.observe(handle.el);
+    return handle;
   }
 
   /** Update only changed cards in-place without full re-render */
@@ -1415,7 +1416,7 @@ export class DynamicViewsGridView extends BasesView {
         for (let i = 0; i < cards.length; i++) {
           const card = cards[i];
           const entry = groupEntries[i];
-          const cardEl = this.renderCard(
+          const { el: cardEl } = this.renderCard(
             groupEl,
             card,
             entry,

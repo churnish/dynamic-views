@@ -67,6 +67,7 @@ import {
   handleArrowNavigation,
   isArrowKey,
   isImageViewerBlockingNav,
+  type VirtualCardRect,
 } from "../shared/keyboard-nav";
 import {
   CHECKBOX_MARKER_PREFIX,
@@ -86,6 +87,12 @@ import {
   isFormulaProperty,
   shouldCollapseField,
 } from "../shared/property-helpers";
+
+/** Per-card cleanup handle for individual card teardown (virtual scrolling) */
+export interface CardHandle {
+  el: HTMLElement;
+  cleanup: () => void;
+}
 
 /** Parse comma-separated property names into a Set for O(1) lookup */
 function parsePropertyList(csv: string): Set<string> {
@@ -662,8 +669,14 @@ export class SharedCardRenderer {
       onFocusChange?: (index: number) => void;
       onHoverStart?: (el: HTMLElement) => void;
       onHoverEnd?: () => void;
+      getVirtualRects?: () => VirtualCardRect[];
+      onMountItem?: (index: number) => HTMLElement | null;
     },
-  ): HTMLElement {
+  ): CardHandle {
+    // Snapshot instance array lengths for per-card resource collection
+    const observersBefore = this.propertyObservers.length;
+    const slideshowsBefore = this.slideshowCleanups.length;
+
     // Create card element
     const cardEl = container.createDiv("card");
 
@@ -720,13 +733,15 @@ export class SharedCardRenderer {
     const { signal } = abortController;
 
     // Keyboard navigation setup (roving tabindex pattern)
+    // Hoisted for per-card cleanup closure (scope leak prevention on unmount)
+    let cardScope: Scope | null = null;
     if (keyboardNav) {
       cardEl.tabIndex =
         keyboardNav.index === keyboardNav.focusableCardIndex ? 0 : -1;
 
       // Create scope for Cmd/Ctrl+Enter and Cmd/Ctrl+Space handling
       // Pass app.scope as parent so unhandled keys bubble up to Obsidian
-      const cardScope = new Scope(this.app.scope);
+      cardScope = new Scope(this.app.scope);
       cardScope.register(["Mod"], "Enter", () => {
         void this.app.workspace.openLinkText(card.path, "", "tab");
         return false;
@@ -749,7 +764,7 @@ export class SharedCardRenderer {
             this.app.keymap.popScope(this.activeScope);
           }
           this.activeScope = cardScope;
-          this.app.keymap.pushScope(cardScope);
+          this.app.keymap.pushScope(cardScope!);
         },
         { signal },
       );
@@ -760,7 +775,7 @@ export class SharedCardRenderer {
         () => {
           // Only pop if this card's scope is the active one
           if (this.activeScope === cardScope) {
-            this.app.keymap.popScope(cardScope);
+            this.app.keymap.popScope(cardScope!);
             this.activeScope = null;
           }
         },
@@ -800,6 +815,8 @@ export class SharedCardRenderer {
                     keyboardNav.onFocusChange(targetIndex);
                   }
                 },
+                keyboardNav.getVirtualRects?.(),
+                keyboardNav.onMountItem,
               );
               // Clear immediately after navigation completes (synchronous)
               container._intentionalFocus = false;
@@ -1409,7 +1426,24 @@ export class SharedCardRenderer {
     cardObserver.observe(cardEl);
     this.propertyObservers.push(cardObserver);
 
-    return cardEl;
+    // Collect per-card resources added during rendering (observers, slideshows)
+    const cardObservers = this.propertyObservers.slice(observersBefore);
+    const cardSlideshows = this.slideshowCleanups.slice(slideshowsBefore);
+
+    // Per-card cleanup for individual teardown (virtual scrolling)
+    // All operations are idempotent — safe if batch cleanup() also runs
+    const cleanup = () => {
+      abortController.abort();
+      for (const obs of cardObservers) obs.disconnect();
+      for (const fn of cardSlideshows) fn();
+      // Pop scope if this card was focused (blur listener removed by abort, so popScope never fires)
+      if (cardScope && this.activeScope === cardScope) {
+        this.app.keymap.popScope(cardScope);
+        this.activeScope = null;
+      }
+    };
+
+    return { el: cardEl, cleanup };
   }
 
   /**
@@ -1499,6 +1533,8 @@ export class SharedCardRenderer {
       };
 
       requestAnimationFrame(() => {
+        // Guard against card unmounted before rAF fires
+        if (signal.aborted || !cardEl.isConnected) return;
         updateWrapperDimensions();
 
         const resizeObserver = new ResizeObserver((entries) => {
@@ -1526,6 +1562,10 @@ export class SharedCardRenderer {
 
         resizeObserver.observe(cardEl);
         this.propertyObservers.push(resizeObserver);
+        // Disconnect on abort so CardHandle cleanup handles this rAF-deferred observer
+        signal.addEventListener("abort", () => resizeObserver.disconnect(), {
+          once: true,
+        });
       });
     }
   }
