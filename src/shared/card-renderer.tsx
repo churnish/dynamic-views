@@ -930,7 +930,7 @@ function CoverSlideshow({
         <div
           className="slideshow-indicator"
           ref={(el: HTMLElement | null) => {
-            if (el) setIcon(el, "lucide-circle-small");
+            if (el) setIcon(el, "lucide-circle-chevron-right");
           }}
         />
       )}

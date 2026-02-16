@@ -175,7 +175,7 @@ body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
     width: 20px;
     height: 20px;
     z-index: 3;
-    opacity: 0.9;
+    opacity: 1;
     pointer-events: none;
     transition: opacity var(--anim-duration-moderate, 300ms) ease;
   }

@@ -446,6 +446,11 @@ export class SharedCardRenderer {
     protected updateLayoutRef: { current: ((source?: string) => void) | null },
   ) {}
 
+  // Wrapper that tags image-load relayouts with source for coalescing in masonry
+  private imageLayoutCallback = (): void => {
+    this.updateLayoutRef.current?.("image-load");
+  };
+
   /**
    * Cleanup observers, scopes, event listeners, and zoom state when renderer is destroyed
    */
@@ -1244,7 +1249,7 @@ export class SharedCardRenderer {
         img,
         cardEl,
         imageUrls,
-        this.updateLayoutRef.current,
+        this.imageLayoutCallback,
         signal,
       );
     }
@@ -1259,7 +1264,7 @@ export class SharedCardRenderer {
         img,
         cardEl,
         imageUrls,
-        this.updateLayoutRef.current,
+        this.imageLayoutCallback,
         signal,
       );
     }
@@ -1578,11 +1583,7 @@ export class SharedCardRenderer {
 
     // Handle image load for masonry layout
     if (cardEl) {
-      setupImageLoadHandler(
-        currentImg,
-        cardEl,
-        this.updateLayoutRef.current || undefined,
-      );
+      setupImageLoadHandler(currentImg, cardEl, this.imageLayoutCallback);
 
       // Setup image preloading
       setupImagePreload(cardEl, imageUrls, signal);
@@ -1614,11 +1615,7 @@ export class SharedCardRenderer {
           // Only set aspect ratio if not yet set by a successful image load
           // (first image may have failed and set default ratio)
           if (cardEl && !cardEl.dataset.aspectRatioSet) {
-            handleImageLoad(
-              nextImg,
-              cardEl,
-              this.updateLayoutRef.current || undefined,
-            );
+            handleImageLoad(nextImg, cardEl, this.imageLayoutCallback);
           }
         },
         onAnimationComplete: () => {
@@ -1661,7 +1658,7 @@ export class SharedCardRenderer {
     // Multi-image indicator
     if (isSlideshowIndicatorEnabled()) {
       const indicator = slideshowEl.createDiv("slideshow-indicator");
-      setIcon(indicator, "lucide-circle-small");
+      setIcon(indicator, "lucide-circle-chevron-right");
     }
 
     // Navigation arrows
@@ -1733,9 +1730,7 @@ export class SharedCardRenderer {
       setupImageLoadHandler(
         imgEl,
         cardEl,
-        format === "cover"
-          ? this.updateLayoutRef.current || undefined
-          : undefined,
+        format === "cover" ? this.imageLayoutCallback : undefined,
       );
     }
 
@@ -1767,9 +1762,7 @@ export class SharedCardRenderer {
                 DEFAULT_ASPECT_RATIO.toString(),
               );
               // Trigger layout update for cover format
-              if (format === "cover" && this.updateLayoutRef.current) {
-                this.updateLayoutRef.current();
-              }
+              if (format === "cover") this.imageLayoutCallback();
             }
           });
         });

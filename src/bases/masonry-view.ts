@@ -170,6 +170,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private masonryContainer: HTMLElement | null = null;
   private displayedCount: number = 50;
   private isLoading: boolean = false;
+  private batchLayoutPending: boolean = false;
+  private pendingImageRelayout: boolean = false;
   private scrollResizeObserver: ResizeObserver | null = null;
   private containerRef: { current: HTMLElement | null } = { current: null };
   private previousDisplayedCount: number = 0;
@@ -1206,6 +1208,27 @@ export class DynamicViewsMasonryView extends BasesView {
       );
       if (containerWidth === 0) return;
 
+      // Suppress full relayouts while an incremental batch layout is pending.
+      // Image load callbacks would corrupt groupLayoutResults by including
+      // the new batch's cards before the incremental layout positions them.
+      if (this.batchLayoutPending) return;
+
+      // Coalesce image-load relayouts — one layout per frame instead of one per image.
+      // Without this, 60 cover images loading triggers 60 independent full relayouts.
+      if (source === "image-load") {
+        if (!this.pendingImageRelayout) {
+          this.pendingImageRelayout = true;
+          requestAnimationFrame(() => {
+            if (!this.pendingImageRelayout) return;
+            this.pendingImageRelayout = false;
+            this.updateLayoutRef.current?.("image-coalesced");
+          });
+        }
+        return;
+      }
+      // A direct relayout (resize, initial-render) subsumes any pending image relayout
+      this.pendingImageRelayout = false;
+
       // Guard against reentrant calls - queue update if one is in progress
       if (this.isUpdatingLayout) {
         this.pendingLayoutUpdate = true;
@@ -1564,7 +1587,10 @@ export class DynamicViewsMasonryView extends BasesView {
     settings: BasesResolvedSettings,
   ): Promise<void> {
     // Guard: return early if data not initialized or no masonry container
-    if (!this.data || !this.masonryContainer) return;
+    if (!this.data || !this.masonryContainer) {
+      this.isLoading = false;
+      return;
+    }
 
     try {
       // Increment render version to cancel any stale onDataUpdated renders
@@ -1795,6 +1821,10 @@ export class DynamicViewsMasonryView extends BasesView {
         initializeScrollGradientsForCards(newCardEls);
         initializeTitleTruncationForCards(newCardEls);
       } else if (prevLayout && newCardsRendered > 0 && targetContainer) {
+        // Mark incremental layout as pending — suppresses full relayouts
+        // and keeps isLoading true until the deferred layout completes
+        this.batchLayoutPending = true;
+
         // Get only the newly rendered cards from the target container
         const allCards = Array.from(
           targetContainer.querySelectorAll<HTMLElement>(".card"),
@@ -1818,11 +1848,15 @@ export class DynamicViewsMasonryView extends BasesView {
 
           // Validate refs are still valid after async delay
           if (!targetContainer?.isConnected || !currentPrevLayout) {
+            this.batchLayoutPending = false;
+            this.isLoading = false;
             return;
           }
 
           // If any card was disconnected, fall back to full recalc
           if (newCards.some((c) => !c.isConnected)) {
+            this.batchLayoutPending = false;
+            this.isLoading = false;
             this.updateLayoutRef.current?.("card-disconnected-fallback");
             return;
           }
@@ -1872,6 +1906,11 @@ export class DynamicViewsMasonryView extends BasesView {
           // Store for next incremental append
           this.groupLayoutResults.set(layoutKey, result);
 
+          // Clear batch state — must be AFTER groupLayoutResults.set (so stored
+          // result is correct) and BEFORE checkAndLoadMore (so it can proceed)
+          this.batchLayoutPending = false;
+          this.isLoading = false;
+
           // Initialize gradients for new cards only (filter out cards that
           // became content-hidden during the double-RAF wait for image load)
           const visibleNewCards = newCardEls.filter(
@@ -1906,9 +1945,17 @@ export class DynamicViewsMasonryView extends BasesView {
         // Both RAFs guarded with isConnected to prevent execution on destroyed view
         const runAfterLayout = (fn: () => void) => {
           requestAnimationFrame(() => {
-            if (!this.containerEl?.isConnected) return;
+            if (!this.containerEl?.isConnected) {
+              this.batchLayoutPending = false;
+              this.isLoading = false;
+              return;
+            }
             requestAnimationFrame(() => {
-              if (!this.containerEl?.isConnected) return;
+              if (!this.containerEl?.isConnected) {
+                this.batchLayoutPending = false;
+                this.isLoading = false;
+                return;
+              }
               fn();
             });
           });
@@ -1968,8 +2015,16 @@ export class DynamicViewsMasonryView extends BasesView {
               ),
             ).then(() => {
               // Guard against view destruction or renderVersion change while waiting for images
-              if (!this.containerEl?.isConnected) return;
-              if (this.renderState.version !== currentVersion) return;
+              if (!this.containerEl?.isConnected) {
+                this.batchLayoutPending = false;
+                this.isLoading = false;
+                return;
+              }
+              if (this.renderState.version !== currentVersion) {
+                this.batchLayoutPending = false;
+                this.isLoading = false;
+                return;
+              }
               runAfterLayout(runIncrementalLayout);
             });
           }
@@ -1977,8 +2032,11 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       // Note: else cases (newCardsRendered === 0 or missing targetContainer) are valid no-ops
     } finally {
-      // Always clear loading flag — ResizeObserver handles future loads
-      this.isLoading = false;
+      // Clear loading flag for synchronous paths (multi-group, new-group, no-op).
+      // The incremental path clears isLoading when its deferred layout executes.
+      if (!this.batchLayoutPending) {
+        this.isLoading = false;
+      }
     }
   }
 
