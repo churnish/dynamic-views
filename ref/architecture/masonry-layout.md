@@ -102,30 +102,27 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 `ResizeObserver` → `throttledResize()` → `updateLayoutRef.current("resize-observer")`
 
-**Fast path — proportional scaling** (`tryProportionalResize`):
+**Fast path — direct mounted-card measurement** (prior heights exist for unmounted cards):
 
-1. Validate all groups can scale: same column count, stored heights length matches virtual item count.
-2. Scale: `scaledHeights = prev.heights.map(h => h * (newCardWidth / prev.measuredAtCardWidth))`.
-3. `calculateMasonryLayout()` with scaled heights and dummy cards array.
-4. Apply `--masonry-width`, `--masonry-left`, `--masonry-top` to **mounted cards only** via VirtualItems.
-5. `updateVirtualItemPositions()` stores scaled positions/heights in VirtualItems.
-6. **Restore** original `heights` and `measuredAtCardWidth` in `groupLayoutResults` for future scaling.
-7. `syncVirtualScroll()` — mount/unmount cards whose positions shifted into/out of viewport.
-8. Schedule deferred full measurement (300ms timeout).
-9. Return `true` (skip full measurement).
+1. Add `masonry-measuring` class (override `content-visibility` for accurate reads).
+2. Set `--masonry-width` on mounted cards only.
+3. Force single reflow, read mounted cards' `offsetHeight`.
+4. Build mixed heights per group: mounted → DOM height, unmounted → `item.height` (last known).
+5. `calculateMasonryLayout()` with dummy cards array + mixed heights.
+6. Apply `--masonry-left`, `--masonry-top` to mounted cards only.
+7. Update container heights. `updateVirtualItemPositions()`.
+8. Store result with `measuredAtCardWidth = cardWidth` (new baseline).
+9. Remove `masonry-measuring` class. No `syncVirtualScroll()` during live resize.
+10. Return — skip full measurement path.
 
-**Fallback — full measurement** (column count changed or no prior heights):
+With virtual scrolling limiting mounted cards to ~32-50, direct DOM measurement is cheap enough (~5-10ms) to run every resize frame. No deferred correction needed.
+
+**Fallback — full measurement** (no prior heights, e.g., first resize before any layout):
 
 1. If unmounted items exist, remount all (append to container end).
 2. Build `allCards` from `virtualItems` (not DOM query — DOM order differs after remount).
 3. Set `--masonry-width`, force reflow, read all heights, calculate layout, apply positions.
 4. `updateVirtualItemPositions()`, store in `groupLayoutResults`.
-
-**Deferred measurement** (300ms after resize stabilizes):
-
-1. Source: `"resize-deferred-measurement"`.
-2. Remounts all unmounted items for accurate full-DOM measurement.
-3. Runs full measurement path with real heights (corrects proportional scaling approximation).
 
 ### 4. Virtual scroll
 
@@ -133,39 +130,38 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 **`syncVirtualScroll()`** — Single pass over all VirtualItems:
 
-1. Calculate visible range: `scrollTop ± VIRTUAL_SCROLL_BUFFER_PX` (800px).
+1. Calculate visible range: `scrollTop ± paneHeight` (1x pane height buffer).
 2. Cache container offset per group (one `getBoundingClientRect` per group).
 3. For each item: `itemTop = containerOffsetY + item.y`, `itemBottom = itemTop + item.height`.
 4. If `inView && !item.el` → `mountVirtualItem()`: render card, apply stored position, set refs.
 5. If `!inView && item.el` → `unmountVirtualItem()`: cleanup, remove from DOM, clear refs.
 
-**Trigger points**: scroll event (RAF-debounced), after proportional resize, after full layout, after batch append.
+**Trigger points**: scroll event (RAF-debounced), after full layout, after batch append.
 
 ## Layout update guard system
 
 `updateLayoutRef.current(source?)` has 5 sequential guards:
 
-| #   | Guard                     | Behavior                                                                                                                                                                                            |
-| --- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                                                                               |
-| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                                                                       |
-| 3   | Unmounted items           | Source-dependent: remount all for `resize-deferred-measurement` / `expand-group`; allow through for `resize-observer` / `resize-trailing` (proportional resize is virtual-aware); block all others. |
-| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                                                                           |
-| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                                                                   |
+| #   | Guard                     | Behavior                                                                                                                                         |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                            |
+| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                    |
+| 3   | Unmounted items           | Source-dependent: remount all for `expand-group`; allow through for `resize-observer` (fast path measures mounted cards only); block all others. |
+| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                        |
+| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                |
 
 ### Layout sources
 
-| Source                          | Trigger                                  | Path                                           |
-| ------------------------------- | ---------------------------------------- | ---------------------------------------------- |
-| `"initial-render"`              | First render                             | Full measurement with card hiding.             |
-| `"resize-observer"`             | ResizeObserver (RAF-debounced)           | Proportional fast path → fallback to full.     |
-| `"resize-deferred-measurement"` | 300ms after resize ends                  | Full measurement with remount-all.             |
-| `"image-load"`                  | Cover/thumbnail image loaded             | Coalesced → `"image-coalesced"`.               |
-| `"image-coalesced"`             | RAF after image-load batch               | Full measurement (blocked if unmounted items). |
-| `"expand-group"`                | Group uncollapsed                        | Full measurement with remount-all.             |
-| `"content-update"`              | In-place card update changed height      | Full measurement (blocked if unmounted items). |
-| `"queued-update"`               | Dequeued from reentrant guard            | Full measurement (blocked if unmounted items). |
-| `"property-measured"`           | Property field width measurement settled | Full measurement (blocked if unmounted items). |
+| Source                | Trigger                                  | Path                                                   |
+| --------------------- | ---------------------------------------- | ------------------------------------------------------ |
+| `"initial-render"`    | First render                             | Full measurement with card hiding.                     |
+| `"resize-observer"`   | ResizeObserver (RAF-debounced)           | Mounted-card measurement fast path → fallback to full. |
+| `"image-load"`        | Cover/thumbnail image loaded             | Coalesced → `"image-coalesced"`.                       |
+| `"image-coalesced"`   | RAF after image-load batch               | Full measurement (blocked if unmounted items).         |
+| `"expand-group"`      | Group uncollapsed                        | Full measurement with remount-all.                     |
+| `"content-update"`    | In-place card update changed height      | Full measurement (blocked if unmounted items).         |
+| `"queued-update"`     | Dequeued from reentrant guard            | Full measurement (blocked if unmounted items).         |
+| `"property-measured"` | Property field width measurement settled | Full measurement (blocked if unmounted items).         |
 
 ## Throttle and debounce patterns
 
@@ -174,7 +170,7 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Pattern**: RAF debounce (cancel-and-reschedule).
 - **Behavior**: Every ResizeObserver callback cancels any pending RAF and schedules a new one. At most one layout runs per frame (~60fps).
 - **No trailing call**: Single RAF ensures the last resize event always fires.
-- **No virtual scroll sync during proportional resize**: Mounted cards get CSS updates directly; `syncVirtualScroll` deferred to `resize-deferred-measurement` (300ms after resize ends).
+- **No virtual scroll sync during resize**: Mounted cards get CSS updates directly; `syncVirtualScroll` runs on next scroll event.
 
 ### Scroll throttle
 
@@ -187,11 +183,6 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Pattern**: Single RAF debounce via `pendingImageRelayout` flag.
 - **Effect**: ~60 concurrent image loads → 1 layout per frame instead of 60.
 - **Subsumption**: Direct relayouts (resize, initial-render) clear the flag, subsuming pending image relayouts.
-
-### Deferred measurement
-
-- **Pattern**: Sliding 300ms timeout, reset on each resize event.
-- **Effect**: Runs full DOM measurement once after resize ends, correcting proportional scaling errors.
 
 ## CSS positioning model
 
@@ -226,14 +217,14 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 
 ## Constants (`src/shared/constants.ts`)
 
-| Constant                   | Value | Purpose                                                        |
-| -------------------------- | ----- | -------------------------------------------------------------- |
-| `BATCH_SIZE`               | 50    | Default infinite scroll batch size.                            |
-| `MAX_BATCH_SIZE`           | 70    | Maximum batch size cap.                                        |
-| `ROWS_PER_COLUMN`          | 10    | Rows per column for dynamic batch size calculation.            |
-| `PANE_MULTIPLIER`          | 3     | Trigger batch load when within 3× viewport height from bottom. |
-| `SCROLL_THROTTLE_MS`       | 100   | Scroll event throttle interval.                                |
-| `VIRTUAL_SCROLL_BUFFER_PX` | 800   | Pixels above/below viewport to keep cards mounted.             |
+| Constant                | Value          | Purpose                                                                  |
+| ----------------------- | -------------- | ------------------------------------------------------------------------ |
+| `BATCH_SIZE`            | 50             | Default infinite scroll batch size.                                      |
+| `MAX_BATCH_SIZE`        | 70             | Maximum batch size cap.                                                  |
+| `ROWS_PER_COLUMN`       | 10             | Rows per column for dynamic batch size calculation.                      |
+| `PANE_MULTIPLIER`       | 3              | Trigger batch load when within 3× viewport height from bottom.           |
+| `SCROLL_THROTTLE_MS`    | 100            | Scroll event throttle interval.                                          |
+| (virtual scroll buffer) | 1× pane height | Dynamic: `scrollEl.clientHeight` above/below pane to keep cards mounted. |
 
 ## Key invariants
 

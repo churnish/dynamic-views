@@ -7,9 +7,6 @@ import type { BasesEntry } from "obsidian";
 import type { CardData } from "./card-renderer";
 import type { CardHandle } from "../bases/shared-renderer";
 
-/** Pixels above/below viewport to keep cards mounted @public */
-export const VIRTUAL_SCROLL_BUFFER_PX = 800;
-
 /** Lightweight representation of a card's position and data when unmounted */
 export interface VirtualItem {
   /** Position in the flat card list */
