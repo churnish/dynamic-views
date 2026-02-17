@@ -371,7 +371,7 @@ export function getBasesViewOptions(
         },
         {
           type: "toggle",
-          displayName: "Save settings as default",
+          displayName: "Save as default settings",
           key: "isTemplate",
           default: false,
         },
