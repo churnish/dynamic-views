@@ -58,6 +58,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 - **`groupLayoutResults: Map<string | undefined, MasonryLayoutResult>`** — Layout result per group (or `undefined` for ungrouped). Used by `tryProportionalResize` for height scaling and `appendBatch` for incremental continuation.
 - **`virtualItems: VirtualItem[]`** — Flat array of all cards across all groups, in render order.
+- **`virtualItemsByGroup: Map<string | undefined, VirtualItem[]>`** — Pre-indexed groupKey → VirtualItem[] lookup. Rebuilt via `rebuildGroupIndex()` after any `virtualItems` mutation. Eliminates repeated O(n) filter scans in layout hot paths.
 - **`groupContainers: Map<string | undefined, HTMLElement>`** — DOM container per group for mounting cards.
 - **`cachedGroupOffsets: Map<string | undefined, number>`** — Cached vertical offset (relative to scroll container) per group. Refreshed synchronously before every `syncVirtualScroll()` call. Eliminates `getBoundingClientRect` from the scroll/resize hot path.
 - **`pendingResizeWidth: number | null`** — Container width cached from the latest `ResizeObserver` entry. Used by the resize fast path to avoid a forced `getBoundingClientRect` reflow.
@@ -106,14 +107,16 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 **Fast path** has two branches (prior heights must exist for unmounted cards):
 
-**Proportional branch** (`"resize-observer"`) — zero DOM reads, ~3-5ms:
+**Proportional branch** (`"resize-observer"`) — zero DOM reads, single-pass:
 
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
-2. Calculate proportional heights for ALL cards: `measuredHeight × (cardWidth / measuredAtWidth)`.
-3. `calculateMasonryLayout()` with proportional heights.
-4. Apply inline `width`, `left`, `top`, `height` to mounted cards.
-5. `updateVirtualItemPositions()`. Update `cachedGroupOffsets`. `syncVirtualScroll()`.
-6. Return — skip full measurement path.
+2. `proportionalResizeLayout()` — single pass over all cards per group:
+   - Proportional height: `measuredHeight × (cardWidth / measuredAtWidth)`.
+   - Greedy shortest-column placement (inlined — bypasses `calculateMasonryLayout`).
+   - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
+   - Apply inline `width`, `left`, `top`, `height` to mounted cards.
+3. Update `cachedGroupOffsets`. If column count changed (`columns !== lastLayoutColumns`), run `syncVirtualScroll()` to mount cards for new viewport positions. Otherwise skip sync (mounted cards stay near viewport during same-column-count resize).
+4. Update `lastLayoutColumns`. Return — skip full measurement path.
 
 The explicit inline `height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
 
@@ -149,7 +152,7 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 4. If `inView && !item.el` → `mountVirtualItem()`: render card, apply stored position, set refs.
 5. If `!inView && item.el` → `unmountVirtualItem()`: cleanup, remove from DOM, clear refs.
 
-**Trigger points**: scroll event (RAF-debounced), after full layout, after batch append, during live resize.
+**Trigger points**: scroll event (RAF-debounced), after full layout, after batch append. **Skipped during active resize** — mount/unmount deferred to post-resize correction to prevent mount storms (50-70 cards mounting in one frame during column count changes).
 
 ## Layout update guard system
 
@@ -185,8 +188,8 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Behavior**: Every ResizeObserver callback cancels any pending RAF and schedules a new one. At most one layout runs per frame (~60fps).
 - **No trailing call**: Single RAF ensures the last resize event always fires.
 - **Container width caching**: `pendingResizeWidth` stores `entries[0].contentRect.width` before the RAF, eliminating `getBoundingClientRect` reflow in the layout function.
-- **Virtual scroll sync during resize**: With `cachedGroupOffsets`, `syncVirtualScroll` is a pure JS loop (~1-2ms) and runs after every resize frame to keep cards mounted/unmounted correctly.
-- **Post-resize correction**: 200ms after the last resize, `"resize-correction"` re-measures mounted cards to fix proportional height drift.
+- **Column-count-aware sync during resize**: `syncVirtualScroll` runs only when column count changes (`columns !== lastLayoutColumns`), which reshuffles the entire layout and scatters mounted cards. For same-column-count resize frames (~95%), sync is skipped — mounted cards stay near their viewport positions after proportional scaling.
+- **Post-resize correction**: 200ms after the last resize, `"resize-correction"` re-measures mounted cards to fix proportional height drift, then `syncVirtualScroll` runs to mount/unmount cards for the final layout.
 
 ### Scroll throttle
 
@@ -204,13 +207,13 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 Cards use `position: absolute` with direct inline styles for per-card positioning (eliminates CSS variable resolution overhead):
 
-| Style / Property   | Set by    | Purpose                                                            |
-| ------------------ | --------- | ------------------------------------------------------------------ |
-| `style.width`      | Layout JS | Card width (inline style).                                         |
-| `style.left`       | Layout JS | Card left position (inline style).                                 |
-| `style.top`        | Layout JS | Card top position (inline style).                                  |
-| `style.height`     | Layout JS | Card height. Set during resize, cleared on correction.             |
-| `--masonry-height` | Layout JS | Container min-height via CSS custom property (sets scrollable area).|
+| Style / Property   | Set by    | Purpose                                                              |
+| ------------------ | --------- | -------------------------------------------------------------------- |
+| `style.width`      | Layout JS | Card width (inline style).                                           |
+| `style.left`       | Layout JS | Card left position (inline style).                                   |
+| `style.top`        | Layout JS | Card top position (inline style).                                    |
+| `style.height`     | Layout JS | Card height. Set during resize, cleared on correction.               |
+| `--masonry-height` | Layout JS | Container min-height via CSS custom property (sets scrollable area). |
 
 **Key CSS classes**:
 
@@ -247,8 +250,8 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 
 1. **`virtualItems` is the source of truth for card ordering.** After remounting, always collect cards from `virtualItems`, never `querySelectorAll` (DOM order differs after remount — appended at end).
 2. **`groupLayoutResults` stores original measured heights**, not scaled. `tryProportionalResize` restores original heights after updating VirtualItem positions with scaled values. This ensures future proportional scaling always starts from the original measurement.
-3. **`updateVirtualItemPositions` maps by filter index.** `virtualItems.filter(v => v.groupKey === key)[i]` ↔ `result.positions[i]`. Consistent because both use the same ordering.
+3. **`updateVirtualItemPositions` maps by group index.** `virtualItemsByGroup.get(key)[i]` ↔ `result.positions[i]`. Consistent because both use the same ordering. The proportional fast path bypasses this function and updates VirtualItems inline.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
 5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions.
-6. **Virtual scroll sync must run after any position change.** Proportional resize, full measurement, batch append, and live resize all call `syncVirtualScroll()` to mount/unmount cards based on updated positions.
+6. **Virtual scroll sync must run after any position change — column-count-aware during resize.** Full measurement, batch append, and correction always call `syncVirtualScroll()`. During resize, sync runs only on column count changes (layout reshuffle requires remounting). Same-column-count frames skip sync (mounted cards stay near viewport after proportional scaling).
 7. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.

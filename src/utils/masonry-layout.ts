@@ -147,7 +147,7 @@ export function calculateMasonryLayout(
       ? preHeights
       : cards.map((card) => card.offsetHeight);
 
-  cards.forEach((card, index) => {
+  for (let index = 0; index < cards.length; index++) {
     // Find shortest column - track index during search
     let shortestColumn = 0;
     let minHeight = columnHeights[0];
@@ -178,7 +178,7 @@ export function calculateMasonryLayout(
         colHeightAfter: Math.round(columnHeights[shortestColumn]),
       });
     }
-  });
+  }
 
   // Calculate container height (subtract trailing gap after last row)
   // Guard against negative height when no cards exist
@@ -280,7 +280,7 @@ export function calculateIncrementalMasonryLayout(
       ? preHeights
       : newCards.map((card) => card.offsetHeight);
 
-  newCards.forEach((card, index) => {
+  for (let index = 0; index < newCards.length; index++) {
     // Find shortest column - track index during search
     let shortestColumn = 0;
     let minHeight = columnHeights[0];
@@ -310,7 +310,7 @@ export function calculateIncrementalMasonryLayout(
         top: Math.round(top),
       });
     }
-  });
+  }
 
   // Subtract trailing gap after last row
   // Guard against negative height when columns are empty

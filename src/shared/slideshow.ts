@@ -308,7 +308,8 @@ export function createSlideshowNavigator(
     // Skip known-failed indices — local (this navigator) + global (cross-card)
     let skipped = 0;
     while (
-      (failedIndices.has(newIndex) || brokenImageUrls.has(imageUrls[newIndex])) &&
+      (failedIndices.has(newIndex) ||
+        brokenImageUrls.has(imageUrls[newIndex])) &&
       skipped < imageUrls.length
     ) {
       newIndex += direction;
