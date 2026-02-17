@@ -66,6 +66,43 @@ export function getBasesViewOptions(
     | Record<string, { widget?: string }>
     | undefined;
 
+  /** Properties currently displayed as title/subtitle (position-based). */
+  function getPositionTitleProps(): Set<string> {
+    if (!config) return new Set();
+    const rawFirst = config.get("displayFirstAsTitle");
+    const displayFirst =
+      typeof rawFirst === "boolean" ? rawFirst : d.displayFirstAsTitle;
+    if (!displayFirst) return new Set();
+
+    const order = config.getOrder();
+    const configStr = (key: string, fallback: string): string => {
+      const v = config.get(key);
+      return typeof v === "string" ? v : fallback;
+    };
+    const special = new Set(
+      [
+        configStr("textPreviewProperty", d.textPreviewProperty),
+        configStr("urlProperty", d.urlProperty),
+        configStr("imageProperty", d.imageProperty),
+      ].filter(Boolean),
+    );
+    const candidates = special.size
+      ? order.filter((id) => !special.has(String(id)))
+      : order;
+
+    const result = new Set<string>();
+    if (candidates[0]) {
+      result.add(String(candidates[0]));
+      const rawSecond = config.get("displaySecondAsSubtitle");
+      const displaySecond =
+        typeof rawSecond === "boolean" ? rawSecond : d.displaySecondAsSubtitle;
+      if (displaySecond && candidates[1]) {
+        result.add(String(candidates[1]));
+      }
+    }
+    return result;
+  }
+
   const schema = [
     {
       type: "slider",
@@ -121,7 +158,8 @@ export function getBasesViewOptions(
           default: d.textPreviewProperty,
           filter: (prop: BasesPropertyId) =>
             config
-              ? config.getOrder().some((id) => String(id) === String(prop))
+              ? config.getOrder().some((id) => String(id) === String(prop)) &&
+                !getPositionTitleProps().has(String(prop))
               : true,
         },
         {
@@ -275,7 +313,8 @@ export function getBasesViewOptions(
           default: d.urlProperty,
           filter: (prop: BasesPropertyId) =>
             config
-              ? config.getOrder().some((id) => String(id) === String(prop))
+              ? config.getOrder().some((id) => String(id) === String(prop)) &&
+                !getPositionTitleProps().has(String(prop))
               : true,
         },
         {
