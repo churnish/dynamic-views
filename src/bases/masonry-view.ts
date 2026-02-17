@@ -120,6 +120,8 @@ export class DynamicViewsMasonryView extends BasesView {
     abortController: null,
     lastRenderHash: "",
     lastSettingsHash: null,
+    lastPropertySetHash: null,
+    lastSettingsHashExcludingOrder: null,
     lastMtimes: new Map(),
   };
   // Track last rendered settings to detect stale config (see readBasesSettings)
@@ -845,6 +847,13 @@ export class DynamicViewsMasonryView extends BasesView {
         sortMethod +
         "\0\0" +
         (groupByProperty ?? "");
+      const propertySetHash = [...visibleProperties].sort().join("\0");
+      const settingsHashExcludingOrder =
+        JSON.stringify(hashableSettings) +
+        "\0\0" +
+        sortMethod +
+        "\0\0" +
+        (groupByProperty ?? "");
       const styleSettingsHash = getStyleSettingsHash();
       // Include mtime and sortMethod in hash so content/sort changes trigger updates
       const collapsedHash = Array.from(this.collapsedGroups).sort().join("\0");
@@ -932,6 +941,31 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
+      // Property reorder only: settings changed but only property ORDER differs.
+      // Card heights are invariant under reorder — skip masonry layout.
+      // Guard: invertPropertyPairing makes pairing position-dependent.
+      const propertySetUnchanged =
+        this.renderState.lastPropertySetHash !== null &&
+        this.renderState.lastPropertySetHash === propertySetHash;
+      const isPropertyReorderOnly =
+        settingsChanged &&
+        propertySetUnchanged &&
+        !settings.invertPropertyPairing &&
+        pathsUnchanged &&
+        changedPaths.size === 0 &&
+        settingsHashExcludingOrder ===
+          this.renderState.lastSettingsHashExcludingOrder;
+
+      if (isPropertyReorderOnly) {
+        this.updatePropertyOrder(visibleProperties, settings);
+        this.renderState.lastRenderHash = renderHash;
+        this.renderState.lastSettingsHash = settingsHash;
+        this.renderState.lastPropertySetHash = propertySetHash;
+        this.renderState.lastSettingsHashExcludingOrder =
+          settingsHashExcludingOrder;
+        return;
+      }
+
       // Clear caches on settings change; reset scroll only if batches were appended
       // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
       if (settingsChanged) {
@@ -947,6 +981,9 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       this.renderState.lastSettingsHash = settingsHash;
       this.renderState.lastRenderHash = renderHash;
+      this.renderState.lastPropertySetHash = propertySetHash;
+      this.renderState.lastSettingsHashExcludingOrder =
+        settingsHashExcludingOrder;
 
       // Set displayedCount when starting fresh (first render or after reset)
       if (this.displayedCount === 0) {
@@ -1324,6 +1361,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Only hide cards on initial render (prevents flash at 0,0)
       const skipHiding = source !== "initial-render";
+      let fastPathHandledSync = false;
       try {
         const gap = getCardSpacing(this.containerEl);
         const isGrouped = this.containerEl.classList.contains("is-grouped");
@@ -1518,14 +1556,15 @@ export class DynamicViewsMasonryView extends BasesView {
 
             this.lastLayoutWidth = containerWidth;
 
-            // Column count changed — layout reshuffled, mounted cards may have
-            // scattered outside viewport. Must sync to mount visible cards.
-            // Same column count: skip sync (mounted cards stay near viewport).
+            // Fast path handles its own sync — set flag so `finally` skips it.
+            // Column count changed → layout reshuffled, must sync to mount visible cards.
+            // Same column count → skip sync (mounted cards stay near viewport).
             this.updateCachedGroupOffsets();
             if (columns !== this.lastLayoutColumns) {
               this.syncVirtualScroll();
             }
             this.lastLayoutColumns = columns;
+            fastPathHandledSync = true;
             return;
           }
           // No prior heights — fall through to full measurement
@@ -1649,9 +1688,11 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Mount/unmount cards based on updated positions.
-        // Cached offsets make this a pure JS loop — no getBoundingClientRect reflow.
-        this.updateCachedGroupOffsets();
-        this.syncVirtualScroll();
+        // Fast path handles its own sync with column-count-aware logic — skip here.
+        if (!fastPathHandledSync) {
+          this.updateCachedGroupOffsets();
+          this.syncVirtualScroll();
+        }
 
         // Show end indicator if all items displayed (skip if 0 results)
         requestAnimationFrame(() => {
@@ -1973,6 +2014,37 @@ export class DynamicViewsMasonryView extends BasesView {
       },
     );
     return handle;
+  }
+
+  /** Surgical property reorder: update property DOM without masonry relayout */
+  private updatePropertyOrder(
+    visibleProperties: string[],
+    settings: BasesResolvedSettings,
+  ): void {
+    for (const item of this.virtualItems) {
+      // Rebuild properties array in new order (propMap.has filters out
+      // title/subtitle properties not in cardData.properties)
+      const propMap = new Map(item.cardData.properties.map((p) => [p.name, p]));
+      item.cardData.properties = visibleProperties
+        .filter((name) => propMap.has(name))
+        .map((name) => propMap.get(name)!);
+
+      // Mounted cards: surgical DOM update
+      if (item.el) {
+        this.cardRenderer.rerenderProperties(
+          item.el,
+          item.cardData,
+          item.entry,
+          settings,
+        );
+      }
+      // Unmounted cards: cardData updated; next mount uses new order
+    }
+
+    if (this.masonryContainer) {
+      initializeScrollGradients(this.masonryContainer);
+    }
+    this.scrollPreservation?.restoreAfterRender();
   }
 
   /** Update only changed cards in-place without full re-render */

@@ -109,10 +109,17 @@ export class DynamicViewsGridView extends BasesView {
     abortController: null,
     lastRenderHash: "",
     lastSettingsHash: null,
+    lastPropertySetHash: null,
+    lastSettingsHashExcludingOrder: null,
     lastMtimes: new Map(),
   };
   // Track last rendered settings to detect stale config (see readBasesSettings)
   private lastRenderedSettings: BasesResolvedSettings | null = null;
+  // Per-card data for surgical property reorder (avoids full re-render)
+  private cardDataByPath = new Map<
+    string,
+    { cardData: CardData; entry: BasesEntry }
+  >();
   private lastGroup: LastGroupState = { key: undefined, container: null };
   private scrollThrottle: ScrollThrottleState = {
     listener: null,
@@ -721,6 +728,13 @@ export class DynamicViewsGridView extends BasesView {
         sortMethod +
         "\0\0" +
         (groupByProperty ?? "");
+      const propertySetHash = [...visibleProperties].sort().join("\0");
+      const settingsHashExcludingOrder =
+        JSON.stringify(hashableSettings) +
+        "\0\0" +
+        sortMethod +
+        "\0\0" +
+        (groupByProperty ?? "");
       const styleSettingsHash = getStyleSettingsHash();
       // Include mtime and sortMethod in hash so content/sort changes trigger updates
       const collapsedHash = Array.from(this.collapsedGroups).sort().join("\0");
@@ -822,6 +836,31 @@ export class DynamicViewsGridView extends BasesView {
         return;
       }
 
+      // Property reorder only: settings changed but only property ORDER differs.
+      // Card heights are invariant under reorder — skip full re-render.
+      // Guard: invertPropertyPairing makes pairing position-dependent.
+      const propertySetUnchanged =
+        this.renderState.lastPropertySetHash !== null &&
+        this.renderState.lastPropertySetHash === propertySetHash;
+      const isPropertyReorderOnly =
+        settingsChanged &&
+        propertySetUnchanged &&
+        !settings.invertPropertyPairing &&
+        pathsUnchanged &&
+        changedPaths.size === 0 &&
+        settingsHashExcludingOrder ===
+          this.renderState.lastSettingsHashExcludingOrder;
+
+      if (isPropertyReorderOnly) {
+        this.updatePropertyOrder(visibleProperties, settings);
+        this.renderState.lastRenderHash = renderHash;
+        this.renderState.lastSettingsHash = settingsHash;
+        this.renderState.lastPropertySetHash = propertySetHash;
+        this.renderState.lastSettingsHashExcludingOrder =
+          settingsHashExcludingOrder;
+        return;
+      }
+
       // Reset to initial batch if settings changed AND infinite scroll has appended batches
       // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
       if (settingsChanged) {
@@ -837,6 +876,9 @@ export class DynamicViewsGridView extends BasesView {
       }
       this.renderState.lastSettingsHash = settingsHash;
       this.renderState.lastRenderHash = renderHash;
+      this.renderState.lastPropertySetHash = propertySetHash;
+      this.renderState.lastSettingsHashExcludingOrder =
+        settingsHashExcludingOrder;
 
       // Set displayedCount when starting fresh (first render or after reset)
       if (this.displayedCount === 0) {
@@ -930,6 +972,7 @@ export class DynamicViewsGridView extends BasesView {
 
       // Clear and re-render
       this.containerEl.empty();
+      this.cardDataByPath.clear();
 
       // Reset batch append state for full re-render
       this.previousDisplayedCount = 0;
@@ -1023,6 +1066,7 @@ export class DynamicViewsGridView extends BasesView {
         for (let i = 0; i < cards.length; i++) {
           const card = cards[i];
           const entry = groupEntries[i];
+          this.cardDataByPath.set(card.path, { cardData: card, entry });
           this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
         }
 
@@ -1185,6 +1229,43 @@ export class DynamicViewsGridView extends BasesView {
     );
     this.contentVisibility?.observe(handle.el);
     return handle;
+  }
+
+  /** Surgical property reorder: update property DOM without full re-render */
+  private updatePropertyOrder(
+    visibleProperties: string[],
+    settings: BasesResolvedSettings,
+  ): void {
+    const feedEl = this.feedContainerRef.current;
+    if (!feedEl) return;
+
+    for (const cardEl of feedEl.querySelectorAll<HTMLElement>(
+      ".card[data-path]",
+    )) {
+      const path = cardEl.dataset.path;
+      if (!path) continue;
+      const stored = this.cardDataByPath.get(path);
+      if (!stored) continue;
+
+      // Rebuild properties array in new order (propMap.has filters out
+      // title/subtitle properties not in cardData.properties)
+      const propMap = new Map(
+        stored.cardData.properties.map((p) => [p.name, p]),
+      );
+      stored.cardData.properties = visibleProperties
+        .filter((name) => propMap.has(name))
+        .map((name) => propMap.get(name)!);
+
+      this.cardRenderer.rerenderProperties(
+        cardEl,
+        stored.cardData,
+        stored.entry,
+        settings,
+      );
+    }
+
+    initializeScrollGradients(feedEl);
+    this.scrollPreservation?.restoreAfterRender();
   }
 
   /** Update only changed cards in-place without full re-render */
@@ -1416,6 +1497,7 @@ export class DynamicViewsGridView extends BasesView {
         for (let i = 0; i < cards.length; i++) {
           const card = cards[i];
           const entry = groupEntries[i];
+          this.cardDataByPath.set(card.path, { cardData: card, entry });
           const { el: cardEl } = this.renderCard(
             groupEl,
             card,

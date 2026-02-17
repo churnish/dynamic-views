@@ -1880,6 +1880,44 @@ export class SharedCardRenderer {
   }
 
   /**
+   * Surgically replace property DOM within an existing card.
+   * Used by property-reorder fast path to avoid full card re-render.
+   */
+  public rerenderProperties(
+    cardEl: HTMLElement,
+    card: CardData,
+    entry: BasesEntry,
+    settings: BasesResolvedSettings,
+  ): void {
+    const bodyEl = cardEl.querySelector<HTMLElement>(".card-body");
+    if (!bodyEl) return;
+
+    // Remove old property containers
+    for (const el of bodyEl.querySelectorAll(
+      ".card-properties-top, .card-properties-bottom",
+    )) {
+      el.remove();
+    }
+
+    // Fresh signal for new property event listeners (scroll gradients, etc.)
+    // Old listeners are on removed DOM — harmless until next full cleanup
+    const propAbort = new AbortController();
+    this.cardAbortControllers.push(propAbort);
+
+    // Re-render properties (appends new containers at end of bodyEl;
+    // internally calls measurePropertyFieldsForCard + setupScrollGradients)
+    this.renderProperties(bodyEl, card, entry, settings, propAbort.signal);
+
+    // Fix DOM order: card-properties-top must be BEFORE card-previews
+    // (renderProperties appends both containers at end of bodyEl)
+    const previewsEl = bodyEl.querySelector(".card-previews");
+    const topEl = bodyEl.querySelector(".card-properties-top");
+    if (previewsEl && topEl) {
+      bodyEl.insertBefore(topEl, previewsEl);
+    }
+  }
+
+  /**
    * Renders property fields for a card using dynamic property array
    */
   private renderProperties(

@@ -133,6 +133,8 @@ export interface RenderState {
   abortController: AbortController | null;
   lastRenderHash: string;
   lastSettingsHash: string | null;
+  lastPropertySetHash: string | null;
+  lastSettingsHashExcludingOrder: string | null;
   lastMtimes: Map<string, number>;
 }
 
