@@ -55,7 +55,7 @@
   .card.masonry-positioned {
     position: absolute;
     width: var(--masonry-width, auto);
-    height: auto;
+    height: var(--masonry-card-height, auto);
     left: var(--masonry-left, 0);
     top: var(--masonry-top, 0);
     contain: layout style paint;

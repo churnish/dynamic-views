@@ -104,24 +104,31 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 `ResizeObserver` → `throttledResize()` → `updateLayoutRef.current("resize-observer")`
 
-**Fast path — direct mounted-card measurement** (prior heights exist for unmounted cards):
+**Fast path** has two branches (prior heights must exist for unmounted cards):
+
+**Proportional branch** (`"resize-observer"`) — zero DOM reads, ~3-5ms:
 
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
-2. Add `masonry-measuring` class (override `content-visibility` for accurate reads).
-3. Set `--masonry-width` on mounted cards only.
-4. Force single reflow, read mounted cards' `offsetHeight`.
-5. Build mixed heights per group: mounted → DOM height, unmounted → `item.height` (last known).
-6. `calculateMasonryLayout()` with dummy cards array + mixed heights.
-7. Apply `--masonry-left`, `--masonry-top` to mounted cards only.
-8. Update container heights. `updateVirtualItemPositions()`.
-9. Store result. Update `cachedGroupOffsets`. `syncVirtualScroll()` (pure JS loop with cached offsets).
-10. Remove `masonry-measuring` class. Return — skip full measurement path.
+2. Calculate proportional heights for ALL cards: `measuredHeight × (cardWidth / measuredAtWidth)`.
+3. `calculateMasonryLayout()` with proportional heights.
+4. Apply `--masonry-width`, `--masonry-left`, `--masonry-top`, `--masonry-card-height` to mounted cards.
+5. `updateVirtualItemPositions()`. Update `cachedGroupOffsets`. `syncVirtualScroll()`.
+6. Return — skip full measurement path.
 
-With virtual scrolling limiting mounted cards to ~32-50, direct DOM measurement is cheap enough (~6-9ms) to run every resize frame.
+The explicit `--masonry-card-height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
+
+**DOM measurement branch** (`"resize-correction"`, `"image-coalesced"`) — ~6-9ms:
+
+1. For correction only: clear `--masonry-card-height` so cards reflow to natural height.
+2. Add `masonry-measuring` class. Set `--masonry-width` on mounted cards. Force reflow.
+3. Read mounted cards' `offsetHeight`. Unmounted cards use proportional scaling.
+4. `calculateMasonryLayout()` with mixed heights. Apply positions.
+5. For correction: set `measuredAtCardWidth` to establish fresh baseline.
+6. Update metadata for mounted cards. Remove `masonry-measuring`. Return.
 
 **Post-resize correction** (`"resize-correction"`, 200ms after last resize):
 
-Proportional height scaling for unmounted cards drifts from true `height: auto` render heights. After resize settles, a correction pass re-measures mounted cards and updates `measuredAtCardWidth` to the current card width, establishing a fresh baseline for future scaling.
+Proportional height scaling drifts from true `height: auto` render heights. After resize settles, the DOM measurement branch clears explicit heights, re-measures mounted cards, and updates `measuredAtCardWidth` to the current card width, establishing a fresh baseline for future scaling.
 
 **Fallback — full measurement** (no prior heights, e.g., first resize before any layout):
 
@@ -148,27 +155,27 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 `updateLayoutRef.current(source?)` has 5 sequential guards:
 
-| #   | Guard                     | Behavior                                                                                                                                         |
-| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                            |
-| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                    |
+| #   | Guard                     | Behavior                                                                                                                                                                                     |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                                                                        |
+| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                                                                |
 | 3   | Unmounted items           | Source-dependent: remount all for `expand-group`; allow through for `resize-observer`, `resize-correction`, and `image-coalesced` (fast path measures mounted cards only); block all others. |
-| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                        |
-| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                |
+| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                                                                    |
+| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                                                            |
 
 ### Layout sources
 
-| Source                | Trigger                                  | Path                                                   |
-| --------------------- | ---------------------------------------- | ------------------------------------------------------ |
-| `"initial-render"`    | First render                             | Full measurement with card hiding.                     |
-| `"resize-observer"`   | ResizeObserver (RAF-debounced)           | Mounted-card measurement fast path → fallback to full. |
-| `"image-load"`        | Cover/thumbnail image loaded             | Coalesced → `"image-coalesced"`.                       |
-| `"resize-correction"` | 200ms after last resize ends             | Mounted-card measurement fast path → correction pass.  |
+| Source                | Trigger                                  | Path                                                                                     |
+| --------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `"initial-render"`    | First render                             | Full measurement with card hiding.                                                       |
+| `"resize-observer"`   | ResizeObserver (RAF-debounced)           | Mounted-card measurement fast path → fallback to full.                                   |
+| `"image-load"`        | Cover/thumbnail image loaded             | Coalesced → `"image-coalesced"`.                                                         |
+| `"resize-correction"` | 200ms after last resize ends             | Mounted-card measurement fast path → correction pass.                                    |
 | `"image-coalesced"`   | RAF after image-load batch               | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
-| `"expand-group"`      | Group uncollapsed                        | Full measurement with remount-all.                     |
-| `"content-update"`    | In-place card update changed height      | Full measurement (blocked if unmounted items).         |
-| `"queued-update"`     | Dequeued from reentrant guard            | Full measurement (blocked if unmounted items).         |
-| `"property-measured"` | Property field width measurement settled | Full measurement (blocked if unmounted items).         |
+| `"expand-group"`      | Group uncollapsed                        | Full measurement with remount-all.                                                       |
+| `"content-update"`    | In-place card update changed height      | Full measurement (blocked if unmounted items).                                           |
+| `"queued-update"`     | Dequeued from reentrant guard            | Full measurement (blocked if unmounted items).                                           |
+| `"property-measured"` | Property field width measurement settled | Full measurement (blocked if unmounted items).                                           |
 
 ## Throttle and debounce patterns
 
@@ -197,12 +204,13 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 Cards use `position: absolute` with CSS custom properties:
 
-| Property           | Set by    | Consumed by                                   |
-| ------------------ | --------- | --------------------------------------------- |
-| `--masonry-width`  | Layout JS | `.dynamic-views-masonry .card` width.         |
-| `--masonry-left`   | Layout JS | `.dynamic-views-masonry .card` left position. |
-| `--masonry-top`    | Layout JS | `.dynamic-views-masonry .card` top position.  |
-| `--masonry-height` | Layout JS | Container min-height (sets scrollable area).  |
+| Property                | Set by    | Consumed by                                                                      |
+| ----------------------- | --------- | -------------------------------------------------------------------------------- |
+| `--masonry-width`       | Layout JS | `.dynamic-views-masonry .card` width.                                            |
+| `--masonry-left`        | Layout JS | `.dynamic-views-masonry .card` left position.                                    |
+| `--masonry-top`         | Layout JS | `.dynamic-views-masonry .card` top position.                                     |
+| `--masonry-card-height` | Layout JS | `.dynamic-views-masonry .card` height. Set during resize, cleared on correction. |
+| `--masonry-height`      | Layout JS | Container min-height (sets scrollable area).                                     |
 
 **Key CSS classes**:
 
@@ -243,4 +251,4 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
 5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions.
 6. **Virtual scroll sync must run after any position change.** Proportional resize, full measurement, batch append, and live resize all call `syncVirtualScroll()` to mount/unmount cards based on updated positions.
-6. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.
+7. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.

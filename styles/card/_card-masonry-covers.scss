@@ -106,29 +106,7 @@ body.dynamic-views-masonry-fixed-cover-height
   padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }
 
-/* Masonry contain mode: hide cover until dimensions known (exclude placeholders) */
-[data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-top
-  .card-cover-wrapper:not(.card-cover-wrapper-placeholder),
-[data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
-  .card-cover-wrapper:not(.card-cover-wrapper-placeholder) {
-  display: none;
-}
-
-/* Masonry contain mode ON: show immediately (no waiting) - exclude placeholders */
-body.dynamic-views-masonry-fixed-cover-height
-  [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-top
-  .card-cover-wrapper:not(.card-cover-wrapper-placeholder),
-body.dynamic-views-masonry-fixed-cover-height
-  [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
-  .card-cover-wrapper:not(.card-cover-wrapper-placeholder) {
-  display: block;
-}
-
-/* Masonry contain mode ON + placeholder enabled for masonry: show placeholder */
+/* Masonry contain mode + fixed cover height + placeholder enabled: show placeholder */
 body.dynamic-views-masonry-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
   [data-view-type="dynamic-views-masonry"]
   .card.card-cover-contain:not(.cover-ready).card-cover-top

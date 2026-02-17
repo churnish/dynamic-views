@@ -1370,10 +1370,14 @@ export class DynamicViewsMasonryView extends BasesView {
           gap,
         });
 
-        // Fast path: measure mounted cards only (~32 DOM reads instead
-        // of remounting all ~964 unmounted cards for full measurement).
-        // Mixed heights: mounted=DOM, unmounted=proportionally scaled.
-        // Used by resize, post-resize correction, and image-load with unmounted items.
+        // Fast path: skip full remount when unmounted cards have prior heights.
+        // Two branches:
+        // - resize-observer: pure proportional heights + explicit CSS height on
+        //   mounted cards. Zero DOM reads — layout/render match is guaranteed by
+        //   the explicit height constraint. ~3-5ms per frame.
+        // - resize-correction / image-coalesced: DOM measurement of mounted cards
+        //   (mixed heights). Correction clears explicit heights first so cards
+        //   reflow to natural height for accurate reads.
         const useFastPath =
           source === "resize-observer" ||
           source === "resize-correction" ||
@@ -1385,97 +1389,170 @@ export class DynamicViewsMasonryView extends BasesView {
             (v) => !v.el && v.height > 0,
           );
           if (hasPriorHeights) {
-            this.masonryContainer.classList.add("masonry-measuring");
-
-            // Set width on mounted cards + force single reflow
-            for (const item of this.virtualItems) {
-              if (item.el) {
-                item.el.style.setProperty("--masonry-width", `${cardWidth}px`);
-              }
-            }
-            const firstMounted = this.virtualItems.find((v) => v.el);
-            if (firstMounted) void firstMounted.el!.offsetHeight;
-
-            // Process per group (or single ungrouped pass)
             const groupKeys = isGrouped
               ? [...new Set(this.virtualItems.map((v) => v.groupKey))]
               : [undefined];
 
-            for (const groupKey of groupKeys) {
-              const groupItems = this.virtualItems.filter(
-                (v) => v.groupKey === groupKey,
-              );
-              if (groupItems.length === 0) continue;
+            if (source === "resize-observer") {
+              // ── Proportional branch: zero DOM reads ──
+              // All cards (mounted + unmounted) use proportional heights.
+              // Mounted cards get explicit CSS height to match, preventing
+              // mismatch between layout positions and rendered height.
+              for (const groupKey of groupKeys) {
+                const groupItems = this.virtualItems.filter(
+                  (v) => v.groupKey === groupKey,
+                );
+                if (groupItems.length === 0) continue;
 
-              // Mixed heights: mounted = DOM measurement, unmounted = proportionally scaled
-              const heights = groupItems.map((item) => {
-                if (item.el) return item.el.offsetHeight;
-                if (item.measuredAtWidth > 0) {
-                  return (
-                    item.measuredHeight * (cardWidth / item.measuredAtWidth)
-                  );
+                const heights = groupItems.map((item) => {
+                  if (item.measuredAtWidth > 0) {
+                    return (
+                      item.measuredHeight * (cardWidth / item.measuredAtWidth)
+                    );
+                  }
+                  return item.height;
+                });
+
+                const result = calculateMasonryLayout({
+                  cards: Array.from({ length: groupItems.length }),
+                  containerWidth,
+                  cardSize: settings.cardSize,
+                  minColumns,
+                  gap,
+                  heights,
+                });
+
+                // Apply positions + width + explicit height on mounted cards
+                for (let i = 0; i < groupItems.length; i++) {
+                  const item = groupItems[i];
+                  if (item.el) {
+                    item.el.style.setProperty(
+                      "--masonry-width",
+                      `${cardWidth}px`,
+                    );
+                    item.el.style.setProperty(
+                      "--masonry-left",
+                      `${result.positions[i].left}px`,
+                    );
+                    item.el.style.setProperty(
+                      "--masonry-top",
+                      `${result.positions[i].top}px`,
+                    );
+                    // Explicit height prevents mismatch between layout and
+                    // rendered height — eliminates overlap/gap during resize
+                    item.el.style.setProperty(
+                      "--masonry-card-height",
+                      `${heights[i]}px`,
+                    );
+                  }
                 }
-                return item.height;
-              });
 
-              const result = calculateMasonryLayout({
-                cards: Array.from({ length: groupItems.length }),
-                containerWidth,
-                cardSize: settings.cardSize,
-                minColumns,
-                gap,
-                heights,
-              });
-
-              // Apply positions to mounted cards only
-              for (let i = 0; i < groupItems.length; i++) {
-                const pos = result.positions[i];
-                if (groupItems[i].el) {
-                  groupItems[i].el!.style.setProperty(
-                    "--masonry-left",
-                    `${pos.left}px`,
-                  );
-                  groupItems[i].el!.style.setProperty(
-                    "--masonry-top",
-                    `${pos.top}px`,
-                  );
-                }
-              }
-
-              // Update container height
-              if (isGrouped) {
-                const container = this.groupContainers.get(groupKey);
+                const container = isGrouped
+                  ? this.groupContainers.get(groupKey)
+                  : this.masonryContainer;
                 container?.style.setProperty(
                   "--masonry-height",
                   `${result.containerHeight}px`,
                 );
-              } else {
-                this.masonryContainer.style.setProperty(
+
+                this.groupLayoutResults.set(groupKey, result);
+                this.updateVirtualItemPositions(groupKey, result);
+              }
+            } else {
+              // ── DOM measurement branch: correction + image-coalesced ──
+              // Clear explicit heights for correction so cards reflow to
+              // natural height. image-coalesced must NOT clear mid-resize.
+              if (source === "resize-correction") {
+                for (const item of this.virtualItems) {
+                  if (item.el) {
+                    item.el.style.removeProperty("--masonry-card-height");
+                  }
+                }
+              }
+
+              this.masonryContainer.classList.add("masonry-measuring");
+
+              // Set width on mounted cards + force single reflow
+              for (const item of this.virtualItems) {
+                if (item.el) {
+                  item.el.style.setProperty(
+                    "--masonry-width",
+                    `${cardWidth}px`,
+                  );
+                }
+              }
+              const firstMounted = this.virtualItems.find((v) => v.el);
+              if (firstMounted) void firstMounted.el!.offsetHeight;
+
+              for (const groupKey of groupKeys) {
+                const groupItems = this.virtualItems.filter(
+                  (v) => v.groupKey === groupKey,
+                );
+                if (groupItems.length === 0) continue;
+
+                // Mixed heights: mounted = DOM, unmounted = proportional
+                const heights = groupItems.map((item) => {
+                  if (item.el) return item.el.offsetHeight;
+                  if (item.measuredAtWidth > 0) {
+                    return (
+                      item.measuredHeight * (cardWidth / item.measuredAtWidth)
+                    );
+                  }
+                  return item.height;
+                });
+
+                const result = calculateMasonryLayout({
+                  cards: Array.from({ length: groupItems.length }),
+                  containerWidth,
+                  cardSize: settings.cardSize,
+                  minColumns,
+                  gap,
+                  heights,
+                });
+
+                for (let i = 0; i < groupItems.length; i++) {
+                  const pos = result.positions[i];
+                  if (groupItems[i].el) {
+                    groupItems[i].el!.style.setProperty(
+                      "--masonry-left",
+                      `${pos.left}px`,
+                    );
+                    groupItems[i].el!.style.setProperty(
+                      "--masonry-top",
+                      `${pos.top}px`,
+                    );
+                  }
+                }
+
+                const container = isGrouped
+                  ? this.groupContainers.get(groupKey)
+                  : this.masonryContainer;
+                container?.style.setProperty(
                   "--masonry-height",
                   `${result.containerHeight}px`,
                 );
-              }
 
-              // Correction pass updates baselines so future proportional scaling
-              // starts from accurate DOM-measured values at the final width.
-              // Live resize preserves original baselines for consistent scaling.
-              if (source === "resize-correction") {
-                result.measuredAtCardWidth = cardWidth;
-              }
+                // Correction updates baselines so future proportional scaling
+                // starts from accurate DOM-measured values at the final width.
+                if (source === "resize-correction") {
+                  result.measuredAtCardWidth = cardWidth;
+                }
 
-              this.groupLayoutResults.set(groupKey, result);
-              this.updateVirtualItemPositions(groupKey, result);
+                this.groupLayoutResults.set(groupKey, result);
+                this.updateVirtualItemPositions(groupKey, result);
 
-              // Update metadata for mounted cards only (accurate DOM heights)
-              for (const item of groupItems) {
-                if (item.el) {
-                  item.measuredHeight = item.height;
-                  item.measuredAtWidth = cardWidth;
+                // Update metadata for mounted cards (accurate DOM heights)
+                for (const item of groupItems) {
+                  if (item.el) {
+                    item.measuredHeight = item.height;
+                    item.measuredAtWidth = cardWidth;
+                  }
                 }
               }
+
+              this.masonryContainer.classList.remove("masonry-measuring");
             }
 
-            this.masonryContainer.classList.remove("masonry-measuring");
             this.lastLayoutWidth = containerWidth;
 
             // Update cached offsets for syncVirtualScroll (runs in finally block)
@@ -1741,6 +1818,12 @@ export class DynamicViewsMasonryView extends BasesView {
     handle.el.style.setProperty("--masonry-left", `${item.x}px`);
     handle.el.style.setProperty("--masonry-top", `${item.y}px`);
     handle.el.classList.add("masonry-positioned");
+    // During active resize, set explicit height to match layout positioning.
+    // Without this, height:auto renders at natural height, causing mismatch
+    // with proportional-scaled positions → overlap/gap.
+    if (this.resizeActiveTimeout !== null) {
+      handle.el.style.setProperty("--masonry-card-height", `${item.height}px`);
+    }
     item.el = handle.el;
     item.handle = handle;
   }
@@ -1751,6 +1834,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.focusState.hoveredEl = null;
     }
     item.handle?.cleanup();
+    item.el!.style.removeProperty("--masonry-card-height");
     item.el?.remove();
     item.el = null;
     item.handle = null;
