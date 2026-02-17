@@ -5,6 +5,8 @@
 
 ## Reference files
 
+Use @ref/project-structure.md as a navigation reference before reading or editing any file in the codebase.
+
 When a reference file listed below is relevant to your current work, you MUST read it before proceeding. Do NOT rely on assumptions — consult the reference first.
 
 Proactively keep these files up-to-date as the codebase evolves by running /document.
@@ -13,7 +15,6 @@ Proactively keep these files up-to-date as the codebase evolves by running /docu
 
 Read...
 
-- **project-structure.md** to navigate the codebase — it maps every codebase and stylesheet file and its responsibility.
 - **masonry-layout.md** before working on masonry layout, virtual scrolling, resize handling, or infinite scroll — it documents the full architecture, data structures, render pipeline, guard system, and invariants.
 
 ### ref/project-knowledge
