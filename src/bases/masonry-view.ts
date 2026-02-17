@@ -1442,7 +1442,7 @@ export class DynamicViewsMasonryView extends BasesView {
                 const groupItems = this.virtualItemsByGroup.get(groupKey)!;
                 if (groupItems.length === 0) continue;
 
-                const { containerHeight, columnHeights, heights } =
+                const { containerHeight, columnHeights } =
                   this.proportionalResizeLayout(
                     groupItems,
                     cardWidth,
@@ -1458,7 +1458,11 @@ export class DynamicViewsMasonryView extends BasesView {
                   `${containerHeight}px`,
                 );
 
-                // Store result for appendBatch continuation
+                // Store result for appendBatch continuation.
+                // positions intentionally empty — proportionalResizeLayout updates
+                // VirtualItems in-place. Do NOT call updateVirtualItemPositions with this result.
+                // heights intentionally omitted — proportional values are scaled,
+                // not original measured heights. appendBatch merge handles undefined.
                 this.groupLayoutResults.set(groupKey, {
                   positions: [],
                   columnHeights,
@@ -1466,7 +1470,6 @@ export class DynamicViewsMasonryView extends BasesView {
                   containerWidth,
                   cardWidth,
                   columns,
-                  heights,
                 });
               }
             } else {
@@ -1812,9 +1815,8 @@ export class DynamicViewsMasonryView extends BasesView {
     cardWidth: number,
     columns: number,
     gap: number,
-  ): { containerHeight: number; columnHeights: number[]; heights: number[] } {
+  ): { containerHeight: number; columnHeights: number[] } {
     const columnHeights = new Array(columns).fill(0) as number[];
-    const heights = new Array<number>(groupItems.length);
 
     for (let i = 0; i < groupItems.length; i++) {
       const item = groupItems[i];
@@ -1824,7 +1826,6 @@ export class DynamicViewsMasonryView extends BasesView {
         item.measuredAtWidth > 0
           ? item.measuredHeight * (cardWidth / item.measuredAtWidth)
           : item.height;
-      heights[i] = height;
 
       // Greedy shortest-column placement
       let shortestCol = 0;
@@ -1856,7 +1857,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     const maxH = columns > 0 ? Math.max(...columnHeights) : 0;
     const containerHeight = Math.round(maxH > 0 ? maxH - gap : 0);
-    return { containerHeight, columnHeights, heights };
+    return { containerHeight, columnHeights };
   }
 
   /** Compute and cache container offsets for syncVirtualScroll.
@@ -2463,20 +2464,20 @@ export class DynamicViewsMasonryView extends BasesView {
             `${result.containerHeight}px`,
           );
 
-          // Update virtual item positions for newly appended cards
-          // (uses batch-local heights — must run BEFORE height merge below)
+          // Update virtual item positions for newly appended cards.
+          // New cards are the last N items in virtualItems (pushed in same order).
+          // Uses batch-local heights — must run BEFORE height merge below.
+          const viOffset = this.virtualItems.length - newCards.length;
           for (let i = 0; i < newCards.length; i++) {
-            const item = this.virtualItems.find((v) => v.el === newCards[i]);
-            if (item) {
-              const pos = result.positions[i];
-              item.x = pos.left;
-              item.y = pos.top;
-              item.width = result.cardWidth;
-              item.height = result.heights?.[i] ?? item.height;
-              if (result.measuredAtCardWidth) {
-                item.measuredHeight = item.height;
-                item.measuredAtWidth = result.measuredAtCardWidth;
-              }
+            const item = this.virtualItems[viOffset + i];
+            const pos = result.positions[i];
+            item.x = pos.left;
+            item.y = pos.top;
+            item.width = result.cardWidth;
+            item.height = result.heights?.[i] ?? item.height;
+            if (result.measuredAtCardWidth) {
+              item.measuredHeight = item.height;
+              item.measuredAtWidth = result.measuredAtCardWidth;
             }
           }
 
