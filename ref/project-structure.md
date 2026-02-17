@@ -4,6 +4,7 @@ description: Maps every source, test, and stylesheet file in the Dynamic Views p
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-16
 ---
+
 # Project structure
 
 ```

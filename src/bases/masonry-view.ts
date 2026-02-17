@@ -186,6 +186,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
   private displayedSoFar: number = 0;
+  private pendingResizeWidth: number | null = null;
+  private cachedGroupOffsets: Map<string | undefined, number> = new Map();
   private propertyMeasuredTimeout: number | null = null;
   private lastDataUpdateTime = { value: 0 };
   private trailingUpdate: {
@@ -1033,6 +1035,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.groupLayoutResults.clear();
       this.virtualItems = [];
       this.groupContainers.clear();
+      this.cachedGroupOffsets.clear();
       this.hasUserScrolled = false;
 
       // Cleanup card renderer observers before re-rendering
@@ -1237,10 +1240,13 @@ export class DynamicViewsMasonryView extends BasesView {
     // Profiling showed chunked async caused layout thrashing (224 InvalidateLayout events)
     this.updateLayoutRef.current = (source?: string) => {
       if (!this.masonryContainer) return;
-      // Cache width early to avoid double getBoundingClientRect() call (layout flush)
-      const containerWidth = Math.floor(
-        this.masonryContainer.getBoundingClientRect().width,
-      );
+      // Use cached width from ResizeObserver for resize sources (avoids forced reflow).
+      // Other sources fall back to getBoundingClientRect.
+      const containerWidth =
+        (source === "resize-observer" || source === "resize-correction") &&
+        this.pendingResizeWidth !== null
+          ? this.pendingResizeWidth
+          : Math.floor(this.masonryContainer.getBoundingClientRect().width);
       if (containerWidth === 0) return;
 
       // Suppress full relayouts while an incremental batch layout is pending.
@@ -1273,8 +1279,12 @@ export class DynamicViewsMasonryView extends BasesView {
             }
           }
           remountedAll = true;
-        } else if (source === "resize-observer") {
-          // Allow through — resize fast path measures mounted cards only.
+        } else if (
+          source === "resize-observer" ||
+          source === "resize-correction" ||
+          source === "image-coalesced"
+        ) {
+          // Allow through — fast path measures mounted cards only.
           // Falls through to full measurement if no prior heights exist.
         } else {
           return;
@@ -1306,8 +1316,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Only hide cards on initial render (prevents flash at 0,0)
       const skipHiding = source !== "initial-render";
-      let skipVirtualScrollSync = false;
-
       try {
         const gap = getCardSpacing(this.containerEl);
         const isGrouped = this.containerEl.classList.contains("is-grouped");
@@ -1362,10 +1370,15 @@ export class DynamicViewsMasonryView extends BasesView {
           gap,
         });
 
-        // Fast path: measure mounted cards on resize (~32 DOM reads instead
+        // Fast path: measure mounted cards only (~32 DOM reads instead
         // of remounting all ~964 unmounted cards for full measurement).
         // Mixed heights: mounted=DOM, unmounted=proportionally scaled.
-        if (source === "resize-observer" && hasUnmountedItems) {
+        // Used by resize, post-resize correction, and image-load with unmounted items.
+        const useFastPath =
+          source === "resize-observer" ||
+          source === "resize-correction" ||
+          source === "image-coalesced";
+        if (useFastPath && hasUnmountedItems) {
           // Need prior heights for unmounted cards — fall through to full
           // measurement on first resize before any layout has run
           const hasPriorHeights = this.virtualItems.some(
@@ -1443,8 +1456,13 @@ export class DynamicViewsMasonryView extends BasesView {
                 );
               }
 
-              // Store result WITHOUT setting measuredAtCardWidth — preserves
-              // unmounted cards' original measurement reference for future scaling
+              // Correction pass updates baselines so future proportional scaling
+              // starts from accurate DOM-measured values at the final width.
+              // Live resize preserves original baselines for consistent scaling.
+              if (source === "resize-correction") {
+                result.measuredAtCardWidth = cardWidth;
+              }
+
               this.groupLayoutResults.set(groupKey, result);
               this.updateVirtualItemPositions(groupKey, result);
 
@@ -1460,10 +1478,8 @@ export class DynamicViewsMasonryView extends BasesView {
             this.masonryContainer.classList.remove("masonry-measuring");
             this.lastLayoutWidth = containerWidth;
 
-            // Skip syncVirtualScroll during resize — avoids forced reflow from
-            // getBoundingClientRect (~5-15ms). Mounted cards get CSS updates
-            // directly; sync runs on next scroll event or layout trigger.
-            skipVirtualScrollSync = true;
+            // Update cached offsets for syncVirtualScroll (runs in finally block)
+            this.updateCachedGroupOffsets();
             return;
           }
           // No prior heights — fall through to full measurement
@@ -1588,11 +1604,10 @@ export class DynamicViewsMasonryView extends BasesView {
           this.masonryContainer.classList.remove("masonry-resizing");
         }
 
-        // Unmount off-screen cards after layout positions are finalized
-        // (skipped during proportional resize — no reflow from getBoundingClientRect)
-        if (!skipVirtualScrollSync) {
-          this.syncVirtualScroll();
-        }
+        // Mount/unmount cards based on updated positions.
+        // Cached offsets make this a pure JS loop — no getBoundingClientRect reflow.
+        this.updateCachedGroupOffsets();
+        this.syncVirtualScroll();
 
         // Show end indicator if all items displayed (skip if 0 results)
         requestAnimationFrame(() => {
@@ -1626,6 +1641,9 @@ export class DynamicViewsMasonryView extends BasesView {
       const newWidth = Math.floor(entries[0].contentRect.width);
       if (newWidth === this.lastLayoutWidth) return;
 
+      // Cache width for the layout function — avoids getBoundingClientRect reflow
+      this.pendingResizeWidth = newWidth;
+
       // Disable top/left CSS transitions during active resize so cards
       // reposition instantly instead of lagging 140ms behind each frame
       this.masonryContainer?.classList.add("masonry-resize-active");
@@ -1635,6 +1653,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.resizeActiveTimeout = window.setTimeout(() => {
         this.resizeActiveTimeout = null;
         this.masonryContainer?.classList.remove("masonry-resize-active");
+        // Post-resize correction: re-measure mounted cards + update baselines
+        this.updateLayoutRef.current?.("resize-correction");
       }, 200);
 
       if (this.resizeRafId !== null) {
@@ -1687,6 +1707,23 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
+  /** Compute and cache container offsets for syncVirtualScroll.
+   *  Must be called synchronously before syncVirtualScroll — offsets depend on
+   *  current scrollTop and are only valid within the same synchronous block. */
+  private updateCachedGroupOffsets(): void {
+    const scrollRect = this.scrollEl.getBoundingClientRect();
+    const scrollTop = this.scrollEl.scrollTop;
+    this.cachedGroupOffsets.clear();
+    for (const [groupKey, container] of this.groupContainers) {
+      if (!container.isConnected) continue;
+      const containerRect = container.getBoundingClientRect();
+      this.cachedGroupOffsets.set(
+        groupKey,
+        containerRect.top - scrollRect.top + scrollTop,
+      );
+    }
+  }
+
   /** Mount a virtual item: render card, apply stored position, set refs */
   private mountVirtualItem(
     item: VirtualItem,
@@ -1730,14 +1767,9 @@ export class DynamicViewsMasonryView extends BasesView {
     const paneHeight = this.scrollEl.clientHeight;
     const settings = this.lastRenderedSettings;
 
-    // Cache container offsets (one getBoundingClientRect per group)
-    const scrollRect = this.scrollEl.getBoundingClientRect();
-    const offsets = new Map<string | undefined, number>();
-    for (const [groupKey, container] of this.groupContainers) {
-      if (!container.isConnected) continue;
-      const containerRect = container.getBoundingClientRect();
-      offsets.set(groupKey, containerRect.top - scrollRect.top + scrollTop);
-    }
+    // Use cached container offsets — computed after layout updates, not every scroll frame
+    if (this.cachedGroupOffsets.size === 0) return;
+    const offsets = this.cachedGroupOffsets;
 
     // Buffer = 1x pane height above/below — scales with pane size
     const visibleTop = scrollTop - paneHeight;
@@ -1770,6 +1802,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.virtualScrollRafId !== null) return;
     this.virtualScrollRafId = requestAnimationFrame(() => {
       this.virtualScrollRafId = null;
+      this.updateCachedGroupOffsets();
       this.syncVirtualScroll();
     });
   }
@@ -2270,6 +2303,7 @@ export class DynamicViewsMasonryView extends BasesView {
           this.isLoading = false;
 
           // Unmount off-screen cards (including newly appended ones below viewport)
+          this.updateCachedGroupOffsets();
           this.syncVirtualScroll();
 
           // Initialize gradients for new cards only (filter out cards that
@@ -2531,6 +2565,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Trigger initial checks
     checkAndLoad();
+    this.updateCachedGroupOffsets();
     this.syncVirtualScroll();
   }
 
