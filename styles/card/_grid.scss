@@ -37,6 +37,7 @@
   height: 100%;
   min-width: 0;
   overflow: hidden;
+  container-type: inline-size;
 }
 
 /* DOM order now matches visual order — no flexbox ordering needed */
@@ -349,7 +350,6 @@ body.dynamic-views-hide-group-property-labels
 
   .card {
     position: relative;
-    container-type: inline-size;
     box-sizing: border-box;
     border: none;
     border-radius: var(--dynamic-views-card-border-radius, 8px);

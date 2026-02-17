@@ -47,17 +47,12 @@
   .masonry-container .card:not(.masonry-positioned) {
     position: absolute;
     opacity: 0;
-    width: var(--masonry-width, auto);
     height: auto;
     contain: layout style paint;
   }
 
   .card.masonry-positioned {
     position: absolute;
-    width: var(--masonry-width, auto);
-    height: var(--masonry-card-height, auto);
-    left: var(--masonry-left, 0);
-    top: var(--masonry-top, 0);
     contain: layout style paint;
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,

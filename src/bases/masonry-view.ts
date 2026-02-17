@@ -1175,7 +1175,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.previousDisplayedCount = displayedSoFar;
       this.displayedSoFar = displayedSoFar;
 
-      // Initial layout calculation (sets --masonry-width on cards)
+      // Initial layout calculation (sets inline width on cards)
       if (this.updateLayoutRef.current) {
         this.updateLayoutRef.current("initial-render");
       }
@@ -1299,6 +1299,9 @@ export class DynamicViewsMasonryView extends BasesView {
           requestAnimationFrame(() => {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
+            // Skip during active resize — post-resize correction will
+            // pick up height changes from images that loaded mid-resize
+            if (this.resizeActiveTimeout !== null) return;
             this.updateLayoutRef.current?.("image-coalesced");
           });
         }
@@ -1426,24 +1429,12 @@ export class DynamicViewsMasonryView extends BasesView {
                 for (let i = 0; i < groupItems.length; i++) {
                   const item = groupItems[i];
                   if (item.el) {
-                    item.el.style.setProperty(
-                      "--masonry-width",
-                      `${cardWidth}px`,
-                    );
-                    item.el.style.setProperty(
-                      "--masonry-left",
-                      `${result.positions[i].left}px`,
-                    );
-                    item.el.style.setProperty(
-                      "--masonry-top",
-                      `${result.positions[i].top}px`,
-                    );
+                    item.el.style.width = `${cardWidth}px`;
+                    item.el.style.left = `${result.positions[i].left}px`;
+                    item.el.style.top = `${result.positions[i].top}px`;
                     // Explicit height prevents mismatch between layout and
                     // rendered height — eliminates overlap/gap during resize
-                    item.el.style.setProperty(
-                      "--masonry-card-height",
-                      `${heights[i]}px`,
-                    );
+                    item.el.style.height = `${heights[i]}px`;
                   }
                 }
 
@@ -1465,7 +1456,8 @@ export class DynamicViewsMasonryView extends BasesView {
               if (source === "resize-correction") {
                 for (const item of this.virtualItems) {
                   if (item.el) {
-                    item.el.style.removeProperty("--masonry-card-height");
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- clearing inline layout height for DOM re-measurement
+                    item.el.style.height = "";
                   }
                 }
               }
@@ -1475,10 +1467,7 @@ export class DynamicViewsMasonryView extends BasesView {
               // Set width on mounted cards + force single reflow
               for (const item of this.virtualItems) {
                 if (item.el) {
-                  item.el.style.setProperty(
-                    "--masonry-width",
-                    `${cardWidth}px`,
-                  );
+                  item.el.style.width = `${cardWidth}px`;
                 }
               }
               const firstMounted = this.virtualItems.find((v) => v.el);
@@ -1513,14 +1502,8 @@ export class DynamicViewsMasonryView extends BasesView {
                 for (let i = 0; i < groupItems.length; i++) {
                   const pos = result.positions[i];
                   if (groupItems[i].el) {
-                    groupItems[i].el!.style.setProperty(
-                      "--masonry-left",
-                      `${pos.left}px`,
-                    );
-                    groupItems[i].el!.style.setProperty(
-                      "--masonry-top",
-                      `${pos.top}px`,
-                    );
+                    groupItems[i].el!.style.left = `${pos.left}px`;
+                    groupItems[i].el!.style.top = `${pos.top}px`;
                   }
                 }
 
@@ -1570,7 +1553,7 @@ export class DynamicViewsMasonryView extends BasesView {
           if (!skipHiding) {
             card.classList.remove("masonry-positioned");
           }
-          card.style.setProperty("--masonry-width", `${cardWidth}px`);
+          card.style.width = `${cardWidth}px`;
         }
 
         // Phase 2: Single forced reflow
@@ -1625,11 +1608,8 @@ export class DynamicViewsMasonryView extends BasesView {
             for (let i = 0; i < groupCards.length; i++) {
               const pos = result.positions[i];
               groupCards[i].classList.add("masonry-positioned");
-              groupCards[i].style.setProperty(
-                "--masonry-left",
-                `${pos.left}px`,
-              );
-              groupCards[i].style.setProperty("--masonry-top", `${pos.top}px`);
+              groupCards[i].style.left = `${pos.left}px`;
+              groupCards[i].style.top = `${pos.top}px`;
             }
 
             groupEl.classList.add("masonry-container");
@@ -1658,8 +1638,8 @@ export class DynamicViewsMasonryView extends BasesView {
           for (let i = 0; i < allCards.length; i++) {
             const pos = result.positions[i];
             allCards[i].classList.add("masonry-positioned");
-            allCards[i].style.setProperty("--masonry-left", `${pos.left}px`);
-            allCards[i].style.setProperty("--masonry-top", `${pos.top}px`);
+            allCards[i].style.left = `${pos.left}px`;
+            allCards[i].style.top = `${pos.top}px`;
           }
 
           this.masonryContainer.style.setProperty(
@@ -1814,15 +1794,15 @@ export class DynamicViewsMasonryView extends BasesView {
       item.index,
       settings,
     );
-    handle.el.style.setProperty("--masonry-width", `${item.width}px`);
-    handle.el.style.setProperty("--masonry-left", `${item.x}px`);
-    handle.el.style.setProperty("--masonry-top", `${item.y}px`);
+    handle.el.style.width = `${item.width}px`;
+    handle.el.style.left = `${item.x}px`;
+    handle.el.style.top = `${item.y}px`;
     handle.el.classList.add("masonry-positioned");
     // During active resize, set explicit height to match layout positioning.
     // Without this, height:auto renders at natural height, causing mismatch
     // with proportional-scaled positions → overlap/gap.
     if (this.resizeActiveTimeout !== null) {
-      handle.el.style.setProperty("--masonry-card-height", `${item.height}px`);
+      handle.el.style.height = `${item.height}px`;
     }
     item.el = handle.el;
     item.handle = handle;
@@ -1834,7 +1814,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.focusState.hoveredEl = null;
     }
     item.handle?.cleanup();
-    item.el!.style.removeProperty("--masonry-card-height");
+    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- clearing inline layout height before DOM removal
+    item.el!.style.height = "";
     item.el?.remove();
     item.el = null;
     item.handle = null;
@@ -2289,7 +2270,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // This ensures text wrapping is correct when we read offsetHeight
         const cardWidth = prevLayout.cardWidth;
         newCards.forEach((card) => {
-          card.style.setProperty("--masonry-width", `${cardWidth}px`);
+          card.style.width = `${cardWidth}px`;
         });
 
         // Function to run incremental layout
@@ -2340,8 +2321,8 @@ export class DynamicViewsMasonryView extends BasesView {
             newCards.forEach((card, index) => {
               const pos = result.positions[index];
               card.classList.add("masonry-positioned");
-              card.style.setProperty("--masonry-left", `${pos.left}px`);
-              card.style.setProperty("--masonry-top", `${pos.top}px`);
+              card.style.left = `${pos.left}px`;
+              card.style.top = `${pos.top}px`;
             });
           } finally {
             this.masonryContainer?.classList.remove("masonry-measuring");

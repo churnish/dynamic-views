@@ -84,7 +84,7 @@
   .dynamic-views-masonry
   .card {
   position: absolute;
-  /* Width set explicitly via --masonry-width, no max-width needed */
+  /* Width set explicitly via inline style, no max-width needed */
   margin: 0;
   display: flex;
   flex-direction: column;

@@ -1,6 +1,6 @@
 ---
 title: Masonry layout system
-description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. It uses absolute positioning via CSS custom properties, proportional height scaling during resize, incremental batch appends for infinite scroll, and virtual scrolling to handle thousands of cards efficiently.
+description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. It uses absolute positioning via inline styles, proportional height scaling during resize, incremental batch appends for infinite scroll, and virtual scrolling to handle thousands of cards efficiently.
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-17
 ---
@@ -28,8 +28,8 @@ Lightweight representation of every card. Mounted cards have `el` and `handle`; 
 | Field             | Type                  | Purpose                                             |
 | ----------------- | --------------------- | --------------------------------------------------- |
 | `index`           | `number`              | Position in flat card list.                         |
-| `x`, `y`          | `number`              | `--masonry-left` and `--masonry-top` values.        |
-| `width`           | `number`              | `--masonry-width` value.                            |
+| `x`, `y`          | `number`              | Inline `left` and `top` values.                     |
+| `width`           | `number`              | Inline `width` value.                               |
 | `height`          | `number`              | Current height (may be proportionally scaled).      |
 | `measuredHeight`  | `number`              | Height at original measurement width.               |
 | `measuredAtWidth` | `number`              | `cardWidth` when height was DOM-measured.           |
@@ -72,11 +72,11 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 2. Render groups/cards with `renderCard()`. Push `VirtualItem` per card with `x=0, y=0, height=0`.
 3. `updateLayoutRef.current("initial-render")`:
    - Add `masonry-resizing` class (hides cards during layout).
-   - Set `--masonry-width` on all cards.
+   - Set inline `width` on all cards.
    - Force single reflow (`void allCards[0]?.offsetHeight`).
    - Read all heights in single pass (`allCards.map(c => c.offsetHeight)`).
    - `calculateMasonryLayout()` per group.
-   - Apply `--masonry-left` and `--masonry-top` per card.
+   - Apply inline `left` and `top` per card.
    - `updateVirtualItemPositions()` stores positions in VirtualItems.
    - Store result in `groupLayoutResults` with `measuredAtCardWidth`.
    - Remove `masonry-resizing` class. `syncVirtualScroll()`.
@@ -91,7 +91,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 3. Load content for new entries, render new cards into group containers.
 4. Push `VirtualItem` per new card.
 5. **Incremental layout** (if single group + previous result exists):
-   - Pre-set `--masonry-width` on new cards.
+   - Pre-set inline `width` on new cards.
    - Wait for images to settle (or skip if fixed-cover-height).
    - In double-RAF: `calculateIncrementalMasonryLayout()` continues from previous `columnHeights`.
    - Apply positions to new cards only. Update container height.
@@ -111,16 +111,16 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
 2. Calculate proportional heights for ALL cards: `measuredHeight × (cardWidth / measuredAtWidth)`.
 3. `calculateMasonryLayout()` with proportional heights.
-4. Apply `--masonry-width`, `--masonry-left`, `--masonry-top`, `--masonry-card-height` to mounted cards.
+4. Apply inline `width`, `left`, `top`, `height` to mounted cards.
 5. `updateVirtualItemPositions()`. Update `cachedGroupOffsets`. `syncVirtualScroll()`.
 6. Return — skip full measurement path.
 
-The explicit `--masonry-card-height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
+The explicit inline `height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
 
 **DOM measurement branch** (`"resize-correction"`, `"image-coalesced"`) — ~6-9ms:
 
-1. For correction only: clear `--masonry-card-height` so cards reflow to natural height.
-2. Add `masonry-measuring` class. Set `--masonry-width` on mounted cards. Force reflow.
+1. For correction only: clear inline `height` so cards reflow to natural height.
+2. Add `masonry-measuring` class. Set inline `width` on mounted cards. Force reflow.
 3. Read mounted cards' `offsetHeight`. Unmounted cards use proportional scaling.
 4. `calculateMasonryLayout()` with mixed heights. Apply positions.
 5. For correction: set `measuredAtCardWidth` to establish fresh baseline.
@@ -134,7 +134,7 @@ Proportional height scaling drifts from true `height: auto` render heights. Afte
 
 1. If unmounted items exist, remount all (append to container end).
 2. Build `allCards` from `virtualItems` (not DOM query — DOM order differs after remount).
-3. Set `--masonry-width`, force reflow, read all heights, calculate layout, apply positions.
+3. Set inline `width`, force reflow, read all heights, calculate layout, apply positions.
 4. `updateVirtualItemPositions()`, store in `groupLayoutResults`.
 
 ### 4. Virtual scroll
@@ -202,15 +202,15 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 ## CSS positioning model
 
-Cards use `position: absolute` with CSS custom properties:
+Cards use `position: absolute` with direct inline styles for per-card positioning (eliminates CSS variable resolution overhead):
 
-| Property                | Set by    | Consumed by                                                                      |
-| ----------------------- | --------- | -------------------------------------------------------------------------------- |
-| `--masonry-width`       | Layout JS | `.dynamic-views-masonry .card` width.                                            |
-| `--masonry-left`        | Layout JS | `.dynamic-views-masonry .card` left position.                                    |
-| `--masonry-top`         | Layout JS | `.dynamic-views-masonry .card` top position.                                     |
-| `--masonry-card-height` | Layout JS | `.dynamic-views-masonry .card` height. Set during resize, cleared on correction. |
-| `--masonry-height`      | Layout JS | Container min-height (sets scrollable area).                                     |
+| Style / Property   | Set by    | Purpose                                                            |
+| ------------------ | --------- | ------------------------------------------------------------------ |
+| `style.width`      | Layout JS | Card width (inline style).                                         |
+| `style.left`       | Layout JS | Card left position (inline style).                                 |
+| `style.top`        | Layout JS | Card top position (inline style).                                  |
+| `style.height`     | Layout JS | Card height. Set during resize, cleared on correction.             |
+| `--masonry-height` | Layout JS | Container min-height via CSS custom property (sets scrollable area).|
 
 **Key CSS classes**:
 
