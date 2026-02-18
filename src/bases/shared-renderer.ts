@@ -1918,6 +1918,68 @@ export class SharedCardRenderer {
   }
 
   /**
+   * Surgically replace subtitle DOM within an existing card.
+   * Handles three transitions: subtitle appeared, disappeared, or changed value.
+   */
+  public rerenderSubtitle(
+    cardEl: HTMLElement,
+    card: CardData,
+    entry: BasesEntry,
+    settings: BasesResolvedSettings,
+  ): void {
+    const subtitleEl = cardEl.querySelector<HTMLElement>(".card-subtitle");
+    const hasSubtitle = !!(settings.subtitleProperty && card.subtitle);
+
+    // Subtitle disappeared: remove stale element
+    if (subtitleEl && !hasSubtitle) {
+      subtitleEl.remove();
+      return;
+    }
+
+    // No subtitle before or after: nothing to do
+    if (!hasSubtitle) return;
+
+    // Subtitle appeared: create element inside .card-title-block
+    let targetEl = subtitleEl;
+    if (!targetEl) {
+      const titleBlock = cardEl.querySelector<HTMLElement>(".card-title-block");
+      if (!titleBlock) return;
+      targetEl = titleBlock.createDiv("card-subtitle");
+    } else {
+      // Subtitle changed: clear old content
+      targetEl.empty();
+    }
+
+    const propAbort = new AbortController();
+    this.cardAbortControllers.push(propAbort);
+
+    this.renderPropertyContent(
+      targetEl,
+      settings.subtitleProperty,
+      card.subtitle,
+      card,
+      entry,
+      { ...settings, propertyLabels: "hide" },
+      shouldHideMissingProperties(),
+      getHideEmptyMode(),
+      propAbort.signal,
+    );
+
+    // Restore scroll gradients on subtitle
+    if (
+      document.body.classList.contains("dynamic-views-subtitle-overflow-scroll")
+    ) {
+      setupElementScrollGradient(targetEl, propAbort.signal);
+    }
+    const wrapper = targetEl.querySelector<HTMLElement>(
+      ".property-content-wrapper",
+    );
+    if (wrapper) {
+      setupElementScrollGradient(wrapper, propAbort.signal);
+    }
+  }
+
+  /**
    * Renders property fields for a card using dynamic property array
    */
   private renderProperties(

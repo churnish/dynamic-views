@@ -1,8 +1,6 @@
 ---
 title: iOS WebKit quirks
-description: >-
-  Platform-specific bugs in iOS WebKit (WKWebView) affecting
-  content-visibility, IntersectionObserver, and CSS scroll-state().
+description: Platform-specific bugs in iOS WebKit (WKWebView) affecting content-visibility, IntersectionObserver, and CSS scroll-state().
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-11
 ---

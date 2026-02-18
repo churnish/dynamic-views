@@ -175,13 +175,17 @@ export function setupImageLoadHandler(
   };
   const errorHandler = () => {
     if (cardEl.classList.contains("cover-ready")) return;
-    markImageBroken(imgEl.src);
+    const failedSrc = imgEl.src;
+    markImageBroken(failedSrc);
 
     // Double rAF for cover-ready (consistent with multi-image error handlers)
     requestAnimationFrame(() => {
       if (!cardEl.isConnected || !imgEl.isConnected) return;
       requestAnimationFrame(() => {
         if (!cardEl.isConnected || !imgEl.isConnected) return;
+        // Skip if src changed — another handler (e.g. slideshow first-image
+        // error in shared-renderer.ts) already advanced to the next image
+        if (imgEl.src !== failedSrc) return;
         // Hide broken image to prevent placeholder icon
         imgEl.addClass("dynamic-views-hidden");
         cardEl.classList.add("cover-ready");

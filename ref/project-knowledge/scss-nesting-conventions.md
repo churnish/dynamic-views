@@ -1,8 +1,6 @@
 ---
 title: SCSS nesting conventions
-description: >-
-  Rules for nesting selectors in SCSS partials — what to nest under
-  .dynamic-views { } and what to leave flat.
+description: Rules for nesting selectors in SCSS partials — what to nest under .dynamic-views { } and what to leave flat.
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-14
 ---

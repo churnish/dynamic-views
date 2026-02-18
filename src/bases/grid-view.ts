@@ -6,7 +6,10 @@
 import type { BasesViewConfig, ViewOption } from "obsidian";
 import { BasesView, BasesEntry, QueryController, TFile } from "obsidian";
 import { CardData } from "../shared/card-renderer";
-import { transformBasesEntries } from "../shared/data-transform";
+import {
+  basesEntryToCardData,
+  transformBasesEntries,
+} from "../shared/data-transform";
 import {
   readBasesSettings,
   getBasesViewOptions,
@@ -729,8 +732,17 @@ export class DynamicViewsGridView extends BasesView {
         "\0\0" +
         (groupByProperty ?? "");
       const propertySetHash = [...visibleProperties].sort().join("\0");
+      // Further exclude order-derived settings for reorder detection
+      // (titleProperty, subtitleProperty, _skipLeadingProperties change when
+      // displayFirstAsTitle derives them from property order positions)
+      const {
+        titleProperty: _tp,
+        subtitleProperty: _sp,
+        _skipLeadingProperties: _slp,
+        ...orderIndependentSettings
+      } = hashableSettings;
       const settingsHashExcludingOrder =
-        JSON.stringify(hashableSettings) +
+        JSON.stringify(orderIndependentSettings) +
         "\0\0" +
         sortMethod +
         "\0\0" +
@@ -852,7 +864,7 @@ export class DynamicViewsGridView extends BasesView {
           this.renderState.lastSettingsHashExcludingOrder;
 
       if (isPropertyReorderOnly) {
-        this.updatePropertyOrder(visibleProperties, settings);
+        this.updatePropertyOrder(visibleProperties, settings, sortMethod);
         this.renderState.lastRenderHash = renderHash;
         this.renderState.lastSettingsHash = settingsHash;
         this.renderState.lastPropertySetHash = propertySetHash;
@@ -1231,10 +1243,11 @@ export class DynamicViewsGridView extends BasesView {
     return handle;
   }
 
-  /** Surgical property reorder: update property DOM without full re-render */
+  /** Surgical property reorder: rebuild CardData + update title/subtitle/property DOM */
   private updatePropertyOrder(
     visibleProperties: string[],
     settings: BasesResolvedSettings,
+    sortMethod: string,
   ): void {
     const feedEl = this.feedContainerRef.current;
     if (!feedEl) return;
@@ -1247,15 +1260,26 @@ export class DynamicViewsGridView extends BasesView {
       const stored = this.cardDataByPath.get(path);
       if (!stored) continue;
 
-      // Rebuild properties array in new order (propMap.has filters out
-      // title/subtitle properties not in cardData.properties)
-      const propMap = new Map(
-        stored.cardData.properties.map((p) => [p.name, p]),
+      // Rebuild CardData with new settings (cheap: property lookups only).
+      // Preserves cached textPreview and imageUrl from previous render.
+      stored.cardData = basesEntryToCardData(
+        this.app,
+        stored.entry,
+        settings,
+        sortMethod,
+        this.sortState.isShuffled,
+        visibleProperties,
+        stored.cardData.textPreview,
+        stored.cardData.imageUrl,
       );
-      stored.cardData.properties = visibleProperties
-        .filter((name) => propMap.has(name))
-        .map((name) => propMap.get(name)!);
 
+      this.updateTitleText(cardEl, stored.cardData, stored.entry, settings);
+      this.cardRenderer.rerenderSubtitle(
+        cardEl,
+        stored.cardData,
+        stored.entry,
+        settings,
+      );
       this.cardRenderer.rerenderProperties(
         cardEl,
         stored.cardData,
@@ -1266,6 +1290,40 @@ export class DynamicViewsGridView extends BasesView {
 
     initializeScrollGradients(feedEl);
     this.scrollPreservation?.restoreAfterRender();
+  }
+
+  /** Update title text node without destroying child elements (extension suffix) */
+  private updateTitleText(
+    cardEl: HTMLElement,
+    card: CardData,
+    entry: BasesEntry,
+    settings: BasesResolvedSettings,
+  ): void {
+    const titleTextEl = cardEl.querySelector<HTMLElement>(".card-title-text");
+    if (!titleTextEl) return;
+
+    // Apply Extension mode logic (mirrors shared-renderer.ts title resolution)
+    const isExtMode = document.body.classList.contains(
+      "dynamic-views-file-type-ext",
+    );
+    const titleProp = settings.titleProperty || "";
+    const titleHasExtension =
+      titleProp === "file.name" || titleProp === "file.fullname";
+    const displayTitle =
+      isExtMode && titleHasExtension ? entry.file.basename : card.title;
+
+    // Find first text node — preserves child elements (.card-title-ext-suffix)
+    const textNode = Array.from(titleTextEl.childNodes).find(
+      (n) => n.nodeType === Node.TEXT_NODE,
+    );
+    if (textNode) {
+      textNode.textContent = displayTitle || "";
+    } else if (displayTitle) {
+      titleTextEl.insertBefore(
+        document.createTextNode(displayTitle),
+        titleTextEl.firstChild,
+      );
+    }
   }
 
   /** Update only changed cards in-place without full re-render */

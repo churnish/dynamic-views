@@ -1,8 +1,6 @@
 ---
 title: Obsidian API quirks
-description: >-
-  Undocumented Obsidian API behaviors discovered during Dynamic Views
-  development. Covers file write timing, race conditions, and workarounds.
+description: Undocumented Obsidian API behaviors discovered during Dynamic Views development. Covers file write timing, race conditions, and workarounds.
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-16
 ---

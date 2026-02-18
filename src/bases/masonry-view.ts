@@ -6,7 +6,10 @@
 import type { BasesViewConfig, ViewOption } from "obsidian";
 import { BasesView, BasesEntry, QueryController, TFile } from "obsidian";
 import { CardData } from "../shared/card-renderer";
-import { transformBasesEntries } from "../shared/data-transform";
+import {
+  basesEntryToCardData,
+  transformBasesEntries,
+} from "../shared/data-transform";
 import {
   readBasesSettings,
   getMasonryViewOptions,
@@ -137,6 +140,8 @@ export class DynamicViewsMasonryView extends BasesView {
     lastMethod: null,
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
+  private lastTitleProperty: string | null = null;
+  private lastSubtitleProperty: string | null = null;
   private focusCleanup: (() => void) | null = null;
   private templateInitializedRef = { value: false };
   private templateCooldownRef = {
@@ -848,8 +853,17 @@ export class DynamicViewsMasonryView extends BasesView {
         "\0\0" +
         (groupByProperty ?? "");
       const propertySetHash = [...visibleProperties].sort().join("\0");
+      // Further exclude order-derived settings for reorder detection
+      // (titleProperty, subtitleProperty, _skipLeadingProperties change when
+      // displayFirstAsTitle derives them from property order positions)
+      const {
+        titleProperty: _tp,
+        subtitleProperty: _sp,
+        _skipLeadingProperties: _slp,
+        ...orderIndependentSettings
+      } = hashableSettings;
       const settingsHashExcludingOrder =
-        JSON.stringify(hashableSettings) +
+        JSON.stringify(orderIndependentSettings) +
         "\0\0" +
         sortMethod +
         "\0\0" +
@@ -947,22 +961,29 @@ export class DynamicViewsMasonryView extends BasesView {
       const propertySetUnchanged =
         this.renderState.lastPropertySetHash !== null &&
         this.renderState.lastPropertySetHash === propertySetHash;
+      const titleSubtitleUnchanged =
+        this.lastTitleProperty !== null &&
+        settings.titleProperty === this.lastTitleProperty &&
+        settings.subtitleProperty === this.lastSubtitleProperty;
       const isPropertyReorderOnly =
         settingsChanged &&
         propertySetUnchanged &&
         !settings.invertPropertyPairing &&
+        titleSubtitleUnchanged &&
         pathsUnchanged &&
         changedPaths.size === 0 &&
         settingsHashExcludingOrder ===
           this.renderState.lastSettingsHashExcludingOrder;
 
       if (isPropertyReorderOnly) {
-        this.updatePropertyOrder(visibleProperties, settings);
+        this.updatePropertyOrder(visibleProperties, settings, sortMethod);
         this.renderState.lastRenderHash = renderHash;
         this.renderState.lastSettingsHash = settingsHash;
         this.renderState.lastPropertySetHash = propertySetHash;
         this.renderState.lastSettingsHashExcludingOrder =
           settingsHashExcludingOrder;
+        this.lastTitleProperty = settings.titleProperty;
+        this.lastSubtitleProperty = settings.subtitleProperty;
         return;
       }
 
@@ -984,6 +1005,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.renderState.lastPropertySetHash = propertySetHash;
       this.renderState.lastSettingsHashExcludingOrder =
         settingsHashExcludingOrder;
+      this.lastTitleProperty = settings.titleProperty;
+      this.lastSubtitleProperty = settings.subtitleProperty;
 
       // Set displayedCount when starting fresh (first render or after reset)
       if (this.displayedCount === 0) {
@@ -2017,20 +2040,27 @@ export class DynamicViewsMasonryView extends BasesView {
     return handle;
   }
 
-  /** Surgical property reorder: update property DOM without masonry relayout */
+  /** Surgical property reorder: rebuild CardData + update title/subtitle/property DOM */
   private updatePropertyOrder(
     visibleProperties: string[],
     settings: BasesResolvedSettings,
+    sortMethod: string,
   ): void {
     for (const item of this.virtualItems) {
-      // Rebuild properties array in new order (propMap.has filters out
-      // title/subtitle properties not in cardData.properties)
-      const propMap = new Map(item.cardData.properties.map((p) => [p.name, p]));
-      item.cardData.properties = visibleProperties
-        .filter((name) => propMap.has(name))
-        .map((name) => propMap.get(name)!);
+      // Rebuild CardData with new settings (cheap: property lookups only).
+      // Preserves cached textPreview and imageUrl from previous render.
+      item.cardData = basesEntryToCardData(
+        this.app,
+        item.entry,
+        settings,
+        sortMethod,
+        this.sortState.isShuffled,
+        visibleProperties,
+        item.cardData.textPreview,
+        item.cardData.imageUrl,
+      );
 
-      // Mounted cards: surgical DOM update
+      // Mounted cards: surgical DOM update (title/subtitle unchanged — guarded by caller)
       if (item.el) {
         this.cardRenderer.rerenderProperties(
           item.el,

@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. It uses absolute positioning via inline styles, proportional height scaling during resize, incremental batch appends for infinite scroll, and virtual scrolling to handle thousands of cards efficiently.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-17
+last updated: 2026-02-18
 ---
 
 # Masonry layout system
@@ -101,7 +101,30 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 6. Otherwise, fall back to full `updateLayoutRef.current()`.
 7. Clear `batchLayoutPending`. `syncVirtualScroll()`. Check if more content needed.
 
-### 3. Resize
+### 3. Property reorder (fast path)
+
+`processDataUpdate()` → `updatePropertyOrder()` — Triggered when only property ORDER changed (not the set of properties, not other settings).
+
+**Detection** (`isPropertyReorderOnly`):
+
+1. `settingsChanged` — settings hash differs from last render.
+2. `propertySetUnchanged` — sorted property names hash unchanged (same properties, different order).
+3. `!settings.invertPropertyPairing` — pairing is position-dependent; reorder changes row count.
+4. `titleSubtitleUnchanged` — `lastTitleProperty`/`lastSubtitleProperty` instance fields match current values. When `displayFirstAsTitle` is ON, title/subtitle are derived from positions 1–2 in `config.getOrder()`. If those positions changed, card heights may vary → skip fast path.
+5. `settingsHashExcludingOrder === last` — order-independent settings hash (excludes `titleProperty`, `subtitleProperty`, `_skipLeadingProperties` which are position-derived, plus CSS-only fields like `textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`).
+6. `pathsUnchanged && changedPaths.size === 0` — no file additions/removals/modifications.
+
+**Execution** (`updatePropertyOrder()`):
+
+1. For each `VirtualItem`: rebuild `cardData` via `basesEntryToCardData()` (preserves cached `textPreview`/`imageUrl`).
+2. For mounted cards (`item.el`): call `rerenderProperties()` only — title/subtitle unchanged by guard.
+3. Unmounted cards: `cardData` updated; next mount uses new order.
+4. Reinitialize scroll gradients. Restore scroll position.
+5. **No masonry layout recalculation** — card heights are invariant under property reorder (property rows have constant height regardless of order).
+
+**Grid view difference**: Grid has no `titleSubtitleUnchanged` guard — CSS grid auto-reflows when DOM content changes. Grid also calls `updateTitleText()` and `rerenderSubtitle()` since title/subtitle may change. Grid iterates all DOM cards (no virtual scrolling yet), which causes a multi-second delay with many cards.
+
+### 4. Resize
 
 `ResizeObserver` → `throttledResize()` → `updateLayoutRef.current("resize-observer")`
 
@@ -140,7 +163,7 @@ Proportional height scaling drifts from true `height: auto` render heights. Afte
 3. Set inline `width`, force reflow, read all heights, calculate layout, apply positions.
 4. `updateVirtualItemPositions()`, store in `groupLayoutResults`.
 
-### 4. Virtual scroll
+### 5. Virtual scroll
 
 Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmounting during initial render and batch loading.
 
@@ -249,7 +272,7 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 ## Key invariants
 
 1. **`virtualItems` is the source of truth for card ordering.** After remounting, always collect cards from `virtualItems`, never `querySelectorAll` (DOM order differs after remount — appended at end).
-2. **`groupLayoutResults` stores original measured heights**, not scaled. `tryProportionalResize` restores original heights after updating VirtualItem positions with scaled values. This ensures future proportional scaling always starts from the original measurement.
+2. **`groupLayoutResults` stores original measured heights**, not scaled. The proportional fast path intentionally omits `heights` from the stored result (scaled values would corrupt the merge in `appendBatch`). The DOM measurement and full layout paths store accurate DOM-measured heights. `appendBatch`'s merge handles missing heights via `?? []`.
 3. **`updateVirtualItemPositions` maps by group index.** `virtualItemsByGroup.get(key)[i]` ↔ `result.positions[i]`. Consistent because both use the same ordering. The proportional fast path bypasses this function and updates VirtualItems inline.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
 5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions.
