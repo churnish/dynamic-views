@@ -138,8 +138,8 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - Greedy shortest-column placement (inlined — bypasses `calculateMasonryLayout`).
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.
-3. Update `cachedGroupOffsets`. If column count changed (`columns !== lastLayoutColumns`), run `syncVirtualScroll()` to mount cards for new viewport positions. Otherwise skip sync (mounted cards stay near viewport during same-column-count resize).
-4. Update `lastLayoutColumns`. Return — skip full measurement path.
+3. Update `cachedGroupOffsets`. Run `syncVirtualScroll()` unconditionally (cheap for same-column-count frames: 0-3 mounts at viewport edges from proportional drift).
+4. Return — skip full measurement path.
 
 The explicit inline `height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
 
@@ -211,8 +211,8 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Behavior**: Every ResizeObserver callback cancels any pending RAF and schedules a new one. At most one layout runs per frame (~60fps).
 - **No trailing call**: Single RAF ensures the last resize event always fires.
 - **Container width caching**: `pendingResizeWidth` stores `entries[0].contentRect.width` before the RAF, eliminating `getBoundingClientRect` reflow in the layout function.
-- **Column-count-aware sync during resize**: `syncVirtualScroll` runs only when column count changes (`columns !== lastLayoutColumns`), which reshuffles the entire layout and scatters mounted cards. For same-column-count resize frames (~95%), sync is skipped — mounted cards stay near their viewport positions after proportional scaling.
-- **Post-resize correction**: 200ms after the last resize, `"resize-correction"` re-measures mounted cards to fix proportional height drift, then `syncVirtualScroll` runs to mount/unmount cards for the final layout.
+- **Unconditional sync during resize**: `syncVirtualScroll` runs after every proportional resize frame. For same-column-count frames (~95%), this is cheap (0-3 mounts at viewport edges from proportional drift). At column count boundaries, sync handles the full layout reshuffle.
+- **Post-resize correction**: 200ms after the last resize, `"resize-correction"` re-measures mounted cards to fix proportional height drift, then `syncVirtualScroll` runs to mount/unmount cards for the final layout. The 200ms debounce cannot be reduced — rAF (~16ms) and 100ms both cause card flashing because ResizeObserver gaps let correction fire mid-drag, triggering mode switching (proportional ↔ DOM measurement).
 
 ### Scroll throttle
 

@@ -62,6 +62,17 @@
       background-color var(--anim-duration-fast, 140ms) ease;
   }
 
+  // Softer transition during post-resize correction — proportional-to-DOM
+  // height reconciliation shifts cards visibly, so ease it over 300ms
+  .masonry-correcting .card.masonry-positioned {
+    transition:
+      opacity var(--anim-duration-superfast, 70ms) ease,
+      top var(--anim-duration-moderate, 300ms) ease,
+      left var(--anim-duration-moderate, 300ms) ease,
+      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
+      background-color var(--anim-duration-fast, 140ms) ease;
+  }
+
   // Strip top/left transitions during active resize — cards reposition instantly
   // instead of lagging 140ms behind each frame's new position
   .masonry-resize-active .card.masonry-positioned {

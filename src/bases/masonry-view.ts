@@ -178,7 +178,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private isLoading: boolean = false;
   private batchLayoutPending: boolean = false;
   private pendingImageRelayout: boolean = false;
-  private resizeActiveTimeout: number | null = null;
+  private resizeCorrectionTimeout: number | null = null;
 
   private scrollResizeObserver: ResizeObserver | null = null;
   private containerRef: { current: HTMLElement | null } = { current: null };
@@ -1366,7 +1366,7 @@ export class DynamicViewsMasonryView extends BasesView {
             this.pendingImageRelayout = false;
             // Skip during active resize — post-resize correction will
             // pick up height changes from images that loaded mid-resize
-            if (this.resizeActiveTimeout !== null) return;
+            if (this.resizeCorrectionTimeout !== null) return;
             this.updateLayoutRef.current?.("image-coalesced");
           });
         }
@@ -1572,14 +1572,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
                 this.groupLayoutResults.set(groupKey, result);
                 this.updateVirtualItemPositions(groupKey, result);
-
-                // Update metadata for mounted cards (accurate DOM heights)
-                for (const item of groupItems) {
-                  if (item.el) {
-                    item.measuredHeight = item.height;
-                    item.measuredAtWidth = cardWidth;
-                  }
-                }
               }
 
               this.masonryContainer.classList.remove("masonry-measuring");
@@ -1773,14 +1765,20 @@ export class DynamicViewsMasonryView extends BasesView {
       // Disable top/left CSS transitions during active resize so cards
       // reposition instantly instead of lagging 140ms behind each frame
       this.masonryContainer?.classList.add("masonry-resize-active");
-      if (this.resizeActiveTimeout !== null) {
-        clearTimeout(this.resizeActiveTimeout);
+      if (this.resizeCorrectionTimeout !== null) {
+        clearTimeout(this.resizeCorrectionTimeout);
       }
-      this.resizeActiveTimeout = window.setTimeout(() => {
-        this.resizeActiveTimeout = null;
+      this.resizeCorrectionTimeout = window.setTimeout(() => {
+        this.resizeCorrectionTimeout = null;
         this.masonryContainer?.classList.remove("masonry-resize-active");
+        // Softer transition during correction — proportional-to-DOM shift is visible
+        this.masonryContainer?.classList.add("masonry-correcting");
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.("resize-correction");
+        // Remove after transition completes (300ms matches --anim-duration-moderate)
+        window.setTimeout(() => {
+          this.masonryContainer?.classList.remove("masonry-correcting");
+        }, 300);
       }, 200);
 
       if (this.resizeRafId !== null) {
@@ -1895,13 +1893,6 @@ export class DynamicViewsMasonryView extends BasesView {
       result.measuredAtCardWidth = cardWidth;
       this.groupLayoutResults.set(groupKey, result);
       this.updateVirtualItemPositions(groupKey, result);
-
-      for (const item of groupItems) {
-        if (item.el) {
-          item.measuredHeight = item.height;
-          item.measuredAtWidth = cardWidth;
-        }
-      }
     }
     this.masonryContainer?.classList.remove("masonry-measuring");
   }
@@ -2010,7 +2001,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // During active resize, set explicit height to match layout positioning.
     // Without this, height:auto renders at natural height, causing mismatch
     // with proportional-scaled positions → overlap/gap.
-    if (this.resizeActiveTimeout !== null) {
+    if (this.resizeCorrectionTimeout !== null) {
       handle.el.style.height = `${item.height}px`;
     }
     item.el = handle.el;
@@ -2898,8 +2889,8 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.resizeRafId !== null) {
       cancelAnimationFrame(this.resizeRafId);
     }
-    if (this.resizeActiveTimeout !== null) {
-      clearTimeout(this.resizeActiveTimeout);
+    if (this.resizeCorrectionTimeout !== null) {
+      clearTimeout(this.resizeCorrectionTimeout);
     }
 
     if (this.trailingUpdate.timeoutId !== null) {
