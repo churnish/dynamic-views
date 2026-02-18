@@ -1,4 +1,11 @@
-import { readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, existsSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  cpSync,
+  rmSync,
+  existsSync,
+} from "fs";
 import { execSync } from "child_process";
 import { dirname, join } from "path";
 
@@ -68,7 +75,7 @@ try {
 // Sync Claude config files from manifest
 try {
   const manifest_md = readFileSync("claude-publish.md", "utf8");
-  const destDir = ".claude";
+  const destDir = "claude";
 
   // Clean previous copy
   if (existsSync(destDir)) rmSync(destDir, { recursive: true });
