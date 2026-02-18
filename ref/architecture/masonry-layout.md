@@ -177,6 +177,8 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 **Trigger points**: scroll event (RAF-debounced), after full layout, after batch append. **Skipped during active resize** — mount/unmount deferred to post-resize correction to prevent mount storms (50-70 cards mounting in one frame during column count changes).
 
+**Post-mount remeasure**: When `syncVirtualScroll` mounts new cards outside of active resize, `remeasureAndReposition()` re-measures DOM heights and recalculates positions. This corrects overlap caused by proportional height drift in `height: auto` cards.
+
 ## Layout update guard system
 
 `updateLayoutRef.current(source?)` has 5 sequential guards:
@@ -277,5 +279,5 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
 5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions.
 6. **Virtual scroll sync runs unconditionally after every position change.** Full measurement, batch append, correction, and proportional resize all call `syncVirtualScroll()`. During same-column-count resize, sync is cheap (0-3 mounts at edges from proportional drift). Skipping sync during resize caused blank space as items drifted outside the viewport without remounting.
-7. **Post-correction remeasure fixes gap mismatch.** After correction's `finally` sync mounts new items, `remeasureAndReposition()` re-measures their DOM heights and recalculates layout. Without this, newly mounted cards have proportional-based positions but DOM heights, producing non-uniform gaps. Only runs for `resize-correction` source.
+7. **Post-mount remeasure fixes proportional height drift.** After `syncVirtualScroll` mounts new cards, `remeasureAndReposition()` runs to correct overlap caused by proportional height estimates diverging from actual DOM heights (`height: auto`). Skipped during active resize (cards have explicit heights). This replaces the previous correction-specific remeasure.
 8. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.

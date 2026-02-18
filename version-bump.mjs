@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, existsSync } from "fs";
 import { execSync } from "child_process";
+import { dirname, join } from "path";
 
 const targetVersion = process.env.npm_package_version;
 
@@ -62,6 +63,49 @@ try {
   console.log("Updated README.md from GitHub");
 } catch {
   console.warn("Could not fetch README.md from GitHub");
+}
+
+// Sync Claude config files from manifest
+try {
+  const manifest_md = readFileSync("claude-publish.md", "utf8");
+  const destDir = ".claude";
+
+  // Clean previous copy
+  if (existsSync(destDir)) rmSync(destDir, { recursive: true });
+
+  // Extract entries from fenced code blocks
+  const entries = [];
+  let inBlock = false;
+  for (const line of manifest_md.split("\n")) {
+    if (line.startsWith("```")) {
+      inBlock = !inBlock;
+      continue;
+    }
+    if (inBlock && line.trim()) entries.push(line.trim());
+  }
+
+  for (const entry of entries) {
+    let dest, source;
+    if (entry.includes(" < ")) {
+      [dest, source] = entry.split(" < ");
+    } else {
+      source = entry;
+      // Strip ~/.claude/ prefix to derive dest
+      const home = process.env.HOME;
+      dest = source.replace(`${home}/.claude/`, "");
+    }
+
+    const target = join(destDir, dest);
+    mkdirSync(dirname(target), { recursive: true });
+    cpSync(source, target, {
+      recursive: true,
+      filter: (src) => !src.endsWith(".DS_Store"),
+    });
+  }
+
+  console.log(`Synced ${entries.length} Claude config entries to ${destDir}/`);
+} catch (err) {
+  console.warn(`Could not sync Claude config: ${err.message}`);
 }
 
 // Update manifest.json

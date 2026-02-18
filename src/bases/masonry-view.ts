@@ -197,6 +197,10 @@ export class DynamicViewsMasonryView extends BasesView {
   private displayedSoFar: number = 0;
   private pendingResizeWidth: number | null = null;
   private cachedGroupOffsets: Map<string | undefined, number> = new Map();
+  private lastLayoutCardWidth: number = 0;
+  private lastLayoutGap: number = 0;
+  private lastLayoutMinColumns: number = 1;
+  private lastLayoutIsGrouped: boolean = false;
   private propertyMeasuredTimeout: number | null = null;
   private lastDataUpdateTime = { value: 0 };
   private trailingUpdate: {
@@ -1389,7 +1393,6 @@ export class DynamicViewsMasonryView extends BasesView {
       const gap = getCardSpacing(this.containerEl);
       const isGrouped = this.containerEl.classList.contains("is-grouped");
       let cardWidth = 0;
-      let isCorrection = false;
       try {
         // Hide cards during initial render only
         if (!skipHiding) {
@@ -1442,6 +1445,12 @@ export class DynamicViewsMasonryView extends BasesView {
         });
         const columns = dims.columns;
         cardWidth = dims.cardWidth;
+
+        // Store for syncVirtualScroll's post-mount remeasure
+        this.lastLayoutCardWidth = cardWidth;
+        this.lastLayoutGap = gap;
+        this.lastLayoutMinColumns = minColumns;
+        this.lastLayoutIsGrouped = isGrouped;
 
         // Fast path: skip full remount when unmounted cards have prior heights.
         // Two branches:
@@ -1504,7 +1513,6 @@ export class DynamicViewsMasonryView extends BasesView {
               // Clear explicit heights for correction so cards reflow to
               // natural height. image-coalesced must NOT clear mid-resize.
               if (source === "resize-correction") {
-                isCorrection = true;
                 for (const item of this.virtualItems) {
                   if (item.el) {
                     // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- clearing inline layout height for DOM re-measurement
@@ -1711,20 +1719,6 @@ export class DynamicViewsMasonryView extends BasesView {
         if (!fastPathHandledSync) {
           this.updateCachedGroupOffsets();
           this.syncVirtualScroll();
-
-          // After correction's sync mounts new items, their DOM heights may
-          // differ from proportional heights used for positioning. Re-measure
-          // to eliminate gap mismatch (only runs if heights actually differ).
-          if (isCorrection && cardWidth > 0) {
-            this.remeasureAndReposition(
-              containerWidth,
-              cardWidth,
-              settings,
-              minColumns,
-              gap,
-              isGrouped,
-            );
-          }
         }
 
         // Show end indicator if all items displayed (skip if 0 results)
@@ -1895,6 +1889,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.updateVirtualItemPositions(groupKey, result);
     }
     this.masonryContainer?.classList.remove("masonry-measuring");
+    this.updateCachedGroupOffsets();
   }
 
   /** Rebuild the groupKey → VirtualItem[] index.
@@ -2039,6 +2034,7 @@ export class DynamicViewsMasonryView extends BasesView {
     const visibleTop = scrollTop - paneHeight;
     const visibleBottom = scrollTop + paneHeight + paneHeight;
 
+    let mountedNew = false;
     for (const item of this.virtualItems) {
       // Skip items not yet positioned (height 0 = created but not laid out)
       if (item.height === 0) continue;
@@ -2054,10 +2050,29 @@ export class DynamicViewsMasonryView extends BasesView {
         const container = this.groupContainers.get(item.groupKey);
         if (container) {
           this.mountVirtualItem(item, container, settings);
+          mountedNew = true;
         }
       } else if (!inView && item.el) {
         this.unmountVirtualItem(item);
       }
+    }
+
+    // Newly mounted cards render at natural DOM heights which may differ
+    // from proportional VirtualItem heights — remeasure and reposition
+    // to prevent overlap. Skip during active resize (explicit heights set).
+    if (
+      mountedNew &&
+      this.resizeCorrectionTimeout === null &&
+      this.lastLayoutCardWidth > 0
+    ) {
+      this.remeasureAndReposition(
+        this.lastLayoutWidth,
+        this.lastLayoutCardWidth,
+        settings,
+        this.lastLayoutMinColumns,
+        this.lastLayoutGap,
+        this.lastLayoutIsGrouped,
+      );
     }
   }
 
