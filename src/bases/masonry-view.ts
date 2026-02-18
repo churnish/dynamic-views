@@ -2059,11 +2059,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Newly mounted cards render at natural DOM heights which may differ
     // from proportional VirtualItem heights — remeasure and reposition
-    // to prevent overlap. Skip during active resize (explicit heights set).
+    // to prevent overlap. Skip during active resize (explicit heights set)
+    // and during pending batch layout (unpositioned cards would corrupt heights).
     if (
       mountedNew &&
       this.resizeCorrectionTimeout === null &&
-      this.lastLayoutCardWidth > 0
+      this.lastLayoutCardWidth > 0 &&
+      !this.batchLayoutPending
     ) {
       this.remeasureAndReposition(
         this.lastLayoutWidth,
