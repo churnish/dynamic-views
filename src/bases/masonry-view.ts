@@ -1375,7 +1375,7 @@ export class DynamicViewsMasonryView extends BasesView {
             if (this.batchLayoutPending) return;
             if (this.lastLayoutCardWidth <= 0) return;
             if (!this.lastRenderedSettings) return;
-            this.remeasureAndReposition(
+            const didWork = this.remeasureAndReposition(
               this.lastLayoutWidth,
               this.lastLayoutCardWidth,
               this.lastRenderedSettings,
@@ -1383,7 +1383,7 @@ export class DynamicViewsMasonryView extends BasesView {
               this.lastLayoutGap,
               this.lastLayoutIsGrouped,
             );
-            this.scheduleDeferredRemeasure();
+            if (didWork) this.scheduleDeferredRemeasure();
           });
         }
         return;
@@ -1787,10 +1787,10 @@ export class DynamicViewsMasonryView extends BasesView {
         this.masonryContainer?.classList.add("masonry-correcting");
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.("resize-correction");
-        // Remove after transition completes (300ms matches --anim-duration-moderate)
+        // Remove after transition completes (140ms matches --anim-duration-fast)
         window.setTimeout(() => {
           this.masonryContainer?.classList.remove("masonry-correcting");
-        }, 300);
+        }, 140);
       }, 200);
 
       if (this.resizeRafId !== null) {
@@ -1845,7 +1845,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Re-measure mounted cards and reposition after correction's sync mounts
    *  new items whose DOM heights differ from proportional layout heights.
-   *  Only runs when at least one mounted card's DOM height differs by >1px. */
+   *  Only runs when at least one mounted card's DOM height differs by >1px.
+   *  Returns true if repositioning was needed, false if skipped. */
   private remeasureAndReposition(
     containerWidth: number,
     cardWidth: number,
@@ -1853,7 +1854,7 @@ export class DynamicViewsMasonryView extends BasesView {
     minColumns: number,
     gap: number,
     isGrouped: boolean,
-  ): void {
+  ): boolean {
     // Quick check: does any mounted item need repositioning?
     let needsReposition = false;
     for (const item of this.virtualItems) {
@@ -1862,7 +1863,7 @@ export class DynamicViewsMasonryView extends BasesView {
         break;
       }
     }
-    if (!needsReposition) return;
+    if (!needsReposition) return false;
 
     // Smooth transition during remeasure — corrections happen when scroll is
     // idle (debounced) so they're visible to the user and should ease in
@@ -1964,10 +1965,11 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    // Remove after transition completes (300ms matches --anim-duration-moderate)
+    // Remove after transition completes (140ms matches --anim-duration-fast)
     window.setTimeout(() => {
       this.masonryContainer?.classList.remove("masonry-correcting");
-    }, 300);
+    }, 140);
+    return true;
   }
 
   /** Rebuild the groupKey → VirtualItem[] index.
@@ -2156,7 +2158,7 @@ export class DynamicViewsMasonryView extends BasesView {
         if (this.resizeCorrectionTimeout !== null) return;
         if (this.lastLayoutCardWidth <= 0) return;
         if (!this.lastRenderedSettings) return;
-        this.remeasureAndReposition(
+        const didWork = this.remeasureAndReposition(
           this.lastLayoutWidth,
           this.lastLayoutCardWidth,
           this.lastRenderedSettings,
@@ -2164,7 +2166,7 @@ export class DynamicViewsMasonryView extends BasesView {
           this.lastLayoutGap,
           this.lastLayoutIsGrouped,
         );
-        this.scheduleDeferredRemeasure();
+        if (didWork) this.scheduleDeferredRemeasure();
       }, 200);
     }
   }

@@ -67,8 +67,8 @@
   .masonry-correcting .card.masonry-positioned {
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
-      top var(--anim-duration-moderate, 300ms) ease,
-      left var(--anim-duration-moderate, 300ms) ease,
+      top var(--anim-duration-fast, 140ms) ease,
+      left var(--anim-duration-fast, 140ms) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }
