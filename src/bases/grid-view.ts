@@ -163,6 +163,7 @@ export class DynamicViewsGridView extends BasesView {
   private displayedCount: number = 50;
   private isLoading: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
+  private observerWindow: (Window & typeof globalThis) | null = null;
   private currentCardSize: number = 400;
   private currentMinColumns: number = 1;
   private feedContainerRef: { current: HTMLElement | null } = { current: null };
@@ -1121,8 +1122,15 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       // Setup ResizeObserver for dynamic grid updates (double-RAF debounce)
+      const currentWindow = this.containerEl.ownerDocument.defaultView;
+      if (currentWindow && this.observerWindow !== currentWindow) {
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = null;
+        this.observerWindow = currentWindow;
+      }
+
       if (!this.resizeObserver) {
-        this.resizeObserver = new ResizeObserver((entries) => {
+        this.resizeObserver = new (this.observerWindow ?? window).ResizeObserver((entries) => {
           const width = entries[0]?.contentRect.width ?? 0;
 
           // Column update logic (extracted for reuse)

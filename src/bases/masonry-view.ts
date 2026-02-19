@@ -193,6 +193,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private previousDisplayedCount: number = 0;
   private layoutResizeObserver: ResizeObserver | null = null;
   private cardResizeObserver: ResizeObserver | null = null;
+  private observerWindow: (Window & typeof globalThis) | null = null;
   private cardResizeRafId: number | null = null;
   private groupLayoutResults: Map<string | undefined, MasonryLayoutResult> =
     new Map();

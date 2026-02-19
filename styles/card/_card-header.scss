@@ -84,7 +84,7 @@ body.dynamic-views-file-type-ext
 }
 
 @media (hover: hover) {
-  .dynamic-views .card.image-format-poster .card-title-url-icon:hover {
+  .dynamic-views .card.image-format-poster.hover-intent-active .card-title-url-icon:hover {
     background-color: color-mix(in srgb, currentColor 20%, transparent);
     border-radius: var(--radius-s);
   }

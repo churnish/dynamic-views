@@ -283,4 +283,18 @@ body.dynamic-views-card-background-custom .dynamic-views .card {
     .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
     cursor: default;
   }
+
+  /* Text cursor: higher specificity needed (base rule uses body.dynamic-views-open-on-title) */
+  body.dynamic-views-open-on-title
+    .dynamic-views
+    .card:not(.hover-intent-active) {
+    .card-text-preview,
+    .card-title,
+    .card-subtitle,
+    .property-label,
+    .property-label-inline,
+    .property-content {
+      cursor: default;
+    }
+  }
 }
