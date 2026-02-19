@@ -244,6 +244,14 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Effect**: ~60 concurrent image loads → 1 layout per frame instead of 60.
 - **Subsumption**: Direct relayouts (resize, initial-render) clear the flag, subsuming pending image relayouts.
 
+### Card height change detection (`cardResizeObserver`)
+
+- **Pattern**: Single `ResizeObserver` instance observes all mounted cards. Debounced `MASONRY_CORRECTION_MS` (200ms).
+- **Purpose**: Catch-all safety net for CSS-only height changes that bypass the normal layout pipeline — cover ratio slider, text preview lines, title lines, thumbnail size settings, and any future height-changing events.
+- **Lifecycle**: Created once in `setupMasonryLayout` (guarded by `!this.cardResizeObserver`). Registered for disconnect on view unload. Cards are observed in `renderCard` and unobserved in `unmountVirtualItem`. On full re-render, `containerEl.empty()` removes all card DOM nodes — ResizeObserver stops tracking removed elements automatically, so no explicit `disconnect` is needed between re-renders.
+- **Guards** (two-stage): The callback returns early if `resizeCorrectionTimeout !== null` (resize in progress), `batchLayoutPending`, `lastLayoutCardWidth === 0` (pre-layout), or `!lastRenderedSettings`. The debounced callback re-checks the same conditions plus `containerEl.isConnected` before calling `remeasureAndReposition`.
+- **Relation to `updateCardsInPlace`**: `updateCardsInPlace` retains its synchronous `remeasureAndReposition` call — content updates are infrequent, single events where 200ms debounce would be a visible regression. The observer is a complementary catch-all, not a replacement for the direct call.
+
 ## CSS positioning model
 
 Cards use `position: absolute` with direct inline styles for per-card positioning (eliminates CSS variable resolution overhead):

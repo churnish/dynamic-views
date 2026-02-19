@@ -186,6 +186,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private containerRef: { current: HTMLElement | null } = { current: null };
   private previousDisplayedCount: number = 0;
   private layoutResizeObserver: ResizeObserver | null = null;
+  private cardResizeObserver: ResizeObserver | null = null;
+  private cardResizeRafId: number | null = null;
   private resizeRafId: number | null = null;
   private groupLayoutResults: Map<string | undefined, MasonryLayoutResult> =
     new Map();
@@ -1820,6 +1822,44 @@ export class DynamicViewsMasonryView extends BasesView {
       this.layoutResizeObserver.disconnect();
       this.layoutResizeObserver.observe(this.masonryContainer);
     }
+
+    if (!this.cardResizeObserver) {
+      this.cardResizeObserver = new ResizeObserver(() => {
+        // Skip during active resize, batch layout, or pre-layout state
+        if (
+          this.resizeCorrectionTimeout !== null ||
+          this.batchLayoutPending ||
+          this.lastLayoutCardWidth === 0 ||
+          !this.lastRenderedSettings
+        )
+          return;
+        // RAF debounce — coalesce same-frame card height changes into one reflow
+        if (this.cardResizeRafId !== null) {
+          cancelAnimationFrame(this.cardResizeRafId);
+        }
+        this.cardResizeRafId = requestAnimationFrame(() => {
+          this.cardResizeRafId = null;
+          if (
+            !this.containerEl.isConnected ||
+            this.batchLayoutPending ||
+            this.resizeCorrectionTimeout !== null ||
+            this.lastLayoutCardWidth === 0 ||
+            !this.lastRenderedSettings
+          )
+            return;
+          const didWork = this.remeasureAndReposition(
+            this.lastLayoutWidth,
+            this.lastLayoutCardWidth,
+            this.lastRenderedSettings,
+            this.lastLayoutMinColumns,
+            this.lastLayoutGap,
+            this.lastLayoutIsGrouped,
+          );
+          if (didWork) this.scheduleDeferredRemeasure();
+        });
+      });
+      this.register(() => this.cardResizeObserver?.disconnect());
+    }
   }
 
   /** Update VirtualItem positions from a layout result for a specific group */
@@ -2091,6 +2131,7 @@ export class DynamicViewsMasonryView extends BasesView {
     item.handle?.cleanup();
     // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- clearing inline layout height before DOM removal
     item.el!.style.height = "";
+    this.cardResizeObserver?.unobserve(item.el!);
     item.el?.remove();
     item.el = null;
     item.handle = null;
@@ -2253,6 +2294,7 @@ export class DynamicViewsMasonryView extends BasesView {
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
       },
     );
+    this.cardResizeObserver?.observe(handle.el);
     return handle;
   }
 
@@ -3094,6 +3136,9 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (this.resizeCorrectionTimeout !== null) {
       clearTimeout(this.resizeCorrectionTimeout);
+    }
+    if (this.cardResizeRafId !== null) {
+      cancelAnimationFrame(this.cardResizeRafId);
     }
 
     if (this.trailingUpdate.timeoutId !== null) {
