@@ -76,6 +76,7 @@ import type {
   FocusState,
 } from "../types";
 import { setupContentVisibility } from "../shared/content-visibility";
+import { updateTextPreviewDOM } from "../shared/text-preview-dom";
 
 // Extend Obsidian types
 declare module "obsidian" {
