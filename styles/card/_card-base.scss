@@ -224,19 +224,25 @@ body.dynamic-views-card-background-custom .dynamic-views .card {
 }
 
 /* Card background on hover options */
-body.dynamic-views-card-background-hover-tinted .dynamic-views .card:hover {
-  background-color: var(--background-primary-alt);
-}
+@media (hover: hover) {
+  body.dynamic-views-card-background-hover-tinted
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: var(--background-primary-alt);
+  }
 
-body.dynamic-views-card-background-hover-transparent
-  .dynamic-views
-  .card:hover {
-  background-color: transparent;
-}
+  body.dynamic-views-card-background-hover-transparent
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: transparent;
+  }
 
-body.dynamic-views-card-background-hover-custom .dynamic-views .card:hover {
-  background-color: var(
-    --dynamic-views-card-background-color-hover-custom,
-    var(--background-primary-alt)
-  );
+  body.dynamic-views-card-background-hover-custom
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: var(
+      --dynamic-views-card-background-color-hover-custom,
+      var(--background-primary-alt)
+    );
+  }
 }

@@ -235,14 +235,8 @@
   .property a.internal-link {
     color: var(--link-color);
   }
-  .property a.internal-link:hover {
-    color: var(--link-color-hover);
-  }
   .property a.external-link {
     color: var(--link-external-color);
-  }
-  .property a.external-link:hover {
-    color: var(--link-external-color-hover);
   }
 
   .card-subtitle {
@@ -262,6 +256,24 @@
       var(--text-normal)
     );
   }
+}
+
+/* Property link hover: card (hover intent) */
+@media (hover: hover) {
+  .dynamic-views .card.hover-intent-active .property a.internal-link:hover {
+    color: var(--link-color-hover);
+  }
+  .dynamic-views .card.hover-intent-active .property a.external-link:hover {
+    color: var(--link-external-color-hover);
+  }
+}
+
+/* Property link hover: list (immediate) */
+.dynamic-views .list-properties .property a.internal-link:hover {
+  color: var(--link-color-hover);
+}
+.dynamic-views .list-properties .property a.external-link:hover {
+  color: var(--link-external-color-hover);
 }
 
 /* Compact mode: reset timestamp icon to left for even fields (edge mode only) */

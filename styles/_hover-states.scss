@@ -6,12 +6,14 @@
   /* Title hover colors (when open-on-title enabled) */
   body.dynamic-views-open-on-title.dynamic-views-title-color-faint
     .dynamic-views
+    .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-muted);
   }
   body.dynamic-views-open-on-title.dynamic-views-title-color-muted
     .dynamic-views
+    .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-normal);
@@ -19,6 +21,7 @@
   /* Normal - no hover color change */
   body.dynamic-views-open-on-title.dynamic-views-title-color-accent
     .dynamic-views
+    .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-accent-hover);
@@ -36,6 +39,7 @@
       .dynamic-views-title-color-custom
     )
     .dynamic-views
+    .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: color-mix(in hsl, var(--dynamic-views-title-color-value), white 15%);
@@ -44,6 +48,7 @@
   /* Subtitle hover colors (when clickable) — exclude real links which keep default hover */
   body.dynamic-views-subtitle-color-faint
     .dynamic-views
+    .card.hover-intent-active
     .card-subtitle
     :is(
       a:not(.internal-link, .external-link),
@@ -54,6 +59,7 @@
   }
   body.dynamic-views-subtitle-color-muted
     .dynamic-views
+    .card.hover-intent-active
     .card-subtitle
     :is(
       a:not(.internal-link, .external-link),
@@ -65,6 +71,7 @@
   /* Normal - no hover color change */
   body.dynamic-views-subtitle-color-accent
     .dynamic-views
+    .card.hover-intent-active
     .card-subtitle
     :is(
       a:not(.internal-link, .external-link),
@@ -86,6 +93,7 @@
       .dynamic-views-subtitle-color-custom
     )
     .dynamic-views
+    .card.hover-intent-active
     .card-subtitle
     :is(
       a:not(.internal-link, .external-link),
@@ -102,6 +110,7 @@
   /* Property hover colors - with labels */
   body.dynamic-views-property-color-with-labels-faint
     .dynamic-views
+    .card.hover-intent-active
     .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
@@ -113,6 +122,7 @@
   }
   body.dynamic-views-property-color-with-labels-muted
     .dynamic-views
+    .card.hover-intent-active
     .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
@@ -125,6 +135,7 @@
   /* Normal - no hover color change */
   body.dynamic-views-property-color-with-labels-accent
     .dynamic-views
+    .card.hover-intent-active
     .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
@@ -146,6 +157,7 @@
       .dynamic-views-property-color-with-labels-pink
     )
     .dynamic-views
+    .card.hover-intent-active
     .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
@@ -162,6 +174,7 @@
   /* Custom uses pre-computed hover variable */
   body.dynamic-views-property-color-with-labels-custom
     .dynamic-views
+    .card.hover-intent-active
     .property:has(:is(.property-label, .property-label-inline))
     .property-content
     :is(
@@ -178,6 +191,7 @@
   /* Property hover colors - without labels */
   body.dynamic-views-property-color-without-labels-faint
     .dynamic-views
+    .card.hover-intent-active
     .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
@@ -189,6 +203,7 @@
   }
   body.dynamic-views-property-color-without-labels-muted
     .dynamic-views
+    .card.hover-intent-active
     .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
@@ -201,6 +216,7 @@
   /* Normal - no hover color change */
   body.dynamic-views-property-color-without-labels-accent
     .dynamic-views
+    .card.hover-intent-active
     .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
@@ -222,6 +238,7 @@
       .dynamic-views-property-color-without-labels-pink
     )
     .dynamic-views
+    .card.hover-intent-active
     .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(
@@ -238,6 +255,7 @@
   /* Custom uses pre-computed hover variable */
   body.dynamic-views-property-color-without-labels-custom
     .dynamic-views
+    .card.hover-intent-active
     .property:not(:has(:is(.property-label, .property-label-inline)))
     .property-content
     :is(

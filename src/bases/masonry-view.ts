@@ -93,31 +93,11 @@ import type {
 } from "../types";
 import { CONTENT_HIDDEN_CLASS } from "../shared/content-visibility";
 import { updateTextPreviewDOM } from "../shared/text-preview-dom";
-import { type VirtualItem } from "../shared/virtual-scroll";
-
-/**
- * Measure the scalable portion of a card's height.
- * Only top/bottom covers scale linearly with card width (aspect ratio preserved).
- * Side covers, thumbnails, poster/backdrop, and fixed-cover-height are non-scalable.
- */
-function measureScalableHeight(cardEl: HTMLElement): number {
-  if (
-    !cardEl.classList.contains("card-cover-top") &&
-    !cardEl.classList.contains("card-cover-bottom")
-  ) {
-    return 0;
-  }
-  // Fixed cover height: CSS-determined, doesn't scale with width
-  if (
-    document.body.classList.contains("dynamic-views-masonry-fixed-cover-height")
-  ) {
-    return 0;
-  }
-  const wrapper = cardEl.querySelector<HTMLElement>(
-    ":scope > .card-cover-wrapper",
-  );
-  return wrapper ? wrapper.offsetHeight : 0;
-}
+import {
+  type VirtualItem,
+  measureScalableHeight,
+  estimateUnmountedHeight,
+} from "../shared/virtual-scroll";
 
 // Extend Obsidian types
 declare module "obsidian" {
@@ -214,7 +194,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private layoutResizeObserver: ResizeObserver | null = null;
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
-  private resizeRafId: number | null = null;
   private groupLayoutResults: Map<string | undefined, MasonryLayoutResult> =
     new Map();
   private virtualItems: VirtualItem[] = [];
@@ -1600,13 +1579,7 @@ export class DynamicViewsMasonryView extends BasesView {
                     item.scalableHeight = measureScalableHeight(item.el);
                     return h;
                   }
-                  if (item.measuredAtWidth > 0) {
-                    return (
-                      item.scalableHeight * (cardWidth / item.measuredAtWidth) +
-                      item.fixedHeight
-                    );
-                  }
-                  return item.height;
+                  return estimateUnmountedHeight(item, cardWidth);
                 });
 
                 const result = calculateMasonryLayout({
@@ -1677,7 +1650,8 @@ export class DynamicViewsMasonryView extends BasesView {
         // Phase 3: Read all heights (single pass)
         const heights = allCards.map((card) => card.offsetHeight);
 
-        // Phase 3b: Measure scalable heights (same reflow — no writes since Phase 3)
+        // Phase 3b: Measure scalable heights (still in same reflow — no style
+        // writes since Phase 3, so child offsetHeight reads are free)
         for (const item of this.virtualItems) {
           if (item.el) {
             item.scalableHeight = measureScalableHeight(item.el);
@@ -1820,9 +1794,9 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     };
 
-    // RAF-debounced resize handler — proportional scaling every frame (~60fps),
+    // Synchronous resize handler — proportional scaling runs directly in
+    // the ResizeObserver callback (RO fires at most once per frame).
     // DOM measurement correction 200ms after resize ends.
-    // Cancel-and-reschedule pattern ensures at most one layout per frame.
     const throttledResize = (entries: ResizeObserverEntry[]) => {
       if (entries.length === 0) return;
       const newWidth = Math.floor(entries[0].contentRect.width);
@@ -1849,14 +1823,12 @@ export class DynamicViewsMasonryView extends BasesView {
         }, MASONRY_CORRECTION_MS);
       }, MASONRY_CORRECTION_MS);
 
-      if (this.resizeRafId !== null) {
-        cancelAnimationFrame(this.resizeRafId);
-      }
-      this.resizeRafId = requestAnimationFrame(() => {
-        this.resizeRafId = null;
-        if (!this.masonryContainer?.isConnected) return;
+      // Run layout synchronously — no RAF deferral.
+      // Chromium throttles RAF for 400ms–3s after rapid setBounds,
+      // causing stale layout after hotkey window resize.
+      if (this.masonryContainer?.isConnected) {
         this.updateLayoutRef.current?.("resize-observer");
-      });
+      }
     };
 
     // Setup resize observer (only once, not per render)
@@ -1866,11 +1838,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.layoutResizeObserver.observe(this.masonryContainer);
       this.register(() => this.layoutResizeObserver?.disconnect());
     } else if (this.masonryContainer) {
-      // Cancel any pending RAF before re-observing
-      if (this.resizeRafId !== null) {
-        cancelAnimationFrame(this.resizeRafId);
-        this.resizeRafId = null;
-      }
       // Re-observe if container was recreated
       this.layoutResizeObserver.disconnect();
       this.layoutResizeObserver.observe(this.masonryContainer);
@@ -1989,13 +1956,7 @@ export class DynamicViewsMasonryView extends BasesView {
           item.scalableHeight = measureScalableHeight(item.el);
           return h;
         }
-        if (item.measuredAtWidth > 0) {
-          return (
-            item.scalableHeight * (cardWidth / item.measuredAtWidth) +
-            item.fixedHeight
-          );
-        }
-        return item.height;
+        return estimateUnmountedHeight(item, cardWidth);
       });
 
       const existingResult = this.groupLayoutResults.get(groupKey);
@@ -2039,7 +2000,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
         if (useGreedy) {
           result = calculateMasonryLayout({
-            cards: Array.from({ length: groupItems.length }) as HTMLElement[],
+            cards: Array.from<HTMLElement>({ length: groupItems.length }),
             containerWidth,
             cardSize: settings.cardSize,
             minColumns,
@@ -2135,11 +2096,7 @@ export class DynamicViewsMasonryView extends BasesView {
       const item = groupItems[i];
 
       // Split proportional height: cover scales with width, text stays fixed
-      const height =
-        item.measuredAtWidth > 0
-          ? item.scalableHeight * (cardWidth / item.measuredAtWidth) +
-            item.fixedHeight
-          : item.height;
+      const height = estimateUnmountedHeight(item, cardWidth);
 
       // Greedy shortest-column placement
       let shortestCol = 0;
@@ -3209,9 +3166,6 @@ export class DynamicViewsMasonryView extends BasesView {
   onunload(): void {
     this.scrollPreservation?.cleanup();
     this.renderState.abortController?.abort();
-    if (this.resizeRafId !== null) {
-      cancelAnimationFrame(this.resizeRafId);
-    }
     if (this.resizeCorrectionTimeout !== null) {
       clearTimeout(this.resizeCorrectionTimeout);
     }

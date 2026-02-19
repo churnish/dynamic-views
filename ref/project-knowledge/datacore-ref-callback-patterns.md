@@ -64,4 +64,4 @@ if (
 ## Current usages
 
 - `cardHoverIntentState` — cover hover zoom (tracks `zoomMode` for Style Settings changes)
-- `imageViewerHoverIntentState` — image viewer cursor hover intent (simple on/off)
+- `cardHoverIntentActive` — card-level hover intent: gates cursor, link hover effects, and keyboard nav (simple on/off)

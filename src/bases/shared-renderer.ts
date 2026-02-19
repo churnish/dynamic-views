@@ -922,12 +922,18 @@ export class SharedCardRenderer {
       { signal },
     );
 
-    // Track hovered card for hover-to-start keyboard navigation (hover intent)
-    if (keyboardNav?.onHoverStart && keyboardNav?.onHoverEnd) {
+    // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
+    if (window.matchMedia("(hover: hover)").matches) {
       setupHoverIntent(
         cardEl,
-        () => keyboardNav.onHoverStart?.(cardEl),
-        () => keyboardNav.onHoverEnd?.(),
+        () => {
+          cardEl.classList.add("hover-intent-active");
+          keyboardNav?.onHoverStart?.(cardEl);
+        },
+        () => {
+          cardEl.classList.remove("hover-intent-active");
+          keyboardNav?.onHoverEnd?.();
+        },
         signal,
       );
     }
@@ -966,16 +972,6 @@ export class SharedCardRenderer {
           );
         }
       }
-    }
-
-    // Image viewer cursor hover intent: show zoom-in cursor only after intentional hover
-    if (window.matchMedia("(hover: hover)").matches) {
-      setupHoverIntent(
-        cardEl,
-        () => cardEl.classList.add("image-viewer-hover-active"),
-        () => cardEl.classList.remove("image-viewer-hover-active"),
-        signal,
-      );
     }
 
     // Handle hover for page preview (only on card when openFileAction is 'card')

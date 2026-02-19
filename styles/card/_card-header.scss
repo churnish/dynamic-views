@@ -181,6 +181,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   /* Underline title on hover when open action is "press on title" */
   body.dynamic-views-open-on-title
     .dynamic-views
+    .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     text-decoration: underline;
@@ -190,6 +191,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   /* Extension suffix underline on hover */
   body.dynamic-views-file-type-ext
     .dynamic-views
+    .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover
     .card-title-ext-suffix {

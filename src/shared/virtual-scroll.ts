@@ -40,6 +40,50 @@ export interface VirtualItem {
 }
 
 /**
+ * Measure the scalable portion of a card's height.
+ * Only top/bottom covers scale linearly with card width (aspect ratio preserved).
+ * Side covers, thumbnails, poster/backdrop, and fixed-cover-height are non-scalable.
+ */
+export function measureScalableHeight(cardEl: HTMLElement): number {
+  if (
+    !cardEl.classList.contains("card-cover-top") &&
+    !cardEl.classList.contains("card-cover-bottom")
+  ) {
+    return 0;
+  }
+  // Fixed cover height: CSS-determined, doesn't scale with width
+  if (
+    document.body.classList.contains("dynamic-views-masonry-fixed-cover-height")
+  ) {
+    return 0;
+  }
+  const wrapper = cardEl.querySelector<HTMLElement>(
+    ":scope > .card-cover-wrapper",
+  );
+  return wrapper ? wrapper.offsetHeight : 0;
+}
+
+/**
+ * Estimate the height of an unmounted card using split proportional scaling.
+ * Cover area scales linearly with card width; text content stays fixed.
+ */
+export function estimateUnmountedHeight(
+  item: Pick<
+    VirtualItem,
+    "scalableHeight" | "fixedHeight" | "measuredAtWidth" | "height"
+  >,
+  cardWidth: number,
+): number {
+  if (item.measuredAtWidth > 0) {
+    return (
+      item.scalableHeight * (cardWidth / item.measuredAtWidth) +
+      item.fixedHeight
+    );
+  }
+  return item.height;
+}
+
+/**
  * Sync mounted/unmounted state for a list of items based on scroll position.
  * Items within viewport + buffer are mounted; items outside are unmounted.
  *

@@ -215,10 +215,10 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
   }
 }
 
-/* Image viewer cursor — requires hover intent (.image-viewer-hover-active) */
+/* Image viewer cursor — requires hover intent (.hover-intent-active) */
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-viewer-hover-active
+  .card.hover-intent-active
   .card-thumbnail
   img {
   cursor: zoom-in;
@@ -226,7 +226,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-viewer-hover-active
+  .card.hover-intent-active
   .card-thumbnail
   .dynamic-views-image-embed {
   cursor: zoom-in;
@@ -234,7 +234,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-format-cover.image-viewer-hover-active
+  .card.image-format-cover.hover-intent-active
   .card-cover
   .dynamic-views-image-embed {
   cursor: zoom-in;
@@ -255,7 +255,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-viewer-hover-active
+  .card.hover-intent-active
   .dynamic-views-image-embed
   img {
   cursor: zoom-in;

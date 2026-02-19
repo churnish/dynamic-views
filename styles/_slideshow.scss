@@ -375,14 +375,18 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   cursor: pointer;
 }
 
-body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
-  .dynamic-views
-  .card-properties
-  .tag:hover,
-body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
-  .dynamic-views
-  .card-subtitle
-  .tag:hover,
+/* Tag outline hover: card (hover intent) */
+@media (hover: hover) {
+  body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+    .dynamic-views
+    .card.hover-intent-active
+    :is(.card-properties, .card-subtitle)
+    .tag:hover {
+    color: color-mix(in hsl, var(--tag-text-color), white 15%);
+  }
+}
+
+/* Tag outline hover: list (immediate) */
 body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
   .dynamic-views
   .list-properties
@@ -400,8 +404,22 @@ body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
   color: var(--tag-text-color);
 }
 
-body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag:hover,
-body.dynamic-views-tag-style-fill .dynamic-views .card-subtitle .tag:hover,
+/* Tag fill hover: card (hover intent) */
+@media (hover: hover) {
+  body.dynamic-views-tag-style-fill
+    .dynamic-views
+    .card.hover-intent-active
+    :is(.card-properties, .card-subtitle)
+    .tag:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--tag-text-color) 20%,
+      transparent
+    );
+  }
+}
+
+/* Tag fill hover: list (immediate) */
 body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
   background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
 }
@@ -419,11 +437,18 @@ body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
   font-size: inherit;
 }
 
-body.dynamic-views-tag-style-plaintext
-  .dynamic-views
-  .card-properties
-  .tag:hover,
-body.dynamic-views-tag-style-plaintext .dynamic-views .card-subtitle .tag:hover,
+/* Tag plaintext hover: card (hover intent) */
+@media (hover: hover) {
+  body.dynamic-views-tag-style-plaintext
+    .dynamic-views
+    .card.hover-intent-active
+    :is(.card-properties, .card-subtitle)
+    .tag:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Tag plaintext hover: list (immediate) */
 body.dynamic-views-tag-style-plaintext
   .dynamic-views
   .list-properties
@@ -507,11 +532,6 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
     cursor: pointer;
   }
 
-  .folder-segment:hover,
-  .filename-segment:hover {
-    text-decoration: underline;
-  }
-
   .path-separator {
     color: inherit;
     margin: 0 2px;
@@ -523,4 +543,20 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
     color: var(--text-faint);
     opacity: 1;
   }
+}
+
+/* Segment underline hover: card (hover intent) */
+@media (hover: hover) {
+  .dynamic-views
+    .card.hover-intent-active
+    :is(.folder-segment, .filename-segment):hover {
+    text-decoration: underline;
+  }
+}
+
+/* Segment underline hover: list + group headings (immediate) */
+.dynamic-views
+  :is(.list-item, .list-properties, .bases-group-heading)
+  :is(.folder-segment, .filename-segment):hover {
+  text-decoration: underline;
 }

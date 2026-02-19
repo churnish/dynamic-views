@@ -11,13 +11,13 @@ last updated: 2026-02-19
 
 ### Shared
 
-| File                           | Role                                                                    |
-| ------------------------------ | ----------------------------------------------------------------------- |
+| File                           | Role                                                                                                                                                                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/utils/masonry-layout.ts`  | Pure layout math — column/position calculations, no DOM. Exports: `calculateMasonryLayout`, `calculateMasonryDimensions`, `calculateIncrementalMasonryLayout`, `repositionWithStableColumns`, `computeGreedyColumnHeights`. |
-| `src/shared/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals). |
-| `src/shared/card-renderer.tsx` | Pure card rendering (normalized `CardData`), used by both backends.     |
-| `src/shared/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation.               |
-| `styles/_masonry.scss`         | Masonry-specific CSS — absolute card positioning, container sizing.     |
+| `src/shared/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals).                                                                                                                                                     |
+| `src/shared/card-renderer.tsx` | Pure card rendering (normalized `CardData`), used by both backends.                                                                                                                                                         |
+| `src/shared/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation.                                                                                                                                                                   |
+| `styles/_masonry.scss`         | Masonry-specific CSS — absolute card positioning, container sizing.                                                                                                                                                         |
 
 ### Bases
 
@@ -190,7 +190,7 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 1. Calculate visible range: `scrollTop ± paneHeight` (1x pane height buffer).
 2. Look up container offset per group from `cachedGroupOffsets` (no `getBoundingClientRect`).
 3. For each item: `itemTop = containerOffsetY + item.y`, `itemBottom = itemTop + item.height`.
-4. If `inView && !item.el` → `mountVirtualItem()`: render card, apply stored position, set refs.
+4. If `inView && !item.el` → `mountVirtualItem()`: render card, apply stored position, set refs. Side cover CSS custom properties (`--dynamic-views-side-cover-width`, `--dynamic-views-side-cover-content-padding`) are set synchronously using `item.width` — `renderCoverWrapper` defers these to RAF (needs `offsetWidth`, unavailable during `renderCard`), so without this the CSS fallback shows for 1 frame.
 5. If `!inView && item.el` → `unmountVirtualItem()`: cleanup, remove from DOM, clear refs.
 
 **Trigger points**: scroll event (RAF-debounced), after full layout, after batch append. **Skipped during active resize** — mount/unmount deferred to post-resize correction to prevent mount storms (50-70 cards mounting in one frame during column count changes).
@@ -201,37 +201,36 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 `updateLayoutRef.current(source?)` has 5 sequential guards:
 
-| #   | Guard                     | Behavior                                                                                                                                                                                     |
-| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                                                                        |
-| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                                                                |
+| #   | Guard                     | Behavior                                                                                                                                                                                                                                       |
+| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                                                                                                                          |
+| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                                                                                                                  |
 | 3   | Unmounted items           | Source-dependent: remount all for `expand-group`, `multi-group-fallback`, and `new-group-fallback`; allow through for `resize-observer`, `resize-correction`, and `image-coalesced` (fast path measures mounted cards only); block all others. |
-| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                                                                    |
-| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                                                            |
+| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                                                                                                                      |
+| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                                                                                                              |
 
 ### Layout sources
 
-| Source                | Trigger                                  | Path                                                                                     |
-| --------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `"initial-render"`    | First render                             | Full measurement with card hiding.                                                       |
-| `"resize-observer"`   | ResizeObserver (RAF-debounced)           | Mounted-card measurement fast path → fallback to full.                                   |
-| `"image-load"`        | Cover/thumbnail image loaded             | Coalesced → `"image-coalesced"`.                                                         |
-| `"resize-correction"` | 200ms after last resize ends             | Mounted-card measurement fast path → correction pass.                                    |
-| `"image-coalesced"`   | RAF after image-load batch               | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
-| `"expand-group"`          | Group uncollapsed                                 | Full measurement with remount-all.                                                       |
-| `"multi-group-fallback"`  | Batch spanned multiple groups                     | Full measurement with remount-all.                                                       |
-| `"new-group-fallback"`    | Batch added cards to a group with no prior layout | Full measurement with remount-all.                                                       |
-| `"content-update"`        | In-place card update changed height               | Full measurement (blocked if unmounted items).                                           |
-| `"queued-update"`         | Dequeued from reentrant guard                     | Full measurement (blocked if unmounted items).                                           |
-| `"property-measured"`     | Property field width measurement settled          | Full measurement (blocked if unmounted items).                                           |
+| Source                   | Trigger                                           | Path                                                                                     |
+| ------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `"initial-render"`       | First render                                      | Full measurement with card hiding.                                                       |
+| `"resize-observer"`      | ResizeObserver (synchronous)                      | Mounted-card measurement fast path → fallback to full.                                   |
+| `"image-load"`           | Cover/thumbnail image loaded                      | Coalesced → `"image-coalesced"`.                                                         |
+| `"resize-correction"`    | 200ms after last resize ends                      | Mounted-card measurement fast path → correction pass.                                    |
+| `"image-coalesced"`      | RAF after image-load batch                        | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
+| `"expand-group"`         | Group uncollapsed                                 | Full measurement with remount-all.                                                       |
+| `"multi-group-fallback"` | Batch spanned multiple groups                     | Full measurement with remount-all.                                                       |
+| `"new-group-fallback"`   | Batch added cards to a group with no prior layout | Full measurement with remount-all.                                                       |
+| `"content-update"`       | In-place card update changed height               | Full measurement (blocked if unmounted items).                                           |
+| `"queued-update"`        | Dequeued from reentrant guard                     | Full measurement (blocked if unmounted items).                                           |
+| `"property-measured"`    | Property field width measurement settled          | Full measurement (blocked if unmounted items).                                           |
 
 ## Throttle and debounce patterns
 
 ### Resize throttle
 
-- **Pattern**: RAF debounce (cancel-and-reschedule).
-- **Behavior**: Every ResizeObserver callback cancels any pending RAF and schedules a new one. At most one layout runs per frame (~60fps).
-- **No trailing call**: Single RAF ensures the last resize event always fires.
+- **Pattern**: Synchronous execution in ResizeObserver callback.
+- **Behavior**: Layout runs directly inside the ResizeObserver callback. RO fires at most once per frame, so no additional coalescing is needed. Chromium throttles `requestAnimationFrame` for 400ms–3s after rapid `setBounds` calls (e.g., hotkey window resize), so RAF-based deferral caused stale layouts.
 - **Container width caching**: `pendingResizeWidth` stores `entries[0].contentRect.width` before the RAF, eliminating `getBoundingClientRect` reflow in the layout function.
 - **Unconditional sync during resize**: `syncVirtualScroll` runs after every proportional resize frame. For same-column-count frames (~95%), this is cheap (0-3 mounts at viewport edges from proportional drift). At column count boundaries, sync handles the full layout reshuffle.
 - **Post-resize correction**: 200ms after the last resize, `"resize-correction"` re-measures mounted cards to fix proportional height drift, then `syncVirtualScroll` runs to mount/unmount cards for the final layout. The 200ms debounce cannot be reduced — rAF (~16ms) and 100ms both cause card flashing because ResizeObserver gaps let correction fire mid-drag, triggering mode switching (proportional ↔ DOM measurement).
@@ -352,14 +351,14 @@ Both backends share the same pure layout math (`calculateMasonryLayout()`, `calc
 
 ### Pure utility functions (`src/utils/masonry-layout.ts`)
 
-| Function | Shared? | Purpose |
-| --- | --- | --- |
-| `calculateMasonryLayout()` | Both | Full greedy shortest-column layout from scratch. |
-| `calculateMasonryDimensions()` | Both | Column count and card width without measuring heights. |
-| `calculateIncrementalMasonryLayout()` | Both | Continues greedy placement from previous `columnHeights`. |
-| `repositionWithStableColumns()` | Both | Reposition with heights changed but column assignments preserved. |
-| `computeGreedyColumnHeights()` | Bases | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 4`. |
-| `applyMasonryLayout()` | Datacore | Applies a `MasonryLayoutResult` to DOM elements via CSS custom properties. |
+| Function                              | Shared?  | Purpose                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `calculateMasonryLayout()`            | Both     | Full greedy shortest-column layout from scratch.                                                                                                                                                                                                                                                                                                                       |
+| `calculateMasonryDimensions()`        | Both     | Column count and card width without measuring heights.                                                                                                                                                                                                                                                                                                                 |
+| `calculateIncrementalMasonryLayout()` | Both     | Continues greedy placement from previous `columnHeights`.                                                                                                                                                                                                                                                                                                              |
+| `repositionWithStableColumns()`       | Both     | Reposition with heights changed but column assignments preserved.                                                                                                                                                                                                                                                                                                      |
+| `computeGreedyColumnHeights()`        | Bases    | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 4`. |
+| `applyMasonryLayout()`                | Datacore | Applies a `MasonryLayoutResult` to DOM elements via CSS custom properties.                                                                                                                                                                                                                                                                                             |
 
 ### Shared behavior
 

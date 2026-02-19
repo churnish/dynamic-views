@@ -497,11 +497,8 @@ const cardHoverIntentState = new WeakMap<
   { controller: AbortController; zoomMode: string }
 >();
 
-/** Per-element image viewer hover intent (survives Preact re-renders) */
-const imageViewerHoverIntentState = new WeakMap<HTMLElement, AbortController>();
-
-/** Per-element keyboard nav hover intent (survives Preact re-renders) */
-const keyboardNavHoverIntentState = new WeakMap<HTMLElement, AbortController>();
+/** Per-element card hover intent state (survives Preact re-renders) */
+const cardHoverIntentActive = new WeakMap<HTMLElement, AbortController>();
 
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
@@ -2032,38 +2029,28 @@ function Card({
           }
         }
 
-        // Image viewer cursor hover intent (element-scoped to survive Preact re-renders)
+        // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
         if (window.matchMedia("(hover: hover)").matches) {
-          const existingIv = imageViewerHoverIntentState.get(cardEl);
-          if (!existingIv || existingIv.signal.aborted) {
-            existingIv?.abort();
+          const existing = cardHoverIntentActive.get(cardEl);
+          if (!existing || existing.signal.aborted) {
+            existing?.abort();
             const hoverAbort = new AbortController();
-            imageViewerHoverIntentState.set(cardEl, hoverAbort);
-            setupHoverIntent(
-              cardEl,
-              () => cardEl.classList.add("image-viewer-hover-active"),
-              () => cardEl.classList.remove("image-viewer-hover-active"),
-              hoverAbort.signal,
-            );
-          }
-        }
-
-        // Keyboard nav hover intent (element-scoped to survive Preact re-renders)
-        if (hoveredCardRef) {
-          const existingKb = keyboardNavHoverIntentState.get(cardEl);
-          if (!existingKb || existingKb.signal.aborted) {
-            existingKb?.abort();
-            const hoverAbort = new AbortController();
-            keyboardNavHoverIntentState.set(cardEl, hoverAbort);
+            cardHoverIntentActive.set(cardEl, hoverAbort);
             setupHoverIntent(
               cardEl,
               () => {
-                (hoveredCardRef as { current: HTMLElement | null }).current =
-                  cardEl;
+                cardEl.classList.add("hover-intent-active");
+                if (hoveredCardRef) {
+                  (hoveredCardRef as { current: HTMLElement | null }).current =
+                    cardEl;
+                }
               },
               () => {
-                (hoveredCardRef as { current: HTMLElement | null }).current =
-                  null;
+                cardEl.classList.remove("hover-intent-active");
+                if (hoveredCardRef) {
+                  (hoveredCardRef as { current: HTMLElement | null }).current =
+                    null;
+                }
               },
               hoverAbort.signal,
             );
