@@ -27,6 +27,7 @@ import {
   calculateMasonryDimensions,
   calculateIncrementalMasonryLayout,
   repositionWithStableColumns,
+  computeGreedyColumnHeights,
   type MasonryLayoutResult,
 } from "../utils/masonry-layout";
 import {
@@ -1376,7 +1377,11 @@ export class DynamicViewsMasonryView extends BasesView {
 
       let remountedAll = false;
       if (hasUnmountedItems) {
-        if (source === "expand-group") {
+        if (
+          source === "expand-group" ||
+          source === "multi-group-fallback" ||
+          source === "new-group-fallback"
+        ) {
           // Remount all items for accurate full-DOM measurement
           for (const item of this.virtualItems) {
             if (!item.el && item.height > 0) {
@@ -2010,13 +2015,46 @@ export class DynamicViewsMasonryView extends BasesView {
           cardWidth,
           gap,
         });
-        result = {
-          ...existingResult,
-          positions: stable.positions,
-          columnHeights: stable.columnHeights,
-          containerHeight: stable.containerHeight,
-          heights,
-        };
+
+        // In grouped mode, detect if stable reposition introduced excessive
+        // column imbalance — prevents amplification across incremental batch
+        // appends. Ungrouped mode skips this: visual stability during scroll
+        // outweighs minor imbalance with a single group.
+        let useGreedy = false;
+        if (isGrouped) {
+          const stableRange =
+            Math.max(...stable.columnHeights) -
+            Math.min(...stable.columnHeights);
+          const greedyColHeights = computeGreedyColumnHeights(
+            heights,
+            existingResult.columns,
+            gap,
+          );
+          const greedyRange =
+            Math.max(...greedyColHeights) - Math.min(...greedyColHeights);
+          useGreedy =
+            stableRange > greedyRange * 1.5 &&
+            stableRange - greedyRange > gap * 4;
+        }
+
+        if (useGreedy) {
+          result = calculateMasonryLayout({
+            cards: Array.from({ length: groupItems.length }) as HTMLElement[],
+            containerWidth,
+            cardSize: settings.cardSize,
+            minColumns,
+            gap,
+            heights,
+          });
+        } else {
+          result = {
+            ...existingResult,
+            positions: stable.positions,
+            columnHeights: stable.columnHeights,
+            containerHeight: stable.containerHeight,
+            heights,
+          };
+        }
       } else {
         result = calculateMasonryLayout({
           cards: Array.from({ length: groupItems.length }),

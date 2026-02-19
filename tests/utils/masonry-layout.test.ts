@@ -2,6 +2,7 @@ import {
   calculateMasonryLayout,
   applyMasonryLayout,
   repositionWithStableColumns,
+  computeGreedyColumnHeights,
 } from "../../src/utils/masonry-layout";
 
 describe("masonry-layout", () => {
@@ -327,6 +328,36 @@ describe("masonry-layout", () => {
       });
 
       expect(result.positions[0].left).toBe(2 * (194 + 8));
+    });
+  });
+
+  describe("computeGreedyColumnHeights", () => {
+    it("should distribute heights evenly across columns", () => {
+      // 6 cards of equal height across 3 columns → balanced
+      const heights = [100, 100, 100, 100, 100, 100];
+      const result = computeGreedyColumnHeights(heights, 3, 10);
+      expect(result).toEqual([220, 220, 220]);
+    });
+
+    it("should place each card in shortest column", () => {
+      // Heights: 300, 100, 200, 150 across 2 columns, gap=10
+      // Card 0 (300) → col 0: 310. Card 1 (100) → col 1: 110.
+      // Card 2 (200) → col 1: 320. Card 3 (150) → col 0: 470.
+      const heights = [300, 100, 200, 150];
+      const result = computeGreedyColumnHeights(heights, 2, 10);
+      expect(result).toEqual([470, 320]);
+    });
+
+    it("should handle single column", () => {
+      const heights = [100, 200, 150];
+      const result = computeGreedyColumnHeights(heights, 1, 10);
+      // Each card adds height+gap: (100+10)+(200+10)+(150+10) = 480
+      expect(result).toEqual([480]);
+    });
+
+    it("should handle empty heights", () => {
+      const result = computeGreedyColumnHeights([], 3, 10);
+      expect(result).toEqual([0, 0, 0]);
     });
   });
 });

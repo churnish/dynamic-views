@@ -379,3 +379,27 @@ export function repositionWithStableColumns(params: StableRepositionParams): {
 
   return { positions, containerHeight, columnHeights };
 }
+
+/**
+ * Compute greedy shortest-column heights without allocating positions.
+ * Used to check if repositionWithStableColumns introduced excessive imbalance.
+ */
+export function computeGreedyColumnHeights(
+  heights: number[],
+  columns: number,
+  gap: number,
+): number[] {
+  const columnHeights = new Array(columns).fill(0) as number[];
+  for (let i = 0; i < heights.length; i++) {
+    let shortestCol = 0;
+    let minH = columnHeights[0];
+    for (let c = 1; c < columns; c++) {
+      if (columnHeights[c] < minH) {
+        minH = columnHeights[c];
+        shortestCol = c;
+      }
+    }
+    columnHeights[shortestCol] += heights[i] + gap;
+  }
+  return columnHeights;
+}
