@@ -500,6 +500,9 @@ const cardHoverIntentState = new WeakMap<
 /** Per-element image viewer hover intent (survives Preact re-renders) */
 const imageViewerHoverIntentState = new WeakMap<HTMLElement, AbortController>();
 
+/** Per-element keyboard nav hover intent (survives Preact re-renders) */
+const keyboardNavHoverIntentState = new WeakMap<HTMLElement, AbortController>();
+
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
 
@@ -2044,6 +2047,28 @@ function Card({
             );
           }
         }
+
+        // Keyboard nav hover intent (element-scoped to survive Preact re-renders)
+        if (hoveredCardRef) {
+          const existingKb = keyboardNavHoverIntentState.get(cardEl);
+          if (!existingKb || existingKb.signal.aborted) {
+            existingKb?.abort();
+            const hoverAbort = new AbortController();
+            keyboardNavHoverIntentState.set(cardEl, hoverAbort);
+            setupHoverIntent(
+              cardEl,
+              () => {
+                (hoveredCardRef as { current: HTMLElement | null }).current =
+                  cardEl;
+              },
+              () => {
+                (hoveredCardRef as { current: HTMLElement | null }).current =
+                  null;
+              },
+              hoverAbort.signal,
+            );
+          }
+        }
       }}
       draggable={settings.openFileAction === "card"}
       onDragStart={settings.openFileAction === "card" ? handleDrag : undefined}
@@ -2145,10 +2170,6 @@ function Card({
         }
       }}
       onMouseEnter={(e: MouseEvent) => {
-        // Track hovered card for hover-to-start keyboard navigation
-        (hoveredCardRef as { current: HTMLElement | null }).current =
-          e.currentTarget as HTMLElement;
-
         // Trigger Obsidian's hover preview (only on card when openFileAction is 'card')
         if (settings.openFileAction === "card") {
           app.workspace.trigger("hover-link", {
@@ -2172,7 +2193,6 @@ function Card({
         }
       }}
       onMouseLeave={(e: MouseEvent) => {
-        (hoveredCardRef as { current: HTMLElement | null }).current = null;
         if (format === "poster") {
           (e.currentTarget as HTMLElement).classList.remove(
             "poster-hover-active",

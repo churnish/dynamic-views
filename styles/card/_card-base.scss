@@ -63,7 +63,7 @@
   }
 
   // Eased transition during post-resize correction and scroll remeasure —
-  // proportional-to-DOM height reconciliation shifts cards visibly
+  // 200ms must match MASONRY_CORRECTION_MS in shared/constants.ts
   .masonry-correcting .card.masonry-positioned {
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,

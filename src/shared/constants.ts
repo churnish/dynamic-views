@@ -23,6 +23,9 @@ export const MAX_BATCH_SIZE = 70;
 /** Throttle interval for resize layout updates in milliseconds */
 export const RESIZE_THROTTLE_MS = 100;
 
+/** Masonry correction delay and transition duration in ms (must match CSS masonry-correcting) */
+export const MASONRY_CORRECTION_MS = 200;
+
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 

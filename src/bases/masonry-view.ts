@@ -43,6 +43,7 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
+  MASONRY_CORRECTION_MS,
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
@@ -1787,11 +1788,11 @@ export class DynamicViewsMasonryView extends BasesView {
         this.masonryContainer?.classList.add("masonry-correcting");
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.("resize-correction");
-        // Remove after transition completes (200ms matches masonry-correcting)
+        // Remove after transition completes
         window.setTimeout(() => {
           this.masonryContainer?.classList.remove("masonry-correcting");
-        }, 200);
-      }, 200);
+        }, MASONRY_CORRECTION_MS);
+      }, MASONRY_CORRECTION_MS);
 
       if (this.resizeRafId !== null) {
         cancelAnimationFrame(this.resizeRafId);
@@ -1964,10 +1965,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    // Remove after transition completes (200ms matches masonry-correcting)
+    // Remove after transition completes
     window.setTimeout(() => {
       this.masonryContainer?.classList.remove("masonry-correcting");
-    }, 200);
+    }, MASONRY_CORRECTION_MS);
     return true;
   }
 
@@ -2166,7 +2167,7 @@ export class DynamicViewsMasonryView extends BasesView {
           this.lastLayoutIsGrouped,
         );
         if (didWork) this.scheduleDeferredRemeasure();
-      }, 200);
+      }, MASONRY_CORRECTION_MS);
     }
   }
 
@@ -2343,8 +2344,17 @@ export class DynamicViewsMasonryView extends BasesView {
           if (previewEl) {
             // Update existing text
             previewEl.textContent = newText;
+          } else if (previewsEl) {
+            // Wrapper exists (has thumbnail) — insert text before thumbnail
+            const textWrapper = document.createElement("div");
+            textWrapper.className = "card-text-preview-wrapper";
+            textWrapper.createDiv({
+              cls: "card-text-preview",
+              text: newText,
+            });
+            previewsEl.insertBefore(textWrapper, previewsEl.firstChild);
           } else {
-            // Create wrapper — text appeared on a card that had none
+            // No wrapper at all — create one
             const bodyEl = cardEl.querySelector(".card-body");
             if (bodyEl) {
               const wrapper = document.createElement("div");

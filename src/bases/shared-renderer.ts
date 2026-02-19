@@ -922,21 +922,13 @@ export class SharedCardRenderer {
       { signal },
     );
 
-    // Track hovered card for hover-to-start keyboard navigation
+    // Track hovered card for hover-to-start keyboard navigation (hover intent)
     if (keyboardNav?.onHoverStart && keyboardNav?.onHoverEnd) {
-      cardEl.addEventListener(
-        "mouseenter",
-        () => {
-          keyboardNav.onHoverStart?.(cardEl);
-        },
-        { signal },
-      );
-      cardEl.addEventListener(
-        "mouseleave",
-        () => {
-          keyboardNav.onHoverEnd?.();
-        },
-        { signal },
+      setupHoverIntent(
+        cardEl,
+        () => keyboardNav.onHoverStart?.(cardEl),
+        () => keyboardNav.onHoverEnd?.(),
+        signal,
       );
     }
 

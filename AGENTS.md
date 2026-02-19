@@ -9,7 +9,7 @@ Use @ref/project-structure.md as a navigation reference before reading or editin
 
 When a reference file listed below is relevant to your current work, you MUST read it before proceeding. Do NOT rely on assumptions — consult the reference first.
 
-Proactively keep these files up-to-date as the codebase evolves by running /document.
+Proactively keep these files up-to-date as the codebase evolves by running `/document`.
 
 ### ref/architecture
 

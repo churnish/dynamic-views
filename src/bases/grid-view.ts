@@ -1367,6 +1367,12 @@ export class DynamicViewsGridView extends BasesView {
       if (newText) {
         if (previewEl) {
           previewEl.textContent = newText;
+        } else if (previewsEl) {
+          // Wrapper exists (has thumbnail) — insert text before thumbnail
+          const textWrapper = document.createElement("div");
+          textWrapper.className = "card-text-preview-wrapper";
+          textWrapper.createDiv({ cls: "card-text-preview", text: newText });
+          previewsEl.insertBefore(textWrapper, previewsEl.firstChild);
         } else {
           const bodyEl = cardEl.querySelector(".card-body");
           if (bodyEl) {
