@@ -246,3 +246,41 @@ body.dynamic-views-card-background-custom .dynamic-views .card {
     );
   }
 }
+
+/* Gate pointer cursor behind hover intent on desktop */
+@media (hover: hover) {
+  .dynamic-views .card:not(.hover-intent-active) {
+    &.clickable-card {
+      cursor: default;
+    }
+
+    .card-title a,
+    .card-title .card-title-link {
+      cursor: default;
+    }
+
+    .property a {
+      cursor: default;
+    }
+
+    .folder-segment,
+    .filename-segment {
+      cursor: default;
+    }
+  }
+
+  /* Tags: higher specificity needed (base rule uses body:not() selectors) */
+  .dynamic-views
+    .card:not(.hover-intent-active)
+    :is(.card-properties, .card-subtitle)
+    .tag {
+    cursor: default;
+  }
+
+  /* Poster cards: higher specificity needed (base rule uses body class selector) */
+  body.dynamic-views-open-on-card
+    .dynamic-views
+    .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+    cursor: default;
+  }
+}
