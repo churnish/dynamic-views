@@ -191,6 +191,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private virtualItemsByGroup = new Map<string | undefined, VirtualItem[]>();
   private groupContainers: Map<string | undefined, HTMLElement> = new Map();
   private virtualScrollRafId: number | null = null;
+  private deferredRemeasureRafId: number | null = null;
   private hasUserScrolled = false;
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
@@ -1721,6 +1722,12 @@ export class DynamicViewsMasonryView extends BasesView {
           this.syncVirtualScroll();
         }
 
+        // Catch post-measurement height drift (e.g. image load → aspect ratio
+        // update, cover-ready class). Double-RAF matches handleImageLoad timing.
+        if (source === "initial-render" || source === "compact-mode-sync") {
+          this.scheduleDeferredRemeasure();
+        }
+
         // Show end indicator if all items displayed (skip if 0 results)
         requestAnimationFrame(() => {
           if (!this.containerEl?.isConnected) return;
@@ -2075,6 +2082,8 @@ export class DynamicViewsMasonryView extends BasesView {
         this.lastLayoutGap,
         this.lastLayoutIsGrouped,
       );
+      // Catch deferred height changes (e.g. image decode → cover resize)
+      this.scheduleDeferredRemeasure();
     }
   }
 
@@ -2085,6 +2094,31 @@ export class DynamicViewsMasonryView extends BasesView {
       this.virtualScrollRafId = null;
       this.updateCachedGroupOffsets();
       this.syncVirtualScroll();
+    });
+  }
+
+  /** Schedule a deferred remeasure to catch post-measurement height drift.
+   *  Uses double-RAF to run after async height changes (e.g. cover-ready,
+   *  image aspect ratio updates) have settled. */
+  private scheduleDeferredRemeasure(): void {
+    if (this.deferredRemeasureRafId !== null) return;
+    this.deferredRemeasureRafId = requestAnimationFrame(() => {
+      this.deferredRemeasureRafId = requestAnimationFrame(() => {
+        this.deferredRemeasureRafId = null;
+        if (!this.containerEl?.isConnected) return;
+        if (this.batchLayoutPending) return;
+        if (this.resizeCorrectionTimeout !== null) return;
+        if (this.lastLayoutCardWidth <= 0) return;
+        if (!this.lastRenderedSettings) return;
+        this.remeasureAndReposition(
+          this.lastLayoutWidth,
+          this.lastLayoutCardWidth,
+          this.lastRenderedSettings,
+          this.lastLayoutMinColumns,
+          this.lastLayoutGap,
+          this.lastLayoutIsGrouped,
+        );
+      });
     });
   }
 
@@ -2930,6 +2964,9 @@ export class DynamicViewsMasonryView extends BasesView {
     cleanupVisibilityObserver();
     if (this.virtualScrollRafId !== null) {
       cancelAnimationFrame(this.virtualScrollRafId);
+    }
+    if (this.deferredRemeasureRafId !== null) {
+      cancelAnimationFrame(this.deferredRemeasureRafId);
     }
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
