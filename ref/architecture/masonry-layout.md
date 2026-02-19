@@ -41,19 +41,21 @@ last updated: 2026-02-19
 
 Lightweight representation of every card. Mounted cards have `el` and `handle`; unmounted cards are pure JS objects with stored positions.
 
-| Field             | Type                  | Purpose                                             |
-| ----------------- | --------------------- | --------------------------------------------------- |
-| `index`           | `number`              | Position in flat card list.                         |
-| `x`, `y`          | `number`              | Inline `left` and `top` values.                     |
-| `width`           | `number`              | Inline `width` value.                               |
-| `height`          | `number`              | Current height (may be proportionally scaled).      |
-| `measuredHeight`  | `number`              | Height at original measurement width.               |
-| `measuredAtWidth` | `number`              | `cardWidth` when height was DOM-measured.           |
-| `cardData`        | `CardData`            | Normalized card data for rendering.                 |
-| `entry`           | `BasesEntry`          | Obsidian Bases entry.                               |
-| `groupKey`        | `string \| undefined` | Group key (`undefined` for ungrouped).              |
-| `el`              | `HTMLElement \| null` | DOM element when mounted, `null` when unmounted.    |
-| `handle`          | `CardHandle \| null`  | Cleanup handle when mounted, `null` when unmounted. |
+| Field             | Type                  | Purpose                                                                     |
+| ----------------- | --------------------- | --------------------------------------------------------------------------- |
+| `index`           | `number`              | Position in flat card list.                                                 |
+| `x`, `y`          | `number`              | Inline `left` and `top` values.                                             |
+| `width`           | `number`              | Inline `width` value.                                                       |
+| `height`          | `number`              | Current height (may be proportionally scaled).                              |
+| `measuredHeight`  | `number`              | Height at original measurement width.                                       |
+| `measuredAtWidth` | `number`              | `cardWidth` when height was DOM-measured.                                   |
+| `scalableHeight`  | `number`              | Height of scalable portion (top/bottom cover) at `measuredAtWidth`.         |
+| `fixedHeight`     | `number`              | Height of fixed portion (header, properties, preview) at `measuredAtWidth`. |
+| `cardData`        | `CardData`            | Normalized card data for rendering.                                         |
+| `entry`           | `BasesEntry`          | Obsidian Bases entry.                                                       |
+| `groupKey`        | `string \| undefined` | Group key (`undefined` for ungrouped).                                      |
+| `el`              | `HTMLElement \| null` | DOM element when mounted, `null` when unmounted.                            |
+| `handle`          | `CardHandle \| null`  | Cleanup handle when mounted, `null` when unmounted.                         |
 
 ### MasonryLayoutResult (`src/utils/masonry-layout.ts`)
 
@@ -150,7 +152,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
 2. `proportionalResizeLayout()` — single pass over all cards per group:
-   - Proportional height: `measuredHeight × (cardWidth / measuredAtWidth)`.
+   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area scales linearly; text content stays constant.
    - Greedy shortest-column placement (inlined — bypasses `calculateMasonryLayout`).
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.

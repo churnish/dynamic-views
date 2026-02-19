@@ -94,6 +94,30 @@ import { CONTENT_HIDDEN_CLASS } from "../shared/content-visibility";
 import { updateTextPreviewDOM } from "../shared/text-preview-dom";
 import { type VirtualItem } from "../shared/virtual-scroll";
 
+/**
+ * Measure the scalable portion of a card's height.
+ * Only top/bottom covers scale linearly with card width (aspect ratio preserved).
+ * Side covers, thumbnails, poster/backdrop, and fixed-cover-height are non-scalable.
+ */
+function measureScalableHeight(cardEl: HTMLElement): number {
+  if (
+    !cardEl.classList.contains("card-cover-top") &&
+    !cardEl.classList.contains("card-cover-bottom")
+  ) {
+    return 0;
+  }
+  // Fixed cover height: CSS-determined, doesn't scale with width
+  if (
+    document.body.classList.contains("dynamic-views-masonry-fixed-cover-height")
+  ) {
+    return 0;
+  }
+  const wrapper = cardEl.querySelector<HTMLElement>(
+    ":scope > .card-cover-wrapper",
+  );
+  return wrapper ? wrapper.offsetHeight : 0;
+}
+
 // Extend Obsidian types
 declare module "obsidian" {
   interface BasesView {
@@ -397,6 +421,8 @@ export class DynamicViewsMasonryView extends BasesView {
         height: 0,
         measuredHeight: 0,
         measuredAtWidth: 0,
+        scalableHeight: 0,
+        fixedHeight: 0,
         cardData: cards[i],
         entry: entries[i],
         groupKey: expandGroupKey,
@@ -1232,6 +1258,8 @@ export class DynamicViewsMasonryView extends BasesView {
             height: 0,
             measuredHeight: 0,
             measuredAtWidth: 0,
+            scalableHeight: 0,
+            fixedHeight: 0,
             cardData: card,
             entry,
             groupKey,
@@ -1560,12 +1588,17 @@ export class DynamicViewsMasonryView extends BasesView {
                 const groupItems = this.virtualItemsByGroup.get(groupKey)!;
                 if (groupItems.length === 0) continue;
 
-                // Mixed heights: mounted = DOM, unmounted = proportional
+                // Mixed heights: mounted = DOM, unmounted = split proportional
                 const heights = groupItems.map((item) => {
-                  if (item.el) return item.el.offsetHeight;
+                  if (item.el) {
+                    const h = item.el.offsetHeight;
+                    item.scalableHeight = measureScalableHeight(item.el);
+                    return h;
+                  }
                   if (item.measuredAtWidth > 0) {
                     return (
-                      item.measuredHeight * (cardWidth / item.measuredAtWidth)
+                      item.scalableHeight * (cardWidth / item.measuredAtWidth) +
+                      item.fixedHeight
                     );
                   }
                   return item.height;
@@ -1638,6 +1671,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Phase 3: Read all heights (single pass)
         const heights = allCards.map((card) => card.offsetHeight);
+
+        // Phase 3b: Measure scalable heights (same reflow — no writes since Phase 3)
+        for (const item of this.virtualItems) {
+          if (item.el) {
+            item.scalableHeight = measureScalableHeight(item.el);
+          }
+        }
 
         // Phase 4: Calculate and apply layout
         if (isGrouped && groups) {
@@ -1888,6 +1928,7 @@ export class DynamicViewsMasonryView extends BasesView {
       if (result.measuredAtCardWidth && item.el) {
         item.measuredHeight = item.height;
         item.measuredAtWidth = result.measuredAtCardWidth;
+        item.fixedHeight = item.measuredHeight - item.scalableHeight;
       }
     }
   }
@@ -1938,9 +1979,16 @@ export class DynamicViewsMasonryView extends BasesView {
       if (groupItems.length === 0) continue;
 
       const heights = groupItems.map((item) => {
-        if (item.el) return item.el.offsetHeight;
+        if (item.el) {
+          const h = item.el.offsetHeight;
+          item.scalableHeight = measureScalableHeight(item.el);
+          return h;
+        }
         if (item.measuredAtWidth > 0) {
-          return item.measuredHeight * (cardWidth / item.measuredAtWidth);
+          return (
+            item.scalableHeight * (cardWidth / item.measuredAtWidth) +
+            item.fixedHeight
+          );
         }
         return item.height;
       });
@@ -2048,10 +2096,11 @@ export class DynamicViewsMasonryView extends BasesView {
     for (let i = 0; i < groupItems.length; i++) {
       const item = groupItems[i];
 
-      // Proportional height
+      // Split proportional height: cover scales with width, text stays fixed
       const height =
         item.measuredAtWidth > 0
-          ? item.measuredHeight * (cardWidth / item.measuredAtWidth)
+          ? item.scalableHeight * (cardWidth / item.measuredAtWidth) +
+            item.fixedHeight
           : item.height;
 
       // Greedy shortest-column placement
@@ -2121,6 +2170,24 @@ export class DynamicViewsMasonryView extends BasesView {
     handle.el.style.left = `${item.x}px`;
     handle.el.style.top = `${item.y}px`;
     handle.el.classList.add("masonry-positioned");
+    // Set side cover dimensions synchronously to prevent 1-frame flash.
+    // renderCoverWrapper defers updateWrapperDimensions to RAF (needs
+    // offsetWidth not yet available during renderCard), but at this point
+    // item.width is set and equals offsetWidth (border-box, no border).
+    const wrapperRatio = handle.el.style.getPropertyValue(
+      "--dynamic-views-wrapper-ratio",
+    );
+    if (wrapperRatio) {
+      const targetWidth = Math.floor(parseFloat(wrapperRatio) * item.width);
+      handle.el.style.setProperty(
+        "--dynamic-views-side-cover-width",
+        `${targetWidth}px`,
+      );
+      handle.el.style.setProperty(
+        "--dynamic-views-side-cover-content-padding",
+        `${targetWidth}px`,
+      );
+    }
     // During active resize, set explicit height to match layout positioning.
     // Without this, height:auto renders at natural height, causing mismatch
     // with proportional-scaled positions → overlap/gap.
@@ -2641,6 +2708,8 @@ export class DynamicViewsMasonryView extends BasesView {
             height: 0,
             measuredHeight: 0,
             measuredAtWidth: 0,
+            scalableHeight: 0,
+            fixedHeight: 0,
             cardData: card,
             entry,
             groupKey: currentGroupKey,
@@ -2739,6 +2808,7 @@ export class DynamicViewsMasonryView extends BasesView {
           // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
           this.masonryContainer?.classList.add("masonry-measuring");
           let result: MasonryLayoutResult;
+          const viOffset = this.virtualItems.length - newCards.length;
           try {
             // Force synchronous reflow so heights reflect new widths
             void targetContainer.offsetHeight;
@@ -2753,6 +2823,14 @@ export class DynamicViewsMasonryView extends BasesView {
               columns: currentPrevLayout.columns,
               gap,
             });
+
+            // Measure scalable heights before position writes (same reflow as layout calc)
+            for (let i = 0; i < newCards.length; i++) {
+              const item = this.virtualItems[viOffset + i];
+              if (item.el) {
+                item.scalableHeight = measureScalableHeight(item.el);
+              }
+            }
 
             // Apply positions to new cards only (width already set above)
             newCards.forEach((card, index) => {
@@ -2777,7 +2855,6 @@ export class DynamicViewsMasonryView extends BasesView {
           // Update virtual item positions for newly appended cards.
           // New cards are the last N items in virtualItems (pushed in same order).
           // Uses batch-local heights — must run BEFORE height merge below.
-          const viOffset = this.virtualItems.length - newCards.length;
           for (let i = 0; i < newCards.length; i++) {
             const item = this.virtualItems[viOffset + i];
             const pos = result.positions[i];
@@ -2788,6 +2865,7 @@ export class DynamicViewsMasonryView extends BasesView {
             if (result.measuredAtCardWidth) {
               item.measuredHeight = item.height;
               item.measuredAtWidth = result.measuredAtCardWidth;
+              item.fixedHeight = item.measuredHeight - item.scalableHeight;
             }
           }
 

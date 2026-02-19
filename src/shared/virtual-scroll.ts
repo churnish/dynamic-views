@@ -23,6 +23,10 @@ export interface VirtualItem {
   measuredHeight: number;
   /** cardWidth when height was DOM-measured (not scaled) */
   measuredAtWidth: number;
+  /** Height of scalable portion (top/bottom cover) at measurement width */
+  scalableHeight: number;
+  /** Height of fixed portion (header, properties, preview) at measurement width */
+  fixedHeight: number;
   /** Normalized card data for rendering */
   cardData: CardData;
   /** Bases entry for rendering */
