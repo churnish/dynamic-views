@@ -192,6 +192,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private virtualItemsByGroup = new Map<string | undefined, VirtualItem[]>();
   private groupContainers: Map<string | undefined, HTMLElement> = new Map();
   private virtualScrollRafId: number | null = null;
+  private scrollRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private deferredRemeasureRafId: number | null = null;
   private hasUserScrolled = false;
   private expectedIncrementalHeight: number | null = null;
@@ -1370,10 +1371,19 @@ export class DynamicViewsMasonryView extends BasesView {
           requestAnimationFrame(() => {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
-            // Skip during active resize — post-resize correction will
-            // pick up height changes from images that loaded mid-resize
             if (this.resizeCorrectionTimeout !== null) return;
-            this.updateLayoutRef.current?.("image-coalesced");
+            if (this.batchLayoutPending) return;
+            if (this.lastLayoutCardWidth <= 0) return;
+            if (!this.lastRenderedSettings) return;
+            this.remeasureAndReposition(
+              this.lastLayoutWidth,
+              this.lastLayoutCardWidth,
+              this.lastRenderedSettings,
+              this.lastLayoutMinColumns,
+              this.lastLayoutGap,
+              this.lastLayoutIsGrouped,
+            );
+            this.scheduleDeferredRemeasure();
           });
         }
         return;
@@ -1854,8 +1864,9 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (!needsReposition) return;
 
-    // Suppress position transitions — remeasure corrections should be instant
-    this.masonryContainer?.classList.add("masonry-remeasuring");
+    // Smooth transition during remeasure — corrections happen when scroll is
+    // idle (debounced) so they're visible to the user and should ease in
+    this.masonryContainer?.classList.add("masonry-correcting");
 
     // Scroll anchor: record absolute Y of first visible mounted card
     // so we can compensate scrollTop after positions shift
@@ -1928,7 +1939,6 @@ export class DynamicViewsMasonryView extends BasesView {
           groupItems[i].el!.style.top = `${pos.top}px`;
         }
       }
-
       const container = isGrouped
         ? this.groupContainers.get(groupKey)
         : this.masonryContainer;
@@ -1945,8 +1955,6 @@ export class DynamicViewsMasonryView extends BasesView {
     this.updateCachedGroupOffsets();
 
     // Compensate scroll position so viewport content stays visually anchored.
-    // Without this, cards above viewport changing height shift all visible
-    // cards — causing column snapping on scroll-up.
     if (anchorItem) {
       const newOffset = this.cachedGroupOffsets.get(anchorItem.groupKey) ?? 0;
       const newAbsY = newOffset + anchorItem.y;
@@ -1956,10 +1964,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    // Re-enable transitions after browser commits the instant position changes
-    requestAnimationFrame(() => {
-      this.masonryContainer?.classList.remove("masonry-remeasuring");
-    });
+    // Remove after transition completes (300ms matches --anim-duration-moderate)
+    window.setTimeout(() => {
+      this.masonryContainer?.classList.remove("masonry-correcting");
+    }, 300);
   }
 
   /** Rebuild the groupKey → VirtualItem[] index.
@@ -2127,26 +2135,37 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    // Newly mounted cards render at natural DOM heights which may differ
-    // from proportional VirtualItem heights — remeasure and reposition
-    // to prevent overlap. Skip during active resize (explicit heights set)
-    // and during pending batch layout (unpositioned cards would corrupt heights).
+    // Don't remeasure during active scroll — newly mounted cards' heights
+    // change as images load (~24px cover drift), causing immediate and
+    // deferred remeasures to fight each other (opposite 24px jumps within
+    // ~32ms = visible flicker). Debounce: one remeasure + deferred pass
+    // after scroll settles (200ms, matching resize correction delay).
     if (
       mountedNew &&
       this.resizeCorrectionTimeout === null &&
       this.lastLayoutCardWidth > 0 &&
       !this.batchLayoutPending
     ) {
-      this.remeasureAndReposition(
-        this.lastLayoutWidth,
-        this.lastLayoutCardWidth,
-        settings,
-        this.lastLayoutMinColumns,
-        this.lastLayoutGap,
-        this.lastLayoutIsGrouped,
-      );
-      // Catch deferred height changes (e.g. image decode → cover resize)
-      this.scheduleDeferredRemeasure();
+      if (this.scrollRemeasureTimeout !== null) {
+        clearTimeout(this.scrollRemeasureTimeout);
+      }
+      this.scrollRemeasureTimeout = setTimeout(() => {
+        this.scrollRemeasureTimeout = null;
+        if (!this.containerEl?.isConnected) return;
+        if (this.batchLayoutPending) return;
+        if (this.resizeCorrectionTimeout !== null) return;
+        if (this.lastLayoutCardWidth <= 0) return;
+        if (!this.lastRenderedSettings) return;
+        this.remeasureAndReposition(
+          this.lastLayoutWidth,
+          this.lastLayoutCardWidth,
+          this.lastRenderedSettings,
+          this.lastLayoutMinColumns,
+          this.lastLayoutGap,
+          this.lastLayoutIsGrouped,
+        );
+        this.scheduleDeferredRemeasure();
+      }, 200);
     }
   }
 
@@ -2708,6 +2727,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
           // Merge all heights so resize fast path can use them for unmounted cards.
           // Must happen AFTER virtual item loop (which uses batch-local indices).
+          const prevPositions = currentPrevLayout.positions ?? [];
+          result.positions = [...prevPositions, ...(result.positions ?? [])];
           const prevHeights = currentPrevLayout.heights ?? [];
           result.heights = [...prevHeights, ...(result.heights ?? [])];
 
@@ -3027,6 +3048,9 @@ export class DynamicViewsMasonryView extends BasesView {
     cleanupVisibilityObserver();
     if (this.virtualScrollRafId !== null) {
       cancelAnimationFrame(this.virtualScrollRafId);
+    }
+    if (this.scrollRemeasureTimeout !== null) {
+      clearTimeout(this.scrollRemeasureTimeout);
     }
     if (this.deferredRemeasureRafId !== null) {
       cancelAnimationFrame(this.deferredRemeasureRafId);
