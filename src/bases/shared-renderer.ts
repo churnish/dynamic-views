@@ -45,6 +45,7 @@ import {
   getSlideshowMaxImages,
   getUrlIcon,
   getCompactBreakpoint,
+  getCoverHoverZoomMode,
 } from "../utils/style-settings";
 import { getPropertyLabel, stripNotePrefix } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
@@ -63,6 +64,7 @@ import {
   setupImagePreload,
   setupSwipeGestures,
 } from "../shared/slideshow";
+import { setupHoverIntent } from "../shared/hover-intent";
 import {
   handleArrowNavigation,
   isArrowKey,
@@ -941,39 +943,37 @@ export class SharedCardRenderer {
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
     // Gates content reveal (via CSS) and scroll access on desktop.
     if (isPoster && window.matchMedia("(hover: hover)").matches) {
-      let hasMoved = false;
-
-      cardEl.addEventListener(
-        "mouseenter",
+      setupHoverIntent(
+        cardEl,
         () => {
-          hasMoved = false;
+          cardEl
+            .closest(".dynamic-views")
+            ?.querySelector(".card.poster-hover-active")
+            ?.classList.remove("poster-hover-active");
+          cardEl.classList.add("poster-hover-active");
         },
-        { signal },
+        () => cardEl.classList.remove("poster-hover-active"),
+        signal,
       );
+    }
 
-      cardEl.addEventListener(
-        "mousemove",
-        () => {
-          if (!hasMoved) {
-            hasMoved = true;
-            cardEl
-              .closest(".dynamic-views")
-              ?.querySelector(".card.poster-hover-active")
-              ?.classList.remove("poster-hover-active");
-            cardEl.classList.add("poster-hover-active");
-          }
-        },
-        { signal },
-      );
-
-      cardEl.addEventListener(
-        "mouseleave",
-        () => {
-          hasMoved = false;
-          cardEl.classList.remove("poster-hover-active");
-        },
-        { signal },
-      );
+    // Cover hover zoom intent: require mousemove before activating zoom
+    if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
+      const zoomMode = getCoverHoverZoomMode();
+      if (zoomMode !== "off") {
+        const targetEl =
+          zoomMode === "cover"
+            ? (cardEl.querySelector(".card-cover") as HTMLElement)
+            : cardEl;
+        if (targetEl) {
+          setupHoverIntent(
+            targetEl,
+            () => cardEl.classList.add("cover-hover-active"),
+            () => cardEl.classList.remove("cover-hover-active"),
+            signal,
+          );
+        }
+      }
     }
 
     // Handle hover for page preview (only on card when openFileAction is 'card')

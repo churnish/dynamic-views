@@ -268,6 +268,13 @@ export function isThumbnailScrubbingDisabled(): boolean {
   return hasBodyClass("dynamic-views-disable-thumbnail-scrubbing");
 }
 
+/** Get cover hover zoom mode from Style Settings */
+export function getCoverHoverZoomMode(): "cover" | "card" | "off" {
+  if (hasBodyClass("dynamic-views-cover-hover-zoom-off")) return "off";
+  if (hasBodyClass("dynamic-views-cover-hover-zoom-cover")) return "cover";
+  return "card";
+}
+
 /**
  * Get maximum number of images for slideshow
  * Returns slider value (default 10, min 2, max 24)

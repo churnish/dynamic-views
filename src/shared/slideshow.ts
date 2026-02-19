@@ -10,6 +10,7 @@ import {
   SCROLL_THROTTLE_MS,
 } from "./constants";
 import { isExternalUrl } from "../utils/image";
+import { setupHoverIntent } from "./hover-intent";
 
 // Blob URL cache for external images to prevent re-downloads
 // Obsidian's Electron sends Cache-Control: no-cache on cross-origin requests,
@@ -701,34 +702,23 @@ export function setupImagePreload(
   signal: AbortSignal,
 ): void {
   let preloaded = false;
-  let hasMoved = false;
 
-  cardEl.addEventListener(
-    "mouseenter",
+  setupHoverIntent(
+    cardEl,
     () => {
-      hasMoved = false;
-    },
-    { signal },
-  );
-
-  cardEl.addEventListener(
-    "mousemove",
-    () => {
-      if (!hasMoved) {
-        hasMoved = true;
-        if (!preloaded) {
-          preloaded = true;
-          imageUrls.slice(1).forEach((url) => {
-            if (isExternalUrl(url)) {
-              void getExternalBlobUrl(url);
-            } else {
-              new Image().src = url;
-            }
-          });
-        }
+      if (!preloaded) {
+        preloaded = true;
+        imageUrls.slice(1).forEach((url) => {
+          if (isExternalUrl(url)) {
+            void getExternalBlobUrl(url);
+          } else {
+            new Image().src = url;
+          }
+        });
       }
     },
-    { signal },
+    undefined,
+    signal,
   );
 }
 

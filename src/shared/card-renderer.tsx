@@ -19,6 +19,7 @@ import {
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
   getUrlIcon,
+  getCoverHoverZoomMode,
 } from "../utils/style-settings";
 import {
   getPropertyLabel,
@@ -66,6 +67,7 @@ import {
   CHECKBOX_MARKER_PREFIX,
   THUMBNAIL_STACK_MULTIPLIER,
 } from "./constants";
+import { setupHoverIntent } from "./hover-intent";
 
 import {
   isTagProperty,
@@ -488,6 +490,12 @@ const cardPropertyObservers = new Map<string, ResizeObserver[]>();
 
 // Module-level Map to store AbortControllers for scroll listener cleanup
 const cardScrollAbortControllers = new Map<string, AbortController>();
+
+/** Per-element hover intent state (WeakMap avoids path collisions across containers) */
+const cardHoverIntentState = new WeakMap<
+  HTMLElement,
+  { controller: AbortController; zoomMode: string }
+>();
 
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
@@ -1985,6 +1993,38 @@ function Card({
         });
         responsiveObserver.observe(cardEl);
         cardResponsiveObservers.set(card.path, responsiveObserver);
+
+        // Cover hover zoom intent (element-scoped to survive Preact re-renders)
+        if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
+          const zoomMode = getCoverHoverZoomMode();
+          if (zoomMode !== "off") {
+            const targetEl =
+              zoomMode === "cover"
+                ? (cardEl.querySelector(".card-cover") as HTMLElement)
+                : cardEl;
+            if (targetEl) {
+              const existing = cardHoverIntentState.get(cardEl);
+              if (
+                !existing ||
+                existing.controller.signal.aborted ||
+                existing.zoomMode !== zoomMode
+              ) {
+                existing?.controller.abort();
+                const hoverAbort = new AbortController();
+                cardHoverIntentState.set(cardEl, {
+                  controller: hoverAbort,
+                  zoomMode,
+                });
+                setupHoverIntent(
+                  targetEl,
+                  () => cardEl.classList.add("cover-hover-active"),
+                  () => cardEl.classList.remove("cover-hover-active"),
+                  hoverAbort.signal,
+                );
+              }
+            }
+          }
+        }
       }}
       draggable={settings.openFileAction === "card"}
       onDragStart={settings.openFileAction === "card" ? handleDrag : undefined}

@@ -46,6 +46,7 @@ dynamic-views/
 │   │
 │   ├── shared/                       # Cross-backend shared logic
 │   │   ├── card-renderer.tsx         # Pure card rendering (normalized CardData)
+│   │   ├── hover-intent.ts           # Shared hover intent (mousemove-after-mouseenter) utility
 │   │   ├── constants.ts              # Infinite scroll, throttling, batch size constants
 │   │   ├── content-loader.ts         # Async image/text loading with dedup
 │   │   ├── content-visibility.ts     # IntersectionObserver-based visibility management
