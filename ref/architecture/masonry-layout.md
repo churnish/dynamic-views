@@ -1,23 +1,39 @@
 ---
 title: Masonry layout system
-description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. It uses absolute positioning via inline styles, proportional height scaling during resize, incremental batch appends for infinite scroll, and virtual scrolling to handle thousands of cards efficiently.
+description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling. Datacore uses declarative Preact/JSX rendering without virtual scrolling. The detailed pipeline, guard system, and invariant sections below document the Bases implementation; see "Bases vs. Datacore" at the end for architectural differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-18
+last updated: 2026-02-19
 ---
 
 # Masonry layout system
 
 ## Files
 
-| File                           | Role                                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `src/bases/masonry-view.ts`    | View class — orchestrates rendering, layout, virtual scroll, resize, infinite scroll.    |
-| `src/utils/masonry-layout.ts`  | Pure layout math — column/position calculations, no DOM.                                 |
-| `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                   |
-| `src/shared/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation across mounted/unmounted cards. |
-| `src/shared/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals).                  |
-| `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.          |
-| `styles/_masonry.scss`         | Masonry-specific CSS — absolute card positioning, container sizing.                      |
+### Shared
+
+| File                           | Role                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `src/utils/masonry-layout.ts`  | Pure layout math — column/position calculations, no DOM.                |
+| `src/shared/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals). |
+| `src/shared/card-renderer.tsx` | Pure card rendering (normalized `CardData`), used by both backends.     |
+| `src/shared/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation.               |
+| `styles/_masonry.scss`         | Masonry-specific CSS — absolute card positioning, container sizing.     |
+
+### Bases
+
+| File                           | Role                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `src/bases/masonry-view.ts`    | View class — orchestrates rendering, layout, virtual scroll, resize, infinite scroll. |
+| `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
+| `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.       |
+
+### Datacore
+
+| File                            | Role                                                             |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `src/datacore/view.tsx`         | Main controller — state, query, layout effects, infinite scroll. |
+| `src/datacore/masonry-view.tsx` | Thin wrapper — sets `viewMode="masonry"` on `CardView`.          |
+| `src/datacore/card-view.tsx`    | Card component — delegates to `CardRenderer` with view mode.     |
 
 ## Core data structures
 
@@ -281,3 +297,53 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 6. **Virtual scroll sync runs unconditionally after every position change.** Full measurement, batch append, correction, and proportional resize all call `syncVirtualScroll()`. During same-column-count resize, sync is cheap (0-3 mounts at edges from proportional drift). Skipping sync during resize caused blank space as items drifted outside the viewport without remounting.
 7. **Post-mount remeasure fixes proportional height drift.** After `syncVirtualScroll` mounts new cards, `remeasureAndReposition()` runs to correct overlap caused by proportional height estimates diverging from actual DOM heights (`height: auto`). Skipped during active resize (cards have explicit heights) and during `batchLayoutPending` (unpositioned batch cards would corrupt `groupLayoutResults` heights, causing ~2700px gaps at batch boundaries). This replaces the previous correction-specific remeasure.
 8. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.
+
+## Bases vs. Datacore
+
+Both backends share the same pure layout math (`calculateMasonryLayout()`, `calculateIncrementalMasonryLayout()`) and the same greedy shortest-column algorithm. They diverge in rendering model, state management, and performance strategy.
+
+### Architecture comparison
+
+| Aspect                  | Bases                                                     | Datacore                                                          |
+| ----------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Rendering model**     | Imperative DOM manipulation via `renderCard()`.           | Declarative Preact/JSX components via `CardRenderer`.             |
+| **State management**    | Instance fields + `{ current }` ref boxes on view class.  | Preact hooks (`dc.useState`, `dc.useRef`, `dc.useEffect`).        |
+| **Card positioning**    | Direct inline styles (`style.left`, `style.top`).         | CSS custom properties (`--masonry-left`, `--masonry-top`).        |
+| **Virtual scrolling**   | Full `VirtualItem[]` tracking with mount/unmount.         | Not implemented — all displayed cards rendered in DOM.            |
+| **Resize strategy**     | 3-tier: proportional fast path → correction → fallback.   | Full recalculation via double-RAF throttle. No proportional path. |
+| **Resize cost**         | ~3-5ms/frame (proportional), ~6-9ms (correction).         | Full `calculateMasonryLayout()` per frame.                        |
+| **Layout guard system** | 5 sequential guards with source-dependent behavior.       | No guard system — layout runs via `useEffect` dependencies.       |
+| **Image coalescing**    | Single RAF debounce via `pendingImageRelayout` flag.      | Handled by Preact re-render batching.                             |
+| **Group collapse**      | Surgical expand/collapse with scroll position adjustment. | State-driven re-render.                                           |
+| **Content loading**     | `ContentCache` class with abort controllers.              | `useRef` Map with effect ID race prevention.                      |
+| **Cleanup**             | Manual per-card `CardHandle.cleanup()` + abort.           | Preact handles unmount cleanup.                                   |
+| **Width modes**         | Standalone view — fills pane.                             | Embedded in Live Preview/Reading View with normal/wide/max modes. |
+
+### What Bases has that Datacore lacks
+
+- **Virtual scrolling** — Bases mounts only viewport-adjacent cards, handling thousands efficiently. Datacore renders all cards up to `displayedCount` in the DOM. With 1000+ visible cards, Datacore may degrade.
+- **Proportional resize scaling** — Zero-DOM-read resize at ~60fps. Scales `measuredHeight × (newWidth / measuredAtWidth)` without touching the DOM. Datacore does a full recalculation each frame.
+- **Post-resize correction** — 200ms debounced DOM re-measure to fix proportional height drift and establish a fresh baseline.
+- **Layout guard system** — Source-tagged layout requests with 5 guards preventing corruption (batch pending, reentrant, coalescing). Datacore relies on Preact's effect scheduling.
+- **Group offset caching** — `cachedGroupOffsets` eliminates `getBoundingClientRect` from the scroll/resize hot path.
+- **Property reorder fast path** — Detects property-order-only changes and updates card content without relayout.
+- **Post-mount remeasure** — After virtual scroll mounts new cards, `remeasureAndReposition()` corrects proportional height drift.
+
+### What Datacore has that Bases lacks
+
+- **Declarative rendering** — Data changes flow through Preact's render cycle. No manual DOM bookkeeping.
+- **Width modes** — `normal` (match `--file-line-width`), `wide` (1.75×), `max` (full pane). Bases views fill their pane natively.
+- **Reactive query** — `dc.query()` re-executes on Datacore index updates (500ms debounced). Bases uses Obsidian's `onDataUpdated()` callback.
+- **DOM shuffle** — Fisher-Yates shuffle directly reorders DOM children + triggers relayout. Bases rebuilds via data sort.
+
+### Shared behavior
+
+- **Layout algorithm** — Greedy shortest-column placement via `calculateMasonryLayout()`.
+- **Incremental append** — `calculateIncrementalMasonryLayout()` continues from previous `columnHeights` when container width is stable.
+- **Batch height reads** — Single forced reflow per layout pass (read all `offsetHeight` values before writing positions).
+- **Infinite scroll** — `displayedCount` incremented by `columns × ROWS_PER_COLUMN` (capped at `MAX_BATCH_SIZE`) when within `PANE_MULTIPLIER × viewport height` from bottom. Leading + trailing throttle.
+- **Card rendering** — Both backends produce `CardData` and render through shared `card-renderer.tsx` logic (title, subtitle, properties, image, text preview).
+- **CSS classes** — `masonry-container`, `masonry-positioned`, `masonry-measuring` used by both.
+- **Responsive classes** — `syncResponsiveClasses()` runs after layout in both backends.
+- **Scroll gradients** — `initializeScrollGradients()` applied to property rows in both.
+- **Title truncation** — Binary-search truncation via `initializeTitleTruncation()` in both.
