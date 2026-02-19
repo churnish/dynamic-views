@@ -193,6 +193,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private groupContainers: Map<string | undefined, HTMLElement> = new Map();
   private virtualScrollRafId: number | null = null;
   private scrollRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isCompensatingScroll = false;
   private deferredRemeasureRafId: number | null = null;
   private hasUserScrolled = false;
   private expectedIncrementalHeight: number | null = null;
@@ -1783,14 +1784,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.resizeCorrectionTimeout = window.setTimeout(() => {
         this.resizeCorrectionTimeout = null;
         this.masonryContainer?.classList.remove("masonry-resize-active");
-        // Softer transition during correction — proportional-to-DOM shift is visible
-        this.masonryContainer?.classList.add("masonry-correcting");
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.("resize-correction");
-        // Remove after transition completes (140ms matches --anim-duration-fast)
-        window.setTimeout(() => {
-          this.masonryContainer?.classList.remove("masonry-correcting");
-        }, 140);
       }, 200);
 
       if (this.resizeRafId !== null) {
@@ -1864,10 +1859,6 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
     if (!needsReposition) return false;
-
-    // Smooth transition during remeasure — corrections happen when scroll is
-    // idle (debounced) so they're visible to the user and should ease in
-    this.masonryContainer?.classList.add("masonry-correcting");
 
     // Scroll anchor: record absolute Y of first visible mounted card
     // so we can compensate scrollTop after positions shift
@@ -1961,14 +1952,11 @@ export class DynamicViewsMasonryView extends BasesView {
       const newAbsY = newOffset + anchorItem.y;
       const delta = newAbsY - anchorAbsY;
       if (delta !== 0) {
+        this.isCompensatingScroll = true;
         this.scrollEl.scrollTop = scrollTop + delta;
       }
     }
 
-    // Remove after transition completes (140ms matches --anim-duration-fast)
-    window.setTimeout(() => {
-      this.masonryContainer?.classList.remove("masonry-correcting");
-    }, 140);
     return true;
   }
 
@@ -2947,6 +2935,12 @@ export class DynamicViewsMasonryView extends BasesView {
     // Create scroll handler with throttling (scroll tracking is in constructor)
     // Uses leading+trailing pattern: runs immediately on first event, then again when throttle expires
     this.scrollThrottle.listener = () => {
+      // Skip sync for programmatic scroll compensation — positions were
+      // just recalculated, syncing would cascade into another remeasure
+      if (this.isCompensatingScroll) {
+        this.isCompensatingScroll = false;
+        return;
+      }
       // Activate virtual scrolling on first user scroll
       this.hasUserScrolled = true;
 
