@@ -1832,10 +1832,23 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     };
 
+    // Electron popout windows have a separate V8 isolate — observers created
+    // in the main window's context don't fire for popout DOM elements.
+    const currentWindow = this.masonryContainer.ownerDocument.defaultView;
+    if (currentWindow && this.observerWindow !== currentWindow) {
+      this.layoutResizeObserver?.disconnect();
+      this.layoutResizeObserver = null;
+      this.cardResizeObserver?.disconnect();
+      this.cardResizeObserver = null;
+      this.observerWindow = currentWindow;
+    }
+
     // Setup resize observer (only once, not per render)
     // ResizeObserver handles both pane and window resize (container resizes in both cases)
     if (!this.layoutResizeObserver) {
-      this.layoutResizeObserver = new ResizeObserver(throttledResize);
+      this.layoutResizeObserver = new (
+        this.observerWindow ?? window
+      ).ResizeObserver(throttledResize);
       this.layoutResizeObserver.observe(this.masonryContainer);
       this.register(() => this.layoutResizeObserver?.disconnect());
     } else if (this.masonryContainer) {
@@ -1845,7 +1858,9 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     if (!this.cardResizeObserver) {
-      this.cardResizeObserver = new ResizeObserver(() => {
+      this.cardResizeObserver = new (
+        this.observerWindow ?? window
+      ).ResizeObserver(() => {
         // Skip during active resize, batch layout, or pre-layout state
         if (
           this.resizeCorrectionTimeout !== null ||
@@ -3119,7 +3134,9 @@ export class DynamicViewsMasonryView extends BasesView {
     // Setup ResizeObserver on masonry container to detect layout changes
     if (needsMoreItems() && this.masonryContainer) {
       let prevHeight = this.masonryContainer.offsetHeight;
-      this.scrollResizeObserver = new ResizeObserver((entries) => {
+      const RO = (this.masonryContainer.ownerDocument.defaultView ?? window)
+        .ResizeObserver;
+      this.scrollResizeObserver = new RO((entries) => {
         // Guard: skip if container disconnected from DOM
         if (!this.masonryContainer?.isConnected) return;
 

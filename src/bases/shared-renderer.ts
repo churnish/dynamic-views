@@ -1536,7 +1536,8 @@ export class SharedCardRenderer {
         if (signal.aborted || !cardEl.isConnected) return;
         updateWrapperDimensions();
 
-        const CoverRO = (cardEl.ownerDocument.defaultView ?? window).ResizeObserver;
+        const CoverRO = (cardEl.ownerDocument.defaultView ?? window)
+          .ResizeObserver;
         const resizeObserver = new CoverRO((entries) => {
           if (signal.aborted || !cardEl.isConnected) return;
           // Skip content-hidden cards (dimension reads trigger Chromium warnings)
@@ -1666,7 +1667,8 @@ export class SharedCardRenderer {
     );
 
     // Reset to slide 1 when view becomes visible (reading/editing views are separate DOMs)
-    const IO = (slideshowEl.ownerDocument.defaultView ?? window).IntersectionObserver;
+    const IO = (slideshowEl.ownerDocument.defaultView ?? window)
+      .IntersectionObserver;
     const visibilityObserver = new IO(
       (entries) => {
         if (entries[0]?.isIntersecting) {

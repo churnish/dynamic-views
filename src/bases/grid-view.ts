@@ -1130,7 +1130,9 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       if (!this.resizeObserver) {
-        this.resizeObserver = new (this.observerWindow ?? window).ResizeObserver((entries) => {
+        this.resizeObserver = new (
+          this.observerWindow ?? window
+        ).ResizeObserver((entries) => {
           const width = entries[0]?.contentRect.width ?? 0;
 
           // Column update logic (extracted for reuse)

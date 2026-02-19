@@ -255,6 +255,13 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Guards**: The callback returns early if `resizeCorrectionTimeout !== null` (resize in progress), `batchLayoutPending`, `lastLayoutCardWidth === 0` (pre-layout), or `!lastRenderedSettings`. The RAF callback re-checks the same conditions plus `containerEl.isConnected` before calling `remeasureAndReposition`.
 - **Relation to `updateCardsInPlace`**: `updateCardsInPlace` retains its synchronous `remeasureAndReposition` call — content updates are infrequent, single events where RAF debounce would be a visible regression. The observer is a complementary catch-all, not a replacement for the direct call.
 
+### Cross-window observer context
+
+- **Problem**: Plugin code runs in the main window's module context. `new ResizeObserver()` / `new IntersectionObserver()` resolve to the main window's constructor. In Electron, each popout BrowserWindow has its own V8 isolate — observers from the main window silently fail to fire callbacks for DOM elements in a popout window.
+- **Detection**: `observerWindow` field tracks the window context of existing observers. On each `setupMasonryLayout` call, `masonryContainer.ownerDocument.defaultView` is compared against `observerWindow`. On mismatch (view moved to a different window), existing observers are disconnected and nullified, forcing re-creation in the correct context.
+- **Creation**: Guarded observers (`layoutResizeObserver`, `cardResizeObserver`) use `new (this.observerWindow ?? window).ResizeObserver(...)`. The `scrollResizeObserver` (recreated each call) uses a local `const RO = (container.ownerDocument.defaultView ?? window).ResizeObserver`.
+- **Per-card observers** (in `shared-renderer.ts`): No field needed — derive the window inline from `cardEl.ownerDocument.defaultView` at each creation site.
+
 ## CSS positioning model
 
 Cards use `position: absolute` with direct inline styles for per-card positioning (eliminates CSS variable resolution overhead):
