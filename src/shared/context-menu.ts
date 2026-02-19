@@ -190,8 +190,11 @@ export function showFileContextMenu(
 
   menu.showAtMouseEvent(e);
 
-  // Manipulate menu DOM after rendering
-  const menuEl = document.body.querySelector(".menu") as HTMLElement;
+  // Manipulate menu DOM after rendering — use the event target's document,
+  // not the module-scope document (which is the main window's in popouts).
+  const menuDoc = (e.target as HTMLElement)?.ownerDocument ?? document;
+  const menuWin = menuDoc.defaultView ?? window;
+  const menuEl = menuDoc.body.querySelector(".menu") as HTMLElement;
   if (!menuEl) return;
 
   // Hide menu during processing to prevent flicker
@@ -218,7 +221,7 @@ export function showFileContextMenu(
 
   requestAnimationFrame(() => {
     // Ensure menu still exists (user may have closed it)
-    if (!document.body.contains(menuEl)) return;
+    if (!menuDoc.body.contains(menuEl)) return;
 
     try {
       // Add filename label at top for mobile (matching vanilla)
@@ -226,14 +229,14 @@ export function showFileContextMenu(
         const menuScroll = menuEl.querySelector(".menu-scroll");
         if (menuScroll && menuScroll.firstChild) {
           // Create label group
-          const labelGroup = document.createElement("div");
+          const labelGroup = menuDoc.createElement("div");
           labelGroup.className = "menu-group";
 
-          const labelItem = document.createElement("div");
+          const labelItem = menuDoc.createElement("div");
           labelItem.className = "menu-item is-label";
           labelItem.setAttribute("data-section", "title");
 
-          const titleDiv = document.createElement("div");
+          const titleDiv = menuDoc.createElement("div");
           titleDiv.className = "menu-item-title";
           titleDiv.textContent = getFilename(path);
 
@@ -244,14 +247,14 @@ export function showFileContextMenu(
           menuScroll.insertBefore(labelGroup, menuScroll.firstChild);
 
           // Add separator after label
-          const separator = document.createElement("div");
+          const separator = menuDoc.createElement("div");
           separator.className = "menu-separator";
           labelGroup.after(separator);
         }
       }
 
       // Check menu still exists before building item map
-      if (!document.body.contains(menuEl)) return;
+      if (!menuDoc.body.contains(menuEl)) return;
 
       // Build map of all menu items by title (exclude labels)
       const itemsByTitle = new Map<string, HTMLElement>();
@@ -278,7 +281,7 @@ export function showFileContextMenu(
           onClick: () => void,
           isWarning = false,
         ): HTMLElement => {
-          const item = document.createElement("div");
+          const item = menuDoc.createElement("div");
           item.className = isWarning
             ? "menu-item tappable is-warning"
             : "menu-item tappable";
@@ -287,7 +290,7 @@ export function showFileContextMenu(
           item.createDiv({ cls: "menu-item-title", text: title });
           item.addEventListener("click", () => {
             onClick();
-            document.body.click();
+            menuDoc.body.click();
           });
           // Add hover state (Obsidian doesn't auto-handle custom items)
           item.addEventListener("mouseenter", () => {
@@ -366,7 +369,7 @@ export function showFileContextMenu(
       }
 
       // Check menu still exists after creating custom items
-      if (!document.body.contains(menuEl)) return;
+      if (!menuDoc.body.contains(menuEl)) return;
 
       // Use pre-defined menu structure, adding dynamic fourth group for desktop
       let menuStructure: Array<{
@@ -440,7 +443,7 @@ export function showFileContextMenu(
 
       // Rebuild menu in order
       for (const group of menuStructure) {
-        const groupEl = document.createElement("div");
+        const groupEl = menuDoc.createElement("div");
         groupEl.className = "menu-group";
         let hasItems = false;
 
@@ -455,7 +458,7 @@ export function showFileContextMenu(
         if (hasItems) {
           menuScroll.appendChild(groupEl);
           if (group.separator) {
-            const sep = document.createElement("div");
+            const sep = menuDoc.createElement("div");
             sep.className = "menu-separator";
             menuScroll.appendChild(sep);
           }
@@ -464,11 +467,11 @@ export function showFileContextMenu(
 
       // Add plugin items
       if (pluginItems.length > 0) {
-        const pluginGroup = document.createElement("div");
+        const pluginGroup = menuDoc.createElement("div");
         pluginGroup.className = "menu-group";
         pluginItems.forEach((item) => pluginGroup.appendChild(item));
         menuScroll.appendChild(pluginGroup);
-        const sep = document.createElement("div");
+        const sep = menuDoc.createElement("div");
         sep.className = "menu-separator";
         menuScroll.appendChild(sep);
       }
@@ -476,14 +479,14 @@ export function showFileContextMenu(
       // Add Delete file at end
       const deleteItem = itemsByTitle.get("Delete file");
       if (deleteItem) {
-        const deleteGroup = document.createElement("div");
+        const deleteGroup = menuDoc.createElement("div");
         deleteGroup.className = "menu-group";
         deleteGroup.appendChild(deleteItem);
         menuScroll.appendChild(deleteGroup);
       }
 
       // Check menu still exists before cleanup operations
-      if (!document.body.contains(menuEl)) return;
+      if (!menuDoc.body.contains(menuEl)) return;
 
       // Remove empty menu groups and orphaned separators
       const menuGroups = menuEl.querySelectorAll(".menu-group");
@@ -533,11 +536,11 @@ export function showFileContextMenu(
       let left = e.clientX;
 
       // Adjust if menu would overflow viewport
-      if (top + rect.height > window.innerHeight) {
-        top = Math.max(0, window.innerHeight - rect.height - 10);
+      if (top + rect.height > menuWin.innerHeight) {
+        top = Math.max(0, menuWin.innerHeight - rect.height - 10);
       }
-      if (left + rect.width > window.innerWidth) {
-        left = Math.max(0, window.innerWidth - rect.width - 10);
+      if (left + rect.width > menuWin.innerWidth) {
+        left = Math.max(0, menuWin.innerWidth - rect.width - 10);
       }
 
       menuEl.style.top = `${top}px`;
