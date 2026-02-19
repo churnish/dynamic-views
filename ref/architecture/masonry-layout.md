@@ -246,11 +246,11 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 ### Card height change detection (`cardResizeObserver`)
 
-- **Pattern**: Single `ResizeObserver` instance observes all mounted cards. Debounced `MASONRY_CORRECTION_MS` (200ms).
+- **Pattern**: Single `ResizeObserver` instance observes all mounted cards. RAF-debounced (cancel-and-reschedule — at most one reflow per frame).
 - **Purpose**: Catch-all safety net for CSS-only height changes that bypass the normal layout pipeline — cover ratio slider, text preview lines, title lines, thumbnail size settings, and any future height-changing events.
-- **Lifecycle**: Created once in `setupMasonryLayout` (guarded by `!this.cardResizeObserver`). Registered for disconnect on view unload. Cards are observed in `renderCard` and unobserved in `unmountVirtualItem`. On full re-render, `containerEl.empty()` removes all card DOM nodes — ResizeObserver stops tracking removed elements automatically, so no explicit `disconnect` is needed between re-renders.
-- **Guards** (two-stage): The callback returns early if `resizeCorrectionTimeout !== null` (resize in progress), `batchLayoutPending`, `lastLayoutCardWidth === 0` (pre-layout), or `!lastRenderedSettings`. The debounced callback re-checks the same conditions plus `containerEl.isConnected` before calling `remeasureAndReposition`.
-- **Relation to `updateCardsInPlace`**: `updateCardsInPlace` retains its synchronous `remeasureAndReposition` call — content updates are infrequent, single events where 200ms debounce would be a visible regression. The observer is a complementary catch-all, not a replacement for the direct call.
+- **Lifecycle**: Created once in `setupMasonryLayout` (guarded by `!this.cardResizeObserver`). Registered for disconnect on view unload. Cards are observed in `renderCard` and unobserved in `unmountVirtualItem`. On full re-render, `containerEl.empty()` removes all card DOM nodes — ResizeObserver stops tracking removed elements automatically, so no explicit `disconnect` is needed between re-renders. After initial layout, the spurious RAF from card creation is cancelled to avoid a redundant no-op remeasure.
+- **Guards**: The callback returns early if `resizeCorrectionTimeout !== null` (resize in progress), `batchLayoutPending`, `lastLayoutCardWidth === 0` (pre-layout), or `!lastRenderedSettings`. The RAF callback re-checks the same conditions plus `containerEl.isConnected` before calling `remeasureAndReposition`.
+- **Relation to `updateCardsInPlace`**: `updateCardsInPlace` retains its synchronous `remeasureAndReposition` call — content updates are infrequent, single events where RAF debounce would be a visible regression. The observer is a complementary catch-all, not a replacement for the direct call.
 
 ## CSS positioning model
 
