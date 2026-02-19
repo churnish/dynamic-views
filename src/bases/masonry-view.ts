@@ -26,6 +26,7 @@ import {
   calculateMasonryLayout,
   calculateMasonryDimensions,
   calculateIncrementalMasonryLayout,
+  repositionWithStableColumns,
   type MasonryLayoutResult,
 } from "../utils/masonry-layout";
 import {
@@ -1853,6 +1854,25 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (!needsReposition) return;
 
+    // Suppress position transitions — remeasure corrections should be instant
+    this.masonryContainer?.classList.add("masonry-remeasuring");
+
+    // Scroll anchor: record absolute Y of first visible mounted card
+    // so we can compensate scrollTop after positions shift
+    const scrollTop = this.scrollEl.scrollTop;
+    let anchorItem: VirtualItem | null = null;
+    let anchorAbsY = 0;
+    for (const item of this.virtualItems) {
+      if (!item.el) continue;
+      const offset = this.cachedGroupOffsets.get(item.groupKey) ?? 0;
+      const absY = offset + item.y;
+      if (absY + item.height > scrollTop) {
+        anchorItem = item;
+        anchorAbsY = absY;
+        break;
+      }
+    }
+
     this.masonryContainer?.classList.add("masonry-measuring");
     for (const groupKey of this.virtualItemsByGroup.keys()) {
       const groupItems = this.virtualItemsByGroup.get(groupKey)!;
@@ -1866,14 +1886,40 @@ export class DynamicViewsMasonryView extends BasesView {
         return item.height;
       });
 
-      const result = calculateMasonryLayout({
-        cards: Array.from({ length: groupItems.length }),
-        containerWidth,
-        cardSize: settings.cardSize,
-        minColumns,
-        gap,
-        heights,
-      });
+      const existingResult = this.groupLayoutResults.get(groupKey);
+
+      // Stable column reposition when prior layout exists — prevents
+      // cascading column switching from small height changes.
+      let result: MasonryLayoutResult;
+      if (
+        existingResult &&
+        existingResult.columns > 0 &&
+        existingResult.positions.length >= groupItems.length
+      ) {
+        const stable = repositionWithStableColumns({
+          existingPositions: existingResult.positions,
+          newHeights: heights,
+          columns: existingResult.columns,
+          cardWidth,
+          gap,
+        });
+        result = {
+          ...existingResult,
+          positions: stable.positions,
+          columnHeights: stable.columnHeights,
+          containerHeight: stable.containerHeight,
+          heights,
+        };
+      } else {
+        result = calculateMasonryLayout({
+          cards: Array.from({ length: groupItems.length }),
+          containerWidth,
+          cardSize: settings.cardSize,
+          minColumns,
+          gap,
+          heights,
+        });
+      }
 
       for (let i = 0; i < groupItems.length; i++) {
         const pos = result.positions[i];
@@ -1897,6 +1943,23 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     this.masonryContainer?.classList.remove("masonry-measuring");
     this.updateCachedGroupOffsets();
+
+    // Compensate scroll position so viewport content stays visually anchored.
+    // Without this, cards above viewport changing height shift all visible
+    // cards — causing column snapping on scroll-up.
+    if (anchorItem) {
+      const newOffset = this.cachedGroupOffsets.get(anchorItem.groupKey) ?? 0;
+      const newAbsY = newOffset + anchorItem.y;
+      const delta = newAbsY - anchorAbsY;
+      if (delta !== 0) {
+        this.scrollEl.scrollTop = scrollTop + delta;
+      }
+    }
+
+    // Re-enable transitions after browser commits the instant position changes
+    requestAnimationFrame(() => {
+      this.masonryContainer?.classList.remove("masonry-remeasuring");
+    });
   }
 
   /** Rebuild the groupKey → VirtualItem[] index.

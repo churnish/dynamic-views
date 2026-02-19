@@ -1,6 +1,7 @@
 import {
   calculateMasonryLayout,
   applyMasonryLayout,
+  repositionWithStableColumns,
 } from "../../src/utils/masonry-layout";
 
 describe("masonry-layout", () => {
@@ -251,6 +252,81 @@ describe("masonry-layout", () => {
       expect(card2.classList.contains("masonry-positioned")).toBe(true);
       expect(card2.style.getPropertyValue("--masonry-left")).toBeTruthy();
       expect(card2.style.getPropertyValue("--masonry-top")).toBeTruthy();
+    });
+  });
+
+  describe("repositionWithStableColumns", () => {
+    it("should preserve column assignments when heights change", () => {
+      const gap = 8;
+      const cardWidth = 194;
+      const step = cardWidth + gap;
+      const existingPositions = [
+        { left: 0, top: 0 }, // col0
+        { left: step, top: 0 }, // col1
+        { left: step * 2, top: 0 }, // col2
+        { left: 0, top: 108 }, // col0
+        { left: step, top: 128 }, // col1
+        { left: step * 2, top: 98 }, // col2
+      ];
+      const newHeights = [124, 120, 90, 110, 80, 95]; // card 0 grew 24px
+
+      const result = repositionWithStableColumns({
+        existingPositions,
+        newHeights,
+        columns: 3,
+        cardWidth,
+        gap,
+      });
+
+      // Card 0: col0, top 0 (unchanged)
+      expect(result.positions[0]).toEqual({ left: 0, top: 0 });
+      // Card 1: col1, top 0 (unchanged — different column)
+      expect(result.positions[1]).toEqual({ left: step, top: 0 });
+      // Card 3: col0, top 132 (shifted +24 from card 0's growth)
+      expect(result.positions[3]).toEqual({ left: 0, top: 132 });
+      // Card 4: col1, top 128 (unchanged — different column)
+      expect(result.positions[4]).toEqual({ left: step, top: 128 });
+    });
+
+    it("should handle single column", () => {
+      const result = repositionWithStableColumns({
+        existingPositions: [
+          { left: 0, top: 0 },
+          { left: 0, top: 108 },
+        ],
+        newHeights: [124, 80],
+        columns: 1,
+        cardWidth: 400,
+        gap: 8,
+      });
+
+      expect(result.positions[0]).toEqual({ left: 0, top: 0 });
+      expect(result.positions[1]).toEqual({ left: 0, top: 132 });
+    });
+
+    it("should handle empty input", () => {
+      const result = repositionWithStableColumns({
+        existingPositions: [],
+        newHeights: [],
+        columns: 3,
+        cardWidth: 200,
+        gap: 8,
+      });
+
+      expect(result.positions).toEqual([]);
+      expect(result.containerHeight).toBe(0);
+    });
+
+    it("should clamp column index when out of bounds", () => {
+      const result = repositionWithStableColumns({
+        existingPositions: [{ left: 808, top: 0 }],
+        newHeights: [100],
+        columns: 3,
+        cardWidth: 194,
+        gap: 8,
+      });
+
+      expect(result.positions[0].left).toBe(2 * (194 + 8));
     });
   });
 });

@@ -334,3 +334,48 @@ export function calculateIncrementalMasonryLayout(
     measuredAtCardWidth: cardWidth,
   };
 }
+
+export interface StableRepositionParams {
+  /** Existing positions — column derived from left / (cardWidth + gap) */
+  existingPositions: MasonryPosition[];
+  /** Updated heights (DOM-measured for mounted, proportional for unmounted) */
+  newHeights: number[];
+  columns: number;
+  cardWidth: number;
+  gap: number;
+}
+
+/**
+ * Reposition cards with stable column assignment — only vertical positions change.
+ * Derives each card's column from its existing x position, preserving column assignment.
+ * Prevents column switching when heights change during scroll-triggered remeasurement.
+ */
+export function repositionWithStableColumns(params: StableRepositionParams): {
+  positions: MasonryPosition[];
+  containerHeight: number;
+  columnHeights: number[];
+} {
+  const { existingPositions, newHeights, columns, cardWidth, gap } = params;
+  const columnHeights = new Array(columns).fill(0) as number[];
+  const positions: MasonryPosition[] = [];
+
+  const count = Math.min(existingPositions.length, newHeights.length);
+  for (let i = 0; i < count; i++) {
+    const col =
+      columns > 1
+        ? Math.min(
+            Math.round(existingPositions[i].left / (cardWidth + gap)),
+            columns - 1,
+          )
+        : 0;
+    const left = col * (cardWidth + gap);
+    const top = columnHeights[col];
+    positions.push({ left, top });
+    columnHeights[col] += newHeights[i] + gap;
+  }
+
+  const maxH = columns > 0 ? Math.max(...columnHeights) : 0;
+  const containerHeight = Math.round(maxH > 0 ? maxH - gap : 0);
+
+  return { positions, containerHeight, columnHeights };
+}
