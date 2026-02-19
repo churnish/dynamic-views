@@ -497,6 +497,9 @@ const cardHoverIntentState = new WeakMap<
   { controller: AbortController; zoomMode: string }
 >();
 
+/** Per-element image viewer hover intent (survives Preact re-renders) */
+const imageViewerHoverIntentState = new WeakMap<HTMLElement, AbortController>();
+
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
 
@@ -2023,6 +2026,22 @@ function Card({
                 );
               }
             }
+          }
+        }
+
+        // Image viewer cursor hover intent (element-scoped to survive Preact re-renders)
+        if (window.matchMedia("(hover: hover)").matches) {
+          const existingIv = imageViewerHoverIntentState.get(cardEl);
+          if (!existingIv || existingIv.signal.aborted) {
+            existingIv?.abort();
+            const hoverAbort = new AbortController();
+            imageViewerHoverIntentState.set(cardEl, hoverAbort);
+            setupHoverIntent(
+              cardEl,
+              () => cardEl.classList.add("image-viewer-hover-active"),
+              () => cardEl.classList.remove("image-viewer-hover-active"),
+              hoverAbort.signal,
+            );
           }
         }
       }}

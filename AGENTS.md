@@ -27,3 +27,4 @@ Read...
 - **ios-webkit-quirks.md** before modifying content-visibility, IntersectionObserver, or scroll-state container queries — iOS WebKit has platform-specific bugs.
 - **obsidian-api-quirks.md** before using `vault.process()`, `vault.modify()`, `new Notice()`, or any file I/O that could race with Obsidian's debounced writes.
 - **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.
+- **datacore-ref-callback-patterns.md** before attaching event listeners or stateful behavior in `card-renderer.tsx` ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution.

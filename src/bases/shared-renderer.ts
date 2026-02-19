@@ -976,6 +976,16 @@ export class SharedCardRenderer {
       }
     }
 
+    // Image viewer cursor hover intent: show zoom-in cursor only after intentional hover
+    if (window.matchMedia("(hover: hover)").matches) {
+      setupHoverIntent(
+        cardEl,
+        () => cardEl.classList.add("image-viewer-hover-active"),
+        () => cardEl.classList.remove("image-viewer-hover-active"),
+        signal,
+      );
+    }
+
     // Handle hover for page preview (only on card when openFileAction is 'card')
     // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
     if (settings.openFileAction === "card") {

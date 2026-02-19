@@ -148,25 +148,10 @@ body.dynamic-views-cover-circular
 }
 
 /* Hover zoom for cover images (desktop only).
-   Default: "hover over card". The :not() fallback covers when Style Settings plugin is off. */
+   Transitions are always declared; the scale/transform change only fires via .cover-hover-active (JS hover intent). */
 @media (hover: hover) {
   /* Base transition for single-image covers */
-  body.dynamic-views-cover-hover-zoom-cover
-    .dynamic-views
-    .card.image-format-cover
-    .card-cover:not(.card-cover-slideshow)
-    .dynamic-views-image-embed
-    img,
-  body.dynamic-views-cover-hover-zoom-card
-    .dynamic-views
-    .card.image-format-cover
-    .card-cover:not(.card-cover-slideshow)
-    .dynamic-views-image-embed
-    img,
-  body:not(.dynamic-views-cover-hover-zoom-cover):not(
-      .dynamic-views-cover-hover-zoom-card
-    ):not(.dynamic-views-cover-hover-zoom-off)
-    .dynamic-views
+  .dynamic-views
     .card.image-format-cover
     .card-cover:not(.card-cover-slideshow)
     .dynamic-views-image-embed
@@ -177,22 +162,7 @@ body.dynamic-views-cover-circular
   }
 
   /* Base transition for slideshow covers - use scale property to not conflict with slide animations */
-  body.dynamic-views-cover-hover-zoom-cover
-    .dynamic-views
-    .card.image-format-cover
-    .card-cover-slideshow
-    .dynamic-views-image-embed
-    img,
-  body.dynamic-views-cover-hover-zoom-card
-    .dynamic-views
-    .card.image-format-cover
-    .card-cover-slideshow
-    .dynamic-views-image-embed
-    img,
-  body:not(.dynamic-views-cover-hover-zoom-cover):not(
-      .dynamic-views-cover-hover-zoom-card
-    ):not(.dynamic-views-cover-hover-zoom-off)
-    .dynamic-views
+  .dynamic-views
     .card.image-format-cover
     .card-cover-slideshow
     .dynamic-views-image-embed

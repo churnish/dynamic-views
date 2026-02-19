@@ -11,29 +11,29 @@ last updated: 2026-02-19
 
 ### Shared
 
-| File                          | Role                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `src/shared/card-renderer.tsx` | Pure card rendering (normalized `CardData`), used by both backends.    |
-| `src/shared/constants.ts`     | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals). |
-| `src/shared/content-visibility.ts` | IntersectionObserver-based `content-hidden` class toggling.        |
-| `src/shared/keyboard-nav.ts`  | DOM-based arrow navigation and hover-to-keyboard focus transfer.        |
-| `src/shared/scroll-gradient.ts` | Horizontal scroll gradients for property rows.                        |
-| `src/shared/property-measure.ts` | Side-by-side property field width measurement + queued processing.   |
-| `styles/card/_grid.scss`      | Grid-specific CSS — CSS Grid columns, subgrid groups, card sizing.     |
+| File                               | Role                                                                    |
+| ---------------------------------- | ----------------------------------------------------------------------- |
+| `src/shared/card-renderer.tsx`     | Pure card rendering (normalized `CardData`), used by both backends.     |
+| `src/shared/constants.ts`          | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals). |
+| `src/shared/content-visibility.ts` | IntersectionObserver-based `content-hidden` class toggling.             |
+| `src/shared/keyboard-nav.ts`       | DOM-based arrow navigation and hover-to-keyboard focus transfer.        |
+| `src/shared/scroll-gradient.ts`    | Horizontal scroll gradients for property rows.                          |
+| `src/shared/property-measure.ts`   | Side-by-side property field width measurement + queued processing.      |
+| `styles/card/_grid.scss`           | Grid-specific CSS — CSS Grid columns, subgrid groups, card sizing.      |
 
 ### Bases
 
-| File                           | Role                                                                       |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `src/bases/grid-view.ts`       | View class — orchestrates rendering, resize, infinite scroll, group collapse. |
+| File                           | Role                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------- |
+| `src/bases/grid-view.ts`       | View class — orchestrates rendering, resize, infinite scroll, group collapse.   |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration. |
 
 ### Datacore
 
-| File                            | Role                                                             |
-| ------------------------------- | ---------------------------------------------------------------- |
-| `src/datacore/view.tsx`         | Main controller — state, query, layout effects, infinite scroll. |
-| `src/datacore/card-view.tsx`    | Card component — delegates to `CardRenderer` with view mode.    |
+| File                         | Role                                                             |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `src/datacore/view.tsx`      | Main controller — state, query, layout effects, infinite scroll. |
+| `src/datacore/card-view.tsx` | Card component — delegates to `CardRenderer` with view mode.     |
 
 ## Core data structures
 
@@ -41,25 +41,25 @@ last updated: 2026-02-19
 
 Shared cache objects for deduplicating async content loading across renders and batch appends.
 
-| Field               | Type                             | Purpose                                         |
-| ------------------- | -------------------------------- | ----------------------------------------------- |
-| `textPreviews`      | `Record<string, string>`         | Cached text preview content by file path.        |
-| `images`            | `Record<string, string>`         | Cached image URLs by file path.                  |
-| `hasImageAvailable` | `Record<string, boolean>`        | Boolean flags for image availability per path.   |
+| Field               | Type                      | Purpose                                        |
+| ------------------- | ------------------------- | ---------------------------------------------- |
+| `textPreviews`      | `Record<string, string>`  | Cached text preview content by file path.      |
+| `images`            | `Record<string, string>`  | Cached image URLs by file path.                |
+| `hasImageAvailable` | `Record<string, boolean>` | Boolean flags for image availability per path. |
 
 ### RenderState (`src/types.ts`)
 
 Tracks render versioning and change detection hashes to skip no-op re-renders.
 
-| Field                           | Type                          | Purpose                                                      |
-| ------------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| `version`                       | `number`                      | Incremented on each render; cancels stale async operations.  |
-| `abortController`               | `AbortController \| null`     | Cancels in-flight content loading on new render.             |
-| `lastRenderHash`                | `string`                      | Hash of data + settings + mtimes + sort + collapse state.    |
-| `lastSettingsHash`              | `string \| null`              | Hash of resolved settings (detects settings changes).        |
-| `lastPropertySetHash`           | `string \| null`              | Sorted property names hash (detects property set changes).   |
-| `lastSettingsHashExcludingOrder`| `string \| null`              | Order-independent settings hash (detects reorder-only).      |
-| `lastMtimes`                    | `Map<string, number>`         | File modification times (detects content-only changes).      |
+| Field                            | Type                      | Purpose                                                     |
+| -------------------------------- | ------------------------- | ----------------------------------------------------------- |
+| `version`                        | `number`                  | Incremented on each render; cancels stale async operations. |
+| `abortController`                | `AbortController \| null` | Cancels in-flight content loading on new render.            |
+| `lastRenderHash`                 | `string`                  | Hash of data + settings + mtimes + sort + collapse state.   |
+| `lastSettingsHash`               | `string \| null`          | Hash of resolved settings (detects settings changes).       |
+| `lastPropertySetHash`            | `string \| null`          | Sorted property names hash (detects property set changes).  |
+| `lastSettingsHashExcludingOrder` | `string \| null`          | Order-independent settings hash (detects reorder-only).     |
+| `lastMtimes`                     | `Map<string, number>`     | File modification times (detects content-only changes).     |
 
 ### Key maps on `DynamicViewsGridView`
 
@@ -69,18 +69,18 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 
 ### Grid-specific state fields
 
-| Field                  | Type                  | Purpose                                                        |
-| ---------------------- | --------------------- | -------------------------------------------------------------- |
-| `displayedCount`       | `number`              | Cards currently visible (infinite scroll progress).            |
-| `previousDisplayedCount` | `number`            | Count from last batch render (for incremental append).         |
-| `isLoading`            | `boolean`             | Guard: batch append in progress.                               |
-| `currentCardSize`      | `number`              | Resolved card width setting (px).                              |
-| `currentMinColumns`    | `number`              | Resolved minimum columns setting.                              |
-| `lastColumnCount`      | `number`              | Last computed column count (skip no-op CSS updates).           |
-| `isUpdatingColumns`    | `boolean`             | Guard: prevents reentrant ResizeObserver calls.                |
-| `lastObservedWidth`    | `number`              | Last container width (0 = tab switch detection).               |
-| `resizeRafId`          | `number \| null`      | Double-RAF debounce tracking ID.                               |
-| `hasBatchAppended`     | `boolean`             | Flag: has infinite scroll appended items (end indicator logic).|
+| Field                    | Type             | Purpose                                                         |
+| ------------------------ | ---------------- | --------------------------------------------------------------- |
+| `displayedCount`         | `number`         | Cards currently visible (infinite scroll progress).             |
+| `previousDisplayedCount` | `number`         | Count from last batch render (for incremental append).          |
+| `isLoading`              | `boolean`        | Guard: batch append in progress.                                |
+| `currentCardSize`        | `number`         | Resolved card width setting (px).                               |
+| `currentMinColumns`      | `number`         | Resolved minimum columns setting.                               |
+| `lastColumnCount`        | `number`         | Last computed column count (skip no-op CSS updates).            |
+| `isUpdatingColumns`      | `boolean`        | Guard: prevents reentrant ResizeObserver calls.                 |
+| `lastObservedWidth`      | `number`         | Last container width (0 = tab switch detection).                |
+| `resizeRafId`            | `number \| null` | Double-RAF debounce tracking ID.                                |
+| `hasBatchAppended`       | `boolean`        | Flag: has infinite scroll appended items (end indicator logic). |
 
 ## Render pipeline
 
@@ -219,12 +219,12 @@ Triggered when only property **order** changed (not the set of properties, not o
 
 `processDataUpdate()` has 4 sequential guards:
 
-| #   | Guard                        | Behavior                                                                                                             |
-| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1   | `!this.data`                 | Return early — data not yet initialized (race with MutationObserver).                                                |
-| 2   | `isLoading`                  | Return early — batch append in progress, full re-render would corrupt state.                                         |
-| 3   | `renderHash === lastHash`    | Return early — nothing changed. Schedule delayed re-checks (100/250/500ms) for late Obsidian config updates.         |
-| 4   | `renderState.version`        | Incremented on each render. Stale async operations (content loading) bail when version mismatches on completion.      |
+| #   | Guard                     | Behavior                                                                                                         |
+| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | `!this.data`              | Return early — data not yet initialized (race with MutationObserver).                                            |
+| 2   | `isLoading`               | Return early — batch append in progress, full re-render would corrupt state.                                     |
+| 3   | `renderHash === lastHash` | Return early — nothing changed. Schedule delayed re-checks (100/250/500ms) for late Obsidian config updates.     |
+| 4   | `renderState.version`     | Incremented on each render. Stale async operations (content loading) bail when version mismatches on completion. |
 
 ### Data update throttle
 
@@ -260,23 +260,23 @@ Cards use CSS Grid for automatic flow-based positioning:
 
 | Property / Variable                  | Set by    | Purpose                                                             |
 | ------------------------------------ | --------- | ------------------------------------------------------------------- |
-| `--dynamic-views-grid-columns`       | Layout JS | Column count for `grid-template-columns: repeat(N, 1fr)`.          |
+| `--dynamic-views-grid-columns`       | Layout JS | Column count for `grid-template-columns: repeat(N, 1fr)`.           |
 | `--dynamic-views-image-aspect-ratio` | Layout JS | Cover aspect ratio via `padding-top` trick.                         |
 | `--dynamic-views-preserve-height`    | Layout JS | Temporary `min-height` during DOM wipe to prevent scroll reset.     |
 | `gap`                                | CSS       | Card spacing (`--dynamic-views-card-spacing-desktop/mobile`).       |
-| `align-items: stretch`              | CSS       | Cards fill grid cell height (enables `margin-top: auto` alignment). |
+| `align-items: stretch`               | CSS       | Cards fill grid cell height (enables `margin-top: auto` alignment). |
 
 **Key CSS classes**:
 
-| Class                          | Element           | Purpose                                                                                      |
-| ------------------------------ | ----------------- | -------------------------------------------------------------------------------------------- |
-| `dynamic-views-grid`           | Feed container    | CSS Grid layout with `repeat(var(--dynamic-views-grid-columns), 1fr)`.                       |
-| `dynamic-views-group-section`  | Group wrapper     | `grid-column: 1 / -1` + `subgrid` — spans full width, inherits parent columns.              |
-| `dynamic-views-group`          | Group container   | Nested subgrid for cards within a group.                                                     |
-| `bases-group-heading`          | Group header      | Sticky header with `scroll-state(stuck: top)` container query for border.                    |
-| `content-hidden`               | Card              | Added by IntersectionObserver; triggers `content-visibility: hidden`.                         |
-| `is-grouped`                   | View container    | Toggled when view has grouped data.                                                          |
-| `dynamic-views-height-preserved` | View container  | Temporary class during DOM wipe; sets `min-height` to prevent scroll reset.                  |
+| Class                            | Element         | Purpose                                                                        |
+| -------------------------------- | --------------- | ------------------------------------------------------------------------------ |
+| `dynamic-views-grid`             | Feed container  | CSS Grid layout with `repeat(var(--dynamic-views-grid-columns), 1fr)`.         |
+| `dynamic-views-group-section`    | Group wrapper   | `grid-column: 1 / -1` + `subgrid` — spans full width, inherits parent columns. |
+| `dynamic-views-group`            | Group container | Nested subgrid for cards within a group.                                       |
+| `bases-group-heading`            | Group header    | Sticky header with `scroll-state(stuck: top)` container query for border.      |
+| `content-hidden`                 | Card            | Added by IntersectionObserver; triggers `content-visibility: hidden`.          |
+| `is-grouped`                     | View container  | Toggled when view has grouped data.                                            |
+| `dynamic-views-height-preserved` | View container  | Temporary class during DOM wipe; sets `min-height` to prevent scroll reset.    |
 
 **Card flex layout**:
 
@@ -297,9 +297,12 @@ Cards use CSS Grid for automatic flow-based positioning:
 
 ```html
 <div class="dynamic-views-grid" style="--dynamic-views-grid-columns: N">
-  <div class="dynamic-views-group-section">          <!-- grid-column: 1/-1, subgrid -->
-    <div class="bases-group-heading">Title</div>      <!-- grid-column: 1/-1, sticky -->
-    <div class="dynamic-views-group">                 <!-- grid-column: 1/-1, subgrid -->
+  <div class="dynamic-views-group-section">
+    <!-- grid-column: 1/-1, subgrid -->
+    <div class="bases-group-heading">Title</div>
+    <!-- grid-column: 1/-1, sticky -->
+    <div class="dynamic-views-group">
+      <!-- grid-column: 1/-1, subgrid -->
       <div class="card">...</div>
       <div class="card">...</div>
     </div>
@@ -323,22 +326,22 @@ Arrow keys navigate spatially across all mounted cards using DOM measurements.
 
 ## Constants (`src/shared/constants.ts`)
 
-| Constant             | Value          | Purpose                                                                  |
-| -------------------- | -------------- | ------------------------------------------------------------------------ |
-| `BATCH_SIZE`         | 50             | Default infinite scroll batch size.                                      |
-| `MAX_BATCH_SIZE`     | 70             | Maximum batch size cap.                                                  |
-| `ROWS_PER_COLUMN`    | 10             | Rows per column for dynamic batch size calculation.                      |
-| `PANE_MULTIPLIER`    | 3              | Trigger batch load when within 3× viewport height from bottom.           |
-| `SCROLL_THROTTLE_MS` | 100            | Scroll event throttle interval.                                          |
+| Constant             | Value | Purpose                                                        |
+| -------------------- | ----- | -------------------------------------------------------------- |
+| `BATCH_SIZE`         | 50    | Default infinite scroll batch size.                            |
+| `MAX_BATCH_SIZE`     | 70    | Maximum batch size cap.                                        |
+| `ROWS_PER_COLUMN`    | 10    | Rows per column for dynamic batch size calculation.            |
+| `PANE_MULTIPLIER`    | 3     | Trigger batch load when within 3× viewport height from bottom. |
+| `SCROLL_THROTTLE_MS` | 100   | Scroll event throttle interval.                                |
 
 ### Property measurement constants (`src/shared/property-measure.ts`)
 
-| Constant                   | Value | Purpose                                              |
-| -------------------------- | ----- | ---------------------------------------------------- |
-| `SETS_PER_FRAME`           | 5     | Side-by-side property sets processed per frame.      |
-| `MAX_QUEUE_SIZE`           | 500   | Maximum queued property sets.                        |
-| `MAX_GRADIENT_BATCH_SIZE`  | 100   | Early-flush threshold for gradient updates.          |
-| `MEASUREMENT_CHUNK_SIZE`   | 5     | Property fields measured per chunk.                  |
+| Constant                  | Value | Purpose                                         |
+| ------------------------- | ----- | ----------------------------------------------- |
+| `SETS_PER_FRAME`          | 5     | Side-by-side property sets processed per frame. |
+| `MAX_QUEUE_SIZE`          | 500   | Maximum queued property sets.                   |
+| `MAX_GRADIENT_BATCH_SIZE` | 100   | Early-flush threshold for gradient updates.     |
+| `MEASUREMENT_CHUNK_SIZE`  | 5     | Property fields measured per chunk.             |
 
 ## Key invariants
 
@@ -357,17 +360,17 @@ Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCard
 
 ### Architecture comparison
 
-| Aspect                 | Bases                                                     | Datacore                                                          |
-| ---------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Rendering model**    | Imperative DOM manipulation via `renderCard()`.           | Declarative Preact/JSX components via `CardRenderer`.             |
-| **State management**   | Instance fields + `{ current }` ref boxes on view class.  | Preact hooks (`dc.useState`, `dc.useRef`, `dc.useEffect`).       |
-| **Layout engine**      | CSS Grid with JS-controlled `--dynamic-views-grid-columns`. | CSS Grid with JS-controlled `--dynamic-views-grid-columns`.     |
-| **Content visibility** | Custom IntersectionObserver (`content-hidden` class).     | Not implemented — all displayed cards rendered normally.           |
-| **Resize strategy**    | Double-RAF debounce → update CSS variable only.           | Double-RAF throttle → update CSS variable only.                   |
-| **Group collapse**     | Surgical expand/collapse with scroll position adjustment. | State-driven re-render.                                           |
-| **Content loading**    | `ContentCache` objects with abort controllers.            | `useRef` Map with effect ID race prevention.                      |
-| **Cleanup**            | Manual per-card `CardHandle.cleanup()` + abort.           | Preact handles unmount cleanup.                                   |
-| **Width modes**        | Standalone view — fills pane.                             | Embedded in Live Preview/Reading View with normal/wide/max modes. |
+| Aspect                 | Bases                                                       | Datacore                                                          |
+| ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Rendering model**    | Imperative DOM manipulation via `renderCard()`.             | Declarative Preact/JSX components via `CardRenderer`.             |
+| **State management**   | Instance fields + `{ current }` ref boxes on view class.    | Preact hooks (`dc.useState`, `dc.useRef`, `dc.useEffect`).        |
+| **Layout engine**      | CSS Grid with JS-controlled `--dynamic-views-grid-columns`. | CSS Grid with JS-controlled `--dynamic-views-grid-columns`.       |
+| **Content visibility** | Custom IntersectionObserver (`content-hidden` class).       | Not implemented — all displayed cards rendered normally.          |
+| **Resize strategy**    | Double-RAF debounce → update CSS variable only.             | Double-RAF throttle → update CSS variable only.                   |
+| **Group collapse**     | Surgical expand/collapse with scroll position adjustment.   | State-driven re-render.                                           |
+| **Content loading**    | `ContentCache` objects with abort controllers.              | `useRef` Map with effect ID race prevention.                      |
+| **Cleanup**            | Manual per-card `CardHandle.cleanup()` + abort.             | Preact handles unmount cleanup.                                   |
+| **Width modes**        | Standalone view — fills pane.                               | Embedded in Live Preview/Reading View with normal/wide/max modes. |
 
 ### What Bases has that Datacore lacks
 
@@ -397,17 +400,17 @@ Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCard
 
 ## Grid vs. masonry comparison
 
-| Aspect                   | Grid                                                | Masonry                                                  |
-| ------------------------ | --------------------------------------------------- | -------------------------------------------------------- |
-| **Layout engine**        | CSS Grid (`display: grid`, automatic flow)          | Absolute positioning (`position: absolute`, JS-calculated) |
-| **Card height**          | Natural content height, equal per row (`stretch`)   | Variable per card (`height: auto` or proportional)       |
-| **Column control**       | Single CSS variable (`--dynamic-views-grid-columns`) | JavaScript calculates all positions per card             |
-| **Resize cost**          | ~0ms (CSS variable update only)                     | ~3-5ms proportional, ~6-9ms correction                   |
-| **Virtual scrolling**    | None — all cards in DOM, content-visibility for perf | Full `VirtualItem[]` tracking with mount/unmount         |
-| **Image load handling**  | CSS Grid auto-reflows rows (no JS needed)           | Coalesced RAF relayout per image batch                   |
-| **Group structure**      | CSS subgrid (cards aligned with parent columns)     | Block containers with `position: relative`               |
-| **Properties alignment** | `margin-top: auto` (works with `stretch`)           | `margin-top: auto` (limited — no fixed card height)      |
-| **Reorder fast path**    | Updates title + subtitle + properties               | Updates properties only (title/subtitle guarded)         |
-| **Content fast path**    | Updates text preview in-place                       | Not implemented (full relayout on content change)        |
-| **Render complexity**    | Simpler (CSS handles positioning)                   | Complex (5-guard layout system, proportional scaling)    |
-| **Performance ceiling**  | Lower control (CSS Grid limits)                     | Higher control (arbitrary layouts, virtual scroll)       |
+| Aspect                   | Grid                                                 | Masonry                                                    |
+| ------------------------ | ---------------------------------------------------- | ---------------------------------------------------------- |
+| **Layout engine**        | CSS Grid (`display: grid`, automatic flow)           | Absolute positioning (`position: absolute`, JS-calculated) |
+| **Card height**          | Natural content height, equal per row (`stretch`)    | Variable per card (`height: auto` or proportional)         |
+| **Column control**       | Single CSS variable (`--dynamic-views-grid-columns`) | JavaScript calculates all positions per card               |
+| **Resize cost**          | ~0ms (CSS variable update only)                      | ~3-5ms proportional, ~6-9ms correction                     |
+| **Virtual scrolling**    | None — all cards in DOM, content-visibility for perf | Full `VirtualItem[]` tracking with mount/unmount           |
+| **Image load handling**  | CSS Grid auto-reflows rows (no JS needed)            | Coalesced RAF relayout per image batch                     |
+| **Group structure**      | CSS subgrid (cards aligned with parent columns)      | Block containers with `position: relative`                 |
+| **Properties alignment** | `margin-top: auto` (works with `stretch`)            | `margin-top: auto` (limited — no fixed card height)        |
+| **Reorder fast path**    | Updates title + subtitle + properties                | Updates properties only (title/subtitle guarded)           |
+| **Content fast path**    | Updates text preview in-place                        | Not implemented (full relayout on content change)          |
+| **Render complexity**    | Simpler (CSS handles positioning)                    | Complex (5-guard layout system, proportional scaling)      |
+| **Performance ceiling**  | Lower control (CSS Grid limits)                      | Higher control (arbitrary layouts, virtual scroll)         |

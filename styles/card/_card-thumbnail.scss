@@ -215,9 +215,10 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
   }
 }
 
-/* Thumbnail expand on click - Toggle mode */
+/* Image viewer cursor — requires hover intent (.image-viewer-hover-active) */
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
+  .card.image-viewer-hover-active
   .card-thumbnail
   img {
   cursor: zoom-in;
@@ -225,6 +226,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
+  .card.image-viewer-hover-active
   .card-thumbnail
   .dynamic-views-image-embed {
   cursor: zoom-in;
@@ -232,7 +234,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-format-cover
+  .card.image-format-cover.image-viewer-hover-active
   .card-cover
   .dynamic-views-image-embed {
   cursor: zoom-in;
@@ -249,6 +251,13 @@ body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views-image-embed
   img {
   pointer-events: none;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.image-viewer-hover-active
+  .dynamic-views-image-embed
+  img {
   cursor: zoom-in;
 }
 
