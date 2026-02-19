@@ -1361,42 +1361,7 @@ export class DynamicViewsGridView extends BasesView {
       if (!cardEl) continue;
 
       // Update text preview — add/remove wrapper to avoid stale empty gap
-      const newText = this.contentCache.textPreviews[path] || "";
-      const previewsEl = cardEl.querySelector(".card-previews");
-      const previewEl = cardEl.querySelector(".card-text-preview");
-
-      if (newText) {
-        if (previewEl) {
-          previewEl.textContent = newText;
-        } else if (previewsEl) {
-          // Wrapper exists (has thumbnail) — insert text before thumbnail
-          const textWrapper = document.createElement("div");
-          textWrapper.className = "card-text-preview-wrapper";
-          textWrapper.createDiv({ cls: "card-text-preview", text: newText });
-          previewsEl.insertBefore(textWrapper, previewsEl.firstChild);
-        } else {
-          const bodyEl = cardEl.querySelector(".card-body");
-          if (bodyEl) {
-            const wrapper = document.createElement("div");
-            wrapper.className = "card-previews";
-            const textWrapper = wrapper.createDiv("card-text-preview-wrapper");
-            textWrapper.createDiv({ cls: "card-text-preview", text: newText });
-            const bottomProps = bodyEl.querySelector(".card-properties-bottom");
-            if (bottomProps) {
-              bodyEl.insertBefore(wrapper, bottomProps);
-            } else {
-              bodyEl.appendChild(wrapper);
-            }
-          }
-        }
-      } else if (previewsEl) {
-        const hasThumbnail = previewsEl.querySelector(".card-thumbnail");
-        if (hasThumbnail) {
-          previewEl?.closest(".card-text-preview-wrapper")?.remove();
-        } else {
-          previewsEl.remove();
-        }
-      }
+      updateTextPreviewDOM(cardEl, this.contentCache.textPreviews[path] || "");
     }
 
     // Grid: CSS auto-handles row height changes, no relayout needed

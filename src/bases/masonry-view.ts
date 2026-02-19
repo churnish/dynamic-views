@@ -91,6 +91,7 @@ import type {
   FocusState,
 } from "../types";
 import { CONTENT_HIDDEN_CLASS } from "../shared/content-visibility";
+import { updateTextPreviewDOM } from "../shared/text-preview-dom";
 import { type VirtualItem } from "../shared/virtual-scroll";
 
 // Extend Obsidian types
@@ -1269,6 +1270,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
         initializeScrollGradients(this.masonryContainer);
         initializeTitleTruncation(this.masonryContainer);
+
+        // Cancel spurious cardResizeObserver RAF from initial card creation —
+        // layout just measured all cards, no drift possible yet
+        if (this.cardResizeRafId !== null) {
+          cancelAnimationFrame(this.cardResizeRafId);
+          this.cardResizeRafId = null;
+        }
       }
 
       // Compute effective total (exclude collapsed groups)
@@ -2378,56 +2386,10 @@ export class DynamicViewsMasonryView extends BasesView {
         `[data-path="${CSS.escape(path)}"]`,
       );
       if (cardEl) {
-        const newText = this.contentCache.textPreviews[path] || "";
-        const previewsEl = cardEl.querySelector(".card-previews");
-        const previewEl = cardEl.querySelector(".card-text-preview");
-
-        if (newText) {
-          if (previewEl) {
-            // Update existing text
-            previewEl.textContent = newText;
-          } else if (previewsEl) {
-            // Wrapper exists (has thumbnail) — insert text before thumbnail
-            const textWrapper = document.createElement("div");
-            textWrapper.className = "card-text-preview-wrapper";
-            textWrapper.createDiv({
-              cls: "card-text-preview",
-              text: newText,
-            });
-            previewsEl.insertBefore(textWrapper, previewsEl.firstChild);
-          } else {
-            // No wrapper at all — create one
-            const bodyEl = cardEl.querySelector(".card-body");
-            if (bodyEl) {
-              const wrapper = document.createElement("div");
-              wrapper.className = "card-previews";
-              const textWrapper = wrapper.createDiv(
-                "card-text-preview-wrapper",
-              );
-              textWrapper.createDiv({
-                cls: "card-text-preview",
-                text: newText,
-              });
-              const bottomProps = bodyEl.querySelector(
-                ".card-properties-bottom",
-              );
-              if (bottomProps) {
-                bodyEl.insertBefore(wrapper, bottomProps);
-              } else {
-                bodyEl.appendChild(wrapper);
-              }
-            }
-          }
-        } else if (previewsEl) {
-          // Text became empty — remove wrapper if no thumbnail sibling
-          const hasThumbnail = previewsEl.querySelector(".card-thumbnail");
-          if (hasThumbnail) {
-            // Keep wrapper for thumbnail, just remove text nodes
-            previewEl?.closest(".card-text-preview-wrapper")?.remove();
-          } else {
-            previewsEl.remove();
-          }
-        }
+        updateTextPreviewDOM(
+          cardEl,
+          this.contentCache.textPreviews[path] || "",
+        );
       }
 
       // Update unmounted VirtualItem card data so remount uses fresh content
