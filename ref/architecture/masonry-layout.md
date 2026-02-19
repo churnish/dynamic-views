@@ -264,6 +264,7 @@ Cards use `position: absolute` with direct inline styles for per-card positionin
 | `masonry-positioned`    | Card              | Added after position is set; removed during initial layout to hide cards.                    |
 | `masonry-resizing`      | Masonry container | Hides cards during initial layout measurement.                                               |
 | `masonry-measuring`     | Masonry container | Forces content rendering for accurate `offsetHeight` reads (overrides `content-visibility`). |
+| `masonry-correcting`    | Masonry container | 200ms ease for top/left during post-resize correction and scroll remeasure.                  |
 | `masonry-resize-active` | Masonry container | Strips top/left transitions during active resize drag — cards reposition instantly.          |
 
 ## Keyboard navigation

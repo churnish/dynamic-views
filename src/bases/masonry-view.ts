@@ -1784,8 +1784,13 @@ export class DynamicViewsMasonryView extends BasesView {
       this.resizeCorrectionTimeout = window.setTimeout(() => {
         this.resizeCorrectionTimeout = null;
         this.masonryContainer?.classList.remove("masonry-resize-active");
+        this.masonryContainer?.classList.add("masonry-correcting");
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.("resize-correction");
+        // Remove after transition completes (200ms matches masonry-correcting)
+        window.setTimeout(() => {
+          this.masonryContainer?.classList.remove("masonry-correcting");
+        }, 200);
       }, 200);
 
       if (this.resizeRafId !== null) {
@@ -1859,6 +1864,8 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
     if (!needsReposition) return false;
+
+    this.masonryContainer?.classList.add("masonry-correcting");
 
     // Scroll anchor: record absolute Y of first visible mounted card
     // so we can compensate scrollTop after positions shift
@@ -1957,6 +1964,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
+    // Remove after transition completes (200ms matches masonry-correcting)
+    window.setTimeout(() => {
+      this.masonryContainer?.classList.remove("masonry-correcting");
+    }, 200);
     return true;
   }
 
@@ -2324,9 +2335,46 @@ export class DynamicViewsMasonryView extends BasesView {
         `[data-path="${CSS.escape(path)}"]`,
       );
       if (cardEl) {
+        const newText = this.contentCache.textPreviews[path] || "";
+        const previewsEl = cardEl.querySelector(".card-previews");
         const previewEl = cardEl.querySelector(".card-text-preview");
-        if (previewEl) {
-          previewEl.textContent = this.contentCache.textPreviews[path] || "";
+
+        if (newText) {
+          if (previewEl) {
+            // Update existing text
+            previewEl.textContent = newText;
+          } else {
+            // Create wrapper — text appeared on a card that had none
+            const bodyEl = cardEl.querySelector(".card-body");
+            if (bodyEl) {
+              const wrapper = document.createElement("div");
+              wrapper.className = "card-previews";
+              const textWrapper = wrapper.createDiv(
+                "card-text-preview-wrapper",
+              );
+              textWrapper.createDiv({
+                cls: "card-text-preview",
+                text: newText,
+              });
+              const bottomProps = bodyEl.querySelector(
+                ".card-properties-bottom",
+              );
+              if (bottomProps) {
+                bodyEl.insertBefore(wrapper, bottomProps);
+              } else {
+                bodyEl.appendChild(wrapper);
+              }
+            }
+          }
+        } else if (previewsEl) {
+          // Text became empty — remove wrapper if no thumbnail sibling
+          const hasThumbnail = previewsEl.querySelector(".card-thumbnail");
+          if (hasThumbnail) {
+            // Keep wrapper for thumbnail, just remove text nodes
+            previewEl?.closest(".card-text-preview-wrapper")?.remove();
+          } else {
+            previewsEl.remove();
+          }
         }
       }
 
@@ -2351,8 +2399,22 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    if (anyHeightChanged && this.updateLayoutRef.current) {
-      this.updateLayoutRef.current("content-update");
+    if (
+      anyHeightChanged &&
+      this.lastLayoutCardWidth > 0 &&
+      this.lastRenderedSettings &&
+      !this.batchLayoutPending &&
+      this.resizeCorrectionTimeout === null
+    ) {
+      const didWork = this.remeasureAndReposition(
+        this.lastLayoutWidth,
+        this.lastLayoutCardWidth,
+        this.lastRenderedSettings,
+        this.lastLayoutMinColumns,
+        this.lastLayoutGap,
+        this.lastLayoutIsGrouped,
+      );
+      if (didWork) this.scheduleDeferredRemeasure();
     }
 
     // Re-initialize gradients unconditionally (content changed even if height didn't)
