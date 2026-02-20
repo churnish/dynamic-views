@@ -667,9 +667,10 @@ export class DynamicViewsMasonryView extends BasesView {
         });
       }, 100);
     };
-    document.addEventListener(PROPERTY_MEASURED_EVENT, handlePropertyMeasured);
+    const propertyEventDoc = this.containerEl.ownerDocument;
+    propertyEventDoc.addEventListener(PROPERTY_MEASURED_EVENT, handlePropertyMeasured);
     this.register(() => {
-      document.removeEventListener(
+      propertyEventDoc.removeEventListener(
         PROPERTY_MEASURED_EVENT,
         handlePropertyMeasured,
       );
@@ -3210,8 +3211,9 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.scrollResizeObserver) {
       this.scrollResizeObserver.disconnect();
     }
-    // Clean up property measurement observer
-    cleanupVisibilityObserver();
+    // Clean up property measurement observer for this window only
+    const cleanupWindow = this.containerEl.ownerDocument.defaultView;
+    if (cleanupWindow) cleanupVisibilityObserver(cleanupWindow);
     if (this.virtualScrollRafId !== null) {
       cancelAnimationFrame(this.virtualScrollRafId);
     }

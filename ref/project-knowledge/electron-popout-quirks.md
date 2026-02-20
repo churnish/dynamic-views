@@ -2,7 +2,7 @@
 title: Electron popout window quirks
 description: Platform-specific quirks when running plugin code in Electron popout (BrowserWindow) windows.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-20
+last updated: 2026-02-21
 ---
 # Electron popout window quirks
 
@@ -51,3 +51,20 @@ The `@panzoom/panzoom` library's `isAttached` check walks up the DOM to find `do
 ## Event listener binding
 
 Libraries that bind event listeners to module-scope `document` (e.g., `pointermove`, `pointerup` for drag handling) will miss events in popouts since pointer events fire on the popout's document. Must rebind to the popout's document after init. See panzoom rebinding in `image-viewer.ts`.
+
+## `defaultView` is null after window close
+
+When a popout's `BrowserWindow` is closed, `ownerDocument.defaultView` returns `null` for elements that were in that document. Cleanup code that derives the window via `containerEl.ownerDocument.defaultView` must null-check — otherwise a `?? fallback` pattern may trigger unintended global behavior (e.g., cleaning up all windows' observers instead of just the closed one).
+
+```ts
+// Wrong: falls through to global cleanup when window is gone
+cleanupObserver(el.ownerDocument.defaultView ?? undefined);
+
+// Right: skip cleanup — observer dies with its window
+const win = el.ownerDocument.defaultView;
+if (win) cleanupObserver(win);
+```
+
+## ResizeObserver doesn't fire for minimized windows
+
+Electron does not dispatch `ResizeObserver` callbacks for minimized `BrowserWindow` instances. The window must be restored/shown before testing RO-based behavior. This applies to both main and popout windows.

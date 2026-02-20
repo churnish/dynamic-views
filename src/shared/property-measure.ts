@@ -20,11 +20,12 @@ export function resetGapCache(): void {
 
 /** Track visible cards via IntersectionObserver */
 const visibleCards = new Set<HTMLElement>();
-let visibilityObserver: IntersectionObserver | null = null;
+const visibilityObservers = new Map<Window & typeof globalThis, IntersectionObserver>();
 
-function getVisibilityObserver(): IntersectionObserver {
-  if (!visibilityObserver) {
-    visibilityObserver = new IntersectionObserver(
+function getVisibilityObserver(win: Window & typeof globalThis): IntersectionObserver {
+  let observer = visibilityObservers.get(win);
+  if (!observer) {
+    observer = new win.IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const card = entry.target as HTMLElement;
@@ -37,17 +38,31 @@ function getVisibilityObserver(): IntersectionObserver {
       },
       { rootMargin: "100px" }, // Measure slightly before visible
     );
+    visibilityObservers.set(win, observer);
   }
-  return visibilityObserver;
+  return observer;
 }
 
-/** Cleanup visibility observer and tracked cards */
-export function cleanupVisibilityObserver(): void {
-  if (visibilityObserver) {
-    visibilityObserver.disconnect();
-    visibilityObserver = null;
+/**
+ * Cleanup visibility observer and tracked cards.
+ * @param win - If provided, cleans up only that window's observer.
+ *              If omitted, disconnects all observers (use on plugin unload only).
+ */
+export function cleanupVisibilityObserver(win?: Window & typeof globalThis): void {
+  if (win) {
+    const obs = visibilityObservers.get(win);
+    if (obs) {
+      obs.disconnect();
+      visibilityObservers.delete(win);
+    }
+    visibleCards.forEach((card) => {
+      if (card.ownerDocument.defaultView === win) visibleCards.delete(card);
+    });
+  } else {
+    visibilityObservers.forEach((obs) => obs.disconnect());
+    visibilityObservers.clear();
+    visibleCards.clear();
   }
-  visibleCards.clear();
 }
 
 /** Global set queue to prevent frame drops */
@@ -61,6 +76,9 @@ const queuedSets = new Set<HTMLElement>();
 let isProcessingSets = false;
 let pendingFlush = false;
 const gradientBatch: HTMLElement[] = [];
+
+/** Track documents that had cards processed this queue cycle */
+const processedDocuments = new Set<Document>();
 
 /** Sets to process per frame */
 const SETS_PER_FRAME = 5;
@@ -90,16 +108,24 @@ function processSetQueue(): void {
         gradientBatch.length = 0;
         batch.forEach((field) => updateScrollGradient(field));
         pendingFlush = false;
-        document.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
+        processedDocuments.forEach((doc) => {
+          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
+        });
+        processedDocuments.clear();
       });
     } else {
       requestAnimationFrame(() => {
-        document.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
+        processedDocuments.forEach((doc) => {
+          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
+        });
+        processedDocuments.clear();
       });
     }
     return;
   }
 
+  // Clear stale documents from any interrupted previous cycle
+  if (!isProcessingSets) processedDocuments.clear();
   isProcessingSets = true;
 
   // Process up to SETS_PER_FRAME sets per frame
@@ -116,6 +142,7 @@ function processSetQueue(): void {
       ) {
         set.classList.remove("property-measured");
         measureSideBySideSet(set, gradientBatch);
+        processedDocuments.add(set.ownerDocument);
       }
     }
   }
@@ -130,6 +157,7 @@ function processSetQueue(): void {
     requestAnimationFrame(() => {
       batch.forEach((field) => updateScrollGradient(field));
       pendingFlush = false;
+      // No event dispatch here — processing continues; terminal dispatch fires on queue drain.
     });
   }
 
@@ -438,14 +466,18 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
   const cardProps = cardEl.querySelector(".card-properties") as HTMLElement;
   if (!cardProps) return [];
 
-  // Register with visibility observer (Phase 5.1)
-  getVisibilityObserver().observe(cardEl);
+  // Derive window from card element for cross-window observer safety
+  const cardWindow = cardEl.ownerDocument.defaultView;
+  if (!cardWindow) return [];
+
+  // Register with visibility observer
+  getVisibilityObserver(cardWindow).observe(cardEl);
 
   // Track if this is the first resize (initial appearance)
   let isFirstResize = true;
 
   // ResizeObserver handles size changes
-  const observer = new ResizeObserver(() => {
+  const observer = new cardWindow.ResizeObserver(() => {
     // Skip content-hidden cards (dimension reads trigger Chromium warnings)
     if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
     // Skip in compact mode or if container has no width
