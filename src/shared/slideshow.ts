@@ -356,8 +356,42 @@ export function createSlideshowNavigator(
       );
     }
 
-    // Handle failed images: hide and auto-advance
-    // Use event target for URL comparison to avoid race with rapid navigation
+    // Skip animation: directly update current image
+    if (skipAnimation) {
+      // Error handler on currImg (skipAnimation sets URL on currImg, not nextImg)
+      currImg.addEventListener(
+        "error",
+        (e) => {
+          if (signal.aborted) return;
+          const targetSrc = (e.target as HTMLImageElement).src;
+          if (targetSrc !== effectiveUrl) return;
+          failedIndices.add(newIndex);
+          markImageBroken(imageUrls[newIndex]);
+          if (failedIndices.size >= imageUrls.length) return;
+          currImg.addClass("dynamic-views-hidden");
+          navigate(direction, honorGestureDirection, true);
+        },
+        { once: true, signal },
+      );
+      currImg.src = effectiveUrl;
+      currImg.removeClass("dynamic-views-hidden");
+      currentIndex = newIndex;
+      isAnimating = false;
+      if (callbacks?.onSlideChange) {
+        currImg.addEventListener(
+          "load",
+          () => {
+            if (!signal.aborted) {
+              callbacks.onSlideChange!(newIndex, currImg);
+            }
+          },
+          { once: true, signal },
+        );
+      }
+      return;
+    }
+
+    // Handle failed images during animated navigation: hide and auto-advance
     nextImg.addEventListener(
       "error",
       (e) => {
@@ -391,26 +425,6 @@ export function createSlideshowNavigator(
       },
       { once: true, signal },
     );
-
-    // Skip animation: directly update current image
-    if (skipAnimation) {
-      currImg.src = effectiveUrl;
-      currImg.removeClass("dynamic-views-hidden");
-      currentIndex = newIndex;
-      isAnimating = false;
-      if (callbacks?.onSlideChange) {
-        currImg.addEventListener(
-          "load",
-          () => {
-            if (!signal.aborted) {
-              callbacks.onSlideChange!(newIndex, currImg);
-            }
-          },
-          { once: true, signal },
-        );
-      }
-      return;
-    }
 
     nextImg.src = effectiveUrl;
 
@@ -470,18 +484,29 @@ export function createSlideshowNavigator(
   // Reset to first slide (called when view becomes visible)
   const reset = () => {
     if (isAnimating) return;
-    currentIndex = 0;
+    // Find first non-broken image to reset to
+    let resetIndex = 0;
+    while (
+      resetIndex < imageUrls.length &&
+      brokenImageUrls.has(imageUrls[resetIndex])
+    ) {
+      resetIndex++;
+    }
+    // All images broken — nothing to reset to
+    if (resetIndex >= imageUrls.length) return;
+    currentIndex = resetIndex;
     lastWrapFromFirstTimestamp = null;
     failedIndices.clear();
     const elements = getElements();
     if (elements) {
-      elements.currImg.src = getCachedBlobUrl(imageUrls[0]);
+      elements.currImg.src = getCachedBlobUrl(imageUrls[resetIndex]);
       // Trigger onSlideChange callback on reset
       if (callbacks?.onSlideChange) {
         elements.currImg.addEventListener(
           "load",
           () => {
-            if (!signal.aborted) callbacks.onSlideChange!(0, elements.currImg);
+            if (!signal.aborted)
+              callbacks.onSlideChange!(resetIndex, elements.currImg);
           },
           { once: true, signal },
         );

@@ -1669,9 +1669,13 @@ export class SharedCardRenderer {
     // Reset to slide 1 when view becomes visible (reading/editing views are separate DOMs)
     const IO = (slideshowEl.ownerDocument.defaultView ?? window)
       .IntersectionObserver;
+    let wasHidden = false;
     const visibilityObserver = new IO(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
+        if (!entries[0]?.isIntersecting) {
+          wasHidden = true;
+        } else if (wasHidden) {
+          wasHidden = false;
           reset();
         }
       },
