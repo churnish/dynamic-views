@@ -710,9 +710,13 @@ export function setupImagePreload(
         preloaded = true;
         imageUrls.slice(1).forEach((url) => {
           if (isExternalUrl(url)) {
-            void getExternalBlobUrl(url);
+            void getExternalBlobUrl(url).then((result) => {
+              if (result === null) brokenImageUrls.add(url);
+            });
           } else {
-            new Image().src = url;
+            const img = new Image();
+            img.onerror = () => brokenImageUrls.add(url);
+            img.src = url;
           }
         });
       }

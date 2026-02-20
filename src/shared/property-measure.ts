@@ -20,9 +20,14 @@ export function resetGapCache(): void {
 
 /** Track visible cards via IntersectionObserver */
 const visibleCards = new Set<HTMLElement>();
-const visibilityObservers = new Map<Window & typeof globalThis, IntersectionObserver>();
+const visibilityObservers = new Map<
+  Window & typeof globalThis,
+  IntersectionObserver
+>();
 
-function getVisibilityObserver(win: Window & typeof globalThis): IntersectionObserver {
+function getVisibilityObserver(
+  win: Window & typeof globalThis,
+): IntersectionObserver {
   let observer = visibilityObservers.get(win);
   if (!observer) {
     observer = new win.IntersectionObserver(
@@ -48,7 +53,9 @@ function getVisibilityObserver(win: Window & typeof globalThis): IntersectionObs
  * @param win - If provided, cleans up only that window's observer.
  *              If omitted, disconnects all observers (use on plugin unload only).
  */
-export function cleanupVisibilityObserver(win?: Window & typeof globalThis): void {
+export function cleanupVisibilityObserver(
+  win?: Window & typeof globalThis,
+): void {
   if (win) {
     const obs = visibilityObservers.get(win);
     if (obs) {

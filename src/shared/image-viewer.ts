@@ -93,7 +93,7 @@ function closeImageViewer(
     // unreliable — add class directly instead.
     // Skipped when a new viewer pre-empts this one (mouse is on a different card).
     if (restoreHoverIntent) {
-      const cardEl = original.closest(".card") as HTMLElement | null;
+      const cardEl = original.closest<HTMLElement>(".card");
       if (cardEl) {
         cardEl.classList.add("hover-intent-active");
       }

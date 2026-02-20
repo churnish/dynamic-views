@@ -1,11 +1,14 @@
 # Dynamic Views
 
+## Terminology
+
 - **Naming prefix**: Never use the `dv-` prefix as a shorthand for Dynamic Views. Only use the full `dynamic-views-` prefix in all contexts.
 - **Plugin name**: Never abbreviate the plugin name to 'DV' in the codebase, stylesheet, or any user-facing text. Always use the full name 'Dynamic Views'. It's OK to use the 'DV' shorthand in fleeting chat contexts only.
+- **View names**: Always capitalize plugin view names: 'Grid', 'Masonry', 'List' NOT 'grid', 'masonry', 'list'. Do NOT capitalize when referring to the layout itself rather than the view as a whole.
 
 ## Reference files
 
-Use @ref/project-structure.md as a navigation reference before reading or editing any file in the codebase.
+Use @ref/project-structure.md as a navigational guide before reading or editing any file in the codebase.
 
 When a reference file listed below is relevant to your current work, you MUST read it before proceeding. Do NOT rely on assumptions — consult the reference first.
 

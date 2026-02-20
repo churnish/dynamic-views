@@ -668,7 +668,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }, 100);
     };
     const propertyEventDoc = this.containerEl.ownerDocument;
-    propertyEventDoc.addEventListener(PROPERTY_MEASURED_EVENT, handlePropertyMeasured);
+    propertyEventDoc.addEventListener(
+      PROPERTY_MEASURED_EVENT,
+      handlePropertyMeasured,
+    );
     this.register(() => {
       propertyEventDoc.removeEventListener(
         PROPERTY_MEASURED_EVENT,

@@ -4,6 +4,7 @@ description: Platform-specific quirks when running plugin code in Electron popou
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-21
 ---
+
 # Electron popout window quirks
 
 Obsidian's "Open in new window" creates an Electron `BrowserWindow` (popout) with a separate V8 isolate and separate document. Plugin JS runs in the main window's context but operates on DOM elements in the popout's document. This causes several non-obvious issues.
