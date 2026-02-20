@@ -1336,6 +1336,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Synchronous layout update - single pass, no chunking
     // Profiling showed chunked async caused layout thrashing (224 InvalidateLayout events)
     this.updateLayoutRef.current = (source?: string) => {
+      console.debug("[layout] enter", { source, isUpdating: this.isUpdatingLayout, hasMasonryContainer: !!this.masonryContainer });
       if (!this.masonryContainer) return;
       // Use cached width from ResizeObserver for resize sources (avoids forced reflow).
       // Other sources fall back to getBoundingClientRect.
@@ -1524,12 +1525,14 @@ export class DynamicViewsMasonryView extends BasesView {
                 const groupItems = this.virtualItemsByGroup.get(groupKey)!;
                 if (groupItems.length === 0) continue;
 
+                const existingResult = this.groupLayoutResults.get(groupKey);
                 const { containerHeight, columnHeights } =
                   this.proportionalResizeLayout(
                     groupItems,
                     cardWidth,
                     columns,
                     gap,
+                    existingResult?.columns,
                   );
 
                 const container = isGrouped
@@ -1540,13 +1543,15 @@ export class DynamicViewsMasonryView extends BasesView {
                   `${containerHeight}px`,
                 );
 
-                // Store result for appendBatch continuation.
-                // positions intentionally empty — proportionalResizeLayout updates
-                // VirtualItems in-place. Do NOT call updateVirtualItemPositions with this result.
+                // Store result for appendBatch continuation and stable column guards.
+                // Positions built from VirtualItems updated in-place by proportionalResizeLayout.
                 // heights intentionally omitted — proportional values are scaled,
                 // not original measured heights. appendBatch merge handles undefined.
                 this.groupLayoutResults.set(groupKey, {
-                  positions: [],
+                  positions: groupItems.map((item) => ({
+                    left: item.x,
+                    top: item.y,
+                  })),
                   columnHeights,
                   containerHeight,
                   containerWidth,
@@ -1596,14 +1601,78 @@ export class DynamicViewsMasonryView extends BasesView {
                   return estimateUnmountedHeight(item, cardWidth);
                 });
 
-                const result = calculateMasonryLayout({
-                  cards: Array.from<HTMLElement>({ length: groupItems.length }),
-                  containerWidth,
-                  cardSize: settings.cardSize,
-                  minColumns,
-                  gap,
-                  heights,
-                });
+                const existingResult = this.groupLayoutResults.get(groupKey);
+
+                let result: MasonryLayoutResult;
+                const willStable = !!(existingResult && existingResult.columns === columns && existingResult.positions.length >= groupItems.length);
+                console.debug(`[correction] group=${String(groupKey)}, willStable=${willStable}, existCols=${existingResult?.columns}, cols=${columns}, posLen=${existingResult?.positions.length}, items=${groupItems.length}`);
+                if (
+                  existingResult &&
+                  // Stricter than remeasureAndReposition's `columns > 0` — resize-correction
+                  // may run after a column count change, where old column assignments are invalid.
+                  existingResult.columns === columns &&
+                  existingResult.positions.length >= groupItems.length
+                ) {
+                  const stable = repositionWithStableColumns({
+                    existingPositions: existingResult.positions,
+                    newHeights: heights,
+                    columns,
+                    cardWidth,
+                    gap,
+                  });
+
+                  let useGreedy = false;
+                  if (isGrouped) {
+                    const stableRange =
+                      Math.max(...stable.columnHeights) -
+                      Math.min(...stable.columnHeights);
+                    const greedyColHeights = computeGreedyColumnHeights(
+                      heights,
+                      columns,
+                      gap,
+                    );
+                    const greedyRange =
+                      Math.max(...greedyColHeights) -
+                      Math.min(...greedyColHeights);
+                    useGreedy =
+                      stableRange > greedyRange * 1.5 &&
+                      stableRange - greedyRange > gap * 4;
+                  }
+
+                  if (useGreedy) {
+                    result = calculateMasonryLayout({
+                      cards: Array.from<HTMLElement>({
+                        length: groupItems.length,
+                      }),
+                      containerWidth,
+                      cardSize: settings.cardSize,
+                      minColumns,
+                      gap,
+                      heights,
+                    });
+                  } else {
+                    result = {
+                      ...existingResult,
+                      positions: stable.positions,
+                      columnHeights: stable.columnHeights,
+                      containerHeight: stable.containerHeight,
+                      containerWidth,
+                      cardWidth,
+                      heights,
+                    };
+                  }
+                } else {
+                  result = calculateMasonryLayout({
+                    cards: Array.from<HTMLElement>({
+                      length: groupItems.length,
+                    }),
+                    containerWidth,
+                    cardSize: settings.cardSize,
+                    minColumns,
+                    gap,
+                    heights,
+                  });
+                }
 
                 for (let i = 0; i < groupItems.length; i++) {
                   const pos = result.positions[i];
@@ -1636,9 +1705,9 @@ export class DynamicViewsMasonryView extends BasesView {
 
             this.lastLayoutWidth = containerWidth;
 
-            // Fast path handles its own sync — set flag so `finally` skips it.
-            // Must sync every frame: proportional scaling drifts items near
-            // viewport edges, leaving unmounted gaps without remounting.
+            // DOM measurement branch handles its own sync — set flag so `finally` skips it.
+            // Must sync after correction: re-measured heights shift positions, potentially
+            // moving items in/out of viewport range.
             this.updateCachedGroupOffsets();
             this.syncVirtualScroll();
             fastPathHandledSync = true;
@@ -1673,6 +1742,7 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Phase 4: Calculate and apply layout
+        console.debug("[phase4] reached", { source, isGrouped, cardCount: allCards.length });
         if (isGrouped && groups) {
           const groupCardsMap = new Map<HTMLElement, HTMLElement[]>();
           if (remountedAll) {
@@ -1705,14 +1775,68 @@ export class DynamicViewsMasonryView extends BasesView {
             );
             const groupKey = getGroupKeyDataset(groupEl);
 
-            const result = calculateMasonryLayout({
-              cards: groupCards,
-              containerWidth,
-              cardSize: settings.cardSize,
-              minColumns,
-              gap,
-              heights: groupHeights,
-            });
+            const existingResult = this.groupLayoutResults.get(groupKey);
+
+            let result: MasonryLayoutResult;
+            const willStable = !!(existingResult && existingResult.columns === columns && existingResult.positions.length >= groupCards.length);
+            console.debug(`[phase4-grouped] source=${source}, group=${groupKey}, willStable=${willStable}, existCols=${existingResult?.columns}, cols=${columns}, posLen=${existingResult?.positions.length}, cards=${groupCards.length}`);
+            if (
+              existingResult &&
+              existingResult.columns === columns &&
+              existingResult.positions.length >= groupCards.length
+            ) {
+              const stable = repositionWithStableColumns({
+                existingPositions: existingResult.positions,
+                newHeights: groupHeights,
+                columns,
+                cardWidth,
+                gap,
+              });
+
+              const stableRange =
+                Math.max(...stable.columnHeights) -
+                Math.min(...stable.columnHeights);
+              const greedyColHeights = computeGreedyColumnHeights(
+                groupHeights,
+                columns,
+                gap,
+              );
+              const greedyRange =
+                Math.max(...greedyColHeights) - Math.min(...greedyColHeights);
+              const useGreedy =
+                stableRange > greedyRange * 1.5 &&
+                stableRange - greedyRange > gap * 4;
+
+              if (useGreedy) {
+                result = calculateMasonryLayout({
+                  cards: groupCards,
+                  containerWidth,
+                  cardSize: settings.cardSize,
+                  minColumns,
+                  gap,
+                  heights: groupHeights,
+                });
+              } else {
+                result = {
+                  ...existingResult,
+                  positions: stable.positions,
+                  columnHeights: stable.columnHeights,
+                  containerHeight: stable.containerHeight,
+                  containerWidth,
+                  cardWidth,
+                  heights: groupHeights,
+                };
+              }
+            } else {
+              result = calculateMasonryLayout({
+                cards: groupCards,
+                containerWidth,
+                cardSize: settings.cardSize,
+                minColumns,
+                gap,
+                heights: groupHeights,
+              });
+            }
 
             // Apply positions (single pass)
             for (let i = 0; i < groupCards.length; i++) {
@@ -1735,14 +1859,53 @@ export class DynamicViewsMasonryView extends BasesView {
           }
         } else {
           // Ungrouped mode
-          const result = calculateMasonryLayout({
-            cards: allCards,
-            containerWidth,
-            cardSize: settings.cardSize,
-            minColumns,
-            gap,
-            heights,
+          const existingResult = this.groupLayoutResults.get(undefined);
+          console.debug("[phase4-ungrouped]", {
+            source,
+            hasExisting: !!existingResult,
+            existingCols: existingResult?.columns,
+            cols: columns,
+            existingPosLen: existingResult?.positions?.length,
+            cardCount: allCards.length,
+            willStable:
+              !!existingResult &&
+              existingResult.columns === columns &&
+              existingResult.positions.length >= allCards.length,
           });
+
+          let result: MasonryLayoutResult;
+          if (
+            existingResult &&
+            existingResult.columns === columns &&
+            existingResult.positions.length >= allCards.length
+          ) {
+            const stable = repositionWithStableColumns({
+              existingPositions: existingResult.positions,
+              newHeights: heights,
+              columns,
+              cardWidth,
+              gap,
+            });
+
+            result = {
+              ...existingResult,
+              positions: stable.positions,
+              columnHeights: stable.columnHeights,
+              containerHeight: stable.containerHeight,
+              containerWidth,
+              cardWidth,
+              heights,
+            };
+          } else {
+            result = calculateMasonryLayout({
+              cards: allCards,
+              containerWidth,
+              cardSize: settings.cardSize,
+              minColumns,
+              gap,
+              heights,
+            });
+          }
 
           // Apply positions (single pass)
           for (let i = 0; i < allCards.length; i++) {
@@ -2121,8 +2284,12 @@ export class DynamicViewsMasonryView extends BasesView {
     cardWidth: number,
     columns: number,
     gap: number,
+    priorColumns: number | undefined,
   ): { containerHeight: number; columnHeights: number[] } {
     const columnHeights = new Array(columns).fill(0) as number[];
+    const stableColumns = priorColumns === columns;
+
+    console.debug("[proportional]", { stableColumns, priorColumns, columns, cardWidth, gap });
 
     for (let i = 0; i < groupItems.length; i++) {
       const item = groupItems[i];
@@ -2130,18 +2297,29 @@ export class DynamicViewsMasonryView extends BasesView {
       // Split proportional height: cover scales with width, text stays fixed
       const height = estimateUnmountedHeight(item, cardWidth);
 
-      // Greedy shortest-column placement
-      let shortestCol = 0;
-      let minH = columnHeights[0];
-      for (let c = 1; c < columns; c++) {
-        if (columnHeights[c] < minH) {
-          minH = columnHeights[c];
-          shortestCol = c;
+      let col: number;
+      if (stableColumns && columns > 1) {
+        // Stable column from prior x position — prevents sideways jumps during resize
+        const raw = item.x / (cardWidth + gap);
+        col = Math.min(Math.round(raw), columns - 1);
+        if (i < 5) {
+          const greedyCol = columnHeights.indexOf(Math.min(...columnHeights));
+          console.debug(`[proportional] card ${i}: x=${item.x}, raw=${raw.toFixed(3)}, col=${col}, greedyWould=${greedyCol}`);
+        }
+      } else {
+        // Greedy shortest-column for first layout or column count change
+        col = 0;
+        let minH = columnHeights[0];
+        for (let c = 1; c < columns; c++) {
+          if (columnHeights[c] < minH) {
+            minH = columnHeights[c];
+            col = c;
+          }
         }
       }
-      const left = shortestCol * (cardWidth + gap);
-      const top = columnHeights[shortestCol];
-      columnHeights[shortestCol] += height + gap;
+      const left = col * (cardWidth + gap);
+      const top = columnHeights[col];
+      columnHeights[col] += height + gap;
 
       // Update VirtualItem in-place (replaces updateVirtualItemPositions)
       item.x = left;

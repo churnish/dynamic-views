@@ -151,14 +151,15 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 **Proportional branch** (`"resize-observer"`) — zero DOM reads, single-pass:
 
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
-2. `proportionalResizeLayout()` — single pass over all cards per group:
+2. **Pre-read `scrollTop` and `clientHeight`** from `scrollEl` before the style write loop — reading these after inline style changes would trigger forced reflow in `syncVirtualScroll`.
+3. `proportionalResizeLayout()` — single pass over all cards per group:
    - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area scales linearly; text content stays constant.
    - Greedy shortest-column placement (inlined — bypasses `calculateMasonryLayout`).
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.
-3. **Skip `updateCachedGroupOffsets()`** — stale offsets from the last non-resize layout are used. The 1x-pane-height buffer absorbs any drift. Post-resize correction refreshes offsets within 200ms.
-4. Run `syncVirtualScroll()` unconditionally (cheap for same-column-count frames: 0-3 mounts at viewport edges from proportional drift).
-5. Return — skip full measurement path.
+4. **Skip `updateCachedGroupOffsets()`** — stale offsets from the last non-resize layout are used. The 1x-pane-height buffer absorbs any drift. Post-resize correction refreshes offsets within 200ms.
+5. Run `syncVirtualScroll()` unconditionally (cheap for same-column-count frames: 0-3 mounts at viewport edges from proportional drift).
+6. Return — skip full measurement path.
 
 The explicit inline `height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
 
