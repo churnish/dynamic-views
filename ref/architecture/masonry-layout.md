@@ -156,8 +156,9 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - Greedy shortest-column placement (inlined — bypasses `calculateMasonryLayout`).
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.
-3. Update `cachedGroupOffsets`. Run `syncVirtualScroll()` unconditionally (cheap for same-column-count frames: 0-3 mounts at viewport edges from proportional drift).
-4. Return — skip full measurement path.
+3. **Skip `updateCachedGroupOffsets()`** — stale offsets from the last non-resize layout are used. The 1x-pane-height buffer absorbs any drift. Post-resize correction refreshes offsets within 200ms.
+4. Run `syncVirtualScroll()` unconditionally (cheap for same-column-count frames: 0-3 mounts at viewport edges from proportional drift).
+5. Return — skip full measurement path.
 
 The explicit inline `height` prevents mismatch between layout positions and rendered height. Without it, `height: auto` would render at natural height while positions use proportional height → overlap/gaps. Cards look slightly "frozen" during drag (content doesn't reflow to new width); this resolves on correction.
 
@@ -276,14 +277,14 @@ Cards use `position: absolute` with direct inline styles for per-card positionin
 
 **Key CSS classes**:
 
-| Class                   | Element           | Purpose                                                                                      |
-| ----------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
-| `masonry-container`     | Group container   | Applied by `applyMasonryLayout`.                                                             |
-| `masonry-positioned`    | Card              | Added after position is set; removed during initial layout to hide cards.                    |
-| `masonry-resizing`      | Masonry container | Hides cards during initial layout measurement.                                               |
-| `masonry-measuring`     | Masonry container | Forces content rendering for accurate `offsetHeight` reads (overrides `content-visibility`). |
-| `masonry-correcting`    | Masonry container | 200ms ease for top/left during post-resize correction and scroll remeasure.                  |
-| `masonry-resize-active` | Masonry container | Strips top/left transitions during active resize drag — cards reposition instantly.          |
+| Class                   | Element           | Purpose                                                                                                                                                                   |
+| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `masonry-container`     | Group container   | Applied by `applyMasonryLayout`.                                                                                                                                          |
+| `masonry-positioned`    | Card              | Added after position is set; removed during initial layout to hide cards.                                                                                                 |
+| `masonry-resizing`      | Masonry container | Hides cards during initial layout measurement.                                                                                                                            |
+| `masonry-measuring`     | Masonry container | Forces content rendering for accurate `offsetHeight` reads (overrides `content-visibility`).                                                                              |
+| `masonry-correcting`    | Masonry container | 200ms ease for top/left during post-resize correction and scroll remeasure.                                                                                               |
+| `masonry-resize-active` | Masonry container | Keeps top/left/height transitions (140ms) during active resize — cards animate to new positions. Width is not transitioned; left positions assume target width instantly. |
 
 ## Keyboard navigation
 
@@ -313,7 +314,7 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 2. **`groupLayoutResults` stores original measured heights**, not scaled. The proportional fast path intentionally omits `heights` from the stored result (scaled values would corrupt the merge in `appendBatch`). The DOM measurement and full layout paths store accurate DOM-measured heights. `appendBatch`'s merge handles missing heights via `?? []`.
 3. **`updateVirtualItemPositions` maps by group index.** `virtualItemsByGroup.get(key)[i]` ↔ `result.positions[i]`. Consistent because both use the same ordering. The proportional fast path bypasses this function and updates VirtualItems inline.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
-5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions.
+5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions. **Exception**: the proportional resize branch skips offset refresh — the 1x-pane-height buffer absorbs drift, and post-resize correction refreshes offsets within 200ms.
 6. **Virtual scroll sync runs unconditionally after every position change.** Full measurement, batch append, correction, and proportional resize all call `syncVirtualScroll()`. During same-column-count resize, sync is cheap (0-3 mounts at edges from proportional drift). Skipping sync during resize caused blank space as items drifted outside the viewport without remounting.
 7. **Post-mount remeasure is debounced during scroll.** When `syncVirtualScroll` mounts new cards, remeasure is deferred via `scrollRemeasureTimeout` (200ms, matching resize correction delay). Newly mounted cards' DOM heights change as images load (~24px cover drift), so immediate remeasure would fight deferred remeasure — opposite position jumps within ~32ms cause visible flicker. The debounce ensures one clean `remeasureAndReposition()` + deferred pass after scroll settles, when images have loaded and heights are stable. Uses `repositionWithStableColumns()` to preserve column assignments — prevents cascading column switching from small height changes. In grouped mode, `remeasureAndReposition` checks whether stable reposition introduced excessive column imbalance: if the stable column-height range exceeds 1.5× the greedy range AND the absolute difference exceeds `gap × 4`, it falls back to a full `calculateMasonryLayout()` for that group. This prevents column drift from amplifying across incremental batch appends. Ungrouped mode always uses stable columns — visual stability during scroll outweighs minor imbalance with a single group. Position transitions use the base 140ms ease — corrections are visible to the user since remeasure is debounced to scroll idle. Scroll compensation adjusts `scrollTop` after remeasure to keep the first visible card anchored. Skipped during active resize (cards have explicit heights) and during `batchLayoutPending` (unpositioned batch cards would corrupt `groupLayoutResults` heights, causing ~2700px gaps at batch boundaries). Image-load relayout also uses `remeasureAndReposition()` (stable columns) rather than a full `calculateMasonryLayout()` call — this prevents column reassignment when images finish loading, since height changes at that point are minor corrections, not structural changes requiring column rebalancing.
 8. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.

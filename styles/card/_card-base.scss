@@ -73,11 +73,15 @@
       background-color var(--anim-duration-fast, 140ms) ease;
   }
 
-  // Strip top/left transitions during active resize — cards reposition instantly
-  // instead of lagging 140ms behind each frame's new position
+  // During active resize, keep top/left/height transitions for smooth repositioning.
+  // Per-frame JS cost is ~0.3ms after offset skip — budget for transition smoothing.
+  // Width is NOT transitioned — left positions assume target width instantly.
   .masonry-resize-active .card.masonry-positioned {
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
+      top var(--anim-duration-fast, 140ms) ease,
+      left var(--anim-duration-fast, 140ms) ease,
+      height var(--anim-duration-fast, 140ms) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }

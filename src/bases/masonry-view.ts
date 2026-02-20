@@ -1515,6 +1515,11 @@ export class DynamicViewsMasonryView extends BasesView {
             if (source === "resize-observer") {
               // ── Proportional branch: single-pass, zero DOM reads ──
               // Inlines greedy placement + VirtualItem update + style writes
+              // Pre-read scroll metrics before style writes to avoid forced reflow
+              // in syncVirtualScroll (scrollTop + clientHeight trigger reflow
+              // after inline style changes to child elements)
+              const scrollTop = this.scrollEl.scrollTop;
+              const paneHeight = this.scrollEl.clientHeight;
               for (const groupKey of this.virtualItemsByGroup.keys()) {
                 const groupItems = this.virtualItemsByGroup.get(groupKey)!;
                 if (groupItems.length === 0) continue;
@@ -1549,6 +1554,10 @@ export class DynamicViewsMasonryView extends BasesView {
                   columns,
                 });
               }
+              this.lastLayoutWidth = containerWidth;
+              this.syncVirtualScroll({ scrollTop, paneHeight });
+              fastPathHandledSync = true;
+              return;
             } else {
               // ── DOM measurement branch: correction + image-coalesced ──
               // Clear explicit heights for correction so cards reflow to
@@ -2231,13 +2240,16 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Sync visible items based on scroll position — mount/unmount as needed */
-  private syncVirtualScroll(): void {
+  private syncVirtualScroll(cached?: {
+    scrollTop: number;
+    paneHeight: number;
+  }): void {
     if (!this.virtualItems.length || !this.lastRenderedSettings) return;
     // Only sync after user has scrolled — prevents premature unmounting
     // during initial render and batch loading
     if (!this.hasUserScrolled) return;
-    const scrollTop = this.scrollEl.scrollTop;
-    const paneHeight = this.scrollEl.clientHeight;
+    const scrollTop = cached?.scrollTop ?? this.scrollEl.scrollTop;
+    const paneHeight = cached?.paneHeight ?? this.scrollEl.clientHeight;
     const settings = this.lastRenderedSettings;
 
     // Use cached container offsets — computed after layout updates, not every scroll frame
