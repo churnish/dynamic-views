@@ -336,13 +336,16 @@ export function calculateIncrementalMasonryLayout(
 }
 
 export interface StableRepositionParams {
-  /** Existing positions — column derived from left / (cardWidth + gap) */
+  /** Existing positions — column derived from left / (existingCardWidth + gap) */
   existingPositions: MasonryPosition[];
   /** Updated heights (DOM-measured for mounted, proportional for unmounted) */
   newHeights: number[];
   columns: number;
   cardWidth: number;
   gap: number;
+  /** Card width when existingPositions were computed. Used to derive column
+   *  index from stored left values. Falls back to cardWidth if omitted. */
+  existingCardWidth?: number;
 }
 
 /**
@@ -355,16 +358,21 @@ export function repositionWithStableColumns(params: StableRepositionParams): {
   containerHeight: number;
   columnHeights: number[];
 } {
-  const { existingPositions, newHeights, columns, cardWidth, gap } = params;
+  const { existingPositions, newHeights, columns, cardWidth, gap, existingCardWidth } = params;
   const columnHeights = new Array(columns).fill(0) as number[];
   const positions: MasonryPosition[] = [];
+
+  // Use the cardWidth from when positions were stored to correctly derive
+  // column indices. Without this, width changes between layout passes cause
+  // left / (newWidth + gap) to round to a different column than intended.
+  const colStep = (existingCardWidth ?? cardWidth) + gap;
 
   const count = Math.min(existingPositions.length, newHeights.length);
   for (let i = 0; i < count; i++) {
     const col =
       columns > 1
         ? Math.min(
-            Math.round(existingPositions[i].left / (cardWidth + gap)),
+            Math.round(existingPositions[i].left / colStep),
             columns - 1,
           )
         : 0;
