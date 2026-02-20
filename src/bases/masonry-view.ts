@@ -1584,7 +1584,7 @@ export class DynamicViewsMasonryView extends BasesView {
                 });
 
                 const result = calculateMasonryLayout({
-                  cards: Array.from({ length: groupItems.length }),
+                  cards: Array.from<HTMLElement>({ length: groupItems.length }),
                   containerWidth,
                   cardSize: settings.cardSize,
                   minColumns,
@@ -2009,6 +2009,9 @@ export class DynamicViewsMasonryView extends BasesView {
           );
           const greedyRange =
             Math.max(...greedyColHeights) - Math.min(...greedyColHeights);
+          // 1.5x relative threshold ignores negligible drift (e.g. 1px rounding);
+          // 4×gap absolute threshold ensures the visual difference is noticeable
+          // (empirically: gap=8px → 32px minimum visible imbalance).
           useGreedy =
             stableRange > greedyRange * 1.5 &&
             stableRange - greedyRange > gap * 4;
@@ -2034,7 +2037,7 @@ export class DynamicViewsMasonryView extends BasesView {
         }
       } else {
         result = calculateMasonryLayout({
-          cards: Array.from({ length: groupItems.length }),
+          cards: Array.from<HTMLElement>({ length: groupItems.length }),
           containerWidth,
           cardSize: settings.cardSize,
           minColumns,

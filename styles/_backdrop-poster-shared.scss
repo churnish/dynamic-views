@@ -69,6 +69,8 @@
       object-position: center;
       opacity: 0;
       transition: opacity var(--anim-duration-fast, 140ms) ease;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     &.cover-ready :is(.card-backdrop, .card-poster) img {

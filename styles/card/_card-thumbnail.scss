@@ -204,6 +204,8 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
     border-radius: 0; /* Override theme styles; container handles border-radius */
     opacity: 0;
     transition: opacity var(--anim-duration-fast, 140ms) ease;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .card.cover-ready .card-thumbnail img {

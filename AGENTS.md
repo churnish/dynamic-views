@@ -28,3 +28,4 @@ Read...
 - **obsidian-api-quirks.md** before using `vault.process()`, `vault.modify()`, `new Notice()`, or any file I/O that could race with Obsidian's debounced writes.
 - **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.
 - **datacore-ref-callback-patterns.md** before attaching event listeners or stateful behavior in `card-renderer.tsx` ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution.
+- **electron-popout-quirks.md** before using `document`, `window`, `ResizeObserver`, `IntersectionObserver`, or `:hover` checks in code that may run in popout windows — covers silent observer failures, stale hit-testing, and module-scope binding issues.

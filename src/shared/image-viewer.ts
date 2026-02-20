@@ -77,6 +77,7 @@ function closeImageViewer(
   cloneEl: CloneElement,
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>,
+  restoreHoverIntent = true,
 ): void {
   cloneEl.remove();
 
@@ -87,13 +88,15 @@ function closeImageViewer(
     delete cloneEl.__originalEmbed;
 
     // Restore hover intent so cursor stays zoom-in/pointer after dismiss.
-    // Clone overlay causes mouseleave → hover intent deactivates; after
+    // Clone overlay causes mouseleave → hover intent deactivates. After
     // removal, Electron doesn't re-hit-test so :hover and mouseenter are
-    // unreliable. Adding class directly is safe — hover intent's normal
-    // mouseenter/mouseleave cycle resumes on next interaction.
-    const cardEl = original.closest(".card") as HTMLElement | null;
-    if (cardEl) {
-      cardEl.classList.add("hover-intent-active");
+    // unreliable — add class directly instead.
+    // Skipped when a new viewer pre-empts this one (mouse is on a different card).
+    if (restoreHoverIntent) {
+      const cardEl = original.closest(".card") as HTMLElement | null;
+      if (cardEl) {
+        cardEl.classList.add("hover-intent-active");
+      }
     }
   }
 
@@ -678,8 +681,9 @@ function openImageViewer(
   const viewerWin = viewerDoc.defaultView ?? window;
 
   // Close other open viewers (clone array to avoid mutation during iteration)
+  // Don't restore hover intent — mouse is on the new card, not the old one
   for (const clone of Array.from(viewerClones.values())) {
-    closeImageViewer(clone, viewerCleanupFns, viewerClones);
+    closeImageViewer(clone, viewerCleanupFns, viewerClones, false);
   }
 
   // Clone the embed element for viewing (original stays on card)
@@ -911,7 +915,8 @@ function openImageViewer(
     };
 
     // Trackpad ghost clicks arrive up to ~1200ms after keypress (observed range: 179–1162ms)
-    const GHOST_CLICK_WINDOW = 0; // TODO: restore to 1500
+    // Disabled: monitoring for false dismissals. May re-enable (1500ms) in the future.
+    const GHOST_CLICK_WINDOW = 0;
 
     // Click-to-dismiss (unless disabled) - works with or without panzoom
     if (!isDismissDisabled) {
