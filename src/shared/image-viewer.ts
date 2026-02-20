@@ -85,6 +85,16 @@ function closeImageViewer(
   if (original) {
     viewerClones.delete(original);
     delete cloneEl.__originalEmbed;
+
+    // Restore hover intent so cursor stays zoom-in/pointer after dismiss.
+    // Clone overlay causes mouseleave → hover intent deactivates; after
+    // removal, Electron doesn't re-hit-test so :hover and mouseenter are
+    // unreliable. Adding class directly is safe — hover intent's normal
+    // mouseenter/mouseleave cycle resumes on next interaction.
+    const cardEl = original.closest(".card") as HTMLElement | null;
+    if (cardEl) {
+      cardEl.classList.add("hover-intent-active");
+    }
   }
 
   const cleanup = viewerCleanupFns.get(cloneEl);
@@ -120,7 +130,9 @@ export function handleImageViewerClick(
   // Always stop propagation to prevent third-party plugins (e.g. Image Toolkit)
   e.stopPropagation();
 
-  const isViewerDisabled = document.body.classList.contains(
+  const viewerDoc = (e.currentTarget as HTMLElement)?.ownerDocument ?? document;
+
+  const isViewerDisabled = viewerDoc.body.classList.contains(
     "dynamic-views-image-viewer-disabled",
   );
   if (isViewerDisabled) {
@@ -172,11 +184,13 @@ function setupImageViewerGestures(
   let resizeHandler: (() => void) | null = null;
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let isMaximized = false;
+  const gestureDoc = container.ownerDocument;
+  const gestureWin = gestureDoc.defaultView ?? window;
   let containerResizeObserver: ResizeObserver | null = null;
 
   // Cache viewport dimensions (updated on resize for mobile)
-  let cachedViewportWidth = window.innerWidth;
-  let cachedViewportHeight = window.innerHeight;
+  let cachedViewportWidth = gestureWin.innerWidth;
+  let cachedViewportHeight = gestureWin.innerHeight;
 
   // Cache container dimensions (updated on resize for desktop maximized mode)
   let cachedContainerWidth = container.clientWidth;
@@ -213,13 +227,13 @@ function setupImageViewerGestures(
     if (isMobile) {
       // Mobile: update viewport dimensions on resize
       resizeHandler = () => {
-        cachedViewportWidth = window.innerWidth;
-        cachedViewportHeight = window.innerHeight;
+        cachedViewportWidth = gestureWin.innerWidth;
+        cachedViewportHeight = gestureWin.innerHeight;
       };
-      window.addEventListener("resize", resizeHandler);
+      gestureWin.addEventListener("resize", resizeHandler);
     } else {
       // Desktop: update container dimensions via ResizeObserver (avoids stale bounds in maximized mode)
-      containerResizeObserver = new ResizeObserver((entries) => {
+      containerResizeObserver = new gestureWin.ResizeObserver((entries) => {
         for (const entry of entries) {
           cachedContainerWidth = entry.contentRect.width;
           cachedContainerHeight = entry.contentRect.height;
@@ -359,6 +373,18 @@ function setupImageViewerGestures(
     // Use platform-specific setTransform (mobile: viewport clamping, desktop: maximized edge-gluing)
     const customSetTransform = mobileSetTransform ?? desktopSetTransform;
 
+    // Panzoom's isAttached walks up to module-scope `document`, which fails
+    // for elements in popout windows (separate V8 isolate). Temporarily
+    // reparent the container to the main document for the init check —
+    // imgEl.parentNode (container) stays correct throughout.
+    const inPopout = container.ownerDocument !== document;
+    let reparentBack: (() => void) | null = null;
+    if (inPopout) {
+      const origParent = container.parentElement;
+      const origNext = container.nextSibling;
+      document.body.appendChild(container);
+      reparentBack = () => origParent?.insertBefore(container, origNext);
+    }
     panzoomInstance = Panzoom(imgEl, {
       maxScale: isMobile ? 9 : 4,
       minScale: 1,
@@ -368,6 +394,29 @@ function setupImageViewerGestures(
       cursor: isMobile ? "default" : "move",
       ...(customSetTransform && { setTransform: customSetTransform }),
     });
+    reparentBack?.();
+
+    // Panzoom also binds handleMove/handleUp to module-scope `document`.
+    // In popouts, pointer events fire on the popout's document. Rebind.
+    if (inPopout) {
+      const pz = panzoomInstance;
+      document.removeEventListener("pointermove", pz.handleMove);
+      document.removeEventListener("pointerup", pz.handleUp);
+      document.removeEventListener("pointerleave", pz.handleUp);
+      document.removeEventListener("pointercancel", pz.handleUp);
+      gestureDoc.addEventListener("pointermove", pz.handleMove, {
+        passive: true,
+      });
+      gestureDoc.addEventListener("pointerup", pz.handleUp, {
+        passive: true,
+      });
+      gestureDoc.addEventListener("pointerleave", pz.handleUp, {
+        passive: true,
+      });
+      gestureDoc.addEventListener("pointercancel", pz.handleUp, {
+        passive: true,
+      });
+    }
 
     // Enable wheel zoom on container
     // Desktop: only zoom when cursor is over the image (not the overlay)
@@ -419,7 +468,7 @@ function setupImageViewerGestures(
         if (container.classList.contains("dynamic-views-viewer-fixed")) {
           const orig = (container as CloneElement).__originalEmbed;
           if (
-            document.activeElement !== container &&
+            gestureDoc.activeElement !== container &&
             !orig?.closest(".workspace-leaf.mod-active")
           )
             return;
@@ -444,7 +493,7 @@ function setupImageViewerGestures(
           container.dataset.lastKeyTime = String(Date.now());
         }
       };
-      document.addEventListener("keydown", spacebarHandler, true);
+      gestureDoc.addEventListener("keydown", spacebarHandler, true);
 
       // Long-press via pointer events on container (panzoom stops propagation on imgEl)
       let longPressStartX = 0;
@@ -547,10 +596,26 @@ function setupImageViewerGestures(
           container.removeEventListener("wheel", wheelHandler, WHEEL_OPTIONS);
           containerWheelHandlers.delete(container);
         }
+        // Remove popout document listeners (destroy() only removes from main document)
+        if (gestureDoc !== document) {
+          gestureDoc.removeEventListener(
+            "pointermove",
+            panzoomInstance.handleMove,
+          );
+          gestureDoc.removeEventListener("pointerup", panzoomInstance.handleUp);
+          gestureDoc.removeEventListener(
+            "pointerleave",
+            panzoomInstance.handleUp,
+          );
+          gestureDoc.removeEventListener(
+            "pointercancel",
+            panzoomInstance.handleUp,
+          );
+        }
         panzoomInstance.destroy();
       }
       if (spacebarHandler) {
-        document.removeEventListener("keydown", spacebarHandler, true);
+        gestureDoc.removeEventListener("keydown", spacebarHandler, true);
       }
       if (longPressTimer) {
         clearTimeout(longPressTimer);
@@ -581,7 +646,7 @@ function setupImageViewerGestures(
         imgEl.removeEventListener("error", errorHandler);
       }
       if (resizeHandler) {
-        window.removeEventListener("resize", resizeHandler);
+        gestureWin.removeEventListener("resize", resizeHandler);
       }
       if (containerResizeObserver) {
         containerResizeObserver.disconnect();
@@ -608,6 +673,9 @@ function openImageViewer(
     console.warn("Cannot open viewer - no img element found");
     return;
   }
+
+  const viewerDoc = embedEl.ownerDocument;
+  const viewerWin = viewerDoc.defaultView ?? window;
 
   // Close other open viewers (clone array to avoid mutation during iteration)
   for (const clone of Array.from(viewerClones.values())) {
@@ -648,11 +716,11 @@ function openImageViewer(
   const isMobile = app.isMobile;
   const isFullscreen =
     isMobile ||
-    document.body.classList.contains("dynamic-views-image-viewer-fullscreen");
+    viewerDoc.body.classList.contains("dynamic-views-image-viewer-fullscreen");
 
   // For constrained mode, extract opacity from theme's cover color
   if (!isFullscreen) {
-    const coverColor = getComputedStyle(document.body)
+    const coverColor = getComputedStyle(viewerDoc.body)
       .getPropertyValue("--background-modifier-cover")
       .trim();
     const match = coverColor.match(/[\d.]+(?=\s*\)$)/); // Extract last number (alpha)
@@ -685,16 +753,16 @@ function openImageViewer(
         cloneEl.addClass("dynamic-views-viewer-fixed");
         updateBounds();
         // Append to body (not view-content) to survive React re-renders
-        document.body.appendChild(cloneEl);
+        viewerDoc.body.appendChild(cloneEl);
 
         // Update bounds when leaf resizes (stable element)
-        resizeObserver = new ResizeObserver(updateBounds);
+        resizeObserver = new viewerWin.ResizeObserver(updateBounds);
         resizeObserver.observe(workspaceLeaf);
       } else {
-        document.body.appendChild(cloneEl);
+        viewerDoc.body.appendChild(cloneEl);
       }
     } else {
-      document.body.appendChild(cloneEl);
+      viewerDoc.body.appendChild(cloneEl);
     }
 
     // Watch for Obsidian modals opening (command palette, settings, etc.)
@@ -717,15 +785,15 @@ function openImageViewer(
         }
       }
     });
-    modalObserver.observe(document.body, { childList: true });
+    modalObserver.observe(viewerDoc.body, { childList: true });
 
     // Only setup pinch/gesture zoom if not disabled
-    const isPinchZoomDisabled = document.body.classList.contains(
+    const isPinchZoomDisabled = viewerDoc.body.classList.contains(
       "dynamic-views-zoom-disabled",
     );
 
     // Check dismiss setting once, applies regardless of panzoom state
-    const isDismissDisabled = document.body.classList.contains(
+    const isDismissDisabled = viewerDoc.body.classList.contains(
       "dynamic-views-image-viewer-disable-dismiss-on-click",
     );
     // Track gesture controls for Alt+drag coordination (set when Panzoom active)
@@ -767,7 +835,7 @@ function openImageViewer(
         if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
           const orig = cloneEl.__originalEmbed;
           if (
-            document.activeElement !== cloneEl &&
+            viewerDoc.activeElement !== cloneEl &&
             !orig?.closest(".workspace-leaf.mod-active")
           )
             return;
@@ -784,7 +852,7 @@ function openImageViewer(
           cloneEl.dataset.lastKeyTime = String(Date.now());
         }
       };
-      document.addEventListener("keydown", onSpacebar, true);
+      viewerDoc.addEventListener("keydown", onSpacebar, true);
 
       // Image is always draggable when panzoom is off (no pan to conflict with)
       imgEl.draggable = true;
@@ -811,7 +879,7 @@ function openImageViewer(
       viewerCleanupFns.set(cloneEl, () => {
         existingGestureCleanup?.();
         cloneEl.removeEventListener("wheel", onPinchWheel);
-        document.removeEventListener("keydown", onSpacebar, true);
+        viewerDoc.removeEventListener("keydown", onSpacebar, true);
         imgEl.removeEventListener("dragstart", onPanzoomOffDragStart);
       });
     }
@@ -946,7 +1014,7 @@ function openImageViewer(
       if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
         const orig = cloneEl.__originalEmbed;
         if (
-          document.activeElement !== cloneEl &&
+          viewerDoc.activeElement !== cloneEl &&
           !orig?.closest(".workspace-leaf.mod-active")
         )
           return;
@@ -961,7 +1029,7 @@ function openImageViewer(
       if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
         const orig = cloneEl.__originalEmbed;
         if (
-          document.activeElement !== cloneEl &&
+          viewerDoc.activeElement !== cloneEl &&
           !orig?.closest(".workspace-leaf.mod-active")
         )
           return;
@@ -972,8 +1040,8 @@ function openImageViewer(
 
       void (async () => {
         try {
-          if (!document.hasFocus()) {
-            window.focus();
+          if (!viewerDoc.hasFocus()) {
+            viewerWin.focus();
             await new Promise((r) => setTimeout(r, 50));
           }
 
@@ -998,7 +1066,7 @@ function openImageViewer(
           }
 
           // Clipboard API only supports PNG - convert via canvas
-          const canvas = document.createElement("canvas");
+          const canvas = viewerDoc.createElement("canvas");
           canvas.width = sourceImg.naturalWidth;
           canvas.height = sourceImg.naturalHeight;
           const ctx = canvas.getContext("2d");
@@ -1024,8 +1092,8 @@ function openImageViewer(
     };
 
     // Add all listeners synchronously (isOpening flag prevents immediate trigger)
-    document.addEventListener("keydown", onEscape, true);
-    document.addEventListener("keydown", onCopy, true);
+    viewerDoc.addEventListener("keydown", onEscape, true);
+    viewerDoc.addEventListener("keydown", onCopy, true);
     cloneEl.addEventListener("click", onOverlayClick);
 
     // Desktop-only: Alt+drag to drag image out of viewer
@@ -1058,7 +1126,7 @@ function openImageViewer(
         if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
           const orig = cloneEl.__originalEmbed;
           if (
-            document.activeElement !== cloneEl &&
+            viewerDoc.activeElement !== cloneEl &&
             !orig?.closest(".workspace-leaf.mod-active")
           )
             return;
@@ -1102,30 +1170,30 @@ function openImageViewer(
         disableAltDrag();
       };
 
-      document.addEventListener("keydown", onAltKeyDown, true);
-      document.addEventListener("keyup", onAltKeyUp, true);
-      window.addEventListener("blur", onAltBlur);
+      viewerDoc.addEventListener("keydown", onAltKeyDown, true);
+      viewerDoc.addEventListener("keyup", onAltKeyUp, true);
+      viewerWin.addEventListener("blur", onAltBlur);
       imgEl.addEventListener("dragstart", onDragStart);
       imgEl.addEventListener("dragend", onDragEnd);
     }
 
     // Cleanup removes all listeners (removeEventListener is no-op if never added)
     viewerListenerCleanups.set(cloneEl, () => {
-      document.removeEventListener("keydown", onEscape, true);
-      document.removeEventListener("keydown", onCopy, true);
+      viewerDoc.removeEventListener("keydown", onEscape, true);
+      viewerDoc.removeEventListener("keydown", onCopy, true);
       cloneEl.removeEventListener("click", onOverlayClick);
       if (isMobile) {
         cloneEl.removeEventListener("touchstart", onTouchStart);
         cloneEl.removeEventListener("touchend", onTouchEnd);
       }
       if (onAltKeyDown) {
-        document.removeEventListener("keydown", onAltKeyDown, true);
+        viewerDoc.removeEventListener("keydown", onAltKeyDown, true);
       }
       if (onAltKeyUp) {
-        document.removeEventListener("keyup", onAltKeyUp, true);
+        viewerDoc.removeEventListener("keyup", onAltKeyUp, true);
       }
       if (onAltBlur) {
-        window.removeEventListener("blur", onAltBlur);
+        viewerWin.removeEventListener("blur", onAltBlur);
       }
       if (onDragStart) {
         imgEl.removeEventListener("dragstart", onDragStart);
