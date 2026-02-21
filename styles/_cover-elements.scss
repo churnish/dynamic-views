@@ -5,7 +5,7 @@
 /* Cover-bottom: expands to fill remaining space */
 /* Cover-bottom placeholder: expands to match cover dimensions */
 /* Grid view: cover-bottom — fixed cover height */
-/* Grid cover-bottom wrapper: fixed size, no margins (spacer handles top gap) */
+/* Grid cover-bottom wrapper: fixed size, no bottom margin */
 /* Grid cover-bottom: push properties-bottom to bottom of card */
 /* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
 /* Compensate: card bottom padding = inset (instead of card-padding) */
@@ -41,7 +41,6 @@
     .card-cover-wrapper {
     flex-grow: 0;
     flex-shrink: 0;
-    margin-top: 0;
     margin-bottom: 0;
   }
 
