@@ -55,7 +55,7 @@ export interface MasonryLayoutResult {
   columns: number;
   heights?: number[]; // Card heights used in this layout
   measuredAtCardWidth?: number; // cardWidth when heights were DOM-measured (not scaled)
-  columnAssignments?: number[]; // Column index for each card — authoritative source during stable resize
+  columnAssignments: number[]; // Column index for each card — authoritative source during stable resize
 }
 
 /**

@@ -194,6 +194,30 @@ describe("masonry-layout", () => {
       const minHeight = Math.min(...result.columnHeights);
       expect(maxHeight - minHeight).toBeLessThanOrEqual(200); // Within 2 cards difference
     });
+
+    it("should return columnAssignments aligned with positions", () => {
+      const cards = Array(6)
+        .fill(null)
+        .map(() => createMockCard(100));
+
+      const result = calculateMasonryLayout({
+        cards,
+        containerWidth: 630,
+        cardSize: 200,
+        minColumns: 1,
+        gap: 10,
+      });
+
+      expect(result.columnAssignments).toHaveLength(6);
+      // Equal heights → round-robin: [0, 1, 2, 0, 1, 2]
+      expect(result.columnAssignments).toEqual([0, 1, 2, 0, 1, 2]);
+      // Each assignment matches the position's column
+      for (let i = 0; i < 6; i++) {
+        const expectedLeft =
+          result.columnAssignments[i] * (result.cardWidth + 10);
+        expect(result.positions[i].left).toBeCloseTo(expectedLeft, 0);
+      }
+    });
   });
 
   describe("applyMasonryLayout", () => {
@@ -328,6 +352,55 @@ describe("masonry-layout", () => {
       });
 
       expect(result.positions[0].left).toBe(2 * (194 + 8));
+    });
+
+    it("should use columnAssignments directly when provided", () => {
+      const result = repositionWithStableColumns({
+        columnAssignments: [0, 1, 2, 0, 1, 2],
+        newHeights: [100, 120, 90, 110, 80, 95],
+        columns: 3,
+        cardWidth: 200,
+        gap: 10,
+      });
+
+      expect(result.positions[0].left).toBe(0); // col 0
+      expect(result.positions[1].left).toBe(210); // col 1
+      expect(result.positions[2].left).toBe(420); // col 2
+      expect(result.positions[3].left).toBe(0); // col 0
+      expect(result.columnAssignments).toEqual([0, 1, 2, 0, 1, 2]);
+    });
+
+    it("should clamp columnAssignments when columns decrease", () => {
+      const result = repositionWithStableColumns({
+        columnAssignments: [0, 1, 2, 3],
+        newHeights: [100, 100, 100, 100],
+        columns: 3,
+        cardWidth: 200,
+        gap: 10,
+      });
+
+      expect(result.columnAssignments).toEqual([0, 1, 2, 2]);
+      expect(result.positions[3].left).toBe(420); // clamped to col 2
+    });
+
+    it("should prefer columnAssignments over existingPositions", () => {
+      const result = repositionWithStableColumns({
+        columnAssignments: [2, 1, 0],
+        existingPositions: [
+          { left: 0, top: 0 }, // would derive col 0
+          { left: 210, top: 0 }, // would derive col 1
+          { left: 420, top: 0 }, // would derive col 2
+        ],
+        newHeights: [100, 100, 100],
+        columns: 3,
+        cardWidth: 200,
+        gap: 10,
+      });
+
+      // Uses columnAssignments [2, 1, 0], not positions
+      expect(result.positions[0].left).toBe(420); // col 2
+      expect(result.positions[1].left).toBe(210); // col 1
+      expect(result.positions[2].left).toBe(0); // col 0
     });
   });
 

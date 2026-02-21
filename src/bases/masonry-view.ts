@@ -212,6 +212,9 @@ export class DynamicViewsMasonryView extends BasesView {
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
   private displayedSoFar: number = 0;
+  /** Latest container width from ResizeObserver. Never reset — deferred resize
+   *  at scroll-idle reads the most recent value, which is always the correct
+   *  target width regardless of when the deferral was scheduled. */
   private pendingResizeWidth: number | null = null;
   private cachedGroupOffsets: Map<string | undefined, number> = new Map();
   private lastLayoutCardWidth: number = 0;
@@ -1126,6 +1129,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.groupLayoutResults.clear();
       this.virtualItems = [];
       this.hasExplicitScrollHeights = false;
+      this.pendingDeferredFullLayout = false;
+      this.pendingDeferredResize = false;
       this.virtualItemsByGroup.clear();
       this.groupContainers.clear();
       this.cachedGroupOffsets.clear();
@@ -1344,11 +1349,6 @@ export class DynamicViewsMasonryView extends BasesView {
     // Profiling showed chunked async caused layout thrashing (224 InvalidateLayout events)
     this.updateLayoutRef.current = (source?: string) => {
       if (!this.masonryContainer) return;
-      console.debug("[masonry:probe] updateLayout called", {
-        source,
-        batchPending: this.batchLayoutPending,
-        scrollRemeasure: this.scrollRemeasureTimeout !== null,
-      });
       // Use cached width from ResizeObserver for resize sources (avoids forced reflow).
       // Other sources fall back to getBoundingClientRect.
       const containerWidth =
@@ -2074,12 +2074,6 @@ export class DynamicViewsMasonryView extends BasesView {
           this.lastLayoutCardWidth === 0 ||
           !this.lastRenderedSettings
         ) {
-          console.debug("[masonry:probe] cardResizeObserver blocked", {
-            resizeCorrection: this.resizeCorrectionTimeout !== null,
-            scrollRemeasure: this.scrollRemeasureTimeout !== null,
-            batchPending: this.batchLayoutPending,
-            noCardWidth: this.lastLayoutCardWidth === 0,
-          });
           return;
         }
         // RAF debounce — coalesce same-frame card height changes into one reflow
@@ -2127,7 +2121,7 @@ export class DynamicViewsMasonryView extends BasesView {
       item.height = result.heights?.[i] ?? item.height;
       // Store authoritative column index — used by proportionalResizeLayout
       // and repositionWithStableColumns to lock column during same-count resize
-      if (result.columnAssignments && i < result.columnAssignments.length) {
+      if (i < result.columnAssignments.length) {
         item.col = result.columnAssignments[i];
       }
       // Only update baselines for mounted items — unmounted items retain
@@ -2191,11 +2185,6 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       return false;
     }
-
-    console.debug("[masonry:probe] remeasureAndReposition proceeding", {
-      skipTransition,
-      hasExplicitHeights: this.hasExplicitScrollHeights,
-    });
 
     if (skipTransition) {
       this.masonryContainer?.classList.add("masonry-skip-transition");
@@ -2384,12 +2373,6 @@ export class DynamicViewsMasonryView extends BasesView {
   } {
     const columnHeights = new Array(columns).fill(0) as number[];
     const stableColumns = priorColumns === columns;
-    console.debug("[masonry:probe] proportionalResizeLayout", {
-      items: groupItems.length,
-      cardWidth,
-      columns,
-      stableColumns,
-    });
     const columnAssignments: number[] = [];
 
     for (let i = 0; i < groupItems.length; i++) {
@@ -2568,57 +2551,76 @@ export class DynamicViewsMasonryView extends BasesView {
     // until 200ms after the user stops scrolling entirely.
     const shouldScheduleRemeasure =
       this.scrollRemeasureTimeout !== null ||
-      (this.resizeCorrectionTimeout === null &&
+      this.pendingDeferredFullLayout ||
+      this.pendingDeferredResize ||
+      (mountedNew &&
+        this.resizeCorrectionTimeout === null &&
         this.lastLayoutCardWidth > 0 &&
         !this.batchLayoutPending);
-    console.debug("[masonry:probe] syncVirtualScroll", {
-      mountedNew,
-      timerActive: this.scrollRemeasureTimeout !== null,
-      shouldSchedule: shouldScheduleRemeasure,
-      hasExplicitHeights: this.hasExplicitScrollHeights,
-      batchPending: this.batchLayoutPending,
-    });
     if (shouldScheduleRemeasure) {
       if (this.scrollRemeasureTimeout !== null) {
         clearTimeout(this.scrollRemeasureTimeout);
       }
       this.scrollRemeasureTimeout = setTimeout(() => {
         this.scrollRemeasureTimeout = null;
-        console.debug("[masonry:probe] scroll-idle timer fired");
-        if (!this.containerEl?.isConnected) return;
-        if (this.pendingDeferredFullLayout) {
-          if (this.batchLayoutPending) return; // keep flag, retry on next scroll-idle
-          this.pendingDeferredFullLayout = false;
-          this.pendingDeferredResize = false; // full layout subsumes resize
-          this.masonryContainer?.classList.add("masonry-skip-transition");
-          this.updateLayoutRef.current?.("deferred-full-layout");
-          this.scheduleDeferredRemeasure(true);
-          return;
-        }
-        if (this.pendingDeferredResize) {
-          if (this.batchLayoutPending) return; // keep flag, retry on next scroll-idle
-          this.pendingDeferredResize = false;
-          this.masonryContainer?.classList.add("masonry-skip-transition");
-          this.updateLayoutRef.current?.("resize-observer");
-          this.scheduleDeferredRemeasure(true);
-          return;
-        }
-        if (this.batchLayoutPending) return;
-        if (this.resizeCorrectionTimeout !== null) return;
-        if (this.lastLayoutCardWidth <= 0) return;
-        if (!this.lastRenderedSettings) return;
-        const didWork = this.remeasureAndReposition(
-          this.lastLayoutWidth,
-          this.lastLayoutCardWidth,
-          this.lastRenderedSettings,
-          this.lastLayoutMinColumns,
-          this.lastLayoutGap,
-          this.lastLayoutIsGrouped,
-          true,
-        );
-        if (didWork) this.scheduleDeferredRemeasure(true);
+        this.onScrollIdle();
       }, SCROLL_IDLE_MS);
     }
+  }
+
+  /** Runs deferred layout work after scroll settles. Reschedules itself when
+   *  blocked by a pending batch layout to avoid silently dropping work. */
+  private onScrollIdle(): void {
+    if (!this.containerEl?.isConnected) return;
+    if (this.pendingDeferredFullLayout) {
+      if (this.batchLayoutPending) {
+        this.scrollRemeasureTimeout = setTimeout(() => {
+          this.scrollRemeasureTimeout = null;
+          this.onScrollIdle();
+        }, SCROLL_IDLE_MS);
+        return;
+      }
+      this.pendingDeferredFullLayout = false;
+      this.pendingDeferredResize = false; // full layout subsumes resize
+      this.masonryContainer?.classList.add("masonry-skip-transition");
+      this.updateLayoutRef.current?.("deferred-full-layout");
+      this.scheduleDeferredRemeasure(true);
+      return;
+    }
+    if (this.pendingDeferredResize) {
+      if (this.batchLayoutPending) {
+        this.scrollRemeasureTimeout = setTimeout(() => {
+          this.scrollRemeasureTimeout = null;
+          this.onScrollIdle();
+        }, SCROLL_IDLE_MS);
+        return;
+      }
+      this.pendingDeferredResize = false;
+      this.masonryContainer?.classList.add("masonry-skip-transition");
+      this.updateLayoutRef.current?.("resize-observer");
+      this.scheduleDeferredRemeasure(true);
+      return;
+    }
+    if (this.batchLayoutPending) {
+      this.scrollRemeasureTimeout = setTimeout(() => {
+        this.scrollRemeasureTimeout = null;
+        this.onScrollIdle();
+      }, SCROLL_IDLE_MS);
+      return;
+    }
+    if (this.resizeCorrectionTimeout !== null) return;
+    if (this.lastLayoutCardWidth <= 0) return;
+    if (!this.lastRenderedSettings) return;
+    const didWork = this.remeasureAndReposition(
+      this.lastLayoutWidth,
+      this.lastLayoutCardWidth,
+      this.lastRenderedSettings,
+      this.lastLayoutMinColumns,
+      this.lastLayoutGap,
+      this.lastLayoutIsGrouped,
+      true,
+    );
+    if (didWork) this.scheduleDeferredRemeasure(true);
   }
 
   /** Schedule virtual scroll sync on next animation frame */
@@ -2639,12 +2641,6 @@ export class DynamicViewsMasonryView extends BasesView {
     this.deferredRemeasureRafId = requestAnimationFrame(() => {
       this.deferredRemeasureRafId = requestAnimationFrame(() => {
         this.deferredRemeasureRafId = null;
-        console.debug("[masonry:probe] scheduleDeferredRemeasure fired", {
-          scrollRemeasure: this.scrollRemeasureTimeout !== null,
-          resizeCorrection: this.resizeCorrectionTimeout !== null,
-          batchPending: this.batchLayoutPending,
-          cardWidth: this.lastLayoutCardWidth,
-        });
         const cleanupSkipTransition = () => {
           if (skipTransition) {
             requestAnimationFrame(() => {
@@ -3103,198 +3099,211 @@ export class DynamicViewsMasonryView extends BasesView {
       this.displayedSoFar = displayedSoFar;
       this.rebuildGroupIndex();
 
-      // Use incremental layout if we have previous state, otherwise fall back to full recalc
-      // For grouped mode, use lastGroupKey; for ungrouped, use undefined
-      const layoutKey = this.lastGroup.container
-        ? this.lastGroup.key
-        : undefined;
-      const prevLayout = this.groupLayoutResults.get(layoutKey);
-      const targetContainer = this.lastGroup.container ?? this.masonryContainer;
-
-      // Ensure target container has masonry-container class for CSS height rule
-      if (
-        targetContainer &&
-        !targetContainer.classList.contains("masonry-container")
-      ) {
-        targetContainer.classList.add("masonry-container");
-      }
-
-      if (groupsWithNewCards > 1) {
-        // Batch spanned multiple groups - trigger full recalc to position all
-        this.updateLayoutRef.current?.("multi-group-fallback");
-        // Initialize gradients for new cards only (avoids re-scanning old hidden cards)
-        initializeScrollGradientsForCards(newCardEls);
-        initializeTitleTruncationForCards(newCardEls);
-      } else if (!prevLayout && newCardsRendered > 0) {
-        // No previous layout for this container (new group) - trigger full recalc
-        this.updateLayoutRef.current?.("new-group-fallback");
-        // Initialize gradients for new cards only
-        initializeScrollGradientsForCards(newCardEls);
-        initializeTitleTruncationForCards(newCardEls);
-      } else if (prevLayout && newCardsRendered > 0 && targetContainer) {
-        // Mark incremental layout as pending — suppresses full relayouts
-        // and keeps isLoading true until the deferred layout completes
+      if (newCardsRendered > 0 && newCardsPerGroup.size > 0) {
         this.batchLayoutPending = true;
 
-        // Get only the newly rendered cards from the target container
-        const allCards = Array.from(
-          targetContainer.querySelectorAll<HTMLElement>(".card"),
-        );
-        const newCards =
-          newCardsRendered > 0 ? allCards.slice(-newCardsRendered) : [];
+        // Card width from last known layout (always available after initial render)
+        const cardWidth = this.lastLayoutCardWidth;
 
-        // Pre-set width on new cards BEFORE measuring heights
-        // This ensures text wrapping is correct when we read offsetHeight
-        const cardWidth = prevLayout.cardWidth;
-        newCards.forEach((card) => {
-          card.style.width = `${cardWidth}px`;
-        });
+        // Pre-set width on ALL new cards for correct text wrapping
+        for (const cards of newCardsPerGroup.values()) {
+          for (const card of cards) {
+            card.style.width = `${cardWidth}px`;
+          }
+        }
 
-        // Function to run incremental layout
-        const runIncrementalLayout = () => {
-          // Never hide during incremental layout - cards already positioned
-
-          // Re-read prevLayout in case it was updated during async operations
-          const currentPrevLayout = this.groupLayoutResults.get(layoutKey);
-
-          // Validate refs are still valid after async delay
-          if (!targetContainer?.isConnected || !currentPrevLayout) {
+        const runPerGroupLayout = () => {
+          if (!this.containerEl?.isConnected) {
+            this.batchLayoutPending = false;
+            this.isLoading = false;
+            return;
+          }
+          if (this.renderState.version !== currentVersion) {
             this.batchLayoutPending = false;
             this.isLoading = false;
             return;
           }
 
-          // If any card was disconnected, fall back to full recalc
-          if (newCards.some((c) => !c.isConnected)) {
+          // Bail out if any new card was disconnected — can't track virtualItem
+          // alignment when cards are missing from the per-group arrays
+          const allNewCards = [...newCardsPerGroup.values()].flat();
+          if (allNewCards.some((c) => !c.isConnected)) {
             this.batchLayoutPending = false;
             this.isLoading = false;
             this.updateLayoutRef.current?.("card-disconnected-fallback");
             return;
           }
 
-          // Sync responsive classes before measuring (ResizeObservers are async)
-          syncResponsiveClasses(newCards);
-
-          // Force content rendering for accurate measurement
-          // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
           this.masonryContainer?.classList.add("masonry-measuring");
-          let result: MasonryLayoutResult;
-          const viOffset = this.virtualItems.length - newCards.length;
+          this.masonryContainer?.classList.add("masonry-skip-transition");
+
           try {
             // Force synchronous reflow so heights reflect new widths
-            void targetContainer.offsetHeight;
+            void this.masonryContainer?.offsetHeight;
 
             const gap = getCardSpacing(this.containerEl);
 
-            result = calculateIncrementalMasonryLayout({
-              newCards,
-              columnHeights: currentPrevLayout.columnHeights,
-              containerWidth: currentPrevLayout.containerWidth,
-              cardWidth: currentPrevLayout.cardWidth,
-              columns: currentPrevLayout.columns,
-              gap,
-            });
+            for (const [groupKey, groupNewCards] of newCardsPerGroup) {
+              const groupContainer =
+                this.groupContainers.get(groupKey) ?? this.masonryContainer;
+              if (!groupContainer?.isConnected) continue;
 
-            // Measure scalable heights before position writes (same reflow as layout calc)
-            for (let i = 0; i < newCards.length; i++) {
-              const item = this.virtualItems[viOffset + i];
-              if (item.el) {
-                item.scalableHeight = measureScalableHeight(item.el);
+              if (groupNewCards.length === 0) continue;
+
+              syncResponsiveClasses(groupNewCards);
+
+              const currentPrevLayout =
+                this.groupLayoutResults.get(groupKey);
+              let result: MasonryLayoutResult;
+
+              if (currentPrevLayout) {
+                // Incremental: continue from previous column heights
+                result = calculateIncrementalMasonryLayout({
+                  newCards: groupNewCards,
+                  columnHeights: currentPrevLayout.columnHeights,
+                  containerWidth: currentPrevLayout.containerWidth,
+                  cardWidth: currentPrevLayout.cardWidth,
+                  columns: currentPrevLayout.columns,
+                  gap,
+                });
+
+                // Merge with previous results
+                const prevPositions = currentPrevLayout.positions ?? [];
+                result.positions = [
+                  ...prevPositions,
+                  ...(result.positions ?? []),
+                ];
+                const prevHeights = currentPrevLayout.heights ?? [];
+                result.heights = [
+                  ...prevHeights,
+                  ...(result.heights ?? []),
+                ];
+                const prevCols =
+                  currentPrevLayout.columnAssignments ?? [];
+                result.columnAssignments = [
+                  ...prevCols,
+                  ...(result.columnAssignments ?? []),
+                ];
+              } else {
+                // New group: full layout for just this group's cards
+                const heights = groupNewCards.map((c) => c.offsetHeight);
+                result = calculateMasonryLayout({
+                  cards: groupNewCards,
+                  containerWidth: this.lastLayoutWidth,
+                  cardSize: settings.cardSize,
+                  minColumns: settings.minimumColumns,
+                  gap,
+                  heights,
+                });
+                // calculateMasonryLayout doesn't set measuredAtCardWidth — add it
+                // so virtualItem baselines are set for the resize fast path
+                result.measuredAtCardWidth = result.cardWidth;
               }
+
+              // Position new cards only
+              const posOffset = currentPrevLayout
+                ? (currentPrevLayout.positions?.length ?? 0)
+                : 0;
+              groupNewCards.forEach((card, index) => {
+                const pos = result.positions[posOffset + index];
+                card.classList.add("masonry-positioned");
+                card.style.left = `${pos.left}px`;
+                card.style.top = `${pos.top}px`;
+              });
+
+              // Ensure container has masonry-container class
+              if (
+                !groupContainer.classList.contains("masonry-container")
+              ) {
+                groupContainer.classList.add("masonry-container");
+              }
+
+              // Update container height
+              groupContainer.style.setProperty(
+                "--masonry-height",
+                `${result.containerHeight}px`,
+              );
+
+              // Track expected height for ungrouped mode (ResizeObserver skip)
+              if (
+                newCardsPerGroup.size === 1 &&
+                groupKey === undefined
+              ) {
+                this.expectedIncrementalHeight = result.containerHeight;
+              }
+
+              // Store for next incremental append
+              this.groupLayoutResults.set(groupKey, result);
             }
 
-            // Apply positions to new cards only (width already set above)
-            console.debug("[masonry:probe] runIncrementalLayout positioning", {
-              newCards: newCards.length,
-              containerHeight: result.containerHeight,
-              scrollTop: this.scrollEl?.scrollTop,
-            });
-            this.masonryContainer?.classList.add("masonry-skip-transition");
-            newCards.forEach((card, index) => {
-              const pos = result.positions[index];
-              card.classList.add("masonry-positioned");
-              card.style.left = `${pos.left}px`;
-              card.style.top = `${pos.top}px`;
-            });
+            // Update virtualItem positions for ALL new cards
+            // (new cards are the last N items in virtualItems)
+            const viOffset = this.virtualItems.length - newCardsRendered;
+            let cardIdx = 0;
+            for (const [groupKey, groupNewCards] of newCardsPerGroup) {
+              const groupResult = this.groupLayoutResults.get(groupKey);
+              if (!groupResult) continue;
+
+              const posOffset =
+                (groupResult.positions?.length ?? 0) -
+                groupNewCards.length;
+
+              for (let i = 0; i < groupNewCards.length; i++) {
+                const item = this.virtualItems[viOffset + cardIdx];
+                if (item) {
+                  const pos = groupResult.positions[posOffset + i];
+                  item.x = pos.left;
+                  item.y = pos.top;
+                  item.width = groupResult.cardWidth;
+                  item.height =
+                    groupResult.heights?.[posOffset + i] ?? item.height;
+                  if (
+                    groupResult.columnAssignments &&
+                    posOffset + i <
+                      groupResult.columnAssignments.length
+                  ) {
+                    item.col =
+                      groupResult.columnAssignments[posOffset + i];
+                  }
+                  if (groupResult.measuredAtCardWidth) {
+                    item.measuredHeight = item.height;
+                    item.measuredAtWidth =
+                      groupResult.measuredAtCardWidth;
+                    item.scalableHeight = item.el
+                      ? measureScalableHeight(item.el)
+                      : 0;
+                    item.fixedHeight =
+                      item.measuredHeight - item.scalableHeight;
+                  }
+                }
+                cardIdx++;
+              }
+            }
+          } finally {
+            this.masonryContainer?.classList.remove("masonry-measuring");
+            // Clean up skip-transition in finally to avoid permanent stuck class on throw
             requestAnimationFrame(() => {
               this.masonryContainer?.classList.remove(
                 "masonry-skip-transition",
               );
             });
-          } finally {
-            this.masonryContainer?.classList.remove("masonry-measuring");
           }
 
-          // Track expected height so ResizeObserver can skip this change
-          this.expectedIncrementalHeight = result.containerHeight;
-
-          // Update container height (group container or main container)
-          targetContainer.style.setProperty(
-            "--masonry-height",
-            `${result.containerHeight}px`,
-          );
-
-          // Update virtual item positions for newly appended cards.
-          // New cards are the last N items in virtualItems (pushed in same order).
-          // Uses batch-local heights — must run BEFORE height merge below.
-          for (let i = 0; i < newCards.length; i++) {
-            const item = this.virtualItems[viOffset + i];
-            const pos = result.positions[i];
-            item.x = pos.left;
-            item.y = pos.top;
-            item.width = result.cardWidth;
-            item.height = result.heights?.[i] ?? item.height;
-            if (
-              result.columnAssignments &&
-              i < result.columnAssignments.length
-            ) {
-              item.col = result.columnAssignments[i];
-            }
-            if (result.measuredAtCardWidth) {
-              item.measuredHeight = item.height;
-              item.measuredAtWidth = result.measuredAtCardWidth;
-              item.fixedHeight = item.measuredHeight - item.scalableHeight;
-            }
-          }
-
-          // Merge all heights so resize fast path can use them for unmounted cards.
-          // Must happen AFTER virtual item loop (which uses batch-local indices).
-          const prevPositions = currentPrevLayout.positions ?? [];
-          result.positions = [...prevPositions, ...(result.positions ?? [])];
-          const prevHeights = currentPrevLayout.heights ?? [];
-          result.heights = [...prevHeights, ...(result.heights ?? [])];
-          const prevCols = currentPrevLayout.columnAssignments ?? [];
-          result.columnAssignments = [
-            ...prevCols,
-            ...(result.columnAssignments ?? []),
-          ];
-
-          // Store for next incremental append
-          this.groupLayoutResults.set(layoutKey, result);
-
-          // Clear batch state — must be AFTER groupLayoutResults.set (so stored
-          // result is correct) and BEFORE checkAndLoadMore (so it can proceed)
           this.batchLayoutPending = false;
           this.isLoading = false;
 
-          // Unmount off-screen cards (including newly appended ones below viewport)
           this.updateCachedGroupOffsets();
           this.syncVirtualScroll();
 
-          // Initialize gradients for new cards only (filter out cards that
-          // became content-hidden during the double-RAF wait for image load)
+          // Initialize gradients for new cards only
           const visibleNewCards = newCardEls.filter(
             (c) => !c.classList.contains(CONTENT_HIDDEN_CLASS),
           );
           initializeScrollGradientsForCards(visibleNewCards);
           initializeTitleTruncationForCards(visibleNewCards);
 
-          // After layout completes, check if more content needed
-          // (ResizeObserver skips expected heights, so we check here)
-          // Guard: skip if render was cancelled while waiting for layout
           if (this.renderState.version === currentVersion) {
             this.checkAndLoadMore(totalEntries, settings);
-            // Show end indicator if all items displayed (skip if 0 results)
             if (
               this.displayedSoFar >= this.totalEntries &&
               this.totalEntries > 0
@@ -3304,15 +3313,12 @@ export class DynamicViewsMasonryView extends BasesView {
           }
         };
 
-        // Check if fixed cover height is enabled (heights are CSS-determined)
+        // Schedule via image load + double RAF (same pattern as before)
         const isFixedCoverHeight = document.body.classList.contains(
           "dynamic-views-masonry-fixed-cover-height",
         );
 
-        // Double RAF ensures browser has completed layout calculation:
-        // First RAF waits for pending style recalc, second ensures paint is complete
-        // and all ResizeObserver callbacks have fired
-        // Both RAFs guarded with isConnected to prevent execution on destroyed view
+        const allNewCards = [...newCardsPerGroup.values()].flat();
         const runAfterLayout = (fn: () => void) => {
           requestAnimationFrame(() => {
             if (!this.containerEl?.isConnected) {
@@ -3332,11 +3338,9 @@ export class DynamicViewsMasonryView extends BasesView {
         };
 
         if (isFixedCoverHeight) {
-          // Heights are CSS-determined, position after layout
-          runAfterLayout(runIncrementalLayout);
+          runAfterLayout(runPerGroupLayout);
         } else {
-          // Need to wait for image heights to be known (covers and thumbnails)
-          const newCardImages = newCards
+          const newCardImages = allNewCards
             .flatMap((card) => [
               card.querySelector<HTMLImageElement>(
                 ".dynamic-views-image-embed img",
@@ -3345,11 +3349,9 @@ export class DynamicViewsMasonryView extends BasesView {
             ])
             .filter((img): img is HTMLImageElement => img !== null);
 
-          // Apply cached aspect ratios and collect images that need to load
           const uncachedImages = newCardImages.filter((img) => {
             const cachedRatio = getCachedAspectRatio(img.src);
             if (cachedRatio !== undefined) {
-              // Apply cached aspect ratio - height will be correct for layout
               const card = img.closest<HTMLElement>(".card");
               if (card) {
                 card.style.setProperty(
@@ -3357,16 +3359,14 @@ export class DynamicViewsMasonryView extends BasesView {
                   cachedRatio.toString(),
                 );
               }
-              return false; // Don't need to wait for layout (ratio is known)
+              return false;
             }
-            return true; // Need to wait for load
+            return true;
           });
 
           if (uncachedImages.length === 0) {
-            // All images have cached aspect ratios (or no images)
-            runAfterLayout(runIncrementalLayout);
+            runAfterLayout(runPerGroupLayout);
           } else {
-            // Wait for uncached images to load/error
             void Promise.all(
               uncachedImages.map(
                 (img) =>
@@ -3384,7 +3384,6 @@ export class DynamicViewsMasonryView extends BasesView {
                   }),
               ),
             ).then(() => {
-              // Guard against view destruction or renderVersion change while waiting for images
               if (!this.containerEl?.isConnected) {
                 this.batchLayoutPending = false;
                 this.isLoading = false;
@@ -3395,15 +3394,14 @@ export class DynamicViewsMasonryView extends BasesView {
                 this.isLoading = false;
                 return;
               }
-              runAfterLayout(runIncrementalLayout);
+              runAfterLayout(runPerGroupLayout);
             });
           }
         }
       }
-      // Note: else cases (newCardsRendered === 0 or missing targetContainer) are valid no-ops
     } finally {
-      // Clear loading flag for synchronous paths (multi-group, new-group, no-op).
-      // The incremental path clears isLoading when its deferred layout executes.
+      // Clear loading flag for synchronous paths (no-op).
+      // The per-group path clears isLoading when its deferred layout executes.
       if (!this.batchLayoutPending) {
         this.isLoading = false;
       }
