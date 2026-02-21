@@ -30,16 +30,16 @@ const markdownPatterns = [
   /~~((?:(?!~~).)+)~~/g, // Strikethrough
   /==((?:(?!==).)+)==/g, // Highlight
   /!\[[^\]\n]*\]\([^)]*\)/g, // Markdown images (before links, strip entirely)
-  /\[(?![ xX]\])([^\]\n]*)\]\([^)]*\)/g, // Links (exclude checkboxes, allow empty)
+  /\[([^\]\n]*)\]\([^)]*\)/g, // Links (allow empty display text)
   /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, // Embedded wikilinks (images, etc.)
   /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g, // Wikilinks with alias → keep alias
   /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, // Wikilinks → keep link text
   /(^|\s)#[a-zA-Z0-9_\-/]+/g, // Tags (require whitespace/line-start before #)
-  /^\s*[-*+]\s*\[[ xX]\]\s+/gm, // Task list markers (bullet-style) - before bare checkbox
-  /^\s*(\d+[.)]\s*)\[[ xX]\]\s+/gm, // Task list markers (numbered) - preserves number
-  /\[[ xX]\]\s+/g, // Bare task checkboxes (after task markers)
+  /^\s*[-*+]\s*\[[^\]]\]\s+/gm, // Task list markers (bullet-style) - before bare checkbox
+  /^\s*(\d+[.)]\s*)\[[^\]]\]\s+/gm, // Task list markers (numbered) - preserves number
+  /\[[^\]]\]\s+/g, // Bare task checkboxes (after task markers)
   /^\s*[-*+]\s+/gm, // Bullet list markers (after task markers)
-  /^#{1,6}\s+.+$/gm, // Heading lines (full removal)
+  /^#{1,6}(?:[ \t].*)?$/gm, // Heading lines (full removal, [ \t] prevents cross-newline matching)
   /^\s*(?:[-_*])\s*(?:[-_*])\s*(?:[-_*])[\s\-_*]*$/gm, // Horizontal rules
   /^\s*\|.*\|.*$/gm, // Tables
   /\^\[[^\]]*?]/g, // Inline footnotes
@@ -145,12 +145,12 @@ function removeCodeBlocks(text: string): string {
 export function stripMarkdownSyntax(text: string): string {
   if (!text || text.trim().length === 0) return "";
 
-  // First pass: remove callout title lines only
-  text = text.replace(/^>\s*\[![\w-]+\][+-]?.*$/gm, "");
-  // Second pass: strip > prefix from remaining blockquote lines
-  text = text.replace(/^>\s?/gm, "");
-  // Third pass: strip > after list markers (e.g., "- >text" or "- [ ] >text")
-  text = text.replace(/^(\s*[-*+](?:\s*\[[ xX]\])?\s*)>\s?/gm, "$1");
+  // First pass: remove callout title lines at any nesting depth
+  text = text.replace(/^(?:>\s*)+\[![\w-]+\][+-]?.*$/gm, "");
+  // Second pass: strip all > prefixes from remaining blockquote lines
+  text = text.replace(/^(?:>\s?)+/gm, "");
+  // Third pass: strip > after list markers (e.g., "- >text" or "- [-] >text")
+  text = text.replace(/^(\s*[-*+](?:\s*\[[^\]]\])?\s*)>\s?/gm, "$1");
 
   // Protect escaped characters before processing markdown
   const { text: protectedText, map: escapedCharsMap } =

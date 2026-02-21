@@ -195,6 +195,12 @@ More content`;
       expect(result).toBe("Content here More content");
     });
 
+    it("should strip bare heading syntax", () => {
+      expect(sanitizeForPreview("#")).toBe("");
+      expect(sanitizeForPreview("## ")).toBe("");
+      expect(sanitizeForPreview("#\nContent here")).toBe("Content here");
+    });
+
     it("should strip bullet list markers", () => {
       const input = `- Item 1
 * Item 2
@@ -218,6 +224,21 @@ More content`;
       expect(result).toBe("1. Task one 2) Task two");
     });
 
+    it("should strip non-standard task checkboxes", () => {
+      const input = `- [-] Cancelled
+- [/] In progress
+- [>] Deferred
+- [!] Important`;
+      const result = sanitizeForPreview(input);
+      expect(result).toBe("Cancelled In progress Deferred Important");
+    });
+
+    it("should strip non-standard numbered task checkboxes", () => {
+      const input = "1. [-] Numbered cancelled";
+      const result = sanitizeForPreview(input);
+      expect(result).toBe("1. Numbered cancelled");
+    });
+
     it("should strip bare task checkboxes without list markers", () => {
       const input = `[ ] Bare unchecked
 [x] Bare checked
@@ -226,12 +247,19 @@ More content`;
       expect(result).toBe("Bare unchecked Bare checked Bare checked uppercase");
     });
 
+    it("should strip bare non-standard checkboxes", () => {
+      const input = "[-] Cancelled";
+      const result = sanitizeForPreview(input);
+      expect(result).toBe("Cancelled");
+    });
+
     it("should strip blockquote markers in list items", () => {
       const input = `- >smile
 - > hello
-- [ ] >hi`;
+- [ ] >hi
+- [-] >cancelled quote`;
       const result = sanitizeForPreview(input);
-      expect(result).toBe("smile hello hi");
+      expect(result).toBe("smile hello hi cancelled quote");
     });
 
     it("should strip blockquote markers with varied indentation in lists", () => {
@@ -323,6 +351,25 @@ After code`;
 Regular text`;
       const result = sanitizeForPreview(input);
       expect(result).toBe("Callout content More content Regular text");
+    });
+
+    it("should handle nested callouts", () => {
+      const input = `> [!NOTE] Title
+> Contents
+>
+> > [!DANGER] Title
+> > Contents
+> >
+> > > [!TLDR] Title
+> > > Contents`;
+      const result = sanitizeForPreview(input);
+      expect(result).toBe("Contents Contents Contents");
+    });
+
+    it("should handle double-nested blockquotes", () => {
+      const input = "> > deeply nested";
+      const result = sanitizeForPreview(input);
+      expect(result).toBe("deeply nested");
     });
 
     it("should handle blockquotes", () => {
