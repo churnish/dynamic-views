@@ -370,7 +370,15 @@ export function repositionWithStableColumns(params: StableRepositionParams): {
   columnHeights: number[];
   columnAssignments: number[];
 } {
-  const { newHeights, columns, cardWidth, gap, columnAssignments: priorCols, existingPositions, existingCardWidth } = params;
+  const {
+    newHeights,
+    columns,
+    cardWidth,
+    gap,
+    columnAssignments: priorCols,
+    existingPositions,
+    existingCardWidth,
+  } = params;
   const columnHeights = new Array(columns).fill(0) as number[];
   const positions: MasonryPosition[] = [];
   const columnAssignments: number[] = [];
