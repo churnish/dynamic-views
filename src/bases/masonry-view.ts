@@ -1403,6 +1403,7 @@ export class DynamicViewsMasonryView extends BasesView {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
             if (this.resizeCorrectionTimeout !== null) return;
+            if (this.scrollRemeasureTimeout !== null) return;
             if (this.batchLayoutPending) return;
             if (this.lastLayoutCardWidth <= 0) return;
             if (!this.lastRenderedSettings) return;
@@ -2025,9 +2026,10 @@ export class DynamicViewsMasonryView extends BasesView {
       this.cardResizeObserver = new (
         this.observerWindow ?? window
       ).ResizeObserver(() => {
-        // Skip during active resize, batch layout, or pre-layout state
+        // Skip during active resize, scroll remeasure, batch layout, or pre-layout state
         if (
           this.resizeCorrectionTimeout !== null ||
+          this.scrollRemeasureTimeout !== null ||
           this.batchLayoutPending ||
           this.lastLayoutCardWidth === 0 ||
           !this.lastRenderedSettings
@@ -2043,14 +2045,11 @@ export class DynamicViewsMasonryView extends BasesView {
             !this.containerEl.isConnected ||
             this.batchLayoutPending ||
             this.resizeCorrectionTimeout !== null ||
+            this.scrollRemeasureTimeout !== null ||
             this.lastLayoutCardWidth === 0 ||
             !this.lastRenderedSettings
           )
             return;
-          console.debug("[cardResizeObserver] firing remeasureAndReposition", {
-            hasExplicitScrollHeights: this.hasExplicitScrollHeights,
-            scrollRemeasureTimeout: this.scrollRemeasureTimeout !== null,
-          });
           const didWork = this.remeasureAndReposition(
             this.lastLayoutWidth,
             this.lastLayoutCardWidth,
@@ -2105,6 +2104,7 @@ export class DynamicViewsMasonryView extends BasesView {
     minColumns: number,
     gap: number,
     isGrouped: boolean,
+    skipTransition = false,
   ): boolean {
     // Clear explicit scroll heights so cards reflow to natural height for
     // accurate measurement. Without this, offsetHeight returns the explicit
@@ -2128,29 +2128,20 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Quick check: does any mounted item need repositioning?
     let needsReposition = false;
-    const driftItems: { index: number; offsetH: number; storedH: number; delta: number }[] = [];
     for (const item of this.virtualItems) {
-      if (item.el) {
-        const offsetH = item.el.offsetHeight;
-        const delta = offsetH - item.height;
-        if (Math.abs(delta) > 1) {
-          driftItems.push({ index: item.index, offsetH, storedH: item.height, delta });
-          needsReposition = true;
-        }
+      if (item.el && Math.abs(item.el.offsetHeight - item.height) > 1) {
+        needsReposition = true;
+        break;
       }
-    }
-    if (driftItems.length > 0) {
-      console.debug("[remeasure] drift detected", {
-        count: driftItems.length,
-        samples: driftItems.slice(0, 5),
-      });
     }
     if (!needsReposition) {
       this.masonryContainer?.classList.remove("masonry-measuring");
       return false;
     }
 
-    this.masonryContainer?.classList.add("masonry-correcting");
+    if (!skipTransition) {
+      this.masonryContainer?.classList.add("masonry-correcting");
+    }
 
     // Scroll anchor: record absolute Y of first visible mounted card
     // so we can compensate scrollTop after positions shift
@@ -2288,9 +2279,11 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Remove after transition completes
-    window.setTimeout(() => {
-      this.masonryContainer?.classList.remove("masonry-correcting");
-    }, MASONRY_CORRECTION_MS);
+    if (!skipTransition) {
+      window.setTimeout(() => {
+        this.masonryContainer?.classList.remove("masonry-correcting");
+      }, MASONRY_CORRECTION_MS);
+    }
     return true;
   }
 
@@ -2494,12 +2487,15 @@ export class DynamicViewsMasonryView extends BasesView {
     // deferred remeasures to fight each other (opposite 24px jumps within
     // ~32ms = visible flicker). Debounce: one remeasure + deferred pass
     // after scroll settles (200ms, matching resize correction delay).
-    if (
-      mountedNew &&
-      this.resizeCorrectionTimeout === null &&
-      this.lastLayoutCardWidth > 0 &&
-      !this.batchLayoutPending
-    ) {
+    // Reset on every scroll tick (not just mounts) so the remeasure defers
+    // until 200ms after the user stops scrolling entirely.
+    const shouldScheduleRemeasure =
+      this.scrollRemeasureTimeout !== null ||
+      (mountedNew &&
+        this.resizeCorrectionTimeout === null &&
+        this.lastLayoutCardWidth > 0 &&
+        !this.batchLayoutPending);
+    if (shouldScheduleRemeasure) {
       if (this.scrollRemeasureTimeout !== null) {
         clearTimeout(this.scrollRemeasureTimeout);
       }
@@ -2510,9 +2506,6 @@ export class DynamicViewsMasonryView extends BasesView {
         if (this.resizeCorrectionTimeout !== null) return;
         if (this.lastLayoutCardWidth <= 0) return;
         if (!this.lastRenderedSettings) return;
-        console.debug("[scrollRemeasure] firing remeasureAndReposition", {
-          hasExplicitScrollHeights: this.hasExplicitScrollHeights,
-        });
         const didWork = this.remeasureAndReposition(
           this.lastLayoutWidth,
           this.lastLayoutCardWidth,
@@ -2520,6 +2513,7 @@ export class DynamicViewsMasonryView extends BasesView {
           this.lastLayoutMinColumns,
           this.lastLayoutGap,
           this.lastLayoutIsGrouped,
+          true,
         );
         if (didWork) this.scheduleDeferredRemeasure();
       }, MASONRY_CORRECTION_MS);
@@ -2547,6 +2541,7 @@ export class DynamicViewsMasonryView extends BasesView {
         if (!this.containerEl?.isConnected) return;
         if (this.batchLayoutPending) return;
         if (this.resizeCorrectionTimeout !== null) return;
+        if (this.scrollRemeasureTimeout !== null) return;
         if (this.lastLayoutCardWidth <= 0) return;
         if (!this.lastRenderedSettings) return;
         this.remeasureAndReposition(
