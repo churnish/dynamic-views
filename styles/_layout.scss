@@ -26,6 +26,18 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
   --bases-view-padding: var(--size-4-3);
 }
 
+/* Match Obsidian's native --bases-embed-padding for card views.
+   Obsidian defines this per data-view-type; plugin views need their own. */
+.bases-view[data-view-type="dynamic-views-grid"],
+.bases-view[data-view-type="dynamic-views-masonry"] {
+  --bases-embed-padding: var(--size-4-1) 1px;
+}
+
+.is-phone .bases-view[data-view-type="dynamic-views-grid"],
+.is-phone .bases-view[data-view-type="dynamic-views-masonry"] {
+  --bases-embed-padding: var(--size-4-2);
+}
+
 /* Scroll fade gradient at bottom of scrollable results */
 .dynamic-views .results-container,
 .dynamic-views-bases-container {

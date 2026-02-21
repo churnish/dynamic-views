@@ -181,6 +181,16 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   .card-title .card-title-link:active {
     opacity: 0.5;
   }
+
+  /* iOS WKWebView compositor bug: opacity property on <a> inside position:absolute
+     card causes the card to visually shift right momentarily.
+     Replace Obsidian's a.mobile-tap { opacity: 0.5 } with filter: opacity()
+     which renders identically but avoids the compositor layer shift.
+     Do NOT add transition: filter — animating filter also triggers the bug. */
+  .card-title a.mobile-tap {
+    opacity: 1;
+    filter: opacity(0.5);
+  }
 }
 
 @media (hover: hover) {
