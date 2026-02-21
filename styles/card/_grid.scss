@@ -17,13 +17,17 @@
   background-color: var(--dynamic-views-view-background);
 }
 
-/* Card spacing setting - Bases files only */
-.workspace-leaf-content[data-type="bases"] .dynamic-views .dynamic-views-grid {
+/* Card spacing setting - Bases files and embeds */
+.workspace-leaf-content[data-type="bases"] .dynamic-views .dynamic-views-grid,
+.bases-embed .dynamic-views .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
 }
 
 .is-mobile
-  .workspace-leaf-content[data-type="bases"]
+  :is(
+    .workspace-leaf-content[data-type="bases"],
+    .bases-embed
+  )
   .dynamic-views
   .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-mobile, 6px);
@@ -154,8 +158,12 @@ body.dynamic-views-hide-group-property-labels
   border-style: solid;
 }
 
-/* Card spacing setting - Bases files only */
+/* Card spacing setting - Bases files and embeds */
 .workspace-leaf-content[data-type="bases"]
+  .dynamic-views-grid
+  .dynamic-views-group-section
+  > .dynamic-views-group,
+.bases-embed
   .dynamic-views-grid
   .dynamic-views-group-section
   > .dynamic-views-group {
@@ -163,7 +171,10 @@ body.dynamic-views-hide-group-property-labels
 }
 
 .is-mobile
-  .workspace-leaf-content[data-type="bases"]
+  :is(
+    .workspace-leaf-content[data-type="bases"],
+    .bases-embed
+  )
   .dynamic-views-grid
   .dynamic-views-group-section
   > .dynamic-views-group {
