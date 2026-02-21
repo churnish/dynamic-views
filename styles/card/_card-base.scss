@@ -73,6 +73,12 @@
       background-color var(--anim-duration-fast, 140ms) ease;
   }
 
+  // Instant repositioning during scroll-idle remeasure — overrides base
+  // 140ms transition so positions update in sync with scrollTop compensation
+  .masonry-skip-transition .card.masonry-positioned {
+    transition: none !important;
+  }
+
   // During active resize, keep top/left/height transitions for smooth repositioning.
   // Per-frame JS cost is ~0.3ms after offset skip — budget for transition smoothing.
   // Width is NOT transitioned — left positions assume target width instantly.

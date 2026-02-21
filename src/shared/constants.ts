@@ -26,6 +26,11 @@ export const RESIZE_THROTTLE_MS = 100;
 /** Masonry correction delay and transition duration in ms (must match CSS masonry-correcting) */
 export const MASONRY_CORRECTION_MS = 200;
 
+/** Scroll-idle delay before running deferred layouts and remeasure (ms).
+ * Longer than MASONRY_CORRECTION_MS to avoid firing during brief scroll
+ * pauses (e.g., between mouse wheel ticks or trackpad gestures). */
+export const SCROLL_IDLE_MS = 500;
+
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 
