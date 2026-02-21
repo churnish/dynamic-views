@@ -18,6 +18,10 @@ const PLUGIN_LINK_EMBED = "Link Embed";
 const DEFAULT_CREATED_TIME_PROPERTY = "created time";
 const DEFAULT_MODIFIED_TIME_PROPERTY = "modified time";
 
+// Description containing proper nouns (not subject to sentence case)
+const CONTEXT_MENU_DESC =
+  "Show commands to create new Grid or Masonry base in folder context menus.";
+
 export class DynamicViewsSettingTab extends PluginSettingTab {
   plugin: DynamicViews;
 
@@ -181,6 +185,20 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               .onChange(async (value) => {
                 await this.plugin.persistenceManager.setPluginSettings({
                   openRandomInNewTab: value,
+                });
+              }),
+          ),
+      )
+      .addSetting((s) =>
+        s
+          .setName("Context menu commands")
+          .setDesc(CONTEXT_MENU_DESC)
+          .addToggle((toggle) =>
+            toggle
+              .setValue(settings.contextMenuCommands)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setPluginSettings({
+                  contextMenuCommands: value,
                 });
               }),
           ),

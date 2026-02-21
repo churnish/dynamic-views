@@ -17,6 +17,7 @@ export interface PluginSettings {
   revealInNotebookNavigator: "disable" | "files-folders" | "tags" | "all";
   showYoutubeThumbnails: boolean;
   showCardLinkCovers: boolean;
+  contextMenuCommands: boolean;
 }
 
 /** Per-view visual defaults (shared across Bases and Datacore) */

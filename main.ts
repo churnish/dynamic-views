@@ -5,6 +5,7 @@ import {
   MarkdownView,
   QueryController,
   TFile,
+  TFolder,
   PaneType,
 } from "obsidian";
 import { PersistenceManager } from "./src/persistence";
@@ -38,8 +39,10 @@ import { invalidateCacheForFile } from "./src/shared/image-loader";
 
 // Plugin/feature names (proper nouns, not subject to sentence case)
 const DATACORE = "Datacore";
-const GRID_VIEW = "Grid view";
-const MASONRY_VIEW = "Masonry view";
+const GRID = "Grid";
+const MASONRY = "Masonry";
+const NEW_GRID_BASE = "New Grid base";
+const NEW_MASONRY_BASE = "New Masonry base";
 
 export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
@@ -116,8 +119,8 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "create-dynamic-view",
-      name: `Create note with ${DATACORE} query`,
-      icon: "lucide-file-plus-corner",
+      name: `Create new note with ${DATACORE} query`,
+      icon: "lucide-file-code-corner",
       callback: async () => {
         await this.createExplorerFile();
       },
@@ -151,7 +154,7 @@ export default class DynamicViews extends Plugin {
     // Add ribbon icons
     this.addRibbonIcon(
       "lucide-grid-2x-2",
-      `Create new base with ${GRID_VIEW}`,
+      `Create new ${GRID} base`,
       async (evt: MouseEvent) => {
         await this.createBaseFile(
           "dynamic-views-grid",
@@ -163,7 +166,7 @@ export default class DynamicViews extends Plugin {
 
     this.addRibbonIcon(
       "panels-right-bottom",
-      `Create new base with ${MASONRY_VIEW}`,
+      `Create new ${MASONRY} base`,
       async (evt: MouseEvent) => {
         await this.createBaseFile(
           "dynamic-views-masonry",
@@ -258,7 +261,7 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "create-base-grid-view",
-      name: `Create new base with ${GRID_VIEW}`,
+      name: `Create new ${GRID} base`,
       icon: "lucide-grid-2x-2",
       callback: async () => {
         await this.createBaseFile("dynamic-views-grid", "Grid", false);
@@ -267,7 +270,7 @@ export default class DynamicViews extends Plugin {
 
     this.addCommand({
       id: "create-base-masonry-view",
-      name: `Create new base with ${MASONRY_VIEW}`,
+      name: `Create new ${MASONRY} base`,
       icon: "panels-right-bottom",
       callback: async () => {
         await this.createBaseFile("dynamic-views-masonry", "Masonry", false);
@@ -333,6 +336,45 @@ export default class DynamicViews extends Plugin {
         }
       }),
     );
+
+    // Add "New Grid/Masonry base" to folder context menus
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (!(file instanceof TFolder)) return;
+        if (!this.persistenceManager.getPluginSettings().contextMenuCommands)
+          return;
+
+        menu.addItem((item) =>
+          item
+            .setTitle(NEW_GRID_BASE)
+            .setIcon("lucide-grid-2x-2")
+            .setSection("action-primary")
+            .onClick(async () => {
+              await this.createBaseFile(
+                "dynamic-views-grid",
+                "Grid",
+                false,
+                file.path,
+              );
+            }),
+        );
+
+        menu.addItem((item) =>
+          item
+            .setTitle(NEW_MASONRY_BASE)
+            .setIcon("panels-right-bottom")
+            .setSection("action-primary")
+            .onClick(async () => {
+              await this.createBaseFile(
+                "dynamic-views-masonry",
+                "Masonry",
+                false,
+                file.path,
+              );
+            }),
+        );
+      }),
+    );
   }
 
   getQueryTemplate(): string {
@@ -374,12 +416,15 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     viewType: string,
     viewName: string,
     paneType: PaneType | boolean,
+    folderPath?: string,
   ) {
     try {
-      const activeFile = this.app.workspace.getActiveFile();
-      const folderPath = this.app.fileManager.getNewFileParent(
-        activeFile?.path ?? "",
-      ).path;
+      if (!folderPath) {
+        const activeFile = this.app.workspace.getActiveFile();
+        folderPath = this.app.fileManager.getNewFileParent(
+          activeFile?.path ?? "",
+        ).path;
+      }
       const filePath = getAvailableBasePath(this.app, folderPath, "Untitled");
       const minCol = viewType === "dynamic-views-masonry" ? "two" : "one";
       const content = `views:\n  - type: ${viewType}\n    name: ${viewName}\n    minimumColumns: ${minCol}\n`;

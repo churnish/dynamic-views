@@ -18,6 +18,7 @@ export const PLUGIN_SETTINGS: PluginSettings = {
   revealInNotebookNavigator: "disable",
   showYoutubeThumbnails: true,
   showCardLinkCovers: true,
+  contextMenuCommands: true,
 };
 
 export const VIEW_DEFAULTS: ViewDefaults = {
