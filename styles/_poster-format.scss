@@ -13,7 +13,10 @@
 }
 
 /* Poster mode — Gradient (default — hardcoded dark at 85%) */
-body.dynamic-views-poster-mode-gradient
+body:is(
+    .dynamic-views-poster-mode-gradient,
+    :not([class*="dynamic-views-poster-mode-"])
+  )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -26,7 +29,10 @@ body.dynamic-views-poster-mode-gradient
 }
 
 /* Gradient: bottom-align content where tint provides contrast, with light text (hardcoded dark gradient) */
-body.dynamic-views-poster-mode-gradient
+body:is(
+    .dynamic-views-poster-mode-gradient,
+    :not([class*="dynamic-views-poster-mode-"])
+  )
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
   justify-content: flex-end;
@@ -35,7 +41,10 @@ body.dynamic-views-poster-mode-gradient
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }
 
-body.dynamic-views-poster-mode-gradient
+body:is(
+    .dynamic-views-poster-mode-gradient,
+    :not([class*="dynamic-views-poster-mode-"])
+  )
   .dynamic-views
   .card.image-format-poster:has(.card-poster)
   .card-content {
@@ -44,7 +53,10 @@ body.dynamic-views-poster-mode-gradient
 }
 
 /* Gradient: disable backdrop blur (incompatible with gradient — blur would show through transparent top) */
-body.dynamic-views-poster-mode-gradient
+body:is(
+    .dynamic-views-poster-mode-gradient,
+    :not([class*="dynamic-views-poster-mode-"])
+  )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -54,10 +66,7 @@ body.dynamic-views-poster-mode-gradient
 /* Poster mode — Overlay (flat tint) */
 
 /* Overlay + Match theme (dark) */
-body.dynamic-views-poster-mode-overlay:is(
-    .dynamic-views-poster-theme-match,
-    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
-  ).theme-dark
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-match.theme-dark
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -67,10 +76,7 @@ body.dynamic-views-poster-mode-overlay:is(
 }
 
 /* Overlay + Match theme (light) */
-body.dynamic-views-poster-mode-overlay:is(
-    .dynamic-views-poster-theme-match,
-    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
-  ).theme-light
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-match.theme-light
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -89,8 +95,11 @@ body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
   );
 }
 
-/* Overlay + Dark (forced) */
-body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
+/* Overlay + Dark (default, forced) */
+body.dynamic-views-poster-mode-overlay:is(
+    .dynamic-views-poster-theme-dark,
+    :not([class*="dynamic-views-poster-theme-"])
+  )
   .dynamic-views
   .card.image-format-poster
   .card-poster::after {
@@ -188,10 +197,7 @@ body.dynamic-views-open-on-card
 body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-light
   .dynamic-views
   .card.image-format-poster:has(.card-poster),
-body.dynamic-views-poster-mode-overlay:is(
-    .dynamic-views-poster-theme-match,
-    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
-  ).theme-light
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-match.theme-light
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
   --text-normal: #222222;
@@ -200,13 +206,13 @@ body.dynamic-views-poster-mode-overlay:is(
 }
 
 /* Overlay: text color overrides (dark tint → light text) */
-body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-mode-overlay:is(
+    .dynamic-views-poster-theme-dark,
+    :not([class*="dynamic-views-poster-theme-"])
+  )
   .dynamic-views
   .card.image-format-poster:has(.card-poster),
-body.dynamic-views-poster-mode-overlay:is(
-    .dynamic-views-poster-theme-match,
-    :not(.dynamic-views-poster-theme-light, .dynamic-views-poster-theme-dark)
-  ).theme-dark
+body.dynamic-views-poster-mode-overlay.dynamic-views-poster-theme-match.theme-dark
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
   --text-normal: #fafafa;

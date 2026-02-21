@@ -10,7 +10,10 @@
 }
 
 /* Placeholder background: follows cover background setting */
-body.dynamic-views-cover-bg-plain
+body:is(
+    .dynamic-views-cover-bg-plain,
+    :not([class*="dynamic-views-cover-bg-"])
+  )
   .dynamic-views
   .card.image-format-cover
   .card-cover-placeholder {

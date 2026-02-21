@@ -154,7 +154,7 @@ settings:
         title: Card background (hover)
         type: class-select
         allowEmpty: false
-        default: dynamic-views-card-background-hover-none
+        default: dynamic-views-card-background-hover-transparent
         options:
             -
                 label: No change
@@ -240,7 +240,7 @@ settings:
         description: Theme color preset for card borders on hover.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-card-border-color-hover-normal
+        default: dynamic-views-card-border-color-hover-muted
         options:
             -
                 label: Faint

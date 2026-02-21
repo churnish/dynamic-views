@@ -20,7 +20,13 @@
 
 /* Card border color on hover presets */
 @media (hover: hover) {
-  /* Normal (default) — body class needed for specificity over border presets */
+  /* Muted (default) */
+  body:not([class*="dynamic-views-card-border-color-hover-"])
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--background-modifier-border-hover);
+  }
+
   body.dynamic-views-card-border-color-hover-normal
     .dynamic-views
     .card.hover-intent-active:hover {

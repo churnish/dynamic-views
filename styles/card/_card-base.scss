@@ -53,8 +53,8 @@
     contain: layout style paint;
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
-      top var(--anim-duration-fast, 140ms) ease,
-      left var(--anim-duration-fast, 140ms) ease,
+      top 200ms ease,
+      left 200ms ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }
@@ -82,9 +82,9 @@
   .masonry-resize-active .card.masonry-positioned {
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
-      top var(--anim-duration-fast, 140ms) ease,
-      left var(--anim-duration-fast, 140ms) ease,
-      height var(--anim-duration-fast, 140ms) ease,
+      top 200ms ease,
+      left 200ms ease,
+      height 200ms ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }
@@ -215,6 +215,13 @@ body.dynamic-views-card-background-custom .dynamic-views .card {
 
 /* Card background on hover options */
 @media (hover: hover) {
+  /* Transparent (default) */
+  body:not([class*="dynamic-views-card-background-hover-"])
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: transparent;
+  }
+
   body.dynamic-views-card-background-hover-tinted
     .dynamic-views
     .card.hover-intent-active:hover {

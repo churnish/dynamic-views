@@ -40,7 +40,10 @@ body.dynamic-views-cover-crop-bottom
 }
 
 /* Cover background variants */
-body.dynamic-views-cover-bg-plain
+body:is(
+    .dynamic-views-cover-bg-plain,
+    :not([class*="dynamic-views-cover-bg-"])
+  )
   .dynamic-views
   .card.image-format-cover
   .card-cover {
