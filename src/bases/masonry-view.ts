@@ -1419,12 +1419,7 @@ export class DynamicViewsMasonryView extends BasesView {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
             if (this.resizeCorrectionTimeout !== null) return;
-            if (this.scrollRemeasureTimeout !== null) {
-              console.debug(
-                "[masonry:probe] image-load blocked by scrollRemeasureTimeout",
-              );
-              return;
-            }
+            if (this.scrollRemeasureTimeout !== null) return;
             if (this.batchLayoutPending) return;
             if (this.lastLayoutCardWidth <= 0) return;
             if (!this.lastRenderedSettings) return;
