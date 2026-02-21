@@ -45,7 +45,6 @@ import {
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
   MASONRY_CORRECTION_MS,
-  SCROLL_IDLE_MS,
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
@@ -187,7 +186,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private isLoading: boolean = false;
   private batchLayoutPending: boolean = false;
   private pendingImageRelayout: boolean = false;
-  private pendingDeferredFullLayout = false;
   private pendingDeferredResize = false;
   private resizeCorrectionTimeout: number | null = null;
 
@@ -1129,7 +1127,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.groupLayoutResults.clear();
       this.virtualItems = [];
       this.hasExplicitScrollHeights = false;
-      this.pendingDeferredFullLayout = false;
       this.pendingDeferredResize = false;
       this.virtualItemsByGroup.clear();
       this.groupContainers.clear();
@@ -1370,15 +1367,6 @@ export class DynamicViewsMasonryView extends BasesView {
           // No new cards — scroll-idle remeasure handles height drift.
           return;
         }
-        if (
-          source === "multi-group-fallback" ||
-          source === "new-group-fallback"
-        ) {
-          // Full recalc deferred to scroll-idle — new cards stay unpositioned
-          // briefly (below viewport since batch loading is ahead of scroll).
-          this.pendingDeferredFullLayout = true;
-          return;
-        }
         if (source === "resize-observer" || source === "resize-correction") {
           // Proportional resize repositions ALL cards — defer to scroll-idle.
           // pendingResizeWidth retains the latest width for the deferred pass.
@@ -1396,12 +1384,7 @@ export class DynamicViewsMasonryView extends BasesView {
       );
 
       if (hasUnmountedItems) {
-        if (
-          source === "expand-group" ||
-          source === "multi-group-fallback" ||
-          source === "new-group-fallback" ||
-          source === "deferred-full-layout"
-        ) {
+        if (source === "expand-group") {
           // Remount all items for accurate full-DOM measurement
           for (const item of this.virtualItems) {
             if (!item.el && item.height > 0) {
@@ -1672,7 +1655,7 @@ export class DynamicViewsMasonryView extends BasesView {
                       Math.min(...greedyColHeights);
                     useGreedy =
                       stableRange > greedyRange * 1.5 &&
-                      stableRange - greedyRange > gap * 4;
+                      stableRange - greedyRange > gap * 8;
                   }
 
                   if (useGreedy) {
@@ -1842,7 +1825,7 @@ export class DynamicViewsMasonryView extends BasesView {
                   Math.max(...greedyColHeights) - Math.min(...greedyColHeights);
                 useGreedy =
                   stableRange > greedyRange * 1.5 &&
-                  stableRange - greedyRange > gap * 4;
+                  stableRange - greedyRange > gap * 8;
               }
 
               if (useGreedy) {
@@ -2260,10 +2243,10 @@ export class DynamicViewsMasonryView extends BasesView {
             Math.max(...greedyColHeights) - Math.min(...greedyColHeights);
           // 1.5x relative threshold ignores negligible drift (e.g. 1px rounding);
           // 4×gap absolute threshold ensures the visual difference is noticeable
-          // (empirically: gap=8px → 32px minimum visible imbalance).
+          // (empirically: gap=8px → 64px minimum visible imbalance).
           useGreedy =
             stableRange > greedyRange * 1.5 &&
-            stableRange - greedyRange > gap * 4;
+            stableRange - greedyRange > gap * 8;
         }
 
         if (useGreedy) {
@@ -2551,7 +2534,6 @@ export class DynamicViewsMasonryView extends BasesView {
     // until 200ms after the user stops scrolling entirely.
     const shouldScheduleRemeasure =
       this.scrollRemeasureTimeout !== null ||
-      this.pendingDeferredFullLayout ||
       this.pendingDeferredResize ||
       (mountedNew &&
         this.resizeCorrectionTimeout === null &&
@@ -2564,7 +2546,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.scrollRemeasureTimeout = setTimeout(() => {
         this.scrollRemeasureTimeout = null;
         this.onScrollIdle();
-      }, SCROLL_IDLE_MS);
+      }, MASONRY_CORRECTION_MS);
     }
   }
 
@@ -2572,27 +2554,12 @@ export class DynamicViewsMasonryView extends BasesView {
    *  blocked by a pending batch layout to avoid silently dropping work. */
   private onScrollIdle(): void {
     if (!this.containerEl?.isConnected) return;
-    if (this.pendingDeferredFullLayout) {
-      if (this.batchLayoutPending) {
-        this.scrollRemeasureTimeout = setTimeout(() => {
-          this.scrollRemeasureTimeout = null;
-          this.onScrollIdle();
-        }, SCROLL_IDLE_MS);
-        return;
-      }
-      this.pendingDeferredFullLayout = false;
-      this.pendingDeferredResize = false; // full layout subsumes resize
-      this.masonryContainer?.classList.add("masonry-skip-transition");
-      this.updateLayoutRef.current?.("deferred-full-layout");
-      this.scheduleDeferredRemeasure(true);
-      return;
-    }
     if (this.pendingDeferredResize) {
       if (this.batchLayoutPending) {
         this.scrollRemeasureTimeout = setTimeout(() => {
           this.scrollRemeasureTimeout = null;
           this.onScrollIdle();
-        }, SCROLL_IDLE_MS);
+        }, MASONRY_CORRECTION_MS);
         return;
       }
       this.pendingDeferredResize = false;
@@ -2605,7 +2572,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.scrollRemeasureTimeout = setTimeout(() => {
         this.scrollRemeasureTimeout = null;
         this.onScrollIdle();
-      }, SCROLL_IDLE_MS);
+      }, MASONRY_CORRECTION_MS);
       return;
     }
     if (this.resizeCorrectionTimeout !== null) return;
@@ -2962,8 +2929,8 @@ export class DynamicViewsMasonryView extends BasesView {
       let displayedSoFar = 0;
       let newCardsRendered = 0;
       const startIndex = prevCount;
-      let groupsWithNewCards = 0; // Track how many groups received cards
       const newCardEls: HTMLElement[] = [];
+      const newCardsPerGroup = new Map<string | undefined, HTMLElement[]>();
 
       for (const processedGroup of processedGroups) {
         if (displayedSoFar >= currCount) break;
@@ -3066,6 +3033,10 @@ export class DynamicViewsMasonryView extends BasesView {
             settings,
           );
           newCardEls.push(handle.el);
+          if (!newCardsPerGroup.has(currentGroupKey)) {
+            newCardsPerGroup.set(currentGroupKey, []);
+          }
+          newCardsPerGroup.get(currentGroupKey)!.push(handle.el);
           this.virtualItems.push({
             index: startIndex + newCardsRendered,
             x: 0,
@@ -3084,10 +3055,6 @@ export class DynamicViewsMasonryView extends BasesView {
             handle,
           });
           newCardsRendered++;
-        }
-
-        if (cards.length > 0) {
-          groupsWithNewCards++;
         }
 
         displayedSoFar += groupEntriesToDisplay;
@@ -3152,8 +3119,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
               syncResponsiveClasses(groupNewCards);
 
-              const currentPrevLayout =
-                this.groupLayoutResults.get(groupKey);
+              const currentPrevLayout = this.groupLayoutResults.get(groupKey);
               let result: MasonryLayoutResult;
 
               if (currentPrevLayout) {
@@ -3174,12 +3140,8 @@ export class DynamicViewsMasonryView extends BasesView {
                   ...(result.positions ?? []),
                 ];
                 const prevHeights = currentPrevLayout.heights ?? [];
-                result.heights = [
-                  ...prevHeights,
-                  ...(result.heights ?? []),
-                ];
-                const prevCols =
-                  currentPrevLayout.columnAssignments ?? [];
+                result.heights = [...prevHeights, ...(result.heights ?? [])];
+                const prevCols = currentPrevLayout.columnAssignments ?? [];
                 result.columnAssignments = [
                   ...prevCols,
                   ...(result.columnAssignments ?? []),
@@ -3212,9 +3174,7 @@ export class DynamicViewsMasonryView extends BasesView {
               });
 
               // Ensure container has masonry-container class
-              if (
-                !groupContainer.classList.contains("masonry-container")
-              ) {
+              if (!groupContainer.classList.contains("masonry-container")) {
                 groupContainer.classList.add("masonry-container");
               }
 
@@ -3225,10 +3185,7 @@ export class DynamicViewsMasonryView extends BasesView {
               );
 
               // Track expected height for ungrouped mode (ResizeObserver skip)
-              if (
-                newCardsPerGroup.size === 1 &&
-                groupKey === undefined
-              ) {
+              if (newCardsPerGroup.size === 1 && groupKey === undefined) {
                 this.expectedIncrementalHeight = result.containerHeight;
               }
 
@@ -3245,8 +3202,7 @@ export class DynamicViewsMasonryView extends BasesView {
               if (!groupResult) continue;
 
               const posOffset =
-                (groupResult.positions?.length ?? 0) -
-                groupNewCards.length;
+                (groupResult.positions?.length ?? 0) - groupNewCards.length;
 
               for (let i = 0; i < groupNewCards.length; i++) {
                 const item = this.virtualItems[viOffset + cardIdx];
@@ -3259,16 +3215,13 @@ export class DynamicViewsMasonryView extends BasesView {
                     groupResult.heights?.[posOffset + i] ?? item.height;
                   if (
                     groupResult.columnAssignments &&
-                    posOffset + i <
-                      groupResult.columnAssignments.length
+                    posOffset + i < groupResult.columnAssignments.length
                   ) {
-                    item.col =
-                      groupResult.columnAssignments[posOffset + i];
+                    item.col = groupResult.columnAssignments[posOffset + i];
                   }
                   if (groupResult.measuredAtCardWidth) {
                     item.measuredHeight = item.height;
-                    item.measuredAtWidth =
-                      groupResult.measuredAtCardWidth;
+                    item.measuredAtWidth = groupResult.measuredAtCardWidth;
                     item.scalableHeight = item.el
                       ? measureScalableHeight(item.el)
                       : 0;
