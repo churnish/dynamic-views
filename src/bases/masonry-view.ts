@@ -405,6 +405,7 @@ export class DynamicViewsMasonryView extends BasesView {
         measuredAtWidth: 0,
         scalableHeight: 0,
         fixedHeight: 0,
+        col: 0,
         cardData: cards[i],
         entry: entries[i],
         groupKey: expandGroupKey,
@@ -1247,6 +1248,7 @@ export class DynamicViewsMasonryView extends BasesView {
             measuredAtWidth: 0,
             scalableHeight: 0,
             fixedHeight: 0,
+            col: 0,
             cardData: card,
             entry,
             groupKey,
@@ -1517,14 +1519,13 @@ export class DynamicViewsMasonryView extends BasesView {
                 if (groupItems.length === 0) continue;
 
                 const existingResult = this.groupLayoutResults.get(groupKey);
-                const { containerHeight, columnHeights } =
+                const { containerHeight, columnHeights, columnAssignments } =
                   this.proportionalResizeLayout(
                     groupItems,
                     cardWidth,
                     columns,
                     gap,
                     existingResult?.columns,
-                    existingResult?.cardWidth,
                   );
 
                 const container = isGrouped
@@ -1549,6 +1550,7 @@ export class DynamicViewsMasonryView extends BasesView {
                   containerWidth,
                   cardWidth,
                   columns,
+                  columnAssignments,
                 });
               }
               this.lastLayoutWidth = containerWidth;
@@ -1604,6 +1606,7 @@ export class DynamicViewsMasonryView extends BasesView {
                   existingResult.positions.length >= groupItems.length
                 ) {
                   const stable = repositionWithStableColumns({
+                    columnAssignments: existingResult.columnAssignments,
                     existingPositions: existingResult.positions,
                     existingCardWidth: existingResult.cardWidth,
                     newHeights: heights,
@@ -1650,6 +1653,7 @@ export class DynamicViewsMasonryView extends BasesView {
                       positions: stable.positions,
                       columnHeights: stable.columnHeights,
                       containerHeight: stable.containerHeight,
+                      columnAssignments: stable.columnAssignments,
                       containerWidth,
                       cardWidth,
                       heights,
@@ -1691,7 +1695,7 @@ export class DynamicViewsMasonryView extends BasesView {
                 }
 
                 this.groupLayoutResults.set(groupKey, result);
-                this.updateVirtualItemPositions(groupKey, result, `correction(${source})`);
+                this.updateVirtualItemPositions(groupKey, result);
               }
 
               this.masonryContainer.classList.remove("masonry-measuring");
@@ -1771,6 +1775,7 @@ export class DynamicViewsMasonryView extends BasesView {
               existingResult.positions.length >= groupCards.length
             ) {
               const stable = repositionWithStableColumns({
+                columnAssignments: existingResult.columnAssignments,
                 existingPositions: existingResult.positions,
                 existingCardWidth: existingResult.cardWidth,
                 newHeights: groupHeights,
@@ -1814,6 +1819,7 @@ export class DynamicViewsMasonryView extends BasesView {
                   positions: stable.positions,
                   columnHeights: stable.columnHeights,
                   containerHeight: stable.containerHeight,
+                  columnAssignments: stable.columnAssignments,
                   containerWidth,
                   cardWidth,
                   heights: groupHeights,
@@ -1846,7 +1852,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
             result.measuredAtCardWidth = cardWidth;
             this.groupLayoutResults.set(groupKey, result);
-            this.updateVirtualItemPositions(groupKey, result, `phase4-grouped(${source})`);
+            this.updateVirtualItemPositions(groupKey, result);
             cardIndex += groupCards.length;
           }
         } else {
@@ -1859,6 +1865,7 @@ export class DynamicViewsMasonryView extends BasesView {
             existingResult.positions.length >= allCards.length
           ) {
             const stable = repositionWithStableColumns({
+              columnAssignments: existingResult.columnAssignments,
               existingPositions: existingResult.positions,
               existingCardWidth: existingResult.cardWidth,
               newHeights: heights,
@@ -1872,6 +1879,7 @@ export class DynamicViewsMasonryView extends BasesView {
               positions: stable.positions,
               columnHeights: stable.columnHeights,
               containerHeight: stable.containerHeight,
+              columnAssignments: stable.columnAssignments,
               containerWidth,
               cardWidth,
               heights,
@@ -1903,7 +1911,7 @@ export class DynamicViewsMasonryView extends BasesView {
           result.measuredAtCardWidth = cardWidth;
 
           this.groupLayoutResults.set(undefined, result);
-          this.updateVirtualItemPositions(undefined, result, `phase4-ungrouped(${source})`);
+          this.updateVirtualItemPositions(undefined, result);
         }
 
         this.lastLayoutWidth = containerWidth;
@@ -2062,27 +2070,20 @@ export class DynamicViewsMasonryView extends BasesView {
   private updateVirtualItemPositions(
     groupKey: string | undefined,
     result: MasonryLayoutResult,
-    source?: string,
   ): void {
-    const gap = this.lastLayoutGap;
     const groupItems = this.virtualItemsByGroup.get(groupKey) ?? [];
     for (let i = 0; i < groupItems.length && i < result.positions.length; i++) {
       const item = groupItems[i];
       const pos = result.positions[i];
-      // Debug: detect column changes (same column count only)
-      if (result.columns > 1 && result.cardWidth > 0) {
-        const newCol = Math.round(pos.left / (result.cardWidth + gap));
-        const prev = item as unknown as Record<string, number>;
-        if (prev._debugCol !== undefined && prev._debugColCount === result.columns && prev._debugCol !== newCol) {
-          console.debug(`[COL-CHANGE] source=${source}, group=${String(groupKey)}, card=${i}, prevCol=${prev._debugCol}, newCol=${newCol}, cols=${result.columns}, prevLeft=${item.x}, newLeft=${pos.left}, cardWidth=${result.cardWidth}, gap=${gap}`);
-        }
-        prev._debugCol = newCol;
-        prev._debugColCount = result.columns;
-      }
       item.x = pos.left;
       item.y = pos.top;
       item.width = result.cardWidth;
       item.height = result.heights?.[i] ?? item.height;
+      // Store authoritative column index — used by proportionalResizeLayout
+      // and repositionWithStableColumns to lock column during same-count resize
+      if (result.columnAssignments && i < result.columnAssignments.length) {
+        item.col = result.columnAssignments[i];
+      }
       // Only update baselines for mounted items — unmounted items retain
       // their original DOM-measured values for accurate proportional scaling.
       if (result.measuredAtCardWidth && item.el) {
@@ -2190,6 +2191,7 @@ export class DynamicViewsMasonryView extends BasesView {
         existingResult.positions.length >= groupItems.length
       ) {
         const stable = repositionWithStableColumns({
+          columnAssignments: existingResult.columnAssignments,
           existingPositions: existingResult.positions,
           existingCardWidth: existingResult.cardWidth,
           newHeights: heights,
@@ -2237,6 +2239,7 @@ export class DynamicViewsMasonryView extends BasesView {
             positions: stable.positions,
             columnHeights: stable.columnHeights,
             containerHeight: stable.containerHeight,
+            columnAssignments: stable.columnAssignments,
             heights,
           };
         }
@@ -2268,7 +2271,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       result.measuredAtCardWidth = cardWidth;
       this.groupLayoutResults.set(groupKey, result);
-      this.updateVirtualItemPositions(groupKey, result, "remeasure");
+      this.updateVirtualItemPositions(groupKey, result);
     }
     this.masonryContainer?.classList.remove("masonry-measuring");
     this.updateCachedGroupOffsets();
@@ -2314,12 +2317,10 @@ export class DynamicViewsMasonryView extends BasesView {
     columns: number,
     gap: number,
     priorColumns: number | undefined,
-    priorCardWidth: number | undefined,
-  ): { containerHeight: number; columnHeights: number[] } {
+  ): { containerHeight: number; columnHeights: number[]; columnAssignments: number[] } {
     const columnHeights = new Array(columns).fill(0) as number[];
     const stableColumns = priorColumns === columns;
-    // Use prior cardWidth for column derivation — item.x was set with the old width
-    const colStep = (stableColumns && priorCardWidth ? priorCardWidth : cardWidth) + gap;
+    const columnAssignments: number[] = [];
 
     for (let i = 0; i < groupItems.length; i++) {
       const item = groupItems[i];
@@ -2329,15 +2330,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
       let col: number;
       if (stableColumns && columns > 1) {
-        // Stable column from prior x position — prevents sideways jumps during resize
-        col = Math.min(Math.round(item.x / colStep), columns - 1);
-        // Debug: detect same-column-count column changes
-        const prev = item as unknown as Record<string, number>;
-        if (prev._debugCol !== undefined && prev._debugColCount === columns && prev._debugCol !== col) {
-          console.debug(`[COL-CHANGE] source=proportional, card=${i}, prevCol=${prev._debugCol}, newCol=${col}, cols=${columns}, x=${item.x}, cardWidth=${cardWidth}, gap=${gap}, div=${item.x / (cardWidth + gap)}`);
-        }
-        prev._debugCol = col;
-        prev._debugColCount = columns;
+        // Read stored column index directly — no position/width derivation needed
+        col = Math.min(item.col, columns - 1);
       } else {
         // Greedy shortest-column for first layout or column count change
         col = 0;
@@ -2348,20 +2342,18 @@ export class DynamicViewsMasonryView extends BasesView {
             col = c;
           }
         }
-        // Update debug tracking for greedy path too
-        const prev = item as unknown as Record<string, number>;
-        prev._debugCol = col;
-        prev._debugColCount = columns;
       }
       const left = col * (cardWidth + gap);
       const top = columnHeights[col];
       columnHeights[col] += height + gap;
+      columnAssignments.push(col);
 
       // Update VirtualItem in-place (replaces updateVirtualItemPositions)
       item.x = left;
       item.y = top;
       item.width = cardWidth;
       item.height = height;
+      item.col = col;
 
       // Apply styles to mounted cards (replaces separate style-write loop)
       if (item.el) {
@@ -2374,7 +2366,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     const maxH = columns > 0 ? Math.max(...columnHeights) : 0;
     const containerHeight = Math.round(maxH > 0 ? maxH - gap : 0);
-    return { containerHeight, columnHeights };
+    return { containerHeight, columnHeights, columnAssignments };
   }
 
   /** Compute and cache container offsets for syncVirtualScroll.
@@ -2957,6 +2949,7 @@ export class DynamicViewsMasonryView extends BasesView {
             measuredAtWidth: 0,
             scalableHeight: 0,
             fixedHeight: 0,
+            col: 0,
             cardData: card,
             entry,
             groupKey: currentGroupKey,
@@ -3109,6 +3102,9 @@ export class DynamicViewsMasonryView extends BasesView {
             item.y = pos.top;
             item.width = result.cardWidth;
             item.height = result.heights?.[i] ?? item.height;
+            if (result.columnAssignments && i < result.columnAssignments.length) {
+              item.col = result.columnAssignments[i];
+            }
             if (result.measuredAtCardWidth) {
               item.measuredHeight = item.height;
               item.measuredAtWidth = result.measuredAtCardWidth;
@@ -3122,6 +3118,8 @@ export class DynamicViewsMasonryView extends BasesView {
           result.positions = [...prevPositions, ...(result.positions ?? [])];
           const prevHeights = currentPrevLayout.heights ?? [];
           result.heights = [...prevHeights, ...(result.heights ?? [])];
+          const prevCols = currentPrevLayout.columnAssignments ?? [];
+          result.columnAssignments = [...prevCols, ...(result.columnAssignments ?? [])];
 
           // Store for next incremental append
           this.groupLayoutResults.set(layoutKey, result);

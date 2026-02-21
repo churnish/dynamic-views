@@ -55,6 +55,7 @@ export interface MasonryLayoutResult {
   columns: number;
   heights?: number[]; // Card heights used in this layout
   measuredAtCardWidth?: number; // cardWidth when heights were DOM-measured (not scaled)
+  columnAssignments?: number[]; // Column index for each card — authoritative source during stable resize
 }
 
 /**
@@ -139,6 +140,7 @@ export function calculateMasonryLayout(
   // Initialize column heights
   const columnHeights: number[] = new Array(columns).fill(0) as number[];
   const positions: MasonryPosition[] = [];
+  const columnAssignments: number[] = [];
 
   // Use pre-measured heights if provided and valid (avoids reflow in grouped mode),
   // otherwise batch read all card heights in single pass
@@ -163,6 +165,7 @@ export function calculateMasonryLayout(
     const top = columnHeights[shortestColumn];
 
     positions.push({ left, top });
+    columnAssignments.push(shortestColumn);
 
     // Update column height using pre-measured height
     const cardHeight = heights[index];
@@ -199,6 +202,7 @@ export function calculateMasonryLayout(
     cardWidth,
     columns,
     heights,
+    columnAssignments,
   };
 }
 
@@ -273,6 +277,7 @@ export function calculateIncrementalMasonryLayout(
   // Clone column heights to avoid mutating previous state
   const columnHeights = [...prevColumnHeights];
   const positions: MasonryPosition[] = [];
+  const columnAssignments: number[] = [];
 
   // Use pre-measured heights if provided and valid, otherwise batch read
   const heights =
@@ -296,6 +301,7 @@ export function calculateIncrementalMasonryLayout(
     const top = columnHeights[shortestColumn];
 
     positions.push({ left, top });
+    columnAssignments.push(shortestColumn);
 
     // Update column height
     const cardHeight = heights[index];
@@ -332,60 +338,73 @@ export function calculateIncrementalMasonryLayout(
     columns,
     heights,
     measuredAtCardWidth: cardWidth,
+    columnAssignments,
   };
 }
 
 export interface StableRepositionParams {
-  /** Existing positions — column derived from left / (existingCardWidth + gap) */
-  existingPositions: MasonryPosition[];
   /** Updated heights (DOM-measured for mounted, proportional for unmounted) */
   newHeights: number[];
   columns: number;
   cardWidth: number;
   gap: number;
-  /** Card width when existingPositions were computed. Used to derive column
-   *  index from stored left values. Falls back to cardWidth if omitted. */
+  /** Authoritative column assignments from prior layout — used directly when
+   *  available, bypassing all position-based derivation. */
+  columnAssignments?: number[];
+  /** Fallback: existing positions for column derivation when columnAssignments
+   *  is unavailable (e.g. first layout after upgrade). */
+  existingPositions?: MasonryPosition[];
+  /** Card width when existingPositions were computed. Only used for position-based
+   *  fallback derivation. */
   existingCardWidth?: number;
 }
 
 /**
  * Reposition cards with stable column assignment — only vertical positions change.
- * Derives each card's column from its existing x position, preserving column assignment.
- * Prevents column switching when heights change during scroll-triggered remeasurement.
+ * Uses stored column assignments directly when available; falls back to deriving
+ * columns from existing positions for backwards compatibility.
  */
 export function repositionWithStableColumns(params: StableRepositionParams): {
   positions: MasonryPosition[];
   containerHeight: number;
   columnHeights: number[];
+  columnAssignments: number[];
 } {
-  const { existingPositions, newHeights, columns, cardWidth, gap, existingCardWidth } = params;
+  const { newHeights, columns, cardWidth, gap, columnAssignments: priorCols, existingPositions, existingCardWidth } = params;
   const columnHeights = new Array(columns).fill(0) as number[];
   const positions: MasonryPosition[] = [];
+  const columnAssignments: number[] = [];
 
-  // Use the cardWidth from when positions were stored to correctly derive
-  // column indices. Without this, width changes between layout passes cause
-  // left / (newWidth + gap) to round to a different column than intended.
+  // Fallback step size for position-based derivation (only when priorCols unavailable)
   const colStep = (existingCardWidth ?? cardWidth) + gap;
 
-  const count = Math.min(existingPositions.length, newHeights.length);
-  for (let i = 0; i < count; i++) {
-    const col =
-      columns > 1
-        ? Math.min(
-            Math.round(existingPositions[i].left / colStep),
-            columns - 1,
-          )
-        : 0;
+  const count = priorCols?.length ?? existingPositions?.length ?? 0;
+  const heightCount = Math.min(count, newHeights.length);
+  for (let i = 0; i < heightCount; i++) {
+    let col: number;
+    if (priorCols && i < priorCols.length) {
+      // Authoritative: stored column index — immune to width/rounding changes
+      col = Math.min(priorCols[i], columns - 1);
+    } else if (existingPositions && columns > 1) {
+      // Fallback: derive from position (legacy path)
+      col = Math.min(
+        Math.round(existingPositions[i].left / colStep),
+        columns - 1,
+      );
+    } else {
+      col = 0;
+    }
     const left = col * (cardWidth + gap);
     const top = columnHeights[col];
     positions.push({ left, top });
+    columnAssignments.push(col);
     columnHeights[col] += newHeights[i] + gap;
   }
 
   const maxH = columns > 0 ? Math.max(...columnHeights) : 0;
   const containerHeight = Math.round(maxH > 0 ? maxH - gap : 0);
 
-  return { positions, containerHeight, columnHeights };
+  return { positions, containerHeight, columnHeights, columnAssignments };
 }
 
 /**

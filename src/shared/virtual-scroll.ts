@@ -31,6 +31,8 @@ export interface VirtualItem {
   cardData: CardData;
   /** Bases entry for rendering */
   entry: BasesEntry;
+  /** Column index in the masonry grid (stable across same-column-count resize) */
+  col: number;
   /** Group key (undefined for ungrouped) */
   groupKey: string | undefined;
   /** DOM element when mounted, null when unmounted */
