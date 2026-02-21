@@ -97,7 +97,7 @@
     contain-intrinsic-height: auto 300px;
   }
 
-  .card .card-content > * + * {
+  .card .card-content > * + *:not(:empty) {
     margin-top: var(--size-4-2);
   }
 

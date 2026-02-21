@@ -246,16 +246,21 @@ body.dynamic-views-hide-group-property-labels
 
   .dynamic-views-grid
     .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-    .card-properties-bottom:not(:first-child) {
+    .card-properties-bottom {
     margin-top: auto;
-    padding-top: var(--size-4-2);
   }
 
+  /* Only add top separation when card-body has visible content above properties.
+     The old :not(:first-child) check was visibility-unaware — a hidden .card-previews
+     (display:none placeholder-only) still counted as a sibling. */
   .dynamic-views-grid
     .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-    .card-properties-bottom:only-child {
-    margin-top: auto;
-    padding-top: 0;
+    .card-body:has(
+      > .card-properties-top,
+      > .card-previews:not(:has(> .card-thumbnail-placeholder:only-child))
+    )
+    > .card-properties-bottom {
+    padding-top: var(--size-4-2);
   }
 
   .dynamic-views-grid .card.card-cover-top .card-previews {
