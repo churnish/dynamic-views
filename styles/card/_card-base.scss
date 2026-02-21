@@ -1,7 +1,4 @@
 /* Fade-in animation for batch-appended cards */
-/* Card spacing setting - Bases files only */
-/* Grid uses row-gap for spacing; zero out card margins to prevent grid row inflation.
-   Scoped to Bases to match specificity of the Bases-only card margin rules above. */
 /* Clickable card cursor */
 /* Masonry container */
 /* Hide cards during layout recalc - fade out with opacity transition */
@@ -101,7 +98,7 @@
     margin-top: var(--size-4-2);
   }
 
-  .card .card-body > * + * {
+  .card .card-body > * + *:not(:empty) {
     margin-top: var(--size-4-2);
   }
 
@@ -122,23 +119,6 @@
   to {
     opacity: 1;
   }
-}
-
-.workspace-leaf-content[data-type="bases"] .dynamic-views .card {
-  margin: var(--dynamic-views-card-spacing-desktop, 8px) 0;
-}
-
-.is-mobile .workspace-leaf-content[data-type="bases"] .dynamic-views .card {
-  margin: var(--dynamic-views-card-spacing-mobile, 6px) 0;
-}
-
-.workspace-leaf-content[data-type="bases"]
-  .dynamic-views
-  .dynamic-views-grid
-  .dynamic-views-group
-  > .card {
-  margin-top: 0;
-  margin-bottom: 0;
 }
 
 /* Card border color presets — set shared variable, consumed by ::after and cover-content divider */

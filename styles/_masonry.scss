@@ -7,8 +7,7 @@
 /* Masonry: Thumbnail top/bottom positioning */
 /* Masonry thumbnail-bottom: no extra margins needed — card-content gap
    handles spacing above, card padding handles spacing below. */
-/* Masonry: push bottom properties to bottom of card when it has siblings above */
-/* Masonry: only-child pushes to bottom but needs no padding (no sibling above) */
+/* Masonry: push bottom properties to bottom of card */
 /* Masonry cover-bottom: properties-bottom needs spacing from content above.
    margin-top: auto has no effect in masonry (no fixed height), so use a fixed margin. */
 .dynamic-views {
@@ -55,17 +54,27 @@
       min-width: 0;
     }
 
-    .card:not(.card-cover-bottom) .card-properties-bottom:not(:first-child) {
+    .card:not(.card-cover-bottom) .card-properties-bottom {
       margin-top: auto;
+    }
+
+    /* Only add top separation when card-body has visible content above properties.
+       Mirrors the Grid fix in _grid.scss — :has() is visibility-aware unlike :not(:first-child). */
+    .card:not(.card-cover-bottom)
+      .card-body:has(
+        > .card-properties-top,
+        > .card-previews:not(:has(> .card-thumbnail-placeholder:only-child))
+      )
+      > .card-properties-bottom {
       padding-top: var(--size-4-2);
     }
 
-    .card:not(.card-cover-bottom) .card-properties-bottom:only-child {
-      margin-top: auto;
-      padding-top: 0;
-    }
-
-    .card.card-cover-bottom .card-properties-bottom:not(:first-child) {
+    .card.card-cover-bottom
+      .card-body:has(
+        > .card-properties-top,
+        > .card-previews:not(:has(> .card-thumbnail-placeholder:only-child))
+      )
+      > .card-properties-bottom {
       margin-top: var(--size-4-2);
     }
   }
