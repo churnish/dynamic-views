@@ -253,6 +253,20 @@ More content`;
       expect(result).toBe("Cancelled");
     });
 
+    it("should treat [x](url) as link, not checkbox", () => {
+      const input = "Click [x](https://example.org) here";
+      const result = sanitizeForPreview(input);
+      expect(result).toBe("Click x here");
+    });
+
+    it("should not strip #text without space as heading", () => {
+      const input = "#notheading some text";
+      const result = sanitizeForPreview(input);
+      // No space after # — not a heading (entire line NOT removed).
+      // #notheading IS stripped as a tag, but "some text" is preserved.
+      expect(result).toBe("some text");
+    });
+
     it("should strip blockquote markers in list items", () => {
       const input = `- >smile
 - > hello

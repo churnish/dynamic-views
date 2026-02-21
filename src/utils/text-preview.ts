@@ -30,7 +30,7 @@ const markdownPatterns = [
   /~~((?:(?!~~).)+)~~/g, // Strikethrough
   /==((?:(?!==).)+)==/g, // Highlight
   /!\[[^\]\n]*\]\([^)]*\)/g, // Markdown images (before links, strip entirely)
-  /\[([^\]\n]*)\]\([^)]*\)/g, // Links (allow empty display text)
+  /\[([^\]\n]*)\]\([^)]*\)/g, // Links — no checkbox exclusion needed: valid checkboxes require \s after ]
   /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, // Embedded wikilinks (images, etc.)
   /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g, // Wikilinks with alias → keep alias
   /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, // Wikilinks → keep link text
@@ -148,7 +148,7 @@ export function stripMarkdownSyntax(text: string): string {
   // First pass: remove callout title lines at any nesting depth
   text = text.replace(/^(?:>\s*)+\[![\w-]+\][+-]?.*$/gm, "");
   // Second pass: strip all > prefixes from remaining blockquote lines
-  text = text.replace(/^(?:>\s?)+/gm, "");
+  text = text.replace(/^(?:>\s*)+/gm, "");
   // Third pass: strip > after list markers (e.g., "- >text" or "- [-] >text")
   text = text.replace(/^(\s*[-*+](?:\s*\[[^\]]\])?\s*)>\s?/gm, "$1");
 
