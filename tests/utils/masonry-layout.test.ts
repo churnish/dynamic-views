@@ -1,5 +1,6 @@
 import {
   calculateMasonryLayout,
+  calculateIncrementalMasonryLayout,
   applyMasonryLayout,
   repositionWithStableColumns,
   computeGreedyColumnHeights,
@@ -401,6 +402,121 @@ describe("masonry-layout", () => {
       expect(result.positions[0].left).toBe(420); // col 2
       expect(result.positions[1].left).toBe(210); // col 1
       expect(result.positions[2].left).toBe(0); // col 0
+    });
+  });
+
+  describe("calculateIncrementalMasonryLayout", () => {
+    const createMockCard = (height: number): HTMLElement => {
+      const card = document.createElement("div");
+      Object.defineProperty(card, "offsetHeight", {
+        configurable: true,
+        value: height,
+      });
+      return card;
+    };
+
+    it("should place cards in shortest column from provided columnHeights", () => {
+      // Column 1 is shortest (50), so first new card should go there
+      const columnHeights = [100, 50, 75];
+      const newCards = [createMockCard(80), createMockCard(60)];
+
+      const result = calculateIncrementalMasonryLayout({
+        newCards,
+        columnHeights,
+        containerWidth: 630,
+        cardWidth: 200,
+        columns: 3,
+        gap: 10,
+      });
+
+      // First card → column 1 (height 50, the shortest)
+      expect(result.columnAssignments[0]).toBe(1);
+      expect(result.positions[0].left).toBe(210); // col 1 × (200 + 10)
+      expect(result.positions[0].top).toBe(50);
+    });
+
+    it("should return correct positions, heights, and columnAssignments", () => {
+      const columnHeights = [0, 0, 0];
+      const newCards = [
+        createMockCard(100),
+        createMockCard(150),
+        createMockCard(80),
+      ];
+
+      const result = calculateIncrementalMasonryLayout({
+        newCards,
+        columnHeights,
+        containerWidth: 630,
+        cardWidth: 200,
+        columns: 3,
+        gap: 10,
+      });
+
+      expect(result.positions).toHaveLength(3);
+      expect(result.heights).toHaveLength(3);
+      expect(result.columnAssignments).toHaveLength(3);
+
+      // With equal starting heights, cards placed round-robin
+      expect(result.columnAssignments).toEqual([0, 1, 2]);
+      expect(result.positions[0]).toEqual({ left: 0, top: 0 });
+      expect(result.positions[1]).toEqual({ left: 210, top: 0 });
+      expect(result.positions[2]).toEqual({ left: 420, top: 0 });
+      expect(result.heights).toEqual([100, 150, 80]);
+    });
+
+    it("should update columnHeights correctly", () => {
+      const columnHeights = [100, 50, 75];
+      const gap = 10;
+      const newCards = [createMockCard(80)];
+
+      const result = calculateIncrementalMasonryLayout({
+        newCards,
+        columnHeights,
+        containerWidth: 630,
+        cardWidth: 200,
+        columns: 3,
+        gap,
+      });
+
+      // Card went to col 1 (shortest, height 50); new height = 50 + 80 + 10 = 140
+      expect(result.columnHeights[0]).toBe(100); // unchanged
+      expect(result.columnHeights[1]).toBe(140); // 50 + 80 + 10
+      expect(result.columnHeights[2]).toBe(75); // unchanged
+    });
+
+    it("should calculate containerHeight as max of columnHeights minus trailing gap", () => {
+      const columnHeights = [200, 100, 150];
+      const gap = 10;
+      const newCards = [createMockCard(50)];
+
+      const result = calculateIncrementalMasonryLayout({
+        newCards,
+        columnHeights,
+        containerWidth: 630,
+        cardWidth: 200,
+        columns: 3,
+        gap,
+      });
+
+      // Card goes to col 1 (shortest, 100) → new height = 100 + 50 + 10 = 160
+      // Max of [200, 160, 150] = 200; containerHeight = 200 - 10 = 190
+      expect(result.containerHeight).toBe(190);
+    });
+
+    it("should set measuredAtCardWidth to the input cardWidth", () => {
+      const cardWidth = 194;
+      const newCards = [createMockCard(100)];
+
+      const result = calculateIncrementalMasonryLayout({
+        newCards,
+        columnHeights: [0],
+        containerWidth: 194,
+        cardWidth,
+        columns: 1,
+        gap: 8,
+      });
+
+      expect(result.measuredAtCardWidth).toBe(cardWidth);
     });
   });
 

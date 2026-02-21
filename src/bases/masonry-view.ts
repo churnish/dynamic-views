@@ -2154,6 +2154,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Quick check: does any mounted item need repositioning?
     let needsReposition = false;
     for (const item of this.virtualItems) {
+      // 1px tolerance absorbs sub-pixel rounding from offsetHeight
       if (item.el && Math.abs(item.el.offsetHeight - item.height) > 1) {
         needsReposition = true;
         break;
@@ -2242,7 +2243,7 @@ export class DynamicViewsMasonryView extends BasesView {
           const greedyRange =
             Math.max(...greedyColHeights) - Math.min(...greedyColHeights);
           // 1.5x relative threshold ignores negligible drift (e.g. 1px rounding);
-          // 4×gap absolute threshold ensures the visual difference is noticeable
+          // 8×gap absolute threshold ensures the visual difference is noticeable
           // (empirically: gap=8px → 64px minimum visible imbalance).
           useGreedy =
             stableRange > greedyRange * 1.5 &&
@@ -3199,7 +3200,10 @@ export class DynamicViewsMasonryView extends BasesView {
             let cardIdx = 0;
             for (const [groupKey, groupNewCards] of newCardsPerGroup) {
               const groupResult = this.groupLayoutResults.get(groupKey);
-              if (!groupResult) continue;
+              if (!groupResult) {
+                cardIdx += groupNewCards.length;
+                continue;
+              }
 
               const posOffset =
                 (groupResult.positions?.length ?? 0) - groupNewCards.length;

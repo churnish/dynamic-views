@@ -82,6 +82,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 - **`groupContainers: Map<string | undefined, HTMLElement>`** — DOM container per group for mounting cards.
 - **`cachedGroupOffsets: Map<string | undefined, number>`** — Cached vertical offset (relative to scroll container) per group. Refreshed synchronously before every `syncVirtualScroll()` call. Eliminates `getBoundingClientRect` from the scroll/resize hot path.
 - **`pendingResizeWidth: number | null`** — Latest container width from `ResizeObserver`. Never reset — deferred resize at scroll-idle reads the most recent value, which is always the correct target width. Used by the resize fast path to avoid a forced `getBoundingClientRect` reflow.
+- **`hasExplicitScrollHeights: boolean`** — Tracks whether cards have explicit `style.height` set during `mountVirtualItem` to prevent scroll-back drift. When true, `remeasureAndReposition` clears the explicit heights before DOM measurement. Set in `mountVirtualItem`, cleared in `remeasureAndReposition`.
 
 ## Render pipeline
 
@@ -110,16 +111,17 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 1. Collect only NEW entries (from `previousDisplayedCount` to `displayedCount`).
 2. Set `batchLayoutPending = true` (suppresses concurrent full relayouts).
 3. Load content for new entries, render new cards into group containers.
-4. Push `VirtualItem` per new card.
-5. **Incremental layout** (if single group + previous result exists):
-   - Pre-set inline `width` on new cards.
+4. Push `VirtualItem` per new card. Track new cards per group via `newCardsPerGroup: Map<string | undefined, HTMLElement[]>`.
+5. **Per-group incremental layout** (`runPerGroupLayout`):
+   - Pre-set inline `width` on all new cards.
    - Wait for images to settle (or skip if fixed-cover-height).
-   - In double-RAF: `calculateIncrementalMasonryLayout()` continues from previous `columnHeights`.
-   - Apply positions to new cards only. Update container height.
-   - Update VirtualItem positions for new cards.
-   - **Merge heights**: `result.heights = [...prevHeights, ...newHeights]`. Store merged result.
-6. Otherwise, fall back to full `updateLayoutRef.current()`.
-7. Clear `batchLayoutPending`. `syncVirtualScroll()`. Check if more content needed.
+   - In double-RAF, for each group with new cards:
+     - **Existing group** (has prior `groupLayoutResults`): `calculateIncrementalMasonryLayout()` continues from previous `columnHeights`. Merge positions, heights, and columnAssignments with previous result.
+     - **New group** (no prior result): `calculateMasonryLayout()` for just that group's cards.
+   - Apply positions to new cards only. Update container height per group.
+   - Update VirtualItem positions for new cards (offset-aware mapping).
+   - Disconnected-card guard: if any new card is disconnected (e.g., group container removed), bail and fall back to full `updateLayout("card-disconnected-fallback")`.
+6. Clear `batchLayoutPending`. `syncVirtualScroll()`. Check if more content needed.
 
 ### 3. Property reorder (fast path)
 
@@ -199,36 +201,34 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 **Trigger points**: scroll event (RAF-debounced), after full layout, after batch append. **Skipped during active resize** — mount/unmount deferred to post-resize correction to prevent mount storms (50-70 cards mounting in one frame during column count changes).
 
-**Post-mount remeasure**: When `syncVirtualScroll` mounts new cards outside of active resize, remeasure is debounced via `scrollRemeasureTimeout` (`SCROLL_IDLE_MS` = 500ms). The `onScrollIdle()` method processes deferred work in priority order: `pendingDeferredFullLayout` → `pendingDeferredResize` → standard remeasure. After scroll settles, `remeasureAndReposition()` re-measures DOM heights and recalculates positions, correcting overlap caused by proportional height drift in `height: auto` cards. The debounce prevents flicker from immediate vs. deferred remeasure fighting over image-load height changes (~24px cover drift).
+**Post-mount remeasure**: When `syncVirtualScroll` mounts new cards outside of active resize, remeasure is debounced via `scrollRemeasureTimeout` (`MASONRY_CORRECTION_MS` = 200ms). The `onScrollIdle()` method processes deferred work in priority order: `pendingDeferredResize` → standard remeasure. After scroll settles, `remeasureAndReposition()` re-measures DOM heights and recalculates positions, correcting overlap caused by proportional height drift in `height: auto` cards. The debounce prevents flicker from immediate vs. deferred remeasure fighting over image-load height changes (~24px cover drift).
 
 ## Layout update guard system
 
 `updateLayoutRef.current(source?)` has 5 sequential guards:
 
-| #   | Guard                     | Behavior                                                                                                                                                                                                                                                               |
-| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                                                                                                                                                  |
-| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                                                                                                                                          |
-| 3   | Unmounted items           | Source-dependent: remount all for `expand-group`, `multi-group-fallback`, `new-group-fallback`, and `deferred-full-layout`; allow through for `resize-observer`, `resize-correction`, and `image-coalesced` (fast path measures mounted cards only); block all others. |
-| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                                                                                                                                              |
-| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                                                                                                                                      |
+| #   | Guard                     | Behavior                                                                                                                                                                                     |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `containerWidth === 0`    | Return early — container not visible.                                                                                                                                                        |
+| 2   | `batchLayoutPending`      | Return early — incremental batch in flight, full relayout would corrupt `groupLayoutResults`.                                                                                                |
+| 3   | Unmounted items           | Source-dependent: remount all for `expand-group`; allow through for `resize-observer`, `resize-correction`, and `image-coalesced` (fast path measures mounted cards only); block all others. |
+| 4   | `source === "image-load"` | Coalesce into single RAF (`pendingImageRelayout` flag). Direct relayouts subsume pending image relayouts.                                                                                    |
+| 5   | `isUpdatingLayout`        | Queue via `pendingLayoutUpdate` flag, process in `finally` block.                                                                                                                            |
 
 ### Layout sources
 
-| Source                   | Trigger                                                  | Path                                                                                     |
-| ------------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `"initial-render"`       | First render                                             | Full measurement with card hiding.                                                       |
-| `"resize-observer"`      | ResizeObserver (synchronous)                             | Mounted-card measurement fast path → fallback to full.                                   |
-| `"image-load"`           | Cover/thumbnail image loaded                             | Coalesced → `"image-coalesced"`.                                                         |
-| `"resize-correction"`    | 200ms after last resize ends                             | Mounted-card measurement fast path → correction pass.                                    |
-| `"image-coalesced"`      | RAF after image-load batch                               | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
-| `"expand-group"`         | Group uncollapsed                                        | Full measurement with remount-all.                                                       |
-| `"multi-group-fallback"` | Batch spanned multiple groups                            | Full measurement with remount-all.                                                       |
-| `"new-group-fallback"`   | Batch added cards to a group with no prior layout        | Full measurement with remount-all.                                                       |
-| `"deferred-full-layout"` | Scroll-idle timer fires with `pendingDeferredFullLayout` | Full measurement with remount-all.                                                       |
-| `"content-update"`       | In-place card update changed height                      | Full measurement (blocked if unmounted items).                                           |
-| `"queued-update"`        | Dequeued from reentrant guard                            | Full measurement (blocked if unmounted items).                                           |
-| `"property-measured"`    | Property field width measurement settled                 | Full measurement (blocked if unmounted items).                                           |
+| Source                         | Trigger                                         | Path                                                                                     |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `"initial-render"`             | First render                                    | Full measurement with card hiding.                                                       |
+| `"resize-observer"`            | ResizeObserver (synchronous)                    | Mounted-card measurement fast path → fallback to full.                                   |
+| `"image-load"`                 | Cover/thumbnail image loaded                    | Coalesced → `"image-coalesced"`.                                                         |
+| `"resize-correction"`          | 200ms after last resize ends                    | Mounted-card measurement fast path → correction pass.                                    |
+| `"image-coalesced"`            | RAF after image-load batch                      | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
+| `"expand-group"`               | Group uncollapsed                               | Full measurement with remount-all.                                                       |
+| `"card-disconnected-fallback"` | Per-group batch layout found disconnected cards | Full measurement (blocked if unmounted items).                                           |
+| `"content-update"`             | In-place card update changed height             | Full measurement (blocked if unmounted items).                                           |
+| `"queued-update"`              | Dequeued from reentrant guard                   | Full measurement (blocked if unmounted items).                                           |
+| `"property-measured"`          | Property field width measurement settled        | Full measurement (blocked if unmounted items).                                           |
 
 ## Throttle and debounce patterns
 
@@ -304,16 +304,15 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 
 ## Constants (`src/shared/constants.ts`)
 
-| Constant                | Value          | Purpose                                                                                                                            |
-| ----------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `BATCH_SIZE`            | 50             | Default infinite scroll batch size.                                                                                                |
-| `MAX_BATCH_SIZE`        | 70             | Maximum batch size cap.                                                                                                            |
-| `ROWS_PER_COLUMN`       | 10             | Rows per column for dynamic batch size calculation.                                                                                |
-| `PANE_MULTIPLIER`       | 3              | Trigger batch load when within 3× viewport height from bottom.                                                                     |
-| `SCROLL_THROTTLE_MS`    | 100            | Scroll event throttle interval.                                                                                                    |
-| `MASONRY_CORRECTION_MS` | 200            | Post-resize correction delay. Must match CSS `masonry-correcting` transition.                                                      |
-| `SCROLL_IDLE_MS`        | 500            | Scroll-idle delay before running deferred layouts. Longer than `MASONRY_CORRECTION_MS` to avoid firing during brief scroll pauses. |
-| (virtual scroll buffer) | 1× pane height | Dynamic: `scrollEl.clientHeight` above/below pane to keep cards mounted.                                                           |
+| Constant                | Value          | Purpose                                                                       |
+| ----------------------- | -------------- | ----------------------------------------------------------------------------- |
+| `BATCH_SIZE`            | 50             | Default infinite scroll batch size.                                           |
+| `MAX_BATCH_SIZE`        | 70             | Maximum batch size cap.                                                       |
+| `ROWS_PER_COLUMN`       | 10             | Rows per column for dynamic batch size calculation.                           |
+| `PANE_MULTIPLIER`       | 3              | Trigger batch load when within 3× viewport height from bottom.                |
+| `SCROLL_THROTTLE_MS`    | 100            | Scroll event throttle interval.                                               |
+| `MASONRY_CORRECTION_MS` | 200            | Post-resize correction delay. Must match CSS `masonry-correcting` transition. |
+| (virtual scroll buffer) | 1× pane height | Dynamic: `scrollEl.clientHeight` above/below pane to keep cards mounted.      |
 
 ## Key invariants
 
@@ -323,9 +322,9 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
 5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions. **Exception**: the proportional resize branch skips offset refresh — the 1x-pane-height buffer absorbs drift, and post-resize correction refreshes offsets within 200ms.
 6. **Virtual scroll sync runs unconditionally after every position change.** Full measurement, batch append, correction, and proportional resize all call `syncVirtualScroll()`. During same-column-count resize, sync is cheap (0-3 mounts at edges from proportional drift). Skipping sync during resize caused blank space as items drifted outside the viewport without remounting.
-7. **Post-mount remeasure is debounced during scroll.** When `syncVirtualScroll` mounts new cards, remeasure is deferred via `scrollRemeasureTimeout` (200ms, matching resize correction delay). Newly mounted cards' DOM heights change as images load (~24px cover drift), so immediate remeasure would fight deferred remeasure — opposite position jumps within ~32ms cause visible flicker. The debounce ensures one clean `remeasureAndReposition()` + deferred pass after scroll settles, when images have loaded and heights are stable. Uses `repositionWithStableColumns()` to preserve column assignments — prevents cascading column switching from small height changes. In grouped mode, `remeasureAndReposition` checks whether stable reposition introduced excessive column imbalance: if the stable column-height range exceeds 1.5× the greedy range AND the absolute difference exceeds `gap × 4`, it falls back to a full `calculateMasonryLayout()` for that group. This prevents column drift from amplifying across incremental batch appends. Ungrouped mode always uses stable columns — visual stability during scroll outweighs minor imbalance with a single group. Position transitions use the base 140ms ease — corrections are visible to the user since remeasure is debounced to scroll idle. Scroll compensation adjusts `scrollTop` after remeasure to keep the first visible card anchored. Skipped during active resize (cards have explicit heights) and during `batchLayoutPending` (unpositioned batch cards would corrupt `groupLayoutResults` heights, causing ~2700px gaps at batch boundaries). Image-load relayout also uses `remeasureAndReposition()` (stable columns) rather than a full `calculateMasonryLayout()` call — this prevents column reassignment when images finish loading, since height changes at that point are minor corrections, not structural changes requiring column rebalancing.
+7. **Post-mount remeasure is debounced during scroll.** When `syncVirtualScroll` mounts new cards, remeasure is deferred via `scrollRemeasureTimeout` (200ms, matching resize correction delay). Newly mounted cards' DOM heights change as images load (~24px cover drift), so immediate remeasure would fight deferred remeasure — opposite position jumps within ~32ms cause visible flicker. The debounce ensures one clean `remeasureAndReposition()` + deferred pass after scroll settles, when images have loaded and heights are stable. Uses `repositionWithStableColumns()` to preserve column assignments — prevents cascading column switching from small height changes. In grouped mode, `remeasureAndReposition` checks whether stable reposition introduced excessive column imbalance: if the stable column-height range exceeds 1.5× the greedy range AND the absolute difference exceeds `gap × 8`, it falls back to a full `calculateMasonryLayout()` for that group. This prevents column drift from amplifying across incremental batch appends. Ungrouped mode always uses stable columns — visual stability during scroll outweighs minor imbalance with a single group. Position transitions use the base 140ms ease — corrections are visible to the user since remeasure is debounced to scroll idle. Scroll compensation adjusts `scrollTop` after remeasure to keep the first visible card anchored. Skipped during active resize (cards have explicit heights) and during `batchLayoutPending` (unpositioned batch cards would corrupt `groupLayoutResults` heights, causing ~2700px gaps at batch boundaries). Image-load relayout also uses `remeasureAndReposition()` (stable columns) rather than a full `calculateMasonryLayout()` call — this prevents column reassignment when images finish loading, since height changes at that point are minor corrections, not structural changes requiring column rebalancing.
 8. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.
-9. **`onScrollIdle` reschedules when blocked.** When `batchLayoutPending` prevents deferred work (`pendingDeferredFullLayout`, `pendingDeferredResize`, or standard remeasure), `onScrollIdle` reschedules itself via `setTimeout(SCROLL_IDLE_MS)` instead of silently dropping the work. The deferred flags persist across reschedules.
+9. **`onScrollIdle` reschedules when blocked.** When `batchLayoutPending` prevents deferred work (`pendingDeferredResize` or standard remeasure), `onScrollIdle` reschedules itself via `setTimeout(MASONRY_CORRECTION_MS)` instead of silently dropping the work. The deferred flags persist across reschedules.
 10. **`shouldScheduleRemeasure` gates mount-path behind `mountedNew`.** The scroll-idle timer is scheduled unconditionally when deferred flags are set or a timer is already active (debounce reset). For the mount path, `mountedNew` prevents scheduling on every scroll tick when no cards were mounted or unmounted.
 
 ## Bases vs. Datacore
@@ -374,7 +373,7 @@ Both backends share the same pure layout math (`calculateMasonryLayout()`, `calc
 | `calculateMasonryDimensions()`        | Both     | Column count and card width without measuring heights.                                                                                                                                                                                                                                                                                                                 |
 | `calculateIncrementalMasonryLayout()` | Both     | Continues greedy placement from previous `columnHeights`.                                                                                                                                                                                                                                                                                                              |
 | `repositionWithStableColumns()`       | Both     | Reposition with heights changed but column assignments preserved.                                                                                                                                                                                                                                                                                                      |
-| `computeGreedyColumnHeights()`        | Bases    | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 4`. |
+| `computeGreedyColumnHeights()`        | Bases    | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 8`. |
 | `applyMasonryLayout()`                | Datacore | Applies a `MasonryLayoutResult` to DOM elements via CSS custom properties.                                                                                                                                                                                                                                                                                             |
 
 ### Shared behavior
