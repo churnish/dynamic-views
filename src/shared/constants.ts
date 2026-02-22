@@ -26,6 +26,9 @@ export const RESIZE_THROTTLE_MS = 100;
 /** Masonry correction delay and transition duration in ms (must match CSS masonry-correcting) */
 export const MASONRY_CORRECTION_MS = 200;
 
+/** Throttle interval for post-mount remeasure during scroll */
+export const MOUNT_REMEASURE_MS = 200;
+
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 

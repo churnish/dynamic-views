@@ -45,6 +45,7 @@ import {
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
   MASONRY_CORRECTION_MS,
+  MOUNT_REMEASURE_MS,
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
@@ -203,6 +204,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private groupContainers: Map<string | undefined, HTMLElement> = new Map();
   private virtualScrollRafId: number | null = null;
   private scrollRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private hasExplicitScrollHeights = false;
   private isCompensatingScroll = false;
   private deferredRemeasureRafId: number | null = null;
@@ -1128,6 +1130,10 @@ export class DynamicViewsMasonryView extends BasesView {
       this.virtualItems = [];
       this.hasExplicitScrollHeights = false;
       this.pendingDeferredResize = false;
+      if (this.mountRemeasureTimeout !== null) {
+        clearTimeout(this.mountRemeasureTimeout);
+        this.mountRemeasureTimeout = null;
+      }
       this.virtualItemsByGroup.clear();
       this.groupContainers.clear();
       this.cachedGroupOffsets.clear();
@@ -1362,7 +1368,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Defer non-critical full recalcs during active scroll.
       // Repositioning all cards mid-scroll causes visible snapping.
-      if (this.scrollRemeasureTimeout !== null) {
+      if (this.isScrollRemeasurePending()) {
         if (source === "property-measured") {
           // No new cards — scroll-idle remeasure handles height drift.
           return;
@@ -1419,7 +1425,7 @@ export class DynamicViewsMasonryView extends BasesView {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
             if (this.resizeCorrectionTimeout !== null) return;
-            if (this.scrollRemeasureTimeout !== null) return;
+            if (this.isScrollRemeasurePending()) return;
             if (this.batchLayoutPending) return;
             if (this.lastLayoutCardWidth <= 0) return;
             if (!this.lastRenderedSettings) return;
@@ -2047,7 +2053,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Skip during active resize, scroll remeasure, batch layout, or pre-layout state
         if (
           this.resizeCorrectionTimeout !== null ||
-          this.scrollRemeasureTimeout !== null ||
+          this.isScrollRemeasurePending() ||
           this.batchLayoutPending ||
           this.lastLayoutCardWidth === 0 ||
           !this.lastRenderedSettings
@@ -2064,7 +2070,7 @@ export class DynamicViewsMasonryView extends BasesView {
             !this.containerEl.isConnected ||
             this.batchLayoutPending ||
             this.resizeCorrectionTimeout !== null ||
-            this.scrollRemeasureTimeout !== null ||
+            this.isScrollRemeasurePending() ||
             this.lastLayoutCardWidth === 0 ||
             !this.lastRenderedSettings
           )
@@ -2521,21 +2527,25 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    // Don't remeasure during active scroll — newly mounted cards' heights
-    // change as images load (~24px cover drift), causing immediate and
-    // deferred remeasures to fight each other (opposite 24px jumps within
-    // ~32ms = visible flicker). Debounce: one remeasure + deferred pass
-    // after scroll settles (200ms, matching resize correction delay).
-    // Reset on every scroll tick (not just mounts) so the remeasure defers
-    // until 200ms after the user stops scrolling entirely.
-    const shouldScheduleRemeasure =
-      this.scrollRemeasureTimeout !== null ||
-      this.pendingDeferredResize ||
-      (mountedNew &&
-        this.resizeCorrectionTimeout === null &&
-        this.lastLayoutCardWidth > 0 &&
-        !this.batchLayoutPending);
-    if (shouldScheduleRemeasure) {
+    // Mount-triggered remeasure: throttle (fire every MOUNT_REMEASURE_MS during
+    // scroll with mounts). Not reset on subsequent mounts — spreads corrections
+    // across the scroll instead of accumulating them until scroll idle.
+    if (
+      mountedNew &&
+      this.mountRemeasureTimeout === null &&
+      this.resizeCorrectionTimeout === null &&
+      this.lastLayoutCardWidth > 0 &&
+      !this.batchLayoutPending
+    ) {
+      this.mountRemeasureTimeout = setTimeout(() => {
+        this.mountRemeasureTimeout = null;
+        this.onMountRemeasure();
+      }, MOUNT_REMEASURE_MS);
+    }
+
+    // Scroll-idle debounce: reset on every tick for deferred flags only.
+    // Handles pendingDeferredResize which needs true scroll idle.
+    if (this.pendingDeferredResize) {
       if (this.scrollRemeasureTimeout !== null) {
         clearTimeout(this.scrollRemeasureTimeout);
       }
@@ -2544,6 +2554,36 @@ export class DynamicViewsMasonryView extends BasesView {
         this.onScrollIdle();
       }, MASONRY_CORRECTION_MS);
     }
+  }
+
+  /** True when any scroll-related remeasure timer is pending.
+   *  Used by guard sites to defer work during active scroll. */
+  private isScrollRemeasurePending(): boolean {
+    return (
+      this.scrollRemeasureTimeout !== null ||
+      this.mountRemeasureTimeout !== null
+    );
+  }
+
+  /** Fires during scroll to correct height drift from recently mounted cards.
+   *  Throttled by MOUNT_REMEASURE_MS — corrections blend with scroll motion. */
+  private onMountRemeasure(): void {
+    if (!this.containerEl?.isConnected) return;
+    if (this.batchLayoutPending) return;
+    if (this.resizeCorrectionTimeout !== null) return;
+    if (this.lastLayoutCardWidth <= 0) return;
+    if (!this.lastRenderedSettings) return;
+    // Deferred resize takes priority — let scroll-idle handle it
+    if (this.pendingDeferredResize) return;
+    this.remeasureAndReposition(
+      this.lastLayoutWidth,
+      this.lastLayoutCardWidth,
+      this.lastRenderedSettings,
+      this.lastLayoutMinColumns,
+      this.lastLayoutGap,
+      this.lastLayoutIsGrouped,
+      true, // skipTransition — instant correction during scroll
+    );
   }
 
   /** Runs deferred layout work after scroll settles. Reschedules itself when
@@ -2625,7 +2665,7 @@ export class DynamicViewsMasonryView extends BasesView {
           cleanupSkipTransition();
           return;
         }
-        if (this.scrollRemeasureTimeout !== null) {
+        if (this.isScrollRemeasurePending()) {
           cleanupSkipTransition();
           return;
         }
@@ -2814,7 +2854,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.lastRenderedSettings &&
       !this.batchLayoutPending &&
       this.resizeCorrectionTimeout === null &&
-      this.scrollRemeasureTimeout === null
+      !this.isScrollRemeasurePending()
     ) {
       const didWork = this.remeasureAndReposition(
         this.lastLayoutWidth,
@@ -3547,6 +3587,9 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (this.scrollRemeasureTimeout !== null) {
       clearTimeout(this.scrollRemeasureTimeout);
+    }
+    if (this.mountRemeasureTimeout !== null) {
+      clearTimeout(this.mountRemeasureTimeout);
     }
     if (this.deferredRemeasureRafId !== null) {
       cancelAnimationFrame(this.deferredRemeasureRafId);
