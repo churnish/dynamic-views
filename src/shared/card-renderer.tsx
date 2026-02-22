@@ -43,6 +43,7 @@ import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
 import {
   createSlideshowNavigator,
   filterBrokenUrls,
+  getCachedBlobUrl,
   markImageBroken,
   setupHoverZoomEligibility,
   setupImagePreload,
@@ -2533,14 +2534,16 @@ function Card({
                                     0,
                                     Math.min(section, imageArray.length - 1),
                                   );
-                                  const rawUrl = imageArray[newIndex];
+                                  const resolvedUrl = getCachedBlobUrl(
+                                    imageArray[newIndex],
+                                  );
                                   const imgEl = (
                                     e.currentTarget as HTMLElement
                                   ).querySelector("img");
                                   if (imgEl) {
                                     imgEl.removeClass("dynamic-views-hidden");
-                                    if (imgEl.src !== rawUrl) {
-                                      imgEl.src = rawUrl;
+                                    if (imgEl.src !== resolvedUrl) {
+                                      imgEl.src = resolvedUrl;
                                     }
                                   }
                                 }
@@ -2564,7 +2567,7 @@ function Card({
                                   ).querySelector("img");
                                   if (imgEl && firstUrl) {
                                     imgEl.removeClass("dynamic-views-hidden");
-                                    imgEl.src = firstUrl;
+                                    imgEl.src = getCachedBlobUrl(firstUrl);
                                   }
                                 }
                               : undefined
@@ -2614,6 +2617,19 @@ function Card({
                                         cardEl,
                                         imageArray,
                                         controller.signal,
+                                        (url) => {
+                                          if (controller.signal.aborted) return;
+                                          const idx = imageArray.indexOf(url);
+                                          if (idx !== -1)
+                                            imageArray.splice(idx, 1);
+                                          if (imageArray.length <= 1) {
+                                            const thumbEl =
+                                              imgEl.closest(".card-thumbnail");
+                                            thumbEl?.classList.remove(
+                                              "multi-image",
+                                            );
+                                          }
+                                        },
                                       );
                                     }
                                   }
@@ -2629,8 +2645,15 @@ function Card({
                                         imageArray.indexOf(failedSrc);
                                       if (failedIdx !== -1)
                                         imageArray.splice(failedIdx, 1);
-                                      // After splice, failedIdx points to next element
-                                      if (failedIdx < imageArray.length) {
+                                      if (imageArray.length <= 1) {
+                                        const thumbEl =
+                                          imgEl.closest(".card-thumbnail");
+                                        thumbEl?.classList.remove(
+                                          "multi-image",
+                                        );
+                                      }
+                                      // Show nearest remaining valid image
+                                      if (imageArray.length > 0) {
                                         if (
                                           controller.signal.aborted ||
                                           !imgEl.isConnected
@@ -2639,7 +2662,14 @@ function Card({
                                         imgEl.removeClass(
                                           "dynamic-views-hidden",
                                         );
-                                        imgEl.src = imageArray[failedIdx];
+                                        imgEl.src = getCachedBlobUrl(
+                                          imageArray[
+                                            Math.min(
+                                              failedIdx,
+                                              imageArray.length - 1,
+                                            )
+                                          ],
+                                        );
                                         return;
                                       }
                                       const cardEl = imgEl.closest(

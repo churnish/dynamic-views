@@ -735,6 +735,7 @@ export function setupImagePreload(
   cardEl: HTMLElement,
   imageUrls: string[],
   signal: AbortSignal,
+  onBroken?: (url: string) => void,
 ): void {
   let preloaded = false;
 
@@ -746,11 +747,17 @@ export function setupImagePreload(
         imageUrls.slice(1).forEach((url) => {
           if (isExternalUrl(url)) {
             void getExternalBlobUrl(url).then((result) => {
-              if (result === null) brokenImageUrls.add(url);
+              if (result === null) {
+                brokenImageUrls.add(url);
+                if (!signal.aborted) onBroken?.(url);
+              }
             });
           } else {
             const img = new Image();
-            img.onerror = () => brokenImageUrls.add(url);
+            img.onerror = () => {
+              brokenImageUrls.add(url);
+              if (!signal.aborted) onBroken?.(url);
+            };
             img.src = url;
           }
         });

@@ -98,20 +98,34 @@ function closeImageViewer(
         cardEl.classList.add("hover-intent-active");
       }
 
-      // Resume thumbnail scrubbing at last cursor position
+      // Resume thumbnail scrubbing at last cursor position, or reset if cursor
+      // is outside the thumbnail (e.g. dismissed via keyboard or moved away)
       const thumbnailEl = original.closest<HTMLElement>(
         ".card-thumbnail.multi-image",
       );
       if (thumbnailEl && original.dataset.viewerX) {
         const x = Number(original.dataset.viewerX);
         const y = Number(original.dataset.viewerY);
-        thumbnailEl.dispatchEvent(
-          new MouseEvent("mousemove", {
-            clientX: x,
-            clientY: y,
-            bubbles: false,
-          }),
-        );
+        const rect = thumbnailEl.getBoundingClientRect();
+        if (
+          x >= rect.left &&
+          x <= rect.right &&
+          y >= rect.top &&
+          y <= rect.bottom
+        ) {
+          thumbnailEl.dispatchEvent(
+            new MouseEvent("mousemove", {
+              clientX: x,
+              clientY: y,
+              bubbles: false,
+            }),
+          );
+        } else {
+          // Cursor outside thumbnail — trigger reset to first image
+          thumbnailEl.dispatchEvent(
+            new MouseEvent("mouseleave", { bubbles: false }),
+          );
+        }
       }
       delete original.dataset.viewerX;
       delete original.dataset.viewerY;

@@ -59,6 +59,7 @@ import type { BasesResolvedSettings } from "../types";
 import {
   createSlideshowNavigator,
   filterBrokenUrls,
+  getCachedBlobUrl,
   markImageBroken,
   setupHoverZoomEligibility,
   setupImagePreload,
@@ -1821,26 +1822,34 @@ export class SharedCardRenderer {
 
     // Fallback to next valid image if current fails (for multi-image cards)
     if (imageUrls.length > 1) {
+      // Non-scrubbing fallback uses sequential index (covers, disabled scrubbing)
       let currentUrlIndex = 0;
       const tryNextImage = () => {
-        // Guard against race with cleanup (signal aborted during execution)
         if (signal?.aborted) return;
-        const failedUrl = imageUrls[currentUrlIndex];
-        markImageBroken(failedUrl);
+        const failedSrc = imgEl.src;
+        markImageBroken(failedSrc);
         if (scrubbableUrls) {
-          const idx = scrubbableUrls.indexOf(failedUrl);
+          const idx = scrubbableUrls.indexOf(failedSrc);
           if (idx !== -1) scrubbableUrls.splice(idx, 1);
           if (scrubbableUrls.length <= 1) {
             imageEl.classList.remove("multi-image");
           }
-        }
-        currentUrlIndex++;
-        // Try next URL (pre-validated, should not fail)
-        if (currentUrlIndex < imageUrls.length) {
-          if (signal?.aborted || !imgEl.isConnected) return; // Guard before DOM mutation
-          imgEl.removeClass("dynamic-views-hidden"); // Unhide
-          imgEl.src = imageUrls[currentUrlIndex];
-          return;
+          // Show first remaining valid image
+          if (scrubbableUrls.length > 0) {
+            if (signal?.aborted || !imgEl.isConnected) return;
+            imgEl.removeClass("dynamic-views-hidden");
+            imgEl.src = getCachedBlobUrl(scrubbableUrls[0]);
+            return;
+          }
+        } else {
+          // Sequential fallback for covers / disabled scrubbing
+          currentUrlIndex++;
+          if (currentUrlIndex < imageUrls.length) {
+            if (signal?.aborted || !imgEl.isConnected) return;
+            imgEl.removeClass("dynamic-views-hidden");
+            imgEl.src = getCachedBlobUrl(imageUrls[currentUrlIndex]);
+            return;
+          }
         }
         // All images failed - hide thumbnail wrapper and set cover-ready
         if (signal?.aborted) return;
@@ -1855,7 +1864,6 @@ export class SharedCardRenderer {
                 "--actual-aspect-ratio",
                 DEFAULT_ASPECT_RATIO.toString(),
               );
-              // Trigger layout update for cover format
               if (format === "cover") this.imageLayoutCallback();
             }
           });
@@ -1872,9 +1880,16 @@ export class SharedCardRenderer {
     if (scrubbableUrls) {
       imageEl.classList.add("multi-image");
 
-      // Preload on hover
+      // Preload on hover — splice broken URLs from scrubbable array immediately
       if (signal) {
-        setupImagePreload(cardEl, scrubbableUrls, signal);
+        setupImagePreload(cardEl, scrubbableUrls, signal, (url) => {
+          if (signal.aborted) return;
+          const idx = scrubbableUrls.indexOf(url);
+          if (idx !== -1) scrubbableUrls.splice(idx, 1);
+          if (scrubbableUrls.length <= 1) {
+            imageEl.classList.remove("multi-image");
+          }
+        });
       }
 
       // Cache bounding rect on mouseenter to avoid layout thrashing on every mousemove
@@ -1902,10 +1917,10 @@ export class SharedCardRenderer {
               scrubbableUrls.length - 1,
             ),
           );
-          const rawUrl = scrubbableUrls[index];
+          const resolvedUrl = getCachedBlobUrl(scrubbableUrls[index]);
           imgEl.removeClass("dynamic-views-hidden");
-          if (imgEl.src !== rawUrl) {
-            imgEl.src = rawUrl;
+          if (imgEl.src !== resolvedUrl) {
+            imgEl.src = resolvedUrl;
           }
         },
         { signal },
@@ -1922,7 +1937,7 @@ export class SharedCardRenderer {
           if (!firstUrl) return;
           // First image is pre-validated, always show it
           imgEl.removeClass("dynamic-views-hidden");
-          imgEl.src = firstUrl;
+          imgEl.src = getCachedBlobUrl(firstUrl);
         },
         { signal },
       );
