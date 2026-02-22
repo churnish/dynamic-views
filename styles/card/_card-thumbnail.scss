@@ -102,6 +102,7 @@ body.dynamic-views-open-on-title .dynamic-views .path-separator {
     );
     overflow: hidden;
     border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
+    background-color: var(--dynamic-views-image-background-plain);
     pointer-events: none;
   }
 
@@ -193,6 +194,10 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
   .card-thumbnail .dynamic-views-image-embed {
     width: 100%;
     height: 100%;
+  }
+
+  .card-thumbnail img.scrub-loading {
+    visibility: hidden;
   }
 
   .card-thumbnail img {

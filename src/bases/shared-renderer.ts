@@ -1826,6 +1826,7 @@ export class SharedCardRenderer {
       let currentUrlIndex = 0;
       const tryNextImage = () => {
         if (signal?.aborted) return;
+        imgEl.removeClass("scrub-loading");
         const failedSrc = imgEl.src;
         markImageBroken(failedSrc);
         if (scrubbableUrls) {
@@ -1917,10 +1918,25 @@ export class SharedCardRenderer {
               scrubbableUrls.length - 1,
             ),
           );
-          const resolvedUrl = getCachedBlobUrl(scrubbableUrls[index]);
-          imgEl.removeClass("dynamic-views-hidden");
-          if (imgEl.src !== resolvedUrl) {
-            imgEl.src = resolvedUrl;
+          const rawUrl = scrubbableUrls[index];
+          const resolvedUrl = getCachedBlobUrl(rawUrl);
+          if (resolvedUrl === rawUrl && rawUrl.startsWith("http")) {
+            // Uncached external — hide img so placeholder background shows
+            if (imgEl.src !== resolvedUrl) {
+              imgEl.addClass("scrub-loading");
+              imgEl.src = resolvedUrl;
+              imgEl.addEventListener(
+                "load",
+                () => imgEl.removeClass("scrub-loading"),
+                { once: true },
+              );
+            }
+          } else {
+            imgEl.removeClass("scrub-loading");
+            imgEl.removeClass("dynamic-views-hidden");
+            if (imgEl.src !== resolvedUrl) {
+              imgEl.src = resolvedUrl;
+            }
           }
         },
         { signal },
@@ -1933,6 +1949,7 @@ export class SharedCardRenderer {
           if (this.viewerClones.has(imageEmbedContainer)) return;
           // Invalidate cached rect for next hover (handles resize)
           cachedRect = null;
+          imgEl.removeClass("scrub-loading");
           const firstUrl = scrubbableUrls[0];
           if (!firstUrl) return;
           // First image is pre-validated, always show it

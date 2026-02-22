@@ -2534,13 +2534,29 @@ function Card({
                                     0,
                                     Math.min(section, imageArray.length - 1),
                                   );
-                                  const resolvedUrl = getCachedBlobUrl(
-                                    imageArray[newIndex],
-                                  );
+                                  const rawUrl = imageArray[newIndex];
+                                  const resolvedUrl = getCachedBlobUrl(rawUrl);
                                   const imgEl = (
                                     e.currentTarget as HTMLElement
                                   ).querySelector("img");
-                                  if (imgEl) {
+                                  if (!imgEl) return;
+                                  if (
+                                    resolvedUrl === rawUrl &&
+                                    rawUrl.startsWith("http")
+                                  ) {
+                                    // Uncached external — hide img so placeholder background shows
+                                    if (imgEl.src !== resolvedUrl) {
+                                      imgEl.addClass("scrub-loading");
+                                      imgEl.src = resolvedUrl;
+                                      imgEl.addEventListener(
+                                        "load",
+                                        () =>
+                                          imgEl.removeClass("scrub-loading"),
+                                        { once: true },
+                                      );
+                                    }
+                                  } else {
+                                    imgEl.removeClass("scrub-loading");
                                     imgEl.removeClass("dynamic-views-hidden");
                                     if (imgEl.src !== resolvedUrl) {
                                       imgEl.src = resolvedUrl;
@@ -2566,6 +2582,7 @@ function Card({
                                     e.currentTarget as HTMLElement
                                   ).querySelector("img");
                                   if (imgEl && firstUrl) {
+                                    imgEl.removeClass("scrub-loading");
                                     imgEl.removeClass("dynamic-views-hidden");
                                     imgEl.src = getCachedBlobUrl(firstUrl);
                                   }
@@ -2638,6 +2655,7 @@ function Card({
                                     "error",
                                     () => {
                                       if (controller.signal.aborted) return;
+                                      imgEl.removeClass("scrub-loading");
                                       const failedSrc = imgEl.src;
                                       markImageBroken(failedSrc);
                                       // Splice broken URL for immediate scrub update
