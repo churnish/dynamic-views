@@ -97,6 +97,24 @@ function closeImageViewer(
       if (cardEl) {
         cardEl.classList.add("hover-intent-active");
       }
+
+      // Resume thumbnail scrubbing at last cursor position
+      const thumbnailEl = original.closest<HTMLElement>(
+        ".card-thumbnail.multi-image",
+      );
+      if (thumbnailEl && original.dataset.viewerX) {
+        const x = Number(original.dataset.viewerX);
+        const y = Number(original.dataset.viewerY);
+        thumbnailEl.dispatchEvent(
+          new MouseEvent("mousemove", {
+            clientX: x,
+            clientY: y,
+            bubbles: false,
+          }),
+        );
+      }
+      delete original.dataset.viewerX;
+      delete original.dataset.viewerY;
     }
   }
 
@@ -154,6 +172,9 @@ export function handleImageViewerClick(
   if (existingClone) {
     closeImageViewer(existingClone, viewerCleanupFns, viewerClones);
   } else {
+    // Store click coordinates for scrub resume on viewer close
+    embedEl.dataset.viewerX = String(e.clientX);
+    embedEl.dataset.viewerY = String(e.clientY);
     openImageViewer(embedEl, app, viewerCleanupFns, viewerClones);
   }
 }
@@ -1228,6 +1249,13 @@ function openImageViewer(
       cloneEl.setAttribute("tabindex", "-1");
       cloneEl.focus({ preventScroll: true });
     }
+
+    // Track cursor position over overlay so closeImageViewer has fresh coordinates
+    // for the synthetic mousemove that resumes thumbnail scrubbing
+    cloneEl.addEventListener("mousemove", (e: MouseEvent) => {
+      embedEl.dataset.viewerX = String(e.clientX);
+      embedEl.dataset.viewerY = String(e.clientY);
+    });
 
     // Register in tracking map AFTER all setup succeeds (prevents partial state)
     viewerClones.set(embedEl, cloneEl);

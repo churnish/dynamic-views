@@ -1085,6 +1085,34 @@ export class SharedCardRenderer {
         // Make title draggable when openFileAction is 'title'
         link.addEventListener("dragstart", handleDrag, { signal });
 
+        // Dead zone: clicks/contextmenu on .card-title that miss the link
+        titleEl.addEventListener(
+          "click",
+          (e) => {
+            if (!link.contains(e.target as Node)) {
+              e.preventDefault();
+              e.stopPropagation();
+              const paneType = Keymap.isModEvent(e);
+              void this.app.workspace.openLinkText(
+                card.path,
+                "",
+                paneType || false,
+              );
+            }
+          },
+          { signal },
+        );
+
+        titleEl.addEventListener(
+          "contextmenu",
+          (e) => {
+            if (!link.contains(e.target as Node)) {
+              handleContextMenu(e);
+            }
+          },
+          { signal },
+        );
+
         // Add extension suffix inside link for Extension mode
         if (
           extInfo &&
@@ -1873,6 +1901,8 @@ export class SharedCardRenderer {
       imageEl.addEventListener(
         "mouseleave",
         () => {
+          // Don't reset while image viewer is open (overlay triggers mouseleave)
+          if (this.viewerClones.has(imageEmbedContainer)) return;
           // Invalidate cached rect for next hover (handles resize)
           cachedRect = null;
           const firstUrl = scrubbableUrls[0];

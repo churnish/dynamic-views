@@ -1677,6 +1677,43 @@ function Card({
       <div
         className="card-title"
         tabIndex={-1}
+        onClick={
+          settings.openFileAction === "title" ||
+          (format === "poster" && app.isMobile && card.imageUrl)
+            ? (e: MouseEvent) => {
+                const linkEl = (e.currentTarget as HTMLElement).querySelector(
+                  ".card-title-link",
+                );
+                if (linkEl && !linkEl.contains(e.target as Node)) {
+                  e.stopPropagation();
+                  const paneType = Keymap.isModEvent(e);
+                  void app.workspace.openLinkText(
+                    card.path,
+                    "",
+                    paneType || false,
+                  );
+                }
+              }
+            : undefined
+        }
+        onContextMenu={
+          settings.openFileAction === "title" ||
+          (format === "poster" && app.isMobile && card.imageUrl)
+            ? (e: MouseEvent) => {
+                const linkEl = (e.currentTarget as HTMLElement).querySelector(
+                  ".card-title-link",
+                );
+                if (linkEl && !linkEl.contains(e.target as Node)) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const file = app.vault.getAbstractFileByPath(card.path);
+                  if (file instanceof TFile) {
+                    showFileContextMenu(e, app, file, card.path);
+                  }
+                }
+              }
+            : undefined
+        }
         ref={(el: HTMLElement | null) => {
           if (!el) return;
           if (isTitleScrollMode) {
@@ -2512,6 +2549,14 @@ function Card({
                           onMouseLeave={
                             enableScrubbing
                               ? (e: MouseEvent) => {
+                                  // Don't reset while image viewer is open (overlay triggers mouseleave)
+                                  const embedEl = (
+                                    e.currentTarget as HTMLElement
+                                  ).querySelector<HTMLElement>(
+                                    ".dynamic-views-image-embed",
+                                  );
+                                  if (embedEl && viewerClones.has(embedEl))
+                                    return;
                                   const firstUrl = imageArray[0];
                                   if (!firstUrl) return;
                                   const imgEl = (
