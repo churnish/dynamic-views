@@ -1809,12 +1809,31 @@ export class SharedCardRenderer {
       );
     }
 
+    // Scrubbable array declared here so tryNextImage can splice broken URLs.
+    // null when scrubbing not active (cover format, mobile, disabled).
+    const scrubbableUrls =
+      format === "thumbnail" &&
+      imageUrls.length > 1 &&
+      !this.app.isMobile &&
+      !isThumbnailScrubbingDisabled()
+        ? imageUrls.slice(0, 10)
+        : null;
+
     // Fallback to next valid image if current fails (for multi-image cards)
     if (imageUrls.length > 1) {
       let currentUrlIndex = 0;
       const tryNextImage = () => {
         // Guard against race with cleanup (signal aborted during execution)
         if (signal?.aborted) return;
+        const failedUrl = imageUrls[currentUrlIndex];
+        markImageBroken(failedUrl);
+        if (scrubbableUrls) {
+          const idx = scrubbableUrls.indexOf(failedUrl);
+          if (idx !== -1) scrubbableUrls.splice(idx, 1);
+          if (scrubbableUrls.length <= 1) {
+            imageEl.classList.remove("multi-image");
+          }
+        }
         currentUrlIndex++;
         // Try next URL (pre-validated, should not fail)
         if (currentUrlIndex < imageUrls.length) {
@@ -1823,13 +1842,13 @@ export class SharedCardRenderer {
           imgEl.src = imageUrls[currentUrlIndex];
           return;
         }
-        // All images failed - use double rAF for cover-ready (consistent with backdrop)
+        // All images failed - hide thumbnail wrapper and set cover-ready
         if (signal?.aborted) return;
         requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected) return;
           requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected) return;
-            imgEl.addClass("dynamic-views-hidden");
+            imageEl.classList.add("dynamic-views-hidden");
             if (!cardEl.classList.contains("cover-ready")) {
               cardEl.classList.add("cover-ready");
               cardEl.style.setProperty(
@@ -1850,13 +1869,7 @@ export class SharedCardRenderer {
     }
 
     // Thumbnail scrubbing (desktop only, max 10 images)
-    if (
-      format === "thumbnail" &&
-      imageUrls.length > 1 &&
-      !this.app.isMobile &&
-      !isThumbnailScrubbingDisabled()
-    ) {
-      const scrubbableUrls = imageUrls.slice(0, 10);
+    if (scrubbableUrls) {
       imageEl.classList.add("multi-image");
 
       // Preload on hover
@@ -1878,7 +1891,7 @@ export class SharedCardRenderer {
       imageEl.addEventListener(
         "mousemove",
         (e) => {
-          if (signal?.aborted) return; // Guard against race with cleanup
+          if (signal?.aborted || scrubbableUrls.length === 0) return;
           // Use cached rect, or cache on first mousemove if mouseenter didn't fire
           const rect = (cachedRect ??= imageEl.getBoundingClientRect());
           const x = e.clientX - rect.left;
