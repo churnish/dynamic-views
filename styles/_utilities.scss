@@ -56,24 +56,45 @@
   padding-bottom: 0;
 }
 
-/* Feedback button */
-.dynamic-views-feedback-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  margin-top: 20px;
-  margin-bottom: 0;
-  padding: var(--size-2-2) 0;
-  overflow: visible;
+/* Settings header */
+.dynamic-views-settings-header {
+  margin-bottom: var(--size-4-6);
 }
 
-.dynamic-views-feedback-button {
+.dynamic-views-settings-header-links {
+  font-size: 0.9em;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--size-4-2);
-  line-height: 1;
+  flex-wrap: wrap;
+}
+
+.dynamic-views-header-link {
+  color: var(--text-muted);
+  padding: 4px 10px 0;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    color: var(--text-muted) !important;
+    text-decoration: none !important;
+    transform: translateY(-1px);
+  }
+}
+
+.dynamic-views-link-icon {
+  display: flex;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+  }
 }
 
 /* Hide scrollbar during scroll restoration (prevents distracting flicker) */

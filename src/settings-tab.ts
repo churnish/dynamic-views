@@ -80,6 +80,50 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       conditionalText.toggleClass("dynamic-views-hidden", !enabled);
     };
 
+    // Header
+    const headerEl = containerEl.createDiv("dynamic-views-settings-header");
+
+    const linksContainer = headerEl.createDiv(
+      "dynamic-views-settings-header-links",
+    );
+
+    const createHeaderLink = (
+      parent: HTMLElement,
+      href: string,
+      icon: string,
+      text: string,
+    ) => {
+      const link = parent.createEl("a", {
+        href,
+        cls: "dynamic-views-header-link",
+      });
+      link.setAttribute("target", "_blank");
+      const iconEl = link.createSpan({ cls: "dynamic-views-link-icon" });
+      setIcon(iconEl, icon);
+      link.createSpan({ text });
+    };
+
+    createHeaderLink(
+      linksContainer,
+      "https://github.com/churnish/dynamic-views/wiki",
+      "book-open",
+      "Wiki",
+    );
+    linksContainer.createSpan({ text: " • " });
+    createHeaderLink(
+      linksContainer,
+      "https://github.com/churnish/dynamic-views/issues",
+      "bug",
+      "Report bug",
+    );
+    linksContainer.createSpan({ text: " • " });
+    createHeaderLink(
+      linksContainer,
+      "https://github.com/churnish/dynamic-views/issues",
+      "lightbulb",
+      "Request feature",
+    );
+
     // Appearance section - description text only, no settings
     new SettingGroup(containerEl).addClass("dynamic-views-appearance-group");
 
@@ -114,7 +158,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .addSetting((s) =>
         s
           .setName("Open file action")
-          .setDesc("How files should open when clicked.")
+          .setDesc("How files should open when pressed.")
           .addDropdown((dropdown) =>
             dropdown
               .addOption("card", "Press on title or card")
@@ -191,7 +235,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName("Context menu commands")
+          .setName("Folder commands")
           .setDesc(CONTEXT_MENU_DESC)
           .addToggle((toggle) =>
             toggle
@@ -341,22 +385,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               }),
           ),
       );
-
-    // Feedback button
-    const feedbackContainer = containerEl.createEl("div", {
-      cls: "dynamic-views-feedback-container",
-    });
-
-    const button = feedbackContainer.createEl("button", {
-      cls: "mod-cta dynamic-views-feedback-button",
-    });
-    button.addEventListener("click", () => {
-      window.open("https://github.com/churnish/dynamic-views/issues", "_blank");
-    });
-
-    const iconDiv = button.createEl("div");
-    setIcon(iconDiv, "message-square-reply");
-    button.appendText("Leave feedback");
   }
 
   hide(): void {
