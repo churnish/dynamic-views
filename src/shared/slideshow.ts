@@ -323,6 +323,16 @@ export function createSlideshowNavigator(
 
     const elements = getElements();
     if (!elements) return;
+    // Hide slideshow controls when only 1 valid image remains
+    if (imageUrls.some((url) => brokenImageUrls.has(url))) {
+      const validCount = imageUrls.reduce(
+        (n, url) => n + (brokenImageUrls.has(url) ? 0 : 1),
+        0,
+      );
+      if (validCount <= 1) {
+        elements.imageEmbed.parentElement?.addClass("slideshow-single");
+      }
+    }
 
     const { currImg, nextImg } = elements;
     const newUrl = imageUrls[newIndex];
