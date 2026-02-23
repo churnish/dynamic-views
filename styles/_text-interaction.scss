@@ -1,0 +1,83 @@
+/* Text cursor on text preview when title acts as link */
+body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
+  cursor: text;
+}
+
+/* Bases needs user-select: text on the container for mobile WebKit —
+   Datacore inherits it from CodeMirror's cm-content, but Bases sits
+   directly under view-content (user-select: none) */
+body.dynamic-views-open-on-title .dynamic-views-bases-container {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Revealed poster cards: Bases container needs user-select for iOS WebKit */
+.dynamic-views-bases-container:has(.card.poster-revealed) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Make all card text selectable when title acts as link */
+body.dynamic-views-open-on-title .dynamic-views .card-title,
+body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
+body.dynamic-views-open-on-title .dynamic-views .property-label,
+body.dynamic-views-open-on-title .dynamic-views .property-label-inline,
+body.dynamic-views-open-on-title .dynamic-views .property-content {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+/* Make revealed poster card text selectable (mobile tap + desktop press) */
+.dynamic-views .card.poster-revealed .card-title,
+.dynamic-views .card.poster-revealed .card-subtitle,
+.dynamic-views .card.poster-revealed .property-label,
+.dynamic-views .card.poster-revealed .property-label-inline,
+.dynamic-views .card.poster-revealed .property-content {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+/* Title link: selectable text */
+body.dynamic-views-open-on-title .dynamic-views .card-title a,
+body.dynamic-views-open-on-title .dynamic-views .card-title .card-title-link {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Revealed poster: title link selectable */
+.dynamic-views .card.poster-revealed .card-title a,
+.dynamic-views .card.poster-revealed .card-title .card-title-link {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Filename segment: selectable when title acts as link */
+body.dynamic-views-open-on-title .dynamic-views .filename-segment {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Revealed poster: filename selectable */
+.dynamic-views .card.poster-revealed .filename-segment {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Path separator: selectable for full path copy */
+body.dynamic-views-open-on-title .dynamic-views .path-separator {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Revealed poster: path separator selectable */
+.dynamic-views .card.poster-revealed .path-separator {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Text preview: cursor text in revealed poster */
+.dynamic-views .card.poster-revealed .card-text-preview {
+  cursor: text;
+}

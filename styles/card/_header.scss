@@ -191,7 +191,10 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 
 @media (hover: hover) {
   /* Underline title on hover when open action is "press on title" */
-  body.dynamic-views-open-on-title
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    )
     .dynamic-views
     .card.hover-intent-active
     .card-title

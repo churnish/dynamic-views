@@ -158,6 +158,13 @@ body.dynamic-views-open-on-card
   cursor: pointer;
 }
 
+/* Press mode: revealed poster cards use default cursor (title has its own pointer) */
+body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press
+  .dynamic-views
+  .card.image-format-poster.poster-revealed:has(.card-poster) {
+  cursor: default;
+}
+
 /* Mobile: always pointer cursor for reveal toggle, even in title mode */
 @media (hover: none) {
   body.dynamic-views-open-on-title

@@ -139,12 +139,13 @@ body.dynamic-views-card-border-color-transparent
   --poster-inset: 0px;
 }
 
-/* Poster hover zoom transition (all platforms — needed for both hover and tap) */
+/* Poster reveal zoom transition (all platforms — needed for both hover and tap) */
 body.dynamic-views-poster-hover-zoom
   .dynamic-views
   .card.image-format-poster
   .card-poster
   img {
+  will-change: transform; /* iOS WebKit: own GPU layer so ::after overlay repaint doesn't swallow transform transition */
   transition:
     transform var(--anim-duration-fast, 140ms) ease,
     opacity var(--anim-duration-fast, 140ms) ease;

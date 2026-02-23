@@ -1,13 +1,19 @@
 @media (hover: hover) {
   /* Title hover colors (when open-on-title enabled) */
-  body.dynamic-views-open-on-title.dynamic-views-title-color-faint
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-color-faint
     .dynamic-views
     .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-muted);
   }
-  body.dynamic-views-open-on-title.dynamic-views-title-color-muted
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-color-muted
     .dynamic-views
     .card.hover-intent-active
     .card-title
@@ -15,7 +21,10 @@
     color: var(--text-normal);
   }
   /* Normal - no hover color change */
-  body.dynamic-views-open-on-title.dynamic-views-title-color-accent
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-color-accent
     .dynamic-views
     .card.hover-intent-active
     .card-title
@@ -23,7 +32,10 @@
     color: var(--text-accent-hover);
   }
   /* Title color variants (red-pink, custom): 15% white mix using --dynamic-views-title-color-value */
-  body.dynamic-views-open-on-title:is(
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ):is(
       .dynamic-views-title-color-red,
       .dynamic-views-title-color-orange,
       .dynamic-views-title-color-yellow,
@@ -42,35 +54,50 @@
   }
 
   /* Explicit title hover color: open-on-title → hover over title link */
-  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-faint
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-hover-color-faint
     .dynamic-views
     .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-faint);
   }
-  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-muted
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-hover-color-muted
     .dynamic-views
     .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-muted);
   }
-  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-normal
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-hover-color-normal
     .dynamic-views
     .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-normal);
   }
-  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-accent
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-hover-color-accent
     .dynamic-views
     .card.hover-intent-active
     .card-title
     :is(a, .card-title-link):hover {
     color: var(--text-accent-hover);
   }
-  body.dynamic-views-open-on-title:is(
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ):is(
       .dynamic-views-title-hover-color-red,
       .dynamic-views-title-hover-color-orange,
       .dynamic-views-title-hover-color-yellow,
@@ -86,7 +113,10 @@
     :is(a, .card-title-link):hover {
     color: var(--dynamic-views-title-hover-color-value);
   }
-  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-custom
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    ).dynamic-views-title-hover-color-custom
     .dynamic-views
     .card.hover-intent-active
     .card-title
@@ -95,31 +125,55 @@
   }
 
   /* Explicit title hover color: open-on-card → hover over card */
-  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-faint
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press
+    ).dynamic-views-title-hover-color-faint
     .dynamic-views
     .card.hover-intent-active:hover
+    .card-title,
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-faint
+    .dynamic-views
+    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--text-faint);
   }
-  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-muted
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press
+    ).dynamic-views-title-hover-color-muted
     .dynamic-views
     .card.hover-intent-active:hover
+    .card-title,
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-muted
+    .dynamic-views
+    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--text-muted);
   }
-  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-normal
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press
+    ).dynamic-views-title-hover-color-normal
     .dynamic-views
     .card.hover-intent-active:hover
+    .card-title,
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-normal
+    .dynamic-views
+    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--text-normal);
   }
-  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-accent
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press
+    ).dynamic-views-title-hover-color-accent
     .dynamic-views
     .card.hover-intent-active:hover
+    .card-title,
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-accent
+    .dynamic-views
+    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--text-accent-hover);
   }
-  body.dynamic-views-open-on-card:is(
+  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press):is(
       .dynamic-views-title-hover-color-red,
       .dynamic-views-title-hover-color-orange,
       .dynamic-views-title-hover-color-yellow,
@@ -131,12 +185,31 @@
     )
     .dynamic-views
     .card.hover-intent-active:hover
+    .card-title,
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press:is(
+      .dynamic-views-title-hover-color-red,
+      .dynamic-views-title-hover-color-orange,
+      .dynamic-views-title-hover-color-yellow,
+      .dynamic-views-title-hover-color-green,
+      .dynamic-views-title-hover-color-cyan,
+      .dynamic-views-title-hover-color-blue,
+      .dynamic-views-title-hover-color-purple,
+      .dynamic-views-title-hover-color-pink
+    )
+    .dynamic-views
+    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--dynamic-views-title-hover-color-value);
   }
-  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-custom
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press
+    ).dynamic-views-title-hover-color-custom
     .dynamic-views
     .card.hover-intent-active:hover
+    .card-title,
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-custom
+    .dynamic-views
+    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
   }
@@ -431,7 +504,10 @@
   }
 
   /* Text cursor: higher specificity needed (default rule uses body.dynamic-views-open-on-title) */
-  body.dynamic-views-open-on-title
+  :is(
+      body.dynamic-views-open-on-title,
+      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+    )
     .dynamic-views
     .card:not(.hover-intent-active) {
     .card-text-preview,

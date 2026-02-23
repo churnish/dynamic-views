@@ -145,6 +145,7 @@ dynamic-views/
 │   ├── _property-colors.scss         # Color presets for labels, text, subtitle, title
 │   ├── _tags.scss                    # Tag styles (outline/fill/plaintext/theme) + color presets
 │   ├── _hover-states.scss            # Hover color rules, cursor gating
+│   ├── _text-interaction.scss        # Text selectability + cursor rules (open-on-title, poster-revealed)
 │   ├── _scroll-gradient.scss         # Horizontal/vertical gradient masks for scrollable content
 │   ├── _masonry-view.scss            # Masonry view layout: absolute positioning, flex overrides
 │   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar

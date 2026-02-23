@@ -1,7 +1,4 @@
 /* When card-content only has text preview (no thumbnails), use column layout */
-/* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
-/* Thumbnail right: align thumbnail to the right when no text preview */
-/* Stacked: left-align thumbnail when no text preview */
 .dynamic-views {
   .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(
       :has(.card-cover)
@@ -9,15 +6,18 @@
     flex-direction: column;
   }
 
+  /* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
   .card.card-thumbnail-left .card-previews:has(.card-text-preview-wrapper) {
     flex-direction: row-reverse;
   }
 
+  /* Thumbnail right: align thumbnail to the right when no text preview */
   .card.card-thumbnail-right
     .card-previews:not(:has(.card-text-preview-wrapper)) {
     justify-content: flex-end;
   }
 
+  /* Stacked: left-align thumbnail when no text preview */
   .card.thumbnail-stack.card-thumbnail-right
     .card-previews:not(:has(.card-text-preview-wrapper)) {
     justify-content: flex-start;
@@ -47,51 +47,6 @@
   }
 }
 
-/* Text cursor on text preview when openFileAction is 'title' */
-body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
-  cursor: text;
-}
-
-/* Bases needs user-select: text on the container for mobile WebKit —
-   Datacore inherits it from CodeMirror's cm-content, but Bases sits
-   directly under view-content (user-select: none) */
-body.dynamic-views-open-on-title .dynamic-views-bases-container {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Make all card text selectable when openFileAction is 'title' */
-body.dynamic-views-open-on-title .dynamic-views .card-title,
-body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
-body.dynamic-views-open-on-title .dynamic-views .property-label,
-body.dynamic-views-open-on-title .dynamic-views .property-label-inline,
-body.dynamic-views-open-on-title .dynamic-views .property-content {
-  -webkit-user-select: text;
-  user-select: text;
-  cursor: text;
-}
-
-/* Title link: selectable text */
-body.dynamic-views-open-on-title .dynamic-views .card-title a,
-body.dynamic-views-open-on-title .dynamic-views .card-title .card-title-link {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Filename segment in file path property: selectable when openFileAction is 'title' */
-body.dynamic-views-open-on-title .dynamic-views .filename-segment {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Path separator: selectable when openFileAction is 'title' for full path copy */
-body.dynamic-views-open-on-title .dynamic-views .path-separator {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Hide thumbnail placeholder by default */
-/* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */
 .dynamic-views {
   .card-thumbnail {
     flex-shrink: 0;
@@ -106,6 +61,7 @@ body.dynamic-views-open-on-title .dynamic-views .path-separator {
     pointer-events: none;
   }
 
+  /* Hide thumbnail placeholder by default */
   .card-thumbnail-placeholder {
     display: none;
   }
@@ -126,6 +82,7 @@ body.dynamic-views-show-thumbnail-placeholder
   background-color: var(--dynamic-views-image-background-dimmed);
 }
 
+/* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */
 .dynamic-views {
   .card-thumbnail.multi-image {
     overflow: visible; /* Allow drop-shadow to extend outside */

@@ -722,15 +722,18 @@ export class SharedCardRenderer {
 
     cardEl.setAttribute("data-path", card.path);
 
-    // Only make card draggable when openFileAction is 'card'
-    if (settings.openFileAction === "card") {
+    const isPosterClickReveal =
+      isPoster &&
+      hasImageSource &&
+      card.imageUrl &&
+      (this.app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
+
+    const isCardClickable =
+      settings.openFileAction === "card" && !isPosterClickReveal;
+    if (isCardClickable) {
       cardEl.setAttribute("draggable", "true");
     }
-    // Only show pointer cursor when entire card is clickable
-    cardEl.classList.toggle(
-      "clickable-card",
-      settings.openFileAction === "card",
-    );
+    cardEl.classList.toggle("clickable-card", isCardClickable);
 
     // Create AbortController for event listener cleanup
     const abortController = new AbortController();
@@ -873,6 +876,12 @@ export class SharedCardRenderer {
           const isInteractive = target.closest(
             "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
           );
+
+          // Skip toggle when user is selecting text
+          const selection = (
+            cardEl.ownerDocument.defaultView ?? window
+          ).getSelection();
+          if (selection && selection.toString().length > 0) return;
 
           if (!cardEl.classList.contains("poster-revealed")) {
             e.preventDefault();
@@ -1044,10 +1053,7 @@ export class SharedCardRenderer {
       }
 
       // Add title text
-      if (
-        settings.openFileAction === "title" ||
-        (isPoster && this.app.isMobile && card.imageUrl)
-      ) {
+      if (settings.openFileAction === "title" || isPosterClickReveal) {
         // Render as clickable, draggable link
         const link = titleEl.createEl("a", {
           cls: "internal-link card-title-text",

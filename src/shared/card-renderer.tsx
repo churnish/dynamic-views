@@ -1666,6 +1666,11 @@ function Card({
   // Only registered in map when card mounts (avoids orphaned controllers)
   const scrollController = new AbortController();
 
+  const isPosterClickReveal =
+    format === "poster" &&
+    card.imageUrl &&
+    (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
+
   // Cache scroll mode checks (avoid repeated DOM queries in ref callbacks)
   const isTitleScrollMode = document.body.classList.contains(
     "dynamic-views-title-overflow-scroll",
@@ -1681,8 +1686,7 @@ function Card({
         className="card-title"
         tabIndex={-1}
         onClick={
-          settings.openFileAction === "title" ||
-          (format === "poster" && app.isMobile && card.imageUrl)
+          settings.openFileAction === "title" || isPosterClickReveal
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
                   ".card-title-link",
@@ -1700,8 +1704,7 @@ function Card({
             : undefined
         }
         onContextMenu={
-          settings.openFileAction === "title" ||
-          (format === "poster" && app.isMobile && card.imageUrl)
+          settings.openFileAction === "title" || isPosterClickReveal
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
                   ".card-title-link",
@@ -1728,8 +1731,7 @@ function Card({
       >
         {renderFileTypeIcon(card.path)}
         {renderFileExt(extInfo)}
-        {settings.openFileAction === "title" ||
-        (format === "poster" && app.isMobile && card.imageUrl) ? (
+        {settings.openFileAction === "title" || isPosterClickReveal ? (
           <span
             className="card-title-link"
             data-href={card.path}
@@ -2101,14 +2103,15 @@ function Card({
           }
         }
       }}
-      draggable={settings.openFileAction === "card"}
-      onDragStart={settings.openFileAction === "card" ? handleDrag : undefined}
+      draggable={settings.openFileAction === "card" && !isPosterClickReveal}
+      onDragStart={
+        settings.openFileAction === "card" && !isPosterClickReveal
+          ? handleDrag
+          : undefined
+      }
       tabIndex={index === focusableCardIndex ? 0 : -1}
       onClick={(e: MouseEvent) => {
         // Poster tap toggle: mobile or desktop press mode
-        const isPosterClickReveal =
-          format === "poster" &&
-          (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
         if (isPosterClickReveal) {
           const cardEl = e.currentTarget as HTMLElement;
           if (cardEl.querySelector(".card-poster")) {
@@ -2116,6 +2119,12 @@ function Card({
             const isInteractive = target.closest(
               "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
             );
+
+            // Skip toggle when user is selecting text
+            const selection = (
+              cardEl.ownerDocument.defaultView ?? window
+            ).getSelection();
+            if (selection && selection.toString().length > 0) return;
 
             if (!cardEl.classList.contains("poster-revealed")) {
               e.preventDefault();
@@ -2273,7 +2282,10 @@ function Card({
         }
       }}
       style={{
-        cursor: settings.openFileAction === "card" ? "pointer" : "default",
+        cursor:
+          settings.openFileAction === "card" && !isPosterClickReveal
+            ? "pointer"
+            : "default",
       }}
     >
       {/* Cover: before .card-content for top/left position */}
