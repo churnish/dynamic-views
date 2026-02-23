@@ -20,6 +20,7 @@ import {
   getSlideshowMaxImages,
   getUrlIcon,
   getCoverHoverZoomMode,
+  hasBodyClass,
 } from "../utils/style-settings";
 import {
   getPropertyLabel,
@@ -1651,6 +1652,7 @@ function Card({
     cardClasses.push(`card-thumbnail-${settings.imageFit}`);
   } else if (format === "poster") {
     cardClasses.push("image-format-poster");
+    cardClasses.push(`poster-${settings.posterDisplayMode}`);
     cardClasses.push(`card-cover-${settings.imageFit}`);
   } else if (format === "backdrop") {
     cardClasses.push("image-format-backdrop");
@@ -2103,8 +2105,11 @@ function Card({
       onDragStart={settings.openFileAction === "card" ? handleDrag : undefined}
       tabIndex={index === focusableCardIndex ? 0 : -1}
       onClick={(e: MouseEvent) => {
-        // Poster tap toggle: mobile only (desktop uses hover intent)
-        if (format === "poster" && app.isMobile) {
+        // Poster tap toggle: mobile or desktop press mode
+        const isPosterClickReveal =
+          format === "poster" &&
+          (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
+        if (isPosterClickReveal) {
           const cardEl = e.currentTarget as HTMLElement;
           if (cardEl.querySelector(".card-poster")) {
             const target = e.target as HTMLElement;
@@ -2133,7 +2138,11 @@ function Card({
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
         if (
           settings.openFileAction === "card" &&
-          !(app.isMobile && format === "poster" && card.imageUrl)
+          !(
+            format === "poster" &&
+            card.imageUrl &&
+            (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"))
+          )
         ) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
@@ -2222,14 +2231,20 @@ function Card({
         }
       }}
       onMouseLeave={(e: MouseEvent) => {
-        if (format === "poster") {
+        if (
+          format === "poster" &&
+          !hasBodyClass("dynamic-views-poster-reveal-press")
+        ) {
           (e.currentTarget as HTMLElement).classList.remove(
             "poster-hover-active",
           );
         }
       }}
       onMouseMove={(e: MouseEvent) => {
-        if (format === "poster") {
+        if (
+          format === "poster" &&
+          !hasBodyClass("dynamic-views-poster-reveal-press")
+        ) {
           const cardEl = e.currentTarget as HTMLElement;
           if (!cardEl.classList.contains("poster-hover-active")) {
             cardEl

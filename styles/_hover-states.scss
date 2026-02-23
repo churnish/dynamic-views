@@ -1,7 +1,3 @@
-/* ============================================
-   HOVER COLOR RULES FOR CLICKABLE ELEMENTS
-   ============================================ */
-
 @media (hover: hover) {
   /* Title hover colors (when open-on-title enabled) */
   body.dynamic-views-open-on-title.dynamic-views-title-color-faint
@@ -43,6 +39,106 @@
     .card-title
     :is(a, .card-title-link):hover {
     color: color-mix(in hsl, var(--dynamic-views-title-color-value), white 15%);
+  }
+
+  /* Explicit title hover color: open-on-title → hover over title link */
+  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-faint
+    .dynamic-views
+    .card.hover-intent-active
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-faint);
+  }
+  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-muted
+    .dynamic-views
+    .card.hover-intent-active
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-normal
+    .dynamic-views
+    .card.hover-intent-active
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-normal);
+  }
+  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-accent
+    .dynamic-views
+    .card.hover-intent-active
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--text-accent-hover);
+  }
+  body.dynamic-views-open-on-title:is(
+      .dynamic-views-title-hover-color-red,
+      .dynamic-views-title-hover-color-orange,
+      .dynamic-views-title-hover-color-yellow,
+      .dynamic-views-title-hover-color-green,
+      .dynamic-views-title-hover-color-cyan,
+      .dynamic-views-title-hover-color-blue,
+      .dynamic-views-title-hover-color-purple,
+      .dynamic-views-title-hover-color-pink
+    )
+    .dynamic-views
+    .card.hover-intent-active
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--dynamic-views-title-hover-color-value);
+  }
+  body.dynamic-views-open-on-title.dynamic-views-title-hover-color-custom
+    .dynamic-views
+    .card.hover-intent-active
+    .card-title
+    :is(a, .card-title-link):hover {
+    color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
+  }
+
+  /* Explicit title hover color: open-on-card → hover over card */
+  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-faint
+    .dynamic-views
+    .card.hover-intent-active:hover
+    .card-title {
+    color: var(--text-faint);
+  }
+  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-muted
+    .dynamic-views
+    .card.hover-intent-active:hover
+    .card-title {
+    color: var(--text-muted);
+  }
+  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-normal
+    .dynamic-views
+    .card.hover-intent-active:hover
+    .card-title {
+    color: var(--text-normal);
+  }
+  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-accent
+    .dynamic-views
+    .card.hover-intent-active:hover
+    .card-title {
+    color: var(--text-accent-hover);
+  }
+  body.dynamic-views-open-on-card:is(
+      .dynamic-views-title-hover-color-red,
+      .dynamic-views-title-hover-color-orange,
+      .dynamic-views-title-hover-color-yellow,
+      .dynamic-views-title-hover-color-green,
+      .dynamic-views-title-hover-color-cyan,
+      .dynamic-views-title-hover-color-blue,
+      .dynamic-views-title-hover-color-purple,
+      .dynamic-views-title-hover-color-pink
+    )
+    .dynamic-views
+    .card.hover-intent-active:hover
+    .card-title {
+    color: var(--dynamic-views-title-hover-color-value);
+  }
+  body.dynamic-views-open-on-card.dynamic-views-title-hover-color-custom
+    .dynamic-views
+    .card.hover-intent-active:hover
+    .card-title {
+    color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
   }
 
   /* Subtitle hover colors (when clickable) — exclude real links which keep default hover */
@@ -268,318 +364,90 @@
       var(--text-muted)
     );
   }
+
+  /* Card background on hover options */
+  /* Transparent (default) */
+  body:not([class*="dynamic-views-card-background-hover-"])
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: transparent;
+  }
+
+  body.dynamic-views-card-background-hover-tinted
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: var(--background-primary-alt);
+  }
+
+  body.dynamic-views-card-background-hover-transparent
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: transparent;
+  }
+
+  body.dynamic-views-card-background-hover-custom
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    background-color: var(
+      --dynamic-views-card-background-color-hover-custom,
+      var(--background-primary-alt)
+    );
+  }
+
+  /* Gate pointer cursor behind hover intent on desktop */
+  .dynamic-views .card:not(.hover-intent-active) {
+    &.clickable-card {
+      cursor: default;
+    }
+
+    .card-title a,
+    .card-title .card-title-link {
+      cursor: default;
+    }
+
+    .property a {
+      cursor: default;
+    }
+
+    .folder-segment,
+    .filename-segment {
+      cursor: default;
+    }
+  }
+
+  /* Tags: higher specificity needed (default rule uses body:not() selectors) */
+  .dynamic-views
+    .card:not(.hover-intent-active)
+    :is(.card-properties, .card-subtitle)
+    .tag {
+    cursor: default;
+  }
+
+  /* Poster cards: higher specificity needed (default rule uses body class selector) */
+  body.dynamic-views-open-on-card
+    .dynamic-views
+    .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+    cursor: default;
+  }
+
+  /* Text cursor: higher specificity needed (default rule uses body.dynamic-views-open-on-title) */
+  body.dynamic-views-open-on-title
+    .dynamic-views
+    .card:not(.hover-intent-active) {
+    .card-text-preview,
+    .card-title,
+    .card-subtitle,
+    .property-label,
+    .property-label-inline,
+    .property-content {
+      cursor: default;
+    }
+  }
 }
 
-/* Even fields (right side) - label after content */
-/* Even fields (right side) - content before label */
-/* Odd fields (left side) - left-aligned labels */
-/* Even fields (right side) - right-aligned labels */
-/* Universal property-content wrapper */
-/* Empty value marker styling - 0.6 opacity of property value color */
-/* Checkbox property - remove extra padding */
-/* Even fields (right side) - content should fill wrapper width for proper alignment */
-/* Array list wrapper - ensure items display inline */
-/* List separator styling - 0.6 opacity of property value color */
-/* Alignment via justify-content on property-content wrapper */
-/* Odd fields (left side) */
-/* Even fields (right side) - align content right when not scrollable */
-/* Even fields (right side) - align content left when scrollable */
-/* Left alignment for right-side properties */
-/* Reset inline property label order to place label before content */
-/* Stacked layout (unpaired properties are direct children of card-properties) */
-/* Hide scrollbar for side-by-side fields */
-/* Gradient masks for scrollable content (ON by default) */
-/* Vertical gradient masks for poster card body scroll */
-/* Hide empty fields */
 .dynamic-views {
-  .property-pair .pair-right .property-label-inline {
-    order: 2;
-  }
-
-  .property-pair .pair-right .property-content {
-    order: 1;
-  }
-
-  .property-pair .pair-left .property-label {
-    text-align: left;
-  }
-
-  .property-pair .pair-right .property-label {
-    text-align: right;
-  }
-
-  .property-content {
-    display: flex;
-    align-items: center;
-    gap: var(--size-2-2);
-    flex-shrink: 0;
-    white-space: nowrap;
-    min-height: var(--dynamic-views-property-content-height, 20px);
-    color: inherit;
-    min-width: 0;
-    flex: 0 0 auto;
-    width: max-content;
-  }
-
-  .property-content > span.empty-value-marker {
-    color: inherit;
-    opacity: 0.6;
-  }
-
-  .property-content > .metadata-input-checkbox {
-    margin: 0;
-    padding: 0;
-  }
-
-  .property-pair .pair-right .property-content {
-    min-width: 100%;
-    width: max-content;
-    justify-content: flex-end;
-  }
-
-  .property-content .list-wrapper {
-    display: inline;
-  }
-
-  .property-content .list-wrapper > span {
-    display: inline;
-  }
-
-  .property-content .list-item {
-    display: inline;
-  }
-
-  .property-content .list-separator {
-    display: inline;
-  }
-
-  .list-separator {
-    color: inherit;
-    opacity: 0.6;
-  }
-
-  .property-pair .pair-left .property-content {
-    justify-content: flex-start;
-  }
-
-  .property-pair .pair-right:not(.is-scrollable) .property-content-wrapper {
-    justify-content: flex-end;
-  }
-
-  .property-pair .pair-right.is-scrollable .property-content-wrapper {
-    justify-content: flex-start;
-  }
-
-  &:is(
-      .dynamic-views-paired-property-left,
-      .dynamic-views-paired-property-column
-    )
-    .property-pair
-    .pair-right
-    .property-content-wrapper {
-    justify-content: flex-start;
-  }
-
-  &:is(
-      .dynamic-views-paired-property-left,
-      .dynamic-views-paired-property-column
-    )
-    .property-pair
-    .pair-right
-    .property-content {
-    justify-content: flex-start;
-    order: 0;
-  }
-
-  &:is(
-      .dynamic-views-paired-property-left,
-      .dynamic-views-paired-property-column
-    )
-    .property-pair
-    .pair-right
-    .property-label {
-    text-align: left;
-  }
-
-  &:is(
-      .dynamic-views-paired-property-left,
-      .dynamic-views-paired-property-column
-    )
-    .property-pair
-    .pair-right
-    .property-label-inline {
-    order: 0;
-  }
-
-  .card-properties > .property .property-content {
-    justify-content: flex-start;
-  }
-
-  .property-pair .property::-webkit-scrollbar {
-    display: none;
-  }
-
-  .property-content-wrapper.scroll-gradient-left,
-  .card-subtitle.scroll-gradient-left,
-  .card-title.scroll-gradient-left {
-    mask-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black 100%
-    );
-  }
-
-  .property-content-wrapper.scroll-gradient-right,
-  .card-subtitle.scroll-gradient-right,
-  .card-title.scroll-gradient-right {
-    mask-image: linear-gradient(
-      to right,
-      black 0,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to right,
-      black 0,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-  }
-
-  .property-content-wrapper.scroll-gradient-both,
-  .card-subtitle.scroll-gradient-both,
-  .card-title.scroll-gradient-both {
-    mask-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-  }
-
-  .card.image-format-poster .card-body.scroll-gradient-top {
-    mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black 100%
-    );
-  }
-
-  .card.image-format-poster .card-body.scroll-gradient-bottom {
-    mask-image: linear-gradient(
-      to bottom,
-      black 0,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      black 0,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-  }
-
-  .card.image-format-poster .card-body.scroll-gradient-vertical-both {
-    mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0) 0,
-      rgba(0, 0, 0, 0.3) 4px,
-      black 28px,
-      black calc(100% - 28px),
-      rgba(0, 0, 0, 0.3) calc(100% - 4px),
-      rgba(0, 0, 0, 0) 100%
-    );
-  }
-
+  /* Hide empty fields */
   .property:empty {
     display: none;
   }
-}
-
-/* Remove gradient masks when toggle ON */
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .property-content-wrapper.scroll-gradient-left,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .property-content-wrapper.scroll-gradient-right,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .property-content-wrapper.scroll-gradient-both,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card-subtitle.scroll-gradient-left,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card-subtitle.scroll-gradient-right,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card-subtitle.scroll-gradient-both,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card-title.scroll-gradient-left,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card-title.scroll-gradient-right,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card-title.scroll-gradient-both,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card.image-format-poster
-  .card-body.scroll-gradient-top,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card.image-format-poster
-  .card-body.scroll-gradient-bottom,
-body.dynamic-views-no-fade-truncated-text
-  .dynamic-views
-  .card.image-format-poster
-  .card-body.scroll-gradient-vertical-both {
-  mask-image: none;
-  -webkit-mask-image: none;
 }

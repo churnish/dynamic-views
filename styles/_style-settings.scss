@@ -54,6 +54,11 @@ settings:
         step: 1
         format: px
     -
+        id: dynamic-views-backdrop-hover-zoom
+        title: Hover zoom
+        description: Subtle zoom effect when hovering over backdrop cards.
+        type: class-toggle
+    -
         id: layout-heading
         title: Card layout
         type: heading
@@ -321,11 +326,11 @@ settings:
         description: Background style for Contain fit and placeholders.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-cover-bg-plain
+        default: dynamic-views-cover-bg-dimmed
         options:
             -
-                label: Plain
-                value: dynamic-views-cover-bg-plain
+                label: Dimmed
+                value: dynamic-views-cover-bg-dimmed
             -
                 label: Transparent
                 value: dynamic-views-cover-bg-transparent
@@ -356,13 +361,13 @@ settings:
         default: dynamic-views-show-cover-placeholder-grid
         options:
             -
-                label: In Grid view
+                label: In Grid
                 value: dynamic-views-show-cover-placeholder-grid
             -
-                label: In Masonry view
+                label: In Masonry
                 value: dynamic-views-show-cover-placeholder-masonry
             -
-                label: In Grid and Masonry views
+                label: In Grid & Masonry
                 value: dynamic-views-show-cover-placeholder-both
             -
                 label: Don't show
@@ -401,7 +406,7 @@ settings:
     -
         id: dynamic-views-cover-hover-zoom
         title: Hover zoom
-        description: Subtle zoom effect when hovering over covers.
+        description: Subtle zoom effect when hovering over cover images.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-hover-zoom-card
@@ -600,6 +605,17 @@ settings:
         level: 2
         collapsed: true
     -
+        id: dynamic-views-poster-hover-zoom
+        title: Hover zoom
+        description: Subtle zoom effect when revealing poster details.
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-poster-reveal-press
+        title: Reveal on press
+        description: Show poster details on press instead of hover.
+        type: class-toggle
+    -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
         description: Don't vertically scroll card content when it doesn't fit.
@@ -609,19 +625,6 @@ settings:
         title: Disable raise animation
         description: Fade in without sliding up on reveal.
         type: class-toggle
-    -
-        id: dynamic-views-poster-mode
-        title: Display mode
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-poster-mode-gradient
-        options:
-            -
-                label: Gradient
-                value: dynamic-views-poster-mode-gradient
-            -
-                label: Overlay
-                value: dynamic-views-poster-mode-overlay
     -
         id: dynamic-views-poster-overlay-tint
         title: Overlay tint
@@ -1389,7 +1392,7 @@ settings:
         default: ''
     -
         id: dynamic-views-title-color
-        title: Text color
+        title: Title color
         description: Theme color preset for titles.
         type: class-select
         allowEmpty: false
@@ -1436,8 +1439,66 @@ settings:
                 value: dynamic-views-title-color-custom
     -
         id: dynamic-views-title-color-custom
-        title: Custom text color
+        title: Custom title color
         description: Set a custom color.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-title-hover-color
+        title: Title color (hover)
+        description: Title color when hovering over clickable titles.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-hover-color-no-change
+        options:
+            -
+                label: No change
+                value: dynamic-views-title-hover-color-no-change
+            -
+                label: Faint
+                value: dynamic-views-title-hover-color-faint
+            -
+                label: Muted
+                value: dynamic-views-title-hover-color-muted
+            -
+                label: Normal
+                value: dynamic-views-title-hover-color-normal
+            -
+                label: Accent
+                value: dynamic-views-title-hover-color-accent
+            -
+                label: Red
+                value: dynamic-views-title-hover-color-red
+            -
+                label: Orange
+                value: dynamic-views-title-hover-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-title-hover-color-yellow
+            -
+                label: Green
+                value: dynamic-views-title-hover-color-green
+            -
+                label: Cyan
+                value: dynamic-views-title-hover-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-title-hover-color-blue
+            -
+                label: Purple
+                value: dynamic-views-title-hover-color-purple
+            -
+                label: Pink
+                value: dynamic-views-title-hover-color-pink
+            -
+                label: Custom
+                value: dynamic-views-title-hover-color-custom
+    -
+        id: dynamic-views-title-hover-color-custom
+        title: Custom title hover color
+        description: Set a custom hover color.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -1475,3 +1536,110 @@ settings:
                 value: dynamic-views-title-overflow-scroll
 
 */
+
+/* Conditional Style Settings visibility */
+body:not(.dynamic-views-card-background-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-background-color-custom"],
+body:not(.dynamic-views-card-background-hover-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-background-color-hover-custom"],
+body:not(.dynamic-views-card-border-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-border-color-custom"],
+body:not(.dynamic-views-card-border-color-hover-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-border-color-hover-custom"],
+body:not(.dynamic-views-cover-bg-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-cover-background-color-custom"],
+body.dynamic-views-image-viewer-disabled
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-image-viewer-disabled"]
+  ~ .setting-item,
+body:not(.dynamic-views-property-color-with-labels-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-color-with-labels-custom"],
+body:not(.dynamic-views-property-color-without-labels-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-color-without-labels-custom"],
+body:not(.dynamic-views-property-label-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-property-label-color-custom"],
+body.dynamic-views-slideshow-disabled
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-slideshow-disabled"]
+  ~ .setting-item,
+body:not(.dynamic-views-subtitle-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-subtitle-color-custom"],
+body.dynamic-views-file-type-none
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-hidden-file-extensions"],
+body.dynamic-views-tag-style-theme
+  .style-settings-container
+  .setting-item:is(
+    [data-id="dynamic-views-tag-color"],
+    [data-id="dynamic-views-tag-color-custom"]
+  ),
+body:not(.dynamic-views-tag-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-tag-color-custom"],
+body:not(.dynamic-views-text-preview-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-text-preview-color-custom"],
+body.dynamic-views-cover-circular
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-cover-border-radius"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-spacing-desktop"],
+body:not(.is-mobile)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-card-spacing-mobile"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-image-viewer-fullscreen"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-reveal-press"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-zoom-sensitivity"],
+body.dynamic-views-disable-thumbnail-scrubbing
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-hide-thumbnail-shadow"],
+body:not(.dynamic-views-title-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-title-color-custom"],
+body:not(.dynamic-views-title-hover-color-custom)
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-title-hover-color-custom"],
+body.dynamic-views-poster-theme-dark
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-light"],
+body.dynamic-views-poster-theme-light
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-poster-overlay-dark"] {
+  display: none !important;
+}
+
+/* Appearance group styling (Style Settings UI) */
+.dynamic-views-appearance-group .setting-item-description {
+  padding-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:first-child {
+  margin-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:last-child {
+  margin-bottom: 0;
+}
+
+.dynamic-views-appearance-group .setting-items {
+  margin-bottom: 0;
+  background-color: transparent;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+}

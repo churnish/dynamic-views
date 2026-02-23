@@ -1,11 +1,4 @@
-/* ==================== BACKDROP + POSTER SHARED ==================== */
-
-/* Shared base styles for fullbleed image formats (backdrop + poster) */
-/* Constrain height so .card-body can scroll.
-   overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
-   without clipping its border-radius. */
-/* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
-/* Card content stacks above background image */
+/* Shared styles for fullbleed image formats (backdrop + poster) */
 .dynamic-views {
   .card.image-format-backdrop {
     position: relative;
@@ -32,6 +25,9 @@
       overflow-clip-margin: 4px;
     }
 
+    /* Constrain height so .card-body can scroll.
+       overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
+       without clipping its border-radius. */
     .card-body {
       position: relative;
       z-index: 1;
@@ -40,6 +36,7 @@
       overflow-y: auto;
       scrollbar-width: none;
 
+      /* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
       > * {
         flex-shrink: 0;
       }
@@ -77,6 +74,7 @@
       opacity: 1;
     }
 
+    /* Card content stacks above background image */
     .card-content {
       position: relative;
       z-index: 1;
@@ -95,16 +93,27 @@
       overflow-y: auto;
     }
   }
+
+  /* Press mode: gate scroll behind poster-revealed instead */
+  body.dynamic-views-poster-reveal-press .dynamic-views {
+    .card.image-format-poster.poster-revealed .card-body {
+      overflow-y: auto;
+    }
+  }
 }
 
 body.dynamic-views-poster-disable-scroll
   .dynamic-views
   .card.image-format-poster
+  .card-body,
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
   .card-body {
   overflow-y: hidden;
 }
 
-/* No scroll = no scroll gradient (false affordance) */
+/* No scroll = no scroll gradient */
 body.dynamic-views-poster-disable-scroll
   .dynamic-views
   .card.image-format-poster
@@ -128,4 +137,64 @@ body.dynamic-views-card-border-color-transparent
   .dynamic-views
   .card.image-format-poster {
   --poster-inset: 0px;
+}
+
+/* Poster hover zoom transition (all platforms — needed for both hover and tap) */
+body.dynamic-views-poster-hover-zoom
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster
+  img {
+  transition:
+    transform var(--anim-duration-fast, 140ms) ease,
+    opacity var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Poster: zoom on tap reveal (mobile) */
+body.dynamic-views-poster-hover-zoom
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-poster
+  img {
+  transform: scale(1.05);
+}
+
+/* Backdrop/poster hover zoom (desktop) */
+@media (hover: hover) {
+  body.dynamic-views-backdrop-hover-zoom
+    .dynamic-views
+    .card.image-format-backdrop
+    .card-backdrop
+    img {
+    transition:
+      transform var(--anim-duration-fast, 140ms) ease,
+      opacity var(--anim-duration-fast, 140ms) ease;
+  }
+
+  /* Backdrop: zoom on card hover intent */
+  body.dynamic-views-backdrop-hover-zoom
+    .dynamic-views
+    .card.image-format-backdrop.hover-intent-active
+    .card-backdrop
+    img {
+    transform: scale(1.05);
+  }
+
+  /* Poster: zoom on poster hover intent */
+  body.dynamic-views-poster-hover-zoom
+    .dynamic-views
+    .card.image-format-poster.poster-hover-active
+    .card-poster
+    img {
+    transform: scale(1.05);
+  }
+
+  /* Poster: zoom on press reveal (press mode, desktop) */
+  body.dynamic-views-poster-hover-zoom.dynamic-views-poster-reveal-press
+    .dynamic-views
+    .card.image-format-poster.poster-revealed
+    .card-poster
+    img {
+    transform: scale(1.05);
+  }
 }

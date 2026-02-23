@@ -227,6 +227,21 @@ export function getBasesViewOptions(
             (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) === "never",
         },
         {
+          type: "dropdown",
+          displayName: "Display mode",
+          key: "posterDisplayMode",
+          options: {
+            gradient: "Gradient",
+            overlay: "Overlay",
+          },
+          default: d.posterDisplayMode,
+          shouldHide: (config: BasesConfig) =>
+            (config.get("imageFormat") ?? d.imageFormat) !== "poster" ||
+            (!(config.get("imageProperty") || d.imageProperty) &&
+              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
+                "never"),
+        },
+        {
           type: "slider",
           displayName: "Size",
           key: "thumbnailSize",
@@ -535,6 +550,12 @@ export function readBasesSettings(
         ? value
         : defaults.imageFit;
     })(),
+    posterDisplayMode: (() => {
+      const value = config.get("posterDisplayMode");
+      return value === "gradient" || value === "overlay"
+        ? value
+        : defaults.posterDisplayMode;
+    })(),
     imageRatio: getNumber("imageRatio", defaults.imageRatio),
     propertyLabels: (() => {
       const value = config.get("propertyLabels");
@@ -652,6 +673,12 @@ export function extractBasesTemplate(
       return value === "crop" || value === "contain"
         ? value
         : mergedDefaults.imageFit;
+    })(),
+    posterDisplayMode: (() => {
+      const value = config.get("posterDisplayMode");
+      return value === "gradient" || value === "overlay"
+        ? value
+        : mergedDefaults.posterDisplayMode;
     })(),
     imageRatio: getNumber("imageRatio", mergedDefaults.imageRatio),
     propertyLabels: (() => {

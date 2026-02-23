@@ -76,6 +76,7 @@ export function Settings({
         fallbackToContent: settings.fallbackToContent,
         fallbackToEmbeds: settings.fallbackToEmbeds,
         imageFormat: settings.imageFormat,
+        posterDisplayMode: settings.posterDisplayMode,
         thumbnailSize: settings.thumbnailSize,
         imagePosition: settings.imagePosition,
         imageFit: settings.imageFit,
@@ -357,6 +358,30 @@ export function Settings({
                   <option value="backdrop">Backdrop</option>
                 </select>
               </div>
+              {settings.imageFormat === "poster" && (
+                <div className="setting-item setting-item-dropdown">
+                  <div className="setting-item-info">
+                    <label>Display mode</label>
+                  </div>
+                  <select
+                    value={settings.posterDisplayMode}
+                    onChange={(e: unknown) => {
+                      const evt = e as Event & {
+                        target: HTMLSelectElement;
+                      };
+                      onSettingsChange({
+                        posterDisplayMode: evt.target.value as
+                          | "gradient"
+                          | "overlay",
+                      });
+                    }}
+                    className="dropdown"
+                  >
+                    <option value="gradient">Gradient</option>
+                    <option value="overlay">Overlay</option>
+                  </select>
+                </div>
+              )}
               {settings.imageFormat === "thumbnail" && (
                 <div className="setting-item">
                   <div className="setting-item-info">

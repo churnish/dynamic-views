@@ -46,6 +46,7 @@ import {
   getUrlIcon,
   getCompactBreakpoint,
   getCoverHoverZoomMode,
+  hasBodyClass,
 } from "../utils/style-settings";
 import { getPropertyLabel, stripNotePrefix } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
@@ -701,6 +702,7 @@ export class SharedCardRenderer {
         cardEl.classList.add("image-format-thumbnail");
       } else if (format === "poster") {
         cardEl.classList.add("image-format-poster");
+        cardEl.classList.add(`poster-${settings.posterDisplayMode}`);
       } else if (format === "backdrop") {
         cardEl.classList.add("image-format-backdrop");
       }
@@ -860,12 +862,13 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       "click",
       (e) => {
-        // Poster tap toggle: mobile only (desktop uses hover intent)
-        if (
+        // Poster tap toggle: mobile or desktop press mode
+        const isPosterClickReveal =
           format === "poster" &&
-          this.app.isMobile &&
-          cardEl.querySelector(".card-poster")
-        ) {
+          cardEl.querySelector(".card-poster") &&
+          (this.app.isMobile ||
+            hasBodyClass("dynamic-views-poster-reveal-press"));
+        if (isPosterClickReveal) {
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
             "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
@@ -891,7 +894,12 @@ export class SharedCardRenderer {
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
         if (
           settings.openFileAction === "card" &&
-          !(this.app.isMobile && isPoster && card.imageUrl)
+          !(
+            isPoster &&
+            card.imageUrl &&
+            (this.app.isMobile ||
+              hasBodyClass("dynamic-views-poster-reveal-press"))
+          )
         ) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
@@ -941,7 +949,11 @@ export class SharedCardRenderer {
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
     // Gates content reveal (via CSS) and scroll access on desktop.
-    if (isPoster && window.matchMedia("(hover: hover)").matches) {
+    if (
+      isPoster &&
+      window.matchMedia("(hover: hover)").matches &&
+      !hasBodyClass("dynamic-views-poster-reveal-press")
+    ) {
       setupHoverIntent(
         cardEl,
         () => {
