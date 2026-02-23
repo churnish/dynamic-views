@@ -1671,6 +1671,10 @@ function Card({
     card.imageUrl &&
     (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
 
+  if (settings.openFileAction === "card" && !isPosterClickReveal) {
+    cardClasses.push("clickable-card");
+  }
+
   // Cache scroll mode checks (avoid repeated DOM queries in ref callbacks)
   const isTitleScrollMode = document.body.classList.contains(
     "dynamic-views-title-overflow-scroll",
@@ -2280,12 +2284,6 @@ function Card({
         if (settings.openFileAction === "title") {
           e.stopPropagation();
         }
-      }}
-      style={{
-        cursor:
-          settings.openFileAction === "card" && !isPosterClickReveal
-            ? "pointer"
-            : "default",
       }}
     >
       {/* Cover: before .card-content for top/left position */}
