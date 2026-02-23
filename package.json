@@ -9,6 +9,7 @@
     "css": "sass styles/main.scss styles.css --style=expanded --no-source-map",
     "css:watch": "sass styles/main.scss styles.css --style=expanded --no-source-map --watch",
     "build": "npm run css && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "preversion": "node version-bump.mjs --preflight",
     "version": "node version-bump.mjs && git add manifest.json",
     "postversion": "git push origin main --follow-tags --force",
     "release": "npm version",
@@ -29,7 +30,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.5",
     "@types/jest": "^29.5.11",

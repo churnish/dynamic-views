@@ -84,7 +84,7 @@
 
 /* Desktop: scroll gated by hover intent to prevent capturing view scroll */
 @media (hover: hover) {
-  .dynamic-views {
+  body:not(.dynamic-views-poster-reveal-press) .dynamic-views {
     .card.image-format-poster .card-body {
       overflow-y: hidden;
     }

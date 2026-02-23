@@ -1,7 +1,3 @@
-/* ============================================
-   SETTINGS PANEL
-   ============================================ */
-
 /* Collapsible settings sections */
 .dynamic-views {
   .settings-dropdown-wrapper {
@@ -115,6 +111,7 @@
     padding: 8px 12px;
     background-color: var(--background-secondary);
     cursor: pointer;
+    -webkit-user-select: none;
     user-select: none;
     font-weight: 500;
     font-size: 0.9em;
@@ -125,8 +122,10 @@
       border-radius: 5px;
     }
 
-    &:hover {
-      background-color: var(--background-modifier-hover);
+    @media (hover: hover) {
+      &:hover {
+        background-color: var(--background-modifier-hover);
+      }
     }
 
     .chevron {
@@ -236,6 +235,8 @@ label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
   background-color: var(--interactive-accent) !important;
 }
 
-.toggle-switch:hover .toggle-slider {
-  opacity: 0.9;
+@media (hover: hover) {
+  .toggle-switch:hover .toggle-slider {
+    opacity: 0.9;
+  }
 }

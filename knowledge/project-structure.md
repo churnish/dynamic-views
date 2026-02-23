@@ -115,38 +115,42 @@ dynamic-views/
 │
 ├── styles/                           # SCSS source (compiled to styles.css)
 │   ├── main.scss                     # Entry point — @use's all partials in order
-│   ├── _settings-block.scss          # @settings YAML comment block (Style Settings)
+│   ├── _style-settings.scss          # @settings YAML comment block (Style Settings)
 │   ├── _variables.scss               # Derived CSS custom properties
-│   ├── _accessibility.scss           # Focus rings, focus-visible
-│   ├── _layout.scss                  # Container queries, width system, scroll fade
-│   ├── _toolbar.scss                 # Toolbar, dropdowns, buttons, visibility toggles
-│   ├── _query-editor.scss            # Query dropdown and editor
-│   ├── _settings-panel.scss          # Settings UI panel
-│   ├── _search.scss                  # Search controls
-│   ├── card/                         # Card view partials
-│   │   ├── _grid.scss                # Grid layout, groups, subgrid
-│   │   ├── _card-base.scss           # Card container, borders, backgrounds
-│   │   ├── _card-content.scss        # Thumbnail position layouts
-│   │   ├── _card-header.scss         # Title, subtitle, file type indicators
-│   │   ├── _card-thumbnail.scss      # Thumbnail sizing, crop/contain modes
-│   │   ├── _card-image-viewer.scss   # Image viewer overlay, panzoom
-│   │   └── _card-masonry-covers.scss # Masonry cover height variants
-│   ├── _cover-format.scss            # Cover flexbox system, wrapper positioning
-│   ├── _cover-elements.scss          # Cover element styling, cover-content border
-│   ├── _cover-placeholders.scss      # Placeholder/skeleton styles
-│   ├── _side-cover-spacing.scss      # Side cover layout adjustments
-│   ├── _backdrop-poster-shared.scss  # Shared backdrop/poster base
-│   ├── _background-format.scss       # Background image format
-│   ├── _poster-format.scss           # Poster image format
-│   ├── _slideshow.scss               # Slideshow animations
-│   ├── _properties.scss              # Property row system
-│   ├── _hover-states.scss            # Hover color rules
-│   ├── _masonry.scss                 # Masonry-specific styles
-│   ├── _list-view.scss               # List view styles
-│   ├── _responsive.scss              # Compact viewport, mobile overrides
+│   ├── _focus.scss                   # Focus rings, focus-visible
+│   ├── _container.scss               # Container queries, width system, scroll fade
+│   ├── datacore/                     # Datacore backend UI
+│   │   ├── _toolbar.scss             # Toolbar, dropdowns, buttons
+│   │   ├── _query-editor.scss        # Query dropdown and editor
+│   │   ├── _settings.scss            # View settings panel
+│   │   └── _list-view.scss           # List view styles
+│   ├── _grid-masonry-shared.scss    # Shared card view layout: groups, sticky headers, card base
+│   ├── _grid-view.scss              # Grid view layout: CSS Grid, subgrid, grid spacing
+│   ├── _image-viewer.scss           # Image viewer overlay, panzoom
+│   ├── card/                         # Card internals
+│   │   ├── _core.scss                # Card container, borders, backgrounds
+│   │   ├── _content.scss             # Thumbnail position layouts
+│   │   ├── _header.scss              # Title, subtitle, file type indicators
+│   │   ├── _thumbnail.scss           # Thumbnail sizing, crop/contain modes
+│   │   ├── _masonry-covers.scss      # Masonry cover height variants
+│   │   ├── _cover.scss               # Cover flexbox system, wrapper positioning
+│   │   ├── _cover-elements.scss      # Cover element styling, cover-content border
+│   │   ├── _cover-placeholders.scss  # Placeholder/skeleton styles
+│   │   ├── _side-cover-spacing.scss  # Side cover layout adjustments
+│   │   ├── _backdrop-poster-shared.scss # Shared backdrop/poster base
+│   │   ├── _backdrop.scss            # Backdrop image format
+│   │   ├── _poster.scss              # Poster image format
+│   │   └── _slideshow.scss           # Slideshow animations
+│   ├── _properties.scss              # Property row system, labels, timestamps, paths
+│   ├── _property-colors.scss         # Color presets for labels, text, subtitle, title
+│   ├── _tags.scss                    # Tag styles (outline/fill/plaintext/theme) + color presets
+│   ├── _hover-states.scss            # Hover color rules, cursor gating
+│   ├── _scroll-gradient.scss         # Horizontal/vertical gradient masks for scrollable content
+│   ├── _masonry-view.scss            # Masonry view layout: absolute positioning, flex overrides
+│   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar
 │   └── _utilities.scss               # Utility classes
 │
-├── ref/                              # Reference docs
+├── knowledge/                        # Project knowledge docs
 │   └── ...
 ├── archive/                          # Preserved deprecated code
 │   └── ...

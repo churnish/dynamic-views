@@ -112,7 +112,7 @@ body:not(.dynamic-views-image-viewer-disabled)
     max-width var(--anim-duration-fast, 140ms) ease;
 }
 
-/* Limit zoomed images to 90% viewport (desktop) / 80vh height (mobile, width inherits 100vw from base) */
+/* Limit zoomed images to 90% viewport (desktop) / 80vh height (mobile, width inherits 100vw from initial rule) */
 body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed
   img {

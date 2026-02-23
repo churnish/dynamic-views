@@ -9,7 +9,7 @@ last updated: 2026-02-21
 
 ## Problem
 
-The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from `_style-settings.scss` and adds the selected value as a body class (e.g., `body.dynamic-views-poster-mode-gradient`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
+The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from `_style-settings.scss` and adds the selected value as a body class (e.g., `body.dynamic-views-poster-theme-dark`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
 
 ## Fallback pattern
 
@@ -39,7 +39,7 @@ body:not([class*="dynamic-views-card-background-hover-"])
 
 ## Specificity
 
-`:is()` takes the specificity of its most specific argument. Both `.dynamic-views-poster-mode-gradient` (class = `0,1,0`) and `:not([class*="..."])` (attribute = `0,1,0`) have equal specificity. The fallback branch has the same weight as the explicit branch — no cascade surprises.
+`:is()` takes the specificity of its most specific argument. Both `.dynamic-views-poster-theme-dark` (class = `0,1,0`) and `:not([class*="..."])` (attribute = `0,1,0`) have equal specificity. The fallback branch has the same weight as the explicit branch — no cascade surprises.
 
 ## When a fallback is NOT needed
 

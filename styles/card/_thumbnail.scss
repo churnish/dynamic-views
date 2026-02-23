@@ -102,7 +102,7 @@ body.dynamic-views-open-on-title .dynamic-views .path-separator {
     );
     overflow: hidden;
     border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
-    background-color: var(--dynamic-views-image-background-plain);
+    background-color: var(--dynamic-views-image-background-dimmed);
     pointer-events: none;
   }
 
@@ -123,7 +123,7 @@ body.dynamic-views-show-thumbnail-placeholder
       var(--dynamic-views-image-aspect-ratio, 1)
   );
   border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
-  background-color: var(--dynamic-views-image-background-plain);
+  background-color: var(--dynamic-views-image-background-dimmed);
 }
 
 .dynamic-views {

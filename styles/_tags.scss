@@ -1,0 +1,162 @@
+/* Tag style: Outline (default) - reset all theme styles, apply only plugin styles */
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
+  all: unset;
+  border-radius: var(--pill-radius);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  color: var(--tag-text-color);
+  font-size: 0.875em;
+  line-height: 1;
+  padding: calc(0.25em - 1px) calc(0.65em - 1px);
+  cursor: pointer;
+}
+
+/* Tag outline hover: card (hover intent) */
+@media (hover: hover) {
+  body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+    .dynamic-views
+    .card.hover-intent-active
+    :is(.card-properties, .card-subtitle)
+    .tag:hover {
+    color: color-mix(in hsl, var(--tag-text-color), white 15%);
+  }
+}
+
+/* Tag outline hover: list (immediate) */
+body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+  .dynamic-views
+  .list-properties
+  .tag:hover {
+  color: color-mix(in hsl, var(--tag-text-color), white 15%);
+}
+
+/* Tag style: Fill - colored background based on text color */
+body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag,
+body.dynamic-views-tag-style-fill .dynamic-views .card-subtitle .tag,
+body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
+  border: none;
+  padding: 0.25em 0.65em;
+  background-color: color-mix(in srgb, var(--tag-text-color) 10%, transparent);
+  color: var(--tag-text-color);
+}
+
+/* Tag fill hover: card (hover intent) */
+@media (hover: hover) {
+  body.dynamic-views-tag-style-fill
+    .dynamic-views
+    .card.hover-intent-active
+    :is(.card-properties, .card-subtitle)
+    .tag:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--tag-text-color) 20%,
+      transparent
+    );
+  }
+}
+
+/* Tag fill hover: list (immediate) */
+body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
+  background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
+}
+
+/* Tag style: Theme style - no overrides, inherits Obsidian's a.tag styles */
+
+/* Tag style: Plaintext */
+body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag,
+body.dynamic-views-tag-style-plaintext .dynamic-views .card-subtitle .tag,
+body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* Tag plaintext hover: card (hover intent) */
+@media (hover: hover) {
+  body.dynamic-views-tag-style-plaintext
+    .dynamic-views
+    .card.hover-intent-active
+    :is(.card-properties, .card-subtitle)
+    .tag:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Tag plaintext hover: list (immediate) */
+body.dynamic-views-tag-style-plaintext
+  .dynamic-views
+  .list-properties
+  .tag:hover {
+  text-decoration: underline;
+}
+
+/* Tag color presets - semantic colors applied at element level via semantic color tokens */
+body.dynamic-views-tag-color-faint:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-faint);
+}
+body.dynamic-views-tag-color-muted:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-muted);
+}
+body.dynamic-views-tag-color-normal:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--text-normal);
+}
+
+body.dynamic-views-tag-color-accent {
+  --dynamic-views-tag-color-value: var(--text-accent);
+}
+body.dynamic-views-tag-color-red {
+  --dynamic-views-tag-color-value: var(--color-red);
+}
+body.dynamic-views-tag-color-orange {
+  --dynamic-views-tag-color-value: var(--color-orange);
+}
+body.dynamic-views-tag-color-yellow {
+  --dynamic-views-tag-color-value: var(--color-yellow);
+}
+body.dynamic-views-tag-color-green {
+  --dynamic-views-tag-color-value: var(--color-green);
+}
+body.dynamic-views-tag-color-cyan {
+  --dynamic-views-tag-color-value: var(--color-cyan);
+}
+body.dynamic-views-tag-color-blue {
+  --dynamic-views-tag-color-value: var(--color-blue);
+}
+body.dynamic-views-tag-color-purple {
+  --dynamic-views-tag-color-value: var(--color-purple);
+}
+body.dynamic-views-tag-color-pink {
+  --dynamic-views-tag-color-value: var(--color-pink);
+}
+body.dynamic-views-tag-color-custom {
+  --dynamic-views-tag-color-value: var(
+    --dynamic-views-tag-color-custom,
+    var(--text-faint)
+  );
+}
+/* Custom fallback via semantic color tokens */
+body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle, .list-properties)
+  .tag {
+  --tag-text-color: var(--dynamic-views-tag-color-custom, var(--text-faint));
+}
+
+/* Tag color application (skip when using theme styling) */
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
+  --tag-text-color: var(--dynamic-views-tag-color-value, var(--text-faint));
+}

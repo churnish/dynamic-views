@@ -18,6 +18,7 @@ jest.mock("../../src/constants", () => ({
     imageProperty: "",
     fallbackToEmbeds: "always",
     imageFormat: "thumbnail",
+    posterDisplayMode: "gradient",
     thumbnailSize: 80,
     imagePosition: "right",
     imageFit: "crop",
@@ -60,6 +61,7 @@ const MOCK_VIEW_DEFAULTS: any = {
   imageProperty: "",
   fallbackToEmbeds: "always",
   imageFormat: "thumbnail",
+  posterDisplayMode: "gradient",
   thumbnailSize: 80,
   imagePosition: "right",
   imageFit: "crop",
@@ -188,6 +190,20 @@ describe("readBasesSettings — hidden property visibility", () => {
   });
 });
 
+describe("readBasesSettings — posterDisplayMode", () => {
+  it("should read posterDisplayMode from config", () => {
+    const config = createMockConfig({ posterDisplayMode: "overlay" }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.posterDisplayMode).toBe("overlay");
+  });
+
+  it("should fall back to default for invalid posterDisplayMode", () => {
+    const config = createMockConfig({ posterDisplayMode: "invalid" }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.posterDisplayMode).toBe("gradient");
+  });
+});
+
 describe("readBasesSettings — templateOverrides", () => {
   it("should use templateOverrides when config has no value", () => {
     const config = createMockConfig({}, []);
@@ -248,6 +264,18 @@ describe("extractBasesTemplate", () => {
     const config = createMockConfig({}, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
     expect(result).toEqual({});
+  });
+
+  it("should include non-default posterDisplayMode", () => {
+    const config = createMockConfig({ posterDisplayMode: "overlay" }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    expect(result.posterDisplayMode).toBe("overlay");
+  });
+
+  it("should omit default posterDisplayMode", () => {
+    const config = createMockConfig({ posterDisplayMode: "gradient" }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    expect(result.posterDisplayMode).toBeUndefined();
   });
 
   it("should coerce minimumColumns string to number", () => {

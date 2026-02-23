@@ -1,19 +1,5 @@
-/* Fade-in animation for batch-appended cards */
-/* Clickable card cursor */
-/* Masonry container */
-/* Hide cards during layout recalc - fade out with opacity transition */
-/* Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container) */
-/* Hide end indicator during resize - use display:none to fully remove from flow */
-/* Hide cards until masonry positions them (prevents flash at 0,0) */
-/* Must match positioned cards' CSS context (position + containment) for accurate height measurement */
-/* height: auto overrides grid's height: 100% which causes incorrect 148px skeleton height */
-/* Masonry positioned cards */
-/* Desktop: cards outside scrollport margin hidden by IO-based system */
-/* Spacing between card-header and card-body inside .card-content */
-/* Spacing between elements inside card-body (properties-top, previews, properties-bottom) */
-/* Grid view: card-content fills available space, aligns children to top */
-/* Grid view: title-group grows horizontally inside card-header to fill space beside URL icon */
 .dynamic-views {
+  /* Fade-in animation for batch-appended cards */
   .card.card-fade-in {
     animation: cardFadeIn var(--anim-duration-fast, 140ms) ease-out;
   }
@@ -22,12 +8,15 @@
     cursor: pointer;
   }
 
+  /* Masonry container */
   .masonry-container {
     position: relative;
     height: var(--masonry-height, auto);
     contain: layout style;
   }
 
+  /* Hide cards during layout recalc - fade out with opacity transition.
+     Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container). */
   .masonry-container.masonry-resizing .card,
   .masonry-resizing .masonry-container .card {
     opacity: 0;
@@ -37,10 +26,14 @@
       visibility 0s var(--anim-duration-superfast, 70ms);
   }
 
+  /* Hide end indicator during resize - use display:none to fully remove from flow */
   &:has(.masonry-resizing) .dynamic-views-end-indicator {
     display: none;
   }
 
+  /* Hide cards until masonry positions them (prevents flash at 0,0).
+     Must match positioned cards' CSS context (position + containment) for accurate height measurement.
+     height: auto overrides grid's height: 100% which causes incorrect 148px skeleton height. */
   .masonry-container .card:not(.masonry-positioned) {
     position: absolute;
     opacity: 0;
@@ -48,30 +41,34 @@
     contain: layout style paint;
   }
 
+  // Must not exceed MOUNT_REMEASURE_MS / MASONRY_CORRECTION_MS in
+  // shared/constants.ts — transitions must finish before next reposition tick
+  --masonry-reposition-duration: 200ms;
+
+  /* Masonry positioned cards */
   .card.masonry-positioned {
     position: absolute;
     contain: layout style paint;
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
-      top 200ms ease,
-      left 200ms ease,
+      top var(--masonry-reposition-duration) ease,
+      left var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }
 
-  // Eased transition during post-resize correction and scroll remeasure —
-  // 200ms must match MASONRY_CORRECTION_MS in shared/constants.ts
+  // Eased transition during post-resize correction and scroll remeasure
   .masonry-correcting .card.masonry-positioned {
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
-      top 200ms ease,
-      left 200ms ease,
+      top var(--masonry-reposition-duration) ease,
+      left var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }
 
-  // Instant repositioning during scroll-idle remeasure — overrides base
-  // 140ms transition so positions update in sync with scrollTop compensation
+  // Instant repositioning during scroll-idle remeasure — overrides default
+  // transition so positions update in sync with scrollTop compensation
   .masonry-skip-transition .card.masonry-positioned {
     transition: none !important;
   }
@@ -82,31 +79,36 @@
   .masonry-resize-active .card.masonry-positioned {
     transition:
       opacity var(--anim-duration-superfast, 70ms) ease,
-      top 200ms ease,
-      left 200ms ease,
-      height 200ms ease,
+      top var(--masonry-reposition-duration) ease,
+      left var(--masonry-reposition-duration) ease,
+      height var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease;
   }
 
+  /* Desktop: cards outside scrollport margin hidden by IO-based system */
   .card.content-hidden {
     content-visibility: hidden;
     contain-intrinsic-height: auto 300px;
   }
 
+  /* Spacing between card-header and card-body inside .card-content */
   .card .card-content > * + *:not(:empty) {
     margin-top: var(--size-4-2);
   }
 
+  /* Spacing between elements inside card-body (properties-top, previews, properties-bottom) */
   .card .card-body > * + *:not(:empty) {
     margin-top: var(--size-4-2);
   }
 
+  /* Grid view: card-content fills available space, aligns children to top */
   .dynamic-views-grid .card-previews {
     flex-grow: 1;
     align-items: flex-start;
   }
 
+  /* Grid view: title-group grows horizontally inside card-header to fill space beside URL icon */
   .dynamic-views-grid .card-header .card-title-block {
     flex-grow: 1;
   }
@@ -122,7 +124,7 @@
 }
 
 /* Card border color presets — set shared variable, consumed by ::after and cover-content divider */
-/* Faint (default) — no rule needed, base uses --background-modifier-border */
+/* Faint (default) — no rule needed, default --card-border-color is --background-modifier-border */
 body.dynamic-views-card-border-color-muted .dynamic-views .card {
   --card-border-color: var(--background-modifier-border-hover);
 }
@@ -170,17 +172,6 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
   );
 }
 
-/* Focus ring - appears after hiding rules to win via cascade */
-body .dynamic-views .card:focus-visible::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
-  pointer-events: none;
-  z-index: 10;
-}
-
 /* Mobile: browser-managed content-visibility (IO-based toggling causes
    infinite reflow loop on iOS WebKit) */
 body.is-mobile .dynamic-views .card {
@@ -201,97 +192,14 @@ body:not(.dynamic-views-show-thumbnail-placeholder)
   display: none;
 }
 
-/* Card background options */
+/* Card background options — override --card-bg so placeholder derives from it */
 body.dynamic-views-card-background-transparent .dynamic-views .card {
-  background-color: transparent;
+  --card-bg: var(--dynamic-views-view-background, var(--background-primary));
 }
 
 body.dynamic-views-card-background-custom .dynamic-views .card {
-  background-color: var(
+  --card-bg: var(
     --dynamic-views-card-background-color-custom,
     var(--background-primary-alt)
   );
-}
-
-/* Card background on hover options */
-@media (hover: hover) {
-  /* Transparent (default) */
-  body:not([class*="dynamic-views-card-background-hover-"])
-    .dynamic-views
-    .card.hover-intent-active:hover {
-    background-color: transparent;
-  }
-
-  body.dynamic-views-card-background-hover-tinted
-    .dynamic-views
-    .card.hover-intent-active:hover {
-    background-color: var(--background-primary-alt);
-  }
-
-  body.dynamic-views-card-background-hover-transparent
-    .dynamic-views
-    .card.hover-intent-active:hover {
-    background-color: transparent;
-  }
-
-  body.dynamic-views-card-background-hover-custom
-    .dynamic-views
-    .card.hover-intent-active:hover {
-    background-color: var(
-      --dynamic-views-card-background-color-hover-custom,
-      var(--background-primary-alt)
-    );
-  }
-}
-
-/* Gate pointer cursor behind hover intent on desktop */
-@media (hover: hover) {
-  .dynamic-views .card:not(.hover-intent-active) {
-    &.clickable-card {
-      cursor: default;
-    }
-
-    .card-title a,
-    .card-title .card-title-link {
-      cursor: default;
-    }
-
-    .property a {
-      cursor: default;
-    }
-
-    .folder-segment,
-    .filename-segment {
-      cursor: default;
-    }
-  }
-
-  /* Tags: higher specificity needed (base rule uses body:not() selectors) */
-  .dynamic-views
-    .card:not(.hover-intent-active)
-    :is(.card-properties, .card-subtitle)
-    .tag {
-    cursor: default;
-  }
-
-  /* Poster cards: higher specificity needed (base rule uses body class selector) */
-  body.dynamic-views-open-on-card
-    .dynamic-views
-    .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
-    cursor: default;
-  }
-
-  /* Text cursor: higher specificity needed (base rule uses body.dynamic-views-open-on-title) */
-  body.dynamic-views-open-on-title
-    .dynamic-views
-    .card:not(.hover-intent-active) {
-    .card-text-preview,
-    .card-title,
-    .card-subtitle,
-    .property-label,
-    .property-label-inline,
-    .property-content {
-      cursor: default;
-    }
-  }
 }

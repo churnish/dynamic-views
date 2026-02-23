@@ -52,22 +52,6 @@ body:
     validations:
       required: true
   - type: textarea
-    id: console-logs
-    attributes:
-      label: Console logs (optional)
-      description: |-
-        To share console logs:
-
-        1. Open developer tools in Obsidian (`Ctrl+Shift+I` on Windows/Linux, `Cmd+Option+I` on macOS).
-        2. Open the **Console** tab.
-        3. Reproduce the bug.
-        4. Share any console output that appears below.
-
-        **Note:** Console logs can contain file paths, note titles, and other vault details. Please review before sharing.
-      placeholder: Add console logs here...
-    validations:
-      required: false
-  - type: textarea
     id: additional-info
     attributes:
       label: Additional information (optional)
@@ -90,6 +74,22 @@ body:
       render: text
     validations:
       required: true
+  - type: textarea
+    id: console-logs
+    attributes:
+      label: Console logs (optional)
+      description: |-
+        To share console logs:
+
+        1. Open developer tools in Obsidian (`Ctrl+Shift+I` on Windows/Linux, `Cmd+Option+I` on macOS).
+        2. Open the **Console** tab.
+        3. Reproduce the bug.
+        4. Share any console output that appears below.
+
+        **Note:** Console logs can contain file paths, note titles, and other vault details. Please review before sharing.
+      placeholder: Add console logs here...
+    validations:
+      required: false
   - type: textarea
     id: plugin-settings
     attributes:

@@ -2,46 +2,54 @@
 // All partials loaded in dependency order.
 
 // Settings block (Style Settings plugin YAML) — must be first.
-@use "settings-block";
+@use "style-settings";
 
 // Foundation.
 @use "variables";
-@use "accessibility";
-@use "layout";
+@use "focus";
+@use "container";
 
-// Controls.
-@use "toolbar";
-@use "query-editor";
-@use "settings-panel";
-@use "search";
+// Datacore UI.
+@use "datacore/toolbar";
+@use "datacore/query-editor";
+@use "datacore/settings";
 
-// Card view.
-@use "card/grid";
-@use "card/card-base";
-@use "card/card-content";
-@use "card/card-header";
-@use "card/card-thumbnail";
-@use "card/card-image-viewer";
-@use "card/card-masonry-covers";
+// View layout.
+@use "grid-masonry-shared";
+@use "grid-view";
+
+// Overlays.
+@use "image-viewer";
+
+// Card internals.
+@use "card/core";
+@use "card/content";
+@use "card/header";
+@use "card/thumbnail";
+@use "card/masonry-covers";
 
 // Image formats.
-@use "cover-format";
-@use "cover-elements";
-@use "cover-placeholders";
-@use "side-cover-spacing";
-@use "backdrop-poster-shared";
-@use "background-format";
-@use "poster-format";
-@use "slideshow";
+@use "card/cover";
+@use "card/cover-elements";
+@use "card/cover-placeholders";
+@use "card/side-cover-spacing";
+@use "card/backdrop-poster-shared";
+@use "card/backdrop";
+@use "card/poster";
+@use "card/slideshow";
 
 // Data display.
 @use "properties";
+@use "property-colors";
+@use "tags";
 @use "hover-states";
+@use "scroll-gradient";
 
 // View types.
-@use "masonry";
-@use "list-view";
+@use "masonry-view";
+@use "datacore/list-view";
 
 // Overrides.
-@use "responsive";
+@use "compact";
+@use "plugin-settings";
 @use "utilities";

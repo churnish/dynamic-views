@@ -19,7 +19,7 @@ last updated: 2026-02-19
 | `src/shared/keyboard-nav.ts`       | DOM-based arrow navigation and hover-to-keyboard focus transfer.        |
 | `src/shared/scroll-gradient.ts`    | Horizontal scroll gradients for property rows.                          |
 | `src/shared/property-measure.ts`   | Side-by-side property field width measurement + queued processing.      |
-| `styles/card/_grid.scss`           | Grid-specific CSS — CSS Grid columns, subgrid groups, card sizing.      |
+| `styles/_grid-view.scss`           | Grid-specific CSS — CSS Grid columns, subgrid groups, card sizing.      |
 
 ### Bases
 

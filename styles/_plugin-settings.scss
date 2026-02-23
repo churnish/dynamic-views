@@ -1,0 +1,94 @@
+/* Settings header */
+.dynamic-views-settings-header {
+  margin-bottom: var(--size-4-6);
+}
+
+.dynamic-views-settings-header-links {
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+}
+
+.dynamic-views-header-link {
+  color: var(--text-muted);
+  padding: 4px 10px 0;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    color: var(--text-muted) !important;
+    text-decoration: none !important;
+    transform: translateY(-1px);
+  }
+}
+
+.dynamic-views-link-icon {
+  display: flex;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+  }
+}
+
+/* Appearance group */
+.dynamic-views-appearance-group .setting-item-description {
+  padding-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:first-child {
+  margin-top: 0;
+}
+
+.dynamic-views-appearance-group .setting-item-description:last-child {
+  margin-bottom: 0;
+}
+
+.dynamic-views-appearance-group .setting-items {
+  margin-bottom: 0;
+  background-color: transparent;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+}
+
+/* Indented sub-settings */
+.setting-sub-items {
+  margin-inline-start: 20px;
+  padding-left: 1em;
+  position: relative;
+}
+
+.setting-sub-items::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+/* Add padding only when visible and not last.
+   Currently inactive as sub-items is last child; retained for future structure changes. */
+.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
+  padding-bottom: var(--size-4-4, 16px);
+}
+
+.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item)::before {
+  bottom: var(--size-4-4, 16px);
+}
+
+/* Remove bottom padding from setting when sub-items hidden and last in group */
+.setting-items
+  > .setting-item:has(+ .setting-sub-items.dynamic-views-hidden:last-child) {
+  padding-bottom: 0;
+}

@@ -1,24 +1,5 @@
-/* ==================== CARD COVER FORMAT - FLEXBOX SYSTEM ==================== */
-
-/* Base card setup for cover format */
-/* Card content flex setup */
-/* Cover format: spacing between cover wrapper and content wrapper is handled
-   by cover wrapper margins (negative edge-bleed + positive spacing margins) */
-/* Remove spacing from properties-top when it's first visible element (no header) */
-/* Title-subtitle: explicitly zero gap (owl selector would add spacing; title and subtitle should sit flush) */
-/* ==================== COVER WRAPPER POSITIONING ==================== */
-/* Cover wrapper: match card corner rounding where wrapper meets card edge.
-   Card overflow:hidden alone doesn't reliably clip at rounded corners in Chromium. */
-/* Cover-top: wrapper with negative margins to bleed to edges */
-/* Cover-bottom: wrapper at end with edge-bleeding margins */
-/* Cover-bottom placeholder: expands to fill remaining space like actual cover */
-/* ==================== COVER-ONLY CARDS ==================== */
-/* When cover is the only visible element, fill entire card */
-/* Cover-only cards: zero padding, reset wrapper margins */
-/* Reset negative margins since padding is 0 */
-/* Cover-left: wrapper positioned at edges */
-/* Cover-right: wrapper positioned at edges */
 .dynamic-views {
+  /* Core card setup for cover format */
   .card.image-format-cover {
     position: relative;
     overflow: hidden;
@@ -27,15 +8,18 @@
     flex-direction: column;
   }
 
+  /* Card content flex setup */
   .card.image-format-cover .card-previews {
     flex-direction: row;
     gap: var(--size-4-2);
   }
 
+  /* Remove spacing from properties-top when it's first visible element (no header) */
   .card.image-format-cover:not(:has(.card-header)) .card-properties-top {
     margin-top: 0;
   }
 
+  /* Title-subtitle: explicitly zero gap (owl selector would add spacing; title and subtitle should sit flush) */
   .card.image-format-cover:has(
       .card-cover-wrapper:not(.card-cover-wrapper-placeholder)
     )
@@ -47,6 +31,12 @@
     margin-top: 0;
   }
 
+  /* ============================================
+     COVER WRAPPER POSITIONING
+     ============================================ */
+
+  /* Cover wrapper: match card corner rounding where wrapper meets card edge.
+     Card overflow:hidden alone doesn't reliably clip at rounded corners in Chromium. */
   .card.image-format-cover {
     --cover-inner-radius: max(
       var(--dynamic-views-cover-border-radius, 0px),
@@ -64,6 +54,7 @@
     overflow: hidden;
   }
 
+  /* Cover-top: wrapper with negative margins to bleed to edges */
   .card.card-cover-top.image-format-cover .card-cover-wrapper {
     border-radius: var(--cover-inner-radius) var(--cover-inner-radius)
       var(--cover-non-edge-radius) var(--cover-non-edge-radius);
@@ -75,6 +66,7 @@
       calc(var(--cover-inset-computed) - var(--dynamic-views-card-padding, 8px));
   }
 
+  /* Cover-bottom: wrapper at end with edge-bleeding margins */
   .card.card-cover-bottom.image-format-cover .card-cover-wrapper {
     border-radius: var(--cover-non-edge-radius) var(--cover-non-edge-radius)
       var(--cover-inner-radius) var(--cover-inner-radius);
@@ -90,12 +82,18 @@
     );
   }
 
+  /* Cover-bottom placeholder: expands to fill remaining space like actual cover */
   .card.card-cover-bottom.image-format-cover
     .card-cover-wrapper.card-cover-wrapper-placeholder {
     flex-grow: 1;
     min-height: 0;
   }
 
+  /* ============================================
+     COVER-ONLY CARDS
+     ============================================ */
+
+  /* Cover-only cards: zero padding, reset wrapper margins */
   .card.card-cover-top.image-format-cover:not(
       :has(
         .card-header,
@@ -115,6 +113,7 @@
     padding: 0;
   }
 
+  /* Reset negative margins since padding is 0 */
   .card.card-cover-top.image-format-cover:not(
       :has(
         .card-header,
@@ -136,6 +135,7 @@
     margin: 0;
   }
 
+  /* Cover-left: wrapper positioned at edges */
   .card.card-cover-left.image-format-cover .card-cover-wrapper {
     border-radius: var(--cover-inner-radius) var(--cover-non-edge-radius)
       var(--cover-non-edge-radius) var(--cover-inner-radius);
@@ -152,6 +152,7 @@
     );
   }
 
+  /* Cover-right: wrapper positioned at edges */
   .card.card-cover-right.image-format-cover .card-cover-wrapper {
     border-radius: var(--cover-non-edge-radius) var(--cover-inner-radius)
       var(--cover-inner-radius) var(--cover-non-edge-radius);

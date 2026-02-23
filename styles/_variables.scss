@@ -1,8 +1,5 @@
-/* ============================================
-   COLOR VARIABLES
-   ============================================ */
-
 /* Derived CSS variables and custom color compositions */
+
 body {
   /* Clamp thumbnail aspect ratio to 0.5-2.0 range */
   --dynamic-views-thumbnail-aspect-ratio: clamp(
@@ -12,7 +9,9 @@ body {
   );
   --dynamic-views-list-separator: ", ";
   --dynamic-views-empty-value-marker: "—";
-  /* Custom colors from HSL components (when undefined, falls back) */
+  /* Custom colors from HSL components — hover variants shift hue slightly
+     cooler (-3°), minimal saturation boost (×1.02), noticeable lightness
+     increase (×1.15). When undefined, CSS ignores the declaration. */
   --dynamic-views-property-color-with-labels-custom: hsl(
     var(--dynamic-views-property-color-with-labels-custom-h),
     var(--dynamic-views-property-color-with-labels-custom-s),
@@ -43,29 +42,4 @@ body {
     calc(var(--dynamic-views-tag-color-custom-s) * 1.02),
     calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
   );
-  /* Plain background for covers/thumbnails without images */
-  --dynamic-views-image-background-plain: #eeeeee;
-}
-.theme-dark {
-  --dynamic-views-image-background-plain: #1a1a1a;
-}
-
-/* Appearance section description styling */
-.dynamic-views-appearance-group .setting-item-description {
-  padding-top: 0;
-}
-
-.dynamic-views-appearance-group .setting-item-description:first-child {
-  margin-top: 0;
-}
-
-.dynamic-views-appearance-group .setting-item-description:last-child {
-  margin-bottom: 0;
-}
-
-.dynamic-views-appearance-group .setting-items {
-  margin-bottom: 0;
-  background-color: transparent;
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
 }

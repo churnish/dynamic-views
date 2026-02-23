@@ -41,13 +41,13 @@ body.dynamic-views-cover-crop-bottom
 
 /* Cover background variants */
 body:is(
-    .dynamic-views-cover-bg-plain,
+    .dynamic-views-cover-bg-dimmed,
     :not([class*="dynamic-views-cover-bg-"])
   )
   .dynamic-views
   .card.image-format-cover
   .card-cover {
-  background-color: var(--dynamic-views-image-background-plain);
+  background-color: var(--dynamic-views-image-background-dimmed);
 }
 body.dynamic-views-cover-bg-transparent
   .dynamic-views
@@ -61,7 +61,7 @@ body.dynamic-views-cover-bg-custom
   .card-cover {
   background-color: var(
     --dynamic-views-cover-background-color-custom,
-    var(--dynamic-views-image-background-plain)
+    var(--dynamic-views-image-background-dimmed)
   );
 }
 

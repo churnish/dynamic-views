@@ -1,7 +1,3 @@
-/* ============================================
-   VIEW-SPECIFIC STYLES: LIST VIEW
-   ============================================ */
-
 .dynamic-views .list-view {
   margin: 0;
   padding-left: 0;
@@ -44,10 +40,12 @@
 .dynamic-views .list-link {
   color: var(--link-color);
   text-decoration: none;
-}
 
-.list-link:hover {
-  color: var(--link-color-hover);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--link-color-hover);
+    }
+  }
 }
 
 .dynamic-views .list-properties {

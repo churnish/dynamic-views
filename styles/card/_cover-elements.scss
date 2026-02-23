@@ -1,16 +1,5 @@
-/* ==================== COVER ELEMENT STYLING ==================== */
-
-/* Cover-top/bottom: aspect ratio using padding-top hack */
-/* Cover-top: fixed aspect ratio using padding-top trick */
-/* Cover-bottom: expands to fill remaining space */
-/* Cover-bottom placeholder: expands to match cover dimensions */
-/* Grid view: cover-bottom — fixed cover height */
-/* Grid cover-bottom wrapper: fixed size, no bottom margin */
-/* Grid cover-bottom: push properties-bottom to bottom of card */
-/* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
-/* Compensate: card bottom padding = inset (instead of card-padding) */
-/* All covers: border radius */
 .dynamic-views {
+  /* Cover-top: fixed aspect ratio using padding-top trick */
   .card.card-cover-top.image-format-cover .card-cover {
     width: 100%;
     height: 0;
@@ -19,6 +8,7 @@
     overflow: hidden;
   }
 
+  /* Cover-bottom: expands to fill remaining space */
   .card.card-cover-bottom.image-format-cover .card-cover {
     width: 100%;
     height: 100%;
@@ -27,15 +17,18 @@
     overflow: hidden;
   }
 
+  /* Cover-bottom placeholder: expands to match cover dimensions */
   .card.card-cover-bottom.image-format-cover .card-cover-placeholder {
     height: 100%;
     min-height: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
   }
 
+  /* Grid: cover-bottom — fixed cover height */
   .dynamic-views-grid .card.card-cover-bottom .card-previews {
     flex-grow: 0;
   }
 
+  /* Grid cover-bottom wrapper: fixed size, no bottom margin */
   .dynamic-views-grid
     .card.card-cover-bottom.image-format-cover
     .card-cover-wrapper {
@@ -44,6 +37,7 @@
     margin-bottom: 0;
   }
 
+  /* Grid cover-bottom: push properties-bottom to bottom of card */
   .dynamic-views-grid
     .card.card-cover-bottom.image-format-cover
     .card-properties-bottom:not(:first-child) {
@@ -58,6 +52,7 @@
     padding-top: 0;
   }
 
+  /* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */
   .dynamic-views-grid .card.card-cover-bottom.image-format-cover {
     padding-bottom: var(--cover-inset-computed);
   }
@@ -76,6 +71,7 @@
     padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
   }
 
+  /* All covers: border radius */
   .card.image-format-cover .card-cover {
     border-radius: var(--dynamic-views-cover-border-radius, 0);
   }
@@ -97,9 +93,8 @@ body.dynamic-views-cover-circular
   border-radius: 50%;
 }
 
-/* Cover-left/right: full height */
-/* Image element inside cover */
 .dynamic-views {
+  /* Cover-left/right: full height */
   .card.card-cover-left.image-format-cover .card-cover,
   .card.card-cover-right.image-format-cover .card-cover {
     width: 100%;
@@ -108,6 +103,7 @@ body.dynamic-views-cover-circular
     overflow: hidden;
   }
 
+  /* Image element inside cover */
   .card.image-format-cover .card-cover .dynamic-views-image-embed {
     position: absolute;
     top: 0;
@@ -151,7 +147,7 @@ body.dynamic-views-cover-circular
 /* Hover zoom for cover images (desktop only).
    Transitions are always declared; the scale/transform change only fires via .cover-hover-active (JS hover intent). */
 @media (hover: hover) {
-  /* Base transition for single-image covers */
+  /* Default transition for single-image covers */
   .dynamic-views
     .card.image-format-cover
     .card-cover:not(.card-cover-slideshow)
@@ -159,17 +155,6 @@ body.dynamic-views-cover-circular
     img {
     transition:
       transform var(--anim-duration-fast, 140ms) ease,
-      opacity var(--anim-duration-fast, 140ms) ease;
-  }
-
-  /* Base transition for slideshow covers - use scale property to not conflict with slide animations */
-  .dynamic-views
-    .card.image-format-cover
-    .card-cover-slideshow
-    .dynamic-views-image-embed
-    img {
-    transition:
-      scale var(--anim-duration-fast, 140ms) ease,
       opacity var(--anim-duration-fast, 140ms) ease;
   }
 
@@ -191,7 +176,9 @@ body.dynamic-views-cover-circular
   }
 }
 
-/* ==================== COVER-CONTENT BORDER ==================== */
+/* ============================================
+   COVER-CONTENT BORDER
+   ============================================ */
 
 /* Border between cover and card content — inherits --card-border-color from card */
 body.dynamic-views-show-cover-border

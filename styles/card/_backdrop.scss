@@ -1,6 +1,4 @@
-/* ==================== BACKGROUND FORMAT ==================== */
-
-/* Overlay for text readability */
+/* Overlay for readability */
 .dynamic-views {
   .card.image-format-backdrop .card-backdrop::after {
     content: "";
@@ -11,7 +9,7 @@
   }
 }
 
-/* Overlay theme: Match theme (default — also applies when no theme class set) */
+/* Overlay theme: Match theme (default) */
 body:is(
     .dynamic-views-backdrop-theme-match,
     :not(

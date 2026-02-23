@@ -1,31 +1,3 @@
-/* ============================================
-   CONTAINER & LAYOUT STYLES
-   ============================================ */
-
-/* Title alignment (left is default in base CSS) */
-body.dynamic-views-title-align-center .dynamic-views .card-title {
-  text-align: center;
-}
-
-body.dynamic-views-title-align-right .dynamic-views .card-title {
-  text-align: right;
-}
-
-/* Title scroll mode */
-body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
-  display: block;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
-  white-space: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-/* Mirror Obsidian's --bases-view-padding (scoped to .bases-view) for width parity */
-.dynamic-views {
-  --bases-view-padding: var(--size-4-3);
-}
-
 /* Match Obsidian's native --bases-embed-padding for card views.
    Obsidian defines this per data-view-type; plugin views need their own. */
 .bases-view[data-view-type="dynamic-views-grid"],
@@ -51,6 +23,7 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
   bottom: 0;
   z-index: 1;
   display: block;
+  /* Fade height — tall enough to span ~3 card rows of scroll proximity */
   height: 80px;
   margin-top: -80px;
   background: linear-gradient(

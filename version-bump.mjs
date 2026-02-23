@@ -1,9 +1,10 @@
 import { readFileSync, writeFileSync } from "fs";
 import { execSync } from "child_process";
 
+const isPreflight = process.argv.includes("--preflight");
 const targetVersion = process.env.npm_package_version;
 
-// ── Pre-flight check (abort before any side effects) ─────────────────
+// ── Pre-flight checks (run in preversion, before npm touches package.json) ──
 
 // Full lint + catch any console.debug that isn't behind a DEBUG_ gate
 try {
@@ -52,7 +53,10 @@ try {
   }
 }
 
-// ── Side effects ─────────────────────────────────────────────────────
+// In preflight mode, exit after validation — no side effects
+if (isPreflight) process.exit(0);
+
+// ── Side effects (run in version, after npm bumps package.json) ─────
 
 // Fetch latest README from GitHub
 try {

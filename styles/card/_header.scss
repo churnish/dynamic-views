@@ -1,4 +1,3 @@
-/* Extension suffix element (hidden by default, shown in Extension mode) */
 .dynamic-views {
   .card .card-header {
     display: flex;
@@ -30,6 +29,7 @@
     overflow: hidden;
   }
 
+  /* Extension suffix element (hidden by default, shown in Extension mode) */
   .card-title-ext-suffix {
     display: none;
   }
@@ -65,9 +65,6 @@ body.dynamic-views-file-type-ext
   text-decoration: none;
 }
 
-/* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
-/* When URL icon is only child (no title/subtitle), push to right */
-/* File type indicator styles */
 .dynamic-views {
   .card-title-url-icon {
     flex-shrink: 0;
@@ -88,6 +85,7 @@ body.dynamic-views-file-type-ext
     pointer-events: none;
   }
 
+  /* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
   .dynamic-views
     .card.image-format-poster.hover-intent-active
     .card-title-url-icon:hover {
@@ -97,10 +95,12 @@ body.dynamic-views-file-type-ext
 }
 
 .dynamic-views {
+  /* When URL icon is only child (no title/subtitle), push to right */
   .card-header .card-title-url-icon:only-child {
     margin-left: auto;
   }
 
+  /* File type indicator styles */
   .card-title-ext {
     display: none;
   }
@@ -182,14 +182,10 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     opacity: 0.5;
   }
 
-  /* iOS WKWebView compositor bug: opacity property on <a> inside position:absolute
-     card causes the card to visually shift right momentarily.
-     Replace Obsidian's a.mobile-tap { opacity: 0.5 } with filter: opacity()
-     which renders identically but avoids the compositor layer shift.
-     Do NOT add transition: filter — animating filter also triggers the bug. */
+  /* iOS WKWebView compositor bug: opacity on <a> inside position:absolute card
+     causes horizontal shift. Block Obsidian's a.mobile-tap { opacity: 0.5 }. */
   .card-title a.mobile-tap {
     opacity: 1;
-    filter: opacity(0.5);
   }
 }
 
@@ -216,8 +212,6 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   }
 }
 
-/* Subtitle property content inherits color from subtitle (exclude links) */
-/* Subtitle property-content: use line-height instead of fixed min-height */
 .dynamic-views {
   .card-subtitle {
     color: var(--text-faint);
@@ -232,11 +226,13 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     line-height: var(--line-height-tight);
   }
 
+  /* Subtitle property content inherits color from subtitle (exclude links) */
   .card-subtitle .property-content,
   .card-subtitle .property-content *:not(.internal-link, .external-link, a) {
     color: inherit;
   }
 
+  /* Subtitle property-content: use line-height instead of fixed min-height */
   .card-subtitle .property-content {
     min-height: 0;
   }
@@ -267,8 +263,6 @@ body.dynamic-views-subtitle-align-right .dynamic-views .card-subtitle {
 }
 
 /* Subtitle wrap mode (default) - override property-content-wrapper's overflow */
-/* Allow path-wrapper to wrap in subtitle */
-/* Allow path segments to word-break in subtitle */
 .dynamic-views {
   .card-subtitle .property-content-wrapper {
     overflow: hidden;
@@ -276,6 +270,7 @@ body.dynamic-views-subtitle-align-right .dynamic-views .card-subtitle {
   }
 }
 
+/* Allow path-wrapper to wrap in subtitle */
 body:not(.dynamic-views-subtitle-overflow-scroll)
   .dynamic-views
   .card-subtitle
@@ -285,6 +280,7 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
   flex-wrap: wrap;
 }
 
+/* Allow path segments to word-break in subtitle */
 body:not(.dynamic-views-subtitle-overflow-scroll)
   .dynamic-views
   .card-subtitle
@@ -360,8 +356,7 @@ body.dynamic-views-subtitle-overflow-scroll
   white-space: nowrap;
 }
 
-/* Title divider line (shown when class-toggle is ON) */
-/* Only show divider when card has content below title (excludes cover-bottom-only cards) */
+/* Title divider line — only when card has content below title (excludes cover-bottom-only cards) */
 body.dynamic-views-title-divider
   .dynamic-views
   .card:has(.card-previews, .card-properties-top, .card-properties-bottom)
@@ -387,4 +382,23 @@ body.dynamic-views-subtitle-above
     flex-direction: row;
     gap: var(--size-4-2);
   }
+}
+
+/* Title alignment (left is default in standard CSS) */
+body.dynamic-views-title-align-center .dynamic-views .card-title {
+  text-align: center;
+}
+
+body.dynamic-views-title-align-right .dynamic-views .card-title {
+  text-align: right;
+}
+
+/* Title scroll mode */
+body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }

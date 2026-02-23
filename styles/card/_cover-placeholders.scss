@@ -1,23 +1,21 @@
-/* ==================== COVER PLACEHOLDERS ==================== */
-
-/* Placeholder base styles: hidden by default, with border radius and background */
+/* Placeholder core styles: hidden by default, with border radius and background */
 .dynamic-views {
   .card.image-format-cover .card-cover-placeholder {
     display: none;
     border-radius: var(--dynamic-views-cover-border-radius, 0);
-    background-color: var(--dynamic-views-image-background-plain);
+    background-color: var(--dynamic-views-image-background-dimmed);
   }
 }
 
 /* Placeholder background: follows cover background setting */
 body:is(
-    .dynamic-views-cover-bg-plain,
+    .dynamic-views-cover-bg-dimmed,
     :not([class*="dynamic-views-cover-bg-"])
   )
   .dynamic-views
   .card.image-format-cover
   .card-cover-placeholder {
-  background-color: var(--dynamic-views-image-background-plain);
+  background-color: var(--dynamic-views-image-background-dimmed);
 }
 /* Custom */
 body.dynamic-views-cover-bg-custom
@@ -26,7 +24,7 @@ body.dynamic-views-cover-bg-custom
   .card-cover-placeholder {
   background-color: var(
     --dynamic-views-cover-background-color-custom,
-    var(--dynamic-views-image-background-plain)
+    var(--dynamic-views-image-background-dimmed)
   );
 }
 /* Transparent */
@@ -37,7 +35,7 @@ body.dynamic-views-cover-bg-transparent
   background-color: transparent;
 }
 
-/* Show placeholder in grid view by default (when no Style Settings class present) */
+/* Show placeholder in Grid by default (when no Style Settings class present) */
 body:not(.dynamic-views-show-cover-placeholder-masonry):not(
     .dynamic-views-show-cover-placeholder-both
   ):not(.dynamic-views-show-cover-placeholder-none)
@@ -77,7 +75,7 @@ body:not(.dynamic-views-show-cover-placeholder-masonry):not(
   height: 100%;
 }
 
-/* Show placeholder for top/bottom covers in grid view */
+/* Show placeholder for top/bottom covers in Grid */
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-grid
@@ -104,7 +102,7 @@ body.dynamic-views-show-cover-placeholder-both
   padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }
 
-/* Show placeholder for top/bottom covers in masonry view */
+/* Show placeholder for top/bottom covers in Masonry */
 body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views
   .dynamic-views-masonry
@@ -131,7 +129,7 @@ body.dynamic-views-show-cover-placeholder-both
   padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }
 
-/* Show placeholder for left/right covers in grid view */
+/* Show placeholder for left/right covers in Grid */
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-grid
@@ -157,7 +155,7 @@ body.dynamic-views-show-cover-placeholder-both
   height: 100%;
 }
 
-/* Show placeholder for left/right covers in masonry view */
+/* Show placeholder for left/right covers in Masonry */
 body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views
   .dynamic-views-masonry
@@ -185,7 +183,7 @@ body.dynamic-views-show-cover-placeholder-both
 
 /* Hide placeholder-only wrappers when placeholder shouldn't show */
 
-/* Grid view: hide when setting is "In Masonry view" or "Don't show" */
+/* Grid: hide when setting is "In Masonry" or "Don't show" */
 body.dynamic-views-show-cover-placeholder-masonry
   .dynamic-views
   .dynamic-views-grid
@@ -197,7 +195,7 @@ body.dynamic-views-show-cover-placeholder-none
   display: none;
 }
 
-/* Masonry view: hide when setting is "In Grid view" or "Don't show" */
+/* Masonry: hide when setting is "In Grid" or "Don't show" */
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-masonry

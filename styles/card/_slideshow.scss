@@ -1,0 +1,236 @@
+.dynamic-views {
+  /* Dual stacked images for slideshow */
+  .slideshow-img {
+    position: absolute !important; /* !important required - without it, images stack vertically causing blank slides */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Higher specificity to override .card.image-format-cover .card-cover img z-index */
+  .card.image-format-cover .card-cover .slideshow-img-current {
+    z-index: 2 !important; /* !important required - ensures current image displays above next image */
+  }
+
+  .card.image-format-cover .card-cover .slideshow-img-next {
+    z-index: 1;
+  }
+
+  /* Hide next image when not animating (empty src shows broken icon) */
+  .slideshow-img-next:not(.slideshow-enter-left):not(.slideshow-enter-right) {
+    visibility: hidden;
+  }
+}
+
+/* Slideshow animations - dual image choreography */
+@keyframes slideshow-exit-left {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideshow-exit-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideshow-enter-left {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideshow-enter-right {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Navigation arrows */
+.dynamic-views {
+  .slideshow-exit-left {
+    animation: slideshow-exit-left var(--anim-duration-moderate, 300ms) ease
+      forwards;
+  }
+
+  .slideshow-exit-right {
+    animation: slideshow-exit-right var(--anim-duration-moderate, 300ms) ease
+      forwards;
+  }
+
+  .slideshow-enter-left {
+    animation: slideshow-enter-left var(--anim-duration-moderate, 300ms) ease
+      forwards;
+  }
+
+  .slideshow-enter-right {
+    animation: slideshow-enter-right var(--anim-duration-moderate, 300ms) ease
+      forwards;
+  }
+
+  .slideshow-nav-left,
+  .slideshow-nav-right {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity var(--anim-duration-moderate, 300ms) ease;
+  }
+
+  .slideshow-nav-left {
+    left: var(--size-2-2);
+  }
+
+  .slideshow-nav-right {
+    right: var(--size-2-2);
+  }
+}
+
+/* Show arrows on hover (desktop only - mobile uses swipe gestures) */
+@media (hover: hover) {
+  .dynamic-views {
+    .card-cover-slideshow:hover .slideshow-nav-left,
+    .card-cover-slideshow:hover .slideshow-nav-right {
+      opacity: 1;
+    }
+
+    /* Slideshow cover transition — uses scale (not transform) to avoid conflicting with slide animations */
+    .card.image-format-cover
+      .card-cover-slideshow
+      .dynamic-views-image-embed
+      img {
+      transition:
+        scale var(--anim-duration-fast, 140ms) ease,
+        opacity var(--anim-duration-fast, 140ms) ease;
+    }
+  }
+}
+
+/* Arrow icons */
+.dynamic-views {
+  .slideshow-nav-left svg,
+  .slideshow-nav-right svg {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
+      drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+  }
+}
+
+.theme-light .dynamic-views .slideshow-nav-left svg,
+.theme-light .dynamic-views .slideshow-nav-right svg {
+  color: white;
+}
+
+.theme-dark .dynamic-views .slideshow-nav-left svg,
+.theme-dark .dynamic-views .slideshow-nav-right svg {
+  color: var(--color-base-100);
+}
+
+/* Mobile: Hide nav arrows (use swipe gestures instead) */
+.is-mobile .dynamic-views .slideshow-nav-left,
+.is-mobile .dynamic-views .slideshow-nav-right {
+  display: none;
+}
+
+/* Hide nav arrows when setting enabled */
+body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-left,
+body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
+  display: none;
+}
+
+.dynamic-views {
+  /* Slideshow indicator */
+  .slideshow-indicator {
+    position: absolute;
+    right: max(calc(var(--dynamic-views-card-padding, 8px) - 2px), 4px);
+    top: max(calc(var(--dynamic-views-card-padding, 8px) - 1px), 4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    z-index: 3;
+    opacity: 1;
+    pointer-events: none;
+    transition: opacity var(--anim-duration-moderate, 300ms) ease;
+  }
+
+  /* Hide indicator when nav buttons appear on hover */
+  .card-cover-slideshow:hover .slideshow-indicator {
+    opacity: 0;
+  }
+
+  .slideshow-indicator svg {
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
+      drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+  }
+}
+
+/* Hide slideshow indicator when toggle is on */
+body.dynamic-views-hide-slideshow-indicator
+  .dynamic-views
+  .slideshow-indicator {
+  display: none;
+}
+
+.theme-light .dynamic-views .slideshow-indicator svg {
+  color: white;
+}
+
+.theme-dark .dynamic-views .slideshow-indicator svg {
+  color: var(--color-base-100);
+}
+
+/* Mobile: Match Obsidian's larger .text-icon-button sizing */
+.is-mobile .dynamic-views .slideshow-indicator {
+  width: 22px;
+  height: 22px;
+}
+
+.is-mobile .dynamic-views .slideshow-indicator svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Hide slideshow controls when only 1 valid image remains (broken images discovered at runtime) */
+.slideshow-single {
+  .slideshow-indicator,
+  .slideshow-nav-left,
+  .slideshow-nav-right {
+    display: none;
+  }
+}

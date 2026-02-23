@@ -1,11 +1,3 @@
-/* ============================================
-   DATACORE & BASES VIEW STYLES
-   ============================================ */
-
-/* ============================================
-   FOCUS & ACCESSIBILITY STYLES
-   ============================================ */
-
 .dynamic-views button:not(.clickable-icon) {
   box-shadow: none !important;
 }
@@ -41,4 +33,15 @@
 
 .dynamic-views .card:focus-visible {
   outline: none;
+}
+
+/* Card focus ring — uses ::after so it renders on top of covers */
+body .dynamic-views .card:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+  pointer-events: none;
+  z-index: 10;
 }

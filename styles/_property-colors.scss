@@ -1,352 +1,91 @@
-/* Property label color presets - semantic colors applied at element level via semantic color tokens */
-body.dynamic-views-property-label-color-faint
-  .dynamic-views
-  :is(.property-label, .property-label-inline) {
-  color: var(--text-faint);
-}
-body.dynamic-views-property-label-color-muted
-  .dynamic-views
-  :is(.property-label, .property-label-inline) {
-  color: var(--text-muted);
-}
-body.dynamic-views-property-label-color-normal
-  .dynamic-views
-  :is(.property-label, .property-label-inline) {
-  color: var(--text-normal);
+// Color setting mixin — generates semantic, preset, and custom color rules.
+// Body classes follow the pattern: body.dynamic-views-{class-stem}-{variant}.
+// CSS variable for preset/custom values: --dynamic-views-{var-stem}-value.
+@mixin color-setting(
+  $class-stem,
+  $var-stem: $class-stem,
+  $selector: null,
+  $fallback: --text-faint,
+  $property: color,
+  $include-semantics: true,
+  $include-accent: true,
+  $include-custom: true
+) {
+  $colors: "red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink";
+
+  // Semantic text variants — applied directly on target elements
+  @if $include-semantics and $selector {
+    @each $variant in faint, muted, normal {
+      body.dynamic-views-#{$class-stem}-#{$variant}
+        .dynamic-views
+        #{$selector} {
+        #{$property}: var(--text-#{$variant});
+      }
+    }
+  }
+
+  // Accent preset — body-level variable
+  @if $include-accent {
+    body.dynamic-views-#{$class-stem}-accent {
+      --dynamic-views-#{$var-stem}-value: var(--text-accent);
+    }
+  }
+
+  // Color presets — body-level variable
+  @each $color in $colors {
+    body.dynamic-views-#{$class-stem}-#{$color} {
+      --dynamic-views-#{$var-stem}-value: var(--color-#{$color});
+    }
+  }
+
+  // Custom picker — body-level variable + direct element override with fallback
+  @if $include-custom {
+    body.dynamic-views-#{$class-stem}-custom {
+      --dynamic-views-#{$var-stem}-value: var(
+        --dynamic-views-#{$class-stem}-custom,
+        var(#{$fallback})
+      );
+    }
+    @if $selector {
+      body.dynamic-views-#{$class-stem}-custom .dynamic-views #{$selector} {
+        #{$property}: var(
+          --dynamic-views-#{$class-stem}-custom,
+          var(#{$fallback})
+        );
+      }
+    }
+  }
 }
 
-body.dynamic-views-property-label-color-accent {
-  --dynamic-views-property-label-color-value: var(--text-accent);
-}
-body.dynamic-views-property-label-color-red {
-  --dynamic-views-property-label-color-value: var(--color-red);
-}
-body.dynamic-views-property-label-color-orange {
-  --dynamic-views-property-label-color-value: var(--color-orange);
-}
-body.dynamic-views-property-label-color-yellow {
-  --dynamic-views-property-label-color-value: var(--color-yellow);
-}
-body.dynamic-views-property-label-color-green {
-  --dynamic-views-property-label-color-value: var(--color-green);
-}
-body.dynamic-views-property-label-color-cyan {
-  --dynamic-views-property-label-color-value: var(--color-cyan);
-}
-body.dynamic-views-property-label-color-blue {
-  --dynamic-views-property-label-color-value: var(--color-blue);
-}
-body.dynamic-views-property-label-color-purple {
-  --dynamic-views-property-label-color-value: var(--color-purple);
-}
-body.dynamic-views-property-label-color-pink {
-  --dynamic-views-property-label-color-value: var(--color-pink);
-}
-body.dynamic-views-property-label-color-custom {
-  --dynamic-views-property-label-color-value: var(
-    --dynamic-views-property-label-color-custom,
-    var(--text-faint)
-  );
-}
-/* Custom fallback via semantic color tokens */
-body.dynamic-views-property-label-color-custom
-  .dynamic-views
-  :is(.property-label, .property-label-inline) {
-  color: var(--dynamic-views-property-label-color-custom, var(--text-faint));
-}
-
-/* Property text color presets - with labels - semantic colors via semantic color tokens */
-body.dynamic-views-property-color-with-labels-faint
-  .dynamic-views
-  .property:has(:is(.property-label, .property-label-inline)) {
-  color: var(--text-faint);
-}
-body.dynamic-views-property-color-with-labels-muted
-  .dynamic-views
-  .property:has(:is(.property-label, .property-label-inline)) {
-  color: var(--text-muted);
-}
-body.dynamic-views-property-color-with-labels-normal
-  .dynamic-views
-  .property:has(:is(.property-label, .property-label-inline)) {
-  color: var(--text-normal);
-}
-
-body.dynamic-views-property-color-with-labels-accent {
-  --dynamic-views-property-with-label-color-value: var(--text-accent);
-}
-body.dynamic-views-property-color-with-labels-red {
-  --dynamic-views-property-with-label-color-value: var(--color-red);
-}
-body.dynamic-views-property-color-with-labels-orange {
-  --dynamic-views-property-with-label-color-value: var(--color-orange);
-}
-body.dynamic-views-property-color-with-labels-yellow {
-  --dynamic-views-property-with-label-color-value: var(--color-yellow);
-}
-body.dynamic-views-property-color-with-labels-green {
-  --dynamic-views-property-with-label-color-value: var(--color-green);
-}
-body.dynamic-views-property-color-with-labels-cyan {
-  --dynamic-views-property-with-label-color-value: var(--color-cyan);
-}
-body.dynamic-views-property-color-with-labels-blue {
-  --dynamic-views-property-with-label-color-value: var(--color-blue);
-}
-body.dynamic-views-property-color-with-labels-purple {
-  --dynamic-views-property-with-label-color-value: var(--color-purple);
-}
-body.dynamic-views-property-color-with-labels-pink {
-  --dynamic-views-property-with-label-color-value: var(--color-pink);
-}
-body.dynamic-views-property-color-with-labels-custom {
-  --dynamic-views-property-with-label-color-value: var(
-    --dynamic-views-property-color-with-labels-custom,
-    var(--text-faint)
-  );
-}
-/* Custom fallback via semantic color tokens */
-body.dynamic-views-property-color-with-labels-custom
-  .dynamic-views
-  .property:has(:is(.property-label, .property-label-inline)) {
-  color: var(
-    --dynamic-views-property-color-with-labels-custom,
-    var(--text-faint)
-  );
-}
-
-/* Property text color presets - without labels - semantic colors via semantic color tokens */
-body.dynamic-views-property-color-without-labels-faint
-  .dynamic-views
-  .property:not(:has(:is(.property-label, .property-label-inline))) {
-  color: var(--text-faint);
-}
-body.dynamic-views-property-color-without-labels-muted
-  .dynamic-views
-  .property:not(:has(:is(.property-label, .property-label-inline))) {
-  color: var(--text-muted);
-}
-body.dynamic-views-property-color-without-labels-normal
-  .dynamic-views
-  .property:not(:has(:is(.property-label, .property-label-inline))) {
-  color: var(--text-normal);
-}
-
-body.dynamic-views-property-color-without-labels-accent {
-  --dynamic-views-property-no-label-color-value: var(--text-accent);
-}
-body.dynamic-views-property-color-without-labels-red {
-  --dynamic-views-property-no-label-color-value: var(--color-red);
-}
-body.dynamic-views-property-color-without-labels-orange {
-  --dynamic-views-property-no-label-color-value: var(--color-orange);
-}
-body.dynamic-views-property-color-without-labels-yellow {
-  --dynamic-views-property-no-label-color-value: var(--color-yellow);
-}
-body.dynamic-views-property-color-without-labels-green {
-  --dynamic-views-property-no-label-color-value: var(--color-green);
-}
-body.dynamic-views-property-color-without-labels-cyan {
-  --dynamic-views-property-no-label-color-value: var(--color-cyan);
-}
-body.dynamic-views-property-color-without-labels-blue {
-  --dynamic-views-property-no-label-color-value: var(--color-blue);
-}
-body.dynamic-views-property-color-without-labels-purple {
-  --dynamic-views-property-no-label-color-value: var(--color-purple);
-}
-body.dynamic-views-property-color-without-labels-pink {
-  --dynamic-views-property-no-label-color-value: var(--color-pink);
-}
-body.dynamic-views-property-color-without-labels-custom {
-  --dynamic-views-property-no-label-color-value: var(
-    --dynamic-views-property-color-without-labels-custom,
-    var(--text-faint)
-  );
-}
-/* Custom fallback via semantic color tokens */
-body.dynamic-views-property-color-without-labels-custom
-  .dynamic-views
-  .property:not(:has(:is(.property-label, .property-label-inline))) {
-  color: var(
-    --dynamic-views-property-color-without-labels-custom,
-    var(--text-faint)
-  );
-}
-
-/* Subtitle color presets - semantic colors applied at element level via semantic color tokens */
-body.dynamic-views-subtitle-color-faint .dynamic-views .card-subtitle {
-  color: var(--text-faint);
-}
-body.dynamic-views-subtitle-color-muted .dynamic-views .card-subtitle {
-  color: var(--text-muted);
-}
-body.dynamic-views-subtitle-color-normal .dynamic-views .card-subtitle {
-  color: var(--text-normal);
-}
-
-body.dynamic-views-subtitle-color-accent {
-  --dynamic-views-subtitle-color-value: var(--text-accent);
-}
-body.dynamic-views-subtitle-color-red {
-  --dynamic-views-subtitle-color-value: var(--color-red);
-}
-body.dynamic-views-subtitle-color-orange {
-  --dynamic-views-subtitle-color-value: var(--color-orange);
-}
-body.dynamic-views-subtitle-color-yellow {
-  --dynamic-views-subtitle-color-value: var(--color-yellow);
-}
-body.dynamic-views-subtitle-color-green {
-  --dynamic-views-subtitle-color-value: var(--color-green);
-}
-body.dynamic-views-subtitle-color-cyan {
-  --dynamic-views-subtitle-color-value: var(--color-cyan);
-}
-body.dynamic-views-subtitle-color-blue {
-  --dynamic-views-subtitle-color-value: var(--color-blue);
-}
-body.dynamic-views-subtitle-color-purple {
-  --dynamic-views-subtitle-color-value: var(--color-purple);
-}
-body.dynamic-views-subtitle-color-pink {
-  --dynamic-views-subtitle-color-value: var(--color-pink);
-}
-body.dynamic-views-subtitle-color-custom {
-  --dynamic-views-subtitle-color-value: var(
-    --dynamic-views-subtitle-color-custom,
-    var(--text-faint)
-  );
-}
-/* Custom fallback via semantic color tokens */
-body.dynamic-views-subtitle-color-custom .dynamic-views .card-subtitle {
-  color: var(--dynamic-views-subtitle-color-custom, var(--text-faint));
-}
-
-/* Text preview color presets - semantic colors applied at element level via semantic color tokens */
-body.dynamic-views-text-preview-color-faint .dynamic-views .card-text-preview {
-  color: var(--text-faint);
-}
-body.dynamic-views-text-preview-color-muted .dynamic-views .card-text-preview {
-  color: var(--text-muted);
-}
-body.dynamic-views-text-preview-color-normal .dynamic-views .card-text-preview {
-  color: var(--text-normal);
-}
-
-body.dynamic-views-text-preview-color-accent {
-  --dynamic-views-text-preview-color-value: var(--text-accent);
-}
-body.dynamic-views-text-preview-color-red {
-  --dynamic-views-text-preview-color-value: var(--color-red);
-}
-body.dynamic-views-text-preview-color-orange {
-  --dynamic-views-text-preview-color-value: var(--color-orange);
-}
-body.dynamic-views-text-preview-color-yellow {
-  --dynamic-views-text-preview-color-value: var(--color-yellow);
-}
-body.dynamic-views-text-preview-color-green {
-  --dynamic-views-text-preview-color-value: var(--color-green);
-}
-body.dynamic-views-text-preview-color-cyan {
-  --dynamic-views-text-preview-color-value: var(--color-cyan);
-}
-body.dynamic-views-text-preview-color-blue {
-  --dynamic-views-text-preview-color-value: var(--color-blue);
-}
-body.dynamic-views-text-preview-color-purple {
-  --dynamic-views-text-preview-color-value: var(--color-purple);
-}
-body.dynamic-views-text-preview-color-pink {
-  --dynamic-views-text-preview-color-value: var(--color-pink);
-}
-body.dynamic-views-text-preview-color-custom {
-  --dynamic-views-text-preview-color-value: var(
-    --dynamic-views-text-preview-color-custom,
-    var(--text-muted)
-  );
-}
-/* Custom fallback via semantic color tokens */
-body.dynamic-views-text-preview-color-custom .dynamic-views .card-text-preview {
-  color: var(--dynamic-views-text-preview-color-custom, var(--text-muted));
-}
-
-/* Title color presets - semantic colors applied at element level via semantic color tokens */
-body.dynamic-views-title-color-faint .dynamic-views .card-title {
-  --dynamic-views-title-color: var(--text-faint);
-}
-body.dynamic-views-title-color-muted .dynamic-views .card-title {
-  --dynamic-views-title-color: var(--text-muted);
-}
-body.dynamic-views-title-color-normal .dynamic-views .card-title {
-  --dynamic-views-title-color: var(--text-normal);
-}
-
-body.dynamic-views-title-color-accent {
-  --dynamic-views-title-color-value: var(--text-accent);
-}
-body.dynamic-views-title-color-red {
-  --dynamic-views-title-color-value: var(--color-red);
-}
-body.dynamic-views-title-color-orange {
-  --dynamic-views-title-color-value: var(--color-orange);
-}
-body.dynamic-views-title-color-yellow {
-  --dynamic-views-title-color-value: var(--color-yellow);
-}
-body.dynamic-views-title-color-green {
-  --dynamic-views-title-color-value: var(--color-green);
-}
-body.dynamic-views-title-color-cyan {
-  --dynamic-views-title-color-value: var(--color-cyan);
-}
-body.dynamic-views-title-color-blue {
-  --dynamic-views-title-color-value: var(--color-blue);
-}
-body.dynamic-views-title-color-purple {
-  --dynamic-views-title-color-value: var(--color-purple);
-}
-body.dynamic-views-title-color-pink {
-  --dynamic-views-title-color-value: var(--color-pink);
-}
-body.dynamic-views-title-color-custom {
-  --dynamic-views-title-color-value: var(
-    --dynamic-views-title-color-custom,
-    var(--text-normal)
-  );
-}
-/* Custom fallback via semantic color tokens */
-body.dynamic-views-title-color-custom .dynamic-views .card-title {
-  --dynamic-views-title-color: var(
-    --dynamic-views-title-color-custom,
-    var(--text-normal)
-  );
-}
-
-/* Title hover color presets */
-body.dynamic-views-title-hover-color-red {
-  --dynamic-views-title-hover-color-value: var(--color-red);
-}
-body.dynamic-views-title-hover-color-orange {
-  --dynamic-views-title-hover-color-value: var(--color-orange);
-}
-body.dynamic-views-title-hover-color-yellow {
-  --dynamic-views-title-hover-color-value: var(--color-yellow);
-}
-body.dynamic-views-title-hover-color-green {
-  --dynamic-views-title-hover-color-value: var(--color-green);
-}
-body.dynamic-views-title-hover-color-cyan {
-  --dynamic-views-title-hover-color-value: var(--color-cyan);
-}
-body.dynamic-views-title-hover-color-blue {
-  --dynamic-views-title-hover-color-value: var(--color-blue);
-}
-body.dynamic-views-title-hover-color-purple {
-  --dynamic-views-title-hover-color-value: var(--color-purple);
-}
-body.dynamic-views-title-hover-color-pink {
-  --dynamic-views-title-hover-color-value: var(--color-pink);
-}
+@include color-setting(
+  "property-label-color",
+  $selector: ":is(.property-label, .property-label-inline)"
+);
+@include color-setting(
+  "property-color-with-labels",
+  $var-stem: "property-with-label-color",
+  $selector: ".property:has(:is(.property-label, .property-label-inline))"
+);
+@include color-setting(
+  "property-color-without-labels",
+  $var-stem: "property-no-label-color",
+  $selector: ".property:not(:has(:is(.property-label, .property-label-inline)))"
+);
+@include color-setting("subtitle-color", $selector: ".card-subtitle");
+@include color-setting(
+  "text-preview-color",
+  $selector: ".card-text-preview",
+  $fallback: --text-muted
+);
+@include color-setting(
+  "title-color",
+  $selector: ".card-title",
+  $property: --dynamic-views-title-color,
+  $fallback: --text-normal
+);
+@include color-setting(
+  "title-hover-color",
+  $include-semantics: false,
+  $include-accent: false,
+  $include-custom: false
+);

@@ -17,7 +17,7 @@ last updated: 2026-02-21
 | `src/shared/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals).                                                                                                                                                     |
 | `src/shared/card-renderer.tsx` | Pure card rendering (normalized `CardData`), used by both backends.                                                                                                                                                         |
 | `src/shared/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation.                                                                                                                                                                   |
-| `styles/_masonry.scss`         | Masonry-specific CSS — absolute card positioning, container sizing.                                                                                                                                                         |
+| `styles/_masonry-view.scss`    | Masonry-specific CSS — absolute card positioning, container sizing.                                                                                                                                                         |
 
 ### Bases
 
@@ -289,15 +289,15 @@ Cards use `position: absolute` with direct inline styles for per-card positionin
 
 **Key CSS classes**:
 
-| Class                     | Element           | Purpose                                                                                                                                                                   |
-| ------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `masonry-container`       | Group container   | Applied by `applyMasonryLayout`.                                                                                                                                          |
-| `masonry-positioned`      | Card              | Added after position is set; removed during initial layout to hide cards.                                                                                                 |
-| `masonry-resizing`        | Masonry container | Hides cards during initial layout measurement.                                                                                                                            |
-| `masonry-measuring`       | Masonry container | Forces content rendering for accurate `offsetHeight` reads (overrides `content-visibility`).                                                                              |
-| `masonry-correcting`      | Masonry container | 200ms ease for top/left during post-resize correction and scroll remeasure.                                                                                               |
-| `masonry-resize-active`   | Masonry container | Keeps top/left/height transitions (140ms) during active resize — cards animate to new positions. Width is not transitioned; left positions assume target width instantly. |
-| `masonry-skip-transition` | Masonry container | Disables position transitions during scroll-idle remeasure and deferred layout — ensures positions update in sync with `scrollTop` compensation.                          |
+| Class                     | Element           | Purpose                                                                                                                                                                                             |
+| ------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `masonry-container`       | Group container   | Applied by `applyMasonryLayout`.                                                                                                                                                                    |
+| `masonry-positioned`      | Card              | Added after position is set; removed during initial layout to hide cards.                                                                                                                           |
+| `masonry-resizing`        | Masonry container | Hides cards during initial layout measurement.                                                                                                                                                      |
+| `masonry-measuring`       | Masonry container | Forces content rendering for accurate `offsetHeight` reads (overrides `content-visibility`).                                                                                                        |
+| `masonry-correcting`      | Masonry container | Eased top/left transitions (`--masonry-reposition-duration`) during post-resize correction and scroll remeasure.                                                                                    |
+| `masonry-resize-active`   | Masonry container | Keeps top/left/height transitions (`--masonry-reposition-duration`) during active resize — cards animate to new positions. Width is not transitioned; left positions assume target width instantly. |
+| `masonry-skip-transition` | Masonry container | Disables position transitions during scroll-idle remeasure and deferred layout — ensures positions update in sync with `scrollTop` compensation.                                                    |
 
 ## Keyboard navigation
 

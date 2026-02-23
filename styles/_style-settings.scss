@@ -1448,7 +1448,7 @@ settings:
     -
         id: dynamic-views-title-hover-color
         title: Title color (hover)
-        description: Title color when hovering over clickable titles.
+        description: Theme color preset for titles on hover.
         type: class-select
         allowEmpty: false
         default: dynamic-views-title-hover-color-no-change
@@ -1622,24 +1622,4 @@ body.dynamic-views-poster-theme-light
   .style-settings-container
   .setting-item[data-id="dynamic-views-poster-overlay-dark"] {
   display: none !important;
-}
-
-/* Appearance group styling (Style Settings UI) */
-.dynamic-views-appearance-group .setting-item-description {
-  padding-top: 0;
-}
-
-.dynamic-views-appearance-group .setting-item-description:first-child {
-  margin-top: 0;
-}
-
-.dynamic-views-appearance-group .setting-item-description:last-child {
-  margin-bottom: 0;
-}
-
-.dynamic-views-appearance-group .setting-items {
-  margin-bottom: 0;
-  background-color: transparent;
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
 }
