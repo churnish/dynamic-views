@@ -75,7 +75,7 @@ Note: to get updates for _Dynamic Views_, you will have to check for and install
 
 1. Download `dynamic-views.zip` in the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
 2. Open the vault folder in the system file manager.
-3. Navigate to your Obsidian configuration folder (`.obsidian` by default, hidden on most OSes).
+3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
 5. Unzip `dynamic-views.zip` and place it in the `plugins` folder.
 6. Reload plugins or app.
 7. Enable _Dynamic Views_ in Obsidian settings > Community plugins > Installed plugins.
