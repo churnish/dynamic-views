@@ -26,7 +26,8 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Position card images on top, bottom, left or right
 - Select and copy card text
 - Hover across thumbnail to preview other images
-- *Open URL* card button
+- Configure default view settings
+- *Open URL* card button (↗)
 - *Shuffle view* button
 - *Open random file* button
 - Fold sections when grouping by property
@@ -85,7 +86,7 @@ Note: to get updates for _Dynamic Views_, you will have to check for and install
 ## Support
 
 - Please [open an issue](https://github.com/churnish/dynamic-views/issues) if you run into a problem.
-- Feature requests considered but not prioritized; current work focused on stability and performance.
+- Feature requests considered but not prioritized; current development focused on stability and performance.
 - PRs welcome. Please reach out if you'd like to help maintain the plugin.
 
 ## Credits
