@@ -113,6 +113,7 @@ function closeImageViewer(
           y >= rect.top &&
           y <= rect.bottom
         ) {
+          // Recalculate scrub position for current cursor coordinates
           thumbnailEl.dispatchEvent(
             new MouseEvent("mousemove", {
               clientX: x,
@@ -120,6 +121,17 @@ function closeImageViewer(
               bubbles: false,
             }),
           );
+          // Preact re-renders overwrite img.src via microtask reconciliation.
+          // Re-apply the scrubbed src (updated by the handler above) after
+          // Preact finishes.
+          if (thumbnailEl.dataset.scrubbedSrc) {
+            requestAnimationFrame(() => {
+              const img = thumbnailEl.querySelector("img");
+              if (img?.isConnected && thumbnailEl.dataset.scrubbedSrc) {
+                img.src = thumbnailEl.dataset.scrubbedSrc;
+              }
+            });
+          }
         } else {
           // Cursor outside thumbnail — trigger reset to first image
           thumbnailEl.dispatchEvent(
@@ -751,11 +763,13 @@ function openImageViewer(
   }
 
   // Append clone to appropriate container based on fullscreen setting
-  // Mobile: always fullscreen. Desktop: fullscreen if toggle is on
+  // Mobile: always fullscreen. Desktop: fullscreen unless explicitly disabled
   const isMobile = app.isMobile;
   const isFullscreen =
     isMobile ||
-    viewerDoc.body.classList.contains("dynamic-views-image-viewer-fullscreen");
+    !viewerDoc.body.classList.contains(
+      "dynamic-views-image-viewer-disable-fullscreen",
+    );
 
   // For constrained mode, extract opacity from theme's cover color
   if (!isFullscreen) {

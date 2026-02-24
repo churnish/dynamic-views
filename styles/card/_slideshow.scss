@@ -186,12 +186,16 @@ body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
     pointer-events: none;
     transition: opacity var(--anim-duration-moderate, 300ms) ease;
   }
+}
 
-  /* Hide indicator when nav buttons appear on hover */
-  .card-cover-slideshow:hover .slideshow-indicator {
+/* Hide indicator when nav buttons appear on hover */
+@media (hover: hover) {
+  .dynamic-views .card-cover-slideshow:hover .slideshow-indicator {
     opacity: 0;
   }
+}
 
+.dynamic-views {
   .slideshow-indicator svg {
     width: 18px;
     height: 18px;
@@ -227,7 +231,7 @@ body.dynamic-views-hide-slideshow-indicator
 }
 
 /* Hide slideshow controls when only one valid image remains (broken images discovered at runtime) */
-.slideshow-single {
+.dynamic-views .slideshow-single {
   .slideshow-indicator,
   .slideshow-nav-left,
   .slideshow-nav-right {

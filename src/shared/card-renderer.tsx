@@ -1640,23 +1640,25 @@ function Card({
   const format = settings.imageFormat;
   const position = settings.imagePosition;
 
-  // Build card classes
+  // Build card classes — format classes only when an image source is configured
   const cardClasses = ["card"];
-  if (format === "cover") {
-    cardClasses.push("image-format-cover");
-    cardClasses.push(`card-cover-${position}`);
-    cardClasses.push(`card-cover-${settings.imageFit}`);
-  } else if (format === "thumbnail") {
-    cardClasses.push("image-format-thumbnail");
-    cardClasses.push(`card-thumbnail-${position}`);
-    cardClasses.push(`card-thumbnail-${settings.imageFit}`);
-  } else if (format === "poster") {
-    cardClasses.push("image-format-poster");
-    cardClasses.push(`poster-${settings.posterDisplayMode}`);
-    cardClasses.push(`card-cover-${settings.imageFit}`);
-  } else if (format === "backdrop") {
-    cardClasses.push("image-format-backdrop");
-    cardClasses.push(`card-cover-${settings.imageFit}`);
+  if (hasImageSource) {
+    if (format === "cover") {
+      cardClasses.push("image-format-cover");
+      cardClasses.push(`card-cover-${position}`);
+      cardClasses.push(`card-cover-${settings.imageFit}`);
+    } else if (format === "thumbnail") {
+      cardClasses.push("image-format-thumbnail");
+      cardClasses.push(`card-thumbnail-${position}`);
+      cardClasses.push(`card-thumbnail-${settings.imageFit}`);
+    } else if (format === "poster") {
+      cardClasses.push("image-format-poster");
+      cardClasses.push(`poster-${settings.posterDisplayMode}`);
+      cardClasses.push(`card-cover-${settings.imageFit}`);
+    } else if (format === "backdrop") {
+      cardClasses.push("image-format-backdrop");
+      cardClasses.push(`card-cover-${settings.imageFit}`);
+    }
   }
 
   // Drag handler for card-level drag (reuses shared utility)
@@ -2139,6 +2141,8 @@ function Card({
                 ?.querySelector(".card.poster-revealed")
                 ?.classList.remove("poster-revealed");
               cardEl.classList.add("poster-revealed");
+              // Press acts as hover intent — ungate pointer cursors
+              cardEl.classList.add("hover-intent-active");
               return;
             } else if (!isInteractive) {
               e.stopPropagation();
@@ -2548,9 +2552,11 @@ function Card({
                           onMouseMove={
                             enableScrubbing
                               ? (e: MouseEvent) => {
-                                  const rect = (
-                                    e.currentTarget as HTMLElement
-                                  ).getBoundingClientRect();
+                                  if (imageArray.length === 0) return;
+                                  const thumbEl =
+                                    e.currentTarget as HTMLElement;
+                                  const rect =
+                                    thumbEl.getBoundingClientRect();
                                   const x = e.clientX - rect.left;
                                   const section = Math.floor(
                                     (x / rect.width) * imageArray.length,
@@ -2561,9 +2567,8 @@ function Card({
                                   );
                                   const rawUrl = imageArray[newIndex];
                                   const resolvedUrl = getCachedBlobUrl(rawUrl);
-                                  const imgEl = (
-                                    e.currentTarget as HTMLElement
-                                  ).querySelector("img");
+                                  const imgEl =
+                                    thumbEl.querySelector("img");
                                   if (!imgEl) return;
                                   if (
                                     resolvedUrl === rawUrl &&
@@ -2587,6 +2592,8 @@ function Card({
                                       imgEl.src = resolvedUrl;
                                     }
                                   }
+                                  // Store for viewer dismiss restoration (Preact re-renders overwrite img.src)
+                                  thumbEl.dataset.scrubbedSrc = resolvedUrl;
                                 }
                               : undefined
                           }
@@ -2594,23 +2601,24 @@ function Card({
                             enableScrubbing
                               ? (e: MouseEvent) => {
                                   // Don't reset while image viewer is open (overlay triggers mouseleave)
-                                  const embedEl = (
-                                    e.currentTarget as HTMLElement
-                                  ).querySelector<HTMLElement>(
-                                    ".dynamic-views-image-embed",
-                                  );
+                                  const thumbEl =
+                                    e.currentTarget as HTMLElement;
+                                  const embedEl =
+                                    thumbEl.querySelector<HTMLElement>(
+                                      ".dynamic-views-image-embed",
+                                    );
                                   if (embedEl && viewerClones.has(embedEl))
                                     return;
                                   const firstUrl = imageArray[0];
                                   if (!firstUrl) return;
-                                  const imgEl = (
-                                    e.currentTarget as HTMLElement
-                                  ).querySelector("img");
+                                  const imgEl =
+                                    thumbEl.querySelector("img");
                                   if (imgEl && firstUrl) {
                                     imgEl.removeClass("scrub-loading");
                                     imgEl.removeClass("dynamic-views-hidden");
                                     imgEl.src = getCachedBlobUrl(firstUrl);
                                   }
+                                  delete thumbEl.dataset.scrubbedSrc;
                                 }
                               : undefined
                           }
@@ -2738,9 +2746,12 @@ function Card({
                                               !imgEl.isConnected
                                             )
                                               return;
-                                            imgEl.addClass(
-                                              "dynamic-views-hidden",
-                                            );
+                                            const thumbEl =
+                                              imgEl.closest(".card-thumbnail");
+                                            if (thumbEl)
+                                              thumbEl.classList.add(
+                                                "dynamic-views-hidden",
+                                              );
                                             cardEl.style.setProperty(
                                               "--actual-aspect-ratio",
                                               DEFAULT_ASPECT_RATIO.toString(),
