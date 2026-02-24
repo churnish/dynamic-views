@@ -460,4 +460,43 @@ describe("cleanUpBaseFile", () => {
     expect(viewIds?.get("New View")?.isNew).toBe(true);
     expect(viewIds?.get("Old View")?.isNew).toBe(false);
   });
+
+  it("should return isNew=false for renamed views", async () => {
+    const file = createMockFile("test.base");
+    setupVaultProcess(app, {
+      views: [
+        {
+          type: "dynamic-views-grid",
+          name: "Renamed View",
+          id: "abc123-Old Name",
+        },
+      ],
+    });
+
+    const viewIds = await cleanUpBaseFile(app, file, plugin);
+    expect(viewIds?.get("Renamed View")?.isNew).toBe(false);
+  });
+
+  it("should not inject template values into existing view YAML", async () => {
+    const file = createMockFile("test.base");
+    plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
+      imageFormat: "poster",
+      cardSize: 500,
+    });
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: "dynamic-views-grid",
+          name: "Existing",
+          id: "abc-Existing",
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    expect(result.views[0]).not.toHaveProperty("imageFormat");
+    expect(result.views[0]).not.toHaveProperty("cardSize");
+  });
 });
