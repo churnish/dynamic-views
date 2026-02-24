@@ -42,6 +42,7 @@ import {
 } from "./image-loader";
 import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
 import {
+  createPreloadBrokenHandler,
   createSlideshowNavigator,
   filterBrokenUrls,
   getCachedBlobUrl,
@@ -811,12 +812,20 @@ function CoverSlideshow({
 
     // Setup image preloading
     if (cardEl) {
-      setupImagePreload(cardEl, imageArray, signal);
+      setupImagePreload(
+        cardEl,
+        imageArray,
+        signal,
+        createPreloadBrokenHandler(imageArray, () => {
+          imageEmbed.parentElement?.addClass("slideshow-single");
+        }),
+      );
     }
 
-    // Hover zoom eligibility: only first hovered slide gets zoom effect
+    // Hover zoom eligibility: only first hovered slide gets zoom effect.
+    // Always listen on card — cover-hover-active (from setupHoverIntent) gates whether zoom fires.
     const clearHoverZoom = setupHoverZoomEligibility(
-      slideshowEl,
+      cardEl,
       imageEmbed,
       signal,
     );
@@ -2555,8 +2564,7 @@ function Card({
                                   if (imageArray.length === 0) return;
                                   const thumbEl =
                                     e.currentTarget as HTMLElement;
-                                  const rect =
-                                    thumbEl.getBoundingClientRect();
+                                  const rect = thumbEl.getBoundingClientRect();
                                   const x = e.clientX - rect.left;
                                   const section = Math.floor(
                                     (x / rect.width) * imageArray.length,
@@ -2567,8 +2575,7 @@ function Card({
                                   );
                                   const rawUrl = imageArray[newIndex];
                                   const resolvedUrl = getCachedBlobUrl(rawUrl);
-                                  const imgEl =
-                                    thumbEl.querySelector("img");
+                                  const imgEl = thumbEl.querySelector("img");
                                   if (!imgEl) return;
                                   if (
                                     resolvedUrl === rawUrl &&
@@ -2611,8 +2618,7 @@ function Card({
                                     return;
                                   const firstUrl = imageArray[0];
                                   if (!firstUrl) return;
-                                  const imgEl =
-                                    thumbEl.querySelector("img");
+                                  const imgEl = thumbEl.querySelector("img");
                                   if (imgEl && firstUrl) {
                                     imgEl.removeClass("scrub-loading");
                                     imgEl.removeClass("dynamic-views-hidden");
@@ -2667,19 +2673,14 @@ function Card({
                                         cardEl,
                                         imageArray,
                                         controller.signal,
-                                        (url) => {
-                                          if (controller.signal.aborted) return;
-                                          const idx = imageArray.indexOf(url);
-                                          if (idx !== -1)
-                                            imageArray.splice(idx, 1);
-                                          if (imageArray.length <= 1) {
-                                            const thumbEl =
-                                              imgEl.closest(".card-thumbnail");
-                                            thumbEl?.classList.remove(
-                                              "multi-image",
-                                            );
-                                          }
-                                        },
+                                        createPreloadBrokenHandler(
+                                          imageArray,
+                                          () => {
+                                            imgEl
+                                              .closest(".card-thumbnail")
+                                              ?.classList.remove("multi-image");
+                                          },
+                                        ),
                                       );
                                     }
                                   }

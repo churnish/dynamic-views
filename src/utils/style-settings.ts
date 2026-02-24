@@ -252,6 +252,11 @@ export function isSlideshowEnabled(): boolean {
   return !hasBodyClass("dynamic-views-slideshow-disabled");
 }
 
+/** Returns true when user enables "Disable looping" */
+export function isSlideshowLoopingDisabled(): boolean {
+  return hasBodyClass("dynamic-views-slideshow-disable-looping");
+}
+
 /**
  * Check if slideshow indicator should be shown (default behavior)
  * Returns false when user enables "Hide slideshow indicator"
@@ -387,6 +392,19 @@ export function setupStyleSettingsObserver(
           .sort();
 
         if (oldFiltered.join() !== newFiltered.join()) {
+          // Clean up stale imperative classes when press mode toggled OFF
+          const pressClass = "dynamic-views-poster-reveal-press";
+          if (
+            oldFiltered.includes(pressClass) &&
+            !newFiltered.includes(pressClass)
+          ) {
+            document
+              .querySelectorAll(".dynamic-views .card.poster-revealed")
+              .forEach((el) => {
+                el.classList.remove("poster-revealed", "hover-intent-active");
+              });
+          }
+
           onStyleChange();
           break;
         }

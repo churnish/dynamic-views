@@ -1,6 +1,6 @@
 /**
  * Shared Card Renderer for Bases Views
- * Consolidates duplicate card rendering logic from Grid and Masonry views
+ * Consolidates duplicate card rendering logic from Grid and Masonry
  */
 
 import {
@@ -58,6 +58,7 @@ import { getFileExtInfo, getFileTypeIcon } from "../utils/file-extension";
 import type DynamicViews from "../../main";
 import type { BasesResolvedSettings } from "../types";
 import {
+  createPreloadBrokenHandler,
   createSlideshowNavigator,
   filterBrokenUrls,
   getCachedBlobUrl,
@@ -892,6 +893,8 @@ export class SharedCardRenderer {
               ?.querySelector(".card.poster-revealed")
               ?.classList.remove("poster-revealed");
             cardEl.classList.add("poster-revealed");
+            // Press acts as hover intent — ungate pointer cursors
+            cardEl.classList.add("hover-intent-active");
             return;
           } else if (!isInteractive) {
             e.stopPropagation();
@@ -1674,12 +1677,20 @@ export class SharedCardRenderer {
       setupImageLoadHandler(currentImg, cardEl, this.imageLayoutCallback);
 
       // Setup image preloading
-      setupImagePreload(cardEl, imageUrls, signal);
+      setupImagePreload(
+        cardEl,
+        imageUrls,
+        signal,
+        createPreloadBrokenHandler(imageUrls, () => {
+          imageEmbedContainer.parentElement?.addClass("slideshow-single");
+        }),
+      );
     }
 
-    // Hover zoom eligibility: only first hovered slide gets zoom effect
+    // Hover zoom eligibility: only first hovered slide gets zoom effect.
+    // Always listen on card — cover-hover-active (from setupHoverIntent) gates whether zoom fires.
     const clearHoverZoom = setupHoverZoomEligibility(
-      slideshowEl,
+      cardEl,
       imageEmbedContainer,
       signal,
     );
@@ -1901,14 +1912,14 @@ export class SharedCardRenderer {
 
       // Preload on hover — splice broken URLs from scrubbable array immediately
       if (signal) {
-        setupImagePreload(cardEl, scrubbableUrls, signal, (url) => {
-          if (signal.aborted) return;
-          const idx = scrubbableUrls.indexOf(url);
-          if (idx !== -1) scrubbableUrls.splice(idx, 1);
-          if (scrubbableUrls.length <= 1) {
+        setupImagePreload(
+          cardEl,
+          scrubbableUrls,
+          signal,
+          createPreloadBrokenHandler(scrubbableUrls, () => {
             imageEl.classList.remove("multi-image");
-          }
-        });
+          }),
+        );
       }
 
       // Cache bounding rect on mouseenter to avoid layout thrashing on every mousemove
@@ -2786,7 +2797,7 @@ export class SharedCardRenderer {
   }
 
   /**
-   * Measures property fields for side-by-side layout (delegates to shared utility)
+   * Measures property fields for paired layout (delegates to shared utility)
    */
   private measurePropertyFieldsForCard(container: HTMLElement): void {
     const observers = measurePropertyFields(container);

@@ -170,6 +170,19 @@ body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
   display: none;
 }
 
+/* Dim boundary arrows when looping disabled */
+@media (hover: hover) {
+  body.dynamic-views-slideshow-disable-looping
+    .dynamic-views
+    .card-cover-slideshow:hover {
+    &.slideshow-at-first .slideshow-nav-left,
+    &.slideshow-at-last .slideshow-nav-right {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+}
+
 .dynamic-views {
   /* Slideshow indicator */
   .slideshow-indicator {

@@ -10,6 +10,7 @@ import {
   SCROLL_THROTTLE_MS,
 } from "./constants";
 import { isExternalUrl } from "../utils/image";
+import { isSlideshowLoopingDisabled } from "../utils/style-settings";
 import { setupHoverIntent } from "./hover-intent";
 
 // Blob URL cache for external images to prevent re-downloads
@@ -65,6 +66,21 @@ export function markImageBroken(url: string): void {
 export function filterBrokenUrls(urls: string[]): string[] {
   if (brokenImageUrls.size === 0) return urls;
   return urls.filter((url) => !brokenImageUrls.has(url));
+}
+
+/**
+ * Create onBroken callback for setupImagePreload.
+ * Splices broken URL from array; calls onReduced when ≤1 remain.
+ */
+export function createPreloadBrokenHandler(
+  urls: string[],
+  onReduced: () => void,
+): (url: string) => void {
+  return (url) => {
+    const idx = urls.indexOf(url);
+    if (idx !== -1) urls.splice(idx, 1);
+    if (urls.length <= 1) onReduced();
+  };
 }
 
 /** Initialize blob URL cache state — call on plugin load */
@@ -273,6 +289,18 @@ export function createSlideshowNavigator(
 
     currentIndex = activeNewIndex;
     isAnimating = false;
+    updateBoundaryClasses();
+  };
+
+  // Mark first/last slide on the slideshow wrapper (CSS gates visual effect via body class)
+  const updateBoundaryClasses = () => {
+    const el = getElements()?.imageEmbed.parentElement;
+    if (!el) return;
+    el.classList.toggle("slideshow-at-first", currentIndex === 0);
+    el.classList.toggle(
+      "slideshow-at-last",
+      currentIndex === imageUrls.length - 1,
+    );
   };
 
   signal.addEventListener(
@@ -300,11 +328,16 @@ export function createSlideshowNavigator(
       finishAnimation();
     }
 
-    // Calculate next index with wraparound
+    // Calculate next index (wrap or clamp based on looping setting)
     const current = currentIndex;
+    const noLoop = isSlideshowLoopingDisabled();
     let newIndex = current + direction;
-    if (newIndex < 0) newIndex = imageUrls.length - 1;
-    if (newIndex >= imageUrls.length) newIndex = 0;
+    if (noLoop) {
+      if (newIndex < 0 || newIndex >= imageUrls.length) return;
+    } else {
+      if (newIndex < 0) newIndex = imageUrls.length - 1;
+      if (newIndex >= imageUrls.length) newIndex = 0;
+    }
 
     // Skip known-failed indices — local (this navigator) + global (cross-card)
     let skipped = 0;
@@ -314,8 +347,12 @@ export function createSlideshowNavigator(
       skipped < imageUrls.length
     ) {
       newIndex += direction;
-      if (newIndex < 0) newIndex = imageUrls.length - 1;
-      if (newIndex >= imageUrls.length) newIndex = 0;
+      if (noLoop) {
+        if (newIndex < 0 || newIndex >= imageUrls.length) return;
+      } else {
+        if (newIndex < 0) newIndex = imageUrls.length - 1;
+        if (newIndex >= imageUrls.length) newIndex = 0;
+      }
       skipped++;
     }
     // All alternatives exhausted or landed back on current index
@@ -387,6 +424,7 @@ export function createSlideshowNavigator(
       currImg.removeClass("dynamic-views-hidden");
       currentIndex = newIndex;
       isAnimating = false;
+      updateBoundaryClasses();
       if (callbacks?.onSlideChange) {
         currImg.addEventListener(
           "load",
@@ -522,7 +560,11 @@ export function createSlideshowNavigator(
         );
       }
     }
+    updateBoundaryClasses();
   };
+
+  // Set initial boundary state (always starts at index 0)
+  updateBoundaryClasses();
 
   return { navigate, reset };
 }
@@ -774,11 +816,11 @@ export function setupImagePreload(
  * Returns a function to call after slide animation completes to clear old image's class
  */
 export function setupHoverZoomEligibility(
-  slideshowEl: HTMLElement,
+  hoverTarget: HTMLElement,
   imageEmbed: HTMLElement,
   signal: AbortSignal,
 ): () => void {
-  slideshowEl.addEventListener(
+  hoverTarget.addEventListener(
     "mouseenter",
     () => {
       const currImg = imageEmbed.querySelector(".slideshow-img-current");
@@ -786,7 +828,7 @@ export function setupHoverZoomEligibility(
     },
     { signal },
   );
-  slideshowEl.addEventListener(
+  hoverTarget.addEventListener(
     "mouseleave",
     () => {
       imageEmbed

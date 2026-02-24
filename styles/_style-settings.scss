@@ -583,11 +583,10 @@ settings:
         description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
     -
-        id: dynamic-views-image-viewer-fullscreen
-        title: Open in fullscreen
-        description: Open images in fullscreen on desktop.
+        id: dynamic-views-image-viewer-disable-fullscreen
+        title: Disable fullscreen
+        description: Open images in constrained overlay instead of fullscreen on desktop.
         type: class-toggle
-        default: true
     -
         id: dynamic-views-zoom-sensitivity
         title: Zoom sensitivity
@@ -605,11 +604,10 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-poster-hover-zoom
-        title: Reveal zoom
-        description: Subtle zoom effect when revealing poster details.
+        id: dynamic-views-poster-disable-reveal-zoom
+        title: Disable reveal zoom
+        description: Disable zoom effect when revealing poster details.
         type: class-toggle
-        default: true
     -
         id: dynamic-views-poster-reveal-press
         title: Reveal on press
@@ -973,6 +971,11 @@ settings:
         id: dynamic-views-slideshow-disabled
         title: Disable slideshow
         description: Don't cycle through images on cards with multiple images.
+        type: class-toggle
+    -
+        id: dynamic-views-slideshow-disable-looping
+        title: Disable looping
+        description: Stop at the last image instead of wrapping back to the first.
         type: class-toggle
     -
         id: dynamic-views-hide-slideshow-indicator
@@ -1599,7 +1602,10 @@ body:not(.is-mobile)
   .setting-item[data-id="dynamic-views-card-spacing-mobile"],
 body.is-mobile
   .style-settings-container
-  .setting-item[data-id="dynamic-views-image-viewer-fullscreen"],
+  .setting-item[data-id="dynamic-views-image-viewer-disable-fullscreen"],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id="dynamic-views-backdrop-hover-zoom"],
 body.is-mobile
   .style-settings-container
   .setting-item[data-id="dynamic-views-poster-reveal-press"],
