@@ -741,6 +741,7 @@ export class DynamicViewsMasonryView extends BasesView {
       // Skipping on subsequent renders avoids vault.process() racing with
       // Obsidian's debounced config.set() file writes (overwrites pending settings).
       const viewName = this.config?.name;
+      let isNewView = false;
       if (!this.viewId || (viewName && !this.viewId.endsWith(`-${viewName}`))) {
         const viewIds = await cleanUpBaseFile(
           this.app,
@@ -748,7 +749,9 @@ export class DynamicViewsMasonryView extends BasesView {
           this.plugin,
           viewName,
         );
-        this.viewId = (viewName && viewIds?.get(viewName)) ?? null;
+        const viewInfo = viewName ? viewIds?.get(viewName) : undefined;
+        this.viewId = viewInfo?.id ?? null;
+        isNewView = viewInfo?.isNew ?? false;
       }
 
       // Load collapsed groups from persisted UI state only on first render.
@@ -792,9 +795,9 @@ export class DynamicViewsMasonryView extends BasesView {
       // Track total entries for end indicator
       this.totalEntries = allEntries.length;
 
-      // Template overrides for first render (config not yet populated from YAML).
-      // For existing views, config.get() returns saved values so overrides are never reached.
-      const templateOverrides = !this.lastRenderedSettings
+      // Template overrides only for genuinely new views (not existing views on app restart).
+      // Existing views have their settings saved in YAML — template should not override them.
+      const templateOverrides = isNewView
         ? this.plugin.persistenceManager.getSettingsTemplate("masonry")
         : undefined;
 

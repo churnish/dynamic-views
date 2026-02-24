@@ -1,5 +1,5 @@
 /**
- * Shared utilities for Bases views (grid-view and masonry-view)
+ * Shared utilities for Bases views (Grid and Masonry)
  * Eliminates code duplication between view implementations
  */
 
@@ -79,12 +79,12 @@ export async function cleanUpBaseFile(
   file: TFile | null,
   plugin: DynamicViews,
   callerViewName?: string,
-): Promise<Map<string, string> | null> {
+): Promise<Map<string, { id: string; isNew: boolean }> | null> {
   if (!file || !file.path.endsWith(".base")) return null;
 
   let changeCount = 0;
   const migrations: Array<{ oldId: string; newId: string }> = [];
-  const viewIds = new Map<string, string>();
+  const viewIds = new Map<string, { id: string; isNew: boolean }>();
 
   await app.vault.process(file, (content) => {
     let parsed: Record<string, unknown>;
@@ -153,6 +153,8 @@ export async function cleanUpBaseFile(
           isRename = idField !== undefined && idCounts.get(idField) === 1;
         }
 
+        const isNew = needsNewId && !isRename;
+
         if (needsNewId) {
           const hash = Math.random().toString(36).substring(2, 8);
           const newId = `${hash}-${viewName}`;
@@ -164,7 +166,7 @@ export async function cleanUpBaseFile(
           }
 
           // New view (not rename) — apply template defaults to YAML
-          if (!isRename) {
+          if (isNew) {
             const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
             const template = plugin.persistenceManager.getSettingsTemplate(vt);
             if (template) {
@@ -178,7 +180,7 @@ export async function cleanUpBaseFile(
           }
         }
 
-        viewIds.set(viewName, viewObj.id as string);
+        viewIds.set(viewName, { id: viewObj.id as string, isNew });
       }
 
       for (const key of Object.keys(viewObj)) {
@@ -225,6 +227,10 @@ export async function cleanUpBaseFile(
       // Remove keys that match VIEW_DEFAULTS (sparse YAML).
       // Skip keys where BASES_DEFAULTS overrides VIEW_DEFAULTS — for those,
       // the VIEW_DEFAULTS value is a meaningful non-default choice in Bases context.
+      // Also skip keys where a template has a different value — the VIEW_DEFAULTS
+      // value is an explicit user choice that differs from the effective default.
+      const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
+      const template = plugin.persistenceManager.getSettingsTemplate(vt);
       for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
         if (key in BASES_DEFAULTS) continue;
         const value = viewObj[key];
@@ -232,6 +238,8 @@ export async function cleanUpBaseFile(
 
         // (minimumColumns: YAML "one"/"two" never === VIEW_DEFAULTS number, so naturally preserved)
         if (value === VIEW_DEFAULTS[key]) {
+          // Preserve if template would change the effective default
+          if (template && key in template) continue;
           delete viewObj[key];
           changeCount++;
         }

@@ -310,6 +310,7 @@ describe("cleanUpBaseFile", () => {
     const viewIds = await cleanUpBaseFile(app, file, plugin);
 
     expect(viewIds?.get("New View")).toBeDefined();
+    expect(viewIds?.get("New View")?.isNew).toBe(true);
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0].id).toMatch(/-New View$/);
   });
@@ -398,5 +399,65 @@ describe("cleanUpBaseFile", () => {
     const result = getResult();
     expect(typeof result).toBe("object");
     expect((result as any).views[0].imageFormat).toBe("cover");
+  });
+
+  it("should preserve VIEW_DEFAULTS values when template conflicts", async () => {
+    const file = createMockFile("test.base");
+    plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
+      imageFormat: "poster",
+    });
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: "dynamic-views-grid",
+          name: "Test",
+          id: "abc-Test",
+          imageFormat: "thumbnail", // matches VIEW_DEFAULTS but conflicts with template
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    expect(result.views[0].imageFormat).toBe("thumbnail"); // preserved
+  });
+
+  it("should strip VIEW_DEFAULTS values when no template conflict", async () => {
+    const file = createMockFile("test.base");
+    plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
+      imageFormat: "poster", // template only has imageFormat
+    });
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: "dynamic-views-grid",
+          name: "Test",
+          id: "abc-Test",
+          cardSize: 300, // matches VIEW_DEFAULTS, NOT in template
+          imageFormat: "thumbnail", // matches VIEW_DEFAULTS, IS in template
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    expect(result.views[0]).not.toHaveProperty("cardSize"); // stripped
+    expect(result.views[0].imageFormat).toBe("thumbnail"); // preserved
+  });
+
+  it("should return isNew=true for new views and isNew=false for existing", async () => {
+    const file = createMockFile("test.base");
+    setupVaultProcess(app, {
+      views: [
+        { type: "dynamic-views-grid", name: "New View" },
+        { type: "dynamic-views-grid", name: "Old View", id: "abc-Old View" },
+      ],
+    });
+
+    const viewIds = await cleanUpBaseFile(app, file, plugin);
+    expect(viewIds?.get("New View")?.isNew).toBe(true);
+    expect(viewIds?.get("Old View")?.isNew).toBe(false);
   });
 });
