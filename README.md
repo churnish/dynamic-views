@@ -85,7 +85,7 @@ Note: to get updates for _Dynamic Views_, you will have to check for and install
 ## Support
 
 - Please [open an issue](https://github.com/churnish/dynamic-views/issues) if you run into a problem.
-- Feature requests considered but not prioritized; further development focused on stability and performance.
+- Feature requests considered but not prioritized; current work focused on stability and performance.
 - PRs welcome. Please reach out if you'd like to help maintain the plugin.
 
 ## Credits
