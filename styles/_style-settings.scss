@@ -345,8 +345,8 @@ settings:
         collapsed: true
     -
         id: dynamic-views-cover-crop
-        title: Cover crop alignment
-        description: How to crop cover images when aspect ratios don't match.
+        title: Crop alignment
+        description: How to crop images to fit.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-crop-center
@@ -362,8 +362,8 @@ settings:
                 value: dynamic-views-cover-crop-bottom
     -
         id: dynamic-views-cover-background
-        title: Cover background
-        description: Background style for Contain fit and placeholders.
+        title: Background
+        description: Background color for contained images and placeholders.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-bg-dimmed
@@ -387,15 +387,15 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-masonry-fixed-cover-height
-        title: Fixed cover height
-        description: Keep top/bottom letterbox bars visible in contain mode in Masonry.
+        id: dynamic-views-fixed-cover-height
+        title: Fixed height
+        description: Show background bars above and below contained images in Masonry.
         type: class-toggle
         default: false
     -
         id: dynamic-views-show-cover-placeholder
-        title: Show placeholder for cards with no image
-        description: If covers are enabled but a file doesn't have an image, show an empty cover. If disabled, card content will fill all available space.
+        title: Show placeholders
+        description: Show an empty cover when a file has no image.
         type: class-select
         allowEmpty: false
         default: dynamic-views-show-cover-placeholder-grid
@@ -410,11 +410,11 @@ settings:
                 label: In Grid & Masonry
                 value: dynamic-views-show-cover-placeholder-both
             -
-                label: Hide
+                label: Disable
                 value: dynamic-views-show-cover-placeholder-none
     -
-        id: dynamic-views-side-cover-min-height
-        title: Minimum left/right cover height
+        id: dynamic-views-side-cover-height
+        title: Side cover height
         description: Minimum height for cards with left or right cover position.
         type: variable-text
         default: 150px
@@ -425,8 +425,8 @@ settings:
         type: class-toggle
     -
         id: dynamic-views-cover-border-radius
-        title: Cover border radius
-        description: Corner roundness of cover images.
+        title: Border radius
+        description: Corner roundness of covers.
         type: variable-number-slider
         default: 0
         min: 0
@@ -435,7 +435,7 @@ settings:
         format: px
     -
         id: dynamic-views-cover-inset
-        title: Cover inset
+        title: Inset
         description: Distance from card edge to cover.
         type: variable-number-slider
         default: 0
@@ -446,7 +446,7 @@ settings:
     -
         id: dynamic-views-cover-hover-zoom
         title: Hover zoom
-        description: Subtle zoom effect when hovering over cover images.
+        description: Show a subtle image zoom effect.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-hover-zoom-card
@@ -462,8 +462,8 @@ settings:
                 value: dynamic-views-cover-hover-zoom-none
     -
         id: dynamic-views-show-cover-border
-        title: Show border between cover and card content
-        description: Show divider line between cover and card content.
+        title: Divider line
+        description: Show a border between cover and card content.
         type: class-toggle
     -
         id: datacore-heading

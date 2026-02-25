@@ -51,7 +51,7 @@ describe("measureScalableHeight", () => {
   });
 
   it("returns 0 for top cover with fixed-cover-height mode", () => {
-    document.body.classList.add("dynamic-views-masonry-fixed-cover-height");
+    document.body.classList.add("dynamic-views-fixed-cover-height");
     const card = createCard(["card-cover-top"], 200);
     expect(measureScalableHeight(card)).toBe(0);
   });

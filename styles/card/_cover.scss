@@ -170,18 +170,50 @@
   }
 }
 
-/* Masonry hidden placeholders (higher specificity to beat owl selector) */
-body.dynamic-views-show-cover-placeholder-grid
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
-  .card-title
-  + .card-subtitle,
-body.dynamic-views-show-cover-placeholder-none
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
-  .card-title
-  + .card-subtitle {
-  margin-top: 0;
+/* ============================================
+   MASONRY COVER HEIGHT OVERRIDES
+   ============================================ */
+
+/* Masonry cover height: use slider value (crop mode only) */
+[data-view-type="dynamic-views-masonry"]
+  .card:not(.card-cover-contain).card-cover-top.image-format-cover
+  .card-cover,
+[data-view-type="dynamic-views-masonry"]
+  .card:not(.card-cover-contain).card-cover-bottom.image-format-cover
+  .card-cover {
+  padding-top: calc(
+    var(--dynamic-views-image-aspect-ratio, 0.55) * 100%
+  ) !important;
+}
+
+/* Masonry contain mode OFF: collapse top/bottom bars only (keep left/right) */
+/* Use min(actual, slider) - shrinks only when image is wider than slider ratio */
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-top.image-format-cover
+  .card-cover,
+[data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-bottom.image-format-cover
+  .card-cover {
+  padding-top: calc(
+    min(
+        var(
+          --actual-aspect-ratio,
+          var(--dynamic-views-image-aspect-ratio, 0.55)
+        ),
+        var(--dynamic-views-image-aspect-ratio, 0.55)
+      ) *
+      100%
+  );
+}
+
+/* Masonry contain mode ON: use slider value (top/bottom bars visible) */
+body.dynamic-views-fixed-cover-height
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-top.image-format-cover
+  .card-cover,
+body.dynamic-views-fixed-cover-height
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain.card-cover-bottom.image-format-cover
+  .card-cover {
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }

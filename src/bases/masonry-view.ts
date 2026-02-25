@@ -3310,7 +3310,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Schedule via image load + double RAF (same pattern as before)
         const isFixedCoverHeight = document.body.classList.contains(
-          "dynamic-views-masonry-fixed-cover-height",
+          "dynamic-views-fixed-cover-height",
         );
 
         const allNewCards = [...newCardsPerGroup.values()].flat();

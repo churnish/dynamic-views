@@ -1,5 +1,5 @@
 /**
- * Virtual scrolling for masonry view
+ * Virtual scrolling for Masonry
  * Only renders cards within viewport + buffer; unmounted cards are lightweight JS objects
  */
 
@@ -55,7 +55,7 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
   }
   // Fixed cover height: CSS-determined, doesn't scale with width
   if (
-    document.body.classList.contains("dynamic-views-masonry-fixed-cover-height")
+    document.body.classList.contains("dynamic-views-fixed-cover-height")
   ) {
     return 0;
   }

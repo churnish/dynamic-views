@@ -206,3 +206,39 @@ body.dynamic-views-show-cover-placeholder-none
   .card-cover-wrapper.card-cover-wrapper-placeholder {
   display: none;
 }
+
+/* Masonry contain mode + fixed cover height + placeholder enabled: show placeholder */
+body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain:not(.cover-ready).card-cover-top
+  .card-cover-wrapper.card-cover-wrapper-placeholder,
+body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
+  .card-cover-wrapper.card-cover-wrapper-placeholder,
+body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain:not(.cover-ready).card-cover-top
+  .card-cover-wrapper.card-cover-wrapper-placeholder,
+body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
+  [data-view-type="dynamic-views-masonry"]
+  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
+  .card-cover-wrapper.card-cover-wrapper-placeholder {
+  display: block;
+}
+
+/* Masonry hidden placeholders: zero title-subtitle gap (higher specificity to beat owl selector) */
+body.dynamic-views-show-cover-placeholder-grid
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
+  .card-title
+  + .card-subtitle,
+body.dynamic-views-show-cover-placeholder-none
+  .dynamic-views
+  .dynamic-views-masonry
+  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
+  .card-title
+  + .card-subtitle {
+  margin-top: 0;
+}
