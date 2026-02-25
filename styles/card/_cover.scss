@@ -135,6 +135,18 @@
     margin: 0;
   }
 
+  /* Side cover: derive ratio from slider variable */
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover {
+    --side-cover-ratio: calc(
+      var(--dynamic-views-image-aspect-ratio, 1) /
+        (var(--dynamic-views-image-aspect-ratio, 1) + 1)
+    );
+    --side-cover-offset: calc(
+      var(--side-cover-ratio) *
+        (100% + 2 * var(--dynamic-views-card-padding, 8px))
+    );
+  }
+
   /* Cover-left: wrapper positioned at edges */
   .card.card-cover-left.image-format-cover .card-cover-wrapper {
     border-radius: var(--cover-inner-radius) var(--cover-non-edge-radius)
@@ -145,10 +157,7 @@
     bottom: var(--cover-inset-computed);
     right: auto !important;
     width: calc(
-      var(--dynamic-views-side-cover-width, 200px) - var(
-          --dynamic-views-cover-inset,
-          0px
-        )
+      var(--side-cover-ratio) * 100% - var(--dynamic-views-cover-inset, 0px)
     );
   }
 
@@ -162,10 +171,7 @@
     bottom: var(--cover-inset-computed);
     left: auto !important;
     width: calc(
-      var(--dynamic-views-side-cover-width, 200px) - var(
-          --dynamic-views-cover-inset,
-          0px
-        )
+      var(--side-cover-ratio) * 100% - var(--dynamic-views-cover-inset, 0px)
     );
   }
 }

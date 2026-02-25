@@ -13,6 +13,7 @@ import {
   Menu,
   Keymap,
 } from "obsidian";
+import type { BasesViewConfig } from "obsidian";
 import { CardData } from "../shared/card-renderer";
 import {
   setupImageLoadHandler,
@@ -256,6 +257,76 @@ export function applyViewContainerStyles(
     "--dynamic-views-title-lines",
     String(settings.titleLines),
   );
+}
+
+/** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
+export function applyCssOnlySettings(
+  config: BasesViewConfig,
+  containerEl: HTMLElement,
+): void {
+  if (!config || !containerEl) return;
+
+  const textPreviewLines = config.get("textPreviewLines");
+  if (typeof textPreviewLines === "number") {
+    containerEl.style.setProperty(
+      "--dynamic-views-text-preview-lines",
+      String(textPreviewLines),
+    );
+  }
+
+  const titleLines = config.get("titleLines");
+  if (typeof titleLines === "number") {
+    containerEl.style.setProperty(
+      "--dynamic-views-title-lines",
+      String(titleLines),
+    );
+  }
+
+  const imageRatio = config.get("imageRatio");
+  if (typeof imageRatio === "number") {
+    containerEl.style.setProperty(
+      "--dynamic-views-image-aspect-ratio",
+      String(imageRatio),
+    );
+  }
+
+  const thumbnailSize = config.get("thumbnailSize");
+  if (typeof thumbnailSize === "number") {
+    containerEl.style.setProperty(
+      "--dynamic-views-thumbnail-size",
+      `${thumbnailSize}px`,
+    );
+  }
+
+  // Swap poster display mode class on existing cards (avoids full re-render)
+  const posterDisplayMode =
+    (config.get("posterDisplayMode") as string) ?? "gradient";
+  for (const card of containerEl.querySelectorAll(
+    ".card.image-format-poster",
+  )) {
+    card.classList.remove("poster-gradient", "poster-overlay");
+    card.classList.add(`poster-${posterDisplayMode}`);
+  }
+
+  // Swap image fit class on existing cards (avoids full re-render)
+  const imageFit = (config.get("imageFit") as string) ?? "crop";
+  for (const card of containerEl.querySelectorAll(".card")) {
+    card.classList.remove(
+      "card-thumbnail-crop",
+      "card-thumbnail-contain",
+      "card-cover-crop",
+      "card-cover-contain",
+    );
+    if (card.classList.contains("image-format-thumbnail")) {
+      card.classList.add(`card-thumbnail-${imageFit}`);
+    } else if (
+      card.classList.contains("image-format-cover") ||
+      card.classList.contains("image-format-poster") ||
+      card.classList.contains("image-format-backdrop")
+    ) {
+      card.classList.add(`card-cover-${imageFit}`);
+    }
+  }
 }
 
 /**
@@ -1543,75 +1614,6 @@ export class SharedCardRenderer {
       }
     } else {
       coverWrapper.createDiv("card-cover-placeholder");
-    }
-
-    // Set CSS custom properties for side cover dimensions
-    if (position === "left" || position === "right") {
-      const aspectRatio =
-        typeof settings.imageRatio === "string"
-          ? parseFloat(settings.imageRatio)
-          : settings.imageRatio || 1.0;
-      const wrapperRatio = aspectRatio / (aspectRatio + 1);
-
-      cardEl.style.setProperty(
-        "--dynamic-views-wrapper-ratio",
-        wrapperRatio.toString(),
-      );
-
-      const updateWrapperDimensions = () => {
-        const cardWidth = cardEl.offsetWidth;
-        const targetWidth = Math.floor(wrapperRatio * cardWidth);
-        const paddingValue = targetWidth;
-
-        cardEl.style.setProperty(
-          "--dynamic-views-side-cover-width",
-          `${targetWidth}px`,
-        );
-        cardEl.style.setProperty(
-          "--dynamic-views-side-cover-content-padding",
-          `${paddingValue}px`,
-        );
-
-        return { cardWidth, targetWidth, paddingValue };
-      };
-
-      requestAnimationFrame(() => {
-        // Guard against card unmounted before rAF fires
-        if (signal.aborted || !cardEl.isConnected) return;
-        updateWrapperDimensions();
-
-        const CoverRO = (cardEl.ownerDocument.defaultView ?? window)
-          .ResizeObserver;
-        const resizeObserver = new CoverRO((entries) => {
-          if (signal.aborted || !cardEl.isConnected) return;
-          // Skip content-hidden cards (dimension reads trigger Chromium warnings)
-          if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
-          for (const entry of entries) {
-            const target = entry.target as HTMLElement;
-            const newCardWidth = target.offsetWidth;
-            if (newCardWidth <= 0) continue;
-
-            const newTargetWidth = Math.floor(wrapperRatio * newCardWidth);
-            const newPaddingValue = newTargetWidth;
-
-            cardEl.style.setProperty(
-              "--dynamic-views-side-cover-width",
-              `${newTargetWidth}px`,
-            );
-            cardEl.style.setProperty(
-              "--dynamic-views-side-cover-content-padding",
-              `${newPaddingValue}px`,
-            );
-          }
-        });
-
-        resizeObserver.observe(cardEl);
-        this.propertyObservers.push(resizeObserver);
-        // Disconnect on abort so CardHandle cleanup handles this rAF-deferred observer
-        signal.addEventListener("abort", () => resizeObserver.disconnect(), {
-          once: true,
-        });
-      });
     }
   }
 

@@ -1311,6 +1311,34 @@ export function View({
     dc,
   ]);
 
+  // CSS-only settings: update container variables for instant slider feedback (all view modes)
+  dc.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.style.setProperty(
+      "--dynamic-views-image-aspect-ratio",
+      String(settings.imageRatio),
+    );
+    container.style.setProperty(
+      "--dynamic-views-text-preview-lines",
+      String(settings.textPreviewLines),
+    );
+    container.style.setProperty(
+      "--dynamic-views-title-lines",
+      String(settings.titleLines),
+    );
+    container.style.setProperty(
+      "--dynamic-views-thumbnail-size",
+      `${settings.thumbnailSize}px`,
+    );
+  }, [
+    settings.imageRatio,
+    settings.textPreviewLines,
+    settings.titleLines,
+    settings.thumbnailSize,
+    dc,
+  ]);
+
   // Apply dynamic grid layout (all width modes)
   dc.useEffect(() => {
     if (viewMode !== "grid") return;
@@ -1336,25 +1364,6 @@ export function View({
       );
 
       container.style.setProperty("--dynamic-views-grid-columns", String(cols));
-      // Set CSS variable for image aspect ratio
-      container.style.setProperty(
-        "--dynamic-views-image-aspect-ratio",
-        String(settings.imageRatio),
-      );
-      // Set CSS variable for text preview line count
-      container.style.setProperty(
-        "--dynamic-views-text-preview-lines",
-        String(settings.textPreviewLines),
-      );
-      container.style.setProperty(
-        "--dynamic-views-title-lines",
-        String(settings.titleLines),
-      );
-      // Set CSS variable for thumbnail size
-      container.style.setProperty(
-        "--dynamic-views-thumbnail-size",
-        `${settings.thumbnailSize}px`,
-      );
     };
 
     updateGrid();
@@ -1382,9 +1391,6 @@ export function View({
     viewMode,
     settings.cardSize,
     settings.minimumColumns,
-    settings.textPreviewLines,
-    settings.titleLines,
-    settings.thumbnailSize,
     _styleRevision,
     dc,
   ]);

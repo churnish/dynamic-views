@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling. Datacore uses declarative Preact/JSX rendering without virtual scrolling. The detailed pipeline, guard system, and invariant sections below document the Bases implementation; see "Bases vs. Datacore" at the end for architectural differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-21
+last updated: 2026-02-25
 ---
 
 # Masonry layout system
@@ -197,7 +197,7 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 1. Calculate visible range: `scrollTop ± paneHeight` (1x pane height buffer).
 2. Look up container offset per group from `cachedGroupOffsets` (no `getBoundingClientRect`).
 3. For each item: `itemTop = containerOffsetY + item.y`, `itemBottom = itemTop + item.height`.
-4. If `inView && !item.el` → `mountVirtualItem()`: render card, apply stored position, set refs. Side cover CSS custom properties (`--dynamic-views-side-cover-width`, `--dynamic-views-side-cover-content-padding`) are set synchronously using `item.width` — `renderCoverWrapper` defers these to RAF (needs `offsetWidth`, unavailable during `renderCard`), so without this the CSS fallback shows for 1 frame.
+4. If `inView && !item.el` → `mountVirtualItem()`: render card, apply stored position, set refs. Side cover dimensions use CSS-only `calc()` with `%` units (derived from `--dynamic-views-image-aspect-ratio`), so no JS pre-calculation is needed — CSS resolves on first paint.
 5. If `!inView && item.el` → `unmountVirtualItem()`: cleanup, remove from DOM, clear refs.
 
 **Trigger points**: scroll event (RAF-debounced), after full layout, after batch append. **Skipped during active resize** — mount/unmount deferred to post-resize correction to prevent mount storms (50-70 cards mounting in one frame during column count changes).

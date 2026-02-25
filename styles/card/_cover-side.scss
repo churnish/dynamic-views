@@ -14,8 +14,8 @@ body:is(
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   > .card-content {
-  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
-  margin-left: var(--dynamic-views-side-cover-content-padding);
+  max-width: calc(100% - var(--side-cover-offset));
+  margin-left: var(--side-cover-offset);
 }
 
 /* Cover-right: content padding */
@@ -32,7 +32,7 @@ body:is(
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   > .card-content {
-  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
+  max-width: calc(100% - var(--side-cover-offset));
 }
 
 /* Side cover: minimum card height */
@@ -70,8 +70,8 @@ body:is(
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
   > .card-content {
-  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
-  margin-left: var(--dynamic-views-side-cover-content-padding);
+  max-width: calc(100% - var(--side-cover-offset));
+  margin-left: var(--side-cover-offset);
 }
 
 /* Cover-right: content padding */
@@ -87,7 +87,7 @@ body:is(
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
   > .card-content {
-  max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
+  max-width: calc(100% - var(--side-cover-offset));
 }
 
 /* Side cover: minimum card height */

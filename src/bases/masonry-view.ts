@@ -36,6 +36,7 @@ import {
   initializeTitleTruncationForCards,
   syncResponsiveClasses,
   applyViewContainerStyles,
+  applyCssOnlySettings,
   type CardHandle,
 } from "./shared-renderer";
 import { getCachedAspectRatio } from "../shared/image-loader";
@@ -540,43 +541,6 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
-  /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
-  private applyCssOnlySettings(): void {
-    if (!this.config || !this.containerEl) return;
-
-    const textPreviewLines = this.config.get("textPreviewLines");
-    if (typeof textPreviewLines === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-text-preview-lines",
-        String(textPreviewLines),
-      );
-    }
-
-    const titleLines = this.config.get("titleLines");
-    if (typeof titleLines === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-title-lines",
-        String(titleLines),
-      );
-    }
-
-    const imageRatio = this.config.get("imageRatio");
-    if (typeof imageRatio === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-image-aspect-ratio",
-        String(imageRatio),
-      );
-    }
-
-    const thumbnailSize = this.config.get("thumbnailSize");
-    if (typeof thumbnailSize === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-thumbnail-size",
-        `${thumbnailSize}px`,
-      );
-    }
-  }
-
   /**
    * Handle template toggle changes
    * Called from onDataUpdated() since Obsidian calls that for config changes
@@ -713,7 +677,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.handleTemplateToggleLocal();
 
     // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
-    this.applyCssOnlySettings();
+    applyCssOnlySettings(this.config, this.containerEl);
 
     // Delay reading config - Obsidian may fire onDataUpdated before updating config.getOrder()
     // Using queueMicrotask gives Obsidian time to finish updating config state.
@@ -876,6 +840,8 @@ export class DynamicViewsMasonryView extends BasesView {
         titleLines: _tl,
         imageRatio: _ir,
         thumbnailSize: _ts,
+        posterDisplayMode: _pdm,
+        imageFit: _if,
         ...hashableSettings
       } = settings;
       const settingsHash =
@@ -2444,24 +2410,6 @@ export class DynamicViewsMasonryView extends BasesView {
     handle.el.style.left = `${item.x}px`;
     handle.el.style.top = `${item.y}px`;
     handle.el.classList.add("masonry-positioned");
-    // Set side cover dimensions synchronously to prevent 1-frame flash.
-    // renderCoverWrapper defers updateWrapperDimensions to RAF (needs
-    // offsetWidth not yet available during renderCard), but at this point
-    // item.width is set and equals offsetWidth (border-box, no border).
-    const wrapperRatio = handle.el.style.getPropertyValue(
-      "--dynamic-views-wrapper-ratio",
-    );
-    if (wrapperRatio) {
-      const targetWidth = Math.floor(parseFloat(wrapperRatio) * item.width);
-      handle.el.style.setProperty(
-        "--dynamic-views-side-cover-width",
-        `${targetWidth}px`,
-      );
-      handle.el.style.setProperty(
-        "--dynamic-views-side-cover-content-padding",
-        `${targetWidth}px`,
-      );
-    }
     // Set explicit height to match stored layout height. Prevents height drift
     // in freshly rendered cards from triggering remeasureAndReposition during
     // scroll — small per-card differences cascade through columns, causing

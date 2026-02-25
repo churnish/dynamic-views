@@ -481,9 +481,6 @@ function renderFilenameSegment(filename: string, filePath: string, app: App) {
 const viewerCleanupFns = new Map<HTMLElement, () => void>();
 const viewerClones = new Map<HTMLElement, HTMLElement>();
 
-// Module-level Map to store ResizeObservers for cleanup
-const cardResizeObservers = new Map<string, ResizeObserver>();
-
 // Module-level Map to store responsive ResizeObservers (compact mode, thumbnail stacking)
 const cardResponsiveObservers = new Map<string, ResizeObserver>();
 
@@ -509,32 +506,9 @@ const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
 const containerCssClassesMap = new WeakMap<HTMLElement, string[]>();
 
 /**
- * Cleanup ResizeObserver for a card when it's removed
- */
-export function cleanupCardObserver(cardPath: string): void {
-  const observer = cardResizeObservers.get(cardPath);
-  if (observer) {
-    observer.disconnect();
-    cardResizeObservers.delete(cardPath);
-  }
-  const responsiveObserver = cardResponsiveObservers.get(cardPath);
-  if (responsiveObserver) {
-    responsiveObserver.disconnect();
-    cardResponsiveObservers.delete(cardPath);
-  }
-  const propertyObservers = cardPropertyObservers.get(cardPath);
-  if (propertyObservers) {
-    propertyObservers.forEach((obs) => obs.disconnect());
-    cardPropertyObservers.delete(cardPath);
-  }
-}
-
-/**
  * Cleanup all card ResizeObservers (call when view is destroyed)
  */
 export function cleanupAllCardObservers(): void {
-  cardResizeObservers.forEach((observer) => observer.disconnect());
-  cardResizeObservers.clear();
   cardResponsiveObservers.forEach((observer) => observer.disconnect());
   cardResponsiveObservers.clear();
   cardPropertyObservers.forEach((observers) =>
@@ -1956,78 +1930,6 @@ function Card({
             }
           });
         });
-
-        // Setup side cover dimensions (for left/right cover position)
-        if (
-          format === "cover" &&
-          (position === "left" || position === "right")
-        ) {
-          requestAnimationFrame(() => {
-            // Guard against race: card may be unmounted before RAF executes
-            if (!cardEl.isConnected) return;
-
-            // Get aspect ratio from settings
-            const aspectRatio =
-              typeof settings.imageRatio === "string"
-                ? parseFloat(settings.imageRatio)
-                : settings.imageRatio || 1.0;
-            const wrapperRatio = aspectRatio / (aspectRatio + 1);
-
-            // Set wrapper ratio for potential CSS calc usage
-            cardEl.style.setProperty(
-              "--dynamic-views-wrapper-ratio",
-              wrapperRatio.toString(),
-            );
-
-            // Function to calculate and set wrapper dimensions
-            const updateWrapperDimensions = () => {
-              const cardWidth = cardEl.offsetWidth;
-              const targetWidth = Math.floor(wrapperRatio * cardWidth);
-              const paddingValue = targetWidth;
-
-              cardEl.style.setProperty(
-                "--dynamic-views-side-cover-width",
-                `${targetWidth}px`,
-              );
-              cardEl.style.setProperty(
-                "--dynamic-views-side-cover-content-padding",
-                `${paddingValue}px`,
-              );
-            };
-
-            // Initial calculation
-            updateWrapperDimensions();
-
-            // Cleanup existing observer for this card if any
-            cleanupCardObserver(card.path);
-
-            // Create ResizeObserver to update wrapper width when card resizes
-            const resizeObserver = new ResizeObserver((entries) => {
-              for (const entry of entries) {
-                const target = entry.target as HTMLElement;
-                const newCardWidth = target.offsetWidth;
-
-                if (newCardWidth === 0) continue;
-
-                const newTargetWidth = Math.floor(wrapperRatio * newCardWidth);
-                const newPaddingValue = newTargetWidth;
-
-                cardEl.style.setProperty(
-                  "--dynamic-views-side-cover-width",
-                  `${newTargetWidth}px`,
-                );
-                cardEl.style.setProperty(
-                  "--dynamic-views-side-cover-content-padding",
-                  `${newPaddingValue}px`,
-                );
-              }
-            });
-
-            // Store observer for cleanup and start observing
-            cardResizeObservers.set(card.path, resizeObserver);
-            resizeObserver.observe(cardEl);
-          });
-        }
 
         // Setup responsive behaviors (compact mode, thumbnail stacking)
         const existingResponsiveObserver = cardResponsiveObservers.get(

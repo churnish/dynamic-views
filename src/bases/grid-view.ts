@@ -28,6 +28,7 @@ import {
   initializeTitleTruncationForCards,
   syncResponsiveClasses,
   applyViewContainerStyles,
+  applyCssOnlySettings,
   type CardHandle,
 } from "./shared-renderer";
 import {
@@ -528,48 +529,11 @@ export class DynamicViewsGridView extends BasesView {
     this.handleTemplateToggleLocal();
 
     // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
-    this.applyCssOnlySettings();
+    applyCssOnlySettings(this.config, this.containerEl);
 
     // Delay reading config - Obsidian may fire onDataUpdated before updating config.getOrder()
     // Using queueMicrotask gives Obsidian time to finish updating config state.
     queueMicrotask(() => this.processDataUpdate());
-  }
-
-  /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
-  private applyCssOnlySettings(): void {
-    if (!this.config || !this.containerEl) return;
-
-    const textPreviewLines = this.config.get("textPreviewLines");
-    if (typeof textPreviewLines === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-text-preview-lines",
-        String(textPreviewLines),
-      );
-    }
-
-    const titleLines = this.config.get("titleLines");
-    if (typeof titleLines === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-title-lines",
-        String(titleLines),
-      );
-    }
-
-    const imageRatio = this.config.get("imageRatio");
-    if (typeof imageRatio === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-image-aspect-ratio",
-        String(imageRatio),
-      );
-    }
-
-    const thumbnailSize = this.config.get("thumbnailSize");
-    if (typeof thumbnailSize === "number") {
-      this.containerEl.style.setProperty(
-        "--dynamic-views-thumbnail-size",
-        `${thumbnailSize}px`,
-      );
-    }
   }
 
   /** Internal handler after config has settled */
@@ -726,6 +690,8 @@ export class DynamicViewsGridView extends BasesView {
         titleLines: _tl,
         imageRatio: _ir,
         thumbnailSize: _ts,
+        posterDisplayMode: _pdm,
+        imageFit: _if,
         ...hashableSettings
       } = settings;
       const settingsHash =
