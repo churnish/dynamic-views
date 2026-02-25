@@ -189,30 +189,42 @@ body.dynamic-views-card-background-custom .dynamic-views .card {
   );
 }
 
-/* Card shadow presets */
-body.dynamic-views-card-shadow-subtle .dynamic-views .card {
+/* Card shadow presets — scoped to Bases files only (embed overflow: hidden clips shadow) */
+body.dynamic-views-card-shadow-subtle
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views
+  .card {
   box-shadow: var(--shadow-xs);
 }
-body.dynamic-views-card-shadow-soft .dynamic-views .card {
+body.dynamic-views-card-shadow-soft
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views
+  .card {
   box-shadow: var(--shadow-s);
 }
-body.dynamic-views-card-shadow-dramatic .dynamic-views .card {
+body.dynamic-views-card-shadow-dramatic
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views
+  .card {
   box-shadow: var(--shadow-l);
 }
 
 /* Card shadow on hover presets */
 @media (hover: hover) {
   body.dynamic-views-card-shadow-hover-subtle
+    .workspace-leaf-content[data-type="bases"]
     .dynamic-views
     .card.hover-intent-active:hover {
     box-shadow: var(--shadow-xs);
   }
   body.dynamic-views-card-shadow-hover-soft
+    .workspace-leaf-content[data-type="bases"]
     .dynamic-views
     .card.hover-intent-active:hover {
     box-shadow: var(--shadow-s);
   }
   body.dynamic-views-card-shadow-hover-dramatic
+    .workspace-leaf-content[data-type="bases"]
     .dynamic-views
     .card.hover-intent-active:hover {
     box-shadow: var(--shadow-l);
