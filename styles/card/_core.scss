@@ -8,90 +8,6 @@
     cursor: pointer;
   }
 
-  /* Masonry container */
-  .masonry-container {
-    position: relative;
-    height: var(--masonry-height, auto);
-    contain: layout style;
-  }
-
-  /* Hide cards during layout recalc - fade out with opacity transition.
-     Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container). */
-  .masonry-container.masonry-resizing .card,
-  .masonry-resizing .masonry-container .card {
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      opacity var(--anim-duration-superfast, 70ms) ease,
-      visibility 0s var(--anim-duration-superfast, 70ms);
-  }
-
-  /* Hide end indicator during resize - use display:none to fully remove from flow */
-  &:has(.masonry-resizing) .dynamic-views-end-indicator {
-    display: none;
-  }
-
-  /* Hide cards until masonry positions them (prevents flash at 0,0).
-     Must match positioned cards' CSS context (position + containment) for accurate height measurement.
-     height: auto overrides grid's height: 100% which causes incorrect 148px skeleton height. */
-  .masonry-container .card:not(.masonry-positioned) {
-    position: absolute;
-    opacity: 0;
-    height: auto;
-    contain: layout style paint;
-  }
-
-  // Must not exceed MOUNT_REMEASURE_MS / MASONRY_CORRECTION_MS in
-  // shared/constants.ts — transitions must finish before next reposition tick
-  --masonry-reposition-duration: 200ms;
-
-  /* Masonry positioned cards */
-  .card.masonry-positioned {
-    position: absolute;
-    contain: layout style paint;
-    transition:
-      opacity var(--anim-duration-superfast, 70ms) ease,
-      top var(--masonry-reposition-duration) ease,
-      left var(--masonry-reposition-duration) ease,
-      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease;
-  }
-
-  // Eased transition during post-resize correction and scroll remeasure
-  .masonry-correcting .card.masonry-positioned {
-    transition:
-      opacity var(--anim-duration-superfast, 70ms) ease,
-      top var(--masonry-reposition-duration) ease,
-      left var(--masonry-reposition-duration) ease,
-      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease;
-  }
-
-  // Instant repositioning during scroll-idle remeasure — overrides default
-  // transition so positions update in sync with scrollTop compensation
-  .masonry-skip-transition .card.masonry-positioned {
-    transition: none !important;
-  }
-
-  // During active resize, keep top/left/height transitions for smooth repositioning.
-  // Per-frame JS cost is ~0.3ms after offset skip — budget for transition smoothing.
-  // Width is NOT transitioned — left positions assume target width instantly.
-  .masonry-resize-active .card.masonry-positioned {
-    transition:
-      opacity var(--anim-duration-superfast, 70ms) ease,
-      top var(--masonry-reposition-duration) ease,
-      left var(--masonry-reposition-duration) ease,
-      height var(--masonry-reposition-duration) ease,
-      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease;
-  }
-
-  /* Desktop: cards outside scrollport margin hidden by IO-based system */
-  .card.content-hidden {
-    content-visibility: hidden;
-    contain-intrinsic-height: auto 300px;
-  }
-
   /* Spacing between card-header and card-body inside .card-content */
   .card .card-content > * + *:not(:empty) {
     margin-top: var(--size-4-2);
@@ -102,13 +18,13 @@
     margin-top: var(--size-4-2);
   }
 
-  /* Grid view: card-content fills available space, aligns children to top */
+  /* Grid: card-content fills available space, aligns children to top */
   .dynamic-views-grid .card-previews {
     flex-grow: 1;
     align-items: flex-start;
   }
 
-  /* Grid view: title-group grows horizontally inside card-header to fill space beside URL icon */
+  /* Grid: title-group grows horizontally inside card-header to fill space beside URL icon */
   .dynamic-views-grid .card-header .card-title-block {
     flex-grow: 1;
   }
@@ -172,24 +88,93 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
   );
 }
 
-/* Mobile: browser-managed content-visibility (IO-based toggling causes
-   infinite reflow loop on iOS WebKit) */
-body.is-mobile .dynamic-views .card {
-  content-visibility: auto;
-  contain-intrinsic-height: auto 300px;
-}
+/* Card border color on hover presets */
+@media (hover: hover) {
+  /* Muted (default) */
+  body:not([class*="dynamic-views-card-border-color-hover-"])
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--background-modifier-border-hover);
+  }
 
-/* Force content rendering during masonry height measurement
-   (overrides both IO-based .content-hidden and CSS content-visibility: auto) */
-.masonry-measuring .card {
-  content-visibility: visible !important;
-}
-
-/* Collapse card-content when it only has a hidden thumbnail placeholder */
-body:not(.dynamic-views-show-thumbnail-placeholder)
-  .dynamic-views
-  .card-previews:has(> .card-thumbnail-placeholder:only-child) {
-  display: none;
+  body.dynamic-views-card-border-color-hover-normal
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--background-modifier-border-focus);
+  }
+  body.dynamic-views-card-border-color-hover-faint
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--background-modifier-border);
+  }
+  body.dynamic-views-card-border-color-hover-muted
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--background-modifier-border-hover);
+  }
+  body.dynamic-views-card-border-color-hover-accent
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--text-accent);
+  }
+  body.dynamic-views-card-border-color-hover-red
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-red);
+  }
+  body.dynamic-views-card-border-color-hover-orange
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-orange);
+  }
+  body.dynamic-views-card-border-color-hover-yellow
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-yellow);
+  }
+  body.dynamic-views-card-border-color-hover-green
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-green);
+  }
+  body.dynamic-views-card-border-color-hover-cyan
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-cyan);
+  }
+  body.dynamic-views-card-border-color-hover-blue
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-blue);
+  }
+  body.dynamic-views-card-border-color-hover-purple
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-purple);
+  }
+  body.dynamic-views-card-border-color-hover-pink
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(--color-pink);
+  }
+  body.dynamic-views-card-border-color-hover-transparent
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: transparent;
+  }
+  body.dynamic-views-card-border-color-hover-transparent
+    .dynamic-views
+    .card.hover-intent-active:hover::after {
+    box-shadow: none;
+  }
+  body.dynamic-views-card-border-color-hover-custom
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    --card-border-color: var(
+      --dynamic-views-card-border-color-hover-custom,
+      var(--background-modifier-border-focus)
+    );
+  }
 }
 
 /* Card background options — override --card-bg so placeholder derives from it */
@@ -202,4 +187,34 @@ body.dynamic-views-card-background-custom .dynamic-views .card {
     --dynamic-views-card-background-color-custom,
     var(--background-primary-alt)
   );
+}
+
+/* Card shadow presets */
+body.dynamic-views-card-shadow-subtle .dynamic-views .card {
+  box-shadow: var(--shadow-xs);
+}
+body.dynamic-views-card-shadow-soft .dynamic-views .card {
+  box-shadow: var(--shadow-s);
+}
+body.dynamic-views-card-shadow-dramatic .dynamic-views .card {
+  box-shadow: var(--shadow-l);
+}
+
+/* Card shadow on hover presets */
+@media (hover: hover) {
+  body.dynamic-views-card-shadow-hover-subtle
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    box-shadow: var(--shadow-xs);
+  }
+  body.dynamic-views-card-shadow-hover-soft
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    box-shadow: var(--shadow-s);
+  }
+  body.dynamic-views-card-shadow-hover-dramatic
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    box-shadow: var(--shadow-l);
+  }
 }

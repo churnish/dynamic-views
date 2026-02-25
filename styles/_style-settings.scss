@@ -298,6 +298,46 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-card-shadow
+        title: Card shadow
+        description: Drop shadow behind cards.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-shadow-none
+        options:
+            -
+                label: Disable
+                value: dynamic-views-card-shadow-none
+            -
+                label: Subtle
+                value: dynamic-views-card-shadow-subtle
+            -
+                label: Soft
+                value: dynamic-views-card-shadow-soft
+            -
+                label: Dramatic
+                value: dynamic-views-card-shadow-dramatic
+    -
+        id: dynamic-views-card-shadow-hover
+        title: Card shadow (hover)
+        description: Drop shadow behind cards on hover.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-shadow-hover-none
+        options:
+            -
+                label: Disable
+                value: dynamic-views-card-shadow-hover-none
+            -
+                label: Subtle
+                value: dynamic-views-card-shadow-hover-subtle
+            -
+                label: Soft
+                value: dynamic-views-card-shadow-hover-soft
+            -
+                label: Dramatic
+                value: dynamic-views-card-shadow-hover-dramatic
+    -
         id: covers-heading
         title: Covers
         type: heading
@@ -370,7 +410,7 @@ settings:
                 label: In Grid & Masonry
                 value: dynamic-views-show-cover-placeholder-both
             -
-                label: Don't show
+                label: Hide
                 value: dynamic-views-show-cover-placeholder-none
     -
         id: dynamic-views-side-cover-min-height
@@ -418,8 +458,8 @@ settings:
                 label: On hover over card
                 value: dynamic-views-cover-hover-zoom-card
             -
-                label: Disabled
-                value: dynamic-views-cover-hover-zoom-off
+                label: Disable
+                value: dynamic-views-cover-hover-zoom-none
     -
         id: dynamic-views-show-cover-border
         title: Show border between cover and card content
