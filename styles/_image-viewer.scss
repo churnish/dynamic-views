@@ -34,10 +34,10 @@ body:has(.dynamic-views-image-embed.is-zoomed)
     var(--card-border-color, var(--background-modifier-border));
 }
 
-/* Constrained mode: overlay styling (desktop, fullscreen toggle off) */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
+/* Constrained mode: overlay styling (desktop, fullscreen disabled) */
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .is-mobile
+  ).dynamic-views-image-viewer-disable-fullscreen
   > .dynamic-views-image-embed.is-zoomed {
   background: color-mix(
     in srgb,
@@ -48,9 +48,9 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
 }
 
 /* Constrained mode: solid background when maximized */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .is-mobile
+  ).dynamic-views-image-viewer-disable-fullscreen
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
   background: var(--background-primary);
 }
@@ -60,12 +60,12 @@ body.is-mobile:has(.dynamic-views-image-embed.is-zoomed) .mobile-navbar {
   display: none;
 }
 
-/* Fullscreen image viewer: mobile (always) or desktop with toggle on */
+/* Fullscreen image viewer: mobile (always) or desktop with fullscreen enabled */
 body:not(.dynamic-views-image-viewer-disabled).is-mobile
   > .dynamic-views-image-embed.is-zoomed,
-body:not(
-    .dynamic-views-image-viewer-disabled
-  ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .dynamic-views-image-viewer-disable-fullscreen
+  ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed {
   background: var(--background-modifier-cover);
   position: fixed;
@@ -75,17 +75,17 @@ body:not(
 /* Fullscreen mode: solid background when maximized */
 body:not(.dynamic-views-image-viewer-disabled).is-mobile
   > .dynamic-views-image-embed.is-zoomed.is-maximized,
-body:not(
-    .dynamic-views-image-viewer-disabled
-  ).dynamic-views-image-viewer-fullscreen:not(.is-mobile)
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .dynamic-views-image-viewer-disable-fullscreen
+  ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
   background: var(--background-primary);
 }
 
 /* Scale image when maximized with panzoom disabled (desktop fullscreen only) */
-body.dynamic-views-zoom-disabled.dynamic-views-image-viewer-fullscreen:not(
-    .is-mobile
-  )
+body.dynamic-views-zoom-disabled:not(
+    .dynamic-views-image-viewer-disable-fullscreen
+  ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed.is-maximized
   img {
   max-height: 100vh;
@@ -125,10 +125,10 @@ body:not(.dynamic-views-image-viewer-disabled).is-mobile
   max-height: 80vh;
 }
 
-/* Constrained mode (desktop, toggle off): limit to 90% of view */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
+/* Constrained mode (desktop, fullscreen disabled): limit to 90% of view */
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .is-mobile
+  ).dynamic-views-image-viewer-disable-fullscreen
   > .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 90%;
@@ -136,9 +136,9 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile):not(
 }
 
 /* Constrained mode maximized (desktop, panzoom disabled): scale to 100% */
-body.dynamic-views-zoom-disabled:not(.is-mobile):not(
-    .dynamic-views-image-viewer-fullscreen
-  )
+body.dynamic-views-zoom-disabled:not(
+    .is-mobile
+  ).dynamic-views-image-viewer-disable-fullscreen
   > .dynamic-views-image-embed.is-zoomed.is-maximized
   img {
   max-height: 100%;
@@ -147,11 +147,12 @@ body.dynamic-views-zoom-disabled:not(.is-mobile):not(
 
 /* Disable drag in fullscreen mode */
 body.is-mobile > .dynamic-views-image-embed.is-zoomed img,
-body.dynamic-views-image-viewer-fullscreen
+body:not(.dynamic-views-image-viewer-disable-fullscreen)
   > .dynamic-views-image-embed.is-zoomed
   img {
   -webkit-user-drag: none;
   user-drag: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -161,4 +162,95 @@ body.dynamic-views-image-viewer-fullscreen
   -webkit-user-drag: auto;
   user-drag: auto;
   cursor: default !important;
+}
+
+/* Image viewer cursor — requires hover intent (.hover-intent-active) */
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.hover-intent-active
+  .card-thumbnail
+  img {
+  cursor: zoom-in;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.hover-intent-active
+  .card-thumbnail
+  .dynamic-views-image-embed {
+  cursor: zoom-in;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.image-format-cover.hover-intent-active
+  .card-cover
+  .dynamic-views-image-embed {
+  cursor: zoom-in;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .dynamic-views-image-embed {
+  pointer-events: auto;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .dynamic-views-image-embed
+  img {
+  pointer-events: none;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.hover-intent-active
+  .dynamic-views-image-embed
+  img {
+  cursor: zoom-in;
+}
+
+/* Reset zoom cursor when all card images are broken — must match
+   specificity of hover-intent-active zoom-in rules above */
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.no-valid-images.hover-intent-active
+  .card-thumbnail
+  img,
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.no-valid-images.hover-intent-active
+  .card-thumbnail
+  .dynamic-views-image-embed,
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.image-format-cover.no-valid-images.hover-intent-active
+  .card-cover
+  .dynamic-views-image-embed,
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.no-valid-images.hover-intent-active
+  .dynamic-views-image-embed
+  img,
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.no-valid-images
+  .dynamic-views-image-embed,
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views
+  .card.no-valid-images
+  .dynamic-views-image-embed
+  img {
+  cursor: inherit;
+}
+
+/* When image viewer disabled, images inherit card cursor (overrides third-party plugins like Image Toolkit) */
+body.dynamic-views-image-viewer-disabled
+  .dynamic-views
+  .dynamic-views-image-embed,
+body.dynamic-views-image-viewer-disabled
+  .dynamic-views
+  .dynamic-views-image-embed
+  img {
+  cursor: inherit !important;
 }

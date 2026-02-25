@@ -133,17 +133,6 @@ body.dynamic-views-cover-circular
   }
 }
 
-/* Skip image fade-in during shuffle (rearrange, not fresh load) */
-.skip-cover-fade .card.image-format-cover .card-cover img,
-.skip-cover-fade .card .card-thumbnail img,
-.skip-cover-fade
-  .card:is(.image-format-backdrop, .image-format-poster)
-  :is(.card-backdrop, .card-poster)
-  img {
-  opacity: 1 !important;
-  transition: none !important;
-}
-
 /* Hover zoom for cover images (desktop only).
    Transitions are always declared; the scale/transform change only fires via .cover-hover-active (JS hover intent). */
 @media (hover: hover) {
@@ -158,8 +147,35 @@ body.dynamic-views-cover-circular
       opacity var(--anim-duration-fast, 140ms) ease;
   }
 
-  /* Cover hover zoom: activated by JS hover intent (cover-hover-active class) */
-  .dynamic-views
+  /* Cover hover zoom — card mode (default): zoom on card hover intent.
+     Mode logic lives in CSS so switching SS mode works without re-render. */
+  body:is(
+      .dynamic-views-cover-hover-zoom-card,
+      :not([class*="dynamic-views-cover-hover-zoom-"])
+    )
+    .dynamic-views
+    .card.image-format-cover.hover-intent-active
+    .card-cover:not(.card-cover-slideshow)
+    .dynamic-views-image-embed
+    img {
+    transform: scale(1.05);
+  }
+
+  body:is(
+      .dynamic-views-cover-hover-zoom-card,
+      :not([class*="dynamic-views-cover-hover-zoom-"])
+    )
+    .dynamic-views
+    .card.image-format-cover.hover-intent-active
+    .card-cover-slideshow
+    .dynamic-views-image-embed
+    img.hover-zoom-eligible {
+    scale: 1.05;
+  }
+
+  /* Cover hover zoom — cover mode: zoom on cover hover intent */
+  body.dynamic-views-cover-hover-zoom-cover
+    .dynamic-views
     .card.image-format-cover.cover-hover-active
     .card-cover:not(.card-cover-slideshow)
     .dynamic-views-image-embed
@@ -167,7 +183,8 @@ body.dynamic-views-cover-circular
     transform: scale(1.05);
   }
 
-  .dynamic-views
+  body.dynamic-views-cover-hover-zoom-cover
+    .dynamic-views
     .card.image-format-cover.cover-hover-active
     .card-cover-slideshow
     .dynamic-views-image-embed
@@ -212,4 +229,66 @@ body.dynamic-views-show-cover-border.dynamic-views-card-border-color-transparent
   .card.image-format-cover
   .card-cover-wrapper {
   border-color: var(--background-modifier-border);
+}
+
+/* ============================================
+   COVER CROP, FIT & BACKGROUND
+   ============================================ */
+
+/* Cover crop alignment overrides */
+body.dynamic-views-cover-crop-top
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover
+  img {
+  object-position: center top;
+}
+
+body.dynamic-views-cover-crop-bottom
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover
+  img {
+  object-position: center bottom;
+}
+
+/* Cover fit mode: Contain mode - images use object-fit: contain */
+/* Cover backgrounds (all modes) */
+.dynamic-views {
+  .card.card-cover-contain.image-format-cover .card-cover img {
+    object-fit: contain;
+    object-position: center;
+    position: relative;
+    border-radius: 0; /* Override theme styles; container handles border-radius */
+  }
+
+  .card.image-format-cover .card-cover {
+    background-color: var(--background-secondary);
+  }
+}
+
+/* Cover background variants */
+body:is(
+    .dynamic-views-cover-bg-dimmed,
+    :not([class*="dynamic-views-cover-bg-"])
+  )
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover {
+  background-color: var(--dynamic-views-image-background-dimmed);
+}
+body.dynamic-views-cover-bg-transparent
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover {
+  background-color: transparent;
+}
+body.dynamic-views-cover-bg-custom
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover {
+  background-color: var(
+    --dynamic-views-cover-background-color-custom,
+    var(--dynamic-views-image-background-dimmed)
+  );
 }

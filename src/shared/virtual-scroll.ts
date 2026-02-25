@@ -54,9 +54,7 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
     return 0;
   }
   // Fixed cover height: CSS-determined, doesn't scale with width
-  if (
-    document.body.classList.contains("dynamic-views-fixed-cover-height")
-  ) {
+  if (document.body.classList.contains("dynamic-views-fixed-cover-height")) {
     return 0;
   }
   const wrapper = cardEl.querySelector<HTMLElement>(

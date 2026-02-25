@@ -9,7 +9,7 @@ import {
   PaneType,
 } from "obsidian";
 import { PersistenceManager } from "./src/persistence";
-import { View } from "./src/datacore/view";
+import { View } from "./src/datacore/controller";
 import { setDatacorePreact } from "./src/jsx-runtime";
 import { getAvailablePath, getAvailableBasePath } from "./src/utils/file";
 import "./src/jsx-runtime"; // Ensure h and Fragment are globally available
@@ -23,7 +23,7 @@ import {
   MASONRY_VIEW_TYPE,
   masonryViewOptions,
 } from "./src/bases/masonry-view";
-import { DynamicViewsSettingTab } from "./src/settings-tab";
+import { DynamicViewsSettingTab } from "./src/plugin-settings";
 import type { DatacoreAPI } from "./src/datacore/types";
 import {
   initExternalBlobCache,

@@ -1,3 +1,31 @@
+.dynamic-views {
+  .card-previews {
+    display: flex;
+    flex-direction: row;
+    gap: var(--size-4-2);
+  }
+}
+
+/* Card previews: thumbnail sizing, text preview, position layouts */
+.dynamic-views {
+  .card.card-thumbnail-top .card-previews {
+    flex-direction: column;
+  }
+
+  .card.card-thumbnail-top .card-previews .card-thumbnail {
+    order: -1;
+  }
+
+  /* Thumbnail-bottom: column layout, content aligned to top */
+  .card.card-thumbnail-bottom .card-previews {
+    flex-direction: column;
+  }
+
+  .card.card-thumbnail-bottom .card-previews .card-text-preview-wrapper {
+    flex: 0 1 auto;
+  }
+}
+
 /* When card-content only has text preview (no thumbnails), use column layout */
 .dynamic-views {
   .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(
@@ -106,13 +134,6 @@ body.dynamic-views-show-thumbnail-placeholder
   filter: none;
 }
 
-/* Bottom spacing for phone to push view end indicator above mobile toolbar */
-.is-phone
-  .workspace-leaf-content[data-type="bases"]
-  .dynamic-views-bases-container {
-  margin-bottom: var(--view-bottom-spacing);
-}
-
 /* Hide multi-image thumbnail shadow when setting enabled */
 body.dynamic-views-hide-thumbnail-shadow
   .dynamic-views
@@ -179,59 +200,18 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
   }
 }
 
-/* Image viewer cursor — requires hover intent (.hover-intent-active) */
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card.hover-intent-active
-  .card-thumbnail
-  img {
-  cursor: zoom-in;
+/* Thumbnail crop alignment overrides */
+body.dynamic-views-thumbnail-crop-top .dynamic-views .card-thumbnail img {
+  object-position: center top;
 }
 
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card.hover-intent-active
-  .card-thumbnail
-  .dynamic-views-image-embed {
-  cursor: zoom-in;
+body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
+  object-position: center bottom;
 }
 
-body:not(.dynamic-views-image-viewer-disabled)
+/* Collapse card-previews when it only has a hidden thumbnail placeholder */
+body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
-  .card.image-format-cover.hover-intent-active
-  .card-cover
-  .dynamic-views-image-embed {
-  cursor: zoom-in;
-}
-
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .dynamic-views-image-embed {
-  pointer-events: auto;
-}
-
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .dynamic-views-image-embed
-  img {
-  pointer-events: none;
-}
-
-body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views
-  .card.hover-intent-active
-  .dynamic-views-image-embed
-  img {
-  cursor: zoom-in;
-}
-
-/* When image viewer disabled, images inherit card cursor (overrides third-party plugins like Image Toolkit) */
-body.dynamic-views-image-viewer-disabled
-  .dynamic-views
-  .dynamic-views-image-embed,
-body.dynamic-views-image-viewer-disabled
-  .dynamic-views
-  .dynamic-views-image-embed
-  img {
-  cursor: inherit !important;
+  .card-previews:has(> .card-thumbnail-placeholder:only-child) {
+  display: none;
 }

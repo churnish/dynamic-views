@@ -1,5 +1,5 @@
 /**
- * Preview utilities
+ * Text preview utilities
  * Extracts and sanitizes content for card previews
  */
 
@@ -50,7 +50,7 @@ const markdownPatterns = [
 ];
 
 /**
- * Replace escaped characters with placeholders to protect from markdown processing
+ * Replace escaped characters with placeholders to protect from Markdown processing
  * Returns the text with placeholders and a map to restore them later
  * Using § character to avoid conflicts with markdown syntax patterns
  */
@@ -140,7 +140,7 @@ function removeCodeBlocks(text: string): string {
 }
 
 /**
- * Strip markdown syntax from text while preserving content
+ * Strip Markdown syntax from text while preserving content
  */
 export function stripMarkdownSyntax(text: string): string {
   if (!text || text.trim().length === 0) return "";
@@ -152,7 +152,7 @@ export function stripMarkdownSyntax(text: string): string {
   // Third pass: strip > after list markers (e.g., "- >text" or "- [-] >text")
   text = text.replace(/^(\s*[-*+](?:\s*\[[^\]]\])?\s*)>\s?/gm, "$1");
 
-  // Protect escaped characters before processing markdown
+  // Protect escaped characters before processing Markdown
   const { text: protectedText, map: escapedCharsMap } =
     protectEscapedChars(text);
 
@@ -189,7 +189,7 @@ export function stripMarkdownSyntax(text: string): string {
 
 /**
  * Sanitize markdown content for preview display
- * @param content - Raw markdown content
+ * @param content - Raw Markdown content
  * @param omitFirstLine - When to omit first line: "always", "ifMatchesTitle", or "never"
  * @param filename - Optional filename to compare against first line
  * @param titleValue - Optional title value to compare against first line

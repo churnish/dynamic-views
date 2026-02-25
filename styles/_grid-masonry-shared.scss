@@ -218,4 +218,17 @@ body.dynamic-views-hide-group-property-labels
       pointer-events: none;
     }
   }
+
+  /* Desktop: cards outside scrollport margin hidden by IO-based system */
+  .card.content-hidden {
+    content-visibility: hidden;
+    contain-intrinsic-height: auto 300px;
+  }
+}
+
+/* Mobile: browser-managed content-visibility (IO-based toggling causes
+   infinite reflow loop on iOS WebKit) */
+body.is-mobile .dynamic-views .card {
+  content-visibility: auto;
+  contain-intrinsic-height: auto 300px;
 }

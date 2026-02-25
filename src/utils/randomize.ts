@@ -2,7 +2,7 @@ import { App, Notice, View, BasesEntry, PaneType, Keymap } from "obsidian";
 import type { DynamicViewsGridView } from "../bases/grid-view";
 import type { DynamicViewsMasonryView } from "../bases/masonry-view";
 
-type DynamicBasesView = DynamicViewsGridView | DynamicViewsMasonryView;
+type BasesCardView = DynamicViewsGridView | DynamicViewsMasonryView;
 
 /**
  * Calculate pane type based on modifier keys and setting.
@@ -106,14 +106,14 @@ export function getActiveBasesView(
 /**
  * Get the active Bases view if it's a dynamic-views view (Grid or Masonry)
  */
-export function getActiveDynamicViewsBase(app: App): DynamicBasesView | null {
+export function getActiveDynamicViewsBase(app: App): BasesCardView | null {
   const basesView = getActiveBasesView(app);
 
   if (
     basesView?.type === "dynamic-views-grid" ||
     basesView?.type === "dynamic-views-masonry"
   ) {
-    return basesView as DynamicBasesView;
+    return basesView as BasesCardView;
   }
 
   return null;
@@ -170,7 +170,7 @@ export function toggleShuffleActiveView(app: App): void {
 
   if (isDynamicView) {
     // Always reshuffle — original sort restores on view reopen
-    const dynamicView = basesView as DynamicBasesView;
+    const dynamicView = basesView as BasesCardView;
     const entries = basesView.data?.data;
     if (entries && entries.length > 0) {
       const paths = entries.map((e) => e.file.path);

@@ -20,10 +20,12 @@
   align-items: center;
   gap: 6px;
 
-  &:hover {
-    color: var(--text-muted) !important;
-    text-decoration: none !important;
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text-muted) !important;
+      text-decoration: none !important;
+      transform: translateY(-1px);
+    }
   }
 }
 

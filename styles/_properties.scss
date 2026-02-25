@@ -264,11 +264,13 @@
 }
 
 /* Property link hover: list (immediate) */
-.dynamic-views .list-properties .property a.internal-link:hover {
-  color: var(--link-color-hover);
-}
-.dynamic-views .list-properties .property a.external-link:hover {
-  color: var(--link-external-color-hover);
+@media (hover: hover) {
+  .dynamic-views .list-properties .property a.internal-link:hover {
+    color: var(--link-color-hover);
+  }
+  .dynamic-views .list-properties .property a.external-link:hover {
+    color: var(--link-external-color-hover);
+  }
 }
 
 /* Compact mode: reset timestamp icon to left for even fields (edge mode only) */
@@ -493,6 +495,7 @@ body:is(
   .path-separator {
     color: inherit;
     margin: 0 2px;
+    -webkit-user-select: none;
     user-select: none;
     opacity: 0.5;
   }
@@ -513,10 +516,12 @@ body:is(
 }
 
 /* Segment underline hover: list + group headings (immediate) */
-.dynamic-views
-  :is(.list-item, .list-properties, .bases-group-heading)
-  :is(.folder-segment, .filename-segment):hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .dynamic-views
+    :is(.list-item, .list-properties, .bases-group-heading)
+    :is(.folder-segment, .filename-segment):hover {
+    text-decoration: underline;
+  }
 }
 
 /* Paired property layout */

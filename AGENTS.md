@@ -13,6 +13,8 @@
 
 Use @knowledge/project-structure.md as a navigational guide before reading or editing any file in the codebase.
 
+Consult @wiki/wiki-structure.md to find user-facing, human-verified plugin wiki pages that document how features and settings are meant to function.
+
 ### knowledge/architecture
 
 Read...

@@ -1,5 +1,21 @@
 import type { RefObject } from "../datacore/types";
-import { cacheExternalImage, markImageBroken } from "./slideshow";
+import { cacheExternalImage } from "./slideshow";
+
+// Track URLs that failed to load — filtered out on subsequent renders
+// Session-scoped: cleared on plugin reload/unload. Unbounded growth is intentional
+// and harmless — bounded by user's vault broken image count.
+export const brokenImageUrls = new Set<string>();
+
+/** Mark a URL as broken — filtered out on subsequent renders */
+export function markImageBroken(url: string): void {
+  brokenImageUrls.add(url);
+}
+
+/** Filter known-broken URLs from an image URL array */
+export function filterBrokenUrls(urls: string[]): string[] {
+  if (brokenImageUrls.size === 0) return urls;
+  return urls.filter((url) => !brokenImageUrls.has(url));
+}
 
 // Cache aspect ratio by image URL to avoid layout flash on re-render
 // Unbounded cache growth is intentional and harmless - entries are small (~20 bytes each)

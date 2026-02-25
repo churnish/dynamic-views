@@ -1,9 +1,9 @@
 /**
- * Shared masonry layout logic for both Bases and Datacore views
+ * Shared masonry layout logic for both Bases and Datacore
  * Pure positioning calculations - no DOM manipulation
  */
 
-// Intentional debug toggle — flip to true for masonry layout diagnostics. Do not remove without explicit user instruction.
+// Intentional debug toggle — flip to true for masonry layout diagnostics. Do NOT remove without explicit user instruction.
 const DEBUG_MASONRY = false;
 
 const logMasonry = (

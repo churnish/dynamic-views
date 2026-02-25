@@ -166,7 +166,7 @@ function closeImageViewer(
  * @param viewerClones - Map storing original → clone element mappings
  * @param openFileAction - How card clicks should open files ("card" or "title")
  */
-export function handleImageViewerClick(
+export function handleImageViewerTrigger(
   e: MouseEvent,
   cardPath: string,
   app: App,
@@ -176,6 +176,10 @@ export function handleImageViewerClick(
 ): void {
   // Always stop propagation to prevent third-party plugins (e.g. Image Toolkit)
   e.stopPropagation();
+
+  // Skip viewer when all card images are broken (discovered via preload)
+  const cardEl = (e.currentTarget as HTMLElement)?.closest(".card");
+  if (cardEl?.classList.contains("no-valid-images")) return;
 
   const viewerDoc = (e.currentTarget as HTMLElement)?.ownerDocument ?? document;
 

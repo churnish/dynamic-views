@@ -12,6 +12,7 @@ import {
 import { isExternalUrl } from "../utils/image";
 import { isSlideshowLoopingDisabled } from "../utils/style-settings";
 import { setupHoverIntent } from "./hover-intent";
+import { brokenImageUrls, markImageBroken } from "./image-loader";
 
 // Blob URL cache for external images to prevent re-downloads
 // Obsidian's Electron sends Cache-Control: no-cache on cross-origin requests,
@@ -23,10 +24,6 @@ const BLOB_CACHE_LIMIT = 150;
 const pendingFetches = new Map<string, Promise<string | null>>();
 // Track URLs that failed validation to prevent retrying broken images
 const failedValidationUrls = new Set<string>();
-// Track URLs that failed to load — filtered out on subsequent renders
-// Session-scoped: cleared on plugin reload/unload. Unbounded growth is intentional
-// and harmless — bounded by user's vault broken image count.
-const brokenImageUrls = new Set<string>();
 // Prevent orphaned blob URLs from in-flight fetches during cleanup
 let isCleanedUp = false;
 
@@ -57,29 +54,28 @@ export function getCachedBlobUrl(url: string): string {
   return externalBlobCache.get(url) ?? url;
 }
 
-/** Mark a URL as broken — filtered out on subsequent renders */
-export function markImageBroken(url: string): void {
-  brokenImageUrls.add(url);
-}
-
-/** Filter known-broken URLs from an image URL array */
-export function filterBrokenUrls(urls: string[]): string[] {
-  if (brokenImageUrls.size === 0) return urls;
-  return urls.filter((url) => !brokenImageUrls.has(url));
-}
-
 /**
  * Create onBroken callback for setupImagePreload.
  * Splices broken URL from array; calls onReduced when ≤1 remain.
+ *
+ * setupImagePreload skips index 0 (validated by the <img> error handler),
+ * so after removing all broken urls at indices 1+, index 0 may still be
+ * in the array despite being in the global broken set. Reconcile here.
  */
 export function createPreloadBrokenHandler(
   urls: string[],
+  cardEl: HTMLElement | null,
   onReduced: () => void,
 ): (url: string) => void {
   return (url) => {
     const idx = urls.indexOf(url);
     if (idx !== -1) urls.splice(idx, 1);
+    // Reconcile index 0 — may have been marked broken by <img> error handler
+    if (urls.length === 1 && brokenImageUrls.has(urls[0])) {
+      urls.splice(0, 1);
+    }
     if (urls.length <= 1) onReduced();
+    if (urls.length === 0) cardEl?.classList.add("no-valid-images");
   };
 }
 
@@ -206,6 +202,10 @@ export interface SlideshowElements {
 export interface SlideshowCallbacks {
   onSlideChange?: (newIndex: number, nextImg: HTMLImageElement) => void;
   onAnimationComplete?: () => void;
+  onAllFailed?: () => void;
+  onBroken?: (url: string) => void;
+  /** Shared guard between hover preload and first-navigate preload to prevent duplicate runs */
+  preloadGuard?: { done: boolean };
 }
 
 /**
@@ -228,8 +228,6 @@ export function createSlideshowNavigator(
   let currentIndex = 0;
   let isAnimating = false;
   let lastWrapFromFirstTimestamp: number | null = null;
-  // One-shot: on first navigation, preload all uncached external images (covers mobile)
-  let preloadTriggered = false;
 
   // Read animation duration from CSS variable at runtime
   // Falls back to SLIDESHOW_ANIMATION_MS if variable not defined or invalid
@@ -379,13 +377,26 @@ export function createSlideshowNavigator(
     isAnimating = true;
     activeNewIndex = newIndex;
 
-    // On first navigation, preload all uncached external images
-    // Covers mobile where hover preload never fires
-    if (!preloadTriggered) {
-      preloadTriggered = true;
-      imageUrls.forEach((url) => {
-        if (isExternalUrl(url) && !externalBlobCache.has(url)) {
-          void getExternalBlobUrl(url);
+    // On first navigation, validate and preload images at indices 1+
+    // Covers mobile where hover preload never fires (shared guard prevents duplicate runs)
+    const guard = callbacks?.preloadGuard;
+    if (guard && !guard.done) {
+      guard.done = true;
+      imageUrls.slice(1).forEach((url) => {
+        if (isExternalUrl(url)) {
+          void getExternalBlobUrl(url).then((result) => {
+            if (result === null) {
+              markImageBroken(url);
+              if (!signal.aborted) callbacks?.onBroken?.(url);
+            }
+          });
+        } else {
+          const img = new Image();
+          img.onerror = () => {
+            markImageBroken(url);
+            if (!signal.aborted) callbacks?.onBroken?.(url);
+          };
+          img.src = url;
         }
       });
     }
@@ -414,7 +425,10 @@ export function createSlideshowNavigator(
           if (targetSrc !== effectiveUrl) return;
           failedIndices.add(newIndex);
           markImageBroken(imageUrls[newIndex]);
-          if (failedIndices.size >= imageUrls.length) return;
+          if (failedIndices.size >= imageUrls.length) {
+            callbacks?.onAllFailed?.();
+            return;
+          }
           currImg.addClass("dynamic-views-hidden");
           navigate(direction, honorGestureDirection, true);
         },
@@ -453,8 +467,8 @@ export function createSlideshowNavigator(
         failedIndices.add(newIndex);
         markImageBroken(imageUrls[newIndex]);
         if (failedIndices.size >= imageUrls.length) {
-          // All images failed - stop trying
           isAnimating = false;
+          callbacks?.onAllFailed?.();
           return;
         }
 
@@ -768,8 +782,7 @@ export function setupSwipeGestures(
 }
 
 /**
- * Preload images on hover intent (mousemove after mouseenter)
- * Prevents preloading when card scrolls under stationary cursor
+ * Preload and validate images at indices 1+ on hover intent.
  * External images: cached as blob URLs via requestUrl
  * Internal images: browser preload via Image()
  */
@@ -778,32 +791,32 @@ export function setupImagePreload(
   imageUrls: string[],
   signal: AbortSignal,
   onBroken?: (url: string) => void,
+  preloadGuard?: { done: boolean },
 ): void {
-  let preloaded = false;
-
   setupHoverIntent(
     cardEl,
     () => {
-      if (!preloaded) {
-        preloaded = true;
-        imageUrls.slice(1).forEach((url) => {
-          if (isExternalUrl(url)) {
-            void getExternalBlobUrl(url).then((result) => {
-              if (result === null) {
-                brokenImageUrls.add(url);
-                if (!signal.aborted) onBroken?.(url);
-              }
-            });
-          } else {
-            const img = new Image();
-            img.onerror = () => {
-              brokenImageUrls.add(url);
-              if (!signal.aborted) onBroken?.(url);
-            };
-            img.src = url;
-          }
-        });
+      if (preloadGuard) {
+        if (preloadGuard.done) return;
+        preloadGuard.done = true;
       }
+      imageUrls.slice(1).forEach((url) => {
+        if (isExternalUrl(url)) {
+          void getExternalBlobUrl(url).then((result) => {
+            if (result === null) {
+              markImageBroken(url);
+              if (!signal.aborted) onBroken?.(url);
+            }
+          });
+        } else {
+          const img = new Image();
+          img.onerror = () => {
+            markImageBroken(url);
+            if (!signal.aborted) onBroken?.(url);
+          };
+          img.src = url;
+        }
+      });
     },
     undefined,
     signal,

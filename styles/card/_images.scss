@@ -1,0 +1,51 @@
+/* Shared image styles across formats */
+
+/* Skip image fade-in during shuffle (rearrange, not fresh load) */
+.skip-cover-fade .card.image-format-cover .card-cover img,
+.skip-cover-fade .card .card-thumbnail img,
+.skip-cover-fade
+  .card:is(.image-format-backdrop, .image-format-poster)
+  :is(.card-backdrop, .card-poster)
+  img {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* Fullbleed image formats (backdrop + poster) */
+.dynamic-views {
+  .card:is(.image-format-backdrop, .image-format-poster) {
+    :is(.card-backdrop, .card-poster) img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      opacity: 0;
+      transition: opacity var(--anim-duration-fast, 140ms) ease;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    &.cover-ready :is(.card-backdrop, .card-poster) img {
+      opacity: 1;
+    }
+
+    /* Card content stacks above background image */
+    .card-content {
+      position: relative;
+      z-index: 1;
+    }
+  }
+}
+
+/* Transparent border = no inset */
+body.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-backdrop {
+  --backdrop-inset: 0px;
+}
+
+body.dynamic-views-card-border-color-transparent
+  .dynamic-views
+  .card.image-format-poster {
+  --poster-inset: 0px;
+}

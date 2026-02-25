@@ -101,3 +101,10 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
     drop-shadow(0 0 10px rgba(255, 255, 255, 0.15))
     drop-shadow(0 0 16px rgba(255, 255, 255, 0.12));
 }
+
+/* Bottom spacing for phone to push view end indicator above mobile toolbar */
+.is-phone
+  .workspace-leaf-content[data-type="bases"]
+  .dynamic-views-bases-container {
+  margin-bottom: var(--view-bottom-spacing);
+}

@@ -12,7 +12,7 @@
   gap: var(--dynamic-views-card-spacing-mobile, 6px);
 }
 
-/* Grid view: remove margins (gap handles spacing) and set flexbox layout */
+/* Grid: remove margins (gap handles spacing) and set flexbox layout */
 .dynamic-views-grid .card {
   margin: 0;
   display: flex;
@@ -84,7 +84,7 @@
     box-sizing: border-box;
   }
 
-  /* Grid view: push bottom properties to bottom of card when it has siblings above.
+  /* Grid: push bottom properties to bottom of card when it has siblings above.
      Exclude cover-bottom and cover-top cover-image which have their own rules. */
   .dynamic-views-grid
     .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
@@ -105,7 +105,7 @@
     padding-top: var(--size-4-2);
   }
 
-  /* Grid view: cover-top — fixed cover height, gap absorbs remaining space.
+  /* Grid: cover-top — fixed cover height, gap absorbs remaining space.
      Content stays natural height with text top-aligned. */
   .dynamic-views-grid .card.card-cover-top .card-previews {
     flex-grow: 0;

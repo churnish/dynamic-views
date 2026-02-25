@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-21
+last updated: 2026-02-25
 ---
 
 # Style Settings fallback selectors
@@ -53,11 +53,95 @@ body:not([class*="dynamic-views-card-background-hover-"])
 2. If it needs a rule, add the `:is(.default-class, :not([class*="prefix-"]))` fallback.
 3. If the setting is nested under a parent that requires Style Settings, skip the fallback.
 
-## Current fallbacks (as of 82607e0)
+## `class-toggle` fallback — inverted toggle (CSS)
+
+For toggles where the default is ON, invert the toggle name so that **absence of class = feature enabled** (the correct default). The toggle becomes a "disable" switch:
+
+```yaml
+# Before (broken without SS)
+id: dynamic-views-poster-hover-zoom
+type: class-toggle
+default: true
+
+# After (works without SS)
+id: dynamic-views-poster-disable-reveal-zoom
+type: class-toggle
+```
+
+In CSS, replace positive match with `:not()`:
+
+```scss
+/* Before */
+body.dynamic-views-poster-hover-zoom .dynamic-views ... {
+}
+
+/* After — absence of class = enabled */
+body:not(.dynamic-views-poster-disable-reveal-zoom) .dynamic-views ... {
+}
+```
+
+In JS, invert the check:
+
+```typescript
+// Before
+const isFullscreen = body.classList.contains(
+  "dynamic-views-image-viewer-fullscreen",
+);
+// After
+const isFullscreen = !body.classList.contains(
+  "dynamic-views-image-viewer-disable-fullscreen",
+);
+```
+
+### When adding a new `class-toggle` with default ON
+
+1. Name the toggle as a "disable" switch (e.g., `disable-feature` instead of `feature`).
+2. Use `:not(.disable-class)` in CSS to match "enabled" state.
+3. Invert any JS `classList.contains()` checks.
+
+## `class-toggle` fallback — `.css-settings-manager` gate (CSS)
+
+For toggles where the default is ON but inversion is impractical (e.g., the toggle hides a UI element and cannot be reframed as "show"), gate the CSS behind `.css-settings-manager` (the `<style>` element Style Settings creates):
+
+```scss
+/* Show pin button only when user explicitly unchecks the toggle.
+   .css-settings-manager = Style Settings active, so :not() means toggle is OFF. */
+body.css-settings-manager:not(.dynamic-views-hide-pin-toolbar)
+  .dynamic-views
+  .pin-btn {
+  display: flex !important;
+}
+```
+
+Without Style Settings, `.css-settings-manager` is absent, so the entire rule is inert — the element stays hidden by default.
+
+## Avoid re-renders from SS changes
+
+Re-renders from Style Settings changes are disruptive — they reset scroll position. Only add settings to `getStyleSettingsHash()` when they genuinely affect rendered card content (text, icons, layout). Do NOT add settings that only affect:
+
+- **CSS-only toggles** (hover zoom, poster mode, cursor) — body class changes are picked up by CSS automatically.
+- **JS event listener targets** (e.g., cover hover zoom mode) — design listeners to work without rebinding. Example: `setupHoverZoomEligibility` always listens on `cardEl`; the mode-dependent `cover-hover-active` class (from `setupHoverIntent`) gates activation in CSS.
+
+## Current fallbacks
+
+### `class-select` (CSS)
 
 | Setting                   | Default     | Fallback file                                      |
 | ------------------------- | ----------- | -------------------------------------------------- |
 | Poster overlay tint       | dark        | `_poster.scss`                                     |
-| Cover background          | plain       | `_cover-placeholders.scss`, `_masonry-covers.scss` |
-| Card border color (hover) | muted       | `_content.scss`                                    |
-| Card background (hover)   | transparent | `_core.scss`                                       |
+| Cover background          | plain       | `_cover-placeholders.scss`, `_cover-elements.scss` |
+| Card border color (hover) | muted       | `_hover-states.scss`                               |
+| Card background (hover)   | transparent | `_hover-states.scss`                               |
+
+### `class-toggle` — inverted (CSS)
+
+| Setting                 | Toggle class                                    | Fallback file        |
+| ----------------------- | ----------------------------------------------- | -------------------- |
+| Poster reveal zoom      | `dynamic-views-poster-disable-reveal-zoom`      | `_poster.scss`       |
+| Image viewer fullscreen | `dynamic-views-image-viewer-disable-fullscreen` | `_image-viewer.scss` |
+
+### `class-toggle` — `.css-settings-manager` gate (CSS)
+
+| Setting          | Toggle class                     | Fallback file   |
+| ---------------- | -------------------------------- | --------------- |
+| Hide pin toolbar | `dynamic-views-hide-pin-toolbar` | `_toolbar.scss` |

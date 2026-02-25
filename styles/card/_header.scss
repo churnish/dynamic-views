@@ -166,7 +166,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   display: none;
 }
 
-/* Dim on touch/press for visual feedback (matches Bases backend <a> tag behavior) */
+/* Dim on touch/press for visual feedback (matches Bases <a> tag behavior) */
 .dynamic-views {
   .card-title a,
   .card-title .card-title-link {
@@ -190,7 +190,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 }
 
 @media (hover: hover) {
-  /* Underline title on hover when open action is "press on title" */
+  /* Underline title on hover when open action is "Press on title" */
   :is(
       body.dynamic-views-open-on-title,
       body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
@@ -368,7 +368,7 @@ body.dynamic-views-title-divider
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* Subtitle above title - flip visual order with CSS order */
+/* Subtitle above title */
 body.dynamic-views-subtitle-above .dynamic-views .card-title-block .card-title {
   order: 2;
 }
@@ -379,15 +379,7 @@ body.dynamic-views-subtitle-above
   order: 1;
 }
 
-.dynamic-views {
-  .card-previews {
-    display: flex;
-    flex-direction: row;
-    gap: var(--size-4-2);
-  }
-}
-
-/* Title alignment (left is default in standard CSS) */
+/* Title alignment */
 body.dynamic-views-title-align-center .dynamic-views .card-title {
   text-align: center;
 }

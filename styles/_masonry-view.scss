@@ -92,3 +92,79 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Masonry container */
+.dynamic-views {
+  .masonry-container {
+    position: relative;
+    height: var(--masonry-height, auto);
+    contain: layout style;
+  }
+
+  /* Hide cards during layout recalc - fade out with opacity transition.
+     Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container). */
+  .masonry-container.masonry-resizing .card,
+  .masonry-resizing .masonry-container .card {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--anim-duration-superfast, 70ms) ease,
+      visibility 0s var(--anim-duration-superfast, 70ms);
+  }
+
+  /* Hide end indicator during resize - use display:none to fully remove from flow */
+  &:has(.masonry-resizing) .dynamic-views-end-indicator {
+    display: none;
+  }
+
+  /* Hide cards until masonry positions them (prevents flash at 0,0).
+     Must match positioned cards' CSS context (position + containment) for accurate height measurement.
+     height: auto overrides grid's height: 100% which causes incorrect 148px skeleton height. */
+  .masonry-container .card:not(.masonry-positioned) {
+    position: absolute;
+    opacity: 0;
+    height: auto;
+    contain: layout style paint;
+  }
+
+  // Must not exceed MOUNT_REMEASURE_MS / MASONRY_CORRECTION_MS in
+  // shared/constants.ts — transitions must finish before next reposition tick
+  --masonry-reposition-duration: 200ms;
+
+  /* Masonry positioned cards */
+  .card.masonry-positioned {
+    position: absolute;
+    contain: layout style paint;
+    transition:
+      opacity var(--anim-duration-superfast, 70ms) ease,
+      top var(--masonry-reposition-duration) ease,
+      left var(--masonry-reposition-duration) ease,
+      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
+      background-color var(--anim-duration-fast, 140ms) ease;
+  }
+
+  // Instant repositioning during scroll-idle remeasure — overrides default
+  // transition so positions update in sync with scrollTop compensation
+  .masonry-skip-transition .card.masonry-positioned {
+    transition: none !important;
+  }
+
+  // During active resize, keep top/left/height transitions for smooth repositioning.
+  // Per-frame JS cost is ~0.3ms after offset skip — budget for transition smoothing.
+  // Width is NOT transitioned — left positions assume target width instantly.
+  .masonry-resize-active .card.masonry-positioned {
+    transition:
+      opacity var(--anim-duration-superfast, 70ms) ease,
+      top var(--masonry-reposition-duration) ease,
+      left var(--masonry-reposition-duration) ease,
+      height var(--masonry-reposition-duration) ease,
+      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
+      background-color var(--anim-duration-fast, 140ms) ease;
+  }
+}
+
+/* Force content rendering during masonry height measurement
+   (overrides both IO-based .content-hidden and CSS content-visibility: auto) */
+.masonry-measuring .card {
+  content-visibility: visible !important;
+}

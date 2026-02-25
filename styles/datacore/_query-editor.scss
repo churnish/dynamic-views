@@ -68,8 +68,10 @@
     border-color var(--anim-duration-fast, 140ms);
 }
 
-.query-btn:hover {
-  background-color: var(--background-modifier-hover);
+@media (hover: hover) {
+  .query-btn:hover {
+    background-color: var(--background-modifier-hover);
+  }
 }
 
 .dynamic-views .query-apply-btn {
@@ -78,8 +80,10 @@
   border-color: var(--interactive-accent);
 }
 
-.dynamic-views .query-apply-btn:hover {
-  background-color: var(--interactive-accent-hover);
+@media (hover: hover) {
+  .dynamic-views .query-apply-btn:hover {
+    background-color: var(--interactive-accent-hover);
+  }
 }
 
 .dynamic-views .query-clear-btn {
@@ -88,9 +92,11 @@
   border-color: var(--background-modifier-border);
 }
 
-.dynamic-views .query-clear-btn:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+@media (hover: hover) {
+  .dynamic-views .query-clear-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .dynamic-views .query-tip {

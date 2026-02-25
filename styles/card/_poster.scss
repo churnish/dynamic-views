@@ -1,3 +1,139 @@
+/* Poster setup: position, overflow, card-body scroll, poster element */
+.dynamic-views {
+  .card.image-format-poster {
+    position: relative;
+    overflow: hidden;
+    --poster-inset: 1px;
+
+    .card-content {
+      overflow: clip;
+      overflow-clip-margin: 4px;
+    }
+
+    /* Constrain height so .card-body can scroll.
+       overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
+       without clipping its border-radius. */
+    .card-body {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      scrollbar-width: none;
+
+      /* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
+      > * {
+        flex-shrink: 0;
+      }
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .card-poster {
+      position: absolute;
+      inset: calc(var(--poster-inset) - var(--dynamic-views-card-padding, 8px));
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    &.card-cover-contain .card-poster img {
+      object-fit: contain;
+    }
+  }
+}
+
+/* Desktop: scroll gated by hover intent to prevent capturing view scroll */
+@media (hover: hover) {
+  body:not(.dynamic-views-poster-reveal-press) .dynamic-views {
+    .card.image-format-poster .card-body {
+      overflow-y: hidden;
+    }
+
+    .card.image-format-poster.poster-hover-active .card-body {
+      overflow-y: auto;
+    }
+  }
+
+  /* Press mode: gate scroll behind poster-revealed instead */
+  body.dynamic-views-poster-reveal-press .dynamic-views {
+    .card.image-format-poster.poster-revealed .card-body {
+      overflow-y: auto;
+    }
+  }
+}
+
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster
+  .card-body,
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-body {
+  overflow-y: hidden;
+}
+
+/* No scroll = no scroll gradient */
+body.dynamic-views-poster-disable-scroll
+  .dynamic-views
+  .card.image-format-poster
+  .card-body:is(
+    .scroll-gradient-top,
+    .scroll-gradient-bottom,
+    .scroll-gradient-vertical-both
+  ) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* Poster reveal zoom transition (all platforms — needed for both hover and tap) */
+body:not(.dynamic-views-poster-disable-reveal-zoom)
+  .dynamic-views
+  .card.image-format-poster
+  .card-poster
+  img {
+  will-change: transform; /* iOS WebKit: own GPU layer so ::after overlay repaint doesn't swallow transform transition */
+  transition:
+    transform var(--anim-duration-fast, 140ms) ease,
+    opacity var(--anim-duration-fast, 140ms) ease;
+}
+
+/* Poster: zoom on tap reveal (mobile) */
+body:not(.dynamic-views-poster-disable-reveal-zoom)
+  .dynamic-views
+  .card.image-format-poster.poster-revealed
+  .card-poster
+  img {
+  transform: scale(1.05);
+}
+
+/* Poster hover zoom (desktop) */
+@media (hover: hover) {
+  /* Poster: zoom on poster hover intent (hover mode only, not press mode) */
+  body:not(.dynamic-views-poster-disable-reveal-zoom):not(
+      .dynamic-views-poster-reveal-press
+    )
+    .dynamic-views
+    .card.image-format-poster.poster-hover-active
+    .card-poster
+    img {
+    transform: scale(1.05);
+  }
+
+  /* Poster: zoom on press reveal (press mode, desktop) */
+  body:not(
+      .dynamic-views-poster-disable-reveal-zoom
+    ).dynamic-views-poster-reveal-press
+    .dynamic-views
+    .card.image-format-poster.poster-revealed
+    .card-poster
+    img {
+    transform: scale(1.05);
+  }
+}
+
 /* Poster overlay for text readability (includes transition, unlike backdrop) */
 .dynamic-views {
   .card.image-format-poster .card-poster::after {
@@ -151,8 +287,15 @@ body.dynamic-views-poster-disable-raise
   }
 }
 
-/* Card mode: cards with images have pointer cursor */
+/* Card mode: poster cards with images have pointer cursor */
 body.dynamic-views-open-on-card
+  .dynamic-views
+  .card.image-format-poster:has(.card-poster) {
+  cursor: pointer;
+}
+
+/* Press mode: pointer on poster cards regardless of open action (press toggles reveal) */
+body.dynamic-views-poster-reveal-press
   .dynamic-views
   .card.image-format-poster:has(.card-poster) {
   cursor: pointer;

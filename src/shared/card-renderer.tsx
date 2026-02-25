@@ -19,7 +19,6 @@ import {
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
   getUrlIcon,
-  getCoverHoverZoomMode,
   hasBodyClass,
 } from "../utils/style-settings";
 import {
@@ -39,14 +38,14 @@ import {
   handleJsxImageError,
   handleImageLoad,
   DEFAULT_ASPECT_RATIO,
+  filterBrokenUrls,
+  markImageBroken,
 } from "./image-loader";
-import { handleImageViewerClick, cleanupAllViewers } from "./image-viewer";
+import { handleImageViewerTrigger, cleanupAllViewers } from "./image-viewer";
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
-  filterBrokenUrls,
   getCachedBlobUrl,
-  markImageBroken,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -497,7 +496,7 @@ const cardScrollAbortControllers = new Map<string, AbortController>();
 /** Per-element hover intent state (WeakMap avoids path collisions across containers) */
 const cardHoverIntentState = new WeakMap<
   HTMLElement,
-  { controller: AbortController; zoomMode: string }
+  { controller: AbortController }
 >();
 
 /** Per-element card hover intent state (survives Preact re-renders) */
@@ -810,15 +809,25 @@ function CoverSlideshow({
 
     const cardEl = slideshowEl.closest(".card") as HTMLElement;
 
+    // Shared handler for both hover preload and navigator preload —
+    // both mutate the same imageArray, so a single instance deduplicates splices
+    const preloadBrokenHandler = createPreloadBrokenHandler(
+      imageArray,
+      cardEl,
+      () => {
+        imageEmbed.parentElement?.addClass("slideshow-single");
+      },
+    );
+    const preloadGuard = { done: false };
+
     // Setup image preloading
     if (cardEl) {
       setupImagePreload(
         cardEl,
         imageArray,
         signal,
-        createPreloadBrokenHandler(imageArray, () => {
-          imageEmbed.parentElement?.addClass("slideshow-single");
-        }),
+        preloadBrokenHandler,
+        preloadGuard,
       );
     }
 
@@ -854,8 +863,12 @@ function CoverSlideshow({
         },
         onAnimationComplete: () => {
           clearHoverZoom();
-          // No layout update needed - card dimensions are locked to first slide
         },
+        onAllFailed: () => {
+          cardEl?.classList.add("no-valid-images");
+        },
+        onBroken: preloadBrokenHandler,
+        preloadGuard,
       },
     );
 
@@ -931,7 +944,7 @@ function CoverSlideshow({
       <div
         className="dynamic-views-image-embed"
         onClick={(e: MouseEvent) => {
-          handleImageViewerClick(
+          handleImageViewerTrigger(
             e,
             cardPath,
             app,
@@ -1766,7 +1779,10 @@ function Card({
                 showFileContextMenu(e, app, file, card.path);
               }
             }}
-            onMouseOver={(e: MouseEvent) => {
+            onMouseEnter={(e: MouseEvent) => {
+              // Skip when card handler already covers it
+              if (isPosterClickReveal && settings.openFileAction === "card")
+                return;
               app.workspace.trigger("hover-link", {
                 event: e,
                 source: "file-explorer",
@@ -1865,7 +1881,7 @@ function Card({
               <div
                 className="dynamic-views-image-embed"
                 onClick={(e: MouseEvent) => {
-                  handleImageViewerClick(
+                  handleImageViewerTrigger(
                     e,
                     card.path,
                     app,
@@ -2058,34 +2074,24 @@ function Card({
         responsiveObserver.observe(cardEl);
         cardResponsiveObservers.set(card.path, responsiveObserver);
 
-        // Cover hover zoom intent (element-scoped to survive Preact re-renders)
+        // Cover hover zoom intent: always listen on .card-cover.
+        // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
         if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
-          const zoomMode = getCoverHoverZoomMode();
-          if (zoomMode !== "off") {
-            const targetEl =
-              zoomMode === "cover"
-                ? (cardEl.querySelector(".card-cover") as HTMLElement)
-                : cardEl;
-            if (targetEl) {
-              const existing = cardHoverIntentState.get(cardEl);
-              if (
-                !existing ||
-                existing.controller.signal.aborted ||
-                existing.zoomMode !== zoomMode
-              ) {
-                existing?.controller.abort();
-                const hoverAbort = new AbortController();
-                cardHoverIntentState.set(cardEl, {
-                  controller: hoverAbort,
-                  zoomMode,
-                });
-                setupHoverIntent(
-                  targetEl,
-                  () => cardEl.classList.add("cover-hover-active"),
-                  () => cardEl.classList.remove("cover-hover-active"),
-                  hoverAbort.signal,
-                );
-              }
+          const coverEl = cardEl.querySelector(".card-cover") as HTMLElement;
+          if (coverEl) {
+            const existing = cardHoverIntentState.get(cardEl);
+            if (!existing || existing.controller.signal.aborted) {
+              existing?.controller.abort();
+              const hoverAbort = new AbortController();
+              cardHoverIntentState.set(cardEl, {
+                controller: hoverAbort,
+              });
+              setupHoverIntent(
+                coverEl,
+                () => cardEl.classList.add("cover-hover-active"),
+                () => cardEl.classList.remove("cover-hover-active"),
+                hoverAbort.signal,
+              );
             }
           }
         }
@@ -2632,7 +2638,7 @@ function Card({
                           <div
                             className="dynamic-views-image-embed"
                             onClick={(e: MouseEvent) => {
-                              handleImageViewerClick(
+                              handleImageViewerTrigger(
                                 e,
                                 card.path,
                                 app,
@@ -2675,6 +2681,7 @@ function Card({
                                         controller.signal,
                                         createPreloadBrokenHandler(
                                           imageArray,
+                                          cardEl,
                                           () => {
                                             imgEl
                                               .closest(".card-thumbnail")
@@ -2727,6 +2734,7 @@ function Card({
                                       const cardEl = imgEl.closest(
                                         ".card",
                                       ) as HTMLElement;
+                                      cardEl?.classList.add("no-valid-images");
                                       if (
                                         cardEl &&
                                         !cardEl.classList.contains(

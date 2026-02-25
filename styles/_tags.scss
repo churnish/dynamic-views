@@ -24,11 +24,13 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 }
 
 /* Tag outline hover: list (immediate) */
-body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
-  .dynamic-views
-  .list-properties
-  .tag:hover {
-  color: color-mix(in hsl, var(--tag-text-color), white 15%);
+@media (hover: hover) {
+  body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+    .dynamic-views
+    .list-properties
+    .tag:hover {
+    color: color-mix(in hsl, var(--tag-text-color), white 15%);
+  }
 }
 
 /* Tag style: Fill - colored background based on text color */
@@ -57,8 +59,14 @@ body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
 }
 
 /* Tag fill hover: list (immediate) */
-body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
-  background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
+@media (hover: hover) {
+  body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--tag-text-color) 20%,
+      transparent
+    );
+  }
 }
 
 /* Tag style: Theme style - no overrides, inherits Obsidian's a.tag styles */
@@ -86,11 +94,13 @@ body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
 }
 
 /* Tag plaintext hover: list (immediate) */
-body.dynamic-views-tag-style-plaintext
-  .dynamic-views
-  .list-properties
-  .tag:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  body.dynamic-views-tag-style-plaintext
+    .dynamic-views
+    .list-properties
+    .tag:hover {
+    text-decoration: underline;
+  }
 }
 
 /* Tag color presets - semantic colors applied at element level via semantic color tokens */

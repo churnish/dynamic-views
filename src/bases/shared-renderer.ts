@@ -19,6 +19,8 @@ import {
   setupBackdropImageLoader,
   handleImageLoad,
   DEFAULT_ASPECT_RATIO,
+  filterBrokenUrls,
+  markImageBroken,
 } from "../shared/image-loader";
 import {
   showFileContextMenu,
@@ -45,13 +47,12 @@ import {
   getSlideshowMaxImages,
   getUrlIcon,
   getCompactBreakpoint,
-  getCoverHoverZoomMode,
   hasBodyClass,
 } from "../utils/style-settings";
 import { getPropertyLabel, stripNotePrefix } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import {
-  handleImageViewerClick,
+  handleImageViewerTrigger,
   cleanupAllViewers,
 } from "../shared/image-viewer";
 import { getFileExtInfo, getFileTypeIcon } from "../utils/file-extension";
@@ -60,9 +61,7 @@ import type { BasesResolvedSettings } from "../types";
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
-  filterBrokenUrls,
   getCachedBlobUrl,
-  markImageBroken,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -867,12 +866,8 @@ export class SharedCardRenderer {
       "click",
       (e) => {
         // Poster tap toggle: mobile or desktop press mode
-        const isPosterClickReveal =
-          format === "poster" &&
-          cardEl.querySelector(".card-poster") &&
-          (this.app.isMobile ||
-            hasBodyClass("dynamic-views-poster-reveal-press"));
-        if (isPosterClickReveal) {
+        // Uses outer isPosterClickReveal + DOM guard (poster element may be removed after render)
+        if (isPosterClickReveal && cardEl.querySelector(".card-poster")) {
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
             "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
@@ -980,25 +975,6 @@ export class SharedCardRenderer {
       );
     }
 
-    // Cover hover zoom intent: require mousemove before activating zoom
-    if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
-      const zoomMode = getCoverHoverZoomMode();
-      if (zoomMode !== "off") {
-        const targetEl =
-          zoomMode === "cover"
-            ? (cardEl.querySelector(".card-cover") as HTMLElement)
-            : cardEl;
-        if (targetEl) {
-          setupHoverIntent(
-            targetEl,
-            () => cardEl.classList.add("cover-hover-active"),
-            () => cardEl.classList.remove("cover-hover-active"),
-            signal,
-          );
-        }
-      }
-    }
-
     // Handle hover for page preview (only on card when openFileAction is 'card')
     // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
     if (settings.openFileAction === "card") {
@@ -1011,6 +987,7 @@ export class SharedCardRenderer {
             hoverParent: { hoverPopover: null },
             targetEl: cardEl,
             linktext: card.path,
+            sourcePath: card.path,
           });
         },
         { signal },
@@ -1085,21 +1062,24 @@ export class SharedCardRenderer {
           { signal },
         );
 
-        // Page preview on hover (mouseenter to prevent bubbling)
-        link.addEventListener(
-          "mouseenter",
-          (e) => {
-            this.app.workspace.trigger("hover-link", {
-              event: e,
-              source: "bases",
-              hoverParent: { hoverPopover: null },
-              targetEl: link,
-              linktext: card.path,
-              sourcePath: card.path,
-            });
-          },
-          { signal },
-        );
+        // Page preview on hover — skip when card handler already covers it
+        // (isPosterClickReveal + openFileAction 'card' = card mouseenter handles it)
+        if (!(isPosterClickReveal && settings.openFileAction === "card")) {
+          link.addEventListener(
+            "mouseenter",
+            (e) => {
+              this.app.workspace.trigger("hover-link", {
+                event: e,
+                source: "bases",
+                hoverParent: { hoverPopover: null },
+                targetEl: link,
+                linktext: card.path,
+                sourcePath: card.path,
+              });
+            },
+            { signal },
+          );
+        }
 
         // Open context menu on right-click
         link.addEventListener("contextmenu", handleContextMenu, { signal });
@@ -1408,6 +1388,20 @@ export class SharedCardRenderer {
       );
     }
 
+    // Cover hover zoom intent: always listen on .card-cover (created by renderCoverWrapper above).
+    // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
+    if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
+      const coverEl = cardEl.querySelector(".card-cover") as HTMLElement;
+      if (coverEl) {
+        setupHoverIntent(
+          coverEl,
+          () => cardEl.classList.add("cover-hover-active"),
+          () => cardEl.classList.remove("cover-hover-active"),
+          signal,
+        );
+      }
+    }
+
     // Card-level responsive behaviors (single ResizeObserver)
     // Use cached breakpoint to avoid getComputedStyle per card
     const breakpoint = getCompactBreakpoint();
@@ -1648,7 +1642,7 @@ export class SharedCardRenderer {
     imageEmbedContainer.addEventListener(
       "click",
       (e) => {
-        handleImageViewerClick(
+        handleImageViewerTrigger(
           e,
           cardPath,
           this.app,
@@ -1672,6 +1666,17 @@ export class SharedCardRenderer {
       attr: { src: "", alt: "" },
     });
 
+    // Shared handler for both hover preload and navigator preload —
+    // both mutate the same imageUrls array, so a single instance deduplicates splices
+    const preloadBrokenHandler = createPreloadBrokenHandler(
+      imageUrls,
+      cardEl,
+      () => {
+        imageEmbedContainer.parentElement?.addClass("slideshow-single");
+      },
+    );
+    const preloadGuard = { done: false };
+
     // Handle image load for masonry layout
     if (cardEl) {
       setupImageLoadHandler(currentImg, cardEl, this.imageLayoutCallback);
@@ -1681,9 +1686,8 @@ export class SharedCardRenderer {
         cardEl,
         imageUrls,
         signal,
-        createPreloadBrokenHandler(imageUrls, () => {
-          imageEmbedContainer.parentElement?.addClass("slideshow-single");
-        }),
+        preloadBrokenHandler,
+        preloadGuard,
       );
     }
 
@@ -1719,8 +1723,12 @@ export class SharedCardRenderer {
         },
         onAnimationComplete: () => {
           clearHoverZoom();
-          // No layout update needed - card dimensions are locked to first slide
         },
+        onAllFailed: () => {
+          cardEl?.classList.add("no-valid-images");
+        },
+        onBroken: preloadBrokenHandler,
+        preloadGuard,
       },
     );
 
@@ -1813,7 +1821,7 @@ export class SharedCardRenderer {
     imageEmbedContainer.addEventListener(
       "click",
       (e) => {
-        handleImageViewerClick(
+        handleImageViewerTrigger(
           e,
           cardEl.getAttribute("data-path") || "",
           this.app,
@@ -1883,6 +1891,7 @@ export class SharedCardRenderer {
         }
         // All images failed - hide thumbnail wrapper and set cover-ready
         if (signal?.aborted) return;
+        cardEl.classList.add("no-valid-images");
         requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected) return;
           requestAnimationFrame(() => {
@@ -1916,7 +1925,7 @@ export class SharedCardRenderer {
           cardEl,
           scrubbableUrls,
           signal,
-          createPreloadBrokenHandler(scrubbableUrls, () => {
+          createPreloadBrokenHandler(scrubbableUrls, cardEl, () => {
             imageEl.classList.remove("multi-image");
           }),
         );

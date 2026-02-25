@@ -1,23 +1,15 @@
-/* Grid: spacing for cards with actual covers OR when placeholder should show */
+/* Grid: spacing for side covers when cover element OR visible placeholder exists */
 
 /* Cover-left: content padding */
 .dynamic-views
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover)
   > .card-content,
-body.dynamic-views-show-cover-placeholder-grid
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
-  > .card-content,
-body.dynamic-views-show-cover-placeholder-both
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
-  > .card-content,
-body:not(.dynamic-views-show-cover-placeholder-masonry):not(
-    .dynamic-views-show-cover-placeholder-both
-  ):not(.dynamic-views-show-cover-placeholder-none)
+body:is(
+    .dynamic-views-show-cover-placeholder-grid,
+    .dynamic-views-show-cover-placeholder-both,
+    :not([class*="dynamic-views-show-cover-placeholder-"])
+  )
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
@@ -26,45 +18,16 @@ body:not(.dynamic-views-show-cover-placeholder-masonry):not(
   margin-left: var(--dynamic-views-side-cover-content-padding);
 }
 
-/* Cover-left: minimum card height */
-.dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover),
-body.dynamic-views-show-cover-placeholder-grid
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
-body.dynamic-views-show-cover-placeholder-both
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
-body:not(.dynamic-views-show-cover-placeholder-masonry):not(
-    .dynamic-views-show-cover-placeholder-both
-  ):not(.dynamic-views-show-cover-placeholder-none)
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
-  min-height: var(--dynamic-views-side-cover-height, 150px);
-}
-
 /* Cover-right: content padding */
 .dynamic-views
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover)
   > .card-content,
-body.dynamic-views-show-cover-placeholder-grid
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
-  > .card-content,
-body.dynamic-views-show-cover-placeholder-both
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
-  > .card-content,
-body:not(.dynamic-views-show-cover-placeholder-masonry):not(
-    .dynamic-views-show-cover-placeholder-both
-  ):not(.dynamic-views-show-cover-placeholder-none)
+body:is(
+    .dynamic-views-show-cover-placeholder-grid,
+    .dynamic-views-show-cover-placeholder-both,
+    :not([class*="dynamic-views-show-cover-placeholder-"])
+  )
   .dynamic-views
   .dynamic-views-grid
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
@@ -72,40 +35,37 @@ body:not(.dynamic-views-show-cover-placeholder-masonry):not(
   max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
 }
 
-/* Cover-right: minimum card height */
+/* Side cover: minimum card height */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover),
-body.dynamic-views-show-cover-placeholder-grid
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
+    .card-cover
+  ),
+body:is(
+    .dynamic-views-show-cover-placeholder-grid,
+    .dynamic-views-show-cover-placeholder-both,
+    :not([class*="dynamic-views-show-cover-placeholder-"])
+  )
   .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
-body.dynamic-views-show-cover-placeholder-both
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
-body:not(.dynamic-views-show-cover-placeholder-masonry):not(
-    .dynamic-views-show-cover-placeholder-both
-  ):not(.dynamic-views-show-cover-placeholder-none)
-  .dynamic-views
-  .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
+    .card-cover-placeholder
+  ) {
   min-height: var(--dynamic-views-side-cover-height, 150px);
 }
 
-/* Masonry: spacing for cards with actual covers OR when placeholder should show */
+/* Masonry: spacing for side covers when cover element OR visible placeholder exists.
+   No :not() fallback — default placeholder is Grid-only, Masonry requires explicit opt-in. */
 
 /* Cover-left: content padding */
 .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover)
   > .card-content,
-body.dynamic-views-show-cover-placeholder-masonry
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
-  > .card-content,
-body.dynamic-views-show-cover-placeholder-both
+body:is(
+    .dynamic-views-show-cover-placeholder-masonry,
+    .dynamic-views-show-cover-placeholder-both
+  )
   .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
@@ -114,32 +74,15 @@ body.dynamic-views-show-cover-placeholder-both
   margin-left: var(--dynamic-views-side-cover-content-padding);
 }
 
-/* Cover-left: minimum card height */
-.dynamic-views
-  .dynamic-views-masonry
-  .card.card-cover-left.image-format-cover:has(.card-cover),
-body.dynamic-views-show-cover-placeholder-masonry
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder),
-body.dynamic-views-show-cover-placeholder-both
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) {
-  min-height: var(--dynamic-views-side-cover-height, 150px);
-}
-
 /* Cover-right: content padding */
 .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover)
   > .card-content,
-body.dynamic-views-show-cover-placeholder-masonry
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
-  > .card-content,
-body.dynamic-views-show-cover-placeholder-both
+body:is(
+    .dynamic-views-show-cover-placeholder-masonry,
+    .dynamic-views-show-cover-placeholder-both
+  )
   .dynamic-views
   .dynamic-views-masonry
   .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
@@ -147,17 +90,20 @@ body.dynamic-views-show-cover-placeholder-both
   max-width: calc(100% - var(--dynamic-views-side-cover-content-padding));
 }
 
-/* Cover-right: minimum card height */
+/* Side cover: minimum card height */
 .dynamic-views
   .dynamic-views-masonry
-  .card.card-cover-right.image-format-cover:has(.card-cover),
-body.dynamic-views-show-cover-placeholder-masonry
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
+    .card-cover
+  ),
+body:is(
+    .dynamic-views-show-cover-placeholder-masonry,
+    .dynamic-views-show-cover-placeholder-both
+  )
   .dynamic-views
   .dynamic-views-masonry
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder),
-body.dynamic-views-show-cover-placeholder-both
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) {
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
+    .card-cover-placeholder
+  ) {
   min-height: var(--dynamic-views-side-cover-height, 150px);
 }

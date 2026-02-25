@@ -1,44 +1,42 @@
 // Dynamic Views — SCSS entry point.
 // All partials loaded in dependency order.
 
-// Settings block (Style Settings plugin YAML) — must be first.
+// Style Settings YAML — must be first.
 @use "style-settings";
 
-// Foundation.
+// Foundation
 @use "variables";
 @use "focus";
 @use "container";
 
-// Datacore UI.
+// Datacore UI
 @use "datacore/toolbar";
 @use "datacore/query-editor";
 @use "datacore/settings";
 
-// View layout.
+// View layout
 @use "grid-masonry-shared";
 @use "grid-view";
 
-// Overlays.
+// Overlays
 @use "image-viewer";
 
-// Card internals.
+// Card internals
 @use "card/core";
-@use "card/content";
+@use "card/previews";
 @use "card/header";
-@use "card/thumbnail";
-@use "card/masonry-covers";
 
-// Image formats.
+// Image formats
 @use "card/cover";
 @use "card/cover-elements";
 @use "card/cover-placeholders";
-@use "card/side-cover-spacing";
-@use "card/backdrop-poster-shared";
+@use "card/cover-side";
+@use "card/images";
 @use "card/backdrop";
 @use "card/poster";
 @use "card/slideshow";
 
-// Data display.
+// Data display
 @use "properties";
 @use "property-colors";
 @use "tags";
@@ -46,11 +44,11 @@
 @use "text-interaction";
 @use "scroll-gradient";
 
-// View types.
+// View types
 @use "masonry-view";
 @use "datacore/list-view";
 
-// Overrides.
+// Overrides
 @use "compact";
 @use "plugin-settings";
 @use "utilities";

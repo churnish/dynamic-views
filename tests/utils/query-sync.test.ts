@@ -4,7 +4,7 @@ import {
   findQueryInBlock,
   updateQueryInBlock,
   QueryMatch,
-} from "../../src/utils/query-sync";
+} from "../../src/datacore/query-sync";
 
 describe("query-sync", () => {
   describe("hasPageSelector", () => {

@@ -39,7 +39,7 @@ import {
   ensurePageSelector,
   updateQueryInBlock,
   findQueryInBlock,
-} from "../utils/query-sync";
+} from "./query-sync";
 import { getPaneType } from "../utils/randomize";
 import {
   loadTextPreviewsForEntries,

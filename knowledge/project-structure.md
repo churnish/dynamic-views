@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-16
+last updated: 2026-02-24
 ---
 
 # Project structure
@@ -24,7 +24,7 @@ dynamic-views/
 │   ├── constants.ts                  # Default settings, view defaults, Datacore defaults
 │   ├── types.ts                      # Core interfaces: settings, view defaults, resolved settings
 │   ├── persistence.ts                # Plugin data persistence and settings resolution
-│   ├── settings-tab.ts               # Plugin settings tab UI
+│   ├── plugin-settings.ts            # Plugin settings tab UI
 │   ├── jsx-runtime.ts                # JSX runtime proxy -> Datacore's bundled Preact
 │   ├── jsx.d.ts                      # JSX type declarations
 │   │
@@ -36,12 +36,13 @@ dynamic-views/
 │   │   └── utils.ts                  # Context menus, toolbar, property management
 │   │
 │   ├── datacore/                     # Datacore backend (Preact/JSX)
-│   │   ├── view.tsx                  # Main controller — state, query processing, rendering
+│   │   ├── controller.tsx            # Main controller — state, query processing, rendering
 │   │   ├── card-view.tsx             # Card component (grid + masonry modes)
 │   │   ├── list-view.tsx             # List view component
 │   │   ├── masonry-view.tsx          # Masonry wrapper over CardView
+│   │   ├── query-sync.ts            # Query processing + code block sync
 │   │   ├── toolbar.tsx               # Toolbar with dropdowns + controls
-│   │   ├── settings.tsx              # Settings panel component
+│   │   ├── settings.tsx              # View settings panel component
 │   │   └── types.d.ts               # Datacore API + Preact type defs
 │   │
 │   ├── shared/                       # Cross-backend shared logic
@@ -74,7 +75,6 @@ dynamic-views/
 │       ├── masonry-layout.ts         # Pure masonry positioning calculations
 │       ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │       ├── property.ts               # Property extraction for Datacore/Bases
-│       ├── query-sync.ts             # Query processing + code block sync
 │       ├── randomize.ts              # Randomization + pane type from modifier keys
 │       ├── sanitize.ts               # Control character removal (localStorage safety)
 │       ├── storage.ts                # Storage key generation
@@ -124,31 +124,30 @@ dynamic-views/
 │   │   ├── _query-editor.scss        # Query dropdown and editor
 │   │   ├── _settings.scss            # View settings panel
 │   │   └── _list-view.scss           # List view styles
-│   ├── _grid-masonry-shared.scss    # Shared card view layout: groups, sticky headers, card base
-│   ├── _grid-view.scss              # Grid view layout: CSS Grid, subgrid, grid spacing
-│   ├── _image-viewer.scss           # Image viewer overlay, panzoom
+│   ├── _grid-masonry-shared.scss    # Shared card view layout: groups, sticky headers, card foundation, content-visibility
+│   ├── _grid-view.scss              # Grid: CSS Grid columns, subgrid, grid spacing
+│   ├── _image-viewer.scss           # Image viewer overlay, panzoom, cursor rules
 │   ├── card/                         # Card internals
-│   │   ├── _core.scss                # Card container, borders, backgrounds
-│   │   ├── _content.scss             # Thumbnail position layouts
+│   │   ├── _core.scss                # Card container, borders, backgrounds, border color presets
+│   │   ├── _previews.scss            # Thumbnail sizing, text preview, position layouts
 │   │   ├── _header.scss              # Title, subtitle, file type indicators
-│   │   ├── _thumbnail.scss           # Thumbnail sizing, crop/contain modes
-│   │   ├── _masonry-covers.scss      # Masonry cover height variants
-│   │   ├── _cover.scss               # Cover flexbox system, wrapper positioning
-│   │   ├── _cover-elements.scss      # Cover element styling, cover-content border
-│   │   ├── _cover-placeholders.scss  # Placeholder/skeleton styles
-│   │   ├── _side-cover-spacing.scss  # Side cover layout adjustments
-│   │   ├── _backdrop-poster-shared.scss # Shared backdrop/poster base
+│   │   ├── _cover.scss               # Cover flexbox system, wrapper positioning, masonry cover height overrides
+│   │   ├── _cover-elements.scss      # Cover element styling, hover zoom, cover-content border, crop/fit/background
+│   │   ├── _cover-placeholders.scss  # Placeholder/skeleton styles and visibility
+│   │   ├── _cover-side.scss           # Side cover layout adjustments
+│   │   ├── _images.scss              # Shared image styles across all formats (skip-cover-fade, fullbleed img)
 │   │   ├── _backdrop.scss            # Backdrop image format
 │   │   ├── _poster.scss              # Poster image format
 │   │   └── _slideshow.scss           # Slideshow animations
-│   ├── _properties.scss              # Property row system, labels, timestamps, paths
+│   ├── _properties.scss              # Property row system, labels, timestamps, paths, paired property layout
 │   ├── _property-colors.scss         # Color presets for labels, text, subtitle, title
 │   ├── _tags.scss                    # Tag styles (outline/fill/plaintext/theme) + color presets
-│   ├── _hover-states.scss            # Hover color rules, cursor gating
+│   ├── _hover-states.scss            # Hover color presets, cursor gating
 │   ├── _text-interaction.scss        # Text selectability + cursor rules (open-on-title, poster-revealed)
 │   ├── _scroll-gradient.scss         # Horizontal/vertical gradient masks for scrollable content
-│   ├── _masonry-view.scss            # Masonry view layout: absolute positioning, flex overrides
+│   ├── _masonry-view.scss            # Masonry: absolute positioning, container rules, transitions
 │   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar
+│   ├── _plugin-settings.scss         # Plugin settings tab styling
 │   └── _utilities.scss               # Utility classes
 │
 ├── knowledge/                        # Project knowledge docs

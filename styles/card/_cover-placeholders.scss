@@ -210,24 +210,28 @@ body.dynamic-views-show-cover-placeholder-none
 /* Masonry contain mode + fixed cover height + placeholder enabled: show placeholder */
 body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
   [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-top
+  .card.image-format-cover.card-cover-contain:not(.cover-ready).card-cover-top
   .card-cover-wrapper.card-cover-wrapper-placeholder,
 body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
   [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
+  .card.image-format-cover.card-cover-contain:not(
+    .cover-ready
+  ).card-cover-bottom
   .card-cover-wrapper.card-cover-wrapper-placeholder,
 body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
   [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-top
+  .card.image-format-cover.card-cover-contain:not(.cover-ready).card-cover-top
   .card-cover-wrapper.card-cover-wrapper-placeholder,
 body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
   [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain:not(.cover-ready).card-cover-bottom
+  .card.image-format-cover.card-cover-contain:not(
+    .cover-ready
+  ).card-cover-bottom
   .card-cover-wrapper.card-cover-wrapper-placeholder {
   display: block;
 }
 
-/* Masonry hidden placeholders: zero title-subtitle gap (higher specificity to beat owl selector) */
+/* Masonry with placeholders disabled: zero title-subtitle gap (higher specificity to beat owl selector) */
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-masonry
