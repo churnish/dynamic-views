@@ -31,3 +31,4 @@ Read...
 - **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.
 - **datacore-ref-callback-patterns.md** before attaching event listeners or stateful behavior in `card-renderer.tsx` ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution.
 - **style-settings-fallbacks.md** before adding or modifying `class-select` settings in `_style-settings.scss` — documents the fallback selector pattern for CSS defaults that must work without the Style Settings plugin installed.
+- **electron-css-quirks.md** before writing nested `:has()` selectors or working around `-webkit-line-clamp` truncation behavior — documents Blink/Electron CSS rendering quirks and rejected fixes.
