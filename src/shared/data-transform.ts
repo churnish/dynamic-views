@@ -130,60 +130,50 @@ function applySmartTimestamp(
     return props;
   }
 
-  // Detect ctime sorting: includes "ctime" OR matches createdTimeProperty (for Bases)
-  const createdPropStripped = stripNotePrefix(settings.createdTimeProperty);
+  // Only match against the exact setting values (no hardcoded fallbacks).
+  // Datacore uses "ctime"/"mtime" sort keywords — only match when the
+  // setting value is the corresponding default property.
+  const createdProp = settings.createdTimeProperty;
+  const modifiedProp = settings.modifiedTimeProperty;
+  const createdStripped = stripNotePrefix(createdProp);
+  const modifiedStripped = stripNotePrefix(modifiedProp);
+
   const sortingByCtime =
-    sortMethod.includes("ctime") ||
-    sortMethod.startsWith(settings.createdTimeProperty + "-") ||
-    sortMethod.startsWith(createdPropStripped + "-");
+    sortMethod.startsWith(createdProp + "-") ||
+    sortMethod.startsWith(createdStripped + "-") ||
+    (sortMethod.includes("ctime") &&
+      (createdStripped === "file.ctime" || createdStripped === "created time"));
 
-  // Detect mtime sorting: includes "mtime" OR matches modifiedTimeProperty (for Bases)
-  const modifiedPropStripped = stripNotePrefix(settings.modifiedTimeProperty);
   const sortingByMtime =
-    sortMethod.includes("mtime") ||
-    sortMethod.startsWith(settings.modifiedTimeProperty + "-") ||
-    sortMethod.startsWith(modifiedPropStripped + "-");
+    sortMethod.startsWith(modifiedProp + "-") ||
+    sortMethod.startsWith(modifiedStripped + "-") ||
+    (sortMethod.includes("mtime") &&
+      (modifiedStripped === "file.mtime" ||
+        modifiedStripped === "modified time"));
 
-  // Only proceed if sorting by a timestamp
   if (!sortingByCtime && !sortingByMtime) {
     return props;
   }
 
-  // Check if both timestamps are already shown
-  const hasCtimeProperty = props.some(
-    (p) =>
-      p === "file.ctime" ||
-      p === "created time" ||
-      (settings.createdTimeProperty && p === settings.createdTimeProperty),
+  // Only check for the exact setting values
+  const hasCreated = props.some(
+    (p) => p === createdProp || p === createdStripped,
   );
-  const hasMtimeProperty = props.some(
-    (p) =>
-      p === "file.mtime" ||
-      p === "modified time" ||
-      (settings.modifiedTimeProperty && p === settings.modifiedTimeProperty),
+  const hasModified = props.some(
+    (p) => p === modifiedProp || p === modifiedStripped,
   );
 
-  // If both are shown, don't change anything
-  if (hasCtimeProperty && hasMtimeProperty) {
+  if (hasCreated && hasModified) {
     return props;
   }
 
-  // Determine which timestamp property to show and which to replace
-  const targetProperty = sortingByCtime
-    ? settings.createdTimeProperty
-    : settings.modifiedTimeProperty;
+  // Replace the non-sort timestamp with the sort timestamp
+  const targetProperty = sortingByCtime ? createdProp : modifiedProp;
+  const replaceProp = sortingByCtime ? modifiedProp : createdProp;
+  const replaceStripped = sortingByCtime ? modifiedStripped : createdStripped;
 
-  const propertiesToReplace = sortingByCtime
-    ? ["file.mtime", "modified time", settings.modifiedTimeProperty].filter(
-        Boolean,
-      )
-    : ["file.ctime", "created time", settings.createdTimeProperty].filter(
-        Boolean,
-      );
-
-  // Replace mismatched timestamp properties
   return props.map((prop) => {
-    if (propertiesToReplace.includes(prop)) {
+    if (prop === replaceProp || prop === replaceStripped) {
       return targetProperty;
     }
     return prop;

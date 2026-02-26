@@ -721,7 +721,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
     const direction = firstSort.direction.toLowerCase();
     return `${property}-${direction}`;
   }
-  return "mtime-desc";
+  return "none";
 }
 
 /**
