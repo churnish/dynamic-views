@@ -2,6 +2,7 @@
  * Shared utility for measuring side-by-side property field widths
  */
 
+import { getOwnerWindow } from "../utils/owner-window";
 import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
 import { updateScrollGradient } from "./scroll-gradient";
 
@@ -63,7 +64,7 @@ export function cleanupVisibilityObserver(
       visibilityObservers.delete(win);
     }
     visibleCards.forEach((card) => {
-      if (card.ownerDocument.defaultView === win) visibleCards.delete(card);
+      if (getOwnerWindow(card) === win) visibleCards.delete(card);
     });
   } else {
     visibilityObservers.forEach((obs) => obs.disconnect());
@@ -101,6 +102,8 @@ export const PROPERTY_MEASURED_EVENT = "dynamic-views:property-measured";
 
 /** Process queued sets in batches per frame */
 function processSetQueue(): void {
+  const win = getOwnerWindow(setQueue[0]?.card);
+
   if (setQueue.length === 0) {
     isProcessingSets = false;
     queuedSets.clear(); // Clear dedup set when queue empty
@@ -108,7 +111,7 @@ function processSetQueue(): void {
     // Set pendingFlush to prevent new queue processing until flush completes
     if (gradientBatch.length > 0) {
       pendingFlush = true;
-      requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => {
         // Clear and process batch inside RAF to avoid race condition
         // (new items added between slice and RAF execution would be lost)
         const batch = gradientBatch.slice();
@@ -121,7 +124,7 @@ function processSetQueue(): void {
         processedDocuments.clear();
       });
     } else {
-      requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => {
         processedDocuments.forEach((doc) => {
           doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
         });
@@ -161,7 +164,7 @@ function processSetQueue(): void {
     pendingFlush = true;
     const batch = gradientBatch.slice();
     gradientBatch.length = 0;
-    requestAnimationFrame(() => {
+    win.requestAnimationFrame(() => {
       batch.forEach((field) => updateScrollGradient(field));
       pendingFlush = false;
       // No event dispatch here — processing continues; terminal dispatch fires on queue drain.
@@ -169,7 +172,7 @@ function processSetQueue(): void {
   }
 
   // Continue processing
-  requestAnimationFrame(processSetQueue);
+  win.requestAnimationFrame(processSetQueue);
 }
 
 /** Width cache tolerance to avoid redundant measurements from rounding */
@@ -222,7 +225,7 @@ function queueCardSets(
 
   // Start processing if not already running and no flush pending
   if (!isProcessingSets && !pendingFlush) {
-    requestAnimationFrame(processSetQueue);
+    getOwnerWindow(sets[0]).requestAnimationFrame(processSetQueue);
   }
 }
 
@@ -388,7 +391,7 @@ export function measureSideBySideSet(
       if (!field2Empty) gradientTargets.push(field2);
     } else {
       // Fallback: schedule own RAF (for single-set calls)
-      requestAnimationFrame(() => {
+      getOwnerWindow(field1).requestAnimationFrame(() => {
         if (!field1Empty) updateScrollGradient(field1);
         if (!field2Empty) updateScrollGradient(field2);
       });
@@ -430,6 +433,7 @@ export function remeasurePropertyFields(container: HTMLElement): void {
   // Process sets in chunks across frames to prevent freeze
   let index = 0;
   const gradientTargets: HTMLElement[] = [];
+  const win = getOwnerWindow(container);
 
   function processChunk(): void {
     const end = Math.min(index + MEASUREMENT_CHUNK_SIZE, sets.length);
@@ -440,16 +444,16 @@ export function remeasurePropertyFields(container: HTMLElement): void {
 
     if (index < sets.length) {
       // More sets to process - schedule next chunk
-      requestAnimationFrame(processChunk);
+      win.requestAnimationFrame(processChunk);
     } else if (gradientTargets.length > 0) {
       // All done - update gradients
-      requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => {
         gradientTargets.forEach((field) => updateScrollGradient(field));
       });
     }
   }
 
-  requestAnimationFrame(processChunk);
+  win.requestAnimationFrame(processChunk);
 }
 
 /**
@@ -474,8 +478,8 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
   if (!cardProps) return [];
 
   // Derive window from card element for cross-window observer safety
-  const cardWindow = cardEl.ownerDocument.defaultView;
-  if (!cardWindow) return [];
+  if (!cardEl.ownerDocument.defaultView) return [];
+  const cardWindow = getOwnerWindow(cardEl);
 
   // Register with visibility observer
   getVisibilityObserver(cardWindow).observe(cardEl);

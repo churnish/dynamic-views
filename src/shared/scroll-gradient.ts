@@ -1,3 +1,4 @@
+import { getOwnerWindow } from "../utils/owner-window";
 import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
 import { SCROLL_TOLERANCE } from "./constants";
 
@@ -31,12 +32,13 @@ const verticalGradientClassCache = new WeakMap<HTMLElement, string | null>();
  */
 function throttleRAF<T extends (...args: unknown[]) => void>(
   fn: T,
+  element?: Element,
 ): (...args: Parameters<T>) => void {
   let scheduled = false;
   return (...args: Parameters<T>) => {
     if (scheduled) return;
     scheduled = true;
-    requestAnimationFrame(() => {
+    getOwnerWindow(element).requestAnimationFrame(() => {
       fn(...args);
       scheduled = false;
     });
@@ -177,14 +179,14 @@ export function setupElementScrollGradient(
   signal?: AbortSignal,
 ): void {
   // Initial gradient update
-  requestAnimationFrame(() => {
+  getOwnerWindow(element).requestAnimationFrame(() => {
     updateElementScrollGradient(element);
   });
 
   // Throttled scroll handler
   const throttledUpdate = throttleRAF(() => {
     updateElementScrollGradient(element);
-  });
+  }, element);
 
   element.addEventListener("scroll", throttledUpdate, { signal });
 }
@@ -198,7 +200,7 @@ function createThrottledUpdate(
   element: HTMLElement,
   updateGradientFn: (element: HTMLElement) => void,
 ): () => void {
-  return throttleRAF(() => updateGradientFn(element));
+  return throttleRAF(() => updateGradientFn(element), element);
 }
 
 /**
@@ -415,13 +417,13 @@ export function setupVerticalScrollGradient(
   element: HTMLElement,
   signal: AbortSignal,
 ): void {
-  requestAnimationFrame(() => {
+  getOwnerWindow(element).requestAnimationFrame(() => {
     updateVerticalScrollGradient(element);
   });
 
   const throttledUpdate = throttleRAF(() => {
     updateVerticalScrollGradient(element);
-  });
+  }, element);
 
   element.addEventListener("scroll", throttledUpdate, { signal });
 }

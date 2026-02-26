@@ -100,6 +100,7 @@ import {
   measureScalableHeight,
   estimateUnmountedHeight,
 } from "../shared/virtual-scroll";
+import { getOwnerWindow } from "../utils/owner-window";
 
 // Extend Obsidian types
 declare module "obsidian" {
@@ -1271,7 +1272,9 @@ export class DynamicViewsMasonryView extends BasesView {
         // Cancel spurious cardResizeObserver RAF from initial card creation —
         // layout just measured all cards, no drift possible yet
         if (this.cardResizeRafId !== null) {
-          cancelAnimationFrame(this.cardResizeRafId);
+          (this.observerWindow ?? window).cancelAnimationFrame(
+            this.cardResizeRafId,
+          );
           this.cardResizeRafId = null;
         }
       }
@@ -1302,8 +1305,8 @@ export class DynamicViewsMasonryView extends BasesView {
       // Clear skip-cover-fade after cached image load events have fired.
       // Double-rAF lets the browser process queued load events for cached images
       // before removing the class (matching handleImageLoad's double-rAF timing).
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      (this.observerWindow ?? window).requestAnimationFrame(() => {
+        (this.observerWindow ?? window).requestAnimationFrame(() => {
           this.scrollEl
             .closest(".workspace-leaf-content")
             ?.classList.remove("skip-cover-fade");
@@ -1390,7 +1393,7 @@ export class DynamicViewsMasonryView extends BasesView {
       if (source === "image-load") {
         if (!this.pendingImageRelayout) {
           this.pendingImageRelayout = true;
-          requestAnimationFrame(() => {
+          (this.observerWindow ?? window).requestAnimationFrame(() => {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
             if (this.resizeCorrectionTimeout !== null) return;
@@ -1930,7 +1933,7 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Show end indicator if all items displayed (skip if 0 results)
-        requestAnimationFrame(() => {
+        (this.observerWindow ?? window).requestAnimationFrame(() => {
           if (!this.containerEl?.isConnected) return;
           if (
             this.displayedSoFar >= this.totalEntries &&
@@ -1945,7 +1948,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Process any queued update
         if (this.pendingLayoutUpdate) {
           this.pendingLayoutUpdate = false;
-          requestAnimationFrame(() => {
+          (this.observerWindow ?? window).requestAnimationFrame(() => {
             if (!this.containerEl?.isConnected) return;
             this.updateLayoutRef.current?.("queued-update");
           });
@@ -2031,9 +2034,13 @@ export class DynamicViewsMasonryView extends BasesView {
         }
         // RAF debounce — coalesce same-frame card height changes into one reflow
         if (this.cardResizeRafId !== null) {
-          cancelAnimationFrame(this.cardResizeRafId);
+          (this.observerWindow ?? window).cancelAnimationFrame(
+            this.cardResizeRafId,
+          );
         }
-        this.cardResizeRafId = requestAnimationFrame(() => {
+        this.cardResizeRafId = (
+          this.observerWindow ?? window
+        ).requestAnimationFrame(() => {
           this.cardResizeRafId = null;
           if (
             !this.containerEl.isConnected ||
@@ -2133,7 +2140,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (!needsReposition) {
       this.masonryContainer?.classList.remove("masonry-measuring");
       if (skipTransition) {
-        requestAnimationFrame(() => {
+        (this.observerWindow ?? window).requestAnimationFrame(() => {
           this.masonryContainer?.classList.remove("masonry-skip-transition");
         });
       }
@@ -2286,7 +2293,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Remove after transition completes
     if (skipTransition) {
       // Re-enable transitions after browser paints the instant correction
-      requestAnimationFrame(() => {
+      (this.observerWindow ?? window).requestAnimationFrame(() => {
         this.masonryContainer?.classList.remove("masonry-skip-transition");
       });
     } else {
@@ -2580,7 +2587,9 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Schedule virtual scroll sync on next animation frame */
   private scheduleVirtualScrollSync(): void {
     if (this.virtualScrollRafId !== null) return;
-    this.virtualScrollRafId = requestAnimationFrame(() => {
+    this.virtualScrollRafId = (
+      this.observerWindow ?? window
+    ).requestAnimationFrame(() => {
       this.virtualScrollRafId = null;
       this.updateCachedGroupOffsets();
       this.syncVirtualScroll();
@@ -2592,12 +2601,16 @@ export class DynamicViewsMasonryView extends BasesView {
    *  image aspect ratio updates) have settled. */
   private scheduleDeferredRemeasure(skipTransition = false): void {
     if (this.deferredRemeasureRafId !== null) return;
-    this.deferredRemeasureRafId = requestAnimationFrame(() => {
-      this.deferredRemeasureRafId = requestAnimationFrame(() => {
+    this.deferredRemeasureRafId = (
+      this.observerWindow ?? window
+    ).requestAnimationFrame(() => {
+      this.deferredRemeasureRafId = (
+        this.observerWindow ?? window
+      ).requestAnimationFrame(() => {
         this.deferredRemeasureRafId = null;
         const cleanupSkipTransition = () => {
           if (skipTransition) {
-            requestAnimationFrame(() => {
+            (this.observerWindow ?? window).requestAnimationFrame(() => {
               this.masonryContainer?.classList.remove(
                 "masonry-skip-transition",
               );
@@ -3225,7 +3238,7 @@ export class DynamicViewsMasonryView extends BasesView {
           } finally {
             this.masonryContainer?.classList.remove("masonry-measuring");
             // Clean up skip-transition in finally to avoid permanent stuck class on throw
-            requestAnimationFrame(() => {
+            (this.observerWindow ?? window).requestAnimationFrame(() => {
               this.masonryContainer?.classList.remove(
                 "masonry-skip-transition",
               );
@@ -3263,13 +3276,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
         const allNewCards = [...newCardsPerGroup.values()].flat();
         const runAfterLayout = (fn: () => void) => {
-          requestAnimationFrame(() => {
+          (this.observerWindow ?? window).requestAnimationFrame(() => {
             if (!this.containerEl?.isConnected) {
               this.batchLayoutPending = false;
               this.isLoading = false;
               return;
             }
-            requestAnimationFrame(() => {
+            (this.observerWindow ?? window).requestAnimationFrame(() => {
               if (!this.containerEl?.isConnected) {
                 this.batchLayoutPending = false;
                 this.isLoading = false;
@@ -3457,8 +3470,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Setup ResizeObserver on masonry container to detect layout changes
     if (needsMoreItems() && this.masonryContainer) {
       let prevHeight = this.masonryContainer.offsetHeight;
-      const RO = (this.masonryContainer.ownerDocument.defaultView ?? window)
-        .ResizeObserver;
+      const RO = getOwnerWindow(this.masonryContainer).ResizeObserver;
       this.scrollResizeObserver = new RO((entries) => {
         // Guard: skip if container disconnected from DOM
         if (!this.masonryContainer?.isConnected) return;
@@ -3511,7 +3523,9 @@ export class DynamicViewsMasonryView extends BasesView {
       clearTimeout(this.resizeCorrectionTimeout);
     }
     if (this.cardResizeRafId !== null) {
-      cancelAnimationFrame(this.cardResizeRafId);
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.cardResizeRafId,
+      );
     }
 
     if (this.trailingUpdate.timeoutId !== null) {
@@ -3531,10 +3545,12 @@ export class DynamicViewsMasonryView extends BasesView {
       this.scrollResizeObserver.disconnect();
     }
     // Clean up property measurement observer for this window only
-    const cleanupWindow = this.containerEl.ownerDocument.defaultView;
-    if (cleanupWindow) cleanupVisibilityObserver(cleanupWindow);
+    const cleanupWindow = getOwnerWindow(this.containerEl);
+    cleanupVisibilityObserver(cleanupWindow);
     if (this.virtualScrollRafId !== null) {
-      cancelAnimationFrame(this.virtualScrollRafId);
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.virtualScrollRafId,
+      );
     }
     if (this.scrollRemeasureTimeout !== null) {
       clearTimeout(this.scrollRemeasureTimeout);
@@ -3543,7 +3559,9 @@ export class DynamicViewsMasonryView extends BasesView {
       clearTimeout(this.mountRemeasureTimeout);
     }
     if (this.deferredRemeasureRafId !== null) {
-      cancelAnimationFrame(this.deferredRemeasureRafId);
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.deferredRemeasureRafId,
+      );
     }
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction

@@ -12,6 +12,7 @@ import {
 } from "../utils/style-settings";
 import { getVaultPathFromResourceUrl, isExternalUrl } from "../utils/image";
 import { getCachedBlobUrl } from "./slideshow";
+import { getOwnerWindow } from "../utils/owner-window";
 
 // Extend App type for undocumented dragManager API
 declare module "obsidian" {
@@ -125,7 +126,7 @@ function closeImageViewer(
           // Re-apply the scrubbed src (updated by the handler above) after
           // Preact finishes.
           if (thumbnailEl.dataset.scrubbedSrc) {
-            requestAnimationFrame(() => {
+            getOwnerWindow(thumbnailEl).requestAnimationFrame(() => {
               const img = thumbnailEl.querySelector("img");
               if (img?.isConnected && thumbnailEl.dataset.scrubbedSrc) {
                 img.src = thumbnailEl.dataset.scrubbedSrc;

@@ -10,6 +10,7 @@
  * Visible focus requires explicit activation via keyboard interaction.
  */
 
+import { getOwnerWindow } from "../utils/owner-window";
 import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
 
 const CARD_SELECTOR = ".card";
@@ -377,7 +378,7 @@ export function setupHoverKeyboardNavigation(
         }
         // Capture container reference to prevent stale closure
         const containerSnapshot = container;
-        requestAnimationFrame(() => {
+        getOwnerWindow(containerSnapshot).requestAnimationFrame(() => {
           if (containerSnapshot?.isConnected) {
             containerSnapshot._intentionalFocus = false;
           }

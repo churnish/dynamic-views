@@ -1132,7 +1132,7 @@ export class DynamicViewsGridView extends BasesView {
                 // Re-initialize gradients after column change (card widths changed)
                 const feed = this.feedContainerRef.current;
                 if (feed) {
-                  requestAnimationFrame(() => {
+                  (this.observerWindow ?? window).requestAnimationFrame(() => {
                     // Guard: skip if stale render or disconnected
                     if (!feed.isConnected) return;
 
@@ -1152,15 +1152,23 @@ export class DynamicViewsGridView extends BasesView {
           // Skip debounce on tab switch (width 0→positive) to prevent flash
           if (width > 0 && this.lastObservedWidth === 0) {
             if (this.resizeRafId !== null)
-              cancelAnimationFrame(this.resizeRafId);
+              (this.observerWindow ?? window).cancelAnimationFrame(
+                this.resizeRafId,
+              );
             this.resizeRafId = null;
             updateColumns();
           } else if (width > 0) {
             // Normal resize: double-RAF debounce to coalesce rapid events
             if (this.resizeRafId !== null)
-              cancelAnimationFrame(this.resizeRafId);
-            this.resizeRafId = requestAnimationFrame(() => {
-              this.resizeRafId = requestAnimationFrame(() => {
+              (this.observerWindow ?? window).cancelAnimationFrame(
+                this.resizeRafId,
+              );
+            this.resizeRafId = (
+              this.observerWindow ?? window
+            ).requestAnimationFrame(() => {
+              this.resizeRafId = (
+                this.observerWindow ?? window
+              ).requestAnimationFrame(() => {
                 updateColumns();
               });
             });
@@ -1180,8 +1188,8 @@ export class DynamicViewsGridView extends BasesView {
       // Clear skip-cover-fade after cached image load events have fired.
       // Double-rAF lets the browser process queued load events for cached images
       // before removing the class (matching handleImageLoad's double-rAF timing).
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      (this.observerWindow ?? window).requestAnimationFrame(() => {
+        (this.observerWindow ?? window).requestAnimationFrame(() => {
           this.scrollEl
             .closest(".workspace-leaf-content")
             ?.classList.remove("skip-cover-fade");
@@ -1709,7 +1717,7 @@ export class DynamicViewsGridView extends BasesView {
       this.resizeObserver.disconnect();
     }
     if (this.resizeRafId !== null) {
-      cancelAnimationFrame(this.resizeRafId);
+      (this.observerWindow ?? window).cancelAnimationFrame(this.resizeRafId);
     }
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);

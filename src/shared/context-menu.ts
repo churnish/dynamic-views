@@ -4,6 +4,7 @@
  */
 
 import { App, Menu, Notice, Platform, TFile, setIcon } from "obsidian";
+import { getOwnerWindow } from "../utils/owner-window";
 
 /**
  * Show context menu for external links (URLs)
@@ -219,7 +220,7 @@ export function showFileContextMenu(
         "Merge entire file with...",
       ]);
 
-  requestAnimationFrame(() => {
+  getOwnerWindow(e.target as HTMLElement).requestAnimationFrame(() => {
     // Ensure menu still exists (user may have closed it)
     if (!menuDoc.body.contains(menuEl)) return;
 

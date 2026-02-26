@@ -37,6 +37,7 @@ import {
   handleJsxImageLoad,
   handleJsxImageError,
   handleImageLoad,
+  handleAllImagesFailed,
   DEFAULT_ASPECT_RATIO,
   filterBrokenUrls,
   markImageBroken,
@@ -84,6 +85,7 @@ import {
   revealFileInNotebookNavigator,
 } from "../utils/notebook-navigator";
 import { measurePropertyFields } from "./property-measure";
+import { getOwnerWindow } from "../utils/owner-window";
 
 /**
  * Extended container element with focus management properties
@@ -839,7 +841,7 @@ function CoverSlideshow({
           clearHoverZoom();
         },
         onAllFailed: () => {
-          cardEl?.classList.add("no-valid-images");
+          handleAllImagesFailed(cardEl);
         },
         onBroken: preloadBrokenHandler,
         preloadGuard,
@@ -1390,7 +1392,7 @@ export function CardRenderer({
             }
           }
 
-          requestAnimationFrame(() => {
+          getOwnerWindow(el).requestAnimationFrame(() => {
             if (el.isConnected) {
               container._lastKey = null;
             }
@@ -1443,7 +1445,7 @@ export function CardRenderer({
             if (key && !isArrowKey(key)) {
               container._intentionalFocus = true;
               relatedTarget.focus();
-              requestAnimationFrame(() => {
+              getOwnerWindow(el).requestAnimationFrame(() => {
                 if (el.isConnected) {
                   container._intentionalFocus = false;
                 }
@@ -1476,7 +1478,7 @@ export function CardRenderer({
               container._intentionalFocus = true;
               container._keyboardNavActive = true;
               firstCard.focus();
-              requestAnimationFrame(() => {
+              getOwnerWindow(el).requestAnimationFrame(() => {
                 if (el.isConnected) {
                   container._intentionalFocus = false;
                 }
@@ -1523,7 +1525,7 @@ export function CardRenderer({
             container._intentionalFocus = true;
             container._keyboardNavActive = true;
             firstCard.focus();
-            requestAnimationFrame(() => {
+            getOwnerWindow(container).requestAnimationFrame(() => {
               if (container.isConnected) {
                 container._intentionalFocus = false;
               }
@@ -1642,18 +1644,13 @@ function Card({
     if (format === "cover") {
       cardClasses.push("image-format-cover");
       cardClasses.push(`card-cover-${position}`);
-      cardClasses.push(`card-cover-${settings.imageFit}`);
     } else if (format === "thumbnail") {
       cardClasses.push("image-format-thumbnail");
       cardClasses.push(`card-thumbnail-${position}`);
-      cardClasses.push(`card-thumbnail-${settings.imageFit}`);
     } else if (format === "poster") {
       cardClasses.push("image-format-poster");
-      cardClasses.push(`poster-${settings.posterDisplayMode}`);
-      cardClasses.push(`card-cover-${settings.imageFit}`);
     } else if (format === "backdrop") {
       cardClasses.push("image-format-backdrop");
-      cardClasses.push(`card-cover-${settings.imageFit}`);
     }
   }
 
@@ -1913,8 +1910,8 @@ function Card({
         );
 
         // Measure side-by-side property field widths (double RAF to ensure DOM is ready)
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
+        getOwnerWindow(cardEl).requestAnimationFrame(() => {
+          getOwnerWindow(cardEl).requestAnimationFrame(() => {
             // Guard against race: card may be unmounted before inner RAF executes
             if (!cardEl.isConnected) return;
 
@@ -2044,9 +2041,7 @@ function Card({
             );
 
             // Skip toggle when user is selecting text
-            const selection = (
-              cardEl.ownerDocument.defaultView ?? window
-            ).getSelection();
+            const selection = getOwnerWindow(cardEl).getSelection();
             if (selection && selection.toString().length > 0) return;
 
             if (!cardEl.classList.contains("poster-revealed")) {
@@ -2133,7 +2128,7 @@ function Card({
                 onFocusChange?.(targetIndex);
               },
             );
-            requestAnimationFrame(() => {
+            getOwnerWindow(container).requestAnimationFrame(() => {
               if (container.isConnected) {
                 container._intentionalFocus = false;
               }
@@ -2636,33 +2631,31 @@ function Card({
                                       const cardEl = imgEl.closest(
                                         ".card",
                                       ) as HTMLElement;
-                                      cardEl?.classList.add("no-valid-images");
                                       if (
                                         cardEl &&
                                         !cardEl.classList.contains(
                                           "cover-ready",
                                         )
                                       ) {
-                                        requestAnimationFrame(() => {
+                                        getOwnerWindow(
+                                          cardEl,
+                                        ).requestAnimationFrame(() => {
                                           if (
                                             controller.signal.aborted ||
                                             !cardEl.isConnected ||
                                             !imgEl.isConnected
                                           )
                                             return;
-                                          requestAnimationFrame(() => {
+                                          getOwnerWindow(
+                                            cardEl,
+                                          ).requestAnimationFrame(() => {
                                             if (
                                               controller.signal.aborted ||
                                               !cardEl.isConnected ||
                                               !imgEl.isConnected
                                             )
                                               return;
-                                            const thumbEl =
-                                              imgEl.closest(".card-thumbnail");
-                                            if (thumbEl)
-                                              thumbEl.classList.add(
-                                                "dynamic-views-hidden",
-                                              );
+                                            handleAllImagesFailed(cardEl);
                                             cardEl.style.setProperty(
                                               "--actual-aspect-ratio",
                                               DEFAULT_ASPECT_RATIO.toString(),

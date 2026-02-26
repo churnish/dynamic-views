@@ -19,6 +19,7 @@ import {
   setupImageLoadHandler,
   setupBackdropImageLoader,
   handleImageLoad,
+  handleAllImagesFailed,
   DEFAULT_ASPECT_RATIO,
   filterBrokenUrls,
   markImageBroken,
@@ -92,6 +93,7 @@ import {
   isFormulaProperty,
   shouldCollapseField,
 } from "../shared/property-helpers";
+import { getOwnerWindow } from "../utils/owner-window";
 
 /** Per-card cleanup handle for individual card teardown (virtual scrolling) */
 export interface CardHandle {
@@ -257,6 +259,14 @@ export function applyViewContainerStyles(
     "--dynamic-views-title-lines",
     String(settings.titleLines),
   );
+
+  // Poster display mode — container class
+  container.classList.remove("poster-mode-gradient", "poster-mode-overlay");
+  container.classList.add(`poster-mode-${settings.posterDisplayMode}`);
+
+  // Image fit — container class
+  container.classList.remove("image-fit-crop", "image-fit-contain");
+  container.classList.add(`image-fit-${settings.imageFit}`);
 }
 
 /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
@@ -298,35 +308,16 @@ export function applyCssOnlySettings(
     );
   }
 
-  // Swap poster display mode class on existing cards (avoids full re-render)
+  // Poster display mode — container class
+  containerEl.classList.remove("poster-mode-gradient", "poster-mode-overlay");
   const posterDisplayMode =
     (config.get("posterDisplayMode") as string) ?? "gradient";
-  for (const card of containerEl.querySelectorAll(
-    ".card.image-format-poster",
-  )) {
-    card.classList.remove("poster-gradient", "poster-overlay");
-    card.classList.add(`poster-${posterDisplayMode}`);
-  }
+  containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
 
-  // Swap image fit class on existing cards (avoids full re-render)
+  // Image fit — container class
+  containerEl.classList.remove("image-fit-crop", "image-fit-contain");
   const imageFit = (config.get("imageFit") as string) ?? "crop";
-  for (const card of containerEl.querySelectorAll(".card")) {
-    card.classList.remove(
-      "card-thumbnail-crop",
-      "card-thumbnail-contain",
-      "card-cover-crop",
-      "card-cover-contain",
-    );
-    if (card.classList.contains("image-format-thumbnail")) {
-      card.classList.add(`card-thumbnail-${imageFit}`);
-    } else if (
-      card.classList.contains("image-format-cover") ||
-      card.classList.contains("image-format-poster") ||
-      card.classList.contains("image-format-backdrop")
-    ) {
-      card.classList.add(`card-cover-${imageFit}`);
-    }
-  }
+  containerEl.classList.add(`image-fit-${imageFit}`);
 }
 
 /**
@@ -773,21 +764,14 @@ export class SharedCardRenderer {
         cardEl.classList.add("image-format-thumbnail");
       } else if (format === "poster") {
         cardEl.classList.add("image-format-poster");
-        cardEl.classList.add(`poster-${settings.posterDisplayMode}`);
       } else if (format === "backdrop") {
         cardEl.classList.add("image-format-backdrop");
       }
 
       if (format === "thumbnail") {
         cardEl.classList.add(`card-thumbnail-${position}`);
-        cardEl.classList.add(`card-thumbnail-${settings.imageFit}`);
       } else if (format === "cover") {
         cardEl.classList.add(`card-cover-${position}`);
-        cardEl.classList.add(`card-cover-${settings.imageFit}`);
-      } else if (format === "poster") {
-        cardEl.classList.add(`card-cover-${settings.imageFit}`);
-      } else if (format === "backdrop") {
-        cardEl.classList.add(`card-cover-${settings.imageFit}`);
       }
     }
 
@@ -945,9 +929,7 @@ export class SharedCardRenderer {
           );
 
           // Skip toggle when user is selecting text
-          const selection = (
-            cardEl.ownerDocument.defaultView ?? window
-          ).getSelection();
+          const selection = getOwnerWindow(cardEl).getSelection();
           if (selection && selection.toString().length > 0) return;
 
           if (!cardEl.classList.contains("poster-revealed")) {
@@ -1493,7 +1475,7 @@ export class SharedCardRenderer {
     // Thumbnail starts inside previews; stacking moves it to a sibling of previews in card-body
     let isStacked = canMoveThumbnail && thumbnailEl?.parentElement === bodyEl;
 
-    const RO = (cardEl.ownerDocument.defaultView ?? window).ResizeObserver;
+    const RO = getOwnerWindow(cardEl).ResizeObserver;
     const cardObserver = new RO((entries) => {
       // Guard against race with cleanup or element removal
       if (signal.aborted || !cardEl.isConnected) return;
@@ -1727,7 +1709,7 @@ export class SharedCardRenderer {
           clearHoverZoom();
         },
         onAllFailed: () => {
-          cardEl?.classList.add("no-valid-images");
+          handleAllImagesFailed(cardEl);
         },
         onBroken: preloadBrokenHandler,
         preloadGuard,
@@ -1735,8 +1717,7 @@ export class SharedCardRenderer {
     );
 
     // Reset to slide 1 when view becomes visible (reading/editing views are separate DOMs)
-    const IO = (slideshowEl.ownerDocument.defaultView ?? window)
-      .IntersectionObserver;
+    const IO = getOwnerWindow(slideshowEl).IntersectionObserver;
     let wasHidden = false;
     const visibilityObserver = new IO(
       (entries) => {
@@ -1891,14 +1872,13 @@ export class SharedCardRenderer {
             return;
           }
         }
-        // All images failed - hide thumbnail wrapper and set cover-ready
+        // All images failed
         if (signal?.aborted) return;
-        cardEl.classList.add("no-valid-images");
-        requestAnimationFrame(() => {
+        getOwnerWindow(cardEl).requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected) return;
-          requestAnimationFrame(() => {
+          getOwnerWindow(cardEl).requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected) return;
-            imageEl.classList.add("dynamic-views-hidden");
+            handleAllImagesFailed(cardEl);
             if (!cardEl.classList.contains("cover-ready")) {
               cardEl.classList.add("cover-ready");
               cardEl.style.setProperty(

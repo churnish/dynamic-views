@@ -4,6 +4,7 @@
  */
 
 import type { App, EventRef, WorkspaceLeaf } from "obsidian";
+import { getOwnerWindow } from "../utils/owner-window";
 
 // Shared scroll positions across all views (keyed by leafId)
 const scrollPositions = new Map<string, number>();
@@ -115,7 +116,7 @@ export class ScrollPreservation {
     return () => {
       if (scheduled) return;
       scheduled = true;
-      requestAnimationFrame(() => {
+      getOwnerWindow(this.scrollEl).requestAnimationFrame(() => {
         scheduled = false;
         if (!this.scrollEl.isConnected) return;
 

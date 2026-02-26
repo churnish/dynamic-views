@@ -53,6 +53,7 @@ import {
   getCardSpacing,
   setupStyleSettingsObserver,
 } from "../utils/style-settings";
+import { getOwnerWindow } from "../utils/owner-window";
 
 import {
   calculateMasonryLayout,
@@ -365,7 +366,8 @@ export function View({
 
     updateWidth();
 
-    const resizeObserver = new ResizeObserver(updateWidth);
+    const win = getOwnerWindow(containerRef.current);
+    const resizeObserver = new win.ResizeObserver(updateWidth);
     resizeObserver.observe(section);
 
     return () => {
@@ -426,7 +428,8 @@ export function View({
 
     updateWidth();
 
-    const resizeObserver = new ResizeObserver(updateWidth);
+    const win = getOwnerWindow(containerRef.current);
+    const resizeObserver = new win.ResizeObserver(updateWidth);
     resizeObserver.observe(section);
 
     return () => {
@@ -1189,7 +1192,9 @@ export function View({
         // Process any queued update
         if (pendingLayoutUpdate) {
           pendingLayoutUpdate = false;
-          requestAnimationFrame(updateLayout);
+          getOwnerWindow(containerRef.current).requestAnimationFrame(
+            updateLayout,
+          );
         }
       }
     };
@@ -1203,9 +1208,10 @@ export function View({
     // Initialize gradients after layout sets card widths (double-RAF for CSS property paint)
     const container = containerRef.current;
     if (container) {
-      requestAnimationFrame(() => {
+      const win = getOwnerWindow(container);
+      win.requestAnimationFrame(() => {
         if (!container.isConnected) return;
-        requestAnimationFrame(() => {
+        win.requestAnimationFrame(() => {
           if (!container.isConnected) return;
           // Sync responsive classes (same pattern as Bases)
           syncResponsiveClasses(
@@ -1223,6 +1229,7 @@ export function View({
     let trailingRafId: number | null = null;
     let staleWidthRafId: number | null = null;
     let resizeThrottleTimeout: ReturnType<typeof setTimeout> | null = null;
+    const win = getOwnerWindow(containerRef.current);
     const throttledResize = (entries: ResizeObserverEntry[]) => {
       if (entries.length === 0) return;
       const entry = entries[0];
@@ -1235,10 +1242,10 @@ export function View({
       // Throttle: only process if not in cooldown
       if (resizeThrottleTimeout === null) {
         if (resizeRafId !== null) {
-          cancelAnimationFrame(resizeRafId);
+          win.cancelAnimationFrame(resizeRafId);
         }
-        resizeRafId = requestAnimationFrame(() => {
-          const innerRafId = requestAnimationFrame(() => {
+        resizeRafId = win.requestAnimationFrame(() => {
+          const innerRafId = win.requestAnimationFrame(() => {
             resizeRafId = null;
             if (!containerRef.current?.isConnected) return;
             updateLayout();
@@ -1252,8 +1259,8 @@ export function View({
               currentWidth !== lastLayoutWidthRef.current
             ) {
               if (staleWidthRafId !== null)
-                cancelAnimationFrame(staleWidthRafId);
-              staleWidthRafId = requestAnimationFrame(() => {
+                win.cancelAnimationFrame(staleWidthRafId);
+              staleWidthRafId = win.requestAnimationFrame(() => {
                 staleWidthRafId = null;
                 updateLayout();
               });
@@ -1273,10 +1280,10 @@ export function View({
             trailingWidth !== lastLayoutWidthRef.current
           ) {
             if (trailingRafId !== null) {
-              cancelAnimationFrame(trailingRafId);
+              win.cancelAnimationFrame(trailingRafId);
             }
-            trailingRafId = requestAnimationFrame(() => {
-              const innerTrailingRafId = requestAnimationFrame(() => {
+            trailingRafId = win.requestAnimationFrame(() => {
+              const innerTrailingRafId = win.requestAnimationFrame(() => {
                 trailingRafId = null;
                 if (!containerRef.current?.isConnected) return;
                 updateLayout();
@@ -1288,13 +1295,13 @@ export function View({
       }
     };
 
-    const resizeObserver = new ResizeObserver(throttledResize);
+    const resizeObserver = new win.ResizeObserver(throttledResize);
     resizeObserver.observe(containerRef.current!);
 
     return () => {
-      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
-      if (trailingRafId !== null) cancelAnimationFrame(trailingRafId);
-      if (staleWidthRafId !== null) cancelAnimationFrame(staleWidthRafId);
+      if (resizeRafId !== null) win.cancelAnimationFrame(resizeRafId);
+      if (trailingRafId !== null) win.cancelAnimationFrame(trailingRafId);
+      if (staleWidthRafId !== null) win.cancelAnimationFrame(staleWidthRafId);
       if (resizeThrottleTimeout !== null) clearTimeout(resizeThrottleTimeout);
       resizeObserver.disconnect();
     };
@@ -1369,22 +1376,23 @@ export function View({
     updateGrid();
 
     // Debounced resize handler (double-RAF)
+    const win = getOwnerWindow(containerRef.current);
     let resizeRafId: number | null = null;
     const debouncedResize = () => {
-      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
-      resizeRafId = requestAnimationFrame(() => {
-        resizeRafId = requestAnimationFrame(() => {
+      if (resizeRafId !== null) win.cancelAnimationFrame(resizeRafId);
+      resizeRafId = win.requestAnimationFrame(() => {
+        resizeRafId = win.requestAnimationFrame(() => {
           resizeRafId = null; // Clear after use
           updateGrid();
         });
       });
     };
 
-    const resizeObserver = new ResizeObserver(debouncedResize);
+    const resizeObserver = new win.ResizeObserver(debouncedResize);
     resizeObserver.observe(container);
 
     return () => {
-      if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
+      if (resizeRafId !== null) win.cancelAnimationFrame(resizeRafId);
       resizeObserver.disconnect();
     };
   }, [
@@ -1405,12 +1413,13 @@ export function View({
     const container = containerRef.current;
     if (!container) return;
 
+    const win = getOwnerWindow(containerRef.current);
     let rafId: number | null = null;
     let rafId2: number | null = null;
 
     // Double-RAF: wait for layout useEffects to complete
-    rafId = requestAnimationFrame(() => {
-      rafId2 = requestAnimationFrame(() => {
+    rafId = win.requestAnimationFrame(() => {
+      rafId2 = win.requestAnimationFrame(() => {
         if (!container.isConnected) return;
 
         // Sync responsive classes before gradient init (ResizeObservers are async)
@@ -1424,8 +1433,8 @@ export function View({
     });
 
     return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      if (rafId2 !== null) cancelAnimationFrame(rafId2);
+      if (rafId !== null) win.cancelAnimationFrame(rafId);
+      if (rafId2 !== null) win.cancelAnimationFrame(rafId2);
     };
   }, [
     viewMode,
@@ -1479,12 +1488,13 @@ export function View({
 
     // Delay initial check to ensure DOM is painted (especially for ListView)
     // Attach listener inside RAF so initial check completes before scroll events fire
-    const rafId = requestAnimationFrame(() => {
+    const win = getOwnerWindow(containerRef.current);
+    const rafId = win.requestAnimationFrame(() => {
       handleScroll();
       container.addEventListener("scroll", handleScroll);
     });
     return () => {
-      cancelAnimationFrame(rafId);
+      win.cancelAnimationFrame(rafId);
       container.removeEventListener("scroll", handleScroll);
     };
   }, [settings.queryHeight, viewMode]);
@@ -1570,7 +1580,8 @@ export function View({
     };
 
     // Setup ResizeObserver (watches masonry container)
-    const resizeObserver = new ResizeObserver(() => {
+    const win = getOwnerWindow(containerRef.current);
+    const resizeObserver = new win.ResizeObserver(() => {
       // Only clear loading flag - don't trigger auto-loading to prevent cascade
       isLoadingRef.current = false;
     });
@@ -1585,7 +1596,7 @@ export function View({
     const handleWindowResize = () => {
       loadMoreItems();
     };
-    window.addEventListener("resize", handleWindowResize);
+    win.addEventListener("resize", handleWindowResize);
 
     // Setup scroll listener with leading-edge throttle
     let scrollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1611,7 +1622,7 @@ export function View({
     // Cleanup
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", handleWindowResize);
+      win.removeEventListener("resize", handleWindowResize);
       scrollableElement.removeEventListener("scroll", handleScroll);
       if (scrollTimer) clearTimeout(scrollTimer);
       clearTimeout(initialCheckTimeout);
@@ -1940,8 +1951,9 @@ export function View({
     if (!container) return;
 
     // Use double RAF to ensure DOM has updated after settings change
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    const win = getOwnerWindow(containerRef.current);
+    win.requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => {
         remeasurePropertyFields(container);
       });
     });
@@ -2024,7 +2036,10 @@ export function View({
   };
 
   return (
-    <div ref={explorerRef} className="dynamic-views">
+    <div
+      ref={explorerRef}
+      className={`dynamic-views poster-mode-${settings.posterDisplayMode} image-fit-${settings.imageFit}`}
+    >
       <div
         ref={toolbarRef}
         className={`controls-wrapper${isResultsScrolled ? " scrolled" : ""}`}

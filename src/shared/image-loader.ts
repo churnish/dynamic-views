@@ -1,5 +1,6 @@
 import type { RefObject } from "../datacore/types";
 import { cacheExternalImage } from "./slideshow";
+import { getOwnerWindow } from "../utils/owner-window";
 
 // Track URLs that failed to load — filtered out on subsequent renders
 // Session-scoped: cleared on plugin reload/unload. Unbounded growth is intentional
@@ -15,6 +16,39 @@ export function markImageBroken(url: string): void {
 export function filterBrokenUrls(urls: string[]): string[] {
   if (brokenImageUrls.size === 0) return urls;
   return urls.filter((url) => !brokenImageUrls.has(url));
+}
+
+/** Inject placeholder element when all card images fail at runtime */
+export function handleAllImagesFailed(cardEl: HTMLElement): void {
+  cardEl.classList.add("no-valid-images");
+  const doc = cardEl.ownerDocument;
+
+  // Thumbnail: remove .card-thumbnail, inject .card-thumbnail-placeholder
+  // Removal (not hiding) ensures :only-child CSS collapse rule in _previews.scss works
+  const thumbEl = cardEl.querySelector(".card-thumbnail");
+  if (thumbEl instanceof HTMLElement) {
+    const parent = thumbEl.parentElement;
+    thumbEl.remove();
+    if (parent && !parent.querySelector(".card-thumbnail-placeholder")) {
+      const ph = doc.createElement("div");
+      ph.className = "card-thumbnail-placeholder";
+      parent.appendChild(ph);
+    }
+    return;
+  }
+
+  // Cover: remove .card-cover, inject .card-cover-placeholder in wrapper
+  const wrapper = cardEl.querySelector(".card-cover-wrapper");
+  if (wrapper instanceof HTMLElement) {
+    wrapper.classList.add("card-cover-wrapper-placeholder");
+    const coverEl = wrapper.querySelector(".card-cover");
+    if (coverEl) coverEl.remove();
+    if (!wrapper.querySelector(".card-cover-placeholder")) {
+      const ph = doc.createElement("div");
+      ph.className = "card-cover-placeholder";
+      wrapper.appendChild(ph);
+    }
+  }
 }
 
 // Cache aspect ratio by image URL to avoid layout flash on re-render
@@ -133,10 +167,10 @@ export function handleImageLoad(
   } else {
     // Double rAF ensures browser paints initial state before triggering transitions
     // Single rAF can be batched with initial render; double guarantees a paint cycle
-    requestAnimationFrame(() => {
+    getOwnerWindow(cardEl).requestAnimationFrame(() => {
       // Guard against card unmounted during first rAF
       if (!cardEl.isConnected) return;
-      requestAnimationFrame(() => {
+      getOwnerWindow(cardEl).requestAnimationFrame(() => {
         // Guard against card unmounted during second rAF
         if (!cardEl.isConnected) return;
         cardEl.classList.add("cover-ready");
@@ -195,9 +229,9 @@ export function setupImageLoadHandler(
     markImageBroken(failedSrc);
 
     // Double rAF for cover-ready (consistent with multi-image error handlers)
-    requestAnimationFrame(() => {
+    getOwnerWindow(cardEl).requestAnimationFrame(() => {
       if (!cardEl.isConnected || !imgEl.isConnected) return;
-      requestAnimationFrame(() => {
+      getOwnerWindow(cardEl).requestAnimationFrame(() => {
         if (!cardEl.isConnected || !imgEl.isConnected) return;
         // Skip if src changed — another handler (e.g. slideshow first-image
         // error in shared-renderer.ts) already advanced to the next image
@@ -205,6 +239,7 @@ export function setupImageLoadHandler(
         // Hide broken image to prevent placeholder icon
         imgEl.addClass("dynamic-views-hidden");
         cardEl.classList.add("cover-ready");
+        handleAllImagesFailed(cardEl);
         // Set default aspect ratio on error
         cardEl.style.setProperty(
           "--actual-aspect-ratio",
@@ -319,6 +354,7 @@ export function handleJsxImageError(
     return;
 
   cardEl.classList.add("cover-ready");
+  handleAllImagesFailed(cardEl);
   // Set default aspect ratio on error
   cardEl.style.setProperty(
     "--actual-aspect-ratio",
@@ -387,10 +423,10 @@ export function setupBackdropImageLoader(
       }
       // All images failed - cleanup with double rAF
       if (signal?.aborted) return;
-      requestAnimationFrame(() => {
+      getOwnerWindow(cardEl).requestAnimationFrame(() => {
         if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
           return;
-        requestAnimationFrame(() => {
+        getOwnerWindow(cardEl).requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
             return;
           imgEl.addClass("dynamic-views-hidden");
@@ -407,10 +443,10 @@ export function setupBackdropImageLoader(
       () => {
         if (signal?.aborted) return;
         markImageBroken(imgEl.src);
-        requestAnimationFrame(() => {
+        getOwnerWindow(cardEl).requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
             return;
-          requestAnimationFrame(() => {
+          getOwnerWindow(cardEl).requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
               return;
             imgEl.addClass("dynamic-views-hidden");
