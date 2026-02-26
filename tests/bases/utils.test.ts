@@ -1,4 +1,8 @@
-import { serializeGroupKey, handleTemplateToggle } from "../../src/bases/utils";
+import {
+  serializeGroupKey,
+  handleTemplateToggle,
+  getSortMethod,
+} from "../../src/bases/utils";
 import { Notice } from "obsidian";
 
 // Mock extractBasesTemplate — returns a sparse template object
@@ -458,5 +462,31 @@ describe("serializeGroupKey", () => {
       // Arrays with null stringify to JSON
       expect(serializeGroupKey([1, null, 3])).toBe("[1,null,3]");
     });
+  });
+});
+
+describe("getSortMethod", () => {
+  it("should return 'property-direction' string from sort config", () => {
+    const config = {
+      getSort: () => [{ property: "file.mtime", direction: "DESC" }],
+      getDisplayName: (p: string) => p,
+    };
+    expect(getSortMethod(config)).toBe("file.mtime-desc");
+  });
+
+  it("should return 'none' when getSort() returns null", () => {
+    const config = {
+      getSort: () => null,
+      getDisplayName: (p: string) => p,
+    };
+    expect(getSortMethod(config)).toBe("none");
+  });
+
+  it("should return 'none' when getSort() returns empty array", () => {
+    const config = {
+      getSort: () => [],
+      getDisplayName: (p: string) => p,
+    };
+    expect(getSortMethod(config)).toBe("none");
   });
 });

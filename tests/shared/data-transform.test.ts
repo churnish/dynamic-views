@@ -5,6 +5,7 @@ import {
   transformBasesEntries,
   resolveBasesProperty,
   resolveDatacoreProperty,
+  applySmartTimestamp,
 } from "../../src/shared/data-transform";
 
 import { App, TFile } from "obsidian";
@@ -1538,6 +1539,163 @@ describe("data-transform", () => {
 
         expect(result).toBeNull();
       });
+    });
+  });
+
+  describe("applySmartTimestamp", () => {
+    // applySmartTimestamp calls stripNotePrefix internally — provide real implementation
+    beforeEach(() => {
+      const { stripNotePrefix } = require("../../src/utils/property");
+      stripNotePrefix.mockImplementation((name: string) =>
+        name.startsWith("note.") ? name.slice(5) : name,
+      );
+    });
+
+    function makeSettings(overrides: Record<string, unknown> = {}) {
+      return {
+        smartTimestamp: true,
+        createdTimeProperty: "created time",
+        modifiedTimeProperty: "modified time",
+        ...overrides,
+      } as any;
+    }
+
+    it("should return props unchanged when smartTimestamp is false", () => {
+      const props = ["created time"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings({ smartTimestamp: false }),
+      );
+      expect(result).toEqual(["created time"]);
+    });
+
+    it("should return props unchanged when createdTimeProperty is empty", () => {
+      const props = ["modified time"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings({ createdTimeProperty: "" }),
+      );
+      expect(result).toEqual(["modified time"]);
+    });
+
+    it("should return props unchanged when modifiedTimeProperty is empty", () => {
+      const props = ["created time"];
+      const result = applySmartTimestamp(
+        props,
+        "created time-asc",
+        makeSettings({ modifiedTimeProperty: "" }),
+      );
+      expect(result).toEqual(["created time"]);
+    });
+
+    it("should return props unchanged when sortMethod is 'none'", () => {
+      const props = ["created time"];
+      const result = applySmartTimestamp(props, "none", makeSettings());
+      expect(result).toEqual(["created time"]);
+    });
+
+    it("should return props unchanged when sortMethod is 'name-asc'", () => {
+      const props = ["created time"];
+      const result = applySmartTimestamp(props, "name-asc", makeSettings());
+      expect(result).toEqual(["created time"]);
+    });
+
+    it("should replace 'created time' with 'modified time' when sorting by modified time", () => {
+      const props = ["created time"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["modified time"]);
+    });
+
+    it("should replace 'modified time' with 'created time' when sorting by created time", () => {
+      const props = ["modified time"];
+      const result = applySmartTimestamp(
+        props,
+        "created time-asc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["created time"]);
+    });
+
+    it("should not replace when both timestamps are in props", () => {
+      const props = ["created time", "modified time"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["created time", "modified time"]);
+    });
+
+    it("should not replace when neither timestamp is in props", () => {
+      const props = ["tags", "author"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["tags", "author"]);
+    });
+
+    it("should handle custom property names", () => {
+      const props = ["updated"];
+      const result = applySmartTimestamp(
+        props,
+        "created-desc",
+        makeSettings({
+          createdTimeProperty: "created",
+          modifiedTimeProperty: "updated",
+        }),
+      );
+      expect(result).toEqual(["created"]);
+    });
+
+    it("should NOT match Datacore ctime sort with custom property names", () => {
+      // Custom names don't match the default "file.ctime"/"created time" guard
+      const props = ["updated"];
+      const result = applySmartTimestamp(
+        props,
+        "ctime-desc",
+        makeSettings({
+          createdTimeProperty: "created",
+          modifiedTimeProperty: "updated",
+        }),
+      );
+      expect(result).toEqual(["updated"]);
+    });
+
+    it("should match Datacore ctime sort with default 'file.ctime' property", () => {
+      const props = ["file.mtime"];
+      const result = applySmartTimestamp(
+        props,
+        "ctime-desc",
+        makeSettings({
+          createdTimeProperty: "file.ctime",
+          modifiedTimeProperty: "file.mtime",
+        }),
+      );
+      expect(result).toEqual(["file.ctime"]);
+    });
+
+    it("should match note.-prefixed property via stripNotePrefix", () => {
+      const props = ["created time"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings({
+          createdTimeProperty: "note.created time",
+          modifiedTimeProperty: "note.modified time",
+        }),
+      );
+      // sortMethod "modified time-desc" matches stripped "modified time"
+      // props contain "created time" which matches stripped "created time"
+      // So "created time" gets replaced with "note.modified time" (the full prop)
+      expect(result).toEqual(["note.modified time"]);
     });
   });
 });

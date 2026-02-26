@@ -709,8 +709,8 @@ export function renderGroupHeader(
 }
 
 /**
- * Get sort method from Bases config
- * Returns a string that uniquely identifies the sort configuration
+ * Get sort method from Bases config.
+ * Returns "property-direction" string, or "none" when no sort is configured.
  */
 export function getSortMethod(config: BasesConfigWithSort): string {
   const sortConfigs = config.getSort();

@@ -115,7 +115,7 @@ function resolveSubtitleToPlainText(
  * If sorting by created/modified time, automatically show that timestamp
  * (unless both are already shown)
  */
-function applySmartTimestamp(
+export function applySmartTimestamp(
   props: string[],
   sortMethod: string,
   settings: BasesResolvedSettings,
@@ -138,16 +138,20 @@ function applySmartTimestamp(
   const createdStripped = stripNotePrefix(createdProp);
   const modifiedStripped = stripNotePrefix(modifiedProp);
 
+  // Exact Datacore sort keyword patterns (e.g. "ctime-asc", "mtime-desc")
+  const DC_CTIME = /^ctime-(asc|desc)$/;
+  const DC_MTIME = /^mtime-(asc|desc)$/;
+
   const sortingByCtime =
     sortMethod.startsWith(createdProp + "-") ||
     sortMethod.startsWith(createdStripped + "-") ||
-    (sortMethod.includes("ctime") &&
+    (DC_CTIME.test(sortMethod) &&
       (createdStripped === "file.ctime" || createdStripped === "created time"));
 
   const sortingByMtime =
     sortMethod.startsWith(modifiedProp + "-") ||
     sortMethod.startsWith(modifiedStripped + "-") ||
-    (sortMethod.includes("mtime") &&
+    (DC_MTIME.test(sortMethod) &&
       (modifiedStripped === "file.mtime" ||
         modifiedStripped === "modified time"));
 
