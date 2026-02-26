@@ -489,4 +489,12 @@ describe("getSortMethod", () => {
     };
     expect(getSortMethod(config)).toBe("none");
   });
+
+  it("should use display name from config.getDisplayName()", () => {
+    const config = {
+      getSort: () => [{ property: "file.mtime", direction: "DESC" }],
+      getDisplayName: (p: string) => (p === "file.mtime" ? "modified time" : p),
+    };
+    expect(getSortMethod(config)).toBe("modified time-desc");
+  });
 });

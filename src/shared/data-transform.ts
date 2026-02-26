@@ -14,6 +14,8 @@ import {
   isValidUri,
   isCheckboxProperty,
   stripNotePrefix,
+  toDisplayName,
+  toSyntaxName,
 } from "../utils/property";
 import { hasUriScheme } from "../utils/link-parser";
 import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
@@ -130,13 +132,16 @@ export function applySmartTimestamp(
     return props;
   }
 
-  // Only match against the exact setting values (no hardcoded fallbacks).
-  // Datacore uses "ctime"/"mtime" sort keywords — only match when the
-  // setting value is the corresponding default property.
   const createdProp = settings.createdTimeProperty;
   const modifiedProp = settings.modifiedTimeProperty;
   const createdStripped = stripNotePrefix(createdProp);
   const modifiedStripped = stripNotePrefix(modifiedProp);
+
+  // Normalize to both forms so "file.mtime" and "modified time" both match
+  const createdDisplay = toDisplayName(createdStripped);
+  const createdSyntax = toSyntaxName(createdStripped);
+  const modifiedDisplay = toDisplayName(modifiedStripped);
+  const modifiedSyntax = toSyntaxName(modifiedStripped);
 
   // Exact Datacore sort keyword patterns (e.g. "ctime-asc", "mtime-desc")
   const DC_CTIME = /^ctime-(asc|desc)$/;
@@ -145,15 +150,16 @@ export function applySmartTimestamp(
   const sortingByCtime =
     sortMethod.startsWith(createdProp + "-") ||
     sortMethod.startsWith(createdStripped + "-") ||
-    (DC_CTIME.test(sortMethod) &&
-      (createdStripped === "file.ctime" || createdStripped === "created time"));
+    sortMethod.startsWith(createdDisplay + "-") ||
+    sortMethod.startsWith(createdSyntax + "-") ||
+    (DC_CTIME.test(sortMethod) && createdDisplay === "created time");
 
   const sortingByMtime =
     sortMethod.startsWith(modifiedProp + "-") ||
     sortMethod.startsWith(modifiedStripped + "-") ||
-    (DC_MTIME.test(sortMethod) &&
-      (modifiedStripped === "file.mtime" ||
-        modifiedStripped === "modified time"));
+    sortMethod.startsWith(modifiedDisplay + "-") ||
+    sortMethod.startsWith(modifiedSyntax + "-") ||
+    (DC_MTIME.test(sortMethod) && modifiedDisplay === "modified time");
 
   if (!sortingByCtime && !sortingByMtime) {
     return props;

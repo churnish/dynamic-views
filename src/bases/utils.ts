@@ -717,7 +717,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
 
   if (sortConfigs && sortConfigs.length > 0) {
     const firstSort = sortConfigs[0];
-    const property = firstSort.property;
+    const property = config.getDisplayName(firstSort.property);
     const direction = firstSort.direction.toLowerCase();
     return `${property}-${direction}`;
   }

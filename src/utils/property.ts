@@ -494,6 +494,24 @@ const PROPERTY_LABEL_MAP: Record<string, string> = {
 };
 
 /**
+ * Normalize built-in property name to its display form.
+ * E.g. "file.mtime" → "modified time", "file.ctime" → "created time".
+ * Returns the input unchanged if no mapping exists.
+ */
+export function toDisplayName(property: string): string {
+  return PROPERTY_LABEL_MAP[property] ?? property;
+}
+
+/**
+ * Normalize built-in property name to its syntax form.
+ * E.g. "modified time" → "file.mtime", "created time" → "file.ctime".
+ * Returns the input unchanged if no mapping exists.
+ */
+export function toSyntaxName(property: string): string {
+  return DEFAULT_DISPLAY_TO_SYNTAX[property] ?? property;
+}
+
+/**
  * Convert property name to readable label
  * When displayNameMap is provided (Bases path), uses custom display names from .base YAML
  * Falls back to PROPERTY_LABEL_MAP for built-in properties, then prefix stripping

@@ -1543,11 +1543,29 @@ describe("data-transform", () => {
   });
 
   describe("applySmartTimestamp", () => {
-    // applySmartTimestamp calls stripNotePrefix internally — provide real implementation
+    // Provide real implementations for pure helpers used by applySmartTimestamp
     beforeEach(() => {
-      const { stripNotePrefix } = require("../../src/utils/property");
+      const {
+        stripNotePrefix,
+        toDisplayName,
+        toSyntaxName,
+      } = require("../../src/utils/property");
       stripNotePrefix.mockImplementation((name: string) =>
         name.startsWith("note.") ? name.slice(5) : name,
+      );
+      const displayMap: Record<string, string> = {
+        "file.ctime": "created time",
+        "file.mtime": "modified time",
+      };
+      toDisplayName.mockImplementation(
+        (name: string) => displayMap[name] ?? name,
+      );
+      const syntaxMap: Record<string, string> = {
+        "created time": "file.ctime",
+        "modified time": "file.mtime",
+      };
+      toSyntaxName.mockImplementation(
+        (name: string) => syntaxMap[name] ?? name,
       );
     });
 
@@ -1696,6 +1714,31 @@ describe("data-transform", () => {
       // props contain "created time" which matches stripped "created time"
       // So "created time" gets replaced with "note.modified time" (the full prop)
       expect(result).toEqual(["note.modified time"]);
+    });
+
+    it("should match sort by internal name when setting uses display name", () => {
+      // Setting: "modified time", sort method: "file.mtime-desc" (alias match)
+      const props = ["created time"];
+      const result = applySmartTimestamp(
+        props,
+        "file.mtime-desc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["modified time"]);
+    });
+
+    it("should match sort by display name when setting uses internal name", () => {
+      // Setting: "file.mtime", sort method: "modified time-desc" (alias match)
+      const props = ["file.ctime"];
+      const result = applySmartTimestamp(
+        props,
+        "modified time-desc",
+        makeSettings({
+          createdTimeProperty: "file.ctime",
+          modifiedTimeProperty: "file.mtime",
+        }),
+      );
+      expect(result).toEqual(["file.mtime"]);
     });
   });
 });
