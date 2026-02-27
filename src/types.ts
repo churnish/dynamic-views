@@ -57,7 +57,7 @@ export interface ViewDefaults {
   cssclasses: string;
 }
 
-/** Datacore-only defaults */
+/** Datacore-only defaults (titleProperty/subtitleProperty shadow ViewDefaults via spread order in resolveSettings) */
 export interface DatacoreDefaults {
   titleProperty: string;
   subtitleProperty: string;

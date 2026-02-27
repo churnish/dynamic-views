@@ -233,6 +233,7 @@ export function View({
     null,
   );
   const isSyncing = dc.useRef(false);
+  const pendingSync = dc.useRef<string | null>(null);
 
   // Stable pages reference - prevents re-renders when Datacore returns new array with same content
   const prevPagesKeyRef = dc.useRef<string>("");
@@ -1832,7 +1833,14 @@ export function View({
 
   const syncQueryToCodeBlock = dc.useCallback(
     async (queryToSave: string) => {
-      if (isSyncing.current || !currentFile) return;
+      if (!currentFile) return;
+
+      // Queue latest value if already syncing (prevents silent drop)
+      if (isSyncing.current) {
+        pendingSync.current = queryToSave;
+        return;
+      }
+
       isSyncing.current = true;
 
       try {
@@ -1851,6 +1859,13 @@ export function View({
         console.error("Failed to sync query to code block:", error);
       } finally {
         isSyncing.current = false;
+
+        // Flush pending sync if queued during this write
+        const pending = pendingSync.current;
+        if (pending !== null) {
+          pendingSync.current = null;
+          void syncQueryToCodeBlock(pending);
+        }
       }
     },
     [currentFile, app],

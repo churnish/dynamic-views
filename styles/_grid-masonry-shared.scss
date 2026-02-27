@@ -195,10 +195,16 @@ body.dynamic-views-hide-group-property-labels
     --card-bg: var(--background-primary-alt);
     background-color: var(--card-bg);
     /* Placeholder bg */
-    --dynamic-views-image-background-dimmed: light-dark(
-      rgb(from var(--card-bg) calc(r - 15) calc(g - 15) calc(b - 15)),
-      rgb(from var(--card-bg) calc(r - 10) calc(g - 10) calc(b - 10))
+    --dynamic-views-image-background-dimmed: rgb(
+      from var(--card-bg) calc(r - 15) calc(g - 15) calc(b - 15)
     );
+
+    .theme-dark & {
+      --dynamic-views-image-background-dimmed: rgb(
+        from var(--card-bg) calc(r - 10) calc(g - 10) calc(b - 10)
+      );
+    }
+
     break-inside: avoid;
     page-break-inside: avoid;
     transition:
