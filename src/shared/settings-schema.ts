@@ -32,15 +32,13 @@ export function getBasesViewOptions(
   viewType?: "grid" | "masonry",
   config?: BasesViewConfig,
 ): ViewOption[] {
-  // Merge settings template into defaults (if template exists)
-  // For new views: config is empty → controls show these defaults = template values
-  // For existing views: config has values → these defaults are ignored by Obsidian
+  // Merge settings template into defaults for NEW views only.
+  // Existing views (have an id from cleanUpBaseFile) use plain defaults —
+  // otherwise template-polluted defaults override user-cleared settings.
   const d = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
   if (viewType) {
     try {
-      // Access plugin instance to read settings template
       const plugin = window.app?.plugins?.plugins?.["dynamic-views"];
-      // Cast through unknown — persistenceManager is on DynamicViews, not base Plugin
       const pm = (
         plugin as unknown as {
           persistenceManager?: {
@@ -51,9 +49,12 @@ export function getBasesViewOptions(
         }
       )?.persistenceManager;
       if (pm) {
-        const template = pm.getSettingsTemplate(viewType);
-        if (template) {
-          Object.assign(d, template);
+        const isNewView = !config || config.get("id") == null;
+        if (isNewView) {
+          const template = pm.getSettingsTemplate(viewType);
+          if (template) {
+            Object.assign(d, template);
+          }
         }
       }
     } catch {
