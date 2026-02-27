@@ -5,11 +5,7 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 export default defineConfig([
   // Only lint src/ TypeScript files
   {
-    ignores: [
-      "**",
-      "!src/**",
-      "!main.ts",
-    ],
+    ignores: ["**", "!src/**", "!main.ts"],
   },
 
   // Obsidian recommended rules (includes JS recommended, TS type-checked,

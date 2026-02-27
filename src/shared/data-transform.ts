@@ -4,7 +4,6 @@
  */
 
 import { TFile, type App, type BasesEntry } from "obsidian";
-import { getFileExtInfo } from "../utils/file-extension";
 import type { CardData } from "./card-renderer";
 import type { BasesResolvedSettings } from "../types";
 import type { DatacoreAPI, DatacoreFile } from "../datacore/types";
@@ -18,7 +17,6 @@ import {
   toSyntaxName,
 } from "../utils/property";
 import { hasUriScheme } from "../utils/link-parser";
-import { VALID_IMAGE_EXTENSIONS } from "../utils/image";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
 
 /**
@@ -611,19 +609,6 @@ export function transformDatacoreResults(
   return results
     .filter((p) => p.$path)
     .map((p) => {
-      // For image files, use file itself as card image
-      const ext = getFileExtInfo(p.$path, true)?.ext.slice(1) || "";
-      if (
-        VALID_IMAGE_EXTENSIONS.includes(ext) &&
-        !images[p.$path] &&
-        settings.fallbackToEmbeds !== "never"
-      ) {
-        const file = app.vault.getAbstractFileByPath(p.$path);
-        if (file instanceof TFile) {
-          images[p.$path] = app.vault.getResourcePath(file);
-          hasImageAvailable[p.$path] = true;
-        }
-      }
       return datacoreResultToCardData(
         app,
         p,
@@ -652,16 +637,6 @@ export function transformBasesEntries(
   hasImageAvailable: Record<string, boolean>,
 ): CardData[] {
   return entries.map((entry) => {
-    // For image files, use file itself as card image
-    const ext = entry.file.extension?.toLowerCase() || "";
-    if (
-      VALID_IMAGE_EXTENSIONS.includes(ext) &&
-      !images[entry.file.path] &&
-      settings.fallbackToEmbeds !== "never"
-    ) {
-      images[entry.file.path] = app.vault.getResourcePath(entry.file);
-      hasImageAvailable[entry.file.path] = true;
-    }
     return basesEntryToCardData(
       app,
       entry,

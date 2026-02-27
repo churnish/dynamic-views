@@ -3,6 +3,7 @@ import {
   processImagePaths,
   resolveInternalImagePaths,
   extractImageEmbeds,
+  VALID_IMAGE_EXTENSIONS,
 } from "../utils/image";
 import { loadFilePreview } from "../utils/text-preview";
 import { getSlideshowMaxImages } from "../utils/style-settings";
@@ -69,6 +70,17 @@ export async function loadImageForEntry(
   // Skip if already in caller's cache (uses path, not composite key, because each
   // caller passes their own cache objects - this prevents re-loading within a batch)
   if (path in hasImageCache) {
+    return;
+  }
+
+  // Image files use themselves as card image (gated on fallbackToEmbeds
+  // since self-image is a form of embed fallback — "never" suppresses it)
+  if (
+    fallbackToEmbeds !== "never" &&
+    VALID_IMAGE_EXTENSIONS.includes(file.extension?.toLowerCase() ?? "")
+  ) {
+    imageCache[path] = app.vault.getResourcePath(file);
+    hasImageCache[path] = true;
     return;
   }
 

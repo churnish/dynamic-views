@@ -1,4 +1,5 @@
 node_modules/
+node_modules.nosync/
 .claude/
 coverage/
 screenshots/
@@ -6,11 +7,11 @@ screenshots/
 cc-chats/
 wiki/
 
+*.js.map
+*.map
+*.zip
+
 main.js
 styles.css
 data.json
 .DS_Store
-
-*.js.map
-*.map
-*.zip

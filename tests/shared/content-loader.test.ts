@@ -13,6 +13,16 @@ jest.mock("../../src/utils/image", () => ({
   resolveInternalImagePaths: jest.fn(),
   extractImageEmbeds: jest.fn(),
   isExternalUrl: jest.fn((url: string) => /^https?:\/\//i.test(url)),
+  VALID_IMAGE_EXTENSIONS: [
+    "avif",
+    "bmp",
+    "gif",
+    "jpeg",
+    "jpg",
+    "png",
+    "svg",
+    "webp",
+  ],
 }));
 
 // Mock text-preview utility
@@ -276,6 +286,104 @@ describe("content-loader", () => {
 
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    it("should self-assign image file when fallbackToEmbeds is not never", async () => {
+      const imageCache: Record<string, string | string[]> = {};
+      const hasImageCache: Record<string, boolean> = {};
+
+      const imageFile = new TFile();
+      imageFile.path = "photos/sunset.png";
+      imageFile.extension = "png";
+
+      (mockApp.vault as any).getResourcePath = jest
+        .fn()
+        .mockReturnValue("app://vault/photos/sunset.png");
+
+      await loadImageForEntry(
+        "photos/sunset.png",
+        imageFile,
+        mockApp,
+        [],
+        "always",
+        imageCache,
+        hasImageCache,
+      );
+
+      expect(imageCache["photos/sunset.png"]).toBe(
+        "app://vault/photos/sunset.png",
+      );
+      expect(hasImageCache["photos/sunset.png"]).toBe(true);
+      // Should not proceed to property/embed loading
+      expect(mockImageUtils.processImagePaths).not.toHaveBeenCalled();
+    });
+
+    it("should not self-assign image file when fallbackToEmbeds is never", async () => {
+      const imageCache: Record<string, string | string[]> = {};
+      const hasImageCache: Record<string, boolean> = {};
+
+      const imageFile = new TFile();
+      imageFile.path = "photos/sunset.png";
+      imageFile.extension = "png";
+
+      await loadImageForEntry(
+        "photos/sunset.png",
+        imageFile,
+        mockApp,
+        [],
+        "never",
+        imageCache,
+        hasImageCache,
+      );
+
+      // Should proceed to normal loading (no self-assign)
+      expect(mockImageUtils.processImagePaths).toHaveBeenCalled();
+    });
+
+    it("should skip self-assign for image file already in cache", async () => {
+      const imageCache: Record<string, string | string[]> = {
+        "photos/sunset.png": "pre-existing-url",
+      };
+      const hasImageCache: Record<string, boolean> = {
+        "photos/sunset.png": true,
+      };
+
+      const imageFile = new TFile();
+      imageFile.path = "photos/sunset.png";
+      imageFile.extension = "png";
+
+      await loadImageForEntry(
+        "photos/sunset.png",
+        imageFile,
+        mockApp,
+        [],
+        "always",
+        imageCache,
+        hasImageCache,
+      );
+
+      // Should return early from the hasImageCache guard
+      expect(imageCache["photos/sunset.png"]).toBe("pre-existing-url");
+      expect(mockImageUtils.processImagePaths).not.toHaveBeenCalled();
+    });
+
+    it("should not self-assign for non-image files", async () => {
+      const imageCache: Record<string, string | string[]> = {};
+      const hasImageCache: Record<string, boolean> = {};
+
+      // .md is not an image extension
+      await loadImageForEntry(
+        "test/file.md",
+        mockFile,
+        mockApp,
+        [],
+        "always",
+        imageCache,
+        hasImageCache,
+      );
+
+      // Should proceed to normal loading (no self-assign)
+      expect(mockImageUtils.processImagePaths).toHaveBeenCalled();
     });
   });
 

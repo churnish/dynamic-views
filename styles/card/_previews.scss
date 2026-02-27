@@ -209,7 +209,8 @@ body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
   object-position: center bottom;
 }
 
-/* Collapse card-previews when it only has a hidden thumbnail placeholder */
+/* Collapse card-previews when it only has a hidden thumbnail placeholder
+   (see also: card-body collapse below for owl selector margin) */
 body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
   .card-previews:has(> .card-thumbnail-placeholder:only-child) {
@@ -217,7 +218,7 @@ body:not(.dynamic-views-show-thumbnail-placeholder)
 }
 
 /* Collapse card-body when its only content is a hidden card-previews
-   (prevents owl selector margin on title-only cards) */
+   (prevents owl selector margin on title-only cards — sibling of rule above) */
 body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
   .card-body:has(
