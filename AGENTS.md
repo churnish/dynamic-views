@@ -9,6 +9,10 @@
 - **Avoid "base"**: NEVER use "base" to mean "default" in comments, docs, file names, function/class/variable names, or any user-facing text — ambiguous with Obsidian's Bases feature. Use synonyms like "standard", "core", and "initial" instead.
 - **Press over click/tap**: In all user-facing text, prefer "press" over "click" and "tap".
 
+## Performance
+
+- **Card view performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
+
 ## Knowledge files
 
 Use @knowledge/project-structure.md as a navigational guide before reading or editing any file in the codebase.

@@ -49,6 +49,8 @@ export function getBasesViewOptions(
         }
       )?.persistenceManager;
       if (pm) {
+        // Must agree with readBasesSettings(templateOverrides) and
+        // cleanUpBaseFile()'s YAML template injection on "new view" detection.
         const isNewView = !config || config.get("id") == null;
         if (isNewView) {
           const template = pm.getSettingsTemplate(viewType);
