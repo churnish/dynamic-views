@@ -59,6 +59,8 @@ export interface ViewDefaults {
 
 /** Datacore-only defaults */
 export interface DatacoreDefaults {
+  titleProperty: string;
+  subtitleProperty: string;
   listMarker: string;
   queryHeight: number;
   /** PLACEHOLDER: Forces pairing for hard-coded tags+mtime until rework */

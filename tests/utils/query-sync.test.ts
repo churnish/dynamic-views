@@ -1,6 +1,7 @@
 import {
   hasFileSelector,
   ensureFileSelector,
+  stripFileSelector,
   findQueryInBlock,
   updateQueryInBlock,
   QueryMatch,
@@ -77,9 +78,9 @@ describe("query-sync", () => {
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should wrap query without @page", () => {
+    it("should wrap query without file selector", () => {
       const query = 'title = "Test"';
-      expect(ensureFileSelector(query)).toBe('@page and (title = "Test")');
+      expect(ensureFileSelector(query)).toBe('@file and (title = "Test")');
     });
 
     it("should handle empty query", () => {
@@ -89,7 +90,7 @@ describe("query-sync", () => {
 
     it("should trim query before checking", () => {
       const query = '  title = "Test"  ';
-      expect(ensureFileSelector(query)).toBe('@page and (title = "Test")');
+      expect(ensureFileSelector(query)).toBe('@file and (title = "Test")');
     });
 
     it("should preserve @page at start", () => {
@@ -110,21 +111,21 @@ describe("query-sync", () => {
     it("should handle complex queries", () => {
       const query = 'title = "Test" and tags = #note';
       expect(ensureFileSelector(query)).toBe(
-        '@page and (title = "Test" and tags = #note)',
+        '@file and (title = "Test" and tags = #note)',
       );
     });
 
     it("should handle queries with parentheses", () => {
       const query = '(title = "Test" or title = "Demo")';
       expect(ensureFileSelector(query)).toBe(
-        '@page and ((title = "Test" or title = "Demo"))',
+        '@file and ((title = "Test" or title = "Demo"))',
       );
     });
 
     it("should handle multiline queries", () => {
       const query = `title = "Test"
 and tags = #note`;
-      expect(ensureFileSelector(query)).toBe(`@page and (title = "Test"
+      expect(ensureFileSelector(query)).toBe(`@file and (title = "Test"
 and tags = #note)`);
     });
 
@@ -147,9 +148,54 @@ and tags = #note)`);
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should wrap non-file selectors with @page", () => {
-      expect(ensureFileSelector("@section")).toBe("@page and (@section)");
-      expect(ensureFileSelector("@task")).toBe("@page and (@task)");
+    it("should wrap non-file selectors with @file", () => {
+      expect(ensureFileSelector("@section")).toBe("@file and (@section)");
+      expect(ensureFileSelector("@task")).toBe("@file and (@task)");
+    });
+  });
+
+  describe("stripFileSelector", () => {
+    it("should strip @file and (...) wrapper", () => {
+      expect(stripFileSelector('@file and (title = "Test")')).toBe(
+        'title = "Test"',
+      );
+    });
+
+    it("should leave bare @file unchanged", () => {
+      expect(stripFileSelector("@file")).toBe("@file");
+    });
+
+    it("should leave @page queries unchanged", () => {
+      expect(stripFileSelector('@page and (title = "Test")')).toBe(
+        '@page and (title = "Test")',
+      );
+    });
+
+    it("should leave explicit @file queries without outer parens unchanged", () => {
+      expect(stripFileSelector('@file and $extension = "png"')).toBe(
+        '@file and $extension = "png"',
+      );
+    });
+
+    it("should handle multiline queries", () => {
+      expect(
+        stripFileSelector('@file and (#tag and\npath("lorem"))'),
+      ).toBe('#tag and\npath("lorem")');
+    });
+
+    it("should be case-insensitive", () => {
+      expect(stripFileSelector('@FILE and (title = "Test")')).toBe(
+        'title = "Test"',
+      );
+    });
+
+    it("should handle empty string", () => {
+      expect(stripFileSelector("")).toBe("");
+    });
+
+    it("should round-trip with ensureFileSelector", () => {
+      const query = '#tag and path("lorem")';
+      expect(stripFileSelector(ensureFileSelector(query))).toBe(query);
     });
   });
 
@@ -476,7 +522,7 @@ title = "Test"
       const wrappedQuery = ensureFileSelector(match!.query);
       const updated = updateQueryInBlock(content, wrappedQuery);
 
-      expect(updated).toContain('@page and (title = "Test")');
+      expect(updated).toContain('@file and (title = "Test")');
     });
 
     it("should preserve query with @page selector", () => {

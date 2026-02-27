@@ -194,9 +194,10 @@ body.dynamic-views-hide-group-property-labels
     /* Resolved card background — overridden by transparent/custom modes */
     --card-bg: var(--background-primary-alt);
     background-color: var(--card-bg);
-    /* Placeholder bg: 15 RGB units darker than card bg on light themes, 25 on dark */
-    --dynamic-views-image-background-dimmed: rgb(
-      from var(--card-bg) calc(r - 15) calc(g - 15) calc(b - 15)
+    /* Placeholder bg */
+    --dynamic-views-image-background-dimmed: light-dark(
+      rgb(from var(--card-bg) calc(r - 15) calc(g - 15) calc(b - 15)),
+      rgb(from var(--card-bg) calc(r - 10) calc(g - 10) calc(b - 10))
     );
     break-inside: avoid;
     page-break-inside: avoid;

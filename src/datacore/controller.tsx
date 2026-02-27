@@ -37,6 +37,7 @@ import { Toolbar } from "./toolbar";
 import { getCurrentFile, getAvailablePath } from "../utils/file";
 import {
   ensureFileSelector,
+  stripFileSelector,
   updateQueryInBlock,
   findQueryInBlock,
 } from "./query-sync";
@@ -184,14 +185,16 @@ export function View({
     getPersistedValue("resultLimit", ""),
   );
 
-  // Query state - extract query from between DQL markers if present
-  const cleanQuery = (USER_QUERY || "")
-    .split("\n")
-    .filter(
-      (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
-    )
-    .join("\n")
-    .trim();
+  // Query state - extract query from between DQL markers, strip @file wrapper for editor
+  const cleanQuery = stripFileSelector(
+    (USER_QUERY || "")
+      .split("\n")
+      .filter(
+        (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
+      )
+      .join("\n")
+      .trim(),
+  );
 
   const [draftQuery, setDraftQuery] = dc.useState(cleanQuery);
   const [appliedQuery, setAppliedQuery] = dc.useState(cleanQuery);
@@ -530,7 +533,7 @@ export function View({
     const q = appliedQuery.trim();
     if (!q || q.length === 0) {
       setQueryError(null);
-      return "@page"; // Default: show all pages
+      return "@file"; // Default: show all files
     }
     setQueryError(null);
     return ensureFileSelector(q);
@@ -1631,13 +1634,16 @@ export function View({
 
   // Auto-reload: Watch for USER_QUERY prop changes (Datacore re-renders on code block edits)
   dc.useEffect(() => {
-    const newCleanQuery = (USER_QUERY || "")
-      .split("\n")
-      .filter(
-        (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
-      )
-      .join("\n")
-      .trim();
+    const newCleanQuery = stripFileSelector(
+      (USER_QUERY || "")
+        .split("\n")
+        .filter(
+          (line) =>
+            !line.includes("QUERY START") && !line.includes("QUERY END"),
+        )
+        .join("\n")
+        .trim(),
+    );
 
     // Only update if query changed
     if (newCleanQuery !== appliedQuery) {
@@ -1852,14 +1858,14 @@ export function View({
 
   const handleApplyQuery = dc.useCallback(() => {
     void (async () => {
-      const processedQuery = ensureFileSelector(draftQuery.trim());
-      setDraftQuery(processedQuery); // Update editor to show processed query
-      setAppliedQuery(processedQuery);
+      const trimmed = draftQuery.trim();
+      setDraftQuery(trimmed);
+      setAppliedQuery(trimmed);
       setShowQueryEditor(false);
 
       if (currentFile) {
         try {
-          await syncQueryToCodeBlock(processedQuery);
+          await syncQueryToCodeBlock(ensureFileSelector(trimmed));
         } catch (error) {
           console.error("Failed to sync query to code block:", error);
         }

@@ -58,6 +58,8 @@ export const VIEW_DEFAULTS: ViewDefaults = {
 };
 
 export const DATACORE_DEFAULTS: DatacoreDefaults = {
+  titleProperty: "$name",
+  subtitleProperty: "",
   listMarker: "bullet",
   queryHeight: 0,
   // PLACEHOLDER: pairProperties forces side-by-side for hard-coded tags+mtime
