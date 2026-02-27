@@ -4,13 +4,13 @@
 
 // ============= Query Processing =============
 
-export function hasPageSelector(query: string): boolean {
-  return /@page\b/i.test(query.trim());
+export function hasFileSelector(query: string): boolean {
+  return /@(page|file)\b/i.test(query.trim());
 }
 
-export function ensurePageSelector(query: string): string {
+export function ensureFileSelector(query: string): string {
   const trimmed = query.trim();
-  if (!trimmed || hasPageSelector(trimmed)) {
+  if (!trimmed || hasFileSelector(trimmed)) {
     return trimmed;
   }
   return `@page and (${trimmed})`;

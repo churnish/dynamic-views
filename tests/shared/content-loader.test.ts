@@ -367,6 +367,31 @@ describe("content-loader", () => {
       expect(mockImageUtils.processImagePaths).not.toHaveBeenCalled();
     });
 
+    it("should not self-assign image file when imagePropertyValues are present", async () => {
+      const imageCache: Record<string, string | string[]> = {};
+      const hasImageCache: Record<string, boolean> = {};
+
+      const imageFile = new TFile();
+      imageFile.path = "photos/sunset.png";
+      imageFile.extension = "png";
+
+      // Property image takes priority over self-image
+      await loadImageForEntry(
+        "photos/sunset.png",
+        imageFile,
+        mockApp,
+        ["[[other-cover.jpg]]"],
+        "always",
+        imageCache,
+        hasImageCache,
+      );
+
+      // Should proceed to property loading, not self-assign
+      expect(mockImageUtils.processImagePaths).toHaveBeenCalledWith([
+        "[[other-cover.jpg]]",
+      ]);
+    });
+
     it("should not self-assign for non-image files", async () => {
       const imageCache: Record<string, string | string[]> = {};
       const hasImageCache: Record<string, boolean> = {};

@@ -36,7 +36,7 @@ import { ListView } from "./list-view";
 import { Toolbar } from "./toolbar";
 import { getCurrentFile, getAvailablePath } from "../utils/file";
 import {
-  ensurePageSelector,
+  ensureFileSelector,
   updateQueryInBlock,
   findQueryInBlock,
 } from "./query-sync";
@@ -533,7 +533,7 @@ export function View({
       return "@page"; // Default: show all pages
     }
     setQueryError(null);
-    return ensurePageSelector(q);
+    return ensureFileSelector(q);
   }, [appliedQuery]);
 
   // Style Settings revision - triggers re-render when CSS variables change
@@ -1852,7 +1852,7 @@ export function View({
 
   const handleApplyQuery = dc.useCallback(() => {
     void (async () => {
-      const processedQuery = ensurePageSelector(draftQuery.trim());
+      const processedQuery = ensureFileSelector(draftQuery.trim());
       setDraftQuery(processedQuery); // Update editor to show processed query
       setAppliedQuery(processedQuery);
       setShowQueryEditor(false);

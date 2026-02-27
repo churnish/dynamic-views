@@ -1,99 +1,122 @@
 import {
-  hasPageSelector,
-  ensurePageSelector,
+  hasFileSelector,
+  ensureFileSelector,
   findQueryInBlock,
   updateQueryInBlock,
   QueryMatch,
 } from "../../src/datacore/query-sync";
 
 describe("query-sync", () => {
-  describe("hasPageSelector", () => {
+  describe("hasFileSelector", () => {
     it("should return true for query with @page", () => {
-      expect(hasPageSelector("@page")).toBe(true);
-      expect(hasPageSelector('@page and title = "Test"')).toBe(true);
-      expect(hasPageSelector("  @page  ")).toBe(true);
+      expect(hasFileSelector("@page")).toBe(true);
+      expect(hasFileSelector('@page and title = "Test"')).toBe(true);
+      expect(hasFileSelector("  @page  ")).toBe(true);
     });
 
     it("should be case-insensitive", () => {
-      expect(hasPageSelector("@PAGE")).toBe(true);
-      expect(hasPageSelector("@Page")).toBe(true);
-      expect(hasPageSelector("@pAgE")).toBe(true);
+      expect(hasFileSelector("@PAGE")).toBe(true);
+      expect(hasFileSelector("@Page")).toBe(true);
+      expect(hasFileSelector("@pAgE")).toBe(true);
     });
 
     it("should match @page as word boundary", () => {
-      expect(hasPageSelector("@page")).toBe(true);
-      expect(hasPageSelector("@page and foo")).toBe(true);
+      expect(hasFileSelector("@page")).toBe(true);
+      expect(hasFileSelector("@page and foo")).toBe(true);
     });
 
     it("should return false for query without @page", () => {
-      expect(hasPageSelector('title = "Test"')).toBe(false);
-      expect(hasPageSelector("tags = #note")).toBe(false);
-      expect(hasPageSelector("")).toBe(false);
+      expect(hasFileSelector('title = "Test"')).toBe(false);
+      expect(hasFileSelector("tags = #note")).toBe(false);
+      expect(hasFileSelector("")).toBe(false);
     });
 
     it("should handle queries with @page in middle", () => {
-      expect(hasPageSelector("foo and @page and bar")).toBe(true);
+      expect(hasFileSelector("foo and @page and bar")).toBe(true);
     });
 
     it("should handle whitespace around @page", () => {
-      expect(hasPageSelector("  @page  ")).toBe(true);
-      expect(hasPageSelector("\n@page\n")).toBe(true);
-      expect(hasPageSelector("\t@page\t")).toBe(true);
+      expect(hasFileSelector("  @page  ")).toBe(true);
+      expect(hasFileSelector("\n@page\n")).toBe(true);
+      expect(hasFileSelector("\t@page\t")).toBe(true);
     });
 
     it("should not match @page as part of longer word", () => {
       // Word boundary after @page, so @pagesize should not match
-      expect(hasPageSelector("@pagesize")).toBe(false);
-      expect(hasPageSelector("@pagefoo")).toBe(false);
+      expect(hasFileSelector("@pagesize")).toBe(false);
+      expect(hasFileSelector("@pagefoo")).toBe(false);
+    });
+
+    it("should return true for query with @file", () => {
+      expect(hasFileSelector("@file")).toBe(true);
+      expect(hasFileSelector('@file and $extension = "png"')).toBe(true);
+      expect(hasFileSelector("  @file  ")).toBe(true);
+    });
+
+    it("should be case-insensitive for @file", () => {
+      expect(hasFileSelector("@FILE")).toBe(true);
+      expect(hasFileSelector("@File")).toBe(true);
+    });
+
+    it("should not match @file as part of longer word", () => {
+      expect(hasFileSelector("@filename")).toBe(false);
+      expect(hasFileSelector("@filetype")).toBe(false);
+    });
+
+    it("should return false for non-file selectors", () => {
+      expect(hasFileSelector("@section")).toBe(false);
+      expect(hasFileSelector("@task")).toBe(false);
+      expect(hasFileSelector("@block")).toBe(false);
+      expect(hasFileSelector("@list-item")).toBe(false);
     });
   });
 
-  describe("ensurePageSelector", () => {
+  describe("ensureFileSelector", () => {
     it("should not modify query that already has @page", () => {
       const query = '@page and title = "Test"';
-      expect(ensurePageSelector(query)).toBe(query);
+      expect(ensureFileSelector(query)).toBe(query);
     });
 
     it("should wrap query without @page", () => {
       const query = 'title = "Test"';
-      expect(ensurePageSelector(query)).toBe('@page and (title = "Test")');
+      expect(ensureFileSelector(query)).toBe('@page and (title = "Test")');
     });
 
     it("should handle empty query", () => {
-      expect(ensurePageSelector("")).toBe("");
-      expect(ensurePageSelector("  ")).toBe("");
+      expect(ensureFileSelector("")).toBe("");
+      expect(ensureFileSelector("  ")).toBe("");
     });
 
     it("should trim query before checking", () => {
       const query = '  title = "Test"  ';
-      expect(ensurePageSelector(query)).toBe('@page and (title = "Test")');
+      expect(ensureFileSelector(query)).toBe('@page and (title = "Test")');
     });
 
     it("should preserve @page at start", () => {
       const query = "@page";
-      expect(ensurePageSelector(query)).toBe("@page");
+      expect(ensureFileSelector(query)).toBe("@page");
     });
 
     it("should handle @page in middle of query", () => {
       const query = "foo and @page and bar";
-      expect(ensurePageSelector(query)).toBe(query);
+      expect(ensureFileSelector(query)).toBe(query);
     });
 
     it("should be case-insensitive for @page detection", () => {
       const query = '@PAGE and title = "Test"';
-      expect(ensurePageSelector(query)).toBe(query);
+      expect(ensureFileSelector(query)).toBe(query);
     });
 
     it("should handle complex queries", () => {
       const query = 'title = "Test" and tags = #note';
-      expect(ensurePageSelector(query)).toBe(
+      expect(ensureFileSelector(query)).toBe(
         '@page and (title = "Test" and tags = #note)',
       );
     });
 
     it("should handle queries with parentheses", () => {
       const query = '(title = "Test" or title = "Demo")';
-      expect(ensurePageSelector(query)).toBe(
+      expect(ensureFileSelector(query)).toBe(
         '@page and ((title = "Test" or title = "Demo"))',
       );
     });
@@ -101,13 +124,32 @@ describe("query-sync", () => {
     it("should handle multiline queries", () => {
       const query = `title = "Test"
 and tags = #note`;
-      expect(ensurePageSelector(query)).toBe(`@page and (title = "Test"
+      expect(ensureFileSelector(query)).toBe(`@page and (title = "Test"
 and tags = #note)`);
     });
 
     it("should not double-wrap if @page is already present", () => {
       const query = '@page and (title = "Test")';
-      expect(ensurePageSelector(query)).toBe(query);
+      expect(ensureFileSelector(query)).toBe(query);
+    });
+
+    it("should not modify query that already has @file", () => {
+      const query = '@file and $extension = "png"';
+      expect(ensureFileSelector(query)).toBe(query);
+    });
+
+    it("should pass through bare @file unchanged", () => {
+      expect(ensureFileSelector("@file")).toBe("@file");
+    });
+
+    it("should be case-insensitive for @file detection", () => {
+      const query = '@FILE and $extension = "png"';
+      expect(ensureFileSelector(query)).toBe(query);
+    });
+
+    it("should wrap non-file selectors with @page", () => {
+      expect(ensureFileSelector("@section")).toBe("@page and (@section)");
+      expect(ensureFileSelector("@task")).toBe("@page and (@task)");
     });
   });
 
@@ -425,13 +467,13 @@ test query
   });
 
   describe("integration tests", () => {
-    it("should work with ensurePageSelector and updateQueryInBlock", () => {
+    it("should work with ensureFileSelector and updateQueryInBlock", () => {
       const content = `// –––– DQL QUERY START ––––
 title = "Test"
 // ––––– DQL QUERY END –––––`;
 
       const match = findQueryInBlock(content);
-      const wrappedQuery = ensurePageSelector(match!.query);
+      const wrappedQuery = ensureFileSelector(match!.query);
       const updated = updateQueryInBlock(content, wrappedQuery);
 
       expect(updated).toContain('@page and (title = "Test")');
@@ -443,9 +485,20 @@ title = "Test"
 // ––––– DQL QUERY END –––––`;
 
       const match = findQueryInBlock(content);
-      const ensured = ensurePageSelector(match!.query);
+      const ensured = ensureFileSelector(match!.query);
 
       expect(ensured).toBe('@page and title = "Test"');
+    });
+
+    it("should preserve query with @file selector", () => {
+      const content = `// –––– DQL QUERY START ––––
+@file and $extension = "png"
+// ––––– DQL QUERY END –––––`;
+
+      const match = findQueryInBlock(content);
+      const ensured = ensureFileSelector(match!.query);
+
+      expect(ensured).toBe('@file and $extension = "png"');
     });
   });
 });

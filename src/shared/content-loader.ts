@@ -73,10 +73,12 @@ export async function loadImageForEntry(
     return;
   }
 
-  // Image files use themselves as card image (gated on fallbackToEmbeds
-  // since self-image is a form of embed fallback — "never" suppresses it)
+  // Image files use themselves as card image when no property images exist
+  // (gated on fallbackToEmbeds — "never" suppresses self-image as embed fallback;
+  // getResourcePath is synchronous so in-flight dedup is unnecessary)
   if (
     fallbackToEmbeds !== "never" &&
+    imagePropertyValues.length === 0 &&
     VALID_IMAGE_EXTENSIONS.includes(file.extension?.toLowerCase() ?? "")
   ) {
     imageCache[path] = app.vault.getResourcePath(file);
