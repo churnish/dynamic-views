@@ -195,7 +195,7 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
     opacity: 1;
   }
 
-  .card.card-thumbnail-contain .card-thumbnail img {
+  &.image-fit-contain .card .card-thumbnail img {
     object-fit: contain;
   }
 }
@@ -213,5 +213,15 @@ body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
 body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
   .card-previews:has(> .card-thumbnail-placeholder:only-child) {
+  display: none;
+}
+
+/* Collapse card-body when its only content is a hidden card-previews
+   (prevents owl selector margin on title-only cards) */
+body:not(.dynamic-views-show-thumbnail-placeholder)
+  .dynamic-views
+  .card-body:has(
+    > .card-previews:only-child > .card-thumbnail-placeholder:only-child
+  ) {
   display: none;
 }

@@ -479,6 +479,42 @@ describe("data-transform", () => {
       expect(result[0].textPreview).toBeUndefined();
       expect(result[0].imageUrl).toBeUndefined();
     });
+
+    it("should not use image file as card image when fallbackToEmbeds is never", () => {
+      const mockResults: any[] = [
+        {
+          $path: "photo.png",
+          $name: "photo",
+          $tags: [],
+          $ctime: { toMillis: () => 0 },
+          $mtime: { toMillis: () => 0 },
+          value: jest.fn().mockReturnValue([]),
+        },
+      ];
+
+      const mockDC: any = {
+        coerce: { string: (val: any) => String(val) },
+      };
+
+      const images: Record<string, string | string[]> = {};
+      const hasImageAvailable: Record<string, boolean> = {};
+
+      const result = transformDatacoreResults(
+        mockApp,
+        mockResults,
+        mockDC,
+        { ...mockSettings, fallbackToEmbeds: "never" },
+        "alphabetical",
+        false,
+        {},
+        images,
+        hasImageAvailable,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].imageUrl).toBeUndefined();
+      expect(images["photo.png"]).toBeUndefined();
+    });
   });
 
   describe("transformBasesEntries", () => {
@@ -550,6 +586,39 @@ describe("data-transform", () => {
       );
 
       expect(result).toEqual([]);
+    });
+
+    it("should not use image file as card image when fallbackToEmbeds is never", () => {
+      const mockEntries: any[] = [
+        {
+          file: {
+            path: "photo.jpg",
+            basename: "photo",
+            extension: "jpg",
+            stat: { ctime: 0, mtime: 0 },
+          },
+          getValue: jest.fn(),
+        },
+      ];
+
+      const images: Record<string, string | string[]> = {};
+      const hasImageAvailable: Record<string, boolean> = {};
+
+      const result = transformBasesEntries(
+        mockApp,
+        mockEntries,
+        { ...mockSettings, fallbackToEmbeds: "never" },
+        "alphabetical",
+        false,
+        [],
+        {},
+        images,
+        hasImageAvailable,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].imageUrl).toBeUndefined();
+      expect(images["photo.jpg"]).toBeUndefined();
     });
   });
 

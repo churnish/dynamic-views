@@ -3,21 +3,12 @@ import globals from "globals";
 import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default defineConfig([
-  // Ignore generated files, configs, and test files
+  // Only lint src/ TypeScript files
   {
     ignores: [
-      "main.js",
-      "*.js.map",
-      "*.map",
-      "esbuild.config.mjs",
-      "eslint.config.js",
-      "check-*.js",
-      "version-bump.mjs",
-      "jest.config.cjs",
-      "tests/**",
-      "coverage/**",
-      "archive/**",
-      "scripts/**",
+      "**",
+      "!src/**",
+      "!main.ts",
     ],
   },
 

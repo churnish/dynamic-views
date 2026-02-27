@@ -613,7 +613,11 @@ export function transformDatacoreResults(
     .map((p) => {
       // For image files, use file itself as card image
       const ext = getFileExtInfo(p.$path, true)?.ext.slice(1) || "";
-      if (VALID_IMAGE_EXTENSIONS.includes(ext) && !images[p.$path]) {
+      if (
+        VALID_IMAGE_EXTENSIONS.includes(ext) &&
+        !images[p.$path] &&
+        settings.fallbackToEmbeds !== "never"
+      ) {
         const file = app.vault.getAbstractFileByPath(p.$path);
         if (file instanceof TFile) {
           images[p.$path] = app.vault.getResourcePath(file);
@@ -650,7 +654,11 @@ export function transformBasesEntries(
   return entries.map((entry) => {
     // For image files, use file itself as card image
     const ext = entry.file.extension?.toLowerCase() || "";
-    if (VALID_IMAGE_EXTENSIONS.includes(ext) && !images[entry.file.path]) {
+    if (
+      VALID_IMAGE_EXTENSIONS.includes(ext) &&
+      !images[entry.file.path] &&
+      settings.fallbackToEmbeds !== "never"
+    ) {
       images[entry.file.path] = app.vault.getResourcePath(entry.file);
       hasImageAvailable[entry.file.path] = true;
     }
