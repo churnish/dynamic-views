@@ -22,6 +22,28 @@ export function stripNotePrefix(propertyName: string): string {
 }
 
 /**
+ * Check if two property names refer to the same property,
+ * accounting for Bases "note." prefix variations
+ */
+export function isSameProperty(a: string, b: string): boolean {
+  if (a === b) return true;
+  const aStripped = stripNotePrefix(a);
+  const bStripped = stripNotePrefix(b);
+  return aStripped === bStripped || aStripped === b || a === bStripped;
+}
+
+/** Parse comma-separated property names into a Set for O(1) lookup */
+export function parsePropertyList(csv: string): Set<string> {
+  if (!csv) return new Set();
+  return new Set(
+    csv
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s),
+  );
+}
+
+/**
  * Get property info from Obsidian's property registry
  * @param app - Obsidian App instance
  * @param propertyName - Property name (may include "note." prefix)
@@ -533,8 +555,9 @@ export function getPropertyLabel(
 
   // Strip note. prefix from YAML properties
   // (note.formula.one → formula.one, preserving the actual property name)
-  if (propertyName.startsWith("note.")) {
-    return propertyName.slice(5); // Remove "note."
+  const stripped = stripNotePrefix(propertyName);
+  if (stripped !== propertyName) {
+    return stripped;
   }
 
   // Strip formula. prefix from formula properties

@@ -12,12 +12,18 @@ import {
   getFirstBasesPropertyValue,
   isValidUri,
   isCheckboxProperty,
+  isSameProperty,
   stripNotePrefix,
   toDisplayName,
   toSyntaxName,
 } from "../utils/property";
 import { hasUriScheme } from "../utils/link-parser";
 import { formatTimestamp, extractTimestamp } from "./render-utils";
+import { isTagProperty } from "./property-helpers";
+
+/** Exact Datacore sort keyword patterns (e.g. "ctime-asc", "mtime-desc") */
+const DC_CTIME = /^ctime-(asc|desc)$/;
+const DC_MTIME = /^mtime-(asc|desc)$/;
 
 /**
  * Resolve file.links or file.embeds property from metadataCache
@@ -58,19 +64,12 @@ function isCustomTimestampProperty(
   propertyName: string,
   settings: BasesResolvedSettings,
 ): boolean {
-  const stripped = stripNotePrefix(propertyName);
-
-  if (settings.createdTimeProperty) {
-    const settingStripped = stripNotePrefix(settings.createdTimeProperty);
-    if (stripped === settingStripped) return true;
-  }
-
-  if (settings.modifiedTimeProperty) {
-    const settingStripped = stripNotePrefix(settings.modifiedTimeProperty);
-    if (stripped === settingStripped) return true;
-  }
-
-  return false;
+  return (
+    (!!settings.createdTimeProperty &&
+      isSameProperty(propertyName, settings.createdTimeProperty)) ||
+    (!!settings.modifiedTimeProperty &&
+      isSameProperty(propertyName, settings.modifiedTimeProperty))
+  );
 }
 
 /**
@@ -135,41 +134,43 @@ export function applySmartTimestamp(
   const createdStripped = stripNotePrefix(createdProp);
   const modifiedStripped = stripNotePrefix(modifiedProp);
 
-  // Normalize to both forms so "file.mtime" and "modified time" both match
-  const createdDisplay = toDisplayName(createdStripped);
-  const createdSyntax = toSyntaxName(createdStripped);
-  const modifiedDisplay = toDisplayName(modifiedStripped);
-  const modifiedSyntax = toSyntaxName(modifiedStripped);
+  // Collect all known name forms for each timestamp.
+  // Bases getOrder() uses "note." prefix for YAML properties, getSort() uses
+  // internal names (file.mtime), and settings use display names (modified time).
+  const createdForms = new Set([
+    createdProp,
+    createdStripped,
+    "note." + createdProp,
+    "note." + createdStripped,
+    toDisplayName(createdStripped),
+    toSyntaxName(createdStripped),
+  ]);
+  const modifiedForms = new Set([
+    modifiedProp,
+    modifiedStripped,
+    "note." + modifiedProp,
+    "note." + modifiedStripped,
+    toDisplayName(modifiedStripped),
+    toSyntaxName(modifiedStripped),
+  ]);
 
-  // Exact Datacore sort keyword patterns (e.g. "ctime-asc", "mtime-desc")
-  const DC_CTIME = /^ctime-(asc|desc)$/;
-  const DC_MTIME = /^mtime-(asc|desc)$/;
+  const createdDisplay = toDisplayName(createdStripped);
+  const modifiedDisplay = toDisplayName(modifiedStripped);
 
   const sortingByCtime =
-    sortMethod.startsWith(createdProp + "-") ||
-    sortMethod.startsWith(createdStripped + "-") ||
-    sortMethod.startsWith(createdDisplay + "-") ||
-    sortMethod.startsWith(createdSyntax + "-") ||
+    [...createdForms].some((f) => sortMethod.startsWith(f + "-")) ||
     (DC_CTIME.test(sortMethod) && createdDisplay === "created time");
 
   const sortingByMtime =
-    sortMethod.startsWith(modifiedProp + "-") ||
-    sortMethod.startsWith(modifiedStripped + "-") ||
-    sortMethod.startsWith(modifiedDisplay + "-") ||
-    sortMethod.startsWith(modifiedSyntax + "-") ||
+    [...modifiedForms].some((f) => sortMethod.startsWith(f + "-")) ||
     (DC_MTIME.test(sortMethod) && modifiedDisplay === "modified time");
 
   if (!sortingByCtime && !sortingByMtime) {
     return props;
   }
 
-  // Only check for the exact setting values
-  const hasCreated = props.some(
-    (p) => p === createdProp || p === createdStripped,
-  );
-  const hasModified = props.some(
-    (p) => p === modifiedProp || p === modifiedStripped,
-  );
+  const hasCreated = props.some((p) => createdForms.has(p));
+  const hasModified = props.some((p) => modifiedForms.has(p));
 
   if (hasCreated && hasModified) {
     return props;
@@ -177,11 +178,10 @@ export function applySmartTimestamp(
 
   // Replace the non-sort timestamp with the sort timestamp
   const targetProperty = sortingByCtime ? createdProp : modifiedProp;
-  const replaceProp = sortingByCtime ? modifiedProp : createdProp;
-  const replaceStripped = sortingByCtime ? modifiedStripped : createdStripped;
+  const replaceForms = sortingByCtime ? modifiedForms : createdForms;
 
   return props.map((prop) => {
-    if (prop === replaceProp || prop === replaceStripped) {
+    if (replaceForms.has(prop)) {
       return targetProperty;
     }
     return prop;
@@ -201,7 +201,7 @@ export function resolveTimestampProperty(
 ): string | null {
   if (!propertyName) return null;
 
-  const prop = propertyName.trim().toLowerCase();
+  const prop = propertyName.trim();
 
   if (prop === "file.ctime" || prop === "created time") {
     return formatTimestamp(ctime, false, styled);
@@ -428,10 +428,9 @@ export function basesEntryToCardData(
   }
 
   // Only fetch tags when needed for display or subtitle
-  const TAG_PROPERTY_NAMES = ["tags", "note.tags", "file.tags", "file tags"];
   const needsTags =
-    visibleProperties.some((p) => TAG_PROPERTY_NAMES.includes(p)) ||
-    TAG_PROPERTY_NAMES.includes(settings.subtitleProperty);
+    visibleProperties.some(isTagProperty) ||
+    isTagProperty(settings.subtitleProperty);
 
   let yamlTags: string[] = [];
   let tags: string[] = [];
@@ -651,6 +650,48 @@ export function transformBasesEntries(
 }
 
 /**
+ * Resolve built-in file properties shared across both backends.
+ * Returns string|null for matched properties, undefined if not a file property.
+ */
+function resolveFileProperty(
+  propertyName: string,
+  cardData: CardData,
+  app: App,
+  ctime: number,
+  mtime: number,
+): string | null | undefined {
+  if (propertyName === "file.path" || propertyName === "file path") {
+    const path = cardData.path;
+    return !path || path === "" ? null : path;
+  }
+
+  if (propertyName === "file.folder" || propertyName === "folder") {
+    return cardData.folderPath === "" ? "/" : cardData.folderPath || null;
+  }
+
+  if (propertyName === "tags" || propertyName === "note.tags") {
+    return cardData.yamlTags.length > 0 ? "tags" : null;
+  }
+
+  if (propertyName === "file.tags" || propertyName === "file tags") {
+    return cardData.tags.length > 0 ? "tags" : null;
+  }
+
+  if (propertyName === "file.links" || propertyName === "file links") {
+    return resolveFileLinksProperty(app, cardData.path, "links");
+  }
+
+  if (propertyName === "file.embeds" || propertyName === "file embeds") {
+    return resolveFileLinksProperty(app, cardData.path, "embeds");
+  }
+
+  const timestamp = resolveTimestampProperty(propertyName, ctime, mtime, true);
+  if (timestamp) return timestamp;
+
+  return undefined;
+}
+
+/**
  * Resolve property value for Bases entry
  * Returns null for missing/empty properties
  */
@@ -665,45 +706,14 @@ export function resolveBasesProperty(
     return null;
   }
 
-  // Handle special properties (support both dot and space notation)
-  // Examples: file.path, file.tags, file.mtime, file.ctime
-  // Or: "file path", "file tags", "modified time", "created time"
-  if (propertyName === "file.path" || propertyName === "file path") {
-    const path = cardData.path;
-    if (!path || path === "") {
-      return null;
-    }
-    return path;
-  }
-
-  // YAML tags only
-  if (propertyName === "tags" || propertyName === "note.tags") {
-    return cardData.yamlTags.length > 0 ? "tags" : null;
-  }
-
-  // tags in YAML + note body
-  if (propertyName === "file.tags" || propertyName === "file tags") {
-    return cardData.tags.length > 0 ? "tags" : null;
-  }
-
-  // file.links - non-embedded links from metadataCache
-  if (propertyName === "file.links" || propertyName === "file links") {
-    return resolveFileLinksProperty(app, cardData.path, "links");
-  }
-
-  // file.embeds - embedded links from metadataCache
-  if (propertyName === "file.embeds" || propertyName === "file embeds") {
-    return resolveFileLinksProperty(app, cardData.path, "embeds");
-  }
-
-  // Handle file timestamp properties (styled for property display)
-  const timestamp = resolveTimestampProperty(
+  const fileResult = resolveFileProperty(
     propertyName,
+    cardData,
+    app,
     cardData.ctime,
     cardData.mtime,
-    true,
   );
-  if (timestamp) return timestamp;
+  if (fileResult !== undefined) return fileResult;
 
   // Generic property: read from frontmatter
   const value = getFirstBasesPropertyValue(app, entry, propertyName);
@@ -855,34 +865,14 @@ export function resolveDatacoreProperty(
     return cardData.folderPath === "" ? "/" : cardData.folderPath || null;
   }
 
-  // YAML tags only
-  if (propertyName === "tags") {
-    return cardData.yamlTags.length > 0 ? "tags" : null; // Special marker
-  }
-
-  // tags in YAML + note body
-  if (propertyName === "file.tags" || propertyName === "file tags") {
-    return cardData.tags.length > 0 ? "tags" : null; // Special marker
-  }
-
-  // file.links - non-embedded links from metadataCache
-  if (propertyName === "file.links" || propertyName === "file links") {
-    return resolveFileLinksProperty(app, cardData.path, "links");
-  }
-
-  // file.embeds - embedded links from metadataCache
-  if (propertyName === "file.embeds" || propertyName === "file embeds") {
-    return resolveFileLinksProperty(app, cardData.path, "embeds");
-  }
-
-  // Handle file timestamp properties (styled for property display)
-  const timestamp = resolveTimestampProperty(
+  const fileResult = resolveFileProperty(
     propertyName,
+    cardData,
+    app,
     cardData.ctime,
     cardData.mtime,
-    true,
   );
-  if (timestamp) return timestamp;
+  if (fileResult !== undefined) return fileResult;
 
   // Generic property: read from frontmatter
   const rawValue = getFirstDatacorePropertyValue(result, propertyName);

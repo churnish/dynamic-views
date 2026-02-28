@@ -9,6 +9,12 @@
 - **Avoid "base"**: NEVER use "base" to mean "default" in comments, docs, file names, function/class/variable names, or any user-facing text — ambiguous with Obsidian's Bases feature. Use synonyms like "standard", "core", and "initial" instead.
 - **Press over click/tap**: In all user-facing text, prefer "press" over "click" and "tap".
 
+## Datacore property display
+
+- **Current state**: Datacore card views display ONLY hardcoded properties (`file.tags`, `file.mtime`). Custom user-defined properties are NOT yet supported.
+- **Future parity**: Datacore will gain full property display parity with Bases — configurable property lists, custom timestamp properties, labels, icons, and ALL rendering features. Shared helpers in `render-utils.ts` (`isTimestampProperty`, `getTimestampIcon`) already accept both `BasesResolvedSettings` and `ResolvedSettings`.
+- **Lay the foundation**: When working on shared infrastructure (helpers, types, rendering logic), ALWAYS design it to work with both backends. Wire up Datacore call sites even when the feature is NOT yet observable there.
+
 ## Performance
 
 - **Card view performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".

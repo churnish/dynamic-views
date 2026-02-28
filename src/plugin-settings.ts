@@ -186,7 +186,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       .addSetting((s) =>
         s
           .setName("Omit first line in text preview")
-          .setDesc("Control when the first line is removed from text preview.")
+          .setDesc("When the first line should not be shown in text preview.")
           .addDropdown((dropdown) =>
             dropdown
               .addOption("always", "Always")
@@ -210,7 +210,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
             dropdown
               .addOption("all-views", "In all views")
               .addOption("base-files", "In base files")
-              .addOption("disabled", "Disabled")
+              .addOption("disabled", "Disable")
               .setValue(settings.preventSidebarSwipe)
               .onChange(async (value) => {
                 await this.plugin.persistenceManager.setPluginSettings({
@@ -352,8 +352,8 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName("Fetch YouTube thumbnails")
-          .setDesc("Extract thumbnail images from YouTube embeds in notes.")
+          .setName("Show YouTube thumbnails")
+          .setDesc("Fetch preview images from YouTube embeds in notes.")
           .addToggle((toggle) =>
             toggle
               .setValue(settings.showYoutubeThumbnails)
@@ -366,10 +366,10 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName("Fetch card link images")
+          .setName("Show card link images")
           .then((s) => {
             const desc = s.descEl;
-            desc.appendText("Extract cover images from ");
+            desc.appendText("Fetch cover images from ");
             desc.createEl("a", {
               text: PLUGIN_AUTO_CARD_LINK,
               href: "obsidian://show-plugin?id=auto-card-link",

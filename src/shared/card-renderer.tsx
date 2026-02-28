@@ -24,6 +24,7 @@ import {
 import {
   getPropertyLabel,
   normalizePropertyName,
+  parsePropertyList,
   stripNotePrefix,
 } from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
@@ -71,12 +72,14 @@ import {
   THUMBNAIL_STACK_MULTIPLIER,
 } from "./constants";
 import { setupHoverIntent } from "./hover-intent";
+import { isTimestampProperty, getTimestampIcon } from "./render-utils";
 
 import {
   isTagProperty,
   isFileProperty,
   isFormulaProperty,
   shouldCollapseField,
+  computeInvertPairs,
 } from "./property-helpers";
 import {
   shouldUseNotebookNavigator,
@@ -363,6 +366,7 @@ function renderTagsList(tags: string[], app: App, showHashPrefix: boolean) {
             key={tag}
             href="#"
             className="tag"
+            draggable={false}
             tabIndex={-1}
             onClick={(e: MouseEvent) => {
               e.preventDefault();
@@ -633,61 +637,6 @@ export interface CardRendererProps {
   app: App;
   onCardClick?: (path: string, paneType: PaneType | boolean) => void;
   onFocusChange?: (index: number) => void;
-}
-
-/** Parse comma-separated property names into a Set for O(1) lookup */
-function parsePropertyList(csv: string): Set<string> {
-  if (!csv) return new Set();
-  return new Set(
-    csv
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s),
-  );
-}
-
-/**
- * When pairProperties is OFF, compute which property indices should pair.
- * Single inverted props can trigger pairing (default: pair up).
- */
-function computeInvertPairs(
-  props: Array<{ name: string }>,
-  unpairSet: Set<string>,
-): Map<number, number> {
-  const pairs = new Map<number, number>(); // leftIdx → rightIdx
-  const claimed = new Set<number>();
-
-  for (let i = 0; i < props.length; i++) {
-    if (claimed.has(i)) continue;
-    if (!unpairSet.has(props[i].name)) continue;
-
-    let partnerIdx: number;
-    if (i === 0) {
-      // First prop → pair down
-      partnerIdx = 1;
-    } else if (i + 1 < props.length && unpairSet.has(props[i + 1].name)) {
-      // Next prop also inverted → pair down with it
-      partnerIdx = i + 1;
-    } else {
-      // Default → pair up
-      partnerIdx = i - 1;
-    }
-
-    // Validate partner exists and not claimed
-    if (
-      partnerIdx >= 0 &&
-      partnerIdx < props.length &&
-      !claimed.has(partnerIdx)
-    ) {
-      // Normalize: lower index as key
-      const leftIdx = Math.min(i, partnerIdx);
-      const rightIdx = Math.max(i, partnerIdx);
-      pairs.set(leftIdx, rightIdx);
-      claimed.add(leftIdx);
-      claimed.add(rightIdx);
-    }
-  }
-  return pairs;
 }
 
 /**
@@ -1148,13 +1097,7 @@ function renderProperty(
   }
 
   // Handle special properties by property name
-  // For timestamps: file.mtime, file.ctime, or legacy formats
-  if (
-    propertyName === "file.mtime" ||
-    propertyName === "file.ctime" ||
-    propertyName === "modified time" ||
-    propertyName === "created time"
-  ) {
+  if (isTimestampProperty(propertyName, settings)) {
     return (
       <>
         {labelAbove}
@@ -1173,7 +1116,7 @@ function renderProperty(
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  {timeIcon === "calendar" ? (
+                  {getTimestampIcon(propertyName, settings) === "calendar" ? (
                     <>
                       <path d="M8 2v4" />
                       <path d="M16 2v4" />
@@ -1685,7 +1628,7 @@ function Card({
         className="card-title"
         tabIndex={-1}
         onClick={
-          settings.openFileAction === "title" || isPosterClickReveal
+          settings.openFileAction === "title" && app.isMobile
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
                   ".card-title-link",
@@ -1703,7 +1646,7 @@ function Card({
             : undefined
         }
         onContextMenu={
-          settings.openFileAction === "title" || isPosterClickReveal
+          settings.openFileAction === "title" && app.isMobile
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
                   ".card-title-link",
@@ -2039,10 +1982,18 @@ function Card({
             const isInteractive = target.closest(
               "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
             );
-
-            // Skip toggle when user is selecting text
-            const selection = getOwnerWindow(cardEl).getSelection();
-            if (selection && selection.toString().length > 0) return;
+            // Don't dismiss if user has selected text (drag-select or double-click)
+            const hasTextSelection =
+              ((cardEl.ownerDocument.defaultView ?? window)
+                .getSelection()
+                ?.toString().length ?? 0) > 0;
+            // Don't dismiss if click landed on text-selectable content —
+            // prevents double-click word selection from being swallowed by dismiss
+            const isTextTarget =
+              settings.openFileAction === "title" &&
+              target.closest(
+                ".card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content",
+              );
 
             if (!cardEl.classList.contains("poster-revealed")) {
               e.preventDefault();
@@ -2056,7 +2007,7 @@ function Card({
               // Press acts as hover intent — ungate pointer cursors
               cardEl.classList.add("hover-intent-active");
               return;
-            } else if (!isInteractive) {
+            } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
               e.stopPropagation();
               cardEl.classList.remove("poster-revealed");
               return;
@@ -2185,8 +2136,19 @@ function Card({
         }
       }}
       onContextMenu={(e: MouseEvent) => {
-        // Show file context menu when openFileAction is 'card'
         if (settings.openFileAction === "card") {
+          // Poster click-reveal: context menu on title text only.
+          // Mobile: .card-title (full wrapper — fat finger). Desktop: .card-title-link (precise).
+          if (
+            isPosterClickReveal &&
+            !(e.target as HTMLElement).closest(
+              app.isMobile ? ".card-title" : ".card-title-link",
+            )
+          ) {
+            // Block editor context menu in live preview (card is inside cm-content)
+            e.preventDefault();
+            return;
+          }
           const file = app.vault.getAbstractFileByPath(card.path);
           if (file instanceof TFile) {
             showFileContextMenu(e, app, file, card.path);
@@ -2451,7 +2413,9 @@ function Card({
                     {card.textPreview && (
                       <div className="card-text-preview-wrapper">
                         <div className="card-text-preview">
-                          {card.textPreview}
+                          <span className="card-text-preview-text">
+                            {card.textPreview}
+                          </span>
                         </div>
                       </div>
                     )}

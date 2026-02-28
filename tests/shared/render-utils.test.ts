@@ -2,10 +2,12 @@ import {
   formatTimestamp,
   shouldShowTimestampIcon,
   getTimestampIcon,
+  isTimestampProperty,
   isDateValue,
   extractTimestamp,
 } from "../../src/shared/render-utils";
 import type { Settings } from "../../src/types";
+import type { BasesResolvedSettings } from "../../src/types";
 
 // Mock moment.js
 jest.mock("moment", () => {
@@ -204,6 +206,99 @@ describe("render-utils", () => {
       expect(getTimestampIcon("file.mtime", baseSettings)).toBe("clock");
       expect(getTimestampIcon("modified time", baseSettings)).toBe("clock");
       expect(getTimestampIcon("updated", baseSettings)).toBe("clock");
+    });
+
+    it('should return "calendar" for note.-prefixed custom created property', () => {
+      const settings = {
+        createdTimeProperty: "ctd",
+      } as Settings;
+      expect(getTimestampIcon("note.ctd", settings)).toBe("calendar");
+    });
+
+    it('should return "clock" for note.-prefixed custom modified property', () => {
+      const settings = {
+        createdTimeProperty: "ctd",
+      } as Settings;
+      expect(getTimestampIcon("note.upd", settings)).toBe("clock");
+    });
+
+    it('should return "calendar" when both property and setting have note. prefix', () => {
+      const settings = {
+        createdTimeProperty: "note.created",
+      } as Settings;
+      // Both stripped to "created" via stripNotePrefix
+      expect(getTimestampIcon("note.created", settings)).toBe("calendar");
+    });
+  });
+
+  describe("isTimestampProperty", () => {
+    const makeSettings = (
+      overrides: Partial<BasesResolvedSettings> = {},
+    ): BasesResolvedSettings =>
+      ({
+        smartTimestamp: false,
+        createdTimeProperty: "created time",
+        modifiedTimeProperty: "modified time",
+        ...overrides,
+      }) as BasesResolvedSettings;
+
+    it("should return true for hardcoded names regardless of smartTimestamp", () => {
+      const settings = makeSettings({ smartTimestamp: false });
+      expect(isTimestampProperty("file.mtime", settings)).toBe(true);
+      expect(isTimestampProperty("file.ctime", settings)).toBe(true);
+      expect(isTimestampProperty("modified time", settings)).toBe(true);
+      expect(isTimestampProperty("created time", settings)).toBe(true);
+    });
+
+    it("should return false for custom names when smartTimestamp is OFF", () => {
+      const settings = makeSettings({
+        smartTimestamp: false,
+        createdTimeProperty: "ctd",
+        modifiedTimeProperty: "upd",
+      });
+      expect(isTimestampProperty("ctd", settings)).toBe(false);
+      expect(isTimestampProperty("upd", settings)).toBe(false);
+    });
+
+    it("should return true for custom names when smartTimestamp is ON", () => {
+      const settings = makeSettings({
+        smartTimestamp: true,
+        createdTimeProperty: "ctd",
+        modifiedTimeProperty: "upd",
+      });
+      expect(isTimestampProperty("ctd", settings)).toBe(true);
+      expect(isTimestampProperty("upd", settings)).toBe(true);
+    });
+
+    it("should return true for note.-prefixed custom names when smartTimestamp is ON", () => {
+      const settings = makeSettings({
+        smartTimestamp: true,
+        createdTimeProperty: "ctd",
+        modifiedTimeProperty: "upd",
+      });
+      expect(isTimestampProperty("note.ctd", settings)).toBe(true);
+      expect(isTimestampProperty("note.upd", settings)).toBe(true);
+    });
+
+    it("should return true when both property and setting have note. prefix", () => {
+      const settings = makeSettings({
+        smartTimestamp: true,
+        createdTimeProperty: "note.created",
+        modifiedTimeProperty: "note.modified",
+      });
+      // Both stripped to "created"/"modified" via stripNotePrefix
+      expect(isTimestampProperty("note.created", settings)).toBe(true);
+      expect(isTimestampProperty("note.modified", settings)).toBe(true);
+    });
+
+    it("should return false for unrelated properties when smartTimestamp is ON", () => {
+      const settings = makeSettings({
+        smartTimestamp: true,
+        createdTimeProperty: "ctd",
+        modifiedTimeProperty: "upd",
+      });
+      expect(isTimestampProperty("tags", settings)).toBe(false);
+      expect(isTimestampProperty("note.tags", settings)).toBe(false);
     });
   });
 

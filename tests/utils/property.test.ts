@@ -8,6 +8,7 @@ import {
   getPropertyLabel,
   getAllVaultProperties,
   stripNotePrefix,
+  isSameProperty,
   isCheckboxProperty,
   normalizePropertyName,
   isValidUri,
@@ -579,6 +580,44 @@ describe("property", () => {
 
     it("should handle note. as entire string", () => {
       expect(stripNotePrefix("note.")).toBe("");
+    });
+  });
+
+  describe("isSameProperty", () => {
+    it("should match identical names", () => {
+      expect(isSameProperty("ctd", "ctd")).toBe(true);
+    });
+
+    it("should match single prefix on left", () => {
+      expect(isSameProperty("note.ctd", "ctd")).toBe(true);
+    });
+
+    it("should match single prefix on right", () => {
+      expect(isSameProperty("ctd", "note.ctd")).toBe(true);
+    });
+
+    it("should match double prefix against single prefix", () => {
+      expect(isSameProperty("note.note.created", "note.created")).toBe(true);
+    });
+
+    it("should match double prefix reversed", () => {
+      expect(isSameProperty("note.created", "note.note.created")).toBe(true);
+    });
+
+    it("should match both with same prefix", () => {
+      expect(isSameProperty("note.ctd", "note.ctd")).toBe(true);
+    });
+
+    it("should not match different properties", () => {
+      expect(isSameProperty("ctd", "upd")).toBe(false);
+    });
+
+    it("should not match prefixed different properties", () => {
+      expect(isSameProperty("note.ctd", "note.upd")).toBe(false);
+    });
+
+    it("should not false-positive with file. prefix", () => {
+      expect(isSameProperty("file.mtime", "file.ctime")).toBe(false);
     });
   });
 

@@ -10,6 +10,7 @@ import type {
   BasesResolvedSettings,
 } from "../types";
 import { VIEW_DEFAULTS, BASES_DEFAULTS } from "../constants";
+import { stripNotePrefix } from "../utils/property";
 
 /** Minimal Bases config interface — subset of BasesViewConfig used by settings readers */
 interface BasesConfig {
@@ -199,7 +200,7 @@ export function getBasesViewOptions(
             if (prop.startsWith("file.")) return false;
             if (prop.startsWith("formula.")) return true;
             if (!propertyInfos) return true;
-            const widget = propertyInfos[prop.slice(5)]?.widget;
+            const widget = propertyInfos[stripNotePrefix(prop)]?.widget;
             return !widget || widget === "text" || widget === "multitext";
           },
         },

@@ -4,6 +4,7 @@
  */
 
 import type { BasesResolvedSettings } from "../types";
+import { isSameProperty } from "../utils/property";
 
 /**
  * Interface for date values from Datacore/Bases
@@ -98,18 +99,40 @@ export function getTimestampIcon(
   propertyName: string,
   settings: BasesResolvedSettings,
 ): "calendar" | "clock" {
-  // Check if property is created time (calendar icon)
   if (
     propertyName === "file.ctime" ||
     propertyName === "created time" ||
     (settings.createdTimeProperty &&
-      propertyName === settings.createdTimeProperty)
+      isSameProperty(propertyName, settings.createdTimeProperty))
   ) {
     return "calendar";
   }
 
-  // Otherwise it's modified time (clock icon)
   return "clock";
+}
+
+/**
+ * Check if a property is a known or configured timestamp property
+ * Returns true for hardcoded file timestamps regardless of settings,
+ * and for custom smart timestamp properties when smartTimestamp is ON
+ */
+export function isTimestampProperty(
+  propertyName: string,
+  settings: BasesResolvedSettings,
+): boolean {
+  if (
+    propertyName === "file.mtime" ||
+    propertyName === "file.ctime" ||
+    propertyName === "modified time" ||
+    propertyName === "created time"
+  ) {
+    return true;
+  }
+  if (!settings.smartTimestamp) return false;
+  return (
+    isSameProperty(propertyName, settings.createdTimeProperty) ||
+    isSameProperty(propertyName, settings.modifiedTimeProperty)
+  );
 }
 
 /**

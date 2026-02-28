@@ -71,3 +71,42 @@ export function shouldCollapseField(
 
   return false;
 }
+
+/**
+ * When pairProperties is OFF, compute which property indices should pair.
+ * Single inverted props can trigger pairing (default: pair up).
+ */
+export function computeInvertPairs(
+  props: Array<{ name: string }>,
+  unpairSet: Set<string>,
+): Map<number, number> {
+  const pairs = new Map<number, number>();
+  const claimed = new Set<number>();
+
+  for (let i = 0; i < props.length; i++) {
+    if (claimed.has(i)) continue;
+    if (!unpairSet.has(props[i].name)) continue;
+
+    let partnerIdx: number;
+    if (i === 0) {
+      partnerIdx = 1;
+    } else if (i + 1 < props.length && unpairSet.has(props[i + 1].name)) {
+      partnerIdx = i + 1;
+    } else {
+      partnerIdx = i - 1;
+    }
+
+    if (
+      partnerIdx >= 0 &&
+      partnerIdx < props.length &&
+      !claimed.has(partnerIdx)
+    ) {
+      const leftIdx = Math.min(i, partnerIdx);
+      const rightIdx = Math.max(i, partnerIdx);
+      pairs.set(leftIdx, rightIdx);
+      claimed.add(leftIdx);
+      claimed.add(rightIdx);
+    }
+  }
+  return pairs;
+}

@@ -34,7 +34,7 @@ import {
   setupElementScrollGradient,
   setupVerticalScrollGradient,
 } from "../shared/scroll-gradient";
-import { getTimestampIcon } from "../shared/render-utils";
+import { getTimestampIcon, isTimestampProperty } from "../shared/render-utils";
 import {
   showTagHashPrefix,
   getHideEmptyMode,
@@ -51,7 +51,11 @@ import {
   getCompactBreakpoint,
   hasBodyClass,
 } from "../utils/style-settings";
-import { getPropertyLabel, stripNotePrefix } from "../utils/property";
+import {
+  getPropertyLabel,
+  parsePropertyList,
+  stripNotePrefix,
+} from "../utils/property";
 import { findLinksInText, type ParsedLink } from "../utils/link-parser";
 import {
   handleImageViewerTrigger,
@@ -92,6 +96,7 @@ import {
   isFileProperty,
   isFormulaProperty,
   shouldCollapseField,
+  computeInvertPairs,
 } from "../shared/property-helpers";
 import { getOwnerWindow } from "../utils/owner-window";
 
@@ -99,61 +104,6 @@ import { getOwnerWindow } from "../utils/owner-window";
 export interface CardHandle {
   el: HTMLElement;
   cleanup: () => void;
-}
-
-/** Parse comma-separated property names into a Set for O(1) lookup */
-function parsePropertyList(csv: string): Set<string> {
-  if (!csv) return new Set();
-  return new Set(
-    csv
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s),
-  );
-}
-
-/**
- * When pairProperties is OFF, compute which property indices should pair.
- * Single inverted props can trigger pairing (default: pair up).
- */
-function computeInvertPairs(
-  props: Array<{ name: string }>,
-  unpairSet: Set<string>,
-): Map<number, number> {
-  const pairs = new Map<number, number>(); // leftIdx → rightIdx
-  const claimed = new Set<number>();
-
-  for (let i = 0; i < props.length; i++) {
-    if (claimed.has(i)) continue;
-    if (!unpairSet.has(props[i].name)) continue;
-
-    let partnerIdx: number;
-    if (i === 0) {
-      // First prop → pair down
-      partnerIdx = 1;
-    } else if (i + 1 < props.length && unpairSet.has(props[i + 1].name)) {
-      // Next prop also inverted → pair down with it
-      partnerIdx = i + 1;
-    } else {
-      // Default → pair up
-      partnerIdx = i - 1;
-    }
-
-    // Validate partner exists and not claimed
-    if (
-      partnerIdx >= 0 &&
-      partnerIdx < props.length &&
-      !claimed.has(partnerIdx)
-    ) {
-      // Normalize: lower index as key
-      const leftIdx = Math.min(i, partnerIdx);
-      const rightIdx = Math.max(i, partnerIdx);
-      pairs.set(leftIdx, rightIdx);
-      claimed.add(leftIdx);
-      claimed.add(rightIdx);
-    }
-  }
-  return pairs;
 }
 
 /**
@@ -927,10 +877,18 @@ export class SharedCardRenderer {
           const isInteractive = target.closest(
             "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
           );
-
-          // Skip toggle when user is selecting text
-          const selection = getOwnerWindow(cardEl).getSelection();
-          if (selection && selection.toString().length > 0) return;
+          // Don't dismiss if user has selected text (drag-select or double-click)
+          const hasTextSelection =
+            ((cardEl.ownerDocument.defaultView ?? window)
+              .getSelection()
+              ?.toString().length ?? 0) > 0;
+          // Don't dismiss if click landed on text-selectable content —
+          // prevents double-click word selection from being swallowed by dismiss
+          const isTextTarget =
+            settings.openFileAction === "title" &&
+            target.closest(
+              ".card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content",
+            );
 
           if (!cardEl.classList.contains("poster-revealed")) {
             e.preventDefault();
@@ -944,7 +902,7 @@ export class SharedCardRenderer {
             // Press acts as hover intent — ungate pointer cursors
             cardEl.classList.add("hover-intent-active");
             return;
-          } else if (!isInteractive) {
+          } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
             e.stopPropagation();
             cardEl.classList.remove("poster-revealed");
             return;
@@ -1054,7 +1012,22 @@ export class SharedCardRenderer {
 
     // Attach context menu to card when openFileAction is 'card'
     if (settings.openFileAction === "card") {
-      cardEl.addEventListener("contextmenu", handleContextMenu, { signal });
+      cardEl.addEventListener(
+        "contextmenu",
+        (e: MouseEvent) => {
+          // Poster click-reveal: context menu on title text only.
+          // Mobile: .card-title (full wrapper — fat finger). Desktop: .card-title-text (precise).
+          if (
+            isPosterClickReveal &&
+            !(e.target as HTMLElement).closest(
+              this.app.isMobile ? ".card-title" : ".card-title-text",
+            )
+          )
+            return;
+          handleContextMenu(e);
+        },
+        { signal },
+      );
     }
 
     // Drag handler function
@@ -1140,33 +1113,37 @@ export class SharedCardRenderer {
         // Make title draggable when openFileAction is 'title'
         link.addEventListener("dragstart", handleDrag, { signal });
 
-        // Dead zone: clicks/contextmenu on .card-title that miss the link
-        titleEl.addEventListener(
-          "click",
-          (e) => {
-            if (!link.contains(e.target as Node)) {
-              e.preventDefault();
-              e.stopPropagation();
-              const paneType = Keymap.isModEvent(e);
-              void this.app.workspace.openLinkText(
-                card.path,
-                "",
-                paneType || false,
-              );
-            }
-          },
-          { signal },
-        );
+        // Dead zone: clicks/contextmenu on .card-title that miss the link.
+        // Mobile only — fat-finger tap targets. Desktop uses precise link clicks.
+        // Only for open-on-title — in press mode, only the link itself is clickable.
+        if (settings.openFileAction === "title" && this.app.isMobile) {
+          titleEl.addEventListener(
+            "click",
+            (e) => {
+              if (!link.contains(e.target as Node)) {
+                e.preventDefault();
+                e.stopPropagation();
+                const paneType = Keymap.isModEvent(e);
+                void this.app.workspace.openLinkText(
+                  card.path,
+                  "",
+                  paneType || false,
+                );
+              }
+            },
+            { signal },
+          );
 
-        titleEl.addEventListener(
-          "contextmenu",
-          (e) => {
-            if (!link.contains(e.target as Node)) {
-              handleContextMenu(e);
-            }
-          },
-          { signal },
-        );
+          titleEl.addEventListener(
+            "contextmenu",
+            (e) => {
+              if (!link.contains(e.target as Node)) {
+                handleContextMenu(e);
+              }
+            },
+            { signal },
+          );
+        }
 
         // Add extension suffix inside link for Extension mode
         if (
@@ -1399,10 +1376,9 @@ export class SharedCardRenderer {
 
       if (hasTextPreview) {
         const wrapper = previewsEl.createDiv("card-text-preview-wrapper");
-        wrapper.createDiv({
-          cls: "card-text-preview",
-          text: card.textPreview,
-        });
+        const previewDiv = wrapper.createDiv("card-text-preview");
+        const textSpan = previewDiv.createSpan("card-text-preview-text");
+        textSpan.textContent = card.textPreview ?? null;
       }
 
       // Thumbnail (all positions now inside card-previews)
@@ -2524,14 +2500,7 @@ export class SharedCardRenderer {
       }
     }
 
-    // Handle timestamp properties - only show icons for known timestamp properties
-    const isKnownTimestampProperty =
-      propertyName === "file.mtime" ||
-      propertyName === "file.ctime" ||
-      propertyName === "modified time" ||
-      propertyName === "created time";
-
-    if (isKnownTimestampProperty) {
+    if (isTimestampProperty(propertyName, settings)) {
       // stringValue is already formatted by data-transform
       const timestampWrapper = propertyContent.createSpan();
       if (showTimestampIcon() && settings.propertyLabels === "hide") {
@@ -2553,6 +2522,7 @@ export class SharedCardRenderer {
           text: showHashPrefix ? "#" + tag : tag,
           href: "#",
         });
+        tagEl.draggable = false;
         tagEl.tabIndex = -1;
         tagEl.addEventListener(
           "click",
@@ -2586,6 +2556,7 @@ export class SharedCardRenderer {
           text: showHashPrefix ? "#" + tag : tag,
           href: "#",
         });
+        tagEl.draggable = false;
         tagEl.tabIndex = -1;
         tagEl.addEventListener(
           "click",

@@ -128,14 +128,11 @@ export function View({
   USER_QUERY = "",
   QUERY_ID,
 }: ViewProps): JSX.Element {
-  // Get file containing this query (memoized to prevent re-fetching on every render)
-  // This is used to exclude the query note itself from results
+  // Get file containing this query (used for query sync to code block)
   const currentFile = dc.useMemo(() => {
     const file = getCurrentFile(app);
     return file;
   }, [app]);
-
-  const currentFilePath = currentFile?.path;
 
   // Access PersistenceManager from plugin
   const persistenceManager = plugin.persistenceManager;
@@ -623,10 +620,7 @@ export function View({
   const { sorted, totalCount } = dc.useMemo(() => {
     const pagesArray = Array.isArray(pages) ? [...pages] : [];
 
-    // Exclude current file
-    let filtered = currentFilePath
-      ? pagesArray.filter((p) => p.$path !== currentFilePath)
-      : pagesArray;
+    let filtered = pagesArray;
 
     // Filter by search query
     if (parsedSearchTerms) {
@@ -716,7 +710,6 @@ export function View({
     isShuffled,
     shuffledOrder,
     resultLimit,
-    currentFilePath,
   ]);
 
   // State to store file text previews and images
@@ -781,7 +774,7 @@ export function View({
       const path = file.$path || "";
       const mtime = file.$mtime?.toMillis?.() || 0;
       const ctime = file.$ctime?.toMillis?.() || 0;
-      const cacheKey = `${path}:${mtime}:${ctime}`;
+      const cacheKey = `${path}:${mtime}:${ctime}:${sortMethod}`;
 
       // Check cache first
       const cached = cache?.get(cacheKey);
@@ -2054,6 +2047,8 @@ export function View({
     <div
       ref={explorerRef}
       className={`dynamic-views poster-mode-${settings.posterDisplayMode} image-fit-${settings.imageFit}`}
+      // Block editor context menu in live preview — view sits inside cm-content
+      onContextMenu={(e: MouseEvent) => e.preventDefault()}
     >
       <div
         ref={toolbarRef}

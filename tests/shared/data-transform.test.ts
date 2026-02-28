@@ -630,6 +630,81 @@ describe("data-transform", () => {
       expect(result).toBeNull();
     });
 
+    it("should resolve file.folder with nested path", () => {
+      const mockEntry: any = {
+        file: { path: "folder/subfolder/file.md" },
+      };
+
+      const mockCardData: any = {
+        path: "folder/subfolder/file.md",
+        folderPath: "folder/subfolder",
+        tags: [],
+        yamlTags: [],
+        ctime: 1000000,
+        mtime: 2000000,
+      };
+
+      const result = resolveBasesProperty(
+        mockApp,
+        "file.folder",
+        mockEntry,
+        mockCardData,
+        mockSettings,
+      );
+
+      expect(result).toBe("folder/subfolder");
+    });
+
+    it("should resolve file.folder with root file (empty folderPath) as '/'", () => {
+      const mockEntry: any = {
+        file: { path: "file.md" },
+      };
+
+      const mockCardData: any = {
+        path: "file.md",
+        folderPath: "",
+        tags: [],
+        yamlTags: [],
+        ctime: 1000000,
+        mtime: 2000000,
+      };
+
+      const result = resolveBasesProperty(
+        mockApp,
+        "file.folder",
+        mockEntry,
+        mockCardData,
+        mockSettings,
+      );
+
+      expect(result).toBe("/");
+    });
+
+    it("should resolve 'folder' variant same as file.folder", () => {
+      const mockEntry: any = {
+        file: { path: "projects/readme.md" },
+      };
+
+      const mockCardData: any = {
+        path: "projects/readme.md",
+        folderPath: "projects",
+        tags: [],
+        yamlTags: [],
+        ctime: 1000000,
+        mtime: 2000000,
+      };
+
+      const result = resolveBasesProperty(
+        mockApp,
+        "folder",
+        mockEntry,
+        mockCardData,
+        mockSettings,
+      );
+
+      expect(result).toBe("projects");
+    });
+
     it("should resolve file.tags property", () => {
       mockApp.metadataCache.getFileCache = jest.fn().mockReturnValue({
         tags: [{ tag: "#tag1" }, { tag: "#tag2" }],
@@ -1740,6 +1815,43 @@ describe("data-transform", () => {
         }),
       );
       expect(result).toEqual(["file.mtime"]);
+    });
+
+    it("should replace internal-name prop when setting uses display name (Bases path)", () => {
+      // Bases visible properties use internal names (file.mtime),
+      // settings use display names (modified time)
+      const props = ["file.mtime"];
+      const result = applySmartTimestamp(
+        props,
+        "created time-asc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["created time"]);
+    });
+
+    it("should detect both-present guard across name forms", () => {
+      // Props contain internal names, settings use display names
+      const props = ["file.ctime", "file.mtime"];
+      const result = applySmartTimestamp(
+        props,
+        "created time-asc",
+        makeSettings(),
+      );
+      expect(result).toEqual(["file.ctime", "file.mtime"]);
+    });
+
+    it("should replace note.-prefixed prop from Bases getOrder()", () => {
+      // Bases getOrder() returns "note.upd", setting stores "upd"
+      const props = ["note.upd"];
+      const result = applySmartTimestamp(
+        props,
+        "ctd-desc",
+        makeSettings({
+          createdTimeProperty: "ctd",
+          modifiedTimeProperty: "upd",
+        }),
+      );
+      expect(result).toEqual(["ctd"]);
     });
   });
 });
