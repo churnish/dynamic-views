@@ -37,7 +37,6 @@ import { Toolbar } from "./toolbar";
 import { getCurrentFile, getAvailablePath } from "../utils/file";
 import {
   ensureFileSelector,
-  stripFileSelector,
   updateQueryInBlock,
   findQueryInBlock,
 } from "./query-sync";
@@ -185,16 +184,14 @@ export function View({
     getPersistedValue("resultLimit", ""),
   );
 
-  // Query state - extract query from between DQL markers, strip @file wrapper for editor
-  const cleanQuery = stripFileSelector(
-    (USER_QUERY || "")
-      .split("\n")
-      .filter(
-        (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
-      )
-      .join("\n")
-      .trim(),
-  );
+  // Query state - extract query from between DQL markers
+  const cleanQuery = (USER_QUERY || "")
+    .split("\n")
+    .filter(
+      (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
+    )
+    .join("\n")
+    .trim();
 
   const [draftQuery, setDraftQuery] = dc.useState(cleanQuery);
   const [appliedQuery, setAppliedQuery] = dc.useState(cleanQuery);
@@ -1635,16 +1632,13 @@ export function View({
 
   // Auto-reload: Watch for USER_QUERY prop changes (Datacore re-renders on code block edits)
   dc.useEffect(() => {
-    const newCleanQuery = stripFileSelector(
-      (USER_QUERY || "")
-        .split("\n")
-        .filter(
-          (line) =>
-            !line.includes("QUERY START") && !line.includes("QUERY END"),
-        )
-        .join("\n")
-        .trim(),
-    );
+    const newCleanQuery = (USER_QUERY || "")
+      .split("\n")
+      .filter(
+        (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
+      )
+      .join("\n")
+      .trim();
 
     // Only update if query changed
     if (newCleanQuery !== appliedQuery) {
@@ -1880,7 +1874,7 @@ export function View({
 
       if (currentFile) {
         try {
-          await syncQueryToCodeBlock(ensureFileSelector(trimmed));
+          await syncQueryToCodeBlock(trimmed);
         } catch (error) {
           console.error("Failed to sync query to code block:", error);
         }

@@ -1,7 +1,6 @@
 import {
   hasFileSelector,
   ensureFileSelector,
-  stripFileSelector,
   findQueryInBlock,
   updateQueryInBlock,
   QueryMatch,
@@ -151,51 +150,6 @@ and tags = #note)`);
     it("should wrap non-file selectors with @file", () => {
       expect(ensureFileSelector("@section")).toBe("@file and (@section)");
       expect(ensureFileSelector("@task")).toBe("@file and (@task)");
-    });
-  });
-
-  describe("stripFileSelector", () => {
-    it("should strip @file and (...) wrapper", () => {
-      expect(stripFileSelector('@file and (title = "Test")')).toBe(
-        'title = "Test"',
-      );
-    });
-
-    it("should leave bare @file unchanged", () => {
-      expect(stripFileSelector("@file")).toBe("@file");
-    });
-
-    it("should leave @page queries unchanged", () => {
-      expect(stripFileSelector('@page and (title = "Test")')).toBe(
-        '@page and (title = "Test")',
-      );
-    });
-
-    it("should leave explicit @file queries without outer parens unchanged", () => {
-      expect(stripFileSelector('@file and $extension = "png"')).toBe(
-        '@file and $extension = "png"',
-      );
-    });
-
-    it("should handle multiline queries", () => {
-      expect(
-        stripFileSelector('@file and (#tag and\npath("lorem"))'),
-      ).toBe('#tag and\npath("lorem")');
-    });
-
-    it("should be case-insensitive", () => {
-      expect(stripFileSelector('@FILE and (title = "Test")')).toBe(
-        'title = "Test"',
-      );
-    });
-
-    it("should handle empty string", () => {
-      expect(stripFileSelector("")).toBe("");
-    });
-
-    it("should round-trip with ensureFileSelector", () => {
-      const query = '#tag and path("lorem")';
-      expect(stripFileSelector(ensureFileSelector(query))).toBe(query);
     });
   });
 

@@ -16,12 +16,6 @@ export function ensureFileSelector(query: string): string {
   return `@file and (${trimmed})`;
 }
 
-/** Strip the `@file and (...)` wrapper added by ensureFileSelector */
-export function stripFileSelector(query: string): string {
-  const match = query.trim().match(/^@file\s+and\s+\(([\s\S]+)\)$/i);
-  return match ? match[1].trim() : query.trim();
-}
-
 // ============= Code Block Sync =============
 
 export interface QueryMatch {
