@@ -2158,8 +2158,10 @@ function Card({
       onMouseDownCapture={(e: MouseEvent) => {
         // Stop propagation in capture phase to prevent CodeMirror's capture-phase
         // handler on cm-scroller from intercepting text selection
-        // when openFileAction is 'title' (card content should be selectable)
-        if (settings.openFileAction === "title") {
+        // when openFileAction is 'title' (card content should be selectable).
+        // Only intercept primary button — right-click doesn't start text selection
+        // and must propagate to dismiss any open context menu.
+        if (settings.openFileAction === "title" && e.button === 0) {
           e.stopPropagation();
         }
       }}

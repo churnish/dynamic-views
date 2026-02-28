@@ -39,7 +39,7 @@ import {
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
-  setupStyleSettingsObserver,
+  setupSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
   loadContentForEntries,
@@ -493,7 +493,7 @@ export class DynamicViewsGridView extends BasesView {
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
     // Watch for Dynamic Views Style Settings changes only
-    const disconnectObserver = setupStyleSettingsObserver(() =>
+    const disconnectObserver = setupSettingsObserver(() =>
       this.onDataUpdated(),
     );
     this.register(disconnectObserver);

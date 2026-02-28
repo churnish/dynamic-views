@@ -49,10 +49,7 @@ import {
   getFirstDatacorePropertyValue,
   getAllDatacoreImagePropertyValues,
 } from "../utils/property";
-import {
-  getCardSpacing,
-  setupStyleSettingsObserver,
-} from "../utils/style-settings";
+import { getCardSpacing, setupSettingsObserver } from "../utils/style-settings";
 import { getOwnerWindow } from "../utils/owner-window";
 
 import {
@@ -516,12 +513,14 @@ export function View({
   }, []);
 
   // Setup Style Settings observer - re-render when CSS variables change
+  // Also re-read plugin settings (e.g. openFileAction body class change)
   dc.useEffect(() => {
-    const disconnect = setupStyleSettingsObserver(() =>
-      setStyleRevision((r) => r + 1),
-    );
+    const disconnect = setupSettingsObserver(() => {
+      setStyleRevision((r) => r + 1);
+      setSettings((prev) => ({ ...prev, ...getPersistedSettings() }));
+    });
     return disconnect;
-  }, []);
+  }, [getPersistedSettings]);
 
   // Validate and fallback query
   const validatedQuery = dc.useMemo(() => {

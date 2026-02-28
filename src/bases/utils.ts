@@ -313,7 +313,7 @@ export function setupBasesSwipePrevention(
 
 // Re-export from shared location
 export {
-  setupStyleSettingsObserver,
+  setupSettingsObserver,
   getStyleSettingsHash,
 } from "../utils/style-settings";
 

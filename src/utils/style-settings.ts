@@ -325,17 +325,17 @@ export function getStyleSettingsHash(): string {
     hasBodyClass("dynamic-views-title-overflow-scroll"),
     hasBodyClass("dynamic-views-subtitle-overflow-scroll"),
     hasBodyClass("dynamic-views-hidden-file-extensions"),
+    // Poster reveal mode (affects JS click handlers, not CSS-only)
+    hasBodyClass("dynamic-views-poster-reveal-press"),
   ].join("|");
 }
 
 /**
- * Setup MutationObserver for Dynamic Views Style Settings changes
- * Watches class changes (class-toggle settings) and Style Settings stylesheet changes (slider settings)
+ * Setup MutationObserver for Dynamic Views settings changes
+ * Watches body class changes (plugin + Style Settings) and Style Settings stylesheet changes
  * @returns Cleanup function to disconnect observer
  */
-export function setupStyleSettingsObserver(
-  onStyleChange: () => void,
-): () => void {
+export function setupSettingsObserver(onStyleChange: () => void): () => void {
   // Mutually exclusive class-select groups that must always have one active member.
   // When Style Settings is disabled it strips all managed classes — re-add the default.
   const FILE_TYPE_CLASSES = [
