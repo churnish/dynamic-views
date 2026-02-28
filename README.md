@@ -18,7 +18,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Cards load while scrolling rather than all at once
 - Fullscreen image viewer
 
-### Extra
+### Extras
 
 - Display properties stacked or side-by-side
 - Property labels can be above, inline, or hidden
