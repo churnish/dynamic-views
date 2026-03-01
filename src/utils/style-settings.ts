@@ -335,7 +335,16 @@ export function getStyleSettingsHash(): string {
  * Watches body class changes (plugin + Style Settings) and Style Settings stylesheet changes
  * @returns Cleanup function to disconnect observer
  */
-export function setupSettingsObserver(onStyleChange: () => void): () => void {
+export function setupStyleSettingsObserver(
+  onStyleChange: () => void,
+  containerEl: HTMLElement,
+): () => void {
+  // Derive document/window from containerEl so popout windows observe their own body,
+  // not the main window's body (which updates ~51ms earlier, causing layout glitches)
+  const doc = containerEl.ownerDocument;
+  const win = doc.defaultView ?? window;
+  const MO = win.MutationObserver ?? MutationObserver;
+
   // Mutually exclusive class-select groups that must always have one active member.
   // When Style Settings is disabled it strips all managed classes — re-add the default.
   const FILE_TYPE_CLASSES = [
@@ -345,67 +354,46 @@ export function setupSettingsObserver(onStyleChange: () => void): () => void {
     "dynamic-views-file-type-none",
   ];
 
-  // Dynamic classes that should NOT trigger re-renders (added/removed by plugin at runtime)
-  const ignoredDynamicClasses = [
-    "dynamic-views-backdrop-theme-match", // Style Settings default
-    "dynamic-views-poster-theme-match", // Style Settings default
-  ];
+  // Hash of JS-relevant Style Settings — only fire callback when actual values change
+  let prevHash = getStyleSettingsHash();
 
   // Observer for body class changes (Style Settings class-toggle settings)
-  const bodyObserver = new MutationObserver((mutations) => {
+  const bodyObserver = new MO((mutations) => {
     for (const mutation of mutations) {
       if (
         mutation.type === "attributes" &&
         mutation.attributeName === "class"
       ) {
         // Re-apply default when Style Settings strips all file-type classes
+        if (!FILE_TYPE_CLASSES.some((c) => doc.body.classList.contains(c))) {
+          doc.body.classList.add("dynamic-views-file-type-ext");
+        }
+
+        // Clean up stale imperative classes when press mode toggled OFF
         if (
-          !FILE_TYPE_CLASSES.some((c) => document.body.classList.contains(c))
+          mutation.oldValue?.includes("dynamic-views-poster-reveal-press") &&
+          !doc.body.classList.contains("dynamic-views-poster-reveal-press")
         ) {
-          document.body.classList.add("dynamic-views-file-type-ext");
+          doc
+            .querySelectorAll(".dynamic-views .card.poster-revealed")
+            .forEach((el) => {
+              el.classList.remove("poster-revealed", "hover-intent-active");
+            });
         }
 
-        // Check if any dynamic-views class changed (excluding runtime-only classes)
-        const oldClasses = mutation.oldValue?.split(" ") || [];
-        const newClasses = document.body.className.split(" ");
-
-        const oldFiltered = oldClasses
-          .filter(
-            (c) =>
-              c.startsWith("dynamic-views-") &&
-              !ignoredDynamicClasses.includes(c),
-          )
-          .sort();
-        const newFiltered = newClasses
-          .filter(
-            (c) =>
-              c.startsWith("dynamic-views-") &&
-              !ignoredDynamicClasses.includes(c),
-          )
-          .sort();
-
-        if (oldFiltered.join() !== newFiltered.join()) {
-          // Clean up stale imperative classes when press mode toggled OFF
-          const pressClass = "dynamic-views-poster-reveal-press";
-          if (
-            oldFiltered.includes(pressClass) &&
-            !newFiltered.includes(pressClass)
-          ) {
-            document
-              .querySelectorAll(".dynamic-views .card.poster-revealed")
-              .forEach((el) => {
-                el.classList.remove("poster-revealed", "hover-intent-active");
-              });
-          }
-
+        // Only fire if JS-relevant settings actually changed
+        clearStyleSettingsCache(); // Must clear before re-hashing
+        const newHash = getStyleSettingsHash();
+        if (newHash !== prevHash) {
+          prevHash = newHash;
           onStyleChange();
-          break;
         }
+        break;
       }
     }
   });
 
-  bodyObserver.observe(document.body, {
+  bodyObserver.observe(doc.body, {
     attributes: true,
     attributeOldValue: true,
     attributeFilter: ["class"],
@@ -413,11 +401,11 @@ export function setupSettingsObserver(onStyleChange: () => void): () => void {
 
   // Observer for Style Settings stylesheet changes (slider/variable settings)
   // Style Settings updates a <style> element in <head> with id "css-settings-manager"
-  const styleEl = document.getElementById("css-settings-manager");
+  const styleEl = doc.getElementById("css-settings-manager");
   let styleObserver: MutationObserver | null = null;
 
   if (styleEl) {
-    styleObserver = new MutationObserver(() => {
+    styleObserver = new MO(() => {
       if (styleEl.textContent?.includes("--dynamic-views-")) {
         onStyleChange();
       }

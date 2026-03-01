@@ -18,6 +18,7 @@ import {
   getCardSpacing,
   clearStyleSettingsCache,
 } from "../utils/style-settings";
+import { PLUGIN_SETTINGS_CHANGE } from "../constants";
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -50,7 +51,7 @@ import {
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
-  setupSettingsObserver,
+  setupStyleSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
   loadContentForEntries,
@@ -74,7 +75,7 @@ import {
   getLeafProps,
 } from "../shared/scroll-preservation";
 import {
-  PROPERTY_MEASURED_EVENT,
+  PROPERTY_MEASURED,
   cleanupVisibilityObserver,
   resetGapCache,
 } from "../shared/property-measure";
@@ -116,7 +117,10 @@ export class DynamicViewsMasonryView extends BasesView {
   private scrollEl: HTMLElement;
   private leafId: string;
   private containerEl: HTMLElement;
-  private plugin: DynamicViews;
+  /** Resolves from registry each time — survives hot-reload / plugin re-enable */
+  private get plugin(): DynamicViews {
+    return this.app.plugins.plugins["dynamic-views"] as DynamicViews;
+  }
   private scrollPreservation: ScrollPreservation | null = null;
   private cardRenderer: SharedCardRenderer;
   private _resolvedFile: TFile | null | undefined = undefined;
@@ -575,8 +579,6 @@ export class DynamicViewsMasonryView extends BasesView {
     this.containerEl = scrollEl.createDiv({
       cls: "dynamic-views dynamic-views-bases-container",
     });
-    // Access plugin from controller's app
-    this.plugin = this.app.plugins.plugins["dynamic-views"] as DynamicViews;
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
@@ -594,11 +596,27 @@ export class DynamicViewsMasonryView extends BasesView {
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
     // Watch for Dynamic Views Style Settings changes only
-    const disconnectObserver = setupSettingsObserver(() => {
+    const disconnectObserver = setupStyleSettingsObserver(() => {
       resetGapCache(); // Invalidate gap cache on settings change
       this.onDataUpdated();
-    });
+    }, this.containerEl);
     this.register(disconnectObserver);
+
+    // Re-render when plugin settings change from the settings tab
+    const pluginSettingsHandler = () => {
+      resetGapCache();
+      this.onDataUpdated();
+    };
+    document.body.addEventListener(
+      PLUGIN_SETTINGS_CHANGE,
+      pluginSettingsHandler,
+    );
+    this.register(() =>
+      document.body.removeEventListener(
+        PLUGIN_SETTINGS_CHANGE,
+        pluginSettingsHandler,
+      ),
+    );
 
     // Setup hover-to-start keyboard navigation
     const cleanupKeyboard = setupHoverKeyboardNavigation(
@@ -642,12 +660,12 @@ export class DynamicViewsMasonryView extends BasesView {
     };
     const propertyEventDoc = this.containerEl.ownerDocument;
     propertyEventDoc.addEventListener(
-      PROPERTY_MEASURED_EVENT,
+      PROPERTY_MEASURED,
       handlePropertyMeasured,
     );
     this.register(() => {
       propertyEventDoc.removeEventListener(
-        PROPERTY_MEASURED_EVENT,
+        PROPERTY_MEASURED,
         handlePropertyMeasured,
       );
       if (this.propertyMeasuredTimeout !== null) {

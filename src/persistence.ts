@@ -10,6 +10,7 @@ import type {
 import {
   BASES_DEFAULTS,
   PLUGIN_SETTINGS,
+  PLUGIN_SETTINGS_CHANGE,
   VIEW_DEFAULTS,
   DATACORE_DEFAULTS,
   DEFAULT_BASES_STATE,
@@ -183,6 +184,7 @@ export class PersistenceManager {
 
     this.data.pluginSettings = sparse;
     await this.save();
+    document.body.dispatchEvent(new Event(PLUGIN_SETTINGS_CHANGE));
   }
 
   // ============================================================================

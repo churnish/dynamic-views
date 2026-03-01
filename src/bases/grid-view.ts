@@ -18,6 +18,7 @@ import {
   getCardSpacing,
   clearStyleSettingsCache,
 } from "../utils/style-settings";
+import { PLUGIN_SETTINGS_CHANGE } from "../constants";
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -39,7 +40,7 @@ import {
 } from "../shared/constants";
 import {
   setupBasesSwipePrevention,
-  setupSettingsObserver,
+  setupStyleSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
   loadContentForEntries,
@@ -96,7 +97,10 @@ export class DynamicViewsGridView extends BasesView {
   private scrollEl: HTMLElement;
   private leafId: string;
   private containerEl: HTMLElement;
-  private plugin: DynamicViews;
+  /** Resolves from registry each time — survives hot-reload / plugin re-enable */
+  private get plugin(): DynamicViews {
+    return this.app.plugins.plugins["dynamic-views"] as DynamicViews;
+  }
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
   private scrollPreservation: ScrollPreservation | null = null;
@@ -474,8 +478,6 @@ export class DynamicViewsGridView extends BasesView {
       cls: "dynamic-views dynamic-views-bases-container",
     });
 
-    // Access plugin from controller's app
-    this.plugin = this.app.plugins.plugins["dynamic-views"] as DynamicViews;
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
@@ -492,11 +494,25 @@ export class DynamicViewsGridView extends BasesView {
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
-    // Watch for Dynamic Views Style Settings changes only
-    const disconnectObserver = setupSettingsObserver(() =>
-      this.onDataUpdated(),
+    // Watch for Style Settings and plugin settings changes
+    const disconnectObserver = setupStyleSettingsObserver(
+      () => this.onDataUpdated(),
+      this.containerEl,
     );
     this.register(disconnectObserver);
+
+    // Re-render when plugin settings change from the settings tab
+    const pluginSettingsHandler = () => this.onDataUpdated();
+    document.body.addEventListener(
+      PLUGIN_SETTINGS_CHANGE,
+      pluginSettingsHandler,
+    );
+    this.register(() =>
+      document.body.removeEventListener(
+        PLUGIN_SETTINGS_CHANGE,
+        pluginSettingsHandler,
+      ),
+    );
 
     // Setup hover-to-start keyboard navigation
     const cleanupKeyboard = setupHoverKeyboardNavigation(

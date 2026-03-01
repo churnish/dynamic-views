@@ -107,3 +107,6 @@ export const DEFAULT_DATACORE_STATE = {
 };
 
 export const STORAGE_KEY_PREFIX = "dynamic-views";
+
+/** Custom event dispatched when plugin-level settings change */
+export const PLUGIN_SETTINGS_CHANGE = "dynamic-views-plugin-settings";

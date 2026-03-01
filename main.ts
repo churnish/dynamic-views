@@ -118,7 +118,7 @@ export default class DynamicViews extends Plugin {
     }
 
     this.addCommand({
-      id: "create-dynamic-view",
+      id: "create-datacore-note",
       name: `Create new note with ${DATACORE} query`,
       icon: "lucide-file-code-corner",
       callback: async () => {
@@ -127,7 +127,7 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "insert-dynamic-view-at-cursor",
+      id: "insert-datacore-query",
       name: `Insert ${DATACORE} query`,
       icon: "lucide-list-plus",
       editorCheckCallback: (
@@ -204,7 +204,7 @@ export default class DynamicViews extends Plugin {
 
     // Add commands for Random and Shuffle
     this.addCommand({
-      id: "random-file-from-bases",
+      id: "open-random-file",
       name: "Open random file from base",
       icon: "dices",
       callback: async () => {
@@ -221,7 +221,7 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "shuffle-bases-view",
+      id: "shuffle-base",
       name: "Shuffle base",
       icon: "shuffle",
       callback: () => {
@@ -236,7 +236,7 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "fold-all-groups",
+      id: "fold-groups",
       name: "Fold all groups",
       icon: "lucide-minimize-2",
       checkCallback: (checking) => {
@@ -248,7 +248,7 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "unfold-all-groups",
+      id: "unfold-groups",
       name: "Unfold all groups",
       icon: "lucide-maximize-2",
       checkCallback: (checking) => {
@@ -260,7 +260,7 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "create-base-grid-view",
+      id: "create-grid-base",
       name: `Create new ${GRID} base`,
       icon: "lucide-grid-2x-2",
       callback: async () => {
@@ -269,7 +269,7 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "create-base-masonry-view",
+      id: "create-masonry-base",
       name: `Create new ${MASONRY} base`,
       icon: "panels-right-bottom",
       callback: async () => {

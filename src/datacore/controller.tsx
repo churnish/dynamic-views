@@ -14,6 +14,7 @@ import {
   resolveSettings,
   VIEW_DEFAULTS,
   DATACORE_DEFAULTS,
+  PLUGIN_SETTINGS_CHANGE,
 } from "../constants";
 import {
   BATCH_SIZE,
@@ -49,7 +50,10 @@ import {
   getFirstDatacorePropertyValue,
   getAllDatacoreImagePropertyValues,
 } from "../utils/property";
-import { getCardSpacing, setupSettingsObserver } from "../utils/style-settings";
+import {
+  getCardSpacing,
+  setupStyleSettingsObserver,
+} from "../utils/style-settings";
 import { getOwnerWindow } from "../utils/owner-window";
 
 import {
@@ -512,15 +516,44 @@ export function View({
     return cleanup;
   }, []);
 
-  // Setup Style Settings observer - re-render when CSS variables change
-  // Also re-read plugin settings (e.g. openFileAction body class change)
+  // Style Settings revision - triggers re-render when CSS variables change
+  const [_styleRevision, setStyleRevision] = dc.useState(0);
+
+  // Re-render when Style Settings CSS variables or body classes change
   dc.useEffect(() => {
-    const disconnect = setupSettingsObserver(() => {
-      setStyleRevision((r) => r + 1);
-      setSettings((prev) => ({ ...prev, ...getPersistedSettings() }));
-    });
+    if (!explorerRef.current) return;
+    const disconnect = setupStyleSettingsObserver(
+      () => setStyleRevision((r) => r + 1),
+      explorerRef.current,
+    );
     return disconnect;
-  }, [getPersistedSettings]);
+  }, []);
+
+  // Re-read plugin settings when changed from the settings tab
+  // Resolve from registry each call — survives hot-reload / plugin re-enable
+  dc.useEffect(() => {
+    const handler = () => {
+      const currentPM = (
+        app.plugins.plugins["dynamic-views"] as DynamicViews | undefined
+      )?.persistenceManager;
+      setSettings((prev) => {
+        const fresh = currentPM?.getPluginSettings();
+        if (!fresh) return prev;
+        // Only re-render if plugin-level settings actually changed
+        for (const key of Object.keys(fresh) as (keyof typeof fresh)[]) {
+          if (prev[key] !== fresh[key]) {
+            // Clear async caches — settings like omitFirstLine affect text generation
+            setTextPreviews({});
+            return { ...prev, ...fresh };
+          }
+        }
+        return prev;
+      });
+    };
+    document.body.addEventListener(PLUGIN_SETTINGS_CHANGE, handler);
+    return () =>
+      document.body.removeEventListener(PLUGIN_SETTINGS_CHANGE, handler);
+  }, [app]);
 
   // Validate and fallback query
   const validatedQuery = dc.useMemo(() => {
@@ -532,9 +565,6 @@ export function View({
     setQueryError(null);
     return ensureFileSelector(q);
   }, [appliedQuery]);
-
-  // Style Settings revision - triggers re-render when CSS variables change
-  const [_styleRevision, setStyleRevision] = dc.useState(0);
 
   // Computed key for property settings - triggers gradient re-init when properties change
   const propertySettingsKey = [settings.omitFirstLine].join("|");
@@ -556,7 +586,7 @@ export function View({
           rawPages.length +
           ":" +
           rawPages
-            .map((p) => p.$path)
+            .map((p) => `${p.$path}:${p.$mtime?.toMillis?.() || 0}`)
             .sort()
             .join("|");
         if (pagesKey !== prevPagesKeyRef.current) {
@@ -729,6 +759,9 @@ export function View({
   // Track current content loading effect to prevent race conditions
   const currentContentLoadRef = dc.useRef<string | null>(null);
 
+  // Track previous mtimes to invalidate text/image cache when file content changes
+  const prevMtimeRef = dc.useRef<Map<string, number>>(new Map());
+
   // Clear cache when settings change (they affect card transformation)
   const prevSettingsRef = dc.useRef(settings);
   dc.useEffect(() => {
@@ -773,7 +806,7 @@ export function View({
       const path = file.$path || "";
       const mtime = file.$mtime?.toMillis?.() || 0;
       const ctime = file.$ctime?.toMillis?.() || 0;
-      const cacheKey = `${path}:${mtime}:${ctime}:${sortMethod}`;
+      const cacheKey = `${path}:${mtime}:${ctime}:${sortMethod}:${settings.smartTimestamp}:${settings.createdTimeProperty}:${settings.modifiedTimeProperty}`;
 
       // Check cache first
       const cached = cache?.get(cacheKey);
@@ -836,6 +869,12 @@ export function View({
     const effectId = Math.random().toString(36).slice(2);
     currentContentLoadRef.current = effectId;
 
+    // Build mtime lookup for displayed items to detect content changes
+    const mtimeByPath = new Map<string, number>();
+    for (const p of sorted.slice(0, displayedCount)) {
+      mtimeByPath.set(p.$path, p.$mtime?.toMillis?.() || 0);
+    }
+
     const loadTextPreviews = async () => {
       const newTextPreviews: Record<string, string> = {};
       const newImages: Record<string, string | string[]> = {};
@@ -846,12 +885,18 @@ export function View({
         sorted.slice(0, displayedCount).map((p) => p.$path),
       );
 
+      const prevMtimes = prevMtimeRef.current ?? new Map<string, number>();
+
       // Prepare entries for text preview loading
       if (settings.textPreviewProperty || settings.fallbackToContent) {
         // Copy existing cached entries that are still in results
+        // (skip when mtime changed — file content was modified)
         for (const path of currentPaths) {
           const cached = textPreviews[path];
-          if (cached !== undefined) {
+          if (
+            cached !== undefined &&
+            mtimeByPath.get(path) === prevMtimes.get(path)
+          ) {
             newTextPreviews[path] = cached;
           }
         }
@@ -954,13 +999,20 @@ export function View({
       // Prepare entries for image loading
       {
         // Copy existing cached entries that are still in results
+        // (skip when mtime changed — file content was modified)
         for (const path of currentPaths) {
           const cachedImage = images[path];
-          if (cachedImage !== undefined) {
+          if (
+            cachedImage !== undefined &&
+            mtimeByPath.get(path) === prevMtimes.get(path)
+          ) {
             newImages[path] = cachedImage;
           }
           const cachedHasImage = hasImageAvailable[path];
-          if (cachedHasImage !== undefined) {
+          if (
+            cachedHasImage !== undefined &&
+            mtimeByPath.get(path) === prevMtimes.get(path)
+          ) {
             newHasImageAvailable[path] = cachedHasImage;
           }
         }
@@ -1013,6 +1065,7 @@ export function View({
         return;
       }
 
+      prevMtimeRef.current = mtimeByPath;
       setTextPreviews(newTextPreviews);
       setImages(newImages);
       setHasImageAvailable(newHasImageAvailable);
