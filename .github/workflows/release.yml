@@ -87,6 +87,6 @@ jobs:
           REPO=${GITHUB_REPOSITORY##*/}
           FILES="main.js manifest.json $REPO.zip"
           [ -f styles.css ] && FILES="$FILES styles.css"
-          gh release create "$GITHUB_REF_NAME" $FILES --notes "${{ steps.notes.outputs.BODY }}"
+          gh release create "$GITHUB_REF_NAME" $FILES --title "$GITHUB_REF_NAME" --notes "${{ steps.notes.outputs.BODY }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
