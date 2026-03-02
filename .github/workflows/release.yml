@@ -82,17 +82,11 @@ jobs:
           [ -f styles.css ] && FILES="$FILES styles.css"
           zip "$REPO.zip" $FILES
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          body: '${{ steps.notes.outputs.BODY }}'
-          files: |
-            main.js
-            manifest.json
-            styles.css
-            ${{ github.event.repository.name }}.zip
-          fail_on_unmatched_files: false
-          draft: false
-          prerelease: false
+      - name: Create release
+        run: |
+          REPO=${GITHUB_REPOSITORY##*/}
+          FILES="main.js manifest.json $REPO.zip"
+          [ -f styles.css ] && FILES="$FILES styles.css"
+          gh release create "$GITHUB_REF_NAME" $FILES --notes "${{ steps.notes.outputs.BODY }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
