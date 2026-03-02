@@ -45,7 +45,7 @@ jobs:
             echo "BODY=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          SINCE=$(git log -1 --format=%aI "$PREV_TAG" | cut -dT -f1)
+          SINCE=$(git log -1 --format=%aI "$PREV_TAG")
 
           PRS=$(gh pr list --state merged --search "merged:>=${SINCE}" --limit 200 \
             --json number,title,author \
@@ -87,6 +87,7 @@ jobs:
           REPO=${GITHUB_REPOSITORY##*/}
           FILES="main.js manifest.json $REPO.zip"
           [ -f styles.css ] && FILES="$FILES styles.css"
-          gh release create "$GITHUB_REF_NAME" $FILES --title "$GITHUB_REF_NAME" --notes "${{ steps.notes.outputs.BODY }}"
+          gh release create "$GITHUB_REF_NAME" $FILES --title "$GITHUB_REF_NAME" --notes "$RELEASE_BODY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BODY: ${{ steps.notes.outputs.BODY }}

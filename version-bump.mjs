@@ -18,6 +18,8 @@ try {
   process.exit(1);
 }
 
+if (isPreflight) process.exit(0);
+
 try {
   execSync('npm outdated eslint-plugin-obsidianmd --json', {
     encoding: 'utf8',
@@ -45,8 +47,6 @@ try {
     }
   }
 }
-
-if (isPreflight) process.exit(0);
 
 if (!targetVersion) {
   console.error('npm_package_version is not set. Run via npm version.');
