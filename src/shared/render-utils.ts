@@ -3,7 +3,7 @@
  * Pure functions used by both Bases (DOM) and Datacore (JSX) views
  */
 
-import * as momentLib from 'moment';
+import { moment } from 'obsidian';
 import type { BasesResolvedSettings } from '../types';
 import { isSameProperty } from '../utils/property';
 import {
@@ -49,9 +49,6 @@ export function formatTimestamp(
   isDateOnly: boolean = false,
   styled: boolean = false
 ): string {
-  // moment's CJS export is a function; access via .default for ESM interop
-  const moment = (momentLib as any).default ?? momentLib;
-
   // For date-only properties, use date format
   if (isDateOnly) {
     return moment(timestamp).format(getDateFormat());

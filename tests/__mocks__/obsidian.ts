@@ -283,6 +283,11 @@ export function stringifyYaml(obj: unknown): string {
   return JSON.stringify(obj);
 }
 
+// Mock moment (Obsidian re-exports moment.js)
+export const moment = (ts: number) => ({
+  format: (fmt: string) => `${ts}-${fmt}`,
+});
+
 // Mock Platform
 export const Platform = {
   isMobile: false,

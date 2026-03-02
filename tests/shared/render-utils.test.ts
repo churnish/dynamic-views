@@ -11,14 +11,6 @@ import {
 import type { Settings } from '../../src/types';
 import type { BasesResolvedSettings } from '../../src/types';
 
-// Mock moment.js
-vi.mock('moment', () => {
-  const mockMoment = (ts: number) => ({
-    format: vi.fn((fmt: string) => `${ts}-${fmt}`),
-  });
-  return { default: mockMoment };
-});
-
 // Mock style-settings module
 vi.mock('../../src/utils/style-settings', () => ({
   shouldShowRecentTimeOnly: vi.fn(),

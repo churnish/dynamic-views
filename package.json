@@ -24,7 +24,6 @@
     ],
     "ignoreDependencies": [
       "jsdom",
-      "moment",
       "obsidian",
       "prettier",
       "sass",
@@ -32,8 +31,7 @@
     ],
     "ignoreBinaries": [
       "knip",
-      "sass",
-      "tsc"
+      "sass"
     ],
     "ignoreExportsUsedInFile": true
   },
