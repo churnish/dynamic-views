@@ -18,8 +18,7 @@ const logMasonry = (
         .map(([k, v]) => `${k}=${String(v)}`)
         .join(', ')
     : '';
-  // eslint-disable-next-line no-console -- gated by DEBUG_MASONRY
-  console.debug(`[masonry:${source}] ${msg}${dataStr}`);
+  globalThis.console.debug(`[masonry:${source}] ${msg}${dataStr}`);
 };
 
 export interface MasonryPosition {

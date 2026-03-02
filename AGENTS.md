@@ -36,7 +36,6 @@ Read...
 
 Read...
 
-- **obsidian-review-bot.md** before fixing bot-reported issues, adding/modifying eslint-disable comments, or preparing a PR for the Obsidian plugin review.
 - **eslint-config.md** before modifying `eslint.config.js`, adding eslint overrides, or troubleshooting lint errors.
 - **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.
 - **datacore-ref-callback-patterns.md** before attaching event listeners or stateful behavior in `card-renderer.tsx` ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution.

@@ -222,13 +222,12 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               })
           )
       )
-      .addSetting((s) =>
-        s
+      .addSetting((s) => {
+        const randomFileDesc =
+          'When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.';
+        return s
           .setName('Open random file in new tab')
-          .setDesc(
-            // eslint-disable-next-line obsidianmd/ui/sentence-case -- new sentence
-            'When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.'
-          )
+          .setDesc(randomFileDesc)
           .addToggle((toggle) =>
             toggle
               .setValue(settings.openRandomInNewTab)
@@ -237,8 +236,8 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
                   openRandomInNewTab: value,
                 });
               })
-          )
-      )
+          );
+      })
       .addSetting((s) =>
         s
           .setName('Folder commands')

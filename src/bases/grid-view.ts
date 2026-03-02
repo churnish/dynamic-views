@@ -701,15 +701,17 @@ export class DynamicViewsGridView extends BasesView {
       const visibleProperties = this.config.getOrder();
       // Exclude CSS-only settings from hash — they're applied instantly via
       // applyCssOnlySettings() and don't need a full DOM rebuild
-      const {
-        textPreviewLines: _tpl,
-        titleLines: _tl,
-        imageRatio: _ir,
-        thumbnailSize: _ts,
-        posterDisplayMode: _pdm,
-        imageFit: _if,
-        ...hashableSettings
-      } = settings;
+      const CSS_ONLY_KEYS = new Set([
+        'textPreviewLines',
+        'titleLines',
+        'imageRatio',
+        'thumbnailSize',
+        'posterDisplayMode',
+        'imageFit',
+      ]);
+      const hashableSettings = Object.fromEntries(
+        Object.entries(settings).filter(([k]) => !CSS_ONLY_KEYS.has(k))
+      );
       const settingsHash =
         JSON.stringify(hashableSettings) +
         '\0\0' +
@@ -722,12 +724,16 @@ export class DynamicViewsGridView extends BasesView {
       // Further exclude order-derived settings for reorder detection
       // (titleProperty, subtitleProperty, _skipLeadingProperties change when
       // displayFirstAsTitle derives them from property order positions)
-      const {
-        titleProperty: _tp,
-        subtitleProperty: _sp,
-        _skipLeadingProperties: _slp,
-        ...orderIndependentSettings
-      } = hashableSettings;
+      const ORDER_DERIVED_KEYS = new Set([
+        'titleProperty',
+        'subtitleProperty',
+        '_skipLeadingProperties',
+      ]);
+      const orderIndependentSettings = Object.fromEntries(
+        Object.entries(hashableSettings).filter(
+          ([k]) => !ORDER_DERIVED_KEYS.has(k)
+        )
+      );
       const settingsHashExcludingOrder =
         JSON.stringify(orderIndependentSettings) +
         '\0\0' +

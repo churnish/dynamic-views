@@ -119,6 +119,14 @@
     contain: layout style;
   }
 
+  /* Grouped masonry: explicit height + border-box eats padding-bottom (set by
+     _grid-view.scss for group divider spacing). Extend height to accommodate it. */
+  .dynamic-views-masonry
+    .dynamic-views-group-section
+    > .masonry-container {
+    height: calc(var(--masonry-height, auto) + var(--size-4-4));
+  }
+
   /* Hide cards during layout recalc - fade out with opacity transition.
      Works for both ungrouped (.masonry-container on same element) and grouped (nested .masonry-container). */
   .masonry-container.masonry-resizing .card,
