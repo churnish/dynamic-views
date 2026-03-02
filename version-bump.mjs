@@ -1,12 +1,11 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 
 const isPreflight = process.argv.includes('--preflight');
 const targetVersion = process.env.npm_package_version;
 
-// ── Pre-flight checks (run in preversion, before npm touches package.json) ──
+// ── Pre-flight checks ──
 
-// Full lint + catch any console.debug that isn't behind a DEBUG_ gate
 try {
   execSync(
     'npx eslint . --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
@@ -19,28 +18,22 @@ try {
   process.exit(1);
 }
 
-// Auto-update eslint-plugin-obsidianmd if outdated (review bot uses this plugin)
 try {
-  // npm outdated exits 0 when everything is current — nothing to do
   execSync('npm outdated eslint-plugin-obsidianmd --json', {
     encoding: 'utf8',
   });
 } catch (err) {
-  // npm outdated exits 1 when a package is outdated, with JSON on stdout
   let info;
   try {
     info = JSON.parse(err.stdout)['eslint-plugin-obsidianmd'];
-  } catch {
-    // JSON parse failed — ignore silently
-  }
+  } catch {}
   if (info) {
     console.log(
       `\nUpdating eslint-plugin-obsidianmd: ${info.current} → ${info.latest}`
     );
     execSync('npm update eslint-plugin-obsidianmd', { stdio: 'inherit' });
-    execSync('git add package.json', { stdio: 'inherit' });
+    execSync('git add package.json package-lock.json', { stdio: 'inherit' });
 
-    // Verify no new lint errors from the updated plugin
     try {
       execSync('npx eslint .', { stdio: 'inherit' });
       console.log('ESLint passed with updated plugin\n');
@@ -53,24 +46,36 @@ try {
   }
 }
 
-// In preflight mode, exit after validation — no side effects
 if (isPreflight) process.exit(0);
 
-// ── Side effects (run in version, after npm bumps package.json) ─────
+// ── Side effects ──
 
-// Fetch latest README from GitHub
 try {
-  execSync('git fetch origin && git checkout origin/main -- README.md', {
-    stdio: 'inherit',
-  });
-  console.log('Updated README.md from GitHub');
+  execSync('git fetch origin', { stdio: 'inherit' });
+  const files = execSync('git ls-tree --name-only origin/main', {
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter((f) => f.startsWith('README'));
+  for (const file of files) {
+    execSync(`git checkout origin/main -- ${file}`, { stdio: 'inherit' });
+    console.log(`Updated ${file} from GitHub`);
+  }
 } catch {
-  console.warn('Could not fetch README.md from GitHub');
+  console.warn('Could not fetch README files from GitHub');
 }
 
-// Update manifest.json
 let manifest = JSON.parse(readFileSync('manifest.json', 'utf8'));
 manifest.version = targetVersion;
 writeFileSync('manifest.json', JSON.stringify(manifest, null, '\t') + '\n');
+execSync('git add manifest.json', { stdio: 'inherit' });
+
+if (existsSync('versions.json')) {
+  let versions = JSON.parse(readFileSync('versions.json', 'utf8'));
+  versions[targetVersion] = manifest.minAppVersion;
+  writeFileSync('versions.json', JSON.stringify(versions, null, '\t') + '\n');
+  execSync('git add versions.json', { stdio: 'inherit' });
+  console.log(`Updated versions.json for ${targetVersion}`);
+}
 
 console.log(`Updated manifest.json to version ${targetVersion}`);

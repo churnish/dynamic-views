@@ -77,10 +77,10 @@ jobs:
 
       - name: Create release bundle
         run: |
-          mkdir release
-          cp main.js manifest.json styles.css release/
-          cd release
-          zip ../dynamic-views.zip main.js manifest.json styles.css
+          REPO=${GITHUB_REPOSITORY##*/}
+          FILES="main.js manifest.json"
+          [ -f styles.css ] && FILES="$FILES styles.css"
+          zip "$REPO.zip" $FILES
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -90,7 +90,8 @@ jobs:
             main.js
             manifest.json
             styles.css
-            dynamic-views.zip
+            ${{ github.event.repository.name }}.zip
+          fail_on_unmatched_files: false
           draft: false
           prerelease: false
         env:
