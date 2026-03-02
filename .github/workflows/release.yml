@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
         run: npm ci
@@ -85,7 +85,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          body: ${{ steps.notes.outputs.BODY }}
+          body: '${{ steps.notes.outputs.BODY }}'
           files: |
             main.js
             manifest.json

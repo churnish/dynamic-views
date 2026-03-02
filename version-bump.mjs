@@ -32,7 +32,7 @@ try {
       `\nUpdating eslint-plugin-obsidianmd: ${info.current} → ${info.latest}`
     );
     execSync('npm update eslint-plugin-obsidianmd', { stdio: 'inherit' });
-    execSync('git add package.json package-lock.json', { stdio: 'inherit' });
+    execSync('git add package.json', { stdio: 'inherit' });
 
     try {
       execSync('npx eslint .', { stdio: 'inherit' });
@@ -47,6 +47,11 @@ try {
 }
 
 if (isPreflight) process.exit(0);
+
+if (!targetVersion) {
+  console.error('npm_package_version is not set. Run via npm version.');
+  process.exit(1);
+}
 
 // ── Side effects ──
 
