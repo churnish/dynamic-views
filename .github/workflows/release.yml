@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v3
@@ -39,7 +42,7 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
-          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]' | sed -n '2p')
+          PREV_TAG=$(git tag --sort=-creatordate | grep -E '^[0-9]' | sed -n '2p')
           if [ -z "$PREV_TAG" ]; then
             echo "No previous tag found, skipping release notes."
             echo "BODY=" >> "$GITHUB_OUTPUT"
