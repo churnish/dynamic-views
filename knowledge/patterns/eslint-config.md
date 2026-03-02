@@ -2,7 +2,7 @@
 title: ESLint configuration
 description: ESLint config structure, project overrides, and bot vs local differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-09
+last updated: 2026-03-03
 ---
 
 # ESLint configuration
@@ -31,10 +31,10 @@ The config uses `defineConfig()` from `eslint/config` — required because the o
 
 The Obsidian review bot and local ESLint use the same ruleset but differ in behavior:
 
-- The bot ignores all `eslint-disable` comments (see `ref/obsidian-review-bot.md`).
+- The bot ignores all `eslint-disable` comments (see `plugins/knowledge/obsidian-review-bot.md`).
 - Some rules may report differently due to scanner implementation differences.
 - A directive can be "unused" per the bot but needed locally. When this happens, keep it with a description for local ESLint — the bot ignores it anyway.
 
 ## Moment.js
 
-Moment.js is bundled with Obsidian and loaded via `require("moment")`. It must not be added to `package.json` dependencies. The `require` call needs `eslint-disable` for `@typescript-eslint/no-require-imports`, `@typescript-eslint/no-unsafe-assignment`, and `import/no-extraneous-dependencies`.
+Obsidian re-exports moment.js as a named export: `import { moment } from 'obsidian'`. This is the correct import — no `eslint-disable` comments needed. Do NOT import from the `'moment'` package directly (`no-restricted-imports` blocks it). The test mock in `tests/__mocks__/obsidian.ts` exports a matching `moment` stub.
