@@ -214,6 +214,32 @@
     color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
   }
 
+  /* Poster hover mode: apply title hover color on :hover (not hover-intent) so
+     the color is correct from the start of the 300ms content fade-in.
+     hover-intent requires mouseenter + mousemove, but CSS :hover fires on
+     mouseenter alone — the gap causes a flash of normal color.
+     All presets resolve to --dynamic-views-title-hover-color-value (see _variables.scss). */
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press,
+      .dynamic-views-title-hover-color-no-change
+    )[class*='dynamic-views-title-hover-color-']
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster)
+    .card-title {
+    /* Sync color transition with content opacity fade (300ms) so the
+       hover→normal color shift is masked by the fade-out on mouse-leave */
+    transition: color var(--anim-duration-moderate, 300ms);
+  }
+  body.dynamic-views-open-on-card:not(
+      .dynamic-views-poster-reveal-press,
+      .dynamic-views-title-hover-color-no-change
+    )[class*='dynamic-views-title-hover-color-']
+    .dynamic-views
+    .card.image-format-poster:has(.card-poster):hover
+    .card-title {
+    color: var(--dynamic-views-title-hover-color-value);
+  }
+
   /* Subtitle hover colors (when clickable) — exclude real links which keep default hover */
   body.dynamic-views-subtitle-color-faint
     .dynamic-views
@@ -440,7 +466,7 @@
 
   /* Card background on hover options */
   /* Transparent (default) */
-  body:not([class*="dynamic-views-card-background-hover-"])
+  body:not([class*='dynamic-views-card-background-hover-'])
     .dynamic-views
     .card.hover-intent-active:hover {
     background-color: transparent;
@@ -503,19 +529,19 @@
     cursor: default;
   }
 
+  body.dynamic-views-poster-reveal-press
+    .dynamic-views
+    .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+    cursor: default;
+  }
+
   /* Text cursor: higher specificity needed (default rule uses body.dynamic-views-open-on-title) */
-  :is(
-      body.dynamic-views-open-on-title,
-      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
-    )
+  body.dynamic-views-open-on-title
     .dynamic-views
     .card:not(.hover-intent-active) {
     .card-text-preview,
     .card-title,
-    .card-subtitle,
-    .property-label,
-    .property-label-inline,
-    .property-content {
+    .card-subtitle {
       cursor: default;
     }
   }

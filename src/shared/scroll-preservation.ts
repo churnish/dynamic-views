@@ -3,8 +3,8 @@
  * Simple scroll save/restore - no visibility manipulation (matches fork behavior)
  */
 
-import type { App, EventRef, WorkspaceLeaf } from "obsidian";
-import { getOwnerWindow } from "../utils/owner-window";
+import type { App, EventRef, WorkspaceLeaf } from 'obsidian';
+import { getOwnerWindow } from '../utils/owner-window';
 
 // Shared scroll positions across all views (keyed by leafId)
 const scrollPositions = new Map<string, number>();
@@ -17,7 +17,7 @@ export interface LeafRuntimeProps {
 
 /** Safely access runtime-only leaf properties */
 export function getLeafProps(
-  leaf: WorkspaceLeaf | null | undefined,
+  leaf: WorkspaceLeaf | null | undefined
 ): LeafRuntimeProps {
   if (!leaf) return {};
   return leaf as unknown as LeafRuntimeProps;
@@ -39,7 +39,7 @@ export class ScrollPreservation {
 
   constructor(config: ScrollPreservationConfig) {
     if (!config.leafId || config.leafId.length === 0) {
-      throw new Error("ScrollPreservation: leafId cannot be empty");
+      throw new Error('ScrollPreservation: leafId cannot be empty');
     }
     this.leafId = config.leafId;
     this.scrollEl = config.scrollEl;
@@ -47,7 +47,7 @@ export class ScrollPreservation {
 
     // Setup active-leaf-change handler
     config.registerEvent(
-      config.app.workspace.on("active-leaf-change", (leaf) => {
+      config.app.workspace.on('active-leaf-change', (leaf) => {
         const leafId = getLeafProps(leaf).id;
         // Guard: skip if leaf has no id (transitional state)
         if (!leafId) return;
@@ -57,16 +57,16 @@ export class ScrollPreservation {
         } else {
           this.handleSwitchAway(leaf);
         }
-      }),
+      })
     );
 
     // Setup scroll tracking
     this.scrollHandler = this.createScrollHandler();
-    this.scrollEl.addEventListener("scroll", this.scrollHandler, {
+    this.scrollEl.addEventListener('scroll', this.scrollHandler, {
       passive: true,
     });
     config.register(() => {
-      this.scrollEl.removeEventListener("scroll", this.scrollHandler);
+      this.scrollEl.removeEventListener('scroll', this.scrollHandler);
     });
   }
 

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import {
   isExternalUrl,
   stripWikilinkSyntax,
@@ -6,307 +7,307 @@ import {
   extractImageEmbeds,
   getYouTubeVideoId,
   getYouTubeThumbnailUrl,
-} from "../../src/utils/image";
-import { App, TFile } from "obsidian";
+} from '../../src/utils/image';
+import { App, TFile } from 'obsidian';
 
 // Mock style settings
-jest.mock("../../src/utils/style-settings", () => ({
-  getSlideshowMaxImages: jest.fn(() => 10),
+vi.mock('../../src/utils/style-settings', () => ({
+  getSlideshowMaxImages: vi.fn(() => 10),
 }));
 
-describe("image", () => {
-  describe("isExternalUrl", () => {
-    it("should return true for http URLs", () => {
-      expect(isExternalUrl("http://example.com/image.png")).toBe(true);
+describe('image', () => {
+  describe('isExternalUrl', () => {
+    it('should return true for http URLs', () => {
+      expect(isExternalUrl('http://example.com/image.png')).toBe(true);
     });
 
-    it("should return true for https URLs", () => {
-      expect(isExternalUrl("https://example.com/image.png")).toBe(true);
+    it('should return true for https URLs', () => {
+      expect(isExternalUrl('https://example.com/image.png')).toBe(true);
     });
 
-    it("should be case-insensitive", () => {
-      expect(isExternalUrl("HTTP://example.com/image.png")).toBe(true);
-      expect(isExternalUrl("HTTPS://example.com/image.png")).toBe(true);
+    it('should be case-insensitive', () => {
+      expect(isExternalUrl('HTTP://example.com/image.png')).toBe(true);
+      expect(isExternalUrl('HTTPS://example.com/image.png')).toBe(true);
     });
 
-    it("should return false for relative paths", () => {
-      expect(isExternalUrl("images/photo.png")).toBe(false);
-      expect(isExternalUrl("./images/photo.png")).toBe(false);
-      expect(isExternalUrl("../images/photo.png")).toBe(false);
+    it('should return false for relative paths', () => {
+      expect(isExternalUrl('images/photo.png')).toBe(false);
+      expect(isExternalUrl('./images/photo.png')).toBe(false);
+      expect(isExternalUrl('../images/photo.png')).toBe(false);
     });
 
-    it("should return false for absolute paths", () => {
-      expect(isExternalUrl("/images/photo.png")).toBe(false);
+    it('should return false for absolute paths', () => {
+      expect(isExternalUrl('/images/photo.png')).toBe(false);
     });
 
-    it("should return false for wikilinks", () => {
-      expect(isExternalUrl("[[image.png]]")).toBe(false);
+    it('should return false for wikilinks', () => {
+      expect(isExternalUrl('[[image.png]]')).toBe(false);
     });
 
-    it("should return false for other protocols", () => {
-      expect(isExternalUrl("ftp://example.com/file.png")).toBe(false);
-      expect(isExternalUrl("file:///path/to/file.png")).toBe(false);
-    });
-  });
-
-  describe("stripWikilinkSyntax", () => {
-    it("should strip basic wikilink syntax", () => {
-      expect(stripWikilinkSyntax("[[image.png]]")).toBe("image.png");
-    });
-
-    it("should strip embed wikilink syntax", () => {
-      expect(stripWikilinkSyntax("![[image.png]]")).toBe("image.png");
-    });
-
-    it("should strip wikilink with caption", () => {
-      expect(stripWikilinkSyntax("[[image.png|My Caption]]")).toBe("image.png");
-    });
-
-    it("should strip embed wikilink with caption", () => {
-      expect(stripWikilinkSyntax("![[image.png|Caption]]")).toBe("image.png");
-    });
-
-    it("should return unchanged path without wikilink syntax", () => {
-      expect(stripWikilinkSyntax("image.png")).toBe("image.png");
-      expect(stripWikilinkSyntax("path/to/image.png")).toBe(
-        "path/to/image.png",
-      );
-    });
-
-    it("should trim whitespace from extracted path", () => {
-      expect(stripWikilinkSyntax("[[ image.png ]]")).toBe("image.png");
-      expect(stripWikilinkSyntax("![[  image.png  |caption]]")).toBe(
-        "image.png",
-      );
-    });
-
-    it("should handle paths with folders", () => {
-      expect(stripWikilinkSyntax("[[folder/image.png]]")).toBe(
-        "folder/image.png",
-      );
-    });
-
-    it("should not match partial wikilink syntax", () => {
-      expect(stripWikilinkSyntax("[[image.png")).toBe("[[image.png");
-      expect(stripWikilinkSyntax("image.png]]")).toBe("image.png]]");
-    });
-
-    it("should strip heading fragments", () => {
-      expect(stripWikilinkSyntax("[[image.png#heading]]")).toBe("image.png");
-      expect(stripWikilinkSyntax("![[photo.jpg#section]]")).toBe("photo.jpg");
-    });
-
-    it("should strip block references", () => {
-      expect(stripWikilinkSyntax("![[photo.jpg#^block-id]]")).toBe("photo.jpg");
-      expect(stripWikilinkSyntax("[[image.png#^abc123]]")).toBe("image.png");
-    });
-
-    it("should handle fragment and caption together", () => {
-      expect(stripWikilinkSyntax("[[image.png#heading|caption]]")).toBe(
-        "image.png",
-      );
-      expect(stripWikilinkSyntax("![[photo.jpg#^block|alt text]]")).toBe(
-        "photo.jpg",
-      );
-    });
-
-    it("should handle surrounding whitespace", () => {
-      expect(stripWikilinkSyntax("  [[image.png]]  ")).toBe("image.png");
-      expect(stripWikilinkSyntax("\t![[photo.jpg]]\n")).toBe("photo.jpg");
-    });
-
-    it("should return null/undefined as empty string", () => {
-      expect(stripWikilinkSyntax(null)).toBe("");
-      expect(stripWikilinkSyntax(undefined)).toBe("");
+    it('should return false for other protocols', () => {
+      expect(isExternalUrl('ftp://example.com/file.png')).toBe(false);
+      expect(isExternalUrl('file:///path/to/file.png')).toBe(false);
     });
   });
 
-  describe("processImagePaths", () => {
-    it("should separate internal paths and external URLs", () => {
-      const paths = ["image.png", "https://example.com/image.jpg"];
-      const result = processImagePaths(paths);
-
-      expect(result.internalPaths).toEqual(["image.png"]);
-      expect(result.externalUrls).toEqual(["https://example.com/image.jpg"]);
+  describe('stripWikilinkSyntax', () => {
+    it('should strip basic wikilink syntax', () => {
+      expect(stripWikilinkSyntax('[[image.png]]')).toBe('image.png');
     });
 
-    it("should strip wikilink syntax", () => {
-      const paths = ["[[image.png]]", "![[photo.jpg]]"];
-      const result = processImagePaths(paths);
-
-      expect(result.internalPaths).toContain("image.png");
-      expect(result.internalPaths).toContain("photo.jpg");
+    it('should strip embed wikilink syntax', () => {
+      expect(stripWikilinkSyntax('![[image.png]]')).toBe('image.png');
     });
 
-    it("should validate image extensions for internal paths only", () => {
-      const paths = ["image.png", "document.pdf", "photo.jpg"];
-      const result = processImagePaths(paths);
-
-      expect(result.internalPaths).toContain("image.png");
-      expect(result.internalPaths).toContain("photo.jpg");
-      expect(result.internalPaths).not.toContain("document.pdf");
+    it('should strip wikilink with caption', () => {
+      expect(stripWikilinkSyntax('[[image.png|My Caption]]')).toBe('image.png');
     });
 
-    it("should pass through external URLs without validation", () => {
+    it('should strip embed wikilink with caption', () => {
+      expect(stripWikilinkSyntax('![[image.png|Caption]]')).toBe('image.png');
+    });
+
+    it('should return unchanged path without wikilink syntax', () => {
+      expect(stripWikilinkSyntax('image.png')).toBe('image.png');
+      expect(stripWikilinkSyntax('path/to/image.png')).toBe(
+        'path/to/image.png'
+      );
+    });
+
+    it('should trim whitespace from extracted path', () => {
+      expect(stripWikilinkSyntax('[[ image.png ]]')).toBe('image.png');
+      expect(stripWikilinkSyntax('![[  image.png  |caption]]')).toBe(
+        'image.png'
+      );
+    });
+
+    it('should handle paths with folders', () => {
+      expect(stripWikilinkSyntax('[[folder/image.png]]')).toBe(
+        'folder/image.png'
+      );
+    });
+
+    it('should not match partial wikilink syntax', () => {
+      expect(stripWikilinkSyntax('[[image.png')).toBe('[[image.png');
+      expect(stripWikilinkSyntax('image.png]]')).toBe('image.png]]');
+    });
+
+    it('should strip heading fragments', () => {
+      expect(stripWikilinkSyntax('[[image.png#heading]]')).toBe('image.png');
+      expect(stripWikilinkSyntax('![[photo.jpg#section]]')).toBe('photo.jpg');
+    });
+
+    it('should strip block references', () => {
+      expect(stripWikilinkSyntax('![[photo.jpg#^block-id]]')).toBe('photo.jpg');
+      expect(stripWikilinkSyntax('[[image.png#^abc123]]')).toBe('image.png');
+    });
+
+    it('should handle fragment and caption together', () => {
+      expect(stripWikilinkSyntax('[[image.png#heading|caption]]')).toBe(
+        'image.png'
+      );
+      expect(stripWikilinkSyntax('![[photo.jpg#^block|alt text]]')).toBe(
+        'photo.jpg'
+      );
+    });
+
+    it('should handle surrounding whitespace', () => {
+      expect(stripWikilinkSyntax('  [[image.png]]  ')).toBe('image.png');
+      expect(stripWikilinkSyntax('\t![[photo.jpg]]\n')).toBe('photo.jpg');
+    });
+
+    it('should return null/undefined as empty string', () => {
+      expect(stripWikilinkSyntax(null)).toBe('');
+      expect(stripWikilinkSyntax(undefined)).toBe('');
+    });
+  });
+
+  describe('processImagePaths', () => {
+    it('should separate internal paths and external URLs', () => {
+      const paths = ['image.png', 'https://example.com/image.jpg'];
+      const result = processImagePaths(paths);
+
+      expect(result.internalPaths).toEqual(['image.png']);
+      expect(result.externalUrls).toEqual(['https://example.com/image.jpg']);
+    });
+
+    it('should strip wikilink syntax', () => {
+      const paths = ['[[image.png]]', '![[photo.jpg]]'];
+      const result = processImagePaths(paths);
+
+      expect(result.internalPaths).toContain('image.png');
+      expect(result.internalPaths).toContain('photo.jpg');
+    });
+
+    it('should validate image extensions for internal paths only', () => {
+      const paths = ['image.png', 'document.pdf', 'photo.jpg'];
+      const result = processImagePaths(paths);
+
+      expect(result.internalPaths).toContain('image.png');
+      expect(result.internalPaths).toContain('photo.jpg');
+      expect(result.internalPaths).not.toContain('document.pdf');
+    });
+
+    it('should pass through external URLs without validation', () => {
       const paths = [
-        "https://example.com/valid.png",
-        "https://example.com/other.png",
+        'https://example.com/valid.png',
+        'https://example.com/other.png',
       ];
       const result = processImagePaths(paths);
 
       // All external URLs pass through - browser handles load/error at render time
       expect(result.externalUrls).toEqual([
-        "https://example.com/valid.png",
-        "https://example.com/other.png",
+        'https://example.com/valid.png',
+        'https://example.com/other.png',
       ]);
     });
 
-    it("should skip empty paths", () => {
-      const paths = ["", "  ", "image.png"];
+    it('should skip empty paths', () => {
+      const paths = ['', '  ', 'image.png'];
       const result = processImagePaths(paths);
 
-      expect(result.internalPaths).toEqual(["image.png"]);
+      expect(result.internalPaths).toEqual(['image.png']);
     });
 
-    it("should handle empty array", () => {
+    it('should handle empty array', () => {
       const result = processImagePaths([]);
 
       expect(result.internalPaths).toEqual([]);
       expect(result.externalUrls).toEqual([]);
     });
 
-    it("should pass through external URLs with query parameters", () => {
-      const paths = ["https://example.com/image.png?size=large&v=2"];
+    it('should pass through external URLs with query parameters', () => {
+      const paths = ['https://example.com/image.png?size=large&v=2'];
       const result = processImagePaths(paths);
 
       expect(result.externalUrls).toEqual([
-        "https://example.com/image.png?size=large&v=2",
+        'https://example.com/image.png?size=large&v=2',
       ]);
     });
 
-    it("should pass through external URLs without file extensions", () => {
+    it('should pass through external URLs without file extensions', () => {
       const paths = [
-        "https://picsum.photos/200",
-        "https://api.example.com/image/123",
+        'https://picsum.photos/200',
+        'https://api.example.com/image/123',
       ];
       const result = processImagePaths(paths);
 
-      expect(result.externalUrls).toContain("https://picsum.photos/200");
+      expect(result.externalUrls).toContain('https://picsum.photos/200');
       expect(result.externalUrls).toContain(
-        "https://api.example.com/image/123",
+        'https://api.example.com/image/123'
       );
     });
   });
 
-  describe("resolveInternalImagePaths", () => {
+  describe('resolveInternalImagePaths', () => {
     let mockApp: App;
 
     beforeEach(() => {
       mockApp = new App();
     });
 
-    it("should resolve internal image paths to resource URLs", () => {
-      const mockFile = { extension: "png" } as TFile;
-      mockApp.metadataCache.getFirstLinkpathDest = jest
+    it('should resolve internal image paths to resource URLs', () => {
+      const mockFile = { extension: 'png' } as TFile;
+      mockApp.metadataCache.getFirstLinkpathDest = vi
         .fn()
         .mockReturnValue(mockFile);
-      mockApp.vault.getResourcePath = jest
+      mockApp.vault.getResourcePath = vi
         .fn()
-        .mockReturnValue("app://local/image.png");
+        .mockReturnValue('app://local/image.png');
 
       const result = resolveInternalImagePaths(
-        ["image.png"],
-        "note.md",
-        mockApp,
+        ['image.png'],
+        'note.md',
+        mockApp
       );
 
-      expect(result).toEqual(["app://local/image.png"]);
+      expect(result).toEqual(['app://local/image.png']);
       expect(mockApp.metadataCache.getFirstLinkpathDest).toHaveBeenCalledWith(
-        "image.png",
-        "note.md",
+        'image.png',
+        'note.md'
       );
     });
 
-    it("should filter out non-image files", () => {
-      const mockFile = { extension: "pdf" } as TFile;
-      mockApp.metadataCache.getFirstLinkpathDest = jest
+    it('should filter out non-image files', () => {
+      const mockFile = { extension: 'pdf' } as TFile;
+      mockApp.metadataCache.getFirstLinkpathDest = vi
         .fn()
         .mockReturnValue(mockFile);
 
       const result = resolveInternalImagePaths(
-        ["document.pdf"],
-        "note.md",
-        mockApp,
+        ['document.pdf'],
+        'note.md',
+        mockApp
       );
 
       expect(result).toEqual([]);
     });
 
-    it("should skip files that cannot be found", () => {
-      mockApp.metadataCache.getFirstLinkpathDest = jest
+    it('should skip files that cannot be found', () => {
+      mockApp.metadataCache.getFirstLinkpathDest = vi
         .fn()
         .mockReturnValue(null);
 
       const result = resolveInternalImagePaths(
-        ["missing.png"],
-        "note.md",
-        mockApp,
+        ['missing.png'],
+        'note.md',
+        mockApp
       );
 
       expect(result).toEqual([]);
     });
 
-    it("should handle multiple paths", () => {
-      const mockFile1 = { extension: "png" } as TFile;
-      const mockFile2 = { extension: "jpg" } as TFile;
+    it('should handle multiple paths', () => {
+      const mockFile1 = { extension: 'png' } as TFile;
+      const mockFile2 = { extension: 'jpg' } as TFile;
 
-      mockApp.metadataCache.getFirstLinkpathDest = jest
+      mockApp.metadataCache.getFirstLinkpathDest = vi
         .fn()
         .mockReturnValueOnce(mockFile1)
         .mockReturnValueOnce(mockFile2);
 
-      mockApp.vault.getResourcePath = jest
+      mockApp.vault.getResourcePath = vi
         .fn()
-        .mockReturnValueOnce("app://local/image1.png")
-        .mockReturnValueOnce("app://local/image2.jpg");
+        .mockReturnValueOnce('app://local/image1.png')
+        .mockReturnValueOnce('app://local/image2.jpg');
 
       const result = resolveInternalImagePaths(
-        ["image1.png", "image2.jpg"],
-        "note.md",
-        mockApp,
+        ['image1.png', 'image2.jpg'],
+        'note.md',
+        mockApp
       );
 
       expect(result).toEqual([
-        "app://local/image1.png",
-        "app://local/image2.jpg",
+        'app://local/image1.png',
+        'app://local/image2.jpg',
       ]);
     });
 
-    it("should accept all valid image extensions", () => {
+    it('should accept all valid image extensions', () => {
       const extensions = [
-        "avif",
-        "bmp",
-        "gif",
-        "jpeg",
-        "jpg",
-        "png",
-        "svg",
-        "webp",
+        'avif',
+        'bmp',
+        'gif',
+        'jpeg',
+        'jpg',
+        'png',
+        'svg',
+        'webp',
       ];
 
       extensions.forEach((ext) => {
         const mockFile = { extension: ext } as TFile;
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
           .mockReturnValue(`app://local/image.${ext}`);
 
         const result = resolveInternalImagePaths(
           [`image.${ext}`],
-          "note.md",
-          mockApp,
+          'note.md',
+          mockApp
         );
 
         expect(result.length).toBe(1);
@@ -314,90 +315,90 @@ describe("image", () => {
     });
   });
 
-  describe("getYouTubeVideoId", () => {
-    it("should extract video ID from standard watch URL", () => {
-      expect(getYouTubeVideoId("https://youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
-        "dQw4w9WgXcQ",
+  describe('getYouTubeVideoId', () => {
+    it('should extract video ID from standard watch URL', () => {
+      expect(getYouTubeVideoId('https://youtube.com/watch?v=dQw4w9WgXcQ')).toBe(
+        'dQw4w9WgXcQ'
       );
       expect(
-        getYouTubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
-      ).toBe("dQw4w9WgXcQ");
+        getYouTubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+      ).toBe('dQw4w9WgXcQ');
     });
 
-    it("should extract video ID from short URL", () => {
-      expect(getYouTubeVideoId("https://youtu.be/dQw4w9WgXcQ")).toBe(
-        "dQw4w9WgXcQ",
+    it('should extract video ID from short URL', () => {
+      expect(getYouTubeVideoId('https://youtu.be/dQw4w9WgXcQ')).toBe(
+        'dQw4w9WgXcQ'
       );
     });
 
-    it("should extract video ID from mobile URL", () => {
+    it('should extract video ID from mobile URL', () => {
       expect(
-        getYouTubeVideoId("https://m.youtube.com/watch?v=dQw4w9WgXcQ"),
-      ).toBe("dQw4w9WgXcQ");
+        getYouTubeVideoId('https://m.youtube.com/watch?v=dQw4w9WgXcQ')
+      ).toBe('dQw4w9WgXcQ');
     });
 
-    it("should extract video ID from embed URL", () => {
-      expect(getYouTubeVideoId("https://youtube.com/embed/dQw4w9WgXcQ")).toBe(
-        "dQw4w9WgXcQ",
+    it('should extract video ID from embed URL', () => {
+      expect(getYouTubeVideoId('https://youtube.com/embed/dQw4w9WgXcQ')).toBe(
+        'dQw4w9WgXcQ'
       );
     });
 
-    it("should extract video ID from shorts URL", () => {
-      expect(getYouTubeVideoId("https://youtube.com/shorts/dQw4w9WgXcQ")).toBe(
-        "dQw4w9WgXcQ",
+    it('should extract video ID from shorts URL', () => {
+      expect(getYouTubeVideoId('https://youtube.com/shorts/dQw4w9WgXcQ')).toBe(
+        'dQw4w9WgXcQ'
       );
     });
 
-    it("should return null for non-YouTube URLs", () => {
-      expect(getYouTubeVideoId("https://example.com/video")).toBeNull();
-      expect(getYouTubeVideoId("https://vimeo.com/123456")).toBeNull();
+    it('should return null for non-YouTube URLs', () => {
+      expect(getYouTubeVideoId('https://example.com/video')).toBeNull();
+      expect(getYouTubeVideoId('https://vimeo.com/123456')).toBeNull();
     });
 
-    it("should return null for invalid URLs", () => {
-      expect(getYouTubeVideoId("not-a-url")).toBeNull();
+    it('should return null for invalid URLs', () => {
+      expect(getYouTubeVideoId('not-a-url')).toBeNull();
     });
 
-    it("should return null for empty URL", () => {
-      expect(getYouTubeVideoId("")).toBeNull();
+    it('should return null for empty URL', () => {
+      expect(getYouTubeVideoId('')).toBeNull();
     });
 
-    it("should return null for YouTube URL without video ID", () => {
-      expect(getYouTubeVideoId("https://youtube.com/")).toBeNull();
-      expect(getYouTubeVideoId("https://youtube.com/watch")).toBeNull();
+    it('should return null for YouTube URL without video ID', () => {
+      expect(getYouTubeVideoId('https://youtube.com/')).toBeNull();
+      expect(getYouTubeVideoId('https://youtube.com/watch')).toBeNull();
     });
 
-    it("should handle URL with timestamp parameter", () => {
+    it('should handle URL with timestamp parameter', () => {
       expect(
-        getYouTubeVideoId("https://youtube.com/watch?v=dQw4w9WgXcQ&t=120"),
-      ).toBe("dQw4w9WgXcQ");
+        getYouTubeVideoId('https://youtube.com/watch?v=dQw4w9WgXcQ&t=120')
+      ).toBe('dQw4w9WgXcQ');
     });
   });
 
-  describe("getYouTubeThumbnailUrl", () => {
+  describe('getYouTubeThumbnailUrl', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       (global as any).__imageInstances = [];
       (global as any).__lastImage = null;
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
-    it("should return maxresdefault URL when image loads", async () => {
-      const promise = getYouTubeThumbnailUrl("dQw4w9WgXcQ");
+    it('should return maxresdefault URL when image loads', async () => {
+      const promise = getYouTubeThumbnailUrl('dQw4w9WgXcQ');
 
       const img = (global as any).__lastImage;
       if (img && img.onload) img.onload();
 
       const result = await promise;
       expect(result).toBe(
-        "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+        'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
       );
     });
 
-    it("should fall back to hqdefault when maxres fails", async () => {
-      const promise = getYouTubeThumbnailUrl("dQw4w9WgXcQ");
+    it('should fall back to hqdefault when maxres fails', async () => {
+      const promise = getYouTubeThumbnailUrl('dQw4w9WgXcQ');
 
       // First image fails (maxres)
       let img = (global as any).__imageInstances[0];
@@ -411,12 +412,12 @@ describe("image", () => {
 
       const result = await promise;
       expect(result).toBe(
-        "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+        'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
       );
     });
 
-    it("should return null when all thumbnails are below mqdefault width (320px)", async () => {
-      const promise = getYouTubeThumbnailUrl("jNQXAC9IVRw");
+    it('should return null when all thumbnails are below mqdefault width (320px)', async () => {
+      const promise = getYouTubeThumbnailUrl('jNQXAC9IVRw');
 
       // All three quality levels return placeholder (below 320px)
       for (let i = 0; i < 3; i++) {
@@ -434,43 +435,43 @@ describe("image", () => {
     });
   });
 
-  describe("extractImageEmbeds", () => {
+  describe('extractImageEmbeds', () => {
     let mockApp: App;
     let mockFile: TFile;
 
     beforeEach(() => {
       mockApp = new App();
-      mockFile = { path: "note.md" } as TFile;
-      mockApp.vault.cachedRead = jest.fn().mockResolvedValue("");
+      mockFile = { path: 'note.md' } as TFile;
+      mockApp.vault.cachedRead = vi.fn().mockResolvedValue('');
     });
 
-    it("should return empty array for empty file", async () => {
-      mockApp.vault.cachedRead = jest.fn().mockResolvedValue("");
+    it('should return empty array for empty file', async () => {
+      mockApp.vault.cachedRead = vi.fn().mockResolvedValue('');
 
       const result = await extractImageEmbeds(mockFile, mockApp);
 
       expect(result).toEqual([]);
     });
 
-    it("should extract wikilink embeds", async () => {
-      const mockImageFile = { extension: "png" } as TFile;
-      mockApp.vault.cachedRead = jest
+    it('should extract wikilink embeds', async () => {
+      const mockImageFile = { extension: 'png' } as TFile;
+      mockApp.vault.cachedRead = vi
         .fn()
-        .mockResolvedValue("Some text\n![[image.png]]\nMore text");
-      mockApp.metadataCache.getFirstLinkpathDest = jest
+        .mockResolvedValue('Some text\n![[image.png]]\nMore text');
+      mockApp.metadataCache.getFirstLinkpathDest = vi
         .fn()
         .mockReturnValue(mockImageFile);
-      mockApp.vault.getResourcePath = jest
+      mockApp.vault.getResourcePath = vi
         .fn()
-        .mockReturnValue("app://local/image.png");
+        .mockReturnValue('app://local/image.png');
 
       const result = await extractImageEmbeds(mockFile, mockApp);
 
-      expect(result).toContain("app://local/image.png");
+      expect(result).toContain('app://local/image.png');
     });
 
-    it("should skip cardlink images when disabled", async () => {
-      mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+    it('should skip cardlink images when disabled', async () => {
+      mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`cardlink
 url: https://example.com
 image: https://example.com/cover.png
@@ -484,19 +485,19 @@ image: https://example.com/cover.png
       expect(result).toEqual([]);
     });
 
-    describe("code syntax exclusions", () => {
-      it("should skip embeds in inline code (single backticks)", async () => {
-        mockApp.vault.cachedRead = jest
+    describe('code syntax exclusions', () => {
+      it('should skip embeds in inline code (single backticks)', async () => {
+        mockApp.vault.cachedRead = vi
           .fn()
-          .mockResolvedValue("`![[image_1.jpg]]`");
+          .mockResolvedValue('`![[image_1.jpg]]`');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in fenced code block (3 backticks)", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should skip embeds in fenced code block (3 backticks)', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`
 ![[image_2.jpg]]
 \`\`\`
@@ -507,8 +508,8 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in fenced code block (4 backticks)", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should skip embeds in fenced code block (4 backticks)', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`\`
 ![[image_3.jpg]]
 \`\`\`\`
@@ -519,8 +520,8 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in fenced code block with language", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should skip embeds in fenced code block with language', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`markdown
 ![[image_4.jpg]]
 \`\`\`
@@ -531,8 +532,8 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in fenced code block (3 tildes)", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should skip embeds in fenced code block (3 tildes)', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 ~~~
 ![[image_5.jpg]]
 ~~~
@@ -543,8 +544,8 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in fenced code block (4 tildes)", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should skip embeds in fenced code block (4 tildes)', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 ~~~~
 ![[image_6.jpg]]
 ~~~~
@@ -555,38 +556,38 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in indented code block (tab)", async () => {
-        mockApp.vault.cachedRead = jest
+      it('should skip embeds in indented code block (tab)', async () => {
+        mockApp.vault.cachedRead = vi
           .fn()
-          .mockResolvedValue("\t![[image_7.jpg]]");
+          .mockResolvedValue('\t![[image_7.jpg]]');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         expect(result).toEqual([]);
       });
 
-      it("should skip embeds in indented code block (4 spaces)", async () => {
-        mockApp.vault.cachedRead = jest
+      it('should skip embeds in indented code block (4 spaces)', async () => {
+        mockApp.vault.cachedRead = vi
           .fn()
-          .mockResolvedValue("    ![[image_8.jpg]]");
+          .mockResolvedValue('    ![[image_8.jpg]]');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         expect(result).toEqual([]);
       });
 
-      it("should skip markdown images in inline code", async () => {
-        mockApp.vault.cachedRead = jest
+      it('should skip markdown images in inline code', async () => {
+        mockApp.vault.cachedRead = vi
           .fn()
-          .mockResolvedValue("`![alt](https://example.com/image_9.png)`");
+          .mockResolvedValue('`![alt](https://example.com/image_9.png)`');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         expect(result).toEqual([]);
       });
 
-      it("should skip markdown images in fenced block", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should skip markdown images in fenced block', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`
 ![alt](https://example.com/image_10.png)
 \`\`\`
@@ -597,31 +598,31 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should NOT treat single backticks on separate lines as code", async () => {
-        const mockImageFile = { extension: "jpg" } as TFile;
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should NOT treat single backticks on separate lines as code', async () => {
+        const mockImageFile = { extension: 'jpg' } as TFile;
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`
 
 ![[valid_image.jpg]]
 
 \`
         `);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/valid_image.jpg");
+          .mockReturnValue('app://local/valid_image.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
-        expect(result).toContain("app://local/valid_image.jpg");
+        expect(result).toContain('app://local/valid_image.jpg');
       });
 
-      it("should only extract non-code-wrapped image from mixed content", async () => {
-        const mockImageFile = { extension: "jpg" } as TFile;
+      it('should only extract non-code-wrapped image from mixed content', async () => {
+        const mockImageFile = { extension: 'jpg' } as TFile;
         // Note: indented code requires preceding blank line per CommonMark
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`![[image_1.jpg]]\`
 
 \`\`\`
@@ -638,40 +639,40 @@ image: https://example.com/cover.png
 
 ![[image_87.jpg]]
         `);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/image_87.jpg");
+          .mockReturnValue('app://local/image_87.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         expect(result).toHaveLength(1);
-        expect(result).toContain("app://local/image_87.jpg");
+        expect(result).toContain('app://local/image_87.jpg');
       });
 
-      it("should NOT skip indented embed without preceding blank line", async () => {
-        const mockImageFile = { extension: "jpg" } as TFile;
+      it('should NOT skip indented embed without preceding blank line', async () => {
+        const mockImageFile = { extension: 'jpg' } as TFile;
         // Per CommonMark, indented code requires preceding blank line
         // This embed is just indented text, not code
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`Some text
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`Some text
     ![[image.jpg]]`);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/image.jpg");
+          .mockReturnValue('app://local/image.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
-        expect(result).toContain("app://local/image.jpg");
+        expect(result).toContain('app://local/image.jpg');
       });
 
-      it("should skip indented embed WITH preceding blank line", async () => {
+      it('should skip indented embed WITH preceding blank line', async () => {
         // With blank line before, this IS indented code per CommonMark
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`Some text
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`Some text
 
     ![[image.jpg]]`);
 
@@ -680,9 +681,9 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should handle nested fenced blocks (4 backticks containing 3)", async () => {
-        const mockImageFile = { extension: "jpg" } as TFile;
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should handle nested fenced blocks (4 backticks containing 3)', async () => {
+        const mockImageFile = { extension: 'jpg' } as TFile;
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`\`
 \`\`\`
 ![[nested.jpg]]
@@ -691,23 +692,23 @@ image: https://example.com/cover.png
 
 ![[valid.jpg]]
         `);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/valid.jpg");
+          .mockReturnValue('app://local/valid.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         // Only valid.jpg should be extracted, nested.jpg is inside outer block
         expect(result).toHaveLength(1);
-        expect(result).toContain("app://local/valid.jpg");
+        expect(result).toContain('app://local/valid.jpg');
       });
 
-      it("should skip embeds in fenced block with complex info string", async () => {
+      it('should skip embeds in fenced block with complex info string', async () => {
         // Per CommonMark, info strings can contain any characters
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`python {.class title="example"}
 ![[image.jpg]]
 \`\`\`
@@ -718,8 +719,8 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should extract cardlink image from block with complex info string", async () => {
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+      it('should extract cardlink image from block with complex info string', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`cardlink {.some-class}
 url: https://example.com
 image: https://example.com/cover.png
@@ -728,47 +729,47 @@ image: https://example.com/cover.png
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
-        expect(result).toContain("https://example.com/cover.png");
+        expect(result).toContain('https://example.com/cover.png');
       });
 
-      it("should extract embeds from unclosed fenced block (non-CommonMark)", async () => {
+      it('should extract embeds from unclosed fenced block (non-CommonMark)', async () => {
         // Per CommonMark, unclosed fenced blocks extend to EOF
         // Current implementation: unclosed fence = not a fence, embed extracted
         // This test documents current behavior (not CommonMark compliant)
-        const mockImageFile = { extension: "jpg" } as TFile;
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+        const mockImageFile = { extension: 'jpg' } as TFile;
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`
 ![[image.jpg]]`);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/image.jpg");
+          .mockReturnValue('app://local/image.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         // Current behavior: embed IS extracted (block never closed)
         // Note: This differs from CommonMark which treats unclosed fences as code to EOF
-        expect(result).toContain("app://local/image.jpg");
+        expect(result).toContain('app://local/image.jpg');
       });
 
-      it("should NOT close fence with mismatched length", async () => {
+      it('should NOT close fence with mismatched length', async () => {
         // 3 backticks cannot be closed by 4 backticks
-        const mockImageFile = { extension: "jpg" } as TFile;
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+        const mockImageFile = { extension: 'jpg' } as TFile;
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`
 ![[inside.jpg]]
 \`\`\`\`
 
 ![[outside.jpg]]
         `);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/outside.jpg");
+          .mockReturnValue('app://local/outside.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
@@ -776,9 +777,9 @@ image: https://example.com/cover.png
         expect(result.length).toBeGreaterThanOrEqual(1);
       });
 
-      it("should NOT close fence when closing line has trailing content", async () => {
+      it('should NOT close fence when closing line has trailing content', async () => {
         // Per CommonMark, closing fences must have no content after fence chars
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`
 ![[inside.jpg]]
 \`\`\`python
@@ -793,40 +794,38 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it("should extract embed at position 0 (start of file)", async () => {
-        const mockImageFile = { extension: "jpg" } as TFile;
-        mockApp.vault.cachedRead = jest
-          .fn()
-          .mockResolvedValue("![[image.jpg]]");
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+      it('should extract embed at position 0 (start of file)', async () => {
+        const mockImageFile = { extension: 'jpg' } as TFile;
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue('![[image.jpg]]');
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/image.jpg");
+          .mockReturnValue('app://local/image.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
-        expect(result).toContain("app://local/image.jpg");
+        expect(result).toContain('app://local/image.jpg');
       });
 
-      it("should handle frontmatter without closing delimiter", async () => {
-        const mockImageFile = { extension: "jpg" } as TFile;
+      it('should handle frontmatter without closing delimiter', async () => {
+        const mockImageFile = { extension: 'jpg' } as TFile;
         // Malformed frontmatter (no closing ---) - content should still be parsed
-        mockApp.vault.cachedRead = jest.fn().mockResolvedValue(`---
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`---
 key: value
 ![[image.jpg]]`);
-        mockApp.metadataCache.getFirstLinkpathDest = jest
+        mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
           .mockReturnValue(mockImageFile);
-        mockApp.vault.getResourcePath = jest
+        mockApp.vault.getResourcePath = vi
           .fn()
-          .mockReturnValue("app://local/image.jpg");
+          .mockReturnValue('app://local/image.jpg');
 
         const result = await extractImageEmbeds(mockFile, mockApp);
 
         // Embed should be extracted since frontmatter is malformed
-        expect(result).toContain("app://local/image.jpg");
+        expect(result).toContain('app://local/image.jpg');
       });
     });
   });

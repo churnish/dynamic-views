@@ -3,9 +3,9 @@
  * Only renders cards within viewport + buffer; unmounted cards are lightweight JS objects
  */
 
-import type { BasesEntry } from "obsidian";
-import type { CardData } from "./card-renderer";
-import type { CardHandle } from "../bases/shared-renderer";
+import type { BasesEntry } from 'obsidian';
+import type { CardData } from './card-renderer';
+import type { CardHandle } from '../bases/shared-renderer';
 
 /** Lightweight representation of a card's position and data when unmounted */
 export interface VirtualItem {
@@ -48,17 +48,17 @@ export interface VirtualItem {
  */
 export function measureScalableHeight(cardEl: HTMLElement): number {
   if (
-    !cardEl.classList.contains("card-cover-top") &&
-    !cardEl.classList.contains("card-cover-bottom")
+    !cardEl.classList.contains('card-cover-top') &&
+    !cardEl.classList.contains('card-cover-bottom')
   ) {
     return 0;
   }
   // Fixed cover height: CSS-determined, doesn't scale with width
-  if (document.body.classList.contains("dynamic-views-fixed-cover-height")) {
+  if (document.body.classList.contains('dynamic-views-fixed-cover-height')) {
     return 0;
   }
   const wrapper = cardEl.querySelector<HTMLElement>(
-    ":scope > .card-cover-wrapper",
+    ':scope > .card-cover-wrapper'
   );
   return wrapper ? wrapper.offsetHeight : 0;
 }
@@ -70,9 +70,9 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
 export function estimateUnmountedHeight(
   item: Pick<
     VirtualItem,
-    "scalableHeight" | "fixedHeight" | "measuredAtWidth" | "height"
+    'scalableHeight' | 'fixedHeight' | 'measuredAtWidth' | 'height'
   >,
-  cardWidth: number,
+  cardWidth: number
 ): number {
   if (item.measuredAtWidth > 0) {
     return (
@@ -99,7 +99,7 @@ export function syncVisibleItems(
   containerOffsetY: number,
   bufferPx: number,
   onMount: (item: VirtualItem) => void,
-  onUnmount: (item: VirtualItem) => void,
+  onUnmount: (item: VirtualItem) => void
 ): void {
   const visibleTop = scrollTop - bufferPx;
   const visibleBottom = scrollTop + viewportHeight + bufferPx;

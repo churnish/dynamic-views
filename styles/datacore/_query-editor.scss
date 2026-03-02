@@ -63,6 +63,8 @@
   color: var(--text-normal);
   cursor: pointer;
   font-size: 0.9em;
+  -webkit-user-select: none;
+  user-select: none;
   transition:
     background-color var(--anim-duration-fast, 140ms),
     border-color var(--anim-duration-fast, 140ms);
@@ -104,6 +106,8 @@
   color: var(--text-faint);
   flex: 1;
   text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .dynamic-views .query-error {

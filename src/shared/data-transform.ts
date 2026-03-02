@@ -3,10 +3,10 @@
  * Converts various data sources (Datacore, Bases) into normalized CardData format
  */
 
-import { TFile, type App, type BasesEntry } from "obsidian";
-import type { CardData } from "./card-renderer";
-import type { BasesResolvedSettings } from "../types";
-import type { DatacoreAPI, DatacoreFile } from "../datacore/types";
+import { TFile, type App, type BasesEntry } from 'obsidian';
+import type { CardData } from './card-renderer';
+import type { BasesResolvedSettings } from '../types';
+import type { DatacoreAPI, DatacoreFile } from '../datacore/types';
 import {
   getFirstDatacorePropertyValue,
   getFirstBasesPropertyValue,
@@ -16,10 +16,10 @@ import {
   stripNotePrefix,
   toDisplayName,
   toSyntaxName,
-} from "../utils/property";
-import { hasUriScheme } from "../utils/link-parser";
-import { formatTimestamp, extractTimestamp } from "./render-utils";
-import { isTagProperty } from "./property-helpers";
+} from '../utils/property';
+import { hasUriScheme } from '../utils/link-parser';
+import { formatTimestamp, extractTimestamp } from './render-utils';
+import { isTagProperty } from './property-helpers';
 
 /** Exact Datacore sort keyword patterns (e.g. "ctime-asc", "mtime-desc") */
 const DC_CTIME = /^ctime-(asc|desc)$/;
@@ -32,18 +32,18 @@ const DC_MTIME = /^mtime-(asc|desc)$/;
 function resolveFileLinksProperty(
   app: App,
   filePath: string,
-  type: "links" | "embeds",
+  type: 'links' | 'embeds'
 ): string | null {
   const file = app.vault.getAbstractFileByPath(filePath);
   if (!(file instanceof TFile)) return null;
 
   const cache = app.metadataCache.getFileCache(file);
-  const source = type === "links" ? cache?.links : cache?.embeds;
+  const source = type === 'links' ? cache?.links : cache?.embeds;
   const items = (source || [])
-    .filter((l) => typeof l.link === "string" && l.link.trim() !== "")
+    .filter((l) => typeof l.link === 'string' && l.link.trim() !== '')
     .map((l) => `[[${l.link}]]`);
 
-  return items.length === 0 ? null : JSON.stringify({ type: "array", items });
+  return items.length === 0 ? null : JSON.stringify({ type: 'array', items });
 }
 
 /**
@@ -52,7 +52,7 @@ function resolveFileLinksProperty(
  * @returns Array with hashes removed
  */
 function stripTagHashes(tags: string[]): string[] {
-  return tags.map((tag) => tag.replace(/^#/, ""));
+  return tags.map((tag) => tag.replace(/^#/, ''));
 }
 
 /**
@@ -62,7 +62,7 @@ function stripTagHashes(tags: string[]): string[] {
  */
 function isCustomTimestampProperty(
   propertyName: string,
-  settings: BasesResolvedSettings,
+  settings: BasesResolvedSettings
 ): boolean {
   return (
     (!!settings.createdTimeProperty &&
@@ -80,17 +80,17 @@ function isCustomTimestampProperty(
 function resolveSubtitleToPlainText(
   subtitleValue: string | null,
   settings: BasesResolvedSettings,
-  cardData: CardData,
+  cardData: CardData
 ): string | undefined {
   if (!subtitleValue) return undefined;
 
   // Handle tags marker - use correct array based on property name
-  if (subtitleValue === "tags") {
+  if (subtitleValue === 'tags') {
     const isYamlOnly =
-      settings.subtitleProperty === "tags" ||
-      settings.subtitleProperty === "note.tags";
+      settings.subtitleProperty === 'tags' ||
+      settings.subtitleProperty === 'note.tags';
     const tags = isYamlOnly ? cardData.yamlTags : cardData.tags;
-    return tags.length > 0 ? tags.join(", ") : undefined;
+    return tags.length > 0 ? tags.join(', ') : undefined;
   }
 
   // Handle array JSON (starts with specific prefix)
@@ -100,7 +100,7 @@ function resolveSubtitleToPlainText(
         type: string;
         items: string[];
       };
-      if (parsed.type === "array") return parsed.items.join(", ");
+      if (parsed.type === 'array') return parsed.items.join(', ');
     } catch {
       /* fall through to return raw value */
     }
@@ -117,7 +117,7 @@ function resolveSubtitleToPlainText(
 export function applySmartTimestamp(
   props: string[],
   sortMethod: string,
-  settings: BasesResolvedSettings,
+  settings: BasesResolvedSettings
 ): string[] {
   // Only apply if smart timestamp is enabled
   if (!settings.smartTimestamp) {
@@ -140,16 +140,16 @@ export function applySmartTimestamp(
   const createdForms = new Set([
     createdProp,
     createdStripped,
-    "note." + createdProp,
-    "note." + createdStripped,
+    'note.' + createdProp,
+    'note.' + createdStripped,
     toDisplayName(createdStripped),
     toSyntaxName(createdStripped),
   ]);
   const modifiedForms = new Set([
     modifiedProp,
     modifiedStripped,
-    "note." + modifiedProp,
-    "note." + modifiedStripped,
+    'note.' + modifiedProp,
+    'note.' + modifiedStripped,
     toDisplayName(modifiedStripped),
     toSyntaxName(modifiedStripped),
   ]);
@@ -158,12 +158,12 @@ export function applySmartTimestamp(
   const modifiedDisplay = toDisplayName(modifiedStripped);
 
   const sortingByCtime =
-    [...createdForms].some((f) => sortMethod.startsWith(f + "-")) ||
-    (DC_CTIME.test(sortMethod) && createdDisplay === "created time");
+    [...createdForms].some((f) => sortMethod.startsWith(f + '-')) ||
+    (DC_CTIME.test(sortMethod) && createdDisplay === 'created time');
 
   const sortingByMtime =
-    [...modifiedForms].some((f) => sortMethod.startsWith(f + "-")) ||
-    (DC_MTIME.test(sortMethod) && modifiedDisplay === "modified time");
+    [...modifiedForms].some((f) => sortMethod.startsWith(f + '-')) ||
+    (DC_MTIME.test(sortMethod) && modifiedDisplay === 'modified time');
 
   if (!sortingByCtime && !sortingByMtime) {
     return props;
@@ -197,16 +197,16 @@ export function resolveTimestampProperty(
   propertyName: string,
   ctime: number,
   mtime: number,
-  styled: boolean = false,
+  styled: boolean = false
 ): string | null {
   if (!propertyName) return null;
 
   const prop = propertyName.trim();
 
-  if (prop === "file.ctime" || prop === "created time") {
+  if (prop === 'file.ctime' || prop === 'created time') {
     return formatTimestamp(ctime, false, styled);
   }
-  if (prop === "file.mtime" || prop === "modified time") {
+  if (prop === 'file.mtime' || prop === 'modified time') {
     return formatTimestamp(mtime, false, styled);
   }
 
@@ -225,11 +225,11 @@ export function datacoreResultToCardData(
   sortMethod: string,
   isShuffled: boolean,
   textPreview?: string,
-  imageUrl?: string | string[],
+  imageUrl?: string | string[]
 ): CardData {
   // Get folder path (without filename)
-  const path = result.$path || "";
-  const folderPath = path.split("/").slice(0, -1).join("/");
+  const path = result.$path || '';
+  const folderPath = path.split('/').slice(0, -1).join('/');
 
   // Get timestamps (convert Luxon DateTime to milliseconds) - needed for special property resolution
   const ctime = result.$ctime?.toMillis?.() || 0;
@@ -237,9 +237,9 @@ export function datacoreResultToCardData(
 
   // Get title from property (first available from comma-separated list) or fallback to filename
   // Check for special properties first (timestamps, etc.)
-  let title = "";
+  let title = '';
   if (settings.titleProperty) {
-    const titleProps = settings.titleProperty.split(",").map((p) => p.trim());
+    const titleProps = settings.titleProperty.split(',').map((p) => p.trim());
     for (const prop of titleProps) {
       // Try timestamp property first
       const specialValue = resolveTimestampProperty(prop, ctime, mtime);
@@ -248,13 +248,13 @@ export function datacoreResultToCardData(
         break;
       }
       // Special case: file.name in Datacore → use $name
-      if (prop === "file.name" || prop === "file name") {
-        title = result.$name || "";
+      if (prop === 'file.name' || prop === 'file name') {
+        title = result.$name || '';
         break;
       }
       // Try regular property
       let rawTitle = getFirstDatacorePropertyValue(result, prop);
-      if (Array.isArray(rawTitle)) rawTitle = rawTitle.join(", ");
+      if (Array.isArray(rawTitle)) rawTitle = rawTitle.join(', ');
       const propTitle = dc.coerce.string(rawTitle);
       if (propTitle) {
         title = propTitle;
@@ -264,11 +264,11 @@ export function datacoreResultToCardData(
   }
 
   // Get YAML tags only from 'tags' property
-  const yamlTagsRaw = result.value("tags");
+  const yamlTagsRaw = result.value('tags');
   const yamlTags: string[] = stripTagHashes(
     Array.isArray(yamlTagsRaw)
-      ? yamlTagsRaw.filter((t): t is string => typeof t === "string")
-      : [],
+      ? yamlTagsRaw.filter((t): t is string => typeof t === 'string')
+      : []
   );
   // Get tags in YAML + note body from $tags
   const tags = stripTagHashes(result.$tags || []);
@@ -276,7 +276,7 @@ export function datacoreResultToCardData(
   // Create base card data
   const cardData: CardData = {
     path,
-    name: result.$name || "",
+    name: result.$name || '',
     title,
     tags,
     yamlTags,
@@ -293,11 +293,11 @@ export function datacoreResultToCardData(
   // configurable property list matching Bases implementation.
   const subtitlePropsList =
     settings.subtitleProperty
-      ?.split(",")
+      ?.split(',')
       .map((p) => p.trim())
       .filter((p) => p) || [];
 
-  let props = ["file.tags", "file.mtime", ...subtitlePropsList];
+  let props = ['file.tags', 'file.mtime', ...subtitlePropsList];
 
   // Apply smart timestamp logic (includes subtitle fallbacks)
   props = applySmartTimestamp(props, sortMethod, settings);
@@ -310,7 +310,7 @@ export function datacoreResultToCardData(
   const seen = new Set<string>();
   cardData.properties = props
     .filter((prop) => {
-      if (!prop || prop === "") return false;
+      if (!prop || prop === '') return false;
       if (seen.has(prop)) return false;
       seen.add(prop);
       return true;
@@ -343,13 +343,13 @@ export function datacoreResultToCardData(
         result,
         cardData,
         settings,
-        dc,
+        dc
       );
-      if (resolved !== null && resolved !== "") {
+      if (resolved !== null && resolved !== '') {
         cardData.subtitle = resolveSubtitleToPlainText(
           resolved,
           settings,
-          cardData,
+          cardData
         );
         break;
       }
@@ -360,10 +360,10 @@ export function datacoreResultToCardData(
   if (settings.urlProperty) {
     let urlValue = getFirstDatacorePropertyValue(result, settings.urlProperty);
     if (Array.isArray(urlValue)) {
-      urlValue = urlValue.find((v): v is string => typeof v === "string");
+      urlValue = urlValue.find((v): v is string => typeof v === 'string');
     }
 
-    if (typeof urlValue === "string") {
+    if (typeof urlValue === 'string') {
       cardData.urlValue = urlValue;
       cardData.hasValidUrl = isValidUri(urlValue);
     }
@@ -384,14 +384,14 @@ export function basesEntryToCardData(
   isShuffled: boolean,
   visibleProperties: string[],
   textPreview?: string,
-  imageUrl?: string | string[],
+  imageUrl?: string | string[]
 ): CardData {
   // Use file.basename directly (file name without extension)
   const fileName = entry.file.basename || entry.file.name;
 
   // Get folder path (without filename)
   const path = entry.file.path;
-  const folderPath = path.split("/").slice(0, -1).join("/");
+  const folderPath = path.split('/').slice(0, -1).join('/');
 
   // Get timestamps - needed for special property resolution
   const ctime = entry.file.stat.ctime;
@@ -399,9 +399,9 @@ export function basesEntryToCardData(
 
   // Get title from property (first available from comma-separated list) or fallback to filename
   // Check for special properties first (timestamps, etc.)
-  let title = "";
+  let title = '';
   if (settings.titleProperty) {
-    const titleProps = settings.titleProperty.split(",").map((p) => p.trim());
+    const titleProps = settings.titleProperty.split(',').map((p) => p.trim());
     for (const prop of titleProps) {
       // Try timestamp property first
       const specialValue = resolveTimestampProperty(prop, ctime, mtime);
@@ -413,13 +413,13 @@ export function basesEntryToCardData(
       const titleValue = getFirstBasesPropertyValue(app, entry, prop);
       const titleData = (titleValue as { data?: unknown } | null)?.data;
       if (Array.isArray(titleData) && titleData.length > 0) {
-        title = titleData.map(String).join(", ");
+        title = titleData.map(String).join(', ');
         break;
       }
       if (
         titleData != null &&
-        titleData !== "" &&
-        (typeof titleData === "string" || typeof titleData === "number")
+        titleData !== '' &&
+        (typeof titleData === 'string' || typeof titleData === 'number')
       ) {
         title = String(titleData);
         break;
@@ -438,7 +438,7 @@ export function basesEntryToCardData(
   if (needsTags) {
     // Bases getValue can throw on malformed property data (e.g. null in tags array)
     try {
-      const yamlTagsValue = entry.getValue("note.tags") as {
+      const yamlTagsValue = entry.getValue('note.tags') as {
         data?: unknown;
       } | null;
       if (yamlTagsValue && yamlTagsValue.data != null) {
@@ -446,15 +446,15 @@ export function basesEntryToCardData(
         const rawTags = Array.isArray(tagData)
           ? tagData
               .map((t: unknown) => {
-                if (t && typeof t === "object" && "data" in t) {
+                if (t && typeof t === 'object' && 'data' in t) {
                   return String((t as { data: unknown }).data);
                 }
-                return typeof t === "string" || typeof t === "number"
+                return typeof t === 'string' || typeof t === 'number'
                   ? String(t)
-                  : "";
+                  : '';
               })
               .filter((t) => t)
-          : typeof tagData === "string" || typeof tagData === "number"
+          : typeof tagData === 'string' || typeof tagData === 'number'
             ? [String(tagData)]
             : [];
         yamlTags = stripTagHashes(rawTags);
@@ -464,7 +464,7 @@ export function basesEntryToCardData(
     }
 
     try {
-      const allTagsValue = entry.getValue("file.tags") as {
+      const allTagsValue = entry.getValue('file.tags') as {
         data?: unknown;
       } | null;
       if (allTagsValue && allTagsValue.data != null) {
@@ -472,15 +472,15 @@ export function basesEntryToCardData(
         const rawTags = Array.isArray(tagData)
           ? tagData
               .map((t: unknown) => {
-                if (t && typeof t === "object" && "data" in t) {
+                if (t && typeof t === 'object' && 'data' in t) {
                   return String((t as { data: unknown }).data);
                 }
-                return typeof t === "string" || typeof t === "number"
+                return typeof t === 'string' || typeof t === 'number'
                   ? String(t)
-                  : "";
+                  : '';
               })
               .filter((t) => t)
-          : typeof tagData === "string" || typeof tagData === "number"
+          : typeof tagData === 'string' || typeof tagData === 'number'
             ? [String(tagData)]
             : [];
         tags = stripTagHashes(rawTags);
@@ -508,13 +508,13 @@ export function basesEntryToCardData(
   // Resolve properties from config.getOrder() visible list
   // Skip leading properties rendered as title/subtitle
   const displayProperties = visibleProperties.slice(
-    settings._skipLeadingProperties ?? 0,
+    settings._skipLeadingProperties ?? 0
   );
 
   // Include subtitle properties for smart timestamp check
   const subtitlePropsList =
     settings.subtitleProperty
-      ?.split(",")
+      ?.split(',')
       .map((p) => p.trim())
       .filter((p) => p) || [];
 
@@ -531,7 +531,7 @@ export function basesEntryToCardData(
   const seen = new Set<string>();
   cardData.properties = props
     .filter((prop) => {
-      if (!prop || prop === "") return false;
+      if (!prop || prop === '') return false;
       if (seen.has(prop)) return false;
       seen.add(prop);
       return true;
@@ -554,13 +554,13 @@ export function basesEntryToCardData(
         prop,
         entry,
         cardData,
-        settings,
+        settings
       );
-      if (resolved !== null && resolved !== "") {
+      if (resolved !== null && resolved !== '') {
         cardData.subtitle = resolveSubtitleToPlainText(
           resolved,
           settings,
-          cardData,
+          cardData
         );
         break;
       }
@@ -572,16 +572,16 @@ export function basesEntryToCardData(
     const urlValue = getFirstBasesPropertyValue(
       app,
       entry,
-      settings.urlProperty,
+      settings.urlProperty
     );
 
-    if (urlValue && typeof urlValue === "object" && "data" in urlValue) {
+    if (urlValue && typeof urlValue === 'object' && 'data' in urlValue) {
       let urlData = urlValue.data;
       if (Array.isArray(urlData)) {
-        urlData = urlData.find((v): v is string => typeof v === "string");
+        urlData = urlData.find((v): v is string => typeof v === 'string');
       }
 
-      if (typeof urlData === "string") {
+      if (typeof urlData === 'string') {
         cardData.urlValue = urlData;
         cardData.hasValidUrl = isValidUri(urlData);
       }
@@ -603,7 +603,7 @@ export function transformDatacoreResults(
   isShuffled: boolean,
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
-  hasImageAvailable: Record<string, boolean>,
+  hasImageAvailable: Record<string, boolean>
 ): CardData[] {
   return results
     .filter((p) => p.$path)
@@ -616,7 +616,7 @@ export function transformDatacoreResults(
         sortMethod,
         isShuffled,
         textPreviews[p.$path],
-        images[p.$path],
+        images[p.$path]
       );
     });
 }
@@ -633,7 +633,7 @@ export function transformBasesEntries(
   visibleProperties: string[],
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
-  hasImageAvailable: Record<string, boolean>,
+  hasImageAvailable: Record<string, boolean>
 ): CardData[] {
   return entries.map((entry) => {
     return basesEntryToCardData(
@@ -644,7 +644,7 @@ export function transformBasesEntries(
       isShuffled,
       visibleProperties,
       textPreviews[entry.file.path],
-      images[entry.file.path],
+      images[entry.file.path]
     );
   });
 }
@@ -658,31 +658,31 @@ function resolveFileProperty(
   cardData: CardData,
   app: App,
   ctime: number,
-  mtime: number,
+  mtime: number
 ): string | null | undefined {
-  if (propertyName === "file.path" || propertyName === "file path") {
+  if (propertyName === 'file.path' || propertyName === 'file path') {
     const path = cardData.path;
-    return !path || path === "" ? null : path;
+    return !path || path === '' ? null : path;
   }
 
-  if (propertyName === "file.folder" || propertyName === "folder") {
-    return cardData.folderPath === "" ? "/" : cardData.folderPath || null;
+  if (propertyName === 'file.folder' || propertyName === 'folder') {
+    return cardData.folderPath === '' ? '/' : cardData.folderPath || null;
   }
 
-  if (propertyName === "tags" || propertyName === "note.tags") {
-    return cardData.yamlTags.length > 0 ? "tags" : null;
+  if (propertyName === 'tags' || propertyName === 'note.tags') {
+    return cardData.yamlTags.length > 0 ? 'tags' : null;
   }
 
-  if (propertyName === "file.tags" || propertyName === "file tags") {
-    return cardData.tags.length > 0 ? "tags" : null;
+  if (propertyName === 'file.tags' || propertyName === 'file tags') {
+    return cardData.tags.length > 0 ? 'tags' : null;
   }
 
-  if (propertyName === "file.links" || propertyName === "file links") {
-    return resolveFileLinksProperty(app, cardData.path, "links");
+  if (propertyName === 'file.links' || propertyName === 'file links') {
+    return resolveFileLinksProperty(app, cardData.path, 'links');
   }
 
-  if (propertyName === "file.embeds" || propertyName === "file embeds") {
-    return resolveFileLinksProperty(app, cardData.path, "embeds");
+  if (propertyName === 'file.embeds' || propertyName === 'file embeds') {
+    return resolveFileLinksProperty(app, cardData.path, 'embeds');
   }
 
   const timestamp = resolveTimestampProperty(propertyName, ctime, mtime, true);
@@ -700,9 +700,9 @@ export function resolveBasesProperty(
   propertyName: string,
   entry: BasesEntry,
   cardData: CardData,
-  settings: BasesResolvedSettings,
+  settings: BasesResolvedSettings
 ): string | null {
-  if (!propertyName || propertyName === "") {
+  if (!propertyName || propertyName === '') {
     return null;
   }
 
@@ -711,7 +711,7 @@ export function resolveBasesProperty(
     cardData,
     app,
     cardData.ctime,
-    cardData.mtime,
+    cardData.mtime
   );
   if (fileResult !== undefined) return fileResult;
 
@@ -731,7 +731,7 @@ export function resolveBasesProperty(
     return formatTimestamp(
       timestampData.timestamp,
       timestampData.isDateOnly,
-      isCustomTimestamp,
+      isCustomTimestamp
     );
   }
 
@@ -741,35 +741,35 @@ export function resolveBasesProperty(
   // Handle empty values
   if (
     data == null ||
-    data === "" ||
+    data === '' ||
     (Array.isArray(data) && data.length === 0)
   ) {
     // Check if this is an empty checkbox property - show indeterminate state
     if (isCheckboxProperty(app, propertyName)) {
-      return JSON.stringify({ type: "checkbox", indeterminate: true });
+      return JSON.stringify({ type: 'checkbox', indeterminate: true });
     }
 
     // Return empty string for empty property (property exists but empty)
     // This distinguishes from null (missing property)
-    return "";
+    return '';
   }
 
   // Handle checkbox/boolean properties - return special marker for renderer
-  if (typeof data === "boolean") {
-    return JSON.stringify({ type: "checkbox", checked: data });
+  if (typeof data === 'boolean') {
+    return JSON.stringify({ type: 'checkbox', checked: data });
   }
 
   // Convert to string
-  if (typeof data === "string" || typeof data === "number") {
+  if (typeof data === 'string' || typeof data === 'number') {
     const result = String(data);
     // Treat whitespace-only strings as empty
-    if (typeof data === "string" && result.trim() === "") {
-      return "";
+    if (typeof data === 'string' && result.trim() === '') {
+      return '';
     }
     // Check if this is an internal link (Bases strips [[]] for single link values)
     // Internal links: have sourcePath/display AND no URI scheme
     // External links: have URI scheme (https://, obsidian://, etc.)
-    if (!hasUriScheme(result) && typeof data === "string") {
+    if (!hasUriScheme(result) && typeof data === 'string') {
       const valueObj = value as { sourcePath?: unknown; display?: unknown };
       if (valueObj.sourcePath !== undefined || valueObj.display !== undefined) {
         // Wrap internal link in wikilink syntax for renderTextWithLinks
@@ -784,40 +784,40 @@ export function resolveBasesProperty(
     const stringElements = data
       .map((item: unknown) => {
         // Handle nested Bases objects with .data
-        if (item && typeof item === "object" && "data" in item) {
+        if (item && typeof item === 'object' && 'data' in item) {
           const nestedData = (item as { data: unknown }).data;
-          if (nestedData == null || nestedData === "") return null;
+          if (nestedData == null || nestedData === '') return null;
           if (
-            typeof nestedData === "string" ||
-            typeof nestedData === "number" ||
-            typeof nestedData === "boolean"
+            typeof nestedData === 'string' ||
+            typeof nestedData === 'number' ||
+            typeof nestedData === 'boolean'
           ) {
             return String(nestedData);
           }
           // Handle nested Link objects in .data
           // Check link first (original text), fall back to path (resolved)
-          if (typeof nestedData === "object" && nestedData !== null) {
-            if ("link" in nestedData) {
+          if (typeof nestedData === 'object' && nestedData !== null) {
+            if ('link' in nestedData) {
               const linkValue = (nestedData as { link: unknown }).link;
-              if (typeof linkValue === "string" && linkValue.trim() !== "") {
+              if (typeof linkValue === 'string' && linkValue.trim() !== '') {
                 return `[[${linkValue}]]`;
               }
             }
-            if ("path" in nestedData) {
+            if ('path' in nestedData) {
               const pathValue = (nestedData as { path: unknown }).path;
-              if (typeof pathValue === "string" && pathValue.trim() !== "") {
+              if (typeof pathValue === 'string' && pathValue.trim() !== '') {
                 return `[[${pathValue}]]`;
               }
             }
           }
           return null; // Can't stringify complex nested objects
         }
-        if (item == null || item === "") return null;
+        if (item == null || item === '') return null;
         // Bases preserves original YAML strings (including wikilinks)
         if (
-          typeof item === "string" ||
-          typeof item === "number" ||
-          typeof item === "boolean"
+          typeof item === 'string' ||
+          typeof item === 'number' ||
+          typeof item === 'boolean'
         ) {
           return String(item);
         }
@@ -829,7 +829,7 @@ export function resolveBasesProperty(
       return null; // All elements were empty - treat as missing property
     }
     // Return array marker for special rendering
-    return JSON.stringify({ type: "array", items: stringElements });
+    return JSON.stringify({ type: 'array', items: stringElements });
   }
 
   // For complex types (objects), return null (can't display)
@@ -847,22 +847,22 @@ export function resolveDatacoreProperty(
   result: DatacoreFile,
   cardData: CardData,
   settings: BasesResolvedSettings,
-  dc: DatacoreAPI,
+  dc: DatacoreAPI
 ): string | null {
-  if (!propertyName || propertyName === "") return null;
+  if (!propertyName || propertyName === '') return null;
 
   // Handle special properties (support both dot and space notation)
   // Dot notation: file.path, file.tags, file.mtime, file.ctime
   // Space notation: "file path", "file tags", "modified time", "created time"
-  if (propertyName === "file.path" || propertyName === "file path") {
+  if (propertyName === 'file.path' || propertyName === 'file path') {
     const path = cardData.path;
-    if (!path || path === "") return null;
+    if (!path || path === '') return null;
     return path;
   }
 
-  if (propertyName === "file.folder" || propertyName === "folder") {
+  if (propertyName === 'file.folder' || propertyName === 'folder') {
     // Return "/" for root folder (empty folderPath)
-    return cardData.folderPath === "" ? "/" : cardData.folderPath || null;
+    return cardData.folderPath === '' ? '/' : cardData.folderPath || null;
   }
 
   const fileResult = resolveFileProperty(
@@ -870,7 +870,7 @@ export function resolveDatacoreProperty(
     cardData,
     app,
     cardData.ctime,
-    cardData.mtime,
+    cardData.mtime
   );
   if (fileResult !== undefined) return fileResult;
 
@@ -887,7 +887,7 @@ export function resolveDatacoreProperty(
       return formatTimestamp(
         timestampData.timestamp,
         timestampData.isDateOnly,
-        true,
+        true
       );
     }
 
@@ -897,7 +897,7 @@ export function resolveDatacoreProperty(
         // Use dc.coerce.string for all items - handles Link objects correctly
         // (returns [[path|display]] format which preserves navigation and shows filename)
         const str = dc.coerce.string(item);
-        return str && str.trim() !== "" ? str : null;
+        return str && str.trim() !== '' ? str : null;
       })
       .filter((s): s is string => s !== null);
 
@@ -907,7 +907,7 @@ export function resolveDatacoreProperty(
     }
 
     // Return array marker for special rendering
-    return JSON.stringify({ type: "array", items: stringElements });
+    return JSON.stringify({ type: 'array', items: stringElements });
   }
 
   // Check if it's a date/datetime value - format regardless of property type
@@ -918,13 +918,13 @@ export function resolveDatacoreProperty(
     return formatTimestamp(
       timestampData.timestamp,
       timestampData.isDateOnly,
-      isCustomTimestamp,
+      isCustomTimestamp
     );
   }
 
   // Handle checkbox/boolean properties - return special marker for renderer
-  if (typeof rawValue === "boolean") {
-    return JSON.stringify({ type: "checkbox", checked: rawValue });
+  if (typeof rawValue === 'boolean') {
+    return JSON.stringify({ type: 'checkbox', checked: rawValue });
   }
 
   // Handle missing property (null/undefined)
@@ -946,7 +946,7 @@ export function resolveDatacoreProperty(
 
     // Check if this is an empty checkbox property - show indeterminate state
     if (isCheckboxProperty(app, propertyName)) {
-      return JSON.stringify({ type: "checkbox", indeterminate: true });
+      return JSON.stringify({ type: 'checkbox', indeterminate: true });
     }
 
     // Return null for missing property
@@ -957,8 +957,8 @@ export function resolveDatacoreProperty(
   const value = dc.coerce.string(rawValue);
 
   // Handle empty values (property exists but empty)
-  if (!value || value.trim() === "") {
-    return "";
+  if (!value || value.trim() === '') {
+    return '';
   }
 
   return value;

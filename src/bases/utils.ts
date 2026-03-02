@@ -13,33 +13,33 @@ import {
   parseYaml,
   stringifyYaml,
   Notice,
-} from "obsidian";
-import { resolveTimestampProperty } from "../shared/data-transform";
+} from 'obsidian';
+import { resolveTimestampProperty } from '../shared/data-transform';
 import {
   getFirstBasesPropertyValue,
   getAllBasesImagePropertyValues,
-} from "../utils/property";
+} from '../utils/property';
 import {
   loadTextPreviewsForEntries,
   loadImagesForEntries,
-} from "../shared/content-loader";
+} from '../shared/content-loader';
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
-} from "../utils/notebook-navigator";
+} from '../utils/notebook-navigator';
 import type {
   PluginSettings,
   BasesResolvedSettings,
   ViewDefaults,
-} from "../types";
-import { BASES_DEFAULTS, VIEW_DEFAULTS } from "../constants";
+} from '../types';
+import { BASES_DEFAULTS, VIEW_DEFAULTS } from '../constants';
 import {
   VALID_VIEW_VALUES,
   VIEW_DEFAULTS_TYPES,
-} from "../shared/view-validation";
-import { extractBasesTemplate } from "../shared/settings-schema";
-import type DynamicViews from "../../main";
+} from '../shared/view-validation';
+import { extractBasesTemplate } from '../shared/settings-schema';
+import type DynamicViews from '../../main';
 
 /** Bases config interface — matches the config object on BasesView subclasses */
 interface BasesConfigInit {
@@ -51,21 +51,21 @@ interface BasesConfigInit {
 /** Keys allowed in Dynamic Views .base view entries */
 const ALLOWED_VIEW_KEYS = new Set<string>([
   // Bases-native keys
-  "type",
-  "name",
-  "filters",
-  "groupBy",
-  "order",
-  "sort",
-  "columnSize",
-  "limit",
-  "summaries",
+  'type',
+  'name',
+  'filters',
+  'groupBy',
+  'order',
+  'sort',
+  'columnSize',
+  'limit',
+  'summaries',
   // Dynamic Views settings (ViewDefaults)
   ...(Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]),
   // Internal markers
-  "isTemplate",
+  'isTemplate',
   // Persistence ID ({hash}-{viewName})
-  "id",
+  'id',
 ]);
 
 /**
@@ -78,9 +78,9 @@ export async function cleanUpBaseFile(
   app: App,
   file: TFile | null,
   plugin: DynamicViews,
-  callerViewName?: string,
+  callerViewName?: string
 ): Promise<Map<string, { id: string; isNew: boolean }> | null> {
-  if (!file || !file.path.endsWith(".base")) return null;
+  if (!file || !file.path.endsWith('.base')) return null;
 
   let changeCount = 0;
   const migrations: Array<{ oldId: string; newId: string }> = [];
@@ -104,9 +104,9 @@ export async function cleanUpBaseFile(
       callerViewName &&
       !views.some(
         (v) =>
-          typeof v === "object" &&
+          typeof v === 'object' &&
           v !== null &&
-          (v as Record<string, unknown>).name === callerViewName,
+          (v as Record<string, unknown>).name === callerViewName
       )
     ) {
       return content;
@@ -115,18 +115,18 @@ export async function cleanUpBaseFile(
     // Pre-scan: count occurrences of each ID for duplicate detection
     const idCounts = new Map<string, number>();
     for (const v of views) {
-      if (typeof v !== "object" || v === null) continue;
+      if (typeof v !== 'object' || v === null) continue;
       const id = (v as Record<string, unknown>).id;
-      if (typeof id === "string") idCounts.set(id, (idCounts.get(id) ?? 0) + 1);
+      if (typeof id === 'string') idCounts.set(id, (idCounts.get(id) ?? 0) + 1);
     }
 
     for (const view of views) {
-      if (typeof view !== "object" || view === null) continue;
+      if (typeof view !== 'object' || view === null) continue;
       const viewObj = view as Record<string, unknown>;
       const viewType = viewObj.type;
       if (
-        typeof viewType !== "string" ||
-        !viewType.startsWith("dynamic-views-")
+        typeof viewType !== 'string' ||
+        !viewType.startsWith('dynamic-views-')
       )
         continue;
 
@@ -138,7 +138,7 @@ export async function cleanUpBaseFile(
         let storedName: string | undefined;
 
         if (idField) {
-          const dashIndex = idField.indexOf("-");
+          const dashIndex = idField.indexOf('-');
           if (dashIndex > 0) storedName = idField.slice(dashIndex + 1);
         }
 
@@ -167,7 +167,7 @@ export async function cleanUpBaseFile(
 
           // New view (not rename) — apply template defaults to YAML
           if (isNew) {
-            const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
+            const vt = viewType === 'dynamic-views-grid' ? 'grid' : 'masonry';
             const template = plugin.persistenceManager.getSettingsTemplate(vt);
             if (template) {
               for (const [key, value] of Object.entries(template)) {
@@ -196,7 +196,7 @@ export async function cleanUpBaseFile(
         const expectedType = VIEW_DEFAULTS_TYPES[key];
         if (
           expectedType &&
-          key !== "minimumColumns" &&
+          key !== 'minimumColumns' &&
           typeof viewObj[key] !== expectedType
         ) {
           delete viewObj[key];
@@ -217,7 +217,7 @@ export async function cleanUpBaseFile(
 
       // Delete stale titleProperty/subtitleProperty — Bases views now use
       // position-based displayFirstAsTitle/displaySecondAsSubtitle toggles
-      for (const staleKey of ["titleProperty", "subtitleProperty"]) {
+      for (const staleKey of ['titleProperty', 'subtitleProperty']) {
         if (staleKey in viewObj) {
           delete viewObj[staleKey];
           changeCount++;
@@ -229,7 +229,7 @@ export async function cleanUpBaseFile(
       // the VIEW_DEFAULTS value is a meaningful non-default choice in Bases context.
       // Also skip keys where a template has a different value — the VIEW_DEFAULTS
       // value is an explicit user choice that differs from the effective default.
-      const vt = viewType === "dynamic-views-grid" ? "grid" : "masonry";
+      const vt = viewType === 'dynamic-views-grid' ? 'grid' : 'masonry';
       const template = plugin.persistenceManager.getSettingsTemplate(vt);
       for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
         if (key in BASES_DEFAULTS) continue;
@@ -260,17 +260,17 @@ export async function cleanUpBaseFile(
 
 /** CSS selector for embedded view detection - centralized for maintainability */
 export const EMBEDDED_VIEW_SELECTOR =
-  ".markdown-preview-view, .markdown-reading-view, .markdown-source-view";
+  '.markdown-preview-view, .markdown-reading-view, .markdown-source-view';
 
 /** Sentinel value for undefined group keys in dataset storage */
-export const UNDEFINED_GROUP_KEY_SENTINEL = "__dynamic-views-undefined__";
+export const UNDEFINED_GROUP_KEY_SENTINEL = '__dynamic-views-undefined__';
 
 /**
  * Write group key to element's dataset, using sentinel for undefined
  */
 export function setGroupKeyDataset(
   el: HTMLElement,
-  groupKey: string | undefined,
+  groupKey: string | undefined
 ): void {
   el.dataset.groupKey =
     groupKey === undefined ? UNDEFINED_GROUP_KEY_SENTINEL : groupKey;
@@ -298,24 +298,24 @@ export function isEmbeddedView(containerEl: HTMLElement): boolean {
 export function setupBasesSwipePrevention(
   containerEl: HTMLElement,
   app: App,
-  pluginSettings: PluginSettings,
+  pluginSettings: PluginSettings
 ): void {
   const isEmbedded = isEmbeddedView(containerEl);
   const shouldPrevent =
     app.isMobile &&
-    (pluginSettings.preventSidebarSwipe === "all-views" ||
-      (pluginSettings.preventSidebarSwipe === "base-files" && !isEmbedded));
+    (pluginSettings.preventSidebarSwipe === 'all-views' ||
+      (pluginSettings.preventSidebarSwipe === 'base-files' && !isEmbedded));
 
   if (shouldPrevent) {
-    containerEl.dataset.ignoreSwipe = "true";
+    containerEl.dataset.ignoreSwipe = 'true';
   }
 }
 
 // Re-export from shared location
 export {
-  setupSettingsObserver,
+  setupStyleSettingsObserver,
   getStyleSettingsHash,
-} from "../utils/style-settings";
+} from '../utils/style-settings';
 
 /** Interface for Bases config groupBy property */
 export interface BasesGroupBy {
@@ -331,19 +331,19 @@ interface BasesConfigWithSort {
 
 /** Type guard to check if config has groupBy with valid structure */
 export function hasGroupBy(
-  config: unknown,
+  config: unknown
 ): config is { groupBy?: BasesGroupBy } {
-  if (typeof config !== "object" || config === null || !("groupBy" in config)) {
+  if (typeof config !== 'object' || config === null || !('groupBy' in config)) {
     return false;
   }
   const groupBy = (config as { groupBy: unknown }).groupBy;
   // groupBy can be undefined (no grouping) or object with optional property string
   return (
     groupBy === undefined ||
-    (typeof groupBy === "object" &&
+    (typeof groupBy === 'object' &&
       groupBy !== null &&
-      (!("property" in groupBy) ||
-        typeof (groupBy as { property: unknown }).property === "string"))
+      (!('property' in groupBy) ||
+        typeof (groupBy as { property: unknown }).property === 'string'))
   );
 }
 
@@ -353,16 +353,16 @@ export function hasGroupBy(
  */
 export function serializeGroupKey(key: unknown): string | undefined {
   if (key === undefined || key === null) return undefined;
-  if (typeof key === "string") return key;
-  if (typeof key === "number" || typeof key === "boolean") return String(key);
+  if (typeof key === 'string') return key;
+  if (typeof key === 'number' || typeof key === 'boolean') return String(key);
 
-  if (typeof key === "object" && key !== null) {
+  if (typeof key === 'object' && key !== null) {
     // Check if array-like (Bases uses proxy arrays that fail Array.isArray)
     const isArrayLike =
       Array.isArray(key) ||
-      (typeof (key as ArrayLike<unknown>).length === "number" &&
-        !("data" in key) &&
-        !("date" in key));
+      (typeof (key as ArrayLike<unknown>).length === 'number' &&
+        !('data' in key) &&
+        !('date' in key));
 
     // Handle arrays of Bases Value objects (e.g., tags: [{icon, data: "#tag1"}, ...])
     if (isArrayLike) {
@@ -373,24 +373,24 @@ export function serializeGroupKey(key: unknown): string | undefined {
       if (arr.length === 0) return undefined;
       // Extract .data from each element that has it
       const extracted = arr.map((item): unknown => {
-        if (item && typeof item === "object" && "data" in item) {
+        if (item && typeof item === 'object' && 'data' in item) {
           return (item as { data: unknown }).data;
         }
         return item;
       });
       // If all elements are strings/primitives after extraction, join them
-      if (extracted.every((v) => typeof v === "string")) {
-        return extracted.join(", ");
+      if (extracted.every((v) => typeof v === 'string')) {
+        return extracted.join(', ');
       }
       if (
         extracted.every(
           (v) =>
-            typeof v === "string" ||
-            typeof v === "number" ||
-            typeof v === "boolean",
+            typeof v === 'string' ||
+            typeof v === 'number' ||
+            typeof v === 'boolean'
         )
       ) {
-        return extracted.map(String).join(", ");
+        return extracted.map(String).join(', ');
       }
       // Complex array - stringify
       try {
@@ -401,25 +401,25 @@ export function serializeGroupKey(key: unknown): string | undefined {
     }
 
     // Handle Bases date Value objects (e.g., {date: Date, time: boolean})
-    if ("date" in key && (key as { date: unknown }).date instanceof Date) {
+    if ('date' in key && (key as { date: unknown }).date instanceof Date) {
       return (key as { date: Date }).date.toISOString();
     }
 
     // Handle Bases Value objects with .data property (e.g., {icon: "...", data: 462})
-    if ("data" in key) {
+    if ('data' in key) {
       const data = (key as { data: unknown }).data;
       if (data === null || data === undefined) return undefined;
-      if (typeof data === "string") return data;
-      if (typeof data === "number" || typeof data === "boolean")
+      if (typeof data === 'string') return data;
+      if (typeof data === 'number' || typeof data === 'boolean')
         return String(data);
       // Recursively process .data (handles arrays of Value objects inside .data)
-      if (typeof data === "object" && data !== null) {
+      if (typeof data === 'object' && data !== null) {
         return serializeGroupKey(data);
       }
     }
 
     // Handle Bases Value objects with .icon but no .data (empty/missing value)
-    if ("icon" in key && !("data" in key)) {
+    if ('icon' in key && !('data' in key)) {
       return undefined;
     }
   }
@@ -447,7 +447,7 @@ interface GroupData {
 export function processGroups<T extends GroupData>(
   groupedData: T[],
   isShuffled: boolean,
-  shuffledOrder: string[],
+  shuffledOrder: string[]
 ): Array<{ group: T; entries: BasesEntry[] }> {
   return groupedData.map((group) => {
     let groupEntries = [...group.entries];
@@ -470,19 +470,19 @@ export function processGroups<T extends GroupData>(
  * Bases proxy arrays have .data containing the actual array
  */
 function isTagArray(key: unknown): boolean {
-  if (!key || typeof key !== "object") return false;
+  if (!key || typeof key !== 'object') return false;
 
   // Bases proxy has .data property containing the actual array
-  if (!("data" in key)) return false;
+  if (!('data' in key)) return false;
 
   const data = (key as { data: unknown }).data;
   if (!data || !Array.isArray(data) || data.length === 0) return false;
 
   // Check if first item has .data starting with #
   const first: unknown = data[0];
-  if (first && typeof first === "object" && "data" in first) {
+  if (first && typeof first === 'object' && 'data' in first) {
     const itemData = (first as { data: unknown }).data;
-    return typeof itemData === "string" && itemData.startsWith("#");
+    return typeof itemData === 'string' && itemData.startsWith('#');
   }
   return false;
 }
@@ -495,40 +495,40 @@ function renderGroupValue(
   valueEl: HTMLElement,
   key: unknown,
   app: App,
-  propertyName?: string,
+  propertyName?: string
 ): void {
   // Tags: render as clickable tag elements
   if (isTagArray(key)) {
     // Bases proxy has .data containing the actual array
     const dataArr = (key as { data: unknown[] }).data;
     const arr = Array.isArray(dataArr) ? dataArr : Array.from(dataArr);
-    const container = valueEl.createDiv("value-list-container");
+    const container = valueEl.createDiv('value-list-container');
 
     // Create tag elements
     arr.forEach((item) => {
-      if (item && typeof item === "object" && "data" in item) {
+      if (item && typeof item === 'object' && 'data' in item) {
         const data = (item as { data: unknown }).data;
-        if (typeof data === "string" && data.startsWith("#")) {
-          const element = container.createSpan("value-list-element");
-          element.createEl("a", {
-            cls: "tag",
+        if (typeof data === 'string' && data.startsWith('#')) {
+          const element = container.createSpan('value-list-element');
+          element.createEl('a', {
+            cls: 'tag',
             text: data.slice(1), // Remove # prefix
-            href: "#",
+            href: '#',
           });
         }
       }
     });
 
     // Event delegation: single listener on container handles all tag clicks
-    container.addEventListener("click", (e) => {
+    container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      if (!target.hasClass("tag")) return;
+      if (!target.hasClass('tag')) return;
       e.preventDefault();
 
-      const tagText = target.textContent ?? "";
+      const tagText = target.textContent ?? '';
       // Use Notebook Navigator if configured for tags
       if (
-        shouldUseNotebookNavigator(app, "tag") &&
+        shouldUseNotebookNavigator(app, 'tag') &&
         navigateToTagInNotebookNavigator(app, tagText)
       ) {
         return;
@@ -538,15 +538,15 @@ function renderGroupValue(
         app as unknown as {
           internalPlugins: {
             plugins: {
-              "global-search"?: {
+              'global-search'?: {
                 instance?: { openGlobalSearch?: (query: string) => void };
               };
             };
           };
         }
-      ).internalPlugins.plugins["global-search"];
+      ).internalPlugins.plugins['global-search'];
       if (searchPlugin?.instance?.openGlobalSearch) {
-        searchPlugin.instance.openGlobalSearch("tag:" + tagText);
+        searchPlugin.instance.openGlobalSearch('tag:' + tagText);
       }
     });
     return;
@@ -555,8 +555,8 @@ function renderGroupValue(
   // Dates: format as timestamp
   if (
     key &&
-    typeof key === "object" &&
-    "date" in key &&
+    typeof key === 'object' &&
+    'date' in key &&
     (key as { date: unknown }).date instanceof Date
   ) {
     const date = (key as { date: Date }).date;
@@ -565,33 +565,33 @@ function renderGroupValue(
   }
 
   // Folders: render as clickable path segments
-  if (propertyName === "file.folder" || propertyName === "folder") {
+  if (propertyName === 'file.folder' || propertyName === 'folder') {
     // Extract folder path from Bases Value object or plain string
     const folderPath =
-      key && typeof key === "object" && "data" in key
+      key && typeof key === 'object' && 'data' in key
         ? String((key as { data: unknown }).data)
-        : typeof key === "string"
+        : typeof key === 'string'
           ? key
           : null;
 
     if (folderPath && folderPath.length > 0) {
-      const folders = folderPath.split("/").filter((f) => f);
+      const folders = folderPath.split('/').filter((f) => f);
       if (folders.length > 0) {
-        const pathWrapper = valueEl.createDiv("path-wrapper");
+        const pathWrapper = valueEl.createDiv('path-wrapper');
 
         folders.forEach((folder, idx) => {
-          const cumulativePath = folders.slice(0, idx + 1).join("/");
-          const segmentWrapper = pathWrapper.createSpan("path-segment-wrapper");
+          const cumulativePath = folders.slice(0, idx + 1).join('/');
+          const segmentWrapper = pathWrapper.createSpan('path-segment-wrapper');
 
           const segment = segmentWrapper.createSpan(
-            "path-segment folder-segment",
+            'path-segment folder-segment'
           );
           segment.setText(folder);
 
-          segment.addEventListener("click", (e) => {
+          segment.addEventListener('click', (e) => {
             e.stopPropagation();
             const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
-            if (shouldUseNotebookNavigator(app, "folder")) {
+            if (shouldUseNotebookNavigator(app, 'folder')) {
               if (
                 folderFile instanceof TFolder &&
                 navigateToFolderInNotebookNavigator(app, folderFile)
@@ -603,37 +603,37 @@ function renderGroupValue(
               app as unknown as {
                 internalPlugins?: {
                   plugins?: {
-                    "file-explorer"?: {
+                    'file-explorer'?: {
                       instance?: { revealInFolder?: (file: unknown) => void };
                     };
                   };
                 };
               }
-            ).internalPlugins?.plugins?.["file-explorer"];
+            ).internalPlugins?.plugins?.['file-explorer'];
             if (fileExplorer?.instance?.revealInFolder && folderFile) {
               fileExplorer.instance.revealInFolder(folderFile);
             }
           });
 
-          segment.addEventListener("contextmenu", (e) => {
+          segment.addEventListener('contextmenu', (e) => {
             e.stopPropagation();
             e.preventDefault();
             const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
             if (folderFile instanceof TFolder) {
               const menu = new Menu();
               app.workspace.trigger(
-                "file-menu",
+                'file-menu',
                 menu,
                 folderFile,
-                "file-explorer",
+                'file-explorer'
               );
               menu.showAtMouseEvent(e);
             }
           });
 
           if (idx < folders.length - 1) {
-            const separator = segmentWrapper.createSpan("path-separator");
-            separator.setText("/");
+            const separator = segmentWrapper.createSpan('path-separator');
+            separator.setText('/');
           }
         });
         return;
@@ -642,7 +642,7 @@ function renderGroupValue(
   }
 
   // Fallback: use serialized string
-  const keyValue = serializeGroupKey(key) ?? "";
+  const keyValue = serializeGroupKey(key) ?? '';
   valueEl.setText(keyValue);
 }
 
@@ -657,41 +657,41 @@ export function renderGroupHeader(
   app: App,
   entryCount: number,
   collapsed: boolean,
-  onToggleCollapse: () => void,
+  onToggleCollapse: () => void
 ): HTMLElement | null {
   // Don't render header when not grouping
   if (!config.groupBy?.property) return null;
 
-  const headerEl = containerEl.createDiv("bases-group-heading");
-  if (collapsed) headerEl.addClass("collapsed");
+  const headerEl = containerEl.createDiv('bases-group-heading');
+  if (collapsed) headerEl.addClass('collapsed');
 
   // Clickable region: chevron + property label + group value (not count)
-  const collapseRegion = headerEl.createDiv("bases-group-collapse-region");
-  collapseRegion.addEventListener("click", (e) => {
+  const collapseRegion = headerEl.createDiv('bases-group-collapse-region');
+  collapseRegion.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
-    if (target.closest("a")) return; // Don't intercept tag/folder links
+    if (target.closest('a')) return; // Don't intercept tag/folder links
     onToggleCollapse();
   });
 
   // Collapse chevron (left of all heading content)
-  const chevronBtn = collapseRegion.createDiv("bases-group-collapse-btn");
-  setIcon(chevronBtn, "chevron-down");
+  const chevronBtn = collapseRegion.createDiv('bases-group-collapse-btn');
+  setIcon(chevronBtn, 'chevron-down');
 
-  const propertyEl = collapseRegion.createDiv("bases-group-property");
+  const propertyEl = collapseRegion.createDiv('bases-group-property');
   const propertyName = config.getDisplayName(config.groupBy.property);
   propertyEl.setText(propertyName);
 
-  const valueEl = collapseRegion.createDiv("bases-group-value");
+  const valueEl = collapseRegion.createDiv('bases-group-value');
 
   // Show "None" for empty/missing keys (covers hasKey()=false and empty arrays)
   if (!serializeGroupKey(group.key)) {
-    valueEl.setText("None");
-    const countEl = headerEl.createDiv("bases-group-count");
+    valueEl.setText('None');
+    const countEl = headerEl.createDiv('bases-group-count');
     const formattedCount = entryCount
       .toString()
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const countText =
-      entryCount === 1 ? "1 result" : `${formattedCount} results`;
+      entryCount === 1 ? '1 result' : `${formattedCount} results`;
     countEl.setText(countText);
     return headerEl;
   }
@@ -699,11 +699,11 @@ export function renderGroupHeader(
   renderGroupValue(valueEl, group.key, app, config.groupBy.property);
 
   // Render result count
-  const countEl = headerEl.createDiv("bases-group-count");
+  const countEl = headerEl.createDiv('bases-group-count');
   const formattedCount = entryCount
     .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const countText = entryCount === 1 ? "1 result" : `${formattedCount} results`;
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const countText = entryCount === 1 ? '1 result' : `${formattedCount} results`;
   countEl.setText(countText);
   return headerEl;
 }
@@ -721,7 +721,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
     const direction = firstSort.direction.toLowerCase();
     return `${property}-${direction}`;
   }
-  return "none";
+  return 'none';
 }
 
 /**
@@ -733,7 +733,7 @@ export async function loadContentForEntries(
   app: App,
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
-  hasImageAvailable: Record<string, boolean>,
+  hasImageAvailable: Record<string, boolean>
 ): Promise<void> {
   // Load text previews
   if (settings.textPreviewProperty || settings.fallbackToContent) {
@@ -747,14 +747,14 @@ export async function loadContentForEntries(
         let textPreviewData: unknown = null;
         if (settings.textPreviewProperty) {
           const textPreviewProps = settings.textPreviewProperty
-            .split(",")
+            .split(',')
             .map((p) => p.trim());
           for (const prop of textPreviewProps) {
             // Try timestamp property first
             const timestamp = resolveTimestampProperty(
               prop,
               entry.file.stat.ctime,
-              entry.file.stat.mtime,
+              entry.file.stat.mtime
             );
             if (timestamp) {
               textPreviewData = timestamp;
@@ -764,17 +764,17 @@ export async function loadContentForEntries(
             const textPreviewValue = getFirstBasesPropertyValue(
               app,
               entry,
-              prop,
+              prop
             ) as { data?: unknown } | null;
             const data = textPreviewValue?.data;
             if (Array.isArray(data) && data.length > 0) {
-              textPreviewData = data.map(String).join(", ");
+              textPreviewData = data.map(String).join(', ');
               break;
             }
             if (
               data != null &&
-              data !== "" &&
-              (typeof data === "string" || typeof data === "number")
+              data !== '' &&
+              (typeof data === 'string' || typeof data === 'number')
             ) {
               textPreviewData = data;
               break;
@@ -786,7 +786,7 @@ export async function loadContentForEntries(
         let titleString: string | undefined;
         if (settings.titleProperty) {
           const titleProps = settings.titleProperty
-            .split(",")
+            .split(',')
             .map((p) => p.trim());
           for (const prop of titleProps) {
             const titleValue = getFirstBasesPropertyValue(app, entry, prop) as {
@@ -794,9 +794,9 @@ export async function loadContentForEntries(
             } | null;
             if (
               titleValue?.data != null &&
-              titleValue.data !== "" &&
-              (typeof titleValue.data === "string" ||
-                typeof titleValue.data === "number")
+              titleValue.data !== '' &&
+              (typeof titleValue.data === 'string' ||
+                typeof titleValue.data === 'number')
             ) {
               titleString = String(titleValue.data);
               break;
@@ -819,7 +819,7 @@ export async function loadContentForEntries(
       settings.fallbackToContent,
       settings.omitFirstLine,
       app,
-      textPreviews,
+      textPreviews
     );
   }
 
@@ -834,7 +834,7 @@ export async function loadContentForEntries(
         const imagePropertyValues = getAllBasesImagePropertyValues(
           app,
           entry,
-          settings.imageProperty,
+          settings.imageProperty
         );
         return {
           path: entry.file.path,
@@ -853,7 +853,7 @@ export async function loadContentForEntries(
       {
         includeYoutube: settings.showYoutubeThumbnails,
         includeCardLink: settings.showCardLinkCovers,
-      },
+      }
     );
   }
 }
@@ -879,7 +879,7 @@ export function shouldProcessDataUpdate(
     timeoutId: number | null;
     callback: (() => void) | null;
     isTrailing?: boolean;
-  },
+  }
 ): boolean {
   const now = Date.now();
 
@@ -923,19 +923,19 @@ export function shouldProcessDataUpdate(
  */
 export function handleTemplateToggle(
   config: BasesConfigInit,
-  viewType: "grid" | "masonry",
+  viewType: 'grid' | 'masonry',
   plugin: DynamicViews,
   initializedRef: { value: boolean },
-  cooldownTimerRef: { value: ReturnType<typeof setTimeout> | null },
+  cooldownTimerRef: { value: ReturnType<typeof setTimeout> | null }
 ): void {
-  const isTemplate = config.get("isTemplate") === true;
+  const isTemplate = config.get('isTemplate') === true;
 
   // First call: reset stale toggles from previous sessions or duplicated files.
   // Start cooldown to suppress phantom re-fires from the debounced-write/file-reload race.
   if (!initializedRef.value) {
     initializedRef.value = true;
     if (isTemplate) {
-      config.set("isTemplate", undefined);
+      config.set('isTemplate', undefined);
       cooldownTimerRef.value = setTimeout(() => {
         cooldownTimerRef.value = null;
       }, 3000);
@@ -947,7 +947,7 @@ export function handleTemplateToggle(
   if (!isTemplate) return;
 
   // One-shot: immediately reset (transient action, not persistent state)
-  config.set("isTemplate", undefined);
+  config.set('isTemplate', undefined);
 
   // During cooldown, skip — phantom re-fires from debounced-write/file-reload race
   if (cooldownTimerRef.value !== null) return;
@@ -958,9 +958,9 @@ export function handleTemplateToggle(
 
   const extracted = extractBasesTemplate(config, VIEW_DEFAULTS);
   void plugin.persistenceManager.setSettingsTemplate(viewType, extracted);
-  const label = viewType === "grid" ? "Grid" : "Masonry";
+  const label = viewType === 'grid' ? 'Grid' : 'Masonry';
   const notice = new Notice(
-    `Saved as default settings for new ${label} views. Enable again to update.`,
+    `Saved as default settings for new ${label} views. Enable again to update.`
   );
 
   // Obsidian caches the notice-container per window but doesn't clear the cache

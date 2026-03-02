@@ -3,16 +3,16 @@
  * Extracts common logic between card-renderer.tsx and shared-renderer.ts
  */
 
-import { requestUrl } from "obsidian";
+import { requestUrl } from 'obsidian';
 import {
   SLIDESHOW_ANIMATION_MS,
   SWIPE_DETECT_THRESHOLD,
   SCROLL_THROTTLE_MS,
-} from "./constants";
-import { isExternalUrl } from "../utils/image";
-import { isSlideshowLoopingDisabled } from "../utils/style-settings";
-import { setupHoverIntent } from "./hover-intent";
-import { brokenImageUrls, markImageBroken } from "./image-loader";
+} from './constants';
+import { isExternalUrl } from '../utils/image';
+import { isSlideshowLoopingDisabled } from '../utils/style-settings';
+import { setupHoverIntent } from './hover-intent';
+import { brokenImageUrls, markImageBroken } from './image-loader';
 
 // Blob URL cache for external images to prevent re-downloads
 // Obsidian's Electron sends Cache-Control: no-cache on cross-origin requests,
@@ -37,7 +37,7 @@ function validateBlobUrl(blobUrl: string): Promise<boolean> {
     const cleanup = (result: boolean) => {
       img.onload = null;
       img.onerror = null;
-      img.src = "";
+      img.src = '';
       resolve(result);
     };
     img.onload = () => cleanup(img.naturalWidth > 0 && img.naturalHeight > 0);
@@ -65,7 +65,7 @@ export function getCachedBlobUrl(url: string): string {
 export function createPreloadBrokenHandler(
   urls: string[],
   cardEl: HTMLElement | null,
-  onReduced: () => void,
+  onReduced: () => void
 ): (url: string) => void {
   return (url) => {
     const idx = urls.indexOf(url);
@@ -75,7 +75,7 @@ export function createPreloadBrokenHandler(
       urls.splice(0, 1);
     }
     if (urls.length <= 1) onReduced();
-    if (urls.length === 0) cardEl?.classList.add("no-valid-images");
+    if (urls.length === 0) cardEl?.classList.add('no-valid-images');
   };
 }
 
@@ -118,7 +118,7 @@ export async function getExternalBlobUrl(url: string): Promise<string | null> {
     try {
       const response = await requestUrl(url);
       const contentType =
-        response.headers?.["content-type"] ?? "application/octet-stream";
+        response.headers?.['content-type'] ?? 'application/octet-stream';
       const blob = new Blob([response.arrayBuffer], { type: contentType });
       const blobUrl = URL.createObjectURL(blob);
 
@@ -216,12 +216,12 @@ export function createSlideshowNavigator(
   imageUrls: string[],
   getElements: () => SlideshowElements | null,
   signal: AbortSignal,
-  callbacks?: SlideshowCallbacks,
+  callbacks?: SlideshowCallbacks
 ): {
   navigate: (
     direction: 1 | -1,
     honorGestureDirection?: boolean,
-    skipAnimation?: boolean,
+    skipAnimation?: boolean
   ) => void;
   reset: () => void;
 } {
@@ -235,7 +235,7 @@ export function createSlideshowNavigator(
   const elements = getElements();
   if (elements) {
     const cssValue = getComputedStyle(elements.imageEmbed).getPropertyValue(
-      "--anim-duration-moderate",
+      '--anim-duration-moderate'
     );
     const parsed = parseInt(cssValue);
     if (!isNaN(parsed) && parsed > 0) {
@@ -248,8 +248,8 @@ export function createSlideshowNavigator(
 
   // Track active animation state for cancel-and-restart
   let activeAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
-  let activeExitClass = "";
-  let activeEnterClass = "";
+  let activeExitClass = '';
+  let activeEnterClass = '';
   let activeNewIndex = 0;
 
   /**
@@ -277,13 +277,13 @@ export function createSlideshowNavigator(
     if (activeEnterClass) nextImg.classList.remove(activeEnterClass);
 
     // Swap roles
-    currImg.classList.remove("slideshow-img-current");
-    currImg.classList.add("slideshow-img-next");
-    nextImg.classList.remove("slideshow-img-next");
-    nextImg.classList.add("slideshow-img-current");
+    currImg.classList.remove('slideshow-img-current');
+    currImg.classList.add('slideshow-img-next');
+    nextImg.classList.remove('slideshow-img-next');
+    nextImg.classList.add('slideshow-img-current');
 
     // Clear src on the now-next element
-    currImg.src = "";
+    currImg.src = '';
 
     currentIndex = activeNewIndex;
     isAnimating = false;
@@ -294,21 +294,21 @@ export function createSlideshowNavigator(
   const updateBoundaryClasses = () => {
     const el = getElements()?.imageEmbed.parentElement;
     if (!el) return;
-    el.classList.toggle("slideshow-at-first", currentIndex === 0);
+    el.classList.toggle('slideshow-at-first', currentIndex === 0);
     el.classList.toggle(
-      "slideshow-at-last",
-      currentIndex === imageUrls.length - 1,
+      'slideshow-at-last',
+      currentIndex === imageUrls.length - 1
     );
   };
 
   signal.addEventListener(
-    "abort",
+    'abort',
     () => {
       finishAnimation();
       pendingTimeouts.forEach(clearTimeout);
       pendingTimeouts.clear();
     },
-    { once: true },
+    { once: true }
   );
 
   // Track failed image indices to prevent infinite loop when all images fail
@@ -317,7 +317,7 @@ export function createSlideshowNavigator(
   const navigate = (
     direction: 1 | -1,
     honorGestureDirection = false,
-    skipAnimation = false,
+    skipAnimation = false
   ) => {
     if (signal.aborted || imageUrls.length <= 1) return;
 
@@ -362,10 +362,10 @@ export function createSlideshowNavigator(
     if (imageUrls.some((url) => brokenImageUrls.has(url))) {
       const validCount = imageUrls.reduce(
         (n, url) => n + (brokenImageUrls.has(url) ? 0 : 1),
-        0,
+        0
       );
       if (validCount <= 1) {
-        elements.imageEmbed.parentElement?.addClass("slideshow-single");
+        elements.imageEmbed.parentElement?.addClass('slideshow-single');
       }
     }
 
@@ -404,13 +404,13 @@ export function createSlideshowNavigator(
     // Notify about slide change
     if (callbacks?.onSlideChange) {
       nextImg.addEventListener(
-        "load",
+        'load',
         () => {
           if (!signal.aborted) {
             callbacks.onSlideChange!(newIndex, nextImg);
           }
         },
-        { once: true, signal },
+        { once: true, signal }
       );
     }
 
@@ -418,7 +418,7 @@ export function createSlideshowNavigator(
     if (skipAnimation) {
       // Error handler on currImg (skipAnimation sets URL on currImg, not nextImg)
       currImg.addEventListener(
-        "error",
+        'error',
         (e) => {
           if (signal.aborted) return;
           const targetSrc = (e.target as HTMLImageElement).src;
@@ -429,25 +429,25 @@ export function createSlideshowNavigator(
             callbacks?.onAllFailed?.();
             return;
           }
-          currImg.addClass("dynamic-views-hidden");
+          currImg.addClass('dynamic-views-hidden');
           navigate(direction, honorGestureDirection, true);
         },
-        { once: true, signal },
+        { once: true, signal }
       );
       currImg.src = effectiveUrl;
-      currImg.removeClass("dynamic-views-hidden");
+      currImg.removeClass('dynamic-views-hidden');
       currentIndex = newIndex;
       isAnimating = false;
       updateBoundaryClasses();
       if (callbacks?.onSlideChange) {
         currImg.addEventListener(
-          "load",
+          'load',
           () => {
             if (!signal.aborted) {
               callbacks.onSlideChange!(newIndex, currImg);
             }
           },
-          { once: true, signal },
+          { once: true, signal }
         );
       }
       return;
@@ -455,7 +455,7 @@ export function createSlideshowNavigator(
 
     // Handle failed images during animated navigation: hide and auto-advance
     nextImg.addEventListener(
-      "error",
+      'error',
       (e) => {
         if (signal.aborted) return;
         // Ignore errors from src being cleared (resolves to index.html) or changed
@@ -472,20 +472,20 @@ export function createSlideshowNavigator(
           return;
         }
 
-        nextImg.addClass("dynamic-views-hidden");
+        nextImg.addClass('dynamic-views-hidden');
 
         // After animation completes, try to advance to next slide
         const timeoutId = setTimeout(() => {
           pendingTimeouts.delete(timeoutId);
           if (!signal.aborted) {
-            nextImg.removeClass("dynamic-views-hidden");
+            nextImg.removeClass('dynamic-views-hidden');
             isAnimating = false;
             navigate(direction, honorGestureDirection);
           }
         }, animationDuration + 50);
         pendingTimeouts.add(timeoutId);
       },
-      { once: true, signal },
+      { once: true, signal }
     );
 
     nextImg.src = effectiveUrl;
@@ -522,11 +522,11 @@ export function createSlideshowNavigator(
     // Normal: next=left, prev=right. Last→first wrap: reverse direction
     const slideLeft = direction === 1 && !isWrapToFirst;
     activeExitClass = slideLeft
-      ? "slideshow-exit-left"
-      : "slideshow-exit-right";
+      ? 'slideshow-exit-left'
+      : 'slideshow-exit-right';
     activeEnterClass = slideLeft
-      ? "slideshow-enter-left"
-      : "slideshow-enter-right";
+      ? 'slideshow-enter-left'
+      : 'slideshow-enter-right';
 
     currImg.classList.add(activeExitClass);
     nextImg.classList.add(activeEnterClass);
@@ -565,12 +565,12 @@ export function createSlideshowNavigator(
       // Trigger onSlideChange callback on reset
       if (callbacks?.onSlideChange) {
         elements.currImg.addEventListener(
-          "load",
+          'load',
           () => {
             if (!signal.aborted)
               callbacks.onSlideChange!(resetIndex, elements.currImg);
           },
-          { once: true, signal },
+          { once: true, signal }
         );
       }
     }
@@ -589,7 +589,7 @@ export function createSlideshowNavigator(
 export function setupSwipeGestures(
   coverEl: HTMLElement,
   navigate: (direction: 1 | -1, honorGestureDirection?: boolean) => void,
-  signal: AbortSignal,
+  signal: AbortSignal
 ): void {
   let accumulatedDeltaX = 0;
   let lastDeltaX = 0;
@@ -610,16 +610,16 @@ export function setupSwipeGestures(
 
   // Clean up gesture timeout on abort
   signal.addEventListener(
-    "abort",
+    'abort',
     () => {
       if (gestureResetTimeout) clearTimeout(gestureResetTimeout);
     },
-    { once: true },
+    { once: true }
   );
 
   // Wheel events capture trackpad swipes
   coverEl.addEventListener(
-    "wheel",
+    'wheel',
     (e) => {
       // Ignore predominantly vertical scrolling
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
@@ -694,7 +694,7 @@ export function setupSwipeGestures(
       // Prevent vertical scroll for horizontal swipes
       e.preventDefault();
     },
-    { signal },
+    { signal }
   );
 
   // Touch swipes for mobile
@@ -705,12 +705,12 @@ export function setupSwipeGestures(
 
   // Get indicator element for hiding during swipe (mobile only)
   const indicator = coverEl.querySelector(
-    ".slideshow-indicator",
+    '.slideshow-indicator'
   ) as HTMLElement;
-  const isMobile = document.body.classList.contains("is-mobile");
+  const isMobile = document.body.classList.contains('is-mobile');
 
   coverEl.addEventListener(
-    "touchstart",
+    'touchstart',
     (e) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
@@ -720,11 +720,11 @@ export function setupSwipeGestures(
       e.stopPropagation();
       e.stopImmediatePropagation();
     },
-    { signal, capture: true },
+    { signal, capture: true }
   );
 
   coverEl.addEventListener(
-    "touchmove",
+    'touchmove',
     (e) => {
       const deltaX = e.touches[0].clientX - touchStartX;
       const deltaY = e.touches[0].clientY - touchStartY;
@@ -744,9 +744,9 @@ export function setupSwipeGestures(
         if (
           isMobile &&
           indicator &&
-          !indicator.hasClass("dynamic-views-indicator-hidden")
+          !indicator.hasClass('dynamic-views-indicator-hidden')
         ) {
-          indicator.addClass("dynamic-views-indicator-hidden");
+          indicator.addClass('dynamic-views-indicator-hidden');
         }
 
         // Navigate once threshold is hit
@@ -757,25 +757,25 @@ export function setupSwipeGestures(
         }
       }
     },
-    { signal, capture: true },
+    { signal, capture: true }
   );
 
   // Show indicator again when view is scrolled vertically (mobile only)
   // Throttle to prevent battery drain from high-frequency scroll events
   if (isMobile) {
-    const viewContainer = coverEl.closest(".dynamic-views");
+    const viewContainer = coverEl.closest('.dynamic-views');
     if (viewContainer) {
       let lastScrollTime = 0;
       viewContainer.addEventListener(
-        "scroll",
+        'scroll',
         () => {
           const now = Date.now();
           if (now - lastScrollTime < SCROLL_THROTTLE_MS) return;
           lastScrollTime = now;
           if (indicator)
-            indicator.removeClass("dynamic-views-indicator-hidden");
+            indicator.removeClass('dynamic-views-indicator-hidden');
         },
-        { signal, passive: true },
+        { signal, passive: true }
       );
     }
   }
@@ -791,7 +791,7 @@ export function setupImagePreload(
   imageUrls: string[],
   signal: AbortSignal,
   onBroken?: (url: string) => void,
-  preloadGuard?: { done: boolean },
+  preloadGuard?: { done: boolean }
 ): void {
   setupHoverIntent(
     cardEl,
@@ -819,7 +819,7 @@ export function setupImagePreload(
       });
     },
     undefined,
-    signal,
+    signal
   );
 }
 
@@ -831,30 +831,30 @@ export function setupImagePreload(
 export function setupHoverZoomEligibility(
   hoverTarget: HTMLElement,
   imageEmbed: HTMLElement,
-  signal: AbortSignal,
+  signal: AbortSignal
 ): () => void {
   hoverTarget.addEventListener(
-    "mouseenter",
+    'mouseenter',
     () => {
-      const currImg = imageEmbed.querySelector(".slideshow-img-current");
-      currImg?.classList.add("hover-zoom-eligible");
+      const currImg = imageEmbed.querySelector('.slideshow-img-current');
+      currImg?.classList.add('hover-zoom-eligible');
     },
-    { signal },
+    { signal }
   );
   hoverTarget.addEventListener(
-    "mouseleave",
+    'mouseleave',
     () => {
       imageEmbed
-        .querySelectorAll(".slideshow-img")
-        .forEach((img) => img.classList.remove("hover-zoom-eligible"));
+        .querySelectorAll('.slideshow-img')
+        .forEach((img) => img.classList.remove('hover-zoom-eligible'));
     },
-    { signal },
+    { signal }
   );
 
   // Return function to clear class from old image after animation
   // (the element that just became .slideshow-img-next still has the class)
   return () => {
-    const nextImg = imageEmbed.querySelector(".slideshow-img-next");
-    nextImg?.classList.remove("hover-zoom-eligible");
+    const nextImg = imageEmbed.querySelector('.slideshow-img-next');
+    nextImg?.classList.remove('hover-zoom-eligible');
   };
 }

@@ -1,42 +1,43 @@
+import { vi } from 'vitest';
 import {
   readBasesSettings,
   extractBasesTemplate,
-} from "../../src/shared/settings-schema";
+} from '../../src/shared/settings-schema';
 
 // Mock constants (same pattern as cleanup.test.ts)
-jest.mock("../../src/constants", () => ({
+vi.mock('../../src/constants', () => ({
   VIEW_DEFAULTS: {
     cardSize: 300,
-    titleProperty: "file.name",
+    titleProperty: 'file.name',
     titleLines: 2,
-    subtitleProperty: "file.folder",
+    subtitleProperty: 'file.folder',
     displayFirstAsTitle: false,
     displaySecondAsSubtitle: false,
-    textPreviewProperty: "",
+    textPreviewProperty: '',
     fallbackToContent: true,
     textPreviewLines: 5,
-    imageProperty: "",
-    fallbackToEmbeds: "always",
-    imageFormat: "thumbnail",
-    posterDisplayMode: "gradient",
+    imageProperty: '',
+    fallbackToEmbeds: 'always',
+    imageFormat: 'thumbnail',
+    posterDisplayMode: 'gradient',
     thumbnailSize: 80,
-    imagePosition: "right",
-    imageFit: "crop",
+    imagePosition: 'right',
+    imageFit: 'crop',
     imageRatio: 1.0,
-    propertyLabels: "hide",
+    propertyLabels: 'hide',
     pairProperties: false,
-    rightPropertyPosition: "right",
-    invertPropertyPairing: "",
+    rightPropertyPosition: 'right',
+    invertPropertyPairing: '',
     showPropertiesAbove: false,
-    invertPropertyPosition: "",
-    urlProperty: "url",
+    invertPropertyPosition: '',
+    urlProperty: 'url',
     minimumColumns: 1,
-    cssclasses: "",
+    cssclasses: '',
   },
   BASES_DEFAULTS: {
     displayFirstAsTitle: true,
     displaySecondAsSubtitle: false,
-    propertyLabels: "inline",
+    propertyLabels: 'inline',
   },
 }));
 
@@ -50,236 +51,236 @@ function createMockConfig(values: Record<string, unknown>, order: string[]) {
 
 const MOCK_VIEW_DEFAULTS: any = {
   cardSize: 300,
-  titleProperty: "file.name",
+  titleProperty: 'file.name',
   titleLines: 2,
-  subtitleProperty: "file.folder",
+  subtitleProperty: 'file.folder',
   displayFirstAsTitle: false,
   displaySecondAsSubtitle: false,
-  textPreviewProperty: "",
+  textPreviewProperty: '',
   fallbackToContent: true,
   textPreviewLines: 5,
-  imageProperty: "",
-  fallbackToEmbeds: "always",
-  imageFormat: "thumbnail",
-  posterDisplayMode: "gradient",
+  imageProperty: '',
+  fallbackToEmbeds: 'always',
+  imageFormat: 'thumbnail',
+  posterDisplayMode: 'gradient',
   thumbnailSize: 80,
-  imagePosition: "right",
-  imageFit: "crop",
+  imagePosition: 'right',
+  imageFit: 'crop',
   imageRatio: 1.0,
-  propertyLabels: "hide",
+  propertyLabels: 'hide',
   pairProperties: false,
-  rightPropertyPosition: "right",
-  invertPropertyPairing: "",
+  rightPropertyPosition: 'right',
+  invertPropertyPairing: '',
   showPropertiesAbove: false,
-  invertPropertyPosition: "",
-  urlProperty: "url",
+  invertPropertyPosition: '',
+  urlProperty: 'url',
   minimumColumns: 1,
-  cssclasses: "",
+  cssclasses: '',
 };
 
 const MOCK_PLUGIN_SETTINGS: any = {
-  omitFirstLine: "ifMatchesTitle",
-  randomizeAction: "shuffle",
-  openFileAction: "card",
+  omitFirstLine: 'ifMatchesTitle',
+  randomizeAction: 'shuffle',
+  openFileAction: 'card',
   openRandomInNewTab: true,
   smartTimestamp: true,
-  createdTimeProperty: "created time",
-  modifiedTimeProperty: "modified time",
-  preventSidebarSwipe: "disabled",
-  revealInNotebookNavigator: "disable",
+  createdTimeProperty: 'created time',
+  modifiedTimeProperty: 'modified time',
+  preventSidebarSwipe: 'disabled',
+  revealInNotebookNavigator: 'disable',
   showYoutubeThumbnails: true,
   showCardLinkCovers: true,
 };
 
-describe("readBasesSettings — position-based title/subtitle", () => {
-  it("should derive titleProperty from order[0] when displayFirstAsTitle is true", () => {
+describe('readBasesSettings — position-based title/subtitle', () => {
+  it('should derive titleProperty from order[0] when displayFirstAsTitle is true', () => {
     const config = createMockConfig({ displayFirstAsTitle: true }, [
-      "note.director",
-      "note.year",
+      'note.director',
+      'note.year',
     ]);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("note.director");
-    expect(result.subtitleProperty).toBe("");
+    expect(result.titleProperty).toBe('note.director');
+    expect(result.subtitleProperty).toBe('');
     expect(result._skipLeadingProperties).toBe(1);
   });
 
-  it("should derive both title and subtitle when both toggles are true", () => {
+  it('should derive both title and subtitle when both toggles are true', () => {
     const config = createMockConfig(
       { displayFirstAsTitle: true, displaySecondAsSubtitle: true },
-      ["note.director", "note.year", "note.genre"],
+      ['note.director', 'note.year', 'note.genre']
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("note.director");
-    expect(result.subtitleProperty).toBe("note.year");
+    expect(result.titleProperty).toBe('note.director');
+    expect(result.subtitleProperty).toBe('note.year');
     expect(result._skipLeadingProperties).toBe(2);
   });
 
-  it("should not derive subtitle when order has only one item", () => {
+  it('should not derive subtitle when order has only one item', () => {
     const config = createMockConfig(
       { displayFirstAsTitle: true, displaySecondAsSubtitle: true },
-      ["note.director"],
+      ['note.director']
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("note.director");
-    expect(result.subtitleProperty).toBe("");
+    expect(result.titleProperty).toBe('note.director');
+    expect(result.subtitleProperty).toBe('');
     expect(result._skipLeadingProperties).toBe(1);
   });
 
-  it("should not derive title or subtitle when displayFirstAsTitle is false", () => {
+  it('should not derive title or subtitle when displayFirstAsTitle is false', () => {
     const config = createMockConfig({ displayFirstAsTitle: false }, [
-      "note.director",
-      "note.year",
+      'note.director',
+      'note.year',
     ]);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("");
-    expect(result.subtitleProperty).toBe("");
+    expect(result.titleProperty).toBe('');
+    expect(result.subtitleProperty).toBe('');
     expect(result._skipLeadingProperties).toBe(0);
   });
 
-  it("should not derive title when order is empty", () => {
+  it('should not derive title when order is empty', () => {
     const config = createMockConfig({ displayFirstAsTitle: true }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("");
+    expect(result.titleProperty).toBe('');
     expect(result._skipLeadingProperties).toBe(0);
   });
 
-  it("should use BASES_DEFAULTS (displayFirstAsTitle: true) when config has no override", () => {
+  it('should use BASES_DEFAULTS (displayFirstAsTitle: true) when config has no override', () => {
     const config = createMockConfig(
       {}, // no displayFirstAsTitle override — falls back to BASES_DEFAULTS.displayFirstAsTitle (true)
-      ["note.title", "note.author"],
+      ['note.title', 'note.author']
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("note.title");
+    expect(result.titleProperty).toBe('note.title');
     expect(result._skipLeadingProperties).toBe(1);
   });
-  it("should skip special properties in position-based title/subtitle derivation", () => {
+  it('should skip special properties in position-based title/subtitle derivation', () => {
     const config = createMockConfig(
       {
         displayFirstAsTitle: true,
         displaySecondAsSubtitle: true,
-        textPreviewProperty: "note.summary",
+        textPreviewProperty: 'note.summary',
       },
-      ["note.summary", "note.title", "note.author"],
+      ['note.summary', 'note.title', 'note.author']
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.titleProperty).toBe("note.title");
-    expect(result.subtitleProperty).toBe("note.author");
+    expect(result.titleProperty).toBe('note.title');
+    expect(result.subtitleProperty).toBe('note.author');
     expect(result._skipLeadingProperties).toBe(3);
   });
 });
 
-describe("readBasesSettings — hidden property visibility", () => {
-  it("should clear urlProperty and textPreviewProperty when not in getOrder()", () => {
+describe('readBasesSettings — hidden property visibility', () => {
+  it('should clear urlProperty and textPreviewProperty when not in getOrder()', () => {
     const config = createMockConfig(
-      { urlProperty: "note.url", textPreviewProperty: "note.summary" },
-      ["note.title", "note.author"],
+      { urlProperty: 'note.url', textPreviewProperty: 'note.summary' },
+      ['note.title', 'note.author']
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.urlProperty).toBe("");
-    expect(result.textPreviewProperty).toBe("");
+    expect(result.urlProperty).toBe('');
+    expect(result.textPreviewProperty).toBe('');
   });
 
-  it("should keep urlProperty and textPreviewProperty when in getOrder()", () => {
+  it('should keep urlProperty and textPreviewProperty when in getOrder()', () => {
     const config = createMockConfig(
-      { urlProperty: "note.url", textPreviewProperty: "note.summary" },
-      ["note.title", "note.url", "note.summary"],
+      { urlProperty: 'note.url', textPreviewProperty: 'note.summary' },
+      ['note.title', 'note.url', 'note.summary']
     );
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.urlProperty).toBe("note.url");
-    expect(result.textPreviewProperty).toBe("note.summary");
+    expect(result.urlProperty).toBe('note.url');
+    expect(result.textPreviewProperty).toBe('note.summary');
   });
 });
 
-describe("readBasesSettings — posterDisplayMode", () => {
-  it("should read posterDisplayMode from config", () => {
-    const config = createMockConfig({ posterDisplayMode: "overlay" }, []);
+describe('readBasesSettings — posterDisplayMode', () => {
+  it('should read posterDisplayMode from config', () => {
+    const config = createMockConfig({ posterDisplayMode: 'overlay' }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.posterDisplayMode).toBe("overlay");
+    expect(result.posterDisplayMode).toBe('overlay');
   });
 
-  it("should fall back to default for invalid posterDisplayMode", () => {
-    const config = createMockConfig({ posterDisplayMode: "invalid" }, []);
+  it('should fall back to default for invalid posterDisplayMode', () => {
+    const config = createMockConfig({ posterDisplayMode: 'invalid' }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.posterDisplayMode).toBe("gradient");
+    expect(result.posterDisplayMode).toBe('gradient');
   });
 });
 
-describe("readBasesSettings — templateOverrides", () => {
-  it("should use templateOverrides when config has no value", () => {
+describe('readBasesSettings — templateOverrides', () => {
+  it('should use templateOverrides when config has no value', () => {
     const config = createMockConfig({}, []);
     const result = readBasesSettings(
       config,
       MOCK_PLUGIN_SETTINGS,
-      "grid",
+      'grid',
       undefined,
-      { cardSize: 500 },
+      { cardSize: 500 }
     );
     expect(result.cardSize).toBe(500);
   });
 
-  it("should prefer config values over templateOverrides", () => {
+  it('should prefer config values over templateOverrides', () => {
     const config = createMockConfig({ cardSize: 600 }, []);
     const result = readBasesSettings(
       config,
       MOCK_PLUGIN_SETTINGS,
-      "grid",
+      'grid',
       undefined,
-      { cardSize: 500 },
+      { cardSize: 500 }
     );
     expect(result.cardSize).toBe(600);
   });
 
-  it("should apply templateOverrides to enum fallbacks", () => {
+  it('should apply templateOverrides to enum fallbacks', () => {
     const config = createMockConfig({}, []);
     const result = readBasesSettings(
       config,
       MOCK_PLUGIN_SETTINGS,
-      "grid",
+      'grid',
       undefined,
-      { propertyLabels: "above" },
+      { propertyLabels: 'above' }
     );
-    expect(result.propertyLabels).toBe("above");
+    expect(result.propertyLabels).toBe('above');
   });
 });
 
-describe("extractBasesTemplate", () => {
+describe('extractBasesTemplate', () => {
   // VIEW_DEFAULTS from mock: cardSize=300, displayFirstAsTitle=false, propertyLabels="hide"
   // BASES_DEFAULTS from mock: displayFirstAsTitle=true, propertyLabels="inline"
   // mergedDefaults: cardSize=300, displayFirstAsTitle=true, propertyLabels="inline"
 
-  it("should return only non-default values (sparse)", () => {
+  it('should return only non-default values (sparse)', () => {
     const config = createMockConfig({ cardSize: 400 }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
     expect(result).toEqual({ cardSize: 400 });
   });
 
-  it("should detect BASES_DEFAULTS differences from VIEW_DEFAULTS", () => {
+  it('should detect BASES_DEFAULTS differences from VIEW_DEFAULTS', () => {
     // displayFirstAsTitle: false in config — differs from mergedDefaults (true from BASES_DEFAULTS)
     const config = createMockConfig({ displayFirstAsTitle: false }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
     expect(result.displayFirstAsTitle).toBe(false);
   });
 
-  it("should return empty object when all values match defaults", () => {
+  it('should return empty object when all values match defaults', () => {
     const config = createMockConfig({}, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
     expect(result).toEqual({});
   });
 
-  it("should include non-default posterDisplayMode", () => {
-    const config = createMockConfig({ posterDisplayMode: "overlay" }, []);
+  it('should include non-default posterDisplayMode', () => {
+    const config = createMockConfig({ posterDisplayMode: 'overlay' }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
-    expect(result.posterDisplayMode).toBe("overlay");
+    expect(result.posterDisplayMode).toBe('overlay');
   });
 
-  it("should omit default posterDisplayMode", () => {
-    const config = createMockConfig({ posterDisplayMode: "gradient" }, []);
+  it('should omit default posterDisplayMode', () => {
+    const config = createMockConfig({ posterDisplayMode: 'gradient' }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
     expect(result.posterDisplayMode).toBeUndefined();
   });
 
-  it("should coerce minimumColumns string to number", () => {
-    const config = createMockConfig({ minimumColumns: "two" }, []);
+  it('should coerce minimumColumns string to number', () => {
+    const config = createMockConfig({ minimumColumns: 'two' }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
     expect(result.minimumColumns).toBe(2);
   });

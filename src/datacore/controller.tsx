@@ -1,7 +1,7 @@
-import { App, TFile, Keymap, Notice } from "obsidian";
-import type { PaneType } from "obsidian";
-import type DynamicViews from "../../main";
-import type { DatacorePluginInstance } from "./types";
+import { App, TFile, Keymap, Notice } from 'obsidian';
+import type { PaneType } from 'obsidian';
+import type DynamicViews from '../../main';
+import type { DatacorePluginInstance } from './types';
 import {
   ResolvedSettings,
   DatacoreState,
@@ -9,13 +9,13 @@ import {
   WidthMode,
   ViewDefaults,
   DatacoreDefaults,
-} from "../types";
+} from '../types';
 import {
   resolveSettings,
   VIEW_DEFAULTS,
   DATACORE_DEFAULTS,
   PLUGIN_SETTINGS_CHANGE,
-} from "../constants";
+} from '../constants';
 import {
   BATCH_SIZE,
   PANE_MULTIPLIER,
@@ -24,61 +24,61 @@ import {
   WIDE_MODE_MULTIPLIER,
   SCROLL_THROTTLE_MS,
   RESIZE_THROTTLE_MS,
-} from "../shared/constants";
-import { CardView } from "./card-view";
+} from '../shared/constants';
+import { CardView } from './card-view';
 import {
   cleanupAllCardObservers,
   cleanupAllCardScrollListeners,
   cleanupAllImageViewers,
-} from "../shared/card-renderer";
-import { remeasurePropertyFields } from "../shared/property-measure";
-import { MasonryView } from "./masonry-view";
-import { ListView } from "./list-view";
-import { Toolbar } from "./toolbar";
-import { getCurrentFile, getAvailablePath } from "../utils/file";
+} from '../shared/card-renderer';
+import { remeasurePropertyFields } from '../shared/property-measure';
+import { MasonryView } from './masonry-view';
+import { ListView } from './list-view';
+import { Toolbar } from './toolbar';
+import { getCurrentFile, getAvailablePath } from '../utils/file';
 import {
   ensureFileSelector,
   updateQueryInBlock,
   findQueryInBlock,
-} from "./query-sync";
-import { getPaneType } from "../utils/randomize";
+} from './query-sync';
+import { getPaneType } from '../utils/randomize';
 import {
   loadTextPreviewsForEntries,
   loadImagesForEntries,
-} from "../shared/content-loader";
+} from '../shared/content-loader';
 import {
   getFirstDatacorePropertyValue,
   getAllDatacoreImagePropertyValues,
-} from "../utils/property";
+} from '../utils/property';
 import {
   getCardSpacing,
   setupStyleSettingsObserver,
-} from "../utils/style-settings";
-import { getOwnerWindow } from "../utils/owner-window";
+} from '../utils/style-settings';
+import { getOwnerWindow } from '../utils/owner-window';
 
 import {
   calculateMasonryLayout,
   calculateIncrementalMasonryLayout,
   applyMasonryLayout,
   type MasonryLayoutResult,
-} from "../utils/masonry-layout";
-import type { DatacoreAPI, DatacoreFile } from "./types";
+} from '../utils/masonry-layout';
+import type { DatacoreAPI, DatacoreFile } from './types';
 import {
   resolveTimestampProperty,
   datacoreResultToCardData,
-} from "../shared/data-transform";
-import type { CardData } from "../shared/card-renderer";
-import { setupHoverKeyboardNavigation } from "../shared/keyboard-nav";
-import { initializeScrollGradients } from "../shared/scroll-gradient";
+} from '../shared/data-transform';
+import type { CardData } from '../shared/card-renderer';
+import { setupHoverKeyboardNavigation } from '../shared/keyboard-nav';
+import { initializeScrollGradients } from '../shared/scroll-gradient';
 import {
   initializeTitleTruncation,
   syncResponsiveClasses,
-} from "../bases/shared-renderer";
+} from '../bases/shared-renderer';
 
 /** Shared width parameters computed from section CSS variables and dimensions. */
 function calculateWidthParams(
   section: Element,
-  container?: Element | null,
+  container?: Element | null
 ): {
   fileLineWidth: number;
   effectiveMargins: number;
@@ -88,12 +88,12 @@ function calculateWidthParams(
 } {
   const cs = getComputedStyle(section);
   const fileLineWidth =
-    parseFloat(cs.getPropertyValue("--file-line-width")) || 700;
-  const fileMargins = parseFloat(cs.getPropertyValue("--file-margins")) || 16;
+    parseFloat(cs.getPropertyValue('--file-line-width')) || 700;
+  const fileMargins = parseFloat(cs.getPropertyValue('--file-margins')) || 16;
   // Use at least --bases-view-padding so Datacore matches Bases width on mobile
   const containerCs = container ? getComputedStyle(container) : cs;
   const basesViewPadding =
-    parseFloat(containerCs.getPropertyValue("--bases-view-padding")) || 12;
+    parseFloat(containerCs.getPropertyValue('--bases-view-padding')) || 12;
   const effectiveMargins = Math.max(fileMargins, basesViewPadding);
   const availableWidth =
     section.getBoundingClientRect().width - effectiveMargins * 2;
@@ -108,7 +108,7 @@ function calculateWidthParams(
 }
 
 // Extend App type to include isMobile property
-declare module "obsidian" {
+declare module 'obsidian' {
   interface App {
     isMobile: boolean;
   }
@@ -126,7 +126,7 @@ export function View({
   plugin,
   app,
   dc,
-  USER_QUERY = "",
+  USER_QUERY = '',
   QUERY_ID,
 }: ViewProps): JSX.Element {
   // Get file containing this query (used for query sync to code block)
@@ -143,7 +143,7 @@ export function View({
     if (!persistenceManager) return resolveSettings({} as Partial<never>);
 
     const pluginSettings = persistenceManager.getPluginSettings();
-    const template = persistenceManager.getSettingsTemplate("datacore");
+    const template = persistenceManager.getSettingsTemplate('datacore');
     const datacoreState = persistenceManager.getDatacoreState(QUERY_ID);
 
     return resolveSettings(pluginSettings, VIEW_DEFAULTS, DATACORE_DEFAULTS, {
@@ -156,39 +156,39 @@ export function View({
   const getPersistedValue = dc.useCallback(
     <K extends keyof DatacoreState>(
       key: K,
-      defaultValue: DatacoreState[K],
+      defaultValue: DatacoreState[K]
     ): DatacoreState[K] => {
       if (!persistenceManager) return defaultValue;
       const state = persistenceManager.getDatacoreState(QUERY_ID);
       return state[key] ?? defaultValue;
     },
-    [persistenceManager, QUERY_ID],
+    [persistenceManager, QUERY_ID]
   );
 
   // Initialize state
   const [sortMethod, setSortMethod] = dc.useState(
-    getPersistedValue("sortMethod", "mtime-desc"),
+    getPersistedValue('sortMethod', 'mtime-desc')
   );
   const [searchQuery, setSearchQuery] = dc.useState(
-    getPersistedValue("searchQuery", ""),
+    getPersistedValue('searchQuery', '')
   );
   const [viewMode, setViewMode] = dc.useState(
-    getPersistedValue("viewMode", "grid") as ViewMode,
+    getPersistedValue('viewMode', 'grid') as ViewMode
   );
   const [widthMode, setWidthMode] = dc.useState(
-    getPersistedValue("widthMode", "normal") as WidthMode,
+    getPersistedValue('widthMode', 'normal') as WidthMode
   );
   const [resultLimit, setResultLimit] = dc.useState(
-    getPersistedValue("resultLimit", ""),
+    getPersistedValue('resultLimit', '')
   );
 
   // Query state - extract query from between DQL markers
-  const cleanQuery = (USER_QUERY || "")
-    .split("\n")
+  const cleanQuery = (USER_QUERY || '')
+    .split('\n')
     .filter(
-      (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
+      (line) => !line.includes('QUERY START') && !line.includes('QUERY END')
     )
-    .join("\n")
+    .join('\n')
     .trim();
 
   const [draftQuery, setDraftQuery] = dc.useState(cleanQuery);
@@ -225,13 +225,13 @@ export function View({
   const sortedLengthRef = dc.useRef<number>(0);
   const hasBatchAppendedRef = dc.useRef(false);
   const settingsTimeoutRef = dc.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
+    null
   );
   const isSyncing = dc.useRef(false);
   const pendingSync = dc.useRef<string | null>(null);
 
   // Stable pages reference - prevents re-renders when Datacore returns new array with same content
-  const prevPagesKeyRef = dc.useRef<string>("");
+  const prevPagesKeyRef = dc.useRef<string>('');
 
   // Debounce pages updates to prevent render cascade
   const [stablePages, setStablePages] = dc.useState<DatacoreFile[]>([]);
@@ -267,9 +267,9 @@ export function View({
       if (state.resultLimit !== undefined) setResultLimit(state.resultLimit);
     };
 
-    app.workspace.on("layout-change", handleLayoutChange);
+    app.workspace.on('layout-change', handleLayoutChange);
     return () => {
-      app.workspace.off("layout-change", handleLayoutChange);
+      app.workspace.off('layout-change', handleLayoutChange);
     };
   }, [QUERY_ID, persistenceManager, app.workspace]);
 
@@ -305,15 +305,15 @@ export function View({
   dc.useEffect(() => {
     if (!explorerRef.current) return;
 
-    const section = explorerRef.current.closest(".markdown-source-view");
+    const section = explorerRef.current.closest('.markdown-source-view');
     if (!section) return; // Only applies to Live Preview
 
     const codeBlock = explorerRef.current.closest<HTMLElement>(
-      ".cm-preview-code-block",
+      '.cm-preview-code-block'
     );
     if (!codeBlock) return;
 
-    const cmContent = section.querySelector<HTMLElement>(".cm-content");
+    const cmContent = section.querySelector<HTMLElement>('.cm-content');
     if (!cmContent) return;
 
     const updateWidth = () => {
@@ -325,12 +325,12 @@ export function View({
 
       // Determine effective width
       let effectiveWidth: number;
-      if (widthMode === "max") {
+      if (widthMode === 'max') {
         effectiveWidth = params.availableWidth;
-      } else if (widthMode === "wide") {
+      } else if (widthMode === 'wide') {
         // Hysteresis: 40px buffer prevents oscillation when available width
         // hovers near target during rapid CodeMirror resize events
-        const isConstrained = codeBlock.style.width !== "";
+        const isConstrained = codeBlock.style.width !== '';
         const buffer = isConstrained ? 40 : 0;
         effectiveWidth =
           params.availableWidth < params.targetWidth + buffer
@@ -347,19 +347,19 @@ export function View({
       // Use measured content width (not CSS variable) so offset stays correct
       // when pane is narrower than --file-line-width
       const offsetLeft =
-        widthMode === "max"
+        widthMode === 'max'
           ? sectionRect.left - contentRect.left + params.effectiveMargins
           : -(effectiveWidth - contentRect.width) / 2;
-      codeBlock.style.setProperty("width", `${effectiveWidth}px`, "important");
+      codeBlock.style.setProperty('width', `${effectiveWidth}px`, 'important');
       codeBlock.style.setProperty(
-        "max-width",
+        'max-width',
         `${effectiveWidth}px`,
-        "important",
+        'important'
       );
       codeBlock.style.setProperty(
-        "transform",
+        'transform',
         `translateX(${offsetLeft}px)`,
-        "important",
+        'important'
       );
     };
 
@@ -373,9 +373,9 @@ export function View({
       resizeObserver.disconnect();
       // Clean up inline styles on unmount
       if (codeBlock) {
-        codeBlock.style.removeProperty("width");
-        codeBlock.style.removeProperty("max-width");
-        codeBlock.style.removeProperty("transform");
+        codeBlock.style.removeProperty('width');
+        codeBlock.style.removeProperty('max-width');
+        codeBlock.style.removeProperty('transform');
       }
     };
   }, [widthMode]);
@@ -385,18 +385,18 @@ export function View({
     if (!explorerRef.current) return;
 
     // Skip if in Live Preview (handled by the effect above)
-    if (explorerRef.current.closest(".markdown-source-view")) return;
+    if (explorerRef.current.closest('.markdown-source-view')) return;
 
-    const elPre = explorerRef.current.closest<HTMLElement>(".el-pre");
+    const elPre = explorerRef.current.closest<HTMLElement>('.el-pre');
     if (!elPre) return;
 
     const section = explorerRef.current.closest(
-      ".markdown-preview-view, .markdown-reading-view",
+      '.markdown-preview-view, .markdown-reading-view'
     );
     if (!section) return;
 
     // Query sizer once (stable across resizes)
-    const sizer = section.querySelector(".markdown-preview-sizer");
+    const sizer = section.querySelector('.markdown-preview-sizer');
 
     const updateWidth = () => {
       const params = calculateWidthParams(section, explorerRef.current);
@@ -408,9 +408,9 @@ export function View({
       // horizontal while Bases uses --bases-view-padding 12px).
       // Wide: 1.15× fileLineWidth. Max: full available width.
       const effectiveWidth =
-        widthMode === "max"
+        widthMode === 'max'
           ? params.availableWidth
-          : widthMode === "wide"
+          : widthMode === 'wide'
             ? Math.min(params.targetWidth, params.availableWidth)
             : Math.min(params.fileLineWidth, params.availableWidth);
       // Use measured sizer width (not CSS variable) so offset stays correct
@@ -420,9 +420,9 @@ export function View({
         : params.fileLineWidth;
       const offset = Math.max(0, (effectiveWidth - sizerWidth) / 2);
 
-      elPre.style.setProperty("width", `${effectiveWidth}px`, "important");
-      elPre.style.setProperty("max-width", `${effectiveWidth}px`, "important");
-      elPre.style.setProperty("margin-left", `-${offset}px`, "important");
+      elPre.style.setProperty('width', `${effectiveWidth}px`, 'important');
+      elPre.style.setProperty('max-width', `${effectiveWidth}px`, 'important');
+      elPre.style.setProperty('margin-left', `-${offset}px`, 'important');
     };
 
     updateWidth();
@@ -433,9 +433,9 @@ export function View({
 
     return () => {
       resizeObserver.disconnect();
-      elPre.style.removeProperty("width");
-      elPre.style.removeProperty("max-width");
-      elPre.style.removeProperty("margin-left");
+      elPre.style.removeProperty('width');
+      elPre.style.removeProperty('max-width');
+      elPre.style.removeProperty('margin-left');
     };
   }, [widthMode]);
 
@@ -465,7 +465,7 @@ export function View({
     }
     settingsTimeoutRef.current = setTimeout(() => {
       if (QUERY_ID && persistenceManager) {
-        const template = persistenceManager.getSettingsTemplate("datacore");
+        const template = persistenceManager.getSettingsTemplate('datacore');
         const defaults = {
           ...VIEW_DEFAULTS,
           ...DATACORE_DEFAULTS,
@@ -498,11 +498,11 @@ export function View({
     const pluginSettings = persistenceManager.getPluginSettings();
     if (
       app.isMobile &&
-      pluginSettings.preventSidebarSwipe === "all-views" &&
+      pluginSettings.preventSidebarSwipe === 'all-views' &&
       explorerRef.current
     ) {
-      explorerRef.current.dataset.ignoreSwipe = "true";
-      return () => explorerRef.current?.removeAttribute("data-ignore-swipe");
+      explorerRef.current.dataset.ignoreSwipe = 'true';
+      return () => explorerRef.current?.removeAttribute('data-ignore-swipe');
     }
   }, [app.isMobile, persistenceManager]);
 
@@ -511,7 +511,7 @@ export function View({
     const cleanup = setupHoverKeyboardNavigation(
       () => hoveredCardRef.current,
       () => containerRef.current,
-      setFocusableCardIndex,
+      setFocusableCardIndex
     );
     return cleanup;
   }, []);
@@ -524,7 +524,7 @@ export function View({
     if (!explorerRef.current) return;
     const disconnect = setupStyleSettingsObserver(
       () => setStyleRevision((r) => r + 1),
-      explorerRef.current,
+      explorerRef.current
     );
     return disconnect;
   }, []);
@@ -534,7 +534,7 @@ export function View({
   dc.useEffect(() => {
     const handler = () => {
       const currentPM = (
-        app.plugins.plugins["dynamic-views"] as DynamicViews | undefined
+        app.plugins.plugins['dynamic-views'] as DynamicViews | undefined
       )?.persistenceManager;
       setSettings((prev) => {
         const fresh = currentPM?.getPluginSettings();
@@ -560,14 +560,14 @@ export function View({
     const q = appliedQuery.trim();
     if (!q || q.length === 0) {
       setQueryError(null);
-      return "@file"; // Default: show all files
+      return '@file'; // Default: show all files
     }
     setQueryError(null);
     return ensureFileSelector(q);
   }, [appliedQuery]);
 
   // Computed key for property settings - triggers gradient re-init when properties change
-  const propertySettingsKey = [settings.omitFirstLine].join("|");
+  const propertySettingsKey = [settings.omitFirstLine].join('|');
 
   // Ref to always capture latest validatedQuery for debounced callbacks
   const validatedQueryRef = dc.useRef(validatedQuery);
@@ -584,21 +584,21 @@ export function View({
         const rawPages = dc.query(query) || [];
         const pagesKey =
           rawPages.length +
-          ":" +
+          ':' +
           rawPages
             .map((p) => `${p.$path}:${p.$mtime?.toMillis?.() || 0}`)
             .sort()
-            .join("|");
+            .join('|');
         if (pagesKey !== prevPagesKeyRef.current) {
           prevPagesKeyRef.current = pagesKey;
           setStablePages(rawPages);
         }
       } catch (error: unknown) {
         const errorMessage =
-          error instanceof Error ? error.message : "Query error";
+          error instanceof Error ? error.message : 'Query error';
         setQueryError(errorMessage);
         setStablePages([]);
-        prevPagesKeyRef.current = ""; // Reset for recovery
+        prevPagesKeyRef.current = ''; // Reset for recovery
       }
     };
 
@@ -606,7 +606,7 @@ export function View({
     runQuery();
 
     // Subscribe to index updates with debounce
-    const datacorePlugin = app.plugins.plugins["datacore"] as
+    const datacorePlugin = app.plugins.plugins['datacore'] as
       | DatacorePluginInstance
       | undefined;
     const core = datacorePlugin?.api?.core;
@@ -615,7 +615,7 @@ export function View({
     }
 
     let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
-    const updateRef = core.on("update", () => {
+    const updateRef = core.on('update', () => {
       if (debounceTimeout) clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(runQuery, 500);
     });
@@ -632,16 +632,16 @@ export function View({
     if (!searchQuery?.trim()) return null;
 
     const terms = searchQuery.toLowerCase().trim().split(/\s+/);
-    const positiveTerms = terms.filter((t) => !t.startsWith("-"));
+    const positiveTerms = terms.filter((t) => !t.startsWith('-'));
     const negativeTerms = terms
-      .filter((t) => t.startsWith("-"))
+      .filter((t) => t.startsWith('-'))
       .map((t) => t.slice(1));
 
     return {
-      posTagTerms: positiveTerms.filter((t) => t.startsWith("#")),
-      posNameTerms: positiveTerms.filter((t) => !t.startsWith("#")),
-      negTagTerms: negativeTerms.filter((t) => t.startsWith("#")),
-      negNameTerms: negativeTerms.filter((t) => !t.startsWith("#")),
+      posTagTerms: positiveTerms.filter((t) => t.startsWith('#')),
+      posNameTerms: positiveTerms.filter((t) => !t.startsWith('#')),
+      negTagTerms: negativeTerms.filter((t) => t.startsWith('#')),
+      negNameTerms: negativeTerms.filter((t) => !t.startsWith('#')),
     };
   }, [searchQuery]);
 
@@ -657,21 +657,21 @@ export function View({
         parsedSearchTerms;
 
       filtered = filtered.filter((p) => {
-        const fileName = (p.$name || "").toLowerCase();
+        const fileName = (p.$name || '').toLowerCase();
         const fileTags = (p.$tags || []).map((t: string) => t.toLowerCase());
 
         const posNameMatch = posNameTerms.every((term) =>
-          fileName.includes(term),
+          fileName.includes(term)
         );
         const posTagMatch = posTagTerms.every((term) =>
-          fileTags.some((fileTag: string) => fileTag === term),
+          fileTags.some((fileTag: string) => fileTag === term)
         );
 
         const negNameMatch = negNameTerms.some((term) =>
-          fileName.includes(term),
+          fileName.includes(term)
         );
         const negTagMatch = negTagTerms.some((term) =>
-          fileTags.some((fileTag: string) => fileTag === term),
+          fileTags.some((fileTag: string) => fileTag === term)
         );
 
         return posNameMatch && posTagMatch && !negNameMatch && !negTagMatch;
@@ -688,39 +688,39 @@ export function View({
       });
     } else {
       switch (sortMethod) {
-        case "name-asc":
+        case 'name-asc':
           sorted = filtered.sort((a, b) =>
-            (a.$name || "").localeCompare(b.$name || ""),
+            (a.$name || '').localeCompare(b.$name || '')
           );
           break;
-        case "name-desc":
+        case 'name-desc':
           sorted = filtered.sort((a, b) =>
-            (b.$name || "").localeCompare(a.$name || ""),
+            (b.$name || '').localeCompare(a.$name || '')
           );
           break;
-        case "mtime-asc":
+        case 'mtime-asc':
           sorted = filtered.sort(
-            (a, b) => (a.$mtime?.toMillis() || 0) - (b.$mtime?.toMillis() || 0),
+            (a, b) => (a.$mtime?.toMillis() || 0) - (b.$mtime?.toMillis() || 0)
           );
           break;
-        case "mtime-desc":
+        case 'mtime-desc':
           sorted = filtered.sort(
-            (a, b) => (b.$mtime?.toMillis() || 0) - (a.$mtime?.toMillis() || 0),
+            (a, b) => (b.$mtime?.toMillis() || 0) - (a.$mtime?.toMillis() || 0)
           );
           break;
-        case "ctime-asc":
+        case 'ctime-asc':
           sorted = filtered.sort(
-            (a, b) => (a.$ctime?.toMillis() || 0) - (b.$ctime?.toMillis() || 0),
+            (a, b) => (a.$ctime?.toMillis() || 0) - (b.$ctime?.toMillis() || 0)
           );
           break;
-        case "ctime-desc":
+        case 'ctime-desc':
           sorted = filtered.sort(
-            (a, b) => (b.$ctime?.toMillis() || 0) - (a.$ctime?.toMillis() || 0),
+            (a, b) => (b.$ctime?.toMillis() || 0) - (a.$ctime?.toMillis() || 0)
           );
           break;
         default:
           sorted = filtered.sort(
-            (a, b) => (b.$mtime?.toMillis() || 0) - (a.$mtime?.toMillis() || 0),
+            (a, b) => (b.$mtime?.toMillis() || 0) - (a.$mtime?.toMillis() || 0)
           );
       }
     }
@@ -743,10 +743,10 @@ export function View({
 
   // State to store file text previews and images
   const [textPreviews, setTextPreviews] = dc.useState<Record<string, string>>(
-    {},
+    {}
   );
   const [images, setImages] = dc.useState<Record<string, string | string[]>>(
-    {},
+    {}
   );
   const [hasImageAvailable, setHasImageAvailable] = dc.useState<
     Record<string, boolean>
@@ -803,7 +803,7 @@ export function View({
   const allCards = dc.useMemo(() => {
     const cache = cardDataCache.current;
     return sorted.map((file) => {
-      const path = file.$path || "";
+      const path = file.$path || '';
       const mtime = file.$mtime?.toMillis?.() || 0;
       const ctime = file.$ctime?.toMillis?.() || 0;
       const cacheKey = `${path}:${mtime}:${ctime}:${sortMethod}:${settings.smartTimestamp}:${settings.createdTimeProperty}:${settings.modifiedTimeProperty}`;
@@ -828,7 +828,7 @@ export function View({
         sortMethod,
         isShuffled,
         textPreviews[path],
-        images[path],
+        images[path]
       );
       cache?.set(cacheKey, cardData);
       return cardData;
@@ -854,7 +854,7 @@ export function View({
         const mtime = f.$mtime?.toMillis?.() || 0;
         const ctime = f.$ctime?.toMillis?.() || 0;
         return `${f.$path}:${mtime}:${ctime}`;
-      }),
+      })
     );
     for (const key of cache.keys()) {
       if (!currentKeys.has(key)) cache.delete(key);
@@ -882,7 +882,7 @@ export function View({
 
       // Get current result paths for cache preservation
       const currentPaths = new Set(
-        sorted.slice(0, displayedCount).map((p) => p.$path),
+        sorted.slice(0, displayedCount).map((p) => p.$path)
       );
 
       const prevMtimes = prevMtimeRef.current ?? new Map<string, number>();
@@ -908,7 +908,7 @@ export function View({
             try {
               const file = app.vault.getAbstractFileByPath(p.$path);
               if (!(file instanceof TFile)) {
-                newTextPreviews[p.$path] = "(File not found)";
+                newTextPreviews[p.$path] = '(File not found)';
                 return null;
               }
 
@@ -918,14 +918,14 @@ export function View({
                 const ctime = p.$ctime?.toMillis?.() || 0;
                 const mtime = p.$mtime?.toMillis?.() || 0;
                 const textPreviewProps = settings.textPreviewProperty
-                  .split(",")
+                  .split(',')
                   .map((prop) => prop.trim());
                 for (const prop of textPreviewProps) {
                   // Try timestamp property first
                   const timestamp = resolveTimestampProperty(
                     prop,
                     ctime,
-                    mtime,
+                    mtime
                   );
                   if (timestamp) {
                     textPreviewValue = timestamp;
@@ -934,7 +934,7 @@ export function View({
                   // Try regular property
                   const textPreviewPropValue = getFirstDatacorePropertyValue(
                     p,
-                    prop,
+                    prop
                   );
                   if (
                     Array.isArray(textPreviewPropValue) &&
@@ -942,12 +942,12 @@ export function View({
                   ) {
                     textPreviewValue = textPreviewPropValue
                       .map(String)
-                      .join(", ");
+                      .join(', ');
                     break;
                   }
                   if (
-                    typeof textPreviewPropValue === "string" ||
-                    typeof textPreviewPropValue === "number"
+                    typeof textPreviewPropValue === 'string' ||
+                    typeof textPreviewPropValue === 'number'
                   ) {
                     textPreviewValue = String(textPreviewPropValue);
                     break;
@@ -972,11 +972,11 @@ export function View({
               };
             } catch (e: unknown) {
               console.error(
-                "Error reading file:",
+                'Error reading file:',
                 p.$path,
-                e instanceof Error ? e.message : e,
+                e instanceof Error ? e.message : e
               );
-              newTextPreviews[p.$path] = "(Error reading file)";
+              newTextPreviews[p.$path] = '(Error reading file)';
               return null;
             }
           })
@@ -987,7 +987,7 @@ export function View({
           settings.fallbackToContent,
           settings.omitFirstLine,
           app,
-          newTextPreviews,
+          newTextPreviews
         );
       }
 
@@ -1027,7 +1027,7 @@ export function View({
 
               const imagePropertyValues = getAllDatacoreImagePropertyValues(
                 p,
-                settings.imageProperty,
+                settings.imageProperty
               );
               return {
                 path: p.$path,
@@ -1036,9 +1036,9 @@ export function View({
               };
             } catch (e: unknown) {
               console.error(
-                "Error reading file:",
+                'Error reading file:',
                 p.$path,
-                e instanceof Error ? e.message : e,
+                e instanceof Error ? e.message : e
               );
               newHasImageAvailable[p.$path] = false; // Prevent retry loop
               return null;
@@ -1056,7 +1056,7 @@ export function View({
           {
             includeYoutube: pluginSettings.showYoutubeThumbnails,
             includeCardLink: pluginSettings.showCardLinkCovers,
-          },
+          }
         );
       }
 
@@ -1090,18 +1090,18 @@ export function View({
   // Masonry layout - Direct DOM manipulation (no React re-renders on shuffle)
   dc.useEffect(() => {
     // Clean up masonry styles if not in masonry mode
-    if (viewMode !== "masonry") {
+    if (viewMode !== 'masonry') {
       const container = containerRef.current;
       if (container) {
-        const cards = container.querySelectorAll<HTMLElement>(".card");
+        const cards = container.querySelectorAll<HTMLElement>('.card');
         cards.forEach((card) => {
-          card.classList.remove("masonry-positioned");
-          card.style.removeProperty("--masonry-width");
-          card.style.removeProperty("--masonry-left");
-          card.style.removeProperty("--masonry-top");
+          card.classList.remove('masonry-positioned');
+          card.style.removeProperty('--masonry-width');
+          card.style.removeProperty('--masonry-left');
+          card.style.removeProperty('--masonry-top');
         });
-        container.classList.remove("masonry-container");
-        container.style.removeProperty("--masonry-height");
+        container.classList.remove('masonry-container');
+        container.style.removeProperty('--masonry-height');
       }
       updateLayoutRef.current = null;
       // Clear incremental cache when leaving masonry mode
@@ -1136,13 +1136,13 @@ export function View({
 
       try {
         const cards = Array.from(
-          container.querySelectorAll<HTMLElement>(".card"),
+          container.querySelectorAll<HTMLElement>('.card')
         );
         if (cards.length === 0) return;
 
         // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
         const containerWidth = Math.floor(
-          container.getBoundingClientRect().width,
+          container.getBoundingClientRect().width
         );
         if (containerWidth < 100) return;
 
@@ -1152,16 +1152,16 @@ export function View({
 
         // Set CSS variables (same for both incremental and full paths)
         container.style.setProperty(
-          "--dynamic-views-text-preview-lines",
-          String(settings.textPreviewLines),
+          '--dynamic-views-text-preview-lines',
+          String(settings.textPreviewLines)
         );
         container.style.setProperty(
-          "--dynamic-views-title-lines",
-          String(settings.titleLines),
+          '--dynamic-views-title-lines',
+          String(settings.titleLines)
         );
         container.style.setProperty(
-          "--dynamic-views-thumbnail-size",
-          `${settings.thumbnailSize}px`,
+          '--dynamic-views-thumbnail-size',
+          `${settings.thumbnailSize}px`
         );
 
         const lastResult = lastLayoutResultRef.current;
@@ -1178,14 +1178,14 @@ export function View({
           // Pre-set width on new cards before measuring
           newCards.forEach((card) =>
             card.style.setProperty(
-              "--masonry-width",
-              `${lastResult.cardWidth}px`,
-            ),
+              '--masonry-width',
+              `${lastResult.cardWidth}px`
+            )
           );
 
           // Force content rendering for accurate measurement
           // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
-          container.classList.add("masonry-measuring");
+          container.classList.add('masonry-measuring');
           try {
             void newCards[0]?.offsetHeight;
 
@@ -1203,8 +1203,8 @@ export function View({
 
             // Update container height (applyMasonryLayout sets it, but we update it explicitly)
             container.style.setProperty(
-              "--masonry-height",
-              `${result.containerHeight}px`,
+              '--masonry-height',
+              `${result.containerHeight}px`
             );
 
             lastLayoutResultRef.current = result;
@@ -1212,7 +1212,7 @@ export function View({
             columnCountRef.current = result.columns;
             lastLayoutWidthRef.current = containerWidth;
           } finally {
-            container.classList.remove("masonry-measuring");
+            container.classList.remove('masonry-measuring');
           }
           return;
         }
@@ -1239,7 +1239,7 @@ export function View({
         if (pendingLayoutUpdate) {
           pendingLayoutUpdate = false;
           getOwnerWindow(containerRef.current).requestAnimationFrame(
-            updateLayout,
+            updateLayout
           );
         }
       }
@@ -1261,7 +1261,7 @@ export function View({
           if (!container.isConnected) return;
           // Sync responsive classes (same pattern as Bases)
           syncResponsiveClasses(
-            Array.from(container.querySelectorAll<HTMLElement>(".card")),
+            Array.from(container.querySelectorAll<HTMLElement>('.card'))
           );
           initializeScrollGradients(container);
           initializeTitleTruncation(container);
@@ -1319,7 +1319,7 @@ export function View({
           // Trailing edge: check if width changed during throttle cooldown
           if (!containerRef.current?.isConnected) return;
           const trailingWidth = Math.floor(
-            containerRef.current.getBoundingClientRect().width,
+            containerRef.current.getBoundingClientRect().width
           );
           if (
             trailingWidth > 0 &&
@@ -1369,20 +1369,20 @@ export function View({
     const container = containerRef.current;
     if (!container) return;
     container.style.setProperty(
-      "--dynamic-views-image-aspect-ratio",
-      String(settings.imageRatio),
+      '--dynamic-views-image-aspect-ratio',
+      String(settings.imageRatio)
     );
     container.style.setProperty(
-      "--dynamic-views-text-preview-lines",
-      String(settings.textPreviewLines),
+      '--dynamic-views-text-preview-lines',
+      String(settings.textPreviewLines)
     );
     container.style.setProperty(
-      "--dynamic-views-title-lines",
-      String(settings.titleLines),
+      '--dynamic-views-title-lines',
+      String(settings.titleLines)
     );
     container.style.setProperty(
-      "--dynamic-views-thumbnail-size",
-      `${settings.thumbnailSize}px`,
+      '--dynamic-views-thumbnail-size',
+      `${settings.thumbnailSize}px`
     );
   }, [
     settings.imageRatio,
@@ -1394,7 +1394,7 @@ export function View({
 
   // Apply dynamic grid layout (all width modes)
   dc.useEffect(() => {
-    if (viewMode !== "grid") return;
+    if (viewMode !== 'grid') return;
 
     const container = containerRef.current;
     if (!container) return;
@@ -1403,7 +1403,7 @@ export function View({
       if (!container.isConnected) return;
       // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
       const containerWidth = Math.floor(
-        container.getBoundingClientRect().width,
+        container.getBoundingClientRect().width
       );
       // Skip if container is hidden or collapsed
       if (containerWidth < 100) return;
@@ -1413,10 +1413,10 @@ export function View({
       const gap = getCardSpacing();
       const cols = Math.max(
         minColumns,
-        Math.floor((containerWidth + gap) / (cardSize + gap)),
+        Math.floor((containerWidth + gap) / (cardSize + gap))
       );
 
-      container.style.setProperty("--dynamic-views-grid-columns", String(cols));
+      container.style.setProperty('--dynamic-views-grid-columns', String(cols));
     };
 
     updateGrid();
@@ -1454,7 +1454,7 @@ export function View({
   // Note: masonry mode handles this inside its layout useEffect
   dc.useEffect(() => {
     // Skip for list (no cards) and masonry (handled in layout effect)
-    if (viewMode !== "grid") return;
+    if (viewMode !== 'grid') return;
 
     const container = containerRef.current;
     if (!container) return;
@@ -1470,7 +1470,7 @@ export function View({
 
         // Sync responsive classes before gradient init (ResizeObservers are async)
         syncResponsiveClasses(
-          Array.from(container.querySelectorAll<HTMLElement>(".card")),
+          Array.from(container.querySelectorAll<HTMLElement>('.card'))
         );
 
         initializeScrollGradients(container);
@@ -1507,11 +1507,11 @@ export function View({
 
     if (settings.queryHeight > 0) {
       resultsContainer.setCssProps({
-        "--dynamic-views-query-max-height": `${settings.queryHeight}px`,
+        '--dynamic-views-query-max-height': `${settings.queryHeight}px`,
       });
-      resultsContainer.addClass("dynamic-views-query-results-constrained");
+      resultsContainer.addClass('dynamic-views-query-results-constrained');
     } else {
-      resultsContainer.removeClass("dynamic-views-query-results-constrained");
+      resultsContainer.removeClass('dynamic-views-query-results-constrained');
     }
   }, [settings.queryHeight]);
 
@@ -1537,11 +1537,11 @@ export function View({
     const win = getOwnerWindow(containerRef.current);
     const rafId = win.requestAnimationFrame(() => {
       handleScroll();
-      container.addEventListener("scroll", handleScroll);
+      container.addEventListener('scroll', handleScroll);
     });
     return () => {
       win.cancelAnimationFrame(rafId);
-      container.removeEventListener("scroll", handleScroll);
+      container.removeEventListener('scroll', handleScroll);
     };
   }, [settings.queryHeight, viewMode]);
 
@@ -1567,7 +1567,7 @@ export function View({
       while (element && !scrollableElement) {
         const style = window.getComputedStyle(element);
         const overflowY = style.overflowY;
-        if (overflowY === "auto" || overflowY === "scroll") {
+        if (overflowY === 'auto' || overflowY === 'scroll') {
           scrollableElement = element;
         }
         element = element.parentElement;
@@ -1642,7 +1642,7 @@ export function View({
     const handleWindowResize = () => {
       loadMoreItems();
     };
-    win.addEventListener("resize", handleWindowResize);
+    win.addEventListener('resize', handleWindowResize);
 
     // Setup scroll listener with leading-edge throttle
     let scrollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1661,15 +1661,15 @@ export function View({
         loadMoreItems(); // Trailing call catches scroll position changes during throttle
       }, SCROLL_THROTTLE_MS);
     };
-    scrollableElement.addEventListener("scroll", handleScroll, {
+    scrollableElement.addEventListener('scroll', handleScroll, {
       passive: true,
     });
 
     // Cleanup
     return () => {
       resizeObserver.disconnect();
-      win.removeEventListener("resize", handleWindowResize);
-      scrollableElement.removeEventListener("scroll", handleScroll);
+      win.removeEventListener('resize', handleWindowResize);
+      scrollableElement.removeEventListener('scroll', handleScroll);
       if (scrollTimer) clearTimeout(scrollTimer);
       clearTimeout(initialCheckTimeout);
     };
@@ -1677,12 +1677,12 @@ export function View({
 
   // Auto-reload: Watch for USER_QUERY prop changes (Datacore re-renders on code block edits)
   dc.useEffect(() => {
-    const newCleanQuery = (USER_QUERY || "")
-      .split("\n")
+    const newCleanQuery = (USER_QUERY || '')
+      .split('\n')
       .filter(
-        (line) => !line.includes("QUERY START") && !line.includes("QUERY END"),
+        (line) => !line.includes('QUERY START') && !line.includes('QUERY END')
       )
-      .join("\n")
+      .join('\n')
       .trim();
 
     // Only update if query changed
@@ -1695,19 +1695,19 @@ export function View({
   // Handlers
   const handleToggleWidth = dc.useCallback(() => {
     let nextMode: WidthMode;
-    if (widthMode === "normal") {
-      nextMode = "wide";
-    } else if (widthMode === "wide") {
+    if (widthMode === 'normal') {
+      nextMode = 'wide';
+    } else if (widthMode === 'wide') {
       // Synchronous check avoids race with async ResizeObserver updates
       const section = explorerRef.current?.closest(
-        ".markdown-source-view, .markdown-preview-view, .markdown-reading-view",
+        '.markdown-source-view, .markdown-preview-view, .markdown-reading-view'
       );
       const canExpand = section
         ? calculateWidthParams(section, explorerRef.current).canExpandToMax
         : canExpandToMax;
-      nextMode = canExpand ? "max" : "normal";
+      nextMode = canExpand ? 'max' : 'normal';
     } else {
-      nextMode = "normal";
+      nextMode = 'normal';
     }
     setWidthMode(nextMode);
   }, [widthMode, canExpandToMax]);
@@ -1784,7 +1784,7 @@ export function View({
       setDisplayedCount(app.isMobile ? BATCH_SIZE * 0.5 : BATCH_SIZE);
       hasBatchAppendedRef.current = false;
     },
-    [app.isMobile],
+    [app.isMobile]
   );
 
   const handleSearchFocus = dc.useCallback(() => {
@@ -1794,7 +1794,7 @@ export function View({
   }, []);
 
   const handleClearSearch = dc.useCallback(() => {
-    setSearchQuery("");
+    setSearchQuery('');
     hasBatchAppendedRef.current = false;
   }, []);
 
@@ -1803,9 +1803,9 @@ export function View({
     if (!container) return;
 
     // For masonry: directly reorder DOM and reposition
-    if (viewMode === "masonry") {
+    if (viewMode === 'masonry') {
       const cards = Array.from(
-        container.querySelectorAll<HTMLElement>(".card"),
+        container.querySelectorAll<HTMLElement>('.card')
       );
 
       // Shuffle array of DOM elements
@@ -1852,7 +1852,7 @@ export function View({
         void app.workspace.getLeaf(paneType).openFile(file);
       }
     },
-    [sorted, app, settings.openRandomInNewTab],
+    [sorted, app, settings.openRandomInNewTab]
   );
 
   const handleToggleCode = dc.useCallback(() => {
@@ -1886,7 +1886,7 @@ export function View({
         // Read current content to check if query changed
         const currentContent = await app.vault.read(currentFile);
         const currentQueryMatch = findQueryInBlock(currentContent);
-        const currentQuery = currentQueryMatch?.query || "";
+        const currentQuery = currentQueryMatch?.query || '';
 
         // Only update if query actually changed
         if (currentQuery !== queryToSave) {
@@ -1895,7 +1895,7 @@ export function View({
           });
         }
       } catch (error) {
-        console.error("Failed to sync query to code block:", error);
+        console.error('Failed to sync query to code block:', error);
       } finally {
         isSyncing.current = false;
 
@@ -1907,7 +1907,7 @@ export function View({
         }
       }
     },
-    [currentFile, app],
+    [currentFile, app]
   );
 
   const handleApplyQuery = dc.useCallback(() => {
@@ -1921,7 +1921,7 @@ export function View({
         try {
           await syncQueryToCodeBlock(trimmed);
         } catch (error) {
-          console.error("Failed to sync query to code block:", error);
+          console.error('Failed to sync query to code block:', error);
         }
       }
     })();
@@ -1929,15 +1929,15 @@ export function View({
 
   const handleClearQuery = dc.useCallback(() => {
     void (async () => {
-      setDraftQuery("");
-      setAppliedQuery("");
+      setDraftQuery('');
+      setAppliedQuery('');
 
       // Save empty query to code block
       if (currentFile) {
         try {
-          await syncQueryToCodeBlock("");
+          await syncQueryToCodeBlock('');
         } catch (error) {
-          console.error("Failed to sync cleared query to code block:", error);
+          console.error('Failed to sync cleared query to code block:', error);
         }
       }
     })();
@@ -1949,7 +1949,7 @@ export function View({
   }, []);
 
   const handleResetLimit = dc.useCallback((): void => {
-    setResultLimit("");
+    setResultLimit('');
     setShowLimitDropdown(false);
     hasBatchAppendedRef.current = false;
   }, []);
@@ -1957,28 +1957,28 @@ export function View({
   const handleCreateNote = dc.useCallback(
     (event: MouseEvent) => {
       void (async () => {
-        const folderPath = currentFile?.parent?.path || "";
-        const filePath = getAvailablePath(app, folderPath, "Untitled");
-        const file = await app.vault.create(filePath, "");
+        const folderPath = currentFile?.parent?.path || '';
+        const filePath = getAvailablePath(app, folderPath, 'Untitled');
+        const file = await app.vault.create(filePath, '');
         const newLeaf = Keymap.isModEvent(event);
         void app.workspace.getLeaf(newLeaf).openFile(file);
       })();
     },
-    [app, currentFile],
+    [app, currentFile]
   );
 
   const handleCardClick = dc.useCallback(
     (path: string, paneType: PaneType | boolean) => {
       const file = app.vault.getAbstractFileByPath(path);
       if (file instanceof TFile) {
-        if (settings.openFileAction === "card") {
+        if (settings.openFileAction === 'card') {
           void app.workspace.getLeaf(paneType).openFile(file);
-        } else if (settings.openFileAction === "title") {
+        } else if (settings.openFileAction === 'title') {
           // Only open on title click (handled in CardView)
         }
       }
     },
-    [app, settings.openFileAction],
+    [app, settings.openFileAction]
   );
 
   const handleCopyToClipboard = dc.useCallback(
@@ -1989,20 +1989,20 @@ export function View({
       const links = sorted
         .slice(0, limit > 0 ? limit : sorted.length)
         .map((p) => `[[${p.$name}]]`)
-        .join("\n");
+        .join('\n');
 
       void navigator.clipboard.writeText(links);
       setShowLimitDropdown(false);
-      new Notice("Copied to your clipboard");
+      new Notice('Copied to your clipboard');
     },
-    [resultLimit, sorted],
+    [resultLimit, sorted]
   );
 
   const handleSettingsChange = dc.useCallback(
     (newSettings: Partial<ResolvedSettings>) => {
       setSettings((prev) => ({ ...prev, ...newSettings }));
     },
-    [],
+    []
   );
 
   // Re-measure property fields when label mode changes
@@ -2028,7 +2028,7 @@ export function View({
         onClick={handleCopyToClipboard}
         onKeyDown={(e: unknown) => {
           const evt = e as KeyboardEvent;
-          if (evt.key === "Enter" || evt.key === " ") {
+          if (evt.key === 'Enter' || evt.key === ' ') {
             evt.preventDefault();
             handleCopyToClipboard(evt as unknown as MouseEvent);
           }
@@ -2053,7 +2053,7 @@ export function View({
         <span>Copy to clipboard</span>
       </div>
     ),
-    [handleCopyToClipboard],
+    [handleCopyToClipboard]
   );
 
   // Render appropriate view component
@@ -2075,7 +2075,7 @@ export function View({
       onFocusChange: setFocusableCardIndex,
     };
 
-    if (viewMode === "list") {
+    if (viewMode === 'list') {
       // ListView has different props - needs raw DatacoreFile for tag handlers
       return (
         <ListView
@@ -2088,7 +2088,7 @@ export function View({
           onLinkClick={handleCardClick}
         />
       );
-    } else if (viewMode === "masonry") {
+    } else if (viewMode === 'masonry') {
       return <MasonryView {...commonProps} />;
     } else {
       return <CardView {...commonProps} viewMode="grid" />;
@@ -2104,7 +2104,7 @@ export function View({
     >
       <div
         ref={toolbarRef}
-        className={`controls-wrapper${isResultsScrolled ? " scrolled" : ""}`}
+        className={`controls-wrapper${isResultsScrolled ? ' scrolled' : ''}`}
       >
         <Toolbar
           dc={dc}
@@ -2114,19 +2114,19 @@ export function View({
           viewMode={viewMode}
           showViewDropdown={showViewDropdown}
           onToggleViewDropdown={handleToggleViewDropdown}
-          onSetViewGrid={() => handleSetViewMode("grid")}
-          onSetViewMasonry={() => handleSetViewMode("masonry")}
-          onSetViewList={() => handleSetViewMode("list")}
+          onSetViewGrid={() => handleSetViewMode('grid')}
+          onSetViewMasonry={() => handleSetViewMode('masonry')}
+          onSetViewList={() => handleSetViewMode('list')}
           sortMethod={sortMethod}
           isShuffled={isShuffled}
           showSortDropdown={showSortDropdown}
           onToggleSortDropdown={handleToggleSortDropdown}
-          onSetSortNameAsc={() => handleSetSortMethod("name-asc")}
-          onSetSortNameDesc={() => handleSetSortMethod("name-desc")}
-          onSetSortMtimeDesc={() => handleSetSortMethod("mtime-desc")}
-          onSetSortMtimeAsc={() => handleSetSortMethod("mtime-asc")}
-          onSetSortCtimeDesc={() => handleSetSortMethod("ctime-desc")}
-          onSetSortCtimeAsc={() => handleSetSortMethod("ctime-asc")}
+          onSetSortNameAsc={() => handleSetSortMethod('name-asc')}
+          onSetSortNameDesc={() => handleSetSortMethod('name-desc')}
+          onSetSortMtimeDesc={() => handleSetSortMethod('mtime-desc')}
+          onSetSortMtimeAsc={() => handleSetSortMethod('mtime-asc')}
+          onSetSortCtimeDesc={() => handleSetSortMethod('ctime-desc')}
+          onSetSortCtimeAsc={() => handleSetSortMethod('ctime-asc')}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           onSearchFocus={handleSearchFocus}
@@ -2166,7 +2166,7 @@ export function View({
 
       <div
         ref={resultsContainerRef}
-        className={`results-container${settings.queryHeight > 0 && !isScrolledToBottom ? " with-fade" : ""}`}
+        className={`results-container${settings.queryHeight > 0 && !isScrolledToBottom ? ' with-fade' : ''}`}
       >
         {renderView()}
         {displayedCount >= sorted.length &&

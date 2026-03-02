@@ -1,15 +1,17 @@
+import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 import {
   shuffleArray,
   getActiveBasesView,
   getActiveDynamicViewsBase,
   openRandomFile,
   toggleShuffleActiveView,
-} from "../../src/utils/randomize";
-import { App } from "obsidian";
+} from '../../src/utils/randomize';
+import { App } from 'obsidian';
 
-describe("randomize", () => {
-  describe("shuffleArray", () => {
-    it("should shuffle array to produce different order", () => {
+describe('randomize', () => {
+  describe('shuffleArray', () => {
+    it('should shuffle array to produce different order', () => {
       const original = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       const shuffled = shuffleArray([...original]);
 
@@ -32,8 +34,8 @@ describe("randomize", () => {
       expect(allSame).toBe(false);
     });
 
-    it("should not lose any elements", () => {
-      const original = ["a", "b", "c", "d", "e"];
+    it('should not lose any elements', () => {
+      const original = ['a', 'b', 'c', 'd', 'e'];
       const shuffled = shuffleArray([...original]);
 
       original.forEach((item) => {
@@ -41,7 +43,7 @@ describe("randomize", () => {
       });
     });
 
-    it("should preserve array length", () => {
+    it('should preserve array length', () => {
       const arrays = [
         [],
         [1],
@@ -58,17 +60,17 @@ describe("randomize", () => {
       });
     });
 
-    it("should handle empty arrays", () => {
+    it('should handle empty arrays', () => {
       const result = shuffleArray([]);
       expect(result).toEqual([]);
     });
 
-    it("should handle single-element arrays", () => {
+    it('should handle single-element arrays', () => {
       const result = shuffleArray([42]);
       expect(result).toEqual([42]);
     });
 
-    it("should handle two-element arrays", () => {
+    it('should handle two-element arrays', () => {
       const original = [1, 2];
       const results = new Set();
 
@@ -82,7 +84,7 @@ describe("randomize", () => {
       expect(results.size).toBeGreaterThan(1);
     });
 
-    it("should shuffle in place (mutate original array)", () => {
+    it('should shuffle in place (mutate original array)', () => {
       const original = [1, 2, 3, 4, 5];
       const reference = original;
       const result = shuffleArray(original);
@@ -91,18 +93,18 @@ describe("randomize", () => {
       expect(result).toBe(reference);
     });
 
-    it("should work with different data types", () => {
-      const strings = shuffleArray(["a", "b", "c", "d"]);
+    it('should work with different data types', () => {
+      const strings = shuffleArray(['a', 'b', 'c', 'd']);
       expect(strings.length).toBe(4);
 
       const objects = shuffleArray([{ id: 1 }, { id: 2 }, { id: 3 }]);
       expect(objects.length).toBe(3);
 
-      const mixed = shuffleArray([1, "two", { three: 3 }, null, undefined]);
+      const mixed = shuffleArray([1, 'two', { three: 3 }, null, undefined]);
       expect(mixed.length).toBe(5);
     });
 
-    it("should use Fisher-Yates algorithm (uniform distribution)", () => {
+    it('should use Fisher-Yates algorithm (uniform distribution)', () => {
       // Test that all positions get shuffled
       const original = [1, 2, 3];
       const positionCounts = [
@@ -130,323 +132,323 @@ describe("randomize", () => {
     });
   });
 
-  describe("getActiveBasesView", () => {
+  describe('getActiveBasesView', () => {
     let mockApp: App;
 
     beforeEach(() => {
       mockApp = new App();
     });
 
-    it("should return null when no active leaf", () => {
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(null);
+    it('should return null when no active leaf', () => {
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(null);
       const result = getActiveBasesView(mockApp);
       expect(result).toBeNull();
     });
 
-    it("should return null when active view is not a Bases view", () => {
+    it('should return null when active view is not a Bases view', () => {
       const mockLeaf = {
         view: {
-          getViewType: () => "markdown",
+          getViewType: () => 'markdown',
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveBasesView(mockApp);
       expect(result).toBeNull();
     });
 
-    it("should return dynamic-views grid view data", () => {
+    it('should return dynamic-views grid view data', () => {
       const mockData = {
-        data: [{ file: { path: "test.md" } }],
+        data: [{ file: { path: 'test.md' } }],
       };
 
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: mockData,
-        onDataUpdated: jest.fn(),
+        onDataUpdated: vi.fn(),
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: {
             view: mockView,
           },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveBasesView(mockApp);
       expect(result).toBe(mockView);
-      expect(result?.type).toBe("dynamic-views-grid");
+      expect(result?.type).toBe('dynamic-views-grid');
     });
 
-    it("should return dynamic-views masonry view data", () => {
+    it('should return dynamic-views masonry view data', () => {
       const mockView = {
-        type: "dynamic-views-masonry",
+        type: 'dynamic-views-masonry',
         data: { data: [] },
-        onDataUpdated: jest.fn(),
+        onDataUpdated: vi.fn(),
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: {
             view: mockView,
           },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveBasesView(mockApp);
       expect(result).toBe(mockView);
-      expect(result?.type).toBe("dynamic-views-masonry");
+      expect(result?.type).toBe('dynamic-views-masonry');
     });
 
-    it("should handle standard Bases views", () => {
-      const mockOnDataUpdated = jest.fn();
+    it('should handle standard Bases views', () => {
+      const mockOnDataUpdated = vi.fn();
       const mockView = {
-        type: "table",
-        data: { data: [{ file: { path: "test.md" } }] },
+        type: 'table',
+        data: { data: [{ file: { path: 'test.md' } }] },
         onDataUpdated: mockOnDataUpdated,
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: {
             view: mockView,
           },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveBasesView(mockApp);
-      expect(result?.type).toBe("table");
+      expect(result?.type).toBe('table');
       expect(result?.data).toBe(mockView.data);
     });
 
-    it("should handle base-view type", () => {
+    it('should handle base-view type', () => {
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: [] },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "base-view",
+          getViewType: () => 'base-view',
           controller: {
             view: mockView,
           },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveBasesView(mockApp);
       expect(result).toBeTruthy();
     });
   });
 
-  describe("getActiveDynamicViewsBase", () => {
+  describe('getActiveDynamicViewsBase', () => {
     let mockApp: App;
 
     beforeEach(() => {
       mockApp = new App();
     });
 
-    it("should return null when no active Bases view", () => {
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(null);
+    it('should return null when no active Bases view', () => {
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(null);
       const result = getActiveDynamicViewsBase(mockApp);
       expect(result).toBeNull();
     });
 
-    it("should return null for non-dynamic-views Bases views", () => {
+    it('should return null for non-dynamic-views Bases views', () => {
       const mockView = {
-        type: "table",
+        type: 'table',
         data: { data: [] },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveDynamicViewsBase(mockApp);
       expect(result).toBeNull();
     });
 
-    it("should return dynamic-views grid view", () => {
+    it('should return dynamic-views grid view', () => {
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: [] },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveDynamicViewsBase(mockApp);
       expect(result).toBe(mockView);
     });
 
-    it("should return dynamic-views masonry view", () => {
+    it('should return dynamic-views masonry view', () => {
       const mockView = {
-        type: "dynamic-views-masonry",
+        type: 'dynamic-views-masonry',
         data: { data: [] },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       const result = getActiveDynamicViewsBase(mockApp);
       expect(result).toBe(mockView);
     });
   });
 
-  describe("openRandomFile", () => {
+  describe('openRandomFile', () => {
     let mockApp: App;
 
     beforeEach(() => {
       mockApp = new App();
-      mockApp.workspace.openLinkText = jest.fn().mockResolvedValue(undefined);
+      mockApp.workspace.openLinkText = vi.fn().mockResolvedValue(undefined);
     });
 
-    it("should show notice when no active Bases view", async () => {
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(null);
+    it('should show notice when no active Bases view', async () => {
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(null);
       await openRandomFile(mockApp, false);
       // Notice constructor should be called (tested via mock in setup)
     });
 
-    it("should return early when no entries", async () => {
+    it('should return early when no entries', async () => {
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: [] },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       await openRandomFile(mockApp, false);
       expect(mockApp.workspace.openLinkText).not.toHaveBeenCalled();
     });
 
-    it("should open random file from entries", async () => {
+    it('should open random file from entries', async () => {
       const mockEntries = [
-        { file: { path: "file1.md" } },
-        { file: { path: "file2.md" } },
-        { file: { path: "file3.md" } },
+        { file: { path: 'file1.md' } },
+        { file: { path: 'file2.md' } },
+        { file: { path: 'file3.md' } },
       ];
 
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: mockEntries },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       await openRandomFile(mockApp, false);
 
       expect(mockApp.workspace.openLinkText).toHaveBeenCalledTimes(1);
-      const calledPath = (mockApp.workspace.openLinkText as jest.Mock).mock
+      const calledPath = (mockApp.workspace.openLinkText as Mock).mock
         .calls[0][0];
-      expect(["file1.md", "file2.md", "file3.md"]).toContain(calledPath);
+      expect(['file1.md', 'file2.md', 'file3.md']).toContain(calledPath);
     });
 
-    it("should respect openInNewPane parameter", async () => {
-      const mockEntries = [{ file: { path: "file.md" } }];
+    it('should respect openInNewPane parameter', async () => {
+      const mockEntries = [{ file: { path: 'file.md' } }];
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: mockEntries },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       await openRandomFile(mockApp, true);
       expect(mockApp.workspace.openLinkText).toHaveBeenCalledWith(
-        "file.md",
-        "",
-        true,
+        'file.md',
+        '',
+        true
       );
     });
 
-    it("should handle entries without files", async () => {
+    it('should handle entries without files', async () => {
       const mockEntries = [{ file: null }];
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: mockEntries },
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       await openRandomFile(mockApp, false);
       expect(mockApp.workspace.openLinkText).not.toHaveBeenCalled();
     });
   });
 
-  describe("toggleShuffleActiveView", () => {
+  describe('toggleShuffleActiveView', () => {
     let mockApp: App;
 
     beforeEach(() => {
       mockApp = new App();
       // Suppress console.log in tests
-      jest.spyOn(console, "log").mockImplementation();
+      vi.spyOn(console, 'log').mockImplementation();
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
-    it("should show notice when no active Bases view", () => {
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(null);
+    it('should show notice when no active Bases view', () => {
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(null);
       toggleShuffleActiveView(mockApp);
       // Notice shown (tested via mock)
     });
 
-    it("should toggle shuffle on dynamic-views grid view", () => {
-      const mockOnDataUpdated = jest.fn();
+    it('should toggle shuffle on dynamic-views grid view', () => {
+      const mockOnDataUpdated = vi.fn();
       const mockEntries = [
-        { file: { path: "a.md" } },
-        { file: { path: "b.md" } },
-        { file: { path: "c.md" } },
+        { file: { path: 'a.md' } },
+        { file: { path: 'b.md' } },
+        { file: { path: 'c.md' } },
       ];
 
       const mockView = {
-        type: "dynamic-views-grid",
+        type: 'dynamic-views-grid',
         data: { data: mockEntries },
         onDataUpdated: mockOnDataUpdated,
         isShuffled: false,
@@ -455,11 +457,11 @@ describe("randomize", () => {
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       toggleShuffleActiveView(mockApp);
 
@@ -468,23 +470,23 @@ describe("randomize", () => {
       expect(mockOnDataUpdated).toHaveBeenCalled();
     });
 
-    it("should reshuffle when toggling on already shuffled view", () => {
-      const mockOnDataUpdated = jest.fn();
+    it('should reshuffle when toggling on already shuffled view', () => {
+      const mockOnDataUpdated = vi.fn();
       const mockView = {
-        type: "dynamic-views-masonry",
-        data: { data: [{ file: { path: "a.md" } }] },
+        type: 'dynamic-views-masonry',
+        data: { data: [{ file: { path: 'a.md' } }] },
         onDataUpdated: mockOnDataUpdated,
         isShuffled: true,
-        shuffledOrder: ["a.md"],
+        shuffledOrder: ['a.md'],
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       toggleShuffleActiveView(mockApp);
 
@@ -494,27 +496,27 @@ describe("randomize", () => {
       expect(mockOnDataUpdated).toHaveBeenCalled();
     });
 
-    it("should shuffle standard Bases views once", () => {
-      const mockOnDataUpdated = jest.fn();
+    it('should shuffle standard Bases views once', () => {
+      const mockOnDataUpdated = vi.fn();
       const mockEntries = [
-        { file: { path: "a.md" } },
-        { file: { path: "b.md" } },
-        { file: { path: "c.md" } },
+        { file: { path: 'a.md' } },
+        { file: { path: 'b.md' } },
+        { file: { path: 'c.md' } },
       ];
 
       const mockView = {
-        type: "table",
+        type: 'table',
         data: { data: mockEntries },
         onDataUpdated: mockOnDataUpdated,
       };
 
       const mockLeaf = {
         view: {
-          getViewType: () => "bases",
+          getViewType: () => 'bases',
           controller: { view: mockView },
         },
       };
-      mockApp.workspace.getMostRecentLeaf = jest.fn().mockReturnValue(mockLeaf);
+      mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       toggleShuffleActiveView(mockApp);
 

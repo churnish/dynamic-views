@@ -1,5 +1,5 @@
-import { App, TFile, TFolder } from "obsidian";
-import type { ResolvedSettings } from "../types";
+import { App, TFile, TFolder } from 'obsidian';
+import type { ResolvedSettings } from '../types';
 
 /** Delay after storage-ready for NN view to render */
 const VIEW_RENDER_DELAY_MS = 200;
@@ -20,14 +20,14 @@ interface NotebookNavigatorAPI {
 }
 
 function getNotebookNavigatorAPI(app: App): NotebookNavigatorAPI | null {
-  const plugin = app.plugins?.plugins?.["notebook-navigator"];
+  const plugin = app.plugins?.plugins?.['notebook-navigator'];
   const api = (plugin as unknown as { api?: NotebookNavigatorAPI } | undefined)
     ?.api;
   return api ?? null;
 }
 
 function revealNotebookNavigatorLeaf(app: App): void {
-  const leaves = app.workspace.getLeavesOfType("notebook-navigator");
+  const leaves = app.workspace.getLeavesOfType('notebook-navigator');
   if (leaves.length > 0) {
     void app.workspace.revealLeaf(leaves[0]);
   }
@@ -41,7 +41,7 @@ async function waitForStorageReady(api: NotebookNavigatorAPI): Promise<void> {
   if (api.isStorageReady()) return;
 
   await new Promise<void>((resolve) => {
-    const eventRef = api.once("storage-ready", () => {
+    const eventRef = api.once('storage-ready', () => {
       clearTimeout(timeout);
       resolve();
     });
@@ -59,9 +59,9 @@ async function waitForStorageReady(api: NotebookNavigatorAPI): Promise<void> {
  * Reads dynamically so setting changes take effect immediately
  */
 function getCurrentSetting(
-  app: App,
-): ResolvedSettings["revealInNotebookNavigator"] | null {
-  const plugin = app.plugins?.plugins?.["dynamic-views"] as
+  app: App
+): ResolvedSettings['revealInNotebookNavigator'] | null {
+  const plugin = app.plugins?.plugins?.['dynamic-views'] as
     | { persistenceManager?: { getPluginSettings(): ResolvedSettings } }
     | undefined;
   return (
@@ -76,15 +76,15 @@ function getCurrentSetting(
  */
 export function shouldUseNotebookNavigator(
   app: App,
-  type: "file" | "folder" | "tag",
+  type: 'file' | 'folder' | 'tag'
 ): boolean {
   const setting = getCurrentSetting(app);
-  if (!setting || setting === "disable") return false;
-  if (setting === "all") return true;
-  if (setting === "files-folders" && (type === "file" || type === "folder")) {
+  if (!setting || setting === 'disable') return false;
+  if (setting === 'all') return true;
+  if (setting === 'files-folders' && (type === 'file' || type === 'folder')) {
     return true;
   }
-  if (setting === "tags" && type === "tag") return true;
+  if (setting === 'tags' && type === 'tag') return true;
   return false;
 }
 
@@ -102,7 +102,7 @@ export function revealFileInNotebookNavigator(app: App, file: TFile): boolean {
 
 export function navigateToFolderInNotebookNavigator(
   app: App,
-  folder: TFolder,
+  folder: TFolder
 ): boolean {
   const api = getNotebookNavigatorAPI(app);
   if (!api) return false;
@@ -117,7 +117,7 @@ export function navigateToFolderInNotebookNavigator(
 
 export function navigateToTagInNotebookNavigator(
   app: App,
-  tag: string,
+  tag: string
 ): boolean {
   const api = getNotebookNavigatorAPI(app);
   if (!api) return false;

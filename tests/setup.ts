@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import { vi } from 'vitest';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -18,15 +18,15 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(window, "localStorage", {
+Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
 // Mock canvas for image color extraction tests
-HTMLCanvasElement.prototype.getContext = jest.fn(() => {
+HTMLCanvasElement.prototype.getContext = vi.fn(() => {
   return {
-    drawImage: jest.fn(),
-    getImageData: jest.fn(() => ({
+    drawImage: vi.fn(),
+    getImageData: vi.fn(() => ({
       data: new Uint8ClampedArray(50 * 50 * 4).fill(128), // Gray pixels
     })),
   } as any;
@@ -34,9 +34,9 @@ HTMLCanvasElement.prototype.getContext = jest.fn(() => {
 
 // Mock document.createElement for canvas
 const originalCreateElement = document.createElement.bind(document);
-document.createElement = jest.fn((tagName: string) => {
-  if (tagName === "canvas") {
-    const canvas = originalCreateElement("canvas");
+document.createElement = vi.fn((tagName: string) => {
+  if (tagName === 'canvas') {
+    const canvas = originalCreateElement('canvas');
     canvas.width = 50;
     canvas.height = 50;
     return canvas;
@@ -46,7 +46,7 @@ document.createElement = jest.fn((tagName: string) => {
 
 // Mock Image class for image validation tests
 (global as any).Image = class {
-  src: string = "";
+  src: string = '';
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
   // Default to valid thumbnail dimensions (mqdefault is 320x180, placeholder is 120x90)

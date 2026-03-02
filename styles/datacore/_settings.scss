@@ -57,7 +57,7 @@
       text-align: left !important;
     }
 
-    input[type="text"] {
+    input[type='text'] {
       padding: 6px 10px;
       border: 1px solid var(--background-modifier-border);
       border-radius: 4px;
@@ -221,7 +221,7 @@
 
 .toggle-slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 18px;
   width: 18px;
   left: 3px;
@@ -231,7 +231,7 @@
   border-radius: 50%;
 }
 
-label.toggle-switch input[type="checkbox"]:checked + span.toggle-slider {
+label.toggle-switch input[type='checkbox']:checked + span.toggle-slider {
   background-color: var(--interactive-accent) !important;
 }
 

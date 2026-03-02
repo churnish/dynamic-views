@@ -1,12 +1,12 @@
 /* Match Obsidian's native --bases-embed-padding for card views.
    Obsidian defines this per data-view-type; plugin views need their own. */
-.bases-view[data-view-type="dynamic-views-grid"],
-.bases-view[data-view-type="dynamic-views-masonry"] {
+.bases-view[data-view-type='dynamic-views-grid'],
+.bases-view[data-view-type='dynamic-views-masonry'] {
   --bases-embed-padding: var(--size-4-1) 1px;
 }
 
-.is-phone .bases-view[data-view-type="dynamic-views-grid"],
-.is-phone .bases-view[data-view-type="dynamic-views-masonry"] {
+.is-phone .bases-view[data-view-type='dynamic-views-grid'],
+.is-phone .bases-view[data-view-type='dynamic-views-masonry'] {
   --bases-embed-padding: var(--size-4-2);
 }
 
@@ -18,7 +18,7 @@
 
 .dynamic-views .results-container::after,
 .dynamic-views-bases-container::after {
-  content: "";
+  content: '';
   position: sticky;
   bottom: 0;
   z-index: 1;
@@ -104,7 +104,7 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
 
 /* Bottom spacing for phone to push view end indicator above mobile toolbar */
 .is-phone
-  .workspace-leaf-content[data-type="bases"]
+  .workspace-leaf-content[data-type='bases']
   .dynamic-views-bases-container {
   margin-bottom: var(--view-bottom-spacing);
 }

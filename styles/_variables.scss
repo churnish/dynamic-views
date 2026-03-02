@@ -7,8 +7,8 @@ body {
     var(--dynamic-views-image-aspect-ratio, 1),
     2
   );
-  --dynamic-views-list-separator: ", ";
-  --dynamic-views-empty-value-marker: "—";
+  --dynamic-views-list-separator: ', ';
+  --dynamic-views-empty-value-marker: '—';
   /* Custom colors from HSL components — hover variants shift hue slightly
      cooler (-3°), minimal saturation boost (×1.02), noticeable lightness
      increase (×1.15). When undefined, CSS ignores the declaration. */
@@ -41,5 +41,27 @@ body {
     calc(var(--dynamic-views-tag-color-custom-h) - 3),
     calc(var(--dynamic-views-tag-color-custom-s) * 1.02),
     calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
+  );
+}
+
+/* Resolve title hover color to a single variable for all presets.
+   Named colors (red-pink) already set --dynamic-views-title-hover-color-value
+   via Style Settings; built-in presets and custom need explicit mapping. */
+body.dynamic-views-title-hover-color-faint {
+  --dynamic-views-title-hover-color-value: var(--text-faint);
+}
+body.dynamic-views-title-hover-color-muted {
+  --dynamic-views-title-hover-color-value: var(--text-muted);
+}
+body.dynamic-views-title-hover-color-normal {
+  --dynamic-views-title-hover-color-value: var(--text-normal);
+}
+body.dynamic-views-title-hover-color-accent {
+  --dynamic-views-title-hover-color-value: var(--text-accent-hover);
+}
+body.dynamic-views-title-hover-color-custom {
+  --dynamic-views-title-hover-color-value: var(
+    --dynamic-views-title-hover-color-custom,
+    var(--text-normal)
   );
 }

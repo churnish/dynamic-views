@@ -1,11 +1,11 @@
-import type { ResolvedSettings } from "../types";
-import { CardRenderer, type CardData } from "../shared/card-renderer";
-import type { App, PaneType } from "obsidian";
+import type { ResolvedSettings } from '../types';
+import { CardRenderer, type CardData } from '../shared/card-renderer';
+import type { App, PaneType } from 'obsidian';
 
 interface CardViewProps {
   cards: CardData[];
   settings: ResolvedSettings;
-  viewMode: "grid" | "masonry";
+  viewMode: 'grid' | 'masonry';
   sortMethod: string;
   isShuffled: boolean;
   focusableCardIndex: number;

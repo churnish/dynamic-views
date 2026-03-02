@@ -1,11 +1,12 @@
+import { vi } from 'vitest';
 import {
   updateElementScrollGradient,
   updateScrollGradient,
   setupElementScrollGradient,
   setupScrollGradients,
   initializeScrollGradients,
-} from "../../src/shared/scroll-gradient";
-import { SCROLL_TOLERANCE } from "../../src/shared/constants";
+} from '../../src/shared/scroll-gradient';
+import { SCROLL_TOLERANCE } from '../../src/shared/constants';
 
 /**
  * Creates a mock scrollable element with configurable dimensions
@@ -16,23 +17,23 @@ function createScrollableElement(options: {
   clientWidth?: number;
   isConnected?: boolean;
 }): HTMLElement {
-  const el = document.createElement("div");
-  Object.defineProperty(el, "scrollLeft", {
+  const el = document.createElement('div');
+  Object.defineProperty(el, 'scrollLeft', {
     value: options.scrollLeft ?? 0,
     writable: true,
     configurable: true,
   });
-  Object.defineProperty(el, "scrollWidth", {
+  Object.defineProperty(el, 'scrollWidth', {
     value: options.scrollWidth ?? 100,
     writable: true,
     configurable: true,
   });
-  Object.defineProperty(el, "clientWidth", {
+  Object.defineProperty(el, 'clientWidth', {
     value: options.clientWidth ?? 100,
     writable: true,
     configurable: true,
   });
-  Object.defineProperty(el, "isConnected", {
+  Object.defineProperty(el, 'isConnected', {
     value: options.isConnected ?? true,
     configurable: true,
   });
@@ -49,34 +50,34 @@ function createPropertyField(options: {
   contentClientWidth?: number;
   isConnected?: boolean;
 }): HTMLElement {
-  const field = document.createElement("div");
-  field.className = "property";
-  Object.defineProperty(field, "isConnected", {
+  const field = document.createElement('div');
+  field.className = 'property';
+  Object.defineProperty(field, 'isConnected', {
     value: options.isConnected ?? true,
     configurable: true,
   });
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "property-content-wrapper";
-  Object.defineProperty(wrapper, "scrollLeft", {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'property-content-wrapper';
+  Object.defineProperty(wrapper, 'scrollLeft', {
     value: options.wrapperScrollLeft ?? 0,
     writable: true,
     configurable: true,
   });
-  Object.defineProperty(wrapper, "clientWidth", {
+  Object.defineProperty(wrapper, 'clientWidth', {
     value: options.wrapperClientWidth ?? 100,
     writable: true,
     configurable: true,
   });
 
-  const content = document.createElement("div");
-  content.className = "property-content";
-  Object.defineProperty(content, "scrollWidth", {
+  const content = document.createElement('div');
+  content.className = 'property-content';
+  Object.defineProperty(content, 'scrollWidth', {
     value: options.contentScrollWidth ?? 100,
     writable: true,
     configurable: true,
   });
-  Object.defineProperty(content, "clientWidth", {
+  Object.defineProperty(content, 'clientWidth', {
     value: options.contentClientWidth ?? 100,
     writable: true,
     configurable: true,
@@ -88,23 +89,23 @@ function createPropertyField(options: {
   return field;
 }
 
-describe("scroll-gradient", () => {
+describe('scroll-gradient', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock requestAnimationFrame
-    jest.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
       cb(0);
       return 0;
     });
   });
 
   afterEach(() => {
-    document.body.innerHTML = "";
-    jest.restoreAllMocks();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
   });
 
-  describe("updateElementScrollGradient", () => {
-    it("✓ adds no gradient when content fits", () => {
+  describe('updateElementScrollGradient', () => {
+    it('✓ adds no gradient when content fits', () => {
       const el = createScrollableElement({
         scrollWidth: 100,
         clientWidth: 100,
@@ -112,12 +113,12 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-left")).toBe(false);
-      expect(el.classList.contains("scroll-gradient-right")).toBe(false);
-      expect(el.classList.contains("scroll-gradient-both")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-left')).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(false);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(false);
     });
 
-    it("✓ adds right gradient when at start with overflow", () => {
+    it('✓ adds right gradient when at start with overflow', () => {
       const el = createScrollableElement({
         scrollLeft: 0,
         scrollWidth: 200,
@@ -126,12 +127,12 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
-      expect(el.classList.contains("scroll-gradient-left")).toBe(false);
-      expect(el.classList.contains("scroll-gradient-both")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
+      expect(el.classList.contains('scroll-gradient-left')).toBe(false);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(false);
     });
 
-    it("✓ adds left gradient when at end with overflow", () => {
+    it('✓ adds left gradient when at end with overflow', () => {
       const el = createScrollableElement({
         scrollLeft: 100,
         scrollWidth: 200,
@@ -140,12 +141,12 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-left")).toBe(true);
-      expect(el.classList.contains("scroll-gradient-right")).toBe(false);
-      expect(el.classList.contains("scroll-gradient-both")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-left')).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(false);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(false);
     });
 
-    it("✓ adds both gradients when in middle", () => {
+    it('✓ adds both gradients when in middle', () => {
       const el = createScrollableElement({
         scrollLeft: 50,
         scrollWidth: 200,
@@ -154,12 +155,12 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-both")).toBe(true);
-      expect(el.classList.contains("scroll-gradient-left")).toBe(false);
-      expect(el.classList.contains("scroll-gradient-right")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(true);
+      expect(el.classList.contains('scroll-gradient-left')).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(false);
     });
 
-    it("✓ respects SCROLL_TOLERANCE at start boundary", () => {
+    it('✓ respects SCROLL_TOLERANCE at start boundary', () => {
       const el = createScrollableElement({
         scrollLeft: SCROLL_TOLERANCE,
         scrollWidth: 200,
@@ -169,10 +170,10 @@ describe("scroll-gradient", () => {
       updateElementScrollGradient(el);
 
       // At exactly tolerance, should still be considered "at start"
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
     });
 
-    it("✓ respects SCROLL_TOLERANCE at end boundary", () => {
+    it('✓ respects SCROLL_TOLERANCE at end boundary', () => {
       const el = createScrollableElement({
         scrollLeft: 100 - SCROLL_TOLERANCE,
         scrollWidth: 200,
@@ -182,10 +183,10 @@ describe("scroll-gradient", () => {
       updateElementScrollGradient(el);
 
       // At exactly tolerance from end, should still be considered "at end"
-      expect(el.classList.contains("scroll-gradient-left")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-left')).toBe(true);
     });
 
-    it("✓ skips update when element disconnected", () => {
+    it('✓ skips update when element disconnected', () => {
       const el = createScrollableElement({
         scrollWidth: 200,
         clientWidth: 100,
@@ -194,10 +195,10 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-right")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(false);
     });
 
-    it("✓ skips update when clientWidth is zero", () => {
+    it('✓ skips update when clientWidth is zero', () => {
       const el = createScrollableElement({
         scrollWidth: 200,
         clientWidth: 0,
@@ -205,10 +206,10 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-right")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(false);
     });
 
-    it("✓ removes gradient when content no longer overflows", () => {
+    it('✓ removes gradient when content no longer overflows', () => {
       const el = createScrollableElement({
         scrollLeft: 0,
         scrollWidth: 200,
@@ -216,26 +217,26 @@ describe("scroll-gradient", () => {
       });
 
       updateElementScrollGradient(el);
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
 
       // Simulate resize where content now fits
-      Object.defineProperty(el, "scrollWidth", {
+      Object.defineProperty(el, 'scrollWidth', {
         value: 100,
         configurable: true,
       });
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-right")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(false);
     });
 
-    it("✓ caches gradient class to skip no-op updates", () => {
+    it('✓ caches gradient class to skip no-op updates', () => {
       const el = createScrollableElement({
         scrollLeft: 0,
         scrollWidth: 200,
         clientWidth: 100,
       });
 
-      const toggleSpy = jest.spyOn(el.classList, "toggle");
+      const toggleSpy = vi.spyOn(el.classList, 'toggle');
 
       updateElementScrollGradient(el);
       expect(toggleSpy).toHaveBeenCalled();
@@ -247,8 +248,8 @@ describe("scroll-gradient", () => {
     });
   });
 
-  describe("updateScrollGradient", () => {
-    it("✓ adds gradient to wrapper when content overflows", () => {
+  describe('updateScrollGradient', () => {
+    it('✓ adds gradient to wrapper when content overflows', () => {
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
@@ -257,12 +258,12 @@ describe("scroll-gradient", () => {
 
       updateScrollGradient(field);
 
-      const wrapper = field.querySelector(".property-content-wrapper")!;
-      expect(wrapper.classList.contains("scroll-gradient-right")).toBe(true);
-      expect(field.classList.contains("is-scrollable")).toBe(true);
+      const wrapper = field.querySelector('.property-content-wrapper')!;
+      expect(wrapper.classList.contains('scroll-gradient-right')).toBe(true);
+      expect(field.classList.contains('is-scrollable')).toBe(true);
     });
 
-    it("✓ removes gradient when content fits", () => {
+    it('✓ removes gradient when content fits', () => {
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 80,
@@ -271,12 +272,12 @@ describe("scroll-gradient", () => {
 
       updateScrollGradient(field);
 
-      const wrapper = field.querySelector(".property-content-wrapper")!;
-      expect(wrapper.classList.contains("scroll-gradient-right")).toBe(false);
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      const wrapper = field.querySelector('.property-content-wrapper')!;
+      expect(wrapper.classList.contains('scroll-gradient-right')).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ skips when element disconnected", () => {
+    it('✓ skips when element disconnected', () => {
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
@@ -285,13 +286,13 @@ describe("scroll-gradient", () => {
 
       updateScrollGradient(field);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ skips when wrapper not found", () => {
-      const field = document.createElement("div");
-      field.className = "property";
-      Object.defineProperty(field, "isConnected", {
+    it('✓ skips when wrapper not found', () => {
+      const field = document.createElement('div');
+      field.className = 'property';
+      Object.defineProperty(field, 'isConnected', {
         value: true,
         configurable: true,
       });
@@ -299,22 +300,22 @@ describe("scroll-gradient", () => {
       expect(() => updateScrollGradient(field)).not.toThrow();
     });
 
-    it("✓ skips when content not found", () => {
-      const field = document.createElement("div");
-      field.className = "property";
-      Object.defineProperty(field, "isConnected", {
+    it('✓ skips when content not found', () => {
+      const field = document.createElement('div');
+      field.className = 'property';
+      Object.defineProperty(field, 'isConnected', {
         value: true,
         configurable: true,
       });
 
-      const wrapper = document.createElement("div");
-      wrapper.className = "property-content-wrapper";
+      const wrapper = document.createElement('div');
+      wrapper.className = 'property-content-wrapper';
       field.appendChild(wrapper);
 
       expect(() => updateScrollGradient(field)).not.toThrow();
     });
 
-    it("✓ skips when wrapper has zero width", () => {
+    it('✓ skips when wrapper has zero width', () => {
       const field = createPropertyField({
         wrapperClientWidth: 0,
         contentScrollWidth: 200,
@@ -323,10 +324,10 @@ describe("scroll-gradient", () => {
 
       updateScrollGradient(field);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ skips when content has zero width", () => {
+    it('✓ skips when content has zero width', () => {
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
@@ -335,10 +336,10 @@ describe("scroll-gradient", () => {
 
       updateScrollGradient(field);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ uses contentScrollWidth for gradient calculation", () => {
+    it('✓ uses contentScrollWidth for gradient calculation', () => {
       const field = createPropertyField({
         wrapperScrollLeft: 50,
         wrapperClientWidth: 100,
@@ -348,30 +349,30 @@ describe("scroll-gradient", () => {
 
       updateScrollGradient(field);
 
-      const wrapper = field.querySelector(".property-content-wrapper")!;
+      const wrapper = field.querySelector('.property-content-wrapper')!;
       // In middle: should have both gradients
-      expect(wrapper.classList.contains("scroll-gradient-both")).toBe(true);
+      expect(wrapper.classList.contains('scroll-gradient-both')).toBe(true);
     });
   });
 
-  describe("setupElementScrollGradient", () => {
-    it("✓ attaches scroll listener", () => {
+  describe('setupElementScrollGradient', () => {
+    it('✓ attaches scroll listener', () => {
       const el = createScrollableElement({
         scrollWidth: 200,
         clientWidth: 100,
       });
-      const addEventSpy = jest.spyOn(el, "addEventListener");
+      const addEventSpy = vi.spyOn(el, 'addEventListener');
 
       setupElementScrollGradient(el);
 
       expect(addEventSpy).toHaveBeenCalledWith(
-        "scroll",
+        'scroll',
         expect.any(Function),
-        expect.objectContaining({ signal: undefined }),
+        expect.objectContaining({ signal: undefined })
       );
     });
 
-    it("✓ applies initial gradient via RAF", () => {
+    it('✓ applies initial gradient via RAF', () => {
       const el = createScrollableElement({
         scrollLeft: 0,
         scrollWidth: 200,
@@ -380,81 +381,81 @@ describe("scroll-gradient", () => {
 
       setupElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
     });
 
-    it("✓ respects AbortSignal", () => {
+    it('✓ respects AbortSignal', () => {
       const el = createScrollableElement({
         scrollWidth: 200,
         clientWidth: 100,
       });
       const controller = new AbortController();
-      const addEventSpy = jest.spyOn(el, "addEventListener");
+      const addEventSpy = vi.spyOn(el, 'addEventListener');
 
       setupElementScrollGradient(el, controller.signal);
 
       expect(addEventSpy).toHaveBeenCalledWith(
-        "scroll",
+        'scroll',
         expect.any(Function),
-        expect.objectContaining({ signal: controller.signal }),
+        expect.objectContaining({ signal: controller.signal })
       );
     });
   });
 
-  describe("setupScrollGradients", () => {
-    it("✓ attaches listeners to all property fields", () => {
-      const container = document.createElement("div");
+  describe('setupScrollGradients', () => {
+    it('✓ attaches listeners to all property fields', () => {
+      const container = document.createElement('div');
       const field1 = createPropertyField({ wrapperClientWidth: 100 });
       const field2 = createPropertyField({ wrapperClientWidth: 100 });
       container.appendChild(field1);
       container.appendChild(field2);
 
-      const wrapper1 = field1.querySelector(".property-content-wrapper")!;
-      const wrapper2 = field2.querySelector(".property-content-wrapper")!;
-      const spy1 = jest.spyOn(wrapper1, "addEventListener");
-      const spy2 = jest.spyOn(wrapper2, "addEventListener");
+      const wrapper1 = field1.querySelector('.property-content-wrapper')!;
+      const wrapper2 = field2.querySelector('.property-content-wrapper')!;
+      const spy1 = vi.spyOn(wrapper1, 'addEventListener');
+      const spy2 = vi.spyOn(wrapper2, 'addEventListener');
 
       setupScrollGradients(container, updateScrollGradient);
 
-      expect(spy1).toHaveBeenCalledWith("scroll", expect.any(Function), {
+      expect(spy1).toHaveBeenCalledWith('scroll', expect.any(Function), {
         signal: undefined,
       });
-      expect(spy2).toHaveBeenCalledWith("scroll", expect.any(Function), {
+      expect(spy2).toHaveBeenCalledWith('scroll', expect.any(Function), {
         signal: undefined,
       });
     });
 
-    it("✓ skips fields without wrapper", () => {
-      const container = document.createElement("div");
-      const field = document.createElement("div");
-      field.className = "property";
+    it('✓ skips fields without wrapper', () => {
+      const container = document.createElement('div');
+      const field = document.createElement('div');
+      field.className = 'property';
       container.appendChild(field);
 
       expect(() =>
-        setupScrollGradients(container, updateScrollGradient),
+        setupScrollGradients(container, updateScrollGradient)
       ).not.toThrow();
     });
 
-    it("✓ reuses throttled function instances", () => {
-      const container = document.createElement("div");
+    it('✓ reuses throttled function instances', () => {
+      const container = document.createElement('div');
       const field = createPropertyField({ wrapperClientWidth: 100 });
       container.appendChild(field);
 
-      const updateFn = jest.fn();
+      const updateFn = vi.fn();
 
       // Call twice
       setupScrollGradients(container, updateFn);
       setupScrollGradients(container, updateFn);
 
       // Wrapper should only have listener attached from first call
-      const wrapper = field.querySelector(".property-content-wrapper")!;
+      const wrapper = field.querySelector('.property-content-wrapper')!;
       expect(wrapper).toBeDefined();
     });
   });
 
-  describe("initializeScrollGradients", () => {
-    it("✓ batch-initializes all property fields", () => {
-      const container = document.createElement("div");
+  describe('initializeScrollGradients', () => {
+    it('✓ batch-initializes all property fields', () => {
+      const container = document.createElement('div');
       const field1 = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
@@ -470,79 +471,79 @@ describe("scroll-gradient", () => {
 
       initializeScrollGradients(container);
 
-      const wrapper1 = field1.querySelector(".property-content-wrapper")!;
-      const wrapper2 = field2.querySelector(".property-content-wrapper")!;
+      const wrapper1 = field1.querySelector('.property-content-wrapper')!;
+      const wrapper2 = field2.querySelector('.property-content-wrapper')!;
 
-      expect(wrapper1.classList.contains("scroll-gradient-right")).toBe(true);
-      expect(field1.classList.contains("is-scrollable")).toBe(true);
+      expect(wrapper1.classList.contains('scroll-gradient-right')).toBe(true);
+      expect(field1.classList.contains('is-scrollable')).toBe(true);
 
-      expect(wrapper2.classList.contains("scroll-gradient-right")).toBe(false);
-      expect(field2.classList.contains("is-scrollable")).toBe(false);
+      expect(wrapper2.classList.contains('scroll-gradient-right')).toBe(false);
+      expect(field2.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ skips unmeasured side-by-side fields", () => {
-      const container = document.createElement("div");
-      const propertyPair = document.createElement("div");
-      propertyPair.className = "property-pair";
+    it('✓ skips unmeasured side-by-side fields', () => {
+      const container = document.createElement('div');
+      const propertyPair = document.createElement('div');
+      propertyPair.className = 'property-pair';
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
         contentClientWidth: 200,
       });
-      field.classList.add("pair-left");
+      field.classList.add('pair-left');
       propertyPair.appendChild(field);
       container.appendChild(propertyPair);
 
       initializeScrollGradients(container);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ processes measured side-by-side fields", () => {
-      const container = document.createElement("div");
-      const propertyPair = document.createElement("div");
-      propertyPair.className = "property-pair property-measured";
+    it('✓ processes measured side-by-side fields', () => {
+      const container = document.createElement('div');
+      const propertyPair = document.createElement('div');
+      propertyPair.className = 'property-pair property-measured';
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
         contentClientWidth: 200,
       });
-      field.classList.add("pair-left");
+      field.classList.add('pair-left');
       propertyPair.appendChild(field);
       container.appendChild(propertyPair);
 
       initializeScrollGradients(container);
 
-      expect(field.classList.contains("is-scrollable")).toBe(true);
+      expect(field.classList.contains('is-scrollable')).toBe(true);
     });
 
-    it("✓ processes side-by-side fields in compact mode", () => {
-      const container = document.createElement("div");
-      const card = document.createElement("div");
-      card.className = "card compact-mode";
+    it('✓ processes side-by-side fields in compact mode', () => {
+      const container = document.createElement('div');
+      const card = document.createElement('div');
+      card.className = 'card compact-mode';
 
-      const propertyPair = document.createElement("div");
-      propertyPair.className = "property-pair";
+      const propertyPair = document.createElement('div');
+      propertyPair.className = 'property-pair';
 
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
         contentClientWidth: 200,
       });
-      field.classList.add("pair-left");
+      field.classList.add('pair-left');
       propertyPair.appendChild(field);
       card.appendChild(propertyPair);
       container.appendChild(card);
 
       initializeScrollGradients(container);
 
-      expect(field.classList.contains("is-scrollable")).toBe(true);
+      expect(field.classList.contains('is-scrollable')).toBe(true);
     });
 
-    it("✓ skips fields with zero-width wrapper", () => {
-      const container = document.createElement("div");
+    it('✓ skips fields with zero-width wrapper', () => {
+      const container = document.createElement('div');
       const field = createPropertyField({
         wrapperClientWidth: 0,
         contentScrollWidth: 200,
@@ -552,11 +553,11 @@ describe("scroll-gradient", () => {
 
       initializeScrollGradients(container);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ skips fields with zero-width content", () => {
-      const container = document.createElement("div");
+    it('✓ skips fields with zero-width content', () => {
+      const container = document.createElement('div');
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 200,
@@ -566,27 +567,27 @@ describe("scroll-gradient", () => {
 
       initializeScrollGradients(container);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
 
-    it("✓ removes is-scrollable when content fits", () => {
-      const container = document.createElement("div");
+    it('✓ removes is-scrollable when content fits', () => {
+      const container = document.createElement('div');
       const field = createPropertyField({
         wrapperClientWidth: 100,
         contentScrollWidth: 80,
         contentClientWidth: 80,
       });
-      field.classList.add("is-scrollable");
+      field.classList.add('is-scrollable');
       container.appendChild(field);
 
       initializeScrollGradients(container);
 
-      expect(field.classList.contains("is-scrollable")).toBe(false);
+      expect(field.classList.contains('is-scrollable')).toBe(false);
     });
   });
 
-  describe("gradient class mutual exclusivity", () => {
-    it("✓ only one gradient class active at a time", () => {
+  describe('gradient class mutual exclusivity', () => {
+    it('✓ only one gradient class active at a time', () => {
       const el = createScrollableElement({
         scrollLeft: 0,
         scrollWidth: 200,
@@ -594,18 +595,18 @@ describe("scroll-gradient", () => {
       });
 
       updateElementScrollGradient(el);
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
 
-      Object.defineProperty(el, "scrollLeft", {
+      Object.defineProperty(el, 'scrollLeft', {
         value: 50,
         configurable: true,
       });
       updateElementScrollGradient(el);
 
       const classes = [
-        el.classList.contains("scroll-gradient-left"),
-        el.classList.contains("scroll-gradient-right"),
-        el.classList.contains("scroll-gradient-both"),
+        el.classList.contains('scroll-gradient-left'),
+        el.classList.contains('scroll-gradient-right'),
+        el.classList.contains('scroll-gradient-both'),
       ];
       const activeCount = classes.filter(Boolean).length;
 
@@ -613,8 +614,8 @@ describe("scroll-gradient", () => {
     });
   });
 
-  describe("edge cases", () => {
-    it("✓ handles exactly scrollable boundary", () => {
+  describe('edge cases', () => {
+    it('✓ handles exactly scrollable boundary', () => {
       // Need overflow > SCROLL_TOLERANCE for gradient to appear
       const el = createScrollableElement({
         scrollWidth: 100 + SCROLL_TOLERANCE + 1,
@@ -623,10 +624,10 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
     });
 
-    it("✓ handles large scroll values", () => {
+    it('✓ handles large scroll values', () => {
       const el = createScrollableElement({
         scrollLeft: 10000,
         scrollWidth: 20000,
@@ -635,33 +636,33 @@ describe("scroll-gradient", () => {
 
       updateElementScrollGradient(el);
 
-      expect(el.classList.contains("scroll-gradient-both")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(true);
     });
 
-    it("✓ handles empty container gracefully", () => {
-      const container = document.createElement("div");
+    it('✓ handles empty container gracefully', () => {
+      const container = document.createElement('div');
 
       expect(() => initializeScrollGradients(container)).not.toThrow();
       expect(() =>
-        setupScrollGradients(container, updateScrollGradient),
+        setupScrollGradients(container, updateScrollGradient)
       ).not.toThrow();
     });
   });
 
-  describe("scroll event handling", () => {
+  describe('scroll event handling', () => {
     beforeEach(() => {
       // Mock RAF to execute synchronously for predictable testing
-      jest.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
         cb(0);
         return 0;
       });
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
-    it("✓ scroll event triggers gradient update on scrollable element", () => {
+    it('✓ scroll event triggers gradient update on scrollable element', () => {
       // Test updateElementScrollGradient with a directly scrollable element (like title)
       const el = createScrollableElement({
         scrollLeft: 0,
@@ -673,23 +674,23 @@ describe("scroll-gradient", () => {
       setupElementScrollGradient(el, undefined);
 
       // Initially should have right gradient (at start)
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
 
       // Simulate scroll to middle
-      Object.defineProperty(el, "scrollLeft", {
+      Object.defineProperty(el, 'scrollLeft', {
         value: 50,
         writable: true,
         configurable: true,
       });
 
       // Dispatch scroll event
-      el.dispatchEvent(new Event("scroll"));
+      el.dispatchEvent(new Event('scroll'));
 
       // Should now show both gradients
-      expect(el.classList.contains("scroll-gradient-both")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(true);
     });
 
-    it("✓ abort signal stops scroll listener", () => {
+    it('✓ abort signal stops scroll listener', () => {
       // Test with directly scrollable element (like title)
       const el = createScrollableElement({
         scrollLeft: 0,
@@ -701,28 +702,28 @@ describe("scroll-gradient", () => {
       setupElementScrollGradient(el, controller.signal);
 
       // Initially should have right gradient
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
 
       // Abort controller
       controller.abort();
 
       // Simulate scroll to middle
-      Object.defineProperty(el, "scrollLeft", {
+      Object.defineProperty(el, 'scrollLeft', {
         value: 50,
         writable: true,
         configurable: true,
       });
 
       // Dispatch scroll event - should NOT update since aborted
-      el.dispatchEvent(new Event("scroll"));
+      el.dispatchEvent(new Event('scroll'));
 
       // Should still show right gradient (not updated to "both")
-      expect(el.classList.contains("scroll-gradient-right")).toBe(true);
-      expect(el.classList.contains("scroll-gradient-both")).toBe(false);
+      expect(el.classList.contains('scroll-gradient-right')).toBe(true);
+      expect(el.classList.contains('scroll-gradient-both')).toBe(false);
     });
 
-    it("✓ scroll event on wrapper updates field gradient", () => {
-      const container = document.createElement("div");
+    it('✓ scroll event on wrapper updates field gradient', () => {
+      const container = document.createElement('div');
       const field = createPropertyField({
         wrapperScrollLeft: 0,
         wrapperClientWidth: 100,
@@ -732,25 +733,25 @@ describe("scroll-gradient", () => {
       container.appendChild(field);
 
       const wrapper = field.querySelector(
-        ".property-content-wrapper",
+        '.property-content-wrapper'
       ) as HTMLElement;
 
       // Setup via container function
       setupScrollGradients(container, updateScrollGradient);
       initializeScrollGradients(container);
 
-      expect(wrapper.classList.contains("scroll-gradient-right")).toBe(true);
+      expect(wrapper.classList.contains('scroll-gradient-right')).toBe(true);
 
       // Scroll to end
-      Object.defineProperty(wrapper, "scrollLeft", {
+      Object.defineProperty(wrapper, 'scrollLeft', {
         value: 100,
         writable: true,
         configurable: true,
       });
 
-      wrapper.dispatchEvent(new Event("scroll"));
+      wrapper.dispatchEvent(new Event('scroll'));
 
-      expect(wrapper.classList.contains("scroll-gradient-left")).toBe(true);
+      expect(wrapper.classList.contains('scroll-gradient-left')).toBe(true);
     });
   });
 });

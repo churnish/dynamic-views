@@ -3,6 +3,7 @@
  * Mock implementation of Obsidian API for testing
  * Based on obsidian.d.ts from obsidianmd/obsidian-api
  */
+import { vi } from 'vitest';
 
 export class App {
   vault = new Vault();
@@ -25,17 +26,17 @@ export class App {
 
 export class Vault {
   adapter = {
-    exists: jest.fn().mockResolvedValue(true),
-    read: jest.fn().mockResolvedValue(""),
-    readBinary: jest.fn().mockResolvedValue(new ArrayBuffer(0)),
+    exists: vi.fn().mockResolvedValue(true),
+    read: vi.fn().mockResolvedValue(''),
+    readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
   };
 
   read(file: TFile): Promise<string> {
-    return Promise.resolve("");
+    return Promise.resolve('');
   }
 
   cachedRead(file: TFile): Promise<string> {
-    return Promise.resolve("");
+    return Promise.resolve('');
   }
 
   async process(file: TFile, fn: (content: string) => string): Promise<string> {
@@ -72,7 +73,7 @@ export class WorkspaceLeaf {
 
 export class View {
   getViewType(): string {
-    return "";
+    return '';
   }
 }
 
@@ -89,7 +90,7 @@ export class MetadataCache {
 export class FileManager {
   processFrontMatter(
     file: TFile,
-    fn: (frontmatter: any) => void,
+    fn: (frontmatter: any) => void
   ): Promise<void> {
     return Promise.resolve();
   }
@@ -176,7 +177,7 @@ export abstract class BasesView extends Component {
 
   createFileForView(
     baseFileName: string,
-    frontmatterProcessor?: (frontmatter: any) => void,
+    frontmatterProcessor?: (frontmatter: any) => void
   ): void {
     // Mock file creation
   }
@@ -189,9 +190,9 @@ export class Plugin extends Component {
   addRibbonIcon(
     icon: string,
     title: string,
-    callback: () => void,
+    callback: () => void
   ): HTMLElement {
-    return document.createElement("div");
+    return document.createElement('div');
   }
 
   addCommand(command: Command): Command {
@@ -257,7 +258,7 @@ export class Notice {
 export function requestUrl(request: string | { url: string }): Promise<any> {
   return Promise.resolve({
     status: 200,
-    text: "",
+    text: '',
     json: {},
     arrayBuffer: new ArrayBuffer(0),
   });
@@ -265,12 +266,12 @@ export function requestUrl(request: string | { url: string }): Promise<any> {
 
 // Mock normalizePath
 export function normalizePath(path: string): string {
-  return path.replace(/\\/g, "/");
+  return path.replace(/\\/g, '/');
 }
 
 // Mock setIcon
 export function setIcon(parent: HTMLElement, iconId: string): void {
-  parent.setAttribute("data-icon", iconId);
+  parent.setAttribute('data-icon', iconId);
 }
 
 // Mock YAML helpers — use JSON for test simplicity

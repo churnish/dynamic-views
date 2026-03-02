@@ -2,18 +2,18 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-24
+last updated: 2026-03-02
 ---
 
 # Project structure
 
 ```
 dynamic-views/
-├── main.ts                          # Plugin entry point — registers views, commands, API
-├── styles.css                       # Compiled CSS (build artifact, gitignored)
-├── esbuild.config.mjs               # Build config (JS/TS only)
+├── main.ts                           # Plugin entry point — registers views, commands, API
+├── styles.css                        # Compiled CSS (build artifact, gitignored)
+├── esbuild.config.mjs                # Build config (JS/TS only)
 ├── eslint.config.js                  # Lint rules (obsidianmd plugin)
-├── jest.config.cjs                   # Test config (ts-jest, jsdom)
+├── vitest.config.ts                  # Test config (vitest, jsdom)
 ├── version-bump.mjs                  # Version bump + lint pre-check
 ├── tsconfig.json
 ├── package.json
@@ -40,10 +40,10 @@ dynamic-views/
 │   │   ├── card-view.tsx             # Card component (grid + masonry modes)
 │   │   ├── list-view.tsx             # List view component
 │   │   ├── masonry-view.tsx          # Masonry wrapper over CardView
-│   │   ├── query-sync.ts            # Query processing + code block sync
+│   │   ├── query-sync.ts             # Query processing + code block sync
 │   │   ├── toolbar.tsx               # Toolbar with dropdowns + controls
 │   │   ├── settings.tsx              # View settings panel component
-│   │   └── types.d.ts               # Datacore API + Preact type defs
+│   │   └── types.d.ts                # Datacore API + Preact type defs
 │   │
 │   ├── shared/                       # Cross-backend shared logic
 │   │   ├── card-renderer.tsx         # Pure card rendering (normalized CardData)
@@ -85,7 +85,6 @@ dynamic-views/
 │   ├── setup.ts
 │   ├── __mocks__/
 │   │   ├── obsidian.ts
-│   │   └── styleMock.js
 │   ├── bases/
 │   │   ├── cleanup.test.ts
 │   │   ├── sync-responsive-classes.test.ts
@@ -124,9 +123,9 @@ dynamic-views/
 │   │   ├── _query-editor.scss        # Query dropdown and editor
 │   │   ├── _settings.scss            # View settings panel
 │   │   └── _list-view.scss           # List view styles
-│   ├── _grid-masonry-shared.scss    # Shared card view layout: groups, sticky headers, card foundation, content-visibility
-│   ├── _grid-view.scss              # Grid: CSS Grid columns, subgrid, grid spacing
-│   ├── _image-viewer.scss           # Image viewer overlay, panzoom, cursor rules
+│   ├── _grid-masonry-shared.scss     # Shared card view layout: groups, sticky headers, card foundation, content-visibility
+│   ├── _grid-view.scss               # Grid: CSS Grid columns, subgrid, grid spacing
+│   ├── _image-viewer.scss            # Image viewer overlay, panzoom, cursor rules
 │   ├── card/                         # Card internals
 │   │   ├── _core.scss                # Card container, borders, backgrounds, border color presets
 │   │   ├── _previews.scss            # Thumbnail sizing, text preview, position layouts
@@ -134,7 +133,7 @@ dynamic-views/
 │   │   ├── _cover.scss               # Cover flexbox system, wrapper positioning, masonry cover height overrides
 │   │   ├── _cover-elements.scss      # Cover element styling, hover zoom, cover-content border, crop/fit/background
 │   │   ├── _cover-placeholders.scss  # Placeholder/skeleton styles and visibility
-│   │   ├── _cover-side.scss           # Side cover layout adjustments
+│   │   ├── _cover-side.scss          # Side cover layout adjustments
 │   │   ├── _images.scss              # Shared image styles across all formats (skip-cover-fade, fullbleed img)
 │   │   ├── _backdrop.scss            # Backdrop image format
 │   │   ├── _poster.scss              # Poster image format

@@ -4,157 +4,157 @@ import {
   findQueryInBlock,
   updateQueryInBlock,
   QueryMatch,
-} from "../../src/datacore/query-sync";
+} from '../../src/datacore/query-sync';
 
-describe("query-sync", () => {
-  describe("hasFileSelector", () => {
-    it("should return true for query with @page", () => {
-      expect(hasFileSelector("@page")).toBe(true);
+describe('query-sync', () => {
+  describe('hasFileSelector', () => {
+    it('should return true for query with @page', () => {
+      expect(hasFileSelector('@page')).toBe(true);
       expect(hasFileSelector('@page and title = "Test"')).toBe(true);
-      expect(hasFileSelector("  @page  ")).toBe(true);
+      expect(hasFileSelector('  @page  ')).toBe(true);
     });
 
-    it("should be case-insensitive", () => {
-      expect(hasFileSelector("@PAGE")).toBe(true);
-      expect(hasFileSelector("@Page")).toBe(true);
-      expect(hasFileSelector("@pAgE")).toBe(true);
+    it('should be case-insensitive', () => {
+      expect(hasFileSelector('@PAGE')).toBe(true);
+      expect(hasFileSelector('@Page')).toBe(true);
+      expect(hasFileSelector('@pAgE')).toBe(true);
     });
 
-    it("should match @page as word boundary", () => {
-      expect(hasFileSelector("@page")).toBe(true);
-      expect(hasFileSelector("@page and foo")).toBe(true);
+    it('should match @page as word boundary', () => {
+      expect(hasFileSelector('@page')).toBe(true);
+      expect(hasFileSelector('@page and foo')).toBe(true);
     });
 
-    it("should return false for query without @page", () => {
+    it('should return false for query without @page', () => {
       expect(hasFileSelector('title = "Test"')).toBe(false);
-      expect(hasFileSelector("tags = #note")).toBe(false);
-      expect(hasFileSelector("")).toBe(false);
+      expect(hasFileSelector('tags = #note')).toBe(false);
+      expect(hasFileSelector('')).toBe(false);
     });
 
-    it("should handle queries with @page in middle", () => {
-      expect(hasFileSelector("foo and @page and bar")).toBe(true);
+    it('should handle queries with @page in middle', () => {
+      expect(hasFileSelector('foo and @page and bar')).toBe(true);
     });
 
-    it("should handle whitespace around @page", () => {
-      expect(hasFileSelector("  @page  ")).toBe(true);
-      expect(hasFileSelector("\n@page\n")).toBe(true);
-      expect(hasFileSelector("\t@page\t")).toBe(true);
+    it('should handle whitespace around @page', () => {
+      expect(hasFileSelector('  @page  ')).toBe(true);
+      expect(hasFileSelector('\n@page\n')).toBe(true);
+      expect(hasFileSelector('\t@page\t')).toBe(true);
     });
 
-    it("should not match @page as part of longer word", () => {
+    it('should not match @page as part of longer word', () => {
       // Word boundary after @page, so @pagesize should not match
-      expect(hasFileSelector("@pagesize")).toBe(false);
-      expect(hasFileSelector("@pagefoo")).toBe(false);
+      expect(hasFileSelector('@pagesize')).toBe(false);
+      expect(hasFileSelector('@pagefoo')).toBe(false);
     });
 
-    it("should return true for query with @file", () => {
-      expect(hasFileSelector("@file")).toBe(true);
+    it('should return true for query with @file', () => {
+      expect(hasFileSelector('@file')).toBe(true);
       expect(hasFileSelector('@file and $extension = "png"')).toBe(true);
-      expect(hasFileSelector("  @file  ")).toBe(true);
+      expect(hasFileSelector('  @file  ')).toBe(true);
     });
 
-    it("should be case-insensitive for @file", () => {
-      expect(hasFileSelector("@FILE")).toBe(true);
-      expect(hasFileSelector("@File")).toBe(true);
+    it('should be case-insensitive for @file', () => {
+      expect(hasFileSelector('@FILE')).toBe(true);
+      expect(hasFileSelector('@File')).toBe(true);
     });
 
-    it("should not match @file as part of longer word", () => {
-      expect(hasFileSelector("@filename")).toBe(false);
-      expect(hasFileSelector("@filetype")).toBe(false);
+    it('should not match @file as part of longer word', () => {
+      expect(hasFileSelector('@filename')).toBe(false);
+      expect(hasFileSelector('@filetype')).toBe(false);
     });
 
-    it("should return false for non-file selectors", () => {
-      expect(hasFileSelector("@section")).toBe(false);
-      expect(hasFileSelector("@task")).toBe(false);
-      expect(hasFileSelector("@block")).toBe(false);
-      expect(hasFileSelector("@list-item")).toBe(false);
+    it('should return false for non-file selectors', () => {
+      expect(hasFileSelector('@section')).toBe(false);
+      expect(hasFileSelector('@task')).toBe(false);
+      expect(hasFileSelector('@block')).toBe(false);
+      expect(hasFileSelector('@list-item')).toBe(false);
     });
   });
 
-  describe("ensureFileSelector", () => {
-    it("should not modify query that already has @page", () => {
+  describe('ensureFileSelector', () => {
+    it('should not modify query that already has @page', () => {
       const query = '@page and title = "Test"';
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should wrap query without file selector", () => {
+    it('should wrap query without file selector', () => {
       const query = 'title = "Test"';
       expect(ensureFileSelector(query)).toBe('@file and (title = "Test")');
     });
 
-    it("should handle empty query", () => {
-      expect(ensureFileSelector("")).toBe("");
-      expect(ensureFileSelector("  ")).toBe("");
+    it('should handle empty query', () => {
+      expect(ensureFileSelector('')).toBe('');
+      expect(ensureFileSelector('  ')).toBe('');
     });
 
-    it("should trim query before checking", () => {
+    it('should trim query before checking', () => {
       const query = '  title = "Test"  ';
       expect(ensureFileSelector(query)).toBe('@file and (title = "Test")');
     });
 
-    it("should preserve @page at start", () => {
-      const query = "@page";
-      expect(ensureFileSelector(query)).toBe("@page");
+    it('should preserve @page at start', () => {
+      const query = '@page';
+      expect(ensureFileSelector(query)).toBe('@page');
     });
 
-    it("should handle @page in middle of query", () => {
-      const query = "foo and @page and bar";
+    it('should handle @page in middle of query', () => {
+      const query = 'foo and @page and bar';
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should be case-insensitive for @page detection", () => {
+    it('should be case-insensitive for @page detection', () => {
       const query = '@PAGE and title = "Test"';
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should handle complex queries", () => {
+    it('should handle complex queries', () => {
       const query = 'title = "Test" and tags = #note';
       expect(ensureFileSelector(query)).toBe(
-        '@file and (title = "Test" and tags = #note)',
+        '@file and (title = "Test" and tags = #note)'
       );
     });
 
-    it("should handle queries with parentheses", () => {
+    it('should handle queries with parentheses', () => {
       const query = '(title = "Test" or title = "Demo")';
       expect(ensureFileSelector(query)).toBe(
-        '@file and ((title = "Test" or title = "Demo"))',
+        '@file and ((title = "Test" or title = "Demo"))'
       );
     });
 
-    it("should handle multiline queries", () => {
+    it('should handle multiline queries', () => {
       const query = `title = "Test"
 and tags = #note`;
       expect(ensureFileSelector(query)).toBe(`@file and (title = "Test"
 and tags = #note)`);
     });
 
-    it("should not double-wrap if @page is already present", () => {
+    it('should not double-wrap if @page is already present', () => {
       const query = '@page and (title = "Test")';
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should not modify query that already has @file", () => {
+    it('should not modify query that already has @file', () => {
       const query = '@file and $extension = "png"';
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should pass through bare @file unchanged", () => {
-      expect(ensureFileSelector("@file")).toBe("@file");
+    it('should pass through bare @file unchanged', () => {
+      expect(ensureFileSelector('@file')).toBe('@file');
     });
 
-    it("should be case-insensitive for @file detection", () => {
+    it('should be case-insensitive for @file detection', () => {
       const query = '@FILE and $extension = "png"';
       expect(ensureFileSelector(query)).toBe(query);
     });
 
-    it("should wrap non-file selectors with @file", () => {
-      expect(ensureFileSelector("@section")).toBe("@file and (@section)");
-      expect(ensureFileSelector("@task")).toBe("@file and (@task)");
+    it('should wrap non-file selectors with @file', () => {
+      expect(ensureFileSelector('@section')).toBe('@file and (@section)');
+      expect(ensureFileSelector('@task')).toBe('@file and (@task)');
     });
   });
 
-  describe("findQueryInBlock", () => {
-    it("should find query between markers", () => {
+  describe('findQueryInBlock', () => {
+    it('should find query between markers', () => {
       const content = `Some text
 // –––– DQL QUERY START ––––
 title = "Test"
@@ -167,12 +167,12 @@ More text`;
       expect(result!.query).toBe('title = "Test"');
     });
 
-    it("should return null when no markers found", () => {
-      const content = "Just some regular text";
+    it('should return null when no markers found', () => {
+      const content = 'Just some regular text';
       expect(findQueryInBlock(content)).toBeNull();
     });
 
-    it("should handle multiline queries", () => {
+    it('should handle multiline queries', () => {
       const content = `// –––– DQL QUERY START ––––
 title = "Test" and
 tags = #note and
@@ -187,7 +187,7 @@ tags = #note and
 date > 2024-01-01`);
     });
 
-    it("should trim whitespace from query", () => {
+    it('should trim whitespace from query', () => {
       const content = `// –––– DQL QUERY START ––––
   title = "Test"
 // ––––– DQL QUERY END –––––`;
@@ -198,7 +198,7 @@ date > 2024-01-01`);
       expect(result!.query).toBe('title = "Test"');
     });
 
-    it("should return start and end indices", () => {
+    it('should return start and end indices', () => {
       const content = `prefix
 // –––– DQL QUERY START ––––
 query
@@ -211,11 +211,11 @@ suffix`;
       expect(result!.startIndex).toBeGreaterThan(0);
       expect(result!.endIndex).toBeGreaterThan(result!.startIndex);
       expect(content.substring(result!.startIndex, result!.endIndex)).toBe(
-        result!.fullMatch,
+        result!.fullMatch
       );
     });
 
-    it("should return fullMatch", () => {
+    it('should return fullMatch', () => {
       const content = `// –––– DQL QUERY START ––––
 title = "Test"
 // ––––– DQL QUERY END –––––`;
@@ -223,12 +223,12 @@ title = "Test"
       const result = findQueryInBlock(content);
 
       expect(result).not.toBeNull();
-      expect(result!.fullMatch).toContain("DQL QUERY START");
-      expect(result!.fullMatch).toContain("DQL QUERY END");
+      expect(result!.fullMatch).toContain('DQL QUERY START');
+      expect(result!.fullMatch).toContain('DQL QUERY END');
       expect(result!.fullMatch).toContain('title = "Test"');
     });
 
-    it("should handle markers with varying spacing", () => {
+    it('should handle markers with varying spacing', () => {
       const content = `//  ––––  DQL QUERY START  ––––
 query content
   //  –––––  DQL QUERY END  –––––`;
@@ -236,10 +236,10 @@ query content
       const result = findQueryInBlock(content);
 
       expect(result).not.toBeNull();
-      expect(result!.query).toBe("query content");
+      expect(result!.query).toBe('query content');
     });
 
-    it("should handle empty query between markers", () => {
+    it('should handle empty query between markers', () => {
       const content = `// –––– DQL QUERY START ––––
 
 // ––––– DQL QUERY END –––––`;
@@ -247,24 +247,24 @@ query content
       const result = findQueryInBlock(content);
 
       expect(result).not.toBeNull();
-      expect(result!.query).toBe("");
+      expect(result!.query).toBe('');
     });
 
-    it("should handle only START marker", () => {
+    it('should handle only START marker', () => {
       const content = `// –––– DQL QUERY START ––––
 query without end`;
 
       expect(findQueryInBlock(content)).toBeNull();
     });
 
-    it("should handle only END marker", () => {
+    it('should handle only END marker', () => {
       const content = `query without start
 // ––––– DQL QUERY END –––––`;
 
       expect(findQueryInBlock(content)).toBeNull();
     });
 
-    it("should handle markers in reverse order", () => {
+    it('should handle markers in reverse order', () => {
       const content = `// ––––– DQL QUERY END –––––
 query
 // –––– DQL QUERY START ––––`;
@@ -272,7 +272,7 @@ query
       expect(findQueryInBlock(content)).toBeNull();
     });
 
-    it("should find first occurrence when multiple markers exist", () => {
+    it('should find first occurrence when multiple markers exist', () => {
       const content = `// –––– DQL QUERY START ––––
 first query
 // ––––– DQL QUERY END –––––
@@ -283,10 +283,10 @@ second query
       const result = findQueryInBlock(content);
 
       expect(result).not.toBeNull();
-      expect(result!.query).toBe("first query");
+      expect(result!.query).toBe('first query');
     });
 
-    it("should handle query with special characters", () => {
+    it('should handle query with special characters', () => {
       const content = `// –––– DQL QUERY START ––––
 title =~ /regex.*pattern/ and description != null
 // ––––– DQL QUERY END –––––`;
@@ -295,11 +295,11 @@ title =~ /regex.*pattern/ and description != null
 
       expect(result).not.toBeNull();
       expect(result!.query).toBe(
-        "title =~ /regex.*pattern/ and description != null",
+        'title =~ /regex.*pattern/ and description != null'
       );
     });
 
-    it("should handle queries with code comments", () => {
+    it('should handle queries with code comments', () => {
       const content = `// –––– DQL QUERY START ––––
 // This is a comment in the query
 title = "Test"
@@ -308,27 +308,27 @@ title = "Test"
       const result = findQueryInBlock(content);
 
       expect(result).not.toBeNull();
-      expect(result!.query).toContain("This is a comment");
+      expect(result!.query).toContain('This is a comment');
     });
   });
 
-  describe("updateQueryInBlock", () => {
-    it("should update query between markers", () => {
+  describe('updateQueryInBlock', () => {
+    it('should update query between markers', () => {
       const content = `prefix
 // –––– DQL QUERY START ––––
 old query
 // ––––– DQL QUERY END –––––
 suffix`;
 
-      const result = updateQueryInBlock(content, "new query");
+      const result = updateQueryInBlock(content, 'new query');
 
-      expect(result).toContain("new query");
-      expect(result).not.toContain("old query");
-      expect(result).toContain("prefix");
-      expect(result).toContain("suffix");
+      expect(result).toContain('new query');
+      expect(result).not.toContain('old query');
+      expect(result).toContain('prefix');
+      expect(result).toContain('suffix');
     });
 
-    it("should preserve surrounding content", () => {
+    it('should preserve surrounding content', () => {
       const content = `line 1
 line 2
 // –––– DQL QUERY START ––––
@@ -337,16 +337,16 @@ old
 line 3
 line 4`;
 
-      const result = updateQueryInBlock(content, "new");
+      const result = updateQueryInBlock(content, 'new');
 
-      expect(result).toContain("line 1");
-      expect(result).toContain("line 2");
-      expect(result).toContain("line 3");
-      expect(result).toContain("line 4");
-      expect(result).toContain("new");
+      expect(result).toContain('line 1');
+      expect(result).toContain('line 2');
+      expect(result).toContain('line 3');
+      expect(result).toContain('line 4');
+      expect(result).toContain('new');
     });
 
-    it("should handle multiline new query", () => {
+    it('should handle multiline new query', () => {
       const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
@@ -357,43 +357,43 @@ line 3`;
 
       const result = updateQueryInBlock(content, newQuery);
 
-      expect(result).toContain("line 1");
-      expect(result).toContain("line 2");
-      expect(result).toContain("line 3");
-      expect(result).not.toContain("old");
+      expect(result).toContain('line 1');
+      expect(result).toContain('line 2');
+      expect(result).toContain('line 3');
+      expect(result).not.toContain('old');
     });
 
-    it("should return original content when markers not found", () => {
-      const content = "content without markers";
-      const result = updateQueryInBlock(content, "new query");
+    it('should return original content when markers not found', () => {
+      const content = 'content without markers';
+      const result = updateQueryInBlock(content, 'new query');
 
       expect(result).toBe(content);
     });
 
-    it("should handle empty new query", () => {
+    it('should handle empty new query', () => {
       const content = `// –––– DQL QUERY START ––––
 old query
 // ––––– DQL QUERY END –––––`;
 
-      const result = updateQueryInBlock(content, "");
+      const result = updateQueryInBlock(content, '');
 
-      expect(result).toContain("DQL QUERY START");
-      expect(result).toContain("DQL QUERY END");
-      expect(result).not.toContain("old query");
+      expect(result).toContain('DQL QUERY START');
+      expect(result).toContain('DQL QUERY END');
+      expect(result).not.toContain('old query');
     });
 
-    it("should maintain marker format", () => {
+    it('should maintain marker format', () => {
       const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
 
-      const result = updateQueryInBlock(content, "new");
+      const result = updateQueryInBlock(content, 'new');
 
       expect(result).toMatch(/\/\/ –––– DQL QUERY START ––––/);
       expect(result).toMatch(/\/\/ ––––– DQL QUERY END –––––/);
     });
 
-    it("should update only first occurrence", () => {
+    it('should update only first occurrence', () => {
       const content = `// –––– DQL QUERY START ––––
 first
 // ––––– DQL QUERY END –––––
@@ -401,39 +401,39 @@ first
 second
 // ––––– DQL QUERY END –––––`;
 
-      const result = updateQueryInBlock(content, "updated");
+      const result = updateQueryInBlock(content, 'updated');
 
-      const firstIndex = result.indexOf("updated");
-      const secondIndex = result.indexOf("second");
+      const firstIndex = result.indexOf('updated');
+      const secondIndex = result.indexOf('second');
 
       expect(firstIndex).toBeGreaterThan(-1);
       expect(secondIndex).toBeGreaterThan(-1);
-      expect(result).not.toContain("first");
+      expect(result).not.toContain('first');
     });
 
-    it("should handle query with special characters", () => {
+    it('should handle query with special characters', () => {
       const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
 
-      const newQuery = "title =~ /regex.*/ and (foo or bar)";
+      const newQuery = 'title =~ /regex.*/ and (foo or bar)';
       const result = updateQueryInBlock(content, newQuery);
 
-      expect(result).toContain("title =~ /regex.*/ and (foo or bar)");
+      expect(result).toContain('title =~ /regex.*/ and (foo or bar)');
     });
 
-    it("should preserve indentation of markers", () => {
+    it('should preserve indentation of markers', () => {
       const content = `// –––– DQL QUERY START ––––
 old query
 // ––––– DQL QUERY END –––––`;
 
-      const result = updateQueryInBlock(content, "new query");
+      const result = updateQueryInBlock(content, 'new query');
 
       // Check that the structure is preserved (newlines, markers)
-      expect(result.split("\n").length).toBeGreaterThanOrEqual(3);
+      expect(result.split('\n').length).toBeGreaterThanOrEqual(3);
     });
 
-    it("should handle query with Unicode characters", () => {
+    it('should handle query with Unicode characters', () => {
       const content = `// –––– DQL QUERY START ––––
 old
 // ––––– DQL QUERY END –––––`;
@@ -445,8 +445,8 @@ old
     });
   });
 
-  describe("QueryMatch type", () => {
-    it("should have correct structure", () => {
+  describe('QueryMatch type', () => {
+    it('should have correct structure', () => {
       const content = `// –––– DQL QUERY START ––––
 test query
 // ––––– DQL QUERY END –––––`;
@@ -454,20 +454,20 @@ test query
       const match = findQueryInBlock(content);
 
       expect(match).not.toBeNull();
-      expect(match).toHaveProperty("query");
-      expect(match).toHaveProperty("fullMatch");
-      expect(match).toHaveProperty("startIndex");
-      expect(match).toHaveProperty("endIndex");
+      expect(match).toHaveProperty('query');
+      expect(match).toHaveProperty('fullMatch');
+      expect(match).toHaveProperty('startIndex');
+      expect(match).toHaveProperty('endIndex');
 
-      expect(typeof match!.query).toBe("string");
-      expect(typeof match!.fullMatch).toBe("string");
-      expect(typeof match!.startIndex).toBe("number");
-      expect(typeof match!.endIndex).toBe("number");
+      expect(typeof match!.query).toBe('string');
+      expect(typeof match!.fullMatch).toBe('string');
+      expect(typeof match!.startIndex).toBe('number');
+      expect(typeof match!.endIndex).toBe('number');
     });
   });
 
-  describe("integration tests", () => {
-    it("should work with ensureFileSelector and updateQueryInBlock", () => {
+  describe('integration tests', () => {
+    it('should work with ensureFileSelector and updateQueryInBlock', () => {
       const content = `// –––– DQL QUERY START ––––
 title = "Test"
 // ––––– DQL QUERY END –––––`;
@@ -479,7 +479,7 @@ title = "Test"
       expect(updated).toContain('@file and (title = "Test")');
     });
 
-    it("should preserve query with @page selector", () => {
+    it('should preserve query with @page selector', () => {
       const content = `// –––– DQL QUERY START ––––
 @page and title = "Test"
 // ––––– DQL QUERY END –––––`;
@@ -490,7 +490,7 @@ title = "Test"
       expect(ensured).toBe('@page and title = "Test"');
     });
 
-    it("should preserve query with @file selector", () => {
+    it('should preserve query with @file selector', () => {
       const content = `// –––– DQL QUERY START ––––
 @file and $extension = "png"
 // ––––– DQL QUERY END –––––`;

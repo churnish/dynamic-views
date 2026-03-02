@@ -1,15 +1,15 @@
 /* Enable container queries and set view padding variable for Obsidian's default .bases-view */
-.bases-view[data-view-type="dynamic-views-grid"],
-.bases-view[data-view-type="dynamic-views-masonry"] {
+.bases-view[data-view-type='dynamic-views-grid'],
+.bases-view[data-view-type='dynamic-views-masonry'] {
   container-type: inline-size;
   --bases-view-padding: var(--size-4-3);
 }
 
 /* View background - Bases files only (not embeds) */
-.workspace-leaf-content[data-type="bases"]
-  .bases-view[data-view-type="dynamic-views-grid"],
-.workspace-leaf-content[data-type="bases"]
-  .bases-view[data-view-type="dynamic-views-masonry"] {
+.workspace-leaf-content[data-type='bases']
+  .bases-view[data-view-type='dynamic-views-grid'],
+.workspace-leaf-content[data-type='bases']
+  .bases-view[data-view-type='dynamic-views-masonry'] {
   background-color: var(--dynamic-views-view-background);
 }
 
@@ -52,7 +52,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
    Progressive enhancement: iOS WebKit doesn't yet support scroll-state() container queries. */
 @container dynamic-views-group-heading scroll-state(stuck: top) {
   .bases-group-count::after {
-    content: "";
+    content: '';
     position: absolute;
     bottom: 0;
     left: calc(-1 * var(--bases-view-padding));
@@ -217,7 +217,7 @@ body.dynamic-views-hide-group-property-labels
 
     /* Border as pseudo-element so it appears on top of covers */
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       inset: 0;
       border-radius: inherit;

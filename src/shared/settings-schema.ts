@@ -3,14 +3,18 @@
  * Defines settings structure for both Bases and Datacore views
  */
 
-import type { BasesPropertyId, BasesViewConfig, ViewOption } from "obsidian";
+import type {
+  BasesPropertyId,
+  BasesViewConfig,
+  BasesAllOptions,
+} from 'obsidian';
 import type {
   PluginSettings,
   ViewDefaults,
   BasesResolvedSettings,
-} from "../types";
-import { VIEW_DEFAULTS, BASES_DEFAULTS } from "../constants";
-import { stripNotePrefix } from "../utils/property";
+} from '../types';
+import { VIEW_DEFAULTS, BASES_DEFAULTS } from '../constants';
+import { stripNotePrefix } from '../utils/property';
 
 /** Minimal Bases config interface — subset of BasesViewConfig used by settings readers */
 interface BasesConfig {
@@ -30,21 +34,21 @@ interface BasesConfig {
  * @param config - Runtime config passed by Obsidian (undocumented — official type says no param)
  */
 export function getBasesViewOptions(
-  viewType?: "grid" | "masonry",
-  config?: BasesViewConfig,
-): ViewOption[] {
+  viewType?: 'grid' | 'masonry',
+  config?: BasesViewConfig
+): BasesAllOptions[] {
   // Merge settings template into defaults for NEW views only.
   // Existing views (have an id from cleanUpBaseFile) use plain defaults —
   // otherwise template-polluted defaults override user-cleared settings.
   const d = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
   if (viewType) {
     try {
-      const plugin = window.app?.plugins?.plugins?.["dynamic-views"];
+      const plugin = window.app?.plugins?.plugins?.['dynamic-views'];
       const pm = (
         plugin as unknown as {
           persistenceManager?: {
             getSettingsTemplate(
-              viewType: string,
+              viewType: string
             ): { settings?: Record<string, unknown> } | undefined;
           };
         }
@@ -52,7 +56,7 @@ export function getBasesViewOptions(
       if (pm) {
         // Must agree with readBasesSettings(templateOverrides) and
         // cleanUpBaseFile()'s YAML template injection on "new view" detection.
-        const isNewView = !config || config.get("id") == null;
+        const isNewView = !config || config.get('id') == null;
         if (isNewView) {
           const template = pm.getSettingsTemplate(viewType);
           if (template) {
@@ -73,22 +77,22 @@ export function getBasesViewOptions(
   /** Properties currently displayed as title/subtitle (position-based). */
   function getPositionTitleProps(): Set<string> {
     if (!config) return new Set();
-    const rawFirst = config.get("displayFirstAsTitle");
+    const rawFirst = config.get('displayFirstAsTitle');
     const displayFirst =
-      typeof rawFirst === "boolean" ? rawFirst : d.displayFirstAsTitle;
+      typeof rawFirst === 'boolean' ? rawFirst : d.displayFirstAsTitle;
     if (!displayFirst) return new Set();
 
     const order = config.getOrder();
     const configStr = (key: string, fallback: string): string => {
       const v = config.get(key);
-      return typeof v === "string" ? v : fallback;
+      return typeof v === 'string' ? v : fallback;
     };
     const special = new Set(
       [
-        configStr("textPreviewProperty", d.textPreviewProperty),
-        configStr("urlProperty", d.urlProperty),
-        configStr("imageProperty", d.imageProperty),
-      ].filter(Boolean),
+        configStr('textPreviewProperty', d.textPreviewProperty),
+        configStr('urlProperty', d.urlProperty),
+        configStr('imageProperty', d.imageProperty),
+      ].filter(Boolean)
     );
     const candidates = special.size
       ? order.filter((id) => !special.has(String(id)))
@@ -97,9 +101,9 @@ export function getBasesViewOptions(
     const result = new Set<string>();
     if (candidates[0]) {
       result.add(String(candidates[0]));
-      const rawSecond = config.get("displaySecondAsSubtitle");
+      const rawSecond = config.get('displaySecondAsSubtitle');
       const displaySecond =
-        typeof rawSecond === "boolean" ? rawSecond : d.displaySecondAsSubtitle;
+        typeof rawSecond === 'boolean' ? rawSecond : d.displaySecondAsSubtitle;
       if (displaySecond && candidates[1]) {
         result.add(String(candidates[1]));
       }
@@ -109,56 +113,56 @@ export function getBasesViewOptions(
 
   const schema = [
     {
-      type: "slider",
-      displayName: "Card size",
-      key: "cardSize",
+      type: 'slider',
+      displayName: 'Card size',
+      key: 'cardSize',
       min: 50,
       max: 800,
       step: 10,
       default: d.cardSize,
     },
     {
-      type: "group",
-      displayName: "Title",
+      type: 'group',
+      displayName: 'Title',
       items: [
         {
-          type: "toggle",
-          displayName: "Display first property as title",
-          key: "displayFirstAsTitle",
+          type: 'toggle',
+          displayName: 'Display first property as title',
+          key: 'displayFirstAsTitle',
           default: d.displayFirstAsTitle,
         },
         {
-          type: "slider",
-          displayName: "Lines",
-          key: "titleLines",
+          type: 'slider',
+          displayName: 'Lines',
+          key: 'titleLines',
           min: 1,
           max: 5,
           step: 1,
           default: d.titleLines,
           shouldHide: (config: BasesConfig) =>
-            (config.get("displayFirstAsTitle") ?? d.displayFirstAsTitle) ===
+            (config.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
             false,
         },
         {
-          type: "toggle",
-          displayName: "Display second property as subtitle",
-          key: "displaySecondAsSubtitle",
+          type: 'toggle',
+          displayName: 'Display second property as subtitle',
+          key: 'displaySecondAsSubtitle',
           default: d.displaySecondAsSubtitle,
           shouldHide: (config: BasesConfig) =>
-            (config.get("displayFirstAsTitle") ?? d.displayFirstAsTitle) ===
+            (config.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
             false,
         },
       ],
     },
     {
-      type: "group",
-      displayName: "Text preview",
+      type: 'group',
+      displayName: 'Text preview',
       items: [
         {
-          type: "property",
-          displayName: "Text preview property",
-          key: "textPreviewProperty",
-          placeholder: "Visible property",
+          type: 'property',
+          displayName: 'Text preview property',
+          key: 'textPreviewProperty',
+          placeholder: 'Visible property',
           default: d.textPreviewProperty,
           filter: (prop: BasesPropertyId) =>
             config
@@ -167,168 +171,168 @@ export function getBasesViewOptions(
               : true,
         },
         {
-          type: "toggle",
-          displayName: "Show note content if property missing/empty",
-          key: "fallbackToContent",
+          type: 'toggle',
+          displayName: 'Show note content if property missing/empty',
+          key: 'fallbackToContent',
           default: d.fallbackToContent,
         },
         {
-          type: "slider",
-          displayName: "Lines",
-          key: "textPreviewLines",
+          type: 'slider',
+          displayName: 'Lines',
+          key: 'textPreviewLines',
           min: 1,
           max: 10,
           step: 1,
           default: d.textPreviewLines,
           shouldHide: (config: BasesConfig) =>
-            !(config.get("textPreviewProperty") ?? d.textPreviewProperty) &&
-            (config.get("fallbackToContent") ?? d.fallbackToContent) === false,
+            !(config.get('textPreviewProperty') ?? d.textPreviewProperty) &&
+            (config.get('fallbackToContent') ?? d.fallbackToContent) === false,
         },
       ],
     },
     {
-      type: "group",
-      displayName: "Image",
+      type: 'group',
+      displayName: 'Image',
       items: [
         {
-          type: "property",
-          displayName: "Image property",
-          key: "imageProperty",
-          placeholder: "Property",
+          type: 'property',
+          displayName: 'Image property',
+          key: 'imageProperty',
+          placeholder: 'Property',
           default: d.imageProperty,
           filter: (prop: BasesPropertyId) => {
-            if (prop.startsWith("file.")) return false;
-            if (prop.startsWith("formula.")) return true;
+            if (prop.startsWith('file.')) return false;
+            if (prop.startsWith('formula.')) return true;
             if (!propertyInfos) return true;
             const widget = propertyInfos[stripNotePrefix(prop)]?.widget;
-            return !widget || widget === "text" || widget === "multitext";
+            return !widget || widget === 'text' || widget === 'multitext';
           },
         },
         {
-          type: "dropdown",
-          displayName: "Show image embeds",
-          key: "fallbackToEmbeds",
+          type: 'dropdown',
+          displayName: 'Show image embeds',
+          key: 'fallbackToEmbeds',
           options: {
-            always: "Always",
-            "if-unavailable": "If no available property images",
-            never: "Never",
+            always: 'Always',
+            'if-unavailable': 'If no available property images',
+            never: 'Never',
           },
           default: d.fallbackToEmbeds,
         },
         {
-          type: "dropdown",
-          displayName: "Format",
-          key: "imageFormat",
+          type: 'dropdown',
+          displayName: 'Format',
+          key: 'imageFormat',
           options: {
-            thumbnail: "Thumbnail",
-            cover: "Cover",
-            poster: "Poster",
-            backdrop: "Backdrop",
+            thumbnail: 'Thumbnail',
+            cover: 'Cover',
+            poster: 'Poster',
+            backdrop: 'Backdrop',
           },
           default: d.imageFormat,
           shouldHide: (config: BasesConfig) =>
-            !(config.get("imageProperty") || d.imageProperty) &&
-            (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) === "never",
+            !(config.get('imageProperty') || d.imageProperty) &&
+            (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) === 'never',
         },
         {
-          type: "dropdown",
-          displayName: "Display mode",
-          key: "posterDisplayMode",
+          type: 'dropdown',
+          displayName: 'Display mode',
+          key: 'posterDisplayMode',
           options: {
-            gradient: "Gradient",
-            overlay: "Overlay",
+            gradient: 'Gradient',
+            overlay: 'Overlay',
           },
           default: d.posterDisplayMode,
           shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) !== "poster" ||
-            (!(config.get("imageProperty") || d.imageProperty) &&
-              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
-                "never"),
+            (config.get('imageFormat') ?? d.imageFormat) !== 'poster' ||
+            (!(config.get('imageProperty') || d.imageProperty) &&
+              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+                'never'),
         },
         {
-          type: "slider",
-          displayName: "Size",
-          key: "thumbnailSize",
+          type: 'slider',
+          displayName: 'Size',
+          key: 'thumbnailSize',
           min: 50,
           max: 100,
           step: 1,
           default: d.thumbnailSize,
           shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) !== "thumbnail" ||
-            (!(config.get("imageProperty") || d.imageProperty) &&
-              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
-                "never"),
+            (config.get('imageFormat') ?? d.imageFormat) !== 'thumbnail' ||
+            (!(config.get('imageProperty') || d.imageProperty) &&
+              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+                'never'),
         },
         {
-          type: "dropdown",
-          displayName: "Position",
-          key: "imagePosition",
+          type: 'dropdown',
+          displayName: 'Position',
+          key: 'imagePosition',
           options: {
-            left: "Left",
-            right: "Right",
-            top: "Top",
-            bottom: "Bottom",
+            left: 'Left',
+            right: 'Right',
+            top: 'Top',
+            bottom: 'Bottom',
           },
           default: d.imagePosition,
           shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) === "poster" ||
-            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
-            (!(config.get("imageProperty") || d.imageProperty) &&
-              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
-                "never"),
+            (config.get('imageFormat') ?? d.imageFormat) === 'poster' ||
+            (config.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
+            (!(config.get('imageProperty') || d.imageProperty) &&
+              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+                'never'),
         },
         {
-          type: "dropdown",
-          displayName: "Fit",
-          key: "imageFit",
+          type: 'dropdown',
+          displayName: 'Fit',
+          key: 'imageFit',
           options: {
-            crop: "Crop",
-            contain: "Contain",
+            crop: 'Crop',
+            contain: 'Contain',
           },
           default: d.imageFit,
           shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
-            (!(config.get("imageProperty") || d.imageProperty) &&
-              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
-                "never"),
+            (config.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
+            (!(config.get('imageProperty') || d.imageProperty) &&
+              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+                'never'),
         },
         {
-          type: "slider",
-          displayName: "Ratio",
-          key: "imageRatio",
+          type: 'slider',
+          displayName: 'Ratio',
+          key: 'imageRatio',
           min: 0.25,
           max: 2.5,
           step: 0.05,
           default: d.imageRatio,
           shouldHide: (config: BasesConfig) =>
-            (config.get("imageFormat") ?? d.imageFormat) === "backdrop" ||
-            (!(config.get("imageProperty") || d.imageProperty) &&
-              (config.get("fallbackToEmbeds") ?? d.fallbackToEmbeds) ===
-                "never"),
+            (config.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
+            (!(config.get('imageProperty') || d.imageProperty) &&
+              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+                'never'),
         },
       ],
     },
     {
-      type: "group",
-      displayName: "Properties",
+      type: 'group',
+      displayName: 'Properties',
       items: [
         {
-          type: "dropdown",
-          displayName: "Property labels",
-          key: "propertyLabels",
+          type: 'dropdown',
+          displayName: 'Property labels',
+          key: 'propertyLabels',
           options: {
-            above: "Above",
-            inline: "Inline",
-            hide: "Hide",
+            above: 'Above',
+            inline: 'Inline',
+            hide: 'Hide',
           },
           default: d.propertyLabels,
           shouldHide: (config: BasesConfig) => config.getOrder().length === 0,
         },
         {
-          type: "property",
-          displayName: "URL property",
-          key: "urlProperty",
-          placeholder: "Visible property",
+          type: 'property',
+          displayName: 'URL property',
+          key: 'urlProperty',
+          placeholder: 'Visible property',
           default: d.urlProperty,
           filter: (prop: BasesPropertyId) =>
             config
@@ -337,76 +341,78 @@ export function getBasesViewOptions(
               : true,
         },
         {
-          type: "toggle",
-          displayName: "Pair properties",
-          key: "pairProperties",
+          type: 'toggle',
+          displayName: 'Pair properties',
+          key: 'pairProperties',
           default: d.pairProperties,
           shouldHide: (config: BasesConfig) => config.getOrder().length <= 1,
         },
         {
-          type: "dropdown",
-          displayName: "Right property position",
-          key: "rightPropertyPosition",
+          type: 'dropdown',
+          displayName: 'Right property position',
+          key: 'rightPropertyPosition',
           options: {
-            left: "Left",
-            column: "Column",
-            right: "Right",
+            left: 'Left',
+            column: 'Column',
+            right: 'Right',
           },
           default: d.rightPropertyPosition,
           shouldHide: (config: BasesConfig) =>
             config.getOrder().length <= 1 ||
-            (config.get("pairProperties") ?? d.pairProperties) === false,
+            (config.get('pairProperties') ?? d.pairProperties) === false,
         },
         {
-          type: "text",
-          displayName: "Invert pairing for property",
-          key: "invertPropertyPairing",
-          placeholder: "Comma-separated if multiple",
+          type: 'text',
+          displayName: 'Invert pairing for property',
+          key: 'invertPropertyPairing',
+          placeholder: 'Comma-separated if multiple',
           default: d.invertPropertyPairing,
           shouldHide: (config: BasesConfig) => config.getOrder().length <= 1,
         },
       ],
     },
     {
-      type: "group",
-      displayName: "Other",
+      type: 'group',
+      displayName: 'Other',
       items: [
         {
-          type: "dropdown",
-          displayName: "Minimum columns",
-          key: "minimumColumns",
+          type: 'dropdown',
+          displayName: 'Minimum columns',
+          key: 'minimumColumns',
           options: {
-            one: "One",
-            two: "Two",
+            one: 'One',
+            two: 'Two',
           },
-          default: viewType === "masonry" ? "two" : "one",
+          default: viewType === 'masonry' ? 'two' : 'one',
         },
         {
-          type: "text",
-          displayName: "cssclasses",
-          key: "cssclasses",
-          placeholder: "Comma-separated if multiple",
+          type: 'text',
+          displayName: 'cssclasses',
+          key: 'cssclasses',
+          placeholder: 'Comma-separated if multiple',
           default: d.cssclasses,
         },
         {
-          type: "toggle",
-          displayName: "Save as default settings",
-          key: "isTemplate",
+          type: 'toggle',
+          displayName: 'Save as default settings',
+          key: 'isTemplate',
           default: false,
         },
       ],
     },
   ];
   // Schema objects use widened string types; assertion is safe because
-  // the literal structure matches ViewOption discriminated union members.
-  return schema as ViewOption[];
+  // the literal structure matches BasesAllOptions discriminated union members.
+  return schema as BasesAllOptions[];
 }
 
 /**
  * Additional options specific to masonry view
  */
-export function getMasonryViewOptions(config?: BasesViewConfig): ViewOption[] {
-  return getBasesViewOptions("masonry", config);
+export function getMasonryViewOptions(
+  config?: BasesViewConfig
+): BasesAllOptions[] {
+  return getBasesViewOptions('masonry', config);
 }
 
 /** Type-safe config value getters with fallback to defaults */
@@ -416,17 +422,17 @@ function createConfigGetters(config: BasesConfig) {
     getString: (key: string, fallback: string): string => {
       const value = config.get(key);
       if (value !== undefined && value !== null) {
-        return typeof value === "string" ? value : fallback;
+        return typeof value === 'string' ? value : fallback;
       }
       return fallback;
     },
     getBool: (key: string, fallback: boolean): boolean => {
       const value = config.get(key);
-      return typeof value === "boolean" ? value : fallback;
+      return typeof value === 'boolean' ? value : fallback;
     },
     getNumber: (key: string, fallback: number): number => {
       const value = config.get(key);
-      return typeof value === "number" && Number.isFinite(value)
+      return typeof value === 'number' && Number.isFinite(value)
         ? value
         : fallback;
     },
@@ -445,9 +451,9 @@ function createConfigGetters(config: BasesConfig) {
 export function readBasesSettings(
   config: BasesConfig,
   pluginSettings: PluginSettings,
-  viewType?: "grid" | "masonry",
+  viewType?: 'grid' | 'masonry',
   previousSettings?: Partial<BasesResolvedSettings>,
-  templateOverrides?: Partial<ViewDefaults>,
+  templateOverrides?: Partial<ViewDefaults>
 ): BasesResolvedSettings {
   // Template overrides serve as fallbacks for new views whose config isn't populated yet
   const defaults = {
@@ -460,31 +466,31 @@ export function readBasesSettings(
 
   // Read special-purpose properties first (needed to exclude from title/subtitle)
   let textPreviewProperty = getString(
-    "textPreviewProperty",
-    defaults.textPreviewProperty,
+    'textPreviewProperty',
+    defaults.textPreviewProperty
   );
-  let urlProperty = getString("urlProperty", defaults.urlProperty);
-  const imageProperty = getString("imageProperty", defaults.imageProperty);
+  let urlProperty = getString('urlProperty', defaults.urlProperty);
+  const imageProperty = getString('imageProperty', defaults.imageProperty);
 
   // Position-based title/subtitle: derive from getOrder() positions
   // Skip properties with special roles (text preview, URL button, image)
   const displayFirstAsTitle = getBool(
-    "displayFirstAsTitle",
-    defaults.displayFirstAsTitle,
+    'displayFirstAsTitle',
+    defaults.displayFirstAsTitle
   );
   const displaySecondAsSubtitle = getBool(
-    "displaySecondAsSubtitle",
-    defaults.displaySecondAsSubtitle,
+    'displaySecondAsSubtitle',
+    defaults.displaySecondAsSubtitle
   );
   const order = config.getOrder();
   const specialProps = new Set(
-    [textPreviewProperty, urlProperty, imageProperty].filter(Boolean),
+    [textPreviewProperty, urlProperty, imageProperty].filter(Boolean)
   );
   const candidateOrder = specialProps.size
     ? order.filter((id) => !specialProps.has(String(id)))
     : order;
-  let titleProperty = "";
-  let subtitleProperty = "";
+  let titleProperty = '';
+  let subtitleProperty = '';
   let _skipLeadingProperties = 0;
   if (displayFirstAsTitle && candidateOrder[0]) {
     titleProperty = String(candidateOrder[0]);
@@ -498,37 +504,37 @@ export function readBasesSettings(
   // Properties hidden from the view remain in config but aren't resolved
   const orderSet = new Set(order.map(String));
   if (textPreviewProperty && !orderSet.has(textPreviewProperty))
-    textPreviewProperty = "";
-  if (urlProperty && !orderSet.has(urlProperty)) urlProperty = "";
+    textPreviewProperty = '';
+  if (urlProperty && !orderSet.has(urlProperty)) urlProperty = '';
 
   // Read ViewDefaults from Bases config
   // Note: propertyLabels and imageFormat use previousSettings for stale config fallback
   const viewSettings: ViewDefaults = {
-    cardSize: getNumber("cardSize", defaults.cardSize),
+    cardSize: getNumber('cardSize', defaults.cardSize),
     titleProperty,
-    titleLines: getNumber("titleLines", defaults.titleLines),
+    titleLines: getNumber('titleLines', defaults.titleLines),
     subtitleProperty,
     displayFirstAsTitle,
     displaySecondAsSubtitle,
     textPreviewProperty,
-    fallbackToContent: getBool("fallbackToContent", defaults.fallbackToContent),
-    textPreviewLines: getNumber("textPreviewLines", defaults.textPreviewLines),
+    fallbackToContent: getBool('fallbackToContent', defaults.fallbackToContent),
+    textPreviewLines: getNumber('textPreviewLines', defaults.textPreviewLines),
     imageProperty,
     fallbackToEmbeds: (() => {
-      const value = config.get("fallbackToEmbeds");
-      return value === "always" ||
-        value === "if-unavailable" ||
-        value === "never"
+      const value = config.get('fallbackToEmbeds');
+      return value === 'always' ||
+        value === 'if-unavailable' ||
+        value === 'never'
         ? value
         : defaults.fallbackToEmbeds;
     })(),
     imageFormat: (() => {
-      const value = config.get("imageFormat");
+      const value = config.get('imageFormat');
       if (
-        value === "thumbnail" ||
-        value === "cover" ||
-        value === "poster" ||
-        value === "backdrop"
+        value === 'thumbnail' ||
+        value === 'cover' ||
+        value === 'poster' ||
+        value === 'backdrop'
       ) {
         return value;
       }
@@ -538,32 +544,32 @@ export function readBasesSettings(
       }
       return defaults.imageFormat;
     })(),
-    thumbnailSize: getNumber("thumbnailSize", defaults.thumbnailSize),
+    thumbnailSize: getNumber('thumbnailSize', defaults.thumbnailSize),
     imagePosition: (() => {
-      const value = config.get("imagePosition");
-      return value === "left" ||
-        value === "right" ||
-        value === "top" ||
-        value === "bottom"
+      const value = config.get('imagePosition');
+      return value === 'left' ||
+        value === 'right' ||
+        value === 'top' ||
+        value === 'bottom'
         ? value
         : defaults.imagePosition;
     })(),
     imageFit: (() => {
-      const value = config.get("imageFit");
-      return value === "crop" || value === "contain"
+      const value = config.get('imageFit');
+      return value === 'crop' || value === 'contain'
         ? value
         : defaults.imageFit;
     })(),
     posterDisplayMode: (() => {
-      const value = config.get("posterDisplayMode");
-      return value === "gradient" || value === "overlay"
+      const value = config.get('posterDisplayMode');
+      return value === 'gradient' || value === 'overlay'
         ? value
         : defaults.posterDisplayMode;
     })(),
-    imageRatio: getNumber("imageRatio", defaults.imageRatio),
+    imageRatio: getNumber('imageRatio', defaults.imageRatio),
     propertyLabels: (() => {
-      const value = config.get("propertyLabels");
-      if (value === "hide" || value === "inline" || value === "above") {
+      const value = config.get('propertyLabels');
+      if (value === 'hide' || value === 'inline' || value === 'above') {
         return value;
       }
       // Stale config guard: use previous value if available
@@ -572,28 +578,28 @@ export function readBasesSettings(
       }
       return defaults.propertyLabels;
     })(),
-    pairProperties: getBool("pairProperties", defaults.pairProperties),
+    pairProperties: getBool('pairProperties', defaults.pairProperties),
     rightPropertyPosition: (() => {
-      const value = config.get("rightPropertyPosition");
-      return value === "left" || value === "column" || value === "right"
+      const value = config.get('rightPropertyPosition');
+      return value === 'left' || value === 'column' || value === 'right'
         ? value
         : defaults.rightPropertyPosition;
     })(),
     invertPropertyPairing: getString(
-      "invertPropertyPairing",
-      defaults.invertPropertyPairing,
+      'invertPropertyPairing',
+      defaults.invertPropertyPairing
     ),
     showPropertiesAbove: defaults.showPropertiesAbove,
     invertPropertyPosition: defaults.invertPropertyPosition,
     urlProperty,
     minimumColumns: (() => {
-      const value = config.get("minimumColumns");
-      if (value === "one") return 1;
-      if (value === "two") return 2;
-      const fallback = viewType === "masonry" ? 2 : defaults.minimumColumns;
+      const value = config.get('minimumColumns');
+      if (value === 'one') return 1;
+      if (value === 'two') return 2;
+      const fallback = viewType === 'masonry' ? 2 : defaults.minimumColumns;
       return fallback;
     })(),
-    cssclasses: getString("cssclasses", defaults.cssclasses),
+    cssclasses: getString('cssclasses', defaults.cssclasses),
   };
 
   // Merge: pluginSettings + config-derived ViewDefaults + computed fields
@@ -611,7 +617,7 @@ export function readBasesSettings(
  */
 export function extractBasesTemplate(
   config: BasesConfig,
-  defaults: ViewDefaults,
+  defaults: ViewDefaults
 ): Partial<ViewDefaults> {
   // Merge BASES_DEFAULTS so fallbacks and sparse filter use actual Bases defaults
   const mergedDefaults = { ...defaults, ...BASES_DEFAULTS };
@@ -620,98 +626,98 @@ export function extractBasesTemplate(
 
   // Extract all values with type coercion
   const full: ViewDefaults = {
-    cardSize: getNumber("cardSize", mergedDefaults.cardSize),
+    cardSize: getNumber('cardSize', mergedDefaults.cardSize),
     titleProperty: mergedDefaults.titleProperty,
-    titleLines: getNumber("titleLines", mergedDefaults.titleLines),
+    titleLines: getNumber('titleLines', mergedDefaults.titleLines),
     subtitleProperty: mergedDefaults.subtitleProperty,
     displayFirstAsTitle: getBool(
-      "displayFirstAsTitle",
-      mergedDefaults.displayFirstAsTitle,
+      'displayFirstAsTitle',
+      mergedDefaults.displayFirstAsTitle
     ),
     displaySecondAsSubtitle: getBool(
-      "displaySecondAsSubtitle",
-      mergedDefaults.displaySecondAsSubtitle,
+      'displaySecondAsSubtitle',
+      mergedDefaults.displaySecondAsSubtitle
     ),
     textPreviewProperty: getString(
-      "textPreviewProperty",
-      mergedDefaults.textPreviewProperty,
+      'textPreviewProperty',
+      mergedDefaults.textPreviewProperty
     ),
     fallbackToContent: getBool(
-      "fallbackToContent",
-      mergedDefaults.fallbackToContent,
+      'fallbackToContent',
+      mergedDefaults.fallbackToContent
     ),
     textPreviewLines: getNumber(
-      "textPreviewLines",
-      mergedDefaults.textPreviewLines,
+      'textPreviewLines',
+      mergedDefaults.textPreviewLines
     ),
-    imageProperty: getString("imageProperty", mergedDefaults.imageProperty),
+    imageProperty: getString('imageProperty', mergedDefaults.imageProperty),
     fallbackToEmbeds: (() => {
-      const value = config.get("fallbackToEmbeds");
-      return value === "always" ||
-        value === "if-unavailable" ||
-        value === "never"
+      const value = config.get('fallbackToEmbeds');
+      return value === 'always' ||
+        value === 'if-unavailable' ||
+        value === 'never'
         ? value
         : mergedDefaults.fallbackToEmbeds;
     })(),
     imageFormat: (() => {
-      const value = config.get("imageFormat");
-      return value === "thumbnail" ||
-        value === "cover" ||
-        value === "poster" ||
-        value === "backdrop"
+      const value = config.get('imageFormat');
+      return value === 'thumbnail' ||
+        value === 'cover' ||
+        value === 'poster' ||
+        value === 'backdrop'
         ? value
         : mergedDefaults.imageFormat;
     })(),
-    thumbnailSize: getNumber("thumbnailSize", mergedDefaults.thumbnailSize),
+    thumbnailSize: getNumber('thumbnailSize', mergedDefaults.thumbnailSize),
     imagePosition: (() => {
-      const value = config.get("imagePosition");
-      return value === "left" ||
-        value === "right" ||
-        value === "top" ||
-        value === "bottom"
+      const value = config.get('imagePosition');
+      return value === 'left' ||
+        value === 'right' ||
+        value === 'top' ||
+        value === 'bottom'
         ? value
         : mergedDefaults.imagePosition;
     })(),
     imageFit: (() => {
-      const value = config.get("imageFit");
-      return value === "crop" || value === "contain"
+      const value = config.get('imageFit');
+      return value === 'crop' || value === 'contain'
         ? value
         : mergedDefaults.imageFit;
     })(),
     posterDisplayMode: (() => {
-      const value = config.get("posterDisplayMode");
-      return value === "gradient" || value === "overlay"
+      const value = config.get('posterDisplayMode');
+      return value === 'gradient' || value === 'overlay'
         ? value
         : mergedDefaults.posterDisplayMode;
     })(),
-    imageRatio: getNumber("imageRatio", mergedDefaults.imageRatio),
+    imageRatio: getNumber('imageRatio', mergedDefaults.imageRatio),
     propertyLabels: (() => {
-      const value = config.get("propertyLabels");
-      return value === "hide" || value === "inline" || value === "above"
+      const value = config.get('propertyLabels');
+      return value === 'hide' || value === 'inline' || value === 'above'
         ? value
         : mergedDefaults.propertyLabels;
     })(),
-    pairProperties: getBool("pairProperties", mergedDefaults.pairProperties),
+    pairProperties: getBool('pairProperties', mergedDefaults.pairProperties),
     rightPropertyPosition: (() => {
-      const value = config.get("rightPropertyPosition");
-      return value === "left" || value === "column" || value === "right"
+      const value = config.get('rightPropertyPosition');
+      return value === 'left' || value === 'column' || value === 'right'
         ? value
         : mergedDefaults.rightPropertyPosition;
     })(),
     invertPropertyPairing: getString(
-      "invertPropertyPairing",
-      mergedDefaults.invertPropertyPairing,
+      'invertPropertyPairing',
+      mergedDefaults.invertPropertyPairing
     ),
     showPropertiesAbove: mergedDefaults.showPropertiesAbove,
     invertPropertyPosition: mergedDefaults.invertPropertyPosition,
-    urlProperty: getString("urlProperty", mergedDefaults.urlProperty),
+    urlProperty: getString('urlProperty', mergedDefaults.urlProperty),
     minimumColumns: (() => {
-      const value = config.get("minimumColumns");
-      if (value === "one") return 1;
-      if (value === "two") return 2;
+      const value = config.get('minimumColumns');
+      if (value === 'one') return 1;
+      if (value === 'two') return 2;
       return mergedDefaults.minimumColumns;
     })(),
-    cssclasses: getString("cssclasses", mergedDefaults.cssclasses),
+    cssclasses: getString('cssclasses', mergedDefaults.cssclasses),
   };
 
   // Filter to only non-default values (sparse)

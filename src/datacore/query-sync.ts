@@ -52,7 +52,7 @@ export function updateQueryInBlock(content: string, newQuery: string): string {
   const queryMatch = findQueryInBlock(content);
 
   if (!queryMatch) {
-    console.warn("Could not find DQL QUERY markers");
+    console.warn('Could not find DQL QUERY markers');
     return content;
   }
 

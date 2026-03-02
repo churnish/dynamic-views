@@ -1,12 +1,12 @@
-import { getOwnerWindow } from "../utils/owner-window";
-import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
-import { SCROLL_TOLERANCE } from "./constants";
+import { getOwnerWindow } from '../utils/owner-window';
+import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { SCROLL_TOLERANCE } from './constants';
 
 /** Gradient class names */
 const GRADIENT_CLASSES = [
-  "scroll-gradient-left",
-  "scroll-gradient-right",
-  "scroll-gradient-both",
+  'scroll-gradient-left',
+  'scroll-gradient-right',
+  'scroll-gradient-both',
 ] as const;
 
 /** Cache for wrapper/content element refs (auto-cleans via WeakMap) */
@@ -18,9 +18,9 @@ const gradientClassCache = new WeakMap<HTMLElement, string | null>();
 
 /** Vertical gradient class names */
 const VERTICAL_GRADIENT_CLASSES = [
-  "scroll-gradient-top",
-  "scroll-gradient-bottom",
-  "scroll-gradient-vertical-both",
+  'scroll-gradient-top',
+  'scroll-gradient-bottom',
+  'scroll-gradient-vertical-both',
 ] as const;
 
 /** Separate cache for vertical gradient classes (element can have both horizontal + vertical) */
@@ -32,7 +32,7 @@ const verticalGradientClassCache = new WeakMap<HTMLElement, string | null>();
  */
 function throttleRAF<T extends (...args: unknown[]) => void>(
   fn: T,
-  element?: Element,
+  element?: Element
 ): (...args: Parameters<T>) => void {
   let scheduled = false;
   return (...args: Parameters<T>) => {
@@ -52,14 +52,14 @@ function throttleRAF<T extends (...args: unknown[]) => void>(
 function getGradientClass(
   scrollLeft: number,
   scrollWidth: number,
-  clientWidth: number,
+  clientWidth: number
 ): string | null {
   const atStart = scrollLeft <= SCROLL_TOLERANCE;
   const atEnd = scrollLeft + clientWidth >= scrollWidth - SCROLL_TOLERANCE;
 
-  if (atStart && !atEnd) return "scroll-gradient-right";
-  if (atEnd && !atStart) return "scroll-gradient-left";
-  if (!atStart && !atEnd) return "scroll-gradient-both";
+  if (atStart && !atEnd) return 'scroll-gradient-right';
+  if (atEnd && !atStart) return 'scroll-gradient-left';
+  if (!atStart && !atEnd) return 'scroll-gradient-both';
   return null;
 }
 
@@ -69,7 +69,7 @@ function getGradientClass(
  */
 function setGradientClasses(
   element: HTMLElement,
-  targetClass: string | null,
+  targetClass: string | null
 ): void {
   // Skip if class unchanged
   const currentClass = gradientClassCache.get(element);
@@ -98,7 +98,7 @@ export function updateElementScrollGradient(element: HTMLElement): void {
     ? getGradientClass(
         element.scrollLeft,
         element.scrollWidth,
-        element.clientWidth,
+        element.clientWidth
       )
     : null;
 
@@ -115,7 +115,7 @@ export function updateScrollGradient(element: HTMLElement): void {
   // Guard: skip if element disconnected or in content-hidden card
   if (
     !element.isConnected ||
-    element.closest(".card")?.classList.contains(CONTENT_HIDDEN_CLASS)
+    element.closest('.card')?.classList.contains(CONTENT_HIDDEN_CLASS)
   ) {
     return;
   }
@@ -125,11 +125,11 @@ export function updateScrollGradient(element: HTMLElement): void {
   let content = contentCache.get(element);
 
   if (!wrapper) {
-    wrapper = element.querySelector<HTMLElement>(".property-content-wrapper");
+    wrapper = element.querySelector<HTMLElement>('.property-content-wrapper');
     if (wrapper) wrapperCache.set(element, wrapper);
   }
   if (!content) {
-    content = element.querySelector<HTMLElement>(".property-content");
+    content = element.querySelector<HTMLElement>('.property-content');
     if (content) contentCache.set(element, content);
   }
 
@@ -151,18 +151,18 @@ export function updateScrollGradient(element: HTMLElement): void {
 
   if (!isScrollable) {
     setGradientClasses(wrapper, null);
-    element.classList.remove("is-scrollable");
+    element.classList.remove('is-scrollable');
     return;
   }
 
   // Mark field as scrollable for conditional alignment
-  element.classList.add("is-scrollable");
+  element.classList.add('is-scrollable');
 
   // Calculate and apply gradient class (use contentScrollWidth for consistency)
   const targetClass = getGradientClass(
     wrapper.scrollLeft,
     contentScrollWidth,
-    wrapperWidth,
+    wrapperWidth
   );
   setGradientClasses(wrapper, targetClass);
 }
@@ -176,7 +176,7 @@ export function updateScrollGradient(element: HTMLElement): void {
  */
 export function setupElementScrollGradient(
   element: HTMLElement,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): void {
   // Initial gradient update
   getOwnerWindow(element).requestAnimationFrame(() => {
@@ -188,7 +188,7 @@ export function setupElementScrollGradient(
     updateElementScrollGradient(element);
   }, element);
 
-  element.addEventListener("scroll", throttledUpdate, { signal });
+  element.addEventListener('scroll', throttledUpdate, { signal });
 }
 
 /**
@@ -198,7 +198,7 @@ export function setupElementScrollGradient(
  */
 function createThrottledUpdate(
   element: HTMLElement,
-  updateGradientFn: (element: HTMLElement) => void,
+  updateGradientFn: (element: HTMLElement) => void
 ): () => void {
   return throttleRAF(() => updateGradientFn(element), element);
 }
@@ -214,10 +214,10 @@ function createThrottledUpdate(
 export function setupScrollGradients(
   container: HTMLElement,
   updateGradientFn: (element: HTMLElement) => void,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): void {
   // Find all property containers (both paired and unpaired)
-  const scrollables = container.querySelectorAll(".property");
+  const scrollables = container.querySelectorAll('.property');
 
   scrollables.forEach((el) => {
     const element = el as HTMLElement;
@@ -225,7 +225,7 @@ export function setupScrollGradients(
     // Get cached wrapper or query and cache (only cache successful finds)
     let wrapper = wrapperCache.get(element);
     if (!wrapper) {
-      wrapper = element.querySelector<HTMLElement>(".property-content-wrapper");
+      wrapper = element.querySelector<HTMLElement>('.property-content-wrapper');
       if (wrapper) wrapperCache.set(element, wrapper);
     }
 
@@ -235,7 +235,7 @@ export function setupScrollGradients(
     const throttledUpdate = createThrottledUpdate(element, updateGradientFn);
 
     // Attach scroll listener to wrapper for user scroll interaction
-    wrapper.addEventListener("scroll", throttledUpdate, { signal });
+    wrapper.addEventListener('scroll', throttledUpdate, { signal });
   });
 }
 
@@ -255,7 +255,7 @@ export function setupScrollGradients(
  */
 function initializeGradientFields(
   fields: Iterable<HTMLElement>,
-  isColumnMode: boolean,
+  isColumnMode: boolean
 ): void {
   // Phase 1: Read all dimensions (single forced layout)
   const measurements: Array<{
@@ -268,12 +268,12 @@ function initializeGradientFields(
   for (const field of fields) {
     // Skip paired fields that haven't been measured yet
     // (unless in compact/column mode where JS measurement isn't needed)
-    const pair = field.closest(".property-pair");
+    const pair = field.closest('.property-pair');
     const isPaired = !!pair;
-    const isMeasured = pair?.classList.contains("property-measured") ?? false;
+    const isMeasured = pair?.classList.contains('property-measured') ?? false;
     const isCompact = field
-      .closest(".card")
-      ?.classList.contains("compact-mode");
+      .closest('.card')
+      ?.classList.contains('compact-mode');
     if (isPaired && !isMeasured && !isCompact && !isColumnMode) continue;
 
     // Get cached refs or query and cache (only cache successful finds)
@@ -281,11 +281,11 @@ function initializeGradientFields(
     let content = contentCache.get(field);
 
     if (!wrapper) {
-      wrapper = field.querySelector<HTMLElement>(".property-content-wrapper");
+      wrapper = field.querySelector<HTMLElement>('.property-content-wrapper');
       if (wrapper) wrapperCache.set(field, wrapper);
     }
     if (!content) {
-      content = field.querySelector<HTMLElement>(".property-content");
+      content = field.querySelector<HTMLElement>('.property-content');
       if (content) contentCache.set(field, content);
     }
 
@@ -309,28 +309,28 @@ function initializeGradientFields(
   // Phase 2: Apply all classes (no layout reads)
   for (const { field, wrapper, isScrollable, targetClass } of measurements) {
     if (isScrollable) {
-      field.classList.add("is-scrollable");
+      field.classList.add('is-scrollable');
     } else {
-      field.classList.remove("is-scrollable");
+      field.classList.remove('is-scrollable');
     }
     setGradientClasses(wrapper, targetClass);
   }
 }
 
 export function initializeScrollGradients(container: HTMLElement): void {
-  const allFields = container.querySelectorAll<HTMLElement>(".property");
+  const allFields = container.querySelectorAll<HTMLElement>('.property');
 
   // Column mode skips JS measurement (CSS handles 50% widths),
   // so paired fields never get "property-measured" — allow gradient init directly
   const isColumnMode =
     container
-      .closest(".dynamic-views")
-      ?.classList.contains("dynamic-views-paired-property-column") ?? false;
+      .closest('.dynamic-views')
+      ?.classList.contains('dynamic-views-paired-property-column') ?? false;
 
   // Skip fields in content-hidden cards (dimension reads trigger
   // Chromium "subtree hidden by content-visibility" warnings)
   const fields = Array.from(allFields).filter(
-    (f) => !f.closest(".card")?.classList.contains(CONTENT_HIDDEN_CLASS),
+    (f) => !f.closest('.card')?.classList.contains(CONTENT_HIDDEN_CLASS)
   );
 
   initializeGradientFields(fields, isColumnMode);
@@ -345,12 +345,12 @@ export function initializeScrollGradientsForCards(cards: HTMLElement[]): void {
 
   const isColumnMode =
     cards[0]
-      .closest(".dynamic-views")
-      ?.classList.contains("dynamic-views-paired-property-column") ?? false;
+      .closest('.dynamic-views')
+      ?.classList.contains('dynamic-views-paired-property-column') ?? false;
 
   const fields: HTMLElement[] = [];
   for (const card of cards) {
-    fields.push(...card.querySelectorAll<HTMLElement>(".property"));
+    fields.push(...card.querySelectorAll<HTMLElement>('.property'));
   }
 
   initializeGradientFields(fields, isColumnMode);
@@ -363,14 +363,14 @@ export function initializeScrollGradientsForCards(cards: HTMLElement[]): void {
 function getVerticalGradientClass(
   scrollTop: number,
   scrollHeight: number,
-  clientHeight: number,
+  clientHeight: number
 ): string | null {
   const atTop = scrollTop <= SCROLL_TOLERANCE;
   const atBottom = scrollTop + clientHeight >= scrollHeight - SCROLL_TOLERANCE;
 
-  if (atTop && !atBottom) return "scroll-gradient-bottom";
-  if (atBottom && !atTop) return "scroll-gradient-top";
-  if (!atTop && !atBottom) return "scroll-gradient-vertical-both";
+  if (atTop && !atBottom) return 'scroll-gradient-bottom';
+  if (atBottom && !atTop) return 'scroll-gradient-top';
+  if (!atTop && !atBottom) return 'scroll-gradient-vertical-both';
   return null;
 }
 
@@ -380,7 +380,7 @@ function getVerticalGradientClass(
  */
 function setVerticalGradientClasses(
   element: HTMLElement,
-  targetClass: string | null,
+  targetClass: string | null
 ): void {
   const currentClass = verticalGradientClassCache.get(element);
   if (currentClass === targetClass) return;
@@ -402,7 +402,7 @@ function updateVerticalScrollGradient(element: HTMLElement): void {
     ? getVerticalGradientClass(
         element.scrollTop,
         element.scrollHeight,
-        element.clientHeight,
+        element.clientHeight
       )
     : null;
 
@@ -415,7 +415,7 @@ function updateVerticalScrollGradient(element: HTMLElement): void {
  */
 export function setupVerticalScrollGradient(
   element: HTMLElement,
-  signal: AbortSignal,
+  signal: AbortSignal
 ): void {
   getOwnerWindow(element).requestAnimationFrame(() => {
     updateVerticalScrollGradient(element);
@@ -425,5 +425,5 @@ export function setupVerticalScrollGradient(
     updateVerticalScrollGradient(element);
   }, element);
 
-  element.addEventListener("scroll", throttledUpdate, { signal });
+  element.addEventListener('scroll', throttledUpdate, { signal });
 }

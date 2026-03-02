@@ -1,11 +1,11 @@
-import { defineConfig } from "eslint/config";
-import globals from "globals";
-import obsidianmd from "eslint-plugin-obsidianmd";
+import { defineConfig } from 'eslint/config';
+import globals from 'globals';
+import obsidianmd from 'eslint-plugin-obsidianmd';
 
 export default defineConfig([
   // Only lint src/ TypeScript files
   {
-    ignores: ["**", "!src/**", "!main.ts"],
+    ignores: ['**', '!src/**', '!main.ts'],
   },
 
   // Obsidian recommended rules (includes JS recommended, TS type-checked,
@@ -27,15 +27,15 @@ export default defineConfig([
 
   // Project-specific overrides for TypeScript
   {
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ['**/*.ts', '**/*.tsx'],
     rules: {
       // Keep varsIgnorePattern for underscore-prefixed variables
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { args: "none", varsIgnorePattern: "^_" },
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { args: 'none', varsIgnorePattern: '^_' },
       ],
       // TypeScript handles undefined variable checking; no-undef false positives on JSX namespace
-      "no-undef": "off",
+      'no-undef': 'off',
     },
   },
 ]);

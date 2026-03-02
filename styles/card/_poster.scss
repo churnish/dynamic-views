@@ -37,10 +37,10 @@
       z-index: 0;
       pointer-events: none;
     }
+  }
 
-    &.card-cover-contain .card-poster img {
-      object-fit: contain;
-    }
+  &.image-fit-contain .card.image-format-poster .card-poster img {
+    object-fit: contain;
   }
 }
 
@@ -137,7 +137,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 /* Poster overlay for text readability (includes transition, unlike backdrop) */
 .dynamic-views {
   .card.image-format-poster .card-poster::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -147,7 +147,9 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 }
 
 /* Poster mode — Gradient (hardcoded dark at 85%) */
-.dynamic-views .card.image-format-poster.poster-gradient .card-poster::after {
+.dynamic-views.poster-mode-gradient
+  .card.image-format-poster
+  .card-poster::after {
   background: linear-gradient(
     to top,
     rgb(0 0 0 / 85%) 0%,
@@ -159,15 +161,16 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 }
 
 /* Gradient: bottom-align content where tint provides contrast, with light text (hardcoded dark gradient) */
-.dynamic-views .card.image-format-poster.poster-gradient:has(.card-poster) {
+.dynamic-views.poster-mode-gradient
+  .card.image-format-poster:has(.card-poster) {
   justify-content: flex-end;
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }
 
-.dynamic-views
-  .card.image-format-poster.poster-gradient:has(.card-poster)
+.dynamic-views.poster-mode-gradient
+  .card.image-format-poster:has(.card-poster)
   .card-content {
   flex: 0 1 auto;
   max-height: 70%;
@@ -177,8 +180,8 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 
 /* Overlay + Match theme (dark) */
 body.dynamic-views-poster-theme-match.theme-dark
-  .dynamic-views
-  .card.image-format-poster.poster-overlay
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster
   .card-poster::after {
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)
@@ -187,8 +190,8 @@ body.dynamic-views-poster-theme-match.theme-dark
 
 /* Overlay + Match theme (light) */
 body.dynamic-views-poster-theme-match.theme-light
-  .dynamic-views
-  .card.image-format-poster.poster-overlay
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster
   .card-poster::after {
   background: rgb(
     255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
@@ -197,8 +200,8 @@ body.dynamic-views-poster-theme-match.theme-light
 
 /* Overlay + Light (forced) */
 body.dynamic-views-poster-theme-light
-  .dynamic-views
-  .card.image-format-poster.poster-overlay
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster
   .card-poster::after {
   background: rgb(
     255 255 255 / calc(var(--dynamic-views-poster-overlay-light, 70) * 1%)
@@ -208,10 +211,10 @@ body.dynamic-views-poster-theme-light
 /* Overlay + Dark (default, forced) */
 body:is(
     .dynamic-views-poster-theme-dark,
-    :not([class*="dynamic-views-poster-theme-"])
+    :not([class*='dynamic-views-poster-theme-'])
   )
-  .dynamic-views
-  .card.image-format-poster.poster-overlay
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster
   .card-poster::after {
   background: rgb(
     0 0 0 / calc(var(--dynamic-views-poster-overlay-dark, 70) * 1%)
@@ -312,11 +315,11 @@ body.dynamic-views-poster-reveal-press
 
 /* Overlay: text color overrides (light tint → dark text) */
 body.dynamic-views-poster-theme-light
-  .dynamic-views
-  .card.image-format-poster.poster-overlay:has(.card-poster),
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster:has(.card-poster),
 body.dynamic-views-poster-theme-match.theme-light
-  .dynamic-views
-  .card.image-format-poster.poster-overlay:has(.card-poster) {
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster:has(.card-poster) {
   --text-normal: #222222;
   --text-muted: #333333;
   --text-faint: color-mix(in srgb, #333333 60%, transparent);
@@ -325,13 +328,13 @@ body.dynamic-views-poster-theme-match.theme-light
 /* Overlay: text color overrides (dark tint → light text) */
 body:is(
     .dynamic-views-poster-theme-dark,
-    :not([class*="dynamic-views-poster-theme-"])
+    :not([class*='dynamic-views-poster-theme-'])
   )
-  .dynamic-views
-  .card.image-format-poster.poster-overlay:has(.card-poster),
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster:has(.card-poster),
 body.dynamic-views-poster-theme-match.theme-dark
-  .dynamic-views
-  .card.image-format-poster.poster-overlay:has(.card-poster) {
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster:has(.card-poster) {
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);

@@ -1,4 +1,4 @@
-import { STORAGE_KEY_PREFIX } from "../constants";
+import { STORAGE_KEY_PREFIX } from '../constants';
 
 /**
  * Generate storage key for file-specific data using ctime

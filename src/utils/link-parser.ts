@@ -4,7 +4,7 @@
  */
 
 export interface ParsedLink {
-  type: "internal" | "external";
+  type: 'internal' | 'external';
   url: string;
   caption: string;
   isEmbed: boolean;
@@ -30,7 +30,7 @@ export function hasUriScheme(url: string): boolean {
  */
 function normalizePath(path: string): string {
   // Remove angle brackets if present
-  if (path.startsWith("<") && path.endsWith(">")) {
+  if (path.startsWith('<') && path.endsWith('>')) {
     path = path.slice(1, -1);
   }
   // Decode URL-encoded characters
@@ -45,8 +45,8 @@ function normalizePath(path: string): string {
  * Segment of text that is either plain text or a link
  */
 export type TextSegment =
-  | { type: "text"; content: string }
-  | { type: "link"; link: ParsedLink; raw: string };
+  | { type: 'text'; content: string }
+  | { type: 'link'; link: ParsedLink; raw: string };
 
 /**
  * Strip trailing punctuation from plain URLs
@@ -58,7 +58,7 @@ function stripTrailingPunctuation(url: string): [string, string] {
   if (match) {
     return [match[1], match[2]];
   }
-  return [url, ""];
+  return [url, ''];
 }
 
 /**
@@ -87,7 +87,7 @@ export function findLinksInText(text: string): TextSegment[] {
     // Add text before this match
     if (match.index > lastIndex) {
       segments.push({
-        type: "text",
+        type: 'text',
         content: text.slice(lastIndex, match.index),
       });
     }
@@ -100,7 +100,7 @@ export function findLinksInText(text: string): TextSegment[] {
     if (match[1] !== undefined) {
       // Group 1-2: Embedded wikilink ![[path|alias]]
       parsed = {
-        type: "internal",
+        type: 'internal',
         url: match[1],
         caption: match[2] || match[1],
         isEmbed: true,
@@ -109,7 +109,7 @@ export function findLinksInText(text: string): TextSegment[] {
     } else if (match[3] !== undefined) {
       // Group 3-4: Wikilink [[path|alias]]
       parsed = {
-        type: "internal",
+        type: 'internal',
         url: match[3],
         caption: match[4] || match[3],
         isEmbed: false,
@@ -121,11 +121,11 @@ export function findLinksInText(text: string): TextSegment[] {
       match[7] !== undefined
     ) {
       // Group 5-7: Embedded markdown ![caption](<path>) or ![caption](path)
-      const caption = match[5] || "";
+      const caption = match[5] || '';
       const path = normalizePath(match[6] || match[7]);
       const external = hasUriScheme(path);
       parsed = {
-        type: external ? "external" : "internal",
+        type: external ? 'external' : 'internal',
         url: path,
         caption: caption || path,
         isEmbed: true,
@@ -137,7 +137,7 @@ export function findLinksInText(text: string): TextSegment[] {
       const path = normalizePath(match[9] || match[10]);
       const external = hasUriScheme(path);
       parsed = {
-        type: external ? "external" : "internal",
+        type: external ? 'external' : 'internal',
         url: path,
         caption: caption,
         isEmbed: false,
@@ -147,7 +147,7 @@ export function findLinksInText(text: string): TextSegment[] {
       // Group 11: Angle bracket URL <scheme://url>
       const url = match[11];
       parsed = {
-        type: "external",
+        type: 'external',
         url: url,
         caption: url,
         isEmbed: false,
@@ -157,7 +157,7 @@ export function findLinksInText(text: string): TextSegment[] {
       // Group 12: Plain URL - strip trailing punctuation
       const [cleanUrl, trailing] = stripTrailingPunctuation(match[12]);
       parsed = {
-        type: "external",
+        type: 'external',
         url: cleanUrl,
         caption: cleanUrl,
         isEmbed: false,
@@ -166,18 +166,18 @@ export function findLinksInText(text: string): TextSegment[] {
       actualRaw = cleanUrl;
       // Add trailing punctuation as text after link
       if (trailing) {
-        segments.push({ type: "link", link: parsed, raw: actualRaw });
-        segments.push({ type: "text", content: trailing });
+        segments.push({ type: 'link', link: parsed, raw: actualRaw });
+        segments.push({ type: 'text', content: trailing });
         lastIndex = match.index + rawMatch.length;
         continue;
       }
     }
 
     if (parsed) {
-      segments.push({ type: "link", link: parsed, raw: actualRaw });
+      segments.push({ type: 'link', link: parsed, raw: actualRaw });
     } else {
       // Fallback: treat as text if parsing fails
-      segments.push({ type: "text", content: rawMatch });
+      segments.push({ type: 'text', content: rawMatch });
     }
 
     lastIndex = match.index + rawMatch.length;
@@ -185,12 +185,12 @@ export function findLinksInText(text: string): TextSegment[] {
 
   // Add remaining text after last match
   if (lastIndex < text.length) {
-    segments.push({ type: "text", content: text.slice(lastIndex) });
+    segments.push({ type: 'text', content: text.slice(lastIndex) });
   }
 
   // If no segments, return the whole text
   if (segments.length === 0) {
-    segments.push({ type: "text", content: text });
+    segments.push({ type: 'text', content: text });
   }
 
   return segments;

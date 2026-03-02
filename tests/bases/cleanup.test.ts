@@ -1,53 +1,54 @@
-import { App, TFile } from "obsidian";
-import { cleanUpBaseFile } from "../../src/bases/utils";
+import { vi } from 'vitest';
+import { App, TFile } from 'obsidian';
+import { cleanUpBaseFile } from '../../src/bases/utils';
 
 // Mock all constants used by utils.ts (imported transitively via view-validation)
-jest.mock("../../src/constants", () => ({
+vi.mock('../../src/constants', () => ({
   VIEW_DEFAULTS: {
     cardSize: 300,
-    titleProperty: "file.name",
+    titleProperty: 'file.name',
     titleLines: 2,
-    subtitleProperty: "file.folder",
-    textPreviewProperty: "",
+    subtitleProperty: 'file.folder',
+    textPreviewProperty: '',
     fallbackToContent: true,
     textPreviewLines: 5,
-    imageProperty: "",
-    fallbackToEmbeds: "always",
-    imageFormat: "thumbnail",
+    imageProperty: '',
+    fallbackToEmbeds: 'always',
+    imageFormat: 'thumbnail',
     thumbnailSize: 80,
-    imagePosition: "right",
-    imageFit: "crop",
+    imagePosition: 'right',
+    imageFit: 'crop',
     imageRatio: 1.0,
-    propertyLabels: "hide",
+    propertyLabels: 'hide',
     pairProperties: false,
-    rightPropertyPosition: "right",
-    invertPropertyPairing: "",
+    rightPropertyPosition: 'right',
+    invertPropertyPairing: '',
     showPropertiesAbove: false,
-    invertPropertyPosition: "",
-    urlProperty: "url",
+    invertPropertyPosition: '',
+    urlProperty: 'url',
     minimumColumns: 1,
-    cssclasses: "",
+    cssclasses: '',
     displayFirstAsTitle: false,
     displaySecondAsSubtitle: false,
   },
   DATACORE_DEFAULTS: {
-    listMarker: "bullet",
+    listMarker: 'bullet',
     queryHeight: 0,
     pairProperties: true,
   },
   BASES_DEFAULTS: {
     displayFirstAsTitle: true,
     displaySecondAsSubtitle: false,
-    propertyLabels: "inline",
+    propertyLabels: 'inline',
   },
 }));
 
 function createMockFile(path: string): TFile {
   const file = new TFile();
   file.path = path;
-  file.name = path.split("/").pop() ?? path;
-  file.basename = file.name.replace(/\.base$/, "");
-  file.extension = "base";
+  file.name = path.split('/').pop() ?? path;
+  file.basename = file.name.replace(/\.base$/, '');
+  file.extension = 'base';
   file.stat = { ctime: 0, mtime: 0, size: 0 };
   return file;
 }
@@ -55,8 +56,8 @@ function createMockFile(path: string): TFile {
 function createMockPlugin() {
   return {
     persistenceManager: {
-      migrateBasesState: jest.fn().mockResolvedValue(undefined),
-      getSettingsTemplate: jest.fn().mockReturnValue(undefined),
+      migrateBasesState: vi.fn().mockResolvedValue(undefined),
+      getSettingsTemplate: vi.fn().mockReturnValue(undefined),
     },
   } as any;
 }
@@ -69,12 +70,10 @@ function setupVaultProcess(app: App, data: unknown): () => unknown {
   const content = JSON.stringify(data);
   let transformedContent: string = content;
 
-  app.vault.process = jest.fn(
-    async (_file: TFile, fn: (c: string) => string) => {
-      transformedContent = fn(content);
-      return transformedContent;
-    },
-  );
+  app.vault.process = vi.fn(async (_file: TFile, fn: (c: string) => string) => {
+    transformedContent = fn(content);
+    return transformedContent;
+  });
 
   return () => {
     try {
@@ -85,7 +84,7 @@ function setupVaultProcess(app: App, data: unknown): () => unknown {
   };
 }
 
-describe("cleanUpBaseFile", () => {
+describe('cleanUpBaseFile', () => {
   let app: App;
   let plugin: ReturnType<typeof createMockPlugin>;
 
@@ -94,46 +93,46 @@ describe("cleanUpBaseFile", () => {
     plugin = createMockPlugin();
   });
 
-  it("should return null for non-.base files", async () => {
-    const file = createMockFile("test.md");
+  it('should return null for non-.base files', async () => {
+    const file = createMockFile('test.md');
     const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toBeNull();
   });
 
-  it("should return null for null file", async () => {
+  it('should return null for null file', async () => {
     const result = await cleanUpBaseFile(app, null, plugin);
     expect(result).toBeNull();
   });
 
-  it("should return empty map when no views exist", async () => {
-    const file = createMockFile("test.base");
+  it('should return empty map when no views exist', async () => {
+    const file = createMockFile('test.base');
     setupVaultProcess(app, { views: [] });
 
     const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toEqual(new Map());
   });
 
-  it("should skip non-dynamic-views view types", async () => {
-    const file = createMockFile("test.base");
+  it('should skip non-dynamic-views view types', async () => {
+    const file = createMockFile('test.base');
     setupVaultProcess(app, {
-      views: [{ type: "table", name: "Table View" }],
+      views: [{ type: 'table', name: 'Table View' }],
     });
 
     const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toEqual(new Map());
   });
 
-  it("should remove stale keys not in ALLOWED_VIEW_KEYS", async () => {
-    const file = createMockFile("test.base");
+  it('should remove stale keys not in ALLOWED_VIEW_KEYS', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "My View",
-          id: "abc123-My View",
+          type: 'dynamic-views-grid',
+          name: 'My View',
+          id: 'abc123-My View',
           cardSize: 400,
-          deletedSetting: "stale",
-          listMarker: "bullet", // DatacoreDefaults key — not allowed in Bases
+          deletedSetting: 'stale',
+          listMarker: 'bullet', // DatacoreDefaults key — not allowed in Bases
         },
       ],
     });
@@ -141,22 +140,22 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0]).not.toHaveProperty("deletedSetting");
-    expect(result.views[0]).not.toHaveProperty("listMarker");
+    expect(result.views[0]).not.toHaveProperty('deletedSetting');
+    expect(result.views[0]).not.toHaveProperty('listMarker');
     expect(result.views[0].cardSize).toBe(400);
   });
 
-  it("should delete stale titleProperty/subtitleProperty keys", async () => {
-    const file = createMockFile("test.base");
+  it('should delete stale titleProperty/subtitleProperty keys', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "My View",
-          id: "abc123-My View",
+          type: 'dynamic-views-grid',
+          name: 'My View',
+          id: 'abc123-My View',
           cardSize: 400,
-          titleProperty: "file.name",
-          subtitleProperty: "note.author",
+          titleProperty: 'file.name',
+          subtitleProperty: 'note.author',
         },
       ],
     });
@@ -164,20 +163,20 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0]).not.toHaveProperty("titleProperty");
-    expect(result.views[0]).not.toHaveProperty("subtitleProperty");
+    expect(result.views[0]).not.toHaveProperty('titleProperty');
+    expect(result.views[0]).not.toHaveProperty('subtitleProperty');
     expect(result.views[0].cardSize).toBe(400);
   });
 
-  it("should delete values with wrong type", async () => {
-    const file = createMockFile("test.base");
+  it('should delete values with wrong type', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
-          thumbnailSize: "compact", // string instead of number
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
+          thumbnailSize: 'compact', // string instead of number
           cardSize: 400,
         },
       ],
@@ -186,19 +185,19 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0]).not.toHaveProperty("thumbnailSize");
+    expect(result.views[0]).not.toHaveProperty('thumbnailSize');
     expect(result.views[0].cardSize).toBe(400);
   });
 
-  it("should reset invalid enum values to first valid value", async () => {
-    const file = createMockFile("test.base");
+  it('should reset invalid enum values to first valid value', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
-          imagePosition: "invalid-pos",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
+          imagePosition: 'invalid-pos',
         },
       ],
     });
@@ -207,19 +206,19 @@ describe("cleanUpBaseFile", () => {
 
     const result = getResult() as { views: Record<string, unknown>[] };
     // First valid value for imagePosition is "left"
-    expect(result.views[0].imagePosition).toBe("left");
+    expect(result.views[0].imagePosition).toBe('left');
   });
 
-  it("should remove keys matching VIEW_DEFAULTS (sparse cleanup)", async () => {
-    const file = createMockFile("test.base");
+  it('should remove keys matching VIEW_DEFAULTS (sparse cleanup)', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
           cardSize: 300, // matches VIEW_DEFAULTS
-          imageFormat: "cover", // doesn't match
+          imageFormat: 'cover', // doesn't match
         },
       ],
     });
@@ -227,18 +226,18 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0]).not.toHaveProperty("cardSize");
-    expect(result.views[0].imageFormat).toBe("cover");
+    expect(result.views[0]).not.toHaveProperty('cardSize');
+    expect(result.views[0].imageFormat).toBe('cover');
   });
 
-  it("should skip sparse cleanup for BASES_DEFAULTS keys", async () => {
-    const file = createMockFile("test.base");
+  it('should skip sparse cleanup for BASES_DEFAULTS keys', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
           // VIEW_DEFAULTS.displayFirstAsTitle = false, but BASES_DEFAULTS overrides to true
           // so this value should NOT be removed by sparse cleanup
           displayFirstAsTitle: false,
@@ -252,16 +251,16 @@ describe("cleanUpBaseFile", () => {
     expect(result.views[0].displayFirstAsTitle).toBe(false);
   });
 
-  it("should preserve BASES_DEFAULTS key even when matching VIEW_DEFAULTS, while removing non-BASES_DEFAULTS key", async () => {
-    const file = createMockFile("test.base");
+  it('should preserve BASES_DEFAULTS key even when matching VIEW_DEFAULTS, while removing non-BASES_DEFAULTS key', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
           // propertyLabels: "hide" matches VIEW_DEFAULTS, but it's in BASES_DEFAULTS — preserve
-          propertyLabels: "hide",
+          propertyLabels: 'hide',
           // cardSize: 300 matches VIEW_DEFAULTS and is NOT in BASES_DEFAULTS — remove
           cardSize: 300,
         },
@@ -271,19 +270,19 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0].propertyLabels).toBe("hide");
-    expect(result.views[0]).not.toHaveProperty("cardSize");
+    expect(result.views[0].propertyLabels).toBe('hide');
+    expect(result.views[0]).not.toHaveProperty('cardSize');
   });
 
-  it("should preserve minimumColumns (YAML strings not type-checked)", async () => {
-    const file = createMockFile("test.base");
+  it('should preserve minimumColumns (YAML strings not type-checked)', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
-          minimumColumns: "two",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
+          minimumColumns: 'two',
         },
       ],
     });
@@ -293,36 +292,36 @@ describe("cleanUpBaseFile", () => {
     const result = getResult() as { views: Record<string, unknown>[] };
     // minimumColumns skipped for type check, "two" is valid enum, and
     // YAML "two" !== VIEW_DEFAULTS number 1, so preserved by sparse cleanup
-    expect(result.views[0].minimumColumns).toBe("two");
+    expect(result.views[0].minimumColumns).toBe('two');
   });
 
-  it("should generate view IDs for named views without IDs", async () => {
-    const file = createMockFile("test.base");
+  it('should generate view IDs for named views without IDs', async () => {
+    const file = createMockFile('test.base');
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "New View",
+          type: 'dynamic-views-grid',
+          name: 'New View',
         },
       ],
     });
 
     const viewIds = await cleanUpBaseFile(app, file, plugin);
 
-    expect(viewIds?.get("New View")).toBeDefined();
-    expect(viewIds?.get("New View")?.isNew).toBe(true);
+    expect(viewIds?.get('New View')).toBeDefined();
+    expect(viewIds?.get('New View')?.isNew).toBe(true);
     const result = getResult() as { views: Record<string, unknown>[] };
     expect(result.views[0].id).toMatch(/-New View$/);
   });
 
-  it("should migrate basesState when view is renamed", async () => {
-    const file = createMockFile("test.base");
+  it('should migrate basesState when view is renamed', async () => {
+    const file = createMockFile('test.base');
     setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Renamed View",
-          id: "abc123-Old Name", // name in ID doesn't match current name
+          type: 'dynamic-views-grid',
+          name: 'Renamed View',
+          id: 'abc123-Old Name', // name in ID doesn't match current name
         },
       ],
     });
@@ -330,24 +329,24 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     expect(plugin.persistenceManager.migrateBasesState).toHaveBeenCalledWith(
-      "abc123-Old Name",
-      expect.stringContaining("-Renamed View"),
+      'abc123-Old Name',
+      expect.stringContaining('-Renamed View')
     );
   });
 
-  it("should not migrate when view ID is duplicated", async () => {
-    const file = createMockFile("test.base");
+  it('should not migrate when view ID is duplicated', async () => {
+    const file = createMockFile('test.base');
     setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "View A",
-          id: "abc123-Original",
+          type: 'dynamic-views-grid',
+          name: 'View A',
+          id: 'abc123-Original',
         },
         {
-          type: "dynamic-views-grid",
-          name: "View B",
-          id: "abc123-Original", // duplicate ID — indicates copy, not rename
+          type: 'dynamic-views-grid',
+          name: 'View B',
+          id: 'abc123-Original', // duplicate ID — indicates copy, not rename
         },
       ],
     });
@@ -358,12 +357,12 @@ describe("cleanUpBaseFile", () => {
     expect(plugin.persistenceManager.migrateBasesState).not.toHaveBeenCalled();
   });
 
-  it("should handle invalid YAML gracefully", async () => {
-    const file = createMockFile("test.base");
-    app.vault.process = jest.fn(
+  it('should handle invalid YAML gracefully', async () => {
+    const file = createMockFile('test.base');
+    app.vault.process = vi.fn(
       async (_file: TFile, fn: (c: string) => string) => {
-        return fn("not-valid-json");
-      },
+        return fn('not-valid-json');
+      }
     );
 
     const result = await cleanUpBaseFile(app, file, plugin);
@@ -371,23 +370,23 @@ describe("cleanUpBaseFile", () => {
     expect(result).toEqual(new Map());
   });
 
-  it("should handle content without views array", async () => {
-    const file = createMockFile("test.base");
-    setupVaultProcess(app, { otherKey: "value" });
+  it('should handle content without views array', async () => {
+    const file = createMockFile('test.base');
+    setupVaultProcess(app, { otherKey: 'value' });
 
     const result = await cleanUpBaseFile(app, file, plugin);
     expect(result).toEqual(new Map());
   });
 
-  it("should return content unchanged when no cleanup needed", async () => {
-    const file = createMockFile("test.base");
+  it('should return content unchanged when no cleanup needed', async () => {
+    const file = createMockFile('test.base');
     const originalData = {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
-          imageFormat: "cover",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
+          imageFormat: 'cover',
         },
       ],
     };
@@ -397,22 +396,22 @@ describe("cleanUpBaseFile", () => {
 
     // When changeCount is 0, callback returns original content string (not stringifyYaml)
     const result = getResult();
-    expect(typeof result).toBe("object");
-    expect((result as any).views[0].imageFormat).toBe("cover");
+    expect(typeof result).toBe('object');
+    expect((result as any).views[0].imageFormat).toBe('cover');
   });
 
-  it("should preserve VIEW_DEFAULTS values when template conflicts", async () => {
-    const file = createMockFile("test.base");
+  it('should preserve VIEW_DEFAULTS values when template conflicts', async () => {
+    const file = createMockFile('test.base');
     plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
-      imageFormat: "poster",
+      imageFormat: 'poster',
     });
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
-          imageFormat: "thumbnail", // matches VIEW_DEFAULTS but conflicts with template
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
+          imageFormat: 'thumbnail', // matches VIEW_DEFAULTS but conflicts with template
         },
       ],
     });
@@ -420,22 +419,22 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0].imageFormat).toBe("thumbnail"); // preserved
+    expect(result.views[0].imageFormat).toBe('thumbnail'); // preserved
   });
 
-  it("should strip VIEW_DEFAULTS values when no template conflict", async () => {
-    const file = createMockFile("test.base");
+  it('should strip VIEW_DEFAULTS values when no template conflict', async () => {
+    const file = createMockFile('test.base');
     plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
-      imageFormat: "poster", // template only has imageFormat
+      imageFormat: 'poster', // template only has imageFormat
     });
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Test",
-          id: "abc-Test",
+          type: 'dynamic-views-grid',
+          name: 'Test',
+          id: 'abc-Test',
           cardSize: 300, // matches VIEW_DEFAULTS, NOT in template
-          imageFormat: "thumbnail", // matches VIEW_DEFAULTS, IS in template
+          imageFormat: 'thumbnail', // matches VIEW_DEFAULTS, IS in template
         },
       ],
     });
@@ -443,52 +442,52 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0]).not.toHaveProperty("cardSize"); // stripped
-    expect(result.views[0].imageFormat).toBe("thumbnail"); // preserved
+    expect(result.views[0]).not.toHaveProperty('cardSize'); // stripped
+    expect(result.views[0].imageFormat).toBe('thumbnail'); // preserved
   });
 
-  it("should return isNew=true for new views and isNew=false for existing", async () => {
-    const file = createMockFile("test.base");
+  it('should return isNew=true for new views and isNew=false for existing', async () => {
+    const file = createMockFile('test.base');
     setupVaultProcess(app, {
       views: [
-        { type: "dynamic-views-grid", name: "New View" },
-        { type: "dynamic-views-grid", name: "Old View", id: "abc-Old View" },
+        { type: 'dynamic-views-grid', name: 'New View' },
+        { type: 'dynamic-views-grid', name: 'Old View', id: 'abc-Old View' },
       ],
     });
 
     const viewIds = await cleanUpBaseFile(app, file, plugin);
-    expect(viewIds?.get("New View")?.isNew).toBe(true);
-    expect(viewIds?.get("Old View")?.isNew).toBe(false);
+    expect(viewIds?.get('New View')?.isNew).toBe(true);
+    expect(viewIds?.get('Old View')?.isNew).toBe(false);
   });
 
-  it("should return isNew=false for renamed views", async () => {
-    const file = createMockFile("test.base");
+  it('should return isNew=false for renamed views', async () => {
+    const file = createMockFile('test.base');
     setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Renamed View",
-          id: "abc123-Old Name",
+          type: 'dynamic-views-grid',
+          name: 'Renamed View',
+          id: 'abc123-Old Name',
         },
       ],
     });
 
     const viewIds = await cleanUpBaseFile(app, file, plugin);
-    expect(viewIds?.get("Renamed View")?.isNew).toBe(false);
+    expect(viewIds?.get('Renamed View')?.isNew).toBe(false);
   });
 
-  it("should not inject template values into existing view YAML", async () => {
-    const file = createMockFile("test.base");
+  it('should not inject template values into existing view YAML', async () => {
+    const file = createMockFile('test.base');
     plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
-      imageFormat: "poster",
+      imageFormat: 'poster',
       cardSize: 500,
     });
     const getResult = setupVaultProcess(app, {
       views: [
         {
-          type: "dynamic-views-grid",
-          name: "Existing",
-          id: "abc-Existing",
+          type: 'dynamic-views-grid',
+          name: 'Existing',
+          id: 'abc-Existing',
         },
       ],
     });
@@ -496,7 +495,7 @@ describe("cleanUpBaseFile", () => {
     await cleanUpBaseFile(app, file, plugin);
 
     const result = getResult() as { views: Record<string, unknown>[] };
-    expect(result.views[0]).not.toHaveProperty("imageFormat");
-    expect(result.views[0]).not.toHaveProperty("cardSize");
+    expect(result.views[0]).not.toHaveProperty('imageFormat');
+    expect(result.views[0]).not.toHaveProperty('cardSize');
   });
 });

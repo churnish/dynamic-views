@@ -1,5 +1,5 @@
-import { App, TFile } from "obsidian";
-import { getSlideshowMaxImages } from "./style-settings";
+import { App, TFile } from 'obsidian';
+import { getSlideshowMaxImages } from './style-settings';
 
 /**
  * Maximum content size to parse for image extraction (100KB)
@@ -10,14 +10,14 @@ const MAX_IMAGE_EXTRACTION_CONTENT_SIZE = 100_000;
  * Valid image file extensions supported by the plugin
  */
 export const VALID_IMAGE_EXTENSIONS: string[] = [
-  "avif",
-  "bmp",
-  "gif",
-  "jpeg",
-  "jpg",
-  "png",
-  "svg",
-  "webp",
+  'avif',
+  'bmp',
+  'gif',
+  'jpeg',
+  'jpg',
+  'png',
+  'svg',
+  'webp',
 ];
 
 /**
@@ -37,9 +37,9 @@ export function isExternalUrl(url: string): boolean {
 export function getVaultPathFromResourceUrl(src: string): string | null {
   try {
     const url = new URL(src);
-    if (url.protocol !== "app:") return null;
+    if (url.protocol !== 'app:') return null;
     // pathname: /<id>/<vault-path> — skip empty first segment and vault id
-    const firstSlash = url.pathname.indexOf("/", 1);
+    const firstSlash = url.pathname.indexOf('/', 1);
     if (firstSlash === -1) return null;
     return decodeURIComponent(url.pathname.slice(firstSlash + 1));
   } catch {
@@ -50,10 +50,10 @@ export function getVaultPathFromResourceUrl(src: string): string | null {
 // Generate regex from VALID_IMAGE_EXTENSIONS to ensure they stay in sync
 // Combines jpeg/jpg as jpe?g for efficiency (order-independent)
 const IMAGE_EXTENSION_REGEX = new RegExp(
-  `\\.(${VALID_IMAGE_EXTENSIONS.filter((e) => e !== "jpeg" && e !== "jpg")
-    .concat(["jpe?g"])
-    .join("|")})$`,
-  "i",
+  `\\.(${VALID_IMAGE_EXTENSIONS.filter((e) => e !== 'jpeg' && e !== 'jpg')
+    .concat(['jpe?g'])
+    .join('|')})$`,
+  'i'
 );
 
 /**
@@ -72,7 +72,7 @@ function hasValidImageExtension(path: string): boolean {
  * @returns Clean path without wikilink markers, fragments, or captions; empty string if null/undefined
  */
 export function stripWikilinkSyntax(path: string | null | undefined): string {
-  if (!path) return "";
+  if (!path) return '';
   // Trim before matching - wikilinks may have surrounding whitespace
   const trimmed = path.trim();
   // Capture path before any | (caption) or # (fragment/heading/block)
@@ -130,14 +130,14 @@ export function processImagePaths(imagePaths: string[]): {
 export function resolveInternalImagePaths(
   internalPaths: string[],
   sourcePath: string,
-  app: App,
+  app: App
 ): string[] {
   const resourcePaths: string[] = [];
 
   for (const propPath of internalPaths) {
     const imageFile = app.metadataCache.getFirstLinkpathDest(
       propPath,
-      sourcePath,
+      sourcePath
     );
     if (imageFile && VALID_IMAGE_EXTENSIONS.includes(imageFile.extension)) {
       const resourcePath = app.vault.getResourcePath(imageFile);
@@ -156,9 +156,9 @@ export function resolveInternalImagePaths(
  * YouTube thumbnail quality levels in order of preference
  */
 const YOUTUBE_THUMBNAIL_QUALITIES = [
-  "maxresdefault", // 1280x720
-  "hqdefault", // 480x360
-  "mqdefault", // 320x180
+  'maxresdefault', // 1280x720
+  'hqdefault', // 480x360
+  'mqdefault', // 320x180
 ];
 
 /**
@@ -168,19 +168,19 @@ const YOUTUBE_THUMBNAIL_QUALITIES = [
 export function getYouTubeVideoId(url: string): string | null {
   try {
     const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^(www\.|m\.)/, "");
+    const host = parsed.hostname.replace(/^(www\.|m\.)/, '');
 
-    if (host === "youtu.be") {
+    if (host === 'youtu.be') {
       const id = parsed.pathname.slice(1); // /VIDEO_ID
       return id || null; // Return null for empty ID (e.g., youtu.be/)
     }
-    if (host === "youtube.com") {
+    if (host === 'youtube.com') {
       // /watch?v=ID, /embed/ID, /shorts/ID, /v/ID
-      if (parsed.searchParams.has("v")) return parsed.searchParams.get("v");
-      const segments = parsed.pathname.split("/");
+      if (parsed.searchParams.has('v')) return parsed.searchParams.get('v');
+      const segments = parsed.pathname.split('/');
       // Check segment exists (length check handles edge case of ID "0")
       if (
-        ["embed", "shorts", "v"].includes(segments[1]) &&
+        ['embed', 'shorts', 'v'].includes(segments[1]) &&
         segments.length > 2
       ) {
         return segments[2] || null; // Return null if empty segment
@@ -212,7 +212,7 @@ function validateYouTubeThumbnail(url: string): Promise<boolean> {
       clearTimeout(timeoutId);
       img.onload = null;
       img.onerror = null;
-      img.src = "";
+      img.src = '';
       resolve(result);
     };
     img.onload = () => cleanup(img.naturalWidth >= MIN_THUMBNAIL_WIDTH);
@@ -227,7 +227,7 @@ function validateYouTubeThumbnail(url: string): Promise<boolean> {
  * Returns null if video has no thumbnail (only placeholder available)
  */
 export async function getYouTubeThumbnailUrl(
-  videoId: string,
+  videoId: string
 ): Promise<string | null> {
   for (const quality of YOUTUBE_THUMBNAIL_QUALITIES) {
     const url = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
@@ -275,7 +275,7 @@ function parseLines(content: string): LineInfo[] {
   const lines: LineInfo[] = [];
   let position = 0;
 
-  for (const text of content.split("\n")) {
+  for (const text of content.split('\n')) {
     const start = position;
     const end = position + text.length;
     lines.push({ text, start, end });
@@ -291,7 +291,7 @@ function parseLines(content: string): LineInfo[] {
  */
 function findFencedCodeBlocks(
   content: string,
-  lines: LineInfo[],
+  lines: LineInfo[]
 ): FencedCodeBlock[] {
   const blocks: FencedCodeBlock[] = [];
   let currentBlock: {
@@ -311,8 +311,8 @@ function findFencedCodeBlocks(
       const fenceChar = fenceMatch[2][0];
       const fenceLength = fenceMatch[2].length;
       // Extract first word of info string as language (e.g., "python" from "python {.class}")
-      const infoString = fenceMatch[3]?.trim() || "";
-      const language = infoString.split(/\s+/)[0]?.toLowerCase() || "";
+      const infoString = fenceMatch[3]?.trim() || '';
+      const language = infoString.split(/\s+/)[0]?.toLowerCase() || '';
 
       if (!currentBlock) {
         // Opening fence
@@ -320,13 +320,13 @@ function findFencedCodeBlocks(
           start: line.start,
           fenceChar,
           fenceLength,
-          isCardlink: language === "cardlink" || language === "embed",
+          isCardlink: language === 'cardlink' || language === 'embed',
           contentStart: line.end + 1,
         };
       } else if (
         fenceChar === currentBlock.fenceChar &&
         fenceLength === currentBlock.fenceLength &&
-        infoString === "" // Per CommonMark, closing fence must have no content
+        infoString === '' // Per CommonMark, closing fence must have no content
       ) {
         // Matching closing fence
         blocks.push({
@@ -350,7 +350,7 @@ function findFencedCodeBlocks(
  */
 function findIndentedCodeBlocks(
   lines: LineInfo[],
-  fencedBlocks: FencedCodeBlock[],
+  fencedBlocks: FencedCodeBlock[]
 ): CodeRange[] {
   const ranges: CodeRange[] = [];
   let blockStart: number | null = null;
@@ -369,7 +369,7 @@ function findIndentedCodeBlocks(
       continue;
     }
 
-    const isEmpty = line.text.trim() === "";
+    const isEmpty = line.text.trim() === '';
     const isIndented = /^(\t| {4})/.test(line.text);
 
     if (isIndented) {
@@ -411,7 +411,7 @@ const INLINE_CODE_REGEX = /`[^`\n]+`/g;
  */
 function findInlineCodeRanges(
   content: string,
-  fencedBlocks: FencedCodeBlock[],
+  fencedBlocks: FencedCodeBlock[]
 ): CodeRange[] {
   const ranges: CodeRange[] = [];
   // Reset regex lastIndex (global flag maintains state across calls)
@@ -422,7 +422,7 @@ function findInlineCodeRanges(
     const end = start + match[0].length;
     // Exclude if inside any fenced block (including cardlink)
     const insideFenced = fencedBlocks.some(
-      (b) => start >= b.start && start <= b.end,
+      (b) => start >= b.start && start <= b.end
     );
     if (!insideFenced) {
       ranges.push({ start, end });
@@ -448,7 +448,7 @@ function isInsideCode(
   position: number,
   fencedBlocks: FencedCodeBlock[],
   indentedBlocks: CodeRange[],
-  inlineRanges: CodeRange[],
+  inlineRanges: CodeRange[]
 ): boolean {
   // Check fenced blocks (excluding cardlink blocks which we want to parse)
   for (const block of fencedBlocks) {
@@ -497,7 +497,7 @@ const CARDLINK_IMAGE_REGEX = /^image:\s*(.+?)\s*$/im;
  * Represents an embed found in content
  */
 interface EmbedMatch {
-  type: "wikilink" | "markdown" | "cardlink";
+  type: 'wikilink' | 'markdown' | 'cardlink';
   path: string;
   position: number;
 }
@@ -517,7 +517,7 @@ export async function extractImageEmbeds(
   options?: {
     includeYoutube?: boolean;
     includeCardLink?: boolean;
-  },
+  }
 ): Promise<string[]> {
   const includeYoutube = options?.includeYoutube ?? true;
   const includeCardLink = options?.includeCardLink ?? true;
@@ -528,20 +528,20 @@ export async function extractImageEmbeds(
   if (content.length > MAX_IMAGE_EXTRACTION_CONTENT_SIZE) {
     // Find last newline before limit to avoid cutting mid-syntax
     const lastNewline = content.lastIndexOf(
-      "\n",
-      MAX_IMAGE_EXTRACTION_CONTENT_SIZE,
+      '\n',
+      MAX_IMAGE_EXTRACTION_CONTENT_SIZE
     );
     content = content.slice(
       0,
-      lastNewline !== -1 ? lastNewline : MAX_IMAGE_EXTRACTION_CONTENT_SIZE,
+      lastNewline !== -1 ? lastNewline : MAX_IMAGE_EXTRACTION_CONTENT_SIZE
     );
   }
 
   // Strip frontmatter (handle both Unix \n and Windows \r\n newlines)
-  if (content.startsWith("---\n") || content.startsWith("---\r\n")) {
+  if (content.startsWith('---\n') || content.startsWith('---\r\n')) {
     // Match either newline style for frontmatter end
-    const frontmatterEndUnix = content.indexOf("\n---\n", 4);
-    const frontmatterEndWin = content.indexOf("\r\n---\r\n", 4);
+    const frontmatterEndUnix = content.indexOf('\n---\n', 4);
+    const frontmatterEndWin = content.indexOf('\r\n---\r\n', 4);
     // Use whichever is found first (or -1 if neither)
     let frontmatterEnd = -1;
     let skipLength = 0;
@@ -593,7 +593,7 @@ export async function extractImageEmbeds(
           imagePath = stripWikilinkSyntax(imagePath);
           if (imagePath) {
             embeds.push({
-              type: "cardlink",
+              type: 'cardlink',
               path: imagePath,
               position: block.start,
             });
@@ -608,7 +608,7 @@ export async function extractImageEmbeds(
     const position = match.index;
     if (!isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges)) {
       embeds.push({
-        type: "wikilink",
+        type: 'wikilink',
         path: match[1].trim(),
         position,
       });
@@ -620,7 +620,7 @@ export async function extractImageEmbeds(
     const position = match.index;
     if (!isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges)) {
       // Strip optional title from URL
-      let url = match[1].trim().replace(MD_IMAGE_TITLE_REGEX, "");
+      let url = match[1].trim().replace(MD_IMAGE_TITLE_REGEX, '');
       // Decode URL-encoded characters (e.g., %20 -> space) for local paths
       if (!isExternalUrl(url)) {
         try {
@@ -630,7 +630,7 @@ export async function extractImageEmbeds(
         }
       }
       embeds.push({
-        type: "markdown",
+        type: 'markdown',
         path: url,
         position,
       });
@@ -675,7 +675,7 @@ export async function extractImageEmbeds(
       // Internal path - resolve via metadata cache
       const targetFile = app.metadataCache.getFirstLinkpathDest(
         path,
-        file.path,
+        file.path
       );
       if (targetFile && VALID_IMAGE_EXTENSIONS.includes(targetFile.extension)) {
         const resourcePath = app.vault.getResourcePath(targetFile);

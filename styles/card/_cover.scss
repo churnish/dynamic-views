@@ -181,11 +181,13 @@
    ============================================ */
 
 /* Masonry cover height: use slider value (crop mode only) */
-[data-view-type="dynamic-views-masonry"]
-  .card:not(.card-cover-contain).card-cover-top.image-format-cover
+[data-view-type='dynamic-views-masonry']
+  .dynamic-views:not(.image-fit-contain)
+  .card.card-cover-top.image-format-cover
   .card-cover,
-[data-view-type="dynamic-views-masonry"]
-  .card:not(.card-cover-contain).card-cover-bottom.image-format-cover
+[data-view-type='dynamic-views-masonry']
+  .dynamic-views:not(.image-fit-contain)
+  .card.card-cover-bottom.image-format-cover
   .card-cover {
   padding-top: calc(
     var(--dynamic-views-image-aspect-ratio, 0.55) * 100%
@@ -194,11 +196,13 @@
 
 /* Masonry contain mode OFF: collapse top/bottom bars only (keep left/right) */
 /* Use min(actual, slider) - shrinks only when image is wider than slider ratio */
-[data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain.card-cover-top.image-format-cover
+[data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.card-cover-top.image-format-cover
   .card-cover,
-[data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain.card-cover-bottom.image-format-cover
+[data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.card-cover-bottom.image-format-cover
   .card-cover {
   padding-top: calc(
     min(
@@ -214,12 +218,14 @@
 
 /* Masonry contain mode ON: use slider value (top/bottom bars visible) */
 body.dynamic-views-fixed-cover-height
-  [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain.card-cover-top.image-format-cover
+  [data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.card-cover-top.image-format-cover
   .card-cover,
 body.dynamic-views-fixed-cover-height
-  [data-view-type="dynamic-views-masonry"]
-  .card.card-cover-contain.card-cover-bottom.image-format-cover
+  [data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.card-cover-bottom.image-format-cover
   .card-cover {
   padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }

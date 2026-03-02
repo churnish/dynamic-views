@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 import {
   getMinMasonryColumns,
   getMinGridColumns,
@@ -12,10 +14,10 @@ import {
   getHideEmptyMode,
   getUrlIcon,
   clearStyleSettingsCache,
-} from "../../src/utils/style-settings";
+} from '../../src/utils/style-settings';
 
-describe("style-settings", () => {
-  let mockGetComputedStyle: jest.SpyInstance;
+describe('style-settings', () => {
+  let mockGetComputedStyle: MockInstance;
   let mockClassList: Set<string>;
 
   beforeEach(() => {
@@ -23,15 +25,15 @@ describe("style-settings", () => {
     clearStyleSettingsCache();
 
     // Mock getComputedStyle
-    mockGetComputedStyle = jest
-      .spyOn(window, "getComputedStyle")
+    mockGetComputedStyle = vi
+      .spyOn(window, 'getComputedStyle')
       .mockReturnValue({
-        getPropertyValue: (name: string) => "",
+        getPropertyValue: (name: string) => '',
       } as CSSStyleDeclaration);
 
     // Mock body classList
     mockClassList = new Set<string>();
-    Object.defineProperty(document.body, "classList", {
+    Object.defineProperty(document.body, 'classList', {
       value: {
         contains: (className: string) => mockClassList.has(className),
         add: (className: string) => mockClassList.add(className),
@@ -46,400 +48,400 @@ describe("style-settings", () => {
     mockClassList.clear();
   });
 
-  describe("getMinMasonryColumns", () => {
-    it("should return default value of 2", () => {
+  describe('getMinMasonryColumns', () => {
+    it('should return default value of 2', () => {
       expect(getMinMasonryColumns()).toBe(2);
     });
 
-    it("should return custom value from CSS variable", () => {
+    it('should return custom value from CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-min-masonry-columns" ? "3" : "",
+          name === '--dynamic-views-min-masonry-columns' ? '3' : '',
       } as CSSStyleDeclaration);
 
       expect(getMinMasonryColumns()).toBe(3);
     });
 
-    it("should parse value with px unit", () => {
+    it('should parse value with px unit', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-min-masonry-columns" ? "4px" : "",
+          name === '--dynamic-views-min-masonry-columns' ? '4px' : '',
       } as CSSStyleDeclaration);
 
       expect(getMinMasonryColumns()).toBe(4);
     });
 
-    it("should return default for invalid value", () => {
+    it('should return default for invalid value', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-min-masonry-columns" ? "invalid" : "",
+          name === '--dynamic-views-min-masonry-columns' ? 'invalid' : '',
       } as CSSStyleDeclaration);
 
       expect(getMinMasonryColumns()).toBe(2);
     });
 
-    it("should handle whitespace in CSS variable", () => {
+    it('should handle whitespace in CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-min-masonry-columns" ? "  5  " : "",
+          name === '--dynamic-views-min-masonry-columns' ? '  5  ' : '',
       } as CSSStyleDeclaration);
 
       expect(getMinMasonryColumns()).toBe(5);
     });
   });
 
-  describe("getMinGridColumns", () => {
-    it("should return default value of 1", () => {
+  describe('getMinGridColumns', () => {
+    it('should return default value of 1', () => {
       expect(getMinGridColumns()).toBe(1);
     });
 
-    it("should return custom value from CSS variable", () => {
+    it('should return custom value from CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-min-grid-columns" ? "2" : "",
+          name === '--dynamic-views-min-grid-columns' ? '2' : '',
       } as CSSStyleDeclaration);
 
       expect(getMinGridColumns()).toBe(2);
     });
 
-    it("should handle decimal values", () => {
+    it('should handle decimal values', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-min-grid-columns" ? "1.5" : "",
+          name === '--dynamic-views-min-grid-columns' ? '1.5' : '',
       } as CSSStyleDeclaration);
 
       expect(getMinGridColumns()).toBe(1.5);
     });
   });
 
-  describe("showTimestampIcon", () => {
-    it("should return true by default", () => {
+  describe('showTimestampIcon', () => {
+    it('should return true by default', () => {
       expect(showTimestampIcon()).toBe(true);
     });
 
-    it("should return false when hide class is present", () => {
-      mockClassList.add("dynamic-views-timestamp-icon-hide");
+    it('should return false when hide class is present', () => {
+      mockClassList.add('dynamic-views-timestamp-icon-hide');
       expect(showTimestampIcon()).toBe(false);
     });
 
-    it("should return true when hide class is removed", () => {
-      mockClassList.add("dynamic-views-timestamp-icon-hide");
-      mockClassList.delete("dynamic-views-timestamp-icon-hide");
+    it('should return true when hide class is removed', () => {
+      mockClassList.add('dynamic-views-timestamp-icon-hide');
+      mockClassList.delete('dynamic-views-timestamp-icon-hide');
       expect(showTimestampIcon()).toBe(true);
     });
   });
 
-  describe("getTagStyle", () => {
+  describe('getTagStyle', () => {
     it('should return "plain" by default', () => {
-      expect(getTagStyle()).toBe("plain");
+      expect(getTagStyle()).toBe('plain');
     });
 
     it('should return "minimal" when minimal class is present', () => {
-      mockClassList.add("dynamic-views-tag-style-minimal");
-      expect(getTagStyle()).toBe("minimal");
+      mockClassList.add('dynamic-views-tag-style-minimal');
+      expect(getTagStyle()).toBe('minimal');
     });
 
     it('should return "theme" when theme class is present', () => {
-      mockClassList.add("dynamic-views-tag-style-theme");
-      expect(getTagStyle()).toBe("theme");
+      mockClassList.add('dynamic-views-tag-style-theme');
+      expect(getTagStyle()).toBe('theme');
     });
 
-    it("should prefer minimal over theme when both are present", () => {
-      mockClassList.add("dynamic-views-tag-style-minimal");
-      mockClassList.add("dynamic-views-tag-style-theme");
-      expect(getTagStyle()).toBe("minimal");
+    it('should prefer minimal over theme when both are present', () => {
+      mockClassList.add('dynamic-views-tag-style-minimal');
+      mockClassList.add('dynamic-views-tag-style-theme');
+      expect(getTagStyle()).toBe('minimal');
     });
 
-    it("should return plain when both classes are removed", () => {
-      mockClassList.add("dynamic-views-tag-style-minimal");
-      mockClassList.delete("dynamic-views-tag-style-minimal");
-      expect(getTagStyle()).toBe("plain");
+    it('should return plain when both classes are removed', () => {
+      mockClassList.add('dynamic-views-tag-style-minimal');
+      mockClassList.delete('dynamic-views-tag-style-minimal');
+      expect(getTagStyle()).toBe('plain');
     });
   });
 
-  describe("getCardSpacing", () => {
-    it("should return default value of 8 on desktop", () => {
+  describe('getCardSpacing', () => {
+    it('should return default value of 8 on desktop', () => {
       expect(getCardSpacing()).toBe(8);
     });
 
-    it("should return default value of 6 on mobile", () => {
-      mockClassList.add("is-mobile");
+    it('should return default value of 6 on mobile', () => {
+      mockClassList.add('is-mobile');
       expect(getCardSpacing()).toBe(6);
     });
 
-    it("should return custom desktop value from CSS variable", () => {
+    it('should return custom desktop value from CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-card-spacing-desktop" ? "16" : "",
+          name === '--dynamic-views-card-spacing-desktop' ? '16' : '',
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing()).toBe(16);
     });
 
-    it("should return custom mobile value from CSS variable", () => {
-      mockClassList.add("is-mobile");
+    it('should return custom mobile value from CSS variable', () => {
+      mockClassList.add('is-mobile');
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-card-spacing-mobile" ? "10px" : "",
+          name === '--dynamic-views-card-spacing-mobile' ? '10px' : '',
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing()).toBe(10);
     });
 
-    it("should handle zero value", () => {
+    it('should handle zero value', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-card-spacing-desktop" ? "0" : "",
+          name === '--dynamic-views-card-spacing-desktop' ? '0' : '',
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing()).toBe(0);
     });
 
-    it("should return Obsidian spacing for embeds (not in bases leaf)", () => {
+    it('should return Obsidian spacing for embeds (not in bases leaf)', () => {
       // Create a mock container element that's NOT inside a bases workspace leaf
-      const mockContainer = document.createElement("div");
-      mockContainer.closest = jest.fn().mockReturnValue(null);
+      const mockContainer = document.createElement('div');
+      mockContainer.closest = vi.fn().mockReturnValue(null);
 
       mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) => (name === "--size-4-2" ? "8" : ""),
+        getPropertyValue: (name: string) => (name === '--size-4-2' ? '8' : ''),
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing(mockContainer)).toBe(8);
     });
 
-    it("should return custom spacing when inside bases leaf", () => {
+    it('should return custom spacing when inside bases leaf', () => {
       // Create a mock container element that IS inside a bases workspace leaf
-      const mockContainer = document.createElement("div");
-      const mockBasesLeaf = document.createElement("div");
-      mockContainer.closest = jest.fn().mockReturnValue(mockBasesLeaf);
+      const mockContainer = document.createElement('div');
+      const mockBasesLeaf = document.createElement('div');
+      mockContainer.closest = vi.fn().mockReturnValue(mockBasesLeaf);
 
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-card-spacing-desktop" ? "12" : "",
+          name === '--dynamic-views-card-spacing-desktop' ? '12' : '',
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing(mockContainer)).toBe(12);
     });
   });
 
-  describe("shouldShowRecentTimeOnly", () => {
-    it("should return true by default (time only is default behavior)", () => {
+  describe('shouldShowRecentTimeOnly', () => {
+    it('should return true by default (time only is default behavior)', () => {
       expect(shouldShowRecentTimeOnly()).toBe(true);
     });
 
-    it("should return false when full timestamp class is present", () => {
-      mockClassList.add("dynamic-views-timestamp-recent-full");
+    it('should return false when full timestamp class is present', () => {
+      mockClassList.add('dynamic-views-timestamp-recent-full');
       expect(shouldShowRecentTimeOnly()).toBe(false);
     });
   });
 
-  describe("shouldShowOlderDateOnly", () => {
-    it("should return true by default (date only is default behavior)", () => {
+  describe('shouldShowOlderDateOnly', () => {
+    it('should return true by default (date only is default behavior)', () => {
       expect(shouldShowOlderDateOnly()).toBe(true);
     });
 
-    it("should return false when full timestamp class is present", () => {
-      mockClassList.add("dynamic-views-timestamp-past-full");
+    it('should return false when full timestamp class is present', () => {
+      mockClassList.add('dynamic-views-timestamp-past-full');
       expect(shouldShowOlderDateOnly()).toBe(false);
     });
   });
 
-  describe("getListSeparator", () => {
+  describe('getListSeparator', () => {
     it('should return default ", " (comma space)', () => {
-      expect(getListSeparator()).toBe(", ");
+      expect(getListSeparator()).toBe(', ');
     });
 
-    it("should return custom value from CSS variable", () => {
+    it('should return custom value from CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-list-separator" ? '" | "' : "",
+          name === '--dynamic-views-list-separator' ? '" | "' : '',
       } as CSSStyleDeclaration);
 
-      expect(getListSeparator()).toBe(" | ");
+      expect(getListSeparator()).toBe(' | ');
     });
 
-    it("should strip double quotes", () => {
+    it('should strip double quotes', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-list-separator" ? '" • "' : "",
+          name === '--dynamic-views-list-separator' ? '" • "' : '',
       } as CSSStyleDeclaration);
 
-      expect(getListSeparator()).toBe(" • ");
+      expect(getListSeparator()).toBe(' • ');
     });
 
-    it("should strip single quotes", () => {
+    it('should strip single quotes', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-list-separator" ? "' / '" : "",
+          name === '--dynamic-views-list-separator' ? "' / '" : '',
       } as CSSStyleDeclaration);
 
-      expect(getListSeparator()).toBe(" / ");
+      expect(getListSeparator()).toBe(' / ');
     });
 
-    it("should return default when value is only whitespace (trimmed to empty)", () => {
+    it('should return default when value is only whitespace (trimmed to empty)', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-list-separator" ? "   " : "",
+          name === '--dynamic-views-list-separator' ? '   ' : '',
       } as CSSStyleDeclaration);
 
       // Whitespace-only is trimmed to empty, so falls back to default
-      expect(getListSeparator()).toBe(", ");
+      expect(getListSeparator()).toBe(', ');
     });
 
-    it("should not strip quotes if only one side matches", () => {
+    it('should not strip quotes if only one side matches', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-list-separator" ? '"hello' : "",
+          name === '--dynamic-views-list-separator' ? '"hello' : '',
       } as CSSStyleDeclaration);
 
       expect(getListSeparator()).toBe('"hello');
     });
 
-    it("should handle empty string after quote stripping", () => {
+    it('should handle empty string after quote stripping', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-list-separator" ? '""' : "",
+          name === '--dynamic-views-list-separator' ? '""' : '',
       } as CSSStyleDeclaration);
 
-      expect(getListSeparator()).toBe(", "); // Falls back to default
+      expect(getListSeparator()).toBe(', '); // Falls back to default
     });
   });
 
-  describe("getEmptyValueMarker", () => {
+  describe('getEmptyValueMarker', () => {
     it('should return default "—" (em dash)', () => {
-      expect(getEmptyValueMarker()).toBe("—");
+      expect(getEmptyValueMarker()).toBe('—');
     });
 
-    it("should return custom value from CSS variable", () => {
+    it('should return custom value from CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-empty-value-marker" ? "N/A" : "",
+          name === '--dynamic-views-empty-value-marker' ? 'N/A' : '',
       } as CSSStyleDeclaration);
 
-      expect(getEmptyValueMarker()).toBe("N/A");
+      expect(getEmptyValueMarker()).toBe('N/A');
     });
 
-    it("should strip double quotes", () => {
+    it('should strip double quotes', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-empty-value-marker" ? '"..."' : "",
+          name === '--dynamic-views-empty-value-marker' ? '"..."' : '',
       } as CSSStyleDeclaration);
 
-      expect(getEmptyValueMarker()).toBe("...");
+      expect(getEmptyValueMarker()).toBe('...');
     });
 
-    it("should strip single quotes", () => {
+    it('should strip single quotes', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-empty-value-marker" ? "'—'" : "",
+          name === '--dynamic-views-empty-value-marker' ? "'—'" : '',
       } as CSSStyleDeclaration);
 
-      expect(getEmptyValueMarker()).toBe("—");
+      expect(getEmptyValueMarker()).toBe('—');
     });
 
-    it("should handle empty string after quote stripping", () => {
+    it('should handle empty string after quote stripping', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-empty-value-marker" ? '""' : "",
+          name === '--dynamic-views-empty-value-marker' ? '""' : '',
       } as CSSStyleDeclaration);
 
-      expect(getEmptyValueMarker()).toBe("—"); // Falls back to default
+      expect(getEmptyValueMarker()).toBe('—'); // Falls back to default
     });
 
-    it("should preserve special characters", () => {
+    it('should preserve special characters', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-empty-value-marker" ? "∅" : "",
+          name === '--dynamic-views-empty-value-marker' ? '∅' : '',
       } as CSSStyleDeclaration);
 
-      expect(getEmptyValueMarker()).toBe("∅");
+      expect(getEmptyValueMarker()).toBe('∅');
     });
   });
 
-  describe("shouldHideMissingProperties", () => {
-    it("should return false by default", () => {
+  describe('shouldHideMissingProperties', () => {
+    it('should return false by default', () => {
       expect(shouldHideMissingProperties()).toBe(false);
     });
 
-    it("should return true when class is present", () => {
-      mockClassList.add("dynamic-views-hide-missing-properties");
+    it('should return true when class is present', () => {
+      mockClassList.add('dynamic-views-hide-missing-properties');
       expect(shouldHideMissingProperties()).toBe(true);
     });
   });
 
-  describe("getHideEmptyMode", () => {
-    it("should return labels-hidden by default", () => {
-      expect(getHideEmptyMode()).toBe("labels-hidden");
+  describe('getHideEmptyMode', () => {
+    it('should return labels-hidden by default', () => {
+      expect(getHideEmptyMode()).toBe('labels-hidden');
     });
 
-    it("should return show when show class is present", () => {
-      mockClassList.add("dynamic-views-empty-properties-show");
-      expect(getHideEmptyMode()).toBe("show");
+    it('should return show when show class is present', () => {
+      mockClassList.add('dynamic-views-empty-properties-show');
+      expect(getHideEmptyMode()).toBe('show');
     });
 
-    it("should return all when all class is present", () => {
-      mockClassList.add("dynamic-views-empty-properties-hide");
-      expect(getHideEmptyMode()).toBe("all");
+    it('should return all when all class is present', () => {
+      mockClassList.add('dynamic-views-empty-properties-hide');
+      expect(getHideEmptyMode()).toBe('all');
     });
   });
 
-  describe("getUrlIcon", () => {
-    it("should return default icon", () => {
-      expect(getUrlIcon()).toBe("arrow-up-right");
+  describe('getUrlIcon', () => {
+    it('should return default icon', () => {
+      expect(getUrlIcon()).toBe('arrow-up-right');
     });
 
-    it("should return custom value from CSS variable", () => {
+    it('should return custom value from CSS variable', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-url-icon" ? "external-link" : "",
+          name === '--dynamic-views-url-icon' ? 'external-link' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe("external-link");
+      expect(getUrlIcon()).toBe('external-link');
     });
 
-    it("should strip double quotes from value", () => {
+    it('should strip double quotes from value', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-url-icon" ? '"link"' : "",
+          name === '--dynamic-views-url-icon' ? '"link"' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe("link");
+      expect(getUrlIcon()).toBe('link');
     });
 
     it('should strip lowercase "lucide-" prefix', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-url-icon" ? "lucide-donut" : "",
+          name === '--dynamic-views-url-icon' ? 'lucide-donut' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe("donut");
+      expect(getUrlIcon()).toBe('donut');
     });
 
     it('should strip mixed-case "Lucide-" prefix', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-url-icon" ? "Lucide-globe" : "",
+          name === '--dynamic-views-url-icon' ? 'Lucide-globe' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe("globe");
+      expect(getUrlIcon()).toBe('globe');
     });
 
     it('should strip uppercase "LUCIDE-" prefix', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-url-icon" ? "LUCIDE-arrow-up" : "",
+          name === '--dynamic-views-url-icon' ? 'LUCIDE-arrow-up' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe("arrow-up");
+      expect(getUrlIcon()).toBe('arrow-up');
     });
 
-    it("should handle quoted value with lucide- prefix", () => {
+    it('should handle quoted value with lucide- prefix', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === "--dynamic-views-url-icon" ? '"lucide-star"' : "",
+          name === '--dynamic-views-url-icon' ? '"lucide-star"' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe("star");
+      expect(getUrlIcon()).toBe('star');
     });
   });
 });

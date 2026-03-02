@@ -24,10 +24,10 @@
  */
 export function updateTextPreviewDOM(
   cardEl: HTMLElement,
-  newText: string,
+  newText: string
 ): void {
-  const previewsEl = cardEl.querySelector<HTMLElement>(".card-previews");
-  const previewEl = cardEl.querySelector<HTMLElement>(".card-text-preview");
+  const previewsEl = cardEl.querySelector<HTMLElement>('.card-previews');
+  const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
 
   if (newText) {
     if (previewEl) {
@@ -35,27 +35,27 @@ export function updateTextPreviewDOM(
       previewEl.textContent = newText;
     } else if (previewsEl) {
       // Case 2: wrapper exists (thumbnail present) — prepend text wrapper
-      const textWrapper = document.createElement("div");
-      textWrapper.className = "card-text-preview-wrapper";
-      const textEl = document.createElement("div");
-      textEl.className = "card-text-preview";
+      const textWrapper = document.createElement('div');
+      textWrapper.className = 'card-text-preview-wrapper';
+      const textEl = document.createElement('div');
+      textEl.className = 'card-text-preview';
       textEl.textContent = newText;
       textWrapper.appendChild(textEl);
       previewsEl.insertBefore(textWrapper, previewsEl.firstChild);
     } else {
       // Case 3: no previews wrapper at all — build from scratch
-      const bodyEl = cardEl.querySelector<HTMLElement>(".card-body");
+      const bodyEl = cardEl.querySelector<HTMLElement>('.card-body');
       if (bodyEl) {
-        const wrapper = document.createElement("div");
-        wrapper.className = "card-previews";
-        const textWrapper = document.createElement("div");
-        textWrapper.className = "card-text-preview-wrapper";
-        const textEl = document.createElement("div");
-        textEl.className = "card-text-preview";
+        const wrapper = document.createElement('div');
+        wrapper.className = 'card-previews';
+        const textWrapper = document.createElement('div');
+        textWrapper.className = 'card-text-preview-wrapper';
+        const textEl = document.createElement('div');
+        textEl.className = 'card-text-preview';
         textEl.textContent = newText;
         textWrapper.appendChild(textEl);
         wrapper.appendChild(textWrapper);
-        const bottomProps = bodyEl.querySelector(".card-properties-bottom");
+        const bottomProps = bodyEl.querySelector('.card-properties-bottom');
         if (bottomProps) {
           bodyEl.insertBefore(wrapper, bottomProps);
         } else {
@@ -64,10 +64,10 @@ export function updateTextPreviewDOM(
       }
     }
   } else if (previewsEl) {
-    const hasThumbnail = previewsEl.querySelector(".card-thumbnail");
+    const hasThumbnail = previewsEl.querySelector('.card-thumbnail');
     if (hasThumbnail) {
       // Case 4: thumbnail must stay — remove only the text wrapper
-      previewEl?.closest(".card-text-preview-wrapper")?.remove();
+      previewEl?.closest('.card-text-preview-wrapper')?.remove();
     } else {
       // Case 5: nothing else in the wrapper — remove it entirely
       previewsEl.remove();

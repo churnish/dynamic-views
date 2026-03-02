@@ -1,4 +1,4 @@
-import { App, TFile, normalizePath } from "obsidian";
+import { App, TFile, normalizePath } from 'obsidian';
 
 /**
  * Get the creation timestamp (ctime) of a file
@@ -29,9 +29,9 @@ export function getCurrentFile(app: App): TFile | null {
 export function getAvailablePath(
   app: App,
   folderPath: string,
-  baseName: string,
+  baseName: string
 ): string {
-  const name = baseName.replace(/\.md$/, "");
+  const name = baseName.replace(/\.md$/, '');
   let filePath = folderPath ? `${folderPath}/${name}.md` : `${name}.md`;
   filePath = normalizePath(filePath);
 
@@ -57,9 +57,9 @@ export function getAvailablePath(
 export function getAvailableBasePath(
   app: App,
   folderPath: string,
-  baseName: string,
+  baseName: string
 ): string {
-  const name = baseName.replace(/\.base$/, "");
+  const name = baseName.replace(/\.base$/, '');
   let filePath = folderPath ? `${folderPath}/${name}.base` : `${name}.base`;
   filePath = normalizePath(filePath);
 

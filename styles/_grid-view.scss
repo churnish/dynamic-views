@@ -1,12 +1,12 @@
 /* Card spacing setting - Bases files and embeds */
-:is(.workspace-leaf-content[data-type="bases"], .bases-embed)
+:is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views
   .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
 }
 
 .is-mobile
-  :is(.workspace-leaf-content[data-type="bases"], .bases-embed)
+  :is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views
   .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-mobile, 6px);
@@ -57,7 +57,7 @@
 }
 
 /* Card spacing setting - Bases files and embeds */
-:is(.workspace-leaf-content[data-type="bases"], .bases-embed)
+:is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views-grid
   .dynamic-views-group-section
   > .dynamic-views-group {
@@ -65,7 +65,7 @@
 }
 
 .is-mobile
-  :is(.workspace-leaf-content[data-type="bases"], .bases-embed)
+  :is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views-grid
   .dynamic-views-group-section
   > .dynamic-views-group {

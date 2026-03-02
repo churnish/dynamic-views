@@ -41,7 +41,7 @@
 /* Overlay for readability */
 .dynamic-views {
   .card.image-format-backdrop .card-backdrop::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;

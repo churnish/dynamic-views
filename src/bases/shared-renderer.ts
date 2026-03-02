@@ -12,9 +12,9 @@ import {
   Scope,
   Menu,
   Keymap,
-} from "obsidian";
-import type { BasesViewConfig } from "obsidian";
-import { CardData } from "../shared/card-renderer";
+} from 'obsidian';
+import type { BasesViewConfig } from 'obsidian';
+import { CardData } from '../shared/card-renderer';
 import {
   setupImageLoadHandler,
   setupBackdropImageLoader,
@@ -23,18 +23,18 @@ import {
   DEFAULT_ASPECT_RATIO,
   filterBrokenUrls,
   markImageBroken,
-} from "../shared/image-loader";
+} from '../shared/image-loader';
 import {
   showFileContextMenu,
   showExternalLinkContextMenu,
-} from "../shared/context-menu";
+} from '../shared/context-menu';
 import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
   setupVerticalScrollGradient,
-} from "../shared/scroll-gradient";
-import { getTimestampIcon, isTimestampProperty } from "../shared/render-utils";
+} from '../shared/scroll-gradient';
+import { getTimestampIcon, isTimestampProperty } from '../shared/render-utils';
 import {
   showTagHashPrefix,
   getHideEmptyMode,
@@ -50,20 +50,20 @@ import {
   getUrlIcon,
   getCompactBreakpoint,
   hasBodyClass,
-} from "../utils/style-settings";
+} from '../utils/style-settings';
 import {
   getPropertyLabel,
   parsePropertyList,
   stripNotePrefix,
-} from "../utils/property";
-import { findLinksInText, type ParsedLink } from "../utils/link-parser";
+} from '../utils/property';
+import { findLinksInText, type ParsedLink } from '../utils/link-parser';
 import {
   handleImageViewerTrigger,
   cleanupAllViewers,
-} from "../shared/image-viewer";
-import { getFileExtInfo, getFileTypeIcon } from "../utils/file-extension";
-import type DynamicViews from "../../main";
-import type { BasesResolvedSettings } from "../types";
+} from '../shared/image-viewer';
+import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
+import type DynamicViews from '../../main';
+import type { BasesResolvedSettings } from '../types';
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
@@ -71,34 +71,34 @@ import {
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
-} from "../shared/slideshow";
-import { setupHoverIntent } from "../shared/hover-intent";
+} from '../shared/slideshow';
+import { setupHoverIntent } from '../shared/hover-intent';
 import {
   handleArrowNavigation,
   isArrowKey,
   isImageViewerBlockingNav,
   type VirtualCardRect,
-} from "../shared/keyboard-nav";
+} from '../shared/keyboard-nav';
 import {
   CHECKBOX_MARKER_PREFIX,
   THUMBNAIL_STACK_MULTIPLIER,
-} from "../shared/constants";
+} from '../shared/constants';
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
   revealFileInNotebookNavigator,
-} from "../utils/notebook-navigator";
-import { measurePropertyFields } from "../shared/property-measure";
-import { CONTENT_HIDDEN_CLASS } from "../shared/content-visibility";
+} from '../utils/notebook-navigator';
+import { measurePropertyFields } from '../shared/property-measure';
+import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
 import {
   isTagProperty,
   isFileProperty,
   isFormulaProperty,
   shouldCollapseField,
   computeInvertPairs,
-} from "../shared/property-helpers";
-import { getOwnerWindow } from "../utils/owner-window";
+} from '../shared/property-helpers';
+import { getOwnerWindow } from '../utils/owner-window';
 
 /** Per-card cleanup handle for individual card teardown (virtual scrolling) */
 export interface CardHandle {
@@ -114,8 +114,8 @@ let measureCtx: CanvasRenderingContext2D | null = null;
 
 function getMeasureContext(): CanvasRenderingContext2D {
   if (!measureCanvas) {
-    measureCanvas = document.createElement("canvas");
-    measureCtx = measureCanvas.getContext("2d");
+    measureCanvas = document.createElement('canvas');
+    measureCtx = measureCanvas.getContext('2d');
   }
   return measureCtx!;
 }
@@ -129,14 +129,14 @@ function truncateTitleWithCanvas(
   fullText: string,
   containerWidth: number,
   font: string,
-  maxLines: number,
+  maxLines: number
 ): void {
   if (!fullText || containerWidth <= 0 || maxLines <= 0) return;
 
   const ctx = getMeasureContext();
   ctx.font = font;
 
-  const ellipsis = "…";
+  const ellipsis = '…';
   const ellipsisWidth = ctx.measureText(ellipsis).width;
   // Total width available across all lines, minus ellipsis
   const availableWidth = containerWidth * maxLines - ellipsisWidth;
@@ -169,9 +169,9 @@ function truncateTitleWithCanvas(
 }
 
 const PAIRED_PROPERTY_CLASSES = [
-  "dynamic-views-paired-property-left",
-  "dynamic-views-paired-property-right",
-  "dynamic-views-paired-property-column",
+  'dynamic-views-paired-property-left',
+  'dynamic-views-paired-property-right',
+  'dynamic-views-paired-property-column',
 ] as const;
 
 /**
@@ -180,93 +180,93 @@ const PAIRED_PROPERTY_CLASSES = [
  */
 export function applyViewContainerStyles(
   container: HTMLElement,
-  settings: BasesResolvedSettings,
+  settings: BasesResolvedSettings
 ): void {
   // Paired property layout
   container.classList.remove(...PAIRED_PROPERTY_CLASSES);
   switch (settings.rightPropertyPosition) {
-    case "left":
-      container.classList.add("dynamic-views-paired-property-left");
+    case 'left':
+      container.classList.add('dynamic-views-paired-property-left');
       break;
-    case "right":
-      container.classList.add("dynamic-views-paired-property-right");
+    case 'right':
+      container.classList.add('dynamic-views-paired-property-right');
       break;
-    case "column":
-      container.classList.add("dynamic-views-paired-property-column");
+    case 'column':
+      container.classList.add('dynamic-views-paired-property-column');
       break;
   }
 
   // CSS variables
   container.style.setProperty(
-    "--dynamic-views-thumbnail-size",
-    `${settings.thumbnailSize}px`,
+    '--dynamic-views-thumbnail-size',
+    `${settings.thumbnailSize}px`
   );
   container.style.setProperty(
-    "--dynamic-views-text-preview-lines",
-    String(settings.textPreviewLines),
+    '--dynamic-views-text-preview-lines',
+    String(settings.textPreviewLines)
   );
   container.style.setProperty(
-    "--dynamic-views-title-lines",
-    String(settings.titleLines),
+    '--dynamic-views-title-lines',
+    String(settings.titleLines)
   );
 
   // Poster display mode — container class
-  container.classList.remove("poster-mode-gradient", "poster-mode-overlay");
+  container.classList.remove('poster-mode-gradient', 'poster-mode-overlay');
   container.classList.add(`poster-mode-${settings.posterDisplayMode}`);
 
   // Image fit — container class
-  container.classList.remove("image-fit-crop", "image-fit-contain");
+  container.classList.remove('image-fit-crop', 'image-fit-contain');
   container.classList.add(`image-fit-${settings.imageFit}`);
 }
 
 /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
 export function applyCssOnlySettings(
   config: BasesViewConfig,
-  containerEl: HTMLElement,
+  containerEl: HTMLElement
 ): void {
   if (!config || !containerEl) return;
 
-  const textPreviewLines = config.get("textPreviewLines");
-  if (typeof textPreviewLines === "number") {
+  const textPreviewLines = config.get('textPreviewLines');
+  if (typeof textPreviewLines === 'number') {
     containerEl.style.setProperty(
-      "--dynamic-views-text-preview-lines",
-      String(textPreviewLines),
+      '--dynamic-views-text-preview-lines',
+      String(textPreviewLines)
     );
   }
 
-  const titleLines = config.get("titleLines");
-  if (typeof titleLines === "number") {
+  const titleLines = config.get('titleLines');
+  if (typeof titleLines === 'number') {
     containerEl.style.setProperty(
-      "--dynamic-views-title-lines",
-      String(titleLines),
+      '--dynamic-views-title-lines',
+      String(titleLines)
     );
   }
 
-  const imageRatio = config.get("imageRatio");
-  if (typeof imageRatio === "number") {
+  const imageRatio = config.get('imageRatio');
+  if (typeof imageRatio === 'number') {
     containerEl.style.setProperty(
-      "--dynamic-views-image-aspect-ratio",
-      String(imageRatio),
+      '--dynamic-views-image-aspect-ratio',
+      String(imageRatio)
     );
   }
 
-  const thumbnailSize = config.get("thumbnailSize");
-  if (typeof thumbnailSize === "number") {
+  const thumbnailSize = config.get('thumbnailSize');
+  if (typeof thumbnailSize === 'number') {
     containerEl.style.setProperty(
-      "--dynamic-views-thumbnail-size",
-      `${thumbnailSize}px`,
+      '--dynamic-views-thumbnail-size',
+      `${thumbnailSize}px`
     );
   }
 
   // Poster display mode — container class
-  containerEl.classList.remove("poster-mode-gradient", "poster-mode-overlay");
+  containerEl.classList.remove('poster-mode-gradient', 'poster-mode-overlay');
   const posterDisplayMode =
-    (config.get("posterDisplayMode") as string) ?? "gradient";
+    (config.get('posterDisplayMode') as string) ?? 'gradient';
   containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
 
   // Image fit — container class
-  containerEl.classList.remove("image-fit-crop", "image-fit-contain");
-  const imageFit = (config.get("imageFit") as string) ?? "crop";
+  containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
+  const imageFit = (config.get('imageFit') as string) ?? 'crop';
   containerEl.classList.add(`image-fit-${imageFit}`);
 }
 
@@ -294,13 +294,13 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
 
   for (const titleEl of titles) {
     // Skip titles in content-hidden cards (dimension reads trigger Chromium warnings)
-    if (titleEl.closest(".card")?.classList.contains(CONTENT_HIDDEN_CLASS))
+    if (titleEl.closest('.card')?.classList.contains(CONTENT_HIDDEN_CLASS))
       continue;
 
-    const textEl = titleEl.querySelector<HTMLElement>(".card-title-text");
+    const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
     if (!textEl) continue;
 
-    const fullText = (textEl.textContent || "").trim();
+    const fullText = (textEl.textContent || '').trim();
     if (!fullText) continue;
 
     const style = getComputedStyle(titleEl);
@@ -315,7 +315,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
       width,
       font: style.font,
       maxLines:
-        parseInt(style.getPropertyValue("--dynamic-views-title-lines")) || 2,
+        parseInt(style.getPropertyValue('--dynamic-views-title-lines')) || 2,
     });
   }
 
@@ -327,16 +327,16 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
 
 export function initializeTitleTruncation(container: HTMLElement): void {
   // Only run when extension mode is enabled
-  if (!document.body.classList.contains("dynamic-views-file-type-ext")) {
+  if (!document.body.classList.contains('dynamic-views-file-type-ext')) {
     return;
   }
 
   // Skip if scroll mode is enabled (no truncation)
-  if (document.body.classList.contains("dynamic-views-title-overflow-scroll")) {
+  if (document.body.classList.contains('dynamic-views-title-overflow-scroll')) {
     return;
   }
 
-  const titles = container.querySelectorAll<HTMLElement>(".card-title");
+  const titles = container.querySelectorAll<HTMLElement>('.card-title');
   if (titles.length === 0) return;
 
   truncateTitleElements(titles);
@@ -350,18 +350,18 @@ export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
   if (cards.length === 0) return;
 
   // Only run when extension mode is enabled
-  if (!document.body.classList.contains("dynamic-views-file-type-ext")) {
+  if (!document.body.classList.contains('dynamic-views-file-type-ext')) {
     return;
   }
 
   // Skip if scroll mode is enabled (no truncation)
-  if (document.body.classList.contains("dynamic-views-title-overflow-scroll")) {
+  if (document.body.classList.contains('dynamic-views-title-overflow-scroll')) {
     return;
   }
 
   const titles: HTMLElement[] = [];
   for (const card of cards) {
-    const title = card.querySelector<HTMLElement>(".card-title");
+    const title = card.querySelector<HTMLElement>('.card-title');
     if (title) titles.push(title);
   }
 
@@ -370,7 +370,7 @@ export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
 }
 
 // Extend App type to include dragManager
-declare module "obsidian" {
+declare module 'obsidian' {
   interface App {
     dragManager: {
       dragFile(evt: DragEvent, file: TFile): unknown;
@@ -409,11 +409,11 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
     if (cardWidth <= 0) continue;
 
     const thumb = card.querySelector<HTMLElement>(
-      ".card-thumbnail, .card-thumbnail-placeholder",
+      '.card-thumbnail, .card-thumbnail-placeholder'
     );
     const thumbWidth = thumb?.offsetWidth ?? 0;
-    const wasCompact = card.classList.contains("compact-mode");
-    const wasStacked = card.classList.contains("thumbnail-stack");
+    const wasCompact = card.classList.contains('compact-mode');
+    const wasStacked = card.classList.contains('thumbnail-stack');
 
     measurements.push({
       card,
@@ -442,11 +442,11 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
       cardWidth < thumbWidth * THUMBNAIL_STACK_MULTIPLIER;
 
     if (shouldBeCompact !== wasCompact) {
-      card.classList.toggle("compact-mode", shouldBeCompact);
+      card.classList.toggle('compact-mode', shouldBeCompact);
       anyChanged = true;
     }
     if (thumb && shouldBeStacked !== wasStacked) {
-      card.classList.toggle("thumbnail-stack", shouldBeStacked);
+      card.classList.toggle('thumbnail-stack', shouldBeStacked);
       anyChanged = true;
     }
   }
@@ -466,12 +466,12 @@ export class SharedCardRenderer {
   constructor(
     protected app: App,
     protected plugin: DynamicViews,
-    protected updateLayoutRef: { current: ((source?: string) => void) | null },
+    protected updateLayoutRef: { current: ((source?: string) => void) | null }
   ) {}
 
   // Wrapper that tags image-load relayouts with source for coalescing in masonry
   private imageLayoutCallback = (): void => {
-    this.updateLayoutRef.current?.("image-load");
+    this.updateLayoutRef.current?.('image-load');
   };
 
   /**
@@ -511,12 +511,12 @@ export class SharedCardRenderer {
   private renderTextWithLinks(
     container: HTMLElement,
     text: string,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): void {
     const segments = findLinksInText(text);
 
     for (const segment of segments) {
-      if (segment.type === "text") {
+      if (segment.type === 'text') {
         // Wrap text in span to preserve whitespace in flex containers
         container.createSpan({ text: segment.content });
       } else {
@@ -528,30 +528,30 @@ export class SharedCardRenderer {
   private renderLink(
     container: HTMLElement,
     link: ParsedLink,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): void {
     // Internal link (wikilink or markdown internal)
-    if (link.type === "internal") {
+    if (link.type === 'internal') {
       if (link.isEmbed) {
         // Embedded internal link - render as embed container
-        const embed = container.createSpan({ cls: "internal-embed" });
+        const embed = container.createSpan({ cls: 'internal-embed' });
         embed.dataset.src = link.url;
         embed.setText(link.caption);
         embed.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.preventDefault();
             e.stopPropagation();
             const newLeaf = e.metaKey || e.ctrlKey;
-            void this.app.workspace.openLinkText(link.url, "", newLeaf);
+            void this.app.workspace.openLinkText(link.url, '', newLeaf);
           },
-          { signal },
+          { signal }
         );
         return;
       }
       // Regular internal link
-      const el = container.createEl("a", {
-        cls: "internal-link",
+      const el = container.createEl('a', {
+        cls: 'internal-link',
         text: link.caption,
         href: link.url,
       });
@@ -559,42 +559,42 @@ export class SharedCardRenderer {
       el.tabIndex = -1;
       el.draggable = true;
       el.addEventListener(
-        "click",
+        'click',
         (e) => {
           e.preventDefault();
           e.stopPropagation();
           const newLeaf = e.metaKey || e.ctrlKey;
-          void this.app.workspace.openLinkText(link.url, "", newLeaf);
+          void this.app.workspace.openLinkText(link.url, '', newLeaf);
         },
-        { signal },
+        { signal }
       );
       el.addEventListener(
-        "dragstart",
+        'dragstart',
         (e) => {
           e.stopPropagation();
           const file = this.app.metadataCache.getFirstLinkpathDest(
             link.url,
-            "",
+            ''
           );
           if (!(file instanceof TFile)) return;
           const dragData = this.app.dragManager.dragFile(e, file);
           this.app.dragManager.onDragStart(e, dragData);
         },
-        { signal },
+        { signal }
       );
       el.addEventListener(
-        "contextmenu",
+        'contextmenu',
         (e) => {
           e.preventDefault();
           e.stopPropagation();
           const file = this.app.metadataCache.getFirstLinkpathDest(
             link.url,
-            "",
+            ''
           );
           if (!(file instanceof TFile)) return;
           showFileContextMenu(e, this.app, file, link.url);
         },
-        { signal },
+        { signal }
       );
       return;
     }
@@ -602,48 +602,48 @@ export class SharedCardRenderer {
     // External link
     if (link.isEmbed) {
       // Embedded external link (image)
-      const img = container.createEl("img", {
-        cls: "external-embed",
+      const img = container.createEl('img', {
+        cls: 'external-embed',
         attr: { src: link.url, alt: link.caption },
       });
       img.addEventListener(
-        "click",
+        'click',
         (e) => {
           e.stopPropagation();
         },
-        { signal },
+        { signal }
       );
       img.addEventListener(
-        "error",
+        'error',
         () => {
           if (signal?.aborted) return; // Guard against race with cleanup
-          img.addClass("dynamic-views-hidden");
+          img.addClass('dynamic-views-hidden');
         },
-        { signal, once: true },
+        { signal, once: true }
       );
       return;
     }
     // Regular external link
     // Only open in new tab for web URLs, not custom URIs like obsidian://
-    const el = container.createEl("a", {
-      cls: "external-link",
+    const el = container.createEl('a', {
+      cls: 'external-link',
       text: link.caption,
       href: link.url,
     });
     el.tabIndex = -1;
     if (link.isWebUrl) {
-      el.target = "_blank";
-      el.rel = "noopener noreferrer";
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
     }
     el.addEventListener(
-      "click",
+      'click',
       (e) => {
         e.stopPropagation();
       },
-      { signal },
+      { signal }
     );
     el.addEventListener(
-      "dragstart",
+      'dragstart',
       (e) => {
         e.stopPropagation();
         e.dataTransfer?.clearData();
@@ -652,16 +652,16 @@ export class SharedCardRenderer {
           link.caption === link.url
             ? link.url
             : `[${link.caption}](${link.url})`;
-        e.dataTransfer?.setData("text/plain", dragText);
+        e.dataTransfer?.setData('text/plain', dragText);
       },
-      { signal },
+      { signal }
     );
     el.addEventListener(
-      "contextmenu",
+      'contextmenu',
       (e) => {
         showExternalLinkContextMenu(e, link.url);
       },
-      { signal },
+      { signal }
     );
   }
 
@@ -687,58 +687,58 @@ export class SharedCardRenderer {
       onHoverEnd?: () => void;
       getVirtualRects?: () => VirtualCardRect[];
       onMountItem?: (index: number) => HTMLElement | null;
-    },
+    }
   ): CardHandle {
     // Snapshot instance array lengths for per-card resource collection
     const observersBefore = this.propertyObservers.length;
     const slideshowsBefore = this.slideshowCleanups.length;
 
     // Create card element
-    const cardEl = container.createDiv("card");
+    const cardEl = container.createDiv('card');
 
     const format = settings.imageFormat;
     const position = settings.imagePosition;
 
     // Poster: force title-as-link and card context menu (click toggles reveal, not file open)
-    const isPoster = format === "poster";
+    const isPoster = format === 'poster';
 
     // Check if any image source is configured (property or embeds)
     const hasImageSource =
-      !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== "never";
+      !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== 'never';
 
     // Add format/position classes only when an image source is configured
     if (hasImageSource) {
-      if (format === "cover") {
-        cardEl.classList.add("image-format-cover");
-      } else if (format === "thumbnail") {
-        cardEl.classList.add("image-format-thumbnail");
-      } else if (format === "poster") {
-        cardEl.classList.add("image-format-poster");
-      } else if (format === "backdrop") {
-        cardEl.classList.add("image-format-backdrop");
+      if (format === 'cover') {
+        cardEl.classList.add('image-format-cover');
+      } else if (format === 'thumbnail') {
+        cardEl.classList.add('image-format-thumbnail');
+      } else if (format === 'poster') {
+        cardEl.classList.add('image-format-poster');
+      } else if (format === 'backdrop') {
+        cardEl.classList.add('image-format-backdrop');
       }
 
-      if (format === "thumbnail") {
+      if (format === 'thumbnail') {
         cardEl.classList.add(`card-thumbnail-${position}`);
-      } else if (format === "cover") {
+      } else if (format === 'cover') {
         cardEl.classList.add(`card-cover-${position}`);
       }
     }
 
-    cardEl.setAttribute("data-path", card.path);
+    cardEl.setAttribute('data-path', card.path);
 
     const isPosterClickReveal =
       isPoster &&
       hasImageSource &&
       card.imageUrl &&
-      (this.app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
+      (this.app.isMobile || hasBodyClass('dynamic-views-poster-reveal-press'));
 
     const isCardClickable =
-      settings.openFileAction === "card" && !isPosterClickReveal;
+      settings.openFileAction === 'card' && !isPosterClickReveal;
     if (isCardClickable) {
-      cardEl.setAttribute("draggable", "true");
+      cardEl.setAttribute('draggable', 'true');
     }
-    cardEl.classList.toggle("clickable-card", isCardClickable);
+    cardEl.classList.toggle('clickable-card', isCardClickable);
 
     // Create AbortController for event listener cleanup
     const abortController = new AbortController();
@@ -755,19 +755,19 @@ export class SharedCardRenderer {
       // Create scope for Cmd/Ctrl+Enter and Cmd/Ctrl+Space handling
       // Pass app.scope as parent so unhandled keys bubble up to Obsidian
       cardScope = new Scope(this.app.scope);
-      cardScope.register(["Mod"], "Enter", () => {
-        void this.app.workspace.openLinkText(card.path, "", "tab");
+      cardScope.register(['Mod'], 'Enter', () => {
+        void this.app.workspace.openLinkText(card.path, '', 'tab');
         return false;
       });
-      cardScope.register(["Mod"], " ", () => {
-        void this.app.workspace.openLinkText(card.path, "", "tab");
+      cardScope.register(['Mod'], ' ', () => {
+        void this.app.workspace.openLinkText(card.path, '', 'tab');
         return false;
       });
       this.cardScopes.push(cardScope);
 
       // Update focus state and push scope when card receives focus
       cardEl.addEventListener(
-        "focus",
+        'focus',
         () => {
           if (keyboardNav.onFocusChange) {
             keyboardNav.onFocusChange(keyboardNav.index);
@@ -779,12 +779,12 @@ export class SharedCardRenderer {
           this.activeScope = cardScope;
           this.app.keymap.pushScope(cardScope!);
         },
-        { signal },
+        { signal }
       );
 
       // Pop scope when card loses focus
       cardEl.addEventListener(
-        "blur",
+        'blur',
         () => {
           // Only pop if this card's scope is the active one
           if (this.activeScope === cardScope) {
@@ -792,18 +792,18 @@ export class SharedCardRenderer {
             this.activeScope = null;
           }
         },
-        { signal },
+        { signal }
       );
 
       // Handle keyboard events (Enter/Space, arrows, Tab, Escape)
       cardEl.addEventListener(
-        "keydown",
+        'keydown',
         (e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (e.key === 'Enter' || e.key === ' ') {
             // Open file (Mod+key handled by scope above)
             if (!e.metaKey && !e.ctrlKey) {
               e.preventDefault();
-              void this.app.workspace.openLinkText(card.path, "", false);
+              void this.app.workspace.openLinkText(card.path, '', false);
             }
           } else if (isArrowKey(e.key)) {
             if (isImageViewerBlockingNav(keyboardNav.containerRef.current))
@@ -829,12 +829,12 @@ export class SharedCardRenderer {
                   }
                 },
                 keyboardNav.getVirtualRects?.(),
-                keyboardNav.onMountItem,
+                keyboardNav.onMountItem
               );
               // Clear immediately after navigation completes (synchronous)
               container._intentionalFocus = false;
             }
-          } else if (e.key === "Escape") {
+          } else if (e.key === 'Escape') {
             // Exit keyboard nav mode and unfocus card
             const container = keyboardNav.containerRef.current as
               | (HTMLElement & { _keyboardNavActive?: boolean })
@@ -845,7 +845,7 @@ export class SharedCardRenderer {
             cardEl.blur();
           }
         },
-        { signal },
+        { signal }
       );
     }
 
@@ -853,7 +853,7 @@ export class SharedCardRenderer {
     // Use capture phase so this fires before child element stopPropagation
     if (keyboardNav?.containerRef) {
       cardEl.addEventListener(
-        "mousedown",
+        'mousedown',
         () => {
           const container = keyboardNav.containerRef.current as
             | (HTMLElement & { _keyboardNavActive?: boolean })
@@ -862,20 +862,20 @@ export class SharedCardRenderer {
             container._keyboardNavActive = false;
           }
         },
-        { signal, capture: true },
+        { signal, capture: true }
       );
     }
 
     // Handle card click to open file
     cardEl.addEventListener(
-      "click",
+      'click',
       (e) => {
         // Poster tap toggle: mobile or desktop press mode
         // Uses outer isPosterClickReveal + DOM guard (poster element may be removed after render)
-        if (isPosterClickReveal && cardEl.querySelector(".card-poster")) {
+        if (isPosterClickReveal && cardEl.querySelector('.card-poster')) {
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
-            "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
+            'a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container'
           );
           // Don't dismiss if user has selected text (drag-select or double-click)
           const hasTextSelection =
@@ -885,51 +885,51 @@ export class SharedCardRenderer {
           // Don't dismiss if click landed on text-selectable content —
           // prevents double-click word selection from being swallowed by dismiss
           const isTextTarget =
-            settings.openFileAction === "title" &&
+            settings.openFileAction === 'title' &&
             target.closest(
-              ".card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content",
+              '.card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content'
             );
 
-          if (!cardEl.classList.contains("poster-revealed")) {
+          if (!cardEl.classList.contains('poster-revealed')) {
             e.preventDefault();
             e.stopPropagation();
             // Dismiss any other revealed card in the same view
             cardEl
-              .closest(".dynamic-views")
-              ?.querySelector(".card.poster-revealed")
-              ?.classList.remove("poster-revealed");
-            cardEl.classList.add("poster-revealed");
+              .closest('.dynamic-views')
+              ?.querySelector('.card.poster-revealed')
+              ?.classList.remove('poster-revealed');
+            cardEl.classList.add('poster-revealed');
             // Press acts as hover intent — ungate pointer cursors
-            cardEl.classList.add("hover-intent-active");
+            cardEl.classList.add('hover-intent-active');
             return;
           } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
             e.stopPropagation();
-            cardEl.classList.remove("poster-revealed");
+            cardEl.classList.remove('poster-revealed');
             return;
           }
         }
 
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
         if (
-          settings.openFileAction === "card" &&
+          settings.openFileAction === 'card' &&
           !(
             isPoster &&
             card.imageUrl &&
             (this.app.isMobile ||
-              hasBodyClass("dynamic-views-poster-reveal-press"))
+              hasBodyClass('dynamic-views-poster-reveal-press'))
           )
         ) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
-          const isLink = target.tagName === "A" || target.closest("a");
+          const isLink = target.tagName === 'A' || target.closest('a');
           const isTag =
-            target.classList.contains("tag") || target.closest(".tag");
+            target.classList.contains('tag') || target.closest('.tag');
           const isPathSegment =
-            target.classList.contains("path-segment") ||
-            target.closest(".path-segment");
-          const isImage = target.tagName === "IMG";
+            target.classList.contains('path-segment') ||
+            target.closest('.path-segment');
+          const isImage = target.tagName === 'IMG';
           const isZoomEnabled = !document.body.classList.contains(
-            "dynamic-views-image-viewer-disabled",
+            'dynamic-views-image-viewer-disabled'
           );
 
           if (
@@ -946,22 +946,22 @@ export class SharedCardRenderer {
           }
         }
       },
-      { signal },
+      { signal }
     );
 
     // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
-    if (window.matchMedia("(hover: hover)").matches) {
+    if (window.matchMedia('(hover: hover)').matches) {
       setupHoverIntent(
         cardEl,
         () => {
-          cardEl.classList.add("hover-intent-active");
+          cardEl.classList.add('hover-intent-active');
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
-          cardEl.classList.remove("hover-intent-active");
+          cardEl.classList.remove('hover-intent-active');
           keyboardNav?.onHoverEnd?.();
         },
-        signal,
+        signal
       );
     }
 
@@ -969,39 +969,39 @@ export class SharedCardRenderer {
     // Gates content reveal (via CSS) and scroll access on desktop.
     if (
       isPoster &&
-      window.matchMedia("(hover: hover)").matches &&
-      !hasBodyClass("dynamic-views-poster-reveal-press")
+      window.matchMedia('(hover: hover)').matches &&
+      !hasBodyClass('dynamic-views-poster-reveal-press')
     ) {
       setupHoverIntent(
         cardEl,
         () => {
           cardEl
-            .closest(".dynamic-views")
-            ?.querySelector(".card.poster-hover-active")
-            ?.classList.remove("poster-hover-active");
-          cardEl.classList.add("poster-hover-active");
+            .closest('.dynamic-views')
+            ?.querySelector('.card.poster-hover-active')
+            ?.classList.remove('poster-hover-active');
+          cardEl.classList.add('poster-hover-active');
         },
-        () => cardEl.classList.remove("poster-hover-active"),
-        signal,
+        () => cardEl.classList.remove('poster-hover-active'),
+        signal
       );
     }
 
     // Handle hover for page preview (only on card when openFileAction is 'card')
     // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
-    if (settings.openFileAction === "card") {
+    if (settings.openFileAction === 'card') {
       cardEl.addEventListener(
-        "mouseenter",
+        'mouseenter',
         (e) => {
-          this.app.workspace.trigger("hover-link", {
+          this.app.workspace.trigger('hover-link', {
             event: e,
-            source: "bases",
+            source: 'bases',
             hoverParent: { hoverPopover: null },
             targetEl: cardEl,
             linktext: card.path,
             sourcePath: card.path,
           });
         },
-        { signal },
+        { signal }
       );
     }
 
@@ -1011,22 +1011,22 @@ export class SharedCardRenderer {
     };
 
     // Attach context menu to card when openFileAction is 'card'
-    if (settings.openFileAction === "card") {
+    if (settings.openFileAction === 'card') {
       cardEl.addEventListener(
-        "contextmenu",
+        'contextmenu',
         (e: MouseEvent) => {
           // Poster click-reveal: context menu on title text only.
           // Mobile: .card-title (full wrapper — fat finger). Desktop: .card-title-text (precise).
           if (
             isPosterClickReveal &&
             !(e.target as HTMLElement).closest(
-              this.app.isMobile ? ".card-title" : ".card-title-text",
+              this.app.isMobile ? '.card-title' : '.card-title-text'
             )
           )
             return;
           handleContextMenu(e);
         },
-        { signal },
+        { signal }
       );
     }
 
@@ -1044,81 +1044,81 @@ export class SharedCardRenderer {
       // Add file type icon first (hidden by default, shown via CSS when Icon mode selected)
       const icon = getFileTypeIcon(card.path);
       if (icon) {
-        const iconEl = titleEl.createSpan({ cls: "card-title-icon" });
+        const iconEl = titleEl.createSpan({ cls: 'card-title-icon' });
         setIcon(iconEl, icon);
       }
 
       // Add file format indicator before title text (for Flair mode float:left)
       const extInfo = getFileExtInfo(card.path, isFullname);
-      const extNoDot = extInfo?.ext.slice(1) || "";
+      const extNoDot = extInfo?.ext.slice(1) || '';
       if (extInfo) {
         titleEl.createSpan({
-          cls: "card-title-ext",
-          attr: { "data-ext": extNoDot },
+          cls: 'card-title-ext',
+          attr: { 'data-ext': extNoDot },
         });
       }
 
       // Add title text
-      if (settings.openFileAction === "title" || isPosterClickReveal) {
+      if (settings.openFileAction === 'title' || isPosterClickReveal) {
         // Render as clickable, draggable link
-        const link = titleEl.createEl("a", {
-          cls: "internal-link card-title-text",
+        const link = titleEl.createEl('a', {
+          cls: 'internal-link card-title-text',
           text: displayTitle,
           attr: {
-            "data-href": card.path,
+            'data-href': card.path,
             href: card.path,
-            draggable: "true",
-            "data-ext": extNoDot,
-            tabindex: "-1",
+            draggable: 'true',
+            'data-ext': extNoDot,
+            tabindex: '-1',
           },
         });
 
         link.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.preventDefault();
             e.stopPropagation();
             const paneType = Keymap.isModEvent(e);
             void this.app.workspace.openLinkText(
               card.path,
-              "",
-              paneType || false,
+              '',
+              paneType || false
             );
           },
-          { signal },
+          { signal }
         );
 
         // Page preview on hover — skip when card handler already covers it
         // (isPosterClickReveal + openFileAction 'card' = card mouseenter handles it)
-        if (!(isPosterClickReveal && settings.openFileAction === "card")) {
+        if (!(isPosterClickReveal && settings.openFileAction === 'card')) {
           link.addEventListener(
-            "mouseenter",
+            'mouseenter',
             (e) => {
-              this.app.workspace.trigger("hover-link", {
+              this.app.workspace.trigger('hover-link', {
                 event: e,
-                source: "bases",
+                source: 'bases',
                 hoverParent: { hoverPopover: null },
                 targetEl: link,
                 linktext: card.path,
                 sourcePath: card.path,
               });
             },
-            { signal },
+            { signal }
           );
         }
 
         // Open context menu on right-click
-        link.addEventListener("contextmenu", handleContextMenu, { signal });
+        link.addEventListener('contextmenu', handleContextMenu, { signal });
 
         // Make title draggable when openFileAction is 'title'
-        link.addEventListener("dragstart", handleDrag, { signal });
+        link.addEventListener('dragstart', handleDrag, { signal });
 
         // Dead zone: clicks/contextmenu on .card-title that miss the link.
         // Mobile only — fat-finger tap targets. Desktop uses precise link clicks.
         // Only for open-on-title — in press mode, only the link itself is clickable.
-        if (settings.openFileAction === "title" && this.app.isMobile) {
+        if (settings.openFileAction === 'title' && this.app.isMobile) {
           titleEl.addEventListener(
-            "click",
+            'click',
             (e) => {
               if (!link.contains(e.target as Node)) {
                 e.preventDefault();
@@ -1126,50 +1126,50 @@ export class SharedCardRenderer {
                 const paneType = Keymap.isModEvent(e);
                 void this.app.workspace.openLinkText(
                   card.path,
-                  "",
-                  paneType || false,
+                  '',
+                  paneType || false
                 );
               }
             },
-            { signal },
+            { signal }
           );
 
           titleEl.addEventListener(
-            "contextmenu",
+            'contextmenu',
             (e) => {
               if (!link.contains(e.target as Node)) {
                 handleContextMenu(e);
               }
             },
-            { signal },
+            { signal }
           );
         }
 
         // Add extension suffix inside link for Extension mode
         if (
           extInfo &&
-          document.body.classList.contains("dynamic-views-file-type-ext")
+          document.body.classList.contains('dynamic-views-file-type-ext')
         ) {
           link.createSpan({
-            cls: "card-title-ext-suffix",
+            cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
           });
         }
       } else {
         // Render as plain text in a span for truncation
         titleEl.createSpan({
-          cls: "card-title-text",
+          cls: 'card-title-text',
           text: displayTitle,
-          attr: { "data-ext": extNoDot },
+          attr: { 'data-ext': extNoDot },
         });
 
         // Add extension suffix for Extension mode
         if (
           extInfo &&
-          document.body.classList.contains("dynamic-views-file-type-ext")
+          document.body.classList.contains('dynamic-views-file-type-ext')
         ) {
           titleEl.createSpan({
-            cls: "card-title-ext-suffix",
+            cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
           });
         }
@@ -1177,7 +1177,7 @@ export class SharedCardRenderer {
 
       // Setup scroll gradients for title if scroll mode is enabled
       if (
-        document.body.classList.contains("dynamic-views-title-overflow-scroll")
+        document.body.classList.contains('dynamic-views-title-overflow-scroll')
       ) {
         setupElementScrollGradient(titleEl, signal);
       }
@@ -1186,7 +1186,7 @@ export class SharedCardRenderer {
     // Helper to render subtitle content into a container
     const renderSubtitleContent = (
       subtitleEl: HTMLElement,
-      subtitleProperty: string,
+      subtitleProperty: string
     ) => {
       this.renderPropertyContent(
         subtitleEl,
@@ -1194,16 +1194,16 @@ export class SharedCardRenderer {
         card.subtitle,
         card,
         entry,
-        { ...settings, propertyLabels: "hide" },
+        { ...settings, propertyLabels: 'hide' },
         shouldHideMissingProperties(),
         getHideEmptyMode(),
-        signal,
+        signal
       );
 
       // Setup scroll gradients if scroll mode is enabled
       if (
         document.body.classList.contains(
-          "dynamic-views-subtitle-overflow-scroll",
+          'dynamic-views-subtitle-overflow-scroll'
         )
       ) {
         setupElementScrollGradient(subtitleEl, signal);
@@ -1211,7 +1211,7 @@ export class SharedCardRenderer {
 
       // Setup scroll gradients for inner wrapper (works in wrap mode too)
       const subtitleWrapper = subtitleEl.querySelector(
-        ".property-content-wrapper",
+        '.property-content-wrapper'
       ) as HTMLElement;
       if (subtitleWrapper) {
         setupElementScrollGradient(subtitleWrapper, signal);
@@ -1230,10 +1230,10 @@ export class SharedCardRenderer {
       Array.from(
         new Set(
           rawUrls.filter(
-            (url) => url && typeof url === "string" && url.trim().length > 0,
-          ),
-        ),
-      ),
+            (url) => url && typeof url === 'string' && url.trim().length > 0
+          )
+        )
+      )
     );
     const hasImage = imageUrls.length > 0;
 
@@ -1241,12 +1241,12 @@ export class SharedCardRenderer {
     // In Extension mode, use basename when title property includes an extension
     // (the extension suffix is appended separately by renderTitleContent)
     const isExtMode = document.body.classList.contains(
-      "dynamic-views-file-type-ext",
+      'dynamic-views-file-type-ext'
     );
-    const titleProp = settings.titleProperty || "";
+    const titleProp = settings.titleProperty || '';
     const titleHasExtension =
-      titleProp === "file.name" || titleProp === "file.fullname";
-    const isFullname = titleProp === "file.fullname";
+      titleProp === 'file.name' || titleProp === 'file.fullname';
+    const isFullname = titleProp === 'file.fullname';
     const displayTitle =
       isExtMode && titleHasExtension ? entry.file.basename : card.title;
     const hasTitle = !!displayTitle;
@@ -1254,9 +1254,9 @@ export class SharedCardRenderer {
 
     // Covers: create wrapper BEFORE .card-content for top/left position
     if (
-      format === "cover" &&
+      format === 'cover' &&
       (hasImage || hasImageSource) &&
-      (position === "top" || position === "left")
+      (position === 'top' || position === 'left')
     ) {
       this.renderCoverWrapper(
         cardEl,
@@ -1265,90 +1265,90 @@ export class SharedCardRenderer {
         position,
         settings,
         card,
-        signal,
+        signal
       );
     }
 
     // Universal content wrapper: header + body
-    const cardContent = cardEl.createDiv("card-content");
+    const cardContent = cardEl.createDiv('card-content');
 
     // Title, Subtitle, and URL button — always wrapped in card-header
     if (hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) {
-      const headerEl = cardContent.createDiv("card-header");
+      const headerEl = cardContent.createDiv('card-header');
 
       if (hasTitle || hasSubtitle) {
-        const groupEl = headerEl.createDiv("card-title-block");
+        const groupEl = headerEl.createDiv('card-title-block');
 
         if (hasTitle) {
-          const titleEl = groupEl.createDiv("card-title");
+          const titleEl = groupEl.createDiv('card-title');
           renderTitleContent(titleEl);
         }
 
         if (hasSubtitle) {
-          const subtitleEl = groupEl.createDiv("card-subtitle");
+          const subtitleEl = groupEl.createDiv('card-subtitle');
           renderSubtitleContent(subtitleEl, settings.subtitleProperty);
         }
       }
 
       if (card.hasValidUrl && card.urlValue) {
         const iconEl = headerEl.createDiv(
-          "card-title-url-icon text-icon-button svg-icon",
+          'card-title-url-icon text-icon-button svg-icon'
         );
-        iconEl.setAttribute("aria-label", card.urlValue);
+        iconEl.setAttribute('aria-label', card.urlValue);
         setIcon(iconEl, getUrlIcon());
 
         iconEl.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.open(card.urlValue!, "_blank", "noopener,noreferrer");
+            window.open(card.urlValue!, '_blank', 'noopener,noreferrer');
           },
-          { signal },
+          { signal }
         );
       }
     }
 
     // Make card draggable when settings.openFileAction is 'card'
-    if (settings.openFileAction === "card") {
-      cardEl.addEventListener("dragstart", handleDrag, { signal });
+    if (settings.openFileAction === 'card') {
+      cardEl.addEventListener('dragstart', handleDrag, { signal });
     }
 
     // POSTER: absolute-positioned image fills entire card, content hidden until hover
-    if (format === "poster" && hasImage) {
-      const bgWrapper = cardEl.createDiv("card-poster");
-      const img = bgWrapper.createEl("img", {
-        attr: { src: imageUrls[0], alt: "" },
+    if (format === 'poster' && hasImage) {
+      const bgWrapper = cardEl.createDiv('card-poster');
+      const img = bgWrapper.createEl('img', {
+        attr: { src: imageUrls[0], alt: '' },
       });
       setupBackdropImageLoader(
         img,
         cardEl,
         imageUrls,
         this.imageLayoutCallback,
-        signal,
+        signal
       );
     }
 
     // BACKDROP: absolute-positioned image fills entire card
-    if (format === "backdrop" && hasImage) {
-      const bgWrapper = cardEl.createDiv("card-backdrop");
-      const img = bgWrapper.createEl("img", {
-        attr: { src: imageUrls[0], alt: "" },
+    if (format === 'backdrop' && hasImage) {
+      const bgWrapper = cardEl.createDiv('card-backdrop');
+      const img = bgWrapper.createEl('img', {
+        attr: { src: imageUrls[0], alt: '' },
       });
       setupBackdropImageLoader(
         img,
         cardEl,
         imageUrls,
         this.imageLayoutCallback,
-        signal,
+        signal
       );
     }
 
     // Universal card-body: contains properties and previews
-    const bodyEl = cardContent.createDiv("card-body");
+    const bodyEl = cardContent.createDiv('card-body');
 
     // Poster: vertical scroll gradient on card-body
-    if (format === "poster") {
+    if (format === 'poster') {
       setupVerticalScrollGradient(bodyEl, signal);
     }
 
@@ -1357,7 +1357,7 @@ export class SharedCardRenderer {
 
     // Determine if card-previews will have children
     const hasTextPreview = card.textPreview;
-    const isThumbnailFormat = format === "thumbnail";
+    const isThumbnailFormat = format === 'thumbnail';
     // Only show thumbnail placeholder when an image source is configured
     const showThumbnail = isThumbnailFormat && (hasImage || hasImageSource);
 
@@ -1365,9 +1365,9 @@ export class SharedCardRenderer {
     let previewsEl: HTMLElement | null = null;
     if (hasTextPreview || showThumbnail) {
       // Insert before .card-properties-bottom if it exists (DOM order: top → previews → bottom)
-      const bottomProps = bodyEl.querySelector(".card-properties-bottom");
-      previewsEl = document.createElement("div");
-      previewsEl.className = "card-previews";
+      const bottomProps = bodyEl.querySelector('.card-properties-bottom');
+      previewsEl = document.createElement('div');
+      previewsEl.className = 'card-previews';
       if (bottomProps) {
         bodyEl.insertBefore(previewsEl, bottomProps);
       } else {
@@ -1375,36 +1375,36 @@ export class SharedCardRenderer {
       }
 
       if (hasTextPreview) {
-        const wrapper = previewsEl.createDiv("card-text-preview-wrapper");
-        const previewDiv = wrapper.createDiv("card-text-preview");
-        const textSpan = previewDiv.createSpan("card-text-preview-text");
+        const wrapper = previewsEl.createDiv('card-text-preview-wrapper');
+        const previewDiv = wrapper.createDiv('card-text-preview');
+        const textSpan = previewDiv.createSpan('card-text-preview-text');
         textSpan.textContent = card.textPreview ?? null;
       }
 
       // Thumbnail (all positions now inside card-previews)
       if (showThumbnail) {
         if (hasImage) {
-          const imageEl = previewsEl.createDiv("card-thumbnail");
+          const imageEl = previewsEl.createDiv('card-thumbnail');
           this.renderImage(
             imageEl,
             imageUrls,
-            "thumbnail",
+            'thumbnail',
             position,
             settings,
             cardEl,
-            signal,
+            signal
           );
         } else {
-          previewsEl.createDiv("card-thumbnail-placeholder");
+          previewsEl.createDiv('card-thumbnail-placeholder');
         }
       }
     }
 
     // Covers: create wrapper AFTER .card-content for bottom/right position
     if (
-      format === "cover" &&
+      format === 'cover' &&
       (hasImage || hasImageSource) &&
-      (position === "bottom" || position === "right")
+      (position === 'bottom' || position === 'right')
     ) {
       this.renderCoverWrapper(
         cardEl,
@@ -1413,20 +1413,20 @@ export class SharedCardRenderer {
         position,
         settings,
         card,
-        signal,
+        signal
       );
     }
 
     // Cover hover zoom intent: always listen on .card-cover (created by renderCoverWrapper above).
     // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
-    if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
-      const coverEl = cardEl.querySelector(".card-cover") as HTMLElement;
+    if (format === 'cover' && window.matchMedia('(hover: hover)').matches) {
+      const coverEl = cardEl.querySelector('.card-cover') as HTMLElement;
       if (coverEl) {
         setupHoverIntent(
           coverEl,
-          () => cardEl.classList.add("cover-hover-active"),
-          () => cardEl.classList.remove("cover-hover-active"),
-          signal,
+          () => cardEl.classList.add('cover-hover-active'),
+          () => cardEl.classList.remove('cover-hover-active'),
+          signal
         );
       }
     }
@@ -1437,11 +1437,11 @@ export class SharedCardRenderer {
 
     // Check if thumbnail stacking is applicable (class toggle for all, DOM move only with text preview)
     const needsThumbnailStacking =
-      format === "thumbnail" && (position === "left" || position === "right");
+      format === 'thumbnail' && (position === 'left' || position === 'right');
 
     const thumbnailEl = needsThumbnailStacking
       ? (bodyEl.querySelector(
-          ".card-thumbnail, .card-thumbnail-placeholder",
+          '.card-thumbnail, .card-thumbnail-placeholder'
         ) as HTMLElement)
       : null;
 
@@ -1465,7 +1465,7 @@ export class SharedCardRenderer {
 
         // Compact mode
         if (breakpoint > 0) {
-          cardEl.classList.toggle("compact-mode", cardWidth < breakpoint);
+          cardEl.classList.toggle('compact-mode', cardWidth < breakpoint);
         }
 
         // Thumbnail stacking: class toggle + optional DOM move
@@ -1478,7 +1478,7 @@ export class SharedCardRenderer {
           if (canMoveThumbnail && previewsEl) {
             // Cards with text preview: move thumbnail between card-previews and card-body
             if (shouldStack && !isStacked) {
-              if (cardEl.classList.contains("card-thumbnail-left")) {
+              if (cardEl.classList.contains('card-thumbnail-left')) {
                 bodyEl.insertBefore(thumbnailEl, previewsEl);
               } else {
                 previewsEl.after(thumbnailEl);
@@ -1490,7 +1490,7 @@ export class SharedCardRenderer {
             }
           }
 
-          cardEl.classList.toggle("thumbnail-stack", shouldStack);
+          cardEl.classList.toggle('thumbnail-stack', shouldStack);
         }
       }
     });
@@ -1527,15 +1527,15 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     imageUrls: string[],
     hasImage: boolean,
-    position: "left" | "right" | "top" | "bottom",
+    position: 'left' | 'right' | 'top' | 'bottom',
     settings: BasesResolvedSettings,
     card: CardData,
-    signal: AbortSignal,
+    signal: AbortSignal
   ): void {
     const coverWrapper = cardEl.createDiv(
       hasImage
-        ? "card-cover-wrapper"
-        : "card-cover-wrapper card-cover-wrapper-placeholder",
+        ? 'card-cover-wrapper'
+        : 'card-cover-wrapper card-cover-wrapper-placeholder'
     );
 
     if (hasImage) {
@@ -1543,35 +1543,35 @@ export class SharedCardRenderer {
       const slideshowUrls = imageUrls.slice(0, maxSlideshow);
       const shouldShowSlideshow =
         isSlideshowEnabled() &&
-        (position === "top" || position === "bottom") &&
+        (position === 'top' || position === 'bottom') &&
         slideshowUrls.length >= 2;
 
       if (shouldShowSlideshow) {
         const slideshowEl = coverWrapper.createDiv(
-          "card-cover card-cover-slideshow",
+          'card-cover card-cover-slideshow'
         );
         this.renderSlideshow(
           slideshowEl,
           slideshowUrls,
-          "cover",
+          'cover',
           position,
           settings,
-          card.path,
+          card.path
         );
       } else {
-        const imageEl = coverWrapper.createDiv("card-cover");
+        const imageEl = coverWrapper.createDiv('card-cover');
         this.renderImage(
           imageEl,
           imageUrls,
-          "cover",
+          'cover',
           position,
           settings,
           cardEl,
-          signal,
+          signal
         );
       }
     } else {
-      coverWrapper.createDiv("card-cover-placeholder");
+      coverWrapper.createDiv('card-cover-placeholder');
     }
   }
 
@@ -1582,10 +1582,10 @@ export class SharedCardRenderer {
   private renderSlideshow(
     slideshowEl: HTMLElement,
     imageUrls: string[],
-    format: "thumbnail" | "cover",
-    position: "left" | "right" | "top" | "bottom",
+    format: 'thumbnail' | 'cover',
+    position: 'left' | 'right' | 'top' | 'bottom',
     settings: BasesResolvedSettings,
-    cardPath: string,
+    cardPath: string
   ): void {
     // Create AbortController for cleanup
     const controller = new AbortController();
@@ -1594,13 +1594,13 @@ export class SharedCardRenderer {
 
     // Create image embed with two stacked images
     const imageEmbedContainer = slideshowEl.createDiv(
-      "dynamic-views-image-embed",
+      'dynamic-views-image-embed'
     );
 
     // Add zoom handler
-    const cardEl = slideshowEl.closest(".card") as HTMLElement;
+    const cardEl = slideshowEl.closest('.card') as HTMLElement;
     imageEmbedContainer.addEventListener(
-      "click",
+      'click',
       (e) => {
         handleImageViewerTrigger(
           e,
@@ -1608,22 +1608,22 @@ export class SharedCardRenderer {
           this.app,
           this.viewerCleanupFns,
           this.viewerClones,
-          settings.openFileAction,
+          settings.openFileAction
         );
       },
-      { signal },
+      { signal }
     );
 
     // Create two persistent img elements (current and next)
-    const currentImg = imageEmbedContainer.createEl("img", {
-      cls: "slideshow-img slideshow-img-current",
-      attr: { src: imageUrls[0], alt: "" },
+    const currentImg = imageEmbedContainer.createEl('img', {
+      cls: 'slideshow-img slideshow-img-current',
+      attr: { src: imageUrls[0], alt: '' },
     });
 
     // Next image starts with empty src
-    imageEmbedContainer.createEl("img", {
-      cls: "slideshow-img slideshow-img-next",
-      attr: { src: "", alt: "" },
+    imageEmbedContainer.createEl('img', {
+      cls: 'slideshow-img slideshow-img-next',
+      attr: { src: '', alt: '' },
     });
 
     // Shared handler for both hover preload and navigator preload —
@@ -1632,8 +1632,8 @@ export class SharedCardRenderer {
       imageUrls,
       cardEl,
       () => {
-        imageEmbedContainer.parentElement?.addClass("slideshow-single");
-      },
+        imageEmbedContainer.parentElement?.addClass('slideshow-single');
+      }
     );
     const preloadGuard = { done: false };
 
@@ -1647,7 +1647,7 @@ export class SharedCardRenderer {
         imageUrls,
         signal,
         preloadBrokenHandler,
-        preloadGuard,
+        preloadGuard
       );
     }
 
@@ -1656,7 +1656,7 @@ export class SharedCardRenderer {
     const clearHoverZoom = setupHoverZoomEligibility(
       cardEl,
       imageEmbedContainer,
-      signal,
+      signal
     );
 
     // Create navigator with shared logic
@@ -1664,10 +1664,10 @@ export class SharedCardRenderer {
       imageUrls,
       () => {
         const currImg = imageEmbedContainer.querySelector(
-          ".slideshow-img-current",
+          '.slideshow-img-current'
         ) as HTMLImageElement;
         const nextImg = imageEmbedContainer.querySelector(
-          ".slideshow-img-next",
+          '.slideshow-img-next'
         ) as HTMLImageElement;
         if (!currImg || !nextImg) return null;
         return { imageEmbed: imageEmbedContainer, currImg, nextImg };
@@ -1689,7 +1689,7 @@ export class SharedCardRenderer {
         },
         onBroken: preloadBrokenHandler,
         preloadGuard,
-      },
+      }
     );
 
     // Reset to slide 1 when view becomes visible (reading/editing views are separate DOMs)
@@ -1704,58 +1704,58 @@ export class SharedCardRenderer {
           reset();
         }
       },
-      { threshold: 0 },
+      { threshold: 0 }
     );
     visibilityObserver.observe(slideshowEl);
-    signal.addEventListener("abort", () => visibilityObserver.disconnect(), {
+    signal.addEventListener('abort', () => visibilityObserver.disconnect(), {
       once: true,
     });
 
     // Auto-advance if first image fails to load (skip animation for instant display)
     const expectedFirstUrl = imageUrls[0];
     currentImg.addEventListener(
-      "error",
+      'error',
       (e) => {
         if (signal.aborted || !cardEl.isConnected) return;
         // Only handle errors for the URL we set (ignore cleared src or changed URL)
         const targetSrc = (e.target as HTMLImageElement).src;
         if (targetSrc !== expectedFirstUrl) return;
         markImageBroken(expectedFirstUrl);
-        currentImg.addClass("dynamic-views-hidden");
+        currentImg.addClass('dynamic-views-hidden');
         navigate(1, false, true);
       },
-      { once: true, signal },
+      { once: true, signal }
     );
 
     // Multi-image indicator
     if (isSlideshowIndicatorEnabled()) {
-      const indicator = slideshowEl.createDiv("slideshow-indicator");
-      setIcon(indicator, "lucide-circle-chevron-right");
+      const indicator = slideshowEl.createDiv('slideshow-indicator');
+      setIcon(indicator, 'lucide-circle-chevron-right');
     }
 
     // Navigation arrows
-    const leftArrow = slideshowEl.createDiv("slideshow-nav-left");
-    setIcon(leftArrow, "lucide-chevron-left");
+    const leftArrow = slideshowEl.createDiv('slideshow-nav-left');
+    setIcon(leftArrow, 'lucide-chevron-left');
 
-    const rightArrow = slideshowEl.createDiv("slideshow-nav-right");
-    setIcon(rightArrow, "lucide-chevron-right");
+    const rightArrow = slideshowEl.createDiv('slideshow-nav-right');
+    setIcon(rightArrow, 'lucide-chevron-right');
 
     leftArrow.addEventListener(
-      "click",
+      'click',
       (e) => {
         e.stopPropagation();
         navigate(-1);
       },
-      { signal },
+      { signal }
     );
 
     rightArrow.addEventListener(
-      "click",
+      'click',
       (e) => {
         e.stopPropagation();
         navigate(1);
       },
-      { signal },
+      { signal }
     );
 
     // Setup swipe gestures
@@ -1768,32 +1768,32 @@ export class SharedCardRenderer {
   private renderImage(
     imageEl: HTMLElement,
     imageUrls: string[],
-    format: "thumbnail" | "cover",
-    position: "left" | "right" | "top" | "bottom",
+    format: 'thumbnail' | 'cover',
+    position: 'left' | 'right' | 'top' | 'bottom',
     settings: BasesResolvedSettings,
     cardEl: HTMLElement,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): void {
-    const imageEmbedContainer = imageEl.createDiv("dynamic-views-image-embed");
+    const imageEmbedContainer = imageEl.createDiv('dynamic-views-image-embed');
 
     // Add zoom handler with cleanup via AbortController
     imageEmbedContainer.addEventListener(
-      "click",
+      'click',
       (e) => {
         handleImageViewerTrigger(
           e,
-          cardEl.getAttribute("data-path") || "",
+          cardEl.getAttribute('data-path') || '',
           this.app,
           this.viewerCleanupFns,
           this.viewerClones,
-          settings.openFileAction,
+          settings.openFileAction
         );
       },
-      signal ? { signal } : undefined,
+      signal ? { signal } : undefined
     );
 
-    const imgEl = imageEmbedContainer.createEl("img", {
-      attr: { src: imageUrls[0], alt: "" },
+    const imgEl = imageEmbedContainer.createEl('img', {
+      attr: { src: imageUrls[0], alt: '' },
     });
 
     // Handle image load for masonry layout
@@ -1802,14 +1802,14 @@ export class SharedCardRenderer {
       setupImageLoadHandler(
         imgEl,
         cardEl,
-        format === "cover" ? this.imageLayoutCallback : undefined,
+        format === 'cover' ? this.imageLayoutCallback : undefined
       );
     }
 
     // Scrubbable array declared here so tryNextImage can splice broken URLs.
     // null when scrubbing not active (cover format, mobile, disabled).
     const scrubbableUrls =
-      format === "thumbnail" &&
+      format === 'thumbnail' &&
       imageUrls.length > 1 &&
       !this.app.isMobile &&
       !isThumbnailScrubbingDisabled()
@@ -1822,19 +1822,19 @@ export class SharedCardRenderer {
       let currentUrlIndex = 0;
       const tryNextImage = () => {
         if (signal?.aborted) return;
-        imgEl.removeClass("scrub-loading");
+        imgEl.removeClass('scrub-loading');
         const failedSrc = imgEl.src;
         markImageBroken(failedSrc);
         if (scrubbableUrls) {
           const idx = scrubbableUrls.indexOf(failedSrc);
           if (idx !== -1) scrubbableUrls.splice(idx, 1);
           if (scrubbableUrls.length <= 1) {
-            imageEl.classList.remove("multi-image");
+            imageEl.classList.remove('multi-image');
           }
           // Show first remaining valid image
           if (scrubbableUrls.length > 0) {
             if (signal?.aborted || !imgEl.isConnected) return;
-            imgEl.removeClass("dynamic-views-hidden");
+            imgEl.removeClass('dynamic-views-hidden');
             imgEl.src = getCachedBlobUrl(scrubbableUrls[0]);
             return;
           }
@@ -1843,7 +1843,7 @@ export class SharedCardRenderer {
           currentUrlIndex++;
           if (currentUrlIndex < imageUrls.length) {
             if (signal?.aborted || !imgEl.isConnected) return;
-            imgEl.removeClass("dynamic-views-hidden");
+            imgEl.removeClass('dynamic-views-hidden');
             imgEl.src = getCachedBlobUrl(imageUrls[currentUrlIndex]);
             return;
           }
@@ -1855,27 +1855,27 @@ export class SharedCardRenderer {
           getOwnerWindow(cardEl).requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected) return;
             handleAllImagesFailed(cardEl);
-            if (!cardEl.classList.contains("cover-ready")) {
-              cardEl.classList.add("cover-ready");
+            if (!cardEl.classList.contains('cover-ready')) {
+              cardEl.classList.add('cover-ready');
               cardEl.style.setProperty(
-                "--actual-aspect-ratio",
-                DEFAULT_ASPECT_RATIO.toString(),
+                '--actual-aspect-ratio',
+                DEFAULT_ASPECT_RATIO.toString()
               );
-              if (format === "cover") this.imageLayoutCallback();
+              if (format === 'cover') this.imageLayoutCallback();
             }
           });
         });
       };
       imgEl.addEventListener(
-        "error",
+        'error',
         tryNextImage,
-        signal ? { signal } : undefined,
+        signal ? { signal } : undefined
       );
     }
 
     // Thumbnail scrubbing (desktop only, max 10 images)
     if (scrubbableUrls) {
-      imageEl.classList.add("multi-image");
+      imageEl.classList.add('multi-image');
 
       // Preload on hover — splice broken URLs from scrubbable array immediately
       if (signal) {
@@ -1884,8 +1884,8 @@ export class SharedCardRenderer {
           scrubbableUrls,
           signal,
           createPreloadBrokenHandler(scrubbableUrls, cardEl, () => {
-            imageEl.classList.remove("multi-image");
-          }),
+            imageEl.classList.remove('multi-image');
+          })
         );
       }
 
@@ -1893,15 +1893,15 @@ export class SharedCardRenderer {
       // Closure and DOMRect freed when event listeners are removed via { signal }
       let cachedRect: DOMRect | null = null;
       imageEl.addEventListener(
-        "mouseenter",
+        'mouseenter',
         () => {
           cachedRect = imageEl.getBoundingClientRect();
         },
-        { signal },
+        { signal }
       );
 
       imageEl.addEventListener(
-        "mousemove",
+        'mousemove',
         (e) => {
           if (signal?.aborted || scrubbableUrls.length === 0) return;
           // Use cached rect, or cache on first mousemove if mouseenter didn't fire
@@ -1911,48 +1911,48 @@ export class SharedCardRenderer {
             0,
             Math.min(
               Math.floor((x / rect.width) * scrubbableUrls.length),
-              scrubbableUrls.length - 1,
-            ),
+              scrubbableUrls.length - 1
+            )
           );
           const rawUrl = scrubbableUrls[index];
           const resolvedUrl = getCachedBlobUrl(rawUrl);
-          if (resolvedUrl === rawUrl && rawUrl.startsWith("http")) {
+          if (resolvedUrl === rawUrl && rawUrl.startsWith('http')) {
             // Uncached external — hide img so placeholder background shows
             if (imgEl.src !== resolvedUrl) {
-              imgEl.addClass("scrub-loading");
+              imgEl.addClass('scrub-loading');
               imgEl.src = resolvedUrl;
               imgEl.addEventListener(
-                "load",
-                () => imgEl.removeClass("scrub-loading"),
-                { once: true },
+                'load',
+                () => imgEl.removeClass('scrub-loading'),
+                { once: true }
               );
             }
           } else {
-            imgEl.removeClass("scrub-loading");
-            imgEl.removeClass("dynamic-views-hidden");
+            imgEl.removeClass('scrub-loading');
+            imgEl.removeClass('dynamic-views-hidden');
             if (imgEl.src !== resolvedUrl) {
               imgEl.src = resolvedUrl;
             }
           }
         },
-        { signal },
+        { signal }
       );
 
       imageEl.addEventListener(
-        "mouseleave",
+        'mouseleave',
         () => {
           // Don't reset while image viewer is open (overlay triggers mouseleave)
           if (this.viewerClones.has(imageEmbedContainer)) return;
           // Invalidate cached rect for next hover (handles resize)
           cachedRect = null;
-          imgEl.removeClass("scrub-loading");
+          imgEl.removeClass('scrub-loading');
           const firstUrl = scrubbableUrls[0];
           if (!firstUrl) return;
           // First image is pre-validated, always show it
-          imgEl.removeClass("dynamic-views-hidden");
+          imgEl.removeClass('dynamic-views-hidden');
           imgEl.src = getCachedBlobUrl(firstUrl);
         },
-        { signal },
+        { signal }
       );
     }
   }
@@ -1965,14 +1965,14 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings,
+    settings: BasesResolvedSettings
   ): void {
-    const bodyEl = cardEl.querySelector<HTMLElement>(".card-body");
+    const bodyEl = cardEl.querySelector<HTMLElement>('.card-body');
     if (!bodyEl) return;
 
     // Remove old property containers
     for (const el of bodyEl.querySelectorAll(
-      ".card-properties-top, .card-properties-bottom",
+      '.card-properties-top, .card-properties-bottom'
     )) {
       el.remove();
     }
@@ -1988,8 +1988,8 @@ export class SharedCardRenderer {
 
     // Fix DOM order: card-properties-top must be BEFORE card-previews
     // (renderProperties appends both containers at end of bodyEl)
-    const previewsEl = bodyEl.querySelector(".card-previews");
-    const topEl = bodyEl.querySelector(".card-properties-top");
+    const previewsEl = bodyEl.querySelector('.card-previews');
+    const topEl = bodyEl.querySelector('.card-properties-top');
     if (previewsEl && topEl) {
       bodyEl.insertBefore(topEl, previewsEl);
     }
@@ -2003,9 +2003,9 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings,
+    settings: BasesResolvedSettings
   ): void {
-    const subtitleEl = cardEl.querySelector<HTMLElement>(".card-subtitle");
+    const subtitleEl = cardEl.querySelector<HTMLElement>('.card-subtitle');
     const hasSubtitle = !!(settings.subtitleProperty && card.subtitle);
 
     // Subtitle disappeared: remove stale element
@@ -2020,9 +2020,9 @@ export class SharedCardRenderer {
     // Subtitle appeared: create element inside .card-title-block
     let targetEl = subtitleEl;
     if (!targetEl) {
-      const titleBlock = cardEl.querySelector<HTMLElement>(".card-title-block");
+      const titleBlock = cardEl.querySelector<HTMLElement>('.card-title-block');
       if (!titleBlock) return;
-      targetEl = titleBlock.createDiv("card-subtitle");
+      targetEl = titleBlock.createDiv('card-subtitle');
     } else {
       // Subtitle changed: clear old content
       targetEl.empty();
@@ -2037,20 +2037,20 @@ export class SharedCardRenderer {
       card.subtitle,
       card,
       entry,
-      { ...settings, propertyLabels: "hide" },
+      { ...settings, propertyLabels: 'hide' },
       shouldHideMissingProperties(),
       getHideEmptyMode(),
-      propAbort.signal,
+      propAbort.signal
     );
 
     // Restore scroll gradients on subtitle
     if (
-      document.body.classList.contains("dynamic-views-subtitle-overflow-scroll")
+      document.body.classList.contains('dynamic-views-subtitle-overflow-scroll')
     ) {
       setupElementScrollGradient(targetEl, propAbort.signal);
     }
     const wrapper = targetEl.querySelector<HTMLElement>(
-      ".property-content-wrapper",
+      '.property-content-wrapper'
     );
     if (wrapper) {
       setupElementScrollGradient(wrapper, propAbort.signal);
@@ -2065,7 +2065,7 @@ export class SharedCardRenderer {
     card: CardData,
     entry: BasesEntry,
     settings: BasesResolvedSettings,
-    signal: AbortSignal,
+    signal: AbortSignal
   ): void {
     const props = card.properties;
     if (!props || props.length === 0) return;
@@ -2103,14 +2103,14 @@ export class SharedCardRenderer {
       if (!prop.name) continue;
       // Skip properties rendered elsewhere (text preview, URL button)
       if (excludeSet.has(prop.name)) continue;
-      const stringValue = typeof prop.value === "string" ? prop.value : null;
+      const stringValue = typeof prop.value === 'string' ? prop.value : null;
       if (
         shouldCollapseField(
           stringValue,
           prop.name,
           hideMissing,
           hideEmptyMode,
-          settings.propertyLabels,
+          settings.propertyLabels
         )
       ) {
         continue;
@@ -2186,11 +2186,11 @@ export class SharedCardRenderer {
     // Create containers as needed
     const topPropertiesEl =
       topSets.length > 0
-        ? cardEl.createDiv("card-properties card-properties-top")
+        ? cardEl.createDiv('card-properties card-properties-top')
         : null;
     const bottomPropertiesEl =
       bottomSets.length > 0
-        ? cardEl.createDiv("card-properties card-properties-bottom")
+        ? cardEl.createDiv('card-properties card-properties-bottom')
         : null;
 
     // Helper to check if element has rendered content
@@ -2201,28 +2201,28 @@ export class SharedCardRenderer {
     const handleEmptyField = (
       fieldEl: HTMLElement,
       propName: string,
-      propValue: unknown,
+      propValue: unknown
     ): void => {
       if (propName) {
-        const stringValue = typeof propValue === "string" ? propValue : null;
+        const stringValue = typeof propValue === 'string' ? propValue : null;
         if (
           shouldCollapseField(
             stringValue,
             propName,
             hideMissing,
             hideEmptyMode,
-            settings.propertyLabels,
+            settings.propertyLabels
           )
         ) {
-          fieldEl.addClass("property-collapsed");
+          fieldEl.addClass('property-collapsed');
         } else {
-          const placeholderContent = fieldEl.createDiv("property-content");
+          const placeholderContent = fieldEl.createDiv('property-content');
           const markerSpan =
-            placeholderContent.createSpan("empty-value-marker");
+            placeholderContent.createSpan('empty-value-marker');
           markerSpan.textContent = getEmptyValueMarker();
         }
-      } else if (settings.propertyLabels === "hide") {
-        fieldEl.addClass("property-collapsed");
+      } else if (settings.propertyLabels === 'hide') {
+        fieldEl.addClass('property-collapsed');
       }
     };
 
@@ -2231,7 +2231,7 @@ export class SharedCardRenderer {
     const renderSetsInto = (
       container: HTMLElement,
       setsToRender: typeof sets,
-      pairIndexOffset: number,
+      pairIndexOffset: number
     ): number => {
       let pairNum = pairIndexOffset;
 
@@ -2240,7 +2240,7 @@ export class SharedCardRenderer {
           // Paired: create wrapper
           pairNum++;
           const pairEl = container.createDiv(
-            `property-pair property-pair-${pairNum}`,
+            `property-pair property-pair-${pairNum}`
           );
 
           const fieldEls: HTMLElement[] = [];
@@ -2248,9 +2248,9 @@ export class SharedCardRenderer {
 
           for (let i = 0; i < set.items.length; i++) {
             const item = set.items[i];
-            const posClass = i === 0 ? "pair-left" : "pair-right";
+            const posClass = i === 0 ? 'pair-left' : 'pair-right';
             const fieldEl = pairEl.createDiv(
-              `property property-${item.fieldIndex} ${posClass}`,
+              `property property-${item.fieldIndex} ${posClass}`
             );
             fieldEls.push(fieldEl);
 
@@ -2264,7 +2264,7 @@ export class SharedCardRenderer {
                 settings,
                 hideMissing,
                 hideEmptyMode,
-                signal,
+                signal
               );
             }
             hasContent.push(hasRenderedContent(fieldEl));
@@ -2277,20 +2277,20 @@ export class SharedCardRenderer {
             handleEmptyField(
               fieldEls[1],
               set.items[1].name,
-              set.items[1].value,
+              set.items[1].value
             );
           } else if (!hasContent[0] && hasContent[1]) {
             handleEmptyField(
               fieldEls[0],
               set.items[0].name,
-              set.items[0].value,
+              set.items[0].value
             );
           }
         } else {
           // Unpaired: direct child, no wrapper
           const item = set.items[0];
           const fieldEl = container.createDiv(
-            `property property-${item.fieldIndex}`,
+            `property property-${item.fieldIndex}`
           );
 
           if (item.name) {
@@ -2303,7 +2303,7 @@ export class SharedCardRenderer {
               settings,
               hideMissing,
               hideEmptyMode,
-              signal,
+              signal
             );
           }
 
@@ -2358,15 +2358,15 @@ export class SharedCardRenderer {
     settings: BasesResolvedSettings,
     hideMissing: boolean,
     hideEmptyMode: HideEmptyMode,
-    signal: AbortSignal,
+    signal: AbortSignal
   ): void {
-    if (propertyName === "") {
+    if (propertyName === '') {
       return;
     }
 
     // Coerce unknown to string for rendering (handles Bases Value objects)
     const stringValue =
-      typeof resolvedValue === "string" ? resolvedValue : null;
+      typeof resolvedValue === 'string' ? resolvedValue : null;
 
     // Hide missing properties if toggle enabled (stringValue is null for missing properties)
     // File/formula/tag properties can never be "missing" - they always exist or are computed
@@ -2384,41 +2384,41 @@ export class SharedCardRenderer {
     // Empty = no displayable value (null, undefined, or empty string)
     const isEmpty = !stringValue;
     if (isEmpty) {
-      if (hideEmptyMode === "all") return;
+      if (hideEmptyMode === 'all') return;
       if (
-        hideEmptyMode === "labels-hidden" &&
-        settings.propertyLabels === "hide"
+        hideEmptyMode === 'labels-hidden' &&
+        settings.propertyLabels === 'hide'
       )
         return;
     }
 
     // Render label if property labels are enabled
-    if (settings.propertyLabels === "above") {
-      const labelEl = container.createDiv("property-label");
+    if (settings.propertyLabels === 'above') {
+      const labelEl = container.createDiv('property-label');
       labelEl.textContent = getPropertyLabel(
         propertyName,
-        settings._displayNameMap,
+        settings._displayNameMap
       );
     }
 
     // Add inline label if enabled (as sibling, before property-content)
-    if (settings.propertyLabels === "inline") {
-      const labelSpan = container.createSpan("property-label-inline");
+    if (settings.propertyLabels === 'inline') {
+      const labelSpan = container.createSpan('property-label-inline');
       labelSpan.textContent =
-        getPropertyLabel(propertyName, settings._displayNameMap) + " ";
+        getPropertyLabel(propertyName, settings._displayNameMap) + ' ';
     }
 
     // Wrapper for scrolling content (gradients applied here)
     // tabIndex -1 prevents scrollable div from being in Tab order
-    const contentWrapper = container.createDiv("property-content-wrapper");
+    const contentWrapper = container.createDiv('property-content-wrapper');
     contentWrapper.tabIndex = -1;
 
     // Content container (actual property value)
-    const propertyContent = contentWrapper.createDiv("property-content");
+    const propertyContent = contentWrapper.createDiv('property-content');
 
     // If no value, show placeholder
     if (!stringValue) {
-      const markerSpan = propertyContent.createSpan("empty-value-marker");
+      const markerSpan = propertyContent.createSpan('empty-value-marker');
       markerSpan.textContent = getEmptyValueMarker();
       return;
     }
@@ -2430,20 +2430,20 @@ export class SharedCardRenderer {
           type: string;
           items: string[];
         };
-        if (arrayData.type === "array" && Array.isArray(arrayData.items)) {
+        if (arrayData.type === 'array' && Array.isArray(arrayData.items)) {
           // Filter out empty strings to avoid rendering separators between invisible items
           const nonEmptyItems = arrayData.items.filter(
-            (item) => item.trim().length > 0,
+            (item) => item.trim().length > 0
           );
           if (nonEmptyItems.length === 0) return;
-          const listWrapper = propertyContent.createSpan("list-wrapper");
+          const listWrapper = propertyContent.createSpan('list-wrapper');
           const separator = getListSeparator();
           nonEmptyItems.forEach((item, idx) => {
             const span = listWrapper.createSpan();
-            const listItem = span.createSpan({ cls: "list-item" });
+            const listItem = span.createSpan({ cls: 'list-item' });
             this.renderTextWithLinks(listItem, item, signal);
             if (idx < nonEmptyItems.length - 1) {
-              span.createSpan({ cls: "list-separator", text: separator });
+              span.createSpan({ cls: 'list-separator', text: separator });
             }
           });
           return;
@@ -2461,21 +2461,21 @@ export class SharedCardRenderer {
           checked?: boolean;
           indeterminate?: boolean;
         };
-        if (checkboxData.type === "checkbox") {
-          const checkboxEl = propertyContent.createEl("input", {
-            cls: "metadata-input-checkbox",
-            type: "checkbox",
+        if (checkboxData.type === 'checkbox') {
+          const checkboxEl = propertyContent.createEl('input', {
+            cls: 'metadata-input-checkbox',
+            type: 'checkbox',
           });
           if (checkboxData.indeterminate) {
             checkboxEl.indeterminate = true;
-            checkboxEl.dataset.indeterminate = "true";
+            checkboxEl.dataset.indeterminate = 'true';
           } else {
             checkboxEl.checked = checkboxData.checked ?? false;
-            checkboxEl.dataset.indeterminate = "false";
+            checkboxEl.dataset.indeterminate = 'false';
           }
           // Make interactive - toggle frontmatter on click
           checkboxEl.addEventListener(
-            "click",
+            'click',
             (e) => {
               e.stopPropagation();
               const file = this.app.vault.getAbstractFileByPath(card.path);
@@ -2483,15 +2483,15 @@ export class SharedCardRenderer {
               const fmProp = stripNotePrefix(propertyName);
               // Clear indeterminate state on click
               checkboxEl.indeterminate = false;
-              checkboxEl.dataset.indeterminate = "false";
+              checkboxEl.dataset.indeterminate = 'false';
               void this.app.fileManager.processFrontMatter(
                 file,
                 (frontmatter: Record<string, unknown>) => {
                   frontmatter[fmProp] = checkboxEl.checked;
-                },
+                }
               );
             },
-            { signal },
+            { signal }
           );
           return;
         }
@@ -2503,106 +2503,106 @@ export class SharedCardRenderer {
     if (isTimestampProperty(propertyName, settings)) {
       // stringValue is already formatted by data-transform
       const timestampWrapper = propertyContent.createSpan();
-      if (showTimestampIcon() && settings.propertyLabels === "hide") {
+      if (showTimestampIcon() && settings.propertyLabels === 'hide') {
         const iconName = getTimestampIcon(propertyName, settings);
-        const iconEl = timestampWrapper.createSpan("timestamp-icon");
+        const iconEl = timestampWrapper.createSpan('timestamp-icon');
         setIcon(iconEl, iconName);
       }
       timestampWrapper.appendText(stringValue);
     } else if (
-      (propertyName === "tags" || propertyName === "note.tags") &&
+      (propertyName === 'tags' || propertyName === 'note.tags') &&
       card.yamlTags.length > 0
     ) {
       // YAML tags only
       const showHashPrefix = showTagHashPrefix();
-      const tagsWrapper = propertyContent.createDiv("tags-wrapper");
+      const tagsWrapper = propertyContent.createDiv('tags-wrapper');
       card.yamlTags.forEach((tag) => {
-        const tagEl = tagsWrapper.createEl("a", {
-          cls: "tag",
-          text: showHashPrefix ? "#" + tag : tag,
-          href: "#",
+        const tagEl = tagsWrapper.createEl('a', {
+          cls: 'tag',
+          text: showHashPrefix ? '#' + tag : tag,
+          href: '#',
         });
         tagEl.draggable = false;
         tagEl.tabIndex = -1;
         tagEl.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.preventDefault();
             if (
-              shouldUseNotebookNavigator(this.app, "tag") &&
+              shouldUseNotebookNavigator(this.app, 'tag') &&
               navigateToTagInNotebookNavigator(this.app, tag)
             ) {
               return;
             }
             const searchPlugin =
-              this.plugin.app.internalPlugins.plugins["global-search"];
+              this.plugin.app.internalPlugins.plugins['global-search'];
             if (searchPlugin?.instance?.openGlobalSearch) {
-              searchPlugin.instance.openGlobalSearch("tag:" + tag);
+              searchPlugin.instance.openGlobalSearch('tag:' + tag);
             }
           },
-          { signal },
+          { signal }
         );
       });
     } else if (
-      (propertyName === "file.tags" || propertyName === "file tags") &&
+      (propertyName === 'file.tags' || propertyName === 'file tags') &&
       card.tags.length > 0
     ) {
       // tags in YAML + note body
       const showHashPrefix = showTagHashPrefix();
-      const tagsWrapper = propertyContent.createDiv("tags-wrapper");
+      const tagsWrapper = propertyContent.createDiv('tags-wrapper');
       card.tags.forEach((tag) => {
-        const tagEl = tagsWrapper.createEl("a", {
-          cls: "tag",
-          text: showHashPrefix ? "#" + tag : tag,
-          href: "#",
+        const tagEl = tagsWrapper.createEl('a', {
+          cls: 'tag',
+          text: showHashPrefix ? '#' + tag : tag,
+          href: '#',
         });
         tagEl.draggable = false;
         tagEl.tabIndex = -1;
         tagEl.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.preventDefault();
             if (
-              shouldUseNotebookNavigator(this.app, "tag") &&
+              shouldUseNotebookNavigator(this.app, 'tag') &&
               navigateToTagInNotebookNavigator(this.app, tag)
             ) {
               return;
             }
             const searchPlugin =
-              this.plugin.app.internalPlugins.plugins["global-search"];
+              this.plugin.app.internalPlugins.plugins['global-search'];
             if (searchPlugin?.instance?.openGlobalSearch) {
-              searchPlugin.instance.openGlobalSearch("tag:" + tag);
+              searchPlugin.instance.openGlobalSearch('tag:' + tag);
             }
           },
-          { signal },
+          { signal }
         );
       });
     } else if (
-      (propertyName === "file.path" ||
-        propertyName === "path" ||
-        propertyName === "file path") &&
+      (propertyName === 'file.path' ||
+        propertyName === 'path' ||
+        propertyName === 'file path') &&
       card.path.length > 0
     ) {
-      const pathWrapper = propertyContent.createDiv("path-wrapper");
+      const pathWrapper = propertyContent.createDiv('path-wrapper');
       // Split full path including filename
-      const segments = card.path.split("/").filter((f) => f);
+      const segments = card.path.split('/').filter((f) => f);
       segments.forEach((segment, idx) => {
         const span = pathWrapper.createSpan();
         const isLastSegment = idx === segments.length - 1;
         const segmentClass = isLastSegment
-          ? "path-segment filename-segment"
-          : "path-segment folder-segment";
+          ? 'path-segment filename-segment'
+          : 'path-segment folder-segment';
         const segmentEl = span.createSpan({ cls: segmentClass, text: segment });
 
         // Make clickable
-        const cumulativePath = segments.slice(0, idx + 1).join("/");
+        const cumulativePath = segments.slice(0, idx + 1).join('/');
         segmentEl.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.stopPropagation();
             if (isLastSegment) {
               // Filename segment - reveal file
-              if (shouldUseNotebookNavigator(this.app, "file")) {
+              if (shouldUseNotebookNavigator(this.app, 'file')) {
                 const file = this.app.vault.getAbstractFileByPath(card.path);
                 if (
                   file instanceof TFile &&
@@ -2613,7 +2613,7 @@ export class SharedCardRenderer {
               }
             } else {
               // Folder segment - navigate to folder
-              if (shouldUseNotebookNavigator(this.app, "folder")) {
+              if (shouldUseNotebookNavigator(this.app, 'folder')) {
                 const folder =
                   this.app.vault.getAbstractFileByPath(cumulativePath);
                 if (
@@ -2627,7 +2627,7 @@ export class SharedCardRenderer {
             // Fallback to file explorer
             const pathToReveal = isLastSegment ? card.path : cumulativePath;
             const fileExplorer =
-              this.app.internalPlugins?.plugins?.["file-explorer"];
+              this.app.internalPlugins?.plugins?.['file-explorer'];
             if (fileExplorer?.instance?.revealInFolder) {
               const target = this.app.vault.getAbstractFileByPath(pathToReveal);
               if (target) {
@@ -2635,12 +2635,12 @@ export class SharedCardRenderer {
               }
             }
           },
-          { signal },
+          { signal }
         );
 
         // Add context menu for all segments
         segmentEl.addEventListener(
-          "contextmenu",
+          'contextmenu',
           (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -2657,43 +2657,43 @@ export class SharedCardRenderer {
               if (folderFile instanceof TFolder) {
                 const menu = new Menu();
                 this.app.workspace.trigger(
-                  "file-menu",
+                  'file-menu',
                   menu,
                   folderFile,
-                  "file-explorer",
+                  'file-explorer'
                 );
                 menu.showAtMouseEvent(e);
               }
             }
           },
-          { signal },
+          { signal }
         );
 
         if (idx < segments.length - 1) {
-          span.createSpan({ cls: "path-separator", text: "/" });
+          span.createSpan({ cls: 'path-separator', text: '/' });
         }
       });
     } else if (
-      (propertyName === "file.folder" || propertyName === "folder") &&
+      (propertyName === 'file.folder' || propertyName === 'folder') &&
       card.folderPath.length > 0
     ) {
-      const folderWrapper = propertyContent.createDiv("path-wrapper");
+      const folderWrapper = propertyContent.createDiv('path-wrapper');
       // Split folder path into segments
-      const folders = card.folderPath.split("/").filter((f) => f);
+      const folders = card.folderPath.split('/').filter((f) => f);
       folders.forEach((folder, idx) => {
         const span = folderWrapper.createSpan();
         const segmentEl = span.createSpan({
-          cls: "path-segment folder-segment",
+          cls: 'path-segment folder-segment',
           text: folder,
         });
 
         // Make clickable - reveal folder in file explorer
-        const cumulativePath = folders.slice(0, idx + 1).join("/");
+        const cumulativePath = folders.slice(0, idx + 1).join('/');
         segmentEl.addEventListener(
-          "click",
+          'click',
           (e) => {
             e.stopPropagation();
-            if (shouldUseNotebookNavigator(this.app, "folder")) {
+            if (shouldUseNotebookNavigator(this.app, 'folder')) {
               const folderObj =
                 this.app.vault.getAbstractFileByPath(cumulativePath);
               if (
@@ -2705,7 +2705,7 @@ export class SharedCardRenderer {
             }
             // Fallback to file explorer
             const fileExplorer =
-              this.app.internalPlugins?.plugins?.["file-explorer"];
+              this.app.internalPlugins?.plugins?.['file-explorer'];
             if (fileExplorer?.instance?.revealInFolder) {
               const folderFile =
                 this.app.vault.getAbstractFileByPath(cumulativePath);
@@ -2714,12 +2714,12 @@ export class SharedCardRenderer {
               }
             }
           },
-          { signal },
+          { signal }
         );
 
         // Add context menu for folder segments
         segmentEl.addEventListener(
-          "contextmenu",
+          'contextmenu',
           (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -2728,24 +2728,24 @@ export class SharedCardRenderer {
             if (folderFile instanceof TFolder) {
               const menu = new Menu();
               this.app.workspace.trigger(
-                "file-menu",
+                'file-menu',
                 menu,
                 folderFile,
-                "file-explorer",
+                'file-explorer'
               );
               menu.showAtMouseEvent(e);
             }
           },
-          { signal },
+          { signal }
         );
 
         if (idx < folders.length - 1) {
-          span.createSpan({ cls: "path-separator", text: "/" });
+          span.createSpan({ cls: 'path-separator', text: '/' });
         }
       });
     } else {
       // Generic property - wrap in div for proper scrolling (consistent with tags/paths)
-      const textWrapper = propertyContent.createDiv("text-wrapper");
+      const textWrapper = propertyContent.createDiv('text-wrapper');
       this.renderTextWithLinks(textWrapper, stringValue, signal);
     }
 

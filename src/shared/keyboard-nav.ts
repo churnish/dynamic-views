@@ -10,10 +10,10 @@
  * Visible focus requires explicit activation via keyboard interaction.
  */
 
-import { getOwnerWindow } from "../utils/owner-window";
-import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
+import { getOwnerWindow } from '../utils/owner-window';
+import { CONTENT_HIDDEN_CLASS } from './content-visibility';
 
-const CARD_SELECTOR = ".card";
+const CARD_SELECTOR = '.card';
 
 /** Tolerance in pixels for same-column detection (handles floating point variance) */
 const COLUMN_TOLERANCE = 5;
@@ -73,7 +73,7 @@ export function handleArrowNavigation(
   container: HTMLElement,
   onNavigate?: (targetCard: HTMLElement, index: number) => void,
   virtualRects?: VirtualCardRect[],
-  onMountItem?: (index: number) => HTMLElement | null,
+  onMountItem?: (index: number) => HTMLElement | null
 ): void {
   // Virtual scrolling path: use stored positions for all items
   if (virtualRects?.length) {
@@ -82,14 +82,14 @@ export function handleArrowNavigation(
       currentCard,
       virtualRects,
       onNavigate,
-      onMountItem,
+      onMountItem
     );
     return;
   }
 
   // DOM-based path: query mounted cards
   const cards = Array.from(
-    container.querySelectorAll<HTMLElement>(CARD_SELECTOR),
+    container.querySelectorAll<HTMLElement>(CARD_SELECTOR)
   );
   const currentIndex = cards.indexOf(currentCard);
 
@@ -111,7 +111,7 @@ export function handleArrowNavigation(
     e.key,
     current,
     cardRects,
-    currentIndex,
+    currentIndex
   );
 
   if (targetIdx >= 0) {
@@ -119,7 +119,7 @@ export function handleArrowNavigation(
     onNavigate?.(targetCard, targetIdx);
     targetCard.classList.remove(CONTENT_HIDDEN_CLASS);
     targetCard.focus();
-    targetCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    targetCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 }
 
@@ -128,7 +128,7 @@ function findBestTargetIndex(
   key: string,
   current: { left: number; centerX: number; centerY: number },
   candidates: { left: number; centerX: number; centerY: number }[],
-  currentIndex: number,
+  currentIndex: number
 ): number {
   let bestIndex = -1;
   let minDistance = Infinity;
@@ -141,47 +141,47 @@ function findBestTargetIndex(
     let distance = 0;
 
     switch (key) {
-      case "ArrowDown":
+      case 'ArrowDown':
         if (
           candidate.centerY > current.centerY &&
           isSameColumn(candidate.left, current.left)
         ) {
           distance = calculateDistance(
             candidate.centerY - current.centerY,
-            Math.abs(candidate.centerX - current.centerX),
+            Math.abs(candidate.centerX - current.centerX)
           );
           isValid = true;
         }
         break;
 
-      case "ArrowUp":
+      case 'ArrowUp':
         if (
           candidate.centerY < current.centerY &&
           isSameColumn(candidate.left, current.left)
         ) {
           distance = calculateDistance(
             current.centerY - candidate.centerY,
-            Math.abs(candidate.centerX - current.centerX),
+            Math.abs(candidate.centerX - current.centerX)
           );
           isValid = true;
         }
         break;
 
-      case "ArrowRight":
+      case 'ArrowRight':
         if (candidate.centerX > current.centerX) {
           distance = calculateDistance(
             candidate.centerX - current.centerX,
-            Math.abs(candidate.centerY - current.centerY),
+            Math.abs(candidate.centerY - current.centerY)
           );
           isValid = true;
         }
         break;
 
-      case "ArrowLeft":
+      case 'ArrowLeft':
         if (candidate.centerX < current.centerX) {
           distance = calculateDistance(
             current.centerX - candidate.centerX,
-            Math.abs(candidate.centerY - current.centerY),
+            Math.abs(candidate.centerY - current.centerY)
           );
           isValid = true;
         }
@@ -203,7 +203,7 @@ function handleVirtualArrowNavigation(
   currentCard: HTMLElement,
   virtualRects: VirtualCardRect[],
   onNavigate?: (targetCard: HTMLElement, index: number) => void,
-  onMountItem?: (index: number) => HTMLElement | null,
+  onMountItem?: (index: number) => HTMLElement | null
 ): void {
   // Find current card in virtual rects
   const currentIdx = virtualRects.findIndex((r) => r.el === currentCard);
@@ -232,24 +232,24 @@ function handleVirtualArrowNavigation(
   onNavigate?.(targetEl, targetVirt.index);
   targetEl.classList.remove(CONTENT_HIDDEN_CLASS);
   targetEl.focus();
-  targetEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 /**
  * Check if a key is an arrow key
  */
 export function isArrowKey(key: string): boolean {
-  return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key);
+  return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key);
 }
 
 /** Check if image viewer should block keyboard navigation for a container. */
 export function isImageViewerBlockingNav(
-  container: HTMLElement | null,
+  container: HTMLElement | null
 ): boolean {
-  const viewer = document.querySelector(".dynamic-views-image-embed.is-zoomed");
+  const viewer = document.querySelector('.dynamic-views-image-embed.is-zoomed');
   if (!viewer) return false;
   // Fullscreen viewer → block all nav
-  if (!viewer.classList.contains("dynamic-views-viewer-fixed")) return true;
+  if (!viewer.classList.contains('dynamic-views-viewer-fixed')) return true;
   // Constrained viewer → block only if original embed is in the same view
   const originalEmbed = (viewer as unknown as { __originalEmbed?: HTMLElement })
     .__originalEmbed;
@@ -296,16 +296,16 @@ export function initializeContainerFocus(container: HTMLElement): () => void {
     const relatedTarget = e.relatedTarget as HTMLElement | null;
     // Only reset if focus is leaving to something that's not a card
     // Use optional chaining for defensive access to classList
-    if (!relatedTarget?.classList?.contains("card")) {
+    if (!relatedTarget?.classList?.contains('card')) {
       el._keyboardNavActive = false;
     }
   };
 
-  container.addEventListener("focusout", handleFocusout);
+  container.addEventListener('focusout', handleFocusout);
 
   // Store and return cleanup function
   el._focusCleanup = () => {
-    container.removeEventListener("focusout", handleFocusout);
+    container.removeEventListener('focusout', handleFocusout);
     delete el._focusCleanup;
   };
 
@@ -328,7 +328,7 @@ export function initializeContainerFocus(container: HTMLElement): () => void {
 export function setupHoverKeyboardNavigation(
   getHoveredCard: () => HTMLElement | null,
   getContainerRef: () => HTMLElement | null,
-  setFocusableIndex: (index: number) => void,
+  setFocusableIndex: (index: number) => void
 ): () => void {
   const handleKeydown = (e: KeyboardEvent) => {
     if (isImageViewerBlockingNav(getContainerRef())) return;
@@ -336,11 +336,11 @@ export function setupHoverKeyboardNavigation(
 
     const hoveredCard = getHoveredCard();
     const activeEl = document.activeElement as HTMLElement | null;
-    const isCardFocused = activeEl?.classList.contains("card");
+    const isCardFocused = activeEl?.classList.contains('card');
 
     // Check the DOM-focused card's container for visible focus state
     const focusedCardContainer = activeEl?.closest(
-      ".dynamic-views-masonry, .dynamic-views-grid",
+      '.dynamic-views-masonry, .dynamic-views-grid'
     ) as (HTMLElement & { _keyboardNavActive?: boolean }) | null;
     const isVisiblyFocused =
       focusedCardContainer?._keyboardNavActive && isCardFocused;
@@ -371,7 +371,7 @@ export function setupHoverKeyboardNavigation(
       hoveredCard.focus();
 
       if (container?.isConnected) {
-        const allCards = container.querySelectorAll(".card");
+        const allCards = container.querySelectorAll('.card');
         const index = Array.from(allCards).indexOf(hoveredCard);
         if (index >= 0) {
           setFocusableIndex(index);
@@ -405,7 +405,7 @@ export function setupHoverKeyboardNavigation(
     // Case 4: Not hovering and no card has DOM focus → do nothing
   };
 
-  document.addEventListener("keydown", handleKeydown, { capture: true });
+  document.addEventListener('keydown', handleKeydown, { capture: true });
   return () =>
-    document.removeEventListener("keydown", handleKeydown, { capture: true });
+    document.removeEventListener('keydown', handleKeydown, { capture: true });
 }

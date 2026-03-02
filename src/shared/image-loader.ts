@@ -1,6 +1,6 @@
-import type { RefObject } from "../datacore/types";
-import { cacheExternalImage } from "./slideshow";
-import { getOwnerWindow } from "../utils/owner-window";
+import type { RefObject } from '../datacore/types';
+import { cacheExternalImage } from './slideshow';
+import { getOwnerWindow } from '../utils/owner-window';
 
 // Track URLs that failed to load — filtered out on subsequent renders
 // Session-scoped: cleared on plugin reload/unload. Unbounded growth is intentional
@@ -20,32 +20,32 @@ export function filterBrokenUrls(urls: string[]): string[] {
 
 /** Inject placeholder element when all card images fail at runtime */
 export function handleAllImagesFailed(cardEl: HTMLElement): void {
-  cardEl.classList.add("no-valid-images");
+  cardEl.classList.add('no-valid-images');
   const doc = cardEl.ownerDocument;
 
   // Thumbnail: remove .card-thumbnail, inject .card-thumbnail-placeholder
   // Removal (not hiding) ensures :only-child CSS collapse rule in _previews.scss works
-  const thumbEl = cardEl.querySelector(".card-thumbnail");
+  const thumbEl = cardEl.querySelector('.card-thumbnail');
   if (thumbEl instanceof HTMLElement) {
     const parent = thumbEl.parentElement;
     thumbEl.remove();
-    if (parent && !parent.querySelector(".card-thumbnail-placeholder")) {
-      const ph = doc.createElement("div");
-      ph.className = "card-thumbnail-placeholder";
+    if (parent && !parent.querySelector('.card-thumbnail-placeholder')) {
+      const ph = doc.createElement('div');
+      ph.className = 'card-thumbnail-placeholder';
       parent.appendChild(ph);
     }
     return;
   }
 
   // Cover: remove .card-cover, inject .card-cover-placeholder in wrapper
-  const wrapper = cardEl.querySelector(".card-cover-wrapper");
+  const wrapper = cardEl.querySelector('.card-cover-wrapper');
   if (wrapper instanceof HTMLElement) {
-    wrapper.classList.add("card-cover-wrapper-placeholder");
-    const coverEl = wrapper.querySelector(".card-cover");
+    wrapper.classList.add('card-cover-wrapper-placeholder');
+    const coverEl = wrapper.querySelector('.card-cover');
     if (coverEl) coverEl.remove();
-    if (!wrapper.querySelector(".card-cover-placeholder")) {
-      const ph = doc.createElement("div");
-      ph.className = "card-cover-placeholder";
+    if (!wrapper.querySelector('.card-cover-placeholder')) {
+      const ph = doc.createElement('div');
+      ph.className = 'card-cover-placeholder';
       wrapper.appendChild(ph);
     }
   }
@@ -78,12 +78,12 @@ export function invalidateCacheForFile(filePath: string): void {
   for (const key of imageMetadataCache.keys()) {
     try {
       // Strip query params (timestamps) and decode URL
-      const urlPath = decodeURIComponent(key.split("?")[0]);
+      const urlPath = decodeURIComponent(key.split('?')[0]);
       // Match if URL path ends with the vault-relative file path
       // Use separator prefix to avoid partial filename matches (e.g., "image.png" shouldn't match "myimage.png")
       if (
-        urlPath.endsWith("/" + filePath) ||
-        urlPath.endsWith("\\" + filePath)
+        urlPath.endsWith('/' + filePath) ||
+        urlPath.endsWith('\\' + filePath)
       ) {
         imageMetadataCache.delete(key);
       }
@@ -99,7 +99,7 @@ export function invalidateCacheForFile(filePath: string): void {
  */
 export function applyCachedImageMetadata(
   imgSrc: string,
-  cardEl: HTMLElement,
+  cardEl: HTMLElement
 ): void {
   const cached = imageMetadataCache.get(imgSrc);
   if (!cached) return;
@@ -109,8 +109,8 @@ export function applyCachedImageMetadata(
 
   if (cached.aspectRatio !== undefined) {
     cardEl.style.setProperty(
-      "--actual-aspect-ratio",
-      cached.aspectRatio.toString(),
+      '--actual-aspect-ratio',
+      cached.aspectRatio.toString()
     );
   }
   // Don't add cover-ready here - wait for actual image load to trigger fade-in
@@ -128,7 +128,7 @@ export function applyCachedImageMetadata(
 export function handleImageLoad(
   imgEl: HTMLImageElement,
   cardEl: HTMLElement,
-  onLayoutUpdate?: (() => void) | null,
+  onLayoutUpdate?: (() => void) | null
 ): void {
   // Guard against null/empty src
   if (!imgEl.src) return;
@@ -147,20 +147,20 @@ export function handleImageLoad(
   if (imgEl.src && aspectRatio !== undefined) {
     imageMetadataCache.set(imgEl.src, { aspectRatio });
     // Lock aspect ratio to first successful image (for slideshow contain mode)
-    cardEl.dataset.aspectRatioSet = "1";
+    cardEl.dataset.aspectRatioSet = '1';
   }
 
   // Set actual aspect ratio for masonry contain mode (used when "Fixed cover height" is OFF)
   // Use default ratio for invalid/missing dimensions to prevent layout issues
   cardEl.style.setProperty(
-    "--actual-aspect-ratio",
-    (aspectRatio ?? DEFAULT_ASPECT_RATIO).toString(),
+    '--actual-aspect-ratio',
+    (aspectRatio ?? DEFAULT_ASPECT_RATIO).toString()
   );
 
   // Shuffle re-render: skip transition by adding cover-ready immediately.
   // Browser batches opacity:0 + cover-ready opacity:1 into one paint → no visible fade.
-  if (cardEl.closest(".skip-cover-fade")) {
-    cardEl.classList.add("cover-ready");
+  if (cardEl.closest('.skip-cover-fade')) {
+    cardEl.classList.add('cover-ready');
     if (onLayoutUpdate) {
       onLayoutUpdate();
     }
@@ -173,7 +173,7 @@ export function handleImageLoad(
       getOwnerWindow(cardEl).requestAnimationFrame(() => {
         // Guard against card unmounted during second rAF
         if (!cardEl.isConnected) return;
-        cardEl.classList.add("cover-ready");
+        cardEl.classList.add('cover-ready');
         if (onLayoutUpdate) {
           onLayoutUpdate();
         }
@@ -194,10 +194,10 @@ export function handleImageLoad(
 export function setupImageLoadHandler(
   imgEl: HTMLImageElement,
   cardEl: HTMLElement,
-  onLayoutUpdate?: () => void,
+  onLayoutUpdate?: () => void
 ): () => void {
   // Apply cached metadata immediately to prevent flash on re-render
-  if (imgEl.src && !cardEl.classList.contains("cover-ready")) {
+  if (imgEl.src && !cardEl.classList.contains('cover-ready')) {
     applyCachedImageMetadata(imgEl.src, cardEl);
   }
 
@@ -207,10 +207,10 @@ export function setupImageLoadHandler(
     imgEl.complete &&
     imgEl.naturalWidth > 0 &&
     imgEl.naturalHeight > 0 &&
-    !cardEl.classList.contains("cover-ready")
+    !cardEl.classList.contains('cover-ready')
   ) {
     // Force reflow only when fade is needed (skip during shuffle re-render)
-    if (!cardEl.closest(".skip-cover-fade")) {
+    if (!cardEl.closest('.skip-cover-fade')) {
       void cardEl.offsetHeight;
     }
     handleImageLoad(imgEl, cardEl, onLayoutUpdate);
@@ -220,11 +220,11 @@ export function setupImageLoadHandler(
   // Event handlers for cleanup
   // Guard against double-processing if cache was applied
   const loadHandler = () => {
-    if (cardEl.classList.contains("cover-ready")) return;
+    if (cardEl.classList.contains('cover-ready')) return;
     handleImageLoad(imgEl, cardEl, onLayoutUpdate);
   };
   const errorHandler = () => {
-    if (cardEl.classList.contains("cover-ready")) return;
+    if (cardEl.classList.contains('cover-ready')) return;
     const failedSrc = imgEl.src;
     markImageBroken(failedSrc);
 
@@ -237,13 +237,13 @@ export function setupImageLoadHandler(
         // error in shared-renderer.ts) already advanced to the next image
         if (imgEl.src !== failedSrc) return;
         // Hide broken image to prevent placeholder icon
-        imgEl.addClass("dynamic-views-hidden");
-        cardEl.classList.add("cover-ready");
+        imgEl.addClass('dynamic-views-hidden');
+        cardEl.classList.add('cover-ready');
         handleAllImagesFailed(cardEl);
         // Set default aspect ratio on error
         cardEl.style.setProperty(
-          "--actual-aspect-ratio",
-          DEFAULT_ASPECT_RATIO.toString(),
+          '--actual-aspect-ratio',
+          DEFAULT_ASPECT_RATIO.toString()
         );
         if (onLayoutUpdate) {
           onLayoutUpdate();
@@ -253,13 +253,13 @@ export function setupImageLoadHandler(
   };
 
   // Add load/error listeners for pending images
-  imgEl.addEventListener("load", loadHandler, { once: true });
-  imgEl.addEventListener("error", errorHandler, { once: true });
+  imgEl.addEventListener('load', loadHandler, { once: true });
+  imgEl.addEventListener('error', errorHandler, { once: true });
 
   // Return cleanup function
   return () => {
-    imgEl.removeEventListener("load", loadHandler);
-    imgEl.removeEventListener("error", errorHandler);
+    imgEl.removeEventListener('load', loadHandler);
+    imgEl.removeEventListener('error', errorHandler);
   };
 }
 
@@ -270,15 +270,15 @@ export function setupImageLoadHandler(
  */
 export function handleJsxImageRef(
   imgEl: HTMLImageElement | null,
-  updateLayoutRef: RefObject<(() => void) | null>,
+  updateLayoutRef: RefObject<(() => void) | null>
 ): void {
   if (!imgEl) return;
 
-  const cardEl = imgEl.closest(".card");
+  const cardEl = imgEl.closest('.card');
   if (!cardEl || !(cardEl instanceof HTMLElement)) return;
 
   // Apply cached metadata immediately to prevent flash on re-render
-  if (imgEl.src && !cardEl.classList.contains("cover-ready")) {
+  if (imgEl.src && !cardEl.classList.contains('cover-ready')) {
     applyCachedImageMetadata(imgEl.src, cardEl);
   }
 
@@ -288,10 +288,10 @@ export function handleJsxImageRef(
     imgEl.complete &&
     imgEl.naturalWidth > 0 &&
     imgEl.naturalHeight > 0 &&
-    !cardEl.classList.contains("cover-ready")
+    !cardEl.classList.contains('cover-ready')
   ) {
     // Force reflow only when fade is needed (skip during shuffle re-render)
-    if (!cardEl.closest(".skip-cover-fade")) {
+    if (!cardEl.closest('.skip-cover-fade')) {
       void cardEl.offsetHeight;
     }
     handleImageLoad(imgEl, cardEl, updateLayoutRef.current);
@@ -299,12 +299,12 @@ export function handleJsxImageRef(
     // #18: Fallback listener if image loads before JSX onLoad handler attaches
     // Uses { once: true } to auto-cleanup; cover-ready guard prevents double-processing
     imgEl.addEventListener(
-      "load",
+      'load',
       () => {
-        if (cardEl.classList.contains("cover-ready")) return;
+        if (cardEl.classList.contains('cover-ready')) return;
         handleImageLoad(imgEl, cardEl, updateLayoutRef.current);
       },
-      { once: true },
+      { once: true }
     );
   }
 }
@@ -315,15 +315,15 @@ export function handleJsxImageRef(
  */
 export function handleJsxImageLoad(
   e: Event,
-  updateLayoutRef: RefObject<(() => void) | null>,
+  updateLayoutRef: RefObject<(() => void) | null>
 ): void {
   const imgEl = e.currentTarget as HTMLImageElement;
 
-  const cardEl = imgEl.closest(".card");
+  const cardEl = imgEl.closest('.card');
   if (
     !cardEl ||
     !(cardEl instanceof HTMLElement) ||
-    cardEl.classList.contains("cover-ready")
+    cardEl.classList.contains('cover-ready')
   )
     return;
 
@@ -337,28 +337,28 @@ export function handleJsxImageLoad(
  */
 export function handleJsxImageError(
   e: Event,
-  updateLayoutRef: RefObject<(() => void) | null>,
+  updateLayoutRef: RefObject<(() => void) | null>
 ): void {
   const imgEl = e.currentTarget as HTMLImageElement;
 
   // Hide broken image to prevent placeholder icon
-  imgEl.addClass("dynamic-views-hidden");
+  imgEl.addClass('dynamic-views-hidden');
 
   // Fix null assertions
-  const cardEl = imgEl.closest(".card");
+  const cardEl = imgEl.closest('.card');
   if (
     !cardEl ||
     !(cardEl instanceof HTMLElement) ||
-    cardEl.classList.contains("cover-ready")
+    cardEl.classList.contains('cover-ready')
   )
     return;
 
-  cardEl.classList.add("cover-ready");
+  cardEl.classList.add('cover-ready');
   handleAllImagesFailed(cardEl);
   // Set default aspect ratio on error
   cardEl.style.setProperty(
-    "--actual-aspect-ratio",
-    DEFAULT_ASPECT_RATIO.toString(),
+    '--actual-aspect-ratio',
+    DEFAULT_ASPECT_RATIO.toString()
   );
   if (updateLayoutRef.current) updateLayoutRef.current();
 }
@@ -378,7 +378,7 @@ export function setupBackdropImageLoader(
   cardEl: HTMLElement,
   imageUrls: string[],
   onLayoutUpdate?: (() => void) | null,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): void {
   // Apply cached metadata immediately (prevents flash on re-render)
   applyCachedImageMetadata(imgEl.src, cardEl);
@@ -388,9 +388,9 @@ export function setupBackdropImageLoader(
     imgEl.complete &&
     imgEl.naturalWidth > 0 &&
     imgEl.naturalHeight > 0 &&
-    !cardEl.classList.contains("cover-ready")
+    !cardEl.classList.contains('cover-ready')
   ) {
-    if (!cardEl.closest(".skip-cover-fade")) {
+    if (!cardEl.closest('.skip-cover-fade')) {
       void cardEl.offsetHeight;
     }
     handleImageLoad(imgEl, cardEl, onLayoutUpdate);
@@ -399,12 +399,12 @@ export function setupBackdropImageLoader(
 
   // Load handler - handleImageLoad has internal double-rAF, just guard abort here
   imgEl.addEventListener(
-    "load",
+    'load',
     () => {
       if (signal?.aborted) return;
       handleImageLoad(imgEl, cardEl, onLayoutUpdate);
     },
-    { signal },
+    { signal }
   );
 
   // Multi-image fallback
@@ -417,7 +417,7 @@ export function setupBackdropImageLoader(
       if (currentIndex < imageUrls.length) {
         if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
           return;
-        imgEl.removeClass("dynamic-views-hidden");
+        imgEl.removeClass('dynamic-views-hidden');
         imgEl.src = imageUrls[currentIndex];
         return;
       }
@@ -429,17 +429,17 @@ export function setupBackdropImageLoader(
         getOwnerWindow(cardEl).requestAnimationFrame(() => {
           if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
             return;
-          imgEl.addClass("dynamic-views-hidden");
-          cardEl.classList.add("cover-ready");
+          imgEl.addClass('dynamic-views-hidden');
+          cardEl.classList.add('cover-ready');
           onLayoutUpdate?.();
         });
       });
     };
-    imgEl.addEventListener("error", tryNextImage, { signal });
+    imgEl.addEventListener('error', tryNextImage, { signal });
   } else {
     // Single image error handler
     imgEl.addEventListener(
-      "error",
+      'error',
       () => {
         if (signal?.aborted) return;
         markImageBroken(imgEl.src);
@@ -449,13 +449,13 @@ export function setupBackdropImageLoader(
           getOwnerWindow(cardEl).requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected || !imgEl.isConnected)
               return;
-            imgEl.addClass("dynamic-views-hidden");
-            cardEl.classList.add("cover-ready");
+            imgEl.addClass('dynamic-views-hidden');
+            cardEl.classList.add('cover-ready');
             onLayoutUpdate?.();
           });
         });
       },
-      { signal },
+      { signal }
     );
   }
 }

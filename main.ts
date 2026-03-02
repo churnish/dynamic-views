@@ -7,42 +7,42 @@ import {
   TFile,
   TFolder,
   PaneType,
-} from "obsidian";
-import { PersistenceManager } from "./src/persistence";
-import { View } from "./src/datacore/controller";
-import { setDatacorePreact } from "./src/jsx-runtime";
-import { getAvailablePath, getAvailableBasePath } from "./src/utils/file";
-import "./src/jsx-runtime"; // Ensure h and Fragment are globally available
+} from 'obsidian';
+import { PersistenceManager } from './src/persistence';
+import { View } from './src/datacore/controller';
+import { setDatacorePreact } from './src/jsx-runtime';
+import { getAvailablePath, getAvailableBasePath } from './src/utils/file';
+import './src/jsx-runtime'; // Ensure h and Fragment are globally available
 import {
   DynamicViewsGridView,
   GRID_VIEW_TYPE,
   cardViewOptions,
-} from "./src/bases/grid-view";
+} from './src/bases/grid-view';
 import {
   DynamicViewsMasonryView,
   MASONRY_VIEW_TYPE,
   masonryViewOptions,
-} from "./src/bases/masonry-view";
-import { DynamicViewsSettingTab } from "./src/plugin-settings";
-import type { DatacoreAPI } from "./src/datacore/types";
+} from './src/bases/masonry-view';
+import { DynamicViewsSettingTab } from './src/plugin-settings';
+import type { DatacoreAPI } from './src/datacore/types';
 import {
   initExternalBlobCache,
   cleanupExternalBlobCache,
-} from "./src/shared/slideshow";
+} from './src/shared/slideshow';
 import {
   openRandomFile,
   toggleShuffleActiveView,
   getPaneType,
-} from "./src/utils/randomize";
-import { clearInFlightLoads } from "./src/shared/content-loader";
-import { invalidateCacheForFile } from "./src/shared/image-loader";
+} from './src/utils/randomize';
+import { clearInFlightLoads } from './src/shared/content-loader';
+import { invalidateCacheForFile } from './src/shared/image-loader';
 
 // Plugin/feature names (proper nouns, not subject to sentence case)
-const DATACORE = "Datacore";
-const GRID = "Grid";
-const MASONRY = "Masonry";
-const NEW_GRID_BASE = "New Grid base";
-const NEW_MASONRY_BASE = "New Masonry base";
+const DATACORE = 'Datacore';
+const GRID = 'Grid';
+const MASONRY = 'Masonry';
+const NEW_GRID_BASE = 'New Grid base';
+const NEW_MASONRY_BASE = 'New Masonry base';
 
 export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
@@ -60,7 +60,7 @@ export default class DynamicViews extends Plugin {
         plugin: this,
         app: this.app,
         dc,
-        USER_QUERY: userQuery || "@page",
+        USER_QUERY: userQuery || '@page',
         QUERY_ID: queryId,
       });
     };
@@ -79,7 +79,7 @@ export default class DynamicViews extends Plugin {
     // Set initial body classes for settings
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.add(
-      `dynamic-views-open-on-${settings.openFileAction}`,
+      `dynamic-views-open-on-${settings.openFileAction}`
     );
 
     // Register settings tab
@@ -87,53 +87,53 @@ export default class DynamicViews extends Plugin {
 
     // Register Bases views
     // Note: Named "Grid" to differentiate from built-in Bases "Cards" view
-    this.registerBasesView("dynamic-views-grid", {
-      name: "Grid",
-      icon: "lucide-grid-2x-2",
+    this.registerBasesView('dynamic-views-grid', {
+      name: 'Grid',
+      icon: 'lucide-grid-2x-2',
       factory: (controller: QueryController, scrollEl: HTMLElement) =>
         new DynamicViewsGridView(controller, scrollEl),
       options: cardViewOptions,
     });
 
-    this.registerBasesView("dynamic-views-masonry", {
-      name: "Masonry",
-      icon: "panels-right-bottom",
+    this.registerBasesView('dynamic-views-masonry', {
+      name: 'Masonry',
+      icon: 'panels-right-bottom',
       factory: (controller: QueryController, scrollEl: HTMLElement) =>
         new DynamicViewsMasonryView(controller, scrollEl),
       options: masonryViewOptions,
     });
 
     // Notify Style Settings to parse our CSS (overrides default class below if installed)
-    this.app.workspace.trigger("parse-style-settings");
+    this.app.workspace.trigger('parse-style-settings');
 
     // Default file format indicator when Style Settings is not installed
     const fileTypeClasses = [
-      "dynamic-views-file-type-ext",
-      "dynamic-views-file-type-flair",
-      "dynamic-views-file-type-icon",
-      "dynamic-views-file-type-none",
+      'dynamic-views-file-type-ext',
+      'dynamic-views-file-type-flair',
+      'dynamic-views-file-type-icon',
+      'dynamic-views-file-type-none',
     ];
     if (!fileTypeClasses.some((c) => document.body.classList.contains(c))) {
-      document.body.classList.add("dynamic-views-file-type-ext");
+      document.body.classList.add('dynamic-views-file-type-ext');
     }
 
     this.addCommand({
-      id: "create-datacore-note",
+      id: 'create-datacore-note',
       name: `Create new note with ${DATACORE} query`,
-      icon: "lucide-file-code-corner",
+      icon: 'lucide-file-code-corner',
       callback: async () => {
         await this.createExplorerFile();
       },
     });
 
     this.addCommand({
-      id: "insert-datacore-query",
+      id: 'insert-datacore-query',
       name: `Insert ${DATACORE} query`,
-      icon: "lucide-list-plus",
+      icon: 'lucide-list-plus',
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
-        view: MarkdownView,
+        view: MarkdownView
       ) => {
         const cursor = editor.getCursor();
         const lineContent = editor.getLine(cursor.line);
@@ -153,66 +153,66 @@ export default class DynamicViews extends Plugin {
 
     // Add ribbon icons
     this.addRibbonIcon(
-      "lucide-grid-2x-2",
+      'lucide-grid-2x-2',
       `Create new ${GRID} base`,
       async (evt: MouseEvent) => {
         await this.createBaseFile(
-          "dynamic-views-grid",
-          "Grid",
-          getPaneType(evt, false),
+          'dynamic-views-grid',
+          'Grid',
+          getPaneType(evt, false)
         );
-      },
+      }
     );
 
     this.addRibbonIcon(
-      "panels-right-bottom",
+      'panels-right-bottom',
       `Create new ${MASONRY} base`,
       async (evt: MouseEvent) => {
         await this.createBaseFile(
-          "dynamic-views-masonry",
-          "Masonry",
-          getPaneType(evt, false),
+          'dynamic-views-masonry',
+          'Masonry',
+          getPaneType(evt, false)
         );
-      },
+      }
     );
 
-    this.addRibbonIcon("shuffle", "Shuffle base", () => {
+    this.addRibbonIcon('shuffle', 'Shuffle base', () => {
       // Close any zoomed images
       document
-        .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
+        .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
         .forEach((el) => {
-          el.classList.remove("is-zoomed");
+          el.classList.remove('is-zoomed');
         });
       toggleShuffleActiveView(this.app);
     });
 
     this.addRibbonIcon(
-      "dices",
-      "Open random file from base",
+      'dices',
+      'Open random file from base',
       async (evt: MouseEvent) => {
         // Close any zoomed images
         document
-          .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
+          .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
           .forEach((el) => {
-            el.classList.remove("is-zoomed");
+            el.classList.remove('is-zoomed');
           });
         const defaultInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
-      },
+      }
     );
 
     // Add commands for Random and Shuffle
     this.addCommand({
-      id: "open-random-file",
-      name: "Open random file from base",
-      icon: "dices",
+      id: 'open-random-file',
+      name: 'Open random file from base',
+      icon: 'dices',
       callback: async () => {
         // Close any zoomed images
         document
-          .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
+          .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
           .forEach((el) => {
-            el.classList.remove("is-zoomed");
+            el.classList.remove('is-zoomed');
           });
         const openInNewPane =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
@@ -221,24 +221,24 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "shuffle-base",
-      name: "Shuffle base",
-      icon: "shuffle",
+      id: 'shuffle-base',
+      name: 'Shuffle base',
+      icon: 'shuffle',
       callback: () => {
         // Close any zoomed images
         document
-          .querySelectorAll(".dynamic-views-image-embed.is-zoomed")
+          .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
           .forEach((el) => {
-            el.classList.remove("is-zoomed");
+            el.classList.remove('is-zoomed');
           });
         toggleShuffleActiveView(this.app);
       },
     });
 
     this.addCommand({
-      id: "fold-groups",
-      name: "Fold all groups",
-      icon: "lucide-minimize-2",
+      id: 'fold-groups',
+      name: 'Fold all groups',
+      icon: 'lucide-minimize-2',
       checkCallback: (checking) => {
         const view = this.getActiveDVGroupedView();
         if (!view) return false;
@@ -248,9 +248,9 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "unfold-groups",
-      name: "Unfold all groups",
-      icon: "lucide-maximize-2",
+      id: 'unfold-groups',
+      name: 'Unfold all groups',
+      icon: 'lucide-maximize-2',
       checkCallback: (checking) => {
         const view = this.getActiveDVGroupedView();
         if (!view) return false;
@@ -260,70 +260,70 @@ export default class DynamicViews extends Plugin {
     });
 
     this.addCommand({
-      id: "create-grid-base",
+      id: 'create-grid-base',
       name: `Create new ${GRID} base`,
-      icon: "lucide-grid-2x-2",
+      icon: 'lucide-grid-2x-2',
       callback: async () => {
-        await this.createBaseFile("dynamic-views-grid", "Grid", false);
+        await this.createBaseFile('dynamic-views-grid', 'Grid', false);
       },
     });
 
     this.addCommand({
-      id: "create-masonry-base",
+      id: 'create-masonry-base',
       name: `Create new ${MASONRY} base`,
-      icon: "panels-right-bottom",
+      icon: 'panels-right-bottom',
       callback: async () => {
-        await this.createBaseFile("dynamic-views-masonry", "Masonry", false);
+        await this.createBaseFile('dynamic-views-masonry', 'Masonry', false);
       },
     });
 
     // Invalidate image metadata cache when vault files are modified (#17)
     // Only invalidate for image files to avoid unnecessary cache clears
     const IMAGE_EXTENSIONS = new Set([
-      "png",
-      "jpg",
-      "jpeg",
-      "gif",
-      "webp",
-      "svg",
-      "bmp",
-      "ico",
+      'png',
+      'jpg',
+      'jpeg',
+      'gif',
+      'webp',
+      'svg',
+      'bmp',
+      'ico',
     ]);
     this.registerEvent(
-      this.app.vault.on("modify", (file) => {
+      this.app.vault.on('modify', (file) => {
         if (file instanceof TFile) {
           const ext = file.extension.toLowerCase();
           if (IMAGE_EXTENSIONS.has(ext)) {
             invalidateCacheForFile(file.path);
           }
         }
-      }),
+      })
     );
 
     // Handle editor-drop events for plugin cards
     this.registerEvent(
-      this.app.workspace.on("editor-drop", (evt, editor, view) => {
-        const data = evt.dataTransfer?.getData("text/plain");
+      this.app.workspace.on('editor-drop', (evt, editor, view) => {
+        const data = evt.dataTransfer?.getData('text/plain');
 
         // Check if it's an obsidian:// URI from our plugin
-        if (data && data.startsWith("obsidian://open?vault=")) {
+        if (data && data.startsWith('obsidian://open?vault=')) {
           // Extract file path from URI
           const url = new URL(data);
-          const filePath = url.searchParams.get("file");
+          const filePath = url.searchParams.get('file');
 
           if (filePath) {
             // Decode path and get TFile object
             const decodedPath = decodeURIComponent(filePath);
             const file = this.app.vault.getAbstractFileByPath(
-              decodedPath + ".md",
+              decodedPath + '.md'
             );
 
             if (file instanceof TFile) {
               // Generate link respecting user's link format settings
-              const sourcePath = view.file?.path || "";
+              const sourcePath = view.file?.path || '';
               const link = this.app.fileManager.generateMarkdownLink(
                 file,
-                sourcePath,
+                sourcePath
               );
 
               // Insert link at cursor position
@@ -334,12 +334,12 @@ export default class DynamicViews extends Plugin {
             }
           }
         }
-      }),
+      })
     );
 
     // Add "New Grid/Masonry base" to folder context menus
     this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, file) => {
+      this.app.workspace.on('file-menu', (menu, file) => {
         if (!(file instanceof TFolder)) return;
         if (!this.persistenceManager.getPluginSettings().contextMenuCommands)
           return;
@@ -347,33 +347,33 @@ export default class DynamicViews extends Plugin {
         menu.addItem((item) =>
           item
             .setTitle(NEW_GRID_BASE)
-            .setIcon("lucide-grid-2x-2")
-            .setSection("action-primary")
+            .setIcon('lucide-grid-2x-2')
+            .setSection('action-primary')
             .onClick(async () => {
               await this.createBaseFile(
-                "dynamic-views-grid",
-                "Grid",
+                'dynamic-views-grid',
+                'Grid',
                 false,
-                file.path,
+                file.path
               );
-            }),
+            })
         );
 
         menu.addItem((item) =>
           item
             .setTitle(NEW_MASONRY_BASE)
-            .setIcon("panels-right-bottom")
-            .setSection("action-primary")
+            .setIcon('panels-right-bottom')
+            .setSection('action-primary')
             .onClick(async () => {
               await this.createBaseFile(
-                "dynamic-views-masonry",
-                "Masonry",
+                'dynamic-views-masonry',
+                'Masonry',
                 false,
-                file.path,
+                file.path
               );
-            }),
+            })
         );
-      }),
+      })
     );
   }
 
@@ -394,21 +394,21 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     try {
       const activeFile = this.app.workspace.getActiveFile();
       const folderPath = this.app.fileManager.getNewFileParent(
-        activeFile?.path ?? "",
+        activeFile?.path ?? ''
       ).path;
-      const filePath = getAvailablePath(this.app, folderPath, "Untitled");
+      const filePath = getAvailablePath(this.app, folderPath, 'Untitled');
       const template = this.getQueryTemplate();
 
       await this.app.vault.create(filePath, template);
 
       const file = this.app.vault.getFileByPath(filePath);
       if (file) {
-        const leaf = this.app.workspace.getLeaf("tab");
-        await leaf.openFile(file, { eState: { rename: "all" } });
+        const leaf = this.app.workspace.getLeaf('tab');
+        await leaf.openFile(file, { eState: { rename: 'all' } });
       }
     } catch (error) {
       new Notice(`Failed to create file. Check console for details.`);
-      console.error("File creation failed:", error);
+      console.error('File creation failed:', error);
     }
   }
 
@@ -416,17 +416,17 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     viewType: string,
     viewName: string,
     paneType: PaneType | boolean,
-    folderPath?: string,
+    folderPath?: string
   ) {
     try {
       if (!folderPath) {
         const activeFile = this.app.workspace.getActiveFile();
         folderPath = this.app.fileManager.getNewFileParent(
-          activeFile?.path ?? "",
+          activeFile?.path ?? ''
         ).path;
       }
-      const filePath = getAvailableBasePath(this.app, folderPath, "Untitled");
-      const minCol = viewType === "dynamic-views-masonry" ? "two" : "one";
+      const filePath = getAvailableBasePath(this.app, folderPath, 'Untitled');
+      const minCol = viewType === 'dynamic-views-masonry' ? 'two' : 'one';
       const content = `views:\n  - type: ${viewType}\n    name: ${viewName}\n    minimumColumns: ${minCol}\n`;
 
       await this.app.vault.create(filePath, content);
@@ -434,11 +434,11 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
       const file = this.app.vault.getFileByPath(filePath);
       if (file) {
         const leaf = this.app.workspace.getLeaf(paneType);
-        await leaf.openFile(file, { eState: { rename: "all" } });
+        await leaf.openFile(file, { eState: { rename: 'all' } });
       }
     } catch (error) {
       new Notice(`Failed to create base file. Check console for details.`);
-      console.error("Base file creation failed:", error);
+      console.error('Base file creation failed:', error);
     }
   }
 
@@ -468,13 +468,13 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     // Remove body classes added during load
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(
-      `dynamic-views-open-on-${settings.openFileAction}`,
+      `dynamic-views-open-on-${settings.openFileAction}`
     );
     document.body.classList.remove(
-      "dynamic-views-file-type-ext",
-      "dynamic-views-file-type-flair",
-      "dynamic-views-file-type-icon",
-      "dynamic-views-file-type-none",
+      'dynamic-views-file-type-ext',
+      'dynamic-views-file-type-flair',
+      'dynamic-views-file-type-icon',
+      'dynamic-views-file-type-none'
     );
 
     clearInFlightLoads();

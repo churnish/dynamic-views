@@ -1,16 +1,18 @@
-import { setupClickOutside } from "../../src/utils/dropdown-position";
+import { vi } from 'vitest';
+import type { Mock } from 'vitest';
+import { setupClickOutside } from '../../src/utils/dropdown-position';
 
-describe("dropdown-position", () => {
-  describe("setupClickOutside", () => {
+describe('dropdown-position', () => {
+  describe('setupClickOutside', () => {
     let containerElement: HTMLElement;
-    let onClickOutside: jest.Mock;
+    let onClickOutside: Mock;
     let cleanup: (() => void) | undefined;
 
     beforeEach(() => {
-      containerElement = document.createElement("div");
+      containerElement = document.createElement('div');
       document.body.appendChild(containerElement);
-      onClickOutside = jest.fn();
-      jest.useFakeTimers();
+      onClickOutside = vi.fn();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
@@ -18,17 +20,17 @@ describe("dropdown-position", () => {
         cleanup();
       }
       document.body.removeChild(containerElement);
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
-    it("should call callback when clicking outside container", () => {
+    it('should call callback when clicking outside container', () => {
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Fast-forward timer to attach event listener
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Click outside
-      const outsideElement = document.createElement("div");
+      const outsideElement = document.createElement('div');
       document.body.appendChild(outsideElement);
       outsideElement.click();
 
@@ -37,11 +39,11 @@ describe("dropdown-position", () => {
       document.body.removeChild(outsideElement);
     });
 
-    it("should not call callback when clicking inside container", () => {
+    it('should not call callback when clicking inside container', () => {
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Fast-forward timer to attach event listener
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Click inside
       containerElement.click();
@@ -49,14 +51,14 @@ describe("dropdown-position", () => {
       expect(onClickOutside).not.toHaveBeenCalled();
     });
 
-    it("should not call callback when clicking on child elements", () => {
-      const childElement = document.createElement("button");
+    it('should not call callback when clicking on child elements', () => {
+      const childElement = document.createElement('button');
       containerElement.appendChild(childElement);
 
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Fast-forward timer
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Click on child
       childElement.click();
@@ -64,11 +66,11 @@ describe("dropdown-position", () => {
       expect(onClickOutside).not.toHaveBeenCalled();
     });
 
-    it("should delay event listener attachment", () => {
+    it('should delay event listener attachment', () => {
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Click before timer runs
-      const outsideElement = document.createElement("div");
+      const outsideElement = document.createElement('div');
       document.body.appendChild(outsideElement);
       outsideElement.click();
 
@@ -76,7 +78,7 @@ describe("dropdown-position", () => {
       expect(onClickOutside).not.toHaveBeenCalled();
 
       // Run timer
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Click again
       outsideElement.click();
@@ -87,17 +89,17 @@ describe("dropdown-position", () => {
       document.body.removeChild(outsideElement);
     });
 
-    it("should remove event listener on cleanup", () => {
+    it('should remove event listener on cleanup', () => {
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Fast-forward timer
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Call cleanup
       cleanup();
 
       // Click outside
-      const outsideElement = document.createElement("div");
+      const outsideElement = document.createElement('div');
       document.body.appendChild(outsideElement);
       outsideElement.click();
 
@@ -107,11 +109,11 @@ describe("dropdown-position", () => {
       document.body.removeChild(outsideElement);
     });
 
-    it("should handle cleanup called multiple times", () => {
+    it('should handle cleanup called multiple times', () => {
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Fast-forward timer
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Call cleanup multiple times
       cleanup();
@@ -122,20 +124,20 @@ describe("dropdown-position", () => {
       expect(onClickOutside).not.toHaveBeenCalled();
     });
 
-    it("should handle nested containers", () => {
-      const parentContainer = document.createElement("div");
-      const childContainer = document.createElement("div");
+    it('should handle nested containers', () => {
+      const parentContainer = document.createElement('div');
+      const childContainer = document.createElement('div');
       parentContainer.appendChild(childContainer);
       document.body.appendChild(parentContainer);
 
-      const parentCallback = jest.fn();
-      const childCallback = jest.fn();
+      const parentCallback = vi.fn();
+      const childCallback = vi.fn();
 
       const parentCleanup = setupClickOutside(parentContainer, parentCallback);
       const childCleanup = setupClickOutside(childContainer, childCallback);
 
       // Fast-forward timers
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Click on child
       childContainer.click();
@@ -159,14 +161,14 @@ describe("dropdown-position", () => {
       document.body.removeChild(parentContainer);
     });
 
-    it("should handle document click events", () => {
+    it('should handle document click events', () => {
       cleanup = setupClickOutside(containerElement, onClickOutside);
 
       // Fast-forward timer
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Trigger click event on document
-      const clickEvent = new MouseEvent("click", {
+      const clickEvent = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,
       });
@@ -176,14 +178,14 @@ describe("dropdown-position", () => {
       expect(onClickOutside).toHaveBeenCalledTimes(1);
     });
 
-    it("should work with detached containers", () => {
-      const detachedContainer = document.createElement("div");
-      const callback = jest.fn();
+    it('should work with detached containers', () => {
+      const detachedContainer = document.createElement('div');
+      const callback = vi.fn();
 
       const detachedCleanup = setupClickOutside(detachedContainer, callback);
 
       // Fast-forward timer
-      jest.runAllTimers();
+      vi.runAllTimers();
 
       // Click on document
       document.body.click();

@@ -4,11 +4,11 @@
  * @returns RGB color string in format "rgb(r, g, b)"
  */
 export function extractAverageColor(img: HTMLImageElement): string {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
 
   if (!ctx) {
-    return "rgb(128, 128, 128)"; // Fallback gray
+    return 'rgb(128, 128, 128)'; // Fallback gray
   }
 
   // Use small canvas for performance - 50x50 is enough for average color
@@ -73,6 +73,6 @@ export function calculateLuminance(rgbString: string): number {
  * @param rgbString - RGB color string in format "rgb(r, g, b)"
  * @returns 'light' if luminance > 0.3, otherwise 'dark'
  */
-export function getColorTheme(rgbString: string): "light" | "dark" {
-  return calculateLuminance(rgbString) > 0.3 ? "light" : "dark";
+export function getColorTheme(rgbString: string): 'light' | 'dark' {
+  return calculateLuminance(rgbString) > 0.3 ? 'light' : 'dark';
 }

@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin } from 'obsidian';
 import type {
   PluginData,
   PluginSettings,
@@ -6,7 +6,7 @@ import type {
   BasesUIState,
   DatacoreState,
   SettingsTemplate,
-} from "./types";
+} from './types';
 import {
   BASES_DEFAULTS,
   PLUGIN_SETTINGS,
@@ -15,12 +15,12 @@ import {
   DATACORE_DEFAULTS,
   DEFAULT_BASES_STATE,
   DEFAULT_DATACORE_STATE,
-} from "./constants";
-import { sanitizeObject, sanitizeString } from "./utils/sanitize";
+} from './constants';
+import { sanitizeObject, sanitizeString } from './utils/sanitize';
 import {
   VALID_VIEW_VALUES,
   VIEW_DEFAULTS_TYPES,
-} from "./shared/view-validation";
+} from './shared/view-validation';
 
 const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
 const DATACORE_DEFAULTS_KEYS = new Set(Object.keys(DATACORE_DEFAULTS));
@@ -33,10 +33,10 @@ const DATACORE_DEFAULTS_KEYS = new Set(Object.keys(DATACORE_DEFAULTS));
  */
 function cleanupTemplateSettings(
   settings: Record<string, unknown>,
-  viewType: "grid" | "masonry" | "datacore",
+  viewType: 'grid' | 'masonry' | 'datacore'
 ): boolean {
   let changed = false;
-  const allowDatacore = viewType === "datacore";
+  const allowDatacore = viewType === 'datacore';
 
   for (const key of Object.keys(settings)) {
     // Remove keys not in allowed set
@@ -54,7 +54,7 @@ function cleanupTemplateSettings(
     const expectedType = VIEW_DEFAULTS_TYPES[key];
     if (
       expectedType &&
-      key !== "minimumColumns" &&
+      key !== 'minimumColumns' &&
       typeof settings[key] !== expectedType
     ) {
       delete settings[key];
@@ -66,7 +66,7 @@ function cleanupTemplateSettings(
     // Skip minimumColumns - Bases uses strings, Datacore uses numbers
     const validValues = VALID_VIEW_VALUES[key as keyof ViewDefaults];
     if (
-      key !== "minimumColumns" &&
+      key !== 'minimumColumns' &&
       validValues &&
       !validValues.includes(String(settings[key]) as never)
     ) {
@@ -78,14 +78,14 @@ function cleanupTemplateSettings(
   // Remove keys that match VIEW_DEFAULTS (sparse templates).
   // For Bases views, skip keys where BASES_DEFAULTS overrides VIEW_DEFAULTS
   // (same guard as cleanUpBaseFile in utils.ts).
-  const isBases = viewType !== "datacore";
+  const isBases = viewType !== 'datacore';
   for (const key of Object.keys(VIEW_DEFAULTS) as (keyof ViewDefaults)[]) {
     if (isBases && key in BASES_DEFAULTS) continue;
     if (settings[key] === undefined) continue;
 
     // minimumColumns: view-type-specific default (templates store numbers)
-    if (key === "minimumColumns") {
-      const minColDefault = viewType === "masonry" ? 2 : 1;
+    if (key === 'minimumColumns') {
+      const minColDefault = viewType === 'masonry' ? 2 : 1;
       if (settings[key] === minColDefault) {
         delete settings[key];
         changed = true;
@@ -132,7 +132,7 @@ export class PersistenceManager {
 
     // Clean up stale keys/values in templates
     let templatesDirty = false;
-    for (const viewType of ["grid", "masonry", "datacore"] as const) {
+    for (const viewType of ['grid', 'masonry', 'datacore'] as const) {
       const template = this.data.templates[viewType];
       if (!template) continue;
       if (
@@ -199,13 +199,13 @@ export class PersistenceManager {
 
   async setBasesState(
     viewId: string | undefined,
-    state: Partial<BasesUIState>,
+    state: Partial<BasesUIState>
   ): Promise<void> {
     if (!viewId) return;
 
     // Sanitize collapsedGroups array
     const collapsedGroups = (state.collapsedGroups ?? [])
-      .map((item) => (typeof item === "string" ? sanitizeString(item) : item))
+      .map((item) => (typeof item === 'string' ? sanitizeString(item) : item))
       .filter((s): s is string => s !== null);
 
     // Sparse: delete entry if empty, otherwise store
@@ -255,7 +255,7 @@ export class PersistenceManager {
    */
   async setDatacoreState(
     queryId: string | undefined,
-    state: Partial<DatacoreState>,
+    state: Partial<DatacoreState>
   ): Promise<void> {
     if (!queryId) return; // No persistence without queryId
 
@@ -265,15 +265,15 @@ export class PersistenceManager {
     const sanitized: Partial<DatacoreState> = {};
     for (const [k, v] of Object.entries(state)) {
       const stateKey = k as keyof DatacoreState;
-      if (k === "searchQuery" && typeof v === "string") {
+      if (k === 'searchQuery' && typeof v === 'string') {
         (sanitized as Record<string, string>)[stateKey] = sanitizeString(
-          v.slice(0, 500),
+          v.slice(0, 500)
         );
-      } else if (typeof v === "string") {
+      } else if (typeof v === 'string') {
         (sanitized as Record<string, string>)[stateKey] = sanitizeString(v);
-      } else if (k === "settings" && typeof v === "object" && v !== null) {
+      } else if (k === 'settings' && typeof v === 'object' && v !== null) {
         (sanitized as Record<string, unknown>)[stateKey] = sanitizeObject(
-          v as Record<string, unknown>,
+          v as Record<string, unknown>
         );
       } else {
         (sanitized as Record<string, unknown>)[stateKey] = v;
@@ -300,14 +300,14 @@ export class PersistenceManager {
   }
 
   getSettingsTemplate(
-    viewType: "grid" | "masonry" | "datacore",
+    viewType: 'grid' | 'masonry' | 'datacore'
   ): SettingsTemplate | undefined {
     return this.data.templates[viewType];
   }
 
   async setSettingsTemplate(
-    viewType: "grid" | "masonry" | "datacore",
-    template: SettingsTemplate | null,
+    viewType: 'grid' | 'masonry' | 'datacore',
+    template: SettingsTemplate | null
   ): Promise<void> {
     if (template) {
       this.data.templates[viewType] = template;

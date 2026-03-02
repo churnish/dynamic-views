@@ -1,6 +1,6 @@
-import { App, Notice, View, BasesEntry, PaneType, Keymap } from "obsidian";
-import type { DynamicViewsGridView } from "../bases/grid-view";
-import type { DynamicViewsMasonryView } from "../bases/masonry-view";
+import { App, Notice, View, BasesEntry, PaneType, Keymap } from 'obsidian';
+import type { DynamicViewsGridView } from '../bases/grid-view';
+import type { DynamicViewsMasonryView } from '../bases/masonry-view';
 
 type BasesCardView = DynamicViewsGridView | DynamicViewsMasonryView;
 
@@ -12,10 +12,10 @@ type BasesCardView = DynamicViewsGridView | DynamicViewsMasonryView;
  */
 export function getPaneType(
   event: MouseEvent | KeyboardEvent | null,
-  defaultInNewTab: boolean,
+  defaultInNewTab: boolean
 ): PaneType | boolean {
   const modEvent = Keymap.isModEvent(event);
-  return modEvent === "split" || modEvent === "window"
+  return modEvent === 'split' || modEvent === 'window'
     ? modEvent
     : modEvent
       ? !defaultInNewTab
@@ -25,7 +25,7 @@ export function getPaneType(
 // Internal Obsidian base-view structure
 interface BasesViewWrapper extends View {
   controller?: {
-    view?: BasesViewWrapper["basesView"];
+    view?: BasesViewWrapper['basesView'];
   };
   basesView?: {
     type: string;
@@ -54,8 +54,8 @@ export function shuffleArray<T>(array: T[]): T[] {
  * Get any active Bases view (works with all Bases views, not just dynamic-views)
  */
 export function getActiveBasesView(
-  app: App,
-): BasesViewWrapper["basesView"] | null {
+  app: App
+): BasesViewWrapper['basesView'] | null {
   const activeLeaf = app.workspace.getMostRecentLeaf();
   if (!activeLeaf) return null;
 
@@ -63,7 +63,7 @@ export function getActiveBasesView(
   const viewType = view.getViewType();
 
   // Check if it's a Bases view
-  if (viewType === "bases" || viewType === "base-view") {
+  if (viewType === 'bases' || viewType === 'base-view') {
     const wrapper = view as BasesViewWrapper;
 
     // Check controller.view.data.data (standard Bases views)
@@ -71,13 +71,13 @@ export function getActiveBasesView(
       wrapper.controller?.view?.data?.data &&
       Array.isArray(wrapper.controller.view.data.data)
     ) {
-      const viewInstanceType = wrapper.controller.view.type || "unknown";
+      const viewInstanceType = wrapper.controller.view.type || 'unknown';
 
       // For dynamic-views custom views, return the actual view instance
       // This ensures property modifications (isShuffled, shuffledOrder) persist
       if (
-        viewInstanceType === "dynamic-views-grid" ||
-        viewInstanceType === "dynamic-views-masonry"
+        viewInstanceType === 'dynamic-views-grid' ||
+        viewInstanceType === 'dynamic-views-masonry'
       ) {
         return wrapper.controller.view;
       }
@@ -87,7 +87,7 @@ export function getActiveBasesView(
         type: viewInstanceType,
         data: wrapper.controller.view.data,
         onDataUpdated: wrapper.controller.view.onDataUpdated?.bind(
-          wrapper.controller.view,
+          wrapper.controller.view
         ) as (() => void) | undefined,
         isShuffled: wrapper.controller.view.isShuffled,
         shuffledOrder: wrapper.controller.view.shuffledOrder,
@@ -110,8 +110,8 @@ export function getActiveDynamicViewsBase(app: App): BasesCardView | null {
   const basesView = getActiveBasesView(app);
 
   if (
-    basesView?.type === "dynamic-views-grid" ||
-    basesView?.type === "dynamic-views-masonry"
+    basesView?.type === 'dynamic-views-grid' ||
+    basesView?.type === 'dynamic-views-masonry'
   ) {
     return basesView as BasesCardView;
   }
@@ -124,12 +124,12 @@ export function getActiveDynamicViewsBase(app: App): BasesCardView | null {
  */
 export async function openRandomFile(
   app: App,
-  paneType: PaneType | boolean,
+  paneType: PaneType | boolean
 ): Promise<void> {
   const basesView = getActiveBasesView(app);
 
   if (!basesView) {
-    new Notice("No active base view");
+    new Notice('No active base view');
     return;
   }
 
@@ -149,7 +149,7 @@ export async function openRandomFile(
 
   // Open the file
   const filePath = randomEntry.file.path;
-  await app.workspace.openLinkText(filePath, "", paneType);
+  await app.workspace.openLinkText(filePath, '', paneType);
 }
 
 /**
@@ -159,14 +159,14 @@ export function toggleShuffleActiveView(app: App): void {
   const basesView = getActiveBasesView(app);
 
   if (!basesView) {
-    new Notice("No active base view");
+    new Notice('No active base view');
     return;
   }
 
   // Check if this is a dynamic-views Bases view (which supports persistent shuffle state)
   const isDynamicView =
-    basesView.type === "dynamic-views-grid" ||
-    basesView.type === "dynamic-views-masonry";
+    basesView.type === 'dynamic-views-grid' ||
+    basesView.type === 'dynamic-views-masonry';
 
   if (isDynamicView) {
     // Always reshuffle — original sort restores on view reopen
@@ -183,9 +183,9 @@ export function toggleShuffleActiveView(app: App): void {
     // Target workspace-leaf-content which survives re-render (inner DOM is destroyed).
     // The view removes this class at render completion (see grid-view/masonry-view).
     const leafContent = dynamicView.viewScrollEl?.closest(
-      ".workspace-leaf-content",
+      '.workspace-leaf-content'
     );
-    leafContent?.classList.add("skip-cover-fade");
+    leafContent?.classList.add('skip-cover-fade');
 
     if (dynamicView.onDataUpdated) {
       dynamicView.onDataUpdated();

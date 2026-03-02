@@ -66,8 +66,8 @@ function getCSSTextVariable(name: string, defaultValue: string): string {
  * Parse a CSS variable as a number (removing units like 'px')
  */
 function getCSSVariableAsNumber(name: string, defaultValue: number): number {
-  const value = getCSSVariable(name, "");
-  if (value === "") return defaultValue;
+  const value = getCSSVariable(name, '');
+  if (value === '') return defaultValue;
   const parsed = parseFloat(value);
   return isNaN(parsed) ? defaultValue : parsed;
 }
@@ -84,7 +84,7 @@ export function hasBodyClass(className: string): boolean {
  * @deprecated Used by Datacore only — Bases reads from per-view settings
  */
 export function getMinMasonryColumns(): number {
-  return getCSSVariableAsNumber("--dynamic-views-min-masonry-columns", 2);
+  return getCSSVariableAsNumber('--dynamic-views-min-masonry-columns', 2);
 }
 
 /**
@@ -92,7 +92,7 @@ export function getMinMasonryColumns(): number {
  * @deprecated Used by Datacore only — Bases reads from per-view settings
  */
 export function getMinGridColumns(): number {
-  return getCSSVariableAsNumber("--dynamic-views-min-grid-columns", 1);
+  return getCSSVariableAsNumber('--dynamic-views-min-grid-columns', 1);
 }
 
 /**
@@ -100,7 +100,7 @@ export function getMinGridColumns(): number {
  * Cards narrower than this value enter compact mode
  */
 export function getCompactBreakpoint(): number {
-  return getCSSVariableAsNumber("--dynamic-views-compact-breakpoint", 390);
+  return getCSSVariableAsNumber('--dynamic-views-compact-breakpoint', 390);
 }
 
 /**
@@ -109,37 +109,37 @@ export function getCompactBreakpoint(): number {
  * Returns false only when explicitly hidden
  */
 export function showTimestampIcon(): boolean {
-  return !hasBodyClass("dynamic-views-timestamp-icon-hide");
+  return !hasBodyClass('dynamic-views-timestamp-icon-hide');
 }
 
 /**
  * Get tag style from body class
  */
-export function getTagStyle(): "plain" | "theme" | "minimal" {
-  if (hasBodyClass("dynamic-views-tag-style-minimal")) return "minimal";
-  if (hasBodyClass("dynamic-views-tag-style-theme")) return "theme";
-  return "plain";
+export function getTagStyle(): 'plain' | 'theme' | 'minimal' {
+  if (hasBodyClass('dynamic-views-tag-style-minimal')) return 'minimal';
+  if (hasBodyClass('dynamic-views-tag-style-theme')) return 'theme';
+  return 'plain';
 }
 
 /**
  * Check if tag hash (#) prefix should be shown
  */
 export function showTagHashPrefix(): boolean {
-  return hasBodyClass("dynamic-views-show-tag-hash");
+  return hasBodyClass('dynamic-views-show-tag-hash');
 }
 
 /**
  * Empty properties display mode from dropdown setting
  */
-export type HideEmptyMode = "show" | "labels-hidden" | "all";
+export type HideEmptyMode = 'show' | 'labels-hidden' | 'all';
 
 /**
  * Get empty properties display mode from Style Settings dropdown
  */
 export function getHideEmptyMode(): HideEmptyMode {
-  if (hasBodyClass("dynamic-views-empty-properties-show")) return "show";
-  if (hasBodyClass("dynamic-views-empty-properties-hide")) return "all";
-  return "labels-hidden"; // default
+  if (hasBodyClass('dynamic-views-empty-properties-show')) return 'show';
+  if (hasBodyClass('dynamic-views-empty-properties-hide')) return 'all';
+  return 'labels-hidden'; // default
 }
 
 /**
@@ -153,12 +153,12 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
     !containerEl.closest('.workspace-leaf-content[data-type="bases"]')
   ) {
     // Embed: use Obsidian's spacing scale
-    return getCSSVariableAsNumber("--size-4-2", 8);
+    return getCSSVariableAsNumber('--size-4-2', 8);
   }
-  const isMobile = document.body.classList.contains("is-mobile");
+  const isMobile = document.body.classList.contains('is-mobile');
   const varName = isMobile
-    ? "--dynamic-views-card-spacing-mobile"
-    : "--dynamic-views-card-spacing-desktop";
+    ? '--dynamic-views-card-spacing-mobile'
+    : '--dynamic-views-card-spacing-desktop';
   const defaultVal = isMobile ? 6 : 8;
   return getCSSVariableAsNumber(varName, defaultVal);
 }
@@ -168,7 +168,7 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
  * Returns false when user enables "Show full recent timestamps"
  */
 export function shouldShowRecentTimeOnly(): boolean {
-  return !hasBodyClass("dynamic-views-timestamp-recent-full");
+  return !hasBodyClass('dynamic-views-timestamp-recent-full');
 }
 
 /**
@@ -176,7 +176,7 @@ export function shouldShowRecentTimeOnly(): boolean {
  * Returns false when user enables "Show full older timestamps"
  */
 export function shouldShowOlderDateOnly(): boolean {
-  return !hasBodyClass("dynamic-views-timestamp-past-full");
+  return !hasBodyClass('dynamic-views-timestamp-past-full');
 }
 
 /**
@@ -185,8 +185,8 @@ export function shouldShowOlderDateOnly(): boolean {
  */
 export function getDatetimeFormat(): string {
   return getCSSTextVariable(
-    "--dynamic-views-datetime-format",
-    "YYYY-MM-DD, HH:mm",
+    '--dynamic-views-datetime-format',
+    'YYYY-MM-DD, HH:mm'
   );
 }
 
@@ -195,7 +195,7 @@ export function getDatetimeFormat(): string {
  * Returns Moment.js format string for date-only display (older timestamps)
  */
 export function getDateFormat(): string {
-  return getCSSTextVariable("--dynamic-views-date-format", "YYYY-MM-DD");
+  return getCSSTextVariable('--dynamic-views-date-format', 'YYYY-MM-DD');
 }
 
 /**
@@ -203,7 +203,7 @@ export function getDateFormat(): string {
  * Returns Moment.js format string for time-only display (recent timestamps)
  */
 export function getTimeFormat(): string {
-  return getCSSTextVariable("--dynamic-views-time-format", "HH:mm");
+  return getCSSTextVariable('--dynamic-views-time-format', 'HH:mm');
 }
 
 /**
@@ -211,7 +211,7 @@ export function getTimeFormat(): string {
  * Returns the separator for list-type properties
  */
 export function getListSeparator(): string {
-  return getCSSTextVariable("--dynamic-views-list-separator", ", ");
+  return getCSSTextVariable('--dynamic-views-list-separator', ', ');
 }
 
 /**
@@ -219,7 +219,7 @@ export function getListSeparator(): string {
  * Returns the symbol for empty property values
  */
 export function getEmptyValueMarker(): string {
-  return getCSSTextVariable("--dynamic-views-empty-value-marker", "—");
+  return getCSSTextVariable('--dynamic-views-empty-value-marker', '—');
 }
 
 /**
@@ -227,14 +227,14 @@ export function getEmptyValueMarker(): string {
  * Returns true if properties that don't exist on a file should not be displayed
  */
 export function shouldHideMissingProperties(): boolean {
-  return hasBodyClass("dynamic-views-hide-missing-properties");
+  return hasBodyClass('dynamic-views-hide-missing-properties');
 }
 
 /**
  * Get zoom sensitivity from Style Settings (desktop)
  */
 export function getZoomSensitivityDesktop(): number {
-  return getCSSVariableAsNumber("--dynamic-views-zoom-sensitivity", 0.08);
+  return getCSSVariableAsNumber('--dynamic-views-zoom-sensitivity', 0.08);
 }
 
 /**
@@ -249,12 +249,12 @@ export function getZoomSensitivityMobile(): number {
  * Returns false when user enables "Disable slideshow"
  */
 export function isSlideshowEnabled(): boolean {
-  return !hasBodyClass("dynamic-views-slideshow-disabled");
+  return !hasBodyClass('dynamic-views-slideshow-disabled');
 }
 
 /** Returns true when user enables "Disable looping" */
 export function isSlideshowLoopingDisabled(): boolean {
-  return hasBodyClass("dynamic-views-slideshow-disable-looping");
+  return hasBodyClass('dynamic-views-slideshow-disable-looping');
 }
 
 /**
@@ -262,7 +262,7 @@ export function isSlideshowLoopingDisabled(): boolean {
  * Returns false when user enables "Hide slideshow indicator"
  */
 export function isSlideshowIndicatorEnabled(): boolean {
-  return !hasBodyClass("dynamic-views-hide-slideshow-indicator");
+  return !hasBodyClass('dynamic-views-hide-slideshow-indicator');
 }
 
 /**
@@ -270,7 +270,7 @@ export function isSlideshowIndicatorEnabled(): boolean {
  * Returns true when user enables "Disable thumbnail scrubbing"
  */
 export function isThumbnailScrubbingDisabled(): boolean {
-  return hasBodyClass("dynamic-views-disable-thumbnail-scrubbing");
+  return hasBodyClass('dynamic-views-disable-thumbnail-scrubbing');
 }
 
 /**
@@ -278,7 +278,7 @@ export function isThumbnailScrubbingDisabled(): boolean {
  * Returns slider value (default 10, min 2, max 24)
  */
 export function getSlideshowMaxImages(): number {
-  return getCSSVariableAsNumber("--dynamic-views-slideshow-max-images", 10);
+  return getCSSVariableAsNumber('--dynamic-views-slideshow-max-images', 10);
 }
 
 /**
@@ -286,9 +286,9 @@ export function getSlideshowMaxImages(): number {
  * Accepts both "lucide-donut" and "donut" formats
  */
 export function getUrlIcon(): string {
-  let icon = getCSSTextVariable("--dynamic-views-url-icon", "arrow-up-right");
+  let icon = getCSSTextVariable('--dynamic-views-url-icon', 'arrow-up-right');
   // Strip "lucide-" prefix if present (case-insensitive)
-  if (icon.toLowerCase().startsWith("lucide-")) {
+  if (icon.toLowerCase().startsWith('lucide-')) {
     icon = icon.slice(7);
   }
   return icon;
@@ -322,12 +322,12 @@ export function getStyleSettingsHash(): string {
     // Other
     getUrlIcon(),
     // Body classes for overflow and layout modes
-    hasBodyClass("dynamic-views-title-overflow-scroll"),
-    hasBodyClass("dynamic-views-subtitle-overflow-scroll"),
-    hasBodyClass("dynamic-views-hidden-file-extensions"),
+    hasBodyClass('dynamic-views-title-overflow-scroll'),
+    hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
+    hasBodyClass('dynamic-views-hidden-file-extensions'),
     // Poster reveal mode (affects JS click handlers, not CSS-only)
-    hasBodyClass("dynamic-views-poster-reveal-press"),
-  ].join("|");
+    hasBodyClass('dynamic-views-poster-reveal-press'),
+  ].join('|');
 }
 
 /**
@@ -337,7 +337,7 @@ export function getStyleSettingsHash(): string {
  */
 export function setupStyleSettingsObserver(
   onStyleChange: () => void,
-  containerEl: HTMLElement,
+  containerEl: HTMLElement
 ): () => void {
   // Derive document/window from containerEl so popout windows observe their own body,
   // not the main window's body (which updates ~51ms earlier, causing layout glitches)
@@ -348,10 +348,10 @@ export function setupStyleSettingsObserver(
   // Mutually exclusive class-select groups that must always have one active member.
   // When Style Settings is disabled it strips all managed classes — re-add the default.
   const FILE_TYPE_CLASSES = [
-    "dynamic-views-file-type-ext",
-    "dynamic-views-file-type-flair",
-    "dynamic-views-file-type-icon",
-    "dynamic-views-file-type-none",
+    'dynamic-views-file-type-ext',
+    'dynamic-views-file-type-flair',
+    'dynamic-views-file-type-icon',
+    'dynamic-views-file-type-none',
   ];
 
   // Hash of JS-relevant Style Settings — only fire callback when actual values change
@@ -361,23 +361,23 @@ export function setupStyleSettingsObserver(
   const bodyObserver = new MO((mutations) => {
     for (const mutation of mutations) {
       if (
-        mutation.type === "attributes" &&
-        mutation.attributeName === "class"
+        mutation.type === 'attributes' &&
+        mutation.attributeName === 'class'
       ) {
         // Re-apply default when Style Settings strips all file-type classes
         if (!FILE_TYPE_CLASSES.some((c) => doc.body.classList.contains(c))) {
-          doc.body.classList.add("dynamic-views-file-type-ext");
+          doc.body.classList.add('dynamic-views-file-type-ext');
         }
 
         // Clean up stale imperative classes when press mode toggled OFF
         if (
-          mutation.oldValue?.includes("dynamic-views-poster-reveal-press") &&
-          !doc.body.classList.contains("dynamic-views-poster-reveal-press")
+          mutation.oldValue?.includes('dynamic-views-poster-reveal-press') &&
+          !doc.body.classList.contains('dynamic-views-poster-reveal-press')
         ) {
           doc
-            .querySelectorAll(".dynamic-views .card.poster-revealed")
+            .querySelectorAll('.dynamic-views .card.poster-revealed')
             .forEach((el) => {
-              el.classList.remove("poster-revealed", "hover-intent-active");
+              el.classList.remove('poster-revealed', 'hover-intent-active');
             });
         }
 
@@ -396,17 +396,17 @@ export function setupStyleSettingsObserver(
   bodyObserver.observe(doc.body, {
     attributes: true,
     attributeOldValue: true,
-    attributeFilter: ["class"],
+    attributeFilter: ['class'],
   });
 
   // Observer for Style Settings stylesheet changes (slider/variable settings)
   // Style Settings updates a <style> element in <head> with id "css-settings-manager"
-  const styleEl = doc.getElementById("css-settings-manager");
+  const styleEl = doc.getElementById('css-settings-manager');
   let styleObserver: MutationObserver | null = null;
 
   if (styleEl) {
     styleObserver = new MO(() => {
-      if (styleEl.textContent?.includes("--dynamic-views-")) {
+      if (styleEl.textContent?.includes('--dynamic-views-')) {
         onStyleChange();
       }
     });

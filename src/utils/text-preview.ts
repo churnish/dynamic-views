@@ -3,7 +3,7 @@
  * Extracts and sanitizes content for card previews
  */
 
-import { App, TFile } from "obsidian";
+import { App, TFile } from 'obsidian';
 
 /**
  * Markdown patterns for syntax stripping
@@ -105,10 +105,10 @@ function removeCodeBlocks(text: string): string {
     const openIndex = openMatch.index!;
 
     // Build regex for matching closing fence (same char, exact count)
-    const escapedChar = fenceChar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapedChar = fenceChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const closePattern = new RegExp(
       `^${escapedChar}{${fenceLength}}\\s*$`,
-      "m",
+      'm'
     );
 
     // Search for closing fence after opening (skip indent + fence)
@@ -125,7 +125,7 @@ function removeCodeBlocks(text: string): string {
       changed = true;
     } else {
       // No closing fence found, remove just the opening fence line to continue processing
-      const lineEnd = result.indexOf("\n", openIndex);
+      const lineEnd = result.indexOf('\n', openIndex);
       if (lineEnd === -1) {
         // Opening fence is on last line with no closing, remove it
         result = result.substring(0, openIndex);
@@ -143,14 +143,14 @@ function removeCodeBlocks(text: string): string {
  * Strip Markdown syntax from text while preserving content
  */
 export function stripMarkdownSyntax(text: string): string {
-  if (!text || text.trim().length === 0) return "";
+  if (!text || text.trim().length === 0) return '';
 
   // First pass: remove callout title lines at any nesting depth
-  text = text.replace(/^(?:>\s*)+\[![\w-]+\][+-]?.*$/gm, "");
+  text = text.replace(/^(?:>\s*)+\[![\w-]+\][+-]?.*$/gm, '');
   // Second pass: strip all > prefixes from remaining blockquote lines
-  text = text.replace(/^(?:>\s*)+/gm, "");
+  text = text.replace(/^(?:>\s*)+/gm, '');
   // Third pass: strip > after list markers (e.g., "- >text" or "- [-] >text")
-  text = text.replace(/^(\s*[-*+](?:\s*\[[^\]]\])?\s*)>\s?/gm, "$1");
+  text = text.replace(/^(\s*[-*+](?:\s*\[[^\]]\])?\s*)>\s?/gm, '$1');
 
   // Protect escaped characters before processing Markdown
   const { text: protectedText, map: escapedCharsMap } =
@@ -163,21 +163,21 @@ export function stripMarkdownSyntax(text: string): string {
   markdownPatterns.forEach((pattern) => {
     result = result.replace(pattern, (match: string, ...groups: string[]) => {
       // Special handling for HTML tag pairs - return content (group 2)
-      if (match[0] === "<" && match.includes("</")) {
-        return groups[1] || "";
+      if (match[0] === '<' && match.includes('</')) {
+        return groups[1] || '';
       }
 
       // For patterns with capture groups, return the captured content
       if (groups.length > 0 && groups[0] !== undefined) {
         for (let i = 0; i < groups.length - 2; i++) {
-          if (typeof groups[i] === "string") {
+          if (typeof groups[i] === 'string') {
             return groups[i];
           }
         }
       }
 
       // For other patterns, remove completely
-      return "";
+      return '';
     });
   });
 
@@ -197,44 +197,44 @@ export function stripMarkdownSyntax(text: string): string {
  */
 export function sanitizeForPreview(
   content: string,
-  omitFirstLine: "always" | "ifMatchesTitle" | "never" = "ifMatchesTitle",
+  omitFirstLine: 'always' | 'ifMatchesTitle' | 'never' = 'ifMatchesTitle',
   filename?: string,
-  titleValue?: string,
+  titleValue?: string
 ): string {
   // Remove frontmatter (supports both LF and CRLF line endings)
-  const cleaned = content.replace(/^---\r?\n[\s\S]*?\r?\n---/, "").trim();
+  const cleaned = content.replace(/^---\r?\n[\s\S]*?\r?\n---/, '').trim();
   let stripped = stripMarkdownSyntax(cleaned);
 
   // Check if first line matches filename or title
-  const firstLineEnd = stripped.indexOf("\n");
+  const firstLineEnd = stripped.indexOf('\n');
   const firstLine = (
     firstLineEnd !== -1 ? stripped.substring(0, firstLineEnd) : stripped
   ).trim();
 
   // Determine whether to omit first line based on setting
   const shouldOmit =
-    omitFirstLine === "always" ||
-    (omitFirstLine === "ifMatchesTitle" &&
+    omitFirstLine === 'always' ||
+    (omitFirstLine === 'ifMatchesTitle' &&
       ((filename && firstLine === filename) ||
         (titleValue && firstLine === titleValue)));
 
   if (shouldOmit) {
     stripped =
-      firstLineEnd !== -1 ? stripped.substring(firstLineEnd + 1).trim() : "";
+      firstLineEnd !== -1 ? stripped.substring(firstLineEnd + 1).trim() : '';
   }
 
   // Normalize whitespace and remove block IDs
   const normalized = stripped
-    .replace(/(^|\s)\^[a-zA-Z0-9-]+/g, "$1") // Remove block IDs (require whitespace/line-start before ^)
+    .replace(/(^|\s)\^[a-zA-Z0-9-]+/g, '$1') // Remove block IDs (require whitespace/line-start before ^)
     .split(/\s+/)
     .filter((word) => word)
-    .join(" ")
+    .join(' ')
     .trim();
 
   // Truncate to 1000 characters (using spread to handle surrogate pairs correctly)
   const chars = [...normalized];
   if (chars.length > 1000) {
-    return chars.slice(0, 1000).join("").trimEnd() + "…";
+    return chars.slice(0, 1000).join('').trimEnd() + '…';
   }
   return normalized;
 }
@@ -256,15 +256,15 @@ export async function loadFilePreview(
   propertyValue: unknown,
   settings: {
     fallbackToContent: boolean;
-    omitFirstLine: "always" | "ifMatchesTitle" | "never";
+    omitFirstLine: 'always' | 'ifMatchesTitle' | 'never';
   },
   fileName?: string,
-  titleValue?: string,
+  titleValue?: string
 ): Promise<string> {
   // Check if property value is valid
   const hasValidDesc =
     propertyValue != null &&
-    (typeof propertyValue === "string" || typeof propertyValue === "number") &&
+    (typeof propertyValue === 'string' || typeof propertyValue === 'number') &&
     String(propertyValue).trim().length > 0;
 
   if (hasValidDesc) {
@@ -278,9 +278,9 @@ export async function loadFilePreview(
       content,
       settings.omitFirstLine,
       fileName,
-      titleValue,
+      titleValue
     );
   }
 
-  return "";
+  return '';
 }

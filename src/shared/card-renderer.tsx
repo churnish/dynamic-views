@@ -3,10 +3,10 @@
  * Works with both Bases and Datacore by accepting normalized card data
  */
 
-import type { App, PaneType } from "obsidian";
-import { TFile, TFolder, setIcon, Menu, Keymap } from "obsidian";
-import type { ResolvedSettings } from "../types";
-import type { RefObject } from "../datacore/types";
+import type { App, PaneType } from 'obsidian';
+import { TFile, TFolder, setIcon, Menu, Keymap } from 'obsidian';
+import type { ResolvedSettings } from '../types';
+import type { RefObject } from '../datacore/types';
 import {
   showTagHashPrefix,
   getHideEmptyMode,
@@ -20,19 +20,19 @@ import {
   getSlideshowMaxImages,
   getUrlIcon,
   hasBodyClass,
-} from "../utils/style-settings";
+} from '../utils/style-settings';
 import {
   getPropertyLabel,
   normalizePropertyName,
   parsePropertyList,
   stripNotePrefix,
-} from "../utils/property";
-import { findLinksInText, type ParsedLink } from "../utils/link-parser";
+} from '../utils/property';
+import { findLinksInText, type ParsedLink } from '../utils/link-parser';
 import {
   getFileExtInfo,
   getFileTypeIcon,
   stripExtFromTitle,
-} from "../utils/file-extension";
+} from '../utils/file-extension';
 import {
   handleJsxImageRef,
   handleJsxImageLoad,
@@ -42,8 +42,8 @@ import {
   DEFAULT_ASPECT_RATIO,
   filterBrokenUrls,
   markImageBroken,
-} from "./image-loader";
-import { handleImageViewerTrigger, cleanupAllViewers } from "./image-viewer";
+} from './image-loader';
+import { handleImageViewerTrigger, cleanupAllViewers } from './image-viewer';
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
@@ -51,28 +51,28 @@ import {
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
-} from "./slideshow";
+} from './slideshow';
 import {
   showFileContextMenu,
   showExternalLinkContextMenu,
-} from "./context-menu";
+} from './context-menu';
 import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
   setupVerticalScrollGradient,
-} from "./scroll-gradient";
+} from './scroll-gradient';
 import {
   handleArrowNavigation,
   isArrowKey,
   isImageViewerBlockingNav,
-} from "./keyboard-nav";
+} from './keyboard-nav';
 import {
   CHECKBOX_MARKER_PREFIX,
   THUMBNAIL_STACK_MULTIPLIER,
-} from "./constants";
-import { setupHoverIntent } from "./hover-intent";
-import { isTimestampProperty, getTimestampIcon } from "./render-utils";
+} from './constants';
+import { setupHoverIntent } from './hover-intent';
+import { isTimestampProperty, getTimestampIcon } from './render-utils';
 
 import {
   isTagProperty,
@@ -80,15 +80,15 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   computeInvertPairs,
-} from "./property-helpers";
+} from './property-helpers';
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
   revealFileInNotebookNavigator,
-} from "../utils/notebook-navigator";
-import { measurePropertyFields } from "./property-measure";
-import { getOwnerWindow } from "../utils/owner-window";
+} from '../utils/notebook-navigator';
+import { measurePropertyFields } from './property-measure';
+import { getOwnerWindow } from '../utils/owner-window';
 
 /**
  * Extended container element with focus management properties
@@ -145,22 +145,22 @@ function createFileDragHandler(app: App, path: string) {
  * Truncates title text while keeping extension visible at end.
  */
 function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
-  const textEl = titleEl.querySelector<HTMLElement>(".card-title-text");
-  const extEl = titleEl.querySelector<HTMLElement>(".card-title-ext-suffix");
+  const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
+  const extEl = titleEl.querySelector<HTMLElement>('.card-title-ext-suffix');
 
   if (!textEl) return;
 
-  const fullText = (textEl.textContent || "").trim();
+  const fullText = (textEl.textContent || '').trim();
   if (fullText.length === 0) return; // Skip empty titles
 
-  const ellipsis = "…";
+  const ellipsis = '…';
 
   // Get max height from CSS (returns 0 if invalid)
   const getMaxHeight = () => {
     const style = getComputedStyle(titleEl);
     const lineHeight = parseFloat(style.lineHeight);
     const maxLines = parseInt(
-      style.getPropertyValue("--dynamic-views-title-lines") || "2",
+      style.getPropertyValue('--dynamic-views-title-lines') || '2'
     );
     if (maxLines <= 0 || !isFinite(lineHeight)) return 0;
     return Math.ceil(lineHeight * maxLines) + 1;
@@ -173,7 +173,7 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
     const maxHeight = getMaxHeight();
     if (maxHeight <= 0) return; // Invalid CSS config
 
-    const currentText = textEl.textContent || "";
+    const currentText = textEl.textContent || '';
 
     // Reset to full text only if currently truncated
     if (currentText !== fullText) {
@@ -210,7 +210,7 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
 
   // Only truncate in Extension mode (when extension suffix is visible)
   const isExtensionMode = () =>
-    extEl && getComputedStyle(extEl).display !== "none";
+    extEl && getComputedStyle(extEl).display !== 'none';
 
   const check = () => {
     if (isExtensionMode()) {
@@ -223,7 +223,7 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
   observer.observe(titleEl);
   check(); // Initial check
 
-  signal.addEventListener("abort", () => observer.disconnect());
+  signal.addEventListener('abort', () => observer.disconnect());
 }
 
 /**
@@ -231,7 +231,7 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
  */
 function renderLink(link: ParsedLink, app: App): JSX.Element {
   // Internal link (wikilink or markdown internal)
-  if (link.type === "internal") {
+  if (link.type === 'internal') {
     if (link.isEmbed) {
       // Embedded internal link - render as embed container
       return (
@@ -242,7 +242,7 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
             e.preventDefault();
             e.stopPropagation();
             const paneType = Keymap.isModEvent(e);
-            void app.workspace.openLinkText(link.url, "", paneType || false);
+            void app.workspace.openLinkText(link.url, '', paneType || false);
           }}
         >
           {link.caption}
@@ -261,11 +261,11 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
           e.preventDefault();
           e.stopPropagation();
           const paneType = Keymap.isModEvent(e);
-          void app.workspace.openLinkText(link.url, "", paneType || false);
+          void app.workspace.openLinkText(link.url, '', paneType || false);
         }}
         onDragStart={(e: DragEvent) => {
           e.stopPropagation();
-          const file = app.metadataCache.getFirstLinkpathDest(link.url, "");
+          const file = app.metadataCache.getFirstLinkpathDest(link.url, '');
           if (!(file instanceof TFile)) return;
           const dragData = app.dragManager.dragFile(e, file);
           app.dragManager.onDragStart(e, dragData);
@@ -273,7 +273,7 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
         onContextMenu={(e: MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
-          const file = app.metadataCache.getFirstLinkpathDest(link.url, "");
+          const file = app.metadataCache.getFirstLinkpathDest(link.url, '');
           if (file instanceof TFile) {
             showFileContextMenu(e, app, file, link.url);
           }
@@ -305,8 +305,8 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
       href={link.url}
       className="external-link"
       tabIndex={-1}
-      target={link.isWebUrl ? "_blank" : undefined}
-      rel={link.isWebUrl ? "noopener noreferrer" : undefined}
+      target={link.isWebUrl ? '_blank' : undefined}
+      rel={link.isWebUrl ? 'noopener noreferrer' : undefined}
       onClick={(e: MouseEvent) => {
         e.stopPropagation();
       }}
@@ -318,7 +318,7 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
           link.caption === link.url
             ? link.url
             : `[${link.caption}](${link.url})`;
-        e.dataTransfer?.setData("text/plain", dragText);
+        e.dataTransfer?.setData('text/plain', dragText);
       }}
       onContextMenu={(e: MouseEvent) => {
         showExternalLinkContextMenu(e, link.url);
@@ -342,7 +342,7 @@ function renderTextWithLinks(text: string, app: App): JSX.Element | string {
   const elements: (JSX.Element | string)[] = [];
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (segment.type === "text") {
+    if (segment.type === 'text') {
       // Render text directly without span wrapper to preserve whitespace
       elements.push(segment.content);
     } else {
@@ -371,20 +371,20 @@ function renderTagsList(tags: string[], app: App, showHashPrefix: boolean) {
             onClick={(e: MouseEvent) => {
               e.preventDefault();
               if (
-                shouldUseNotebookNavigator(app, "tag") &&
+                shouldUseNotebookNavigator(app, 'tag') &&
                 navigateToTagInNotebookNavigator(app, tag)
               ) {
                 return;
               }
-              const searchPlugin = app.internalPlugins.plugins["global-search"];
+              const searchPlugin = app.internalPlugins.plugins['global-search'];
               if (searchPlugin?.instance?.openGlobalSearch) {
-                searchPlugin.instance.openGlobalSearch("tag:" + tag);
+                searchPlugin.instance.openGlobalSearch('tag:' + tag);
               }
             }}
           >
-            {showHashPrefix ? "#" + tag : tag}
+            {showHashPrefix ? '#' + tag : tag}
           </a>
-        ),
+        )
       )}
     </div>
   );
@@ -398,7 +398,7 @@ function renderFolderSegment(
   folder: string,
   cumulativePath: string,
   isLast: boolean,
-  app: App,
+  app: App
 ) {
   return (
     <span key={cumulativePath} className="path-segment-wrapper">
@@ -407,7 +407,7 @@ function renderFolderSegment(
         onClick={(e: MouseEvent) => {
           e.stopPropagation();
           const folderFile = app.vault.getAbstractFileByPath(cumulativePath);
-          if (shouldUseNotebookNavigator(app, "folder")) {
+          if (shouldUseNotebookNavigator(app, 'folder')) {
             if (
               folderFile instanceof TFolder &&
               navigateToFolderInNotebookNavigator(app, folderFile)
@@ -415,7 +415,7 @@ function renderFolderSegment(
               return;
             }
           }
-          const fileExplorer = app.internalPlugins?.plugins?.["file-explorer"];
+          const fileExplorer = app.internalPlugins?.plugins?.['file-explorer'];
           if (fileExplorer?.instance?.revealInFolder && folderFile) {
             fileExplorer.instance.revealInFolder(folderFile);
           }
@@ -427,10 +427,10 @@ function renderFolderSegment(
           if (folderFile instanceof TFolder) {
             const menu = new Menu();
             app.workspace.trigger(
-              "file-menu",
+              'file-menu',
               menu,
               folderFile,
-              "file-explorer",
+              'file-explorer'
             );
             menu.showAtMouseEvent(e);
           }
@@ -455,7 +455,7 @@ function renderFilenameSegment(filename: string, filePath: string, app: App) {
         onClick={(e: MouseEvent) => {
           e.stopPropagation();
           const file = app.vault.getAbstractFileByPath(filePath);
-          if (shouldUseNotebookNavigator(app, "file")) {
+          if (shouldUseNotebookNavigator(app, 'file')) {
             if (
               file instanceof TFile &&
               revealFileInNotebookNavigator(app, file)
@@ -463,7 +463,7 @@ function renderFilenameSegment(filename: string, filePath: string, app: App) {
               return;
             }
           }
-          const fileExplorer = app.internalPlugins?.plugins?.["file-explorer"];
+          const fileExplorer = app.internalPlugins?.plugins?.['file-explorer'];
           if (fileExplorer?.instance?.revealInFolder && file) {
             fileExplorer.instance.revealInFolder(file);
           }
@@ -518,7 +518,7 @@ export function cleanupAllCardObservers(): void {
   cardResponsiveObservers.forEach((observer) => observer.disconnect());
   cardResponsiveObservers.clear();
   cardPropertyObservers.forEach((observers) =>
-    observers.forEach((obs) => obs.disconnect()),
+    observers.forEach((obs) => obs.disconnect())
   );
   cardPropertyObservers.clear();
 }
@@ -550,7 +550,7 @@ export function cleanupAllImageViewers(): void {
 }
 
 // Extend App type to include isMobile property and dragManager
-declare module "obsidian" {
+declare module 'obsidian' {
   interface App {
     isMobile: boolean;
     internalPlugins: {
@@ -627,7 +627,7 @@ export interface CardData {
 export interface CardRendererProps {
   cards: CardData[];
   settings: ResolvedSettings;
-  viewMode: "grid" | "masonry";
+  viewMode: 'grid' | 'masonry';
   sortMethod: string;
   isShuffled: boolean;
   focusableCardIndex: number;
@@ -647,22 +647,22 @@ export interface CardRendererProps {
 function shouldCollapseFieldDatacore(
   propertyName: string | undefined,
   resolvedValue: unknown,
-  propertyLabels: "hide" | "inline" | "above",
-  hideEmptyMode: "show" | "labels-hidden" | "all",
-  hideMissing: boolean,
+  propertyLabels: 'hide' | 'inline' | 'above',
+  hideEmptyMode: 'show' | 'labels-hidden' | 'all',
+  hideMissing: boolean
 ): boolean {
   // No property configured - collapse if labels hidden (for layout)
   if (!propertyName) {
-    return propertyLabels === "hide";
+    return propertyLabels === 'hide';
   }
   // Convert unknown to string | null for shared function
-  const stringValue = typeof resolvedValue === "string" ? resolvedValue : null;
+  const stringValue = typeof resolvedValue === 'string' ? resolvedValue : null;
   return shouldCollapseField(
     stringValue,
     propertyName,
     hideMissing,
     hideEmptyMode,
-    propertyLabels,
+    propertyLabels
   );
 }
 
@@ -675,12 +675,12 @@ function renderPropertyContent(
   propertyName: string,
   card: CardData,
   resolvedValue: unknown,
-  timeIcon: "calendar" | "clock",
+  timeIcon: 'calendar' | 'clock',
   settings: ResolvedSettings,
-  app: App,
+  app: App
 ): unknown {
   // Coerce unknown to string for rendering
-  const stringValue = typeof resolvedValue === "string" ? resolvedValue : "";
+  const stringValue = typeof resolvedValue === 'string' ? resolvedValue : '';
   return renderProperty(
     propertyName,
     null,
@@ -688,7 +688,7 @@ function renderPropertyContent(
     settings,
     card,
     app,
-    timeIcon,
+    timeIcon
   );
 }
 
@@ -707,7 +707,7 @@ function CoverSlideshow({
   updateLayoutRef: RefObject<(() => void) | null>;
   cardPath: string;
   app: App;
-  openFileAction: "card" | "title";
+  openFileAction: 'card' | 'title';
 }): JSX.Element {
   const onSlideshowRef = (slideshowEl: HTMLElement | null) => {
     if (!slideshowEl) return;
@@ -728,11 +728,11 @@ function CoverSlideshow({
     )._slideshowController = controller;
 
     const imageEmbed = slideshowEl.querySelector(
-      ".dynamic-views-image-embed",
+      '.dynamic-views-image-embed'
     ) as HTMLElement;
     if (!imageEmbed) return;
 
-    const cardEl = slideshowEl.closest(".card") as HTMLElement;
+    const cardEl = slideshowEl.closest('.card') as HTMLElement;
 
     // Shared handler for both hover preload and navigator preload —
     // both mutate the same imageArray, so a single instance deduplicates splices
@@ -740,8 +740,8 @@ function CoverSlideshow({
       imageArray,
       cardEl,
       () => {
-        imageEmbed.parentElement?.addClass("slideshow-single");
-      },
+        imageEmbed.parentElement?.addClass('slideshow-single');
+      }
     );
     const preloadGuard = { done: false };
 
@@ -752,7 +752,7 @@ function CoverSlideshow({
         imageArray,
         signal,
         preloadBrokenHandler,
-        preloadGuard,
+        preloadGuard
       );
     }
 
@@ -761,7 +761,7 @@ function CoverSlideshow({
     const clearHoverZoom = setupHoverZoomEligibility(
       cardEl,
       imageEmbed,
-      signal,
+      signal
     );
 
     // Create navigator with shared logic
@@ -769,10 +769,10 @@ function CoverSlideshow({
       imageArray,
       () => {
         const currImg = imageEmbed.querySelector(
-          ".slideshow-img-current",
+          '.slideshow-img-current'
         ) as HTMLImageElement;
         const nextImg = imageEmbed.querySelector(
-          ".slideshow-img-next",
+          '.slideshow-img-next'
         ) as HTMLImageElement;
         if (!currImg || !nextImg) return null;
         return { imageEmbed, currImg, nextImg };
@@ -794,7 +794,7 @@ function CoverSlideshow({
         },
         onBroken: preloadBrokenHandler,
         preloadGuard,
-      },
+      }
     );
 
     // Reset to slide 1 when view becomes visible (reading/editing views are separate DOMs)
@@ -808,22 +808,22 @@ function CoverSlideshow({
           reset();
         }
       },
-      { threshold: 0 },
+      { threshold: 0 }
     );
     visibilityObserver.observe(slideshowEl);
-    signal.addEventListener("abort", () => visibilityObserver.disconnect(), {
+    signal.addEventListener('abort', () => visibilityObserver.disconnect(), {
       once: true,
     });
 
     // Auto-advance if first image fails to load (skip animation for instant display)
     const firstImg = imageEmbed.querySelector(
-      ".slideshow-img-current",
+      '.slideshow-img-current'
     ) as HTMLImageElement;
     if (firstImg) {
       // Use exact URL for comparison (avoids fragile substring matching)
       const expectedSrc = imageArray[0];
       firstImg.addEventListener(
-        "error",
+        'error',
         (e) => {
           // Ignore errors from src being cleared or changed (use event target for race safety)
           const targetSrc = (e.target as HTMLImageElement).src;
@@ -831,33 +831,33 @@ function CoverSlideshow({
             return;
           }
           markImageBroken(expectedSrc);
-          firstImg.addClass("dynamic-views-hidden");
+          firstImg.addClass('dynamic-views-hidden');
           navigate(1, false, true);
         },
-        { once: true, signal },
+        { once: true, signal }
       );
     }
 
     // Setup arrow navigation
-    const leftArrow = slideshowEl.querySelector(".slideshow-nav-left");
-    const rightArrow = slideshowEl.querySelector(".slideshow-nav-right");
+    const leftArrow = slideshowEl.querySelector('.slideshow-nav-left');
+    const rightArrow = slideshowEl.querySelector('.slideshow-nav-right');
 
     leftArrow?.addEventListener(
-      "click",
+      'click',
       (e) => {
         e.stopPropagation();
         navigate(-1);
       },
-      { signal },
+      { signal }
     );
 
     rightArrow?.addEventListener(
-      "click",
+      'click',
       (e) => {
         e.stopPropagation();
         navigate(1);
       },
-      { signal },
+      { signal }
     );
 
     // Setup swipe gestures
@@ -875,7 +875,7 @@ function CoverSlideshow({
             app,
             viewerCleanupFns,
             viewerClones,
-            openFileAction,
+            openFileAction
           );
         }}
       >
@@ -894,7 +894,7 @@ function CoverSlideshow({
         <div
           className="slideshow-indicator"
           ref={(el: HTMLElement | null) => {
-            if (el) setIcon(el, "lucide-circle-chevron-right");
+            if (el) setIcon(el, 'lucide-circle-chevron-right');
           }}
         />
       )}
@@ -939,9 +939,9 @@ function renderProperty(
   settings: ResolvedSettings,
   card: CardData,
   app: App,
-  timeIcon: "calendar" | "clock",
+  timeIcon: 'calendar' | 'clock'
 ): unknown {
-  if (propertyName === "") {
+  if (propertyName === '') {
     return null;
   }
 
@@ -965,24 +965,24 @@ function renderProperty(
   const isEmpty = !resolvedValue;
   const hideEmptyMode = getHideEmptyMode();
   if (isEmpty) {
-    if (hideEmptyMode === "all") return null;
-    if (hideEmptyMode === "labels-hidden" && settings.propertyLabels === "hide")
+    if (hideEmptyMode === 'all') return null;
+    if (hideEmptyMode === 'labels-hidden' && settings.propertyLabels === 'hide')
       return null;
   }
 
   // Render label above if enabled
 
   const labelAbove =
-    settings.propertyLabels === "above" ? (
+    settings.propertyLabels === 'above' ? (
       <div className="property-label">{getPropertyLabel(propertyName)}</div>
     ) : null;
 
   // Render inline label if enabled (as sibling, before property-content)
 
   const labelInline =
-    settings.propertyLabels === "inline" ? (
+    settings.propertyLabels === 'inline' ? (
       <span className="property-label-inline">
-        {getPropertyLabel(propertyName)}{" "}
+        {getPropertyLabel(propertyName)}{' '}
       </span>
     ) : null;
 
@@ -1008,7 +1008,7 @@ function renderProperty(
         type: string;
         items: string[];
       };
-      if (arrayData.type === "array" && Array.isArray(arrayData.items)) {
+      if (arrayData.type === 'array' && Array.isArray(arrayData.items)) {
         const separator = getListSeparator();
         return (
           <>
@@ -1027,7 +1027,7 @@ function renderProperty(
                           <span className="list-separator">{separator}</span>
                         )}
                       </span>
-                    ),
+                    )
                   )}
                 </span>
               </div>
@@ -1048,13 +1048,13 @@ function renderProperty(
         checked?: boolean;
         indeterminate?: boolean;
       };
-      if (checkboxData.type === "checkbox") {
+      if (checkboxData.type === 'checkbox') {
         const handleCheckboxClick = (e: Event): void => {
           e.stopPropagation();
           const input = e.target as HTMLInputElement;
           // Clear indeterminate state on click
           input.indeterminate = false;
-          input.dataset.indeterminate = "false";
+          input.dataset.indeterminate = 'false';
           const file = app.vault.getAbstractFileByPath(card.path);
           if (!(file instanceof TFile)) return;
           const fmProp = stripNotePrefix(propertyName);
@@ -1062,7 +1062,7 @@ function renderProperty(
             file,
             (frontmatter: Record<string, unknown>) => {
               frontmatter[fmProp] = input.checked;
-            },
+            }
           );
         };
         const handleCheckboxRef = (el: HTMLInputElement | null): void => {
@@ -1081,7 +1081,7 @@ function renderProperty(
                   type="checkbox"
                   checked={checkboxData.checked ?? false}
                   data-indeterminate={
-                    checkboxData.indeterminate ? "true" : "false"
+                    checkboxData.indeterminate ? 'true' : 'false'
                   }
                   onClick={handleCheckboxClick}
                   ref={handleCheckboxRef}
@@ -1105,7 +1105,7 @@ function renderProperty(
         <div className="property-content-wrapper" tabIndex={-1}>
           <div className="property-content">
             <span>
-              {showTimestampIcon() && settings.propertyLabels === "hide" && (
+              {showTimestampIcon() && settings.propertyLabels === 'hide' && (
                 <svg
                   className="timestamp-icon"
                   xmlns="http://www.w3.org/2000/svg"
@@ -1116,7 +1116,7 @@ function renderProperty(
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  {getTimestampIcon(propertyName, settings) === "calendar" ? (
+                  {getTimestampIcon(propertyName, settings) === 'calendar' ? (
                     <>
                       <path d="M8 2v4" />
                       <path d="M16 2v4" />
@@ -1138,7 +1138,7 @@ function renderProperty(
       </>
     );
   } else if (
-    (propertyName === "tags" || propertyName === "note.tags") &&
+    (propertyName === 'tags' || propertyName === 'note.tags') &&
     card.yamlTags.length > 0
   ) {
     // YAML tags only
@@ -1154,7 +1154,7 @@ function renderProperty(
       </>
     );
   } else if (
-    (propertyName === "file.tags" || propertyName === "file tags") &&
+    (propertyName === 'file.tags' || propertyName === 'file tags') &&
     card.tags.length > 0
   ) {
     // tags in YAML + note body
@@ -1170,13 +1170,13 @@ function renderProperty(
       </>
     );
   } else if (
-    (propertyName === "file.path" ||
-      propertyName === "path" ||
-      propertyName === "file path") &&
+    (propertyName === 'file.path' ||
+      propertyName === 'path' ||
+      propertyName === 'file path') &&
     resolvedValue
   ) {
     // File path property: folder segments + filename segment
-    const segments = resolvedValue.split("/").filter((f: string) => f);
+    const segments = resolvedValue.split('/').filter((f: string) => f);
 
     return (
       <>
@@ -1187,7 +1187,7 @@ function renderProperty(
             <div className="path-wrapper">
               {segments.map((segment: string, idx: number) => {
                 const isLastSegment = idx === segments.length - 1;
-                const cumulativePath = segments.slice(0, idx + 1).join("/");
+                const cumulativePath = segments.slice(0, idx + 1).join('/');
 
                 return isLastSegment
                   ? renderFilenameSegment(segment, cumulativePath, app)
@@ -1199,12 +1199,12 @@ function renderProperty(
       </>
     );
   } else if (
-    (propertyName === "file.folder" || propertyName === "folder") &&
+    (propertyName === 'file.folder' || propertyName === 'folder') &&
     card.folderPath &&
     card.folderPath.length > 0
   ) {
     // Folder property: all segments are folders
-    const folders = card.folderPath.split("/").filter((f: string) => f);
+    const folders = card.folderPath.split('/').filter((f: string) => f);
 
     return (
       <>
@@ -1214,12 +1214,12 @@ function renderProperty(
           <div className="property-content">
             <div className="path-wrapper">
               {folders.map((folder: string, idx: number) => {
-                const cumulativePath = folders.slice(0, idx + 1).join("/");
+                const cumulativePath = folders.slice(0, idx + 1).join('/');
                 return renderFolderSegment(
                   folder,
                   cumulativePath,
                   idx === folders.length - 1,
-                  app,
+                  app
                 );
               })}
             </div>
@@ -1282,7 +1282,7 @@ export function CardRenderer({
 
         // Apply custom CSS classes from settings (mimics cssclasses frontmatter)
         const customClasses = settings.cssclasses
-          .split(",")
+          .split(',')
           .map((cls) => cls.trim())
           .filter(Boolean);
 
@@ -1327,9 +1327,9 @@ export function CardRenderer({
           container._lastKey = e.key;
 
           // Escape exits keyboard nav mode and blurs focused card
-          if (e.key === "Escape") {
+          if (e.key === 'Escape') {
             container._keyboardNavActive = false;
-            const focused = el.querySelector(".card:focus") as HTMLElement;
+            const focused = el.querySelector('.card:focus') as HTMLElement;
             if (focused) {
               focused.blur();
             }
@@ -1356,7 +1356,7 @@ export function CardRenderer({
           if (container._intentionalFocus) return;
 
           const target = e.target as HTMLElement;
-          if (!target.classList.contains("card")) return;
+          if (!target.classList.contains('card')) return;
 
           // Allow focus during mouse click (needed for text selection)
           // Also exit keyboard nav mode since user is using mouse
@@ -1370,7 +1370,7 @@ export function CardRenderer({
           // Focus from outside container - allow Tab or arrow keys (hover-to-start)
           if (!relatedTarget || !el.contains(relatedTarget)) {
             const key = container._lastKey;
-            if (key === "Tab" || (key && isArrowKey(key))) {
+            if (key === 'Tab' || (key && isArrowKey(key))) {
               container._keyboardNavActive = true;
               return;
             }
@@ -1381,7 +1381,7 @@ export function CardRenderer({
 
           // Focus moving between cards - only block if caused by non-arrow key
           // (allows mouse clicks even if _mouseDown timing is off)
-          if (relatedTarget.classList.contains("card")) {
+          if (relatedTarget.classList.contains('card')) {
             const key = container._lastKey;
 
             // Only block if a key was pressed that's not an arrow key
@@ -1401,7 +1401,7 @@ export function CardRenderer({
         const handleFocusout = (e: FocusEvent) => {
           const relatedTarget = e.relatedTarget as HTMLElement | null;
           // If focus is leaving to something outside the container, or to non-card inside
-          if (!relatedTarget || !relatedTarget.classList.contains("card")) {
+          if (!relatedTarget || !relatedTarget.classList.contains('card')) {
             container._keyboardNavActive = false;
           }
         };
@@ -1412,11 +1412,11 @@ export function CardRenderer({
           const target = e.target as HTMLElement;
           // Only when markdown-preview-view receives focus directly (not bubbled)
           if (
-            target.classList.contains("markdown-preview-view") &&
+            target.classList.contains('markdown-preview-view') &&
             target.contains(el) &&
-            container._lastKey === "Tab"
+            container._lastKey === 'Tab'
           ) {
-            const firstCard = el.querySelector(".card");
+            const firstCard = el.querySelector('.card');
             if (firstCard instanceof HTMLElement) {
               container._intentionalFocus = true;
               container._keyboardNavActive = true;
@@ -1431,25 +1431,25 @@ export function CardRenderer({
         };
 
         // Register event listeners
-        document.addEventListener("keydown", handleKeydown, { capture: true });
-        document.addEventListener("focusin", handleDocumentFocusin);
-        el.addEventListener("focusin", handleFocusin);
-        el.addEventListener("focusout", handleFocusout);
-        el.addEventListener("mousedown", handleMouseDown, { capture: true });
-        document.addEventListener("mouseup", handleMouseUp, { capture: true });
+        document.addEventListener('keydown', handleKeydown, { capture: true });
+        document.addEventListener('focusin', handleDocumentFocusin);
+        el.addEventListener('focusin', handleFocusin);
+        el.addEventListener('focusout', handleFocusout);
+        el.addEventListener('mousedown', handleMouseDown, { capture: true });
+        document.addEventListener('mouseup', handleMouseUp, { capture: true });
 
         // Store cleanup function in WeakMap keyed by element (survives across renders)
         containerCleanupMap.set(el, () => {
-          document.removeEventListener("keydown", handleKeydown, {
+          document.removeEventListener('keydown', handleKeydown, {
             capture: true,
           });
-          document.removeEventListener("focusin", handleDocumentFocusin);
-          el.removeEventListener("focusin", handleFocusin);
-          el.removeEventListener("focusout", handleFocusout);
-          el.removeEventListener("mousedown", handleMouseDown, {
+          document.removeEventListener('focusin', handleDocumentFocusin);
+          el.removeEventListener('focusin', handleFocusin);
+          el.removeEventListener('focusout', handleFocusout);
+          el.removeEventListener('mousedown', handleMouseDown, {
             capture: true,
           });
-          document.removeEventListener("mouseup", handleMouseUp, {
+          document.removeEventListener('mouseup', handleMouseUp, {
             capture: true,
           });
         });
@@ -1461,9 +1461,9 @@ export function CardRenderer({
         if (
           e.target === e.currentTarget &&
           container &&
-          container._lastKey === "Tab"
+          container._lastKey === 'Tab'
         ) {
-          const firstCard = container.querySelector(".card");
+          const firstCard = container.querySelector('.card');
           if (firstCard instanceof HTMLElement) {
             container._intentionalFocus = true;
             container._keyboardNavActive = true;
@@ -1477,7 +1477,7 @@ export function CardRenderer({
         }
       }}
       className={
-        viewMode === "masonry" ? "dynamic-views-masonry" : "dynamic-views-grid"
+        viewMode === 'masonry' ? 'dynamic-views-masonry' : 'dynamic-views-grid'
       }
     >
       {cards.map(
@@ -1498,7 +1498,7 @@ export function CardRenderer({
             onCardClick={onCardClick}
             onFocusChange={onFocusChange}
           />
-        ),
+        )
       )}
     </div>
   );
@@ -1509,7 +1509,7 @@ interface CardProps {
   card: CardData;
   index: number;
   settings: ResolvedSettings;
-  viewMode: "grid" | "masonry";
+  viewMode: 'grid' | 'masonry';
   sortMethod: string;
   isShuffled: boolean;
   focusableCardIndex: number;
@@ -1537,16 +1537,16 @@ function Card({
   onFocusChange,
 }: CardProps): unknown {
   // Determine which timestamp to show
-  const useCreatedTime = sortMethod.startsWith("ctime") && !isShuffled;
+  const useCreatedTime = sortMethod.startsWith('ctime') && !isShuffled;
   // Determine time icon (calendar for ctime, clock for mtime)
-  const timeIcon = useCreatedTime ? "calendar" : "clock";
+  const timeIcon = useCreatedTime ? 'calendar' : 'clock';
 
   // Compute title display (only strip extension for file.fullname)
   const normalizedTitleProperty = normalizePropertyName(
     app,
-    settings.titleProperty || "",
+    settings.titleProperty || ''
   );
-  const isFullname = normalizedTitleProperty === "file.fullname";
+  const isFullname = normalizedTitleProperty === 'file.fullname';
   const displayTitle = isFullname
     ? stripExtFromTitle(card.title, card.path, true)
     : card.title;
@@ -1554,7 +1554,7 @@ function Card({
 
   // Compute extension info once for use in title data-ext and renderFileExt
   const extInfo = getFileExtInfo(card.path, isFullname);
-  const extNoDot = extInfo?.ext.slice(1) || "";
+  const extNoDot = extInfo?.ext.slice(1) || '';
 
   // Handle images
   const isArray = Array.isArray(card.imageUrl);
@@ -1564,36 +1564,36 @@ function Card({
       ? (card.imageUrl as (string | string[])[])
           .flat()
           .filter(
-            (url): url is string => typeof url === "string" && url.length > 0,
+            (url): url is string => typeof url === 'string' && url.length > 0
           )
           .slice(0, scrubbingDisabled ? 1 : 10)
       : card.imageUrl
         ? [card.imageUrl as string]
-        : [],
+        : []
   );
   // Enable scrubbing only on desktop with multiple images and setting enabled
   const enableScrubbing =
     !app.isMobile && isArray && imageArray.length > 1 && !scrubbingDisabled;
 
   const hasImageSource =
-    !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== "never";
+    !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== 'never';
 
   const format = settings.imageFormat;
   const position = settings.imagePosition;
 
   // Build card classes — format classes only when an image source is configured
-  const cardClasses = ["card"];
+  const cardClasses = ['card'];
   if (hasImageSource) {
-    if (format === "cover") {
-      cardClasses.push("image-format-cover");
+    if (format === 'cover') {
+      cardClasses.push('image-format-cover');
       cardClasses.push(`card-cover-${position}`);
-    } else if (format === "thumbnail") {
-      cardClasses.push("image-format-thumbnail");
+    } else if (format === 'thumbnail') {
+      cardClasses.push('image-format-thumbnail');
       cardClasses.push(`card-thumbnail-${position}`);
-    } else if (format === "poster") {
-      cardClasses.push("image-format-poster");
-    } else if (format === "backdrop") {
-      cardClasses.push("image-format-backdrop");
+    } else if (format === 'poster') {
+      cardClasses.push('image-format-poster');
+    } else if (format === 'backdrop') {
+      cardClasses.push('image-format-backdrop');
     }
   }
 
@@ -1605,20 +1605,20 @@ function Card({
   const scrollController = new AbortController();
 
   const isPosterClickReveal =
-    format === "poster" &&
+    format === 'poster' &&
     card.imageUrl &&
-    (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"));
+    (app.isMobile || hasBodyClass('dynamic-views-poster-reveal-press'));
 
-  if (settings.openFileAction === "card" && !isPosterClickReveal) {
-    cardClasses.push("clickable-card");
+  if (settings.openFileAction === 'card' && !isPosterClickReveal) {
+    cardClasses.push('clickable-card');
   }
 
   // Cache scroll mode checks (avoid repeated DOM queries in ref callbacks)
   const isTitleScrollMode = document.body.classList.contains(
-    "dynamic-views-title-overflow-scroll",
+    'dynamic-views-title-overflow-scroll'
   );
   const isSubtitleScrollMode = document.body.classList.contains(
-    "dynamic-views-subtitle-overflow-scroll",
+    'dynamic-views-subtitle-overflow-scroll'
   );
 
   // Helper function to render title JSX
@@ -1628,28 +1628,28 @@ function Card({
         className="card-title"
         tabIndex={-1}
         onClick={
-          settings.openFileAction === "title" && app.isMobile
+          settings.openFileAction === 'title' && app.isMobile
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
-                  ".card-title-link",
+                  '.card-title-link'
                 );
                 if (linkEl && !linkEl.contains(e.target as Node)) {
                   e.stopPropagation();
                   const paneType = Keymap.isModEvent(e);
                   void app.workspace.openLinkText(
                     card.path,
-                    "",
-                    paneType || false,
+                    '',
+                    paneType || false
                   );
                 }
               }
             : undefined
         }
         onContextMenu={
-          settings.openFileAction === "title" && app.isMobile
+          settings.openFileAction === 'title' && app.isMobile
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
-                  ".card-title-link",
+                  '.card-title-link'
                 );
                 if (linkEl && !linkEl.contains(e.target as Node)) {
                   e.stopPropagation();
@@ -1673,7 +1673,7 @@ function Card({
       >
         {renderFileTypeIcon(card.path)}
         {renderFileExt(extInfo)}
-        {settings.openFileAction === "title" || isPosterClickReveal ? (
+        {settings.openFileAction === 'title' || isPosterClickReveal ? (
           <span
             className="card-title-link"
             data-href={card.path}
@@ -1683,7 +1683,7 @@ function Card({
             onClick={(e: MouseEvent) => {
               e.stopPropagation();
               const paneType = Keymap.isModEvent(e);
-              void app.workspace.openLinkText(card.path, "", paneType || false);
+              void app.workspace.openLinkText(card.path, '', paneType || false);
             }}
             onContextMenu={(e: MouseEvent) => {
               e.stopPropagation();
@@ -1695,11 +1695,11 @@ function Card({
             }}
             onMouseEnter={(e: MouseEvent) => {
               // Skip when card handler already covers it
-              if (isPosterClickReveal && settings.openFileAction === "card")
+              if (isPosterClickReveal && settings.openFileAction === 'card')
                 return;
-              app.workspace.trigger("hover-link", {
+              app.workspace.trigger('hover-link', {
                 event: e,
-                source: "file-explorer",
+                source: 'file-explorer',
                 hoverParent: { hoverPopover: null },
                 targetEl: e.currentTarget,
                 linktext: card.path,
@@ -1738,12 +1738,12 @@ function Card({
             setupElementScrollGradient(el, scrollController.signal);
           }
           const subtitleWrapper = el.querySelector(
-            ".property-content-wrapper",
+            '.property-content-wrapper'
           ) as HTMLElement;
           if (subtitleWrapper) {
             setupElementScrollGradient(
               subtitleWrapper,
-              scrollController.signal,
+              scrollController.signal
             );
           }
         }}
@@ -1752,10 +1752,10 @@ function Card({
           settings.subtitleProperty,
           null,
           card.subtitle,
-          { ...settings, propertyLabels: "hide" },
+          { ...settings, propertyLabels: 'hide' },
           card,
           app,
-          timeIcon,
+          timeIcon
         )}
       </div>
     );
@@ -1765,8 +1765,8 @@ function Card({
     <div
       className={
         imageArray.length > 0
-          ? "card-cover-wrapper"
-          : "card-cover-wrapper card-cover-wrapper-placeholder"
+          ? 'card-cover-wrapper'
+          : 'card-cover-wrapper card-cover-wrapper-placeholder'
       }
     >
       {imageArray.length > 0 ? (
@@ -1775,7 +1775,7 @@ function Card({
           const slideshowUrls = imageArray.slice(0, maxSlideshow);
           const shouldShowSlideshow =
             isSlideshowEnabled() &&
-            (position === "top" || position === "bottom") &&
+            (position === 'top' || position === 'bottom') &&
             slideshowUrls.length >= 2;
 
           if (shouldShowSlideshow) {
@@ -1801,12 +1801,12 @@ function Card({
                     app,
                     viewerCleanupFns,
                     viewerClones,
-                    settings.openFileAction,
+                    settings.openFileAction
                   );
                 }}
               >
                 <img
-                  src={imageArray[0] || ""}
+                  src={imageArray[0] || ''}
                   alt=""
                   ref={(imgEl: HTMLImageElement | null) =>
                     handleJsxImageRef(imgEl, updateLayoutRef)
@@ -1832,7 +1832,7 @@ function Card({
 
   return (
     <div
-      className={cardClasses.join(" ")}
+      className={cardClasses.join(' ')}
       data-path={card.path}
       ref={(cardEl: HTMLElement | null) => {
         if (!cardEl) {
@@ -1849,7 +1849,7 @@ function Card({
         setupScrollGradients(
           cardEl,
           updateScrollGradient,
-          scrollController.signal,
+          scrollController.signal
         );
 
         // Measure side-by-side property field widths (double RAF to ensure DOM is ready)
@@ -1859,7 +1859,7 @@ function Card({
             if (!cardEl.isConnected) return;
 
             const existingPropertyObservers = cardPropertyObservers.get(
-              card.path,
+              card.path
             );
             if (existingPropertyObservers) {
               existingPropertyObservers.forEach((obs) => obs.disconnect());
@@ -1873,7 +1873,7 @@ function Card({
 
         // Setup responsive behaviors (compact mode, thumbnail stacking)
         const existingResponsiveObserver = cardResponsiveObservers.get(
-          card.path,
+          card.path
         );
         if (existingResponsiveObserver) {
           existingResponsiveObserver.disconnect();
@@ -1882,13 +1882,13 @@ function Card({
         const breakpoint =
           parseFloat(
             getComputedStyle(document.body).getPropertyValue(
-              "--dynamic-views-compact-breakpoint",
-            ),
+              '--dynamic-views-compact-breakpoint'
+            )
           ) || 390;
 
         const needsThumbnailStacking =
-          format === "thumbnail" &&
-          (position === "left" || position === "right");
+          format === 'thumbnail' &&
+          (position === 'left' || position === 'right');
 
         const responsiveObserver = new ResizeObserver((entries) => {
           for (const entry of entries) {
@@ -1896,19 +1896,19 @@ function Card({
 
             // Compact mode
             if (breakpoint > 0) {
-              cardEl.classList.toggle("compact-mode", cardWidth < breakpoint);
+              cardEl.classList.toggle('compact-mode', cardWidth < breakpoint);
             }
 
             // Thumbnail stacking via CSS class only (CSS order handles positioning)
             if (needsThumbnailStacking) {
               const thumbnailEl = cardEl.querySelector(
-                ".card-thumbnail, .card-thumbnail-placeholder",
+                '.card-thumbnail, .card-thumbnail-placeholder'
               );
               if (thumbnailEl) {
                 const thumbnailWidth = (thumbnailEl as HTMLElement).offsetWidth;
                 const isStacked =
                   cardWidth < thumbnailWidth * THUMBNAIL_STACK_MULTIPLIER;
-                cardEl.classList.toggle("thumbnail-stack", isStacked);
+                cardEl.classList.toggle('thumbnail-stack', isStacked);
               }
             }
           }
@@ -1918,8 +1918,8 @@ function Card({
 
         // Cover hover zoom intent: always listen on .card-cover.
         // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
-        if (format === "cover" && window.matchMedia("(hover: hover)").matches) {
-          const coverEl = cardEl.querySelector(".card-cover") as HTMLElement;
+        if (format === 'cover' && window.matchMedia('(hover: hover)').matches) {
+          const coverEl = cardEl.querySelector('.card-cover') as HTMLElement;
           if (coverEl) {
             const existing = cardHoverIntentState.get(cardEl);
             if (!existing || existing.controller.signal.aborted) {
@@ -1930,16 +1930,16 @@ function Card({
               });
               setupHoverIntent(
                 coverEl,
-                () => cardEl.classList.add("cover-hover-active"),
-                () => cardEl.classList.remove("cover-hover-active"),
-                hoverAbort.signal,
+                () => cardEl.classList.add('cover-hover-active'),
+                () => cardEl.classList.remove('cover-hover-active'),
+                hoverAbort.signal
               );
             }
           }
         }
 
         // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
-        if (window.matchMedia("(hover: hover)").matches) {
+        if (window.matchMedia('(hover: hover)').matches) {
           const existing = cardHoverIntentActive.get(cardEl);
           if (!existing || existing.signal.aborted) {
             existing?.abort();
@@ -1948,27 +1948,27 @@ function Card({
             setupHoverIntent(
               cardEl,
               () => {
-                cardEl.classList.add("hover-intent-active");
+                cardEl.classList.add('hover-intent-active');
                 if (hoveredCardRef) {
                   (hoveredCardRef as { current: HTMLElement | null }).current =
                     cardEl;
                 }
               },
               () => {
-                cardEl.classList.remove("hover-intent-active");
+                cardEl.classList.remove('hover-intent-active');
                 if (hoveredCardRef) {
                   (hoveredCardRef as { current: HTMLElement | null }).current =
                     null;
                 }
               },
-              hoverAbort.signal,
+              hoverAbort.signal
             );
           }
         }
       }}
-      draggable={settings.openFileAction === "card" && !isPosterClickReveal}
+      draggable={settings.openFileAction === 'card' && !isPosterClickReveal}
       onDragStart={
-        settings.openFileAction === "card" && !isPosterClickReveal
+        settings.openFileAction === 'card' && !isPosterClickReveal
           ? handleDrag
           : undefined
       }
@@ -1977,10 +1977,10 @@ function Card({
         // Poster tap toggle: mobile or desktop press mode
         if (isPosterClickReveal) {
           const cardEl = e.currentTarget as HTMLElement;
-          if (cardEl.querySelector(".card-poster")) {
+          if (cardEl.querySelector('.card-poster')) {
             const target = e.target as HTMLElement;
             const isInteractive = target.closest(
-              "a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container",
+              'a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container'
             );
             // Don't dismiss if user has selected text (drag-select or double-click)
             const hasTextSelection =
@@ -1990,26 +1990,26 @@ function Card({
             // Don't dismiss if click landed on text-selectable content —
             // prevents double-click word selection from being swallowed by dismiss
             const isTextTarget =
-              settings.openFileAction === "title" &&
+              settings.openFileAction === 'title' &&
               target.closest(
-                ".card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content",
+                '.card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content'
               );
 
-            if (!cardEl.classList.contains("poster-revealed")) {
+            if (!cardEl.classList.contains('poster-revealed')) {
               e.preventDefault();
               e.stopPropagation();
               // Dismiss any other revealed card in the same view
               cardEl
-                .closest(".dynamic-views")
-                ?.querySelector(".card.poster-revealed")
-                ?.classList.remove("poster-revealed");
-              cardEl.classList.add("poster-revealed");
+                .closest('.dynamic-views')
+                ?.querySelector('.card.poster-revealed')
+                ?.classList.remove('poster-revealed');
+              cardEl.classList.add('poster-revealed');
               // Press acts as hover intent — ungate pointer cursors
-              cardEl.classList.add("hover-intent-active");
+              cardEl.classList.add('hover-intent-active');
               return;
             } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
               e.stopPropagation();
-              cardEl.classList.remove("poster-revealed");
+              cardEl.classList.remove('poster-revealed');
               return;
             }
           }
@@ -2017,24 +2017,24 @@ function Card({
 
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
         if (
-          settings.openFileAction === "card" &&
+          settings.openFileAction === 'card' &&
           !(
-            format === "poster" &&
+            format === 'poster' &&
             card.imageUrl &&
-            (app.isMobile || hasBodyClass("dynamic-views-poster-reveal-press"))
+            (app.isMobile || hasBodyClass('dynamic-views-poster-reveal-press'))
           )
         ) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
-          const isLink = target.tagName === "A" || target.closest("a");
+          const isLink = target.tagName === 'A' || target.closest('a');
           const isTag =
-            target.classList.contains("tag") || target.closest(".tag");
+            target.classList.contains('tag') || target.closest('.tag');
           const isPathSegment =
-            target.classList.contains("path-segment") ||
-            target.closest(".path-segment");
-          const isImage = target.tagName === "IMG";
+            target.classList.contains('path-segment') ||
+            target.closest('.path-segment');
+          const isImage = target.tagName === 'IMG';
           const isZoomEnabled = !document.body.classList.contains(
-            "dynamic-views-image-viewer-disabled",
+            'dynamic-views-image-viewer-disabled'
           );
 
           if (
@@ -2047,7 +2047,7 @@ function Card({
             if (onCardClick) {
               onCardClick(card.path, paneType || false);
             } else {
-              void app.workspace.openLinkText(card.path, "", paneType || false);
+              void app.workspace.openLinkText(card.path, '', paneType || false);
             }
           }
         }
@@ -2059,10 +2059,10 @@ function Card({
       }}
       onKeyDown={(e: KeyboardEvent) => {
         // Enter/Space opens file (always use openLinkText, bypass onCardClick)
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           const paneType = Keymap.isModEvent(e);
-          void app.workspace.openLinkText(card.path, "", paneType || false);
+          void app.workspace.openLinkText(card.path, '', paneType || false);
         } else if (isArrowKey(e.key)) {
           if (isImageViewerBlockingNav(containerRef.current)) return;
           e.preventDefault();
@@ -2077,7 +2077,7 @@ function Card({
               (_, targetIndex) => {
                 container._keyboardNavActive = true;
                 onFocusChange?.(targetIndex);
-              },
+              }
             );
             getOwnerWindow(container).requestAnimationFrame(() => {
               if (container.isConnected) {
@@ -2089,10 +2089,10 @@ function Card({
       }}
       onMouseEnter={(e: MouseEvent) => {
         // Trigger Obsidian's hover preview (only on card when openFileAction is 'card')
-        if (settings.openFileAction === "card") {
-          app.workspace.trigger("hover-link", {
+        if (settings.openFileAction === 'card') {
+          app.workspace.trigger('hover-link', {
             event: e,
-            source: "file-explorer",
+            source: 'file-explorer',
             hoverParent: { hoverPopover: null },
             targetEl: e.currentTarget,
             linktext: card.path,
@@ -2101,9 +2101,9 @@ function Card({
         }
         // Reset thumbnail to first image on hover
         const imageSelector =
-          format === "cover" ? ".card-cover img" : ".card-thumbnail img";
+          format === 'cover' ? '.card-cover img' : '.card-thumbnail img';
         const imgEl = (e.currentTarget as HTMLElement).querySelector(
-          imageSelector,
+          imageSelector
         );
         const firstImage = imageArray[0];
         if (imgEl && firstImage) {
@@ -2112,37 +2112,37 @@ function Card({
       }}
       onMouseLeave={(e: MouseEvent) => {
         if (
-          format === "poster" &&
-          !hasBodyClass("dynamic-views-poster-reveal-press")
+          format === 'poster' &&
+          !hasBodyClass('dynamic-views-poster-reveal-press')
         ) {
           (e.currentTarget as HTMLElement).classList.remove(
-            "poster-hover-active",
+            'poster-hover-active'
           );
         }
       }}
       onMouseMove={(e: MouseEvent) => {
         if (
-          format === "poster" &&
-          !hasBodyClass("dynamic-views-poster-reveal-press")
+          format === 'poster' &&
+          !hasBodyClass('dynamic-views-poster-reveal-press')
         ) {
           const cardEl = e.currentTarget as HTMLElement;
-          if (!cardEl.classList.contains("poster-hover-active")) {
+          if (!cardEl.classList.contains('poster-hover-active')) {
             cardEl
-              .closest(".dynamic-views")
-              ?.querySelector(".card.poster-hover-active")
-              ?.classList.remove("poster-hover-active");
-            cardEl.classList.add("poster-hover-active");
+              .closest('.dynamic-views')
+              ?.querySelector('.card.poster-hover-active')
+              ?.classList.remove('poster-hover-active');
+            cardEl.classList.add('poster-hover-active');
           }
         }
       }}
       onContextMenu={(e: MouseEvent) => {
-        if (settings.openFileAction === "card") {
+        if (settings.openFileAction === 'card') {
           // Poster click-reveal: context menu on title text only.
           // Mobile: .card-title (full wrapper — fat finger). Desktop: .card-title-link (precise).
           if (
             isPosterClickReveal &&
             !(e.target as HTMLElement).closest(
-              app.isMobile ? ".card-title" : ".card-title-link",
+              app.isMobile ? '.card-title' : '.card-title-link'
             )
           ) {
             // Block editor context menu in live preview (card is inside cm-content)
@@ -2161,22 +2161,22 @@ function Card({
         // when openFileAction is 'title' (card content should be selectable).
         // Only intercept primary button — right-click doesn't start text selection
         // and must propagate to dismiss any open context menu.
-        if (settings.openFileAction === "title" && e.button === 0) {
+        if (settings.openFileAction === 'title' && e.button === 0) {
           e.stopPropagation();
         }
       }}
     >
       {/* Cover: before .card-content for top/left position */}
-      {format === "cover" &&
+      {format === 'cover' &&
         (imageArray.length > 0 || hasImageSource) &&
-        (position === "top" || position === "left") &&
+        (position === 'top' || position === 'left') &&
         renderCoverWrapper()}
 
       {/* Poster: absolute-positioned image fills entire card */}
-      {format === "poster" && imageArray.length > 0 && (
+      {format === 'poster' && imageArray.length > 0 && (
         <div className="card-poster">
           <img
-            src={imageArray[0] || ""}
+            src={imageArray[0] || ''}
             alt=""
             ref={(imgEl: HTMLImageElement | null) =>
               handleJsxImageRef(imgEl, updateLayoutRef)
@@ -2187,10 +2187,10 @@ function Card({
         </div>
       )}
 
-      {format === "backdrop" && imageArray.length > 0 && (
+      {format === 'backdrop' && imageArray.length > 0 && (
         <div className="card-backdrop">
           <img
-            src={imageArray[0] || ""}
+            src={imageArray[0] || ''}
             alt=""
             ref={(imgEl: HTMLImageElement | null) =>
               handleJsxImageRef(imgEl, updateLayoutRef)
@@ -2219,7 +2219,7 @@ function Card({
                 onClick={(e: MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  window.open(card.urlValue!, "_blank", "noopener,noreferrer");
+                  window.open(card.urlValue!, '_blank', 'noopener,noreferrer');
                 }}
                 ref={(el: HTMLElement | null) => {
                   if (el) setIcon(el, getUrlIcon());
@@ -2233,7 +2233,7 @@ function Card({
         <div
           className="card-body"
           ref={(el: HTMLElement | null) => {
-            if (el && format === "poster") {
+            if (el && format === 'poster') {
               setupVerticalScrollGradient(el, scrollController.signal);
             }
           }}
@@ -2248,7 +2248,7 @@ function Card({
             // Parse override lists for O(1) lookup
             const unpairSet = parsePropertyList(settings.invertPropertyPairing);
             const invertPositionSet = parsePropertyList(
-              settings.invertPropertyPosition,
+              settings.invertPropertyPosition
             );
 
             // Group properties into sets based on pairing settings
@@ -2280,7 +2280,7 @@ function Card({
                     prop.value,
                     propertyLabels,
                     hideEmptyMode,
-                    hideMissing,
+                    hideMissing
                   )
                 ) {
                   continue;
@@ -2327,16 +2327,16 @@ function Card({
 
               sets.forEach((set, setIdx) => {
                 const showConfiguredProps =
-                  propertyLabels !== "hide" || !hideMissing;
+                  propertyLabels !== 'hide' || !hideMissing;
                 const hasContent = set.props.some((p) =>
                   showConfiguredProps
-                    ? p.name !== ""
-                    : p.value !== null && p.value !== undefined,
+                    ? p.name !== ''
+                    : p.value !== null && p.value !== undefined
                 );
                 if (!hasContent) return;
 
                 const anyInvertedPosition = set.props.some((p) =>
-                  invertPositionSet.has(p.name),
+                  invertPositionSet.has(p.name)
                 );
                 const isAbove = settings.showPropertiesAbove
                   ? !anyInvertedPosition
@@ -2352,7 +2352,7 @@ function Card({
                       className={`property-pair property-pair-${pairNum}`}
                     >
                       {set.props.map((p, pi) => {
-                        const posClass = pi === 0 ? "pair-left" : "pair-right";
+                        const posClass = pi === 0 ? 'pair-left' : 'pair-right';
                         return (
                           <div
                             key={`field-${p.fieldIndex}`}
@@ -2365,7 +2365,7 @@ function Card({
                                 (p.value as string | null) ?? null,
                                 timeIcon,
                                 settings,
-                                app,
+                                app
                               )}
                           </div>
                         );
@@ -2388,7 +2388,7 @@ function Card({
                           (p.value as string | null) ?? null,
                           timeIcon,
                           settings,
-                          app,
+                          app
                         )}
                     </div>
                   );
@@ -2409,7 +2409,7 @@ function Card({
 
                 {/* Previews container (text preview + thumbnail) */}
                 {(card.textPreview ||
-                  (format === "thumbnail" &&
+                  (format === 'thumbnail' &&
                     (imageArray.length > 0 || hasImageSource))) && (
                   <div className="card-previews">
                     {card.textPreview && (
@@ -2422,11 +2422,11 @@ function Card({
                       </div>
                     )}
                     {/* Thumbnail */}
-                    {format === "thumbnail" &&
+                    {format === 'thumbnail' &&
                       (imageArray.length > 0 || hasImageSource) &&
                       (imageArray.length > 0 ? (
                         <div
-                          className={`card-thumbnail ${enableScrubbing ? "multi-image" : ""}`}
+                          className={`card-thumbnail ${enableScrubbing ? 'multi-image' : ''}`}
                           onMouseMove={
                             enableScrubbing
                               ? (e: MouseEvent) => {
@@ -2436,34 +2436,34 @@ function Card({
                                   const rect = thumbEl.getBoundingClientRect();
                                   const x = e.clientX - rect.left;
                                   const section = Math.floor(
-                                    (x / rect.width) * imageArray.length,
+                                    (x / rect.width) * imageArray.length
                                   );
                                   const newIndex = Math.max(
                                     0,
-                                    Math.min(section, imageArray.length - 1),
+                                    Math.min(section, imageArray.length - 1)
                                   );
                                   const rawUrl = imageArray[newIndex];
                                   const resolvedUrl = getCachedBlobUrl(rawUrl);
-                                  const imgEl = thumbEl.querySelector("img");
+                                  const imgEl = thumbEl.querySelector('img');
                                   if (!imgEl) return;
                                   if (
                                     resolvedUrl === rawUrl &&
-                                    rawUrl.startsWith("http")
+                                    rawUrl.startsWith('http')
                                   ) {
                                     // Uncached external — hide img so placeholder background shows
                                     if (imgEl.src !== resolvedUrl) {
-                                      imgEl.addClass("scrub-loading");
+                                      imgEl.addClass('scrub-loading');
                                       imgEl.src = resolvedUrl;
                                       imgEl.addEventListener(
-                                        "load",
+                                        'load',
                                         () =>
-                                          imgEl.removeClass("scrub-loading"),
-                                        { once: true },
+                                          imgEl.removeClass('scrub-loading'),
+                                        { once: true }
                                       );
                                     }
                                   } else {
-                                    imgEl.removeClass("scrub-loading");
-                                    imgEl.removeClass("dynamic-views-hidden");
+                                    imgEl.removeClass('scrub-loading');
+                                    imgEl.removeClass('dynamic-views-hidden');
                                     if (imgEl.src !== resolvedUrl) {
                                       imgEl.src = resolvedUrl;
                                     }
@@ -2481,16 +2481,16 @@ function Card({
                                     e.currentTarget as HTMLElement;
                                   const embedEl =
                                     thumbEl.querySelector<HTMLElement>(
-                                      ".dynamic-views-image-embed",
+                                      '.dynamic-views-image-embed'
                                     );
                                   if (embedEl && viewerClones.has(embedEl))
                                     return;
                                   const firstUrl = imageArray[0];
                                   if (!firstUrl) return;
-                                  const imgEl = thumbEl.querySelector("img");
+                                  const imgEl = thumbEl.querySelector('img');
                                   if (imgEl && firstUrl) {
-                                    imgEl.removeClass("scrub-loading");
-                                    imgEl.removeClass("dynamic-views-hidden");
+                                    imgEl.removeClass('scrub-loading');
+                                    imgEl.removeClass('dynamic-views-hidden');
                                     imgEl.src = getCachedBlobUrl(firstUrl);
                                   }
                                   delete thumbEl.dataset.scrubbedSrc;
@@ -2507,12 +2507,12 @@ function Card({
                                 app,
                                 viewerCleanupFns,
                                 viewerClones,
-                                settings.openFileAction,
+                                settings.openFileAction
                               );
                             }}
                           >
                             <img
-                              src={imageArray[0] || ""}
+                              src={imageArray[0] || ''}
                               alt=""
                               ref={(imgEl: HTMLImageElement | null) => {
                                 handleJsxImageRef(imgEl, updateLayoutRef);
@@ -2535,7 +2535,7 @@ function Card({
                                   // Preload scrubbable images on hover intent
                                   if (enableScrubbing) {
                                     const cardEl = imgEl.closest(
-                                      ".card",
+                                      '.card'
                                     ) as HTMLElement;
                                     if (cardEl) {
                                       setupImagePreload(
@@ -2547,19 +2547,19 @@ function Card({
                                           cardEl,
                                           () => {
                                             imgEl
-                                              .closest(".card-thumbnail")
-                                              ?.classList.remove("multi-image");
-                                          },
-                                        ),
+                                              .closest('.card-thumbnail')
+                                              ?.classList.remove('multi-image');
+                                          }
+                                        )
                                       );
                                     }
                                   }
 
                                   imgEl.addEventListener(
-                                    "error",
+                                    'error',
                                     () => {
                                       if (controller.signal.aborted) return;
-                                      imgEl.removeClass("scrub-loading");
+                                      imgEl.removeClass('scrub-loading');
                                       const failedSrc = imgEl.src;
                                       markImageBroken(failedSrc);
                                       // Splice broken URL for immediate scrub update
@@ -2569,9 +2569,9 @@ function Card({
                                         imageArray.splice(failedIdx, 1);
                                       if (imageArray.length <= 1) {
                                         const thumbEl =
-                                          imgEl.closest(".card-thumbnail");
+                                          imgEl.closest('.card-thumbnail');
                                         thumbEl?.classList.remove(
-                                          "multi-image",
+                                          'multi-image'
                                         );
                                       }
                                       // Show nearest remaining valid image
@@ -2582,29 +2582,29 @@ function Card({
                                         )
                                           return;
                                         imgEl.removeClass(
-                                          "dynamic-views-hidden",
+                                          'dynamic-views-hidden'
                                         );
                                         imgEl.src = getCachedBlobUrl(
                                           imageArray[
                                             Math.min(
                                               failedIdx,
-                                              imageArray.length - 1,
+                                              imageArray.length - 1
                                             )
-                                          ],
+                                          ]
                                         );
                                         return;
                                       }
                                       const cardEl = imgEl.closest(
-                                        ".card",
+                                        '.card'
                                       ) as HTMLElement;
                                       if (
                                         cardEl &&
                                         !cardEl.classList.contains(
-                                          "cover-ready",
+                                          'cover-ready'
                                         )
                                       ) {
                                         getOwnerWindow(
-                                          cardEl,
+                                          cardEl
                                         ).requestAnimationFrame(() => {
                                           if (
                                             controller.signal.aborted ||
@@ -2613,7 +2613,7 @@ function Card({
                                           )
                                             return;
                                           getOwnerWindow(
-                                            cardEl,
+                                            cardEl
                                           ).requestAnimationFrame(() => {
                                             if (
                                               controller.signal.aborted ||
@@ -2623,17 +2623,17 @@ function Card({
                                               return;
                                             handleAllImagesFailed(cardEl);
                                             cardEl.style.setProperty(
-                                              "--actual-aspect-ratio",
-                                              DEFAULT_ASPECT_RATIO.toString(),
+                                              '--actual-aspect-ratio',
+                                              DEFAULT_ASPECT_RATIO.toString()
                                             );
-                                            cardEl.classList.add("cover-ready");
+                                            cardEl.classList.add('cover-ready');
                                             if (updateLayoutRef.current)
                                               updateLayoutRef.current();
                                           });
                                         });
                                       }
                                     },
-                                    { signal: controller.signal },
+                                    { signal: controller.signal }
                                   );
                                 } else if (imgEl) {
                                   const existingCtrl = (
@@ -2674,9 +2674,9 @@ function Card({
       </div>
 
       {/* Cover: after .card-content for bottom/right position */}
-      {format === "cover" &&
+      {format === 'cover' &&
         (imageArray.length > 0 || hasImageSource) &&
-        (position === "bottom" || position === "right") &&
+        (position === 'bottom' || position === 'right') &&
         renderCoverWrapper()}
     </div>
   );

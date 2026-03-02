@@ -1,6 +1,10 @@
-/* Text cursor on text preview when title acts as link */
-body.dynamic-views-open-on-title .dynamic-views .card-text-preview {
-  cursor: text;
+/* Text preview: user-select on inner span only so empty space in the
+   -webkit-box div stays non-selectable. cursor: auto shows I-beam over
+   text nodes; empty space inherits pointer from card. */
+body.dynamic-views-open-on-title .dynamic-views .card-text-preview-text {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: auto;
 }
 
 /* Bases needs user-select: text on the container for mobile WebKit —
@@ -11,44 +15,76 @@ body.dynamic-views-open-on-title .dynamic-views-bases-container {
   user-select: text;
 }
 
-/* Revealed poster cards: Bases container needs user-select for iOS WebKit */
-.dynamic-views-bases-container:has(.card.poster-revealed) {
-  -webkit-user-select: text;
-  user-select: text;
+/* Block selection and I-beam cursor on entire view — covers cards, toolbar,
+   settings, query editor. Datacore inherits user-select: text and cursor: text
+   from cm-content; Bases gets user-select: text from the container rule above
+   in open-on-title mode. Element-level overrides in open-on-title selectively
+   re-enable on card text. */
+.dynamic-views {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
 }
 
-/* Make all card text selectable when title acts as link */
+/* Card-level block: Bases container sets user-select: text (for iOS WebKit)
+   which cascades into cards. This stops the cascade — only element-level
+   overrides (title, subtitle, properties) allow selection. */
+body.dynamic-views-open-on-title .dynamic-views .card {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Override _previews.scss's unconditional user-select: text on .card-text-preview.
+   In open-on-title mode, the inner .card-text-preview-text span provides selectability. */
+.dynamic-views .card-text-preview {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Make card text selectable when title acts as link.
+   cursor: auto overrides inherited pointer from ancestors — browser shows
+   I-beam over text nodes, default elsewhere. */
 body.dynamic-views-open-on-title .dynamic-views .card-title,
+body.dynamic-views-open-on-title .dynamic-views .card-subtitle {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+
+/* Property labels: selectable when title acts as link */
+body.dynamic-views-open-on-title .dynamic-views .property-label,
+body.dynamic-views-open-on-title .dynamic-views .property-label-inline {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+
+/* Shrink text wrappers to content width so empty space inherits card's
+   pointer cursor. */
 body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
 body.dynamic-views-open-on-title .dynamic-views .property-label,
-body.dynamic-views-open-on-title .dynamic-views .property-label-inline,
+body.dynamic-views-open-on-title .dynamic-views .property-label-inline {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* Desktop-only: preserve mobile fat-finger tap targets (dead zone on .card-title) */
+body:not(.is-mobile).dynamic-views-open-on-title .dynamic-views .card-title {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* Property values: selectable when title acts as link.
+   Already flex children — don't span full width, no fit-content needed. */
 body.dynamic-views-open-on-title .dynamic-views .property-content {
   -webkit-user-select: text;
   user-select: text;
-  cursor: text;
+  cursor: auto;
 }
 
-/* Make revealed poster card text selectable (mobile tap + desktop press) */
-.dynamic-views .card.poster-revealed .card-title,
-.dynamic-views .card.poster-revealed .card-subtitle,
-.dynamic-views .card.poster-revealed .property-label,
-.dynamic-views .card.poster-revealed .property-label-inline,
-.dynamic-views .card.poster-revealed .property-content {
-  -webkit-user-select: text;
-  user-select: text;
-  cursor: text;
-}
-
-/* Title link: selectable text */
+/* Title link: selectable but keeps pointer cursor (it's a clickable link) */
 body.dynamic-views-open-on-title .dynamic-views .card-title a,
 body.dynamic-views-open-on-title .dynamic-views .card-title .card-title-link {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Revealed poster: title link selectable */
-.dynamic-views .card.poster-revealed .card-title a,
-.dynamic-views .card.poster-revealed .card-title .card-title-link {
   -webkit-user-select: text;
   user-select: text;
 }
@@ -59,25 +95,8 @@ body.dynamic-views-open-on-title .dynamic-views .filename-segment {
   user-select: text;
 }
 
-/* Revealed poster: filename selectable */
-.dynamic-views .card.poster-revealed .filename-segment {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
 /* Path separator: selectable for full path copy */
 body.dynamic-views-open-on-title .dynamic-views .path-separator {
   -webkit-user-select: text;
   user-select: text;
-}
-
-/* Revealed poster: path separator selectable */
-.dynamic-views .card.poster-revealed .path-separator {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Text preview: cursor text in revealed poster */
-.dynamic-views .card.poster-revealed .card-text-preview {
-  cursor: text;
 }

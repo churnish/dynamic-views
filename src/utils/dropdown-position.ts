@@ -3,7 +3,7 @@
  */
 export function setupClickOutside(
   containerElement: HTMLElement,
-  onClickOutside: () => void,
+  onClickOutside: () => void
 ): () => void {
   const handleClick = (event: MouseEvent) => {
     if (!containerElement.contains(event.target as Node)) {
@@ -13,11 +13,11 @@ export function setupClickOutside(
 
   // Use setTimeout to avoid closing immediately when opening
   setTimeout(() => {
-    document.addEventListener("click", handleClick);
+    document.addEventListener('click', handleClick);
   }, 0);
 
   // Return cleanup function
   return () => {
-    document.removeEventListener("click", handleClick);
+    document.removeEventListener('click', handleClick);
   };
 }

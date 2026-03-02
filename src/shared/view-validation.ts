@@ -3,21 +3,21 @@
  * Used by cleanupTemplateSettings (persistence.ts) and cleanUpBaseFile (bases/utils.ts).
  */
 
-import type { ViewDefaults } from "../types";
-import { DATACORE_DEFAULTS, VIEW_DEFAULTS } from "../constants";
+import type { ViewDefaults } from '../types';
+import { DATACORE_DEFAULTS, VIEW_DEFAULTS } from '../constants';
 
 /** Valid enum values for ViewDefaults string-enum fields */
 export const VALID_VIEW_VALUES: Partial<
   Record<keyof ViewDefaults, readonly string[]>
 > = {
-  fallbackToEmbeds: ["always", "if-unavailable", "never"],
-  imageFormat: ["thumbnail", "cover", "poster", "backdrop"],
-  posterDisplayMode: ["gradient", "overlay"],
-  imagePosition: ["left", "right", "top", "bottom"],
-  imageFit: ["crop", "contain"],
-  propertyLabels: ["hide", "inline", "above"],
-  rightPropertyPosition: ["left", "column", "right"],
-  minimumColumns: ["one", "two"],
+  fallbackToEmbeds: ['always', 'if-unavailable', 'never'],
+  imageFormat: ['thumbnail', 'cover', 'poster', 'backdrop'],
+  posterDisplayMode: ['gradient', 'overlay'],
+  imagePosition: ['left', 'right', 'top', 'bottom'],
+  imageFit: ['crop', 'contain'],
+  propertyLabels: ['hide', 'inline', 'above'],
+  rightPropertyPosition: ['left', 'column', 'right'],
+  minimumColumns: ['one', 'two'],
 };
 
 /** Expected runtime types for ViewDefaults + DatacoreDefaults fields */

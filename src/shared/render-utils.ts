@@ -3,8 +3,17 @@
  * Pure functions used by both Bases (DOM) and Datacore (JSX) views
  */
 
-import type { BasesResolvedSettings } from "../types";
-import { isSameProperty } from "../utils/property";
+import * as momentLib from 'moment';
+import type { BasesResolvedSettings } from '../types';
+import { isSameProperty } from '../utils/property';
+import {
+  shouldShowRecentTimeOnly,
+  shouldShowOlderDateOnly,
+  getDatetimeFormat,
+  getDateFormat,
+  getTimeFormat,
+  showTimestampIcon,
+} from '../utils/style-settings';
 
 /**
  * Interface for date values from Datacore/Bases
@@ -38,58 +47,44 @@ export function isTimestampToday(timestamp: number): boolean {
 export function formatTimestamp(
   timestamp: number,
   isDateOnly: boolean = false,
-  styled: boolean = false,
+  styled: boolean = false
 ): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-extraneous-dependencies -- moment.js loaded via Obsidian's bundled require
-  const moment = require("moment") as typeof import("moment");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require to avoid circular dependency
-  const styleSettings = require("../utils/style-settings") as {
-    shouldShowRecentTimeOnly(): boolean;
-    shouldShowOlderDateOnly(): boolean;
-    getDatetimeFormat(): string;
-    getDateFormat(): string;
-    getTimeFormat(): string;
-  };
+  // moment's CJS export is a function; access via .default for ESM interop
+  const moment = (momentLib as any).default ?? momentLib;
 
   // For date-only properties, use date format
   if (isDateOnly) {
-    return moment(timestamp).format(styleSettings.getDateFormat());
+    return moment(timestamp).format(getDateFormat());
   }
 
   // For non-styled properties, use full datetime format
   if (!styled) {
-    return moment(timestamp).format(styleSettings.getDatetimeFormat());
+    return moment(timestamp).format(getDatetimeFormat());
   }
 
   // Determine whether to show time-only or date-only format
   // Each timestamp evaluated independently based on its own date
   const isToday = isTimestampToday(timestamp);
   const isFuture = timestamp > Date.now();
-  const showTimeOnly = isToday && styleSettings.shouldShowRecentTimeOnly();
-  const showDateOnly =
-    !isToday && !isFuture && styleSettings.shouldShowOlderDateOnly();
+  const showTimeOnly = isToday && shouldShowRecentTimeOnly();
+  const showDateOnly = !isToday && !isFuture && shouldShowOlderDateOnly();
 
   if (showTimeOnly) {
-    return moment(timestamp).format(styleSettings.getTimeFormat());
+    return moment(timestamp).format(getTimeFormat());
   }
   if (showDateOnly) {
-    return moment(timestamp).format(styleSettings.getDateFormat());
+    return moment(timestamp).format(getDateFormat());
   }
 
   // Full datetime for styled
-  return moment(timestamp).format(styleSettings.getDatetimeFormat());
+  return moment(timestamp).format(getDatetimeFormat());
 }
 
 /**
  * Check if timestamp icon should be shown
  */
 export function shouldShowTimestampIcon(): boolean {
-  // Import at runtime to avoid circular dependencies
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require to avoid circular dependency
-  const styleSettings = require("../utils/style-settings") as {
-    showTimestampIcon(): boolean;
-  };
-  return styleSettings.showTimestampIcon();
+  return showTimestampIcon();
 }
 
 /**
@@ -97,18 +92,18 @@ export function shouldShowTimestampIcon(): boolean {
  */
 export function getTimestampIcon(
   propertyName: string,
-  settings: BasesResolvedSettings,
-): "calendar" | "clock" {
+  settings: BasesResolvedSettings
+): 'calendar' | 'clock' {
   if (
-    propertyName === "file.ctime" ||
-    propertyName === "created time" ||
+    propertyName === 'file.ctime' ||
+    propertyName === 'created time' ||
     (settings.createdTimeProperty &&
       isSameProperty(propertyName, settings.createdTimeProperty))
   ) {
-    return "calendar";
+    return 'calendar';
   }
 
-  return "clock";
+  return 'clock';
 }
 
 /**
@@ -118,13 +113,13 @@ export function getTimestampIcon(
  */
 export function isTimestampProperty(
   propertyName: string,
-  settings: BasesResolvedSettings,
+  settings: BasesResolvedSettings
 ): boolean {
   if (
-    propertyName === "file.mtime" ||
-    propertyName === "file.ctime" ||
-    propertyName === "modified time" ||
-    propertyName === "created time"
+    propertyName === 'file.mtime' ||
+    propertyName === 'file.ctime' ||
+    propertyName === 'modified time' ||
+    propertyName === 'created time'
   ) {
     return true;
   }
@@ -141,12 +136,12 @@ export function isTimestampProperty(
 export function isBasesDateValue(value: unknown): value is DateValue {
   return (
     value !== null &&
-    typeof value === "object" &&
-    "date" in value &&
+    typeof value === 'object' &&
+    'date' in value &&
     value.date instanceof Date &&
     !isNaN(value.date.getTime()) &&
-    "time" in value &&
-    typeof (value as DateValue).time === "boolean"
+    'time' in value &&
+    typeof (value as DateValue).time === 'boolean'
   );
 }
 
@@ -168,11 +163,11 @@ interface LuxonDateTime {
 export function isLuxonDateTime(value: unknown): value is LuxonDateTime {
   return (
     value !== null &&
-    typeof value === "object" &&
-    "toMillis" in value &&
-    typeof (value as LuxonDateTime).toMillis === "function" &&
-    "hour" in value &&
-    typeof (value as LuxonDateTime).hour === "number"
+    typeof value === 'object' &&
+    'toMillis' in value &&
+    typeof (value as LuxonDateTime).toMillis === 'function' &&
+    'hour' in value &&
+    typeof (value as LuxonDateTime).hour === 'number'
   );
 }
 
@@ -188,7 +183,7 @@ export function isDateValue(value: unknown): value is DateValue {
  * Extract timestamp from date value (works for both Bases and Datacore)
  */
 export function extractTimestamp(
-  value: unknown,
+  value: unknown
 ): { timestamp: number; isDateOnly: boolean } | null {
   // Bases format: {date: Date, time: boolean}
   if (isBasesDateValue(value)) {

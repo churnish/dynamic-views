@@ -4,18 +4,18 @@ import type {
   DatacoreDefaults,
   BasesDefaults,
   ResolvedSettings,
-} from "./types";
+} from './types';
 
 export const PLUGIN_SETTINGS: PluginSettings = {
-  omitFirstLine: "ifMatchesTitle",
-  randomizeAction: "shuffle",
-  openFileAction: "card",
+  omitFirstLine: 'ifMatchesTitle',
+  randomizeAction: 'shuffle',
+  openFileAction: 'card',
   openRandomInNewTab: true,
   smartTimestamp: true,
-  createdTimeProperty: "created time",
-  modifiedTimeProperty: "modified time",
-  preventSidebarSwipe: "disabled",
-  revealInNotebookNavigator: "disable",
+  createdTimeProperty: 'created time',
+  modifiedTimeProperty: 'modified time',
+  preventSidebarSwipe: 'disabled',
+  revealInNotebookNavigator: 'disable',
   showYoutubeThumbnails: true,
   showCardLinkCovers: true,
   contextMenuCommands: true,
@@ -25,42 +25,42 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   // Card size
   cardSize: 300,
   // Title
-  titleProperty: "file.name",
+  titleProperty: 'file.name',
   titleLines: 2,
-  subtitleProperty: "file.folder",
+  subtitleProperty: 'file.folder',
   // Position-based title/subtitle (Bases only; false = no-op for Datacore)
   displayFirstAsTitle: false,
   displaySecondAsSubtitle: false,
   // Text preview
-  textPreviewProperty: "",
+  textPreviewProperty: '',
   fallbackToContent: true,
   textPreviewLines: 5,
   // Image
-  imageProperty: "",
-  fallbackToEmbeds: "always",
-  imageFormat: "thumbnail",
-  posterDisplayMode: "gradient",
+  imageProperty: '',
+  fallbackToEmbeds: 'always',
+  imageFormat: 'thumbnail',
+  posterDisplayMode: 'gradient',
   thumbnailSize: 80,
-  imagePosition: "right",
-  imageFit: "crop",
+  imagePosition: 'right',
+  imageFit: 'crop',
   imageRatio: 1.0,
   // Properties
-  propertyLabels: "hide",
+  propertyLabels: 'hide',
   pairProperties: false,
-  rightPropertyPosition: "right",
-  invertPropertyPairing: "",
+  rightPropertyPosition: 'right',
+  invertPropertyPairing: '',
   showPropertiesAbove: false,
-  invertPropertyPosition: "",
-  urlProperty: "",
+  invertPropertyPosition: '',
+  urlProperty: '',
   // Other
   minimumColumns: 1 as const,
-  cssclasses: "",
+  cssclasses: '',
 };
 
 export const DATACORE_DEFAULTS: DatacoreDefaults = {
-  titleProperty: "$name",
-  subtitleProperty: "",
-  listMarker: "bullet",
+  titleProperty: '$name',
+  subtitleProperty: '',
+  listMarker: 'bullet',
   queryHeight: 0,
   // PLACEHOLDER: pairProperties forces side-by-side for hard-coded tags+mtime
   // Will be revisited during Bases-style property rework
@@ -70,7 +70,7 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
 export const BASES_DEFAULTS: BasesDefaults = {
   displayFirstAsTitle: true,
   displaySecondAsSubtitle: false,
-  propertyLabels: "inline",
+  propertyLabels: 'inline',
 };
 
 /**
@@ -81,7 +81,7 @@ export function resolveSettings(
   pluginSettings: PluginSettings,
   viewDefaults: ViewDefaults = VIEW_DEFAULTS,
   datacoreDefaults: DatacoreDefaults = DATACORE_DEFAULTS,
-  overrides?: Partial<ViewDefaults & DatacoreDefaults>,
+  overrides?: Partial<ViewDefaults & DatacoreDefaults>
 ): ResolvedSettings {
   return {
     ...pluginSettings,
@@ -98,15 +98,15 @@ export const DEFAULT_BASES_STATE = {
 
 /** Default Datacore state (UI + settings) */
 export const DEFAULT_DATACORE_STATE = {
-  sortMethod: "mtime-desc",
-  viewMode: "grid",
-  searchQuery: "",
-  resultLimit: "",
-  widthMode: "normal",
+  sortMethod: 'mtime-desc',
+  viewMode: 'grid',
+  searchQuery: '',
+  resultLimit: '',
+  widthMode: 'normal',
   settings: undefined,
 };
 
-export const STORAGE_KEY_PREFIX = "dynamic-views";
+export const STORAGE_KEY_PREFIX = 'dynamic-views';
 
 /** Custom event dispatched when plugin-level settings change */
-export const PLUGIN_SETTINGS_CHANGE = "dynamic-views-plugin-settings";
+export const PLUGIN_SETTINGS_CHANGE = 'dynamic-views-plugin-settings';

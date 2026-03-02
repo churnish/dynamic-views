@@ -9,17 +9,17 @@
  */
 export function setupTouchInterceptAll(
   container: HTMLElement,
-  signal: AbortSignal,
+  signal: AbortSignal
 ): void {
   container.addEventListener(
-    "touchmove",
+    'touchmove',
     (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       const target = e.target as HTMLElement;
-      if (target.tagName !== "IMG") {
+      if (target.tagName !== 'IMG') {
         e.stopPropagation();
       }
     },
-    { passive: false, signal },
+    { passive: false, signal }
   );
 }

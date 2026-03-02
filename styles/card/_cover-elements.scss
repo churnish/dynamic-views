@@ -151,7 +151,7 @@ body.dynamic-views-cover-circular
      Mode logic lives in CSS so switching SS mode works without re-render. */
   body:is(
       .dynamic-views-cover-hover-zoom-card,
-      :not([class*="dynamic-views-cover-hover-zoom-"])
+      :not([class*='dynamic-views-cover-hover-zoom-'])
     )
     .dynamic-views
     .card.image-format-cover.hover-intent-active
@@ -163,7 +163,7 @@ body.dynamic-views-cover-circular
 
   body:is(
       .dynamic-views-cover-hover-zoom-card,
-      :not([class*="dynamic-views-cover-hover-zoom-"])
+      :not([class*='dynamic-views-cover-hover-zoom-'])
     )
     .dynamic-views
     .card.image-format-cover.hover-intent-active
@@ -253,24 +253,24 @@ body.dynamic-views-cover-crop-bottom
 }
 
 /* Cover fit mode: Contain mode - images use object-fit: contain */
-/* Cover backgrounds (all modes) */
 .dynamic-views {
-  .card.card-cover-contain.image-format-cover .card-cover img {
+  &.image-fit-contain .card.image-format-cover .card-cover img {
     object-fit: contain;
     object-position: center;
     position: relative;
     border-radius: 0; /* Override theme styles; container handles border-radius */
   }
 
+  /* Cover backgrounds (all modes) */
   .card.image-format-cover .card-cover {
-    background-color: var(--background-secondary);
+    background-color: var(--dynamic-views-image-background-dimmed);
   }
 }
 
 /* Cover background variants */
 body:is(
     .dynamic-views-cover-bg-dimmed,
-    :not([class*="dynamic-views-cover-bg-"])
+    :not([class*='dynamic-views-cover-bg-'])
   )
   .dynamic-views
   .card.image-format-cover

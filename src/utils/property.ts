@@ -2,21 +2,21 @@
  * Property utility functions for handling comma-separated properties
  */
 
-import { TFile } from "obsidian";
+import { TFile } from 'obsidian';
 import type {
   App,
   BasesEntry,
   BasesViewConfig,
   BasesPropertyId,
-} from "obsidian";
-import type { DatacoreFile, DatacoreDate } from "../datacore/types";
+} from 'obsidian';
+import type { DatacoreFile, DatacoreDate } from '../datacore/types';
 
 /**
  * Strip "note." prefix from property name to get frontmatter key
  * Bases prefixes frontmatter properties with "note." in its syntax
  */
 export function stripNotePrefix(propertyName: string): string {
-  return propertyName.startsWith("note.")
+  return propertyName.startsWith('note.')
     ? propertyName.slice(5)
     : propertyName;
 }
@@ -37,9 +37,9 @@ export function parsePropertyList(csv: string): Set<string> {
   if (!csv) return new Set();
   return new Set(
     csv
-      .split(",")
+      .split(',')
       .map((s) => s.trim())
-      .filter((s) => s),
+      .filter((s) => s)
   );
 }
 
@@ -51,7 +51,7 @@ export function parsePropertyList(csv: string): Set<string> {
  */
 function getPropertyInfo(
   app: App,
-  propertyName: string,
+  propertyName: string
 ): { type?: string; widget?: string } | undefined {
   const fmProp = stripNotePrefix(propertyName);
   return app.metadataCache.getAllPropertyInfos?.()?.[fmProp] as
@@ -66,7 +66,7 @@ function getPropertyInfo(
  * @returns true if property widget type is "checkbox"
  */
 export function isCheckboxProperty(app: App, propertyName: string): boolean {
-  return getPropertyInfo(app, propertyName)?.widget === "checkbox";
+  return getPropertyInfo(app, propertyName)?.widget === 'checkbox';
 }
 
 /**
@@ -74,19 +74,19 @@ export function isCheckboxProperty(app: App, propertyName: string): boolean {
  * Used when Bases API is unavailable (Datacore path)
  */
 const DEFAULT_DISPLAY_TO_SYNTAX: Record<string, string> = {
-  "file name": "file.name",
-  "file backlinks": "file.backlinks",
-  "file base name": "file.basename",
-  "created time": "file.ctime",
-  "file embeds": "file.embeds",
-  "file extension": "file.ext",
-  folder: "file.folder",
-  "file full name": "file.fullname",
-  "file links": "file.links",
-  "modified time": "file.mtime",
-  "file path": "file.path",
-  "file size": "file.size",
-  "file tags": "file.tags",
+  'file name': 'file.name',
+  'file backlinks': 'file.backlinks',
+  'file base name': 'file.basename',
+  'created time': 'file.ctime',
+  'file embeds': 'file.embeds',
+  'file extension': 'file.ext',
+  folder: 'file.folder',
+  'file full name': 'file.fullname',
+  'file links': 'file.links',
+  'modified time': 'file.mtime',
+  'file path': 'file.path',
+  'file size': 'file.size',
+  'file tags': 'file.tags',
 };
 
 /**
@@ -96,7 +96,7 @@ const DEFAULT_DISPLAY_TO_SYNTAX: Record<string, string> = {
  */
 export function buildDisplayToSyntaxMap(
   config: BasesViewConfig,
-  allProperties: BasesPropertyId[],
+  allProperties: BasesPropertyId[]
 ): Record<string, string> {
   const map: Record<string, string> = {};
   for (const propertyId of allProperties) {
@@ -114,7 +114,7 @@ export function buildDisplayToSyntaxMap(
  */
 export function buildSyntaxToDisplayMap(
   config: BasesViewConfig,
-  allProperties: BasesPropertyId[],
+  allProperties: BasesPropertyId[]
 ): Record<string, string> {
   const map: Record<string, string> = {};
   for (const propertyId of allProperties) {
@@ -138,7 +138,7 @@ export function buildSyntaxToDisplayMap(
 export function normalizePropertyName(
   app: App,
   propertyName: string,
-  reverseMap?: Record<string, string>,
+  reverseMap?: Record<string, string>
 ): string {
   if (!propertyName || !propertyName.trim()) return propertyName;
 
@@ -146,9 +146,9 @@ export function normalizePropertyName(
 
   // 1. Already in syntax format - pass through
   if (
-    trimmed.startsWith("file.") ||
-    trimmed.startsWith("formula.") ||
-    trimmed.startsWith("note.")
+    trimmed.startsWith('file.') ||
+    trimmed.startsWith('formula.') ||
+    trimmed.startsWith('note.')
   ) {
     return trimmed;
   }
@@ -177,24 +177,24 @@ export function normalizePropertyName(
 function normalizePropertyString(
   app: App,
   value: string,
-  reverseMap: Record<string, string>,
+  reverseMap: Record<string, string>
 ): string {
   if (!value) return value;
   return value
-    .split(",")
+    .split(',')
     .map((p) => normalizePropertyName(app, p.trim(), reverseMap))
-    .join(",");
+    .join(',');
 }
 
 /** Settings fields that contain property names needing normalization */
 const PROPERTY_SETTINGS_KEYS = [
-  "titleProperty",
-  "subtitleProperty",
-  "textPreviewProperty",
-  "imageProperty",
-  "urlProperty",
-  "invertPropertyPairing",
-  "invertPropertyPosition",
+  'titleProperty',
+  'subtitleProperty',
+  'textPreviewProperty',
+  'imageProperty',
+  'urlProperty',
+  'invertPropertyPairing',
+  'invertPropertyPosition',
 ] as const;
 
 /**
@@ -208,7 +208,7 @@ export function normalizeSettingsPropertyNames(
     [K in (typeof PROPERTY_SETTINGS_KEYS)[number]]?: string;
   } & { _displayNameMap?: Record<string, string> },
   reverseMap: Record<string, string>,
-  displayNameMap: Record<string, string>,
+  displayNameMap: Record<string, string>
 ): void {
   for (const key of PROPERTY_SETTINGS_KEYS) {
     const value = settings[key];
@@ -226,12 +226,12 @@ export function normalizeSettingsPropertyNames(
 export function getFirstBasesPropertyValue(
   app: App,
   entry: BasesEntry,
-  propertyString: string,
+  propertyString: string
 ): unknown {
   if (!propertyString || !propertyString.trim()) return null;
 
   const properties = propertyString
-    .split(",")
+    .split(',')
     .map((p) => p.trim())
     .filter((p) => p);
 
@@ -248,11 +248,11 @@ export function getFirstBasesPropertyValue(
     // Validate date is actually a Date object to avoid passing malformed values
     if (
       value &&
-      typeof value === "object" &&
-      "date" in value &&
+      typeof value === 'object' &&
+      'date' in value &&
       (value as { date: unknown }).date instanceof Date &&
       !isNaN((value as { date: Date }).date.getTime()) &&
-      "time" in value
+      'time' in value
     ) {
       return value;
     }
@@ -262,9 +262,9 @@ export function getFirstBasesPropertyValue(
     // Empty properties return {data: null}, missing properties return null
     if (
       value &&
-      typeof value === "object" &&
-      "icon" in value &&
-      !("data" in value)
+      typeof value === 'object' &&
+      'icon' in value &&
+      !('data' in value)
     ) {
       const filePath = entry.file?.path;
       if (filePath) {
@@ -281,7 +281,7 @@ export function getFirstBasesPropertyValue(
     }
 
     // Return first valid value found (both regular and formula properties use {data: value} structure)
-    if (value && typeof value === "object" && "data" in value) {
+    if (value && typeof value === 'object' && 'data' in value) {
       return value;
     }
   }
@@ -295,12 +295,12 @@ export function getFirstBasesPropertyValue(
  */
 export function getFirstDatacorePropertyValue(
   page: DatacoreFile,
-  propertyString: string,
+  propertyString: string
 ): unknown {
   if (!propertyString || !propertyString.trim()) return null;
 
   const properties = propertyString
-    .split(",")
+    .split(',')
     .map((p) => p.trim())
     .filter((p) => p);
 
@@ -323,12 +323,12 @@ export function getFirstDatacorePropertyValue(
 export function getFirstBasesDatePropertyValue(
   app: App,
   entry: BasesEntry,
-  propertyString: string,
+  propertyString: string
 ): unknown {
   if (!propertyString || !propertyString.trim()) return null;
 
   const properties = propertyString
-    .split(",")
+    .split(',')
     .map((p) => p.trim())
     .filter((p) => p);
 
@@ -338,8 +338,8 @@ export function getFirstBasesDatePropertyValue(
     // Return first valid date value found
     if (
       value &&
-      typeof value === "object" &&
-      "date" in value &&
+      typeof value === 'object' &&
+      'date' in value &&
       value.date instanceof Date
     ) {
       return value;
@@ -355,12 +355,12 @@ export function getFirstBasesDatePropertyValue(
  */
 export function getFirstDatacoreDatePropertyValue(
   page: DatacoreFile,
-  propertyString: string,
+  propertyString: string
 ): DatacoreDate | null {
   if (!propertyString || !propertyString.trim()) return null;
 
   const properties = propertyString
-    .split(",")
+    .split(',')
     .map((p) => p.trim())
     .filter((p) => p);
 
@@ -368,7 +368,7 @@ export function getFirstDatacoreDatePropertyValue(
     const value: unknown = page.value(prop);
 
     // Only accept DateTime objects (have toMillis method)
-    if (value && typeof value === "object" && "toMillis" in value) {
+    if (value && typeof value === 'object' && 'toMillis' in value) {
       return value as DatacoreDate;
     }
     // Skip properties with wrong type
@@ -385,12 +385,12 @@ export function getFirstDatacoreDatePropertyValue(
 export function getAllBasesImagePropertyValues(
   app: App,
   entry: BasesEntry,
-  propertyString: string,
+  propertyString: string
 ): string[] {
   if (!propertyString || !propertyString.trim()) return [];
 
   const properties = propertyString
-    .split(",")
+    .split(',')
     .map((p) => p.trim())
     .filter((p) => p);
   const allImages: string[] = [];
@@ -399,19 +399,19 @@ export function getAllBasesImagePropertyValues(
     const value = entry.getValue(prop as unknown as BasesPropertyId);
 
     // Extract data from {data: value} structure (both regular and formula properties use this)
-    if (!value || !(typeof value === "object" && "data" in value)) continue;
+    if (!value || !(typeof value === 'object' && 'data' in value)) continue;
     const data = value.data;
-    if (data == null || data === "") continue;
+    if (data == null || data === '') continue;
 
     // Process data (array or single value)
     if (Array.isArray(data)) {
       for (const item of data) {
-        if (typeof item === "string" || typeof item === "number") {
+        if (typeof item === 'string' || typeof item === 'number') {
           const str = String(item);
           if (str.trim()) allImages.push(str);
         }
       }
-    } else if (typeof data === "string" || typeof data === "number") {
+    } else if (typeof data === 'string' || typeof data === 'number') {
       const str = String(data);
       if (str.trim()) allImages.push(str);
     }
@@ -427,12 +427,12 @@ export function getAllBasesImagePropertyValues(
  */
 export function getAllDatacoreImagePropertyValues(
   page: DatacoreFile,
-  propertyString: string,
+  propertyString: string
 ): string[] {
   if (!propertyString || !propertyString.trim()) return [];
 
   const properties = propertyString
-    .split(",")
+    .split(',')
     .map((p) => p.trim())
     .filter((p) => p);
   const allImages: string[] = [];
@@ -447,13 +447,13 @@ export function getAllDatacoreImagePropertyValues(
       // List property - collect all values
       for (const item of value) {
         // Handle Link objects with path property
-        if (typeof item === "object" && item !== null && "path" in item) {
+        if (typeof item === 'object' && item !== null && 'path' in item) {
           const pathValue = (item as { path: unknown }).path;
-          if (typeof pathValue === "string" || typeof pathValue === "number") {
+          if (typeof pathValue === 'string' || typeof pathValue === 'number') {
             const str = String(pathValue).trim();
             if (str) allImages.push(str);
           }
-        } else if (typeof item === "string" || typeof item === "number") {
+        } else if (typeof item === 'string' || typeof item === 'number') {
           const str = String(item).trim();
           if (str) allImages.push(str);
         }
@@ -461,13 +461,13 @@ export function getAllDatacoreImagePropertyValues(
     } else {
       // Single value
       // Handle Link objects with path property
-      if (typeof value === "object" && value !== null && "path" in value) {
+      if (typeof value === 'object' && value !== null && 'path' in value) {
         const pathValue = (value as { path: unknown }).path;
-        if (typeof pathValue === "string" || typeof pathValue === "number") {
+        if (typeof pathValue === 'string' || typeof pathValue === 'number') {
           const str = String(pathValue).trim();
           if (str) allImages.push(str);
         }
-      } else if (typeof value === "string" || typeof value === "number") {
+      } else if (typeof value === 'string' || typeof value === 'number') {
         const str = String(value).trim();
         if (str) allImages.push(str);
       }
@@ -481,38 +481,38 @@ export function getAllDatacoreImagePropertyValues(
  * Map of technical property names to exact labels (no capitalization changes)
  */
 const PROPERTY_LABEL_MAP: Record<string, string> = {
-  "file.file": "file",
-  file: "file",
-  "file.name": "file name",
-  "file name": "file name",
-  "file.basename": "file base name",
-  "file base name": "file base name",
-  "file.ext": "file extension",
-  "file.extension": "file extension",
-  "file extension": "file extension",
-  "file.backlinks": "file backlinks",
-  "file backlinks": "file backlinks",
-  "file.ctime": "created time",
-  "created time": "created time",
-  "file.embeds": "file embeds",
-  "file embeds": "file embeds",
-  "file.fullname": "file full name",
-  "file full name": "file full name",
-  "file.links": "file links",
-  "file links": "file links",
-  "file.path": "file path",
-  path: "file path",
-  "file path": "file path",
-  "file.size": "file size",
-  "file size": "file size",
-  "file.tags": "file tags",
-  "file tags": "file tags",
-  tags: "tags",
-  "note.tags": "tags",
-  "file.mtime": "modified time",
-  "modified time": "modified time",
-  "file.folder": "folder",
-  folder: "folder",
+  'file.file': 'file',
+  file: 'file',
+  'file.name': 'file name',
+  'file name': 'file name',
+  'file.basename': 'file base name',
+  'file base name': 'file base name',
+  'file.ext': 'file extension',
+  'file.extension': 'file extension',
+  'file extension': 'file extension',
+  'file.backlinks': 'file backlinks',
+  'file backlinks': 'file backlinks',
+  'file.ctime': 'created time',
+  'created time': 'created time',
+  'file.embeds': 'file embeds',
+  'file embeds': 'file embeds',
+  'file.fullname': 'file full name',
+  'file full name': 'file full name',
+  'file.links': 'file links',
+  'file links': 'file links',
+  'file.path': 'file path',
+  path: 'file path',
+  'file path': 'file path',
+  'file.size': 'file size',
+  'file size': 'file size',
+  'file.tags': 'file tags',
+  'file tags': 'file tags',
+  tags: 'tags',
+  'note.tags': 'tags',
+  'file.mtime': 'modified time',
+  'modified time': 'modified time',
+  'file.folder': 'folder',
+  folder: 'folder',
 };
 
 /**
@@ -540,9 +540,9 @@ export function toSyntaxName(property: string): string {
  */
 export function getPropertyLabel(
   propertyName: string,
-  displayNameMap?: Record<string, string>,
+  displayNameMap?: Record<string, string>
 ): string {
-  if (!propertyName || propertyName === "") return "";
+  if (!propertyName || propertyName === '') return '';
 
   // Custom display name from .base YAML takes priority
   if (displayNameMap && propertyName in displayNameMap) {
@@ -561,7 +561,7 @@ export function getPropertyLabel(
   }
 
   // Strip formula. prefix from formula properties
-  if (propertyName.startsWith("formula.")) {
+  if (propertyName.startsWith('formula.')) {
     return propertyName.slice(8); // Remove "formula."
   }
 
@@ -579,20 +579,20 @@ export function getAllVaultProperties(app: App): string[] {
 
   // Add special built-in properties for property display
   // Include both Bases format (file.tags) and human-readable format (file tags)
-  properties.add("file.path");
-  properties.add("file.tags");
-  properties.add("file.mtime");
-  properties.add("file.ctime");
-  properties.add("file path");
-  properties.add("file tags");
-  properties.add("created time");
-  properties.add("modified time");
+  properties.add('file.path');
+  properties.add('file.tags');
+  properties.add('file.mtime');
+  properties.add('file.ctime');
+  properties.add('file path');
+  properties.add('file tags');
+  properties.add('created time');
+  properties.add('modified time');
 
   // Get all properties from metadata cache
   // getAllPropertyInfos was added in Obsidian 1.4.0+
   const metadataCache = app.metadataCache;
 
-  if (typeof metadataCache.getAllPropertyInfos === "function") {
+  if (typeof metadataCache.getAllPropertyInfos === 'function') {
     const allPropertyInfos = metadataCache.getAllPropertyInfos() as Record<
       string,
       unknown
@@ -608,12 +608,12 @@ export function getAllVaultProperties(app: App): string[] {
   // Return sorted array
   return Array.from(properties).sort((a, b) => {
     // Bases format (file.tags) takes priority over human-readable format (file tags)
-    const aBasesFormat = a.startsWith("file.");
-    const bBasesFormat = b.startsWith("file.");
+    const aBasesFormat = a.startsWith('file.');
+    const bBasesFormat = b.startsWith('file.');
     const aHumanFormat =
-      (a.startsWith("file ") || a.includes(" time")) && !aBasesFormat;
+      (a.startsWith('file ') || a.includes(' time')) && !aBasesFormat;
     const bHumanFormat =
-      (b.startsWith("file ") || b.includes(" time")) && !bBasesFormat;
+      (b.startsWith('file ') || b.includes(' time')) && !bBasesFormat;
 
     // Bases format first
     if (aBasesFormat && !bBasesFormat) return -1;
@@ -633,7 +633,7 @@ export function getAllVaultProperties(app: App): string[] {
  * Accepts any URI scheme (http://, https://, obsidian://, file://, etc.)
  */
 export function isValidUri(value: string): boolean {
-  if (!value || typeof value !== "string") return false;
+  if (!value || typeof value !== 'string') return false;
 
   const trimmed = value.trim();
 
@@ -641,7 +641,7 @@ export function isValidUri(value: string): boolean {
   if (trimmed.length < 5 || trimmed.length > 2048) return false;
 
   // Must contain :// pattern for URI scheme
-  if (!trimmed.includes("://")) return false;
+  if (!trimmed.includes('://')) return false;
 
   // Validate URI format: scheme + :// + path
   const uriPattern = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/.+$/;

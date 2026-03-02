@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-25
+last updated: 2026-02-26
 ---
 
 # Style Settings fallback selectors
@@ -18,10 +18,10 @@ Use `:is()` with a `:not([class*="prefix-"])` arm to match both "class explicitl
 ```scss
 body:is(
     .dynamic-views-poster-theme-dark,
-    :not([class*="dynamic-views-poster-theme-"])
+    :not([class*='dynamic-views-poster-theme-'])
   )
-  .dynamic-views
-  .card.image-format-poster.poster-overlay
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster
   .card-poster::after {
   /* dark tint is the default — fires with or without Style Settings */
 }
@@ -30,7 +30,7 @@ body:is(
 For settings where the default means "no CSS override needed" (e.g., hover background = transparent), use the simpler `:not()` form since there's no explicit class to match:
 
 ```scss
-body:not([class*="dynamic-views-card-background-hover-"])
+body:not([class*='dynamic-views-card-background-hover-'])
   .dynamic-views
   .card.hover-intent-active:hover {
   background-color: transparent;
@@ -44,7 +44,7 @@ body:not([class*="dynamic-views-card-background-hover-"])
 ## When a fallback is NOT needed
 
 - **Natural CSS baseline**: The default is the browser/theme default with no rule needed (e.g., "Faint" border color uses the base `--background-modifier-border` variable — no class-gated rule exists).
-- **JS-driven defaults**: The JS code has its own fallback. Example: `getCoverHoverZoomMode()` returns `"card"` when no body class is present — the zoom behavior is controlled by JS adding `.cover-hover-active`, not by CSS matching a body class.
+- **JS-driven defaults**: The JS code has its own fallback. Example: `getTagStyle()` returns `"outline"` when no body class matches — tag rendering uses the JS return value, not CSS body class gating.
 - **Unreachable without Style Settings**: If a setting group's parent requires a body class that only Style Settings sets, the child settings are unreachable without the plugin.
 
 ## When adding a new `class-select` setting
@@ -85,11 +85,11 @@ In JS, invert the check:
 ```typescript
 // Before
 const isFullscreen = body.classList.contains(
-  "dynamic-views-image-viewer-fullscreen",
+  'dynamic-views-image-viewer-fullscreen'
 );
 // After
 const isFullscreen = !body.classList.contains(
-  "dynamic-views-image-viewer-disable-fullscreen",
+  'dynamic-views-image-viewer-disable-fullscreen'
 );
 ```
 
@@ -130,8 +130,12 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | ------------------------- | ----------- | -------------------------------------------------- |
 | Poster overlay tint       | dark        | `_poster.scss`                                     |
 | Cover background          | plain       | `_cover-placeholders.scss`, `_cover-elements.scss` |
-| Card border color (hover) | muted       | `_hover-states.scss`                               |
+| Cover hover zoom          | card        | `_cover-elements.scss`                             |
+| Show cover placeholder    | Grid        | `_cover-side.scss`, `_cover-placeholders.scss`     |
+| Card border color (hover) | muted       | `_core.scss`                                       |
 | Card background (hover)   | transparent | `_hover-states.scss`                               |
+
+Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
 
 ### `class-toggle` — inverted (CSS)
 

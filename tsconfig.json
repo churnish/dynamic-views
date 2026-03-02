@@ -14,8 +14,8 @@
     "jsx": "react",
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment",
-    "lib": ["DOM", "ES5", "ES6", "ES7"]
+    "lib": ["DOM", "DOM.Iterable", "ES2022"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "tests", "archive"]
+  "exclude": ["node_modules", "node_modules.nosync", "tests", "archive"]
 }

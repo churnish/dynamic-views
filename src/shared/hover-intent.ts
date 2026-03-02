@@ -7,37 +7,37 @@ export function setupHoverIntent(
   el: HTMLElement,
   onActivate: () => void,
   onDeactivate: (() => void) | undefined,
-  signal: AbortSignal,
+  signal: AbortSignal
 ): void {
   let hasMoved = false;
 
   el.addEventListener(
-    "mouseenter",
+    'mouseenter',
     () => {
       hasMoved = false;
     },
-    { signal },
+    { signal }
   );
 
   el.addEventListener(
-    "mousemove",
+    'mousemove',
     () => {
       if (!hasMoved) {
         hasMoved = true;
         onActivate();
       }
     },
-    { signal, passive: true },
+    { signal, passive: true }
   );
 
   if (onDeactivate) {
     el.addEventListener(
-      "mouseleave",
+      'mouseleave',
       () => {
         hasMoved = false;
         onDeactivate();
       },
-      { signal },
+      { signal }
     );
   }
 }

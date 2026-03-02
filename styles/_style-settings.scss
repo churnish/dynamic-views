@@ -55,8 +55,8 @@ settings:
         format: px
     -
         id: dynamic-views-backdrop-hover-zoom
-        title: Hover zoom
-        description: Subtle zoom effect when hovering over backdrop cards.
+        title: Image zoom
+        description: Enlarge images on hover.
         type: class-toggle
     -
         id: layout-heading
@@ -300,7 +300,7 @@ settings:
     -
         id: dynamic-views-card-shadow
         title: Card shadow
-        description: Drop shadow behind cards.
+        description: Drop shadow behind cards. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-shadow-none
@@ -320,7 +320,7 @@ settings:
     -
         id: dynamic-views-card-shadow-hover
         title: Card shadow (hover)
-        description: Drop shadow behind cards on hover.
+        description: Drop shadow behind cards on hover. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-shadow-hover-none
@@ -445,8 +445,8 @@ settings:
         format: px
     -
         id: dynamic-views-cover-hover-zoom
-        title: Hover zoom
-        description: Show a subtle image zoom effect.
+        title: Image zoom
+        description: Enlarge images on hover.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-hover-zoom-card
@@ -644,14 +644,14 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-poster-disable-reveal-zoom
-        title: Disable reveal zoom
-        description: Disable zoom effect when revealing poster details.
+        id: dynamic-views-poster-reveal-press
+        title: Press to reveal
+        description: Show poster details on press instead of hover.
         type: class-toggle
     -
-        id: dynamic-views-poster-reveal-press
-        title: Reveal on press
-        description: Show poster details on press instead of hover.
+        id: dynamic-views-poster-disable-reveal-zoom
+        title: Disable image zoom
+        description: Do not enlarge images when revealing poster details.
         type: class-toggle
     -
         id: dynamic-views-poster-disable-scroll
@@ -1583,89 +1583,89 @@ settings:
 /* Conditional Style Settings visibility */
 body:not(.dynamic-views-card-background-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-background-color-custom"],
+  .setting-item[data-id='dynamic-views-card-background-color-custom'],
 body:not(.dynamic-views-card-background-hover-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-background-color-hover-custom"],
+  .setting-item[data-id='dynamic-views-card-background-color-hover-custom'],
 body:not(.dynamic-views-card-border-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-border-color-custom"],
+  .setting-item[data-id='dynamic-views-card-border-color-custom'],
 body:not(.dynamic-views-card-border-color-hover-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-border-color-hover-custom"],
+  .setting-item[data-id='dynamic-views-card-border-color-hover-custom'],
 body:not(.dynamic-views-cover-bg-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-cover-background-color-custom"],
+  .setting-item[data-id='dynamic-views-cover-background-color-custom'],
 body.dynamic-views-image-viewer-disabled
   .style-settings-container
-  .setting-item[data-id="dynamic-views-image-viewer-disabled"]
+  .setting-item[data-id='dynamic-views-image-viewer-disabled']
   ~ .setting-item,
 body:not(.dynamic-views-property-color-with-labels-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-property-color-with-labels-custom"],
+  .setting-item[data-id='dynamic-views-property-color-with-labels-custom'],
 body:not(.dynamic-views-property-color-without-labels-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-property-color-without-labels-custom"],
+  .setting-item[data-id='dynamic-views-property-color-without-labels-custom'],
 body:not(.dynamic-views-property-label-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-property-label-color-custom"],
+  .setting-item[data-id='dynamic-views-property-label-color-custom'],
 body.dynamic-views-slideshow-disabled
   .style-settings-container
-  .setting-item[data-id="dynamic-views-slideshow-disabled"]
+  .setting-item[data-id='dynamic-views-slideshow-disabled']
   ~ .setting-item,
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-subtitle-color-custom"],
+  .setting-item[data-id='dynamic-views-subtitle-color-custom'],
 body.dynamic-views-file-type-none
   .style-settings-container
-  .setting-item[data-id="dynamic-views-hidden-file-extensions"],
+  .setting-item[data-id='dynamic-views-hidden-file-extensions'],
 body.dynamic-views-tag-style-theme
   .style-settings-container
   .setting-item:is(
-    [data-id="dynamic-views-tag-color"],
-    [data-id="dynamic-views-tag-color-custom"]
+    [data-id='dynamic-views-tag-color'],
+    [data-id='dynamic-views-tag-color-custom']
   ),
 body:not(.dynamic-views-tag-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-tag-color-custom"],
+  .setting-item[data-id='dynamic-views-tag-color-custom'],
 body:not(.dynamic-views-text-preview-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-text-preview-color-custom"],
+  .setting-item[data-id='dynamic-views-text-preview-color-custom'],
 body.dynamic-views-cover-circular
   .style-settings-container
-  .setting-item[data-id="dynamic-views-cover-border-radius"],
+  .setting-item[data-id='dynamic-views-cover-border-radius'],
 body.is-mobile
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-spacing-desktop"],
+  .setting-item[data-id='dynamic-views-card-spacing-desktop'],
 body:not(.is-mobile)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-card-spacing-mobile"],
+  .setting-item[data-id='dynamic-views-card-spacing-mobile'],
 body.is-mobile
   .style-settings-container
-  .setting-item[data-id="dynamic-views-image-viewer-disable-fullscreen"],
+  .setting-item[data-id='dynamic-views-image-viewer-disable-fullscreen'],
 body.is-mobile
   .style-settings-container
-  .setting-item[data-id="dynamic-views-backdrop-hover-zoom"],
+  .setting-item[data-id='dynamic-views-backdrop-hover-zoom'],
 body.is-mobile
   .style-settings-container
-  .setting-item[data-id="dynamic-views-poster-reveal-press"],
+  .setting-item[data-id='dynamic-views-poster-reveal-press'],
 body.is-mobile
   .style-settings-container
-  .setting-item[data-id="dynamic-views-zoom-sensitivity"],
+  .setting-item[data-id='dynamic-views-zoom-sensitivity'],
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
-  .setting-item[data-id="dynamic-views-hide-thumbnail-shadow"],
+  .setting-item[data-id='dynamic-views-hide-thumbnail-shadow'],
 body:not(.dynamic-views-title-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-title-color-custom"],
+  .setting-item[data-id='dynamic-views-title-color-custom'],
 body:not(.dynamic-views-title-hover-color-custom)
   .style-settings-container
-  .setting-item[data-id="dynamic-views-title-hover-color-custom"],
+  .setting-item[data-id='dynamic-views-title-hover-color-custom'],
 body.dynamic-views-poster-theme-dark
   .style-settings-container
-  .setting-item[data-id="dynamic-views-poster-overlay-light"],
+  .setting-item[data-id='dynamic-views-poster-overlay-light'],
 body.dynamic-views-poster-theme-light
   .style-settings-container
-  .setting-item[data-id="dynamic-views-poster-overlay-dark"] {
+  .setting-item[data-id='dynamic-views-poster-overlay-dark'] {
   display: none !important;
 }

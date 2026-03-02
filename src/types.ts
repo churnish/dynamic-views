@@ -6,15 +6,15 @@
 
 /** Plugin-level settings (settings tab only, not per-view) */
 export interface PluginSettings {
-  omitFirstLine: "always" | "ifMatchesTitle" | "never";
+  omitFirstLine: 'always' | 'ifMatchesTitle' | 'never';
   randomizeAction: string;
-  openFileAction: "card" | "title";
+  openFileAction: 'card' | 'title';
   openRandomInNewTab: boolean;
   smartTimestamp: boolean;
   createdTimeProperty: string;
   modifiedTimeProperty: string;
-  preventSidebarSwipe: "disabled" | "base-files" | "all-views";
-  revealInNotebookNavigator: "disable" | "files-folders" | "tags" | "all";
+  preventSidebarSwipe: 'disabled' | 'base-files' | 'all-views';
+  revealInNotebookNavigator: 'disable' | 'files-folders' | 'tags' | 'all';
   showYoutubeThumbnails: boolean;
   showCardLinkCovers: boolean;
   contextMenuCommands: boolean;
@@ -37,17 +37,17 @@ export interface ViewDefaults {
   textPreviewLines: number;
   // Image
   imageProperty: string;
-  fallbackToEmbeds: "always" | "if-unavailable" | "never";
-  imageFormat: "thumbnail" | "cover" | "poster" | "backdrop";
-  posterDisplayMode: "gradient" | "overlay";
+  fallbackToEmbeds: 'always' | 'if-unavailable' | 'never';
+  imageFormat: 'thumbnail' | 'cover' | 'poster' | 'backdrop';
+  posterDisplayMode: 'gradient' | 'overlay';
   thumbnailSize: number;
-  imagePosition: "left" | "right" | "top" | "bottom";
-  imageFit: "crop" | "contain";
+  imagePosition: 'left' | 'right' | 'top' | 'bottom';
+  imageFit: 'crop' | 'contain';
   imageRatio: number;
   // Properties
-  propertyLabels: "hide" | "inline" | "above";
+  propertyLabels: 'hide' | 'inline' | 'above';
   pairProperties: boolean;
-  rightPropertyPosition: "left" | "column" | "right";
+  rightPropertyPosition: 'left' | 'column' | 'right';
   invertPropertyPairing: string;
   showPropertiesAbove: boolean;
   invertPropertyPosition: string;
@@ -71,7 +71,7 @@ export interface DatacoreDefaults {
 export interface BasesDefaults {
   displayFirstAsTitle: boolean;
   displaySecondAsSubtitle: boolean;
-  propertyLabels: "hide" | "inline" | "above";
+  propertyLabels: 'hide' | 'inline' | 'above';
 }
 
 /** Fully resolved settings — the merge of PluginSettings + ViewDefaults + DatacoreDefaults */
@@ -112,13 +112,13 @@ export type SettingsTemplate = Partial<ViewDefaults & DatacoreDefaults>;
 
 export interface PluginData {
   pluginSettings: Partial<PluginSettings>;
-  templates: Partial<Record<"grid" | "masonry" | "datacore", SettingsTemplate>>;
+  templates: Partial<Record<'grid' | 'masonry' | 'datacore', SettingsTemplate>>;
   basesStates: Record<string, BasesUIState>; // Bases only: { collapsedGroups }
   datacoreStates: Record<string, DatacoreState>; // Datacore only: UI + settings
 }
 
-export type ViewMode = "grid" | "masonry" | "list";
-export type WidthMode = "normal" | "wide" | "max";
+export type ViewMode = 'grid' | 'masonry' | 'list';
+export type WidthMode = 'normal' | 'wide' | 'max';
 
 // ============================================================================
 // View State Interfaces (shared between grid-view.ts and masonry-view.ts)

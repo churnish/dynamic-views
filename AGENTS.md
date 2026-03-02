@@ -5,7 +5,7 @@
 - **Plugin name**: NEVER abbreviate the plugin name to 'DV' in the codebase, stylesheet, or any user-facing text. ALWAYS use the full name 'Dynamic Views'. The 'DV' shorthand is acceptable in fleeting chat contexts ONLY.
 - **Prefix**: NEVER use the `dv-` prefix as a shorthand for Dynamic Views. ONLY use the full `dynamic-views-` prefix in ALL contexts.
 - **View names**: ALWAYS capitalize plugin view names: 'Grid', 'Masonry', 'List' NOT 'grid', 'masonry', 'list'. Do NOT capitalize when referring to the layout itself rather than the view as a whole.
-- **Card views**: There is no singular "card view". The plugin has Grid and Masonry views. ALWAYS use "card views" (plural) when referring to both collectively.
+- **Card views**: NEVER use the term 'card view' (singular). Use 'Grid' or 'Masonry' instead. To refer to both collectively, use 'card views' (plural).
 - **Avoid "base"**: NEVER use "base" to mean "default" in comments, docs, file names, function/class/variable names, or any user-facing text — ambiguous with Obsidian's Bases feature. Use synonyms like "standard", "core", and "initial" instead.
 - **Press over click/tap**: In all user-facing text, prefer "press" over "click" and "tap".
 
@@ -17,7 +17,7 @@
 
 ## Performance
 
-- **Card view performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
+- **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
 
 ## Knowledge files
 

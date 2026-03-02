@@ -2,9 +2,9 @@
  * Shared utility for measuring side-by-side property field widths
  */
 
-import { getOwnerWindow } from "../utils/owner-window";
-import { CONTENT_HIDDEN_CLASS } from "./content-visibility";
-import { updateScrollGradient } from "./scroll-gradient";
+import { getOwnerWindow } from '../utils/owner-window';
+import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { updateScrollGradient } from './scroll-gradient';
 
 /** Cache of last measured container width per card (auto-cleans via WeakMap) */
 const cardWidthCache = new WeakMap<HTMLElement, number>();
@@ -27,7 +27,7 @@ const visibilityObservers = new Map<
 >();
 
 function getVisibilityObserver(
-  win: Window & typeof globalThis,
+  win: Window & typeof globalThis
 ): IntersectionObserver {
   let observer = visibilityObservers.get(win);
   if (!observer) {
@@ -42,7 +42,7 @@ function getVisibilityObserver(
           }
         });
       },
-      { rootMargin: "100px" }, // Measure slightly before visible
+      { rootMargin: '100px' } // Measure slightly before visible
     );
     visibilityObservers.set(win, observer);
   }
@@ -55,7 +55,7 @@ function getVisibilityObserver(
  *              If omitted, disconnects all observers (use on plugin unload only).
  */
 export function cleanupVisibilityObserver(
-  win?: Window & typeof globalThis,
+  win?: Window & typeof globalThis
 ): void {
   if (win) {
     const obs = visibilityObservers.get(win);
@@ -98,7 +98,7 @@ const MAX_QUEUE_SIZE = 500;
 const MAX_GRADIENT_BATCH_SIZE = 100;
 
 /** Event name for masonry relayout coordination */
-export const PROPERTY_MEASURED_EVENT = "dynamic-views:property-measured";
+export const PROPERTY_MEASURED = 'dynamic-views:property-measured';
 
 /** Process queued sets in batches per frame */
 function processSetQueue(): void {
@@ -119,14 +119,14 @@ function processSetQueue(): void {
         batch.forEach((field) => updateScrollGradient(field));
         pendingFlush = false;
         processedDocuments.forEach((doc) => {
-          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
+          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
         });
         processedDocuments.clear();
       });
     } else {
       win.requestAnimationFrame(() => {
         processedDocuments.forEach((doc) => {
-          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED_EVENT));
+          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
         });
         processedDocuments.clear();
       });
@@ -148,9 +148,9 @@ function processSetQueue(): void {
       if (
         set.isConnected &&
         card.isConnected &&
-        !card.classList.contains("compact-mode")
+        !card.classList.contains('compact-mode')
       ) {
-        set.classList.remove("property-measured");
+        set.classList.remove('property-measured');
         measureSideBySideSet(set, gradientBatch);
         processedDocuments.add(set.ownerDocument);
       }
@@ -182,17 +182,17 @@ const WIDTH_TOLERANCE = 0.5;
 function queueCardSets(
   cardEl: HTMLElement,
   sets: NodeListOf<Element>,
-  cardProps: HTMLElement,
+  cardProps: HTMLElement
 ): void {
   // Only measure visible cards
   if (!visibleCards.has(cardEl)) return;
 
   // Skip compact mode cards before queuing
-  if (cardEl.classList.contains("compact-mode")) return;
+  if (cardEl.classList.contains('compact-mode')) return;
 
   // Skip if column mode — default CSS already handles equal widths
-  const viewContainer = cardEl.closest(".dynamic-views");
-  if (viewContainer?.classList.contains("dynamic-views-paired-property-column"))
+  const viewContainer = cardEl.closest('.dynamic-views');
+  if (viewContainer?.classList.contains('dynamic-views-paired-property-column'))
     return;
 
   // Check width and cache with tolerance
@@ -215,7 +215,7 @@ function queueCardSets(
     if (!queuedSets.has(set)) {
       // Enforce queue size limit
       if (setQueue.length >= MAX_QUEUE_SIZE) {
-        console.warn("[property-measure] Queue overflow, skipping measurement");
+        console.warn('[property-measure] Queue overflow, skipping measurement');
         return;
       }
       queuedSets.add(set);
@@ -230,10 +230,10 @@ function queueCardSets(
 }
 
 /** Field selector for left side of pair */
-const LEFT_FIELD_SELECTOR = ".pair-left";
+const LEFT_FIELD_SELECTOR = '.pair-left';
 
 /** Field selector for right side of pair */
-const RIGHT_FIELD_SELECTOR = ".pair-right";
+const RIGHT_FIELD_SELECTOR = '.pair-right';
 
 /**
  * Measures and applies optimal widths for a side-by-side property set
@@ -242,21 +242,21 @@ const RIGHT_FIELD_SELECTOR = ".pair-right";
  */
 export function measureSideBySideSet(
   set: HTMLElement,
-  gradientTargets?: HTMLElement[],
+  gradientTargets?: HTMLElement[]
 ): void {
   try {
-    const card = set.closest(".card") as HTMLElement;
-    const cardProperties = set.closest(".card-properties");
+    const card = set.closest('.card') as HTMLElement;
+    const cardProperties = set.closest('.card-properties');
     if (!card || !cardProperties) return;
 
     // Skip content-hidden cards (dimension reads trigger Chromium warnings)
     if (card.classList.contains(CONTENT_HIDDEN_CLASS)) return;
 
     // Skip if already measured
-    if (set.classList.contains("property-measured")) return;
+    if (set.classList.contains('property-measured')) return;
 
     // Skip in compact mode - CSS overrides measurement with 100% width
-    if (card.classList.contains("compact-mode")) return;
+    if (card.classList.contains('compact-mode')) return;
 
     // Query fields fresh each time (avoids stale references)
     const field1 = set.querySelector(LEFT_FIELD_SELECTOR) as HTMLElement;
@@ -264,22 +264,22 @@ export function measureSideBySideSet(
     if (!field1 || !field2) return;
 
     // Enter measuring state to remove constraints
-    set.classList.add("property-measuring");
+    set.classList.add('property-measuring');
 
     // Force reflow
     void set.offsetWidth;
 
     // Get wrapper references for scroll reset later
     const wrapper1 = field1.querySelector(
-      ".property-content-wrapper",
+      '.property-content-wrapper'
     ) as HTMLElement;
     const wrapper2 = field2.querySelector(
-      ".property-content-wrapper",
+      '.property-content-wrapper'
     ) as HTMLElement;
 
     // Measure property-content (actual content, not wrapper which may be flex-grown)
-    const content1 = field1.querySelector(".property-content") as HTMLElement;
-    const content2 = field2.querySelector(".property-content") as HTMLElement;
+    const content1 = field1.querySelector('.property-content') as HTMLElement;
+    const content2 = field2.querySelector('.property-content') as HTMLElement;
 
     // Check if either field is truly empty (no content element or zero width)
     const field1Empty = !content1 || content1.scrollWidth === 0;
@@ -298,29 +298,29 @@ export function measureSideBySideSet(
 
     if (field1Empty) {
       // Only field2 has content: field2 gets full width (no gap needed)
-      field1Width = "0px";
+      field1Width = '0px';
       field2Width = `${containerWidth}px`;
     } else if (field2Empty) {
       // Only field1 has content: field1 gets full width (no gap needed)
       field1Width = `${containerWidth}px`;
-      field2Width = "0px";
+      field2Width = '0px';
     } else {
       // Both fields have content - measure and allocate
 
       // Measure inline labels if present
       const inlineLabel1 = field1.querySelector(
-        ".property-label-inline",
+        '.property-label-inline'
       ) as HTMLElement;
       const inlineLabel2 = field2.querySelector(
-        ".property-label-inline",
+        '.property-label-inline'
       ) as HTMLElement;
 
       // Measure above labels if present (need max of label vs content width)
       const aboveLabel1 = field1.querySelector(
-        ".property-label",
+        '.property-label'
       ) as HTMLElement;
       const aboveLabel2 = field2.querySelector(
-        ".property-label",
+        '.property-label'
       ) as HTMLElement;
 
       // Total width = content width + inline label width + gap (if inline label exists)
@@ -377,9 +377,9 @@ export function measureSideBySideSet(
     }
 
     // Apply calculated values
-    set.style.setProperty("--field1-width", field1Width);
-    set.style.setProperty("--field2-width", field2Width);
-    set.classList.add("property-measured");
+    set.style.setProperty('--field1-width', field1Width);
+    set.style.setProperty('--field2-width', field2Width);
+    set.classList.add('property-measured');
 
     // Reset scroll position to 0 for both wrappers
     if (wrapper1) wrapper1.scrollLeft = 0;
@@ -398,7 +398,7 @@ export function measureSideBySideSet(
     }
   } finally {
     // Always exit measuring state, even if error occurs
-    set.classList.remove("property-measuring");
+    set.classList.remove('property-measuring');
   }
 }
 
@@ -411,23 +411,23 @@ const MEASUREMENT_CHUNK_SIZE = 5;
  * Uses chunked processing to prevent frame drops with many sets
  */
 export function remeasurePropertyFields(container: HTMLElement): void {
-  const viewContainer = container.closest(".dynamic-views") ?? container;
+  const viewContainer = container.closest('.dynamic-views') ?? container;
   if (
-    viewContainer.classList.contains("dynamic-views-paired-property-column")
+    viewContainer.classList.contains('dynamic-views-paired-property-column')
   ) {
     return;
   }
 
   const sets = Array.from(
-    container.querySelectorAll<HTMLElement>(".property-pair"),
+    container.querySelectorAll<HTMLElement>('.property-pair')
   );
   if (sets.length === 0) return;
 
   // Clear measured state for all sets first (batch DOM writes)
   sets.forEach((set) => {
-    set.classList.remove("property-measured");
-    set.style.removeProperty("--field1-width");
-    set.style.removeProperty("--field2-width");
+    set.classList.remove('property-measured');
+    set.style.removeProperty('--field1-width');
+    set.style.removeProperty('--field2-width');
   });
 
   // Process sets in chunks across frames to prevent freeze
@@ -463,18 +463,18 @@ export function remeasurePropertyFields(container: HTMLElement): void {
  */
 export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
   // Skip measurement if column mode — default CSS is already 50-50
-  const viewContainer = cardEl.closest(".dynamic-views");
+  const viewContainer = cardEl.closest('.dynamic-views');
   if (
-    viewContainer?.classList.contains("dynamic-views-paired-property-column")
+    viewContainer?.classList.contains('dynamic-views-paired-property-column')
   ) {
     return [];
   }
 
-  const sets = cardEl.querySelectorAll(".property-pair");
+  const sets = cardEl.querySelectorAll('.property-pair');
   if (sets.length === 0) return [];
 
   // Card-properties container is inside the card
-  const cardProps = cardEl.querySelector(".card-properties") as HTMLElement;
+  const cardProps = cardEl.querySelector('.card-properties') as HTMLElement;
   if (!cardProps) return [];
 
   // Derive window from card element for cross-window observer safety
@@ -492,7 +492,7 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
     // Skip content-hidden cards (dimension reads trigger Chromium warnings)
     if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
     // Skip in compact mode or if container has no width
-    if (cardEl.classList.contains("compact-mode")) return;
+    if (cardEl.classList.contains('compact-mode')) return;
     if (cardProps.clientWidth <= 0) return;
 
     if (isFirstResize) {

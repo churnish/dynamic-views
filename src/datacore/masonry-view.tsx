@@ -1,7 +1,7 @@
-import { CardView } from "./card-view";
-import type { ResolvedSettings } from "../types";
-import type { CardData } from "../shared/card-renderer";
-import type { App } from "obsidian";
+import { CardView } from './card-view';
+import type { ResolvedSettings } from '../types';
+import type { CardData } from '../shared/card-renderer';
+import type { App } from 'obsidian';
 
 interface MasonryViewProps {
   cards: CardData[];

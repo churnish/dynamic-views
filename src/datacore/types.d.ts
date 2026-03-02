@@ -7,12 +7,12 @@
  * Documentation: https://github.com/blacksmithgu/datacore
  */
 
-import { TFile, Plugin } from "obsidian";
+import { TFile, Plugin } from 'obsidian';
 
 /**
  * Extend Obsidian types with undocumented APIs used by this plugin
  */
-declare module "obsidian" {
+declare module 'obsidian' {
   interface FileManager {
     /** Prompt user to rename a file (undocumented API) */
     promptForFileRename(file: TFile): Promise<void>;
@@ -39,12 +39,12 @@ declare module "obsidian" {
 
 /** Opaque reference returned by Datacore's core.on() for unsubscribing */
 export interface DatacoreEventRef {
-  readonly _brand?: "DatacoreEventRef";
+  readonly _brand?: 'DatacoreEventRef';
 }
 
 /** Datacore's internal event emitter core (subset used for index subscriptions) */
 export interface DatacoreCore {
-  on(event: "update", callback: () => void): DatacoreEventRef;
+  on(event: 'update', callback: () => void): DatacoreEventRef;
   offref(ref: DatacoreEventRef): void;
 }
 
@@ -57,7 +57,7 @@ export interface DatacorePluginInstance {
 
 declare global {
   interface Window {
-    app: import("obsidian").App;
+    app: import('obsidian').App;
   }
 }
 
@@ -191,7 +191,7 @@ export interface DatacoreAPI {
    */
   useCallback<T extends (...args: unknown[]) => unknown>(
     callback: T,
-    deps: unknown[],
+    deps: unknown[]
   ): T;
 
   /**

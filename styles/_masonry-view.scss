@@ -29,7 +29,7 @@
     }
 
     /* Override flex-direction for no-image cards in Masonry */
-    .card:not([class*="card-thumbnail-"]):not([class*="card-cover-"])
+    .card:not([class*='card-thumbnail-']):not([class*='card-cover-'])
       .card-previews {
       flex-direction: row;
     }
@@ -94,13 +94,13 @@
 
 /* Reset Bases' mobile margin - applied to parent instead to include end indicator */
 .is-phone
-  .workspace-leaf-content[data-type="bases"]
+  .workspace-leaf-content[data-type='bases']
   .dynamic-views-masonry.bases-cards-container {
   margin-bottom: 0;
 }
 
 .dynamic-views .dynamic-views-masonry .card,
-.workspace-leaf-content[data-type="bases"]
+.workspace-leaf-content[data-type='bases']
   .dynamic-views
   .dynamic-views-masonry
   .card {

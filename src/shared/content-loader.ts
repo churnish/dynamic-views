@@ -1,12 +1,12 @@
-import type { App, TFile } from "obsidian";
+import type { App, TFile } from 'obsidian';
 import {
   processImagePaths,
   resolveInternalImagePaths,
   extractImageEmbeds,
   VALID_IMAGE_EXTENSIONS,
-} from "../utils/image";
-import { loadFilePreview } from "../utils/text-preview";
-import { getSlideshowMaxImages } from "../utils/style-settings";
+} from '../utils/image';
+import { loadFilePreview } from '../utils/text-preview';
+import { getSlideshowMaxImages } from '../utils/style-settings';
 
 // Track in-flight loads - Map to Promises so concurrent requests can await
 const inFlightTextPreviews = new Map<string, Promise<string>>();
@@ -59,13 +59,13 @@ export async function loadImageForEntry(
   file: TFile,
   app: App,
   imagePropertyValues: unknown[],
-  fallbackToEmbeds: "always" | "if-unavailable" | "never",
+  fallbackToEmbeds: 'always' | 'if-unavailable' | 'never',
   imageCache: Record<string, string | string[]>,
   hasImageCache: Record<string, boolean>,
   embedOptions?: {
     includeYoutube?: boolean;
     includeCardLink?: boolean;
-  },
+  }
 ): Promise<void> {
   // Skip if already in caller's cache (uses path, not composite key, because each
   // caller passes their own cache objects - this prevents re-loading within a batch)
@@ -77,9 +77,9 @@ export async function loadImageForEntry(
   // (gated on fallbackToEmbeds — "never" suppresses self-image as embed fallback;
   // getResourcePath is synchronous so in-flight dedup is unnecessary)
   if (
-    fallbackToEmbeds !== "never" &&
+    fallbackToEmbeds !== 'never' &&
     imagePropertyValues.length === 0 &&
-    VALID_IMAGE_EXTENSIONS.includes(file.extension?.toLowerCase() ?? "")
+    VALID_IMAGE_EXTENSIONS.includes(file.extension?.toLowerCase() ?? '')
   ) {
     imageCache[path] = app.vault.getResourcePath(file);
     hasImageCache[path] = true;
@@ -92,7 +92,7 @@ export async function loadImageForEntry(
   // - embedOptions: determines which embed types (YouTube, CardLink) are included
   const embedKey = embedOptions
     ? `${embedOptions.includeYoutube ?? false}|${embedOptions.includeCardLink ?? false}`
-    : "false|false";
+    : 'false|false';
   const cacheKey = `${path}|${fallbackToEmbeds}|${embedKey}`;
   const existing = inFlightImages.get(cacheKey);
   if (existing) {
@@ -112,7 +112,7 @@ export async function loadImageForEntry(
 
       // Filter to only valid string paths before processing
       const validPaths = imagePropertyValues.filter(
-        (v): v is string => typeof v === "string" && v.length > 0,
+        (v): v is string => typeof v === 'string' && v.length > 0
       );
 
       // Process image paths using shared utility (sync - no validation needed)
@@ -126,19 +126,19 @@ export async function loadImageForEntry(
       ];
 
       // Handle embed images based on fallbackToEmbeds mode
-      if (fallbackToEmbeds === "always") {
+      if (fallbackToEmbeds === 'always') {
         // Pull from properties first, then append in-note embeds
         // Skip parsing if property already has max images
         if (validImages.length < maxImages) {
           const embedImages = await extractImageEmbeds(file, app, embedOptions);
           validImages = [...validImages, ...embedImages];
         }
-      } else if (fallbackToEmbeds === "if-unavailable") {
+      } else if (fallbackToEmbeds === 'if-unavailable') {
         // Only use embeds if no valid property images
         if (validImages.length === 0) {
           validImages = await extractImageEmbeds(file, app, embedOptions);
         }
-      } else if (fallbackToEmbeds === "never") {
+      } else if (fallbackToEmbeds === 'never') {
         // Only use property images, never use embeds
         // No action needed - validImages already contains only property images
       }
@@ -192,14 +192,14 @@ export async function loadImagesForEntries(
     file: TFile;
     imagePropertyValues: unknown[];
   }>,
-  fallbackToEmbeds: "always" | "if-unavailable" | "never",
+  fallbackToEmbeds: 'always' | 'if-unavailable' | 'never',
   app: App,
   imageCache: Record<string, string | string[]>,
   hasImageCache: Record<string, boolean>,
   embedOptions?: {
     includeYoutube?: boolean;
     includeCardLink?: boolean;
-  },
+  }
 ): Promise<void> {
   await Promise.all(
     entries.map(async (entry) => {
@@ -211,9 +211,9 @@ export async function loadImagesForEntries(
         fallbackToEmbeds,
         imageCache,
         hasImageCache,
-        embedOptions,
+        embedOptions
       );
-    }),
+    })
   );
 }
 
@@ -237,10 +237,10 @@ export async function loadTextPreviewForEntry(
   app: App,
   textPreviewData: unknown,
   fallbackToContent: boolean,
-  omitFirstLine: "always" | "ifMatchesTitle" | "never",
+  omitFirstLine: 'always' | 'ifMatchesTitle' | 'never',
   textPreviewCache: Record<string, string>,
   fileName?: string,
-  titleString?: string,
+  titleString?: string
 ): Promise<void> {
   // Skip if already in caller's cache (uses path, not composite key, because each
   // caller passes their own cache objects - this prevents re-loading within a batch)
@@ -256,15 +256,15 @@ export async function loadTextPreviewForEntry(
   // - fileName/titleString: included when omitFirstLine="ifMatchesTitle" (affects first-line comparison)
   const hasTextPreview =
     textPreviewData != null &&
-    (typeof textPreviewData === "string" ||
-      typeof textPreviewData === "number") &&
+    (typeof textPreviewData === 'string' ||
+      typeof textPreviewData === 'number') &&
     String(textPreviewData).trim().length > 0
-      ? "1"
-      : "0";
+      ? '1'
+      : '0';
   const titleKey =
-    omitFirstLine === "ifMatchesTitle"
-      ? `|${fileName ?? ""}|${titleString ?? ""}`
-      : "";
+    omitFirstLine === 'ifMatchesTitle'
+      ? `|${fileName ?? ''}|${titleString ?? ''}`
+      : '';
   const cacheKey = `${path}|${fallbackToContent}|${omitFirstLine}|${hasTextPreview}${titleKey}`;
   const existing = inFlightTextPreviews.get(cacheKey);
   if (existing) {
@@ -275,7 +275,7 @@ export async function loadTextPreviewForEntry(
   // Create and store the loading promise
   const loadPromise = (async (): Promise<string> => {
     try {
-      if (file.extension === "md") {
+      if (file.extension === 'md') {
         return await loadFilePreview(
           file,
           app,
@@ -285,14 +285,14 @@ export async function loadTextPreviewForEntry(
             omitFirstLine,
           },
           fileName,
-          titleString,
+          titleString
         );
       } else {
-        return "";
+        return '';
       }
     } catch (error) {
       console.error(`Failed to load text preview for ${path}:`, error);
-      return "";
+      return '';
     }
   })();
 
@@ -317,9 +317,9 @@ export async function loadTextPreviewForEntry(
 export async function loadTextPreviewsForEntries(
   entries: TextPreviewEntry[],
   fallbackToContent: boolean,
-  omitFirstLine: "always" | "ifMatchesTitle" | "never",
+  omitFirstLine: 'always' | 'ifMatchesTitle' | 'never',
   app: App,
-  textPreviewCache: Record<string, string>,
+  textPreviewCache: Record<string, string>
 ): Promise<void> {
   await Promise.all(
     entries.map(async (entry) => {
@@ -332,8 +332,8 @@ export async function loadTextPreviewsForEntries(
         omitFirstLine,
         textPreviewCache,
         entry.fileName,
-        entry.titleString,
+        entry.titleString
       );
-    }),
+    })
   );
 }

@@ -10,10 +10,10 @@
  * Mobile falls back to CSS content-visibility: auto (browser-managed).
  */
 
-import { Platform } from "obsidian";
-import { PANE_MULTIPLIER } from "./constants";
+import { Platform } from 'obsidian';
+import { PANE_MULTIPLIER } from './constants';
 
-export const CONTENT_HIDDEN_CLASS = "content-hidden";
+export const CONTENT_HIDDEN_CLASS = 'content-hidden';
 
 export function setupContentVisibility(scrollContainer: HTMLElement): {
   observe: (card: HTMLElement) => void;
@@ -28,11 +28,11 @@ export function setupContentVisibility(scrollContainer: HTMLElement): {
       for (const entry of entries) {
         entry.target.classList.toggle(
           CONTENT_HIDDEN_CLASS,
-          !entry.isIntersecting,
+          !entry.isIntersecting
         );
       }
     },
-    { root: scrollContainer, rootMargin: margin, threshold: 0 },
+    { root: scrollContainer, rootMargin: margin, threshold: 0 }
   );
 
   return {

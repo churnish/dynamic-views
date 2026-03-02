@@ -2,20 +2,20 @@
  * Shared image viewer handler - eliminates code duplication across card renderers
  */
 
-import { Notice, TFile, type App } from "obsidian";
-import Panzoom, { PanzoomObject } from "@panzoom/panzoom";
-import { setupTouchInterceptAll } from "../bases/swipe-interceptor";
-import { GESTURE_TIMEOUT_MS } from "./constants";
+import { Notice, TFile, type App } from 'obsidian';
+import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
+import { setupTouchInterceptAll } from '../bases/swipe-interceptor';
+import { GESTURE_TIMEOUT_MS } from './constants';
 import {
   getZoomSensitivityDesktop,
   getZoomSensitivityMobile,
-} from "../utils/style-settings";
-import { getVaultPathFromResourceUrl, isExternalUrl } from "../utils/image";
-import { getCachedBlobUrl } from "./slideshow";
-import { getOwnerWindow } from "../utils/owner-window";
+} from '../utils/style-settings';
+import { getVaultPathFromResourceUrl, isExternalUrl } from '../utils/image';
+import { getCachedBlobUrl } from './slideshow';
+import { getOwnerWindow } from '../utils/owner-window';
 
 // Extend App type for undocumented dragManager API
-declare module "obsidian" {
+declare module 'obsidian' {
   interface App {
     dragManager: {
       dragFile(evt: DragEvent, file: TFile): unknown;
@@ -48,7 +48,7 @@ const containerWheelHandlers = new Map<HTMLElement, (e: WheelEvent) => void>();
  */
 export function cleanupAllViewers(
   viewerCleanupFns: Map<HTMLElement, () => void>,
-  viewerClones: Map<HTMLElement, HTMLElement>,
+  viewerClones: Map<HTMLElement, HTMLElement>
 ): void {
   // Remove clones from DOM and run gesture cleanup
   viewerClones.forEach((clone) => {
@@ -78,7 +78,7 @@ function closeImageViewer(
   cloneEl: CloneElement,
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>,
-  restoreHoverIntent = true,
+  restoreHoverIntent = true
 ): void {
   cloneEl.remove();
 
@@ -94,15 +94,15 @@ function closeImageViewer(
     // unreliable — add class directly instead.
     // Skipped when a new viewer pre-empts this one (mouse is on a different card).
     if (restoreHoverIntent) {
-      const cardEl = original.closest<HTMLElement>(".card");
+      const cardEl = original.closest<HTMLElement>('.card');
       if (cardEl) {
-        cardEl.classList.add("hover-intent-active");
+        cardEl.classList.add('hover-intent-active');
       }
 
       // Resume thumbnail scrubbing at last cursor position, or reset if cursor
       // is outside the thumbnail (e.g. dismissed via keyboard or moved away)
       const thumbnailEl = original.closest<HTMLElement>(
-        ".card-thumbnail.multi-image",
+        '.card-thumbnail.multi-image'
       );
       if (thumbnailEl && original.dataset.viewerX) {
         const x = Number(original.dataset.viewerX);
@@ -116,18 +116,18 @@ function closeImageViewer(
         ) {
           // Recalculate scrub position for current cursor coordinates
           thumbnailEl.dispatchEvent(
-            new MouseEvent("mousemove", {
+            new MouseEvent('mousemove', {
               clientX: x,
               clientY: y,
               bubbles: false,
-            }),
+            })
           );
           // Preact re-renders overwrite img.src via microtask reconciliation.
           // Re-apply the scrubbed src (updated by the handler above) after
           // Preact finishes.
           if (thumbnailEl.dataset.scrubbedSrc) {
             getOwnerWindow(thumbnailEl).requestAnimationFrame(() => {
-              const img = thumbnailEl.querySelector("img");
+              const img = thumbnailEl.querySelector('img');
               if (img?.isConnected && thumbnailEl.dataset.scrubbedSrc) {
                 img.src = thumbnailEl.dataset.scrubbedSrc;
               }
@@ -136,7 +136,7 @@ function closeImageViewer(
         } else {
           // Cursor outside thumbnail — trigger reset to first image
           thumbnailEl.dispatchEvent(
-            new MouseEvent("mouseleave", { bubbles: false }),
+            new MouseEvent('mouseleave', { bubbles: false })
           );
         }
       }
@@ -173,25 +173,25 @@ export function handleImageViewerTrigger(
   app: App,
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>,
-  openFileAction: "card" | "title",
+  openFileAction: 'card' | 'title'
 ): void {
   // Always stop propagation to prevent third-party plugins (e.g. Image Toolkit)
   e.stopPropagation();
 
   // Skip viewer when all card images are broken (discovered via preload)
-  const cardEl = (e.currentTarget as HTMLElement)?.closest(".card");
-  if (cardEl?.classList.contains("no-valid-images")) return;
+  const cardEl = (e.currentTarget as HTMLElement)?.closest('.card');
+  if (cardEl?.classList.contains('no-valid-images')) return;
 
   const viewerDoc = (e.currentTarget as HTMLElement)?.ownerDocument ?? document;
 
   const isViewerDisabled = viewerDoc.body.classList.contains(
-    "dynamic-views-image-viewer-disabled",
+    'dynamic-views-image-viewer-disabled'
   );
   if (isViewerDisabled) {
     // When viewer disabled, only open file if openFileAction is "card"
-    if (openFileAction === "card") {
+    if (openFileAction === 'card') {
       const newLeaf = e.metaKey || e.ctrlKey;
-      void app.workspace.openLinkText(cardPath, "", newLeaf);
+      void app.workspace.openLinkText(cardPath, '', newLeaf);
     }
     // If openFileAction is "title", do nothing (image click has no action)
     return;
@@ -225,7 +225,7 @@ interface ViewerGestureControls {
 function setupImageViewerGestures(
   imgEl: HTMLImageElement,
   container: HTMLElement,
-  isMobile: boolean,
+  isMobile: boolean
 ): ViewerGestureControls {
   let panzoomInstance: PanzoomObject | null = null;
   let spacebarHandler: ((e: KeyboardEvent) => void) | null = null;
@@ -285,7 +285,7 @@ function setupImageViewerGestures(
         cachedViewportWidth = gestureWin.innerWidth;
         cachedViewportHeight = gestureWin.innerHeight;
       };
-      gestureWin.addEventListener("resize", resizeHandler);
+      gestureWin.addEventListener('resize', resizeHandler);
     } else {
       // Desktop: update container dimensions via ResizeObserver (avoids stale bounds in maximized mode)
       containerResizeObserver = new gestureWin.ResizeObserver((entries) => {
@@ -304,7 +304,7 @@ function setupImageViewerGestures(
     const desktopSetTransform = !isMobile
       ? (
           elem: HTMLElement,
-          { scale, x, y }: { scale: number; x: number; y: number },
+          { scale, x, y }: { scale: number; x: number; y: number }
         ) => {
           // Non-maximized: default panzoom behavior
           if (!isMaximized) {
@@ -327,11 +327,11 @@ function setupImageViewerGestures(
           // Max pan: image edges stay at container edges (no empty space on glued axis)
           const maxPanX = Math.max(
             0,
-            (scaledWidth - cachedContainerWidth) / 2 / scale,
+            (scaledWidth - cachedContainerWidth) / 2 / scale
           );
           const maxPanY = Math.max(
             0,
-            (scaledHeight - cachedContainerHeight) / 2 / scale,
+            (scaledHeight - cachedContainerHeight) / 2 / scale
           );
 
           // On scale change, clamp existing pan to new bounds
@@ -350,11 +350,11 @@ function setupImageViewerGestures(
           // Apply delta with clamping
           desktopPanX = Math.max(
             -maxPanX,
-            Math.min(maxPanX, desktopPanX + deltaX),
+            Math.min(maxPanX, desktopPanX + deltaX)
           );
           desktopPanY = Math.max(
             -maxPanY,
-            Math.min(maxPanY, desktopPanY + deltaY),
+            Math.min(maxPanY, desktopPanY + deltaY)
           );
 
           elem.style.transform = `scale(${scale}) translate(${desktopPanX}px, ${desktopPanY}px)`;
@@ -375,7 +375,7 @@ function setupImageViewerGestures(
 
           return (
             elem: HTMLElement,
-            { scale, x, y }: { scale: number; x: number; y: number },
+            { scale, x, y }: { scale: number; x: number; y: number }
           ) => {
             // Cache image dimensions on first call or scale change (avoid reflow on every transform)
             if (cachedImgWidth === 0 || scale !== lastScale) {
@@ -391,7 +391,7 @@ function setupImageViewerGestures(
             // Horizontal: image edges stay at viewport edges (no empty space)
             const maxPanX = Math.max(
               0,
-              (scaledWidth - cachedViewportWidth) / 2 / scale,
+              (scaledWidth - cachedViewportWidth) / 2 / scale
             );
             // Vertical: ~26% viewport visible at pan limit (matches Obsidian native)
             const maxPanY = Math.max(
@@ -399,7 +399,7 @@ function setupImageViewerGestures(
               (scaledHeight -
                 cachedViewportHeight / MOBILE_VERTICAL_PAN_RATIO) /
                 2 /
-                scale,
+                scale
             );
 
             // On scale change, clamp pan to new bounds (intentional: prevents image going offscreen)
@@ -446,7 +446,7 @@ function setupImageViewerGestures(
       startScale: 1,
       step: zoomSensitivity,
       canvas: false,
-      cursor: isMobile ? "default" : "move",
+      cursor: isMobile ? 'default' : 'move',
       ...(customSetTransform && { setTransform: customSetTransform }),
     });
     reparentBack?.();
@@ -455,20 +455,20 @@ function setupImageViewerGestures(
     // In popouts, pointer events fire on the popout's document. Rebind.
     if (inPopout) {
       const pz = panzoomInstance;
-      document.removeEventListener("pointermove", pz.handleMove);
-      document.removeEventListener("pointerup", pz.handleUp);
-      document.removeEventListener("pointerleave", pz.handleUp);
-      document.removeEventListener("pointercancel", pz.handleUp);
-      gestureDoc.addEventListener("pointermove", pz.handleMove, {
+      document.removeEventListener('pointermove', pz.handleMove);
+      document.removeEventListener('pointerup', pz.handleUp);
+      document.removeEventListener('pointerleave', pz.handleUp);
+      document.removeEventListener('pointercancel', pz.handleUp);
+      gestureDoc.addEventListener('pointermove', pz.handleMove, {
         passive: true,
       });
-      gestureDoc.addEventListener("pointerup", pz.handleUp, {
+      gestureDoc.addEventListener('pointerup', pz.handleUp, {
         passive: true,
       });
-      gestureDoc.addEventListener("pointerleave", pz.handleUp, {
+      gestureDoc.addEventListener('pointerleave', pz.handleUp, {
         passive: true,
       });
-      gestureDoc.addEventListener("pointercancel", pz.handleUp, {
+      gestureDoc.addEventListener('pointercancel', pz.handleUp, {
         passive: true,
       });
     }
@@ -479,14 +479,14 @@ function setupImageViewerGestures(
       if (!isMobile && e.target !== imgEl) return;
       panzoomInstance!.zoomWithWheel(e);
     };
-    container.addEventListener("wheel", wheelHandler, WHEEL_OPTIONS);
+    container.addEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
     containerWheelHandlers.set(container, wheelHandler);
 
     // Helper to update maximized state and class (desktop-only)
     function setMaximized(value: boolean, containScale?: number): void {
       if (isMobile) return; // Defensive guard
       isMaximized = value;
-      container.classList.toggle("is-maximized", value);
+      container.classList.toggle('is-maximized', value);
       // Reset desktop pan tracking for fresh start in new mode
       resetDesktopPan();
       // When maximized, prevent zooming out below contain scale
@@ -520,15 +520,19 @@ function setupImageViewerGestures(
       // Spacebar to toggle maximize, R/ArrowDown to reset zoom
       spacebarHandler = (e: KeyboardEvent) => {
         // Constrained viewer: only handle keys when the viewer has focus or its leaf is active
-        if (container.classList.contains("dynamic-views-viewer-fixed")) {
+        if (container.classList.contains('dynamic-views-viewer-fixed')) {
           const orig = (container as CloneElement).__originalEmbed;
+          const activeLeaf =
+            gestureDoc.activeElement?.closest('.workspace-leaf');
           if (
             gestureDoc.activeElement !== container &&
-            !orig?.closest(".workspace-leaf.mod-active")
+            !orig?.closest('.workspace-leaf.mod-active') &&
+            !!activeLeaf &&
+            activeLeaf !== orig?.closest('.workspace-leaf')
           )
             return;
         }
-        if (e.code === "Space") {
+        if (e.code === 'Space') {
           e.preventDefault();
           e.stopPropagation();
           if (isMaximized) {
@@ -540,7 +544,7 @@ function setupImageViewerGestures(
             panzoomInstance?.zoom(containScale, { animate: true });
           }
           container.dataset.lastKeyTime = String(Date.now());
-        } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
+        } else if (e.key === 'r' || e.key === 'R' || e.key === 'ArrowDown') {
           e.preventDefault();
           e.stopImmediatePropagation();
           if (isMaximized) setMaximized(false);
@@ -548,7 +552,7 @@ function setupImageViewerGestures(
           container.dataset.lastKeyTime = String(Date.now());
         }
       };
-      gestureDoc.addEventListener("keydown", spacebarHandler, true);
+      gestureDoc.addEventListener('keydown', spacebarHandler, true);
 
       // Long-press via pointer events on container (panzoom stops propagation on imgEl)
       let longPressStartX = 0;
@@ -571,10 +575,10 @@ function setupImageViewerGestures(
           }
           longPressTimer = null;
           // Flag to prevent click-to-dismiss after long press
-          container.dataset.longPressTriggered = "true";
+          container.dataset.longPressTriggered = 'true';
         }, LONG_PRESS_THRESHOLD);
       };
-      container.addEventListener("pointerdown", pointerdownHandler, true);
+      container.addEventListener('pointerdown', pointerdownHandler, true);
 
       // Cancel long-press on move beyond threshold (user is panning, not long-pressing)
       pointermoveHandler = (e: PointerEvent) => {
@@ -588,7 +592,7 @@ function setupImageViewerGestures(
           panzoomInstance?.setOptions({ disablePan: false });
         }
       };
-      container.addEventListener("pointermove", pointermoveHandler, true);
+      container.addEventListener('pointermove', pointermoveHandler, true);
 
       pointerupHandler = () => {
         clearLongPress();
@@ -599,11 +603,11 @@ function setupImageViewerGestures(
           delete container.dataset.longPressTriggered;
         }, 0);
       };
-      container.addEventListener("pointerup", pointerupHandler, true);
+      container.addEventListener('pointerup', pointerupHandler, true);
 
       // Handle pointer cancel (system gesture, browser scroll) same as pointerup
       pointercancelHandler = pointerupHandler;
-      container.addEventListener("pointercancel", pointercancelHandler, true);
+      container.addEventListener('pointercancel', pointercancelHandler, true);
 
       // Right-click to reset zoom/pan (same as long-press)
       contextmenuHandler = (e: MouseEvent) => {
@@ -618,7 +622,7 @@ function setupImageViewerGestures(
           panzoomInstance?.reset();
         }
       };
-      container.addEventListener("contextmenu", contextmenuHandler, true);
+      container.addEventListener('contextmenu', contextmenuHandler, true);
     }
   }
 
@@ -629,18 +633,18 @@ function setupImageViewerGestures(
     loadHandler = () => {
       attachPanzoom();
     };
-    imgEl.addEventListener("load", loadHandler, { once: true });
+    imgEl.addEventListener('load', loadHandler, { once: true });
 
     // Handle image load errors - cleanup load listener, log warning
     errorHandler = () => {
-      console.warn("Image failed to load, viewer gestures not attached");
+      console.warn('Image failed to load, viewer gestures not attached');
       // Remove load listener since error occurred (defensive cleanup)
       if (loadHandler) {
-        imgEl.removeEventListener("load", loadHandler);
+        imgEl.removeEventListener('load', loadHandler);
         loadHandler = null;
       }
     };
-    imgEl.addEventListener("error", errorHandler, { once: true });
+    imgEl.addEventListener('error', errorHandler, { once: true });
   }
 
   return {
@@ -648,60 +652,60 @@ function setupImageViewerGestures(
       if (panzoomInstance) {
         const wheelHandler = containerWheelHandlers.get(container);
         if (wheelHandler) {
-          container.removeEventListener("wheel", wheelHandler, WHEEL_OPTIONS);
+          container.removeEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
           containerWheelHandlers.delete(container);
         }
         // Remove popout document listeners (destroy() only removes from main document)
         if (gestureDoc !== document) {
           gestureDoc.removeEventListener(
-            "pointermove",
-            panzoomInstance.handleMove,
+            'pointermove',
+            panzoomInstance.handleMove
           );
-          gestureDoc.removeEventListener("pointerup", panzoomInstance.handleUp);
+          gestureDoc.removeEventListener('pointerup', panzoomInstance.handleUp);
           gestureDoc.removeEventListener(
-            "pointerleave",
-            panzoomInstance.handleUp,
+            'pointerleave',
+            panzoomInstance.handleUp
           );
           gestureDoc.removeEventListener(
-            "pointercancel",
-            panzoomInstance.handleUp,
+            'pointercancel',
+            panzoomInstance.handleUp
           );
         }
         panzoomInstance.destroy();
       }
       if (spacebarHandler) {
-        gestureDoc.removeEventListener("keydown", spacebarHandler, true);
+        gestureDoc.removeEventListener('keydown', spacebarHandler, true);
       }
       if (longPressTimer) {
         clearTimeout(longPressTimer);
       }
       if (pointerdownHandler) {
-        container.removeEventListener("pointerdown", pointerdownHandler, true);
+        container.removeEventListener('pointerdown', pointerdownHandler, true);
       }
       if (pointermoveHandler) {
-        container.removeEventListener("pointermove", pointermoveHandler, true);
+        container.removeEventListener('pointermove', pointermoveHandler, true);
       }
       if (pointerupHandler) {
-        container.removeEventListener("pointerup", pointerupHandler, true);
+        container.removeEventListener('pointerup', pointerupHandler, true);
       }
       if (pointercancelHandler) {
         container.removeEventListener(
-          "pointercancel",
+          'pointercancel',
           pointercancelHandler,
-          true,
+          true
         );
       }
       if (contextmenuHandler) {
-        container.removeEventListener("contextmenu", contextmenuHandler, true);
+        container.removeEventListener('contextmenu', contextmenuHandler, true);
       }
       if (loadHandler) {
-        imgEl.removeEventListener("load", loadHandler);
+        imgEl.removeEventListener('load', loadHandler);
       }
       if (errorHandler) {
-        imgEl.removeEventListener("error", errorHandler);
+        imgEl.removeEventListener('error', errorHandler);
       }
       if (resizeHandler) {
-        gestureWin.removeEventListener("resize", resizeHandler);
+        gestureWin.removeEventListener('resize', resizeHandler);
       }
       if (containerResizeObserver) {
         containerResizeObserver.disconnect();
@@ -720,12 +724,12 @@ function openImageViewer(
   embedEl: HTMLElement,
   app: App,
   viewerCleanupFns: Map<HTMLElement, () => void>,
-  viewerClones: Map<HTMLElement, HTMLElement>,
+  viewerClones: Map<HTMLElement, HTMLElement>
 ): void {
   // Validate embed has an image before proceeding
-  const sourceImg = embedEl.querySelector("img");
+  const sourceImg = embedEl.querySelector('img');
   if (!sourceImg) {
-    console.warn("Cannot open viewer - no img element found");
+    console.warn('Cannot open viewer - no img element found');
     return;
   }
 
@@ -740,23 +744,23 @@ function openImageViewer(
 
   // Clone the embed element for viewing (original stays on card)
   const cloneEl = embedEl.cloneNode(true) as CloneElement;
-  cloneEl.classList.add("is-zoomed");
+  cloneEl.classList.add('is-zoomed');
 
   // Store reference to original for O(1) cleanup lookup
   cloneEl.__originalEmbed = embedEl;
 
   // For slideshows, get the current visible image; for regular embeds, get the only img
   const imgEl =
-    cloneEl.querySelector<HTMLImageElement>("img.slideshow-img-current") ||
-    cloneEl.querySelector<HTMLImageElement>("img");
+    cloneEl.querySelector<HTMLImageElement>('img.slideshow-img-current') ||
+    cloneEl.querySelector<HTMLImageElement>('img');
   if (!imgEl) {
-    console.warn("Cannot open viewer - cloned img element missing");
+    console.warn('Cannot open viewer - cloned img element missing');
     return;
   }
 
   // Remove non-current slideshow image from clone (prevents duplicate display)
   const nextImg = cloneEl.querySelector<HTMLImageElement>(
-    "img.slideshow-img-next",
+    'img.slideshow-img-next'
   );
   if (nextImg) {
     nextImg.remove();
@@ -773,19 +777,19 @@ function openImageViewer(
   const isFullscreen =
     isMobile ||
     !viewerDoc.body.classList.contains(
-      "dynamic-views-image-viewer-disable-fullscreen",
+      'dynamic-views-image-viewer-disable-fullscreen'
     );
 
   // For constrained mode, extract opacity from theme's cover color
   if (!isFullscreen) {
     const coverColor = getComputedStyle(viewerDoc.body)
-      .getPropertyValue("--background-modifier-cover")
+      .getPropertyValue('--background-modifier-cover')
       .trim();
     const match = coverColor.match(/[\d.]+(?=\s*\)$)/); // Extract last number (alpha)
     if (match) {
       const opacity = parseFloat(match[0]);
       if (opacity >= 0 && opacity <= 1) {
-        cloneEl.style.setProperty("--overlay-opacity", String(opacity));
+        cloneEl.style.setProperty('--overlay-opacity', String(opacity));
       }
     }
   }
@@ -797,7 +801,7 @@ function openImageViewer(
   try {
     if (!isFullscreen) {
       // Use workspace-leaf (stable across React re-renders) as observer target
-      const workspaceLeaf = embedEl.closest(".workspace-leaf");
+      const workspaceLeaf = embedEl.closest('.workspace-leaf');
       if (workspaceLeaf) {
         const updateBounds = () => {
           const rect = workspaceLeaf.getBoundingClientRect();
@@ -808,7 +812,7 @@ function openImageViewer(
         };
 
         // Set fixed positioning with bounds matching the container
-        cloneEl.addClass("dynamic-views-viewer-fixed");
+        cloneEl.addClass('dynamic-views-viewer-fixed');
         updateBounds();
         // Append to body (not view-content) to survive React re-renders
         viewerDoc.body.appendChild(cloneEl);
@@ -831,12 +835,12 @@ function openImageViewer(
         for (const node of mutation.addedNodes) {
           if (
             node instanceof HTMLElement &&
-            node.matches(".modal-container, .prompt")
+            node.matches('.modal-container, .prompt')
           ) {
             if (isFullscreen) {
               closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
             } else {
-              cloneEl.addClass("dynamic-views-viewer-behind-modal");
+              cloneEl.addClass('dynamic-views-viewer-behind-modal');
             }
             return;
           }
@@ -847,12 +851,12 @@ function openImageViewer(
 
     // Only setup pinch/gesture zoom if not disabled
     const isPinchZoomDisabled = viewerDoc.body.classList.contains(
-      "dynamic-views-zoom-disabled",
+      'dynamic-views-zoom-disabled'
     );
 
     // Check dismiss setting once, applies regardless of panzoom state
     const isDismissDisabled = viewerDoc.body.classList.contains(
-      "dynamic-views-image-viewer-disable-dismiss-on-click",
+      'dynamic-views-image-viewer-disable-dismiss-on-click'
     );
     // Track gesture controls for Alt+drag coordination (set when Panzoom active)
     let gestureControls: ViewerGestureControls | null = null;
@@ -863,7 +867,7 @@ function openImageViewer(
       // On mobile, disable all touch gestures (sidebar swipes + pull-down) while panning
       // Desktop uses simpler cleanup since touch interception not needed
       if (isMobile) {
-        cloneEl.dataset.ignoreSwipe = "true";
+        cloneEl.dataset.ignoreSwipe = 'true';
         const swipeController = new AbortController();
         setupTouchInterceptAll(cloneEl, swipeController.signal);
         viewerCleanupFns.set(cloneEl, () => {
@@ -880,37 +884,41 @@ function openImageViewer(
         e.preventDefault();
 
         if (e.deltaY < 0) {
-          cloneEl.classList.add("is-maximized");
+          cloneEl.classList.add('is-maximized');
         } else if (e.deltaY > 0) {
-          cloneEl.classList.remove("is-maximized");
+          cloneEl.classList.remove('is-maximized');
         }
       };
-      cloneEl.addEventListener("wheel", onPinchWheel, { passive: false });
+      cloneEl.addEventListener('wheel', onPinchWheel, { passive: false });
 
       // Desktop only: spacebar to toggle maximize, R/ArrowDown to reset (when panzoom disabled)
       const onSpacebar = (e: KeyboardEvent) => {
         // Constrained viewer: only handle keys when the viewer has focus or its leaf is active
-        if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+        if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
           const orig = cloneEl.__originalEmbed;
+          const activeLeaf =
+            viewerDoc.activeElement?.closest('.workspace-leaf');
           if (
             viewerDoc.activeElement !== cloneEl &&
-            !orig?.closest(".workspace-leaf.mod-active")
+            !orig?.closest('.workspace-leaf.mod-active') &&
+            !!activeLeaf &&
+            activeLeaf !== orig?.closest('.workspace-leaf')
           )
             return;
         }
-        if (e.code === "Space") {
+        if (e.code === 'Space') {
           e.preventDefault();
           e.stopPropagation();
-          cloneEl.classList.toggle("is-maximized");
+          cloneEl.classList.toggle('is-maximized');
           cloneEl.dataset.lastKeyTime = String(Date.now());
-        } else if (e.key === "r" || e.key === "R" || e.key === "ArrowDown") {
+        } else if (e.key === 'r' || e.key === 'R' || e.key === 'ArrowDown') {
           e.preventDefault();
           e.stopImmediatePropagation();
-          cloneEl.classList.remove("is-maximized");
+          cloneEl.classList.remove('is-maximized');
           cloneEl.dataset.lastKeyTime = String(Date.now());
         }
       };
-      viewerDoc.addEventListener("keydown", onSpacebar, true);
+      viewerDoc.addEventListener('keydown', onSpacebar, true);
 
       // Image is always draggable when panzoom is off (no pan to conflict with)
       imgEl.draggable = true;
@@ -927,18 +935,18 @@ function openImageViewer(
           }
         } else if (isExternalUrl(src)) {
           e.dataTransfer?.clearData();
-          e.dataTransfer?.setData("text/plain", `![](${src})`);
+          e.dataTransfer?.setData('text/plain', `![](${src})`);
         }
       };
 
-      imgEl.addEventListener("dragstart", onPanzoomOffDragStart);
+      imgEl.addEventListener('dragstart', onPanzoomOffDragStart);
 
       const existingGestureCleanup = viewerCleanupFns.get(cloneEl);
       viewerCleanupFns.set(cloneEl, () => {
         existingGestureCleanup?.();
-        cloneEl.removeEventListener("wheel", onPinchWheel);
-        viewerDoc.removeEventListener("keydown", onSpacebar, true);
-        imgEl.removeEventListener("dragstart", onPanzoomOffDragStart);
+        cloneEl.removeEventListener('wheel', onPinchWheel);
+        viewerDoc.removeEventListener('keydown', onSpacebar, true);
+        imgEl.removeEventListener('dragstart', onPanzoomOffDragStart);
       });
     }
 
@@ -947,7 +955,7 @@ function openImageViewer(
       e.preventDefault();
       e.stopPropagation();
     };
-    imgEl.addEventListener("contextmenu", onContextMenu);
+    imgEl.addEventListener('contextmenu', onContextMenu);
 
     // Track pointer movement to distinguish click from pan
     let pointerMoved = false;
@@ -974,8 +982,8 @@ function openImageViewer(
 
     // Click-to-dismiss (unless disabled) - works with or without panzoom
     if (!isDismissDisabled) {
-      imgEl.addEventListener("pointerdown", onPointerDown);
-      imgEl.addEventListener("pointermove", onPointerMove);
+      imgEl.addEventListener('pointerdown', onPointerDown);
+      imgEl.addEventListener('pointermove', onPointerMove);
 
       const onImageClick = (e: MouseEvent) => {
         if (pointerMoved) return;
@@ -989,21 +997,21 @@ function openImageViewer(
         e.stopPropagation();
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       };
-      imgEl.addEventListener("click", onImageClick);
+      imgEl.addEventListener('click', onImageClick);
 
       const existingCleanup = viewerCleanupFns.get(cloneEl);
       viewerCleanupFns.set(cloneEl, () => {
         existingCleanup?.();
-        imgEl.removeEventListener("pointerdown", onPointerDown);
-        imgEl.removeEventListener("pointermove", onPointerMove);
-        imgEl.removeEventListener("click", onImageClick);
-        imgEl.removeEventListener("contextmenu", onContextMenu);
+        imgEl.removeEventListener('pointerdown', onPointerDown);
+        imgEl.removeEventListener('pointermove', onPointerMove);
+        imgEl.removeEventListener('click', onImageClick);
+        imgEl.removeEventListener('contextmenu', onContextMenu);
       });
     } else {
       const existingCleanup = viewerCleanupFns.get(cloneEl);
       viewerCleanupFns.set(cloneEl, () => {
         existingCleanup?.();
-        imgEl.removeEventListener("contextmenu", onContextMenu);
+        imgEl.removeEventListener('contextmenu', onContextMenu);
       });
     }
 
@@ -1039,8 +1047,8 @@ function openImageViewer(
     };
 
     if (isMobile) {
-      cloneEl.addEventListener("touchstart", onTouchStart, { passive: true });
-      cloneEl.addEventListener("touchend", onTouchEnd, { passive: true });
+      cloneEl.addEventListener('touchstart', onTouchStart, { passive: true });
+      cloneEl.addEventListener('touchend', onTouchEnd, { passive: true });
     }
 
     // Flag to prevent opening click from immediately closing viewer
@@ -1068,13 +1076,16 @@ function openImageViewer(
     };
 
     const onEscape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== 'Escape') return;
       // Constrained viewer: only handle Escape when the viewer has focus or its leaf is active
-      if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+      if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
         const orig = cloneEl.__originalEmbed;
+        const activeLeaf = viewerDoc.activeElement?.closest('.workspace-leaf');
         if (
           viewerDoc.activeElement !== cloneEl &&
-          !orig?.closest(".workspace-leaf.mod-active")
+          !orig?.closest('.workspace-leaf.mod-active') &&
+          !!activeLeaf &&
+          activeLeaf !== orig?.closest('.workspace-leaf')
         )
           return;
       }
@@ -1082,14 +1093,17 @@ function openImageViewer(
     };
 
     const onCopy = (e: KeyboardEvent) => {
-      const isCopyShortcut = (e.metaKey || e.ctrlKey) && e.key === "c";
+      const isCopyShortcut = (e.metaKey || e.ctrlKey) && e.key === 'c';
       if (!isCopyShortcut) return;
       // Constrained viewer: only handle copy when the viewer has focus or its leaf is active
-      if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+      if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
         const orig = cloneEl.__originalEmbed;
+        const activeLeaf = viewerDoc.activeElement?.closest('.workspace-leaf');
         if (
           viewerDoc.activeElement !== cloneEl &&
-          !orig?.closest(".workspace-leaf.mod-active")
+          !orig?.closest('.workspace-leaf.mod-active') &&
+          !!activeLeaf &&
+          activeLeaf !== orig?.closest('.workspace-leaf')
         )
           return;
       }
@@ -1112,48 +1126,48 @@ function openImageViewer(
             sourceImg = await new Promise<HTMLImageElement>(
               (resolve, reject) => {
                 const img = new Image();
-                img.crossOrigin = "anonymous";
+                img.crossOrigin = 'anonymous';
                 img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error("Failed to load image"));
+                img.onerror = () => reject(new Error('Failed to load image'));
                 img.src = imgEl.src;
-              },
+              }
             );
           }
 
           if (!sourceImg.naturalWidth || !sourceImg.naturalHeight) {
-            throw new Error("Image not loaded");
+            throw new Error('Image not loaded');
           }
 
           // Clipboard API only supports PNG - convert via canvas
-          const canvas = viewerDoc.createElement("canvas");
+          const canvas = viewerDoc.createElement('canvas');
           canvas.width = sourceImg.naturalWidth;
           canvas.height = sourceImg.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) throw new Error("Failed to get canvas context");
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Failed to get canvas context');
           ctx.drawImage(sourceImg, 0, 0);
 
           const blob = await new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((b) => {
               if (b) resolve(b);
-              else reject(new Error("Failed to create blob"));
-            }, "image/png");
+              else reject(new Error('Failed to create blob'));
+            }, 'image/png');
           });
 
           await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
+            new ClipboardItem({ 'image/png': blob }),
           ]);
-          new Notice("Copied to your clipboard");
+          new Notice('Copied to your clipboard');
         } catch (error) {
-          console.error("Failed to copy image:", error);
-          new Notice("Failed to copy image");
+          console.error('Failed to copy image:', error);
+          new Notice('Failed to copy image');
         }
       })();
     };
 
     // Add all listeners synchronously (isOpening flag prevents immediate trigger)
-    viewerDoc.addEventListener("keydown", onEscape, true);
-    viewerDoc.addEventListener("keydown", onCopy, true);
-    cloneEl.addEventListener("click", onOverlayClick);
+    viewerDoc.addEventListener('keydown', onEscape, true);
+    viewerDoc.addEventListener('keydown', onCopy, true);
+    cloneEl.addEventListener('click', onOverlayClick);
 
     // Desktop-only: Alt+drag to drag image out of viewer
     let onAltKeyDown: ((e: KeyboardEvent) => void) | null = null;
@@ -1169,24 +1183,28 @@ function openImageViewer(
         altHeld = true;
         gestureControls.setAltDragMode(true);
         imgEl.draggable = true;
-        cloneEl.classList.add("is-alt-drag");
+        cloneEl.classList.add('is-alt-drag');
       };
 
       const disableAltDrag = () => {
         altHeld = false;
         gestureControls.setAltDragMode(false);
         imgEl.draggable = false;
-        cloneEl.classList.remove("is-alt-drag");
+        cloneEl.classList.remove('is-alt-drag');
       };
 
       onAltKeyDown = (e: KeyboardEvent) => {
-        if (e.key !== "Alt" || altHeld) return;
+        if (e.key !== 'Alt' || altHeld) return;
         // Constrained viewer: only handle Alt when the viewer has focus or its leaf is active
-        if (cloneEl.classList.contains("dynamic-views-viewer-fixed")) {
+        if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
           const orig = cloneEl.__originalEmbed;
+          const activeLeaf =
+            viewerDoc.activeElement?.closest('.workspace-leaf');
           if (
             viewerDoc.activeElement !== cloneEl &&
-            !orig?.closest(".workspace-leaf.mod-active")
+            !orig?.closest('.workspace-leaf.mod-active') &&
+            !!activeLeaf &&
+            activeLeaf !== orig?.closest('.workspace-leaf')
           )
             return;
         }
@@ -1194,7 +1212,7 @@ function openImageViewer(
       };
 
       onAltKeyUp = (e: KeyboardEvent) => {
-        if (e.key !== "Alt" || !altHeld) return;
+        if (e.key !== 'Alt' || !altHeld) return;
         disableAltDrag();
       };
 
@@ -1220,7 +1238,7 @@ function openImageViewer(
           }
         } else if (isExternalUrl(src)) {
           e.dataTransfer?.clearData();
-          e.dataTransfer?.setData("text/plain", `![](${src})`);
+          e.dataTransfer?.setData('text/plain', `![](${src})`);
         }
       };
 
@@ -1229,36 +1247,36 @@ function openImageViewer(
         disableAltDrag();
       };
 
-      viewerDoc.addEventListener("keydown", onAltKeyDown, true);
-      viewerDoc.addEventListener("keyup", onAltKeyUp, true);
-      viewerWin.addEventListener("blur", onAltBlur);
-      imgEl.addEventListener("dragstart", onDragStart);
-      imgEl.addEventListener("dragend", onDragEnd);
+      viewerDoc.addEventListener('keydown', onAltKeyDown, true);
+      viewerDoc.addEventListener('keyup', onAltKeyUp, true);
+      viewerWin.addEventListener('blur', onAltBlur);
+      imgEl.addEventListener('dragstart', onDragStart);
+      imgEl.addEventListener('dragend', onDragEnd);
     }
 
     // Cleanup removes all listeners (removeEventListener is no-op if never added)
     viewerListenerCleanups.set(cloneEl, () => {
-      viewerDoc.removeEventListener("keydown", onEscape, true);
-      viewerDoc.removeEventListener("keydown", onCopy, true);
-      cloneEl.removeEventListener("click", onOverlayClick);
+      viewerDoc.removeEventListener('keydown', onEscape, true);
+      viewerDoc.removeEventListener('keydown', onCopy, true);
+      cloneEl.removeEventListener('click', onOverlayClick);
       if (isMobile) {
-        cloneEl.removeEventListener("touchstart", onTouchStart);
-        cloneEl.removeEventListener("touchend", onTouchEnd);
+        cloneEl.removeEventListener('touchstart', onTouchStart);
+        cloneEl.removeEventListener('touchend', onTouchEnd);
       }
       if (onAltKeyDown) {
-        viewerDoc.removeEventListener("keydown", onAltKeyDown, true);
+        viewerDoc.removeEventListener('keydown', onAltKeyDown, true);
       }
       if (onAltKeyUp) {
-        viewerDoc.removeEventListener("keyup", onAltKeyUp, true);
+        viewerDoc.removeEventListener('keyup', onAltKeyUp, true);
       }
       if (onAltBlur) {
-        viewerWin.removeEventListener("blur", onAltBlur);
+        viewerWin.removeEventListener('blur', onAltBlur);
       }
       if (onDragStart) {
-        imgEl.removeEventListener("dragstart", onDragStart);
+        imgEl.removeEventListener('dragstart', onDragStart);
       }
       if (onDragEnd) {
-        imgEl.removeEventListener("dragend", onDragEnd);
+        imgEl.removeEventListener('dragend', onDragEnd);
       }
       // Clear pending gesture timeout to prevent dangling callbacks
       if (gestureTimeoutId !== null) {
@@ -1275,17 +1293,17 @@ function openImageViewer(
     // Capture-phase pointerdown re-focuses after tab switches (before panzoom stops propagation).
     if (!isMobile) {
       cloneEl.addEventListener(
-        "pointerdown",
+        'pointerdown',
         () => cloneEl.focus({ preventScroll: true }),
-        true,
+        true
       );
-      cloneEl.setAttribute("tabindex", "-1");
+      cloneEl.setAttribute('tabindex', '-1');
       cloneEl.focus({ preventScroll: true });
     }
 
     // Track cursor position over overlay so closeImageViewer has fresh coordinates
     // for the synthetic mousemove that resumes thumbnail scrubbing
-    cloneEl.addEventListener("mousemove", (e: MouseEvent) => {
+    cloneEl.addEventListener('mousemove', (e: MouseEvent) => {
       embedEl.dataset.viewerX = String(e.clientX);
       embedEl.dataset.viewerY = String(e.clientY);
     });
@@ -1294,7 +1312,7 @@ function openImageViewer(
     viewerClones.set(embedEl, cloneEl);
   } catch (error) {
     // Comprehensive cleanup in reverse order of allocation
-    console.error("Failed to setup image viewer", error);
+    console.error('Failed to setup image viewer', error);
 
     // 1. Call and remove gesture cleanup (may have been partially set up)
     const gestureCleanup = viewerCleanupFns.get(cloneEl);

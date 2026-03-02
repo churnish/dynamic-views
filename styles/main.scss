@@ -2,53 +2,53 @@
 // All partials loaded in dependency order.
 
 // Style Settings YAML — must be first.
-@use "style-settings";
+@use 'style-settings';
 
 // Foundation
-@use "variables";
-@use "focus";
-@use "container";
+@use 'variables';
+@use 'focus';
+@use 'container';
 
 // Datacore UI
-@use "datacore/toolbar";
-@use "datacore/query-editor";
-@use "datacore/settings";
+@use 'datacore/toolbar';
+@use 'datacore/query-editor';
+@use 'datacore/settings';
 
 // View layout
-@use "grid-masonry-shared";
-@use "grid-view";
+@use 'grid-masonry-shared';
+@use 'grid-view';
 
 // Overlays
-@use "image-viewer";
+@use 'image-viewer';
 
 // Card internals
-@use "card/core";
-@use "card/previews";
-@use "card/header";
+@use 'card/core';
+@use 'card/previews';
+@use 'card/header';
 
 // Image formats
-@use "card/cover";
-@use "card/cover-elements";
-@use "card/cover-placeholders";
-@use "card/cover-side";
-@use "card/images";
-@use "card/backdrop";
-@use "card/poster";
-@use "card/slideshow";
+@use 'card/cover';
+@use 'card/cover-elements';
+@use 'card/cover-placeholders';
+@use 'card/cover-side';
+@use 'card/images';
+@use 'card/backdrop';
+@use 'card/poster';
+@use 'card/slideshow';
 
 // Data display
-@use "properties";
-@use "property-colors";
-@use "tags";
-@use "hover-states";
-@use "text-interaction";
-@use "scroll-gradient";
+@use 'properties';
+@use 'property-colors';
+@use 'tags';
+@use 'hover-states';
+@use 'text-interaction';
+@use 'scroll-gradient';
 
 // View types
-@use "masonry-view";
-@use "datacore/list-view";
+@use 'masonry-view';
+@use 'datacore/list-view';
 
 // Overrides
-@use "compact";
-@use "plugin-settings";
-@use "utilities";
+@use 'compact';
+@use 'plugin-settings';
+@use 'utilities';

@@ -3,10 +3,10 @@ import {
   ViewMode,
   ViewDefaults,
   DatacoreDefaults,
-} from "../types";
-import type { DatacoreAPI } from "./types";
-import type { TFile } from "obsidian";
-import type DynamicViews from "../../main";
+} from '../types';
+import type { DatacoreAPI } from './types';
+import type { TFile } from 'obsidian';
+import type DynamicViews from '../../main';
 
 interface SettingsProps {
   dc: DatacoreAPI;
@@ -21,7 +21,7 @@ interface SettingsProps {
 // Keyboard handler for Enter/Space activation
 const handleKeyboardActivate = (action: () => void) => (e: unknown) => {
   const evt = e as KeyboardEvent;
-  if (evt.key === "Enter" || evt.key === " ") {
+  if (evt.key === 'Enter' || evt.key === ' ') {
     evt.preventDefault();
     action();
   }
@@ -55,11 +55,11 @@ export function Settings({
   };
 
   // Datacore has one template shared across all view modes (grid/masonry/list)
-  const templateType = "datacore" as const;
+  const templateType = 'datacore' as const;
 
   // Template toggle state - check if template exists
   const [isTemplate, setIsTemplate] = dc.useState(
-    plugin.persistenceManager.getSettingsTemplate(templateType) != null,
+    plugin.persistenceManager.getSettingsTemplate(templateType) != null
   );
 
   const handleToggleTemplate = (enabled: boolean) => {
@@ -91,7 +91,7 @@ export function Settings({
 
       void plugin.persistenceManager.setSettingsTemplate(
         templateType,
-        templateSettings,
+        templateSettings
       );
     } else {
       // Clear template
@@ -122,10 +122,10 @@ export function Settings({
   // Helper to render a collapsible section header
   const renderSectionHeader = (
     sectionKey: string,
-    label: string,
+    label: string
   ): JSX.Element => (
     <div
-      className={`settings-section-header ${expandedSections[sectionKey] ? "" : "collapsed"}`}
+      className={`settings-section-header ${expandedSections[sectionKey] ? '' : 'collapsed'}`}
       onClick={() => toggleSection(sectionKey)}
       onKeyDown={handleKeyboardActivate(() => toggleSection(sectionKey))}
       tabIndex={0}
@@ -140,19 +140,19 @@ export function Settings({
   // Helper to render a toggle (checkbox) setting
   const renderToggle = (
     label: string,
-    settingKey: keyof ResolvedSettings,
+    settingKey: keyof ResolvedSettings
   ): JSX.Element => (
     <div className="setting-item setting-item-toggle">
       <div className="setting-item-info">
         <label>{label}</label>
       </div>
       <div
-        className={`checkbox-container ${settings[settingKey] ? "is-enabled" : ""}`}
+        className={`checkbox-container ${settings[settingKey] ? 'is-enabled' : ''}`}
         onClick={() =>
           onSettingsChange({ [settingKey]: !settings[settingKey] })
         }
         onKeyDown={handleKeyboardActivate(() =>
-          onSettingsChange({ [settingKey]: !settings[settingKey] }),
+          onSettingsChange({ [settingKey]: !settings[settingKey] })
         )}
         tabIndex={0}
         role="checkbox"
@@ -165,7 +165,7 @@ export function Settings({
   const renderTextInput = (
     label: string,
     settingKey: keyof ResolvedSettings,
-    placeholder?: string,
+    placeholder?: string
   ): JSX.Element => (
     <div className="setting-item setting-item-text">
       <div className="setting-item-info">
@@ -191,7 +191,7 @@ export function Settings({
         <div className="setting-item-info">
           <label>Card size</label>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input
             type="range"
             min="50"
@@ -210,14 +210,14 @@ export function Settings({
 
       {/* Title Section */}
       <div className="settings-section">
-        {renderSectionHeader("title", "Title")}
+        {renderSectionHeader('title', 'Title')}
         <div
-          className={`settings-section-content ${expandedSections.title ? "" : "collapsed"}`}
+          className={`settings-section-content ${expandedSections.title ? '' : 'collapsed'}`}
         >
           {renderTextInput(
-            "Title property",
-            "titleProperty",
-            "Comma-separated if multiple",
+            'Title property',
+            'titleProperty',
+            'Comma-separated if multiple'
           )}
           {settings.titleProperty && (
             <div className="setting-item">
@@ -225,7 +225,7 @@ export function Settings({
                 <label>Lines</label>
               </div>
               <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 <input
                   type="range"
@@ -246,27 +246,27 @@ export function Settings({
             </div>
           )}
           {renderTextInput(
-            "Subtitle property",
-            "subtitleProperty",
-            "Comma-separated if multiple",
+            'Subtitle property',
+            'subtitleProperty',
+            'Comma-separated if multiple'
           )}
         </div>
       </div>
 
       {/* Text Preview Section */}
       <div className="settings-section">
-        {renderSectionHeader("textPreview", "Text preview")}
+        {renderSectionHeader('textPreview', 'Text preview')}
         <div
-          className={`settings-section-content ${expandedSections.textPreview ? "" : "collapsed"}`}
+          className={`settings-section-content ${expandedSections.textPreview ? '' : 'collapsed'}`}
         >
           {renderTextInput(
-            "Text preview property",
-            "textPreviewProperty",
-            "Comma-separated if multiple",
+            'Text preview property',
+            'textPreviewProperty',
+            'Comma-separated if multiple'
           )}
           {renderToggle(
-            "Use note content if property missing or empty",
-            "fallbackToContent",
+            'Use note content if property missing or empty',
+            'fallbackToContent'
           )}
           {(settings.textPreviewProperty || settings.fallbackToContent) && (
             <div className="setting-item">
@@ -274,7 +274,7 @@ export function Settings({
                 <label>Lines</label>
               </div>
               <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 <input
                   type="range"
@@ -301,14 +301,14 @@ export function Settings({
 
       {/* Image Section */}
       <div className="settings-section">
-        {renderSectionHeader("image", "Image")}
+        {renderSectionHeader('image', 'Image')}
         <div
-          className={`settings-section-content ${expandedSections.image ? "" : "collapsed"}`}
+          className={`settings-section-content ${expandedSections.image ? '' : 'collapsed'}`}
         >
           {renderTextInput(
-            "Image property",
-            "imageProperty",
-            "Comma-separated if multiple",
+            'Image property',
+            'imageProperty',
+            'Comma-separated if multiple'
           )}
           <div className="setting-item setting-item-dropdown">
             <div className="setting-item-info">
@@ -320,9 +320,9 @@ export function Settings({
                 const evt = e as Event & { target: HTMLSelectElement };
                 onSettingsChange({
                   fallbackToEmbeds: evt.target.value as
-                    | "always"
-                    | "if-unavailable"
-                    | "never",
+                    | 'always'
+                    | 'if-unavailable'
+                    | 'never',
                 });
               }}
               className="dropdown"
@@ -335,7 +335,7 @@ export function Settings({
             </select>
           </div>
           {!(
-            !settings.imageProperty && settings.fallbackToEmbeds === "never"
+            !settings.imageProperty && settings.fallbackToEmbeds === 'never'
           ) && (
             <>
               <div className="setting-item setting-item-dropdown">
@@ -358,7 +358,7 @@ export function Settings({
                   <option value="backdrop">Backdrop</option>
                 </select>
               </div>
-              {settings.imageFormat === "poster" && (
+              {settings.imageFormat === 'poster' && (
                 <div className="setting-item setting-item-dropdown">
                   <div className="setting-item-info">
                     <label>Display mode</label>
@@ -371,8 +371,8 @@ export function Settings({
                       };
                       onSettingsChange({
                         posterDisplayMode: evt.target.value as
-                          | "gradient"
-                          | "overlay",
+                          | 'gradient'
+                          | 'overlay',
                       });
                     }}
                     className="dropdown"
@@ -382,16 +382,16 @@ export function Settings({
                   </select>
                 </div>
               )}
-              {settings.imageFormat === "thumbnail" && (
+              {settings.imageFormat === 'thumbnail' && (
                 <div className="setting-item">
                   <div className="setting-item-info">
                     <label>Size</label>
                   </div>
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
                     <input
@@ -414,8 +414,8 @@ export function Settings({
                   </div>
                 </div>
               )}
-              {settings.imageFormat !== "poster" &&
-                settings.imageFormat !== "backdrop" && (
+              {settings.imageFormat !== 'poster' &&
+                settings.imageFormat !== 'backdrop' && (
                   <div className="setting-item setting-item-dropdown">
                     <div className="setting-item-info">
                       <label>Position</label>
@@ -438,7 +438,7 @@ export function Settings({
                     </select>
                   </div>
                 )}
-              {settings.imageFormat !== "backdrop" && (
+              {settings.imageFormat !== 'backdrop' && (
                 <div className="setting-item setting-item-dropdown">
                   <div className="setting-item-info">
                     <label>Fit</label>
@@ -450,7 +450,7 @@ export function Settings({
                         target: HTMLSelectElement;
                       };
                       onSettingsChange({
-                        imageFit: evt.target.value as "crop" | "contain",
+                        imageFit: evt.target.value as 'crop' | 'contain',
                       });
                     }}
                     className="dropdown"
@@ -460,16 +460,16 @@ export function Settings({
                   </select>
                 </div>
               )}
-              {settings.imageFormat !== "backdrop" && (
+              {settings.imageFormat !== 'backdrop' && (
                 <div className="setting-item">
                   <div className="setting-item-info">
                     <label>Ratio</label>
                   </div>
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
                     <input
@@ -488,7 +488,7 @@ export function Settings({
                       }}
                       style={{ flex: 1 }}
                     />
-                    <span style={{ minWidth: "40px" }}>
+                    <span style={{ minWidth: '40px' }}>
                       {settings.imageRatio.toFixed(2)}
                     </span>
                   </div>
@@ -501,9 +501,9 @@ export function Settings({
 
       {/* Properties Section */}
       <div className="settings-section">
-        {renderSectionHeader("properties", "Properties")}
+        {renderSectionHeader('properties', 'Properties')}
         <div
-          className={`settings-section-content ${expandedSections.properties ? "" : "collapsed"}`}
+          className={`settings-section-content ${expandedSections.properties ? '' : 'collapsed'}`}
         >
           <div className="setting-item setting-item-dropdown">
             <div className="setting-item-info">
@@ -515,9 +515,9 @@ export function Settings({
                 const evt = e as Event & { target: HTMLSelectElement };
                 onSettingsChange({
                   propertyLabels: evt.target.value as
-                    | "hide"
-                    | "inline"
-                    | "above",
+                    | 'hide'
+                    | 'inline'
+                    | 'above',
                 });
               }}
               className="dropdown"
@@ -528,24 +528,24 @@ export function Settings({
             </select>
           </div>
           {renderTextInput(
-            "URL property",
-            "urlProperty",
-            "Comma-separated if multiple",
+            'URL property',
+            'urlProperty',
+            'Comma-separated if multiple'
           )}
         </div>
       </div>
 
       {/* Other Section */}
       <div className="settings-section">
-        {renderSectionHeader("more", "Other")}
+        {renderSectionHeader('more', 'Other')}
         <div
-          className={`settings-section-content ${expandedSections.more ? "" : "collapsed"}`}
+          className={`settings-section-content ${expandedSections.more ? '' : 'collapsed'}`}
         >
           <div className="setting-item setting-item-text">
             <div className="setting-item-info">
               <label>View height</label>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 className="clickable-icon"
                 aria-label="Restore default"
@@ -579,7 +579,7 @@ export function Settings({
                     onSettingsChange({ queryHeight: val });
                   }
                 }}
-                style={{ width: "80px" }}
+                style={{ width: '80px' }}
               />
             </div>
           </div>
@@ -592,7 +592,7 @@ export function Settings({
               onChange={(e: unknown) => {
                 const evt = e as Event & { target: HTMLSelectElement };
                 onSettingsChange({
-                  listMarker: evt.target.value as "bullet" | "number" | "none",
+                  listMarker: evt.target.value as 'bullet' | 'number' | 'none',
                 });
               }}
               className="dropdown"
@@ -621,16 +621,16 @@ export function Settings({
             </select>
           </div>
           {renderTextInput(
-            "cssclasses",
-            "cssclasses",
-            "Comma-separated if multiple",
+            'cssclasses',
+            'cssclasses',
+            'Comma-separated if multiple'
           )}
           <div className="setting-item setting-item-toggle">
             <div className="setting-item-info">
               <label>Use these settings for new views</label>
             </div>
             <div
-              className={`checkbox-container ${isTemplate ? "is-enabled" : ""}`}
+              className={`checkbox-container ${isTemplate ? 'is-enabled' : ''}`}
               onClick={() => handleToggleTemplate(!isTemplate)}
               tabIndex={0}
               role="checkbox"

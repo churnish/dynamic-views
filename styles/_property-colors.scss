@@ -11,7 +11,7 @@
   $include-accent: true,
   $include-custom: true
 ) {
-  $colors: "red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink";
+  $colors: 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';
 
   // Semantic text variants — applied directly on target elements
   @if $include-semantics and $selector {
@@ -58,33 +58,33 @@
 }
 
 @include color-setting(
-  "property-label-color",
-  $selector: ":is(.property-label, .property-label-inline)"
+  'property-label-color',
+  $selector: ':is(.property-label, .property-label-inline)'
 );
 @include color-setting(
-  "property-color-with-labels",
-  $var-stem: "property-with-label-color",
-  $selector: ".property:has(:is(.property-label, .property-label-inline))"
+  'property-color-with-labels',
+  $var-stem: 'property-with-label-color',
+  $selector: '.property:has(:is(.property-label, .property-label-inline))'
 );
 @include color-setting(
-  "property-color-without-labels",
-  $var-stem: "property-no-label-color",
-  $selector: ".property:not(:has(:is(.property-label, .property-label-inline)))"
+  'property-color-without-labels',
+  $var-stem: 'property-no-label-color',
+  $selector: '.property:not(:has(:is(.property-label, .property-label-inline)))'
 );
-@include color-setting("subtitle-color", $selector: ".card-subtitle");
+@include color-setting('subtitle-color', $selector: '.card-subtitle');
 @include color-setting(
-  "text-preview-color",
-  $selector: ".card-text-preview",
+  'text-preview-color',
+  $selector: '.card-text-preview',
   $fallback: --text-muted
 );
 @include color-setting(
-  "title-color",
-  $selector: ".card-title",
+  'title-color',
+  $selector: '.card-title',
   $property: --dynamic-views-title-color,
   $fallback: --text-normal
 );
 @include color-setting(
-  "title-hover-color",
+  'title-hover-color',
   $include-semantics: false,
   $include-accent: false,
   $include-custom: false

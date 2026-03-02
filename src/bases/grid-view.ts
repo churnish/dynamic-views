@@ -3,26 +3,26 @@
  * Primary implementation using Bases API
  */
 
-import type { BasesViewConfig, ViewOption } from "obsidian";
-import { BasesView, BasesEntry, QueryController, TFile } from "obsidian";
-import { CardData } from "../shared/card-renderer";
+import type { BasesViewConfig, BasesAllOptions } from 'obsidian';
+import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
+import { CardData } from '../shared/card-renderer';
 import {
   basesEntryToCardData,
   transformBasesEntries,
-} from "../shared/data-transform";
+} from '../shared/data-transform';
 import {
   readBasesSettings,
   getBasesViewOptions,
-} from "../shared/settings-schema";
+} from '../shared/settings-schema';
 import {
   getCardSpacing,
   clearStyleSettingsCache,
-} from "../utils/style-settings";
-import { PLUGIN_SETTINGS_CHANGE } from "../constants";
+} from '../utils/style-settings';
+import { PLUGIN_SETTINGS_CHANGE } from '../constants';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
-} from "../shared/scroll-gradient";
+} from '../shared/scroll-gradient';
 import {
   SharedCardRenderer,
   initializeTitleTruncation,
@@ -31,13 +31,13 @@ import {
   applyViewContainerStyles,
   applyCssOnlySettings,
   type CardHandle,
-} from "./shared-renderer";
+} from './shared-renderer';
 import {
   PANE_MULTIPLIER,
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
-} from "../shared/constants";
+} from '../shared/constants';
 import {
   setupBasesSwipePrevention,
   setupStyleSettingsObserver,
@@ -53,21 +53,21 @@ import {
   cleanUpBaseFile,
   shouldProcessDataUpdate,
   handleTemplateToggle,
-} from "./utils";
+} from './utils';
 import {
   initializeContainerFocus,
   setupHoverKeyboardNavigation,
-} from "../shared/keyboard-nav";
+} from '../shared/keyboard-nav';
 import {
   ScrollPreservation,
   getLeafProps,
-} from "../shared/scroll-preservation";
+} from '../shared/scroll-preservation';
 import {
   buildDisplayToSyntaxMap,
   buildSyntaxToDisplayMap,
   normalizeSettingsPropertyNames,
-} from "../utils/property";
-import type DynamicViews from "../../main";
+} from '../utils/property';
+import type DynamicViews from '../../main';
 import type {
   BasesResolvedSettings,
   ContentCache,
@@ -76,12 +76,12 @@ import type {
   ScrollThrottleState,
   SortState,
   FocusState,
-} from "../types";
-import { setupContentVisibility } from "../shared/content-visibility";
-import { updateTextPreviewDOM } from "../shared/text-preview-dom";
+} from '../types';
+import { setupContentVisibility } from '../shared/content-visibility';
+import { updateTextPreviewDOM } from '../shared/text-preview-dom';
 
 // Extend Obsidian types
-declare module "obsidian" {
+declare module 'obsidian' {
   interface App {
     isMobile: boolean;
   }
@@ -90,7 +90,7 @@ declare module "obsidian" {
   }
 }
 
-export const GRID_VIEW_TYPE = "dynamic-views-grid";
+export const GRID_VIEW_TYPE = 'dynamic-views-grid';
 
 export class DynamicViewsGridView extends BasesView {
   readonly type = GRID_VIEW_TYPE;
@@ -99,7 +99,7 @@ export class DynamicViewsGridView extends BasesView {
   private containerEl: HTMLElement;
   /** Resolves from registry each time — survives hot-reload / plugin re-enable */
   private get plugin(): DynamicViews {
-    return this.app.plugins.plugins["dynamic-views"] as DynamicViews;
+    return this.app.plugins.plugins['dynamic-views'] as DynamicViews;
   }
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
@@ -116,7 +116,7 @@ export class DynamicViewsGridView extends BasesView {
   private renderState: RenderState = {
     version: 0,
     abortController: null,
-    lastRenderHash: "",
+    lastRenderHash: '',
     lastSettingsHash: null,
     lastPropertySetHash: null,
     lastSettingsHashExcludingOrder: null,
@@ -217,15 +217,15 @@ export class DynamicViewsGridView extends BasesView {
   /** Toggle collapse state for a group and persist */
   private toggleGroupCollapse(
     collapseKey: string,
-    headerEl: HTMLElement,
+    headerEl: HTMLElement
   ): void {
     const wasCollapsed = this.collapsedGroups.has(collapseKey);
     if (wasCollapsed) {
       this.collapsedGroups.delete(collapseKey);
-      headerEl.removeClass("collapsed");
+      headerEl.removeClass('collapsed');
     } else {
       this.collapsedGroups.add(collapseKey);
-      headerEl.addClass("collapsed");
+      headerEl.addClass('collapsed');
     }
 
     // Persist collapse state (async — in-memory state is authoritative)
@@ -233,7 +233,7 @@ export class DynamicViewsGridView extends BasesView {
       this.viewId ?? undefined,
       {
         collapsedGroups: Array.from(this.collapsedGroups),
-      },
+      }
     );
 
     const groupEl = headerEl.nextElementSibling as HTMLElement | null;
@@ -248,7 +248,7 @@ export class DynamicViewsGridView extends BasesView {
       // scroll (prevents flicker). Empty first so the measurement reflects
       // the final layout (group content removed).
       if (groupEl) groupEl.empty();
-      this.renderState.lastRenderHash = "";
+      this.renderState.lastRenderHash = '';
       const headerTop = headerEl.getBoundingClientRect().top;
       const scrollTop = this.scrollEl.getBoundingClientRect().top;
       // Only scroll when the header was stuck (now above the viewport)
@@ -256,14 +256,14 @@ export class DynamicViewsGridView extends BasesView {
         this.scrollEl.scrollTop += headerTop - scrollTop;
       }
       // Trigger scroll check — collapsing reduces height, may need to load more
-      this.scrollEl.dispatchEvent(new Event("scroll"));
+      this.scrollEl.dispatchEvent(new Event('scroll'));
     }
   }
 
   /** Populate a single group's cards without re-rendering the entire view */
   private async expandGroup(
     collapseKey: string,
-    groupEl: HTMLElement,
+    groupEl: HTMLElement
   ): Promise<void> {
     if (!this.data) return;
     const currentVersion = this.renderState.version;
@@ -278,21 +278,21 @@ export class DynamicViewsGridView extends BasesView {
     const settings = readBasesSettings(
       this.config,
       this.plugin.persistenceManager.getPluginSettings(),
-      "grid",
-      this.lastRenderedSettings ?? undefined,
+      'grid',
+      this.lastRenderedSettings ?? undefined
     );
 
     // Normalize property names once — downstream code uses pre-normalized values
     const reverseMap = buildDisplayToSyntaxMap(this.config, this.allProperties);
     const displayNameMap = buildSyntaxToDisplayMap(
       this.config,
-      this.allProperties,
+      this.allProperties
     );
     normalizeSettingsPropertyNames(
       this.app,
       settings,
       reverseMap,
-      displayNameMap,
+      displayNameMap
     );
 
     const sortMethod = getSortMethod(this.config);
@@ -301,7 +301,7 @@ export class DynamicViewsGridView extends BasesView {
     const processed = processGroups(
       [group],
       this.sortState.isShuffled,
-      this.sortState.order,
+      this.sortState.order
     );
     const entries = processed[0]?.entries ?? [];
     if (entries.length === 0) return;
@@ -313,7 +313,7 @@ export class DynamicViewsGridView extends BasesView {
       this.app,
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable,
+      this.contentCache.hasImageAvailable
     );
 
     // Bail if a new render started during content loading
@@ -328,15 +328,15 @@ export class DynamicViewsGridView extends BasesView {
       this.config.getOrder(),
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable,
+      this.contentCache.hasImageAvailable
     );
 
     // Count cards in preceding groups for correct card index
     const precedingCards = groupEl.parentElement
       ? Array.from(
           groupEl.parentElement.querySelectorAll<HTMLElement>(
-            ".bases-cards-group",
-          ),
+            '.bases-cards-group'
+          )
         )
           .filter((el) => el !== groupEl)
           .reduce(
@@ -344,9 +344,9 @@ export class DynamicViewsGridView extends BasesView {
               sum +
               (el.compareDocumentPosition(groupEl) &
               Node.DOCUMENT_POSITION_FOLLOWING
-                ? el.querySelectorAll(".card").length
+                ? el.querySelectorAll('.card').length
                 : 0),
-            0,
+            0
           )
       : 0;
 
@@ -356,19 +356,19 @@ export class DynamicViewsGridView extends BasesView {
         cards[i],
         entries[i],
         precedingCards + i,
-        settings,
+        settings
       );
     }
 
     // Post-render hooks scoped to this group
     syncResponsiveClasses(
-      Array.from(groupEl.querySelectorAll<HTMLElement>(".card")),
+      Array.from(groupEl.querySelectorAll<HTMLElement>('.card'))
     );
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
 
     // Invalidate render hash so next onDataUpdated() doesn't skip
-    this.renderState.lastRenderHash = "";
+    this.renderState.lastRenderHash = '';
   }
 
   /** Whether this view has grouped data */
@@ -388,9 +388,9 @@ export class DynamicViewsGridView extends BasesView {
       this.viewId ?? undefined,
       {
         collapsedGroups: Array.from(this.collapsedGroups),
-      },
+      }
     );
-    this.renderState.lastRenderHash = "";
+    this.renderState.lastRenderHash = '';
     this.onDataUpdated();
   }
 
@@ -401,7 +401,7 @@ export class DynamicViewsGridView extends BasesView {
       this.viewId ?? undefined,
       {
         collapsedGroups: [],
-      },
+      }
     );
     this.onDataUpdated();
   }
@@ -410,7 +410,7 @@ export class DynamicViewsGridView extends BasesView {
   private calculateInitialCount(settings: BasesResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
-      this.containerEl.getBoundingClientRect().width,
+      this.containerEl.getBoundingClientRect().width
     );
     const minColumns = settings.minimumColumns;
     const gap = getCardSpacing(this.containerEl);
@@ -422,7 +422,7 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     const calculatedColumns = Math.floor(
-      (containerWidth + gap) / (cardSize + gap),
+      (containerWidth + gap) / (cardSize + gap)
     );
     const columns = Math.max(minColumns, calculatedColumns);
     const rawCount = columns * ROWS_PER_COLUMN;
@@ -433,14 +433,14 @@ export class DynamicViewsGridView extends BasesView {
   private calculateColumnCount(): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
-      this.containerEl.getBoundingClientRect().width,
+      this.containerEl.getBoundingClientRect().width
     );
     const cardSize = this.currentCardSize;
     const minColumns = this.currentMinColumns;
     const gap = getCardSpacing(this.containerEl);
     return Math.max(
       minColumns,
-      Math.floor((containerWidth + gap) / (cardSize + gap)),
+      Math.floor((containerWidth + gap) / (cardSize + gap))
     );
   }
 
@@ -451,10 +451,10 @@ export class DynamicViewsGridView extends BasesView {
   private handleTemplateToggleLocal(): void {
     handleTemplateToggle(
       this.config,
-      "grid",
+      'grid',
       this.plugin,
       this.templateInitializedRef,
-      this.templateCooldownRef,
+      this.templateCooldownRef
     );
   }
 
@@ -466,23 +466,23 @@ export class DynamicViewsGridView extends BasesView {
     // Store scroll parent reference
     this.scrollEl = scrollEl;
     // Find leaf by matching container (getLeaf() creates new leaf if pinned, activeLeaf is deprecated)
-    this.leafId = "";
+    this.leafId = '';
     this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view?.containerEl?.contains(scrollEl)) {
-        this.leafId = getLeafProps(leaf).id ?? "";
+        this.leafId = getLeafProps(leaf).id ?? '';
       }
     });
 
     // Create container inside scroll parent
     this.containerEl = scrollEl.createDiv({
-      cls: "dynamic-views dynamic-views-bases-container",
+      cls: 'dynamic-views dynamic-views-bases-container',
     });
 
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
       this.plugin,
-      this.updateLayoutRef,
+      this.updateLayoutRef
     );
 
     // Get plugin settings for feature flags
@@ -497,7 +497,7 @@ export class DynamicViewsGridView extends BasesView {
     // Watch for Style Settings and plugin settings changes
     const disconnectObserver = setupStyleSettingsObserver(
       () => this.onDataUpdated(),
-      this.containerEl,
+      this.containerEl
     );
     this.register(disconnectObserver);
 
@@ -505,13 +505,13 @@ export class DynamicViewsGridView extends BasesView {
     const pluginSettingsHandler = () => this.onDataUpdated();
     document.body.addEventListener(
       PLUGIN_SETTINGS_CHANGE,
-      pluginSettingsHandler,
+      pluginSettingsHandler
     );
     this.register(() =>
       document.body.removeEventListener(
         PLUGIN_SETTINGS_CHANGE,
-        pluginSettingsHandler,
-      ),
+        pluginSettingsHandler
+      )
     );
 
     // Setup hover-to-start keyboard navigation
@@ -520,7 +520,7 @@ export class DynamicViewsGridView extends BasesView {
       () => this.feedContainerRef.current,
       (index) => {
         this.focusState.cardIndex = index;
-      },
+      }
     );
     this.register(cleanupKeyboard);
 
@@ -579,7 +579,7 @@ export class DynamicViewsGridView extends BasesView {
           this.app,
           this.currentFile,
           this.plugin,
-          viewName,
+          viewName
         );
         const viewInfo = viewName ? viewIds?.get(viewName) : undefined;
         this.viewId = viewInfo?.id ?? null;
@@ -592,7 +592,7 @@ export class DynamicViewsGridView extends BasesView {
       // with stale persistence or wrong-file lookups, wiping the in-memory state.
       if (!this._collapsedGroupsLoaded) {
         const basesState = this.plugin.persistenceManager.getBasesState(
-          this.viewId ?? undefined,
+          this.viewId ?? undefined
         );
         this.collapsedGroups = new Set(basesState.collapsedGroups ?? []);
         this._collapsedGroupsLoaded = true;
@@ -628,7 +628,7 @@ export class DynamicViewsGridView extends BasesView {
       // Template overrides only for genuinely new views (not existing views on app restart).
       // Existing views have their settings saved in YAML — template should not override them.
       const templateOverrides = isNewView
-        ? this.plugin.persistenceManager.getSettingsTemplate("grid")
+        ? this.plugin.persistenceManager.getSettingsTemplate('grid')
         : undefined;
 
       // Read settings — pass lastRenderedSettings for stale config fallback,
@@ -636,26 +636,26 @@ export class DynamicViewsGridView extends BasesView {
       const settings = readBasesSettings(
         this.config,
         this.plugin.persistenceManager.getPluginSettings(),
-        "grid",
+        'grid',
         this.lastRenderedSettings ?? undefined,
-        templateOverrides,
+        templateOverrides
       );
       this.lastRenderedSettings = settings;
 
       // Normalize property names once — downstream code uses pre-normalized values
       const reverseMap = buildDisplayToSyntaxMap(
         this.config,
-        this.allProperties,
+        this.allProperties
       );
       const displayNameMap = buildSyntaxToDisplayMap(
         this.config,
-        this.allProperties,
+        this.allProperties
       );
       normalizeSettingsPropertyNames(
         this.app,
         settings,
         reverseMap,
-        displayNameMap,
+        displayNameMap
       );
 
       // Apply per-view CSS classes and variables to container
@@ -663,7 +663,7 @@ export class DynamicViewsGridView extends BasesView {
 
       // Apply custom CSS classes from settings (mimics cssclasses frontmatter)
       const customClasses = settings.cssclasses
-        .split(",")
+        .split(',')
         .map((cls) => cls.trim())
         .filter(Boolean);
 
@@ -672,7 +672,7 @@ export class DynamicViewsGridView extends BasesView {
         this._previousCustomClasses.length === 0 ||
         this._previousCustomClasses.length !== customClasses.length ||
         !this._previousCustomClasses.every(
-          (cls, i) => cls === customClasses[i],
+          (cls, i) => cls === customClasses[i]
         );
 
       if (classesChanged) {
@@ -712,13 +712,13 @@ export class DynamicViewsGridView extends BasesView {
       } = settings;
       const settingsHash =
         JSON.stringify(hashableSettings) +
-        "\0\0" +
+        '\0\0' +
         JSON.stringify(visibleProperties) +
-        "\0\0" +
+        '\0\0' +
         sortMethod +
-        "\0\0" +
-        (groupByProperty ?? "");
-      const propertySetHash = [...visibleProperties].sort().join("\0");
+        '\0\0' +
+        (groupByProperty ?? '');
+      const propertySetHash = [...visibleProperties].sort().join('\0');
       // Further exclude order-derived settings for reorder detection
       // (titleProperty, subtitleProperty, _skipLeadingProperties change when
       // displayFirstAsTitle derives them from property order positions)
@@ -730,32 +730,32 @@ export class DynamicViewsGridView extends BasesView {
       } = hashableSettings;
       const settingsHashExcludingOrder =
         JSON.stringify(orderIndependentSettings) +
-        "\0\0" +
+        '\0\0' +
         sortMethod +
-        "\0\0" +
-        (groupByProperty ?? "");
+        '\0\0' +
+        (groupByProperty ?? '');
       const styleSettingsHash = getStyleSettingsHash();
       // Include mtime and sortMethod in hash so content/sort changes trigger updates
-      const collapsedHash = Array.from(this.collapsedGroups).sort().join("\0");
+      const collapsedHash = Array.from(this.collapsedGroups).sort().join('\0');
       const renderHash =
         allEntries
           .map((e: BasesEntry) => `${e.file.path}:${e.file.stat.mtime}`)
-          .join("\0") +
-        "\0\0" +
+          .join('\0') +
+        '\0\0' +
         settingsHash +
-        "\0\0" +
-        (groupByProperty ?? "") +
-        "\0\0" +
+        '\0\0' +
+        (groupByProperty ?? '') +
+        '\0\0' +
         sortMethod +
-        "\0\0" +
+        '\0\0' +
         styleSettingsHash +
-        "\0\0" +
+        '\0\0' +
         collapsedHash +
-        "\0\0" +
+        '\0\0' +
         String(this.sortState.isShuffled) +
-        "\0\0" +
-        this.sortState.order.join("\0") +
-        "\0\0" +
+        '\0\0' +
+        this.sortState.order.join('\0') +
+        '\0\0' +
         JSON.stringify(visibleProperties);
 
       // Detect files with changed content (mtime changed but paths unchanged)
@@ -763,10 +763,10 @@ export class DynamicViewsGridView extends BasesView {
       const currentPaths = allEntries
         .map((e) => e.file.path)
         .sort()
-        .join("\0");
+        .join('\0');
       const lastPaths = Array.from(this.renderState.lastMtimes.keys())
         .sort()
-        .join("\0");
+        .join('\0');
       const pathsUnchanged = currentPaths === lastPaths;
 
       for (const entry of allEntries) {
@@ -807,13 +807,13 @@ export class DynamicViewsGridView extends BasesView {
         // Restore column CSS (may be lost on tab switch)
         // Only set if actually changed to avoid triggering observers
         const currentGridColumns = this.containerEl.style.getPropertyValue(
-          "--dynamic-views-grid-columns",
+          '--dynamic-views-grid-columns'
         );
         const targetGridColumns = String(this.lastColumnCount);
         if (currentGridColumns !== targetGridColumns) {
           this.containerEl.style.setProperty(
-            "--dynamic-views-grid-columns",
-            targetGridColumns,
+            '--dynamic-views-grid-columns',
+            targetGridColumns
           );
         }
         this.scrollPreservation?.restoreAfterRender();
@@ -892,12 +892,12 @@ export class DynamicViewsGridView extends BasesView {
       // Set CSS variables for grid layout
       this.lastColumnCount = cols;
       this.containerEl.style.setProperty(
-        "--dynamic-views-grid-columns",
-        String(cols),
+        '--dynamic-views-grid-columns',
+        String(cols)
       );
       this.containerEl.style.setProperty(
-        "--dynamic-views-image-aspect-ratio",
-        String(settings.imageRatio),
+        '--dynamic-views-image-aspect-ratio',
+        String(settings.imageRatio)
       );
 
       // Transform to CardData (only visible entries)
@@ -916,7 +916,7 @@ export class DynamicViewsGridView extends BasesView {
       const processedGroups = processGroups(
         groupedData,
         this.sortState.isShuffled,
-        this.sortState.order,
+        this.sortState.order
       );
 
       // Determine grouping state early — collapse state only applies when grouped
@@ -938,7 +938,7 @@ export class DynamicViewsGridView extends BasesView {
           continue;
         const entriesToTake = Math.min(
           processedGroup.entries.length,
-          remainingCount,
+          remainingCount
         );
         visibleEntries.push(...processedGroup.entries.slice(0, entriesToTake));
         remainingCount -= entriesToTake;
@@ -951,7 +951,7 @@ export class DynamicViewsGridView extends BasesView {
         this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
-        this.contentCache.hasImageAvailable,
+        this.contentCache.hasImageAvailable
       );
 
       // Abort if a newer render started or if aborted while we were loading
@@ -965,9 +965,9 @@ export class DynamicViewsGridView extends BasesView {
       // Preserve height during clear to prevent parent scroll reset
       const currentHeight = this.containerEl.scrollHeight;
       this.containerEl.setCssProps({
-        "--dynamic-views-preserve-height": `${currentHeight}px`,
+        '--dynamic-views-preserve-height': `${currentHeight}px`,
       });
-      this.containerEl.addClass("dynamic-views-height-preserved");
+      this.containerEl.addClass('dynamic-views-height-preserved');
 
       // Clear and re-render
       this.containerEl.empty();
@@ -984,11 +984,11 @@ export class DynamicViewsGridView extends BasesView {
       this.cardRenderer.cleanup();
 
       // Toggle is-grouped class
-      this.containerEl.toggleClass("is-grouped", isGrouped);
+      this.containerEl.toggleClass('is-grouped', isGrouped);
 
       // Create cards feed container
       const feedEl = this.containerEl.createDiv(
-        `dynamic-views-grid${isGrouped ? " bases-cards-container" : ""}`,
+        `dynamic-views-grid${isGrouped ? ' bases-cards-container' : ''}`
       );
       this.feedContainerRef.current = feedEl;
 
@@ -1017,7 +1017,7 @@ export class DynamicViewsGridView extends BasesView {
         if (displayedSoFar >= this.displayedCount && !isCollapsed) break;
 
         // Wrap header + group in a section so sticky scopes to the group's content
-        const sectionEl = feedEl.createDiv("dynamic-views-group-section");
+        const sectionEl = feedEl.createDiv('dynamic-views-group-section');
 
         // Render group header (always visible, with chevron)
         const headerEl = renderGroupHeader(
@@ -1029,12 +1029,12 @@ export class DynamicViewsGridView extends BasesView {
           isCollapsed,
           () => {
             if (headerEl) this.toggleGroupCollapse(collapseKey, headerEl);
-          },
+          }
         );
 
         // Create group container for cards (empty if collapsed, for DOM sibling structure)
         const groupEl = sectionEl.createDiv(
-          "dynamic-views-group bases-cards-group",
+          'dynamic-views-group bases-cards-group'
         );
         setGroupKeyDataset(groupEl, groupKey);
 
@@ -1043,7 +1043,7 @@ export class DynamicViewsGridView extends BasesView {
 
         const entriesToDisplay = Math.min(
           processedGroup.entries.length,
-          this.displayedCount - displayedSoFar,
+          this.displayedCount - displayedSoFar
         );
         if (entriesToDisplay === 0) continue;
 
@@ -1059,7 +1059,7 @@ export class DynamicViewsGridView extends BasesView {
           visibleProperties,
           this.contentCache.textPreviews,
           this.contentCache.images,
-          this.contentCache.hasImageAvailable,
+          this.contentCache.hasImageAvailable
         );
 
         for (let i = 0; i < cards.length; i++) {
@@ -1082,7 +1082,7 @@ export class DynamicViewsGridView extends BasesView {
       // Batch-initialize scroll gradients and title truncation after all cards rendered
       // Sync responsive classes before gradient init (ResizeObservers are async)
       syncResponsiveClasses(
-        Array.from(feedEl.querySelectorAll<HTMLElement>(".card")),
+        Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
       );
       initializeScrollGradients(feedEl);
       initializeTitleTruncation(feedEl);
@@ -1138,8 +1138,8 @@ export class DynamicViewsGridView extends BasesView {
                 const scrollBefore = this.scrollEl.scrollTop;
                 this.lastColumnCount = cols;
                 this.containerEl.style.setProperty(
-                  "--dynamic-views-grid-columns",
-                  String(cols),
+                  '--dynamic-views-grid-columns',
+                  String(cols)
                 );
                 if (scrollBefore > 0) {
                   this.scrollEl.scrollTop = scrollBefore;
@@ -1154,7 +1154,7 @@ export class DynamicViewsGridView extends BasesView {
 
                     // Sync responsive classes before gradient init
                     syncResponsiveClasses(
-                      Array.from(feed.querySelectorAll<HTMLElement>(".card")),
+                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
                     );
                     initializeScrollGradients(feed);
                   });
@@ -1169,7 +1169,7 @@ export class DynamicViewsGridView extends BasesView {
           if (width > 0 && this.lastObservedWidth === 0) {
             if (this.resizeRafId !== null)
               (this.observerWindow ?? window).cancelAnimationFrame(
-                this.resizeRafId,
+                this.resizeRafId
               );
             this.resizeRafId = null;
             updateColumns();
@@ -1177,7 +1177,7 @@ export class DynamicViewsGridView extends BasesView {
             // Normal resize: double-RAF debounce to coalesce rapid events
             if (this.resizeRafId !== null)
               (this.observerWindow ?? window).cancelAnimationFrame(
-                this.resizeRafId,
+                this.resizeRafId
               );
             this.resizeRafId = (
               this.observerWindow ?? window
@@ -1199,7 +1199,7 @@ export class DynamicViewsGridView extends BasesView {
       this.scrollPreservation?.restoreAfterRender();
 
       // Remove height preservation now that scroll is restored
-      this.containerEl.removeClass("dynamic-views-height-preserved");
+      this.containerEl.removeClass('dynamic-views-height-preserved');
 
       // Clear skip-cover-fade after cached image load events have fired.
       // Double-rAF lets the browser process queued load events for cached images
@@ -1207,8 +1207,8 @@ export class DynamicViewsGridView extends BasesView {
       (this.observerWindow ?? window).requestAnimationFrame(() => {
         (this.observerWindow ?? window).requestAnimationFrame(() => {
           this.scrollEl
-            .closest(".workspace-leaf-content")
-            ?.classList.remove("skip-cover-fade");
+            .closest('.workspace-leaf-content')
+            ?.classList.remove('skip-cover-fade');
         });
       });
 
@@ -1221,7 +1221,7 @@ export class DynamicViewsGridView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: BasesResolvedSettings,
+    settings: BasesResolvedSettings
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
       container,
@@ -1241,7 +1241,7 @@ export class DynamicViewsGridView extends BasesView {
         onHoverEnd: () => {
           this.focusState.hoveredEl = null;
         },
-      },
+      }
     );
     this.contentVisibility?.observe(handle.el);
     return handle;
@@ -1251,13 +1251,13 @@ export class DynamicViewsGridView extends BasesView {
   private updatePropertyOrder(
     visibleProperties: string[],
     settings: BasesResolvedSettings,
-    sortMethod: string,
+    sortMethod: string
   ): void {
     const feedEl = this.feedContainerRef.current;
     if (!feedEl) return;
 
     for (const cardEl of feedEl.querySelectorAll<HTMLElement>(
-      ".card[data-path]",
+      '.card[data-path]'
     )) {
       const path = cardEl.dataset.path;
       if (!path) continue;
@@ -1274,7 +1274,7 @@ export class DynamicViewsGridView extends BasesView {
         this.sortState.isShuffled,
         visibleProperties,
         stored.cardData.textPreview,
-        stored.cardData.imageUrl,
+        stored.cardData.imageUrl
       );
 
       this.updateTitleText(cardEl, stored.cardData, stored.entry, settings);
@@ -1282,13 +1282,13 @@ export class DynamicViewsGridView extends BasesView {
         cardEl,
         stored.cardData,
         stored.entry,
-        settings,
+        settings
       );
       this.cardRenderer.rerenderProperties(
         cardEl,
         stored.cardData,
         stored.entry,
-        settings,
+        settings
       );
     }
 
@@ -1301,31 +1301,31 @@ export class DynamicViewsGridView extends BasesView {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings,
+    settings: BasesResolvedSettings
   ): void {
-    const titleTextEl = cardEl.querySelector<HTMLElement>(".card-title-text");
+    const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
     // Apply Extension mode logic (mirrors shared-renderer.ts title resolution)
     const isExtMode = document.body.classList.contains(
-      "dynamic-views-file-type-ext",
+      'dynamic-views-file-type-ext'
     );
-    const titleProp = settings.titleProperty || "";
+    const titleProp = settings.titleProperty || '';
     const titleHasExtension =
-      titleProp === "file.name" || titleProp === "file.fullname";
+      titleProp === 'file.name' || titleProp === 'file.fullname';
     const displayTitle =
       isExtMode && titleHasExtension ? entry.file.basename : card.title;
 
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(
-      (n) => n.nodeType === Node.TEXT_NODE,
+      (n) => n.nodeType === Node.TEXT_NODE
     );
     if (textNode) {
-      textNode.textContent = displayTitle || "";
+      textNode.textContent = displayTitle || '';
     } else if (displayTitle) {
       titleTextEl.insertBefore(
         document.createTextNode(displayTitle),
-        titleTextEl.firstChild,
+        titleTextEl.firstChild
       );
     }
   }
@@ -1334,7 +1334,7 @@ export class DynamicViewsGridView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: BasesResolvedSettings,
+    settings: BasesResolvedSettings
   ): Promise<void> {
     // Clear cache for changed files only
     for (const path of changedPaths) {
@@ -1345,7 +1345,7 @@ export class DynamicViewsGridView extends BasesView {
 
     // Load fresh content for changed files
     const changedEntries = allEntries.filter((e) =>
-      changedPaths.has(e.file.path),
+      changedPaths.has(e.file.path)
     );
     await loadContentForEntries(
       changedEntries,
@@ -1353,18 +1353,18 @@ export class DynamicViewsGridView extends BasesView {
       this.app,
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable,
+      this.contentCache.hasImageAvailable
     );
 
     // Update each changed card's DOM
     for (const path of changedPaths) {
       const cardEl = this.containerEl.querySelector<HTMLElement>(
-        `[data-path="${CSS.escape(path)}"]`,
+        `[data-path="${CSS.escape(path)}"]`
       );
       if (!cardEl) continue;
 
       // Update text preview — add/remove wrapper to avoid stale empty gap
-      updateTextPreviewDOM(cardEl, this.contentCache.textPreviews[path] || "");
+      updateTextPreviewDOM(cardEl, this.contentCache.textPreviews[path] || '');
     }
 
     // Grid: CSS auto-handles row height changes, no relayout needed
@@ -1396,7 +1396,7 @@ export class DynamicViewsGridView extends BasesView {
       const processedGroups = processGroups(
         groupedData,
         this.sortState.isShuffled,
-        this.sortState.order,
+        this.sortState.order
       );
 
       // Capture state at start - these may change during async operations
@@ -1425,7 +1425,7 @@ export class DynamicViewsGridView extends BasesView {
         const newStartInGroup = Math.max(0, prevCount - groupStart);
         const newEndInGroup = Math.min(
           processedGroup.entries.length,
-          currCount - groupStart,
+          currCount - groupStart
         );
 
         if (
@@ -1433,7 +1433,7 @@ export class DynamicViewsGridView extends BasesView {
           newStartInGroup < processedGroup.entries.length
         ) {
           newEntries.push(
-            ...processedGroup.entries.slice(newStartInGroup, newEndInGroup),
+            ...processedGroup.entries.slice(newStartInGroup, newEndInGroup)
           );
         }
 
@@ -1447,13 +1447,13 @@ export class DynamicViewsGridView extends BasesView {
         this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
-        this.contentCache.hasImageAvailable,
+        this.contentCache.hasImageAvailable
       );
 
       // Abort if renderVersion changed during loading
       if (this.renderState.version !== currentVersion) {
         this.containerEl
-          .querySelector(".dynamic-views-end-indicator")
+          .querySelector('.dynamic-views-end-indicator')
           ?.remove();
         return;
       }
@@ -1484,7 +1484,7 @@ export class DynamicViewsGridView extends BasesView {
 
         const groupEntriesToDisplay = Math.min(
           processedGroup.entries.length,
-          currCount - displayedSoFar,
+          currCount - displayedSoFar
         );
 
         // Skip groups that were fully rendered before
@@ -1497,7 +1497,7 @@ export class DynamicViewsGridView extends BasesView {
         const startInGroup = Math.max(0, prevCount - displayedSoFar);
         const groupEntries = processedGroup.entries.slice(
           startInGroup,
-          groupEntriesToDisplay,
+          groupEntriesToDisplay
         );
 
         // Get or create group container
@@ -1512,7 +1512,7 @@ export class DynamicViewsGridView extends BasesView {
         } else {
           // Wrap header + group in a section so sticky scopes to the group's content
           const sectionEl = this.feedContainerRef.current.createDiv(
-            "dynamic-views-group-section",
+            'dynamic-views-group-section'
           );
 
           // Render group header
@@ -1526,12 +1526,12 @@ export class DynamicViewsGridView extends BasesView {
             false, // not collapsed (we skipped collapsed groups above)
             () => {
               if (headerEl) this.toggleGroupCollapse(collapseKey, headerEl);
-            },
+            }
           );
 
           // New group - create container for cards
           groupEl = sectionEl.createDiv(
-            "dynamic-views-group bases-cards-group",
+            'dynamic-views-group bases-cards-group'
           );
           setGroupKeyDataset(groupEl, currentGroupKey);
 
@@ -1550,7 +1550,7 @@ export class DynamicViewsGridView extends BasesView {
           this.config.getOrder(),
           this.contentCache.textPreviews,
           this.contentCache.images,
-          this.contentCache.hasImageAvailable,
+          this.contentCache.hasImageAvailable
         );
 
         for (let i = 0; i < cards.length; i++) {
@@ -1562,7 +1562,7 @@ export class DynamicViewsGridView extends BasesView {
             card,
             entry,
             startIndex + newCardsRendered,
-            settings,
+            settings
           );
           newCardEls.push(cardEl);
           newCardsRendered++;
@@ -1599,7 +1599,7 @@ export class DynamicViewsGridView extends BasesView {
 
   private setupInfiniteScroll(
     totalEntries: number,
-    settings?: BasesResolvedSettings,
+    settings?: BasesResolvedSettings
   ): void {
     const scrollContainer = this.scrollEl;
 
@@ -1608,7 +1608,7 @@ export class DynamicViewsGridView extends BasesView {
     this.contentVisibility = setupContentVisibility(scrollContainer);
     // Observe all cards already rendered (initial render happens before this call)
     for (const card of this.containerEl.querySelectorAll<HTMLElement>(
-      ".card",
+      '.card'
     )) {
       this.contentVisibility.observe(card);
     }
@@ -1616,8 +1616,8 @@ export class DynamicViewsGridView extends BasesView {
     // Clean up existing listener (don't use this.register() since this method is called multiple times)
     if (this.scrollThrottle.listener) {
       scrollContainer.removeEventListener(
-        "scroll",
-        this.scrollThrottle.listener,
+        'scroll',
+        this.scrollThrottle.listener
       );
       this.scrollThrottle.listener = null;
     }
@@ -1662,7 +1662,7 @@ export class DynamicViewsGridView extends BasesView {
         // Dynamic batch size: columns × rows per column, capped
         // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
         const containerWidth = Math.floor(
-          this.containerEl.getBoundingClientRect().width,
+          this.containerEl.getBoundingClientRect().width
         );
         // Guard against zero width (element hidden/collapsed)
         if (containerWidth === 0) {
@@ -1674,18 +1674,18 @@ export class DynamicViewsGridView extends BasesView {
               settings.minimumColumns,
               Math.floor(
                 (containerWidth + getCardSpacing(this.containerEl)) /
-                  (settings.cardSize + getCardSpacing(this.containerEl)),
-              ),
+                  (settings.cardSize + getCardSpacing(this.containerEl))
+              )
             )
           : parseInt(
               this.containerEl.style.getPropertyValue(
-                "--dynamic-views-grid-columns",
-              ) || "2",
+                '--dynamic-views-grid-columns'
+              ) || '2'
             ) || 2;
         const batchSize = Math.min(columns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
         this.displayedCount = Math.min(
           this.displayedCount + batchSize,
-          totalEntries,
+          totalEntries
         );
 
         // Append new batch only (preserves existing DOM)
@@ -1710,7 +1710,7 @@ export class DynamicViewsGridView extends BasesView {
     };
 
     // Attach listener to scroll container
-    scrollContainer.addEventListener("scroll", this.scrollThrottle.listener, {
+    scrollContainer.addEventListener('scroll', this.scrollThrottle.listener, {
       passive: true,
     });
 
@@ -1723,8 +1723,8 @@ export class DynamicViewsGridView extends BasesView {
     // Guard against disconnected container (RAF callback after view destroyed)
     if (!this.containerEl?.isConnected) return;
     // Avoid duplicates
-    if (this.containerEl.querySelector(".dynamic-views-end-indicator")) return;
-    this.containerEl.createDiv("dynamic-views-end-indicator");
+    if (this.containerEl.querySelector('.dynamic-views-end-indicator')) return;
+    this.containerEl.createDiv('dynamic-views-end-indicator');
   }
 
   onunload(): void {
@@ -1743,7 +1743,7 @@ export class DynamicViewsGridView extends BasesView {
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {
-      this.scrollEl.removeEventListener("scroll", this.scrollThrottle.listener);
+      this.scrollEl.removeEventListener('scroll', this.scrollThrottle.listener);
     }
     if (this.scrollThrottle.timeoutId !== null) {
       window.clearTimeout(this.scrollThrottle.timeoutId);
@@ -1760,6 +1760,6 @@ export class DynamicViewsGridView extends BasesView {
 }
 
 /** Export options for registration — type assertion needed because Obsidian's
- * official type is `() => ViewOption[]` but runtime passes BasesViewConfig */
+ * official type is `() => BasesAllOptions[]` but runtime passes BasesViewConfig */
 export const cardViewOptions = ((config: BasesViewConfig) =>
-  getBasesViewOptions("grid", config)) as unknown as () => ViewOption[];
+  getBasesViewOptions('grid', config)) as unknown as () => BasesAllOptions[];

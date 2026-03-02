@@ -1,9 +1,9 @@
-import { ViewMode, ResolvedSettings, WidthMode } from "../types";
-import { Settings as SettingsPanel } from "./settings";
-import type { DatacoreAPI, RefObject } from "./types";
-import type { App, TFile } from "obsidian";
-import type DynamicViews from "../../main";
-import { setupClickOutside } from "../utils/dropdown-position";
+import { ViewMode, ResolvedSettings, WidthMode } from '../types';
+import { Settings as SettingsPanel } from './settings';
+import type { DatacoreAPI, RefObject } from './types';
+import type { App, TFile } from 'obsidian';
+import type DynamicViews from '../../main';
+import { setupClickOutside } from '../utils/dropdown-position';
 
 interface ResultsDropdownMenuProps {
   menuRef?: RefObject<HTMLDivElement | null>;
@@ -53,15 +53,15 @@ function ResultsDropdownMenu({
           // Allow: backspace, delete, tab, escape, enter, arrows
           if (
             [
-              "Backspace",
-              "Tab",
-              "Enter",
-              "Escape",
-              "ArrowLeft",
-              "ArrowUp",
-              "ArrowRight",
-              "ArrowDown",
-              "Delete",
+              'Backspace',
+              'Tab',
+              'Enter',
+              'Escape',
+              'ArrowLeft',
+              'ArrowUp',
+              'ArrowRight',
+              'ArrowDown',
+              'Delete',
             ].includes(evt.key)
           ) {
             return;
@@ -69,15 +69,15 @@ function ResultsDropdownMenu({
           // Allow: Ctrl/Cmd+A, Ctrl/Cmd+C, Ctrl/Cmd+V, Ctrl/Cmd+X
           if (
             (evt.ctrlKey || evt.metaKey) &&
-            ["a", "c", "v", "x"].includes(evt.key.toLowerCase())
+            ['a', 'c', 'v', 'x'].includes(evt.key.toLowerCase())
           ) {
             return;
           }
           // Block: non-digit keys, or digit 0 if it would be first character
           if (
-            evt.key < "0" ||
-            evt.key > "9" ||
-            (evt.key === "0" && resultLimit === "")
+            evt.key < '0' ||
+            evt.key > '9' ||
+            (evt.key === '0' && resultLimit === '')
           ) {
             evt.preventDefault();
           }
@@ -86,13 +86,13 @@ function ResultsDropdownMenu({
           const evt = e as InputEvent & { target: HTMLInputElement };
           const val = evt.target.value;
           // Only allow positive integers (no leading zeros, no whitespace, no special chars)
-          if (val === "" || /^[1-9]\d*$/.test(val)) {
+          if (val === '' || /^[1-9]\d*$/.test(val)) {
             onResultLimitChange(val);
           }
         }}
       />
       <div
-        className={`limit-reset-button${!(resultLimit.trim() && parseInt(resultLimit) > 0) ? " disabled" : ""}`}
+        className={`limit-reset-button${!(resultLimit.trim() && parseInt(resultLimit) > 0) ? ' disabled' : ''}`}
         onClick={(e: unknown) => {
           const evt = e as MouseEvent;
           evt.stopPropagation();
@@ -104,7 +104,7 @@ function ResultsDropdownMenu({
         }}
         onKeyDown={(e: unknown) => {
           const evt = e as KeyboardEvent;
-          if (evt.key === "Enter" || evt.key === " ") {
+          if (evt.key === 'Enter' || evt.key === ' ') {
             evt.preventDefault();
             evt.stopPropagation();
             if (resultLimit.trim() && parseInt(resultLimit) > 0) {
@@ -134,7 +134,7 @@ function ResultsDropdownMenu({
         <span>
           {resultLimit.trim() && parseInt(resultLimit) > 0
             ? `Show all (${totalCount.toLocaleString()})`
-            : "Show all"}
+            : 'Show all'}
         </span>
       </div>
       {copyMenuItem}
@@ -188,7 +188,7 @@ function SearchInput({
           onClick={onClearSearch}
           onKeyDown={(e: unknown) => {
             const evt = e as KeyboardEvent;
-            if (evt.key === "Enter" || evt.key === " ") {
+            if (evt.key === 'Enter' || evt.key === ' ') {
               evt.preventDefault();
               onClearSearch();
             }
@@ -388,12 +388,12 @@ export function Toolbar({
   dc.useEffect(() => {
     if (showSettings && settingsButtonRef.current) {
       const settingsWrapper = settingsButtonRef.current.closest(
-        ".settings-dropdown-wrapper",
+        '.settings-dropdown-wrapper'
       );
       if (settingsWrapper) {
         return setupClickOutside(
           settingsWrapper as HTMLElement,
-          onCloseAllDropdowns,
+          onCloseAllDropdowns
         );
       }
     }
@@ -406,7 +406,7 @@ export function Toolbar({
         <div className="view-controls-wrapper">
           <div className="view-dropdown-wrapper">
             <button
-              className={`view-dropdown-btn${showViewDropdown ? " active" : ""}`}
+              className={`view-dropdown-btn${showViewDropdown ? ' active' : ''}`}
               onClick={(e: unknown) => {
                 (e as Event).stopPropagation();
                 onToggleViewDropdown();
@@ -425,7 +425,7 @@ export function Toolbar({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                {viewMode === "list" ? (
+                {viewMode === 'list' ? (
                   <>
                     <line x1="8" y1="6" x2="21" y2="6" />
                     <line x1="8" y1="12" x2="21" y2="12" />
@@ -434,7 +434,7 @@ export function Toolbar({
                     <line x1="3" y1="12" x2="3.01" y2="12" />
                     <line x1="3" y1="18" x2="3.01" y2="18" />
                   </>
-                ) : viewMode === "grid" ? (
+                ) : viewMode === 'grid' ? (
                   <>
                     <path d="M12 3v18" />
                     <path d="M3 12h18" />
@@ -466,11 +466,11 @@ export function Toolbar({
             {showViewDropdown ? (
               <div ref={viewMenuRef} className="view-dropdown-menu">
                 <div
-                  className={`view-option${viewMode === "grid" ? " active" : ""}`}
+                  className={`view-option${viewMode === 'grid' ? ' active' : ''}`}
                   onClick={onSetViewGrid}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetViewGrid();
                     }
@@ -496,11 +496,11 @@ export function Toolbar({
                   <span>Grid</span>
                 </div>
                 <div
-                  className={`view-option${viewMode === "masonry" ? " active" : ""}`}
+                  className={`view-option${viewMode === 'masonry' ? ' active' : ''}`}
                   onClick={onSetViewMasonry}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetViewMasonry();
                     }
@@ -526,11 +526,11 @@ export function Toolbar({
                   <span>Masonry</span>
                 </div>
                 <div
-                  className={`view-option${viewMode === "list" ? " active" : ""}`}
+                  className={`view-option${viewMode === 'list' ? ' active' : ''}`}
                   onClick={onSetViewList}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetViewList();
                     }
@@ -565,7 +565,7 @@ export function Toolbar({
           {/* Sort Dropdown */}
           <div className="sort-dropdown-wrapper">
             <button
-              className={`sort-dropdown-btn${showSortDropdown ? " active" : ""}`}
+              className={`sort-dropdown-btn${showSortDropdown ? ' active' : ''}`}
               onClick={(e: unknown) => {
                 (e as Event).stopPropagation();
                 onToggleSortDropdown();
@@ -593,7 +593,7 @@ export function Toolbar({
                 </svg>
               ) : (
                 <>
-                  {sortMethod === "name-asc" ? (
+                  {sortMethod === 'name-asc' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -611,7 +611,7 @@ export function Toolbar({
                       <path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10" />
                       <path d="M15 14h5l-5 6h5" />
                     </svg>
-                  ) : sortMethod === "name-desc" ? (
+                  ) : sortMethod === 'name-desc' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -629,7 +629,7 @@ export function Toolbar({
                       <path d="M15 20v-3.5a2.5 2.5 0 0 1 5 0V20" />
                       <path d="M20 20h-5" />
                     </svg>
-                  ) : sortMethod === "mtime-desc" ? (
+                  ) : sortMethod === 'mtime-desc' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -646,7 +646,7 @@ export function Toolbar({
                       <path d="m14 18 4-4 4 4" />
                       <path d="M18 14v8" />
                     </svg>
-                  ) : sortMethod === "mtime-asc" ? (
+                  ) : sortMethod === 'mtime-asc' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -663,7 +663,7 @@ export function Toolbar({
                       <path d="m14 18 4 4 4-4" />
                       <path d="M18 22v-8" />
                     </svg>
-                  ) : sortMethod === "ctime-desc" ? (
+                  ) : sortMethod === 'ctime-desc' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -682,7 +682,7 @@ export function Toolbar({
                       <path d="M12 14 8 18" />
                       <path d="M12 14 16 18" />
                     </svg>
-                  ) : sortMethod === "ctime-asc" ? (
+                  ) : sortMethod === 'ctime-asc' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -722,11 +722,11 @@ export function Toolbar({
             {showSortDropdown ? (
               <div ref={sortMenuRef} className="sort-dropdown-menu">
                 <div
-                  className={`sort-option${sortMethod === "name-asc" ? " active" : ""}`}
+                  className={`sort-option${sortMethod === 'name-asc' ? ' active' : ''}`}
                   onClick={onSetSortNameAsc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetSortNameAsc();
                     }
@@ -754,11 +754,11 @@ export function Toolbar({
                   <span>File name (A to Z)</span>
                 </div>
                 <div
-                  className={`sort-option${sortMethod === "name-desc" ? " active" : ""}`}
+                  className={`sort-option${sortMethod === 'name-desc' ? ' active' : ''}`}
                   onClick={onSetSortNameDesc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetSortNameDesc();
                     }
@@ -786,11 +786,11 @@ export function Toolbar({
                   <span>File name (Z to A)</span>
                 </div>
                 <div
-                  className={`sort-option${sortMethod === "mtime-desc" ? " active" : ""}`}
+                  className={`sort-option${sortMethod === 'mtime-desc' ? ' active' : ''}`}
                   onClick={onSetSortMtimeDesc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetSortMtimeDesc();
                     }
@@ -817,11 +817,11 @@ export function Toolbar({
                   <span>Modified time (new to old)</span>
                 </div>
                 <div
-                  className={`sort-option${sortMethod === "mtime-asc" ? " active" : ""}`}
+                  className={`sort-option${sortMethod === 'mtime-asc' ? ' active' : ''}`}
                   onClick={onSetSortMtimeAsc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetSortMtimeAsc();
                     }
@@ -848,11 +848,11 @@ export function Toolbar({
                   <span>Modified time (old to new)</span>
                 </div>
                 <div
-                  className={`sort-option${sortMethod === "ctime-desc" ? " active" : ""}`}
+                  className={`sort-option${sortMethod === 'ctime-desc' ? ' active' : ''}`}
                   onClick={onSetSortCtimeDesc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetSortCtimeDesc();
                     }
@@ -881,11 +881,11 @@ export function Toolbar({
                   <span>Created time (new to old)</span>
                 </div>
                 <div
-                  className={`sort-option${sortMethod === "ctime-asc" ? " active" : ""}`}
+                  className={`sort-option${sortMethod === 'ctime-asc' ? ' active' : ''}`}
                   onClick={onSetSortCtimeAsc}
                   onKeyDown={(e: unknown) => {
                     const evt = e as KeyboardEvent;
-                    if (evt.key === "Enter" || evt.key === " ") {
+                    if (evt.key === 'Enter' || evt.key === ' ') {
                       evt.preventDefault();
                       onSetSortCtimeAsc();
                     }
@@ -930,14 +930,14 @@ export function Toolbar({
 
         {/* Results Count Wrapper */}
         <div
-          className={`results-count-wrapper${showLimitDropdown ? " active" : ""}`}
+          className={`results-count-wrapper${showLimitDropdown ? ' active' : ''}`}
           onClick={(e: unknown) => {
             (e as Event).stopPropagation();
             onToggleLimitDropdown();
           }}
           onKeyDown={(e: unknown) => {
             const evt = e as KeyboardEvent;
-            if (evt.key === "Enter" || evt.key === " ") {
+            if (evt.key === 'Enter' || evt.key === ' ') {
               evt.preventDefault();
               onToggleLimitDropdown();
             }
@@ -949,15 +949,15 @@ export function Toolbar({
           <span
             className={`results-count${(() => {
               const limit = parseInt(resultLimit);
-              return limit > 0 && totalCount > limit ? " limited" : "";
+              return limit > 0 && totalCount > limit ? ' limited' : '';
             })()}`}
           >
             {(() => {
               const limit = parseInt(resultLimit);
               if (limit > 0 && totalCount > limit) {
-                return `${limit.toLocaleString()} result${limit === 1 ? "" : "s"}`;
+                return `${limit.toLocaleString()} result${limit === 1 ? '' : 's'}`;
               }
-              return `${totalCount.toLocaleString()} result${totalCount === 1 ? "" : "s"}`;
+              return `${totalCount.toLocaleString()} result${totalCount === 1 ? '' : 's'}`;
             })()}
           </span>
           <svg
@@ -1061,12 +1061,12 @@ export function Toolbar({
           </button>
           <div className="query-dropdown-wrapper">
             <button
-              className={`query-toggle-btn${showQueryEditor ? " active" : ""}`}
+              className={`query-toggle-btn${showQueryEditor ? ' active' : ''}`}
               onClick={(e: unknown) => {
                 (e as Event).stopPropagation();
                 onToggleCode();
               }}
-              aria-label={showQueryEditor ? "Hide query" : "Edit query"}
+              aria-label={showQueryEditor ? 'Hide query' : 'Edit query'}
               tabIndex={0}
             >
               <svg
@@ -1096,10 +1096,10 @@ export function Toolbar({
                     };
                     onDraftQueryChange(evt.target.value);
                     evt.target.setCssProps({
-                      "--dynamic-views-query-height": "auto",
+                      '--dynamic-views-query-height': 'auto',
                     });
                     evt.target.setCssProps({
-                      "--dynamic-views-query-height": `${evt.target.scrollHeight}px`,
+                      '--dynamic-views-query-height': `${evt.target.scrollHeight}px`,
                     });
                   }}
                   className="query-input"
@@ -1107,10 +1107,10 @@ export function Toolbar({
                   ref={(el: HTMLTextAreaElement | null) => {
                     if (el) {
                       el.setCssProps({
-                        "--dynamic-views-query-height": "auto",
+                        '--dynamic-views-query-height': 'auto',
                       });
                       el.setCssProps({
-                        "--dynamic-views-query-height": `${el.scrollHeight}px`,
+                        '--dynamic-views-query-height': `${el.scrollHeight}px`,
                       });
                     }
                   }}
@@ -1149,7 +1149,7 @@ export function Toolbar({
             <button
               className="pin-btn"
               onClick={onTogglePin}
-              aria-label={isPinned ? "Unpin toolbar" : "Pin toolbar"}
+              aria-label={isPinned ? 'Unpin toolbar' : 'Pin toolbar'}
               tabIndex={0}
             >
               <svg
@@ -1184,7 +1184,7 @@ export function Toolbar({
           <div className="settings-dropdown-wrapper">
             <button
               ref={settingsButtonRef}
-              className={`settings-btn${showSettings ? " active" : ""}`}
+              className={`settings-btn${showSettings ? ' active' : ''}`}
               onClick={(e: unknown) => {
                 (e as Event).stopPropagation();
                 onToggleSettings();
@@ -1224,12 +1224,12 @@ export function Toolbar({
           {/* Show shrink icon when: max mode, OR wide mode with no room to expand */}
           {(() => {
             const showShrink =
-              widthMode === "max" || (widthMode === "wide" && !canExpandToMax);
+              widthMode === 'max' || (widthMode === 'wide' && !canExpandToMax);
             return (
               <button
                 className="width-toggle-btn"
                 onClick={onToggleWidth}
-                aria-label={showShrink ? "Shrink" : "Expand"}
+                aria-label={showShrink ? 'Shrink' : 'Expand'}
                 tabIndex={0}
               >
                 {showShrink ? (
@@ -1284,14 +1284,14 @@ export function Toolbar({
         <div className="compact-bottom-row">
           {/* Results Count Wrapper (Compact) */}
           <div
-            className={`results-count-wrapper-compact${showLimitDropdown ? " active" : ""}`}
+            className={`results-count-wrapper-compact${showLimitDropdown ? ' active' : ''}`}
             onClick={(e: unknown) => {
               (e as Event).stopPropagation();
               onToggleLimitDropdown();
             }}
             onKeyDown={(e: unknown) => {
               const evt = e as KeyboardEvent;
-              if (evt.key === "Enter" || evt.key === " ") {
+              if (evt.key === 'Enter' || evt.key === ' ') {
                 evt.preventDefault();
                 onToggleLimitDropdown();
               }
@@ -1303,15 +1303,15 @@ export function Toolbar({
             <span
               className={`results-count${(() => {
                 const limit = parseInt(resultLimit);
-                return limit > 0 && totalCount > limit ? " limited" : "";
+                return limit > 0 && totalCount > limit ? ' limited' : '';
               })()}`}
             >
               {(() => {
                 const limit = parseInt(resultLimit);
                 if (limit > 0 && totalCount > limit) {
-                  return `${limit.toLocaleString()} result${limit === 1 ? "" : "s"}`;
+                  return `${limit.toLocaleString()} result${limit === 1 ? '' : 's'}`;
                 }
-                return `${totalCount.toLocaleString()} result${totalCount === 1 ? "" : "s"}`;
+                return `${totalCount.toLocaleString()} result${totalCount === 1 ? '' : 's'}`;
               })()}
             </span>
             <svg

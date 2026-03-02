@@ -9,10 +9,10 @@
 export function isTagProperty(propertyName: string | undefined): boolean {
   if (!propertyName) return false;
   return (
-    propertyName === "tags" ||
-    propertyName === "note.tags" ||
-    propertyName === "file.tags" ||
-    propertyName === "file tags"
+    propertyName === 'tags' ||
+    propertyName === 'note.tags' ||
+    propertyName === 'file.tags' ||
+    propertyName === 'file tags'
   );
 }
 
@@ -22,7 +22,7 @@ export function isTagProperty(propertyName: string | undefined): boolean {
 export function isFileProperty(propertyName: string | undefined): boolean {
   if (!propertyName) return false;
   const normalized = propertyName.toLowerCase();
-  return normalized.startsWith("file.") || normalized.startsWith("file ");
+  return normalized.startsWith('file.') || normalized.startsWith('file ');
 }
 
 /**
@@ -30,7 +30,7 @@ export function isFileProperty(propertyName: string | undefined): boolean {
  */
 export function isFormulaProperty(propertyName: string | undefined): boolean {
   if (!propertyName) return false;
-  return propertyName.startsWith("formula.");
+  return propertyName.startsWith('formula.');
 }
 
 /**
@@ -47,8 +47,8 @@ export function shouldCollapseField(
   value: string | null,
   propertyName: string,
   hideMissing: boolean,
-  hideEmptyMode: "show" | "labels-hidden" | "all",
-  propertyLabels: "hide" | "inline" | "above",
+  hideEmptyMode: 'show' | 'labels-hidden' | 'all',
+  propertyLabels: 'hide' | 'inline' | 'above'
 ): boolean {
   // 1. FIRST: Missing handling (only YAML/note properties can be "missing")
   if (
@@ -64,8 +64,8 @@ export function shouldCollapseField(
   // 2. THEN: Empty handling - no displayable value
   const isEmpty = !value;
   if (isEmpty) {
-    if (hideEmptyMode === "all") return true;
-    if (hideEmptyMode === "labels-hidden" && propertyLabels === "hide")
+    if (hideEmptyMode === 'all') return true;
+    if (hideEmptyMode === 'labels-hidden' && propertyLabels === 'hide')
       return true;
   }
 
@@ -78,7 +78,7 @@ export function shouldCollapseField(
  */
 export function computeInvertPairs(
   props: Array<{ name: string }>,
-  unpairSet: Set<string>,
+  unpairSet: Set<string>
 ): Map<number, number> {
   const pairs = new Map<number, number>();
   const claimed = new Set<number>();

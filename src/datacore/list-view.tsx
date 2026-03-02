@@ -1,12 +1,12 @@
-import type { ResolvedSettings } from "../types";
-import { getFirstDatacorePropertyValue } from "../utils/property";
-import type { DatacoreAPI, DatacoreFile } from "./types";
-import type { App } from "obsidian";
-import { datacoreResultToCardData } from "../shared/data-transform";
-import type { CardData } from "../shared/card-renderer";
+import type { ResolvedSettings } from '../types';
+import { getFirstDatacorePropertyValue } from '../utils/property';
+import type { DatacoreAPI, DatacoreFile } from './types';
+import type { App } from 'obsidian';
+import { datacoreResultToCardData } from '../shared/data-transform';
+import type { CardData } from '../shared/card-renderer';
 
 // Extend App type to include internal plugins
-declare module "obsidian" {
+declare module 'obsidian' {
   interface App {
     isMobile: boolean;
     internalPlugins: {
@@ -56,7 +56,7 @@ export function ListView({
           // Get title from property (first available from comma-separated list) or fallback to filename
           let rawTitle = getFirstDatacorePropertyValue(
             p,
-            settings.titleProperty,
+            settings.titleProperty
           );
           if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
           const titleValue = dc.coerce.string(rawTitle || p.$name);
@@ -72,15 +72,15 @@ export function ListView({
                     if (onLinkClick) {
                       onLinkClick(p.$path, false);
                     } else {
-                      void app.workspace.openLinkText(p.$path, "", false);
+                      void app.workspace.openLinkText(p.$path, '', false);
                     }
                   }
                 }}
                 onMouseEnter={(e: MouseEvent) => {
                   if (p.$path) {
-                    app.workspace.trigger("hover-link", {
+                    app.workspace.trigger('hover-link', {
                       event: e,
-                      source: "file-explorer",
+                      source: 'file-explorer',
                       hoverParent: { hoverPopover: null },
                       targetEl: e.currentTarget,
                       linktext: p.$path,
@@ -99,8 +99,8 @@ export function ListView({
                   p,
                   dc,
                   settings,
-                  "mtime-desc",
-                  false,
+                  'mtime-desc',
+                  false
                 );
 
                 // Check if any properties have content
@@ -114,7 +114,7 @@ export function ListView({
 
                 return (
                   <span className="list-properties">
-                    {card.property1 === "tags" &&
+                    {card.property1 === 'tags' &&
                     p.$tags &&
                     p.$tags.length > 0 ? (
                       <>
@@ -128,23 +128,23 @@ export function ListView({
                               onClick={(e: MouseEvent) => {
                                 e.preventDefault();
                                 const searchPlugin =
-                                  app.internalPlugins.plugins["global-search"];
+                                  app.internalPlugins.plugins['global-search'];
                                 if (searchPlugin?.instance?.openGlobalSearch) {
                                   searchPlugin.instance.openGlobalSearch(
-                                    "tag:" + tag,
+                                    'tag:' + tag
                                   );
                                 }
                               }}
                             >
-                              {tag.replace(/^#/, "")}
+                              {tag.replace(/^#/, '')}
                             </a>
-                          ),
+                          )
                         )}
                       </>
                     ) : card.property1 ? (
                       <span className="list-text">{card.property1}</span>
                     ) : null}
-                    {card.property2 === "tags" &&
+                    {card.property2 === 'tags' &&
                     p.$tags &&
                     p.$tags.length > 0 ? (
                       <>
@@ -158,23 +158,23 @@ export function ListView({
                               onClick={(e: MouseEvent) => {
                                 e.preventDefault();
                                 const searchPlugin =
-                                  app.internalPlugins.plugins["global-search"];
+                                  app.internalPlugins.plugins['global-search'];
                                 if (searchPlugin?.instance?.openGlobalSearch) {
                                   searchPlugin.instance.openGlobalSearch(
-                                    "tag:" + tag,
+                                    'tag:' + tag
                                   );
                                 }
                               }}
                             >
-                              {tag.replace(/^#/, "")}
+                              {tag.replace(/^#/, '')}
                             </a>
-                          ),
+                          )
                         )}
                       </>
                     ) : card.property2 ? (
                       <span className="list-text">{card.property2}</span>
                     ) : null}
-                    {card.property3 === "tags" &&
+                    {card.property3 === 'tags' &&
                     p.$tags &&
                     p.$tags.length > 0 ? (
                       <>
@@ -188,23 +188,23 @@ export function ListView({
                               onClick={(e: MouseEvent) => {
                                 e.preventDefault();
                                 const searchPlugin =
-                                  app.internalPlugins.plugins["global-search"];
+                                  app.internalPlugins.plugins['global-search'];
                                 if (searchPlugin?.instance?.openGlobalSearch) {
                                   searchPlugin.instance.openGlobalSearch(
-                                    "tag:" + tag,
+                                    'tag:' + tag
                                   );
                                 }
                               }}
                             >
-                              {tag.replace(/^#/, "")}
+                              {tag.replace(/^#/, '')}
                             </a>
-                          ),
+                          )
                         )}
                       </>
                     ) : card.property3 ? (
                       <span className="list-text">{card.property3}</span>
                     ) : null}
-                    {card.property4 === "tags" &&
+                    {card.property4 === 'tags' &&
                     p.$tags &&
                     p.$tags.length > 0 ? (
                       <>
@@ -218,17 +218,17 @@ export function ListView({
                               onClick={(e: MouseEvent) => {
                                 e.preventDefault();
                                 const searchPlugin =
-                                  app.internalPlugins.plugins["global-search"];
+                                  app.internalPlugins.plugins['global-search'];
                                 if (searchPlugin?.instance?.openGlobalSearch) {
                                   searchPlugin.instance.openGlobalSearch(
-                                    "tag:" + tag,
+                                    'tag:' + tag
                                   );
                                 }
                               }}
                             >
-                              {tag.replace(/^#/, "")}
+                              {tag.replace(/^#/, '')}
                             </a>
-                          ),
+                          )
                         )}
                       </>
                     ) : card.property4 ? (

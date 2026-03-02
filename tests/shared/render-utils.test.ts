@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 import {
   formatTimestamp,
   shouldShowTimestampIcon,
@@ -5,55 +7,54 @@ import {
   isTimestampProperty,
   isDateValue,
   extractTimestamp,
-} from "../../src/shared/render-utils";
-import type { Settings } from "../../src/types";
-import type { BasesResolvedSettings } from "../../src/types";
+} from '../../src/shared/render-utils';
+import type { Settings } from '../../src/types';
+import type { BasesResolvedSettings } from '../../src/types';
 
 // Mock moment.js
-jest.mock("moment", () => {
+vi.mock('moment', () => {
   const mockMoment = (ts: number) => ({
-    format: jest.fn((fmt: string) => `${ts}-${fmt}`),
+    format: vi.fn((fmt: string) => `${ts}-${fmt}`),
   });
-  return mockMoment;
+  return { default: mockMoment };
 });
 
 // Mock style-settings module
-jest.mock("../../src/utils/style-settings", () => ({
-  shouldShowRecentTimeOnly: jest.fn(),
-  shouldShowOlderDateOnly: jest.fn(),
-  getDatetimeFormat: jest.fn(() => "YYYY-MM-DD, HH:mm"),
-  getDateFormat: jest.fn(() => "YYYY-MM-DD"),
-  getTimeFormat: jest.fn(() => "HH:mm"),
-  showTimestampIcon: jest.fn(),
+vi.mock('../../src/utils/style-settings', () => ({
+  shouldShowRecentTimeOnly: vi.fn(),
+  shouldShowOlderDateOnly: vi.fn(),
+  getDatetimeFormat: vi.fn(() => 'YYYY-MM-DD, HH:mm'),
+  getDateFormat: vi.fn(() => 'YYYY-MM-DD'),
+  getTimeFormat: vi.fn(() => 'HH:mm'),
+  showTimestampIcon: vi.fn(),
 }));
 
-describe("render-utils", () => {
+describe('render-utils', () => {
   let mockStyleSettings: {
-    shouldShowRecentTimeOnly: jest.Mock;
-    shouldShowOlderDateOnly: jest.Mock;
-    getDatetimeFormat: jest.Mock;
-    getDateFormat: jest.Mock;
-    getTimeFormat: jest.Mock;
-    showTimestampIcon: jest.Mock;
+    shouldShowRecentTimeOnly: Mock;
+    shouldShowOlderDateOnly: Mock;
+    getDatetimeFormat: Mock;
+    getDateFormat: Mock;
+    getTimeFormat: Mock;
+    showTimestampIcon: Mock;
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    mockStyleSettings = require("../../src/utils/style-settings");
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockStyleSettings = (await import('../../src/utils/style-settings')) as any;
     mockStyleSettings.shouldShowRecentTimeOnly.mockReturnValue(true);
     mockStyleSettings.shouldShowOlderDateOnly.mockReturnValue(true);
   });
 
-  describe("formatTimestamp", () => {
-    it("should format date-only timestamps using date format", () => {
+  describe('formatTimestamp', () => {
+    it('should format date-only timestamps using date format', () => {
       const timestamp = 1000000;
       const result = formatTimestamp(timestamp, true, false);
       expect(result).toBe(`${timestamp}-YYYY-MM-DD`);
       expect(mockStyleSettings.getDateFormat).toHaveBeenCalled();
     });
 
-    it("should format recent styled timestamps as time only when setting enabled", () => {
+    it('should format recent styled timestamps as time only when setting enabled', () => {
       const now = Date.now();
       const recentTimestamp = now - 1000; // 1 second ago
 
@@ -62,7 +63,7 @@ describe("render-utils", () => {
       expect(mockStyleSettings.getTimeFormat).toHaveBeenCalled();
     });
 
-    it("should format older styled timestamps as date only when setting enabled", () => {
+    it('should format older styled timestamps as date only when setting enabled', () => {
       const now = Date.now();
       const oldTimestamp = now - 86400000 * 2; // 2 days ago
 
@@ -71,7 +72,7 @@ describe("render-utils", () => {
       expect(mockStyleSettings.getDateFormat).toHaveBeenCalled();
     });
 
-    it("should treat yesterday at 11pm as older (not today), not recent", () => {
+    it('should treat yesterday at 11pm as older (not today), not recent', () => {
       // Even if yesterday 11pm is only 13 hours ago at 10am today,
       // it should be "older" because it's not today's calendar date
       const today = new Date();
@@ -84,7 +85,7 @@ describe("render-utils", () => {
       expect(mockStyleSettings.getDateFormat).toHaveBeenCalled();
     });
 
-    it("should treat earlier today as recent (same calendar date)", () => {
+    it('should treat earlier today as recent (same calendar date)', () => {
       // A timestamp from earlier today should be "recent" (same calendar date)
       const now = new Date();
       const earlierToday = new Date(now);
@@ -92,7 +93,7 @@ describe("render-utils", () => {
         Math.max(0, now.getHours() - 1),
         now.getMinutes(),
         0,
-        0,
+        0
       ); // 1 hour ago, same day
 
       const result = formatTimestamp(earlierToday.getTime(), false, true);
@@ -100,7 +101,7 @@ describe("render-utils", () => {
       expect(mockStyleSettings.getTimeFormat).toHaveBeenCalled();
     });
 
-    it("should format styled timestamps as full datetime when settings disabled", () => {
+    it('should format styled timestamps as full datetime when settings disabled', () => {
       mockStyleSettings.shouldShowRecentTimeOnly.mockReturnValue(false);
       mockStyleSettings.shouldShowOlderDateOnly.mockReturnValue(false);
 
@@ -111,26 +112,26 @@ describe("render-utils", () => {
       expect(result).toBe(`${recentTimestamp}-YYYY-MM-DD, HH:mm`);
     });
 
-    it("should format non-styled timestamps using datetime format", () => {
+    it('should format non-styled timestamps using datetime format', () => {
       const timestamp = 1000000;
       const result = formatTimestamp(timestamp, false, false);
       expect(result).toBe(`${timestamp}-YYYY-MM-DD, HH:mm`);
       expect(mockStyleSettings.getDatetimeFormat).toHaveBeenCalled();
     });
 
-    it("should handle zero timestamp with datetime format", () => {
+    it('should handle zero timestamp with datetime format', () => {
       const result = formatTimestamp(0, false, false);
-      expect(result).toBe("0-YYYY-MM-DD, HH:mm");
+      expect(result).toBe('0-YYYY-MM-DD, HH:mm');
       expect(mockStyleSettings.getDatetimeFormat).toHaveBeenCalled();
     });
 
-    it("should handle NaN timestamp gracefully", () => {
+    it('should handle NaN timestamp gracefully', () => {
       const result = formatTimestamp(NaN, false, true);
       // NaN comparisons fail (isToday = false), treated as "older" → date only
-      expect(result).toBe("NaN-YYYY-MM-DD");
+      expect(result).toBe('NaN-YYYY-MM-DD');
     });
 
-    it("should treat future timestamp on same calendar day as today", () => {
+    it('should treat future timestamp on same calendar day as today', () => {
       const now = new Date();
       const laterToday = new Date(now);
       laterToday.setHours(23, 59, 59, 999);
@@ -139,7 +140,7 @@ describe("render-utils", () => {
       expect(result).toBe(`${laterToday.getTime()}-HH:mm`);
     });
 
-    it("should show full datetime for future day timestamps", () => {
+    it('should show full datetime for future day timestamps', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(12, 0, 0, 0);
@@ -148,7 +149,7 @@ describe("render-utils", () => {
       expect(result).toBe(`${tomorrow.getTime()}-YYYY-MM-DD, HH:mm`);
     });
 
-    it("should show full datetime for older timestamps when shouldShowOlderDateOnly is false", () => {
+    it('should show full datetime for older timestamps when shouldShowOlderDateOnly is false', () => {
       mockStyleSettings.shouldShowRecentTimeOnly.mockReturnValue(true);
       mockStyleSettings.shouldShowOlderDateOnly.mockReturnValue(false);
 
@@ -159,7 +160,7 @@ describe("render-utils", () => {
       expect(result).toBe(`${yesterday.getTime()}-YYYY-MM-DD, HH:mm`);
     });
 
-    it("should show full datetime for today when shouldShowRecentTimeOnly is false", () => {
+    it('should show full datetime for today when shouldShowRecentTimeOnly is false', () => {
       mockStyleSettings.shouldShowRecentTimeOnly.mockReturnValue(false);
       mockStyleSettings.shouldShowOlderDateOnly.mockReturnValue(true);
 
@@ -169,173 +170,173 @@ describe("render-utils", () => {
     });
   });
 
-  describe("shouldShowTimestampIcon", () => {
-    it("should return true when style-settings returns true", () => {
+  describe('shouldShowTimestampIcon', () => {
+    it('should return true when style-settings returns true', () => {
       mockStyleSettings.showTimestampIcon.mockReturnValue(true);
       expect(shouldShowTimestampIcon()).toBe(true);
     });
 
-    it("should return false when style-settings returns false", () => {
+    it('should return false when style-settings returns false', () => {
       mockStyleSettings.showTimestampIcon.mockReturnValue(false);
       expect(shouldShowTimestampIcon()).toBe(false);
     });
   });
 
-  describe("getTimestampIcon", () => {
+  describe('getTimestampIcon', () => {
     const baseSettings = {
-      createdTimeProperty: "created time",
+      createdTimeProperty: 'created time',
     } as Settings;
 
     it('should return "calendar" for file.ctime', () => {
-      expect(getTimestampIcon("file.ctime", baseSettings)).toBe("calendar");
+      expect(getTimestampIcon('file.ctime', baseSettings)).toBe('calendar');
     });
 
     it('should return "calendar" for "created time"', () => {
-      expect(getTimestampIcon("created time", baseSettings)).toBe("calendar");
+      expect(getTimestampIcon('created time', baseSettings)).toBe('calendar');
     });
 
     it('should return "calendar" for custom createdTimeProperty', () => {
       const settings = {
         ...baseSettings,
-        createdTimeProperty: "date_created",
+        createdTimeProperty: 'date_created',
       } as Settings;
-      expect(getTimestampIcon("date_created", settings)).toBe("calendar");
+      expect(getTimestampIcon('date_created', settings)).toBe('calendar');
     });
 
     it('should return "clock" for other properties', () => {
-      expect(getTimestampIcon("file.mtime", baseSettings)).toBe("clock");
-      expect(getTimestampIcon("modified time", baseSettings)).toBe("clock");
-      expect(getTimestampIcon("updated", baseSettings)).toBe("clock");
+      expect(getTimestampIcon('file.mtime', baseSettings)).toBe('clock');
+      expect(getTimestampIcon('modified time', baseSettings)).toBe('clock');
+      expect(getTimestampIcon('updated', baseSettings)).toBe('clock');
     });
 
     it('should return "calendar" for note.-prefixed custom created property', () => {
       const settings = {
-        createdTimeProperty: "ctd",
+        createdTimeProperty: 'ctd',
       } as Settings;
-      expect(getTimestampIcon("note.ctd", settings)).toBe("calendar");
+      expect(getTimestampIcon('note.ctd', settings)).toBe('calendar');
     });
 
     it('should return "clock" for note.-prefixed custom modified property', () => {
       const settings = {
-        createdTimeProperty: "ctd",
+        createdTimeProperty: 'ctd',
       } as Settings;
-      expect(getTimestampIcon("note.upd", settings)).toBe("clock");
+      expect(getTimestampIcon('note.upd', settings)).toBe('clock');
     });
 
     it('should return "calendar" when both property and setting have note. prefix', () => {
       const settings = {
-        createdTimeProperty: "note.created",
+        createdTimeProperty: 'note.created',
       } as Settings;
       // Both stripped to "created" via stripNotePrefix
-      expect(getTimestampIcon("note.created", settings)).toBe("calendar");
+      expect(getTimestampIcon('note.created', settings)).toBe('calendar');
     });
   });
 
-  describe("isTimestampProperty", () => {
+  describe('isTimestampProperty', () => {
     const makeSettings = (
-      overrides: Partial<BasesResolvedSettings> = {},
+      overrides: Partial<BasesResolvedSettings> = {}
     ): BasesResolvedSettings =>
       ({
         smartTimestamp: false,
-        createdTimeProperty: "created time",
-        modifiedTimeProperty: "modified time",
+        createdTimeProperty: 'created time',
+        modifiedTimeProperty: 'modified time',
         ...overrides,
       }) as BasesResolvedSettings;
 
-    it("should return true for hardcoded names regardless of smartTimestamp", () => {
+    it('should return true for hardcoded names regardless of smartTimestamp', () => {
       const settings = makeSettings({ smartTimestamp: false });
-      expect(isTimestampProperty("file.mtime", settings)).toBe(true);
-      expect(isTimestampProperty("file.ctime", settings)).toBe(true);
-      expect(isTimestampProperty("modified time", settings)).toBe(true);
-      expect(isTimestampProperty("created time", settings)).toBe(true);
+      expect(isTimestampProperty('file.mtime', settings)).toBe(true);
+      expect(isTimestampProperty('file.ctime', settings)).toBe(true);
+      expect(isTimestampProperty('modified time', settings)).toBe(true);
+      expect(isTimestampProperty('created time', settings)).toBe(true);
     });
 
-    it("should return false for custom names when smartTimestamp is OFF", () => {
+    it('should return false for custom names when smartTimestamp is OFF', () => {
       const settings = makeSettings({
         smartTimestamp: false,
-        createdTimeProperty: "ctd",
-        modifiedTimeProperty: "upd",
+        createdTimeProperty: 'ctd',
+        modifiedTimeProperty: 'upd',
       });
-      expect(isTimestampProperty("ctd", settings)).toBe(false);
-      expect(isTimestampProperty("upd", settings)).toBe(false);
+      expect(isTimestampProperty('ctd', settings)).toBe(false);
+      expect(isTimestampProperty('upd', settings)).toBe(false);
     });
 
-    it("should return true for custom names when smartTimestamp is ON", () => {
+    it('should return true for custom names when smartTimestamp is ON', () => {
       const settings = makeSettings({
         smartTimestamp: true,
-        createdTimeProperty: "ctd",
-        modifiedTimeProperty: "upd",
+        createdTimeProperty: 'ctd',
+        modifiedTimeProperty: 'upd',
       });
-      expect(isTimestampProperty("ctd", settings)).toBe(true);
-      expect(isTimestampProperty("upd", settings)).toBe(true);
+      expect(isTimestampProperty('ctd', settings)).toBe(true);
+      expect(isTimestampProperty('upd', settings)).toBe(true);
     });
 
-    it("should return true for note.-prefixed custom names when smartTimestamp is ON", () => {
+    it('should return true for note.-prefixed custom names when smartTimestamp is ON', () => {
       const settings = makeSettings({
         smartTimestamp: true,
-        createdTimeProperty: "ctd",
-        modifiedTimeProperty: "upd",
+        createdTimeProperty: 'ctd',
+        modifiedTimeProperty: 'upd',
       });
-      expect(isTimestampProperty("note.ctd", settings)).toBe(true);
-      expect(isTimestampProperty("note.upd", settings)).toBe(true);
+      expect(isTimestampProperty('note.ctd', settings)).toBe(true);
+      expect(isTimestampProperty('note.upd', settings)).toBe(true);
     });
 
-    it("should return true when both property and setting have note. prefix", () => {
+    it('should return true when both property and setting have note. prefix', () => {
       const settings = makeSettings({
         smartTimestamp: true,
-        createdTimeProperty: "note.created",
-        modifiedTimeProperty: "note.modified",
+        createdTimeProperty: 'note.created',
+        modifiedTimeProperty: 'note.modified',
       });
       // Both stripped to "created"/"modified" via stripNotePrefix
-      expect(isTimestampProperty("note.created", settings)).toBe(true);
-      expect(isTimestampProperty("note.modified", settings)).toBe(true);
+      expect(isTimestampProperty('note.created', settings)).toBe(true);
+      expect(isTimestampProperty('note.modified', settings)).toBe(true);
     });
 
-    it("should return false for unrelated properties when smartTimestamp is ON", () => {
+    it('should return false for unrelated properties when smartTimestamp is ON', () => {
       const settings = makeSettings({
         smartTimestamp: true,
-        createdTimeProperty: "ctd",
-        modifiedTimeProperty: "upd",
+        createdTimeProperty: 'ctd',
+        modifiedTimeProperty: 'upd',
       });
-      expect(isTimestampProperty("tags", settings)).toBe(false);
-      expect(isTimestampProperty("note.tags", settings)).toBe(false);
+      expect(isTimestampProperty('tags', settings)).toBe(false);
+      expect(isTimestampProperty('note.tags', settings)).toBe(false);
     });
   });
 
-  describe("isDateValue", () => {
-    it("should return true for valid DateValue with time:true", () => {
+  describe('isDateValue', () => {
+    it('should return true for valid DateValue with time:true', () => {
       const value = { date: new Date(), time: true };
       expect(isDateValue(value)).toBe(true);
     });
 
-    it("should return true for valid DateValue with time:false", () => {
+    it('should return true for valid DateValue with time:false', () => {
       const value = { date: new Date(), time: false };
       expect(isDateValue(value)).toBe(true);
     });
 
-    it("should return false for object missing time property", () => {
+    it('should return false for object missing time property', () => {
       const value = { date: new Date() };
       expect(isDateValue(value)).toBe(false);
     });
 
-    it("should return false for null/undefined/primitives", () => {
+    it('should return false for null/undefined/primitives', () => {
       expect(isDateValue(null)).toBe(false);
       expect(isDateValue(undefined)).toBe(false);
-      expect(isDateValue("2024-01-01")).toBe(false);
+      expect(isDateValue('2024-01-01')).toBe(false);
       expect(isDateValue(1704067200000)).toBe(false);
       expect(isDateValue({})).toBe(false);
     });
 
-    it("should return false for invalid Date objects", () => {
+    it('should return false for invalid Date objects', () => {
       const invalidDate = new Date(NaN);
       const value = { date: invalidDate, time: true };
       expect(isDateValue(value)).toBe(false);
     });
   });
 
-  describe("extractTimestamp", () => {
-    it("should extract timestamp from valid DateValue with time:true", () => {
-      const date = new Date("2024-01-01T12:00:00Z");
+  describe('extractTimestamp', () => {
+    it('should extract timestamp from valid DateValue with time:true', () => {
+      const date = new Date('2024-01-01T12:00:00Z');
       const value = { date, time: true };
 
       const result = extractTimestamp(value);
@@ -346,8 +347,8 @@ describe("render-utils", () => {
       });
     });
 
-    it("should extract timestamp from valid DateValue with time:false", () => {
-      const date = new Date("2024-01-01");
+    it('should extract timestamp from valid DateValue with time:false', () => {
+      const date = new Date('2024-01-01');
       const value = { date, time: false };
 
       const result = extractTimestamp(value);
@@ -358,10 +359,10 @@ describe("render-utils", () => {
       });
     });
 
-    it("should return null for invalid values", () => {
+    it('should return null for invalid values', () => {
       expect(extractTimestamp(null)).toBeNull();
       expect(extractTimestamp(undefined)).toBeNull();
-      expect(extractTimestamp("2024-01-01")).toBeNull();
+      expect(extractTimestamp('2024-01-01')).toBeNull();
       expect(extractTimestamp({ date: new Date() })).toBeNull();
     });
   });
