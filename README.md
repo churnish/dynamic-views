@@ -55,7 +55,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 ## Installation
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > The plugin is in active development — things can break, or change drastically between releases.
 >
 > **Please ensure your files are regularly [backed up](https://help.obsidian.md/backup).**
@@ -70,8 +70,6 @@ Until _Dynamic Views_ is [made available](https://github.com/obsidianmd/obsidian
 6. Press _Add Plugin_.
 
 <details><summary>Install manually</summary>
-
-Note: to get updates for _Dynamic Views_, you will have to check for and install them manually.
 
 1. Download `dynamic-views.zip` in the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
 2. Open the vault folder in the system file manager.
