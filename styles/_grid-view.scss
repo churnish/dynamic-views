@@ -50,6 +50,12 @@
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   row-gap: var(--size-4-2);
+}
+
+/* Group divider spacing — .is-grouped prefix overrides Obsidian's
+   .is-grouped .bases-cards-container .bases-cards-group padding
+   (3 classes, same specificity — last-write wins). */
+.is-grouped .dynamic-views-group-section > .dynamic-views-group {
   padding: 0 0 var(--size-4-4) 0;
   border-color: var(--background-modifier-border);
   border-width: 0 0 1px 0;

@@ -1,0 +1,176 @@
+---
+title: Bases v Datacore differences
+description: Architectural differences between the Bases (imperative DOM) and Datacore (Preact JSX) backends — rendering, events, cleanup, state, and common pitfalls.
+author: 🤖 Generated with Claude Code
+last updated: 2026-03-03
+---
+
+# Backend differences
+
+Architectural comparison of the Bases and Datacore backends. For card-level DOM details, see card-dom-structure.md.
+
+## Rendering model
+
+|                       | Bases (`bases/shared-renderer.ts`)                                          | Datacore (`shared/card-renderer.tsx` + `datacore/controller.tsx`)                   |
+| --------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Paradigm**          | Imperative DOM — `createDiv()`, `createEl()`, `createSpan()`                | Declarative Preact JSX — VDOM diffing                                               |
+| **Entry point**       | `SharedCardRenderer.renderCard()` returns `CardHandle { el, cleanup }`      | `CardRenderer` function component returns JSX wrapping `Card` components            |
+| **Element stability** | Card DOM is stable after creation — no automatic re-renders                 | Preact re-renders on signal/state change; DOM elements reused via `key={card.path}` |
+| **Mid-interaction**   | Safe — DOM won't mutate unless explicitly called                            | Unsafe — data signal changes can trigger re-render during hover, scroll, or drag    |
+| **Surgical updates**  | `rerenderProperties()` / `rerenderSubtitle()` replace only changed subtrees | Preact diffs entire card component; no surgical subtree replacement                 |
+| **Container**         | Cards appended directly to view-managed container element                   | `CardRenderer` returns a wrapping `div.dynamic-views-grid`/`.dynamic-views-masonry` |
+
+## Event handling
+
+|                       | Bases                                                                     | Datacore                                                                              |
+| --------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Mechanism**         | Native `addEventListener` with `{ signal }` option                        | JSX event props (`onMouseDown`, `onClick`) + ref callback `addEventListener`          |
+| **Lifecycle**         | Attached once at card creation; stable for card lifetime                  | JSX props: re-processed by Preact on every re-render. Ref callbacks: run every render |
+| **Cleanup**           | AbortController per card — `signal.abort()` removes all listeners at once | JSX props: auto-managed by Preact. Manual listeners: AbortController or WeakMap       |
+| **Reattachment risk** | None — listeners survive until explicit teardown                          | High — naively attached listeners in ref callbacks are destroyed on next re-render    |
+
+## Re-render behavior
+
+|                            | Bases                                         | Datacore                                                                         |
+| -------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Frequency**              | Zero automatic re-renders                     | 7+ re-renders per card during init; mid-interaction re-renders from data changes |
+| **Cause**                  | N/A                                           | Datacore signals (query results, metadata updates, state changes)                |
+| **Ref callback impact**    | N/A                                           | Runs on every render — must be idempotent (see WeakMap pattern below)            |
+| **`setIcon` calls**        | One-shot at creation time                     | Must guard with `!el.hasChildNodes()` to avoid redundant DOM clear-and-rebuild   |
+| **Stateful behavior**      | Instance properties on `SharedCardRenderer`   | Module-level `WeakMap<HTMLElement, ...>` keyed by DOM element (not card path)    |
+| **Cross-container safety** | N/A — each view has its own renderer instance | `Map<string, ...>` keyed by `card.path` collides across containers; use WeakMap  |
+
+### The WeakMap pattern (Datacore only)
+
+For state that must survive re-renders and avoid path collisions, use `WeakMap<HTMLElement, ...>`. Full details in datacore-ref-callback-patterns.md.
+
+Key properties:
+
+- **Idempotent**: checks `existing.signal.aborted` before re-attaching
+- **No path collisions**: keyed by DOM element, not `card.path`
+- **Auto-cleanup**: entries GC'd with the element
+- **Key stability**: cards keyed by `card.path` in JSX, so Preact reuses the same DOM element
+
+Current usages: `cardHoverIntentState` (cover hover zoom), `cardHoverIntentActive` (card-level hover intent), `containerCleanupMap` (container cleanup functions), `containerCssClassesMap` (previous cssclasses tracking to avoid unnecessary DOM mutations).
+
+## `document`/`window` scope
+
+Both backends must handle Electron popout windows. Full details in electron-popout-quirks.md (plugins-level knowledge).
+
+|                           | Bases                                                                                           | Datacore                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Observer construction** | `getOwnerWindow(cardEl).ResizeObserver` / `.IntersectionObserver`                               | Same — `getOwnerWindow(containerRef.current).ResizeObserver`                                |
+| **rAF**                   | `getOwnerWindow(cardEl).requestAnimationFrame()`                                                | Same pattern                                                                                |
+| **Module-scope pitfall**  | `measureCanvas` uses `document.createElement('canvas')` — intentional (never inserted into DOM) | Same `measureCanvas` (Datacore calls `initializeTitleTruncation` from `shared-renderer.ts`) |
+| **Shared utility**        | `getOwnerWindow()` from `utils/owner-window.ts` — both backends import it                       | Same                                                                                        |
+
+Both backends listen for `PLUGIN_SETTINGS_CHANGE` on `document.body` (module scope) — Bases in `grid-view.ts`/`masonry-view.ts`, Datacore in `controller.tsx`. In popout windows, `document.body` resolves to the main window's body, so views in popouts miss plugin settings changes. The event is dispatched in `persistence.ts`.
+
+**Rule**: Never use bare `document`, `window`, `ResizeObserver`, `IntersectionObserver`, or `requestAnimationFrame` for elements that may be in a popout. Derive from `el.ownerDocument` / `el.ownerDocument.defaultView`.
+
+## DOM hierarchy
+
+|                      | Bases                                                                         | Datacore                                                                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Outer wrapper**    | `.dynamic-views` (view container)                                             | `div.dynamic-views` (returned by `View` in `controller.tsx`); its parent (Datacore code block container) is not plugin-controlled |
+| **Layout container** | `.dynamic-views-masonry` or `.dynamic-views-grid`                             | `div.dynamic-views-masonry` or `div.dynamic-views-grid` (returned by `CardRenderer`)                                              |
+| **Group sections**   | `.dynamic-views-group-section` → `.masonry-container` / CSS Grid              | Flat — no group sections (Datacore doesn't support grouping yet)                                                                  |
+| **Card DOM**         | Identical class names and nesting — see card-dom-structure.md for divergences | Same                                                                                                                              |
+
+## Settings and state
+
+|                     | Bases                                                                                                   | Datacore                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Settings source** | `.base` YAML → Obsidian Bases API: `config.get()`, `config.getOrder()`                                  | Code block markers + `persistenceManager.getDatacoreState(queryId)`                                   |
+| **Settings type**   | `BasesResolvedSettings` = `PluginSettings & ViewDefaults` + `_displayNameMap`, `_skipLeadingProperties` | `ResolvedSettings` = `PluginSettings & ViewDefaults & DatacoreDefaults` + `_displayNameMap`           |
+| **View ID**         | YAML `id` field in `.base` file                                                                         | 6-char query ID string in code block                                                                  |
+| **UI state**        | `BasesUIState { collapsedGroups }` per view ID                                                          | `DatacoreState { sortMethod, viewMode, widthMode, searchQuery, resultLimit, settings? }` per query ID |
+| **Persistence**     | `persistenceManager.getBasesState(viewId)` / `setBasesState()`                                          | `persistenceManager.getDatacoreState(queryId)` / `setDatacoreState()`                                 |
+| **Settings sync**   | Bases API handles it natively                                                                           | `layout-change` workspace event triggers re-read; `PLUGIN_SETTINGS_CHANGE` on `document.body`         |
+| **Sparse storage**  | Only `collapsedGroups` stored; empty → entry deleted                                                    | Only non-default values stored; all defaults → entry deleted                                          |
+
+## Cleanup
+
+|                            | Bases                                                                                  | Datacore                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Primary mechanism**      | `SharedCardRenderer.cleanup()` iterates instance arrays                                | `dc.useEffect` unmount return + exported `cleanupAll*()` functions                                  |
+| **Per-card teardown**      | `CardHandle.cleanup()` — aborts card AbortController, disconnects observers            | Ref callback `el === null` branch calls `cleanupCardScrollListeners(card.path)`                     |
+| **AbortController scope**  | One per card, stable for card lifetime                                                 | `scrollController`: recreated every render (re-render problem). WeakMap state: stable               |
+| **Instance arrays**        | `cardAbortControllers[]`, `propertyObservers[]`, `slideshowCleanups[]`, `cardScopes[]` | Module-level Maps: `cardScrollAbortControllers`, `cardResponsiveObservers`, `cardPropertyObservers` |
+| **Cross-container safety** | Each view has its own `SharedCardRenderer` instance                                    | Module-level Maps keyed by `card.path` — collision risk across containers                           |
+
+## Shared infrastructure
+
+`src/shared/` contains cross-backend code, but not all files serve both backends.
+
+### Used by both backends
+
+| Module                  | Purpose                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `constants.ts`          | Infinite scroll, throttling, batch size constants                                                 |
+| `data-transform.ts`     | Normalizes Datacore/Bases data → `CardData` interface                                             |
+| `content-loader.ts`     | Async image/text loading with dedup                                                               |
+| `image-loader.ts`       | Image aspect ratio caching + fallbacks                                                            |
+| `context-menu.ts`       | Right-click menus for cards/links                                                                 |
+| `scroll-gradient.ts`    | Horizontal/vertical gradient masks for scrollable content                                         |
+| `keyboard-nav.ts`       | Arrow key focus management                                                                        |
+| `hover-intent.ts`       | Mousemove-after-mouseenter hover intent utility                                                   |
+| `property-measure.ts`   | Property field width measurement + scroll gradients                                               |
+| `property-helpers.ts`   | Tag/file/formula type checks, pair computation                                                    |
+| `render-utils.ts`       | Date/timestamp rendering — accepts both settings types                                            |
+| `content-visibility.ts` | `CONTENT_HIDDEN_CLASS` consumed by `keyboard-nav.ts`, `scroll-gradient.ts`, `property-measure.ts` |
+| `view-validation.ts`    | ViewDefaults validation — used by `persistence.ts` (serves both backends)                         |
+| `slideshow.ts`          | Card image slideshow (animation + swipe)                                                          |
+| `image-viewer.ts`       | Panzoom image viewer                                                                              |
+
+`data-transform.ts` provides parallel transform functions per backend: `datacoreResultToCardData()` / `transformDatacoreResults()` and `basesEntryToCardData()` / `transformBasesEntries()`.
+
+### Datacore only (despite being in `shared/`)
+
+| Module              | Reason                                                  |
+| ------------------- | ------------------------------------------------------- |
+| `card-renderer.tsx` | Preact JSX — returns JSX components, not imperative DOM |
+
+### Bases only (despite being in `shared/`)
+
+| Module                   | Reason                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------- |
+| `virtual-scroll.ts`      | Only imported by `bases/masonry-view.ts`                                         |
+| `scroll-preservation.ts` | Only imported by `bases/grid-view.ts` and `bases/masonry-view.ts`                |
+| `settings-schema.ts`     | Only imported by `bases/utils.ts`, `bases/grid-view.ts`, `bases/masonry-view.ts` |
+| `text-preview-dom.ts`    | Only imported by `bases/grid-view.ts` and `bases/masonry-view.ts`                |
+
+### Bases functions used by Datacore
+
+| Function (from `bases/shared-renderer.ts`) | Purpose                                         |
+| ------------------------------------------ | ----------------------------------------------- |
+| `syncResponsiveClasses()`                  | Batch compact-mode + thumbnail-stack class sync |
+| `initializeTitleTruncation()`              | Canvas-based batch title truncation             |
+
+## Common pitfalls
+
+Bugs that have occurred from backend divergence.
+
+### Popout `document.body` event dispatch
+
+`PLUGIN_SETTINGS_CHANGE` is dispatched on `document.body` (module scope) in `persistence.ts`. Both Bases (`grid-view.ts`/`masonry-view.ts`) and Datacore (`controller.tsx`) listen on `document.body`. In popout windows, `document.body` resolves to the main window's body, so views in popouts miss plugin settings changes. **Status**: Known limitation affecting both backends.
+
+### Ref callback `setIcon` churn
+
+`setIcon(el, icon)` in a Preact ref callback runs on every re-render (7+ times during init). `setIcon` clears the element before inserting, so no visual duplication occurs, but each call is redundant DOM work (clear + rebuild). **Fix**: Guard with `!el.hasChildNodes()` to skip the call when the icon is already present.
+
+### SCSS `&.class` vs descendant selector for Bases DOM
+
+Bases attaches classes directly to the card element (`.card.image-format-cover`), requiring `&.image-format-cover` in SCSS. Writing `.image-format-cover` as a descendant selector silently matches nothing. This is particularly tricky because the Datacore backend produces the same structure, but the class is set via JSX `className` prop rather than imperative `addClass()`.
+
+### `scrollController` recreation on re-render
+
+Each Datacore `Card` render creates a new `AbortController`. The ref callback aborts the previous one via `cleanupCardScrollListeners(card.path)`. Listeners attached with the old signal are silently removed. **Fix**: Use WeakMap pattern for listeners that must survive re-renders. See datacore-ref-callback-patterns.md.
+
+### Cross-container `card.path` collision
+
+Module-level `Map<string, AbortController>` keyed by `card.path` in `card-renderer.tsx`. When the same file appears in two Dynamic Views containers, one container's cleanup aborts the other's signal. **Fix**: Use `WeakMap<HTMLElement, ...>` instead of path-keyed Map.
+
+### Title link structure divergence
+
+Bases: `a.internal-link.card-title-text` (single element with both classes). Datacore: `a.internal-link` wrapping `span.card-title-text`. The inner span exists because `setupTitleTruncation` reads/writes `.card-title-text.textContent` and would destroy ext-suffix children if the link element carried the text class. CSS selectors must account for both structures.

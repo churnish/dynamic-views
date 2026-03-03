@@ -1824,6 +1824,23 @@ function Card({
         // prop application produces the correct absent/auto state.
         if (isPosterClickReveal) cardEl.removeAttribute('draggable');
 
+        // Native drag handler — Preact's onDragStart JSX prop interferes with
+        // Chromium's drag lifecycle, causing drag to abort immediately after
+        // dragstart. Native addEventListener works reliably.
+        if (
+          settings.openFileAction === 'card' &&
+          !isPosterClickReveal &&
+          !(cardEl as HTMLElement & { __cardDragBound?: true }).__cardDragBound
+        ) {
+          (cardEl as HTMLElement & { __cardDragBound?: true }).__cardDragBound =
+            true;
+          cardEl.addEventListener('dragstart', (e: DragEvent) => {
+            e.stopImmediatePropagation();
+            const dragData = app.dragManager.dragLink(e, card.path, '');
+            app.dragManager.onDragStart(e, dragData);
+          });
+        }
+
         // Register controller only when card mounts (cleanup existing first)
         cleanupCardScrollListeners(card.path);
         cardScrollAbortControllers.set(card.path, scrollController);
@@ -1950,11 +1967,6 @@ function Card({
         }
       }}
       draggable={settings.openFileAction === 'card' || undefined}
-      onDragStart={
-        settings.openFileAction === 'card' && !isPosterClickReveal
-          ? handleDrag
-          : undefined
-      }
       tabIndex={index === focusableCardIndex ? 0 : -1}
       onClick={(e: MouseEvent) => {
         // Poster tap toggle: mobile or desktop press mode
@@ -2235,13 +2247,8 @@ function Card({
                     e.stopPropagation();
                     e.dataTransfer?.clearData();
                     e.dataTransfer?.setData('text/plain', card.urlValue!);
-                    // Swap icon for URL text so browser captures text + URL
-                    // ghost, then restore icon on next frame (after capture)
-                    el.textContent = card.urlValue!;
-                    requestAnimationFrame(() => {
-                      el.empty();
-                      setIcon(el, getUrlIcon());
-                    });
+                    // No text swap or setDragImage — the browser's native
+                    // drag ghost for <a href> already shows the URL text
                   });
                   el.addEventListener('dragend', () => {
                     const body = el.ownerDocument.body;

@@ -1321,13 +1321,7 @@ export class SharedCardRenderer {
             e.stopPropagation();
             e.dataTransfer?.clearData();
             e.dataTransfer?.setData('text/plain', card.urlValue!);
-            // Swap icon for URL text so browser captures text + URL ghost,
-            // then restore icon on next frame (after ghost is captured)
-            iconEl.textContent = card.urlValue!;
-            requestAnimationFrame(() => {
-              iconEl.empty();
-              setIcon(iconEl, getUrlIcon());
-            });
+            // No text swap — browser's native <a href> drag ghost shows the URL
           },
           { signal }
         );

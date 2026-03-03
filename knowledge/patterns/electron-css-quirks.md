@@ -2,7 +2,7 @@
 title: Electron CSS quirks
 description: Blink/Electron CSS rendering quirks affecting selectors and text truncation.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-25
+last updated: 2026-03-04
 ---
 
 # Electron CSS quirks
@@ -88,3 +88,32 @@ A binary-search approach was prototyped and confirmed working:
 ### Affected file
 
 - `styles/card/_previews.scss` — `.card-text-preview` uses `-webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5)`
+
+## Stuck `:hover` after drag
+
+**Discovered**: 2026-03-03 on Electron 39.5.
+
+After a drag operation ends, Chromium does **not** re-hit-test the element under the pointer. The dragged element retains `:hover` state until the next mouse move event. This causes visible artifacts when hover styles include transitions — e.g., a card background-color transition animates back over ~1s after drop.
+
+This is a longstanding Chromium behavior, not Electron-specific.
+
+### Mitigation
+
+Gate visible hover effects behind a JS-managed class rather than pure `:hover`. Dynamic Views uses `hover-intent-active` (set by `hover-intent.ts` on mousemove-after-mouseenter, removed on mouseleave/dragend). CSS hover styles are scoped to `.hover-intent-active:hover`, so the stuck `:hover` has no visual effect because the class is removed in `dragend`.
+
+```scss
+// Wrong: visible artifact from stuck :hover
+.card:hover {
+  background: var(--hover-bg);
+}
+
+// Right: class is removed in dragend, so stuck :hover is invisible
+.card.hover-intent-active:hover {
+  background: var(--hover-bg);
+}
+```
+
+### Files
+
+- `src/shared/hover-intent.ts` — `hover-intent-active` class management
+- `styles/_hover-states.scss` — All card hover styles gated by `.hover-intent-active:hover`
