@@ -129,13 +129,12 @@ function renderFileExt(extInfo: { ext: string } | null) {
 }
 
 /**
- * Create a drag handler for file elements (used by card-level drag)
+ * Create a drag handler for card elements — uses dragLink (not dragFile)
+ * to match vanilla Bases ghost icon.
  */
-function createFileDragHandler(app: App, path: string) {
+function createCardDragHandler(app: App, path: string) {
   return (e: DragEvent) => {
-    const file = app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof TFile)) return;
-    const dragData = app.dragManager.dragFile(e, file);
+    const dragData = app.dragManager.dragLink(e, path, '');
     app.dragManager.onDragStart(e, dragData);
   };
 }
@@ -265,9 +264,7 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
         }}
         onDragStart={(e: DragEvent) => {
           e.stopPropagation();
-          const file = app.metadataCache.getFirstLinkpathDest(link.url, '');
-          if (!(file instanceof TFile)) return;
-          const dragData = app.dragManager.dragFile(e, file);
+          const dragData = app.dragManager.dragLink(e, link.url, '');
           app.dragManager.onDragStart(e, dragData);
         }}
         onContextMenu={(e: MouseEvent) => {
@@ -568,6 +565,13 @@ declare module 'obsidian' {
     };
     dragManager: {
       dragFile(evt: DragEvent, file: TFile): unknown;
+      dragLink(
+        evt: DragEvent,
+        linktext: string,
+        sourcePath: string,
+        title?: string,
+        source?: string
+      ): unknown;
       onDragStart(evt: DragEvent, dragData: unknown): void;
     };
   }
@@ -901,13 +905,13 @@ function CoverSlideshow({
       <div
         className="slideshow-nav-left"
         ref={(el: HTMLElement | null) => {
-          if (el) setIcon(el, 'lucide-chevron-left');
+          if (el && !el.hasChildNodes()) setIcon(el, 'lucide-chevron-left');
         }}
       />
       <div
         className="slideshow-nav-right"
         ref={(el: HTMLElement | null) => {
-          if (el) setIcon(el, 'lucide-chevron-right');
+          if (el && !el.hasChildNodes()) setIcon(el, 'lucide-chevron-right');
         }}
       />
     </div>
@@ -1580,7 +1584,7 @@ function Card({
   }
 
   // Drag handler for card-level drag (reuses shared utility)
-  const handleDrag = createFileDragHandler(app, card.path);
+  const handleDrag = createCardDragHandler(app, card.path);
 
   // Create AbortController for scroll listeners (accessible to child refs)
   // Only registered in map when card mounts (avoids orphaned controllers)
@@ -1683,7 +1687,7 @@ function Card({
                 return;
               app.workspace.trigger('hover-link', {
                 event: e,
-                source: 'bases',
+                source: 'file-explorer',
                 hoverParent: { hoverPopover: null },
                 targetEl: e.currentTarget,
                 linktext: card.path,
@@ -2126,7 +2130,7 @@ function Card({
           if (
             isPosterClickReveal &&
             !(e.target as HTMLElement).closest(
-              app.isMobile ? '.card-title' : 'a'
+              app.isMobile ? '.card-title' : 'a.internal-link'
             )
           ) {
             // Block editor context menu in live preview (card is inside cm-content)
@@ -2196,52 +2200,61 @@ function Card({
                 {renderSubtitle()}
               </div>
             )}
-            {card.hasValidUrl && card.urlValue && (
-              <a
-                className="card-title-url-icon text-icon-button svg-icon"
-                aria-label={card.urlValue}
-                href={card.urlValue}
-                target={
-                  /^https?:\/\//i.test(card.urlValue) ? '_blank' : undefined
-                }
-                rel={
-                  /^https?:\/\//i.test(card.urlValue)
-                    ? 'noopener noreferrer'
-                    : undefined
-                }
-                onClick={(e: MouseEvent) => {
-                  e.stopPropagation();
-                }}
-                onMouseDown={() => {
-                  document.body.addClass('dynamic-views-dragging');
-                }}
-                onMouseUp={() => {
-                  document.body.removeClass('dynamic-views-dragging');
-                }}
-                onDragStart={(e: DragEvent) => {
-                  e.stopPropagation();
-                  e.dataTransfer?.clearData();
-                  e.dataTransfer?.setData('text/plain', card.urlValue!);
-                  // Swap icon for URL text so browser captures text + URL ghost,
-                  // then restore icon on next frame (after ghost is captured)
-                  const el = e.currentTarget as HTMLElement | null;
-                  if (el) {
-                    el.textContent = card.urlValue!;
-                    requestAnimationFrame(() => {
-                      el.empty();
-                      setIcon(el, getUrlIcon());
-                    });
-                  }
-                }}
-                onDragEnd={() => {
-                  document.body.querySelector('.tooltip')?.remove();
-                  document.body.removeClass('dynamic-views-dragging');
-                }}
-                ref={(el: HTMLElement | null) => {
-                  if (el) setIcon(el, getUrlIcon());
-                }}
-              />
-            )}
+            {card.hasValidUrl &&
+              card.urlValue &&
+              (() => {
+                const isWebUrl = /^https?:\/\//i.test(card.urlValue);
+                return (
+                  <a
+                    className="card-title-url-icon text-icon-button svg-icon"
+                    aria-label={card.urlValue}
+                    href={card.urlValue}
+                    target={isWebUrl ? '_blank' : undefined}
+                    rel={isWebUrl ? 'noopener noreferrer' : undefined}
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e: MouseEvent) => {
+                      const body = (e.currentTarget as HTMLElement)
+                        .ownerDocument.body;
+                      body.addClass('dynamic-views-dragging');
+                      (
+                        e.currentTarget as HTMLElement
+                      ).ownerDocument.addEventListener(
+                        'mouseup',
+                        () => {
+                          body.removeClass('dynamic-views-dragging');
+                        },
+                        { once: true }
+                      );
+                    }}
+                    onDragStart={(e: DragEvent) => {
+                      e.stopPropagation();
+                      e.dataTransfer?.clearData();
+                      e.dataTransfer?.setData('text/plain', card.urlValue!);
+                      // Swap icon for URL text so browser captures text + URL ghost,
+                      // then restore icon on next frame (after ghost is captured)
+                      const el = e.currentTarget as HTMLElement | null;
+                      if (el) {
+                        el.textContent = card.urlValue!;
+                        requestAnimationFrame(() => {
+                          el.empty();
+                          setIcon(el, getUrlIcon());
+                        });
+                      }
+                    }}
+                    onDragEnd={(e: DragEvent) => {
+                      const body = (e.currentTarget as HTMLElement)
+                        .ownerDocument.body;
+                      body.querySelector('.tooltip')?.remove();
+                      body.removeClass('dynamic-views-dragging');
+                    }}
+                    ref={(el: HTMLElement | null) => {
+                      if (el && !el.hasChildNodes()) setIcon(el, getUrlIcon());
+                    }}
+                  />
+                );
+              })()}
           </div>
         )}
 

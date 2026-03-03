@@ -778,6 +778,16 @@ describe('property', () => {
     it('should handle whitespace', () => {
       expect(isValidUri('  https://example.com  ')).toBe(true);
     });
+
+    it('rejects dangerous URI schemes', () => {
+      expect(isValidUri('javascript://alert(1)')).toBe(false);
+      expect(isValidUri('JavaScript://x%0Aalert(1)')).toBe(false);
+      expect(isValidUri('data://text/html,<script>alert(1)</script>')).toBe(
+        false
+      );
+      expect(isValidUri('vbscript://MsgBox("XSS")')).toBe(false);
+      expect(isValidUri('JAVASCRIPT://anything')).toBe(false);
+    });
   });
 
   describe('buildDisplayToSyntaxMap', () => {

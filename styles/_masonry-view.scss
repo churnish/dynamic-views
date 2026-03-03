@@ -120,8 +120,11 @@
   }
 
   /* Grouped masonry: explicit height + border-box eats padding-bottom (set by
-     _grid-view.scss for group divider spacing). Extend height to accommodate it. */
-  .dynamic-views-masonry .dynamic-views-group-section > .masonry-container {
+     _grid-masonry-shared.scss for group divider spacing). Extend height to
+     accommodate it. Last group has padding-bottom: 0 so exclude it. */
+  .dynamic-views-masonry
+    .dynamic-views-group-section:not(:last-child)
+    > .masonry-container {
     height: calc(var(--masonry-height, auto) + var(--size-4-4));
   }
 

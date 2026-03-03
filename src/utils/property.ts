@@ -632,10 +632,15 @@ export function getAllVaultProperties(app: App): string[] {
  * Validate if a string is a valid URI
  * Accepts any URI scheme (http://, https://, obsidian://, file://, etc.)
  */
+const DANGEROUS_SCHEMES = /^(javascript|data|vbscript):/i;
+
 export function isValidUri(value: string): boolean {
   if (!value || typeof value !== 'string') return false;
 
   const trimmed = value.trim();
+
+  // Block schemes that allow code execution when used in <a href>
+  if (DANGEROUS_SCHEMES.test(trimmed)) return false;
 
   // Basic length checks
   if (trimmed.length < 5 || trimmed.length > 2048) return false;

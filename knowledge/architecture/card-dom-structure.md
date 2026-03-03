@@ -58,7 +58,7 @@ div.card                                    ← data-path="{path}"
 │   │   │   │       ├─ span.card-title-text
 │   │   │   │       └─ span.card-title-ext-suffix
 │   │   │   └─ div.card-subtitle            ← subtitle property; tabIndex=-1
-│   │   └─ span.card-title-url-icon         ← .text-icon-button.svg-icon; URL button
+│   │   └─ a.card-title-url-icon            ← .text-icon-button.svg-icon; URL button; href, aria-label
 │   │
 │   └─ div.card-body
 │       ├─ div.card-properties.card-properties-top

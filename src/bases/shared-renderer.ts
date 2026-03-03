@@ -374,6 +374,13 @@ declare module 'obsidian' {
   interface App {
     dragManager: {
       dragFile(evt: DragEvent, file: TFile): unknown;
+      dragLink(
+        evt: DragEvent,
+        linktext: string,
+        sourcePath: string,
+        title?: string,
+        source?: string
+      ): unknown;
       onDragStart(evt: DragEvent, dragData: unknown): void;
     };
   }
@@ -577,7 +584,11 @@ export class SharedCardRenderer {
             ''
           );
           if (!(file instanceof TFile)) return;
-          const dragData = this.app.dragManager.dragFile(e, file);
+          const dragData = this.app.dragManager.dragLink(
+            e,
+            link.url,
+            ''
+          );
           this.app.dragManager.onDragStart(e, dragData);
         },
         { signal }
@@ -1030,12 +1041,9 @@ export class SharedCardRenderer {
       );
     }
 
-    // Drag handler function
+    // Drag handler — use dragLink (not dragFile) to match vanilla Bases ghost icon
     const handleDrag = (e: DragEvent) => {
-      const file = this.app.vault.getAbstractFileByPath(card.path);
-      if (!(file instanceof TFile)) return;
-
-      const dragData = this.app.dragManager.dragFile(e, file);
+      const dragData = this.app.dragManager.dragLink(e, card.path, '');
       this.app.dragManager.onDragStart(e, dragData);
     };
 
@@ -1121,7 +1129,6 @@ export class SharedCardRenderer {
             'click',
             (e) => {
               if (!link.contains(e.target as Node)) {
-                e.preventDefault();
                 e.stopPropagation();
                 const paneType = Keymap.isModEvent(e);
                 void this.app.workspace.openLinkText(
@@ -1314,12 +1321,17 @@ export class SharedCardRenderer {
         // Hide tooltips during drag via CSS class on body
         iconEl.addEventListener(
           'mousedown',
-          () => document.body.addClass('dynamic-views-dragging'),
-          { signal }
-        );
-        iconEl.addEventListener(
-          'mouseup',
-          () => document.body.removeClass('dynamic-views-dragging'),
+          () => {
+            const body = iconEl.ownerDocument.body;
+            body.addClass('dynamic-views-dragging');
+            iconEl.ownerDocument.addEventListener(
+              'mouseup',
+              () => {
+                body.removeClass('dynamic-views-dragging');
+              },
+              { once: true }
+            );
+          },
           { signal }
         );
         iconEl.addEventListener(
@@ -1341,8 +1353,9 @@ export class SharedCardRenderer {
         iconEl.addEventListener(
           'dragend',
           () => {
-            document.body.querySelector('.tooltip')?.remove();
-            document.body.removeClass('dynamic-views-dragging');
+            const body = iconEl.ownerDocument.body;
+            body.querySelector('.tooltip')?.remove();
+            body.removeClass('dynamic-views-dragging');
           },
           { signal }
         );

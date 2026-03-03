@@ -388,8 +388,7 @@ export function setupHoverKeyboardNavigation(
     }
 
     // Case 3: Not hovering but card has DOM focus → activate visible focus
-    // This handles Tab focus: card has DOM focus but not visible focus yet.
-    // Pressing arrow activates visible focus so subsequent arrows navigate.
+    // and let the event propagate to the card's keydown handler for navigation.
     // Only activate for cards in OUR container — when multiple views exist,
     // each registers this handler, and we must not activate focus cross-view.
     if (
@@ -397,8 +396,6 @@ export function setupHoverKeyboardNavigation(
       focusedCardContainer &&
       focusedCardContainer === getContainerRef()
     ) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
       focusedCardContainer._keyboardNavActive = true;
     }
 
