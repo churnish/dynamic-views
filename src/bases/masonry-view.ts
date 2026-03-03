@@ -316,6 +316,7 @@ export class DynamicViewsMasonryView extends BasesView {
         );
         this.rebuildGroupIndex();
         this.groupLayoutResults.delete(collapseGroupKey);
+        this.cachedGroupOffsets.delete(collapseGroupKey);
       }
 
       this.renderState.lastRenderHash = '';
