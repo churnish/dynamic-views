@@ -24,6 +24,18 @@ declare module 'obsidian' {
     plugins: {
       plugins: Record<string, Plugin | undefined>;
     };
+    /** Drag manager for file/link/folder drag operations (undocumented API) */
+    dragManager: {
+      dragFile(evt: DragEvent, file: TFile): unknown;
+      dragLink(
+        evt: DragEvent,
+        linktext: string,
+        sourcePath: string,
+        title?: string,
+        source?: string
+      ): unknown;
+      onDragStart(evt: DragEvent, dragData: unknown): void;
+    };
   }
   interface MetadataCache {
     /** Get all known property types across the vault (undocumented API) */

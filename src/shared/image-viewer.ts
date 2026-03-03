@@ -14,7 +14,7 @@ import { getVaultPathFromResourceUrl, isExternalUrl } from '../utils/image';
 import { getCachedBlobUrl } from './slideshow';
 import { getOwnerWindow } from '../utils/owner-window';
 
-// dragManager type declared in shared-renderer.ts
+// dragManager type declared in datacore/types.d.ts
 
 /** Long-press detection threshold in ms */
 const LONG_PRESS_THRESHOLD = 500;

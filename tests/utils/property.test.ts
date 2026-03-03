@@ -789,7 +789,7 @@ describe('property', () => {
       expect(isValidUri('JAVASCRIPT://anything')).toBe(false);
     });
 
-    it('rejects dangerous URI schemes in standard format (without ://)', () => {
+    it('rejects dangerous URI schemes in colon-only format (javascript:, data:)', () => {
       expect(isValidUri('javascript:alert(1)')).toBe(false);
       expect(isValidUri('data:text/html,<script>alert(1)</script>')).toBe(
         false

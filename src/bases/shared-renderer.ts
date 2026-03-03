@@ -369,22 +369,7 @@ export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
   truncateTitleElements(titles);
 }
 
-// Extend App type to include dragManager
-declare module 'obsidian' {
-  interface App {
-    dragManager: {
-      dragFile(evt: DragEvent, file: TFile): unknown;
-      dragLink(
-        evt: DragEvent,
-        linktext: string,
-        sourcePath: string,
-        title?: string,
-        source?: string
-      ): unknown;
-      onDragStart(evt: DragEvent, dragData: unknown): void;
-    };
-  }
-}
+// dragManager type declared in datacore/types.d.ts
 
 /**
  * Batch-sync responsive classes (compact-mode, thumbnail-stack) for cards.
@@ -584,11 +569,7 @@ export class SharedCardRenderer {
             ''
           );
           if (!(file instanceof TFile)) return;
-          const dragData = this.app.dragManager.dragLink(
-            e,
-            link.url,
-            ''
-          );
+          const dragData = this.app.dragManager.dragLink(e, link.url, '');
           this.app.dragManager.onDragStart(e, dragData);
         },
         { signal }

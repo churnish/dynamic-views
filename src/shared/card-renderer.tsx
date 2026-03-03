@@ -546,7 +546,7 @@ export function cleanupAllImageViewers(): void {
   cleanupAllViewers(viewerCleanupFns, viewerClones);
 }
 
-// Extend App type (dragManager declared in shared-renderer.ts)
+// Extend App type (dragManager declared in datacore/types.d.ts)
 declare module 'obsidian' {
   interface App {
     isMobile: boolean;
@@ -1818,6 +1818,12 @@ function Card({
           return;
         }
 
+        // Poster cards: remove draggable attribute so the URL <a> is the sole
+        // drag source. Preact can't produce "absent" (undefined coerces to false,
+        // which suppresses child drag in Chromium). removeAttribute after Preact's
+        // prop application produces the correct absent/auto state.
+        if (isPosterClickReveal) cardEl.removeAttribute('draggable');
+
         // Register controller only when card mounts (cleanup existing first)
         cleanupCardScrollListeners(card.path);
         cardScrollAbortControllers.set(card.path, scrollController);
@@ -1943,12 +1949,10 @@ function Card({
           }
         }
       }}
-      draggable={settings.openFileAction === 'card'}
+      draggable={settings.openFileAction === 'card' || undefined}
       onDragStart={
-        settings.openFileAction === 'card'
-          ? isPosterClickReveal
-            ? (e: DragEvent) => e.preventDefault() // Block card drag but keep draggable="true" so Chromium doesn't suppress child <a> drag
-            : handleDrag
+        settings.openFileAction === 'card' && !isPosterClickReveal
+          ? handleDrag
           : undefined
       }
       tabIndex={index === focusableCardIndex ? 0 : -1}
@@ -2117,11 +2121,11 @@ function Card({
       onContextMenu={(e: MouseEvent) => {
         if (settings.openFileAction === 'card') {
           // Poster click-reveal: context menu on title text only.
-          // Mobile: .card-title (full wrapper — fat finger). Desktop: a (precise).
+          // Mobile: .card-title (full wrapper — fat finger). Desktop: .card-title-text (precise).
           if (
             isPosterClickReveal &&
             !(e.target as HTMLElement).closest(
-              app.isMobile ? '.card-title' : 'a.internal-link'
+              app.isMobile ? '.card-title' : '.card-title-text'
             )
           ) {
             // Block editor context menu in live preview (card is inside cm-content)
@@ -2191,62 +2195,62 @@ function Card({
                 {renderSubtitle()}
               </div>
             )}
-            {card.hasValidUrl &&
-              card.urlValue &&
-              (() => {
-                const isWebUrl = /^https?:\/\//i.test(card.urlValue);
-                return (
-                  <a
-                    className="card-title-url-icon text-icon-button svg-icon"
-                    aria-label={card.urlValue}
-                    href={card.urlValue}
-                    draggable={true}
-                    target={isWebUrl ? '_blank' : undefined}
-                    rel={isWebUrl ? 'noopener noreferrer' : undefined}
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation();
-                    }}
-                    onMouseDown={(e: MouseEvent) => {
-                      const body = (e.currentTarget as HTMLElement)
-                        .ownerDocument.body;
-                      body.addClass('dynamic-views-dragging');
-                      (
-                        e.currentTarget as HTMLElement
-                      ).ownerDocument.addEventListener(
-                        'mouseup',
-                        () => {
-                          body.removeClass('dynamic-views-dragging');
-                        },
-                        { once: true }
-                      );
-                    }}
-                    onDragStart={(e: DragEvent) => {
-                      e.stopPropagation();
-                      e.dataTransfer?.clearData();
-                      e.dataTransfer?.setData('text/plain', card.urlValue!);
-                      // Swap icon for URL text so browser captures text + URL ghost,
-                      // then restore icon on next frame (after ghost is captured)
-                      const el = e.currentTarget as HTMLElement | null;
-                      if (el) {
-                        el.textContent = card.urlValue!;
-                        requestAnimationFrame(() => {
-                          el.empty();
-                          setIcon(el, getUrlIcon());
-                        });
-                      }
-                    }}
-                    onDragEnd={(e: DragEvent) => {
-                      const body = (e.currentTarget as HTMLElement)
-                        .ownerDocument.body;
-                      body.querySelector('.tooltip')?.remove();
-                      body.removeClass('dynamic-views-dragging');
-                    }}
-                    ref={(el: HTMLElement | null) => {
-                      if (el && !el.hasChildNodes()) setIcon(el, getUrlIcon());
-                    }}
-                  />
-                );
-              })()}
+            {card.hasValidUrl && card.urlValue && (
+              <a
+                className="card-title-url-icon text-icon-button svg-icon"
+                aria-label={card.urlValue}
+                href={card.urlValue}
+                target={
+                  /^https?:\/\//i.test(card.urlValue) ? '_blank' : undefined
+                }
+                rel={
+                  /^https?:\/\//i.test(card.urlValue)
+                    ? 'noopener noreferrer'
+                    : undefined
+                }
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation();
+                }}
+                ref={(el: HTMLElement | null) => {
+                  if (!el) return;
+                  if (!el.hasChildNodes()) setIcon(el, getUrlIcon());
+                  // Native listeners for drag — Preact's JSX event props
+                  // interfere with Chromium's native drag initiation on <a>
+                  // elements, causing intermittent failures. addEventListener
+                  // works reliably (matches Bases pattern).
+                  if ((el as HTMLElement & { __dragBound?: true }).__dragBound)
+                    return;
+                  (el as HTMLElement & { __dragBound?: true }).__dragBound =
+                    true;
+                  el.addEventListener('mousedown', () => {
+                    const body = el.ownerDocument.body;
+                    body.addClass('dynamic-views-dragging');
+                    el.ownerDocument.addEventListener(
+                      'mouseup',
+                      () => body.removeClass('dynamic-views-dragging'),
+                      { once: true }
+                    );
+                  });
+                  el.addEventListener('dragstart', (e) => {
+                    e.stopPropagation();
+                    e.dataTransfer?.clearData();
+                    e.dataTransfer?.setData('text/plain', card.urlValue!);
+                    // Swap icon for URL text so browser captures text + URL
+                    // ghost, then restore icon on next frame (after capture)
+                    el.textContent = card.urlValue!;
+                    requestAnimationFrame(() => {
+                      el.empty();
+                      setIcon(el, getUrlIcon());
+                    });
+                  });
+                  el.addEventListener('dragend', () => {
+                    const body = el.ownerDocument.body;
+                    body.querySelector('.tooltip')?.remove();
+                    body.removeClass('dynamic-views-dragging');
+                  });
+                }}
+              />
+            )}
           </div>
         )}
 
