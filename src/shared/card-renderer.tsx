@@ -898,36 +898,18 @@ function CoverSlideshow({
           }}
         />
       )}
-      <div className="slideshow-nav-left">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </div>
-      <div className="slideshow-nav-right">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </div>
+      <div
+        className="slideshow-nav-left"
+        ref={(el: HTMLElement | null) => {
+          if (el) setIcon(el, 'lucide-chevron-left');
+        }}
+      />
+      <div
+        className="slideshow-nav-right"
+        ref={(el: HTMLElement | null) => {
+          if (el) setIcon(el, 'lucide-chevron-right');
+        }}
+      />
     </div>
   );
 }
@@ -1631,7 +1613,7 @@ function Card({
           settings.openFileAction === 'title' && app.isMobile
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
-                  '.card-title-link'
+                  'a'
                 );
                 if (linkEl && !linkEl.contains(e.target as Node)) {
                   e.stopPropagation();
@@ -1649,7 +1631,7 @@ function Card({
           settings.openFileAction === 'title' && app.isMobile
             ? (e: MouseEvent) => {
                 const linkEl = (e.currentTarget as HTMLElement).querySelector(
-                  '.card-title-link'
+                  'a'
                 );
                 if (linkEl && !linkEl.contains(e.target as Node)) {
                   e.stopPropagation();
@@ -1674,13 +1656,15 @@ function Card({
         {renderFileTypeIcon(card.path)}
         {renderFileExt(extInfo)}
         {settings.openFileAction === 'title' || isPosterClickReveal ? (
-          <span
-            className="card-title-link"
+          <a
+            className="internal-link"
+            href={card.path}
             data-href={card.path}
             tabIndex={-1}
             draggable={true}
             onDragStart={handleDrag}
             onClick={(e: MouseEvent) => {
+              e.preventDefault();
               e.stopPropagation();
               const paneType = Keymap.isModEvent(e);
               void app.workspace.openLinkText(card.path, '', paneType || false);
@@ -1699,7 +1683,7 @@ function Card({
                 return;
               app.workspace.trigger('hover-link', {
                 event: e,
-                source: 'file-explorer',
+                source: 'bases',
                 hoverParent: { hoverPopover: null },
                 targetEl: e.currentTarget,
                 linktext: card.path,
@@ -1711,7 +1695,7 @@ function Card({
             {extNoDot && (
               <span className="card-title-ext-suffix">.{extNoDot}</span>
             )}
-          </span>
+          </a>
         ) : (
           <>
             <span className="card-title-text">{finalTitle}</span>
@@ -2138,11 +2122,11 @@ function Card({
       onContextMenu={(e: MouseEvent) => {
         if (settings.openFileAction === 'card') {
           // Poster click-reveal: context menu on title text only.
-          // Mobile: .card-title (full wrapper — fat finger). Desktop: .card-title-link (precise).
+          // Mobile: .card-title (full wrapper — fat finger). Desktop: a (precise).
           if (
             isPosterClickReveal &&
             !(e.target as HTMLElement).closest(
-              app.isMobile ? '.card-title' : '.card-title-link'
+              app.isMobile ? '.card-title' : 'a'
             )
           ) {
             // Block editor context menu in live preview (card is inside cm-content)
@@ -2213,13 +2197,45 @@ function Card({
               </div>
             )}
             {card.hasValidUrl && card.urlValue && (
-              <span
+              <a
                 className="card-title-url-icon text-icon-button svg-icon"
                 aria-label={card.urlValue}
+                href={card.urlValue}
+                target={
+                  /^https?:\/\//i.test(card.urlValue) ? '_blank' : undefined
+                }
+                rel={
+                  /^https?:\/\//i.test(card.urlValue)
+                    ? 'noopener noreferrer'
+                    : undefined
+                }
                 onClick={(e: MouseEvent) => {
-                  e.preventDefault();
                   e.stopPropagation();
-                  window.open(card.urlValue!, '_blank', 'noopener,noreferrer');
+                }}
+                onMouseDown={() => {
+                  document.body.addClass('dynamic-views-dragging');
+                }}
+                onMouseUp={() => {
+                  document.body.removeClass('dynamic-views-dragging');
+                }}
+                onDragStart={(e: DragEvent) => {
+                  e.stopPropagation();
+                  e.dataTransfer?.clearData();
+                  e.dataTransfer?.setData('text/plain', card.urlValue!);
+                  // Swap icon for URL text so browser captures text + URL ghost,
+                  // then restore icon on next frame (after ghost is captured)
+                  const el = e.currentTarget as HTMLElement | null;
+                  if (el) {
+                    el.textContent = card.urlValue!;
+                    requestAnimationFrame(() => {
+                      el.empty();
+                      setIcon(el, getUrlIcon());
+                    });
+                  }
+                }}
+                onDragEnd={() => {
+                  document.body.querySelector('.tooltip')?.remove();
+                  document.body.removeClass('dynamic-views-dragging');
                 }}
                 ref={(el: HTMLElement | null) => {
                   if (el) setIcon(el, getUrlIcon());

@@ -48,7 +48,7 @@ jobs:
             echo "BODY=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          SINCE=$(git log -1 --format=%aI "$PREV_TAG")
+          SINCE=$(TZ=UTC0 git log -1 --format='%ad' --date=iso-strict-local "$PREV_TAG" | sed 's/+00:00$/Z/')
 
           PRS=$(gh pr list --state merged --search "merged:>=${SINCE}" --limit 200 \
             --json number,title,author \

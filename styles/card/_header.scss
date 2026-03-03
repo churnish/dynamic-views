@@ -168,8 +168,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 
 /* Dim on touch/press for visual feedback (matches Bases <a> tag behavior) */
 .dynamic-views {
-  .card-title a,
-  .card-title .card-title-link {
+  .card-title a {
     text-decoration: none;
     color: inherit;
     font-weight: inherit;
@@ -178,7 +177,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     transition: opacity var(--anim-duration-fast) ease-in-out;
   }
 
-  .card-title .card-title-link:active {
+  .card-title a:active {
     opacity: 0.5;
   }
 
@@ -198,7 +197,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     text-decoration: underline;
     color: var(--text-normal);
   }
@@ -208,7 +207,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover
+    a:hover
     .card-title-ext-suffix {
     text-decoration: underline;
     text-decoration-color: var(--dynamic-views-title-color, var(--text-normal));

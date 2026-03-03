@@ -59,6 +59,9 @@ body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
 .dynamic-views-menu-positioning {
   visibility: hidden;
 }
+body.dynamic-views-dragging .tooltip {
+  display: none;
+}
 .dynamic-views-query-results-constrained {
   max-height: var(--dynamic-views-query-max-height);
   overflow-y: auto;

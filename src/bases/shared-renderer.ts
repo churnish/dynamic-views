@@ -1281,28 +1281,68 @@ export class SharedCardRenderer {
 
         if (hasTitle) {
           const titleEl = groupEl.createDiv('card-title');
+          titleEl.tabIndex = -1;
           renderTitleContent(titleEl);
         }
 
         if (hasSubtitle) {
           const subtitleEl = groupEl.createDiv('card-subtitle');
+          subtitleEl.tabIndex = -1;
           renderSubtitleContent(subtitleEl, settings.subtitleProperty);
         }
       }
 
       if (card.hasValidUrl && card.urlValue) {
-        const iconEl = headerEl.createDiv(
-          'card-title-url-icon text-icon-button svg-icon'
-        );
+        const iconEl = headerEl.createEl('a', {
+          cls: 'card-title-url-icon text-icon-button svg-icon',
+          href: card.urlValue,
+        });
         iconEl.setAttribute('aria-label', card.urlValue);
+        if (/^https?:\/\//i.test(card.urlValue)) {
+          iconEl.target = '_blank';
+          iconEl.rel = 'noopener noreferrer';
+        }
         setIcon(iconEl, getUrlIcon());
 
         iconEl.addEventListener(
           'click',
           (e) => {
-            e.preventDefault();
             e.stopPropagation();
-            window.open(card.urlValue!, '_blank', 'noopener,noreferrer');
+          },
+          { signal }
+        );
+        // Hide tooltips during drag via CSS class on body
+        iconEl.addEventListener(
+          'mousedown',
+          () => document.body.addClass('dynamic-views-dragging'),
+          { signal }
+        );
+        iconEl.addEventListener(
+          'mouseup',
+          () => document.body.removeClass('dynamic-views-dragging'),
+          { signal }
+        );
+        iconEl.addEventListener(
+          'dragstart',
+          (e) => {
+            e.stopPropagation();
+            e.dataTransfer?.clearData();
+            e.dataTransfer?.setData('text/plain', card.urlValue!);
+            // Swap icon for URL text so browser captures text + URL ghost,
+            // then restore icon on next frame (after ghost is captured)
+            iconEl.textContent = card.urlValue!;
+            requestAnimationFrame(() => {
+              iconEl.empty();
+              setIcon(iconEl, getUrlIcon());
+            });
+          },
+          { signal }
+        );
+        iconEl.addEventListener(
+          'dragend',
+          () => {
+            document.body.querySelector('.tooltip')?.remove();
+            document.body.removeClass('dynamic-views-dragging');
           },
           { signal }
         );
@@ -2023,6 +2063,7 @@ export class SharedCardRenderer {
       const titleBlock = cardEl.querySelector<HTMLElement>('.card-title-block');
       if (!titleBlock) return;
       targetEl = titleBlock.createDiv('card-subtitle');
+      targetEl.tabIndex = -1;
     } else {
       // Subtitle changed: clear old content
       targetEl.empty();

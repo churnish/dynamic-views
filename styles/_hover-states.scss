@@ -7,7 +7,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-muted);
   }
   :is(
@@ -17,7 +17,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-normal);
   }
   /* Normal - no hover color change */
@@ -28,7 +28,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-accent-hover);
   }
   /* Title color variants (red-pink, custom): 15% white mix using --dynamic-views-title-color-value */
@@ -49,7 +49,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: color-mix(in hsl, var(--dynamic-views-title-color-value), white 15%);
   }
 
@@ -61,7 +61,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-faint);
   }
   :is(
@@ -71,7 +71,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-muted);
   }
   :is(
@@ -81,7 +81,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-normal);
   }
   :is(
@@ -91,7 +91,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--text-accent-hover);
   }
   :is(
@@ -110,7 +110,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--dynamic-views-title-hover-color-value);
   }
   :is(
@@ -120,7 +120,7 @@
     .dynamic-views
     .card.hover-intent-active
     .card-title
-    :is(a, .card-title-link):hover {
+    a:hover {
     color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
   }
 
@@ -499,8 +499,7 @@
       cursor: default;
     }
 
-    .card-title a,
-    .card-title .card-title-link {
+    .card-title a {
       cursor: default;
     }
 

@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling. Datacore uses declarative Preact/JSX rendering without virtual scrolling. The detailed pipeline, guard system, and invariant sections below document the Bases implementation; see "Bases vs. Datacore" at the end for architectural differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-25
+last updated: 2026-03-03
 ---
 
 # Masonry layout system
@@ -275,6 +275,37 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Creation**: Guarded observers (`layoutResizeObserver`, `cardResizeObserver`) use `new (this.observerWindow ?? window).ResizeObserver(...)`. The `scrollResizeObserver` (recreated each call) uses a local `const RO = (container.ownerDocument.defaultView ?? window).ResizeObserver`.
 - **Per-card observers** (in `shared-renderer.ts`): No field needed — derive the window inline from `cardEl.ownerDocument.defaultView` at each creation site.
 
+## Group collapse/expand lifecycle
+
+Collapse is synchronous; expand is async. Both modify `virtualItems` and related data structures.
+
+### Collapse (`toggleGroupCollapse` — sync)
+
+1. `groupEl.empty()` — removes all child DOM nodes from the group container. The container element itself stays in the DOM (empty, hidden by CSS `.collapsed + .dynamic-views-group { display: none !important }`).
+2. **Cleanup loop** — for each `virtualItem` with matching `groupKey`:
+   - `handle.cleanup()` — tears down card event listeners, slideshow timers, etc.
+   - `cardResizeObserver.unobserve(el)` — stops observing detached element.
+   - Nulls `focusState.hoveredEl` if it points to a removed card.
+3. `virtualItems = virtualItems.filter(...)` — evicts all items for the collapsed group.
+4. `rebuildGroupIndex()` — rebuilds `virtualItemsByGroup` from the filtered array.
+5. `groupLayoutResults.delete(groupKey)` — removes stale layout result.
+6. `cachedGroupOffsets.delete(groupKey)` — defense-in-depth (rebuilt from DOM on next layout).
+7. Dispatches `scroll` event on `scrollEl` — triggers `checkAndLoad` for potential infinite scroll.
+
+**Critical**: `groupEl.empty()` must precede cleanup. The DOM must reflect the collapsed state before the scroll position adjustment at the end of the method (header proximity check).
+
+### Expand (`expandGroup` — async)
+
+1. Loads content for group entries via `loadContentForEntries()` (cache-hit fast path).
+2. Renders cards into `groupEl` via `renderCard()`, pushing new `VirtualItem` entries.
+3. `rebuildGroupIndex()`.
+4. Triggers layout via `updateLayoutRef.current('expand-group')`.
+5. **Version guard**: exits early if `renderState.version` changed during async gap.
+
+### Invariant
+
+`virtualItems` must never contain entries whose `el` references a detached DOM node. Before this cleanup was added, collapsing a group left stale items with `offsetHeight=0`, corrupting layout heights for all groups on the next expand.
+
 ## CSS positioning model
 
 Cards use `position: absolute` with direct inline styles for per-card positioning (eliminates CSS variable resolution overhead):
@@ -328,7 +359,7 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 2. **`groupLayoutResults` stores original measured heights**, not scaled. The proportional fast path intentionally omits `heights` from the stored result (scaled values would corrupt the merge in `appendBatch`). The DOM measurement and full layout paths store accurate DOM-measured heights. `appendBatch`'s merge handles missing heights via `?? []`.
 3. **`updateVirtualItemPositions` maps by group index.** `virtualItemsByGroup.get(key)[i]` ↔ `result.positions[i]`. Consistent because both use the same ordering. The proportional fast path bypasses this function and updates VirtualItems inline.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
-5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions. **Exception**: the proportional resize branch skips offset refresh — the 1x-pane-height buffer absorbs drift, and post-resize correction refreshes offsets within 200ms.
+5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The function does a full `.clear()` + rebuild from `.dynamic-views-group-section` DOM elements — not incremental. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions. **Exception**: the proportional resize branch skips offset refresh — the 1x-pane-height buffer absorbs drift, and post-resize correction refreshes offsets within 200ms.
 6. **Virtual scroll sync runs unconditionally after every position change.** Full measurement, batch append, correction, and proportional resize all call `syncVirtualScroll()`. During same-column-count resize, sync is cheap (0-3 mounts at edges from proportional drift). Skipping sync during resize caused blank space as items drifted outside the viewport without remounting.
 7. **Post-mount remeasure uses a leading throttle during scroll.** When `syncVirtualScroll` mounts new cards, corrections are spread across the scroll via `mountRemeasureTimeout` (`MOUNT_REMEASURE_MS` = 200ms). The first mount starts the timer; subsequent mounts during the cooldown are ignored (timer not reset). `onMountRemeasure()` fires, calling `remeasureAndReposition(skipTransition=true)`. `scrollRemeasureTimeout` now handles only `pendingDeferredResize`. `cardResizeObserver` catches residual drift after scroll ends. Uses `repositionWithStableColumns()` to preserve column assignments — prevents cascading column switching from small height changes. In grouped mode, `remeasureAndReposition` checks whether stable reposition introduced excessive column imbalance: if the stable column-height range exceeds 1.5× the greedy range AND the absolute difference exceeds `gap × 8`, it falls back to a full `calculateMasonryLayout()` for that group. This prevents column drift from amplifying across incremental batch appends. Ungrouped mode always uses stable columns — visual stability during scroll outweighs minor imbalance with a single group. Mid-scroll corrections use `skipTransition=true` (instant) — remaining drift is caught by the post-scroll safety net. Scroll compensation adjusts `scrollTop` after remeasure to keep the first visible card anchored. Skipped during active resize (cards have explicit heights) and during `batchLayoutPending` (unpositioned batch cards would corrupt `groupLayoutResults` heights, causing ~2700px gaps at batch boundaries). Image-load relayout also uses `remeasureAndReposition()` (stable columns) rather than a full `calculateMasonryLayout()` call — this prevents column reassignment when images finish loading, since height changes at that point are minor corrections, not structural changes requiring column rebalancing.
 8. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.
