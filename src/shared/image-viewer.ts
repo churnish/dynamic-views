@@ -14,15 +14,7 @@ import { getVaultPathFromResourceUrl, isExternalUrl } from '../utils/image';
 import { getCachedBlobUrl } from './slideshow';
 import { getOwnerWindow } from '../utils/owner-window';
 
-// Extend App type for undocumented dragManager API
-declare module 'obsidian' {
-  interface App {
-    dragManager: {
-      dragFile(evt: DragEvent, file: TFile): unknown;
-      onDragStart(evt: DragEvent, dragData: unknown): void;
-    };
-  }
-}
+// dragManager type declared in shared-renderer.ts
 
 /** Long-press detection threshold in ms */
 const LONG_PRESS_THRESHOLD = 500;

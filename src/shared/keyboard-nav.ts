@@ -389,6 +389,8 @@ export function setupHoverKeyboardNavigation(
 
     // Case 3: Not hovering but card has DOM focus → activate visible focus
     // and let the event propagate to the card's keydown handler for navigation.
+    // Do NOT call preventDefault/stopImmediatePropagation — the card's own
+    // keydown handler must receive this event to perform arrow navigation.
     // Only activate for cards in OUR container — when multiple views exist,
     // each registers this handler, and we must not activate focus cross-view.
     if (

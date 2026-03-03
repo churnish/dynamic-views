@@ -788,6 +788,16 @@ describe('property', () => {
       expect(isValidUri('vbscript://MsgBox("XSS")')).toBe(false);
       expect(isValidUri('JAVASCRIPT://anything')).toBe(false);
     });
+
+    it('rejects dangerous URI schemes in standard format (without ://)', () => {
+      expect(isValidUri('javascript:alert(1)')).toBe(false);
+      expect(isValidUri('data:text/html,<script>alert(1)</script>')).toBe(
+        false
+      );
+      expect(
+        isValidUri('data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==')
+      ).toBe(false);
+    });
   });
 
   describe('buildDisplayToSyntaxMap', () => {

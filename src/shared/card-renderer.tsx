@@ -546,7 +546,7 @@ export function cleanupAllImageViewers(): void {
   cleanupAllViewers(viewerCleanupFns, viewerClones);
 }
 
-// Extend App type to include isMobile property and dragManager
+// Extend App type (dragManager declared in shared-renderer.ts)
 declare module 'obsidian' {
   interface App {
     isMobile: boolean;
@@ -562,17 +562,6 @@ declare module 'obsidian' {
         }
       >;
       getPluginById(id: string): { instance?: unknown } | null;
-    };
-    dragManager: {
-      dragFile(evt: DragEvent, file: TFile): unknown;
-      dragLink(
-        evt: DragEvent,
-        linktext: string,
-        sourcePath: string,
-        title?: string,
-        source?: string
-      ): unknown;
-      onDragStart(evt: DragEvent, dragData: unknown): void;
     };
   }
 }
@@ -1954,10 +1943,12 @@ function Card({
           }
         }
       }}
-      draggable={settings.openFileAction === 'card' && !isPosterClickReveal}
+      draggable={settings.openFileAction === 'card'}
       onDragStart={
-        settings.openFileAction === 'card' && !isPosterClickReveal
-          ? handleDrag
+        settings.openFileAction === 'card'
+          ? isPosterClickReveal
+            ? (e: DragEvent) => e.preventDefault() // Block card drag but keep draggable="true" so Chromium doesn't suppress child <a> drag
+            : handleDrag
           : undefined
       }
       tabIndex={index === focusableCardIndex ? 0 : -1}
@@ -2209,6 +2200,7 @@ function Card({
                     className="card-title-url-icon text-icon-button svg-icon"
                     aria-label={card.urlValue}
                     href={card.urlValue}
+                    draggable={true}
                     target={isWebUrl ? '_blank' : undefined}
                     rel={isWebUrl ? 'noopener noreferrer' : undefined}
                     onClick={(e: MouseEvent) => {
