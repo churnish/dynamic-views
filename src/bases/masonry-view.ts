@@ -295,7 +295,29 @@ export class DynamicViewsMasonryView extends BasesView {
       // synchronous so no paint occurs between removing sticky and adjusting
       // scroll (prevents flicker). Empty first so the measurement reflects
       // the final layout (group content removed).
-      if (groupEl) groupEl.empty();
+      if (groupEl) {
+        groupEl.empty();
+
+        // Clean up virtualItems for the collapsed group
+        const collapseGroupKey = getGroupKeyDataset(groupEl);
+        for (const item of this.virtualItems) {
+          if (item.groupKey === collapseGroupKey) {
+            item.handle?.cleanup();
+            if (item.el) {
+              this.cardResizeObserver?.unobserve(item.el);
+              if (this.focusState.hoveredEl === item.el) {
+                this.focusState.hoveredEl = null;
+              }
+            }
+          }
+        }
+        this.virtualItems = this.virtualItems.filter(
+          (v) => v.groupKey !== collapseGroupKey
+        );
+        this.rebuildGroupIndex();
+        this.groupLayoutResults.delete(collapseGroupKey);
+      }
+
       this.renderState.lastRenderHash = '';
       const headerTop = headerEl.getBoundingClientRect().top;
       const scrollTop = this.scrollEl.getBoundingClientRect().top;
@@ -1355,6 +1377,7 @@ export class DynamicViewsMasonryView extends BasesView {
         this.pendingResizeWidth !== null
           ? this.pendingResizeWidth
           : Math.floor(this.masonryContainer.getBoundingClientRect().width);
+
       if (containerWidth === 0) return;
 
       // Suppress full relayouts while an incremental batch layout is pending.
@@ -1752,7 +1775,10 @@ export class DynamicViewsMasonryView extends BasesView {
         void allCards[0]?.offsetHeight;
 
         // Phase 3: Read all heights (single pass)
-        const heights = allCards.map((card) => card.offsetHeight);
+        const heightMap = new Map<HTMLElement, number>();
+        for (const card of allCards) {
+          heightMap.set(card, card.offsetHeight);
+        }
 
         // Phase 3b: Measure scalable heights (still in same reflow — no style
         // writes since Phase 3, so child offsetHeight reads are free)
@@ -1773,15 +1799,11 @@ export class DynamicViewsMasonryView extends BasesView {
             groupCardsMap.set(groupEl, groupCards);
           }
 
-          let cardIndex = 0;
           for (const groupEl of groups) {
             const groupCards = groupCardsMap.get(groupEl) ?? [];
             if (groupCards.length === 0) continue;
 
-            const groupHeights = heights.slice(
-              cardIndex,
-              cardIndex + groupCards.length
-            );
+            const groupHeights = groupCards.map((c) => heightMap.get(c) ?? 0);
             const groupKey = getGroupKeyDataset(groupEl);
 
             const existingResult = this.groupLayoutResults.get(groupKey);
@@ -1872,10 +1894,10 @@ export class DynamicViewsMasonryView extends BasesView {
             result.measuredAtCardWidth = cardWidth;
             this.groupLayoutResults.set(groupKey, result);
             this.updateVirtualItemPositions(groupKey, result);
-            cardIndex += groupCards.length;
           }
         } else {
           // Ungrouped mode
+          const heights = allCards.map((c) => heightMap.get(c) ?? 0);
           const existingResult = this.groupLayoutResults.get(undefined);
           let result: MasonryLayoutResult;
           if (
