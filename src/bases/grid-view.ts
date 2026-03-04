@@ -480,11 +480,7 @@ export class DynamicViewsGridView extends BasesView {
       cls: 'dynamic-views dynamic-views-bases-container',
     });
 
-    // Prevent FOUC in popout windows: inline visibility:hidden travels with the
-    // DOM when adopted into a new document; the plugin stylesheet overrides it
-    // with !important once Obsidian copies styles to the popout (~300ms later).
-    // Must be inline style — CSS classes don't work before stylesheets load.
-    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
+    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- Popout FOUC guard: Obsidian copies <style> tags ~300ms after popout creation. Inline styles travel with the adopted DOM, hiding content before any paint. CSS classes can't help — their rules aren't loaded yet either.
     scrollEl
       .closest<HTMLElement>('.view-content')
       ?.style.setProperty('visibility', 'hidden');
