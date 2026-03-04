@@ -5,6 +5,16 @@
   --bases-view-padding: var(--size-4-3);
 }
 
+/* Override inline visibility:hidden set by the view constructor (FOUC guard).
+   The inline style travels with the DOM to popout windows, hiding content before
+   Obsidian copies stylesheets (~300ms). Conditional on .dynamic-views-loaded so
+   content stays hidden until body classes are also synced (~357ms). */
+body.dynamic-views-loaded
+  .workspace-leaf-content[data-type='bases']
+  > .view-content {
+  visibility: visible !important;
+}
+
 /* View background - Bases files only (not embeds) */
 .workspace-leaf-content[data-type='bases']
   .bases-view[data-view-type='dynamic-views-grid'],
