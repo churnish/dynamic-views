@@ -76,9 +76,6 @@ export default class DynamicViews extends Plugin {
     this.persistenceManager = new PersistenceManager(this);
     await this.persistenceManager.load();
 
-    // Sentinel class: CSS hides Bases view content when absent (prevents popout FOUC)
-    document.body.classList.add('dynamic-views-loaded');
-
     // Set initial body classes for settings
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.add(
@@ -469,7 +466,6 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
 
   onunload() {
     // Remove body classes added during load
-    document.body.classList.remove('dynamic-views-loaded');
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(
       `dynamic-views-open-on-${settings.openFileAction}`
