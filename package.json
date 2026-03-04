@@ -45,6 +45,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-obsidianmd": "^0.1.9",
     "globals": "^17.3.0",
+    "jsdom": "^25.0.1",
     "knip": "^5.80.0",
     "obsidian": "^1.11.4",
     "prettier": "^3.8.1",
