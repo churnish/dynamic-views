@@ -126,6 +126,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
   private _previousCustomClasses: string[] = [];
+  private currentDoc: Document = document;
+  private disconnectStyleObserver: (() => void) | null = null;
 
   // Consolidated state objects (shared patterns with grid-view)
   private contentCache: ContentCache = {
@@ -602,6 +604,16 @@ export class DynamicViewsMasonryView extends BasesView {
     this.containerEl = scrollEl.createDiv({
       cls: 'dynamic-views dynamic-views-bases-container',
     });
+
+    // Prevent FOUC in popout windows: inline visibility:hidden travels with the
+    // DOM when adopted into a new document; the plugin stylesheet overrides it
+    // with !important once Obsidian copies styles to the popout (~300ms later).
+    // Must be inline style — CSS classes don't work before stylesheets load.
+    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
+    scrollEl
+      .closest<HTMLElement>('.view-content')
+      ?.style.setProperty('visibility', 'hidden');
+
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
@@ -619,11 +631,22 @@ export class DynamicViewsMasonryView extends BasesView {
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
     // Watch for Dynamic Views Style Settings changes only
-    const disconnectObserver = setupStyleSettingsObserver(() => {
+    this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
       resetGapCache(); // Invalidate gap cache on settings change
       this.onDataUpdated();
     }, this.containerEl);
-    this.register(disconnectObserver);
+    this.register(() => this.disconnectStyleObserver?.());
+
+    // Detect popout move: sync body classes + rebind observer to new document
+    this.registerEvent(
+      this.app.workspace.on('layout-change', () => {
+        const ownerDoc = this.containerEl.ownerDocument;
+        if (ownerDoc !== this.currentDoc) {
+          this.currentDoc = ownerDoc;
+          this.handleDocumentChange(ownerDoc);
+        }
+      })
+    );
 
     // Re-render when plugin settings change from the settings tab
     const pluginSettingsHandler = () => {
@@ -706,6 +729,27 @@ export class DynamicViewsMasonryView extends BasesView {
         app: this.app,
       });
     }
+  }
+
+  /** Handle view moving to a different document (popout window) */
+  private handleDocumentChange(newDoc: Document): void {
+    // Sync body classes from main window so CSS rules match immediately
+    if (newDoc !== document) {
+      for (const cls of document.body.classList) {
+        if (
+          cls.startsWith('dynamic-views-') ||
+          cls === 'css-settings-manager'
+        ) {
+          newDoc.body.classList.add(cls);
+        }
+      }
+    }
+    // Rebind style observer to new document's body
+    this.disconnectStyleObserver?.();
+    this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
+      resetGapCache();
+      this.onDataUpdated();
+    }, this.containerEl);
   }
 
   onload(): void {
