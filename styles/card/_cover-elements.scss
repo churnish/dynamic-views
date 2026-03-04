@@ -40,16 +40,8 @@
   /* Grid cover-bottom: push properties-bottom to bottom of card */
   .dynamic-views-grid
     .card.card-cover-bottom.image-format-cover
-    .card-properties-bottom:not(:first-child) {
+    .card-properties-bottom {
     margin-top: auto;
-    padding-top: var(--size-4-2);
-  }
-
-  .dynamic-views-grid
-    .card.card-cover-bottom.image-format-cover
-    .card-properties-bottom:only-child {
-    margin-top: auto;
-    padding-top: 0;
   }
 
   /* Grid cover-bottom: .card-content grows to push cover wrapper to bottom */

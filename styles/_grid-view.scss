@@ -98,29 +98,6 @@
     margin-top: auto;
   }
 
-  /* Add spacing above properties-bottom when visible content exists above.
-     Avoids nested :has() inside :not() — unsupported in Electron/Chrome. */
-  .dynamic-views-grid
-    .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-    .card-body:has(> .card-properties-top)
-    > .card-properties-bottom,
-  .dynamic-views-grid
-    .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-    .card-body
-    > .card-previews
-    + .card-properties-bottom {
-    padding-top: var(--size-4-2);
-  }
-
-  /* No spacing when previews only contains a hidden placeholder */
-  .dynamic-views-grid
-    .card:not(.card-cover-bottom):not(.card-cover-top.image-format-cover)
-    .card-body
-    > .card-previews:has(> .card-thumbnail-placeholder:only-child)
-    + .card-properties-bottom {
-    padding-top: 0;
-  }
-
   /* Grid: cover-top — fixed cover height, gap absorbs remaining space.
      Content stays natural height with text top-aligned. */
   .dynamic-views-grid .card.card-cover-top .card-previews {
@@ -138,17 +115,6 @@
     .card.card-cover-top.image-format-cover:has(.card-properties-bottom)
     .card-properties-bottom {
     margin-top: auto;
-  }
-
-  /* Add padding-top only when body content exists above properties-bottom.
-     card-header is excluded — owl selector on card-content already spaces header from body. */
-  .dynamic-views-grid
-    .card.card-cover-top.image-format-cover:has(
-      .card-previews,
-      .card-properties-top
-    )
-    .card-properties-bottom {
-    padding-top: var(--size-4-2);
   }
 
   .dynamic-views-grid .card.card-cover-top.image-format-cover .card-cover,

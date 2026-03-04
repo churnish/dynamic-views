@@ -8,14 +8,10 @@
     cursor: pointer;
   }
 
-  /* Spacing between card-header and card-body inside .card-content */
-  .card .card-content > * + *:not(:empty) {
-    margin-top: var(--size-4-2);
-  }
-
-  /* Spacing between elements inside card-body (properties-top, previews, properties-bottom) */
-  .card .card-body > * + *:not(:empty) {
-    margin-top: var(--size-4-2);
+  /* Spacing between card-header and card-body, and between body children */
+  .card .card-content,
+  .card .card-body {
+    gap: var(--size-4-1);
   }
 
   /* Grid: card-content fills available space, aligns children to top */

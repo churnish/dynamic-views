@@ -49,46 +49,6 @@
     .card:not(.card-cover-bottom) .card-properties-bottom {
       margin-top: auto;
     }
-
-    /* Add spacing above properties-bottom when visible content exists above.
-       Avoids nested :has() inside :not() — unsupported in Electron/Chrome. */
-    .card:not(.card-cover-bottom)
-      .card-body:has(> .card-properties-top)
-      > .card-properties-bottom,
-    .card:not(.card-cover-bottom)
-      .card-body
-      > .card-previews
-      + .card-properties-bottom {
-      padding-top: var(--size-4-2);
-    }
-
-    /* No spacing when previews only contains a hidden placeholder */
-    .card:not(.card-cover-bottom)
-      .card-body
-      > .card-previews:has(> .card-thumbnail-placeholder:only-child)
-      + .card-properties-bottom {
-      padding-top: 0;
-    }
-
-    /* Masonry cover-bottom: properties-bottom needs spacing from content above.
-       margin-top: auto has no effect in masonry (no fixed height), so use a fixed margin. */
-    .card.card-cover-bottom
-      .card-body:has(> .card-properties-top)
-      > .card-properties-bottom,
-    .card.card-cover-bottom
-      .card-body
-      > .card-previews
-      + .card-properties-bottom {
-      margin-top: var(--size-4-2);
-    }
-
-    /* No spacing when previews only contains a hidden placeholder (cover-bottom) */
-    .card.card-cover-bottom
-      .card-body
-      > .card-previews:has(> .card-thumbnail-placeholder:only-child)
-      + .card-properties-bottom {
-      margin-top: 0;
-    }
   }
 }
 
