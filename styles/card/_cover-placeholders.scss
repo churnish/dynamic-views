@@ -231,7 +231,7 @@ body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
   display: block;
 }
 
-/* Masonry with placeholders disabled: zero title-subtitle gap (higher specificity to beat owl selector) */
+/* Masonry with placeholders disabled: zero title-subtitle gap (higher specificity to beat card-body gap) */
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-masonry

@@ -14,12 +14,7 @@
     gap: var(--size-4-2);
   }
 
-  /* Remove spacing from properties-top when it's first visible element (no header) */
-  .card.image-format-cover:not(:has(.card-header)) .card-properties-top {
-    margin-top: 0;
-  }
-
-  /* Title-subtitle: explicitly zero gap (owl selector would add spacing; title and subtitle should sit flush) */
+  /* Title-subtitle: explicitly zero gap (card-body gap would add spacing; title and subtitle should sit flush) */
   .card.image-format-cover:has(
       .card-cover-wrapper:not(.card-cover-wrapper-placeholder)
     )
