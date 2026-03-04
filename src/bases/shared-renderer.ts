@@ -1291,6 +1291,11 @@ export class SharedCardRenderer {
           iconEl.rel = 'noopener noreferrer';
         }
         setIcon(iconEl, getUrlIcon());
+        // Hidden text for native link drag ghost — Chromium uses textContent
+        // to generate the 2-line ghost (title + URL). Without text, only the
+        // SVG icon appears as the ghost.
+        const dragText = iconEl.createSpan('dynamic-views-drag-text');
+        dragText.textContent = card.urlValue;
 
         iconEl.addEventListener(
           'click',
@@ -1319,9 +1324,7 @@ export class SharedCardRenderer {
           'dragstart',
           (e) => {
             e.stopPropagation();
-            e.dataTransfer?.clearData();
-            e.dataTransfer?.setData('text/plain', card.urlValue!);
-            // No text swap — browser's native <a href> drag ghost shows the URL
+            if (e.dataTransfer) e.dataTransfer.effectAllowed = 'link';
           },
           { signal }
         );

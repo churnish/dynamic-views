@@ -62,6 +62,14 @@ body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
 body.dynamic-views-dragging .tooltip {
   display: none;
 }
+.dynamic-views-drag-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
 .dynamic-views-query-results-constrained {
   max-height: var(--dynamic-views-query-max-height);
   overflow-y: auto;

@@ -2225,7 +2225,16 @@ function Card({
                 }}
                 ref={(el: HTMLElement | null) => {
                   if (!el) return;
-                  if (!el.hasChildNodes()) setIcon(el, getUrlIcon());
+                  if (!el.hasChildNodes()) {
+                    setIcon(el, getUrlIcon());
+                    // Hidden text for native link drag ghost — Chromium uses
+                    // textContent to generate the 2-line ghost (title + URL).
+                    // Without text, only the SVG icon appears as the ghost.
+                    const dragText = el.ownerDocument.createElement('span');
+                    dragText.className = 'dynamic-views-drag-text';
+                    dragText.textContent = card.urlValue!;
+                    el.appendChild(dragText);
+                  }
                   // Native listeners for drag — Preact's JSX event props
                   // interfere with Chromium's native drag initiation on <a>
                   // elements, causing intermittent failures. addEventListener
@@ -2245,10 +2254,7 @@ function Card({
                   });
                   el.addEventListener('dragstart', (e) => {
                     e.stopPropagation();
-                    e.dataTransfer?.clearData();
-                    e.dataTransfer?.setData('text/plain', card.urlValue!);
-                    // No text swap or setDragImage — the browser's native
-                    // drag ghost for <a href> already shows the URL text
+                    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'link';
                   });
                   el.addEventListener('dragend', () => {
                     const body = el.ownerDocument.body;
