@@ -76,8 +76,18 @@ export default class DynamicViews extends Plugin {
     this.persistenceManager = new PersistenceManager(this);
     await this.persistenceManager.load();
 
-    // Sentinel class: CSS hides Bases view content when absent (prevents popout FOUC)
-    document.body.classList.add('dynamic-views-loaded');
+    // Hide DV content in popout windows until handleDocumentChange runs.
+    // Obsidian mirrors body classes instantly and recreates .view-content
+    // (destroying inline styles), so a body-class CSS override doesn't work.
+    this.registerEvent(
+      this.app.workspace.on('window-open', (wsWindow) => {
+        const guard = wsWindow.doc.createElement('style');
+        guard.id = 'dynamic-views-fouc-guard';
+        guard.textContent =
+          '.workspace-leaf-content[data-type="bases"] > .view-content { visibility: hidden !important; }';
+        wsWindow.doc.head.appendChild(guard);
+      })
+    );
 
     // Set initial body classes for settings
     const settings = this.persistenceManager.getPluginSettings();
@@ -468,8 +478,16 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
   }
 
   onunload() {
+    // Remove FOUC guards from any open popout windows
+    (
+      this.app.workspace as unknown as {
+        floatingSplit?: { children: { doc: Document }[] };
+      }
+    ).floatingSplit?.children.forEach((wsWindow) => {
+      wsWindow.doc.getElementById('dynamic-views-fouc-guard')?.remove();
+    });
+
     // Remove body classes added during load
-    document.body.classList.remove('dynamic-views-loaded');
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(
       `dynamic-views-open-on-${settings.openFileAction}`

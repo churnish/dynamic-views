@@ -2,17 +2,7 @@
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
   container-type: inline-size;
-  --bases-view-padding: var(--size-4-3);
-}
-
-/* Override inline visibility:hidden set by the view constructor (FOUC guard).
-   The inline style travels with the DOM to popout windows, hiding content before
-   Obsidian copies stylesheets (~300ms). Conditional on .dynamic-views-loaded so
-   content stays hidden until body classes are also synced (~357ms). */
-body.dynamic-views-loaded
-  .workspace-leaf-content[data-type='bases']
-  > .view-content {
-  visibility: visible !important;
+  --bases-view-padding: var(--size-4-3, 12px);
 }
 
 /* View background - Bases files only (not embeds) */
@@ -51,7 +41,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
   position: sticky;
   top: -12px;
   overflow: visible;
-  padding-bottom: calc(var(--size-2-2) + 1px);
+  padding-bottom: calc(var(--size-2-2, 4px) + 1px);
   container-type: scroll-state;
   container-name: dynamic-views-group-heading;
 
@@ -72,7 +62,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
     bottom: 0;
     left: calc(-1 * var(--bases-view-padding));
     right: calc(-1 * var(--bases-view-padding));
-    background: var(--background-primary);
+    background: var(--background-primary, #ffffff);
     z-index: -1;
   }
 
@@ -96,7 +86,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
     left: calc(-1 * var(--bases-view-padding));
     right: calc(-1 * var(--bases-view-padding));
     height: 1px;
-    background: var(--bases-table-border-color);
+    background: var(--bases-table-border-color, #e0e0e0);
   }
 }
 
@@ -160,14 +150,14 @@ body.dynamic-views-hide-group-property-labels
   .bases-group-heading {
     display: flex;
     align-items: center;
-    gap: var(--size-2-2);
+    gap: var(--size-2-2, 4px);
   }
 
   /* Clickable region: chevron + property + value */
   .bases-group-collapse-region {
     display: flex;
     align-items: center;
-    gap: var(--size-2-2);
+    gap: var(--size-2-2, 4px);
     cursor: pointer;
   }
 
@@ -176,7 +166,7 @@ body.dynamic-views-hide-group-property-labels
     display: flex;
     align-items: center;
     flex-shrink: 0;
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
 
     svg {
       width: 16px;
@@ -188,7 +178,7 @@ body.dynamic-views-hide-group-property-labels
   /* Rotate + accent color when collapsed */
   .bases-group-heading.collapsed .bases-group-collapse-btn svg {
     transform: rotate(-90deg);
-    color: var(--color-accent);
+    color: var(--color-accent, hsl(258, 88%, 66%));
   }
 
   /* Hide card container when heading is collapsed (adjacent sibling) */
@@ -198,15 +188,15 @@ body.dynamic-views-hide-group-property-labels
 
   /* Group header property label */
   .bases-group-property {
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
+    color: var(--text-muted, #5c5c5c);
+    font-size: var(--font-ui-small, 13px);
   }
 
   /* Group header result count - match property label style */
   .bases-group-count {
-    color: var(--text-muted);
-    font-size: var(--font-ui-smaller);
-    padding-left: var(--size-2-3);
+    color: var(--text-muted, #5c5c5c);
+    font-size: var(--font-ui-smaller, 12px);
+    padding-left: var(--size-2-3, 6px);
   }
 
   /* Group header value containers - match vanilla Bases structure */
@@ -214,7 +204,7 @@ body.dynamic-views-hide-group-property-labels
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--size-2-2);
+    gap: var(--size-2-2, 4px);
   }
 
   .bases-group-value .value-list-element {
@@ -231,7 +221,7 @@ body.dynamic-views-hide-group-property-labels
     padding: var(--dynamic-views-card-padding, 8px);
     margin: 0;
     /* Resolved card background — overridden by transparent/custom modes */
-    --card-bg: var(--background-primary-alt);
+    --card-bg: var(--background-primary-alt, #fafafa);
     background-color: var(--card-bg);
     /* Placeholder bg */
     --dynamic-views-image-background-dimmed: rgb(
@@ -255,9 +245,11 @@ body.dynamic-views-hide-group-property-labels
        Hover only changes --card-border-visual to avoid layout reflow. */
     --card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
     --card-border-visual: var(--card-border-thickness);
-    --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness));
+    --cover-inset-computed: calc(
+      var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness)
+    );
     /* Resolved card border color — shared by ::after and cover-content divider */
-    --card-border-color: var(--background-modifier-border);
+    --card-border-color: var(--background-modifier-border, #e0e0e0);
 
     /* Border as pseudo-element so it appears on top of covers and card content */
     &::after {

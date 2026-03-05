@@ -480,21 +480,6 @@ export class DynamicViewsGridView extends BasesView {
       cls: 'dynamic-views dynamic-views-bases-container',
     });
 
-    // Prevent FOUC in popout windows: inline visibility:hidden travels with the
-    // DOM when adopted into a new document; the plugin stylesheet overrides it
-    // with !important once Obsidian copies styles to the popout (~300ms later).
-    // Must be inline style — CSS classes don't work before stylesheets load.
-    // Skip for embedded views (inside markdown leaves) — they don't move to popouts.
-    const leafContent = scrollEl.closest<HTMLElement>(
-      '.workspace-leaf-content'
-    );
-    if (leafContent?.getAttribute('data-type') === 'bases') {
-      // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
-      leafContent
-        .querySelector<HTMLElement>(':scope > .view-content')
-        ?.style.setProperty('visibility', 'hidden');
-    }
-
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
       this.app,
@@ -577,6 +562,9 @@ export class DynamicViewsGridView extends BasesView {
         }
       }
     }
+    // Remove FOUC guard injected by window-open handler
+    newDoc.getElementById('dynamic-views-fouc-guard')?.remove();
+
     // Rebind style observer to new document's body
     this.disconnectStyleObserver?.();
     this.disconnectStyleObserver = setupStyleSettingsObserver(
