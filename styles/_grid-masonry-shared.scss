@@ -251,8 +251,10 @@ body.dynamic-views-hide-group-property-labels
       background-color var(--anim-duration-fast, 140ms) ease,
       scale var(--anim-duration-fast, 140ms) ease,
       translate var(--anim-duration-fast, 140ms) ease;
-    /* Cover inset: user setting + 1px offset for border */
+    /* Border thickness: layout (insets, dividers) vs visual (::after).
+       Hover only changes --card-border-visual to avoid layout reflow. */
     --card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
+    --card-border-visual: var(--card-border-thickness);
     --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness));
     /* Resolved card border color — shared by ::after and cover-content divider */
     --card-border-color: var(--background-modifier-border);
@@ -264,7 +266,7 @@ body.dynamic-views-hide-group-property-labels
       inset: 0;
       z-index: 5;
       border-radius: var(--dynamic-views-card-border-radius, 8px);
-      box-shadow: inset 0 0 0 var(--card-border-thickness) var(--card-border-color);
+      box-shadow: inset 0 0 0 var(--card-border-visual) var(--card-border-color);
       pointer-events: none;
       transition: box-shadow var(--anim-duration-fast, 140ms) ease-in-out;
     }

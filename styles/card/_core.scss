@@ -80,7 +80,7 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
 /* Card border color on hover presets */
 @media (hover: hover) {
   .dynamic-views .card.hover-intent-active:hover {
-    --card-border-thickness: var(--dynamic-views-card-border-thickness-hover, 1px);
+    --card-border-visual: var(--dynamic-views-card-border-thickness-hover, 1px);
   }
 
   /* Muted (default) */

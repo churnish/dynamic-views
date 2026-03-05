@@ -105,26 +105,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-card-padding
-        title: Card padding
-        description: Padding from card edges to content.
-        type: variable-number-slider
-        default: 8
-        min: 0
-        max: 24
-        step: 1
-        format: px
-    -
-        id: dynamic-views-card-border-radius
-        title: Card border radius
-        description: Corner roundness of cards.
-        type: variable-number-slider
-        default: 8
-        min: 0
-        max: 32
-        step: 1
-        format: px
-    -
         id: dynamic-views-card-hover-elevate
         title: Elevate
         description: Lift the card up slightly on hover.
@@ -135,13 +115,48 @@ settings:
         description: Make the card slightly larger on hover.
         type: class-toggle
     -
-        id: dynamic-views-no-fade-truncated-text
-        title: Hide scroll gradient
-        description: Do not show gradient fade on scrollable text elements.
-        type: class-toggle
+        id: dynamic-views-card-padding
+        title: Padding
+        description: Gap from card edge to content.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 24
+        step: 1
+        format: px
+    -
+        id: dynamic-views-card-border-radius
+        title: Border radius
+        description: Corner roundness of cards.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-card-border-thickness
+        title: Border thickness
+        description: Thickness of card border. Set to 0 to hide.
+        type: variable-number-slider
+        default: 1
+        min: 0
+        max: 24
+        step: 1
+        format: px
+    -
+        id: dynamic-views-card-border-thickness-hover
+        title: Border thickness (hover)
+        description: Thickness of card border on hover. Set to 0 to hide.
+        type: variable-number-slider
+        default: 1
+        min: 0
+        max: 24
+        step: 1
+        format: px
     -
         id: dynamic-views-card-background
-        title: Card background
+        title: Background
         description: Card background appearance.
         type: class-select
         allowEmpty: false
@@ -158,15 +173,15 @@ settings:
                 value: dynamic-views-card-background-custom
     -
         id: dynamic-views-card-background-color-custom
-        title: Custom card background
-        description: Custom color for card backgrounds.
+        title: Custom background
+        description: Custom color for card background.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
         id: dynamic-views-card-background-hover
-        title: Card background (hover)
+        title: Background (hover)
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-background-hover-transparent
@@ -185,16 +200,16 @@ settings:
                 value: dynamic-views-card-background-hover-custom
     -
         id: dynamic-views-card-background-color-hover-custom
-        title: Custom card background (hover)
-        description: Custom color for card backgrounds on hover.
+        title: Custom background (hover)
+        description: Custom color for card background on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
         id: dynamic-views-card-border-color
-        title: Card border color
-        description: Theme color preset for card borders.
+        title: Border color
+        description: Theme color preset for card border.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-border-color-faint
@@ -240,26 +255,16 @@ settings:
                 value: dynamic-views-card-border-color-custom
     -
         id: dynamic-views-card-border-color-custom
-        title: Custom card border color
-        description: Custom color for card borders.
+        title: Custom border color
+        description: Custom color for card border.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-card-border-thickness
-        title: Card border thickness
-        description: Border thickness in pixels. Set to 0 to remove borders.
-        type: variable-number-slider
-        default: 1
-        min: 0
-        max: 24
-        step: 1
-        format: px
-    -
         id: dynamic-views-card-border-color-hover
-        title: Card border color (hover)
-        description: Theme color preset for card borders on hover.
+        title: Border color (hover)
+        description: Theme color preset for card border on hover.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-border-color-hover-muted
@@ -305,25 +310,15 @@ settings:
                 value: dynamic-views-card-border-color-hover-custom
     -
         id: dynamic-views-card-border-color-hover-custom
-        title: Custom card border color (hover)
+        title: Custom border color (hover)
         description: Custom color for card borders on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-card-border-thickness-hover
-        title: Card border thickness (hover)
-        description: Border thickness on hover. Set to 0 to remove borders on hover.
-        type: variable-number-slider
-        default: 1
-        min: 0
-        max: 24
-        step: 1
-        format: px
-    -
         id: dynamic-views-card-shadow
-        title: Card shadow
+        title: Shadow
         description: Drop shadow behind cards. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
@@ -343,7 +338,7 @@ settings:
                 value: dynamic-views-card-shadow-dramatic
     -
         id: dynamic-views-card-shadow-hover
-        title: Card shadow (hover)
+        title: Shadow (hover)
         description: Drop shadow behind cards on hover. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
@@ -361,6 +356,11 @@ settings:
             -
                 label: Dramatic
                 value: dynamic-views-card-shadow-hover-dramatic
+    -
+        id: dynamic-views-no-fade-truncated-text
+        title: Hide scroll gradient
+        description: Do not show gradient fade on scrollable text elements.
+        type: class-toggle
     -
         id: covers-heading
         title: Covers
