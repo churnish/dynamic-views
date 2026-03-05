@@ -107,13 +107,14 @@ settings:
     -
         id: dynamic-views-card-hover-elevate
         title: Elevate
-        description: Lift the card up slightly on hover.
+        description: Lift the card up slightly on hover. Does not apply in embedded views.
         type: class-toggle
     -
-        id: dynamic-views-card-hover-grow
-        title: Grow
-        description: Make the card slightly larger on hover.
+        id: dynamic-views-card-hover-enlarge
+        title: Enlarge
+        description: Make the card slightly larger on hover. Does not apply in embedded views.
         type: class-toggle
+        default: true
     -
         id: dynamic-views-card-padding
         title: Padding
@@ -342,7 +343,7 @@ settings:
         description: Drop shadow behind cards on hover. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-card-shadow-hover-none
+        default: dynamic-views-card-shadow-hover-subtle
         options:
             -
                 label: Disable
@@ -1418,6 +1419,12 @@ settings:
         title: Hide scrubbing shadow
         description: Do not show the shadow/glow below thumbnails with multiple images.
         type: class-toggle
+        default: true
+    -
+        id: dynamic-views-hide-scrubbing-indicator
+        title: Hide scrubbing indicator
+        description: Hide indicator icon on thumbnails with multiple images.
+        type: class-toggle
         default: false
     -
         id: title-heading
@@ -1693,6 +1700,9 @@ body.is-mobile
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-thumbnail-shadow'],
+body.dynamic-views-disable-thumbnail-scrubbing
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],
 body:not(.dynamic-views-title-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-title-color-custom'],

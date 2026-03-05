@@ -77,6 +77,7 @@
 
 .dynamic-views {
   .card-thumbnail {
+    position: relative;
     flex-shrink: 0;
     width: var(--dynamic-views-thumbnail-size, 80px);
     height: calc(
@@ -93,6 +94,43 @@
   .card-thumbnail-placeholder {
     display: none;
   }
+
+  .card-thumbnail.multi-image .thumbnail-indicator {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
+    transition: opacity var(--anim-duration-moderate, 300ms) ease;
+
+    svg {
+      width: var(--icon-xs);
+      height: var(--icon-xs);
+      transform: scaleX(-1);
+      color: white;
+      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
+        drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+    }
+  }
+}
+
+/* Hide scrubbing indicator on hover intent */
+@media (hover: hover) {
+  .dynamic-views .card-thumbnail.scrub-hover .thumbnail-indicator {
+    opacity: 0;
+  }
+}
+
+/* Hide scrubbing indicator when toggle is on */
+body.dynamic-views-hide-scrubbing-indicator
+  .dynamic-views
+  .card-thumbnail
+  .thumbnail-indicator {
+  display: none;
 }
 
 /* Show thumbnail placeholder when enabled in Style Settings */

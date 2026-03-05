@@ -120,8 +120,8 @@
 /* Show arrows on hover (desktop only - mobile uses swipe gestures) */
 @media (hover: hover) {
   .dynamic-views {
-    .card-cover-slideshow:hover .slideshow-nav-left,
-    .card-cover-slideshow:hover .slideshow-nav-right {
+    .card.hover-intent-active .card-cover-slideshow .slideshow-nav-left,
+    .card.hover-intent-active .card-cover-slideshow .slideshow-nav-right {
       opacity: 1;
     }
 
@@ -164,9 +164,29 @@
   display: none;
 }
 
-/* Hide nav arrows when setting enabled */
-body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-left,
-body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
+/* Navigation arrows: Show — always visible, indicator hidden */
+body.dynamic-views-slideshow-arrows-show .dynamic-views {
+  .slideshow-nav-left,
+  .slideshow-nav-right {
+    opacity: 1;
+  }
+
+  .slideshow-indicator {
+    display: none;
+  }
+}
+
+/* Navigation arrows: Show — override mobile hide */
+body.dynamic-views-slideshow-arrows-show.is-mobile .dynamic-views {
+  .slideshow-nav-left,
+  .slideshow-nav-right {
+    display: flex;
+  }
+}
+
+/* Navigation arrows: Hide */
+body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-left,
+body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
   display: none;
 }
 
@@ -174,7 +194,8 @@ body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
 @media (hover: hover) {
   body.dynamic-views-slideshow-disable-looping
     .dynamic-views
-    .card-cover-slideshow:hover {
+    .card.hover-intent-active
+    .card-cover-slideshow {
     &.slideshow-at-first .slideshow-nav-left,
     &.slideshow-at-last .slideshow-nav-right {
       opacity: 0.6;
@@ -203,15 +224,19 @@ body.dynamic-views-hide-slideshow-arrows .dynamic-views .slideshow-nav-right {
 
 /* Hide indicator when nav buttons appear on hover */
 @media (hover: hover) {
-  .dynamic-views .card-cover-slideshow:hover .slideshow-indicator {
+  .dynamic-views
+    .card.hover-intent-active
+    .card-cover-slideshow
+    .slideshow-indicator {
     opacity: 0;
   }
 }
 
 .dynamic-views {
   .slideshow-indicator svg {
-    width: 18px;
-    height: 18px;
+    width: var(--icon-s);
+    height: var(--icon-s);
+    transform: scaleX(-1);
     filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
       drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
   }
@@ -236,11 +261,6 @@ body.dynamic-views-hide-slideshow-indicator
 .is-mobile .dynamic-views .slideshow-indicator {
   width: 22px;
   height: 22px;
-}
-
-.is-mobile .dynamic-views .slideshow-indicator svg {
-  width: 20px;
-  height: 20px;
 }
 
 /* Hide slideshow controls when only one valid image remains (broken images discovered at runtime) */

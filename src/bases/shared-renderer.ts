@@ -1425,6 +1425,16 @@ export class SharedCardRenderer {
             cardEl,
             signal
           );
+
+          // Multi-image indicator for scrubbable thumbnails
+          if (
+            imageUrls.length > 1 &&
+            !this.app.isMobile &&
+            !isThumbnailScrubbingDisabled()
+          ) {
+            const indicator = imageEl.createDiv('thumbnail-indicator');
+            setIcon(indicator, 'lucide-copy');
+          }
         } else {
           previewsEl.createDiv('card-thumbnail-placeholder');
         }
@@ -1761,7 +1771,7 @@ export class SharedCardRenderer {
     // Multi-image indicator
     if (isSlideshowIndicatorEnabled()) {
       const indicator = slideshowEl.createDiv('slideshow-indicator');
-      setIcon(indicator, 'lucide-circle-chevron-right');
+      setIcon(indicator, 'lucide-copy');
     }
 
     // Navigation arrows
@@ -1927,6 +1937,7 @@ export class SharedCardRenderer {
         'mouseenter',
         () => {
           cachedRect = imageEl.getBoundingClientRect();
+          imageEl.classList.add('scrub-hover');
         },
         { signal }
       );
@@ -1974,6 +1985,7 @@ export class SharedCardRenderer {
         () => {
           // Don't reset while image viewer is open (overlay triggers mouseleave)
           if (this.viewerClones.has(imageEmbedContainer)) return;
+          imageEl.classList.remove('scrub-hover');
           // Invalidate cached rect for next hover (handles resize)
           cachedRect = null;
           imgEl.removeClass('scrub-loading');
@@ -2103,7 +2115,7 @@ export class SharedCardRenderer {
     if (!props || props.length === 0) return;
 
     // Parse override lists for O(1) lookup
-    const unpairSet = parsePropertyList(settings.invertPropertyPairing);
+    const invertPairingSet = parsePropertyList(settings.invertPropertyPairing);
 
     // Properties rendered elsewhere — exclude from property rows
     const excludeSet = new Set<string>();
@@ -2164,7 +2176,7 @@ export class SharedCardRenderer {
     // Pre-compute pairs when pairProperties OFF
     const invertPairs = settings.pairProperties
       ? null
-      : computeInvertPairs(props, unpairSet);
+      : computeInvertPairs(props, invertPairingSet);
 
     let i = 0;
     while (i < visibleProps.length) {
@@ -2176,8 +2188,8 @@ export class SharedCardRenderer {
         // ON: pair unless either inverted
         shouldPair =
           next !== null &&
-          !unpairSet.has(current.name) &&
-          !unpairSet.has(next.name);
+          !invertPairingSet.has(current.name) &&
+          !invertPairingSet.has(next.name);
       } else if (invertPairs) {
         // OFF: check pre-computed pairs (uses original indices)
         shouldPair =

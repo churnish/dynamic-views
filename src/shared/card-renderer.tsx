@@ -887,7 +887,7 @@ function CoverSlideshow({
         <div
           className="slideshow-indicator"
           ref={(el: HTMLElement | null) => {
-            if (el) setIcon(el, 'lucide-circle-chevron-right');
+            if (el) setIcon(el, 'lucide-copy');
           }}
         />
       )}
@@ -2284,14 +2284,16 @@ function Card({
             const { propertyLabels } = settings;
 
             // Parse override lists for O(1) lookup
-            const unpairSet = parsePropertyList(settings.invertPropertyPairing);
+            const invertPairingSet = parsePropertyList(
+              settings.invertPropertyPairing
+            );
             const invertPositionSet = parsePropertyList(
               settings.invertPropertyPosition
             );
 
             // Group properties into sets based on pairing settings
             interface PropertySet {
-              props: Array<{
+              items: Array<{
                 name: string;
                 value: unknown;
                 fieldIndex: number;
@@ -2329,7 +2331,7 @@ function Card({
               // Pre-compute pairs when pairProperties OFF
               const invertPairs = settings.pairProperties
                 ? null
-                : computeInvertPairs(props, unpairSet);
+                : computeInvertPairs(props, invertPairingSet);
 
               const sets: PropertySet[] = [];
               let i = 0;
@@ -2342,8 +2344,8 @@ function Card({
                 if (settings.pairProperties) {
                   shouldPair =
                     next !== null &&
-                    !unpairSet.has(current.name) &&
-                    !unpairSet.has(next.name);
+                    !invertPairingSet.has(current.name) &&
+                    !invertPairingSet.has(next.name);
                 } else if (invertPairs) {
                   shouldPair =
                     next !== null &&
@@ -2352,10 +2354,10 @@ function Card({
                 }
 
                 if (shouldPair && next) {
-                  sets.push({ props: [current, next], paired: true });
+                  sets.push({ items: [current, next], paired: true });
                   i += 2;
                 } else {
-                  sets.push({ props: [current], paired: false });
+                  sets.push({ items: [current], paired: false });
                   i += 1;
                 }
               }
@@ -2366,14 +2368,14 @@ function Card({
               sets.forEach((set, setIdx) => {
                 const showConfiguredProps =
                   propertyLabels !== 'hide' || !hideMissing;
-                const hasContent = set.props.some((p) =>
+                const hasContent = set.items.some((p) =>
                   showConfiguredProps
                     ? p.name !== ''
                     : p.value !== null && p.value !== undefined
                 );
                 if (!hasContent) return;
 
-                const anyInvertedPosition = set.props.some((p) =>
+                const anyInvertedPosition = set.items.some((p) =>
                   invertPositionSet.has(p.name)
                 );
                 const isAbove = settings.showPropertiesAbove
@@ -2389,7 +2391,7 @@ function Card({
                       key={`pair-${setIdx}`}
                       className={`property-pair property-pair-${pairNum}`}
                     >
-                      {set.props.map((p, pi) => {
+                      {set.items.map((p, pi) => {
                         const posClass = pi === 0 ? 'pair-left' : 'pair-right';
                         return (
                           <div
@@ -2413,7 +2415,7 @@ function Card({
                   if (isAbove) topElements.push(pairElement);
                   else bottomElements.push(pairElement);
                 } else {
-                  const p = set.props[0];
+                  const p = set.items[0];
                   const fieldElement = (
                     <div
                       key={`field-${p.fieldIndex}`}
@@ -2465,6 +2467,15 @@ function Card({
                       (imageArray.length > 0 ? (
                         <div
                           className={`card-thumbnail ${enableScrubbing ? 'multi-image' : ''}`}
+                          onMouseEnter={
+                            enableScrubbing
+                              ? (e: MouseEvent) => {
+                                  (
+                                    e.currentTarget as HTMLElement
+                                  ).classList.add('scrub-hover');
+                                }
+                              : undefined
+                          }
                           onMouseMove={
                             enableScrubbing
                               ? (e: MouseEvent) => {
@@ -2523,6 +2534,7 @@ function Card({
                                     );
                                   if (embedEl && viewerClones.has(embedEl))
                                     return;
+                                  thumbEl.classList.remove('scrub-hover');
                                   const firstUrl = imageArray[0];
                                   if (!firstUrl) return;
                                   const imgEl = thumbEl.querySelector('img');
@@ -2693,6 +2705,14 @@ function Card({
                               }
                             />
                           </div>
+                          {enableScrubbing && (
+                            <div
+                              className="thumbnail-indicator"
+                              ref={(el: HTMLElement | null) => {
+                                if (el) setIcon(el, 'lucide-copy');
+                              }}
+                            />
+                          )}
                         </div>
                       ) : (
                         <div className="card-thumbnail-placeholder"></div>
