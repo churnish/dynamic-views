@@ -86,7 +86,7 @@ Note: To get updates for _Dynamic Views_, you will have to check for and install
 - Visit [the wiki](https://github.com/churnish/dynamic-views/wiki) to learn about plugin features and find helpful tips.
 - Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
 - Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
-- PRs welcome. Please reach out if you'd like to help maintain the plugin.
+- PRs welcome. Reach out if you'd like to help maintain the plugin.
 
 ## Credits
 
