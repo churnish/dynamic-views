@@ -469,7 +469,10 @@
   body:not([class*='dynamic-views-card-background-hover-'])
     .dynamic-views
     .card.hover-intent-active:hover {
-    background-color: transparent;
+    background-color: var(
+      --dynamic-views-view-background,
+      var(--background-primary)
+    );
   }
 
   body.dynamic-views-card-background-hover-tinted
@@ -481,7 +484,10 @@
   body.dynamic-views-card-background-hover-transparent
     .dynamic-views
     .card.hover-intent-active:hover {
-    background-color: transparent;
+    background-color: var(
+      --dynamic-views-view-background,
+      var(--background-primary)
+    );
   }
 
   body.dynamic-views-card-background-hover-custom
@@ -491,6 +497,21 @@
       --dynamic-views-card-background-color-hover-custom,
       var(--background-primary-alt)
     );
+  }
+
+  /* Card hover appearance */
+  body.dynamic-views-card-hover-appearance-grow
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    transform: scale(1.02);
+    z-index: 1;
+  }
+
+  body.dynamic-views-card-hover-appearance-elevate
+    .dynamic-views
+    .card.hover-intent-active:hover {
+    transform: translateY(-2px);
+    z-index: 1;
   }
 
   /* Gate pointer cursor behind hover intent on desktop */

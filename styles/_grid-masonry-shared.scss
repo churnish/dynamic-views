@@ -199,6 +199,7 @@ body.dynamic-views-hide-group-property-labels
     border: none;
     border-radius: var(--dynamic-views-card-border-radius, 8px);
     overflow: hidden; /* Clip covers at rounded corners */
+    isolation: isolate; /* Contain internal z-indexes so hover effect z-index stacks above neighbors */
     padding: var(--dynamic-views-card-padding, 8px);
     margin: 0;
     /* Resolved card background — overridden by transparent/custom modes */
@@ -219,7 +220,8 @@ body.dynamic-views-hide-group-property-labels
     page-break-inside: avoid;
     transition:
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease;
+      background-color var(--anim-duration-fast, 140ms) ease,
+      transform var(--anim-duration-fast, 140ms) ease;
     /* Cover inset: user setting + 1px offset for border */
     --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + 1px);
     /* Resolved card border color — shared by ::after and cover-content divider */

@@ -3,8 +3,10 @@
     position: relative;
     width: 100%;
     max-width: 100%;
-    overflow-x: visible;
-    overflow-y: clip;
+    overflow: clip;
+    /* Extend clip boundary so hover transforms aren't clipped on edge rows
+       and sticky group header borders (negative-margin) remain visible */
+    overflow-clip-margin: var(--bases-view-padding);
 
     .card .card-previews {
       flex-grow: 1;
@@ -128,7 +130,8 @@
       top var(--masonry-reposition-duration) ease,
       left var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease;
+      background-color var(--anim-duration-fast, 140ms) ease,
+      transform var(--anim-duration-fast, 140ms) ease;
   }
 
   // Instant repositioning during scroll-idle remeasure — overrides default
@@ -147,7 +150,8 @@
       left var(--masonry-reposition-duration) ease,
       height var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease;
+      background-color var(--anim-duration-fast, 140ms) ease,
+      transform var(--anim-duration-fast, 140ms) ease;
   }
 }
 

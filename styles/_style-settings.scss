@@ -95,7 +95,7 @@ settings:
     -
         id: dynamic-views-hide-end-indicator
         title: Hide end of view indicator
-        description: Do not show the horizontal rule at view bottom.
+        description: Do not show a horizontal rule at view bottom.
         type: class-toggle
         default: false
     -
@@ -127,7 +127,7 @@ settings:
     -
         id: dynamic-views-no-fade-truncated-text
         title: Hide scroll gradient
-        description: Don't show gradient fade on scrollable text elements.
+        description: Do not show gradient fade on scrollable text elements.
         type: class-toggle
     -
         id: dynamic-views-card-background
@@ -149,7 +149,7 @@ settings:
     -
         id: dynamic-views-card-background-color-custom
         title: Custom card background
-        description: Custom color for card backgrounds (only used when Card background is set to Custom color).
+        description: Custom color for card backgrounds.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -176,7 +176,7 @@ settings:
     -
         id: dynamic-views-card-background-color-hover-custom
         title: Custom card background (hover)
-        description: Custom color for card backgrounds on hover (only used when Card background on hover is set to Custom color).
+        description: Custom color for card backgrounds on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -234,7 +234,7 @@ settings:
     -
         id: dynamic-views-card-border-color-custom
         title: Custom card border color
-        description: Custom color for card borders (only used when Card border color is set to Custom).
+        description: Custom color for card borders.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -292,7 +292,7 @@ settings:
     -
         id: dynamic-views-card-border-color-hover-custom
         title: Custom card border color (hover)
-        description: Custom color for card borders on hover (only used when Card border color on hover is set to Custom).
+        description: Custom color for card borders on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -338,6 +338,23 @@ settings:
                 label: Dramatic
                 value: dynamic-views-card-shadow-hover-dramatic
     -
+        id: dynamic-views-card-hover-appearance
+        title: Hover effect
+        description: Visual effect when hovering over a card.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-hover-appearance-none
+        options:
+            -
+                label: Grow
+                value: dynamic-views-card-hover-appearance-grow
+            -
+                label: Elevate
+                value: dynamic-views-card-hover-appearance-elevate
+            -
+                label: None
+                value: dynamic-views-card-hover-appearance-none
+    -
         id: covers-heading
         title: Covers
         type: heading
@@ -380,7 +397,7 @@ settings:
     -
         id: dynamic-views-cover-background-color-custom
         title: Custom cover background
-        description: Background color for "Custom color" mode.
+        description: Background color for 'Custom color' mode.
         type: variable-themed-color
         format: rgb
         opacity: false
@@ -598,7 +615,7 @@ settings:
     -
         id: dynamic-views-disable-sticky-group-header
         title: Disable sticky group header
-        description: Don't freeze group headers when scrolling.
+        description: Do not freeze group headers when scrolling.
         type: class-toggle
         default: false
     -
@@ -610,7 +627,7 @@ settings:
     -
         id: dynamic-views-image-viewer-disabled
         title: Disable image viewer
-        description: Disable image viewer feature.
+        description: Do not enlarge image when pressing on thumbnails or covers.
         type: class-toggle
     -
         id: dynamic-views-zoom-disabled
@@ -619,7 +636,7 @@ settings:
         type: class-toggle
     -
         id: dynamic-views-image-viewer-disable-dismiss-on-click
-        title: Don't dismiss on press
+        title: Do not dismiss on press
         description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
     -
@@ -656,12 +673,12 @@ settings:
     -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
-        description: Don't vertically scroll card content when it doesn't fit.
+        description: Do not vertically scroll card content when it does not fit.
         type: class-toggle
     -
         id: dynamic-views-poster-disable-raise
         title: Disable raise animation
-        description: Fade in without sliding up on reveal.
+        description: Do not slide up on reveal.
         type: class-toggle
     -
         id: dynamic-views-poster-overlay-tint
@@ -858,7 +875,7 @@ settings:
     -
         id: dynamic-views-hide-missing-properties
         title: Hide missing properties
-        description: Hide properties that don't exist in note frontmatter.
+        description: Hide properties that Do not exist in note frontmatter.
         type: class-toggle
         default: false
     -
@@ -1010,7 +1027,7 @@ settings:
     -
         id: dynamic-views-slideshow-disabled
         title: Disable slideshow
-        description: Don't cycle through images on cards with multiple images.
+        description: Do not cycle through images on cards with multiple images.
         type: class-toggle
     -
         id: dynamic-views-slideshow-disable-looping
@@ -1018,16 +1035,27 @@ settings:
         description: Stop at the last image instead of wrapping back to the first.
         type: class-toggle
     -
+        id: dynamic-views-slideshow-arrows
+        title: Navigation arrows
+        description: Controls visibility of left/right arrows on slideshow covers.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-slideshow-arrows-hover
+        options:
+            -
+                label: Show
+                value: dynamic-views-slideshow-arrows-show
+            -
+                label: Show on hover
+                value: dynamic-views-slideshow-arrows-hover
+            -
+                label: Hide
+                value: dynamic-views-slideshow-arrows-hide
+    -
         id: dynamic-views-hide-slideshow-indicator
         title: Hide slideshow indicator
         description: Hide indicator icon when card has multiple images.
         type: class-toggle
-    -
-        id: dynamic-views-hide-slideshow-arrows
-        title: Hide navigation arrows
-        description: Hide left/right arrows on slideshow covers (use touchscreen/trackpad swipe gestures instead).
-        type: class-toggle
-        default: false
     -
         id: dynamic-views-slideshow-max-images
         title: Maximum slideshow images
@@ -1352,7 +1380,7 @@ settings:
     -
         id: dynamic-views-thumbnail-crop
         title: Thumbnail crop alignment
-        description: How to crop thumbnail images when aspect ratios don't match.
+        description: How to crop thumbnail images when aspect ratios Do not match.
         type: class-select
         allowEmpty: false
         default: dynamic-views-thumbnail-crop-center
@@ -1375,13 +1403,13 @@ settings:
     -
         id: dynamic-views-disable-thumbnail-scrubbing
         title: Disable thumbnail scrubbing
-        description: Don't show other images on hover over thumbnail.
+        description: Do not show other images on hover over thumbnail.
         type: class-toggle
         default: false
     -
         id: dynamic-views-hide-thumbnail-shadow
         title: Hide scrubbing shadow
-        description: Don't show the shadow/glow below thumbnails with multiple images.
+        description: Do not show the shadow/glow below thumbnails with multiple images.
         type: class-toggle
         default: false
     -
@@ -1609,6 +1637,9 @@ body:not(.dynamic-views-property-color-without-labels-custom)
 body:not(.dynamic-views-property-label-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-property-label-color-custom'],
+body.dynamic-views-slideshow-arrows-show
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-hide-slideshow-indicator'],
 body.dynamic-views-slideshow-disabled
   .style-settings-container
   .setting-item[data-id='dynamic-views-slideshow-disabled']
