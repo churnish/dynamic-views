@@ -3,7 +3,7 @@
   .card.image-format-poster {
     position: relative;
     overflow: hidden;
-    --poster-inset: 1px;
+    --poster-inset: var(--card-border-thickness);
 
     .card-content {
       overflow: clip;

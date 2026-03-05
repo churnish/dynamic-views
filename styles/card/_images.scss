@@ -36,16 +36,3 @@
     }
   }
 }
-
-/* Transparent border = no inset */
-body.dynamic-views-card-border-color-transparent
-  .dynamic-views
-  .card.image-format-backdrop {
-  --backdrop-inset: 0px;
-}
-
-body.dynamic-views-card-border-color-transparent
-  .dynamic-views
-  .card.image-format-poster {
-  --poster-inset: 0px;
-}

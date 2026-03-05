@@ -125,6 +125,16 @@ settings:
         step: 1
         format: px
     -
+        id: dynamic-views-card-hover-elevate
+        title: Elevate
+        description: Lift the card up slightly on hover.
+        type: class-toggle
+    -
+        id: dynamic-views-card-hover-grow
+        title: Grow
+        description: Make the card slightly larger on hover.
+        type: class-toggle
+    -
         id: dynamic-views-no-fade-truncated-text
         title: Hide scroll gradient
         description: Do not show gradient fade on scrollable text elements.
@@ -226,9 +236,6 @@ settings:
                 label: Pink
                 value: dynamic-views-card-border-color-pink
             -
-                label: Transparent
-                value: dynamic-views-card-border-color-transparent
-            -
                 label: Custom
                 value: dynamic-views-card-border-color-custom
     -
@@ -239,6 +246,16 @@ settings:
         format: hex
         default-light: '#'
         default-dark: '#'
+    -
+        id: dynamic-views-card-border-thickness
+        title: Card border thickness
+        description: Border thickness in pixels. Set to 0 to remove borders.
+        type: variable-number-slider
+        default: 1
+        min: 0
+        max: 24
+        step: 1
+        format: px
     -
         id: dynamic-views-card-border-color-hover
         title: Card border color (hover)
@@ -284,9 +301,6 @@ settings:
                 label: Pink
                 value: dynamic-views-card-border-color-hover-pink
             -
-                label: Transparent
-                value: dynamic-views-card-border-color-hover-transparent
-            -
                 label: Custom
                 value: dynamic-views-card-border-color-hover-custom
     -
@@ -297,6 +311,16 @@ settings:
         format: hex
         default-light: '#'
         default-dark: '#'
+    -
+        id: dynamic-views-card-border-thickness-hover
+        title: Card border thickness (hover)
+        description: Border thickness on hover. Set to 0 to remove borders on hover.
+        type: variable-number-slider
+        default: 1
+        min: 0
+        max: 24
+        step: 1
+        format: px
     -
         id: dynamic-views-card-shadow
         title: Card shadow
@@ -337,23 +361,6 @@ settings:
             -
                 label: Dramatic
                 value: dynamic-views-card-shadow-hover-dramatic
-    -
-        id: dynamic-views-card-hover-appearance
-        title: Hover effect
-        description: Visual effect when hovering over a card.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-hover-appearance-none
-        options:
-            -
-                label: Grow
-                value: dynamic-views-card-hover-appearance-grow
-            -
-                label: Elevate
-                value: dynamic-views-card-hover-appearance-elevate
-            -
-                label: None
-                value: dynamic-views-card-hover-appearance-none
     -
         id: covers-heading
         title: Covers

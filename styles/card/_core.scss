@@ -70,13 +70,6 @@ body.dynamic-views-card-border-color-purple .dynamic-views .card {
 body.dynamic-views-card-border-color-pink .dynamic-views .card {
   --card-border-color: var(--color-pink);
 }
-body.dynamic-views-card-border-color-transparent .dynamic-views .card {
-  --card-border-color: transparent;
-  --cover-inset-computed: var(--dynamic-views-cover-inset, 0px);
-}
-body.dynamic-views-card-border-color-transparent .dynamic-views .card::after {
-  box-shadow: none;
-}
 body.dynamic-views-card-border-color-custom .dynamic-views .card {
   --card-border-color: var(
     --dynamic-views-card-border-color-custom,
@@ -86,6 +79,10 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
 
 /* Card border color on hover presets */
 @media (hover: hover) {
+  .dynamic-views .card.hover-intent-active:hover {
+    --card-border-thickness: var(--dynamic-views-card-border-thickness-hover, 1px);
+  }
+
   /* Muted (default) */
   body:not([class*='dynamic-views-card-border-color-hover-'])
     .dynamic-views
@@ -152,16 +149,6 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
     .dynamic-views
     .card.hover-intent-active:hover {
     --card-border-color: var(--color-pink);
-  }
-  body.dynamic-views-card-border-color-hover-transparent
-    .dynamic-views
-    .card.hover-intent-active:hover {
-    --card-border-color: transparent;
-  }
-  body.dynamic-views-card-border-color-hover-transparent
-    .dynamic-views
-    .card.hover-intent-active:hover::after {
-    box-shadow: none;
   }
   body.dynamic-views-card-border-color-hover-custom
     .dynamic-views

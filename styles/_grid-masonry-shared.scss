@@ -50,12 +50,40 @@ body:not(.dynamic-views-disable-sticky-group-header)
   > .bases-group-heading:not(.collapsed) {
   position: sticky;
   top: -12px;
-  z-index: 10;
   overflow: visible;
-  background: var(--background-primary);
   padding-bottom: calc(var(--size-2-2) + 1px);
   container-type: scroll-state;
   container-name: dynamic-views-group-heading;
+
+  /* Children carry stacking — flex items support z-index without position.
+     z-index: 1 = below card hover (11), above non-hovered content (auto/0). */
+  > .bases-group-collapse-region,
+  > .bases-group-count {
+    z-index: 1;
+  }
+
+  /* Background on child pseudo-element — participates in collapse-region's
+     stacking context so it raises/lowers with the child's z-index. Positioned
+     relative to heading (nearest positioned ancestor). */
+  > .bases-group-collapse-region::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(-1 * var(--bases-view-padding));
+    right: calc(-1 * var(--bases-view-padding));
+    background: var(--background-primary);
+    z-index: -1;
+  }
+
+  /* Stuck state: raise children above hovered cards (z: 11).
+     Nested here so specificity matches the z-index: 1 rule above. */
+  @container dynamic-views-group-heading scroll-state(stuck: top) {
+    > .bases-group-collapse-region,
+    > .bases-group-count {
+      z-index: 20;
+    }
+  }
 }
 
 /* Border below sticky group headers when stuck — spans full pane width.
@@ -221,20 +249,24 @@ body.dynamic-views-hide-group-property-labels
     transition:
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease,
-      transform var(--anim-duration-fast, 140ms) ease;
+      scale var(--anim-duration-fast, 140ms) ease,
+      translate var(--anim-duration-fast, 140ms) ease;
     /* Cover inset: user setting + 1px offset for border */
-    --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + 1px);
+    --card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
+    --cover-inset-computed: calc(var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness));
     /* Resolved card border color — shared by ::after and cover-content divider */
     --card-border-color: var(--background-modifier-border);
 
-    /* Border as pseudo-element so it appears on top of covers */
+    /* Border as pseudo-element so it appears on top of covers and card content */
     &::after {
       content: '';
       position: absolute;
       inset: 0;
-      border-radius: inherit;
-      box-shadow: inset 0 0 0 1px var(--card-border-color);
+      z-index: 5;
+      border-radius: var(--dynamic-views-card-border-radius, 8px);
+      box-shadow: inset 0 0 0 var(--card-border-thickness) var(--card-border-color);
       pointer-events: none;
+      transition: box-shadow var(--anim-duration-fast, 140ms) ease-in-out;
     }
   }
 
