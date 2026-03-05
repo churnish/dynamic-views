@@ -6,10 +6,11 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary, #ffffff);
+  border: 1px solid var(--background-modifier-border, #e0e0e0);
   border-radius: 6px;
-  box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+  box-shadow: 0 4px 12px
+    var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
   z-index: 1000;
   min-width: 400px;
   max-width: min(675px, calc(100vw - 16px));
@@ -25,9 +26,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background-color: var(--background-primary-alt);
+  background-color: var(--background-primary-alt, #fafafa);
   border-radius: 8px;
-  border: 1px solid var(--background-modifier-border);
+  border: 1px solid var(--background-modifier-border, #e0e0e0);
   max-width: 900px;
   margin-left: auto;
   margin-right: 0;
@@ -37,12 +38,12 @@
 .dynamic-views .query-input {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--background-modifier-border);
+  border: 1px solid var(--background-modifier-border, #e0e0e0);
   border-radius: 4px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
+  background-color: var(--background-primary, #ffffff);
+  color: var(--text-normal, #222222);
   font-size: 0.9em;
-  font-family: var(--font-monospace);
+  font-family: var(--font-monospace, monospace);
   resize: none;
   overflow: hidden;
   min-height: 32px;
@@ -57,10 +58,10 @@
 
 .dynamic-views .query-btn {
   padding: 6px 16px;
-  border: 1px solid var(--background-modifier-border);
+  border: 1px solid var(--background-modifier-border, #e0e0e0);
   border-radius: 4px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
+  background-color: var(--background-primary, #ffffff);
+  color: var(--text-normal, #222222);
   cursor: pointer;
   font-size: 0.9em;
   -webkit-user-select: none;
@@ -72,38 +73,38 @@
 
 @media (hover: hover) {
   .query-btn:hover {
-    background-color: var(--background-modifier-hover);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
   }
 }
 
 .dynamic-views .query-apply-btn {
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border-color: var(--interactive-accent);
+  background-color: var(--interactive-accent, hsl(257, 89%, 71%));
+  color: var(--text-on-accent, white);
+  border-color: var(--interactive-accent, hsl(257, 89%, 71%));
 }
 
 @media (hover: hover) {
   .dynamic-views .query-apply-btn:hover {
-    background-color: var(--interactive-accent-hover);
+    background-color: var(--interactive-accent-hover, hsl(255, 90%, 76%));
   }
 }
 
 .dynamic-views .query-clear-btn {
-  background-color: var(--background-secondary);
-  color: var(--text-muted);
-  border-color: var(--background-modifier-border);
+  background-color: var(--background-secondary, #f6f6f6);
+  color: var(--text-muted, #5c5c5c);
+  border-color: var(--background-modifier-border, #e0e0e0);
 }
 
 @media (hover: hover) {
   .dynamic-views .query-clear-btn:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
+    color: var(--text-normal, #222222);
   }
 }
 
 .dynamic-views .query-tip {
   font-size: 0.8em;
-  color: var(--text-faint);
+  color: var(--text-faint, #ababab);
   flex: 1;
   text-align: left;
   -webkit-user-select: none;
@@ -111,12 +112,12 @@
 }
 
 .dynamic-views .query-error {
-  font-family: var(--font-monospace);
+  font-family: var(--font-monospace, monospace);
   font-size: 0.85em;
   white-space: pre-wrap;
   word-wrap: break-word;
   margin: 16px 0;
   padding: 0;
-  color: var(--text-muted);
+  color: var(--text-muted, #5c5c5c);
   overflow-x: auto;
 }

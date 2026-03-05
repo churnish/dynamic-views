@@ -1,6 +1,6 @@
 /* Settings header */
 .dynamic-views-settings-header {
-  margin-bottom: var(--size-4-6);
+  margin-bottom: var(--size-4-6, 24px);
 }
 
 .dynamic-views-settings-header-links {
@@ -8,11 +8,11 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  color: var(--text-muted);
+  color: var(--text-muted, #5c5c5c);
 }
 
 .dynamic-views-header-link {
-  color: var(--text-muted);
+  color: var(--text-muted, #5c5c5c);
   padding: 4px 10px 0;
   font-weight: 500;
   text-decoration: none;
@@ -22,7 +22,7 @@
 
   @media (hover: hover) {
     &:hover {
-      color: var(--text-muted) !important;
+      color: var(--text-muted, #5c5c5c) !important;
       text-decoration: none !important;
       transform: translateY(-1px);
     }
@@ -38,7 +38,7 @@
   svg {
     width: 14px;
     height: 14px;
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
 }
 
@@ -59,7 +59,7 @@
   margin-bottom: 0;
   background-color: transparent;
   border: none;
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border, #e0e0e0);
 }
 
 /* Indented sub-settings */
@@ -76,7 +76,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background-color: var(--background-modifier-border);
+  background-color: var(--background-modifier-border, #e0e0e0);
 }
 
 /* Add padding only when visible and not last.

@@ -49,15 +49,15 @@
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  row-gap: var(--size-4-2);
+  row-gap: var(--size-4-2, 8px);
 }
 
 /* Group divider spacing — .is-grouped prefix overrides Obsidian's
    .is-grouped .bases-cards-container .bases-cards-group padding
    (3 classes, same specificity — last-write wins). */
 .is-grouped .dynamic-views-group-section > .dynamic-views-group {
-  padding: 0 0 var(--size-4-4) 0;
-  border-color: var(--background-modifier-border);
+  padding: 0 0 var(--size-4-4, 16px) 0;
+  border-color: var(--background-modifier-border, #e0e0e0);
   border-width: 0 0 1px 0;
   border-style: solid;
 }
@@ -83,7 +83,7 @@
   .dynamic-views-grid {
     display: grid;
     grid-template-columns: repeat(var(--dynamic-views-grid-columns, 1), 1fr);
-    gap: var(--size-4-2);
+    gap: var(--size-4-2, 8px);
     align-items: stretch;
     width: 100%;
     max-width: 100%;

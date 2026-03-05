@@ -11,7 +11,7 @@
   /* Card content flex setup */
   .card.image-format-cover .card-previews {
     flex-direction: row;
-    gap: var(--size-4-2);
+    gap: var(--size-4-2, 8px);
   }
 
   /* Title-subtitle: explicitly zero gap (card-body gap would add spacing; title and subtitle should sit flush) */

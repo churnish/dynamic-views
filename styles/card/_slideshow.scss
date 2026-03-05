@@ -109,11 +109,11 @@
   }
 
   .slideshow-nav-left {
-    left: var(--size-2-2);
+    left: var(--size-2-2, 4px);
   }
 
   .slideshow-nav-right {
-    right: var(--size-2-2);
+    right: var(--size-2-2, 4px);
   }
 }
 
@@ -155,7 +155,7 @@
 
 .theme-dark .dynamic-views .slideshow-nav-left svg,
 .theme-dark .dynamic-views .slideshow-nav-right svg {
-  color: var(--color-base-100);
+  color: var(--color-base-100, #222222);
 }
 
 /* Mobile: Hide nav arrows (use swipe gestures instead) */
@@ -234,8 +234,8 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 
 .dynamic-views {
   .slideshow-indicator svg {
-    width: var(--icon-s);
-    height: var(--icon-s);
+    width: var(--icon-s, 18px);
+    height: var(--icon-s, 18px);
     transform: scaleX(-1);
     filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
       drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
@@ -254,7 +254,7 @@ body.dynamic-views-hide-slideshow-indicator
 }
 
 .theme-dark .dynamic-views .slideshow-indicator svg {
-  color: var(--color-base-100);
+  color: var(--color-base-100, #222222);
 }
 
 /* Mobile: Match Obsidian's larger .text-icon-button sizing */

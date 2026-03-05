@@ -8,7 +8,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -18,7 +18,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
   /* Normal - no hover color change */
   :is(
@@ -29,7 +29,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-accent-hover);
+    color: var(--text-accent-hover, hsl(255, 90%, 76%));
   }
   /* Title color variants (red-pink, custom): 15% white mix using --dynamic-views-title-color-value */
   :is(
@@ -62,7 +62,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-faint);
+    color: var(--text-faint, #ababab);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -72,7 +72,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -82,7 +82,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -92,7 +92,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-accent-hover);
+    color: var(--text-accent-hover, hsl(255, 90%, 76%));
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -121,7 +121,10 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
+    color: var(
+      --dynamic-views-title-hover-color-custom,
+      var(--text-normal, #222222)
+    );
   }
 
   /* Explicit title hover color: open-on-card → hover over card */
@@ -135,7 +138,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-faint);
+    color: var(--text-faint, #ababab);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press
@@ -147,7 +150,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press
@@ -159,7 +162,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press
@@ -171,7 +174,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-accent-hover);
+    color: var(--text-accent-hover, hsl(255, 90%, 76%));
   }
   body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press):is(
       .dynamic-views-title-hover-color-red,
@@ -211,7 +214,10 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--dynamic-views-title-hover-color-custom, var(--text-normal));
+    color: var(
+      --dynamic-views-title-hover-color-custom,
+      var(--text-normal, #222222)
+    );
   }
 
   /* Poster hover mode: apply title hover color on :hover (not hover-intent) so
@@ -250,7 +256,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
   body.dynamic-views-subtitle-color-muted
     .dynamic-views
@@ -261,7 +267,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
   /* Normal - no hover color change */
   body.dynamic-views-subtitle-color-accent
@@ -273,7 +279,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-accent-hover);
+    color: var(--text-accent-hover, hsl(255, 90%, 76%));
   }
   /* Subtitle color variants: 15% white mix using --dynamic-views-subtitle-color-value */
   body:is(
@@ -313,7 +319,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
   body.dynamic-views-property-color-with-labels-muted
     .dynamic-views
@@ -325,7 +331,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
   /* Normal - no hover color change */
   body.dynamic-views-property-color-with-labels-accent
@@ -338,7 +344,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-accent-hover);
+    color: var(--text-accent-hover, hsl(255, 90%, 76%));
   }
   /* Property with labels color variants: 15% white mix using --dynamic-views-property-with-label-color-value */
   body:is(
@@ -379,7 +385,7 @@
     ):hover {
     color: var(
       --dynamic-views-property-color-with-labels-custom-hover,
-      var(--text-muted)
+      var(--text-muted, #5c5c5c)
     );
   }
 
@@ -394,7 +400,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
   }
   body.dynamic-views-property-color-without-labels-muted
     .dynamic-views
@@ -406,7 +412,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
   /* Normal - no hover color change */
   body.dynamic-views-property-color-without-labels-accent
@@ -419,7 +425,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-accent-hover);
+    color: var(--text-accent-hover, hsl(255, 90%, 76%));
   }
   /* Property without labels color variants: 15% white mix using --dynamic-views-property-no-label-color-value */
   body:is(
@@ -460,7 +466,7 @@
     ):hover {
     color: var(
       --dynamic-views-property-color-without-labels-custom-hover,
-      var(--text-muted)
+      var(--text-muted, #5c5c5c)
     );
   }
 
@@ -471,14 +477,14 @@
     .card.hover-intent-active:hover {
     background-color: var(
       --dynamic-views-view-background,
-      var(--background-primary)
+      var(--background-primary, #ffffff)
     );
   }
 
   body.dynamic-views-card-background-hover-tinted
     .dynamic-views
     .card.hover-intent-active:hover {
-    background-color: var(--background-primary-alt);
+    background-color: var(--background-primary-alt, #fafafa);
   }
 
   body.dynamic-views-card-background-hover-transparent
@@ -486,7 +492,7 @@
     .card.hover-intent-active:hover {
     background-color: var(
       --dynamic-views-view-background,
-      var(--background-primary)
+      var(--background-primary, #ffffff)
     );
   }
 
@@ -495,23 +501,35 @@
     .card.hover-intent-active:hover {
     background-color: var(
       --dynamic-views-card-background-color-hover-custom,
-      var(--background-primary-alt)
+      var(--background-primary-alt, #fafafa)
     );
   }
 
-  /* Card hover appearance */
-  body.dynamic-views-card-hover-appearance-grow
+  /* Card hover effects — individual transform properties compose when both enabled.
+     Enlarge scoped to Bases files only (embed overflow: hidden clips scaled card). */
+  body.dynamic-views-card-hover-enlarge
+    .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
-    transform: scale(1.02);
-    z-index: 1;
+    scale: 1.02;
+    z-index: 11;
   }
 
-  body.dynamic-views-card-hover-appearance-elevate
+  body.dynamic-views-card-hover-elevate
+    .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
-    transform: translateY(-2px);
-    z-index: 1;
+    translate: 0 -2px;
+    z-index: 11;
+  }
+
+  /* Lift masonry container above sticky group headers when a card is hovered —
+     contain: layout on .masonry-container traps card z-index */
+  body:is(.dynamic-views-card-hover-enlarge, .dynamic-views-card-hover-elevate)
+    .workspace-leaf-content[data-type='bases']
+    .dynamic-views-masonry
+    .masonry-container:has(.card.hover-intent-active:hover) {
+    z-index: 11;
   }
 
   /* Gate pointer cursor behind hover intent on desktop */

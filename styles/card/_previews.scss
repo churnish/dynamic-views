@@ -2,7 +2,7 @@
   .card-previews {
     display: flex;
     flex-direction: row;
-    gap: var(--size-4-2);
+    gap: var(--size-4-2, 8px);
   }
 }
 
@@ -57,17 +57,17 @@
   }
 
   .card-text-preview {
-    color: var(--dynamic-views-text-preview-color, var(--text-muted));
+    color: var(--dynamic-views-text-preview-color, var(--text-muted, #5c5c5c));
     font-family: var(--dynamic-views-text-preview-font, inherit);
     font-size: var(
       --dynamic-views-text-preview-font-size,
-      var(--font-ui-small)
+      var(--font-ui-small, 13px)
     );
     display: -webkit-box;
     -webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-height: var(--line-height-tight);
+    line-height: var(--line-height-tight, 1.3);
     word-break: break-word;
     overflow-wrap: break-word;
     -webkit-user-select: text;
@@ -108,8 +108,8 @@
     transition: opacity var(--anim-duration-moderate, 300ms) ease;
 
     svg {
-      width: var(--icon-xs);
-      height: var(--icon-xs);
+      width: var(--icon-xs, 14px);
+      height: var(--icon-xs, 14px);
       transform: scaleX(-1);
       color: white;
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))

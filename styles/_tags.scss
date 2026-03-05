@@ -3,7 +3,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   all: unset;
-  border-radius: var(--pill-radius);
+  border-radius: var(--pill-radius, 2em);
   border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
   color: var(--tag-text-color);
   font-size: 0.875em;
@@ -108,52 +108,52 @@ body.dynamic-views-tag-color-faint:not(.dynamic-views-tag-style-theme)
   .dynamic-views
   :is(.card-properties, .card-subtitle, .list-properties)
   .tag {
-  --tag-text-color: var(--text-faint);
+  --tag-text-color: var(--text-faint, #ababab);
 }
 body.dynamic-views-tag-color-muted:not(.dynamic-views-tag-style-theme)
   .dynamic-views
   :is(.card-properties, .card-subtitle, .list-properties)
   .tag {
-  --tag-text-color: var(--text-muted);
+  --tag-text-color: var(--text-muted, #5c5c5c);
 }
 body.dynamic-views-tag-color-normal:not(.dynamic-views-tag-style-theme)
   .dynamic-views
   :is(.card-properties, .card-subtitle, .list-properties)
   .tag {
-  --tag-text-color: var(--text-normal);
+  --tag-text-color: var(--text-normal, #222222);
 }
 
 body.dynamic-views-tag-color-accent {
-  --dynamic-views-tag-color-value: var(--text-accent);
+  --dynamic-views-tag-color-value: var(--text-accent, hsl(258, 88%, 66%));
 }
 body.dynamic-views-tag-color-red {
-  --dynamic-views-tag-color-value: var(--color-red);
+  --dynamic-views-tag-color-value: var(--color-red, #fb464c);
 }
 body.dynamic-views-tag-color-orange {
-  --dynamic-views-tag-color-value: var(--color-orange);
+  --dynamic-views-tag-color-value: var(--color-orange, #e9973f);
 }
 body.dynamic-views-tag-color-yellow {
-  --dynamic-views-tag-color-value: var(--color-yellow);
+  --dynamic-views-tag-color-value: var(--color-yellow, #e0de71);
 }
 body.dynamic-views-tag-color-green {
-  --dynamic-views-tag-color-value: var(--color-green);
+  --dynamic-views-tag-color-value: var(--color-green, #44cf6e);
 }
 body.dynamic-views-tag-color-cyan {
-  --dynamic-views-tag-color-value: var(--color-cyan);
+  --dynamic-views-tag-color-value: var(--color-cyan, #53dfdd);
 }
 body.dynamic-views-tag-color-blue {
-  --dynamic-views-tag-color-value: var(--color-blue);
+  --dynamic-views-tag-color-value: var(--color-blue, #027aff);
 }
 body.dynamic-views-tag-color-purple {
-  --dynamic-views-tag-color-value: var(--color-purple);
+  --dynamic-views-tag-color-value: var(--color-purple, #a882ff);
 }
 body.dynamic-views-tag-color-pink {
-  --dynamic-views-tag-color-value: var(--color-pink);
+  --dynamic-views-tag-color-value: var(--color-pink, #fa99cd);
 }
 body.dynamic-views-tag-color-custom {
   --dynamic-views-tag-color-value: var(
     --dynamic-views-tag-color-custom,
-    var(--text-faint)
+    var(--text-faint, #ababab)
   );
 }
 /* Custom fallback via semantic color tokens */
@@ -161,12 +161,18 @@ body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
   .dynamic-views
   :is(.card-properties, .card-subtitle, .list-properties)
   .tag {
-  --tag-text-color: var(--dynamic-views-tag-color-custom, var(--text-faint));
+  --tag-text-color: var(
+    --dynamic-views-tag-color-custom,
+    var(--text-faint, #ababab)
+  );
 }
 
 /* Tag color application (skip when using theme styling) */
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
-  --tag-text-color: var(--dynamic-views-tag-color-value, var(--text-faint));
+  --tag-text-color: var(
+    --dynamic-views-tag-color-value,
+    var(--text-faint, #ababab)
+  );
 }

@@ -48,20 +48,23 @@ body {
    Named colors (red-pink) already set --dynamic-views-title-hover-color-value
    via Style Settings; built-in presets and custom need explicit mapping. */
 body.dynamic-views-title-hover-color-faint {
-  --dynamic-views-title-hover-color-value: var(--text-faint);
+  --dynamic-views-title-hover-color-value: var(--text-faint, #ababab);
 }
 body.dynamic-views-title-hover-color-muted {
-  --dynamic-views-title-hover-color-value: var(--text-muted);
+  --dynamic-views-title-hover-color-value: var(--text-muted, #5c5c5c);
 }
 body.dynamic-views-title-hover-color-normal {
-  --dynamic-views-title-hover-color-value: var(--text-normal);
+  --dynamic-views-title-hover-color-value: var(--text-normal, #222222);
 }
 body.dynamic-views-title-hover-color-accent {
-  --dynamic-views-title-hover-color-value: var(--text-accent-hover);
+  --dynamic-views-title-hover-color-value: var(
+    --text-accent-hover,
+    hsl(255, 90%, 76%)
+  );
 }
 body.dynamic-views-title-hover-color-custom {
   --dynamic-views-title-hover-color-value: var(
     --dynamic-views-title-hover-color-custom,
-    var(--text-normal)
+    var(--text-normal, #222222)
   );
 }

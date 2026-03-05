@@ -7,7 +7,7 @@
     padding: 3px 0 8px;
     position: relative;
     z-index: 2;
-    background-color: var(--background-primary);
+    background-color: var(--background-primary, #ffffff);
   }
 
   .controls-wrapper.scrolled::after {
@@ -87,7 +87,7 @@ body.dynamic-views-disable-toolbar-shadow
 
   .view-dropdown-btn {
     padding: 6px 12px;
-    border: 1px solid var(--background-modifier-border);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
     background-color: transparent;
     cursor: pointer;
@@ -96,14 +96,14 @@ body.dynamic-views-disable-toolbar-shadow
     gap: 8px;
     transition: all var(--anim-duration-fast, 140ms);
     font-size: 0.9em;
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
     box-shadow: none;
     height: 30px;
     box-sizing: border-box;
   }
 
   .view-dropdown-btn svg {
-    color: var(--icon-color);
+    color: var(--icon-color, #5c5c5c);
   }
 
   .view-dropdown-btn .chevron {
@@ -113,8 +113,8 @@ body.dynamic-views-disable-toolbar-shadow
 
 @media (hover: hover) {
   .view-dropdown-btn:hover {
-    background-color: var(--background-modifier-hover);
-    border-color: var(--text-faint);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
+    border-color: var(--text-faint, #ababab);
   }
 }
 
@@ -123,10 +123,11 @@ body.dynamic-views-disable-toolbar-shadow
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary, #ffffff);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
-    box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+    box-shadow: 0 4px 12px
+      var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
     z-index: 1000;
     min-width: 120px;
     overflow: hidden;
@@ -145,7 +146,7 @@ body.dynamic-views-disable-toolbar-shadow
 
 @media (hover: hover) {
   .view-option:hover {
-    background-color: var(--background-modifier-hover);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
   }
 }
 
@@ -160,15 +161,15 @@ body.dynamic-views-disable-toolbar-shadow
 
   .sort-dropdown-btn {
     padding: 6px 8px;
-    border: 1px solid var(--background-modifier-border);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
     background-color: transparent;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: var(--size-2-2);
+    gap: var(--size-2-2, 4px);
     transition: all var(--anim-duration-fast, 140ms);
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
     box-shadow: none;
     height: 30px;
     box-sizing: border-box;
@@ -178,7 +179,7 @@ body.dynamic-views-disable-toolbar-shadow
     flex-shrink: 0;
     width: 16px;
     height: 16px;
-    color: var(--icon-color);
+    color: var(--icon-color, #5c5c5c);
   }
 
   .sort-dropdown-btn .chevron {
@@ -190,8 +191,8 @@ body.dynamic-views-disable-toolbar-shadow
 
 @media (hover: hover) {
   .sort-dropdown-btn:hover {
-    background-color: var(--background-modifier-hover);
-    border-color: var(--text-faint);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
+    border-color: var(--text-faint, #ababab);
   }
 }
 
@@ -200,10 +201,11 @@ body.dynamic-views-disable-toolbar-shadow
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary, #ffffff);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
-    box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+    box-shadow: 0 4px 12px
+      var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
     z-index: 1000;
     min-width: 240px;
     overflow: hidden;
@@ -222,7 +224,7 @@ body.dynamic-views-disable-toolbar-shadow
 
 @media (hover: hover) {
   .sort-option:hover {
-    background-color: var(--background-modifier-hover);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
   }
 }
 
@@ -230,18 +232,18 @@ body.dynamic-views-disable-toolbar-shadow
   .view-option svg,
   .sort-option svg {
     flex-shrink: 0;
-    color: var(--icon-color);
+    color: var(--icon-color, #5c5c5c);
   }
 }
 
 .view-option.active,
 .sort-option.active {
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-semibold, 600);
 }
 
 .view-option.active svg,
 .sort-option.active svg {
-  color: var(--text-normal);
+  color: var(--text-normal, #222222);
 }
 
 /* ============================================
@@ -256,7 +258,7 @@ body.dynamic-views-disable-toolbar-shadow
     position: relative;
     display: flex;
     align-items: center;
-    gap: var(--size-2-2);
+    gap: var(--size-2-2, 4px);
     padding: 6px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -280,34 +282,37 @@ body.dynamic-views-disable-toolbar-shadow
 
 @media (hover: hover) {
   :is(.results-count-wrapper, .results-count-wrapper-compact):hover {
-    background-color: var(--background-modifier-hover);
-    opacity: var(--icon-opacity-hover);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
+    opacity: var(--icon-opacity-hover, 1);
   }
 
   :is(.results-count-wrapper, .results-count-wrapper-compact):has(
       .limited
     ):hover {
-    background-color: var(--background-modifier-active-hover);
+    background-color: var(
+      --background-modifier-active-hover,
+      hsla(258, 88%, 66%, 0.1)
+    );
   }
 }
 
 :is(.results-count-wrapper, .results-count-wrapper-compact).active {
-  background-color: var(--background-modifier-hover);
+  background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
 }
 
 .dynamic-views {
   .results-count {
     font-size: 0.85em;
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
     white-space: nowrap;
   }
 
   .results-count.limited {
-    color: var(--icon-color-active);
+    color: var(--icon-color-active, hsl(258, 88%, 66%));
   }
 
   .results-count-chevron {
-    color: var(--text-muted);
+    color: var(--text-muted, #5c5c5c);
     opacity: 0.6;
     flex-shrink: 0;
   }
@@ -316,10 +321,11 @@ body.dynamic-views-disable-toolbar-shadow
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary, #ffffff);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
-    box-shadow: 0 4px 12px var(--background-modifier-box-shadow);
+    box-shadow: 0 4px 12px
+      var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
     z-index: 1000;
     min-width: 200px;
     padding: 8px 12px;
@@ -338,24 +344,24 @@ body.dynamic-views-disable-toolbar-shadow
 
   .limit-dropdown-label {
     font-size: 0.85em;
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
     font-weight: 500;
     cursor: default;
   }
 
   .limit-dropdown-input {
     padding: 6px 10px;
-    border: 1px solid var(--background-modifier-border);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
-    background-color: var(--background-primary);
-    color: var(--text-normal);
+    background-color: var(--background-primary, #ffffff);
+    color: var(--text-normal, #222222);
     font-size: 0.9em;
   }
 }
 
 .limit-dropdown-input:focus {
   outline: none;
-  border-color: var(--interactive-accent);
+  border-color: var(--interactive-accent, hsl(257, 89%, 71%));
 }
 
 .dynamic-views {
@@ -373,7 +379,7 @@ body.dynamic-views-disable-toolbar-shadow
 
 @media (hover: hover) {
   .limit-reset-button:hover {
-    background-color: var(--background-modifier-hover);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
   }
 }
 
@@ -385,7 +391,7 @@ body.dynamic-views-disable-toolbar-shadow
 .dynamic-views {
   .limit-reset-button svg {
     flex-shrink: 0;
-    color: var(--icon-color);
+    color: var(--icon-color, #5c5c5c);
   }
 
   .limit-dropdown-menu .bases-toolbar-menu-item {
@@ -402,13 +408,13 @@ body.dynamic-views-disable-toolbar-shadow
 
   @media (hover: hover) {
     .limit-dropdown-menu .bases-toolbar-menu-item:hover {
-      background-color: var(--background-modifier-hover);
+      background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
     }
   }
 
   .bases-toolbar-menu-item svg {
     flex-shrink: 0;
-    color: var(--icon-color);
+    color: var(--icon-color, #5c5c5c);
   }
 }
 
@@ -429,7 +435,7 @@ body.dynamic-views-disable-toolbar-shadow
     .pin-btn
   ) {
     padding: 6px !important;
-    border: 1px solid var(--background-modifier-border);
+    border: 1px solid var(--background-modifier-border, #e0e0e0);
     border-radius: 6px;
     background-color: transparent;
     cursor: pointer;
@@ -459,7 +465,7 @@ body.dynamic-views-disable-toolbar-shadow
     svg {
     width: 16px;
     height: 16px;
-    color: var(--icon-color);
+    color: var(--icon-color, #5c5c5c);
   }
 
   @media (hover: hover) {
@@ -473,8 +479,8 @@ body.dynamic-views-disable-toolbar-shadow
       .width-toggle-btn,
       .pin-btn
     ):hover {
-      border-color: var(--text-faint);
-      background-color: var(--background-modifier-hover);
+      border-color: var(--text-faint, #ababab);
+      background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
     }
   }
 
@@ -484,8 +490,8 @@ body.dynamic-views-disable-toolbar-shadow
     .query-toggle-btn,
     .settings-btn
   ).active {
-    border-color: var(--text-faint);
-    background-color: var(--background-modifier-hover);
+    border-color: var(--text-faint, #ababab);
+    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
   }
 
   .create-note-button-compact {
@@ -576,7 +582,7 @@ body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
   position: relative;
   flex: 1;
   --search-icon-size: 16px;
-  --search-icon-color: var(--text-normal);
+  --search-icon-color: var(--text-normal, #222222);
   padding: 2px 3px;
 }
 
@@ -591,7 +597,7 @@ body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: var(--text-muted);
+  color: var(--text-muted, #5c5c5c);
   opacity: 0.7;
   pointer-events: none;
   z-index: 1;
@@ -600,10 +606,10 @@ body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
 .dynamic-views .desktop-search {
   width: 100%;
   padding: 6px 28px 6px 32px;
-  border: 1px solid var(--background-modifier-border);
+  border: 1px solid var(--background-modifier-border, #e0e0e0);
   border-radius: 6px;
   background-color: transparent;
-  color: var(--text-normal);
+  color: var(--text-normal, #222222);
   font-size: 0.9em;
   transition: all var(--anim-duration-fast, 140ms);
   height: 30px;
@@ -619,7 +625,7 @@ body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-muted, #5c5c5c);
   opacity: 0.7;
   transition:
     opacity var(--anim-duration-fast, 140ms),
@@ -630,20 +636,20 @@ body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
 @media (hover: hover) {
   .search-input-clear-button:hover {
     opacity: 1;
-    color: var(--text-normal);
+    color: var(--text-normal, #222222);
   }
 }
 
 @media (hover: hover) {
   .desktop-search:hover {
-    border-color: var(--text-muted);
+    border-color: var(--text-muted, #5c5c5c);
   }
 }
 
 .desktop-search:focus {
-  border-color: var(--interactive-accent);
+  border-color: var(--interactive-accent, hsl(257, 89%, 71%));
 }
 
 .dynamic-views .desktop-search::placeholder {
-  color: var(--text-faint);
+  color: var(--text-faint, #ababab);
 }

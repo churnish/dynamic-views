@@ -2,12 +2,12 @@
    Obsidian defines this per data-view-type; plugin views need their own. */
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
-  --bases-embed-padding: var(--size-4-1) 1px;
+  --bases-embed-padding: var(--size-4-1, 4px) 1px;
 }
 
 .is-phone .bases-view[data-view-type='dynamic-views-grid'],
 .is-phone .bases-view[data-view-type='dynamic-views-masonry'] {
-  --bases-embed-padding: var(--size-4-2);
+  --bases-embed-padding: var(--size-4-2, 8px);
 }
 
 /* Scroll fade gradient at bottom of scrollable results */
@@ -29,7 +29,7 @@
   background: linear-gradient(
     to bottom,
     transparent,
-    var(--background-primary)
+    var(--background-primary, #ffffff)
   );
   pointer-events: none;
   opacity: 0;
@@ -106,5 +106,5 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
 .is-phone
   .workspace-leaf-content[data-type='bases']
   .dynamic-views-bases-container {
-  margin-bottom: var(--view-bottom-spacing);
+  margin-bottom: var(--view-bottom-spacing, 0px);
 }

@@ -38,8 +38,8 @@
 
     /* Masonry: Thumbnail top/bottom positioning */
     .card.card-thumbnail-top .card-thumbnail {
-      margin-top: var(--size-4-2);
-      margin-bottom: var(--size-4-2);
+      margin-top: var(--size-4-2, 8px);
+      margin-bottom: var(--size-4-2, 8px);
     }
 
     .card .card-text-preview {
@@ -88,7 +88,7 @@
   .dynamic-views-masonry
     .dynamic-views-group-section:not(:last-child)
     > .masonry-container {
-    height: calc(var(--masonry-height, auto) + var(--size-4-4) + 1px);
+    height: calc(var(--masonry-height, auto) + var(--size-4-4, 16px) + 1px);
   }
 
   /* Hide cards during layout recalc - fade out with opacity transition.
@@ -131,7 +131,8 @@
       left var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease,
-      transform var(--anim-duration-fast, 140ms) ease;
+      scale var(--anim-duration-fast, 140ms) ease,
+      translate var(--anim-duration-fast, 140ms) ease;
   }
 
   // Instant repositioning during scroll-idle remeasure — overrides default
@@ -151,7 +152,8 @@
       height var(--masonry-reposition-duration) ease,
       box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
       background-color var(--anim-duration-fast, 140ms) ease,
-      transform var(--anim-duration-fast, 140ms) ease;
+      scale var(--anim-duration-fast, 140ms) ease,
+      translate var(--anim-duration-fast, 140ms) ease;
   }
 }
 

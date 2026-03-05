@@ -11,7 +11,7 @@
   /* Spacing between card-header and card-body, and between body children */
   .card .card-content,
   .card .card-body {
-    gap: var(--size-4-1);
+    gap: var(--size-4-1, 4px);
   }
 
   /* Grid: card-content fills available space, aligns children to top */
@@ -38,42 +38,42 @@
 /* Card border color presets — set shared variable, consumed by ::after and cover-content divider */
 /* Faint (default) — no rule needed, default --card-border-color is --background-modifier-border */
 body.dynamic-views-card-border-color-muted .dynamic-views .card {
-  --card-border-color: var(--background-modifier-border-hover);
+  --card-border-color: var(--background-modifier-border-hover, #d4d4d4);
 }
 body.dynamic-views-card-border-color-normal .dynamic-views .card {
-  --card-border-color: var(--background-modifier-border-focus);
+  --card-border-color: var(--background-modifier-border-focus, #bdbdbd);
 }
 body.dynamic-views-card-border-color-accent .dynamic-views .card {
-  --card-border-color: var(--text-accent);
+  --card-border-color: var(--text-accent, hsl(258, 88%, 66%));
 }
 body.dynamic-views-card-border-color-red .dynamic-views .card {
-  --card-border-color: var(--color-red);
+  --card-border-color: var(--color-red, #fb464c);
 }
 body.dynamic-views-card-border-color-orange .dynamic-views .card {
-  --card-border-color: var(--color-orange);
+  --card-border-color: var(--color-orange, #e9973f);
 }
 body.dynamic-views-card-border-color-yellow .dynamic-views .card {
-  --card-border-color: var(--color-yellow);
+  --card-border-color: var(--color-yellow, #e0de71);
 }
 body.dynamic-views-card-border-color-green .dynamic-views .card {
-  --card-border-color: var(--color-green);
+  --card-border-color: var(--color-green, #44cf6e);
 }
 body.dynamic-views-card-border-color-cyan .dynamic-views .card {
-  --card-border-color: var(--color-cyan);
+  --card-border-color: var(--color-cyan, #53dfdd);
 }
 body.dynamic-views-card-border-color-blue .dynamic-views .card {
-  --card-border-color: var(--color-blue);
+  --card-border-color: var(--color-blue, #027aff);
 }
 body.dynamic-views-card-border-color-purple .dynamic-views .card {
-  --card-border-color: var(--color-purple);
+  --card-border-color: var(--color-purple, #a882ff);
 }
 body.dynamic-views-card-border-color-pink .dynamic-views .card {
-  --card-border-color: var(--color-pink);
+  --card-border-color: var(--color-pink, #fa99cd);
 }
 body.dynamic-views-card-border-color-custom .dynamic-views .card {
   --card-border-color: var(
     --dynamic-views-card-border-color-custom,
-    var(--background-modifier-border)
+    var(--background-modifier-border, #e0e0e0)
   );
 }
 
@@ -87,88 +87,91 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
   body:not([class*='dynamic-views-card-border-color-hover-'])
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--background-modifier-border-hover);
+    --card-border-color: var(--background-modifier-border-hover, #d4d4d4);
   }
 
   body.dynamic-views-card-border-color-hover-normal
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--background-modifier-border-focus);
+    --card-border-color: var(--background-modifier-border-focus, #bdbdbd);
   }
   body.dynamic-views-card-border-color-hover-faint
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--background-modifier-border);
+    --card-border-color: var(--background-modifier-border, #e0e0e0);
   }
   body.dynamic-views-card-border-color-hover-muted
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--background-modifier-border-hover);
+    --card-border-color: var(--background-modifier-border-hover, #d4d4d4);
   }
   body.dynamic-views-card-border-color-hover-accent
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--text-accent);
+    --card-border-color: var(--text-accent, hsl(258, 88%, 66%));
   }
   body.dynamic-views-card-border-color-hover-red
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-red);
+    --card-border-color: var(--color-red, #fb464c);
   }
   body.dynamic-views-card-border-color-hover-orange
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-orange);
+    --card-border-color: var(--color-orange, #e9973f);
   }
   body.dynamic-views-card-border-color-hover-yellow
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-yellow);
+    --card-border-color: var(--color-yellow, #e0de71);
   }
   body.dynamic-views-card-border-color-hover-green
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-green);
+    --card-border-color: var(--color-green, #44cf6e);
   }
   body.dynamic-views-card-border-color-hover-cyan
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-cyan);
+    --card-border-color: var(--color-cyan, #53dfdd);
   }
   body.dynamic-views-card-border-color-hover-blue
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-blue);
+    --card-border-color: var(--color-blue, #027aff);
   }
   body.dynamic-views-card-border-color-hover-purple
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-purple);
+    --card-border-color: var(--color-purple, #a882ff);
   }
   body.dynamic-views-card-border-color-hover-pink
     .dynamic-views
     .card.hover-intent-active:hover {
-    --card-border-color: var(--color-pink);
+    --card-border-color: var(--color-pink, #fa99cd);
   }
   body.dynamic-views-card-border-color-hover-custom
     .dynamic-views
     .card.hover-intent-active:hover {
     --card-border-color: var(
       --dynamic-views-card-border-color-hover-custom,
-      var(--background-modifier-border-focus)
+      var(--background-modifier-border-focus, #bdbdbd)
     );
   }
 }
 
 /* Card background options — override --card-bg so placeholder derives from it */
 body.dynamic-views-card-background-transparent .dynamic-views .card {
-  --card-bg: var(--dynamic-views-view-background, var(--background-primary));
+  --card-bg: var(
+    --dynamic-views-view-background,
+    var(--background-primary, #ffffff)
+  );
 }
 
 body.dynamic-views-card-background-custom .dynamic-views .card {
   --card-bg: var(
     --dynamic-views-card-background-color-custom,
-    var(--background-primary-alt)
+    var(--background-primary-alt, #fafafa)
   );
 }
 
@@ -177,39 +180,71 @@ body.dynamic-views-card-shadow-subtle
   .workspace-leaf-content[data-type='bases']
   .dynamic-views
   .card {
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(
+    --shadow-xs,
+    0 1px 6px rgba(0, 0, 0, 0.015),
+    0 4px 24px rgba(0, 0, 0, 0.065)
+  );
 }
 body.dynamic-views-card-shadow-soft
   .workspace-leaf-content[data-type='bases']
   .dynamic-views
   .card {
-  box-shadow: var(--shadow-s);
+  box-shadow: var(
+    --shadow-s,
+    0px 1px 2px rgba(0, 0, 0, 0.028),
+    0px 3.4px 6.7px rgba(0, 0, 0, 0.042),
+    0px 15px 30px rgba(0, 0, 0, 0.07)
+  );
 }
 body.dynamic-views-card-shadow-dramatic
   .workspace-leaf-content[data-type='bases']
   .dynamic-views
   .card {
-  box-shadow: var(--shadow-l);
+  box-shadow: var(
+    --shadow-l,
+    0px 1.8px 7.3px rgba(0, 0, 0, 0.071),
+    0px 6.3px 24.7px rgba(0, 0, 0, 0.112),
+    0px 15px 30px rgba(0, 0, 0, 0.1)
+  );
 }
 
 /* Card shadow on hover presets */
 @media (hover: hover) {
-  body.dynamic-views-card-shadow-hover-subtle
+  /* Subtle (default) */
+  body:is(
+      .dynamic-views-card-shadow-hover-subtle,
+      :not([class*='dynamic-views-card-shadow-hover-'])
+    )
     .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
-    box-shadow: var(--shadow-xs);
+    box-shadow: var(
+      --shadow-xs,
+      0 1px 6px rgba(0, 0, 0, 0.015),
+      0 4px 24px rgba(0, 0, 0, 0.065)
+    );
   }
   body.dynamic-views-card-shadow-hover-soft
     .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
-    box-shadow: var(--shadow-s);
+    box-shadow: var(
+      --shadow-s,
+      0px 1px 2px rgba(0, 0, 0, 0.028),
+      0px 3.4px 6.7px rgba(0, 0, 0, 0.042),
+      0px 15px 30px rgba(0, 0, 0, 0.07)
+    );
   }
   body.dynamic-views-card-shadow-hover-dramatic
     .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
-    box-shadow: var(--shadow-l);
+    box-shadow: var(
+      --shadow-l,
+      0px 1.8px 7.3px rgba(0, 0, 0, 0.071),
+      0px 6.3px 24.7px rgba(0, 0, 0, 0.112),
+      0px 15px 30px rgba(0, 0, 0, 0.1)
+    );
   }
 }

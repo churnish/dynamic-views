@@ -31,7 +31,7 @@ body:has(.dynamic-views-image-embed.is-zoomed)
   .dynamic-views
   .card:focus-visible::after {
   box-shadow: inset 0 0 0 1px
-    var(--card-border-color, var(--background-modifier-border));
+    var(--card-border-color, var(--background-modifier-border, #e0e0e0));
 }
 
 /* Constrained mode: overlay styling (desktop, fullscreen disabled) */
@@ -41,7 +41,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   > .dynamic-views-image-embed.is-zoomed {
   background: color-mix(
     in srgb,
-    var(--background-primary) calc(var(--overlay-opacity, 0.4) * 100%),
+    var(--background-primary, #ffffff) calc(var(--overlay-opacity, 0.4) * 100%),
     transparent
   );
   transition: background var(--anim-duration-fast, 140ms) ease;
@@ -52,7 +52,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .is-mobile
   ).dynamic-views-image-viewer-disable-fullscreen
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
-  background: var(--background-primary);
+  background: var(--background-primary, #ffffff);
 }
 
 /* Hide mobile navbar when fullscreen image viewer is active (mobile is always fullscreen) */
@@ -67,7 +67,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .dynamic-views-image-viewer-disable-fullscreen
   ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed {
-  background: var(--background-modifier-cover);
+  background: var(--background-modifier-cover, rgba(220, 220, 220, 0.4));
   position: fixed;
   transition: background var(--anim-duration-fast, 140ms) ease;
 }
@@ -79,7 +79,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .dynamic-views-image-viewer-disable-fullscreen
   ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
-  background: var(--background-primary);
+  background: var(--background-primary, #ffffff);
 }
 
 /* Scale image when maximized with panzoom disabled (desktop fullscreen only) */
