@@ -128,6 +128,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private _previousCustomClasses: string[] = [];
   private currentDoc: Document = document;
   private disconnectStyleObserver: (() => void) | null = null;
+  private handlePropertyMeasured: (() => void) | null = null;
 
   // Consolidated state objects (shared patterns with grid-view)
   private contentCache: ContentCache = {
@@ -609,10 +610,16 @@ export class DynamicViewsMasonryView extends BasesView {
     // DOM when adopted into a new document; the plugin stylesheet overrides it
     // with !important once Obsidian copies styles to the popout (~300ms later).
     // Must be inline style — CSS classes don't work before stylesheets load.
-    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
-    scrollEl
-      .closest<HTMLElement>('.view-content')
-      ?.style.setProperty('visibility', 'hidden');
+    // Skip for embedded views (inside markdown leaves) — they don't move to popouts.
+    const leafContent = scrollEl.closest<HTMLElement>(
+      '.workspace-leaf-content'
+    );
+    if (leafContent?.getAttribute('data-type') === 'bases') {
+      // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
+      leafContent
+        .querySelector<HTMLElement>(':scope > .view-content')
+        ?.style.setProperty('visibility', 'hidden');
+    }
 
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
@@ -642,8 +649,9 @@ export class DynamicViewsMasonryView extends BasesView {
       this.app.workspace.on('layout-change', () => {
         const ownerDoc = this.containerEl.ownerDocument;
         if (ownerDoc !== this.currentDoc) {
+          const oldDoc = this.currentDoc;
           this.currentDoc = ownerDoc;
-          this.handleDocumentChange(ownerDoc);
+          this.handleDocumentChange(oldDoc, ownerDoc);
         }
       })
     );
@@ -704,15 +712,15 @@ export class DynamicViewsMasonryView extends BasesView {
         });
       }, 100);
     };
-    const propertyEventDoc = this.containerEl.ownerDocument;
-    propertyEventDoc.addEventListener(
+    this.handlePropertyMeasured = handlePropertyMeasured;
+    this.containerEl.ownerDocument.addEventListener(
       PROPERTY_MEASURED,
       handlePropertyMeasured
     );
     this.register(() => {
-      propertyEventDoc.removeEventListener(
+      this.currentDoc.removeEventListener(
         PROPERTY_MEASURED,
-        handlePropertyMeasured
+        this.handlePropertyMeasured!
       );
       if (this.propertyMeasuredTimeout !== null) {
         window.clearTimeout(this.propertyMeasuredTimeout);
@@ -732,7 +740,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Handle view moving to a different document (popout window) */
-  private handleDocumentChange(newDoc: Document): void {
+  private handleDocumentChange(oldDoc: Document, newDoc: Document): void {
     // Sync body classes from main window so CSS rules match immediately
     if (newDoc !== document) {
       for (const cls of document.body.classList) {
@@ -743,6 +751,14 @@ export class DynamicViewsMasonryView extends BasesView {
           newDoc.body.classList.add(cls);
         }
       }
+    }
+    // Rebind PROPERTY_MEASURED listener to new document
+    if (this.handlePropertyMeasured) {
+      oldDoc.removeEventListener(
+        PROPERTY_MEASURED,
+        this.handlePropertyMeasured
+      );
+      newDoc.addEventListener(PROPERTY_MEASURED, this.handlePropertyMeasured);
     }
     // Rebind style observer to new document's body
     this.disconnectStyleObserver?.();

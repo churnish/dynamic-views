@@ -484,10 +484,16 @@ export class DynamicViewsGridView extends BasesView {
     // DOM when adopted into a new document; the plugin stylesheet overrides it
     // with !important once Obsidian copies styles to the popout (~300ms later).
     // Must be inline style — CSS classes don't work before stylesheets load.
-    // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
-    scrollEl
-      .closest<HTMLElement>('.view-content')
-      ?.style.setProperty('visibility', 'hidden');
+    // Skip for embedded views (inside markdown leaves) — they don't move to popouts.
+    const leafContent = scrollEl.closest<HTMLElement>(
+      '.workspace-leaf-content'
+    );
+    if (leafContent?.getAttribute('data-type') === 'bases') {
+      // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- inline style required: must apply before stylesheets load in popout
+      leafContent
+        .querySelector<HTMLElement>(':scope > .view-content')
+        ?.style.setProperty('visibility', 'hidden');
+    }
 
     // Initialize shared card renderer
     this.cardRenderer = new SharedCardRenderer(
