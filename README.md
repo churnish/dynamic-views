@@ -33,9 +33,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Fold sections when grouping by property
 - Show result count for each group
 - Full keyboard navigation support
-- Endless customization possibilities with custom CSS
 - Apply CSS snippets to individual views
-- Datacore views: Grid, Masonry, List
 
 And numerous other quality‑of‑life improvements over the default Bases card view.
 
