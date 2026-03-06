@@ -123,6 +123,13 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       'lightbulb',
       'Request feature'
     );
+    linksContainer.createSpan({ text: ' • ' });
+    createHeaderLink(
+      linksContainer,
+      'https://github.com/churnish/dynamic-views/discussions/categories/q-a',
+      'lucide-message-circle-question',
+      'Ask question'
+    );
 
     // Appearance section - description text only, no settings
     new SettingGroup(containerEl).addClass('dynamic-views-appearance-group');
