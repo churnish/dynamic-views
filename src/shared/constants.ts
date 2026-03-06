@@ -47,3 +47,15 @@ export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
 
 /** Thumbnail stacking threshold multiplier (card stacks when width < thumbnail * this) */
 export const THUMBNAIL_STACK_MULTIPLIER = 3;
+
+/** Fixed hover growth per side in px. Scale = 1 + (2 * HOVER_GROWTH_PX) / height. */
+export const HOVER_GROWTH_PX = 4;
+
+const MAX_HOVER_SCALE = 1.04;
+
+/** Size-adaptive hover scale for a card — consistent gap consumption regardless of height.
+    Returns empty string for invalid heights (removes property, falls back to CSS default). */
+export function computeHoverScale(height: number): string {
+  if (height <= 0) return '';
+  return String(Math.min(1 + (HOVER_GROWTH_PX * 2) / height, MAX_HOVER_SCALE));
+}

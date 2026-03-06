@@ -47,6 +47,7 @@ settings:
     -
         id: dynamic-views-backdrop-overlay-blur
         title: Overlay blur
+        description: Blur images when overlay tint is applied.
         type: variable-number-slider
         default: 0
         min: 0
@@ -105,16 +106,16 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-card-hover-elevate
-        title: Elevate
-        description: Lift the card up slightly on hover. Does not apply in embedded views.
-        type: class-toggle
-    -
         id: dynamic-views-card-hover-enlarge
         title: Enlarge
         description: Make the card slightly larger on hover. Does not apply in embedded views.
         type: class-toggle
         default: true
+    -
+        id: dynamic-views-card-hover-elevate
+        title: Elevate
+        description: Lift the card up slightly on hover. Does not apply in embedded views.
+        type: class-toggle
     -
         id: dynamic-views-card-padding
         title: Padding
@@ -183,6 +184,7 @@ settings:
     -
         id: dynamic-views-card-background-hover
         title: Background (hover)
+        description: Card background color on hover.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-background-hover-transparent
@@ -404,8 +406,8 @@ settings:
                 value: dynamic-views-cover-bg-custom
     -
         id: dynamic-views-cover-background-color-custom
-        title: Custom cover background
-        description: Background color for 'Custom color' mode.
+        title: Custom background
+        description: Custom background color for contained images and placeholders.
         type: variable-themed-color
         format: rgb
         opacity: false
@@ -573,12 +575,12 @@ settings:
         default: YYYY-MM-DD, HH:mm
     -
         id: dynamic-views-timestamp-recent-full
-        title: Show full recent timestamps
+        title: Full recent timestamps
         description: Show date for today's created and modified timestamps.
         type: class-toggle
     -
         id: dynamic-views-timestamp-past-full
-        title: Show full past timestamps
+        title: Full past timestamps
         description: Show time for created and modified timestamps older than today.
         type: class-toggle
     -
@@ -644,7 +646,7 @@ settings:
         type: class-toggle
     -
         id: dynamic-views-image-viewer-disable-dismiss-on-click
-        title: Do not dismiss on press
+        title: Disable dismiss on press
         description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
     -
@@ -689,9 +691,35 @@ settings:
         description: Do not slide up on reveal.
         type: class-toggle
     -
+        id: dynamic-views-poster-background
+        title: Background
+        description: Background color for contained images.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-bg-dimmed
+        options:
+            -
+                label: Dimmed
+                value: dynamic-views-poster-bg-dimmed
+            -
+                label: Transparent
+                value: dynamic-views-poster-bg-transparent
+            -
+                label: Custom
+                value: dynamic-views-poster-bg-custom
+    -
+        id: dynamic-views-poster-background-color-custom
+        title: Custom background
+        description: Custom background color for contained images.
+        type: variable-themed-color
+        format: rgb
+        opacity: false
+        default-light: '#'
+        default-dark: '#'
+    -
         id: dynamic-views-poster-overlay-tint
         title: Overlay tint
-        description: Color of the poster overlay.
+        description: Shade of the poster overlay.
         type: class-select
         allowEmpty: false
         default: dynamic-views-poster-theme-dark
@@ -726,12 +754,19 @@ settings:
     -
         id: dynamic-views-poster-overlay-blur
         title: Overlay blur
+        description: Blur images when overlay tint is applied.
         type: variable-number-slider
         default: 0
         min: 0
         max: 20
         step: 1
         format: px
+    -
+        id: dynamic-views-fixed-poster-height
+        title: Fixed height
+        description: Show background bars above and below contained images in poster cards.
+        type: class-toggle
+        default: false
     -
         id: properties-heading
         title: Properties
@@ -760,13 +795,13 @@ settings:
         quotes: true
     -
         id: dynamic-views-property-font
-        title: Property font
+        title: Font
         description: Font name as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-property-font-size
-        title: Property font size
+        title: Font size
         description: Font size of property values (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
@@ -883,7 +918,7 @@ settings:
     -
         id: dynamic-views-hide-missing-properties
         title: Hide missing properties
-        description: Hide properties that Do not exist in note frontmatter.
+        description: Hide properties that do not exist in note frontmatter.
         type: class-toggle
         default: false
     -
@@ -932,13 +967,13 @@ settings:
         collapsed: true
     -
         id: dynamic-views-property-label-font
-        title: Property label font
+        title: Font
         description: Font name as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-property-label-font-size
-        title: Property label text size
+        title: Text size
         description: Font size for property labels (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
@@ -999,7 +1034,7 @@ settings:
         default-dark: '#'
     -
         id: dynamic-views-property-label-case
-        title: Property label case
+        title: Text case
         description: Text case transformation for property labels.
         type: class-select
         allowEmpty: false
@@ -1035,7 +1070,7 @@ settings:
     -
         id: dynamic-views-slideshow-disabled
         title: Disable slideshow
-        description: Do not cycle through images on cards with multiple images.
+        description: Do not cycle through cover images on cards with multiple images.
         type: class-toggle
     -
         id: dynamic-views-slideshow-disable-looping
@@ -1045,7 +1080,7 @@ settings:
     -
         id: dynamic-views-slideshow-arrows
         title: Navigation arrows
-        description: Controls visibility of left/right arrows on slideshow covers.
+        description: Visibility of left/right arrows on slideshow covers.
         type: class-select
         allowEmpty: false
         default: dynamic-views-slideshow-arrows-hover
@@ -1082,13 +1117,13 @@ settings:
         collapsed: true
     -
         id: dynamic-views-subtitle-font
-        title: Subtitle font
+        title: Font
         description: Font name as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-subtitle-font-size
-        title: Subtitle font size
+        title: Font size
         description: Font size for subtitles (e.g., 0.9em, 14px).
         type: variable-text
         default: ''
@@ -1167,7 +1202,8 @@ settings:
         default-dark: '#'
     -
         id: dynamic-views-subtitle-position
-        title: Subtitle position
+        title: Position
+        description: Subtitle placement relative to title.
         type: class-select
         allowEmpty: false
         default: dynamic-views-subtitle-below
@@ -1180,7 +1216,7 @@ settings:
                 value: dynamic-views-subtitle-below
     -
         id: dynamic-views-subtitle-alignment
-        title: Subtitle alignment
+        title: Alignment
         description: Horizontal alignment of subtitles.
         type: class-select
         allowEmpty: false
@@ -1217,7 +1253,7 @@ settings:
         collapsed: true
     -
         id: dynamic-views-tag-style
-        title: Tag style
+        title: Style
         description: Visual appearance of tags.
         type: class-select
         allowEmpty: false
@@ -1230,14 +1266,14 @@ settings:
                 label: Fill
                 value: dynamic-views-tag-style-fill
             -
-                label: Plaintext
+                label: Plain text
                 value: dynamic-views-tag-style-plaintext
             -
-                label: Theme style
+                label: Theme default
                 value: dynamic-views-tag-style-theme
     -
         id: dynamic-views-tag-color
-        title: Tag color
+        title: Color
         description: Color preset for tags.
         type: class-select
         allowEmpty: false
@@ -1304,13 +1340,13 @@ settings:
         collapsed: true
     -
         id: dynamic-views-text-preview-font
-        title: Text preview font
+        title: Font
         description: Font name as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-text-preview-font-size
-        title: Text preview font size
+        title: Font size
         description: Font size for text previews (e.g., 0.9em, 14px, 0.875rem).
         type: variable-text
         default: ''
@@ -1370,6 +1406,11 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-text-preview-italic
+        title: Italic
+        description: Italicize text previews.
+        type: class-toggle
+    -
         id: thumbnails-heading
         title: Thumbnails
         type: heading
@@ -1404,7 +1445,7 @@ settings:
                 value: dynamic-views-thumbnail-crop-bottom
     -
         id: dynamic-views-show-thumbnail-placeholder
-        title: Show placeholder for files with no images
+        title: Show placeholder
         description: Show empty thumbnail placeholder for files without images.
         type: class-toggle
         default: false
@@ -1415,15 +1456,15 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-hide-thumbnail-shadow
-        title: Hide scrubbing shadow
-        description: Do not show the shadow/glow below thumbnails with multiple images.
+        id: dynamic-views-show-thumbnail-shadow
+        title: Scrubbing shadow
+        description: Show a shadow below thumbnails with multiple images.
         type: class-toggle
-        default: true
+        default: false
     -
         id: dynamic-views-hide-scrubbing-indicator
         title: Hide scrubbing indicator
-        description: Hide indicator icon on thumbnails with multiple images.
+        description: Do not show the indicator icon on thumbnails with multiple images.
         type: class-toggle
         default: false
     -
@@ -1435,6 +1476,7 @@ settings:
     -
         id: dynamic-views-file-type-indicator
         title: File format indicator
+        description: How file types are indicated on cards.
         type: class-select
         allowEmpty: false
         default: dynamic-views-file-type-ext
@@ -1465,19 +1507,19 @@ settings:
         default: false
     -
         id: dynamic-views-title-font
-        title: Title font
+        title: Font
         description: Font name as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-title-font-size
-        title: Title font size
+        title: Font size
         description: Font size for card titles (e.g., 1em, 16px, 1.2rem).
         type: variable-text
         default: ''
     -
         id: dynamic-views-title-color
-        title: Title color
+        title: Color
         description: Theme color preset for titles.
         type: class-select
         allowEmpty: false
@@ -1524,15 +1566,15 @@ settings:
                 value: dynamic-views-title-color-custom
     -
         id: dynamic-views-title-color-custom
-        title: Custom title color
-        description: Set a custom color.
+        title: Custom color
+        description: Set a custom title color.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
         id: dynamic-views-title-hover-color
-        title: Title color (hover)
+        title: Color (hover)
         description: Theme color preset for titles on hover.
         type: class-select
         allowEmpty: false
@@ -1582,15 +1624,15 @@ settings:
                 value: dynamic-views-title-hover-color-custom
     -
         id: dynamic-views-title-hover-color-custom
-        title: Custom title hover color
-        description: Set a custom hover color.
+        title: Custom hover color
+        description: Set a custom title hover color.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
         id: dynamic-views-title-alignment
-        title: Title alignment
+        title: Alignment
         description: Horizontal alignment of card titles.
         type: class-select
         allowEmpty: false
@@ -1638,6 +1680,9 @@ body:not(.dynamic-views-card-border-color-hover-custom)
 body:not(.dynamic-views-cover-bg-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-cover-background-color-custom'],
+body:not(.dynamic-views-poster-bg-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-poster-background-color-custom'],
 body.dynamic-views-image-viewer-disabled
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-disabled']
@@ -1699,7 +1744,7 @@ body.is-mobile
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-thumbnail-shadow'],
+  .setting-item[data-id='dynamic-views-show-thumbnail-shadow'],
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],

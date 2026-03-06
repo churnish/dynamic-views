@@ -48,6 +48,7 @@ import {
   SCROLL_THROTTLE_MS,
   MASONRY_CORRECTION_MS,
   MOUNT_REMEASURE_MS,
+  computeHoverScale,
 } from '../shared/constants';
 import {
   setupBasesSwipePrevention,
@@ -1767,6 +1768,14 @@ export class DynamicViewsMasonryView extends BasesView {
                   if (groupItems[i].el) {
                     groupItems[i].el!.style.left = `${pos.left}px`;
                     groupItems[i].el!.style.top = `${pos.top}px`;
+                    groupItems[i].el!.style.setProperty(
+                      '--hover-scale-x',
+                      computeHoverScale(cardWidth)
+                    );
+                    groupItems[i].el!.style.setProperty(
+                      '--hover-scale-y',
+                      computeHoverScale(heights[i])
+                    );
                   }
                 }
 
@@ -1932,6 +1941,14 @@ export class DynamicViewsMasonryView extends BasesView {
               groupCards[i].classList.add('masonry-positioned');
               groupCards[i].style.left = `${pos.left}px`;
               groupCards[i].style.top = `${pos.top}px`;
+              groupCards[i].style.setProperty(
+                '--hover-scale-x',
+                computeHoverScale(cardWidth)
+              );
+              groupCards[i].style.setProperty(
+                '--hover-scale-y',
+                computeHoverScale(groupHeights[i])
+              );
             }
 
             groupEl.classList.add('masonry-container');
@@ -1991,6 +2008,14 @@ export class DynamicViewsMasonryView extends BasesView {
             allCards[i].classList.add('masonry-positioned');
             allCards[i].style.left = `${pos.left}px`;
             allCards[i].style.top = `${pos.top}px`;
+            allCards[i].style.setProperty(
+              '--hover-scale-x',
+              computeHoverScale(cardWidth)
+            );
+            allCards[i].style.setProperty(
+              '--hover-scale-y',
+              computeHoverScale(heights[i])
+            );
           }
 
           this.masonryContainer.style.setProperty(
@@ -2354,6 +2379,14 @@ export class DynamicViewsMasonryView extends BasesView {
         if (groupItems[i].el) {
           groupItems[i].el!.style.left = `${pos.left}px`;
           groupItems[i].el!.style.top = `${pos.top}px`;
+          groupItems[i].el!.style.setProperty(
+            '--hover-scale-x',
+            computeHoverScale(cardWidth)
+          );
+          groupItems[i].el!.style.setProperty(
+            '--hover-scale-y',
+            computeHoverScale(heights[i])
+          );
         }
       }
       const container = isGrouped
@@ -2467,6 +2500,11 @@ export class DynamicViewsMasonryView extends BasesView {
         item.el.style.left = `${left}px`;
         item.el.style.top = `${top}px`;
         item.el.style.height = `${height}px`;
+        item.el.style.setProperty(
+          '--hover-scale-x',
+          computeHoverScale(cardWidth)
+        );
+        item.el.style.setProperty('--hover-scale-y', computeHoverScale(height));
       }
     }
 
@@ -2514,6 +2552,14 @@ export class DynamicViewsMasonryView extends BasesView {
     // scroll — small per-card differences cascade through columns, causing
     // visible jumping. Cleared when remeasureAndReposition runs at scroll-idle.
     handle.el.style.height = `${item.height}px`;
+    handle.el.style.setProperty(
+      '--hover-scale-x',
+      computeHoverScale(item.width)
+    );
+    handle.el.style.setProperty(
+      '--hover-scale-y',
+      computeHoverScale(item.height)
+    );
     this.hasExplicitScrollHeights = true;
     item.el = handle.el;
     item.handle = handle;
@@ -3262,6 +3308,16 @@ export class DynamicViewsMasonryView extends BasesView {
                 card.classList.add('masonry-positioned');
                 card.style.left = `${pos.left}px`;
                 card.style.top = `${pos.top}px`;
+                card.style.setProperty(
+                  '--hover-scale-x',
+                  computeHoverScale(result.cardWidth)
+                );
+                const h = result.heights?.[posOffset + index];
+                if (h)
+                  card.style.setProperty(
+                    '--hover-scale-y',
+                    computeHoverScale(h)
+                  );
               });
 
               // Ensure container has masonry-container class
@@ -3364,6 +3420,9 @@ export class DynamicViewsMasonryView extends BasesView {
         const isFixedCoverHeight = document.body.classList.contains(
           'dynamic-views-fixed-cover-height'
         );
+        const isFixedPosterHeight = document.body.classList.contains(
+          'dynamic-views-fixed-poster-height'
+        );
 
         const allNewCards = [...newCardsPerGroup.values()].flat();
         const runAfterLayout = (fn: () => void) => {
@@ -3384,7 +3443,7 @@ export class DynamicViewsMasonryView extends BasesView {
           });
         };
 
-        if (isFixedCoverHeight) {
+        if (isFixedCoverHeight && isFixedPosterHeight) {
           runAfterLayout(runPerGroupLayout);
         } else {
           const newCardImages = allNewCards
@@ -3393,6 +3452,7 @@ export class DynamicViewsMasonryView extends BasesView {
                 '.dynamic-views-image-embed img'
               ),
               card.querySelector<HTMLImageElement>('.card-thumbnail img'),
+              card.querySelector<HTMLImageElement>('.card-poster img'),
             ])
             .filter((img): img is HTMLImageElement => img !== null);
 

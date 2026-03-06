@@ -37,6 +37,7 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
+  computeHoverScale,
 } from '../shared/constants';
 import {
   setupBasesSwipePrevention,
@@ -91,6 +92,21 @@ declare module 'obsidian' {
 }
 
 export const GRID_VIEW_TYPE = 'dynamic-views-grid';
+
+function setHoverScaleForCards(cards: HTMLElement[]): void {
+  if (cards.length === 0) return;
+  const scaleX = computeHoverScale(cards[0].offsetWidth);
+  const heights = cards.map((c) => c.offsetHeight);
+  for (let i = 0; i < cards.length; i++) {
+    if (heights[i] > 0) {
+      cards[i].style.setProperty('--hover-scale-x', scaleX);
+      cards[i].style.setProperty(
+        '--hover-scale-y',
+        computeHoverScale(heights[i])
+      );
+    }
+  }
+}
 
 export class DynamicViewsGridView extends BasesView {
   readonly type = GRID_VIEW_TYPE;
@@ -368,6 +384,9 @@ export class DynamicViewsGridView extends BasesView {
     );
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
+    setHoverScaleForCards(
+      Array.from(groupEl.querySelectorAll<HTMLElement>('.card'))
+    );
 
     // Invalidate render hash so next onDataUpdated() doesn't skip
     this.renderState.lastRenderHash = '';
@@ -1129,6 +1148,9 @@ export class DynamicViewsGridView extends BasesView {
       );
       initializeScrollGradients(feedEl);
       initializeTitleTruncation(feedEl);
+      setHoverScaleForCards(
+        Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
+      );
 
       // Compute effective total (exclude collapsed groups)
       let effectiveTotal = 0;
@@ -1200,6 +1222,9 @@ export class DynamicViewsGridView extends BasesView {
                       Array.from(feed.querySelectorAll<HTMLElement>('.card'))
                     );
                     initializeScrollGradients(feed);
+                    setHoverScaleForCards(
+                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
+                    );
                   });
                 }
               }
@@ -1626,6 +1651,7 @@ export class DynamicViewsGridView extends BasesView {
         // re-scanning old content-hidden cards in the container)
         initializeScrollGradientsForCards(newCardEls);
         initializeTitleTruncationForCards(newCardEls);
+        setHoverScaleForCards(newCardEls);
       }
 
       // Mark that batch append occurred (for end indicator)

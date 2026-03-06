@@ -511,7 +511,7 @@
     .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
-    scale: 1.02;
+    scale: var(--hover-scale-x, 1.02) var(--hover-scale-y, 1.02);
     z-index: 11;
   }
 
