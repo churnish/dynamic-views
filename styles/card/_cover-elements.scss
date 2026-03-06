@@ -115,7 +115,7 @@ body.dynamic-views-cover-circular
     object-position: center center;
     border-radius: 0; /* Override theme styles; container handles border-radius */
     opacity: 0;
-    transition: opacity var(--anim-duration-fast, 140ms) ease;
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
     -webkit-user-select: none;
     user-select: none;
   }
@@ -135,8 +135,8 @@ body.dynamic-views-cover-circular
     .dynamic-views-image-embed
     img {
     transition:
-      transform var(--anim-duration-fast, 140ms) ease,
-      opacity var(--anim-duration-fast, 140ms) ease;
+      transform var(--dynamic-views-anim-duration-fast) ease,
+      opacity var(--dynamic-views-anim-duration-fast) ease;
   }
 
   /* Cover hover zoom — card mode (default): zoom on card hover intent.

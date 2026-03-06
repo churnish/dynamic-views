@@ -6,11 +6,10 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background-color: var(--background-primary, #ffffff);
-  border: 1px solid var(--background-modifier-border, #e0e0e0);
+  background-color: var(--dynamic-views-background-primary);
+  border: 1px solid var(--dynamic-views-background-modifier-border);
   border-radius: 6px;
-  box-shadow: 0 4px 12px
-    var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
+  box-shadow: 0 4px 12px var(--dynamic-views-background-modifier-box-shadow);
   z-index: 1000;
   min-width: 400px;
   max-width: min(675px, calc(100vw - 16px));
@@ -26,9 +25,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background-color: var(--background-primary-alt, #fafafa);
+  background-color: var(--dynamic-views-background-primary-alt);
   border-radius: 8px;
-  border: 1px solid var(--background-modifier-border, #e0e0e0);
+  border: 1px solid var(--dynamic-views-background-modifier-border);
   max-width: 900px;
   margin-left: auto;
   margin-right: 0;
@@ -38,12 +37,12 @@
 .dynamic-views .query-input {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--background-modifier-border, #e0e0e0);
+  border: 1px solid var(--dynamic-views-background-modifier-border);
   border-radius: 4px;
-  background-color: var(--background-primary, #ffffff);
-  color: var(--text-normal, #222222);
+  background-color: var(--dynamic-views-background-primary);
+  color: var(--dynamic-views-text-normal);
   font-size: 0.9em;
-  font-family: var(--font-monospace, monospace);
+  font-family: var(--dynamic-views-font-monospace);
   resize: none;
   overflow: hidden;
   min-height: 32px;
@@ -58,53 +57,53 @@
 
 .dynamic-views .query-btn {
   padding: 6px 16px;
-  border: 1px solid var(--background-modifier-border, #e0e0e0);
+  border: 1px solid var(--dynamic-views-background-modifier-border);
   border-radius: 4px;
-  background-color: var(--background-primary, #ffffff);
-  color: var(--text-normal, #222222);
+  background-color: var(--dynamic-views-background-primary);
+  color: var(--dynamic-views-text-normal);
   cursor: pointer;
   font-size: 0.9em;
   -webkit-user-select: none;
   user-select: none;
   transition:
-    background-color var(--anim-duration-fast, 140ms),
-    border-color var(--anim-duration-fast, 140ms);
+    background-color var(--dynamic-views-anim-duration-fast),
+    border-color var(--dynamic-views-anim-duration-fast);
 }
 
 @media (hover: hover) {
   .query-btn:hover {
-    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
+    background-color: var(--dynamic-views-background-modifier-hover);
   }
 }
 
 .dynamic-views .query-apply-btn {
-  background-color: var(--interactive-accent, hsl(257, 89%, 71%));
-  color: var(--text-on-accent, white);
-  border-color: var(--interactive-accent, hsl(257, 89%, 71%));
+  background-color: var(--dynamic-views-interactive-accent);
+  color: var(--dynamic-views-text-on-accent);
+  border-color: var(--dynamic-views-interactive-accent);
 }
 
 @media (hover: hover) {
   .dynamic-views .query-apply-btn:hover {
-    background-color: var(--interactive-accent-hover, hsl(255, 90%, 76%));
+    background-color: var(--dynamic-views-interactive-accent-hover);
   }
 }
 
 .dynamic-views .query-clear-btn {
-  background-color: var(--background-secondary, #f6f6f6);
-  color: var(--text-muted, #5c5c5c);
-  border-color: var(--background-modifier-border, #e0e0e0);
+  background-color: var(--dynamic-views-background-secondary);
+  color: var(--dynamic-views-text-muted);
+  border-color: var(--dynamic-views-background-modifier-border);
 }
 
 @media (hover: hover) {
   .dynamic-views .query-clear-btn:hover {
-    background-color: var(--background-modifier-hover, rgba(0, 0, 0, 0.067));
-    color: var(--text-normal, #222222);
+    background-color: var(--dynamic-views-background-modifier-hover);
+    color: var(--dynamic-views-text-normal);
   }
 }
 
 .dynamic-views .query-tip {
   font-size: 0.8em;
-  color: var(--text-faint, #ababab);
+  color: var(--dynamic-views-text-faint);
   flex: 1;
   text-align: left;
   -webkit-user-select: none;
@@ -112,12 +111,12 @@
 }
 
 .dynamic-views .query-error {
-  font-family: var(--font-monospace, monospace);
+  font-family: var(--dynamic-views-font-monospace);
   font-size: 0.85em;
   white-space: pre-wrap;
   word-wrap: break-word;
   margin: 16px 0;
   padding: 0;
-  color: var(--text-muted, #5c5c5c);
+  color: var(--dynamic-views-text-muted);
   overflow-x: auto;
 }

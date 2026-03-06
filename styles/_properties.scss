@@ -2,7 +2,7 @@
   .property-pair {
     display: flex;
     flex-direction: row;
-    gap: var(--size-4-3, 12px);
+    gap: var(--dynamic-views-size-4-3);
     width: 100%;
     min-width: 0;
   }
@@ -10,7 +10,7 @@
   /* Compact mode: wrap paired properties — stay side-by-side when both fit, stack when they don't */
   .card.compact-mode .property-pair {
     flex-wrap: wrap;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
   }
 
   .card.compact-mode .property-pair .property,
@@ -30,7 +30,7 @@
     scrollbar-width: none;
     position: relative;
     direction: ltr;
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
     font-family: var(--dynamic-views-property-font, inherit);
   }
 
@@ -41,7 +41,7 @@
 
   /* Gap between inline property label and content */
   .property:has(.property-label-inline) {
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
   }
 
   /* Vertical layout when property labels are on top */
@@ -164,11 +164,11 @@
   .property-label {
     font-size: var(
       --dynamic-views-property-label-font-size,
-      var(--font-ui-smaller, 12px)
+      var(--dynamic-views-font-ui-smaller)
     );
     font-family: var(--dynamic-views-property-label-font, inherit);
-    color: var(--text-faint, #ababab);
-    margin-bottom: var(--size-2-1, 2px);
+    color: var(--dynamic-views-text-faint);
+    margin-bottom: var(--dynamic-views-size-2-1);
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -177,10 +177,10 @@
   .property-label-inline {
     font-size: var(
       --dynamic-views-property-label-font-size,
-      var(--font-ui-smaller, 12px)
+      var(--dynamic-views-font-ui-smaller)
     );
     font-family: var(--dynamic-views-property-label-font, inherit);
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
     white-space: nowrap;
     flex-shrink: 0;
     z-index: 2;
@@ -194,7 +194,7 @@
   :is(.property-label, .property-label-inline) {
     color: var(
       --dynamic-views-property-label-color-value,
-      var(--text-faint, #ababab)
+      var(--dynamic-views-text-faint)
     );
   }
 
@@ -202,7 +202,7 @@
   .property:has(:is(.property-label, .property-label-inline)) {
     color: var(
       --dynamic-views-property-with-label-color-value,
-      var(--text-muted, #5c5c5c)
+      var(--dynamic-views-text-muted)
     );
   }
 
@@ -210,23 +210,23 @@
   .property:not(:has(:is(.property-label, .property-label-inline))) {
     color: var(
       --dynamic-views-property-no-label-color-value,
-      var(--text-faint, #ababab)
+      var(--dynamic-views-text-faint)
     );
   }
 
   /* Links in properties use Obsidian default colors (not property text color) */
   .property a.internal-link {
-    color: var(--link-color, hsl(258, 88%, 66%));
+    color: var(--dynamic-views-link-color);
   }
   .property a.external-link {
-    color: var(--link-external-color, hsl(258, 88%, 66%));
+    color: var(--dynamic-views-link-external-color);
   }
 
   /* Subtitle color application */
   .card-subtitle {
     color: var(
       --dynamic-views-subtitle-color-value,
-      var(--text-faint, #ababab)
+      var(--dynamic-views-text-faint)
     );
   }
 
@@ -234,7 +234,7 @@
   .card-text-preview {
     --dynamic-views-text-preview-color: var(
       --dynamic-views-text-preview-color-value,
-      var(--text-muted, #5c5c5c)
+      var(--dynamic-views-text-muted)
     );
   }
 
@@ -242,7 +242,7 @@
   .card-title {
     --dynamic-views-title-color: var(
       --dynamic-views-title-color-value,
-      var(--text-normal, #222222)
+      var(--dynamic-views-text-normal)
     );
   }
 }
@@ -250,20 +250,20 @@
 /* Property link hover: card (hover intent) */
 @media (hover: hover) {
   .dynamic-views .card.hover-intent-active .property a.internal-link:hover {
-    color: var(--link-color-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-link-color-hover);
   }
   .dynamic-views .card.hover-intent-active .property a.external-link:hover {
-    color: var(--link-external-color-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-link-external-color-hover);
   }
 }
 
 /* Property link hover: list (immediate) */
 @media (hover: hover) {
   .dynamic-views .list-properties .property a.internal-link:hover {
-    color: var(--link-color-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-link-color-hover);
   }
   .dynamic-views .list-properties .property a.external-link:hover {
-    color: var(--link-external-color-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-link-external-color-hover);
   }
 }
 
@@ -295,7 +295,7 @@ body.dynamic-views-property-label-case-uppercase
 /* Property label bold */
 body.dynamic-views-property-label-bold .dynamic-views .property-label,
 body.dynamic-views-property-label-bold .dynamic-views .property-label-inline {
-  font-weight: var(--font-semibold, 600);
+  font-weight: var(--dynamic-views-font-semibold);
 }
 
 /* Property label small caps */
@@ -311,16 +311,16 @@ body.dynamic-views-property-label-small-caps
   .card-properties {
     font-size: var(
       --dynamic-views-property-font-size,
-      var(--font-ui-small, 13px)
+      var(--dynamic-views-font-ui-small)
     );
-    color: var(--text-faint, #ababab);
-    line-height: var(--line-height-tight, 1.3);
+    color: var(--dynamic-views-text-faint);
+    line-height: var(--dynamic-views-line-height-tight);
     white-space: nowrap;
     min-width: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
   }
 
   /* Timestamp wrapper - flex container for icon positioning */
@@ -338,14 +338,14 @@ body.dynamic-views-property-label-small-caps
     opacity: 0.7;
     width: 1em;
     height: 1em;
-    margin-right: var(--size-2-2, 4px);
+    margin-right: var(--dynamic-views-size-2-2);
   }
 
   /* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
   .property-pair .pair-right .timestamp-icon {
     order: 2;
     margin-right: 0;
-    margin-left: var(--size-2-2, 4px);
+    margin-left: var(--dynamic-views-size-2-2);
   }
 }
 
@@ -358,7 +358,7 @@ body.dynamic-views-timestamp-icon-hide .dynamic-views .timestamp-icon {
 body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: var(--size-2-2, 4px);
+  margin-left: var(--dynamic-views-size-2-2);
 }
 
 /* Center positioning: odd fields show icon on right ONLY in side-by-side */
@@ -369,7 +369,7 @@ body.dynamic-views-timestamp-icon-center
   .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: var(--size-2-2, 4px);
+  margin-left: var(--dynamic-views-size-2-2);
 }
 
 /* Center positioning: even fields show icon on left ONLY in side-by-side */
@@ -379,7 +379,7 @@ body.dynamic-views-timestamp-icon-center
   .pair-right
   .timestamp-icon {
   order: 0;
-  margin-right: var(--size-2-2, 4px);
+  margin-right: var(--dynamic-views-size-2-2);
   margin-left: 0;
 }
 
@@ -390,7 +390,7 @@ body.dynamic-views-timestamp-icon-left
   .pair-right
   .timestamp-icon {
   order: 0;
-  margin-right: var(--size-2-2, 4px);
+  margin-right: var(--dynamic-views-size-2-2);
   margin-left: 0;
 }
 
@@ -404,7 +404,7 @@ body:is(
   .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: var(--size-2-2, 4px);
+  margin-left: var(--dynamic-views-size-2-2);
 }
 
 .dynamic-views {
@@ -417,7 +417,7 @@ body:is(
   .tags-wrapper {
     display: flex;
     align-items: center;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
     white-space: nowrap;
     flex-shrink: 0;
     min-width: 0;
@@ -469,7 +469,7 @@ body:is(
   }
 
   .bases-group-heading .path-separator {
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
     opacity: 1;
   }
 }
@@ -518,7 +518,7 @@ body:is(
   .property-content {
     display: flex;
     align-items: center;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
     flex-shrink: 0;
     white-space: nowrap;
     min-height: var(--dynamic-views-property-content-height, 20px);

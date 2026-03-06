@@ -8,11 +8,10 @@
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    background-color: var(--background-primary, #ffffff);
-    border: 1px solid var(--background-modifier-border, #e0e0e0);
+    background-color: var(--dynamic-views-background-primary);
+    border: 1px solid var(--dynamic-views-background-modifier-border);
     border-radius: 6px;
-    box-shadow: 0 4px 12px
-      var(--background-modifier-box-shadow, rgba(0, 0, 0, 0.1));
+    box-shadow: 0 4px 12px var(--dynamic-views-background-modifier-box-shadow);
     z-index: 1000;
     min-width: 300px;
     max-width: min(500px, calc(100vw - 16px));
@@ -30,9 +29,9 @@
     flex-direction: column !important;
     gap: 12px;
     padding: 16px;
-    background-color: var(--background-primary-alt, #fafafa);
+    background-color: var(--dynamic-views-background-primary-alt);
     border-radius: 8px;
-    border: 1px solid var(--background-modifier-border, #e0e0e0);
+    border: 1px solid var(--dynamic-views-background-modifier-border);
     text-align: left !important;
     align-items: flex-start !important;
     max-width: 900px;
@@ -44,7 +43,7 @@
   .setting-item {
     display: flex !important;
     flex-direction: column !important;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
     align-items: flex-start !important;
     width: 100%;
     max-width: 100%;
@@ -53,27 +52,27 @@
 
     label {
       font-size: 0.9em;
-      color: var(--text-normal, #222222);
+      color: var(--dynamic-views-text-normal);
       font-weight: 500;
       text-align: left !important;
     }
 
     input[type='text'] {
       padding: 6px 10px;
-      border: 1px solid var(--background-modifier-border, #e0e0e0);
+      border: 1px solid var(--dynamic-views-background-modifier-border);
       border-radius: 4px;
-      background-color: var(--background-primary, #ffffff);
-      color: var(--text-normal, #222222);
+      background-color: var(--dynamic-views-background-primary);
+      color: var(--dynamic-views-text-normal);
       font-size: 0.9em;
       box-sizing: border-box;
     }
 
     select {
       padding: 6px 10px;
-      border: 1px solid var(--background-modifier-border, #e0e0e0);
+      border: 1px solid var(--dynamic-views-background-modifier-border);
       border-radius: 4px;
-      background-color: var(--background-primary, #ffffff);
-      color: var(--text-normal, #222222);
+      background-color: var(--dynamic-views-background-primary);
+      color: var(--dynamic-views-text-normal);
       cursor: pointer;
       font-size: 0.9em;
       box-sizing: border-box;
@@ -89,19 +88,19 @@
   .setting-item-info {
     display: flex;
     flex-direction: column;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
     text-align: left !important;
   }
 
   .setting-desc {
     font-size: 0.8em;
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
     text-align: left !important;
   }
 
   .settings-section {
     width: 100%;
-    border: 1px solid var(--background-modifier-border, #e0e0e0);
+    border: 1px solid var(--dynamic-views-background-modifier-border);
     border-radius: 6px;
   }
 
@@ -110,13 +109,13 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background-color: var(--background-secondary, #f6f6f6);
+    background-color: var(--dynamic-views-background-secondary);
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
     font-weight: 500;
     font-size: 0.9em;
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
     border-radius: 5px 5px 0 0;
 
     &.collapsed {
@@ -125,18 +124,15 @@
 
     @media (hover: hover) {
       &:hover {
-        background-color: var(
-          --background-modifier-hover,
-          rgba(0, 0, 0, 0.067)
-        );
+        background-color: var(--dynamic-views-background-modifier-hover);
       }
     }
 
     .chevron {
       width: 16px;
       height: 16px;
-      transition: transform var(--anim-duration-fast, 140ms) ease;
-      color: var(--text-muted, #5c5c5c);
+      transition: transform var(--dynamic-views-anim-duration-fast) ease;
+      color: var(--dynamic-views-text-muted);
       flex-shrink: 0;
     }
 
@@ -150,7 +146,7 @@
     flex-direction: column;
     gap: 12px;
     padding: 12px;
-    background-color: var(--background-primary, #ffffff);
+    background-color: var(--dynamic-views-background-primary);
     border-radius: 0 0 5px 5px;
 
     &.collapsed {
@@ -178,11 +174,11 @@
     max-width: 180px;
     flex-shrink: 1;
     padding: 6px 10px;
-    border: 1px solid var(--background-modifier-border, #e0e0e0);
+    border: 1px solid var(--dynamic-views-background-modifier-border);
     box-sizing: border-box;
     border-radius: 4px;
-    background-color: var(--background-primary, #ffffff);
-    color: var(--text-normal, #222222);
+    background-color: var(--dynamic-views-background-primary);
+    color: var(--dynamic-views-text-normal);
     font-size: 0.9em;
   }
 
@@ -217,8 +213,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--background-modifier-border, #e0e0e0);
-    transition: var(--anim-duration-moderate, 300ms);
+    background-color: var(--dynamic-views-background-modifier-border);
+    transition: var(--dynamic-views-anim-duration-moderate);
     border-radius: 24px;
   }
 }
@@ -230,13 +226,13 @@
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: var(--background-primary, #ffffff);
-  transition: var(--anim-duration-moderate, 300ms);
+  background-color: var(--dynamic-views-background-primary);
+  transition: var(--dynamic-views-anim-duration-moderate);
   border-radius: 50%;
 }
 
 label.toggle-switch input[type='checkbox']:checked + span.toggle-slider {
-  background-color: var(--interactive-accent, hsl(257, 89%, 71%)) !important;
+  background-color: var(--dynamic-views-interactive-accent) !important;
 }
 
 @media (hover: hover) {

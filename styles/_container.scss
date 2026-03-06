@@ -2,12 +2,12 @@
    Obsidian defines this per data-view-type; plugin views need their own. */
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
-  --bases-embed-padding: var(--size-4-1, 4px) 1px;
+  --bases-embed-padding: var(--dynamic-views-size-2-2) 1px;
 }
 
 .is-phone .bases-view[data-view-type='dynamic-views-grid'],
 .is-phone .bases-view[data-view-type='dynamic-views-masonry'] {
-  --bases-embed-padding: var(--size-4-2, 8px);
+  --bases-embed-padding: var(--dynamic-views-size-4-2);
 }
 
 /* Scroll fade gradient at bottom of scrollable results */
@@ -29,11 +29,11 @@
   background: linear-gradient(
     to bottom,
     transparent,
-    var(--background-primary, #ffffff)
+    var(--dynamic-views-background-primary)
   );
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--anim-duration-fast, 140ms);
+  transition: opacity var(--dynamic-views-anim-duration-fast);
 }
 
 .dynamic-views .results-container.with-fade::after,
@@ -87,24 +87,11 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
   box-sizing: border-box;
   min-height: 270px;
   overflow: visible;
-  --shadow-l-light-mode:
-    0px 0px 8px rgba(0, 0, 0, 0.12), 0px 0px 20px rgba(0, 0, 0, 0.15),
-    0px 0px 32px rgba(0, 0, 0, 0.12);
-  --shadow-l-dark-mode:
-    0px 0px 8px rgba(255, 255, 255, 0.12),
-    0px 0px 20px rgba(255, 255, 255, 0.15),
-    0px 0px 32px rgba(255, 255, 255, 0.12);
-  --drop-shadow-l-light-mode: drop-shadow(0 0 4px rgba(0, 0, 0, 0.12))
-    drop-shadow(0 0 10px rgba(0, 0, 0, 0.15))
-    drop-shadow(0 0 16px rgba(0, 0, 0, 0.12));
-  --drop-shadow-l-dark-mode: drop-shadow(0 0 4px rgba(255, 255, 255, 0.12))
-    drop-shadow(0 0 10px rgba(255, 255, 255, 0.15))
-    drop-shadow(0 0 16px rgba(255, 255, 255, 0.12));
 }
 
 /* Bottom spacing for phone to push view end indicator above mobile toolbar */
 .is-phone
   .workspace-leaf-content[data-type='bases']
   .dynamic-views-bases-container {
-  margin-bottom: var(--view-bottom-spacing, 0px);
+  margin-bottom: var(--dynamic-views-view-bottom-spacing);
 }

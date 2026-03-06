@@ -1,4 +1,159 @@
-/* Derived CSS variables and custom color compositions */
+/* Plugin CSS custom properties: wrapper variables, derived values, and color compositions */
+
+:root {
+  /* Sizing */
+  --dynamic-views-size-2-1: 2px;
+  --dynamic-views-size-2-2: 4px;
+  --dynamic-views-size-2-3: 6px;
+  --dynamic-views-size-4-2: 8px;
+  --dynamic-views-size-4-3: 12px;
+  --dynamic-views-size-4-4: 16px;
+  --dynamic-views-size-4-6: 24px;
+
+  /* Typography */
+  --dynamic-views-line-height-tight: var(--line-height-tight, 1.3);
+  --dynamic-views-font-ui-small: var(--font-ui-small, 13px);
+  --dynamic-views-font-ui-smaller: var(--font-ui-smaller, 12px);
+  --dynamic-views-font-ui-medium: var(--font-ui-medium, 15px);
+  --dynamic-views-font-weight: var(--font-weight, 400);
+  --dynamic-views-bold-modifier: var(--bold-modifier, 200);
+  --dynamic-views-font-semibold: var(--font-semibold, 600);
+  --dynamic-views-font-monospace: var(--font-monospace, monospace);
+  --dynamic-views-font-text: var(--font-text, sans-serif);
+  /* Fallback depends on --dynamic-views-font-text declared above */
+  --dynamic-views-font-interface: var(
+    --font-interface,
+    var(--dynamic-views-font-text)
+  );
+  --dynamic-views-nav-tag-weight: var(--nav-tag-weight, 600);
+
+  /* Border radius */
+  --dynamic-views-radius-s: var(--radius-s, 4px);
+  --dynamic-views-pill-radius: var(--pill-radius, 2em);
+
+  /* Icons */
+  --dynamic-views-icon-s: var(--icon-s, 16px);
+  --dynamic-views-icon-xs: var(--icon-xs, 14px);
+  --dynamic-views-icon-xs-stroke-width: var(--icon-xs-stroke-width, 2px);
+  --dynamic-views-icon-color: var(--icon-color, #5c5c5c);
+  --dynamic-views-icon-color-active: var(
+    --icon-color-active,
+    hsl(258, 88%, 66%)
+  );
+  --dynamic-views-icon-opacity-hover: var(--icon-opacity-hover, 1);
+
+  /* Animation */
+  --dynamic-views-anim-duration-superfast: var(--anim-duration-superfast, 70ms);
+  --dynamic-views-anim-duration-fast: var(--anim-duration-fast, 140ms);
+  --dynamic-views-anim-duration-moderate: var(--anim-duration-moderate, 300ms);
+
+  /* Shadows */
+  --dynamic-views-shadow-xs: var(
+    --shadow-xs,
+    0 1px 6px rgba(0, 0, 0, 0.015),
+    0 4px 24px rgba(0, 0, 0, 0.065)
+  );
+  --dynamic-views-shadow-s: var(
+    --shadow-s,
+    0px 1px 2px rgba(0, 0, 0, 0.028),
+    0px 3.4px 6.7px rgba(0, 0, 0, 0.042),
+    0px 15px 30px rgba(0, 0, 0, 0.07)
+  );
+  --dynamic-views-shadow-l: var(
+    --shadow-l,
+    0px 1.8px 7.3px rgba(0, 0, 0, 0.071),
+    0px 6.3px 24.7px rgba(0, 0, 0, 0.112),
+    0px 15px 30px rgba(0, 0, 0, 0.1)
+  );
+
+  /* Layout */
+  --dynamic-views-view-bottom-spacing: var(--view-bottom-spacing, 0px);
+  --dynamic-views-bases-table-border-color: var(
+    --bases-table-border-color,
+    #e0e0e0
+  );
+
+  /* Colors */
+  --dynamic-views-color-base-100: var(--color-base-100, #222222);
+  --dynamic-views-color-red: var(--color-red, #fb464c);
+  --dynamic-views-color-orange: var(--color-orange, #e9973f);
+  --dynamic-views-color-yellow: var(--color-yellow, #e0de71);
+  --dynamic-views-color-green: var(--color-green, #44cf6e);
+  --dynamic-views-color-cyan: var(--color-cyan, #53dfdd);
+  --dynamic-views-color-blue: var(--color-blue, #027aff);
+  --dynamic-views-color-purple: var(--color-purple, #a882ff);
+  --dynamic-views-color-pink: var(--color-pink, #fa99cd);
+  --dynamic-views-color-accent: var(--color-accent, hsl(258, 88%, 66%));
+
+  /* Backgrounds */
+  --dynamic-views-background-primary: var(--background-primary, #ffffff);
+  --dynamic-views-background-primary-alt: var(
+    --background-primary-alt,
+    #fafafa
+  );
+  --dynamic-views-background-secondary: var(--background-secondary, #f6f6f6);
+  --dynamic-views-background-modifier-border: var(
+    --background-modifier-border,
+    #e0e0e0
+  );
+  --dynamic-views-background-modifier-border-hover: var(
+    --background-modifier-border-hover,
+    #d4d4d4
+  );
+  --dynamic-views-background-modifier-border-focus: var(
+    --background-modifier-border-focus,
+    #bdbdbd
+  );
+  --dynamic-views-background-modifier-hover: var(
+    --background-modifier-hover,
+    rgba(0, 0, 0, 0.067)
+  );
+  --dynamic-views-background-modifier-active-hover: var(
+    --background-modifier-active-hover,
+    hsla(258, 88%, 66%, 0.1)
+  );
+  --dynamic-views-background-modifier-box-shadow: var(
+    --background-modifier-box-shadow,
+    rgba(0, 0, 0, 0.1)
+  );
+  --dynamic-views-background-modifier-cover: var(
+    --background-modifier-cover,
+    rgba(220, 220, 220, 0.4)
+  );
+
+  /* Text */
+  --dynamic-views-text-faint: var(--text-faint, #ababab);
+  --dynamic-views-text-muted: var(--text-muted, #5c5c5c);
+  --dynamic-views-text-normal: var(--text-normal, #222222);
+  --dynamic-views-text-accent: var(--text-accent, hsl(258, 88%, 66%));
+  --dynamic-views-text-accent-hover: var(
+    --text-accent-hover,
+    hsl(255, 90%, 76%)
+  );
+  --dynamic-views-text-on-accent: var(--text-on-accent, white);
+
+  /* Links */
+  --dynamic-views-link-color: var(--link-color, hsl(258, 88%, 66%));
+  --dynamic-views-link-color-hover: var(--link-color-hover, hsl(255, 90%, 76%));
+  --dynamic-views-link-external-color: var(
+    --link-external-color,
+    hsl(258, 88%, 66%)
+  );
+  --dynamic-views-link-external-color-hover: var(
+    --link-external-color-hover,
+    hsl(255, 90%, 76%)
+  );
+
+  /* Interactive */
+  --dynamic-views-interactive-accent: var(
+    --interactive-accent,
+    hsl(257, 89%, 71%)
+  );
+  --dynamic-views-interactive-accent-hover: var(
+    --interactive-accent-hover,
+    hsl(255, 90%, 76%)
+  );
+}
 
 body {
   /* Clamp thumbnail aspect ratio to 0.5-2.0 range */
@@ -48,23 +203,22 @@ body {
    Named colors (red-pink) already set --dynamic-views-title-hover-color-value
    via Style Settings; built-in presets and custom need explicit mapping. */
 body.dynamic-views-title-hover-color-faint {
-  --dynamic-views-title-hover-color-value: var(--text-faint, #ababab);
+  --dynamic-views-title-hover-color-value: var(--dynamic-views-text-faint);
 }
 body.dynamic-views-title-hover-color-muted {
-  --dynamic-views-title-hover-color-value: var(--text-muted, #5c5c5c);
+  --dynamic-views-title-hover-color-value: var(--dynamic-views-text-muted);
 }
 body.dynamic-views-title-hover-color-normal {
-  --dynamic-views-title-hover-color-value: var(--text-normal, #222222);
+  --dynamic-views-title-hover-color-value: var(--dynamic-views-text-normal);
 }
 body.dynamic-views-title-hover-color-accent {
   --dynamic-views-title-hover-color-value: var(
-    --text-accent-hover,
-    hsl(255, 90%, 76%)
+    --dynamic-views-text-accent-hover
   );
 }
 body.dynamic-views-title-hover-color-custom {
   --dynamic-views-title-hover-color-value: var(
     --dynamic-views-title-hover-color-custom,
-    var(--text-normal, #222222)
+    var(--dynamic-views-text-normal)
   );
 }

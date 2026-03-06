@@ -31,7 +31,7 @@ body:has(.dynamic-views-image-embed.is-zoomed)
   .dynamic-views
   .card:focus-visible::after {
   box-shadow: inset 0 0 0 1px
-    var(--card-border-color, var(--background-modifier-border, #e0e0e0));
+    var(--card-border-color, var(--dynamic-views-background-modifier-border));
 }
 
 /* Constrained mode: overlay styling (desktop, fullscreen disabled) */
@@ -41,10 +41,11 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   > .dynamic-views-image-embed.is-zoomed {
   background: color-mix(
     in srgb,
-    var(--background-primary, #ffffff) calc(var(--overlay-opacity, 0.4) * 100%),
+    var(--dynamic-views-background-primary)
+      calc(var(--overlay-opacity, 0.4) * 100%),
     transparent
   );
-  transition: background var(--anim-duration-fast, 140ms) ease;
+  transition: background var(--dynamic-views-anim-duration-fast) ease;
 }
 
 /* Constrained mode: solid background when maximized */
@@ -52,7 +53,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .is-mobile
   ).dynamic-views-image-viewer-disable-fullscreen
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
-  background: var(--background-primary, #ffffff);
+  background: var(--dynamic-views-background-primary);
 }
 
 /* Hide mobile navbar when fullscreen image viewer is active (mobile is always fullscreen) */
@@ -67,9 +68,9 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .dynamic-views-image-viewer-disable-fullscreen
   ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed {
-  background: var(--background-modifier-cover, rgba(220, 220, 220, 0.4));
+  background: var(--dynamic-views-background-modifier-cover);
   position: fixed;
-  transition: background var(--anim-duration-fast, 140ms) ease;
+  transition: background var(--dynamic-views-anim-duration-fast) ease;
 }
 
 /* Fullscreen mode: solid background when maximized */
@@ -79,7 +80,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .dynamic-views-image-viewer-disable-fullscreen
   ):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
-  background: var(--background-primary, #ffffff);
+  background: var(--dynamic-views-background-primary);
 }
 
 /* Scale image when maximized with panzoom disabled (desktop fullscreen only) */
@@ -108,8 +109,8 @@ body:not(.dynamic-views-image-viewer-disabled)
      bypass main-thread Layerize (80ms→<1ms per frame) */
   will-change: transform;
   transition:
-    max-height var(--anim-duration-fast, 140ms) ease,
-    max-width var(--anim-duration-fast, 140ms) ease;
+    max-height var(--dynamic-views-anim-duration-fast) ease,
+    max-width var(--dynamic-views-anim-duration-fast) ease;
 }
 
 /* Limit zoomed images to 90% viewport (desktop) / 80vh height (mobile, width inherits 100vw from initial rule) */

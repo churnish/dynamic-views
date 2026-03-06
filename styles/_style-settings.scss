@@ -1456,12 +1456,6 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-show-thumbnail-shadow
-        title: Scrubbing shadow
-        description: Show a shadow below thumbnails with multiple images.
-        type: class-toggle
-        default: false
-    -
         id: dynamic-views-hide-scrubbing-indicator
         title: Hide scrubbing indicator
         description: Do not show the indicator icon on thumbnails with multiple images.
@@ -1742,9 +1736,6 @@ body.is-mobile
 body.is-mobile
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
-body.dynamic-views-disable-thumbnail-scrubbing
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-show-thumbnail-shadow'],
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],

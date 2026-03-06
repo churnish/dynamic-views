@@ -2,7 +2,7 @@
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
   container-type: inline-size;
-  --bases-view-padding: var(--size-4-3, 12px);
+  --bases-view-padding: var(--dynamic-views-size-4-3);
 }
 
 /* View background - Bases files only (not embeds) */
@@ -41,20 +41,12 @@ body:not(.dynamic-views-disable-sticky-group-header)
   position: sticky;
   top: -12px;
   overflow: visible;
-  padding-bottom: calc(var(--size-2-2, 4px) + 1px);
+  padding-bottom: calc(var(--dynamic-views-size-2-2) + 1px);
   container-type: scroll-state;
   container-name: dynamic-views-group-heading;
 
-  /* Children carry stacking — flex items support z-index without position.
-     z-index: 1 = below card hover (11), above non-hovered content (auto/0). */
-  > .bases-group-collapse-region,
-  > .bases-group-count {
-    z-index: 1;
-  }
-
-  /* Background on child pseudo-element — participates in collapse-region's
-     stacking context so it raises/lowers with the child's z-index. Positioned
-     relative to heading (nearest positioned ancestor). */
+  /* Background pseudo-element — spans full pane width behind heading content.
+     Positioned relative to heading (nearest positioned ancestor). */
   > .bases-group-collapse-region::before {
     content: '';
     position: absolute;
@@ -62,17 +54,14 @@ body:not(.dynamic-views-disable-sticky-group-header)
     bottom: 0;
     left: calc(-1 * var(--bases-view-padding));
     right: calc(-1 * var(--bases-view-padding));
-    background: var(--background-primary, #ffffff);
+    background: var(--dynamic-views-background-primary);
     z-index: -1;
   }
 
-  /* Stuck state: raise children above hovered cards (z: 11).
-     Nested here so specificity matches the z-index: 1 rule above. */
-  @container dynamic-views-group-heading scroll-state(stuck: top) {
-    > .bases-group-collapse-region,
-    > .bases-group-count {
-      z-index: 20;
-    }
+  /* JS-toggled: sentinel IO detects stuck state, sets z-index on heading itself.
+     Child z-index can't compete with cards in the grid stacking context. */
+  &.stuck {
+    z-index: 20;
   }
 }
 
@@ -86,8 +75,23 @@ body:not(.dynamic-views-disable-sticky-group-header)
     left: calc(-1 * var(--bases-view-padding));
     right: calc(-1 * var(--bases-view-padding));
     height: 1px;
-    background: var(--bases-table-border-color, #e0e0e0);
+    background: var(--dynamic-views-bases-table-border-color);
   }
+}
+
+/* Section wrapper: positioning context for sticky sentinel */
+.dynamic-views-group-section {
+  position: relative;
+}
+
+/* Zero-height sentinel for sticky heading IO detection */
+.dynamic-views-sticky-sentinel {
+  position: absolute;
+  top: 0;
+  height: 0;
+  width: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Group headings span full grid width */
@@ -150,14 +154,14 @@ body.dynamic-views-hide-group-property-labels
   .bases-group-heading {
     display: flex;
     align-items: center;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
   }
 
   /* Clickable region: chevron + property + value */
   .bases-group-collapse-region {
     display: flex;
     align-items: center;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
     cursor: pointer;
   }
 
@@ -166,19 +170,19 @@ body.dynamic-views-hide-group-property-labels
     display: flex;
     align-items: center;
     flex-shrink: 0;
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
 
     svg {
       width: 16px;
       height: 16px;
-      transition: transform var(--anim-duration-fast, 140ms) ease;
+      transition: transform var(--dynamic-views-anim-duration-fast) ease;
     }
   }
 
   /* Rotate + accent color when collapsed */
   .bases-group-heading.collapsed .bases-group-collapse-btn svg {
     transform: rotate(-90deg);
-    color: var(--color-accent, hsl(258, 88%, 66%));
+    color: var(--dynamic-views-color-accent);
   }
 
   /* Hide card container when heading is collapsed (adjacent sibling) */
@@ -188,15 +192,15 @@ body.dynamic-views-hide-group-property-labels
 
   /* Group header property label */
   .bases-group-property {
-    color: var(--text-muted, #5c5c5c);
-    font-size: var(--font-ui-small, 13px);
+    color: var(--dynamic-views-text-muted);
+    font-size: var(--dynamic-views-font-ui-small);
   }
 
   /* Group header result count - match property label style */
   .bases-group-count {
-    color: var(--text-muted, #5c5c5c);
-    font-size: var(--font-ui-smaller, 12px);
-    padding-left: var(--size-2-3, 6px);
+    color: var(--dynamic-views-text-muted);
+    font-size: var(--dynamic-views-font-ui-smaller);
+    padding-left: var(--dynamic-views-size-2-3);
   }
 
   /* Group header value containers - match vanilla Bases structure */
@@ -204,7 +208,7 @@ body.dynamic-views-hide-group-property-labels
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--size-2-2, 4px);
+    gap: var(--dynamic-views-size-2-2);
   }
 
   .bases-group-value .value-list-element {
@@ -221,7 +225,7 @@ body.dynamic-views-hide-group-property-labels
     padding: var(--dynamic-views-card-padding, 8px);
     margin: 0;
     /* Resolved card background — overridden by transparent/custom modes */
-    --card-bg: var(--background-primary-alt, #fafafa);
+    --card-bg: var(--dynamic-views-background-primary-alt);
     background-color: var(--card-bg);
     /* Placeholder bg */
     --dynamic-views-image-background-dimmed: rgb(
@@ -237,10 +241,10 @@ body.dynamic-views-hide-group-property-labels
     break-inside: avoid;
     page-break-inside: avoid;
     transition:
-      box-shadow var(--anim-duration-fast, 140ms) ease-in-out,
-      background-color var(--anim-duration-fast, 140ms) ease,
-      scale var(--anim-duration-fast, 140ms) ease,
-      translate var(--anim-duration-fast, 140ms) ease;
+      box-shadow var(--dynamic-views-anim-duration-fast) ease-in-out,
+      background-color var(--dynamic-views-anim-duration-fast) ease,
+      scale var(--dynamic-views-anim-duration-fast) ease,
+      translate var(--dynamic-views-anim-duration-fast) ease;
     /* Border thickness: layout (insets, dividers) vs visual (::after).
        Hover only changes --card-border-visual to avoid layout reflow. */
     --card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
@@ -249,7 +253,7 @@ body.dynamic-views-hide-group-property-labels
       var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness)
     );
     /* Resolved card border color — shared by ::after and cover-content divider */
-    --card-border-color: var(--background-modifier-border, #e0e0e0);
+    --card-border-color: var(--dynamic-views-background-modifier-border);
 
     /* Border as pseudo-element so it appears on top of covers and card content */
     &::after {
@@ -260,7 +264,7 @@ body.dynamic-views-hide-group-property-labels
       border-radius: var(--dynamic-views-card-border-radius, 8px);
       box-shadow: inset 0 0 0 var(--card-border-visual) var(--card-border-color);
       pointer-events: none;
-      transition: box-shadow var(--anim-duration-fast, 140ms) ease-in-out;
+      transition: box-shadow var(--dynamic-views-anim-duration-fast) ease-in-out;
     }
   }
 

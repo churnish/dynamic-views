@@ -12,6 +12,13 @@
       );
       z-index: 0;
       pointer-events: none;
+      /* Own rounded clip so the image is anti-aliased at corners
+         (card overflow:hidden alone produces jagged edges in Chromium) */
+      overflow: hidden;
+      border-radius: calc(
+        var(--dynamic-views-card-border-radius, 8px) +
+          var(--dynamic-views-card-padding, 8px) - var(--backdrop-inset)
+      );
     }
   }
 }
@@ -24,8 +31,8 @@
     .card-backdrop
     img {
     transition:
-      transform var(--anim-duration-fast, 140ms) ease,
-      opacity var(--anim-duration-fast, 140ms) ease;
+      transform var(--dynamic-views-anim-duration-fast) ease,
+      opacity var(--dynamic-views-anim-duration-fast) ease;
   }
 
   /* Backdrop: zoom on card hover intent */
@@ -38,66 +45,45 @@
   }
 }
 
-/* Overlay for readability */
-.dynamic-views {
-  .card.image-format-backdrop .card-backdrop::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    backdrop-filter: blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
-  }
-}
+/* Overlay via img filter — eliminates ::after compositing layer that caused
+   jagged corner clipping in Chromium. Dark uses brightness(); light uses
+   invert-brightness-invert (mathematically identical to a white overlay). */
 
-/* Overlay theme: Match theme (default) */
+/* Dark overlay: Match theme (default) + Dark (forced) */
 body:is(
-    .dynamic-views-backdrop-theme-match,
+    .dynamic-views-backdrop-theme-dark,
+    .dynamic-views-backdrop-theme-match.theme-dark,
     :not(
       .dynamic-views-backdrop-theme-light,
       .dynamic-views-backdrop-theme-dark
-    )
-  ).theme-dark
+    ).theme-dark
+  )
   .dynamic-views
   .card.image-format-backdrop
-  .card-backdrop::after {
-  background: rgb(
-    0 0 0 / calc(var(--dynamic-views-backdrop-overlay-dark, 70) * 1%)
-  );
+  .card-backdrop
+  img {
+  filter: brightness(
+      calc(1 - var(--dynamic-views-backdrop-overlay-dark, 70) * 0.01)
+    )
+    blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
 }
 
+/* Light overlay: Match theme (default) + Light (forced) */
 body:is(
-    .dynamic-views-backdrop-theme-match,
+    .dynamic-views-backdrop-theme-light,
+    .dynamic-views-backdrop-theme-match.theme-light,
     :not(
       .dynamic-views-backdrop-theme-light,
       .dynamic-views-backdrop-theme-dark
-    )
-  ).theme-light
+    ).theme-light
+  )
   .dynamic-views
   .card.image-format-backdrop
-  .card-backdrop::after {
-  background: rgb(
-    255 255 255 / calc(var(--dynamic-views-backdrop-overlay-light, 70) * 1%)
-  );
-}
-
-/* Overlay theme: Light (forced) */
-body.dynamic-views-backdrop-theme-light
-  .dynamic-views
-  .card.image-format-backdrop
-  .card-backdrop::after {
-  background: rgb(
-    255 255 255 / calc(var(--dynamic-views-backdrop-overlay-light, 70) * 1%)
-  );
-}
-
-/* Overlay theme: Dark (forced) */
-body.dynamic-views-backdrop-theme-dark
-  .dynamic-views
-  .card.image-format-backdrop
-  .card-backdrop::after {
-  background: rgb(
-    0 0 0 / calc(var(--dynamic-views-backdrop-overlay-dark, 70) * 1%)
-  );
+  .card-backdrop
+  img {
+  filter: invert(1)
+    brightness(calc(1 - var(--dynamic-views-backdrop-overlay-light, 70) * 0.01))
+    invert(1) blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
 }
 
 /* Backdrop text color overrides (light overlay → dark text) */

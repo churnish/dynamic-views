@@ -38,25 +38,25 @@
 }
 
 .dynamic-views .list-link {
-  color: var(--link-color, hsl(258, 88%, 66%));
+  color: var(--dynamic-views-link-color);
   text-decoration: none;
 
   @media (hover: hover) {
     &:hover {
-      color: var(--link-color-hover, hsl(255, 90%, 76%));
+      color: var(--dynamic-views-link-color-hover);
     }
   }
 }
 
 .dynamic-views .list-properties {
   display: inline-flex;
-  gap: var(--size-2-2, 4px);
+  gap: var(--dynamic-views-size-2-2);
   align-items: center;
   flex-wrap: wrap;
   font-size: 0.9em;
-  margin-left: var(--size-4-2, 8px);
+  margin-left: var(--dynamic-views-size-4-2);
 }
 
 .dynamic-views .list-properties.list-path {
-  color: var(--text-faint, #ababab);
+  color: var(--dynamic-views-text-faint);
 }

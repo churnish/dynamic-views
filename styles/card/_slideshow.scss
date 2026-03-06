@@ -72,23 +72,23 @@
 /* Navigation arrows */
 .dynamic-views {
   .slideshow-exit-left {
-    animation: slideshow-exit-left var(--anim-duration-moderate, 300ms) ease
-      forwards;
+    animation: slideshow-exit-left var(--dynamic-views-anim-duration-moderate)
+      ease forwards;
   }
 
   .slideshow-exit-right {
-    animation: slideshow-exit-right var(--anim-duration-moderate, 300ms) ease
-      forwards;
+    animation: slideshow-exit-right var(--dynamic-views-anim-duration-moderate)
+      ease forwards;
   }
 
   .slideshow-enter-left {
-    animation: slideshow-enter-left var(--anim-duration-moderate, 300ms) ease
-      forwards;
+    animation: slideshow-enter-left var(--dynamic-views-anim-duration-moderate)
+      ease forwards;
   }
 
   .slideshow-enter-right {
-    animation: slideshow-enter-right var(--anim-duration-moderate, 300ms) ease
-      forwards;
+    animation: slideshow-enter-right var(--dynamic-views-anim-duration-moderate)
+      ease forwards;
   }
 
   .slideshow-nav-left,
@@ -105,15 +105,15 @@
     cursor: pointer;
     z-index: 3;
     opacity: 0;
-    transition: opacity var(--anim-duration-moderate, 300ms) ease;
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
   }
 
   .slideshow-nav-left {
-    left: var(--size-2-2, 4px);
+    left: var(--dynamic-views-size-2-2);
   }
 
   .slideshow-nav-right {
-    right: var(--size-2-2, 4px);
+    right: var(--dynamic-views-size-2-2);
   }
 }
 
@@ -131,8 +131,8 @@
       .dynamic-views-image-embed
       img {
       transition:
-        scale var(--anim-duration-fast, 140ms) ease,
-        opacity var(--anim-duration-fast, 140ms) ease;
+        scale var(--dynamic-views-anim-duration-fast) ease,
+        opacity var(--dynamic-views-anim-duration-fast) ease;
     }
   }
 }
@@ -155,7 +155,7 @@
 
 .theme-dark .dynamic-views .slideshow-nav-left svg,
 .theme-dark .dynamic-views .slideshow-nav-right svg {
-  color: var(--color-base-100, #222222);
+  color: var(--dynamic-views-color-base-100);
 }
 
 /* Mobile: Hide nav arrows (use swipe gestures instead) */
@@ -218,7 +218,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
     z-index: 3;
     opacity: 1;
     pointer-events: none;
-    transition: opacity var(--anim-duration-moderate, 300ms) ease;
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
   }
 }
 
@@ -234,8 +234,8 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 
 .dynamic-views {
   .slideshow-indicator svg {
-    width: var(--icon-s, 18px);
-    height: var(--icon-s, 18px);
+    width: var(--dynamic-views-icon-s);
+    height: var(--dynamic-views-icon-s);
     transform: scaleX(-1);
     filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
       drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
@@ -254,7 +254,7 @@ body.dynamic-views-hide-slideshow-indicator
 }
 
 .theme-dark .dynamic-views .slideshow-indicator svg {
-  color: var(--color-base-100, #222222);
+  color: var(--dynamic-views-color-base-100);
 }
 
 /* Mobile: Match Obsidian's larger .text-icon-button sizing */

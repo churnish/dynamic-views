@@ -2,7 +2,7 @@
   .card-previews {
     display: flex;
     flex-direction: row;
-    gap: var(--size-4-2, 8px);
+    gap: var(--dynamic-views-size-4-2);
   }
 }
 
@@ -57,22 +57,29 @@
   }
 
   .card-text-preview {
-    color: var(--dynamic-views-text-preview-color, var(--text-muted, #5c5c5c));
+    color: var(
+      --dynamic-views-text-preview-color,
+      var(--dynamic-views-text-muted)
+    );
     font-family: var(--dynamic-views-text-preview-font, inherit);
     font-size: var(
       --dynamic-views-text-preview-font-size,
-      var(--font-ui-small, 13px)
+      var(--dynamic-views-font-ui-small)
     );
     display: -webkit-box;
     -webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5);
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-height: var(--line-height-tight, 1.3);
+    line-height: var(--dynamic-views-line-height-tight);
     word-break: break-word;
     overflow-wrap: break-word;
     -webkit-user-select: text;
     user-select: text;
   }
+}
+
+body.dynamic-views-text-preview-italic .dynamic-views .card-text-preview {
+  font-style: italic;
 }
 
 .dynamic-views {
@@ -105,11 +112,11 @@
     pointer-events: none;
     z-index: 1;
     opacity: 1;
-    transition: opacity var(--anim-duration-moderate, 300ms) ease;
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 
     svg {
-      width: var(--icon-xs, 14px);
-      height: var(--icon-xs, 14px);
+      width: var(--dynamic-views-icon-xs);
+      height: var(--dynamic-views-icon-xs);
       transform: scaleX(-1);
       color: white;
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
@@ -155,54 +162,12 @@ body.dynamic-views-show-thumbnail-placeholder
   }
 
   .card-thumbnail.multi-image img {
-    filter: var(--drop-shadow-l-light-mode);
     border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
   }
 }
 
-.theme-dark .dynamic-views .card-thumbnail.multi-image img {
-  filter: var(--drop-shadow-l-dark-mode);
-}
-
 .is-mobile .dynamic-views .card-thumbnail.multi-image {
   pointer-events: none;
-}
-
-.is-mobile .dynamic-views .card-thumbnail.multi-image img {
-  filter: none;
-}
-
-/* Hide multi-image thumbnail shadow when setting enabled */
-body.dynamic-views-hide-thumbnail-shadow
-  .dynamic-views
-  .card-thumbnail.multi-image
-  img {
-  filter: none;
-}
-
-/* Placeholder still uses box-shadow (no img element) */
-body.dynamic-views-show-thumbnail-placeholder
-  .dynamic-views
-  .card-thumbnail-placeholder.multi-image {
-  box-shadow: var(--shadow-l-light-mode);
-}
-
-body.dynamic-views-show-thumbnail-placeholder.theme-dark
-  .dynamic-views
-  .card-thumbnail-placeholder.multi-image {
-  box-shadow: var(--shadow-l-dark-mode);
-}
-
-body.dynamic-views-show-thumbnail-placeholder.is-mobile
-  .dynamic-views
-  .card-thumbnail-placeholder.multi-image {
-  box-shadow: none;
-}
-
-body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholder
-  .dynamic-views
-  .card-thumbnail-placeholder.multi-image {
-  box-shadow: none;
 }
 
 /* Thumbnail contain mode */
@@ -224,7 +189,7 @@ body.dynamic-views-hide-thumbnail-shadow.dynamic-views-show-thumbnail-placeholde
     pointer-events: auto;
     border-radius: 0; /* Override theme styles; container handles border-radius */
     opacity: 0;
-    transition: opacity var(--anim-duration-fast, 140ms) ease;
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
     -webkit-user-select: none;
     user-select: none;
   }

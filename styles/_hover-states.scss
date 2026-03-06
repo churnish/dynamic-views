@@ -8,7 +8,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -18,7 +18,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
   /* Normal - no hover color change */
   :is(
@@ -29,7 +29,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-accent-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-text-accent-hover);
   }
   /* Title color variants (red-pink, custom): 15% white mix using --dynamic-views-title-color-value */
   :is(
@@ -62,7 +62,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -72,7 +72,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -82,7 +82,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -92,7 +92,7 @@
     .card.hover-intent-active
     .card-title
     a:hover {
-    color: var(--text-accent-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-text-accent-hover);
   }
   :is(
       body.dynamic-views-open-on-title,
@@ -123,7 +123,7 @@
     a:hover {
     color: var(
       --dynamic-views-title-hover-color-custom,
-      var(--text-normal, #222222)
+      var(--dynamic-views-text-normal)
     );
   }
 
@@ -138,7 +138,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press
@@ -150,7 +150,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press
@@ -162,7 +162,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press
@@ -174,7 +174,7 @@
     .dynamic-views
     .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
-    color: var(--text-accent-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-text-accent-hover);
   }
   body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press):is(
       .dynamic-views-title-hover-color-red,
@@ -216,7 +216,7 @@
     .card-title {
     color: var(
       --dynamic-views-title-hover-color-custom,
-      var(--text-normal, #222222)
+      var(--dynamic-views-text-normal)
     );
   }
 
@@ -234,7 +234,7 @@
     .card-title {
     /* Sync color transition with content opacity fade (300ms) so the
        hover→normal color shift is masked by the fade-out on mouse-leave */
-    transition: color var(--anim-duration-moderate, 300ms);
+    transition: color var(--dynamic-views-anim-duration-moderate);
   }
   body.dynamic-views-open-on-card:not(
       .dynamic-views-poster-reveal-press,
@@ -256,7 +256,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
   body.dynamic-views-subtitle-color-muted
     .dynamic-views
@@ -267,7 +267,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
   /* Normal - no hover color change */
   body.dynamic-views-subtitle-color-accent
@@ -279,7 +279,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-accent-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-text-accent-hover);
   }
   /* Subtitle color variants: 15% white mix using --dynamic-views-subtitle-color-value */
   body:is(
@@ -319,7 +319,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
   body.dynamic-views-property-color-with-labels-muted
     .dynamic-views
@@ -331,7 +331,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
   /* Normal - no hover color change */
   body.dynamic-views-property-color-with-labels-accent
@@ -344,7 +344,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-accent-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-text-accent-hover);
   }
   /* Property with labels color variants: 15% white mix using --dynamic-views-property-with-label-color-value */
   body:is(
@@ -385,7 +385,7 @@
     ):hover {
     color: var(
       --dynamic-views-property-color-with-labels-custom-hover,
-      var(--text-muted, #5c5c5c)
+      var(--dynamic-views-text-muted)
     );
   }
 
@@ -400,7 +400,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
   body.dynamic-views-property-color-without-labels-muted
     .dynamic-views
@@ -412,7 +412,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
   /* Normal - no hover color change */
   body.dynamic-views-property-color-without-labels-accent
@@ -425,7 +425,7 @@
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--text-accent-hover, hsl(255, 90%, 76%));
+    color: var(--dynamic-views-text-accent-hover);
   }
   /* Property without labels color variants: 15% white mix using --dynamic-views-property-no-label-color-value */
   body:is(
@@ -466,7 +466,7 @@
     ):hover {
     color: var(
       --dynamic-views-property-color-without-labels-custom-hover,
-      var(--text-muted, #5c5c5c)
+      var(--dynamic-views-text-muted)
     );
   }
 
@@ -477,14 +477,14 @@
     .card.hover-intent-active:hover {
     background-color: var(
       --dynamic-views-view-background,
-      var(--background-primary, #ffffff)
+      var(--dynamic-views-background-primary)
     );
   }
 
   body.dynamic-views-card-background-hover-tinted
     .dynamic-views
     .card.hover-intent-active:hover {
-    background-color: var(--background-primary-alt, #fafafa);
+    background-color: var(--dynamic-views-background-primary-alt);
   }
 
   body.dynamic-views-card-background-hover-transparent
@@ -492,7 +492,7 @@
     .card.hover-intent-active:hover {
     background-color: var(
       --dynamic-views-view-background,
-      var(--background-primary, #ffffff)
+      var(--dynamic-views-background-primary)
     );
   }
 
@@ -501,7 +501,7 @@
     .card.hover-intent-active:hover {
     background-color: var(
       --dynamic-views-card-background-color-hover-custom,
-      var(--background-primary-alt, #fafafa)
+      var(--dynamic-views-background-primary-alt)
     );
   }
 

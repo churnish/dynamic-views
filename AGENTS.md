@@ -34,6 +34,9 @@ Read...
 - **masonry-layout.md** before working on masonry layout, virtual scrolling, resize handling, or infinite scroll — documents the full architecture, data structures, render pipeline, guard system, and invariants.
 - **property-layout.md** before working on property pairing, width measurement, scroll gradients, compact mode, or property position settings — documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and invariants.
 - **bases-v-datacore-differences.md** before working on cross-backend code, shared infrastructure, or any feature that touches both Bases and Datacore — documents rendering model, event handling, cleanup, state, and common pitfalls from backend divergence.
+- **settings-resolution.md** before working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants.
+- **image-loading.md** before working on image loading, caching, aspect ratios, broken URL tracking, embed extraction, or the content-loader dedup pipeline — documents the two-tier cache architecture, fallback chain, load handler wiring, and invariants.
+- **slideshow.md** before working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants.
 
 ### knowledge/patterns
 

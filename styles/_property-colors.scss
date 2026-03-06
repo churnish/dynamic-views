@@ -1,4 +1,4 @@
-@use 'sass:map';
+@use 'sass:string';
 
 // Color setting mixin — generates semantic, preset, and custom color rules.
 // Body classes follow the pattern: body.dynamic-views-{class-stem}-{variant}.
@@ -16,20 +16,12 @@
   $colors: 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';
 
   // Semantic text variants — applied directly on target elements
-  $text-fallbacks: (
-    'faint': #ababab,
-    'muted': #5c5c5c,
-    'normal': #222222,
-  );
   @if $include-semantics and $selector {
     @each $variant in faint, muted, normal {
       body.dynamic-views-#{$class-stem}-#{$variant}
         .dynamic-views
         #{$selector} {
-        #{$property}: var(
-          --text-#{$variant},
-          #{map.get($text-fallbacks, $variant)}
-        );
+        #{$property}: var(--dynamic-views-text-#{$variant});
       }
     }
   }
@@ -37,69 +29,34 @@
   // Accent preset — body-level variable
   @if $include-accent {
     body.dynamic-views-#{$class-stem}-accent {
-      --dynamic-views-#{$var-stem}-value: var(
-        --text-accent,
-        hsl(258, 88%, 66%)
-      );
+      --dynamic-views-#{$var-stem}-value: var(--dynamic-views-text-accent);
     }
   }
 
   // Color presets — body-level variable
-  $color-fallbacks: (
-    'red': #fb464c,
-    'orange': #e9973f,
-    'yellow': #e0de71,
-    'green': #44cf6e,
-    'cyan': #53dfdd,
-    'blue': #027aff,
-    'purple': #a882ff,
-    'pink': #fa99cd,
-  );
   @each $color in $colors {
     body.dynamic-views-#{$class-stem}-#{$color} {
-      --dynamic-views-#{$var-stem}-value: var(
-        --color-#{$color},
-        #{map.get($color-fallbacks, $color)}
-      );
+      --dynamic-views-#{$var-stem}-value: var(--dynamic-views-color-#{$color});
     }
   }
 
-  // Inner fallback for the $fallback variable (maps --text-faint -> #ababab, etc.)
-  $fallback-values: (
-    --text-faint: #ababab,
-    --text-muted: #5c5c5c,
-    --text-normal: #222222,
-  );
-  $inner-fb: map.get($fallback-values, $fallback);
+  // Namespaced fallback variable (e.g. --text-faint -> --dynamic-views-text-faint)
+  $namespaced-fallback: --dynamic-views-#{string.slice($fallback, 3)};
 
   // Custom picker — body-level variable + direct element override with fallback
   @if $include-custom {
     body.dynamic-views-#{$class-stem}-custom {
-      @if $inner-fb {
-        --dynamic-views-#{$var-stem}-value: var(
-          --dynamic-views-#{$class-stem}-custom,
-          var(#{$fallback}, #{$inner-fb})
-        );
-      } @else {
-        --dynamic-views-#{$var-stem}-value: var(
-          --dynamic-views-#{$class-stem}-custom,
-          var(#{$fallback})
-        );
-      }
+      --dynamic-views-#{$var-stem}-value: var(
+        --dynamic-views-#{$class-stem}-custom,
+        var(#{$namespaced-fallback})
+      );
     }
     @if $selector {
       body.dynamic-views-#{$class-stem}-custom .dynamic-views #{$selector} {
-        @if $inner-fb {
-          #{$property}: var(
-            --dynamic-views-#{$class-stem}-custom,
-            var(#{$fallback}, #{$inner-fb})
-          );
-        } @else {
-          #{$property}: var(
-            --dynamic-views-#{$class-stem}-custom,
-            var(#{$fallback})
-          );
-        }
+        #{$property}: var(
+          --dynamic-views-#{$class-stem}-custom,
+          var(#{$namespaced-fallback})
+        );
       }
     }
   }

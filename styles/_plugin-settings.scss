@@ -1,6 +1,6 @@
 /* Settings header */
 .dynamic-views-settings-header {
-  margin-bottom: var(--size-4-6, 24px);
+  margin-bottom: var(--dynamic-views-size-4-6);
 }
 
 .dynamic-views-settings-header-links {
@@ -8,11 +8,11 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  color: var(--text-muted, #5c5c5c);
+  color: var(--dynamic-views-text-muted);
 }
 
 .dynamic-views-header-link {
-  color: var(--text-muted, #5c5c5c);
+  color: var(--dynamic-views-text-muted);
   padding: 4px 10px 0;
   font-weight: 500;
   text-decoration: none;
@@ -22,7 +22,7 @@
 
   @media (hover: hover) {
     &:hover {
-      color: var(--text-muted, #5c5c5c) !important;
+      color: var(--dynamic-views-text-muted) !important;
       text-decoration: none !important;
       transform: translateY(-1px);
     }
@@ -38,7 +38,7 @@
   svg {
     width: 14px;
     height: 14px;
-    color: var(--text-muted, #5c5c5c);
+    color: var(--dynamic-views-text-muted);
   }
 }
 
@@ -59,7 +59,7 @@
   margin-bottom: 0;
   background-color: transparent;
   border: none;
-  box-shadow: inset 0 0 0 1px var(--background-modifier-border, #e0e0e0);
+  box-shadow: inset 0 0 0 1px var(--dynamic-views-background-modifier-border);
 }
 
 /* Indented sub-settings */
@@ -76,17 +76,17 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background-color: var(--background-modifier-border, #e0e0e0);
+  background-color: var(--dynamic-views-background-modifier-border);
 }
 
 /* Add padding only when visible and not last.
    Currently inactive as sub-items is last child; retained for future structure changes. */
 .setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
-  padding-bottom: var(--size-4-4, 16px);
+  padding-bottom: var(--dynamic-views-size-4-4);
 }
 
 .setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item)::before {
-  bottom: var(--size-4-4, 16px);
+  bottom: var(--dynamic-views-size-4-4);
 }
 
 /* Remove bottom padding from setting when sub-items hidden and last in group */

@@ -30,8 +30,8 @@
 /* End of content indicator */
 .dynamic-views-end-indicator {
   width: 100%;
-  margin-top: var(--size-4-4, 16px);
-  border-top: 1px solid var(--background-modifier-border, #e0e0e0);
+  margin-top: var(--dynamic-views-size-4-4);
+  border-top: 1px solid var(--dynamic-views-background-modifier-border);
 }
 
 body:not(.is-mobile) .dynamic-views-end-indicator {

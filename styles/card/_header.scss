@@ -3,7 +3,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: var(--size-4-2, 8px);
+    gap: var(--dynamic-views-size-4-2);
   }
 
   .card-title-block {
@@ -14,18 +14,20 @@
   }
 
   .card-title {
-    font-weight: calc(var(--font-weight, 400) + var(--bold-modifier, 200));
-    color: var(--dynamic-views-title-color, var(--text-normal, #222222));
+    font-weight: calc(
+      var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+    );
+    color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
     font-family: var(--dynamic-views-title-font, inherit);
     font-size: var(
       --dynamic-views-title-font-size,
-      var(--font-ui-medium, 15px)
+      var(--dynamic-views-font-ui-medium)
     );
     max-width: 100%;
     word-break: break-word;
     text-align: left;
     margin: 0;
-    line-height: var(--line-height-tight, 1.3);
+    line-height: var(--dynamic-views-line-height-tight);
     display: -webkit-box;
     -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
     -webkit-box-orient: vertical;
@@ -44,7 +46,8 @@ body.dynamic-views-file-type-ext .dynamic-views .card-title {
   -webkit-line-clamp: unset;
   -webkit-box-orient: unset;
   max-height: calc(
-    var(--dynamic-views-title-lines, 2) * 1em * var(--line-height-tight, 1.3)
+    var(--dynamic-views-title-lines, 2) * 1em *
+      var(--dynamic-views-line-height-tight)
   );
 }
 
@@ -93,7 +96,7 @@ body.dynamic-views-file-type-ext
     .card.image-format-poster.hover-intent-active
     .card-title-url-icon:hover {
     background-color: color-mix(in srgb, currentColor 20%, transparent);
-    border-radius: var(--radius-s, 4px);
+    border-radius: var(--dynamic-views-radius-s);
   }
 }
 
@@ -110,16 +113,16 @@ body.dynamic-views-file-type-ext
 
   .card-title-icon {
     float: left;
-    margin-right: var(--size-2-2, 4px);
+    margin-right: var(--dynamic-views-size-2-2);
     display: none;
   }
 
   .card-title-icon svg {
     width: 1em;
-    height: calc(1em * var(--line-height-tight, 1.3));
+    height: calc(1em * var(--dynamic-views-line-height-tight));
     vertical-align: bottom;
-    color: var(--text-normal, #222222);
-    stroke-width: var(--icon-xs-stroke-width, 2px);
+    color: var(--dynamic-views-text-normal);
+    stroke-width: var(--dynamic-views-icon-xs-stroke-width);
   }
 }
 
@@ -128,29 +131,29 @@ body.dynamic-views-file-type-flair .dynamic-views .card-title-ext {
   display: flex;
   align-items: center;
   height: calc(
-    var(--dynamic-views-title-font-size, var(--font-ui-medium, 15px)) *
-      var(--line-height-tight, 1.3)
+    var(--dynamic-views-title-font-size, var(--dynamic-views-font-ui-medium)) *
+      var(--dynamic-views-line-height-tight)
   );
   font-size: 0;
   pointer-events: none;
   cursor: default;
   float: left;
-  margin-right: var(--size-2-2, 4px);
+  margin-right: var(--dynamic-views-size-2-2);
 }
 
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before {
   content: attr(data-ext);
-  color: var(--text-muted, #5c5c5c);
-  font-family: var(--font-interface, var(--font-text, sans-serif));
-  font-size: var(--font-ui-smaller, 12px);
+  color: var(--dynamic-views-text-muted);
+  font-family: var(--dynamic-views-font-interface);
+  font-size: var(--dynamic-views-font-ui-smaller);
   line-height: var(
     --dynamic-views-title-font-size,
-    var(--font-ui-medium, 15px)
+    var(--dynamic-views-font-ui-medium)
   );
   padding: 0 0.33em 0 0.38em; /* Extra 0.05em left to offset letter-spacing trailing space */
-  border-radius: var(--radius-s, 4px);
-  background-color: var(--background-modifier-border, #e0e0e0);
-  font-weight: var(--nav-tag-weight, 600);
+  border-radius: var(--dynamic-views-radius-s);
+  background-color: var(--dynamic-views-background-modifier-border);
+  font-weight: var(--dynamic-views-nav-tag-weight);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -180,7 +183,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     font-weight: inherit;
     cursor: pointer;
     /* Match Bases backend <a> tag transition for consistent touch feedback */
-    transition: opacity var(--anim-duration-fast, 140ms) ease-in-out;
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease-in-out;
   }
 
   .card-title a:active {
@@ -205,7 +208,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .card-title
     a:hover {
     text-decoration: underline;
-    color: var(--text-normal, #222222);
+    color: var(--dynamic-views-text-normal);
   }
 
   /* Extension suffix underline on hover */
@@ -218,18 +221,18 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     text-decoration: underline;
     text-decoration-color: var(
       --dynamic-views-title-color,
-      var(--text-normal, #222222)
+      var(--dynamic-views-text-normal)
     );
   }
 }
 
 .dynamic-views {
   .card-subtitle {
-    color: var(--text-faint, #ababab);
+    color: var(--dynamic-views-text-faint);
     font-family: var(--dynamic-views-subtitle-font);
     font-size: var(
       --dynamic-views-subtitle-font-size,
-      var(--font-ui-small, 13px)
+      var(--dynamic-views-font-ui-small)
     );
     max-width: 100%;
     word-break: break-word;
@@ -237,7 +240,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     margin: 0;
     display: block;
     overflow: hidden;
-    line-height: var(--line-height-tight, 1.3);
+    line-height: var(--dynamic-views-line-height-tight);
   }
 
   /* Subtitle property content inherits color from subtitle (exclude links) */
@@ -254,7 +257,9 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 
 /* Subtitle bold */
 body.dynamic-views-subtitle-bold .dynamic-views .card-subtitle {
-  font-weight: calc(var(--font-weight, 400) + var(--bold-modifier, 200));
+  font-weight: calc(
+    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+  );
 }
 
 /* Subtitle italic */
@@ -375,8 +380,8 @@ body.dynamic-views-title-divider
   .dynamic-views
   .card:has(.card-previews, .card-properties-top, .card-properties-bottom)
   .card-header {
-  padding-bottom: var(--size-4-2, 8px);
-  border-bottom: 1px solid var(--background-modifier-border, #e0e0e0);
+  padding-bottom: var(--dynamic-views-size-4-2);
+  border-bottom: 1px solid var(--dynamic-views-background-modifier-border);
 }
 
 /* Subtitle above title */
