@@ -1,8 +1,8 @@
 ---
 title: Electron CSS quirks
-description: Blink/Electron CSS rendering quirks affecting selectors and text truncation.
+description: Blink/Electron CSS rendering quirks affecting selectors, text truncation, overflow clipping, and container queries.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-04
+last updated: 2026-03-08
 ---
 
 # Electron CSS quirks
@@ -117,3 +117,55 @@ Gate visible hover effects behind a JS-managed class rather than pure `:hover`. 
 
 - `src/shared/hover-intent.ts` — `hover-intent-active` class management
 - `styles/_hover-states.scss` — All card hover styles gated by `.hover-intent-active:hover`
+
+## `overflow-clip-margin` ignored with per-axis `overflow-y: clip`
+
+**Discovered**: 2026-03-05 on Electron 39.5.
+
+`overflow-clip-margin` only takes effect when using the `overflow` shorthand (`overflow: clip`). When `overflow-y: clip` is set independently (e.g., `overflow-x: visible; overflow-y: clip`), the clip margin is silently ignored.
+
+### Impact
+
+Masonry's container used `overflow-x: visible; overflow-y: clip` so that cards could extend horizontally (e.g., sticky header borders with negative margins) while clipping vertical scroll overflow. Adding hover transforms (scale, translate) on edge-row cards caused them to be clipped at the container boundary because the clip margin wasn't applied.
+
+### Fix
+
+Switch to the shorthand `overflow: clip` + `overflow-clip-margin: <value>`. The clip margin then applies to both axes uniformly, accommodating both vertical hover transforms and horizontal negative-margin extensions.
+
+```scss
+// Broken: clip margin ignored
+.masonry-container {
+  overflow-x: visible;
+  overflow-y: clip;
+  overflow-clip-margin: var(--bases-view-padding); // silently ignored
+}
+
+// Working: shorthand enables clip margin
+.masonry-container {
+  overflow: clip;
+  overflow-clip-margin: var(--bases-view-padding); // applied to both axes
+}
+```
+
+### Affected file
+
+- `styles/_masonry-view.scss` — `.dynamic-views-masonry` overflow and clip margin
+
+## `@container scroll-state(stuck)` cannot style the container element
+
+**Discovered**: 2026-03-08 on Electron 39.5.
+
+CSS `@container scroll-state(stuck: top)` container queries can only style **descendants** of the container element, not the container itself. This is per spec — the container query matches on the container, but only descendant selectors inside the `@container` block are valid targets.
+
+### Impact
+
+Sticky group headings need elevated `z-index` when stuck (to paint above hovered cards with `z-index: 11`). A pure CSS approach using `container-type: scroll-state` on the heading and `@container scroll-state(stuck: top)` to set `z-index: 20` on child elements (`.bases-group-collapse-region`, `.bases-group-count`) was attempted. However, child `z-index` inside a flex container creates per-child stacking contexts — these cannot compete with cards in the parent grid stacking context. Only `z-index` on the heading element itself works, which `@container` cannot target.
+
+### Fix
+
+JS `IntersectionObserver` + zero-height sentinel approach. A sentinel div at each group section's top is observed — when it exits the scroll viewport upward, the heading is stuck. The observer toggles a `stuck` class on the heading, which carries `z-index: 20`. The `@container scroll-state(stuck: top)` rule is retained for the bottom border (progressive enhancement on descendant `::after`).
+
+### Files
+
+- `src/bases/sticky-heading.ts` — Sentinel IO observer
+- `styles/_grid-masonry-shared.scss` — `.stuck` z-index rule, sentinel CSS, `@container` border rule

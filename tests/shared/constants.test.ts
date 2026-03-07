@@ -1,0 +1,37 @@
+import { computeHoverScale, HOVER_GROWTH_PX } from '../../src/shared/constants';
+
+describe('constants', () => {
+  describe('computeHoverScale', () => {
+    it('returns empty string for height = 0', () => {
+      expect(computeHoverScale(0)).toBe('');
+    });
+
+    it('returns empty string for negative height', () => {
+      expect(computeHoverScale(-10)).toBe('');
+      expect(computeHoverScale(-100)).toBe('');
+    });
+
+    it('caps at MAX_HOVER_SCALE (1.04) for small heights', () => {
+      // For very small heights, the formula exceeds 1.04
+      expect(computeHoverScale(1)).toBe('1.04');
+      expect(computeHoverScale(10)).toBe('1.04');
+    });
+
+    it('returns expected value for typical card height (200px)', () => {
+      // 1 + (4 * 2) / 200 = 1 + 8/200 = 1.04
+      expect(computeHoverScale(200)).toBe('1.04');
+    });
+
+    it('returns expected value for tall card (400px)', () => {
+      // 1 + (4 * 2) / 400 = 1 + 8/400 = 1.02
+      const result = computeHoverScale(400);
+      expect(Number(result)).toBeCloseTo(1.02, 5);
+    });
+
+    it('returns expected value for very tall card (1000px)', () => {
+      // 1 + (4 * 2) / 1000 = 1 + 8/1000 = 1.008
+      const result = computeHoverScale(1000);
+      expect(Number(result)).toBeCloseTo(1.008, 5);
+    });
+  });
+});

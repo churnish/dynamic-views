@@ -1,11 +1,13 @@
 ---
 title: Masonry layout system
-description: The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling. Datacore uses declarative Preact/JSX rendering without virtual scrolling. The detailed pipeline, guard system, and invariant sections below document the Bases implementation; see "Bases vs. Datacore" at the end for architectural differences.
+description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-03
+last updated: 2026-03-08
 ---
 
 # Masonry layout system
+
+The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling; Datacore uses declarative Preact/JSX rendering without virtual scrolling. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
 
 ## Files
 
@@ -26,6 +28,7 @@ last updated: 2026-03-03
 | `src/bases/masonry-view.ts`    | View class — orchestrates rendering, layout, virtual scroll, resize, infinite scroll. |
 | `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.       |
+| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                            |
 
 ### Datacore
 
@@ -49,7 +52,7 @@ Lightweight representation of every card. Mounted cards have `el` and `handle`; 
 | `height`          | `number`              | Current height (may be proportionally scaled).                                                                                                             |
 | `measuredHeight`  | `number`              | Height at original measurement width.                                                                                                                      |
 | `measuredAtWidth` | `number`              | `cardWidth` when height was DOM-measured.                                                                                                                  |
-| `scalableHeight`  | `number`              | Height of scalable portion (top/bottom cover) at `measuredAtWidth`.                                                                                        |
+| `scalableHeight`  | `number`              | Height of scalable portion (top/bottom cover, or entire card for poster with image) at `measuredAtWidth`.                                                  |
 | `fixedHeight`     | `number`              | Height of fixed portion (header, properties, preview) at `measuredAtWidth`.                                                                                |
 | `col`             | `number`              | Column index in masonry grid. Set by layout, read by `proportionalResizeLayout` and `repositionWithStableColumns`. Stable across same-column-count resize. |
 | `cardData`        | `CardData`            | Normalized card data for rendering.                                                                                                                        |
@@ -89,7 +92,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 ### 1. Initial render
 
-`processDataUpdate()` → `setupMasonryLayout(settings)` → `updateLayoutRef.current("initial-render")`
+`processDataUpdate()` → `setupMasonryLayout(settings)` → `updateLayoutRef.current("initial-render")`. For the full settings resolution chain, see `settings-resolution.md`.
 
 1. Clear container, create masonry container element.
 2. Render groups/cards with `renderCard()`. Push `VirtualItem` per card with `x=0, y=0, height=0`.
@@ -115,7 +118,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 4. Push `VirtualItem` per new card. Track new cards per group via `newCardsPerGroup: Map<string | undefined, HTMLElement[]>`.
 5. **Per-group incremental layout** (`runPerGroupLayout`):
    - Pre-set inline `width` on all new cards.
-   - Wait for images to settle (or skip if fixed-cover-height).
+   - Wait for images to settle (or skip if both fixed-cover-height and fixed-poster-height are active).
    - In double-RAF, for each group with new cards:
      - **Existing group** (has prior `groupLayoutResults`): `calculateIncrementalMasonryLayout()` continues from previous `columnHeights`. Merge positions, heights, and columnAssignments with previous result.
      - **New group** (no prior result): `calculateMasonryLayout()` for just that group's cards.
@@ -158,7 +161,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
 2. **Pre-read `scrollTop` and `clientHeight`** from `scrollEl` before the style write loop — reading these after inline style changes would trigger forced reflow in `syncVirtualScroll`.
 3. `proportionalResizeLayout()` — single pass over all cards per group:
-   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area scales linearly; text content stays constant.
+   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area and poster cards scale linearly; text content stays constant.
    - Reads `item.col` directly for stable column assignment when column count unchanged. Falls back to greedy shortest-column for column count changes.
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.
@@ -218,18 +221,18 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 
 ### Layout sources
 
-| Source                         | Trigger                                         | Path                                                                                     |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `"initial-render"`             | First render                                    | Full measurement with card hiding.                                                       |
-| `"resize-observer"`            | ResizeObserver (synchronous)                    | Mounted-card measurement fast path → fallback to full.                                   |
-| `"image-load"`                 | Cover/thumbnail image loaded                    | Coalesced → `"image-coalesced"`.                                                         |
-| `"resize-correction"`          | 200ms after last resize ends                    | Mounted-card measurement fast path → correction pass.                                    |
-| `"image-coalesced"`            | RAF after image-load batch                      | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
-| `"expand-group"`               | Group uncollapsed                               | Full measurement with remount-all.                                                       |
-| `"card-disconnected-fallback"` | Per-group batch layout found disconnected cards | Full measurement (blocked if unmounted items).                                           |
-| `"content-update"`             | In-place card update changed height             | Full measurement (blocked if unmounted items).                                           |
-| `"queued-update"`              | Dequeued from reentrant guard                   | Full measurement (blocked if unmounted items).                                           |
-| `"property-measured"`          | Property field width measurement settled        | Full measurement (blocked if unmounted items).                                           |
+| Source                         | Trigger                                                             | Path                                                                                     |
+| ------------------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `"initial-render"`             | First render                                                        | Full measurement with card hiding.                                                       |
+| `"resize-observer"`            | ResizeObserver (synchronous)                                        | Mounted-card measurement fast path → fallback to full.                                   |
+| `"image-load"`                 | Cover/thumbnail image loaded                                        | Coalesced → `"image-coalesced"`.                                                         |
+| `"resize-correction"`          | 200ms after last resize ends                                        | Mounted-card measurement fast path → correction pass.                                    |
+| `"image-coalesced"`            | RAF after image-load batch                                          | Mounted-card measurement fast path if unmounted items exist, otherwise full measurement. |
+| `"expand-group"`               | Group uncollapsed                                                   | Full measurement with remount-all.                                                       |
+| `"card-disconnected-fallback"` | Per-group batch layout found disconnected cards                     | Full measurement (blocked if unmounted items).                                           |
+| `"content-update"`             | In-place card update changed height                                 | Full measurement (blocked if unmounted items).                                           |
+| `"queued-update"`              | Dequeued from reentrant guard                                       | Full measurement (blocked if unmounted items).                                           |
+| `"property-measured"`          | Property field width measurement settled (see `property-layout.md`) | Full measurement (blocked if unmounted items).                                           |
 
 ## Throttle and debounce patterns
 
@@ -255,6 +258,8 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 - **Relation to scroll-idle**: `onScrollIdle` only fires when `pendingDeferredResize` is set. For mount-only scroll sessions, `cardResizeObserver` is the post-scroll safety net.
 
 ### Image-load coalescing
+
+> For the full image loading pipeline, dedup caching, and fade-in pattern, see `image-loading.md`.
 
 - **Pattern**: Single RAF debounce via `pendingImageRelayout` flag.
 - **Effect**: ~60 concurrent image loads → 1 layout per frame instead of 60.
@@ -366,7 +371,9 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 9. **`onScrollIdle` reschedules when blocked.** When `batchLayoutPending` prevents deferred work (`pendingDeferredResize` or standard remeasure), `onScrollIdle` reschedules itself via `setTimeout(MASONRY_CORRECTION_MS)` instead of silently dropping the work. The deferred flags persist across reschedules.
 10. **Mount remeasure and deferred resize are independent scheduling concerns in `syncVirtualScroll`.** The former `shouldScheduleRemeasure` block has been split: `mountRemeasureTimeout` handles the mount-triggered throttle (guarded by `mountedNew` — only starts when cards were actually mounted); `scrollRemeasureTimeout` handles `pendingDeferredResize` debounce only. `isScrollRemeasurePending()` checks both timers and is used at 6 guard sites to defer competing work while either is active.
 
-## Bases vs. Datacore
+## Bases v Datacore
+
+For broader architectural differences (rendering model, events, cleanup, state), see `bases-v-datacore-differences.md`. This section covers masonry-specific divergences.
 
 Both backends share the same pure layout math (`calculateMasonryLayout()`, `calculateIncrementalMasonryLayout()`, `repositionWithStableColumns()`) and the same greedy shortest-column algorithm. They diverge in rendering model, state management, and performance strategy.
 

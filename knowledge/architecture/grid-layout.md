@@ -1,11 +1,13 @@
 ---
 title: Grid layout system
-description: The grid layout system renders cards in a CSS Grid-based equal-height column layout. Both backends share the same card rendering pipeline (`card-renderer.tsx`) and settings schema. Bases uses imperative DOM manipulation with IntersectionObserver-based content visibility. Datacore uses declarative Preact/JSX rendering. The detailed pipeline, guard system, and invariant sections below document the Bases implementation; see "Bases vs. Datacore" at the end for architectural differences.
+description: CSS Grid column layout for card views. Render pipeline, guard system, content visibility, and Bases/Datacore differences.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-02-19
+last updated: 2026-03-08
 ---
 
 # Grid layout system
+
+The grid layout system renders cards in a CSS Grid-based equal-height column layout. Both backends share the same card rendering pipeline (`card-renderer.tsx`) and settings schema. Bases uses imperative DOM manipulation with IntersectionObserver-based content visibility; Datacore uses declarative Preact/JSX rendering. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
 
 ## Files
 
@@ -27,6 +29,7 @@ last updated: 2026-02-19
 | ------------------------------ | ------------------------------------------------------------------------------- |
 | `src/bases/grid-view.ts`       | View class — orchestrates rendering, resize, infinite scroll, group collapse.   |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration. |
+| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                      |
 
 ### Datacore
 
@@ -89,7 +92,7 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 `onDataUpdated()` → `queueMicrotask()` → `processDataUpdate()`
 
 1. `applyCssOnlySettings()` — set CSS variables (`textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`) directly on container. Bypasses throttle for instant feedback.
-2. Read settings with stale-config fallback (`lastRenderedSettings`), normalize property names.
+2. Read settings with stale-config fallback (`lastRenderedSettings`), normalize property names. (For the full resolution chain, stale config guards, and sparse storage, see `settings-resolution.md`.)
 3. Apply per-view CSS classes and variables (`applyViewContainerStyles`).
 4. Compute `renderHash` (data paths + mtimes + settings + sort + shuffle + collapse + properties).
 5. **Skip if hash unchanged** — restore column CSS variable (may be lost on tab switch), restore scroll position, return early. Schedule delayed re-checks at 100/250/500ms to catch late Obsidian config updates.
@@ -251,6 +254,8 @@ Triggered when only property **order** changed (not the set of properties, not o
 
 ### Image-load handling
 
+> For the full image loading pipeline, dedup caching, and fade-in pattern, see `image-loading.md`.
+
 - **No coalescing needed** — grid cards have natural height (`height: auto`). When images load, CSS Grid auto-reflows rows without JavaScript intervention.
 - **Cover fade-in**: Double-RAF delay clears `skip-cover-fade` class after cached image load events have fired.
 
@@ -278,7 +283,7 @@ Cards use CSS Grid for automatic flow-based positioning:
 | `is-grouped`                     | View container  | Toggled when view has grouped data.                                            |
 | `dynamic-views-height-preserved` | View container  | Temporary class during DOM wipe; sets `min-height` to prevent scroll reset.    |
 
-**Card flex layout**:
+**Card flex layout** (for the full card DOM hierarchy and backend divergences, see `card-dom-structure.md`):
 
 ```
 .card (flex-direction: column, height: 100%)
@@ -336,6 +341,8 @@ Arrow keys navigate spatially across all mounted cards using DOM measurements.
 
 ### Property measurement constants (`src/shared/property-measure.ts`)
 
+> For the full measurement pipeline, pairing logic, and alignment modes, see `property-layout.md`.
+
 | Constant                  | Value | Purpose                                         |
 | ------------------------- | ----- | ----------------------------------------------- |
 | `SETS_PER_FRAME`          | 5     | Side-by-side property sets processed per frame. |
@@ -354,7 +361,9 @@ Arrow keys navigate spatially across all mounted cards using DOM measurements.
 7. **Content visibility is disabled on iOS.** `setupContentVisibility()` returns a no-op on mobile to avoid the WebKit infinite reflow loop. Mobile falls back to browser-managed `content-visibility: auto`.
 8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, and `thumbnailSize` changes.
 
-## Bases vs. Datacore
+## Bases v Datacore
+
+For broader architectural differences (rendering model, events, cleanup, state), see `bases-v-datacore-differences.md`. This section covers grid-specific divergences.
 
 Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCardRenderer`) and settings schema. They diverge in rendering model, state management, and layout strategy.
 
