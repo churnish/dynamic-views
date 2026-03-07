@@ -79,6 +79,7 @@ import type {
   FocusState,
 } from '../types';
 import { setupContentVisibility } from '../shared/content-visibility';
+import { setupStickyHeadingObserver } from './sticky-heading';
 import { updateTextPreviewDOM } from '../shared/text-preview-dom';
 
 // Extend Obsidian types
@@ -197,6 +198,8 @@ export class DynamicViewsGridView extends BasesView {
   private lastObservedWidth: number = 0;
   private contentVisibility: ReturnType<typeof setupContentVisibility> | null =
     null;
+  private stickyHeadings: ReturnType<typeof setupStickyHeadingObserver> | null =
+    null;
   private hasBatchAppended: boolean = false;
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
@@ -254,7 +257,10 @@ export class DynamicViewsGridView extends BasesView {
       }
     );
 
-    const groupEl = headerEl.nextElementSibling as HTMLElement | null;
+    const groupEl =
+      headerEl
+        .closest('.dynamic-views-group-section')
+        ?.querySelector<HTMLElement>('.dynamic-views-group') ?? null;
     if (wasCollapsed) {
       // Expanding: surgically populate only this group (avoids full re-render flash)
       if (groupEl && this.data) {
@@ -387,6 +393,12 @@ export class DynamicViewsGridView extends BasesView {
     setHoverScaleForCards(
       Array.from(groupEl.querySelectorAll<HTMLElement>('.card'))
     );
+
+    // Observe newly expanded heading for sticky stuck detection
+    const newHeading = groupEl
+      .closest('.dynamic-views-group-section')
+      ?.querySelector<HTMLElement>('.bases-group-heading:not(.collapsed)');
+    if (newHeading) this.stickyHeadings?.observe(newHeading);
 
     // Invalidate render hash so next onDataUpdated() doesn't skip
     this.renderState.lastRenderHash = '';
@@ -1152,6 +1164,13 @@ export class DynamicViewsGridView extends BasesView {
         Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
       );
 
+      // Rebuild sticky heading observer for all non-collapsed group headings
+      this.stickyHeadings?.disconnect();
+      this.stickyHeadings = setupStickyHeadingObserver(this.scrollEl);
+      feedEl
+        .querySelectorAll<HTMLElement>('.bases-group-heading:not(.collapsed)')
+        .forEach((h) => this.stickyHeadings!.observe(h));
+
       // Compute effective total (exclude collapsed groups)
       let effectiveTotal = 0;
       for (const pg of processedGroups) {
@@ -1603,6 +1622,10 @@ export class DynamicViewsGridView extends BasesView {
           );
           setGroupKeyDataset(groupEl, currentGroupKey);
 
+          // Observe new heading for sticky stuck detection (after group
+          // container so sentinel doesn't break heading + group adjacency)
+          if (headerEl) this.stickyHeadings?.observe(headerEl);
+
           // Update last group tracking
           this.lastGroup.key = currentGroupKey;
           this.lastGroup.container = groupEl;
@@ -1818,6 +1841,7 @@ export class DynamicViewsGridView extends BasesView {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
     this.contentVisibility?.disconnect();
+    this.stickyHeadings?.disconnect();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction

@@ -867,7 +867,7 @@ export class SharedCardRenderer {
         if (isPosterClickReveal && cardEl.querySelector('.card-poster')) {
           const target = e.target as HTMLElement;
           const isInteractive = target.closest(
-            'a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container'
+            'a, button, input, select, textarea, .tag, .path-segment, .path-separator, .clickable-icon, .multi-select-pill, .checkbox-container'
           );
           // Don't dismiss if user has selected text (drag-select or double-click)
           const hasTextSelection =
@@ -918,7 +918,8 @@ export class SharedCardRenderer {
             target.classList.contains('tag') || target.closest('.tag');
           const isPathSegment =
             target.classList.contains('path-segment') ||
-            target.closest('.path-segment');
+            target.closest('.path-segment') ||
+            target.classList.contains('path-separator');
           const isImage = target.tagName === 'IMG';
           const isZoomEnabled = !document.body.classList.contains(
             'dynamic-views-image-viewer-disabled'

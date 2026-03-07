@@ -208,6 +208,7 @@ export async function cleanUpBaseFile(
         const validValues = VALID_VIEW_VALUES[key as keyof ViewDefaults];
         if (
           validValues &&
+          key !== 'minimumColumns' &&
           !validValues.includes(String(viewObj[key]) as never)
         ) {
           viewObj[key] = validValues[0];
@@ -669,7 +670,8 @@ export function renderGroupHeader(
   const collapseRegion = headerEl.createDiv('bases-group-collapse-region');
   collapseRegion.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
-    if (target.closest('a')) return; // Don't intercept tag/folder links
+    if (target.closest('a') || target.classList.contains('path-separator'))
+      return;
     onToggleCollapse();
   });
 
@@ -956,7 +958,7 @@ export function handleTemplateToggle(
     cooldownTimerRef.value = null;
   }, 3000);
 
-  const extracted = extractBasesTemplate(config, VIEW_DEFAULTS);
+  const extracted = extractBasesTemplate(config, VIEW_DEFAULTS, viewType);
   void plugin.persistenceManager.setSettingsTemplate(viewType, extracted);
   const label = viewType === 'grid' ? 'Grid' : 'Masonry';
   const notice = new Notice(

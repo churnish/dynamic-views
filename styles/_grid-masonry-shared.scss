@@ -56,6 +56,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
     right: calc(-1 * var(--bases-view-padding));
     background: var(--dynamic-views-background-primary);
     z-index: -1;
+    pointer-events: none; /* Background only — don't expand collapse-region's click target */
   }
 
   /* JS-toggled: sentinel IO detects stuck state, sets z-index on heading itself.
@@ -185,8 +186,8 @@ body.dynamic-views-hide-group-property-labels
     color: var(--dynamic-views-color-accent);
   }
 
-  /* Hide card container when heading is collapsed (adjacent sibling) */
-  .bases-group-heading.collapsed + .dynamic-views-group {
+  /* Hide card container when heading is collapsed (general sibling) */
+  .bases-group-heading.collapsed ~ .dynamic-views-group {
     display: none !important;
   }
 

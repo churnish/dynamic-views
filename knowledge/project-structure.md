@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-02
+last updated: 2026-03-06
 ---
 
 # Project structure
@@ -32,6 +32,7 @@ dynamic-views/
 │   │   ├── grid-view.ts              # Grid layout view
 │   │   ├── masonry-view.ts           # Masonry layout view
 │   │   ├── shared-renderer.ts        # Shared card rendering (deduplicates grid/masonry)
+│   │   ├── sticky-heading.ts         # Sentinel IO for sticky group heading stuck state
 │   │   ├── swipe-interceptor.ts      # Touch gesture interception for panzoom on mobile
 │   │   └── utils.ts                  # Context menus, toolbar, property management
 │   │
@@ -63,6 +64,7 @@ dynamic-views/
 │   │   ├── scroll-preservation.ts    # Scroll position save/restore
 │   │   ├── settings-schema.ts        # Universal settings schema parser
 │   │   ├── slideshow.ts              # Card image slideshow (animation + swipe)
+│   │   ├── text-preview-dom.ts       # DOM updates for card text previews
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
 │   │   └── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
 │   │
@@ -74,6 +76,7 @@ dynamic-views/
 │       ├── link-parser.ts            # Frontmatter link parsing (internal/external)
 │       ├── masonry-layout.ts         # Pure masonry positioning calculations
 │       ├── notebook-navigator.ts     # Notebook Navigator plugin integration
+│       ├── owner-window.ts           # Popout-safe window reference from DOM element
 │       ├── property.ts               # Property extraction for Datacore/Bases
 │       ├── randomize.ts              # Randomization + pane type from modifier keys
 │       ├── sanitize.ts               # Control character removal (localStorage safety)
@@ -94,11 +97,14 @@ dynamic-views/
 │   │   ├── content-visibility.test.ts
 │   │   ├── content-loader.test.ts
 │   │   ├── data-transform.test.ts
+│   │   ├── hover-intent.test.ts
 │   │   ├── image-loader.test.ts
 │   │   ├── property-helpers.test.ts
 │   │   ├── render-utils.test.ts
 │   │   ├── scroll-gradient.test.ts
-│   │   └── settings-schema.test.ts
+│   │   ├── settings-schema.test.ts
+│   │   ├── text-preview-dom.test.ts
+│   │   └── virtual-scroll.test.ts
 │   └── utils/
 │       ├── dropdown-position.test.ts
 │       ├── file.test.ts

@@ -96,6 +96,7 @@ import type {
   FocusState,
 } from '../types';
 import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
+import { setupStickyHeadingObserver } from './sticky-heading';
 import { updateTextPreviewDOM } from '../shared/text-preview-dom';
 import {
   type VirtualItem,
@@ -232,6 +233,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private lastLayoutMinColumns: number = 1;
   private lastLayoutIsGrouped: boolean = false;
   private propertyMeasuredTimeout: number | null = null;
+  private stickyHeadings: ReturnType<typeof setupStickyHeadingObserver> | null =
+    null;
   private lastDataUpdateTime = { value: 0 };
   private trailingUpdate: {
     timeoutId: number | null;
@@ -288,7 +291,10 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     );
 
-    const groupEl = headerEl.nextElementSibling as HTMLElement | null;
+    const groupEl =
+      headerEl
+        .closest('.dynamic-views-group-section')
+        ?.querySelector<HTMLElement>('.dynamic-views-group') ?? null;
     if (wasCollapsed) {
       // Expanding: surgically populate only this group (avoids full re-render flash)
       if (groupEl && this.data) {
@@ -464,6 +470,12 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
+
+    // Observe newly expanded heading for sticky stuck detection
+    const newHeading = groupEl
+      .closest('.dynamic-views-group-section')
+      ?.querySelector<HTMLElement>('.bases-group-heading:not(.collapsed)');
+    if (newHeading) this.stickyHeadings?.observe(newHeading);
 
     // Invalidate render hash so next onDataUpdated() doesn't skip
     this.renderState.lastRenderHash = '';
@@ -1364,6 +1376,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
         initializeScrollGradients(this.masonryContainer);
         initializeTitleTruncation(this.masonryContainer);
+
+        // Rebuild sticky heading observer for all non-collapsed group headings
+        this.stickyHeadings?.disconnect();
+        this.stickyHeadings = setupStickyHeadingObserver(this.scrollEl);
+        this.masonryContainer
+          .querySelectorAll<HTMLElement>('.bases-group-heading:not(.collapsed)')
+          .forEach((h) => this.stickyHeadings!.observe(h));
 
         // Cancel spurious cardResizeObserver RAF from initial card creation —
         // layout just measured all cards, no drift possible yet
@@ -3141,6 +3160,10 @@ export class DynamicViewsMasonryView extends BasesView {
           setGroupKeyDataset(groupEl, currentGroupKey);
           this.groupContainers.set(currentGroupKey, groupEl);
 
+          // Observe new heading for sticky stuck detection (after group
+          // container so sentinel doesn't break heading + group adjacency)
+          if (headerEl) this.stickyHeadings?.observe(headerEl);
+
           // Update last group tracking
           this.lastGroup.key = currentGroupKey;
           this.lastGroup.container = groupEl;
@@ -3715,6 +3738,7 @@ export class DynamicViewsMasonryView extends BasesView {
       );
     }
     this.focusCleanup?.();
+    this.stickyHeadings?.disconnect();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
 

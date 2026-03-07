@@ -792,7 +792,8 @@ function CoverSlideshow({
 
     // Reset to slide 1 when view becomes visible (reading/editing views are separate DOMs)
     let wasHidden = false;
-    const visibilityObserver = new IntersectionObserver(
+    const IO = getOwnerWindow(slideshowEl).IntersectionObserver;
+    const visibilityObserver = new IO(
       (entries) => {
         if (!entries[0]?.isIntersecting) {
           wasHidden = true;
@@ -1975,7 +1976,7 @@ function Card({
           if (cardEl.querySelector('.card-poster')) {
             const target = e.target as HTMLElement;
             const isInteractive = target.closest(
-              'a, button, input, select, textarea, .tag, .path-segment, .clickable-icon, .multi-select-pill, .checkbox-container'
+              'a, button, input, select, textarea, .tag, .path-segment, .path-separator, .clickable-icon, .multi-select-pill, .checkbox-container'
             );
             // Don't dismiss if user has selected text (drag-select or double-click)
             const hasTextSelection =
@@ -2026,7 +2027,8 @@ function Card({
             target.classList.contains('tag') || target.closest('.tag');
           const isPathSegment =
             target.classList.contains('path-segment') ||
-            target.closest('.path-segment');
+            target.closest('.path-segment') ||
+            target.classList.contains('path-separator');
           const isImage = target.tagName === 'IMG';
           const isZoomEnabled = !document.body.classList.contains(
             'dynamic-views-image-viewer-disabled'
