@@ -2,6 +2,7 @@ name: Feature request
 description: Suggest an improvement or new feature for the Dynamic Views plugin
 labels:
   - Feature request
+  - '⚪️ Pending'
 body:
   - type: markdown
     attributes:
@@ -24,6 +25,12 @@ body:
       options:
         - label: Bases view
         - label: Datacore view
+  - type: markdown
+    attributes:
+      value: "&#8203;"
+  - type: markdown
+    attributes:
+      value: '## Required'
   - type: textarea
     id: use-case
     attributes:
@@ -40,10 +47,16 @@ body:
       placeholder: Describe solution here...
     validations:
       required: true
+  - type: markdown
+    attributes:
+      value: "&#8203;"
+  - type: markdown
+    attributes:
+      value: '## Optional'
   - type: textarea
     id: workaround
     attributes:
-      label: Current workaround (optional)
+      label: Current workaround
       description: If you're using any workarounds, it might be helpful to us to get some inspiration.
       placeholder: Describe workaround here...
     validations:
@@ -51,7 +64,7 @@ body:
   - type: textarea
     id: additional-info
     attributes:
-      label: Additional information (optional)
+      label: Additional information
       description: Provide any additional information that you think would be helpful to understand your suggestion.
       placeholder: Add additional information here...
     validations:
@@ -59,7 +72,7 @@ body:
   - type: textarea
     id: debug-info
     attributes:
-      label: Debug information (optional)
+      label: Debug information
       description: |-
         To share your Obsidian debug info:
 
