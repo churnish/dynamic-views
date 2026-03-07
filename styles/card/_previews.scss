@@ -82,6 +82,23 @@ body.dynamic-views-text-preview-italic .dynamic-views .card-text-preview {
   font-style: italic;
 }
 
+body.dynamic-views-text-preview-align-center .dynamic-views .card-text-preview {
+  text-align: center;
+}
+
+body.dynamic-views-text-preview-align-right .dynamic-views .card-text-preview {
+  text-align: right;
+}
+
+body.dynamic-views-text-preview-align-justify .dynamic-views .card-text-preview {
+  text-align: justify;
+}
+
+body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
 .dynamic-views {
   .card-thumbnail {
     position: relative;

@@ -157,59 +157,6 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-card-background
-        title: Background
-        description: Card background appearance.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-background-tinted
-        options:
-            -
-                label: Tinted
-                value: dynamic-views-card-background-tinted
-            -
-                label: Transparent
-                value: dynamic-views-card-background-transparent
-            -
-                label: Custom
-                value: dynamic-views-card-background-custom
-    -
-        id: dynamic-views-card-background-color-custom
-        title: Custom background
-        description: Custom color for card background.
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
-    -
-        id: dynamic-views-card-background-hover
-        title: Background (hover)
-        description: Card background color on hover.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-background-hover-transparent
-        options:
-            -
-                label: No change
-                value: dynamic-views-card-background-hover-none
-            -
-                label: Tinted
-                value: dynamic-views-card-background-hover-tinted
-            -
-                label: Transparent
-                value: dynamic-views-card-background-hover-transparent
-            -
-                label: Custom
-                value: dynamic-views-card-background-hover-custom
-    -
-        id: dynamic-views-card-background-color-hover-custom
-        title: Custom background (hover)
-        description: Custom color for card background on hover.
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
-    -
         id: dynamic-views-card-border-color
         title: Border color
         description: Theme color preset for card border.
@@ -315,6 +262,59 @@ settings:
         id: dynamic-views-card-border-color-hover-custom
         title: Custom border color (hover)
         description: Custom color for card borders on hover.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-background
+        title: Background
+        description: Card background appearance.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-tinted
+        options:
+            -
+                label: Tinted
+                value: dynamic-views-card-background-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-background-custom
+    -
+        id: dynamic-views-card-background-color-custom
+        title: Custom background
+        description: Custom color for card background.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-background-hover
+        title: Background (hover)
+        description: Card background color on hover.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-hover-transparent
+        options:
+            -
+                label: No change
+                value: dynamic-views-card-background-hover-none
+            -
+                label: Tinted
+                value: dynamic-views-card-background-hover-tinted
+            -
+                label: Transparent
+                value: dynamic-views-card-background-hover-transparent
+            -
+                label: Custom
+                value: dynamic-views-card-background-hover-custom
+    -
+        id: dynamic-views-card-background-color-hover-custom
+        title: Custom background (hover)
+        description: Custom color for card background on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -1246,6 +1246,11 @@ settings:
                 label: Scroll
                 value: dynamic-views-subtitle-overflow-scroll
     -
+        id: dynamic-views-subtitle-hyphenate
+        title: Hyphenate
+        description: Break words at syllable boundaries when wrapping.
+        type: class-toggle
+    -
         id: tags-heading
         title: Tags
         type: heading
@@ -1352,7 +1357,7 @@ settings:
         default: ''
     -
         id: dynamic-views-text-preview-color
-        title: Text color
+        title: Color
         description: Theme color preset for text previews.
         type: class-select
         allowEmpty: false
@@ -1399,7 +1404,7 @@ settings:
                 value: dynamic-views-text-preview-color-custom
     -
         id: dynamic-views-text-preview-color-custom
-        title: Custom text color
+        title: Custom color
         description: Set a custom color.
         type: variable-themed-color
         format: hex
@@ -1409,6 +1414,31 @@ settings:
         id: dynamic-views-text-preview-italic
         title: Italic
         description: Italicize text previews.
+        type: class-toggle
+    -
+        id: dynamic-views-text-preview-alignment
+        title: Alignment
+        description: Horizontal alignment of text previews.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-text-preview-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-text-preview-align-left
+            -
+                label: Center
+                value: dynamic-views-text-preview-align-center
+            -
+                label: Right
+                value: dynamic-views-text-preview-align-right
+            -
+                label: Justify
+                value: dynamic-views-text-preview-align-justify
+    -
+        id: dynamic-views-text-preview-hyphenate
+        title: Hyphenate
+        description: Break words at syllable boundaries when wrapping.
         type: class-toggle
     -
         id: thumbnails-heading
@@ -1655,6 +1685,11 @@ settings:
             -
                 label: Scroll
                 value: dynamic-views-title-overflow-scroll
+    -
+        id: dynamic-views-title-hyphenate
+        title: Hyphenate
+        description: Break words at syllable boundaries when wrapping.
+        type: class-toggle
 
 */
 

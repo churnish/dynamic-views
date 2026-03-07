@@ -281,6 +281,18 @@ body.dynamic-views-subtitle-align-right .dynamic-views .card-subtitle {
   text-align: right;
 }
 
+/* Title hyphenation */
+body.dynamic-views-title-hyphenate .dynamic-views .card-title {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Subtitle hyphenation */
+body.dynamic-views-subtitle-hyphenate .dynamic-views .card-subtitle {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
 /* Subtitle wrap mode (default) - override property-content-wrapper's overflow */
 .dynamic-views {
   .card-subtitle .property-content-wrapper {
