@@ -1183,7 +1183,7 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       // Setup infinite scroll
-      this.setupInfiniteScroll(effectiveTotal, settings);
+      this.setupInfiniteScroll(effectiveTotal);
 
       // Show end indicator if all items fit in initial render (skip if 0 results)
       if (displayedSoFar >= effectiveTotal && effectiveTotal > 0) {
@@ -1457,14 +1457,56 @@ export class DynamicViewsGridView extends BasesView {
     // Grid: CSS auto-handles row height changes, no relayout needed
   }
 
+  /** Check if more content needed after layout completes, and load if so */
+  private checkAndLoadMore(totalEntries: number): void {
+    const settings = this.lastRenderedSettings;
+    if (!settings) return;
+    if (this.isLoading || this.displayedCount >= totalEntries) return;
+
+    const scrollContainer = this.scrollEl;
+    if (!scrollContainer?.isConnected) return;
+
+    const distanceFromBottom =
+      scrollContainer.scrollHeight -
+      (scrollContainer.scrollTop + scrollContainer.clientHeight);
+    const threshold = scrollContainer.clientHeight * PANE_MULTIPLIER;
+
+    if (distanceFromBottom < threshold) {
+      this.isLoading = true;
+      // Dynamic batch size: columns x rows per column, capped
+      const containerWidth = Math.floor(
+        this.containerEl.getBoundingClientRect().width
+      );
+      if (containerWidth === 0) {
+        this.isLoading = false;
+        return;
+      }
+      const columns = Math.max(
+        settings.minimumColumns,
+        Math.floor(
+          (containerWidth + getCardSpacing(this.containerEl)) /
+            (settings.cardSize + getCardSpacing(this.containerEl))
+        )
+      );
+      const batchSize = Math.min(columns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
+      this.displayedCount = Math.min(
+        this.displayedCount + batchSize,
+        totalEntries
+      );
+      void this.appendBatch(totalEntries);
+    }
+  }
+
   private async appendBatch(totalEntries: number): Promise<void> {
     // Guard: return early if data not initialized or no feed container
     if (
       !this.data ||
       !this.feedContainerRef.current ||
       !this.lastRenderedSettings
-    )
+    ) {
+      this.isLoading = false;
       return;
+    }
 
     try {
       // Increment render version to cancel any stale onDataUpdated renders
@@ -1686,13 +1728,12 @@ export class DynamicViewsGridView extends BasesView {
       }
     } finally {
       this.isLoading = false;
+      // Chain next batch if still near bottom (matches masonry pattern)
+      this.checkAndLoadMore(totalEntries);
     }
   }
 
-  private setupInfiniteScroll(
-    totalEntries: number,
-    settings?: BasesResolvedSettings
-  ): void {
+  private setupInfiniteScroll(totalEntries: number): void {
     const scrollContainer = this.scrollEl;
 
     // Recreate content-visibility observer (old IO entries auto-cleaned on DOM wipe)
@@ -1728,63 +1769,6 @@ export class DynamicViewsGridView extends BasesView {
       return;
     }
 
-    // Shared load check function
-    const checkAndLoad = () => {
-      // Skip if container disconnected or already loading
-      if (!scrollContainer.isConnected || this.isLoading) {
-        return;
-      }
-
-      // Calculate distance from bottom
-      const scrollTop = scrollContainer.scrollTop;
-      const scrollHeight = scrollContainer.scrollHeight;
-      const clientHeight = scrollContainer.clientHeight;
-      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-      // Threshold: load when within PANE_MULTIPLIER × pane height from bottom
-      const threshold = clientHeight * PANE_MULTIPLIER;
-
-      // Check if should load more
-      if (
-        distanceFromBottom < threshold &&
-        this.displayedCount < totalEntries
-      ) {
-        this.isLoading = true;
-
-        // Dynamic batch size: columns × rows per column, capped
-        // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
-        const containerWidth = Math.floor(
-          this.containerEl.getBoundingClientRect().width
-        );
-        // Guard against zero width (element hidden/collapsed)
-        if (containerWidth === 0) {
-          this.isLoading = false;
-          return;
-        }
-        const columns = settings
-          ? Math.max(
-              settings.minimumColumns,
-              Math.floor(
-                (containerWidth + getCardSpacing(this.containerEl)) /
-                  (settings.cardSize + getCardSpacing(this.containerEl))
-              )
-            )
-          : parseInt(
-              this.containerEl.style.getPropertyValue(
-                '--dynamic-views-grid-columns'
-              ) || '2'
-            ) || 2;
-        const batchSize = Math.min(columns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
-        this.displayedCount = Math.min(
-          this.displayedCount + batchSize,
-          totalEntries
-        );
-
-        // Append new batch only (preserves existing DOM)
-        void this.appendBatch(totalEntries);
-      }
-    };
-
     // Create scroll handler with throttling (scroll tracking is in constructor)
     this.scrollThrottle.listener = () => {
       // Throttle: skip if cooldown active
@@ -1792,12 +1776,13 @@ export class DynamicViewsGridView extends BasesView {
         return;
       }
 
-      checkAndLoad();
+      this.checkAndLoadMore(totalEntries);
 
       // Start throttle cooldown with trailing call
       this.scrollThrottle.timeoutId = window.setTimeout(() => {
         this.scrollThrottle.timeoutId = null;
-        checkAndLoad(); // Trailing call catches scroll position changes during throttle
+        // Trailing call catches scroll position changes during throttle
+        this.checkAndLoadMore(totalEntries);
       }, SCROLL_THROTTLE_MS);
     };
 
@@ -1807,7 +1792,7 @@ export class DynamicViewsGridView extends BasesView {
     });
 
     // Trigger initial check in case viewport already needs more content
-    checkAndLoad();
+    this.checkAndLoadMore(totalEntries);
   }
 
   /** Show end-of-content indicator when all items are displayed */

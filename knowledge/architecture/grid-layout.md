@@ -29,7 +29,7 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | ------------------------------ | ------------------------------------------------------------------------------- |
 | `src/bases/grid-view.ts`       | View class — orchestrates rendering, resize, infinite scroll, group collapse.   |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration. |
-| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                      |
+| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                     |
 
 ### Datacore
 
@@ -152,13 +152,13 @@ Triggered when only property **order** changed (not the set of properties, not o
 `appendBatch(totalEntries)` — triggered by scroll or initial load.
 
 1. Collect only **new** entries (from `previousDisplayedCount` to `displayedCount`), skipping collapsed groups.
-2. Set `isLoading = true` (suppresses concurrent `processDataUpdate` calls).
+2. `isLoading` is already `true` (set by `checkAndLoadMore` before calling `appendBatch`).
 3. Load content for new entries only (cache-hit no-op for already-loaded).
 4. Render new cards into existing or new group containers. Handle group boundaries — create new group section with header when group key changes.
 5. Update `previousDisplayedCount` to captured `currCount`.
 6. Batch post-render hooks scoped to new cards only: `syncResponsiveClasses()`, `initializeScrollGradientsForCards()`, `initializeTitleTruncationForCards()`.
 7. Show end indicator if all items displayed.
-8. Clear `isLoading` in `finally` block.
+8. `finally` block: clear `isLoading`, then chain `checkAndLoadMore(totalEntries)` to load subsequent batches if still near bottom.
 
 ### 5. Resize
 
@@ -360,6 +360,7 @@ Arrow keys navigate spatially across all mounted cards using DOM measurements.
 6. **Container height is preserved during DOM wipe.** `--dynamic-views-preserve-height` sets `min-height` before clearing the container, preventing the scroll parent from resetting scroll position.
 7. **Content visibility is disabled on iOS.** `setupContentVisibility()` returns a no-op on mobile to avoid the WebKit infinite reflow loop. Mobile falls back to browser-managed `content-visibility: auto`.
 8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, and `thumbnailSize` changes.
+9. **`appendBatch` must chain `checkAndLoadMore` after completing.** The `finally` block calls `checkAndLoadMore(totalEntries)` to load subsequent batches when near the bottom, matching masonry's pattern. Without chaining, a single batch that doesn't fill the viewport stalls infinite scroll permanently — the scroll listener never fires because there's nothing to scroll.
 
 ## Bases v Datacore
 
