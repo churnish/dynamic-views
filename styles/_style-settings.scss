@@ -106,16 +106,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-card-hover-enlarge
-        title: Enlarge
-        description: Make the card slightly larger on hover. Does not apply in embedded views.
-        type: class-toggle
-    -
-        id: dynamic-views-card-hover-disable-elevate
-        title: Elevate
-        description: Lift the card up slightly on hover. Does not apply in embedded views.
-        type: class-toggle
-    -
         id: dynamic-views-card-padding
         title: Padding
         description: Gap from card edge to content.
@@ -358,6 +348,16 @@ settings:
             -
                 label: Dramatic
                 value: dynamic-views-card-shadow-hover-dramatic
+    -
+        id: dynamic-views-card-hover-enlarge
+        title: Enlarge
+        description: Make the card slightly larger on hover. Does not apply in embedded views.
+        type: class-toggle
+    -
+        id: dynamic-views-card-hover-disable-elevate
+        title: Do not lift
+        description: Do not elevate cards on hover.
+        type: class-toggle
     -
         id: dynamic-views-no-fade-truncated-text
         title: Hide scroll gradient
