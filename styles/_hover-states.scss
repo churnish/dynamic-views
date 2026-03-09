@@ -515,7 +515,7 @@
     z-index: 11;
   }
 
-  body.dynamic-views-card-hover-elevate
+  body:not(.dynamic-views-card-hover-disable-elevate)
     .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
@@ -525,7 +525,10 @@
 
   /* Lift masonry container above sticky group headers when a card is hovered —
      contain: layout on .masonry-container traps card z-index */
-  body:is(.dynamic-views-card-hover-enlarge, .dynamic-views-card-hover-elevate)
+  body:is(
+      .dynamic-views-card-hover-enlarge,
+      :not(.dynamic-views-card-hover-disable-elevate)
+    )
     .workspace-leaf-content[data-type='bases']
     .dynamic-views-masonry
     .masonry-container:has(.card.hover-intent-active:hover) {

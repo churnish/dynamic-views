@@ -110,9 +110,8 @@ settings:
         title: Enlarge
         description: Make the card slightly larger on hover. Does not apply in embedded views.
         type: class-toggle
-        default: true
     -
-        id: dynamic-views-card-hover-elevate
+        id: dynamic-views-card-hover-disable-elevate
         title: Elevate
         description: Lift the card up slightly on hover. Does not apply in embedded views.
         type: class-toggle

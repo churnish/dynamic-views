@@ -265,7 +265,7 @@ export function Settings({
             'Comma-separated if multiple'
           )}
           {renderToggle(
-            'Use note content if property missing or empty',
+            'Show note content if property unavailable',
             'fallbackToContent'
           )}
           {(settings.textPreviewProperty || settings.fallbackToContent) && (
