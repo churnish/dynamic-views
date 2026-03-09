@@ -36,7 +36,6 @@ describe('data-transform', () => {
       modifiedTimeProperty: 'modified time',
       fallbackToInNote: true,
       fallbackToEmbeds: 'always',
-      omitFirstLine: 'ifMatchesTitle',
       pairProperties: true,
     } as any;
 

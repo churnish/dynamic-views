@@ -226,7 +226,7 @@ export async function loadImagesForEntries(
  * @param app - Obsidian app instance
  * @param textPreviewData - Text preview property value
  * @param fallbackToContent - Whether to fall back to file content if no text preview
- * @param omitFirstLine - When to omit first line from preview
+ * @param omitFirstLine - When to omit first line from text preview
  * @param textPreviewCache - Cache object to store loaded text previews
  * @param fileName - Optional file name for title comparison (Datacore only)
  * @param titleString - Optional title string for first line comparison (Datacore only)
@@ -240,7 +240,9 @@ export async function loadTextPreviewForEntry(
   omitFirstLine: 'always' | 'ifMatchesTitle' | 'never',
   textPreviewCache: Record<string, string>,
   fileName?: string,
-  titleString?: string
+  titleString?: string,
+  preserveHeadings?: boolean,
+  preserveNewlines?: boolean
 ): Promise<void> {
   // Skip if already in caller's cache (uses path, not composite key, because each
   // caller passes their own cache objects - this prevents re-loading within a batch)
@@ -251,9 +253,10 @@ export async function loadTextPreviewForEntry(
   // If another view is loading this path with same settings, await its result
   // Composite key includes all parameters that affect output:
   // - fallbackToContent: determines whether file content is used as fallback
-  // - omitFirstLine: affects whether first line is stripped from preview
+  // - omitFirstLine: affects whether first line is stripped from text preview
   // - hasTextPreview: whether textPreviewData is provided (affects output source)
   // - fileName/titleString: included when omitFirstLine="ifMatchesTitle" (affects first-line comparison)
+  // - preserveHeadings/preserveNewlines: affect how text is stripped/normalized
   const hasTextPreview =
     textPreviewData != null &&
     (typeof textPreviewData === 'string' ||
@@ -265,7 +268,7 @@ export async function loadTextPreviewForEntry(
     omitFirstLine === 'ifMatchesTitle'
       ? `|${fileName ?? ''}|${titleString ?? ''}`
       : '';
-  const cacheKey = `${path}|${fallbackToContent}|${omitFirstLine}|${hasTextPreview}${titleKey}`;
+  const cacheKey = `${path}|${fallbackToContent}|${omitFirstLine}|${hasTextPreview}${titleKey}|${preserveHeadings ?? false}|${preserveNewlines ?? false}`;
   const existing = inFlightTextPreviews.get(cacheKey);
   if (existing) {
     textPreviewCache[path] = await existing;
@@ -283,6 +286,8 @@ export async function loadTextPreviewForEntry(
           {
             fallbackToContent,
             omitFirstLine,
+            preserveHeadings,
+            preserveNewlines,
           },
           fileName,
           titleString
@@ -310,7 +315,7 @@ export async function loadTextPreviewForEntry(
  *
  * @param entries - Array of entries with path, file, and textPreviewData
  * @param fallbackToContent - Whether to fall back to file content if no text preview
- * @param omitFirstLine - When to omit first line from preview
+ * @param omitFirstLine - When to omit first line from text preview
  * @param app - Obsidian app instance
  * @param textPreviewCache - Cache object to store loaded text previews
  */
@@ -319,7 +324,9 @@ export async function loadTextPreviewsForEntries(
   fallbackToContent: boolean,
   omitFirstLine: 'always' | 'ifMatchesTitle' | 'never',
   app: App,
-  textPreviewCache: Record<string, string>
+  textPreviewCache: Record<string, string>,
+  preserveHeadings?: boolean,
+  preserveNewlines?: boolean
 ): Promise<void> {
   await Promise.all(
     entries.map(async (entry) => {
@@ -332,7 +339,9 @@ export async function loadTextPreviewsForEntries(
         omitFirstLine,
         textPreviewCache,
         entry.fileName,
-        entry.titleString
+        entry.titleString,
+        preserveHeadings,
+        preserveNewlines
       );
     })
   );

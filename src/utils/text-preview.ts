@@ -18,6 +18,9 @@ import { App, TFile } from 'obsidian';
  *
  * Code blocks and escaped characters are handled separately before these patterns.
  */
+/** Heading lines — extracted so `stripMarkdownSyntax` can skip it by reference */
+const headingPattern = /^#{1,6}(?:[ \t].*)?$/gm;
+
 const markdownPatterns = [
   /%%[\s\S]*?%%/g, // Obsidian comments
   /`([^`]+)`/g, // Inline code
@@ -39,7 +42,7 @@ const markdownPatterns = [
   /^\s*(\d+[.)]\s*)\[[^\]]\]\s+/gm, // Task list markers (numbered) - preserves number
   /\[[^\]]\]\s+/g, // Bare task checkboxes (after task markers)
   /^\s*[-*+]\s+/gm, // Bullet list markers (after task markers)
-  /^#{1,6}(?:[ \t].*)?$/gm, // Heading lines (full removal, [ \t] prevents cross-newline matching)
+  headingPattern, // Heading lines (full removal, [ \t] prevents cross-newline matching)
   /^\s*(?:[-_*])\s*(?:[-_*])\s*(?:[-_*])[\s\-_*]*$/gm, // Horizontal rules
   /^\s*\|.*\|.*$/gm, // Tables
   /\^\[[^\]]*?]/g, // Inline footnotes
@@ -141,8 +144,12 @@ function removeCodeBlocks(text: string): string {
 
 /**
  * Strip Markdown syntax from text while preserving content
+ * @param options.preserveHeadings - Strip `#` markers but keep heading text
  */
-export function stripMarkdownSyntax(text: string): string {
+export function stripMarkdownSyntax(
+  text: string,
+  options?: { preserveHeadings?: boolean }
+): string {
   if (!text || text.trim().length === 0) return '';
 
   // First pass: remove callout title lines at any nesting depth
@@ -159,8 +166,16 @@ export function stripMarkdownSyntax(text: string): string {
   // Remove code blocks before other processing (important for tildes before strikethrough)
   let result = removeCodeBlocks(protectedText);
 
+  // Strip heading markers but keep content (requires space after #, so #hashtag is safe)
+  if (options?.preserveHeadings) {
+    result = result.replace(/^#{1,6}[ \t]+/gm, '');
+  }
+
   // Apply each pattern
   markdownPatterns.forEach((pattern) => {
+    // Skip heading removal when preserving headings (markers already stripped above)
+    if (options?.preserveHeadings && pattern === headingPattern) return;
+
     result = result.replace(pattern, (match: string, ...groups: string[]) => {
       // Special handling for HTML tag pairs - return content (group 2)
       if (match[0] === '<' && match.includes('</')) {
@@ -188,22 +203,26 @@ export function stripMarkdownSyntax(text: string): string {
 }
 
 /**
- * Sanitize markdown content for preview display
+ * Sanitize markdown content for text preview display
  * @param content - Raw Markdown content
  * @param omitFirstLine - When to omit first line: "always", "ifMatchesTitle", or "never"
  * @param filename - Optional filename to compare against first line
  * @param titleValue - Optional title value to compare against first line
- * @returns Sanitized preview text (max 1000 chars)
+ * @param options - Optional text preview options (heading/newline preservation)
+ * @returns Sanitized text preview (max 1000 chars)
  */
 export function sanitizeForPreview(
   content: string,
   omitFirstLine: 'always' | 'ifMatchesTitle' | 'never' = 'ifMatchesTitle',
   filename?: string,
-  titleValue?: string
+  titleValue?: string,
+  options?: { preserveHeadings?: boolean; preserveNewlines?: boolean }
 ): string {
   // Remove frontmatter (supports both LF and CRLF line endings)
   const cleaned = content.replace(/^---\r?\n[\s\S]*?\r?\n---/, '').trim();
-  let stripped = stripMarkdownSyntax(cleaned);
+  let stripped = stripMarkdownSyntax(cleaned, {
+    preserveHeadings: options?.preserveHeadings,
+  });
 
   // Check if first line matches filename or title
   const firstLineEnd = stripped.indexOf('\n');
@@ -224,12 +243,23 @@ export function sanitizeForPreview(
   }
 
   // Normalize whitespace and remove block IDs
-  const normalized = stripped
-    .replace(/(^|\s)\^[a-zA-Z0-9-]+/g, '$1') // Remove block IDs (require whitespace/line-start before ^)
-    .split(/\s+/)
-    .filter((word) => word)
-    .join(' ')
-    .trim();
+  let normalized: string;
+  if (options?.preserveNewlines) {
+    normalized = stripped
+      .replace(/(^|\s)\^[a-zA-Z0-9-]+/g, '$1') // Remove block IDs
+      .split('\n')
+      .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n') // Normalize 3+ consecutive newlines to paragraph break
+      .trim();
+  } else {
+    normalized = stripped
+      .replace(/(^|\s)\^[a-zA-Z0-9-]+/g, '$1') // Remove block IDs (require whitespace/line-start before ^)
+      .split(/\s+/)
+      .filter((word) => word)
+      .join(' ')
+      .trim();
+  }
 
   // Truncate to 1000 characters (using spread to handle surrogate pairs correctly)
   const chars = [...normalized];
@@ -245,7 +275,7 @@ export function sanitizeForPreview(
  * @param file - TFile to load preview for
  * @param app - Obsidian App instance
  * @param propertyValue - Value from text preview property (if any)
- * @param settings - Preview settings (fallback behavior, omit first line)
+ * @param settings - Text preview settings (fallback behavior, omit first line)
  * @param fileName - File name for first line comparison
  * @param titleValue - Title property value for first line comparison
  * @returns Preview text (empty string if none available)
@@ -257,6 +287,8 @@ export async function loadFilePreview(
   settings: {
     fallbackToContent: boolean;
     omitFirstLine: 'always' | 'ifMatchesTitle' | 'never';
+    preserveHeadings?: boolean;
+    preserveNewlines?: boolean;
   },
   fileName?: string,
   titleValue?: string
@@ -278,7 +310,11 @@ export async function loadFilePreview(
       content,
       settings.omitFirstLine,
       fileName,
-      titleValue
+      titleValue,
+      {
+        preserveHeadings: settings.preserveHeadings,
+        preserveNewlines: settings.preserveNewlines,
+      }
     );
   }
 

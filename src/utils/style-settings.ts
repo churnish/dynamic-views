@@ -274,6 +274,30 @@ export function isThumbnailScrubbingDisabled(): boolean {
 }
 
 /**
+ * Check if heading text should be kept in text previews
+ * Returns true when user enables "Keep headings"
+ */
+export function shouldKeepPreviewHeadings(): boolean {
+  return hasBodyClass('dynamic-views-text-preview-keep-headings');
+}
+
+/**
+ * Check if newlines should be preserved in text previews
+ * Returns true when user enables "Keep newlines"
+ */
+export function shouldKeepPreviewNewlines(): boolean {
+  return hasBodyClass('dynamic-views-text-preview-keep-newlines');
+}
+
+export type OmitFirstLineMode = 'always' | 'ifMatchesTitle' | 'never';
+
+export function getOmitFirstLineMode(): OmitFirstLineMode {
+  if (hasBodyClass('dynamic-views-omit-first-line-always')) return 'always';
+  if (hasBodyClass('dynamic-views-omit-first-line-never')) return 'never';
+  return 'ifMatchesTitle'; // default
+}
+
+/**
  * Get maximum number of images for slideshow
  * Returns slider value (default 10, min 2, max 24)
  */
@@ -327,6 +351,10 @@ export function getStyleSettingsHash(): string {
     hasBodyClass('dynamic-views-hidden-file-extensions'),
     // Poster reveal mode (affects JS click handlers, not CSS-only)
     hasBodyClass('dynamic-views-poster-reveal-press'),
+    // Text preview content options (affect stripped text output)
+    shouldKeepPreviewHeadings(),
+    shouldKeepPreviewNewlines(),
+    getOmitFirstLineMode(),
   ].join('|');
 }
 

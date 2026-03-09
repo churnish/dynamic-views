@@ -192,23 +192,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName('Omit first line in text preview')
-          .setDesc('When the first line should not be shown in text preview.')
-          .addDropdown((dropdown) =>
-            dropdown
-              .addOption('always', 'Always')
-              .addOption('ifMatchesTitle', 'If matches title')
-              .addOption('never', 'Never')
-              .setValue(settings.omitFirstLine)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setPluginSettings({
-                  omitFirstLine: value as 'always' | 'ifMatchesTitle' | 'never',
-                });
-              })
-          )
-      )
-      .addSetting((s) =>
-        s
           .setName('Prevent sidebar swipe on mobile')
           .setDesc(
             'Prevent sidebars from opening unintentionally when scrolling horizontally in a plugin view.'
@@ -229,22 +212,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
               })
           )
       )
-      .addSetting((s) => {
-        const randomFileDesc =
-          'When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.';
-        return s
-          .setName('Open random file in new tab')
-          .setDesc(randomFileDesc)
-          .addToggle((toggle) =>
-            toggle
-              .setValue(settings.openRandomInNewTab)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setPluginSettings({
-                  openRandomInNewTab: value,
-                });
-              })
-          );
-      })
       .addSetting((s) =>
         s
           .setName('Folder commands')

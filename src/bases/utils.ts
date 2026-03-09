@@ -317,6 +317,11 @@ export {
   setupStyleSettingsObserver,
   getStyleSettingsHash,
 } from '../utils/style-settings';
+import {
+  shouldKeepPreviewHeadings,
+  shouldKeepPreviewNewlines,
+  getOmitFirstLineMode,
+} from '../utils/style-settings';
 
 /** Interface for Bases config groupBy property */
 export interface BasesGroupBy {
@@ -819,9 +824,11 @@ export async function loadContentForEntries(
     await loadTextPreviewsForEntries(
       textPreviewEntries,
       settings.fallbackToContent,
-      settings.omitFirstLine,
+      getOmitFirstLineMode(),
       app,
-      textPreviews
+      textPreviews,
+      shouldKeepPreviewHeadings(),
+      shouldKeepPreviewNewlines()
     );
   }
 

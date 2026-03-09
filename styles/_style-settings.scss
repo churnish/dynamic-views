@@ -646,7 +646,7 @@ settings:
         type: class-toggle
     -
         id: dynamic-views-image-viewer-disable-dismiss-on-click
-        title: Disable dismiss on press
+        title: Do not dismiss on press
         description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
     -
@@ -1439,6 +1439,33 @@ settings:
         id: dynamic-views-text-preview-hyphenate
         title: Hyphenate
         description: Break words at syllable boundaries when wrapping.
+        type: class-toggle
+    -
+        id: dynamic-views-omit-first-line
+        title: Omit first line
+        description: When the first line of note content should not be shown in text preview.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-omit-first-line-match
+        options:
+            -
+                label: Always
+                value: dynamic-views-omit-first-line-always
+            -
+                label: If matches title
+                value: dynamic-views-omit-first-line-match
+            -
+                label: Never
+                value: dynamic-views-omit-first-line-never
+    -
+        id: dynamic-views-text-preview-keep-headings
+        title: Preserve heading text
+        description: Show heading text in text previews rather than omit it.
+        type: class-toggle
+    -
+        id: dynamic-views-text-preview-keep-newlines
+        title: Preserve line breaks
+        description: Do not collapse newlines in text preview.
         type: class-toggle
     -
         id: thumbnails-heading

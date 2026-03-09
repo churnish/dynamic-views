@@ -6,10 +6,8 @@
 
 /** Plugin-level settings (settings tab only, not per-view) */
 export interface PluginSettings {
-  omitFirstLine: 'always' | 'ifMatchesTitle' | 'never';
   randomizeAction: string;
   openFileAction: 'card' | 'title';
-  openRandomInNewTab: boolean;
   smartTimestamp: boolean;
   createdTimeProperty: string;
   modifiedTimeProperty: string;
@@ -124,7 +122,7 @@ export type WidthMode = 'normal' | 'wide' | 'max';
 // View State Interfaces (shared between grid-view.ts and masonry-view.ts)
 // ============================================================================
 
-/** Content preview/image cache */
+/** Content text preview/image cache */
 export interface ContentCache {
   textPreviews: Record<string, string>;
   images: Record<string, string | string[]>;
@@ -139,6 +137,7 @@ export interface RenderState {
   lastSettingsHash: string | null;
   lastPropertySetHash: string | null;
   lastSettingsHashExcludingOrder: string | null;
+  lastStyleSettingsHash: string | null;
   lastMtimes: Map<string, number>;
 }
 

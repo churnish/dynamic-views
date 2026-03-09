@@ -12,10 +12,8 @@ vi.mock('../src/utils/sanitize', () => ({
 vi.mock('../src/constants', () => ({
   PLUGIN_SETTINGS_CHANGE: 'dynamic-views-plugin-settings',
   PLUGIN_SETTINGS: {
-    omitFirstLine: 'ifMatchesTitle',
     randomizeAction: 'shuffle',
     openFileAction: 'card',
-    openRandomInNewTab: true,
     smartTimestamp: true,
     createdTimeProperty: 'created time',
     modifiedTimeProperty: 'modified time',
@@ -92,7 +90,7 @@ describe('PersistenceManager', () => {
       const settings = manager.getPluginSettings();
       expect(settings).toBeDefined();
       // Returns defaults merged with empty stored data
-      expect(settings.omitFirstLine).toBe('ifMatchesTitle');
+      expect(settings.randomizeAction).toBe('shuffle');
     });
   });
 
@@ -149,7 +147,6 @@ describe('PersistenceManager', () => {
   describe('getPluginSettings', () => {
     it('should return merged defaults with stored settings', () => {
       const settings = manager.getPluginSettings();
-      expect(settings.omitFirstLine).toBe('ifMatchesTitle');
       expect(settings.randomizeAction).toBe('shuffle');
     });
   });

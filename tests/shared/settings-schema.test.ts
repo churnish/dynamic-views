@@ -79,10 +79,8 @@ const MOCK_VIEW_DEFAULTS: any = {
 };
 
 const MOCK_PLUGIN_SETTINGS: any = {
-  omitFirstLine: 'ifMatchesTitle',
   randomizeAction: 'shuffle',
   openFileAction: 'card',
-  openRandomInNewTab: true,
   smartTimestamp: true,
   createdTimeProperty: 'created time',
   modifiedTimeProperty: 'modified time',

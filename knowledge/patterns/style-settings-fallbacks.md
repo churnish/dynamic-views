@@ -58,12 +58,12 @@ body:not([class*='dynamic-views-card-background-hover-'])
 For toggles where the default is ON, invert the toggle name so that **absence of class = feature enabled** (the correct default). The toggle becomes a "disable" switch:
 
 ```yaml
-# Before (broken without SS)
+# Before (broken without Style Settings)
 id: dynamic-views-poster-hover-zoom
 type: class-toggle
 default: true
 
-# After (works without SS)
+# After (works without Style Settings)
 id: dynamic-views-poster-disable-reveal-zoom
 type: class-toggle
 ```
@@ -115,7 +115,7 @@ body.css-settings-manager:not(.dynamic-views-hide-pin-toolbar)
 
 Without Style Settings, `.css-settings-manager` is absent, so the entire rule is inert — the element stays hidden by default.
 
-## Avoid re-renders from SS changes
+## Avoid re-renders from Style Settings changes
 
 Re-renders from Style Settings changes are disruptive — they reset scroll position. Only add settings to `getStyleSettingsHash()` when they genuinely affect rendered card content (text, icons, layout). Do NOT add settings that only affect:
 

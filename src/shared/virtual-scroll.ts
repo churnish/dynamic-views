@@ -25,7 +25,7 @@ export interface VirtualItem {
   measuredAtWidth: number;
   /** Height of scalable portion (top/bottom cover) at measurement width */
   scalableHeight: number;
-  /** Height of fixed portion (header, properties, preview) at measurement width */
+  /** Height of fixed portion (header, properties, text preview) at measurement width */
   fixedHeight: number;
   /** Normalized card data for rendering */
   cardData: CardData;
@@ -44,9 +44,17 @@ export interface VirtualItem {
 /**
  * Measure the scalable portion of a card's height.
  * Only top/bottom covers scale linearly with card width (aspect ratio preserved).
- * Side covers, thumbnails, poster/backdrop, and fixed-cover-height are non-scalable.
+ * Side covers, thumbnails, and backdrop are non-scalable. Poster cards with images
+ * are fully scalable (CSS aspect-ratio determines entire height).
  */
 export function measureScalableHeight(cardEl: HTMLElement): number {
+  // Poster cards with images: entire height is scalable (CSS aspect-ratio)
+  if (
+    cardEl.classList.contains('image-format-poster') &&
+    cardEl.querySelector('.card-poster')
+  ) {
+    return cardEl.offsetHeight;
+  }
   if (
     !cardEl.classList.contains('card-cover-top') &&
     !cardEl.classList.contains('card-cover-bottom')

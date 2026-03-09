@@ -140,7 +140,7 @@ body.dynamic-views-cover-circular
   }
 
   /* Cover hover zoom — card mode (default): zoom on card hover intent.
-     Mode logic lives in CSS so switching SS mode works without re-render. */
+     Mode logic lives in CSS so switching Style Settings mode works without re-render. */
   body:is(
       .dynamic-views-cover-hover-zoom-card,
       :not([class*='dynamic-views-cover-hover-zoom-'])

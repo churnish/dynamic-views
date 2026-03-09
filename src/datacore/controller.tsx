@@ -53,6 +53,9 @@ import {
 import {
   getCardSpacing,
   setupStyleSettingsObserver,
+  shouldKeepPreviewHeadings,
+  shouldKeepPreviewNewlines,
+  getOmitFirstLineMode,
 } from '../utils/style-settings';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -223,7 +226,6 @@ export function View({
   const columnCountRef = dc.useRef<number | null>(null);
   const displayedCountRef = dc.useRef(displayedCount);
   const sortedLengthRef = dc.useRef<number>(0);
-  const hasBatchAppendedRef = dc.useRef(false);
   const settingsTimeoutRef = dc.useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -251,6 +253,58 @@ export function View({
       cleanupAllImageViewers();
     };
   }, []);
+
+  // Expand container min-height when toolbar dropdowns are open so they aren't
+  // clipped by Obsidian's `contain: paint` on the code block wrapper
+  dc.useEffect(() => {
+    const container = explorerRef.current;
+    if (!container) return;
+
+    const anyOpen =
+      showSettings ||
+      showViewDropdown ||
+      showSortDropdown ||
+      showLimitDropdown ||
+      showQueryEditor;
+    if (!anyOpen) {
+      container.removeClass('dynamic-views-dropdown-expanded');
+      return;
+    }
+
+    const win = container.ownerDocument.defaultView ?? window;
+    const frame = win.requestAnimationFrame(() => {
+      const dropdowns = container.querySelectorAll(
+        '.settings-dropdown-menu, .view-dropdown-menu, .sort-dropdown-menu, .limit-dropdown-menu, .query-dropdown-menu'
+      );
+      if (!dropdowns.length) return;
+
+      const containerRect = container.getBoundingClientRect();
+      let maxBottom = 0;
+      dropdowns.forEach((dd) => {
+        maxBottom = Math.max(maxBottom, dd.getBoundingClientRect().bottom);
+      });
+      // +16px accounts for box-shadow (4px offset + 12px blur)
+      const neededHeight = maxBottom - containerRect.top + 16;
+
+      if (neededHeight > containerRect.height) {
+        container.setCssProps({
+          '--dynamic-views-dropdown-min-height': `${neededHeight}px`,
+        });
+        container.addClass('dynamic-views-dropdown-expanded');
+      }
+    });
+
+    return () => {
+      win.cancelAnimationFrame(frame);
+      if (container) container.removeClass('dynamic-views-dropdown-expanded');
+    };
+  }, [
+    showSettings,
+    showViewDropdown,
+    showSortDropdown,
+    showLimitDropdown,
+    showQueryEditor,
+  ]);
 
   // Re-read state from persistence on layout change (Live Preview <-> Reading View sync)
   dc.useEffect(() => {
@@ -519,6 +573,11 @@ export function View({
   // Style Settings revision - triggers re-render when CSS variables change
   const [_styleRevision, setStyleRevision] = dc.useState(0);
 
+  // Read text preview style toggles during render so they appear as effect deps
+  const keepPreviewHeadings = shouldKeepPreviewHeadings();
+  const keepPreviewNewlines = shouldKeepPreviewNewlines();
+  const omitFirstLine = getOmitFirstLineMode();
+
   // Re-render when Style Settings CSS variables or body classes change
   dc.useEffect(() => {
     if (!explorerRef.current) return;
@@ -542,7 +601,7 @@ export function View({
         // Only re-render if plugin-level settings actually changed
         for (const key of Object.keys(fresh) as (keyof typeof fresh)[]) {
           if (prev[key] !== fresh[key]) {
-            // Clear async caches — settings like omitFirstLine affect text generation
+            // Clear async caches — style settings affect text generation
             setTextPreviews({});
             return { ...prev, ...fresh };
           }
@@ -565,9 +624,6 @@ export function View({
     setQueryError(null);
     return ensureFileSelector(q);
   }, [appliedQuery]);
-
-  // Computed key for property settings - triggers gradient re-init when properties change
-  const propertySettingsKey = [settings.omitFirstLine].join('|');
 
   // Ref to always capture latest validatedQuery for debounced callbacks
   const validatedQueryRef = dc.useRef(validatedQuery);
@@ -761,6 +817,8 @@ export function View({
 
   // Track previous mtimes to invalidate text/image cache when file content changes
   const prevMtimeRef = dc.useRef<Map<string, number>>(new Map());
+  // Track previous Style Settings text preview settings to invalidate cache on toggle
+  const prevTextPreviewSettingsRef = dc.useRef('');
 
   // Clear cache when settings change (they affect card transformation)
   const prevSettingsRef = dc.useRef(settings);
@@ -889,12 +947,19 @@ export function View({
 
       // Prepare entries for text preview loading
       if (settings.textPreviewProperty || settings.fallbackToContent) {
+        // Detect Style Settings text preview setting changes to invalidate cache
+        const textPreviewSettingsKey = `${omitFirstLine}|${keepPreviewHeadings}|${keepPreviewNewlines}`;
+        const textPreviewSettingsChanged =
+          textPreviewSettingsKey !== prevTextPreviewSettingsRef.current;
+        prevTextPreviewSettingsRef.current = textPreviewSettingsKey;
+
         // Copy existing cached entries that are still in results
-        // (skip when mtime changed — file content was modified)
+        // (skip when mtime changed or Style Settings text settings toggled)
         for (const path of currentPaths) {
           const cached = textPreviews[path];
           if (
             cached !== undefined &&
+            !textPreviewSettingsChanged &&
             mtimeByPath.get(path) === prevMtimes.get(path)
           ) {
             newTextPreviews[path] = cached;
@@ -985,9 +1050,11 @@ export function View({
         await loadTextPreviewsForEntries(
           textPreviewEntries,
           settings.fallbackToContent,
-          settings.omitFirstLine,
+          omitFirstLine,
           app,
-          newTextPreviews
+          newTextPreviews,
+          keepPreviewHeadings,
+          keepPreviewNewlines
         );
       }
 
@@ -1081,8 +1148,10 @@ export function View({
     settings.titleProperty,
     settings.imageProperty,
     settings.fallbackToContent,
-    settings.omitFirstLine,
     settings.fallbackToEmbeds,
+    keepPreviewHeadings,
+    keepPreviewNewlines,
+    omitFirstLine,
     app,
     dc,
   ]);
@@ -1360,7 +1429,6 @@ export function View({
     settings.thumbnailSize,
     _styleRevision,
     sorted.length,
-    propertySettingsKey,
     dc,
   ]);
 
@@ -1482,14 +1550,7 @@ export function View({
       if (rafId !== null) win.cancelAnimationFrame(rafId);
       if (rafId2 !== null) win.cancelAnimationFrame(rafId2);
     };
-  }, [
-    viewMode,
-    displayedCount,
-    settings.cardSize,
-    _styleRevision,
-    propertySettingsKey,
-    dc,
-  ]);
+  }, [viewMode, displayedCount, settings.cardSize, _styleRevision, dc]);
 
   // Sync refs for callback access in infinite scroll
   dc.useEffect(() => {
@@ -1592,8 +1653,6 @@ export function View({
       const currentCount = displayedCountRef.current!;
       const totalLength = sortedLengthRef.current;
       if (totalLength !== null && currentCount >= totalLength) {
-        // All items fit - set flag so end indicator shows
-        hasBatchAppendedRef.current = true;
         return false; // All items loaded
       }
 
@@ -1620,7 +1679,6 @@ export function View({
 
       displayedCountRef.current = newCount;
       setDisplayedCount(newCount);
-      hasBatchAppendedRef.current = true;
 
       return true; // Batch loaded
     };
@@ -1768,21 +1826,18 @@ export function View({
     setViewMode(mode);
     setShowViewDropdown(false);
     setIsShuffled(false);
-    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleSetSortMethod = dc.useCallback((method: string) => {
     setSortMethod(method);
     setShowSortDropdown(false);
     setIsShuffled(false);
-    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleSearchChange = dc.useCallback(
     (query: string) => {
       setSearchQuery(query);
       setDisplayedCount(app.isMobile ? BATCH_SIZE * 0.5 : BATCH_SIZE);
-      hasBatchAppendedRef.current = false;
     },
     [app.isMobile]
   );
@@ -1795,7 +1850,6 @@ export function View({
 
   const handleClearSearch = dc.useCallback(() => {
     setSearchQuery('');
-    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleShuffle = dc.useCallback(() => {
@@ -1824,7 +1878,6 @@ export function View({
       }
 
       setShowSortDropdown(false);
-      hasBatchAppendedRef.current = false;
       return;
     }
 
@@ -1838,7 +1891,6 @@ export function View({
     setShuffledOrder(shuffled);
     setIsShuffled(true);
     setShowSortDropdown(false);
-    hasBatchAppendedRef.current = false;
   }, [sorted, viewMode]);
 
   const handleOpenRandom = dc.useCallback(
@@ -1848,11 +1900,11 @@ export function View({
       const randomPath = sorted[randomIndex].$path;
       const file = app.vault.getAbstractFileByPath(randomPath);
       if (file instanceof TFile) {
-        const paneType = getPaneType(event, settings.openRandomInNewTab);
+        const paneType = getPaneType(event, true);
         void app.workspace.getLeaf(paneType).openFile(file);
       }
     },
-    [sorted, app, settings.openRandomInNewTab]
+    [sorted, app]
   );
 
   const handleToggleCode = dc.useCallback(() => {
@@ -1945,13 +1997,11 @@ export function View({
 
   const handleResultLimitChange = dc.useCallback((limit: string) => {
     setResultLimit(limit);
-    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleResetLimit = dc.useCallback((): void => {
     setResultLimit('');
     setShowLimitDropdown(false);
-    hasBatchAppendedRef.current = false;
   }, []);
 
   const handleCreateNote = dc.useCallback(
@@ -2098,7 +2148,7 @@ export function View({
   return (
     <div
       ref={explorerRef}
-      className={`dynamic-views poster-mode-${settings.posterDisplayMode} image-fit-${settings.imageFit}`}
+      className={`dynamic-views poster-mode-${settings.posterDisplayMode} image-fit-${settings.imageFit}${sorted.length === 0 ? ' dynamic-views-empty' : ''}`}
       // Block editor context menu in live preview — view sits inside cm-content
       onContextMenu={(e: MouseEvent) => e.preventDefault()}
     >
@@ -2169,11 +2219,9 @@ export function View({
         className={`results-container${settings.queryHeight > 0 && !isScrolledToBottom ? ' with-fade' : ''}`}
       >
         {renderView()}
-        {displayedCount >= sorted.length &&
-          sorted.length > 0 &&
-          hasBatchAppendedRef.current && (
-            <div className="dynamic-views-end-indicator" />
-          )}
+        {displayedCount >= sorted.length && sorted.length > 0 && (
+          <div className="dynamic-views-end-indicator" />
+        )}
       </div>
 
       <div ref={loadMoreRef} />

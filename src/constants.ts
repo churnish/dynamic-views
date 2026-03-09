@@ -7,10 +7,8 @@ import type {
 } from './types';
 
 export const PLUGIN_SETTINGS: PluginSettings = {
-  omitFirstLine: 'ifMatchesTitle',
   randomizeAction: 'shuffle',
   openFileAction: 'card',
-  openRandomInNewTab: true,
   smartTimestamp: true,
   createdTimeProperty: 'created time',
   modifiedTimeProperty: 'modified time',

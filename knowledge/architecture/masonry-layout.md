@@ -28,7 +28,7 @@ The masonry layout system renders cards in a Pinterest-style variable-height col
 | `src/bases/masonry-view.ts`    | View class — orchestrates rendering, layout, virtual scroll, resize, infinite scroll. |
 | `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.       |
-| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                            |
+| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                           |
 
 ### Datacore
 
@@ -53,7 +53,7 @@ Lightweight representation of every card. Mounted cards have `el` and `handle`; 
 | `measuredHeight`  | `number`              | Height at original measurement width.                                                                                                                      |
 | `measuredAtWidth` | `number`              | `cardWidth` when height was DOM-measured.                                                                                                                  |
 | `scalableHeight`  | `number`              | Height of scalable portion (top/bottom cover, or entire card for poster with image) at `measuredAtWidth`.                                                  |
-| `fixedHeight`     | `number`              | Height of fixed portion (header, properties, preview) at `measuredAtWidth`.                                                                                |
+| `fixedHeight`     | `number`              | Height of fixed portion (header, properties, text preview) at `measuredAtWidth`.                                                                           |
 | `col`             | `number`              | Column index in masonry grid. Set by layout, read by `proportionalResizeLayout` and `repositionWithStableColumns`. Stable across same-column-count resize. |
 | `cardData`        | `CardData`            | Normalized card data for rendering.                                                                                                                        |
 | `entry`           | `BasesEntry`          | Obsidian Bases entry.                                                                                                                                      |
