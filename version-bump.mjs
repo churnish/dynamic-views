@@ -1,5 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 const isPreflight = process.argv.includes('--preflight');
 const targetVersion = process.env.npm_package_version;
@@ -19,6 +21,21 @@ try {
 }
 
 if (isPreflight) process.exit(0);
+
+// ── Sync shared docs ──
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const knowledgeDir = join(__dirname, '..', 'knowledge');
+
+const sharedDocs = ['release-guide.md'];
+for (const doc of sharedDocs) {
+  const src = join(knowledgeDir, doc);
+  if (existsSync(src)) {
+    writeFileSync(doc, readFileSync(src, 'utf8'));
+    execSync(`git add ${doc}`, { stdio: 'inherit' });
+    console.log(`Synced ${doc} from knowledge/`);
+  }
+}
 
 try {
   execSync('npm outdated eslint-plugin-obsidianmd --json', {

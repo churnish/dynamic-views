@@ -14,7 +14,8 @@ dynamic-views/
 ├── esbuild.config.mjs                # Build config (JS/TS only)
 ├── eslint.config.js                  # Lint rules (obsidianmd plugin)
 ├── vitest.config.ts                  # Test config (vitest, jsdom)
-├── version-bump.mjs                  # Version bump + lint pre-check
+├── version-bump.mjs                  # Version bump + lint pre-check + shared doc sync
+├── release-guide.md                  # Release workflow (synced from knowledge/ on version bump)
 ├── tsconfig.json
 ├── package.json
 ├── manifest.json

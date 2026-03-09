@@ -328,9 +328,7 @@ export function Settings({
               className="dropdown"
             >
               <option value="always">Always</option>
-              <option value="if-unavailable">
-                If no available property images
-              </option>
+              <option value="if-unavailable">If property unavailable</option>
               <option value="never">Never</option>
             </select>
           </div>

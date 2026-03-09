@@ -172,7 +172,7 @@ export function getBasesViewOptions(
         },
         {
           type: 'toggle',
-          displayName: 'Show note content if property missing/empty',
+          displayName: 'Show note content if property unavailable',
           key: 'fallbackToContent',
           default: d.fallbackToContent,
         },
@@ -214,7 +214,7 @@ export function getBasesViewOptions(
           key: 'fallbackToEmbeds',
           options: {
             always: 'Always',
-            'if-unavailable': 'If no available property images',
+            'if-unavailable': 'If property unavailable',
             never: 'Never',
           },
           default: d.fallbackToEmbeds,
