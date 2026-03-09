@@ -90,10 +90,12 @@ dynamic-views/
 │   │   ├── obsidian.ts
 │   ├── bases/
 │   │   ├── cleanup.test.ts
+│   │   ├── grid-scroll.test.ts
 │   │   ├── sync-responsive-classes.test.ts
 │   │   └── utils.test.ts
 │   ├── persistence.test.ts
 │   ├── shared/
+│   │   ├── constants.test.ts
 │   │   ├── content-visibility.test.ts
 │   │   ├── content-loader.test.ts
 │   │   ├── data-transform.test.ts
@@ -156,7 +158,23 @@ dynamic-views/
 │   └── _utilities.scss               # Utility classes
 │
 ├── knowledge/                        # Project knowledge docs
-│   └── ...
+│   ├── project-structure.md          # This file — navigational map
+│   ├── architecture/
+│   │   ├── bases-v-datacore-differences.md
+│   │   ├── card-dom-structure.md
+│   │   ├── grid-layout.md
+│   │   ├── image-loading.md
+│   │   ├── masonry-layout.md
+│   │   ├── property-layout.md
+│   │   ├── settings-resolution.md
+│   │   ├── slideshow.md
+│   │   └── write-path-safety.md
+│   └── patterns/
+│       ├── datacore-ref-callback-patterns.md
+│       ├── electron-css-quirks.md
+│       ├── eslint-config.md
+│       ├── scss-nesting-conventions.md
+│       └── style-settings-fallbacks.md
 ├── archive/                          # Preserved deprecated code
 │   └── ...
 └── .github/                          # CI workflows, issue templates

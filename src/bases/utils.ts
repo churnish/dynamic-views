@@ -48,7 +48,12 @@ interface BasesConfigInit {
   getOrder(): string[];
 }
 
-/** Keys allowed in Dynamic Views .base view entries */
+/**
+ * Keys allowed in Dynamic Views .base view entries.
+ * Intentional allowlist — strips leaked DatacoreDefaults and other stale keys.
+ * Forward-compatibility risk accepted: if Obsidian adds new Bases-native view
+ * keys, they must be added here or they'll be silently removed on first render.
+ */
 const ALLOWED_VIEW_KEYS = new Set<string>([
   // Bases-native keys
   'type',
