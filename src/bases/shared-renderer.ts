@@ -265,8 +265,11 @@ export function applyCssOnlySettings(
 
   // Poster display mode — container class
   containerEl.classList.remove('poster-mode-fade', 'poster-mode-overlay');
+  const rawPosterMode = config.get('posterDisplayMode') as string;
   const posterDisplayMode =
-    (config.get('posterDisplayMode') as string) ?? 'fade';
+    rawPosterMode === 'fade' || rawPosterMode === 'overlay'
+      ? rawPosterMode
+      : 'fade';
   containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
 
   // Image fit — container class

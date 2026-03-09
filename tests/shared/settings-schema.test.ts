@@ -201,6 +201,12 @@ describe('readBasesSettings — posterDisplayMode', () => {
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
     expect(result.posterDisplayMode).toBe('fade');
   });
+
+  it('should fall back to default for stale posterDisplayMode "gradient"', () => {
+    const config = createMockConfig({ posterDisplayMode: 'gradient' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.posterDisplayMode).toBe('fade');
+  });
 });
 
 describe('readBasesSettings — templateOverrides', () => {

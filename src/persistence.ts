@@ -145,7 +145,28 @@ export class PersistenceManager {
         templatesDirty = true;
       }
     }
-    if (templatesDirty) {
+    // Clean up stale enum values in Datacore state settings
+    // (templates are cleaned above; DC states need the same migration)
+    let dcStatesDirty = false;
+    for (const state of Object.values(this.data.datacoreStates)) {
+      const settings = (state as unknown as Record<string, unknown>)
+        .settings as Record<string, unknown> | undefined;
+      if (!settings) continue;
+      for (const [key, validValues] of Object.entries(VALID_VIEW_VALUES)) {
+        const value = settings[key];
+        if (
+          value !== undefined &&
+          key !== 'minimumColumns' &&
+          typeof value === 'string' &&
+          !validValues.includes(value as never)
+        ) {
+          settings[key] = validValues[0];
+          dcStatesDirty = true;
+        }
+      }
+    }
+
+    if (templatesDirty || dcStatesDirty) {
       await this.save();
     }
   }
