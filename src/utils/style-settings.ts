@@ -291,6 +291,12 @@ export function shouldKeepPreviewNewlines(): boolean {
 
 export type OmitFirstLineMode = 'always' | 'ifMatchesTitle' | 'never';
 
+/**
+ * Which first-line omission mode is active.
+ * Returns 'ifMatchesTitle' as default when neither explicit class is present
+ * (Style Settings applies `dynamic-views-omit-first-line-match` which is
+ * handled as the elimination fallback, not an explicit check).
+ */
 export function getOmitFirstLineMode(): OmitFirstLineMode {
   if (hasBodyClass('dynamic-views-omit-first-line-always')) return 'always';
   if (hasBodyClass('dynamic-views-omit-first-line-never')) return 'never';

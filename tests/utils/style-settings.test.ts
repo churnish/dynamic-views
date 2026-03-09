@@ -14,6 +14,9 @@ import {
   getHideEmptyMode,
   getUrlIcon,
   clearStyleSettingsCache,
+  getOmitFirstLineMode,
+  shouldKeepPreviewHeadings,
+  shouldKeepPreviewNewlines,
 } from '../../src/utils/style-settings';
 
 describe('style-settings', () => {
@@ -442,6 +445,44 @@ describe('style-settings', () => {
       } as CSSStyleDeclaration);
 
       expect(getUrlIcon()).toBe('star');
+    });
+  });
+
+  describe('getOmitFirstLineMode', () => {
+    it('should return "always" when always class is present', () => {
+      mockClassList.add('dynamic-views-omit-first-line-always');
+      expect(getOmitFirstLineMode()).toBe('always');
+    });
+
+    it('should return "never" when never class is present', () => {
+      mockClassList.add('dynamic-views-omit-first-line-never');
+      expect(getOmitFirstLineMode()).toBe('never');
+    });
+
+    it('should return "ifMatchesTitle" when neither class is present', () => {
+      expect(getOmitFirstLineMode()).toBe('ifMatchesTitle');
+    });
+  });
+
+  describe('shouldKeepPreviewHeadings', () => {
+    it('should return true when keep-headings class is present', () => {
+      mockClassList.add('dynamic-views-text-preview-keep-headings');
+      expect(shouldKeepPreviewHeadings()).toBe(true);
+    });
+
+    it('should return false when class is absent', () => {
+      expect(shouldKeepPreviewHeadings()).toBe(false);
+    });
+  });
+
+  describe('shouldKeepPreviewNewlines', () => {
+    it('should return true when keep-newlines class is present', () => {
+      mockClassList.add('dynamic-views-text-preview-keep-newlines');
+      expect(shouldKeepPreviewNewlines()).toBe(true);
+    });
+
+    it('should return false when class is absent', () => {
+      expect(shouldKeepPreviewNewlines()).toBe(false);
     });
   });
 });

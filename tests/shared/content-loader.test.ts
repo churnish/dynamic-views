@@ -589,6 +589,75 @@ describe('content-loader', () => {
       expect(textPreviewCache['file1.md']).toBe('preview text');
       expect(textPreviewCache['file2.md']).toBe('preview text');
     });
+
+    it('should pass preserveHeadings and preserveNewlines to loadTextPreviewForEntry', async () => {
+      const textPreviewCache: Record<string, string> = {};
+
+      const file1 = new TFile();
+      file1.path = 'file1.md';
+      file1.extension = 'md';
+
+      await loadTextPreviewsForEntries(
+        [{ path: 'file1.md', file: file1, textPreviewData: null }],
+        true,
+        'never',
+        mockApp,
+        textPreviewCache,
+        true,
+        true
+      );
+
+      expect(mockPreviewUtils.loadFilePreview).toHaveBeenCalledWith(
+        file1,
+        mockApp,
+        null,
+        {
+          fallbackToContent: true,
+          omitFirstLine: 'never',
+          preserveHeadings: true,
+          preserveNewlines: true,
+        },
+        undefined,
+        undefined
+      );
+    });
+
+    it('should produce independent cache results for different preserve settings', async () => {
+      const file1 = new TFile();
+      file1.path = 'file1.md';
+      file1.extension = 'md';
+
+      mockPreviewUtils.loadFilePreview
+        .mockResolvedValueOnce('plain preview')
+        .mockResolvedValueOnce('preserved preview');
+
+      // Load without preserve params
+      const cache1: Record<string, string> = {};
+      await loadTextPreviewsForEntries(
+        [{ path: 'file1.md', file: file1, textPreviewData: null }],
+        true,
+        'never',
+        mockApp,
+        cache1
+      );
+
+      // Load with preserve params (fresh cache, cleared in-flight)
+      clearInFlightLoads();
+      const cache2: Record<string, string> = {};
+      await loadTextPreviewsForEntries(
+        [{ path: 'file1.md', file: file1, textPreviewData: null }],
+        true,
+        'never',
+        mockApp,
+        cache2,
+        true,
+        true
+      );
+
+      expect(mockPreviewUtils.loadFilePreview).toHaveBeenCalledTimes(2);
+      expect(cache1['file1.md']).toBe('plain preview');
+      expect(cache2['file1.md']).toBe('preserved preview');
+    });
   });
 
   describe('concurrent Promise sharing', () => {

@@ -126,14 +126,15 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 
 ### `class-select` (CSS)
 
-| Setting                   | Default     | Fallback file                                      |
-| ------------------------- | ----------- | -------------------------------------------------- |
-| Poster overlay tint       | dark        | `_poster.scss`                                     |
-| Cover background          | plain       | `_cover-placeholders.scss`, `_cover-elements.scss` |
-| Cover hover zoom          | card        | `_cover-elements.scss`                             |
-| Show cover placeholder    | Grid        | `_cover-side.scss`, `_cover-placeholders.scss`     |
-| Card border color (hover) | muted       | `_core.scss`                                       |
-| Card background (hover)   | transparent | `_hover-states.scss`                               |
+| Setting                   | Default        | Fallback file                                                    |
+| ------------------------- | -------------- | ---------------------------------------------------------------- |
+| Poster overlay tint       | dark           | `_poster.scss`                                                   |
+| Cover background          | plain          | `_cover-placeholders.scss`, `_cover-elements.scss`               |
+| Cover hover zoom          | card           | `_cover-elements.scss`                                           |
+| Show cover placeholder    | Grid           | `_cover-side.scss`, `_cover-placeholders.scss`                   |
+| Card border color (hover) | muted          | `_core.scss`                                                     |
+| Card background (hover)   | transparent    | `_hover-states.scss`                                             |
+| Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
 
