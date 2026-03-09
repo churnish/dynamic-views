@@ -19,7 +19,10 @@
   .card.hover-intent-active:not(.image-format-backdrop, .image-format-poster)
   img {
   opacity: 1;
-  transition: opacity var(--dynamic-views-anim-duration-moderate);
+  transition:
+    opacity var(--dynamic-views-anim-duration-moderate),
+    transform var(--dynamic-views-anim-duration-fast) ease,
+    scale var(--dynamic-views-anim-duration-fast) ease;
 }
 
 /* Poster: theme dimming suppressed on hover (poster.scss owns transition timing) */
