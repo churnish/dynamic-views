@@ -247,8 +247,9 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 ### Scroll throttle
 
 - **Pattern**: Leading + trailing, 100ms cooldown (`SCROLL_THROTTLE_MS`).
-- **Leading**: Runs `checkAndLoadMore()` immediately. Schedules `syncVirtualScroll` via RAF.
+- **Leading**: Runs `this.checkAndLoadMore(totalEntries, settings)` immediately. Schedules `syncVirtualScroll` via RAF.
 - **Trailing**: Runs after cooldown if events arrived during it.
+- **No inline closure**: The scroll listener delegates directly to `checkAndLoadMore` — no separate `checkAndLoad` closure. This matches the grid view pattern. The `setupInfiniteScroll` signature requires `settings: BasesResolvedSettings` (non-optional) since the call site always provides it.
 
 ### Mount remeasure throttle
 
@@ -295,7 +296,7 @@ Collapse is synchronous; expand is async. Both modify `virtualItems` and related
 4. `rebuildGroupIndex()` — rebuilds `virtualItemsByGroup` from the filtered array.
 5. `groupLayoutResults.delete(groupKey)` — removes stale layout result.
 6. `cachedGroupOffsets.delete(groupKey)` — defense-in-depth (rebuilt from DOM on next layout).
-7. Dispatches `scroll` event on `scrollEl` — triggers `checkAndLoad` for potential infinite scroll.
+7. Dispatches `scroll` event on `scrollEl` — triggers `checkAndLoadMore` via the scroll listener for potential infinite scroll.
 
 **Critical**: `groupEl.empty()` must precede cleanup. The DOM must reflect the collapsed state before the scroll position adjustment at the end of the method (header proximity check).
 

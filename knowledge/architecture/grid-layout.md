@@ -158,7 +158,15 @@ Triggered when only property **order** changed (not the set of properties, not o
 5. Update `previousDisplayedCount` to captured `currCount`.
 6. Batch post-render hooks scoped to new cards only: `syncResponsiveClasses()`, `initializeScrollGradientsForCards()`, `initializeTitleTruncationForCards()`.
 7. Show end indicator if all items displayed.
-8. `finally` block: clear `isLoading`, then chain `checkAndLoadMore(totalEntries)` to load subsequent batches if still near bottom.
+8. `finally` block: clear `isLoading`. Then, if render version unchanged (batch not aborted), chain `checkAndLoadMore(totalEntries)` to load subsequent batches if still near bottom.
+
+`checkAndLoadMore(totalEntries)` — entry point for both the scroll listener and the post-batch chain.
+
+1. Reads `lastRenderedSettings` — returns early if unavailable.
+2. Guards: skip if `isLoading` or `displayedCount >= totalEntries`.
+3. Calculates `distanceFromBottom`; skips if `>= clientHeight × PANE_MULTIPLIER`.
+4. Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped at `MAX_BATCH_SIZE`. Returns `MAX_BATCH_SIZE` as fallback when container width is 0.
+5. Advances `displayedCount` and calls `appendBatch`.
 
 ### 5. Resize
 
@@ -249,7 +257,7 @@ Triggered when only property **order** changed (not the set of properties, not o
 ### Scroll throttle
 
 - **Pattern**: Leading + trailing, 100ms cooldown (`SCROLL_THROTTLE_MS`).
-- **Leading**: Runs `checkAndLoad()` immediately.
+- **Leading**: Runs `checkAndLoadMore()` immediately.
 - **Trailing**: Runs after cooldown to catch scroll position changes during throttle.
 
 ### Image-load handling
@@ -360,7 +368,7 @@ Arrow keys navigate spatially across all mounted cards using DOM measurements.
 6. **Container height is preserved during DOM wipe.** `--dynamic-views-preserve-height` sets `min-height` before clearing the container, preventing the scroll parent from resetting scroll position.
 7. **Content visibility is disabled on iOS.** `setupContentVisibility()` returns a no-op on mobile to avoid the WebKit infinite reflow loop. Mobile falls back to browser-managed `content-visibility: auto`.
 8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, and `thumbnailSize` changes.
-9. **`appendBatch` must chain `checkAndLoadMore` after completing.** The `finally` block calls `checkAndLoadMore(totalEntries)` to load subsequent batches when near the bottom, matching masonry's pattern. Without chaining, a single batch that doesn't fill the viewport stalls infinite scroll permanently — the scroll listener never fires because there's nothing to scroll.
+9. **`appendBatch` must chain `checkAndLoadMore` after completing.** Without chaining, a batch that doesn't fill the viewport stalls infinite scroll permanently — the scroll listener never fires because there's nothing to scroll. The chain is version-guarded — aborted batches must NOT chain.
 
 ## Bases v Datacore
 

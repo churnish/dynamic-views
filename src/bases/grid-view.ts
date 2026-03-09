@@ -80,7 +80,12 @@ import type {
 } from '../types';
 import { setupContentVisibility } from '../shared/content-visibility';
 import { setupStickyHeadingObserver } from './sticky-heading';
-import { updateTextPreviewDOM } from '../shared/text-preview-dom';
+import {
+  updateTextPreviewDOM,
+  applyPerParagraphClamp,
+  initializeTextPreviewClamp,
+  initializeTextPreviewClampForCards,
+} from '../shared/text-preview-dom';
 
 // Extend Obsidian types
 declare module 'obsidian' {
@@ -139,6 +144,7 @@ export class DynamicViewsGridView extends BasesView {
     lastSettingsHash: null,
     lastPropertySetHash: null,
     lastSettingsHashExcludingOrder: null,
+    lastStyleSettingsHash: null,
     lastMtimes: new Map(),
   };
   // Track last rendered settings to detect stale config (see readBasesSettings)
@@ -390,6 +396,7 @@ export class DynamicViewsGridView extends BasesView {
     );
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
+    initializeTextPreviewClamp(groupEl);
     setHoverScaleForCards(
       Array.from(groupEl.querySelectorAll<HTMLElement>('.card'))
     );
@@ -439,8 +446,8 @@ export class DynamicViewsGridView extends BasesView {
     this.onDataUpdated();
   }
 
-  /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: BasesResolvedSettings): number {
+  /** Calculate batch size based on current column count */
+  private getBatchSize(settings: BasesResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
       this.containerEl.getBoundingClientRect().width
@@ -450,8 +457,8 @@ export class DynamicViewsGridView extends BasesView {
     const cardSize = settings.cardSize;
 
     if (containerWidth === 0) {
-      // Fallback using minimum columns when container not yet laid out
-      return Math.min(minColumns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
+      // Fallback when container not yet laid out — caller guards via isLoading/scroll threshold
+      return MAX_BATCH_SIZE;
     }
 
     const calculatedColumns = Math.floor(
@@ -460,6 +467,11 @@ export class DynamicViewsGridView extends BasesView {
     const columns = Math.max(minColumns, calculatedColumns);
     const rawCount = columns * ROWS_PER_COLUMN;
     return Math.min(rawCount, MAX_BATCH_SIZE);
+  }
+
+  /** Calculate initial card count based on container dimensions */
+  private calculateInitialCount(settings: BasesResolvedSettings): number {
+    return this.getBatchSize(settings);
   }
 
   /** Calculate grid column count based on container width and card size */
@@ -809,6 +821,18 @@ export class DynamicViewsGridView extends BasesView {
         '\0\0' +
         (groupByProperty ?? '');
       const styleSettingsHash = getStyleSettingsHash();
+
+      // Clear text preview cache when style settings change (e.g., keep headings/newlines toggled)
+      // without a full settings change — styleSettingsHash is part of renderHash but not settingsHash,
+      // so settingsChanged won't fire for these toggles
+      if (
+        this.renderState.lastStyleSettingsHash !== null &&
+        this.renderState.lastStyleSettingsHash !== styleSettingsHash
+      ) {
+        this.contentCache.textPreviews = {};
+      }
+      this.renderState.lastStyleSettingsHash = styleSettingsHash;
+
       // Include mtime and sortMethod in hash so content/sort changes trigger updates
       const collapsedHash = Array.from(this.collapsedGroups).sort().join('\0');
       const renderHash =
@@ -1160,6 +1184,7 @@ export class DynamicViewsGridView extends BasesView {
       );
       initializeScrollGradients(feedEl);
       initializeTitleTruncation(feedEl);
+      initializeTextPreviewClamp(feedEl);
       setHoverScaleForCards(
         Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
       );
@@ -1452,6 +1477,9 @@ export class DynamicViewsGridView extends BasesView {
 
       // Update text preview — add/remove wrapper to avoid stale empty gap
       updateTextPreviewDOM(cardEl, this.contentCache.textPreviews[path] || '');
+      // Re-clamp after text preview content change
+      const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
+      if (previewEl) applyPerParagraphClamp(previewEl);
     }
 
     // Grid: CSS auto-handles row height changes, no relayout needed
@@ -1473,22 +1501,7 @@ export class DynamicViewsGridView extends BasesView {
 
     if (distanceFromBottom < threshold) {
       this.isLoading = true;
-      // Dynamic batch size: columns x rows per column, capped
-      const containerWidth = Math.floor(
-        this.containerEl.getBoundingClientRect().width
-      );
-      if (containerWidth === 0) {
-        this.isLoading = false;
-        return;
-      }
-      const columns = Math.max(
-        settings.minimumColumns,
-        Math.floor(
-          (containerWidth + getCardSpacing(this.containerEl)) /
-            (settings.cardSize + getCardSpacing(this.containerEl))
-        )
-      );
-      const batchSize = Math.min(columns * ROWS_PER_COLUMN, MAX_BATCH_SIZE);
+      const batchSize = this.getBatchSize(settings);
       this.displayedCount = Math.min(
         this.displayedCount + batchSize,
         totalEntries
@@ -1508,11 +1521,11 @@ export class DynamicViewsGridView extends BasesView {
       return;
     }
 
-    try {
-      // Increment render version to cancel any stale onDataUpdated renders
-      this.renderState.version++;
-      const currentVersion = this.renderState.version;
+    // Increment render version to cancel any stale onDataUpdated renders
+    this.renderState.version++;
+    const currentVersion = this.renderState.version;
 
+    try {
       const groupedData = this.data.groupedData;
 
       // Reuse settings from the initial render — they don't change between batches.
@@ -1716,6 +1729,7 @@ export class DynamicViewsGridView extends BasesView {
         // re-scanning old content-hidden cards in the container)
         initializeScrollGradientsForCards(newCardEls);
         initializeTitleTruncationForCards(newCardEls);
+        initializeTextPreviewClampForCards(newCardEls);
         setHoverScaleForCards(newCardEls);
       }
 
@@ -1728,7 +1742,9 @@ export class DynamicViewsGridView extends BasesView {
       }
     } finally {
       this.isLoading = false;
-      // Chain next batch if still near bottom (matches masonry pattern)
+    }
+    // Only chain if this batch wasn't aborted by a new render
+    if (this.renderState.version === currentVersion) {
       this.checkAndLoadMore(totalEntries);
     }
   }

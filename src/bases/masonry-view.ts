@@ -97,7 +97,12 @@ import type {
 } from '../types';
 import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
 import { setupStickyHeadingObserver } from './sticky-heading';
-import { updateTextPreviewDOM } from '../shared/text-preview-dom';
+import {
+  updateTextPreviewDOM,
+  applyPerParagraphClamp,
+  initializeTextPreviewClamp,
+  initializeTextPreviewClampForCards,
+} from '../shared/text-preview-dom';
 import {
   type VirtualItem,
   measureScalableHeight,
@@ -145,6 +150,7 @@ export class DynamicViewsMasonryView extends BasesView {
     lastSettingsHash: null,
     lastPropertySetHash: null,
     lastSettingsHashExcludingOrder: null,
+    lastStyleSettingsHash: null,
     lastMtimes: new Map(),
   };
   // Track last rendered settings to detect stale config (see readBasesSettings)
@@ -470,6 +476,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
+    initializeTextPreviewClamp(groupEl);
 
     // Observe newly expanded heading for sticky stuck detection
     const newHeading = groupEl
@@ -706,6 +713,7 @@ export class DynamicViewsMasonryView extends BasesView {
             syncResponsiveClasses(cards);
             initializeScrollGradients(this.masonryContainer);
             initializeTitleTruncation(this.masonryContainer);
+            initializeTextPreviewClamp(this.masonryContainer);
           }
         });
       }, 100);
@@ -978,6 +986,18 @@ export class DynamicViewsMasonryView extends BasesView {
         '\0\0' +
         (groupByProperty ?? '');
       const styleSettingsHash = getStyleSettingsHash();
+
+      // Clear text preview cache when style settings change (e.g., keep headings/newlines toggled)
+      // without a full settings change — styleSettingsHash is part of renderHash but not settingsHash,
+      // so settingsChanged won't fire for these toggles
+      if (
+        this.renderState.lastStyleSettingsHash !== null &&
+        this.renderState.lastStyleSettingsHash !== styleSettingsHash
+      ) {
+        this.contentCache.textPreviews = {};
+      }
+      this.renderState.lastStyleSettingsHash = styleSettingsHash;
+
       // Include mtime and sortMethod in hash so content/sort changes trigger updates
       const collapsedHash = Array.from(this.collapsedGroups).sort().join('\0');
       const renderHash =
@@ -1376,6 +1396,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
         initializeScrollGradients(this.masonryContainer);
         initializeTitleTruncation(this.masonryContainer);
+        initializeTextPreviewClamp(this.masonryContainer);
 
         // Rebuild sticky heading observer for all non-collapsed group headings
         this.stickyHeadings?.disconnect();
@@ -2945,6 +2966,10 @@ export class DynamicViewsMasonryView extends BasesView {
           cardEl,
           this.contentCache.textPreviews[path] || ''
         );
+        // Re-clamp after text preview content change
+        const previewEl =
+          cardEl.querySelector<HTMLElement>('.card-text-preview');
+        if (previewEl) applyPerParagraphClamp(previewEl);
       }
 
       // Update unmounted VirtualItem card data so remount uses fresh content
@@ -3427,6 +3452,7 @@ export class DynamicViewsMasonryView extends BasesView {
           );
           initializeScrollGradientsForCards(visibleNewCards);
           initializeTitleTruncationForCards(visibleNewCards);
+          initializeTextPreviewClampForCards(visibleNewCards);
 
           if (this.renderState.version === currentVersion) {
             this.checkAndLoadMore(totalEntries, settings);
@@ -3540,7 +3566,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private setupInfiniteScroll(
     totalEntries: number,
-    settings?: BasesResolvedSettings
+    settings: BasesResolvedSettings
   ): void {
     const scrollContainer = this.scrollEl;
 
@@ -3562,51 +3588,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.scrollThrottle.timeoutId = null;
     }
 
-    const needsMoreItems = () => this.displayedCount < totalEntries;
-
-    // Shared load check function
-    const checkAndLoad = () => {
-      // Skip if container disconnected, already loading, or all loaded
-      if (!scrollContainer.isConnected || this.isLoading || !needsMoreItems()) {
-        return;
-      }
-
-      // Calculate distance from bottom
-      const scrollTop = scrollContainer.scrollTop;
-      const scrollHeight = scrollContainer.scrollHeight;
-      const clientHeight = scrollContainer.clientHeight;
-      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-      // Threshold: load when within PANE_MULTIPLIER × pane height from bottom
-      const threshold = clientHeight * PANE_MULTIPLIER;
-
-      // Check if should load more
-      if (
-        distanceFromBottom < threshold &&
-        this.displayedCount < totalEntries
-      ) {
-        this.isLoading = true;
-
-        // Dynamic batch size: columns × rows per column, capped
-        const batchSize = settings
-          ? this.getBatchSize(settings)
-          : MAX_BATCH_SIZE;
-        const newCount = Math.min(
-          this.displayedCount + batchSize,
-          totalEntries
-        );
-        this.displayedCount = newCount;
-
-        // Append new batch only (preserves existing DOM)
-        if (settings) {
-          void this.appendBatch(totalEntries, settings);
-        } else {
-          // Fallback to full re-render if settings not available
-          this.onDataUpdated();
-        }
-      }
-    };
-
     // Create scroll handler with throttling (scroll tracking is in constructor)
     // Uses leading+trailing pattern: runs immediately on first event, then again when throttle expires
     this.scrollThrottle.listener = () => {
@@ -3627,12 +3608,13 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
-      checkAndLoad();
+      this.checkAndLoadMore(totalEntries, settings);
 
       // Start throttle cooldown with trailing call
       this.scrollThrottle.timeoutId = window.setTimeout(() => {
         this.scrollThrottle.timeoutId = null;
-        checkAndLoad(); // Trailing call catches scroll position changes during throttle
+        // Trailing call catches scroll position changes during throttle
+        this.checkAndLoadMore(totalEntries, settings);
       }, SCROLL_THROTTLE_MS);
     };
 
@@ -3642,7 +3624,7 @@ export class DynamicViewsMasonryView extends BasesView {
     });
 
     // Setup ResizeObserver on masonry container to detect layout changes
-    if (needsMoreItems() && this.masonryContainer) {
+    if (this.displayedCount < totalEntries && this.masonryContainer) {
       let prevHeight = this.masonryContainer.offsetHeight;
       const RO = getOwnerWindow(this.masonryContainer).ResizeObserver;
       this.scrollResizeObserver = new RO((entries) => {
@@ -3666,7 +3648,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Only trigger loading when height INCREASES (new content added)
         // Skip when height decreases (e.g., properties hidden)
         if (newHeight > prevHeight) {
-          checkAndLoad();
+          this.checkAndLoadMore(totalEntries, settings);
         }
         prevHeight = newHeight;
       });
@@ -3674,7 +3656,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Trigger initial checks
-    checkAndLoad();
+    this.checkAndLoadMore(totalEntries, settings);
     this.updateCachedGroupOffsets();
     this.syncVirtualScroll();
   }
