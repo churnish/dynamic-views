@@ -1,57 +1,32 @@
-import { App, TFile, TFolder } from 'obsidian';
+import { App, MenuItem, TFile, TFolder } from 'obsidian';
 import type { ResolvedSettings } from '../types';
 
-/** Delay after storage-ready for NN view to render */
-const VIEW_RENDER_DELAY_MS = 200;
-
 /**
- * Notebook Navigator API interface (v1.1.0)
- * Minimal type definition for the methods we use
+ * Notebook Navigator API interface (v2.0.0)
+ * Minimal type definition for the methods we use.
+ * Navigation methods internally ensure the view is open and ready.
  */
 interface NotebookNavigatorAPI {
   navigation: {
-    reveal(file: TFile): Promise<void>;
-    navigateToFolder(folder: TFolder): Promise<void>;
-    navigateToTag(tag: string): Promise<void>;
+    reveal(file: TFile): Promise<boolean>;
+    navigateToFolder(folder: TFolder): Promise<boolean>;
+    navigateToTag(tag: string): Promise<boolean>;
   };
-  isStorageReady(): boolean;
-  once(event: string, callback: () => void): unknown;
-  off(ref: unknown): void;
+  menus: {
+    registerFolderMenu(
+      callback: (context: {
+        addItem: (cb: (item: MenuItem) => void) => void;
+        folder: TFolder;
+      }) => void
+    ): () => void;
+  };
 }
 
-function getNotebookNavigatorAPI(app: App): NotebookNavigatorAPI | null {
+export function getNotebookNavigatorAPI(app: App): NotebookNavigatorAPI | null {
   const plugin = app.plugins?.plugins?.['notebook-navigator'];
   const api = (plugin as unknown as { api?: NotebookNavigatorAPI } | undefined)
     ?.api;
   return api ?? null;
-}
-
-function revealNotebookNavigatorLeaf(app: App): void {
-  const leaves = app.workspace.getLeavesOfType('notebook-navigator');
-  if (leaves.length > 0) {
-    void app.workspace.revealLeaf(leaves[0]);
-  }
-}
-
-/**
- * Wait for NN storage to be ready (max 5s timeout)
- * Also adds delay for view to render after storage-ready
- */
-async function waitForStorageReady(api: NotebookNavigatorAPI): Promise<void> {
-  if (api.isStorageReady()) return;
-
-  await new Promise<void>((resolve) => {
-    const eventRef = api.once('storage-ready', () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-    const timeout = setTimeout(() => {
-      api.off(eventRef);
-      resolve();
-    }, 5000);
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, VIEW_RENDER_DELAY_MS));
 }
 
 /**
@@ -91,12 +66,7 @@ export function shouldUseNotebookNavigator(
 export function revealFileInNotebookNavigator(app: App, file: TFile): boolean {
   const api = getNotebookNavigatorAPI(app);
   if (!api) return false;
-
-  revealNotebookNavigatorLeaf(app);
-  waitForStorageReady(api)
-    .then(() => api.navigation.reveal(file))
-    .catch(() => {});
-
+  void api.navigation.reveal(file);
   return true;
 }
 
@@ -106,12 +76,7 @@ export function navigateToFolderInNotebookNavigator(
 ): boolean {
   const api = getNotebookNavigatorAPI(app);
   if (!api) return false;
-
-  revealNotebookNavigatorLeaf(app);
-  waitForStorageReady(api)
-    .then(() => api.navigation.navigateToFolder(folder))
-    .catch(() => {});
-
+  void api.navigation.navigateToFolder(folder);
   return true;
 }
 
@@ -121,11 +86,6 @@ export function navigateToTagInNotebookNavigator(
 ): boolean {
   const api = getNotebookNavigatorAPI(app);
   if (!api) return false;
-
-  revealNotebookNavigatorLeaf(app);
-  waitForStorageReady(api)
-    .then(() => api.navigation.navigateToTag(tag))
-    .catch(() => {});
-
+  void api.navigation.navigateToTag(tag);
   return true;
 }

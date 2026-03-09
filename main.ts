@@ -7,6 +7,7 @@ import {
   TFile,
   TFolder,
   PaneType,
+  type MenuItem,
 } from 'obsidian';
 import { PersistenceManager } from './src/persistence';
 import { View } from './src/datacore/controller';
@@ -36,6 +37,7 @@ import {
 } from './src/utils/randomize';
 import { clearInFlightLoads } from './src/shared/content-loader';
 import { invalidateCacheForFile } from './src/shared/image-loader';
+import { getNotebookNavigatorAPI } from './src/utils/notebook-navigator';
 
 // Plugin/feature names (proper nouns, not subject to sentence case)
 const DATACORE = 'Datacore';
@@ -44,8 +46,22 @@ const MASONRY = 'Masonry';
 const NEW_GRID_BASE = 'New Grid base';
 const NEW_MASONRY_BASE = 'New Masonry base';
 
+/** Retry a callback at `interval` ms until it returns true or `timeout` ms elapses. */
+function retryUntilSuccess(
+  interval: number,
+  timeout: number,
+  callback: () => boolean
+): void {
+  const id = window.setInterval(() => {
+    if (callback()) window.clearInterval(id);
+  }, interval);
+  window.setTimeout(() => window.clearInterval(id), timeout);
+}
+
 export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
+  /** Tracks which NN API instance we registered menus with */
+  private nnRegisteredApi: unknown = null;
 
   // Helper function for datacorejsx blocks
   createView(dc: DatacoreAPI, userQuery?: string, queryId?: string) {
@@ -384,6 +400,16 @@ export default class DynamicViews extends Plugin {
         );
       })
     );
+
+    // Register folder context menus in Notebook Navigator.
+    // NN's async onload may not finish before onLayoutReady — retry briefly.
+    this.app.workspace.onLayoutReady(() => {
+      if (!this.registerNotebookNavigatorMenus()) {
+        retryUntilSuccess(500, 10_000, () =>
+          this.registerNotebookNavigatorMenus()
+        );
+      }
+    });
   }
 
   getQueryTemplate(): string {
@@ -449,6 +475,74 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
       new Notice(`Failed to create base file. Check console for details.`);
       console.error('Base file creation failed:', error);
     }
+  }
+
+  /**
+   * Register "New Grid/Masonry base" in Notebook Navigator folder menus.
+   * Skips if already registered with the same API instance.
+   * Re-registers when NN is disabled/re-enabled (new API instance).
+   */
+  private registerNotebookNavigatorMenus(): boolean {
+    const nnApi = getNotebookNavigatorAPI(this.app);
+    if (!nnApi) return false;
+    if (nnApi === this.nnRegisteredApi) return true;
+    this.nnRegisteredApi = nnApi;
+
+    const dispose = nnApi.menus.registerFolderMenu(({ addItem, folder }) => {
+      if (!this.persistenceManager.getPluginSettings().contextMenuCommands)
+        return;
+
+      const added: MenuItem[] = [];
+      addItem((item) => {
+        item
+          .setTitle(NEW_GRID_BASE)
+          .setIcon('lucide-grid-2x-2')
+          .onClick(async () => {
+            await this.createBaseFile(
+              'dynamic-views-grid',
+              'Grid',
+              false,
+              folder.path
+            );
+          });
+        added.push(item);
+      });
+      addItem((item) => {
+        item
+          .setTitle(NEW_MASONRY_BASE)
+          .setIcon('panels-right-bottom')
+          .onClick(async () => {
+            await this.createBaseFile(
+              'dynamic-views-masonry',
+              'Masonry',
+              false,
+              folder.path
+            );
+          });
+        added.push(item);
+
+        // NN's extension API appends items near the bottom of the menu.
+        // Obsidian's Menu.addItem pushes to items[] before calling the
+        // callback, so both items are in the array now. Splice them into
+        // the creation group (before the first separator) synchronously
+        // — before the menu is shown.
+        const menu = (item as MenuItem & { menu?: { items: MenuItem[] } })
+          .menu;
+        if (!menu) return;
+        const items = menu.items as (MenuItem & { titleEl?: HTMLElement })[];
+        for (const a of added) {
+          const idx = items.indexOf(a);
+          if (idx >= 0) items.splice(idx, 1);
+        }
+        const firstSep = items.findIndex((i) => !i.titleEl);
+        if (firstSep >= 0) {
+          items.splice(firstSep, 0, ...added);
+        }
+      });
+    });
+
+    this.register(dispose);
+    return true;
   }
 
   private getActiveDVGroupedView():
