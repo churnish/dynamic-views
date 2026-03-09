@@ -952,6 +952,7 @@ export class DynamicViewsGridView extends BasesView {
           sortMethod,
           visibleProperties
         );
+        if (this.renderState.version !== currentVersion) return;
         this.renderState.lastRenderHash = renderHash;
         return;
       }

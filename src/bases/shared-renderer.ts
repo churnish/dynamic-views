@@ -461,6 +461,7 @@ export class SharedCardRenderer {
   private slideshowCleanups: (() => void)[] = [];
   private cardScopes: Scope[] = [];
   private cardAbortControllers: AbortController[] = [];
+  private cardRerenderControllers = new Map<HTMLElement, AbortController[]>();
   private activeScope: Scope | null = null;
 
   constructor(
@@ -498,10 +499,35 @@ export class SharedCardRenderer {
     this.cardAbortControllers.forEach((controller) => controller.abort());
     this.cardAbortControllers = [];
 
+    // Abort all rerender-specific controllers
+    this.cardRerenderControllers.forEach((list) =>
+      list.forEach((c) => c.abort())
+    );
+    this.cardRerenderControllers.clear();
+
     // Cleanup viewers only on view destruction (viewer persists across re-renders)
     if (forceViewerCleanup) {
       cleanupAllViewers(this.viewerCleanupFns, this.viewerClones);
     }
+  }
+
+  private abortCardRerenderControllers(cardEl: HTMLElement): void {
+    const list = this.cardRerenderControllers.get(cardEl);
+    if (list) {
+      for (const c of list) c.abort();
+      this.cardRerenderControllers.delete(cardEl);
+    }
+  }
+
+  private trackRerenderController(cardEl: HTMLElement): AbortController {
+    const controller = new AbortController();
+    let list = this.cardRerenderControllers.get(cardEl);
+    if (!list) {
+      list = [];
+      this.cardRerenderControllers.set(cardEl, list);
+    }
+    list.push(controller);
+    return controller;
   }
 
   /**
@@ -2047,8 +2073,8 @@ export class SharedCardRenderer {
   /**
    * Surgically update title, subtitle, properties, and text preview DOM
    * for an existing card. Callers MUST rebuild CardData via
-   * basesEntryToCardData() BEFORE calling this — this method performs
-   * DOM surgery only, it does NOT transform data.
+   * basesEntryToCardData() BEFORE calling this — passing stale CardData
+   * renders outdated title, subtitle, and properties with no error signal.
    */
   public updateCardContent(
     cardEl: HTMLElement,
@@ -2056,6 +2082,7 @@ export class SharedCardRenderer {
     entry: BasesEntry,
     settings: BasesResolvedSettings
   ): void {
+    this.abortCardRerenderControllers(cardEl);
     this.updateTitleText(cardEl, card, entry, settings);
     this.rerenderSubtitle(cardEl, card, entry, settings);
     this.rerenderProperties(cardEl, card, entry, settings);
@@ -2087,8 +2114,7 @@ export class SharedCardRenderer {
 
     // Fresh signal for new property event listeners (scroll gradients, etc.)
     // Old listeners are on removed DOM — harmless until next full cleanup
-    const propAbort = new AbortController();
-    this.cardAbortControllers.push(propAbort);
+    const propAbort = this.trackRerenderController(cardEl);
 
     // Re-render properties (appends new containers at end of bodyEl;
     // internally calls measurePropertyFieldsForCard + setupScrollGradients)
@@ -2137,8 +2163,7 @@ export class SharedCardRenderer {
       targetEl.empty();
     }
 
-    const propAbort = new AbortController();
-    this.cardAbortControllers.push(propAbort);
+    const propAbort = this.trackRerenderController(cardEl);
 
     this.renderPropertyContent(
       targetEl,

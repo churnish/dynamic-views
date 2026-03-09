@@ -2470,7 +2470,7 @@ function Card({
                         <div
                           className="card-text-preview"
                           ref={
-                            preserveNewlines && card.textPreview?.includes('\n')
+                            preserveNewlines && card.textPreview.includes('\n')
                               ? (el: HTMLElement | null) => {
                                   if (el) applyPerParagraphClamp(el);
                                 }
