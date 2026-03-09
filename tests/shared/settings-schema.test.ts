@@ -248,38 +248,44 @@ describe('extractBasesTemplate', () => {
 
   it('should return only non-default values (sparse)', () => {
     const config = createMockConfig({ cardSize: 400 }, []);
-    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result).toEqual({ cardSize: 400 });
   });
 
   it('should detect BASES_DEFAULTS differences from VIEW_DEFAULTS', () => {
     // displayFirstAsTitle: false in config — differs from mergedDefaults (true from BASES_DEFAULTS)
     const config = createMockConfig({ displayFirstAsTitle: false }, []);
-    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.displayFirstAsTitle).toBe(false);
   });
 
   it('should return empty object when all values match defaults', () => {
     const config = createMockConfig({}, []);
-    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result).toEqual({});
   });
 
   it('should include non-default posterDisplayMode', () => {
     const config = createMockConfig({ posterDisplayMode: 'overlay' }, []);
-    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.posterDisplayMode).toBe('overlay');
   });
 
   it('should omit default posterDisplayMode', () => {
     const config = createMockConfig({ posterDisplayMode: 'gradient' }, []);
-    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.posterDisplayMode).toBeUndefined();
   });
 
   it('should coerce minimumColumns string to number', () => {
     const config = createMockConfig({ minimumColumns: 'two' }, []);
-    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.minimumColumns).toBe(2);
+  });
+
+  it('should use masonry default (2) for minimumColumns', () => {
+    const config = createMockConfig({ minimumColumns: 'two' }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'masonry');
+    expect(result.minimumColumns).toBeUndefined();
   });
 });

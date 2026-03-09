@@ -394,7 +394,7 @@ describe('applyPerParagraphClamp', () => {
     expect(paragraphs[1].style.display).toBe('-webkit-box');
     expect(paragraphs[1].style.webkitLineClamp).toBe('1');
     expect(
-      paragraphs[1].querySelector('.dv-truncation-indicator')
+      paragraphs[1].querySelector('.dynamic-views-truncation-indicator')
     ).not.toBeNull();
     expect(paragraphs[2].style.display).toBe('none');
     expect(paragraphs[3].style.display).toBe('none');
@@ -421,7 +421,7 @@ describe('applyPerParagraphClamp', () => {
     expect(paragraphs[2].style.display).toBe('-webkit-box');
     expect(paragraphs[2].style.webkitLineClamp).toBe('1');
     expect(
-      paragraphs[2].querySelector('.dv-truncation-indicator')
+      paragraphs[2].querySelector('.dynamic-views-truncation-indicator')
     ).not.toBeNull();
     expect(paragraphs[3].style.display).toBe('none');
   });

@@ -24,6 +24,7 @@ import { CONTENT_HIDDEN_CLASS } from './content-visibility';
  * Uses plain DOM APIs (no Obsidian-specific createDiv) so it works in both
  * the Obsidian runtime and the jsdom test environment.
  */
+
 /**
  * Sets content on a text preview element.
  * When newline preservation is active, splits text by paragraph breaks (\n\n)
@@ -121,7 +122,7 @@ const DEFAULT_LINE_BUDGET = 5;
 // webkitBoxOrient is deprecated but required for -webkit-line-clamp (no replacement).
 /* eslint-disable obsidianmd/no-static-styles-assignment, @typescript-eslint/no-deprecated */
 
-const TRUNCATION_INDICATOR_CLASS = 'dv-truncation-indicator';
+const TRUNCATION_INDICATOR_CLASS = 'dynamic-views-truncation-indicator';
 
 /** Clear inline clamp styles and any appended truncation indicator from a paragraph. */
 function clearParagraphStyles(p: HTMLElement): void {
@@ -289,7 +290,7 @@ function collectPreviews(
 
 /** Container-scoped — scans all text previews in container. */
 export function initializeTextPreviewClamp(container: HTMLElement): void {
-  if (!document.body.classList.contains(KEEP_NEWLINES_CLASS)) {
+  if (!container.ownerDocument.body.classList.contains(KEEP_NEWLINES_CLASS)) {
     return;
   }
 
@@ -341,7 +342,7 @@ export function initializeTextPreviewClamp(container: HTMLElement): void {
 /** Card-scoped variant — for appendBatch (avoids re-scanning old content-hidden cards). */
 export function initializeTextPreviewClampForCards(cards: HTMLElement[]): void {
   if (cards.length === 0) return;
-  if (!document.body.classList.contains(KEEP_NEWLINES_CLASS)) {
+  if (!cards[0].ownerDocument.body.classList.contains(KEEP_NEWLINES_CLASS)) {
     return;
   }
 

@@ -2015,8 +2015,10 @@ export class SharedCardRenderer {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
+    const ownerDoc = cardEl.ownerDocument;
+
     // Apply Extension mode logic (mirrors title resolution in renderCard)
-    const isExtMode = document.body.classList.contains(
+    const isExtMode = ownerDoc.body.classList.contains(
       'dynamic-views-file-type-ext'
     );
     const titleProp = settings.titleProperty || '';
@@ -2033,7 +2035,7 @@ export class SharedCardRenderer {
       textNode.textContent = displayTitle || '';
     } else if (displayTitle) {
       titleTextEl.insertBefore(
-        document.createTextNode(displayTitle),
+        ownerDoc.createTextNode(displayTitle),
         titleTextEl.firstChild
       );
     }
