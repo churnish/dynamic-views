@@ -239,7 +239,7 @@ export function getBasesViewOptions(
           displayName: 'Display mode',
           key: 'posterDisplayMode',
           options: {
-            gradient: 'Gradient',
+            fade: 'Fade',
             overlay: 'Overlay',
           },
           default: d.posterDisplayMode,
@@ -562,7 +562,7 @@ export function readBasesSettings(
     })(),
     posterDisplayMode: (() => {
       const value = config.get('posterDisplayMode');
-      return value === 'gradient' || value === 'overlay'
+      return value === 'fade' || value === 'overlay'
         ? value
         : defaults.posterDisplayMode;
     })(),
@@ -687,7 +687,7 @@ export function extractBasesTemplate(
     })(),
     posterDisplayMode: (() => {
       const value = config.get('posterDisplayMode');
-      return value === 'gradient' || value === 'overlay'
+      return value === 'fade' || value === 'overlay'
         ? value
         : mergedDefaults.posterDisplayMode;
     })(),

@@ -651,10 +651,13 @@ export class DynamicViewsMasonryView extends BasesView {
     this.registerEvent(
       this.app.workspace.on('layout-change', () => {
         const ownerDoc = this.containerEl.ownerDocument;
+
         if (ownerDoc !== this.currentDoc) {
           const oldDoc = this.currentDoc;
           this.currentDoc = ownerDoc;
           this.handleDocumentChange(oldDoc, ownerDoc);
+          // Re-render to recalculate positions with new window context
+          this.onDataUpdated();
         }
       })
     );
@@ -773,6 +776,20 @@ export class DynamicViewsMasonryView extends BasesView {
       resetGapCache();
       this.onDataUpdated();
     }, this.containerEl);
+
+    // Recreate observers in the new window's V8 isolate — old observers
+    // are bound to the destroyed popout and won't fire for new DOM.
+    // Calls setupMasonryLayout directly (not via render pipeline) because
+    // rapid-fire layout-change events cause version-cancel aborts that
+    // prevent the async render from reaching setupMasonryLayout.
+    this.layoutResizeObserver?.disconnect();
+    this.layoutResizeObserver = null;
+    this.cardResizeObserver?.disconnect();
+    this.cardResizeObserver = null;
+    this.observerWindow = null;
+    if (this.lastRenderedSettings && this.masonryContainer?.isConnected) {
+      this.setupMasonryLayout(this.lastRenderedSettings);
+    }
   }
 
   onload(): void {
@@ -789,13 +806,6 @@ export class DynamicViewsMasonryView extends BasesView {
       const oldDoc = this.currentDoc;
       this.currentDoc = ownerDoc;
       this.handleDocumentChange(oldDoc, ownerDoc);
-      // Force observer recreation in setupMasonryLayout — old observers
-      // are bound to the destroyed popout's V8 isolate
-      this.layoutResizeObserver?.disconnect();
-      this.layoutResizeObserver = null;
-      this.cardResizeObserver?.disconnect();
-      this.cardResizeObserver = null;
-      this.observerWindow = null;
     }
 
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
@@ -1278,6 +1288,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.focusCleanup = initializeContainerFocus(this.masonryContainer);
 
       // Setup masonry layout
+
       this.setupMasonryLayout(settings);
 
       // Clear CSS variable cache to pick up any style changes

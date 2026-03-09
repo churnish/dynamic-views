@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-08
+last updated: 2026-03-09
 ---
 
 # Masonry layout system
@@ -107,6 +107,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - Store result in `groupLayoutResults` with `measuredAtCardWidth`.
    - Remove `masonry-resizing` class. `syncVirtualScroll()`.
 4. Setup infinite scroll (scroll listener + ResizeObserver).
+5. Post-insert measurement passes (see §Post-insert measurement passes).
 
 ### 2. Batch append (infinite scroll)
 
@@ -125,9 +126,28 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - Apply positions to new cards only. Update container height per group.
    - Update VirtualItem positions for new cards (offset-aware mapping).
    - Disconnected-card guard: if any new card is disconnected (e.g., group container removed), bail and fall back to full `updateLayout("card-disconnected-fallback")`.
-6. Clear `batchLayoutPending`. `syncVirtualScroll()`. Check if more content needed.
+6. Post-insert measurement passes — split: pass 1 before layout, passes 2-4 after (see §Post-insert measurement passes).
+7. Clear `batchLayoutPending`. `syncVirtualScroll()`. Check if more content needed.
 
-### 3. Property reorder (fast path)
+### 3. Content update fast path (`updateCardsInPlace`)
+
+`processDataUpdate()` → `updateCardsInPlace()` — Triggered when file **content** changed (mtime differs) but file paths and settings are unchanged.
+
+**Detection** (same as grid):
+
+1. `changedPaths.size > 0` — at least one file has a new mtime.
+2. `!settingsChanged` — settings hash unchanged.
+3. `pathsUnchanged` — sorted file paths match previous render.
+
+**Execution**:
+
+1. Clear content cache for changed paths only.
+2. Load fresh text previews and images for changed entries.
+3. For each changed path: find `VirtualItem` with matching path, find fresh `BasesEntry` from `allEntries`, rebuild `CardData` via `basesEntryToCardData()`, update `item.cardData` and `item.entry`.
+4. For mounted cards (`item.el`): call `updateCardContent()` — updates title, subtitle, properties, and text preview DOM.
+5. Record previous height per card, measure new height. If any height changed, trigger `remeasureAndReposition("content-update")`.
+
+### 4. Property reorder (fast path)
 
 `processDataUpdate()` → `updatePropertyOrder()` — Triggered when only property ORDER changed (not the set of properties, not other settings).
 
@@ -150,7 +170,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 **Grid view difference**: Grid has no `titleSubtitleUnchanged` guard — CSS grid auto-reflows when DOM content changes. Grid also calls `updateTitleText()` and `rerenderSubtitle()` since title/subtitle may change. Grid iterates all DOM cards (no virtual scrolling yet), which causes a multi-second delay with many cards.
 
-### 4. Resize
+### 5. Resize
 
 `ResizeObserver` → `throttledResize()` → `updateLayoutRef.current("resize-observer")`
 
@@ -191,7 +211,7 @@ Proportional height scaling drifts from true `height: auto` render heights. Afte
 3. Set inline `width`, force reflow, read all heights, calculate layout, apply positions.
 4. `updateVirtualItemPositions()`, store in `groupLayoutResults`.
 
-### 5. Virtual scroll
+### 6. Virtual scroll
 
 Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmounting during initial render and batch loading.
 
@@ -206,6 +226,43 @@ Activated on first user scroll (`hasUserScrolled` flag). Prevents premature unmo
 **Trigger points**: scroll event (RAF-debounced), after full layout, after batch append. **Skipped during active resize** — mount/unmount deferred to post-resize correction to prevent mount storms (50-70 cards mounting in one frame during column count changes).
 
 **Post-mount remeasure**: When `syncVirtualScroll` mounts new cards outside of active resize, corrections are spread across the scroll via a leading throttle on `mountRemeasureTimeout` (`MOUNT_REMEASURE_MS` = 200ms). The first mount in a scroll tick starts the timer; subsequent mounts during the cooldown are ignored (timer is not reset). When the timer fires, `onMountRemeasure()` calls `remeasureAndReposition(skipTransition=true)` to correct proportional height drift without scheduling `scheduleDeferredRemeasure` — remaining drift is caught by the next throttle tick or `cardResizeObserver`. `scrollRemeasureTimeout` now handles only `pendingDeferredResize`. `cardResizeObserver` serves as the post-scroll safety net — once both timers clear, height changes from late image loads pass the `isScrollRemeasurePending()` guard and trigger `remeasureAndReposition`. `onScrollIdle` only fires when `pendingDeferredResize` is set (resize during scroll). The throttle prevents flicker from immediate vs. deferred remeasure fighting over image-load height changes (~24px cover drift).
+
+## Post-insert measurement passes
+
+After cards are rendered into the DOM, an ordered sequence of measurement and adjustment passes runs. Each pass may depend on DOM state set by earlier passes. Masonry uses 4 passes — `setHoverScaleForCards` is grid-only.
+
+### Ordered sequence
+
+| #   | Pass                                    | Purpose                                                          | Dependency                                                                |
+| --- | --------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | `syncResponsiveClasses(cards)`          | Batch compact-mode + thumbnail-stack class sync.                 | None — sets CSS classes that affect card dimensions for subsequent reads. |
+| 2   | `initializeScrollGradients(container)`  | Reads scroll dimensions of property rows, sets gradient classes. | Properties must be rendered.                                              |
+| 3   | `initializeTitleTruncation(container)`  | Canvas-based binary-search title truncation.                     | Subtitle and properties must be finalized (see invariant below).          |
+| 4   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
+
+`*ForCards(cards)` variants exist for passes 2-4, scoping measurement to a specific card array instead of scanning the full container. Batch append filters to visible (non-`content-hidden`) new cards to avoid measuring unmounted virtual scroll cards.
+
+### Call sites
+
+| Call site                                | Passes used                | Variant                                                                    |
+| ---------------------------------------- | -------------------------- | -------------------------------------------------------------------------- |
+| Initial render (`setupMasonryLayout`)    | All 4                      | Container                                                                  |
+| Batch append (`appendBatch`)             | 1 before layout; 2-4 after | 1: per-group before layout calc. 2-4: `*ForCards` — visible new cards only |
+| Group expand (`expandGroup`)             | All 4                      | Container — scoped to group element                                        |
+| Property reorder (`updatePropertyOrder`) | 2 only                     | Container — properties changed, title/subtitle/text unchanged              |
+| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4          | 2: container-level after loop. 3, 4: per-card via `updateCardContent`      |
+| Property measured (`PROPERTY_MEASURED`)  | All 4                      | Container — after property field width measurement settles                 |
+| `onDataUpdated` CSS fast-path            | 4 only                     | Container — re-measures clamps after CSS variable change                   |
+
+Masonry batch append splits pass 1 from passes 2-4: `syncResponsiveClasses` runs per-group **before** layout calculation (compact-mode classes affect card heights used for positioning), while scroll gradients, title truncation, and text preview clamp run **after** layout on visible new cards only.
+
+After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition("content-update")` runs — this is a masonry relayout pass, not part of the measurement sequence.
+
+### Truncation ordering invariant
+
+`initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` (`shared-renderer.ts`) enforces this:
+
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp`
 
 ## Layout update guard system
 
@@ -305,8 +362,9 @@ Collapse is synchronous; expand is async. Both modify `virtualItems` and related
 1. Loads content for group entries via `loadContentForEntries()` (cache-hit fast path).
 2. Renders cards into `groupEl` via `renderCard()`, pushing new `VirtualItem` entries.
 3. `rebuildGroupIndex()`.
-4. Triggers layout via `updateLayoutRef.current('expand-group')`.
-5. **Version guard**: exits early if `renderState.version` changed during async gap.
+4. Post-insert measurement passes scoped to group (see §Post-insert measurement passes).
+5. Triggers layout via `updateLayoutRef.current('expand-group')`.
+6. **Version guard**: exits early if `renderState.version` changed during async gap.
 
 ### Invariant
 

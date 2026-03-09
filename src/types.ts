@@ -37,7 +37,7 @@ export interface ViewDefaults {
   imageProperty: string;
   fallbackToEmbeds: 'always' | 'if-unavailable' | 'never';
   imageFormat: 'thumbnail' | 'cover' | 'poster' | 'backdrop';
-  posterDisplayMode: 'gradient' | 'overlay';
+  posterDisplayMode: 'fade' | 'overlay';
   thumbnailSize: number;
   imagePosition: 'left' | 'right' | 'top' | 'bottom';
   imageFit: 'crop' | 'contain';

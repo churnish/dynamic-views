@@ -369,13 +369,13 @@ export function Settings({
                       };
                       onSettingsChange({
                         posterDisplayMode: evt.target.value as
-                          | 'gradient'
+                          | 'fade'
                           | 'overlay',
                       });
                     }}
                     className="dropdown"
                   >
-                    <option value="gradient">Gradient</option>
+                    <option value="fade">Fade</option>
                     <option value="overlay">Overlay</option>
                   </select>
                 </div>

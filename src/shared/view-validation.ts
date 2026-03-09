@@ -12,7 +12,7 @@ export const VALID_VIEW_VALUES: Partial<
 > = {
   fallbackToEmbeds: ['always', 'if-unavailable', 'never'],
   imageFormat: ['thumbnail', 'cover', 'poster', 'backdrop'],
-  posterDisplayMode: ['gradient', 'overlay'],
+  posterDisplayMode: ['fade', 'overlay'],
   imagePosition: ['left', 'right', 'top', 'bottom'],
   imageFit: ['crop', 'contain'],
   propertyLabels: ['hide', 'inline', 'above'],

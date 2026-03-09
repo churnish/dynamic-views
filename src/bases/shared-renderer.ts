@@ -216,7 +216,7 @@ export function applyViewContainerStyles(
   );
 
   // Poster display mode — container class
-  container.classList.remove('poster-mode-gradient', 'poster-mode-overlay');
+  container.classList.remove('poster-mode-fade', 'poster-mode-overlay');
   container.classList.add(`poster-mode-${settings.posterDisplayMode}`);
 
   // Image fit — container class
@@ -264,9 +264,9 @@ export function applyCssOnlySettings(
   }
 
   // Poster display mode — container class
-  containerEl.classList.remove('poster-mode-gradient', 'poster-mode-overlay');
+  containerEl.classList.remove('poster-mode-fade', 'poster-mode-overlay');
   const posterDisplayMode =
-    (config.get('posterDisplayMode') as string) ?? 'gradient';
+    (config.get('posterDisplayMode') as string) ?? 'fade';
   containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
 
   // Image fit — container class
@@ -2015,10 +2015,10 @@ export class SharedCardRenderer {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
-    const ownerDoc = cardEl.ownerDocument;
-
     // Apply Extension mode logic (mirrors title resolution in renderCard)
-    const isExtMode = ownerDoc.body.classList.contains(
+    // Style Settings classes live on the main window's document.body only —
+    // cardEl.ownerDocument.body would miss them in popout windows
+    const isExtMode = document.body.classList.contains(
       'dynamic-views-file-type-ext'
     );
     const titleProp = settings.titleProperty || '';
@@ -2035,7 +2035,7 @@ export class SharedCardRenderer {
       textNode.textContent = displayTitle || '';
     } else if (displayTitle) {
       titleTextEl.insertBefore(
-        ownerDoc.createTextNode(displayTitle),
+        cardEl.ownerDocument.createTextNode(displayTitle),
         titleTextEl.firstChild
       );
     }
@@ -2054,9 +2054,9 @@ export class SharedCardRenderer {
     settings: BasesResolvedSettings
   ): void {
     this.updateTitleText(cardEl, card, entry, settings);
-    initializeTitleTruncationForCards([cardEl]);
     this.rerenderSubtitle(cardEl, card, entry, settings);
     this.rerenderProperties(cardEl, card, entry, settings);
+    initializeTitleTruncationForCards([cardEl]);
     updateTextPreviewDOM(cardEl, card.textPreview || '');
     const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
     if (previewEl) applyPerParagraphClamp(previewEl);

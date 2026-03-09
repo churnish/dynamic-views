@@ -37,7 +37,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   imageProperty: '',
   fallbackToEmbeds: 'always',
   imageFormat: 'thumbnail',
-  posterDisplayMode: 'gradient',
+  posterDisplayMode: 'fade',
   thumbnailSize: 80,
   imagePosition: 'right',
   imageFit: 'crop',

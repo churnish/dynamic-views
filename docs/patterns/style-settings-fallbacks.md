@@ -140,11 +140,11 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 
 ### `class-toggle` — inverted (CSS)
 
-| Setting                 | Toggle class                                    | Fallback file        |
-| ----------------------- | ----------------------------------------------- | -------------------- |
-| Card hover elevate      | `dynamic-views-card-hover-disable-elevate`      | `_hover-states.scss` |
-| Poster reveal zoom      | `dynamic-views-poster-disable-reveal-zoom`      | `_poster.scss`       |
-| Image viewer fullscreen | `dynamic-views-image-viewer-disable-fullscreen` | `_image-viewer.scss` |
+| Setting                  | Toggle class                                    | Fallback file        |
+| ------------------------ | ----------------------------------------------- | -------------------- |
+| Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | `_hover-states.scss` |
+| Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | `_poster.scss`       |
+| Image viewer fullscreen  | `dynamic-views-image-viewer-disable-fullscreen` | `_image-viewer.scss` |
 
 ### `class-toggle` — `.css-settings-manager` gate (CSS)
 

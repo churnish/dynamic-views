@@ -2,7 +2,7 @@
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, content visibility, and Bases/Datacore differences.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-08
+last updated: 2026-03-09
 ---
 
 # Grid layout system
@@ -104,7 +104,7 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
    - Load text previews and images (async, cancellable via `AbortController`).
    - Preserve container height (`--dynamic-views-preserve-height`) to prevent scroll reset during DOM wipe.
    - Clear container, render group sections with headers and cards.
-   - Batch post-render hooks: `syncResponsiveClasses()`, `initializeScrollGradients()`, `initializeTitleTruncation()`.
+   - Post-insert measurement passes (see §Post-insert measurement passes).
    - Setup ResizeObserver (double-RAF debounce for column recalculation).
    - Setup infinite scroll (scroll listener + content visibility observer).
    - Restore scroll position, remove height preservation.
@@ -123,8 +123,9 @@ Triggered when file **content** changed (mtime differs) but file paths and setti
 
 1. Clear content cache for changed paths only.
 2. Load fresh text previews and images for changed entries.
-3. Update text preview DOM in-place (`querySelector('.card-text-preview')`).
-4. **No relayout needed** — CSS Grid auto-adjusts row heights when content changes.
+3. For each changed path: find fresh `BasesEntry` from `allEntries`, rebuild `CardData` via `basesEntryToCardData()`, update `cardDataByPath` with fresh entry and cardData.
+4. Call `updateCardContent()` on each card element — updates title, subtitle, properties, and text preview DOM in-place.
+5. **No relayout needed** — CSS Grid auto-adjusts row heights when content changes.
 
 ### 3. Property reorder fast path (`updatePropertyOrder`)
 
@@ -156,7 +157,7 @@ Triggered when only property **order** changed (not the set of properties, not o
 3. Load content for new entries only (cache-hit no-op for already-loaded).
 4. Render new cards into existing or new group containers. Handle group boundaries — create new group section with header when group key changes.
 5. Update `previousDisplayedCount` to captured `currCount`.
-6. Batch post-render hooks scoped to new cards only: `syncResponsiveClasses()`, `initializeScrollGradientsForCards()`, `initializeTitleTruncationForCards()`.
+6. Post-insert measurement passes scoped to new cards only (see §Post-insert measurement passes).
 7. Show end indicator if all items displayed.
 8. `finally` block: clear `isLoading`. Then, if render version unchanged (batch not aborted), chain `checkAndLoadMore(totalEntries)` to load subsequent batches if still near bottom.
 
@@ -218,13 +219,47 @@ Triggered when only property **order** changed (not the set of properties, not o
 1. Find matching group in data.
 2. Load content (cache-hit no-op for already-loaded entries).
 3. Render cards into group container with correct card indices.
-4. Run scoped post-render hooks.
+4. Post-insert measurement passes scoped to group (see §Post-insert measurement passes).
 5. Invalidate `lastRenderHash` so next `onDataUpdated()` doesn't skip.
 
 **Fold/unfold all** (`foldAllGroups`, `unfoldAllGroups`):
 
 - Fold: add all group keys to `collapsedGroups`, persist, trigger re-render.
 - Unfold: clear `collapsedGroups`, persist, trigger re-render.
+
+## Post-insert measurement passes
+
+After cards are rendered into the DOM, an ordered sequence of measurement and adjustment passes runs. Each pass may depend on DOM state set by earlier passes.
+
+### Ordered sequence
+
+| #   | Pass                                    | Purpose                                                          | Dependency                                                                |
+| --- | --------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | `syncResponsiveClasses(cards)`          | Batch compact-mode + thumbnail-stack class sync.                 | None — sets CSS classes that affect card dimensions for subsequent reads. |
+| 2   | `initializeScrollGradients(container)`  | Reads scroll dimensions of property rows, sets gradient classes. | Properties must be rendered.                                              |
+| 3   | `initializeTitleTruncation(container)`  | Canvas-based binary-search title truncation.                     | Subtitle and properties must be finalized (see invariant below).          |
+| 4   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
+| 5   | `setHoverScaleForCards(cards)`          | Sets CSS custom property for hover scale from card dimensions.   | Card dimensions must be stable.                                           |
+
+`*ForCards(cards)` variants exist for passes 2-4, scoping measurement to a specific card array instead of scanning the full container. Pass 5 (`setHoverScaleForCards`) is inherently card-scoped — no container variant exists. Used by batch append and `updateCardContent` to avoid re-scanning `content-hidden` cards.
+
+### Call sites
+
+| Call site                                | Passes used       | Variant                                                               |
+| ---------------------------------------- | ----------------- | --------------------------------------------------------------------- |
+| Initial render (`renderAllCards`)        | All 5             | Container                                                             |
+| Batch append (`appendBatch`)             | All 5             | `*ForCards` — new cards only                                          |
+| Group expand (`expandGroup`)             | All 5             | Container — scoped to group element                                   |
+| Resize (`updateColumns`)                 | 1, 2, 5           | Container (in RAF after column CSS variable update)                   |
+| Property reorder (`updatePropertyOrder`) | 2 only            | Container — properties changed, title/subtitle/text unchanged         |
+| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4 | 2: container-level after loop. 3, 4: per-card via `updateCardContent` |
+| `onDataUpdated` CSS fast-path            | 4 only            | Container — re-measures clamps after CSS variable change              |
+
+### Truncation ordering invariant
+
+`initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` (`shared-renderer.ts`) enforces this:
+
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp`
 
 ## Render guard system
 
@@ -395,7 +430,7 @@ Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCard
 - **Content visibility optimization** — IntersectionObserver toggles `content-hidden` class at `PANE_MULTIPLIER` distance, allowing the browser to skip rendering for far-off-screen cards. Datacore renders all displayed cards normally.
 - **Surgical group expand** — Expanding a collapsed group renders only that group's cards without full re-render. Datacore does a full state-driven re-render.
 - **Property reorder fast path** — Detects property-order-only changes and updates card content without re-rendering.
-- **Content update fast path** — Detects content-only changes (mtime differs, paths unchanged) and updates text previews in-place.
+- **Content update fast path** — Detects content-only changes (mtime differs, paths unchanged) and updates all card content in-place (title, subtitle, properties, text preview) without full re-render.
 
 ### What Datacore has that Bases lacks
 
@@ -418,17 +453,17 @@ Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCard
 
 ## Grid vs. masonry comparison
 
-| Aspect                   | Grid                                                 | Masonry                                                    |
-| ------------------------ | ---------------------------------------------------- | ---------------------------------------------------------- |
-| **Layout engine**        | CSS Grid (`display: grid`, automatic flow)           | Absolute positioning (`position: absolute`, JS-calculated) |
-| **Card height**          | Natural content height, equal per row (`stretch`)    | Variable per card (`height: auto` or proportional)         |
-| **Column control**       | Single CSS variable (`--dynamic-views-grid-columns`) | JavaScript calculates all positions per card               |
-| **Resize cost**          | ~0ms (CSS variable update only)                      | ~3-5ms proportional, ~6-9ms correction                     |
-| **Virtual scrolling**    | None — all cards in DOM, content-visibility for perf | Full `VirtualItem[]` tracking with mount/unmount           |
-| **Image load handling**  | CSS Grid auto-reflows rows (no JS needed)            | Coalesced RAF relayout per image batch                     |
-| **Group structure**      | CSS subgrid (cards aligned with parent columns)      | Block containers with `position: relative`                 |
-| **Properties alignment** | `margin-top: auto` (works with `stretch`)            | `margin-top: auto` (limited — no fixed card height)        |
-| **Reorder fast path**    | Updates title + subtitle + properties                | Updates properties only (title/subtitle guarded)           |
-| **Content fast path**    | Updates text preview in-place                        | Not implemented (full relayout on content change)          |
-| **Render complexity**    | Simpler (CSS handles positioning)                    | Complex (5-guard layout system, proportional scaling)      |
-| **Performance ceiling**  | Lower control (CSS Grid limits)                      | Higher control (arbitrary layouts, virtual scroll)         |
+| Aspect                   | Grid                                                             | Masonry                                                    |
+| ------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Layout engine**        | CSS Grid (`display: grid`, automatic flow)                       | Absolute positioning (`position: absolute`, JS-calculated) |
+| **Card height**          | Natural content height, equal per row (`stretch`)                | Variable per card (`height: auto` or proportional)         |
+| **Column control**       | Single CSS variable (`--dynamic-views-grid-columns`)             | JavaScript calculates all positions per card               |
+| **Resize cost**          | ~0ms (CSS variable update only)                                  | ~3-5ms proportional, ~6-9ms correction                     |
+| **Virtual scrolling**    | None — all cards in DOM, content-visibility for perf             | Full `VirtualItem[]` tracking with mount/unmount           |
+| **Image load handling**  | CSS Grid auto-reflows rows (no JS needed)                        | Coalesced RAF relayout per image batch                     |
+| **Group structure**      | CSS subgrid (cards aligned with parent columns)                  | Block containers with `position: relative`                 |
+| **Properties alignment** | `margin-top: auto` (works with `stretch`)                        | `margin-top: auto` (limited — no fixed card height)        |
+| **Reorder fast path**    | Updates title + subtitle + properties                            | Updates properties only (title/subtitle guarded)           |
+| **Content fast path**    | Full in-place update (title, subtitle, properties, text preview) | Not implemented (full relayout on content change)          |
+| **Render complexity**    | Simpler (CSS handles positioning)                                | Complex (5-guard layout system, proportional scaling)      |
+| **Performance ceiling**  | Lower control (CSS Grid limits)                                  | Higher control (arbitrary layouts, virtual scroll)         |

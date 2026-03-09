@@ -24,15 +24,16 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 
 ## Image
 
-| Setting           | Description                                                          | Default   |
-| ----------------- | -------------------------------------------------------------------- | --------- |
-| Image property    | Property containing path to image or image URL                       | None      |
-| Show image embeds | When to use images embedded in-note as fallback                      | Always    |
-| Format            | How to display images                                                | Thumbnail |
-| Size              | Thumbnail width in pixels                                            | 80        |
-| Position          | Image placement                                                      | Right     |
-| Fit               | Crop to fill, or contain within bounds                               | Crop      |
-| Ratio             | Aspect ratio of the image area (card-to-image ratio for side covers) | 1.0       |
+| Setting           | Description                                                              | Default   |
+| ----------------- | ------------------------------------------------------------------------ | --------- |
+| Image property    | Property containing path to image or image URL                           | None      |
+| Show image embeds | When to use images embedded in-note as fallback                          | Always    |
+| Format            | How to display images                                                    | Thumbnail |
+| Display mode      | Poster tint style: Fade (bottom gradient) or Overlay (full-image filter) | Fade      |
+| Size              | Thumbnail width in pixels                                                | 80        |
+| Position          | Image placement                                                          | Right     |
+| Fit               | Crop to fill, or contain within bounds                                   | Crop      |
+| Ratio             | Aspect ratio of the image area (card-to-image ratio for side covers)     | 1.0       |
 
 ## Properties
 

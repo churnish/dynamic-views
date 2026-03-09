@@ -1,4 +1,4 @@
-import { App, TFile, Keymap, Notice } from 'obsidian';
+import { App, Events, TFile, Keymap, Notice } from 'obsidian';
 import type { PaneType } from 'obsidian';
 import type DynamicViews from '../../main';
 import type { DatacorePluginInstance } from './types';
@@ -1782,17 +1782,19 @@ export function View({
     setShowQueryEditor(false);
   }, []);
 
-  // Close own dropdowns when another query on the same page opens one
+  // Close own dropdowns when another query on the same page opens one.
+  // Cast to Events because Workspace.on() overloads don't accept custom event names.
   dc.useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<string>).detail;
-      if (detail !== instanceId.current) {
-        closeAllDropdowns();
+    const ref = (app.workspace as Events).on(
+      DROPDOWN_OPENED_EVENT,
+      (senderId: string) => {
+        if (senderId !== instanceId.current) {
+          closeAllDropdowns();
+        }
       }
-    };
-    document.addEventListener(DROPDOWN_OPENED_EVENT, handler);
-    return () => document.removeEventListener(DROPDOWN_OPENED_EVENT, handler);
-  }, [closeAllDropdowns]);
+    );
+    return () => app.workspace.offref(ref);
+  }, [app.workspace, closeAllDropdowns]);
 
   const handleToggleSettings = dc.useCallback(() => {
     setShowSettings((prev) => !prev);
@@ -1802,9 +1804,7 @@ export function View({
       setShowSortDropdown(false);
       setShowLimitDropdown(false);
       setShowQueryEditor(false);
-      document.dispatchEvent(
-        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
-      );
+      app.workspace.trigger(DROPDOWN_OPENED_EVENT, instanceId.current);
     }
   }, [showSettings]);
 
@@ -1816,9 +1816,7 @@ export function View({
       setShowLimitDropdown(false);
       setShowQueryEditor(false);
       setShowSettings(false);
-      document.dispatchEvent(
-        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
-      );
+      app.workspace.trigger(DROPDOWN_OPENED_EVENT, instanceId.current);
     }
   }, [showViewDropdown]);
 
@@ -1830,9 +1828,7 @@ export function View({
       setShowLimitDropdown(false);
       setShowQueryEditor(false);
       setShowSettings(false);
-      document.dispatchEvent(
-        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
-      );
+      app.workspace.trigger(DROPDOWN_OPENED_EVENT, instanceId.current);
     }
   }, [showSortDropdown]);
 
@@ -1844,9 +1840,7 @@ export function View({
       setShowSortDropdown(false);
       setShowQueryEditor(false);
       setShowSettings(false);
-      document.dispatchEvent(
-        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
-      );
+      app.workspace.trigger(DROPDOWN_OPENED_EVENT, instanceId.current);
     }
   }, [showLimitDropdown]);
 
@@ -1943,9 +1937,7 @@ export function View({
       setShowSortDropdown(false);
       setShowLimitDropdown(false);
       setShowSettings(false);
-      document.dispatchEvent(
-        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
-      );
+      app.workspace.trigger(DROPDOWN_OPENED_EVENT, instanceId.current);
     }
   }, [showQueryEditor]);
 

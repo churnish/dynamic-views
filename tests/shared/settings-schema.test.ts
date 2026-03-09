@@ -19,7 +19,7 @@ vi.mock('../../src/constants', () => ({
     imageProperty: '',
     fallbackToEmbeds: 'always',
     imageFormat: 'thumbnail',
-    posterDisplayMode: 'gradient',
+    posterDisplayMode: 'fade',
     thumbnailSize: 80,
     imagePosition: 'right',
     imageFit: 'crop',
@@ -62,7 +62,7 @@ const MOCK_VIEW_DEFAULTS: any = {
   imageProperty: '',
   fallbackToEmbeds: 'always',
   imageFormat: 'thumbnail',
-  posterDisplayMode: 'gradient',
+  posterDisplayMode: 'fade',
   thumbnailSize: 80,
   imagePosition: 'right',
   imageFit: 'crop',
@@ -199,7 +199,7 @@ describe('readBasesSettings — posterDisplayMode', () => {
   it('should fall back to default for invalid posterDisplayMode', () => {
     const config = createMockConfig({ posterDisplayMode: 'invalid' }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.posterDisplayMode).toBe('gradient');
+    expect(result.posterDisplayMode).toBe('fade');
   });
 });
 
@@ -272,7 +272,7 @@ describe('extractBasesTemplate', () => {
   });
 
   it('should omit default posterDisplayMode', () => {
-    const config = createMockConfig({ posterDisplayMode: 'gradient' }, []);
+    const config = createMockConfig({ posterDisplayMode: 'fade' }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.posterDisplayMode).toBeUndefined();
   });

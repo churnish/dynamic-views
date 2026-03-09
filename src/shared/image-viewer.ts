@@ -2,7 +2,7 @@
  * Shared image viewer handler - eliminates code duplication across card renderers
  */
 
-import { Notice, TFile, type App } from 'obsidian';
+import { Notice, Platform, TFile, type App } from 'obsidian';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 import { setupTouchInterceptAll } from '../bases/swipe-interceptor';
 import { GESTURE_TIMEOUT_MS } from './constants';
@@ -212,12 +212,12 @@ interface ViewerGestureControls {
  * Setup zoom and pan gestures for an image in the viewer
  * @param imgEl - The image element
  * @param container - The container element (overlay or embed)
- * @param isMobile - Whether running on mobile device
+ * @param isPhone - Whether running on a phone (tablets get desktop behavior)
  */
 function setupImageViewerGestures(
   imgEl: HTMLImageElement,
   container: HTMLElement,
-  isMobile: boolean
+  isPhone: boolean
 ): ViewerGestureControls {
   let panzoomInstance: PanzoomObject | null = null;
   let spacebarHandler: ((e: KeyboardEvent) => void) | null = null;
@@ -266,13 +266,13 @@ function setupImageViewerGestures(
   }
 
   function attachPanzoom(): void {
-    const zoomSensitivity = isMobile
+    const zoomSensitivity = isPhone
       ? getZoomSensitivityMobile()
       : getZoomSensitivityDesktop();
 
     // Setup resize handling for cached dimensions
-    if (isMobile) {
-      // Mobile: update viewport dimensions on resize
+    if (isPhone) {
+      // Phone: update viewport dimensions on resize
       resizeHandler = () => {
         cachedViewportWidth = gestureWin.innerWidth;
         cachedViewportHeight = gestureWin.innerHeight;
@@ -292,8 +292,8 @@ function setupImageViewerGestures(
       containerResizeObserver.observe(container);
     }
 
-    // Desktop: custom transform that applies edge-gluing when maximized
-    const desktopSetTransform = !isMobile
+    // Desktop/tablet: custom transform that applies edge-gluing when maximized
+    const desktopSetTransform = !isPhone
       ? (
           elem: HTMLElement,
           { scale, x, y }: { scale: number; x: number; y: number }
@@ -353,8 +353,8 @@ function setupImageViewerGestures(
         }
       : undefined;
 
-    // Mobile: custom transform with pan clamping (IIFE to encapsulate state)
-    const mobileSetTransform = isMobile
+    // Phone: custom transform with pan clamping (IIFE to encapsulate state)
+    const mobileSetTransform = isPhone
       ? (() => {
           let panX = 0;
           let panY = 0;
@@ -433,12 +433,12 @@ function setupImageViewerGestures(
       reparentBack = () => origParent?.insertBefore(container, origNext);
     }
     panzoomInstance = Panzoom(imgEl, {
-      maxScale: isMobile ? 9 : 4,
+      maxScale: isPhone ? 9 : 4,
       minScale: 1,
       startScale: 1,
       step: zoomSensitivity,
       canvas: false,
-      cursor: isMobile ? 'default' : 'move',
+      cursor: isPhone ? 'default' : 'move',
       ...(customSetTransform && { setTransform: customSetTransform }),
     });
     reparentBack?.();
@@ -466,9 +466,9 @@ function setupImageViewerGestures(
     }
 
     // Enable wheel zoom on container
-    // Desktop: only zoom when cursor is over the image (not the overlay)
+    // Desktop/tablet: only zoom when cursor is over the image (not the overlay)
     const wheelHandler = (e: WheelEvent) => {
-      if (!isMobile && e.target !== imgEl) return;
+      if (!isPhone && e.target !== imgEl) return;
       panzoomInstance!.zoomWithWheel(e);
     };
     container.addEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
@@ -476,7 +476,7 @@ function setupImageViewerGestures(
 
     // Helper to update maximized state and class (desktop-only)
     function setMaximized(value: boolean, containScale?: number): void {
-      if (isMobile) return; // Defensive guard
+      if (isPhone) return; // Defensive guard
       isMaximized = value;
       container.classList.toggle('is-maximized', value);
       // Reset desktop pan tracking for fresh start in new mode
@@ -497,9 +497,9 @@ function setupImageViewerGestures(
       }
     };
 
-    // Desktop-only: spacebar maximize, long-press reset
-    // Mobile uses standard pinch-zoom + pan (no maximize/long-press features)
-    if (!isMobile) {
+    // Desktop/tablet: spacebar maximize, long-press reset
+    // Phone uses standard pinch-zoom + pan (no maximize/long-press features)
+    if (!isPhone) {
       // Calculate scale to fill container without cropping
       function getContainScale(): number {
         const containerWidth = container.clientWidth;
@@ -764,10 +764,11 @@ function openImageViewer(
   }
 
   // Append clone to appropriate container based on fullscreen setting
-  // Mobile: always fullscreen. Desktop: fullscreen unless explicitly disabled
-  const isMobile = app.isMobile;
+  // Phone: always fullscreen. Desktop/tablet: fullscreen unless explicitly disabled
+  const isPhone = Platform.isPhone;
+  const isMobile = Platform.isMobile; // true for phone + tablet (touch devices)
   const isFullscreen =
-    isMobile ||
+    isPhone ||
     !viewerDoc.body.classList.contains(
       'dynamic-views-image-viewer-disable-fullscreen'
     );
@@ -854,7 +855,7 @@ function openImageViewer(
     let gestureControls: ViewerGestureControls | null = null;
 
     if (!isPinchZoomDisabled) {
-      gestureControls = setupImageViewerGestures(imgEl, cloneEl, isMobile);
+      gestureControls = setupImageViewerGestures(imgEl, cloneEl, isPhone);
 
       // On mobile, disable all touch gestures (sidebar swipes + pull-down) while panning
       // Desktop uses simpler cleanup since touch interception not needed
@@ -869,8 +870,8 @@ function openImageViewer(
       } else {
         viewerCleanupFns.set(cloneEl, gestureControls.cleanup);
       }
-    } else if (!isMobile) {
-      // Desktop only: trackpad pinch to maximize/restore (when panzoom disabled)
+    } else if (!isPhone) {
+      // Desktop/tablet: trackpad pinch to maximize/restore (when panzoom disabled)
       const onPinchWheel = (e: WheelEvent) => {
         if (!e.ctrlKey) return;
         e.preventDefault();

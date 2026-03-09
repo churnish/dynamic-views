@@ -63,9 +63,10 @@ export function updateTextPreviewDOM(
       setPreviewContent(previewEl, newText);
     } else if (previewsEl) {
       // Case 2: wrapper exists (thumbnail present) — prepend text wrapper
-      const textWrapper = document.createElement('div');
+      const doc = cardEl.ownerDocument;
+      const textWrapper = doc.createElement('div');
       textWrapper.className = 'card-text-preview-wrapper';
-      const textEl = document.createElement('div');
+      const textEl = doc.createElement('div');
       textEl.className = 'card-text-preview';
       setPreviewContent(textEl, newText);
       textWrapper.appendChild(textEl);
@@ -74,11 +75,12 @@ export function updateTextPreviewDOM(
       // Case 3: no previews wrapper at all — build from scratch
       const bodyEl = cardEl.querySelector<HTMLElement>('.card-body');
       if (bodyEl) {
-        const wrapper = document.createElement('div');
+        const doc = cardEl.ownerDocument;
+        const wrapper = doc.createElement('div');
         wrapper.className = 'card-previews';
-        const textWrapper = document.createElement('div');
+        const textWrapper = doc.createElement('div');
         textWrapper.className = 'card-text-preview-wrapper';
-        const textEl = document.createElement('div');
+        const textEl = doc.createElement('div');
         textEl.className = 'card-text-preview';
         setPreviewContent(textEl, newText);
         textWrapper.appendChild(textEl);
@@ -173,20 +175,10 @@ function applyClampFromMeasurements(
     const remaining = budget - usedLines;
 
     if (remaining <= 0) {
-      // Margin consumed the budget. Undo the phantom margin (it won't render
-      // since this paragraph would be hidden) and show the paragraph margin-less
-      // instead, filling the last budget line with text rather than empty space.
-      usedLines--;
-      const remainingNoMargin = budget - usedLines;
-
-      if (remainingNoMargin > 0) {
-        p.style.marginTop = '0';
-        clampParagraph(p, remainingNoMargin);
-        lastVisibleIdx = i;
-        hideFrom(paragraphs, i + 1);
-      } else {
-        hideFrom(paragraphs, i);
-      }
+      // Margin consumed the budget — hide this paragraph rather than
+      // showing it margin-less (which creates inconsistent inter-paragraph
+      // spacing that shifts as line count changes).
+      hideFrom(paragraphs, i);
       break;
     }
 
@@ -288,27 +280,20 @@ function collectPreviews(
   return collected;
 }
 
-/** Container-scoped — scans all text previews in container. */
-export function initializeTextPreviewClamp(container: HTMLElement): void {
-  if (!container.ownerDocument.body.classList.contains(KEEP_NEWLINES_CLASS)) {
-    return;
-  }
-
-  const previews =
-    container.querySelectorAll<HTMLElement>('.card-text-preview');
-  if (previews.length === 0) return;
-
+/**
+ * Shared batched clamp core for Bases post-render pipeline.
+ * 3-phase read/write separation avoids layout thrashing across many cards.
+ */
+function batchApplyClamp(previews: Iterable<HTMLElement>): void {
   const collected = collectPreviews(previews);
   if (collected.length === 0) return;
 
-  // Phase 0: Clear ALL stale inline styles (writes only — no reads yet)
+  // Phase 0: Clear stale inline styles
   for (const { paragraphs } of collected) {
-    for (const p of paragraphs) {
-      clearParagraphStyles(p);
-    }
+    for (const p of paragraphs) clearParagraphStyles(p);
   }
 
-  // Phase 1: Read ALL measurements (1 reflow for entire batch)
+  // Phase 1: Read measurements (1 reflow for entire batch)
   const measurements: Array<{
     paragraphs: HTMLElement[];
     lineHeight: number;
@@ -320,11 +305,9 @@ export function initializeTextPreviewClamp(container: HTMLElement): void {
     const style = getComputedStyle(el);
     const lineHeight = parseFloat(style.lineHeight);
     if (!lineHeight || lineHeight <= 0) continue;
-
     const budget =
       parseInt(style.getPropertyValue(TEXT_PREVIEW_LINES_VAR)) ||
       DEFAULT_LINE_BUDGET;
-
     measurements.push({
       paragraphs,
       lineHeight,
@@ -339,6 +322,18 @@ export function initializeTextPreviewClamp(container: HTMLElement): void {
   }
 }
 
+/** Container-scoped — scans all text previews in container. */
+export function initializeTextPreviewClamp(container: HTMLElement): void {
+  if (!container.ownerDocument.body.classList.contains(KEEP_NEWLINES_CLASS)) {
+    return;
+  }
+
+  const previews =
+    container.querySelectorAll<HTMLElement>('.card-text-preview');
+  if (previews.length === 0) return;
+  batchApplyClamp(previews);
+}
+
 /** Card-scoped variant — for appendBatch (avoids re-scanning old content-hidden cards). */
 export function initializeTextPreviewClampForCards(cards: HTMLElement[]): void {
   if (cards.length === 0) return;
@@ -351,44 +346,5 @@ export function initializeTextPreviewClampForCards(cards: HTMLElement[]): void {
     const preview = card.querySelector<HTMLElement>('.card-text-preview');
     if (preview) previews.push(preview);
   }
-
-  const collected = collectPreviews(previews);
-  if (collected.length === 0) return;
-
-  // Phase 0: Clear stale inline styles
-  for (const { paragraphs } of collected) {
-    for (const p of paragraphs) {
-      clearParagraphStyles(p);
-    }
-  }
-
-  // Phase 1: Read measurements
-  const measurements: Array<{
-    paragraphs: HTMLElement[];
-    lineHeight: number;
-    budget: number;
-    heights: number[];
-  }> = [];
-
-  for (const { el, paragraphs } of collected) {
-    const style = getComputedStyle(el);
-    const lineHeight = parseFloat(style.lineHeight);
-    if (!lineHeight || lineHeight <= 0) continue;
-
-    const budget =
-      parseInt(style.getPropertyValue(TEXT_PREVIEW_LINES_VAR)) ||
-      DEFAULT_LINE_BUDGET;
-
-    measurements.push({
-      paragraphs,
-      lineHeight,
-      budget,
-      heights: paragraphs.map((p) => p.offsetHeight),
-    });
-  }
-
-  // Phase 2: Apply clamps
-  for (const m of measurements) {
-    applyClampFromMeasurements(m.paragraphs, m.lineHeight, m.budget, m.heights);
-  }
+  batchApplyClamp(previews);
 }

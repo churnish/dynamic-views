@@ -651,12 +651,12 @@ settings:
     -
         id: dynamic-views-image-viewer-disable-fullscreen
         title: Disable fullscreen
-        description: Open images in constrained overlay instead of fullscreen on desktop.
+        description: Open images in constrained overlay instead of fullscreen.
         type: class-toggle
     -
         id: dynamic-views-zoom-sensitivity
         title: Zoom sensitivity
-        description: How quickly images zoom on desktop.
+        description: How quickly images zoom.
         type: variable-number-slider
         default: 0.08
         min: 0.01
@@ -1785,7 +1785,7 @@ body.is-mobile
 body:not(.is-mobile)
   .style-settings-container
   .setting-item[data-id='dynamic-views-card-spacing-mobile'],
-body.is-mobile
+body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-disable-fullscreen'],
 body.is-mobile
@@ -1794,7 +1794,7 @@ body.is-mobile
 body.is-mobile
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-reveal-press'],
-body.is-mobile
+body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
 body.dynamic-views-disable-thumbnail-scrubbing

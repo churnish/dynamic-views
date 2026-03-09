@@ -22,6 +22,11 @@ try {
 
 if (isPreflight) process.exit(0);
 
+if (!targetVersion) {
+  console.error('npm_package_version is not set. Run via npm version.');
+  process.exit(1);
+}
+
 // ── Sync shared docs ──
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -65,11 +70,6 @@ try {
       process.exit(1);
     }
   }
-}
-
-if (!targetVersion) {
-  console.error('npm_package_version is not set. Run via npm version.');
-  process.exit(1);
 }
 
 // ── Side effects ──

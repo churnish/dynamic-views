@@ -551,6 +551,8 @@ export class DynamicViewsGridView extends BasesView {
         if (ownerDoc !== this.currentDoc) {
           this.currentDoc = ownerDoc;
           this.handleDocumentChange(ownerDoc);
+          // Re-render to recalculate layout with new window context
+          this.onDataUpdated();
         }
       })
     );
@@ -612,6 +614,13 @@ export class DynamicViewsGridView extends BasesView {
       () => this.onDataUpdated(),
       this.containerEl
     );
+
+    // Disconnect old observer — bound to destroyed popout's V8 isolate.
+    // Grid uses CSS Grid for layout, so observer absence is safe until
+    // the next render cycle recreates it in renderCardBatch.
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.observerWindow = null;
   }
 
   onload(): void {
@@ -625,10 +634,6 @@ export class DynamicViewsGridView extends BasesView {
     if (ownerDoc !== this.currentDoc) {
       this.currentDoc = ownerDoc;
       this.handleDocumentChange(ownerDoc);
-      // Force observer recreation — old observer is bound to destroyed popout's V8 isolate
-      this.resizeObserver?.disconnect();
-      this.resizeObserver = null;
-      this.observerWindow = null;
     }
 
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
@@ -1496,6 +1501,10 @@ export class DynamicViewsGridView extends BasesView {
         );
       }
     }
+
+    // Re-initialize scroll gradients (property widths may have changed)
+    const feedEl = this.feedContainerRef.current;
+    if (feedEl) initializeScrollGradients(feedEl);
 
     // Grid: CSS auto-handles row height changes, no relayout needed
   }

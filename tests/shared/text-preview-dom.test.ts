@@ -1,5 +1,6 @@
 import {
   updateTextPreviewDOM,
+  setPreviewContent,
   applyPerParagraphClamp,
 } from '../../src/shared/text-preview-dom';
 
@@ -376,13 +377,12 @@ describe('applyPerParagraphClamp', () => {
     expect(paragraphs[2].style.display).toBe('none');
   });
 
-  it('force-ellipsis when margin-less fallback has zero remaining lines', () => {
+  it('force-ellipsis when margin consumes budget with no remaining lines', () => {
     // 4 single-line paragraphs, budget: 3
     // p0: 1 line → used: 1
     // margin: +1 → used: 2
     // p1: 1 line → used: 3
-    // p2: margin → used: 4, remaining: -1 → undo margin, remainingNoMargin: 0
-    //     → can't show margin-less → hide p2, p3
+    // p2: margin → used: 4, remaining: -1 → hide p2, p3
     // Post-step: p1 is last visible with hidden siblings → force-ellipsis
     const el = makePreviewWithParagraphs([20, 20, 20, 20], 20, 3);
     const paragraphs = el.querySelectorAll('p');
@@ -400,29 +400,27 @@ describe('applyPerParagraphClamp', () => {
     expect(paragraphs[3].style.display).toBe('none');
   });
 
-  it('shows next paragraph margin-less when margin would waste budget line', () => {
+  it('hides paragraph when margin consumes budget instead of removing margin', () => {
     // 4 single-line paragraphs, budget: 4
     // p0: 1 line → used: 1
     // margin: +1 → used: 2
     // p1: 1 line → used: 3
-    // p2: margin → used: 4, remaining: 0 → undo margin, remainingNoMargin: 1
-    //     → show p2 margin-less, clamped to 1 line, hide p3
-    // Post-step: p2 is last visible with hidden p3 → force-ellipsis
-    // Visual: p0(1) + margin(1) + p1(1) + p2(1, no margin) = 4 lines = budget
+    // p2: margin → used: 4, remaining: 0 → hide p2, p3
+    // Post-step: p1 is last visible with hidden siblings → force-ellipsis
     const el = makePreviewWithParagraphs([20, 20, 20, 20], 20, 4);
     const paragraphs = el.querySelectorAll('p');
 
     applyPerParagraphClamp(el);
 
     expect(paragraphs[0].style.display).toBe('');
-    expect(paragraphs[1].style.display).toBe('');
-    // p2: margin-less, clamped to 1, force-ellipsis (hidden sibling p3)
-    expect(paragraphs[2].style.marginTop).toBe('0px');
-    expect(paragraphs[2].style.display).toBe('-webkit-box');
-    expect(paragraphs[2].style.webkitLineClamp).toBe('1');
+    // p1: force-ellipsis (fits but has hidden siblings)
+    expect(paragraphs[1].style.display).toBe('-webkit-box');
+    expect(paragraphs[1].style.webkitLineClamp).toBe('1');
     expect(
-      paragraphs[2].querySelector('.dynamic-views-truncation-indicator')
+      paragraphs[1].querySelector('.dynamic-views-truncation-indicator')
     ).not.toBeNull();
+    // p2, p3: hidden (margin would have collapsed spacing)
+    expect(paragraphs[2].style.display).toBe('none');
     expect(paragraphs[3].style.display).toBe('none');
   });
 
@@ -483,5 +481,80 @@ describe('applyPerParagraphClamp', () => {
     expect(paragraphs[0].style.display).toBe('');
     expect(paragraphs[0].style.webkitLineClamp).toBe('');
     expect(paragraphs[1].style.display).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// setPreviewContent
+// ---------------------------------------------------------------------------
+
+describe('setPreviewContent', () => {
+  function makePreviewEl(keepNewlines = false): HTMLElement {
+    if (keepNewlines) {
+      document.body.classList.add('dynamic-views-text-preview-keep-newlines');
+    } else {
+      document.body.classList.remove(
+        'dynamic-views-text-preview-keep-newlines'
+      );
+    }
+    const el = document.createElement('div');
+    el.className = 'card-text-preview';
+    return el;
+  }
+
+  afterEach(() => {
+    document.body.classList.remove('dynamic-views-text-preview-keep-newlines');
+  });
+
+  it('sets plain text when keep-newlines is off', () => {
+    const el = makePreviewEl(false);
+    setPreviewContent(el, 'Hello world');
+    expect(el.textContent).toBe('Hello world');
+    expect(el.children.length).toBe(0);
+  });
+
+  it('sets plain text when no newlines even with keep-newlines on', () => {
+    const el = makePreviewEl(true);
+    setPreviewContent(el, 'No breaks here');
+    expect(el.textContent).toBe('No breaks here');
+    expect(el.children.length).toBe(0);
+  });
+
+  it('splits double newlines into <p> elements', () => {
+    const el = makePreviewEl(true);
+    setPreviewContent(el, 'Para one\n\nPara two\n\nPara three');
+    expect(el.children.length).toBe(3);
+    expect(el.children[0].textContent).toBe('Para one');
+    expect(el.children[1].textContent).toBe('Para two');
+    expect(el.children[2].textContent).toBe('Para three');
+  });
+
+  it('collapses triple+ newlines into single paragraph break', () => {
+    const el = makePreviewEl(true);
+    setPreviewContent(el, 'A\n\n\n\nB');
+    expect(el.children.length).toBe(2);
+  });
+
+  it('treats single newline as part of same paragraph', () => {
+    const el = makePreviewEl(true);
+    setPreviewContent(el, 'Line one\nLine two');
+    expect(el.children.length).toBe(1);
+    expect(el.children[0].textContent).toBe('Line one\nLine two');
+  });
+
+  it('handles empty string', () => {
+    const el = makePreviewEl(true);
+    setPreviewContent(el, '');
+    expect(el.textContent).toBe('');
+    expect(el.children.length).toBe(0);
+  });
+
+  it('clears previous paragraphs before setting new ones', () => {
+    const el = makePreviewEl(true);
+    setPreviewContent(el, 'First\n\nSecond');
+    expect(el.children.length).toBe(2);
+    setPreviewContent(el, 'A\n\nB\n\nC');
+    expect(el.children.length).toBe(3);
+    expect(el.children[0].textContent).toBe('A');
   });
 });
