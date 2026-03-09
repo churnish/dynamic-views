@@ -78,19 +78,22 @@ export function shouldCollapseField(
  */
 export function computeInvertPairs(
   props: Array<{ name: string }>,
-  unpairSet: Set<string>
+  invertPairingSet: Set<string>
 ): Map<number, number> {
   const pairs = new Map<number, number>();
   const claimed = new Set<number>();
 
   for (let i = 0; i < props.length; i++) {
     if (claimed.has(i)) continue;
-    if (!unpairSet.has(props[i].name)) continue;
+    if (!invertPairingSet.has(props[i].name)) continue;
 
     let partnerIdx: number;
     if (i === 0) {
       partnerIdx = 1;
-    } else if (i + 1 < props.length && unpairSet.has(props[i + 1].name)) {
+    } else if (
+      i + 1 < props.length &&
+      invertPairingSet.has(props[i + 1].name)
+    ) {
       partnerIdx = i + 1;
     } else {
       partnerIdx = i - 1;

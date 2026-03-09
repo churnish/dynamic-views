@@ -46,18 +46,6 @@ const MASONRY = 'Masonry';
 const NEW_GRID_BASE = 'New Grid base';
 const NEW_MASONRY_BASE = 'New Masonry base';
 
-/** Retry a callback at `interval` ms until it returns true or `timeout` ms elapses. */
-function retryUntilSuccess(
-  interval: number,
-  timeout: number,
-  callback: () => boolean
-): void {
-  const id = window.setInterval(() => {
-    if (callback()) window.clearInterval(id);
-  }, interval);
-  window.setTimeout(() => window.clearInterval(id), timeout);
-}
-
 export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
   /** Tracks which NN API instance we registered menus with */
@@ -403,10 +391,24 @@ export default class DynamicViews extends Plugin {
 
     // Register folder context menus in Notebook Navigator.
     // NN's async onload may not finish before onLayoutReady — retry briefly.
+    // registerInterval auto-clears on plugin unload.
     this.app.workspace.onLayoutReady(() => {
       if (!this.registerNotebookNavigatorMenus()) {
-        retryUntilSuccess(500, 10_000, () =>
-          this.registerNotebookNavigatorMenus()
+        const deadline = Date.now() + 10_000;
+        const id = this.registerInterval(
+          window.setInterval(() => {
+            if (
+              this.registerNotebookNavigatorMenus() ||
+              Date.now() >= deadline
+            ) {
+              window.clearInterval(id);
+              if (Date.now() >= deadline) {
+                console.warn(
+                  'Dynamic Views: Notebook Navigator API not available after 10 s'
+                );
+              }
+            }
+          }, 500)
         );
       }
     });
@@ -526,8 +528,8 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
         // callback, so both items are in the array now. Splice them into
         // the creation group (before the first separator) synchronously
         // — before the menu is shown.
-        const menu = (item as MenuItem & { menu?: { items: MenuItem[] } })
-          .menu;
+        // Uses undocumented MenuItem.menu and Menu.items (stable since 1.0).
+        const menu = (item as MenuItem & { menu?: { items: MenuItem[] } }).menu;
         if (!menu) return;
         const items = menu.items as (MenuItem & { titleEl?: HTMLElement })[];
         for (const a of added) {

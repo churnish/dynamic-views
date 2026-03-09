@@ -1,4 +1,7 @@
-import { updateTextPreviewDOM } from '../../src/shared/text-preview-dom';
+import {
+  updateTextPreviewDOM,
+  applyPerParagraphClamp,
+} from '../../src/shared/text-preview-dom';
 
 // ---------------------------------------------------------------------------
 // Helpers — build minimal card DOM fixtures
@@ -185,5 +188,300 @@ describe('updateTextPreviewDOM', () => {
     // DOM should be completely unchanged
     expect(card.innerHTML).toBe(bodyBefore);
     expect(card.querySelector('.card-previews')).toBeNull();
+  });
+
+  // preserveNewlines mode ---------------------------------------------------
+  describe('preserveNewlines mode', () => {
+    afterEach(() => {
+      document.body.classList.remove(
+        'dynamic-views-text-preview-keep-newlines'
+      );
+    });
+
+    it('creates <p> elements when body class is set and text has paragraph breaks', () => {
+      document.body.classList.add('dynamic-views-text-preview-keep-newlines');
+      const card = makeEmptyCard();
+
+      updateTextPreviewDOM(card, 'Para one\n\nPara two\n\nPara three');
+
+      const textEl = card.querySelector('.card-text-preview')!;
+      const paragraphs = textEl.querySelectorAll('p');
+      expect(paragraphs.length).toBe(3);
+      expect(paragraphs[0].textContent).toBe('Para one');
+      expect(paragraphs[1].textContent).toBe('Para two');
+      expect(paragraphs[2].textContent).toBe('Para three');
+    });
+
+    it('creates <p> elements when text has only single newlines', () => {
+      document.body.classList.add('dynamic-views-text-preview-keep-newlines');
+      const card = makeEmptyCard();
+
+      updateTextPreviewDOM(card, 'Line one\nLine two');
+
+      const textEl = card.querySelector('.card-text-preview')!;
+      const paragraphs = textEl.querySelectorAll('p');
+      // Single newlines — no split on \n\n, so one <p> with full text
+      expect(paragraphs.length).toBe(1);
+      expect(paragraphs[0].textContent).toBe('Line one\nLine two');
+    });
+
+    it('uses plain textContent when text has no newlines', () => {
+      document.body.classList.add('dynamic-views-text-preview-keep-newlines');
+      const card = makeEmptyCard();
+
+      updateTextPreviewDOM(card, 'No newlines here');
+
+      const textEl = card.querySelector('.card-text-preview')!;
+      expect(textEl.querySelectorAll('p').length).toBe(0);
+      expect(textEl.textContent).toBe('No newlines here');
+    });
+
+    it('uses plain textContent when body class is absent', () => {
+      const card = makeEmptyCard();
+
+      updateTextPreviewDOM(card, 'Para one\n\nPara two');
+
+      const textEl = card.querySelector('.card-text-preview')!;
+      expect(textEl.querySelectorAll('p').length).toBe(0);
+      expect(textEl.textContent).toBe('Para one\n\nPara two');
+    });
+
+    it('replaces <p> elements with plain textContent when class is removed', () => {
+      document.body.classList.add('dynamic-views-text-preview-keep-newlines');
+      const card = makeEmptyCard();
+
+      // First call — creates <p> elements
+      updateTextPreviewDOM(card, 'Para one\n\nPara two');
+      expect(
+        card.querySelector('.card-text-preview')!.querySelectorAll('p').length
+      ).toBe(2);
+
+      // Remove class, update again
+      document.body.classList.remove(
+        'dynamic-views-text-preview-keep-newlines'
+      );
+      updateTextPreviewDOM(card, 'Plain text now');
+
+      const textEl = card.querySelector('.card-text-preview')!;
+      expect(textEl.querySelectorAll('p').length).toBe(0);
+      expect(textEl.textContent).toBe('Plain text now');
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyPerParagraphClamp
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a .card-text-preview element with <p> children.
+ * Uses mock offsetHeight and getComputedStyle since jsdom has no layout engine.
+ */
+function makePreviewWithParagraphs(
+  paragraphHeights: number[],
+  lineHeight: number,
+  budget: number
+): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'card-text-preview';
+
+  for (const h of paragraphHeights) {
+    const p = document.createElement('p');
+    p.textContent = 'x'.repeat(10);
+    // jsdom has no layout — mock offsetHeight via defineProperty
+    Object.defineProperty(p, 'offsetHeight', { value: h, configurable: true });
+    el.appendChild(p);
+  }
+
+  // Mock getComputedStyle for the preview element
+  const originalGetComputedStyle = window.getComputedStyle;
+  vi.spyOn(window, 'getComputedStyle').mockImplementation((target) => {
+    if (target === el) {
+      return {
+        lineHeight: `${lineHeight}px`,
+        getPropertyValue: (prop: string) => {
+          if (prop === '--dynamic-views-text-preview-lines')
+            return String(budget);
+          return '';
+        },
+      } as unknown as CSSStyleDeclaration;
+    }
+    return originalGetComputedStyle(target);
+  });
+
+  return el;
+}
+
+describe('applyPerParagraphClamp', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does nothing when there are no <p> children', () => {
+    const el = document.createElement('div');
+    el.className = 'card-text-preview';
+    el.textContent = 'plain text';
+
+    applyPerParagraphClamp(el);
+
+    // No changes — textContent intact, no style mutations
+    expect(el.textContent).toBe('plain text');
+  });
+
+  it('does not clamp when all paragraphs fit within budget', () => {
+    // 3 paragraphs, each 1 line (20px / 20px = 1 line)
+    // Budget: 5 lines → used: 1 + 1(margin) + 1 + 1(margin) + 1 = 5 → fits exactly
+    const el = makePreviewWithParagraphs([20, 20, 20], 20, 5);
+    const paragraphs = el.querySelectorAll('p');
+
+    applyPerParagraphClamp(el);
+
+    // No paragraph should be hidden or clamped
+    for (const p of paragraphs) {
+      expect(p.style.display).toBe('');
+      expect(p.style.webkitLineClamp).toBe('');
+    }
+  });
+
+  it('clamps a single long paragraph that exceeds budget', () => {
+    // 1 paragraph, 8 lines (160px / 20px), budget: 3
+    const el = makePreviewWithParagraphs([160], 20, 3);
+    const p = el.querySelector('p')!;
+
+    applyPerParagraphClamp(el);
+
+    expect(p.style.display).toBe('-webkit-box');
+    expect(p.style.webkitLineClamp).toBe('3');
+    expect(p.style.webkitBoxOrient).toBe('vertical');
+    expect(p.style.overflow).toBe('hidden');
+  });
+
+  it('clamps the overflowing paragraph and hides subsequent ones', () => {
+    // 3 paragraphs: 2 lines, 4 lines, 2 lines (at 20px line height)
+    // Budget: 5
+    // p0: 2 lines → used: 2
+    // margin: +1 → used: 3
+    // p1: 4 lines, remaining: 2 → overflow → clamp to 2, hide p2
+    const el = makePreviewWithParagraphs([40, 80, 40], 20, 5);
+    const paragraphs = el.querySelectorAll('p');
+
+    applyPerParagraphClamp(el);
+
+    // p0: no clamping
+    expect(paragraphs[0].style.display).toBe('');
+    // p1: clamped to 2 lines
+    expect(paragraphs[1].style.display).toBe('-webkit-box');
+    expect(paragraphs[1].style.webkitLineClamp).toBe('2');
+    // p2: hidden
+    expect(paragraphs[2].style.display).toBe('none');
+  });
+
+  it('force-ellipsis when margin-less fallback has zero remaining lines', () => {
+    // 4 single-line paragraphs, budget: 3
+    // p0: 1 line → used: 1
+    // margin: +1 → used: 2
+    // p1: 1 line → used: 3
+    // p2: margin → used: 4, remaining: -1 → undo margin, remainingNoMargin: 0
+    //     → can't show margin-less → hide p2, p3
+    // Post-step: p1 is last visible with hidden siblings → force-ellipsis
+    const el = makePreviewWithParagraphs([20, 20, 20, 20], 20, 3);
+    const paragraphs = el.querySelectorAll('p');
+
+    applyPerParagraphClamp(el);
+
+    expect(paragraphs[0].style.display).toBe('');
+    // p1: force-ellipsis (fits but has hidden siblings)
+    expect(paragraphs[1].style.display).toBe('-webkit-box');
+    expect(paragraphs[1].style.webkitLineClamp).toBe('1');
+    expect(
+      paragraphs[1].querySelector('.dv-truncation-indicator')
+    ).not.toBeNull();
+    expect(paragraphs[2].style.display).toBe('none');
+    expect(paragraphs[3].style.display).toBe('none');
+  });
+
+  it('shows next paragraph margin-less when margin would waste budget line', () => {
+    // 4 single-line paragraphs, budget: 4
+    // p0: 1 line → used: 1
+    // margin: +1 → used: 2
+    // p1: 1 line → used: 3
+    // p2: margin → used: 4, remaining: 0 → undo margin, remainingNoMargin: 1
+    //     → show p2 margin-less, clamped to 1 line, hide p3
+    // Post-step: p2 is last visible with hidden p3 → force-ellipsis
+    // Visual: p0(1) + margin(1) + p1(1) + p2(1, no margin) = 4 lines = budget
+    const el = makePreviewWithParagraphs([20, 20, 20, 20], 20, 4);
+    const paragraphs = el.querySelectorAll('p');
+
+    applyPerParagraphClamp(el);
+
+    expect(paragraphs[0].style.display).toBe('');
+    expect(paragraphs[1].style.display).toBe('');
+    // p2: margin-less, clamped to 1, force-ellipsis (hidden sibling p3)
+    expect(paragraphs[2].style.marginTop).toBe('0px');
+    expect(paragraphs[2].style.display).toBe('-webkit-box');
+    expect(paragraphs[2].style.webkitLineClamp).toBe('1');
+    expect(
+      paragraphs[2].querySelector('.dv-truncation-indicator')
+    ).not.toBeNull();
+    expect(paragraphs[3].style.display).toBe('none');
+  });
+
+  it('is idempotent — running twice produces same result', () => {
+    const el = makePreviewWithParagraphs([40, 80, 40], 20, 5);
+
+    applyPerParagraphClamp(el);
+
+    // Capture state after first run
+    const paragraphs = el.querySelectorAll('p');
+    const firstRunStyles = Array.from(paragraphs).map((p) => ({
+      display: p.style.display,
+      clamp: p.style.webkitLineClamp,
+    }));
+
+    // Need to re-mock because offsetHeight on hidden elements would be 0
+    // in a real browser, but our mocks are fixed
+    applyPerParagraphClamp(el);
+
+    const secondRunStyles = Array.from(paragraphs).map((p) => ({
+      display: p.style.display,
+      clamp: p.style.webkitLineClamp,
+    }));
+
+    expect(secondRunStyles).toEqual(firstRunStyles);
+  });
+
+  it('clears stale state from a previous run', () => {
+    // First run: budget 2 → clamp p0 to 2
+    const el = makePreviewWithParagraphs([60, 40], 20, 2);
+    const paragraphs = el.querySelectorAll('p');
+
+    applyPerParagraphClamp(el);
+
+    expect(paragraphs[0].style.display).toBe('-webkit-box');
+    expect(paragraphs[0].style.webkitLineClamp).toBe('2');
+    expect(paragraphs[1].style.display).toBe('none');
+
+    // Simulate budget change: re-mock with budget 10
+    vi.restoreAllMocks();
+    const originalGetComputedStyle = window.getComputedStyle;
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((target) => {
+      if (target === el) {
+        return {
+          lineHeight: '20px',
+          getPropertyValue: (prop: string) => {
+            if (prop === '--dynamic-views-text-preview-lines') return '10';
+            return '';
+          },
+        } as unknown as CSSStyleDeclaration;
+      }
+      return originalGetComputedStyle(target);
+    });
+
+    applyPerParagraphClamp(el);
+
+    // Stale styles should be cleared — all paragraphs fit now
+    expect(paragraphs[0].style.display).toBe('');
+    expect(paragraphs[0].style.webkitLineClamp).toBe('');
+    expect(paragraphs[1].style.display).toBe('');
   });
 });

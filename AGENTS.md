@@ -23,13 +23,13 @@
 
 - **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
 
-## Knowledge
+## Docs
 
-Use @knowledge/project-structure.md as a navigational guide before reading or editing any file in the codebase. ALWAYS update it when adding, removing, or renaming source, test, or knowledge files.
+Use @docs/project-structure.md as a navigational guide before reading or editing any file in the codebase. ALWAYS update it when adding, removing, or renaming source, test, or docs.
 
 Consult @wiki/wiki-structure.md to find user-facing, human-verified plugin wiki pages that document how features and settings are meant to function.
 
-### knowledge/architecture/
+### docs/architecture/
 
 Read...
 
@@ -43,7 +43,7 @@ Read...
 - **slideshow.md** before working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants.
 - **write-path-safety.md** before adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption.
 
-### knowledge/patterns/
+### docs/patterns/
 
 Read...
 

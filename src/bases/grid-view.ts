@@ -81,8 +81,6 @@ import type {
 import { setupContentVisibility } from '../shared/content-visibility';
 import { setupStickyHeadingObserver } from './sticky-heading';
 import {
-  updateTextPreviewDOM,
-  applyPerParagraphClamp,
   initializeTextPreviewClamp,
   initializeTextPreviewClampForCards,
 } from '../shared/text-preview-dom';
@@ -621,11 +619,25 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   onDataUpdated(): void {
+    // Defensive: catch stale document after popout drag-back
+    // (layout-change handler may miss the document swap due to timing)
+    const ownerDoc = this.containerEl.ownerDocument;
+    if (ownerDoc !== this.currentDoc) {
+      this.currentDoc = ownerDoc;
+      this.handleDocumentChange(ownerDoc);
+      // Force observer recreation — old observer is bound to destroyed popout's V8 isolate
+      this.resizeObserver?.disconnect();
+      this.resizeObserver = null;
+      this.observerWindow = null;
+    }
+
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
     this.handleTemplateToggleLocal();
 
     // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
     applyCssOnlySettings(this.config, this.containerEl);
+    // Re-measure per-paragraph clamps after CSS variable change (keep-newlines only)
+    initializeTextPreviewClamp(this.containerEl);
 
     // Delay reading config - Obsidian may fire onDataUpdated before updating config.getOrder()
     // Using queueMicrotask gives Obsidian time to finish updating config state.
@@ -928,7 +940,13 @@ export class DynamicViewsGridView extends BasesView {
 
       // If only content changed (not paths/settings), update in-place
       if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {
-        await this.updateCardsInPlace(changedPaths, allEntries, settings);
+        await this.updateCardsInPlace(
+          changedPaths,
+          allEntries,
+          settings,
+          sortMethod,
+          visibleProperties
+        );
         this.renderState.lastRenderHash = renderHash;
         return;
       }
@@ -1389,7 +1407,12 @@ export class DynamicViewsGridView extends BasesView {
         stored.cardData.imageUrl
       );
 
-      this.updateTitleText(cardEl, stored.cardData, stored.entry, settings);
+      this.cardRenderer.updateTitleText(
+        cardEl,
+        stored.cardData,
+        stored.entry,
+        settings
+      );
       this.cardRenderer.rerenderSubtitle(
         cardEl,
         stored.cardData,
@@ -1408,45 +1431,13 @@ export class DynamicViewsGridView extends BasesView {
     this.scrollPreservation?.restoreAfterRender();
   }
 
-  /** Update title text node without destroying child elements (extension suffix) */
-  private updateTitleText(
-    cardEl: HTMLElement,
-    card: CardData,
-    entry: BasesEntry,
-    settings: BasesResolvedSettings
-  ): void {
-    const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
-    if (!titleTextEl) return;
-
-    // Apply Extension mode logic (mirrors shared-renderer.ts title resolution)
-    const isExtMode = document.body.classList.contains(
-      'dynamic-views-file-type-ext'
-    );
-    const titleProp = settings.titleProperty || '';
-    const titleHasExtension =
-      titleProp === 'file.name' || titleProp === 'file.fullname';
-    const displayTitle =
-      isExtMode && titleHasExtension ? entry.file.basename : card.title;
-
-    // Find first text node — preserves child elements (.card-title-ext-suffix)
-    const textNode = Array.from(titleTextEl.childNodes).find(
-      (n) => n.nodeType === Node.TEXT_NODE
-    );
-    if (textNode) {
-      textNode.textContent = displayTitle || '';
-    } else if (displayTitle) {
-      titleTextEl.insertBefore(
-        document.createTextNode(displayTitle),
-        titleTextEl.firstChild
-      );
-    }
-  }
-
   /** Update only changed cards in-place without full re-render */
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: BasesResolvedSettings
+    settings: BasesResolvedSettings,
+    sortMethod: string,
+    visibleProperties: string[]
   ): Promise<void> {
     // Clear cache for changed files only
     for (const path of changedPaths) {
@@ -1468,18 +1459,42 @@ export class DynamicViewsGridView extends BasesView {
       this.contentCache.hasImageAvailable
     );
 
-    // Update each changed card's DOM
+    // Rebuild CardData and update DOM for each changed card
     for (const path of changedPaths) {
+      const stored = this.cardDataByPath.get(path);
+      const freshEntry = changedEntries.find((e) => e.file.path === path);
+      if (!freshEntry) continue;
+
+      // Rebuild CardData from fresh entry + cached content
+      const newCard = basesEntryToCardData(
+        this.app,
+        freshEntry,
+        settings,
+        sortMethod,
+        this.sortState.isShuffled,
+        visibleProperties,
+        this.contentCache.textPreviews[path],
+        this.contentCache.images[path]
+      );
+
+      // Update stored references
+      if (stored) {
+        stored.cardData = newCard;
+        stored.entry = freshEntry;
+      }
+
+      // Surgical DOM update for mounted card
       const cardEl = this.containerEl.querySelector<HTMLElement>(
         `[data-path="${CSS.escape(path)}"]`
       );
-      if (!cardEl) continue;
-
-      // Update text preview — add/remove wrapper to avoid stale empty gap
-      updateTextPreviewDOM(cardEl, this.contentCache.textPreviews[path] || '');
-      // Re-clamp after text preview content change
-      const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
-      if (previewEl) applyPerParagraphClamp(previewEl);
+      if (cardEl) {
+        this.cardRenderer.updateCardContent(
+          cardEl,
+          newCard,
+          freshEntry,
+          settings
+        );
+      }
     }
 
     // Grid: CSS auto-handles row height changes, no relayout needed

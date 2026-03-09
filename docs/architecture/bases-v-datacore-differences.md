@@ -2,12 +2,12 @@
 title: Bases v Datacore differences
 description: Architectural differences between the Bases (imperative DOM) and Datacore (Preact JSX) backends — rendering, events, cleanup, state, and common pitfalls.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-03
+last updated: 2026-03-09
 ---
 
-# Backend differences
+# Bases v Datacore differences
 
-Architectural comparison of the Bases and Datacore backends. For card-level DOM details, see card-dom-structure.md.
+Architectural comparison of the Bases and Datacore backends. For masonry-specific divergences (virtual scrolling, resize strategy, layout guards), see `masonry-layout.md`.
 
 ## Rendering model
 
@@ -42,7 +42,7 @@ Architectural comparison of the Bases and Datacore backends. For card-level DOM 
 
 ### The WeakMap pattern (Datacore only)
 
-For state that must survive re-renders and avoid path collisions, use `WeakMap<HTMLElement, ...>`. Full details in datacore-ref-callback-patterns.md.
+For state that must survive re-renders and avoid path collisions, use `WeakMap<HTMLElement, ...>`. Full details in `datacore-ref-callback-patterns.md`.
 
 Key properties:
 
@@ -55,7 +55,7 @@ Current usages: `cardHoverIntentState` (cover hover zoom), `cardHoverIntentActiv
 
 ## `document`/`window` scope
 
-Both backends must handle Electron popout windows. Full details in electron-popout-quirks.md (plugins-level knowledge).
+Both backends must handle Electron popout windows. Full details in `electron-popout-quirks.md` (plugins-level docs).
 
 |                           | Bases                                                                                           | Datacore                                                                                    |
 | ------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -70,19 +70,22 @@ Both backends listen for `PLUGIN_SETTINGS_CHANGE` on `document.body` (module sco
 
 ## DOM hierarchy
 
-|                      | Bases                                                                         | Datacore                                                                                                                          |
-| -------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Outer wrapper**    | `.dynamic-views` (view container)                                             | `div.dynamic-views` (returned by `View` in `controller.tsx`); its parent (Datacore code block container) is not plugin-controlled |
-| **Layout container** | `.dynamic-views-masonry` or `.dynamic-views-grid`                             | `div.dynamic-views-masonry` or `div.dynamic-views-grid` (returned by `CardRenderer`)                                              |
-| **Group sections**   | `.dynamic-views-group-section` → `.masonry-container` / CSS Grid              | Flat — no group sections (Datacore doesn't support grouping yet)                                                                  |
-| **Card DOM**         | Identical class names and nesting — see card-dom-structure.md for divergences | Same                                                                                                                              |
+|                      | Bases                                                                           | Datacore                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Outer wrapper**    | `.dynamic-views` (view container)                                               | `div.dynamic-views` (returned by `View` in `controller.tsx`); its parent (Datacore code block container) is not plugin-controlled |
+| **Layout container** | `.dynamic-views-masonry` or `.dynamic-views-grid`                               | `div.dynamic-views-masonry` or `div.dynamic-views-grid` (returned by `CardRenderer`)                                              |
+| **Group sections**   | `.dynamic-views-group-section` → `.masonry-container` / CSS Grid                | Flat — no group sections (Datacore doesn't support grouping yet)                                                                  |
+| **Card DOM**         | Identical class names and nesting — see `card-dom-structure.md` for divergences | Same                                                                                                                              |
 
 ## Settings and state
+
+> For the full resolution chain, sparse storage, stale config guards, and template system, see `settings-resolution.md`.
 
 |                     | Bases                                                                                                   | Datacore                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **Settings source** | `.base` YAML → Obsidian Bases API: `config.get()`, `config.getOrder()`                                  | Code block markers + `persistenceManager.getDatacoreState(queryId)`                                   |
 | **Settings type**   | `BasesResolvedSettings` = `PluginSettings & ViewDefaults` + `_displayNameMap`, `_skipLeadingProperties` | `ResolvedSettings` = `PluginSettings & ViewDefaults & DatacoreDefaults` + `_displayNameMap`           |
+| **Property layout** | `rightPropertyPosition` applied via `applyViewContainerStyles()` (see `property-layout.md`)             | `rightPropertyPosition` not consumed — known parity gap (see `property-layout.md`)                    |
 | **View ID**         | YAML `id` field in `.base` file                                                                         | 6-char query ID string in code block                                                                  |
 | **UI state**        | `BasesUIState { collapsedGroups }` per view ID                                                          | `DatacoreState { sortMethod, viewMode, widthMode, searchQuery, resultLimit, settings? }` per query ID |
 | **Persistence**     | `persistenceManager.getBasesState(viewId)` / `setBasesState()`                                          | `persistenceManager.getDatacoreState(queryId)` / `setDatacoreState()`                                 |
@@ -165,11 +168,20 @@ Bases attaches classes directly to the card element (`.card.image-format-cover`)
 
 ### `scrollController` recreation on re-render
 
-Each Datacore `Card` render creates a new `AbortController`. The ref callback aborts the previous one via `cleanupCardScrollListeners(card.path)`. Listeners attached with the old signal are silently removed. **Fix**: Use WeakMap pattern for listeners that must survive re-renders. See datacore-ref-callback-patterns.md.
+Each Datacore `Card` render creates a new `AbortController`. The ref callback aborts the previous one via `cleanupCardScrollListeners(card.path)`. Listeners attached with the old signal are silently removed. **Fix**: Use WeakMap pattern for listeners that must survive re-renders. See `datacore-ref-callback-patterns.md`.
 
 ### Cross-container `card.path` collision
 
 Module-level `Map<string, AbortController>` keyed by `card.path` in `card-renderer.tsx`. When the same file appears in two Dynamic Views containers, one container's cleanup aborts the other's signal. **Fix**: Use `WeakMap<HTMLElement, ...>` instead of path-keyed Map.
+
+### Style Settings text preview cache invalidation
+
+Both backends must invalidate cached text previews when Style Settings toggles change (`omitFirstLine`, `keepPreviewHeadings`, `keepPreviewNewlines`), but they use completely different mechanisms:
+
+- **Bases**: `getStyleSettingsHash()` returns a hash of all JS-relevant Style Settings values. On each render cycle, `grid-view.ts`/`masonry-view.ts` compare `styleSettingsHash !== lastStyleSettingsHash` and clear `contentCache.textPreviews = {}` on mismatch. Simple and total — all cached entries are discarded.
+- **Datacore**: `_styleRevision` (a Preact state counter) is bumped by the MutationObserver when body classes change, triggering a re-render. The content loading effect re-runs because `omitFirstLine`/`keepPreviewHeadings`/`keepPreviewNewlines` are in its dependency array. A `prevTextPreviewSettingsRef` tracks a composite key of the three values; when it changes, the cache copy loop is skipped so all text previews reload from scratch.
+
+**Past bug**: Datacore's cache copy loop only checked mtime, not whether Style Settings changed. When SS toggles changed, the effect re-ran but copied stale cached entries forward, so text previews never updated. Fixed by adding the `prevTextPreviewSettingsRef` composite key check.
 
 ### Title link structure divergence
 

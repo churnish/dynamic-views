@@ -1,11 +1,9 @@
-node_modules/
-node_modules.nosync/
 .claude/
-coverage/
-screenshots/
 .vscode/
 cc-chats/
-wiki/
+coverage/
+node_modules/
+screenshots/
 
 * [0-9]
 * [0-9].*
@@ -13,7 +11,8 @@ wiki/
 *.map
 *.zip
 
-main.js
-styles.css
-data.json
 .DS_Store
+data.json
+main.js
+package-lock.json
+styles.css

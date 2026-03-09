@@ -24,6 +24,7 @@ import {
   WIDE_MODE_MULTIPLIER,
   SCROLL_THROTTLE_MS,
   RESIZE_THROTTLE_MS,
+  DROPDOWN_OPENED_EVENT,
 } from '../shared/constants';
 import { CardView } from './card-view';
 import {
@@ -215,6 +216,7 @@ export function View({
   const [settings, setSettings] = dc.useState(getPersistedSettings());
 
   // Refs
+  const instanceId = dc.useRef(Math.random().toString(36).slice(2, 8));
   const explorerRef = dc.useRef<HTMLElement | null>(null);
   const toolbarRef = dc.useRef<HTMLElement | null>(null);
   const containerRef = dc.useRef<HTMLElement | null>(null);
@@ -255,7 +257,9 @@ export function View({
   }, []);
 
   // Expand container min-height when toolbar dropdowns are open so they aren't
-  // clipped by Obsidian's `contain: paint` on the code block wrapper
+  // clipped by `contain: paint` on `.cm-preview-code-block` (Live Preview only).
+  // Reading view wraps code blocks in `.el-pre` which has no paint containment,
+  // so dropdowns overflow freely there — this effect is only needed in Live Preview.
   dc.useEffect(() => {
     const container = explorerRef.current;
     if (!container) return;
@@ -1778,6 +1782,18 @@ export function View({
     setShowQueryEditor(false);
   }, []);
 
+  // Close own dropdowns when another query on the same page opens one
+  dc.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail !== instanceId.current) {
+        closeAllDropdowns();
+      }
+    };
+    document.addEventListener(DROPDOWN_OPENED_EVENT, handler);
+    return () => document.removeEventListener(DROPDOWN_OPENED_EVENT, handler);
+  }, [closeAllDropdowns]);
+
   const handleToggleSettings = dc.useCallback(() => {
     setShowSettings((prev) => !prev);
     // Close all other dropdowns
@@ -1786,6 +1802,9 @@ export function View({
       setShowSortDropdown(false);
       setShowLimitDropdown(false);
       setShowQueryEditor(false);
+      document.dispatchEvent(
+        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
+      );
     }
   }, [showSettings]);
 
@@ -1797,6 +1816,9 @@ export function View({
       setShowLimitDropdown(false);
       setShowQueryEditor(false);
       setShowSettings(false);
+      document.dispatchEvent(
+        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
+      );
     }
   }, [showViewDropdown]);
 
@@ -1808,6 +1830,9 @@ export function View({
       setShowLimitDropdown(false);
       setShowQueryEditor(false);
       setShowSettings(false);
+      document.dispatchEvent(
+        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
+      );
     }
   }, [showSortDropdown]);
 
@@ -1819,6 +1844,9 @@ export function View({
       setShowSortDropdown(false);
       setShowQueryEditor(false);
       setShowSettings(false);
+      document.dispatchEvent(
+        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
+      );
     }
   }, [showLimitDropdown]);
 
@@ -1915,6 +1943,9 @@ export function View({
       setShowSortDropdown(false);
       setShowLimitDropdown(false);
       setShowSettings(false);
+      document.dispatchEvent(
+        new CustomEvent(DROPDOWN_OPENED_EVENT, { detail: instanceId.current })
+      );
     }
   }, [showQueryEditor]);
 

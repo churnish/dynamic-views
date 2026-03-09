@@ -27,9 +27,9 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Select and copy card text
 - Hover across thumbnail to preview other images
 - Configure default view settings
-- *Open URL* card button (↗)
-- *Shuffle view* button
-- *Open random file* button
+- _Open URL_ card button (↗)
+- _Shuffle view_ button
+- _Open random file_ button
 - Fold sections when grouping by property
 - Show result count for each group
 - Full keyboard navigation support

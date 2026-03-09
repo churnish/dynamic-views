@@ -1,8 +1,8 @@
 ---
 title: Card DOM structure
-description: Internal DOM hierarchy of cards in Grid and Masonry views, covering both Bases (imperative DOM) and Datacore (Preact JSX) backends. Documents the full card hierarchy, class names, property row structure, and backend divergences.
+description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-03
+last updated: 2026-03-06
 ---
 
 # Card DOM structure
@@ -31,7 +31,7 @@ div.card                                    ← data-path="{path}"
 ├─ div.card-cover-wrapper                   ← cover format, position=top|left (before .card-content)
 │   ├─ div.card-cover                       ← single image
 │   │   └─ div.dynamic-views-image-embed → img
-│   ├─ div.card-cover.card-cover-slideshow  ← slideshow (≥2 images, top/bottom only)
+│   ├─ div.card-cover.card-cover-slideshow  ← slideshow (≥2 images, top/bottom only; see `slideshow.md`)
 │   │   ├─ div.dynamic-views-image-embed
 │   │   │   ├─ img.slideshow-img.slideshow-img-current
 │   │   │   └─ img.slideshow-img.slideshow-img-next
@@ -66,7 +66,8 @@ div.card                                    ← data-path="{path}"
 │       ├─ div.card-previews
 │       │   ├─ div.card-text-preview-wrapper
 │       │   │   └─ div.card-text-preview
-│       │   │       └─ span.card-text-preview-text
+│       │   │       ├─ span.card-text-preview-text    ← default (single block)
+│       │   │       └─ p (×N)                         ← "Preserve line breaks" active + text has \n
 │       │   └─ div.card-thumbnail [.multi-image]
 │       │       └─ div.dynamic-views-image-embed → img
 │       │       OR div.card-thumbnail-placeholder
@@ -76,6 +77,8 @@ div.card                                    ← data-path="{path}"
 ```
 
 ## Property rows
+
+> For the full measurement pipeline, pairing logic, width allocation, and alignment modes, see `property-layout.md`.
 
 Inside `.card-properties-top` or `.card-properties-bottom`:
 
@@ -103,6 +106,16 @@ div.property-pair.property-pair-{N}
   ├─ div.property.property-{N}.pair-left
   └─ div.property.property-{N+1}.pair-right
 ```
+
+## Spacing
+
+`.card-content` and `.card-body` use `gap: var(--size-4-1)` (4px) declared in `styles/card/_core.scss`. This provides uniform spacing between all card sections (header↔body, propsTop↔previews↔propsBottom).
+
+Key behaviors:
+
+- **`margin-top: auto`**: Works with gap — gap provides the 4px minimum, auto absorbs remaining space. Used on `.card-properties-bottom` in Grid (fixed-height cards) to push it to the bottom.
+- **`display: none` children**: Gap automatically skips them — no compensation rules needed for hidden placeholders.
+- **No owl selectors**: The previous `> * + *:not(:empty)` approach required 7+ scattered padding/margin compensation rules across `_grid-view.scss`, `_masonry-view.scss`, and `_cover-elements.scss`. Gap eliminated all of them.
 
 ## Backend differences
 

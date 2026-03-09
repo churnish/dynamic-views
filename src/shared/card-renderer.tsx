@@ -73,6 +73,7 @@ import {
 } from './constants';
 import { setupHoverIntent } from './hover-intent';
 import { isTimestampProperty, getTimestampIcon } from './render-utils';
+import { applyPerParagraphClamp } from './text-preview-dom';
 
 import {
   isTagProperty,
@@ -1034,12 +1035,19 @@ function renderProperty(
           const file = app.vault.getAbstractFileByPath(card.path);
           if (!(file instanceof TFile)) return;
           const fmProp = stripNotePrefix(propertyName);
-          void app.fileManager.processFrontMatter(
-            file,
-            (frontmatter: Record<string, unknown>) => {
-              frontmatter[fmProp] = input.checked;
-            }
-          );
+          void app.fileManager
+            .processFrontMatter(
+              file,
+              (frontmatter: Record<string, unknown>) => {
+                frontmatter[fmProp] = input.checked;
+              }
+            )
+            .catch((error: unknown) => {
+              console.error(
+                'Dynamic Views: failed to update checkbox property',
+                error
+              );
+            });
         };
         const handleCheckboxRef = (el: HTMLInputElement | null): void => {
           if (el && checkboxData.indeterminate) {
@@ -1596,6 +1604,9 @@ function Card({
   const isSubtitleScrollMode = document.body.classList.contains(
     'dynamic-views-subtitle-overflow-scroll'
   );
+  const preserveNewlines = document.body.classList.contains(
+    'dynamic-views-text-preview-keep-newlines'
+  );
 
   // Helper function to render title JSX
   const renderTitle = () => {
@@ -1988,7 +1999,7 @@ function Card({
             const isTextTarget =
               settings.openFileAction === 'title' &&
               target.closest(
-                '.card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content'
+                '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-label, .property-label-inline, .property-content'
               );
 
             if (!cardEl.classList.contains('poster-revealed')) {
@@ -2456,10 +2467,26 @@ function Card({
                   <div className="card-previews">
                     {card.textPreview && (
                       <div className="card-text-preview-wrapper">
-                        <div className="card-text-preview">
-                          <span className="card-text-preview-text">
-                            {card.textPreview}
-                          </span>
+                        <div
+                          className="card-text-preview"
+                          ref={
+                            preserveNewlines && card.textPreview?.includes('\n')
+                              ? (el: HTMLElement | null) => {
+                                  if (el) applyPerParagraphClamp(el);
+                                }
+                              : undefined
+                          }
+                        >
+                          {preserveNewlines &&
+                          card.textPreview.includes('\n') ? (
+                            card.textPreview
+                              .split(/\n\n+/)
+                              .map((para, i) => <p key={i}>{para}</p>)
+                          ) : (
+                            <span className="card-text-preview-text">
+                              {card.textPreview}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}

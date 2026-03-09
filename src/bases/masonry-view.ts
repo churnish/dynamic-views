@@ -98,8 +98,6 @@ import type {
 import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
 import { setupStickyHeadingObserver } from './sticky-heading';
 import {
-  updateTextPreviewDOM,
-  applyPerParagraphClamp,
   initializeTextPreviewClamp,
   initializeTextPreviewClampForCards,
 } from '../shared/text-preview-dom';
@@ -784,11 +782,29 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   onDataUpdated(): void {
+    // Defensive: catch stale document after popout drag-back
+    // (layout-change handler may miss the document swap due to timing)
+    const ownerDoc = this.containerEl.ownerDocument;
+    if (ownerDoc !== this.currentDoc) {
+      const oldDoc = this.currentDoc;
+      this.currentDoc = ownerDoc;
+      this.handleDocumentChange(oldDoc, ownerDoc);
+      // Force observer recreation in setupMasonryLayout — old observers
+      // are bound to the destroyed popout's V8 isolate
+      this.layoutResizeObserver?.disconnect();
+      this.layoutResizeObserver = null;
+      this.cardResizeObserver?.disconnect();
+      this.cardResizeObserver = null;
+      this.observerWindow = null;
+    }
+
     // Handle template toggle changes (Obsidian calls onDataUpdated for config changes)
     this.handleTemplateToggleLocal();
 
     // CSS fast-path: apply CSS-only settings immediately (bypasses throttle)
     applyCssOnlySettings(this.config, this.containerEl);
+    // Re-measure per-paragraph clamps after CSS variable change (keep-newlines only)
+    initializeTextPreviewClamp(this.containerEl);
 
     // Delay reading config - Obsidian may fire onDataUpdated before updating config.getOrder()
     // Using queueMicrotask gives Obsidian time to finish updating config state.
@@ -1079,7 +1095,13 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // If only content changed (not paths/settings), update in-place
       if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {
-        await this.updateCardsInPlace(changedPaths, allEntries, settings);
+        await this.updateCardsInPlace(
+          changedPaths,
+          allEntries,
+          settings,
+          sortMethod,
+          visibleProperties
+        );
         this.renderState.lastRenderHash = renderHash;
         return;
       }
@@ -2924,7 +2946,9 @@ export class DynamicViewsMasonryView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: BasesResolvedSettings
+    settings: BasesResolvedSettings,
+    sortMethod: string,
+    visibleProperties: string[]
   ): Promise<void> {
     // Capture old heights for masonry relayout check
     const heightsBefore = new Map<string, number>();
@@ -2955,28 +2979,38 @@ export class DynamicViewsMasonryView extends BasesView {
       this.contentCache.hasImageAvailable
     );
 
-    // Update each changed card's DOM (mounted) and VirtualItem data (unmounted)
+    // Rebuild CardData and update DOM for each changed card
     for (const path of changedPaths) {
-      // Update mounted card DOM
-      const cardEl = this.containerEl.querySelector<HTMLElement>(
-        `[data-path="${CSS.escape(path)}"]`
-      );
-      if (cardEl) {
-        updateTextPreviewDOM(
-          cardEl,
-          this.contentCache.textPreviews[path] || ''
-        );
-        // Re-clamp after text preview content change
-        const previewEl =
-          cardEl.querySelector<HTMLElement>('.card-text-preview');
-        if (previewEl) applyPerParagraphClamp(previewEl);
-      }
+      const freshEntry = changedEntries.find((e) => e.file.path === path);
+      if (!freshEntry) continue;
 
-      // Update unmounted VirtualItem card data so remount uses fresh content
+      // Rebuild CardData from fresh entry + cached content
+      const newCard = basesEntryToCardData(
+        this.app,
+        freshEntry,
+        settings,
+        sortMethod,
+        this.sortState.isShuffled,
+        visibleProperties,
+        this.contentCache.textPreviews[path],
+        this.contentCache.images[path]
+      );
+
+      // Update VirtualItem references (mounted and unmounted)
       for (const item of this.virtualItems) {
-        if (item.cardData.path === path && !item.el) {
-          item.cardData.textPreview =
-            this.contentCache.textPreviews[path] || '';
+        if (item.cardData.path === path) {
+          item.cardData = newCard;
+          item.entry = freshEntry;
+
+          // Surgical DOM update for mounted card
+          if (item.el) {
+            this.cardRenderer.updateCardContent(
+              item.el,
+              newCard,
+              freshEntry,
+              settings
+            );
+          }
         }
       }
     }

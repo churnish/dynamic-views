@@ -157,7 +157,7 @@ dynamic-views/
 │   ├── _plugin-settings.scss         # Plugin settings tab styling
 │   └── _utilities.scss               # Utility classes
 │
-├── knowledge/                        # Project knowledge docs
+├── docs/                        # Project docs
 │   ├── project-structure.md          # This file — navigational map
 │   ├── architecture/
 │   │   ├── bases-v-datacore-differences.md

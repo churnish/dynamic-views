@@ -1,8 +1,8 @@
 ---
 title: Property layout system
-description: The property layout system handles pairing, width measurement, scroll gradients, and vertical positioning of property fields inside cards. Shared across both Bases and Datacore backends. Documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and compact mode behavior.
+description: Property pairing, width measurement, scroll gradients, and vertical positioning inside cards for both backends.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-05
+last updated: 2026-03-06
 ---
 
 # Property layout system
@@ -304,6 +304,8 @@ During queued measurement, gradient targets are collected into `gradientBatch[]`
 
 ### Masonry relayout coordination
 
+> For the full masonry layout guard system and how `"property-measured"` sources are handled, see `masonry-layout.md`.
+
 The `PROPERTY_MEASURED` custom event (dispatched on each processed card's `ownerDocument` after gradient batch flush) is listened to by masonry views to trigger a relayout — property measurement can change card heights. The masonry listener is bound to `this.containerEl.ownerDocument` at construction time. When a masonry view moves to a popout window, `handleDocumentChange(oldDoc, newDoc)` removes the listener from the old document and rebinds it to the new one — without this, the listener stays on the main window's document and misses events dispatched on the popout's document.
 
 ### Initialization
@@ -329,6 +331,8 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 - **Alignment inherited**: No compact-mode alignment resets. Right-side properties inherit the view's `rightPropertyPosition` setting (right/left/column). This ensures side-by-side pairs in compact mode keep right-alignment, matching non-compact behavior.
 
 ## Settings reference
+
+> For the full settings resolution pipeline (three-layer merge, sparse storage, template system), see `settings-resolution.md`.
 
 ### View settings (Bases config / Datacore settings)
 

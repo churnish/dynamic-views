@@ -1,7 +1,8 @@
 /* Text preview: user-select on inner span only so empty space in the
    -webkit-box div stays non-selectable. cursor: auto shows I-beam over
    text nodes; empty space inherits pointer from card. */
-body.dynamic-views-open-on-title .dynamic-views .card-text-preview-text {
+body.dynamic-views-open-on-title .dynamic-views .card-text-preview-text,
+body.dynamic-views-open-on-title .dynamic-views .card-text-preview p {
   -webkit-user-select: text;
   user-select: text;
   cursor: auto;

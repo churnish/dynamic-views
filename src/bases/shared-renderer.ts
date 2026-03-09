@@ -16,6 +16,11 @@ import {
 import type { BasesViewConfig } from 'obsidian';
 import { CardData } from '../shared/card-renderer';
 import {
+  setPreviewContent,
+  updateTextPreviewDOM,
+  applyPerParagraphClamp,
+} from '../shared/text-preview-dom';
+import {
   setupImageLoadHandler,
   setupBackdropImageLoader,
   handleImageLoad,
@@ -879,7 +884,7 @@ export class SharedCardRenderer {
           const isTextTarget =
             settings.openFileAction === 'title' &&
             target.closest(
-              '.card-subtitle, .card-text-preview-text, .property-label, .property-label-inline, .property-content'
+              '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-label, .property-label-inline, .property-content'
             );
 
           if (!cardEl.classList.contains('poster-revealed')) {
@@ -1406,11 +1411,10 @@ export class SharedCardRenderer {
         bodyEl.appendChild(previewsEl);
       }
 
-      if (hasTextPreview) {
+      if (hasTextPreview && card.textPreview) {
         const wrapper = previewsEl.createDiv('card-text-preview-wrapper');
         const previewDiv = wrapper.createDiv('card-text-preview');
-        const textSpan = previewDiv.createSpan('card-text-preview-text');
-        textSpan.textContent = card.textPreview ?? null;
+        setPreviewContent(previewDiv, card.textPreview);
       }
 
       // Thumbnail (all positions now inside card-previews)
@@ -2001,6 +2005,61 @@ export class SharedCardRenderer {
     }
   }
 
+  /** Update title text node without destroying child elements (extension suffix) */
+  public updateTitleText(
+    cardEl: HTMLElement,
+    card: CardData,
+    entry: BasesEntry,
+    settings: BasesResolvedSettings
+  ): void {
+    const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
+    if (!titleTextEl) return;
+
+    // Apply Extension mode logic (mirrors title resolution in renderCard)
+    const isExtMode = document.body.classList.contains(
+      'dynamic-views-file-type-ext'
+    );
+    const titleProp = settings.titleProperty || '';
+    const titleHasExtension =
+      titleProp === 'file.name' || titleProp === 'file.fullname';
+    const displayTitle =
+      isExtMode && titleHasExtension ? entry.file.basename : card.title;
+
+    // Find first text node — preserves child elements (.card-title-ext-suffix)
+    const textNode = Array.from(titleTextEl.childNodes).find(
+      (n) => n.nodeType === Node.TEXT_NODE
+    );
+    if (textNode) {
+      textNode.textContent = displayTitle || '';
+    } else if (displayTitle) {
+      titleTextEl.insertBefore(
+        document.createTextNode(displayTitle),
+        titleTextEl.firstChild
+      );
+    }
+  }
+
+  /**
+   * Surgically update title, subtitle, properties, and text preview DOM
+   * for an existing card. Callers MUST rebuild CardData via
+   * basesEntryToCardData() BEFORE calling this — this method performs
+   * DOM surgery only, it does NOT transform data.
+   */
+  public updateCardContent(
+    cardEl: HTMLElement,
+    card: CardData,
+    entry: BasesEntry,
+    settings: BasesResolvedSettings
+  ): void {
+    this.updateTitleText(cardEl, card, entry, settings);
+    initializeTitleTruncationForCards([cardEl]);
+    this.rerenderSubtitle(cardEl, card, entry, settings);
+    this.rerenderProperties(cardEl, card, entry, settings);
+    updateTextPreviewDOM(cardEl, card.textPreview || '');
+    const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
+    if (previewEl) applyPerParagraphClamp(previewEl);
+  }
+
   /**
    * Surgically replace property DOM within an existing card.
    * Used by property-reorder fast path to avoid full card re-render.
@@ -2529,12 +2588,19 @@ export class SharedCardRenderer {
               // Clear indeterminate state on click
               checkboxEl.indeterminate = false;
               checkboxEl.dataset.indeterminate = 'false';
-              void this.app.fileManager.processFrontMatter(
-                file,
-                (frontmatter: Record<string, unknown>) => {
-                  frontmatter[fmProp] = checkboxEl.checked;
-                }
-              );
+              void this.app.fileManager
+                .processFrontMatter(
+                  file,
+                  (frontmatter: Record<string, unknown>) => {
+                    frontmatter[fmProp] = checkboxEl.checked;
+                  }
+                )
+                .catch((error: unknown) => {
+                  console.error(
+                    'Dynamic Views: failed to update checkbox property',
+                    error
+                  );
+                });
             },
             { signal }
           );

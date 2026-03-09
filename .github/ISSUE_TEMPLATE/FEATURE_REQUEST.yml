@@ -27,7 +27,7 @@ body:
         - label: Datacore view
   - type: markdown
     attributes:
-      value: "&#8203;"
+      value: '&#8203;'
   - type: markdown
     attributes:
       value: '## Required'
@@ -49,7 +49,7 @@ body:
       required: true
   - type: markdown
     attributes:
-      value: "&#8203;"
+      value: '&#8203;'
   - type: markdown
     attributes:
       value: '## Optional'

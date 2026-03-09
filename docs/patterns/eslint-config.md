@@ -31,7 +31,7 @@ The config uses `defineConfig()` from `eslint/config` — required because the o
 
 The Obsidian review bot and local ESLint use the same ruleset but differ in behavior:
 
-- The bot ignores all `eslint-disable` comments (see `plugins/knowledge/obsidian-review-bot.md`).
+- The bot ignores all `eslint-disable` comments (see `plugins/docs/obsidian-review-bot.md`).
 - Some rules may report differently due to scanner implementation differences.
 - A directive can be "unused" per the bot but needed locally. When this happens, keep it with a description for local ESLint — the bot ignores it anyway.
 

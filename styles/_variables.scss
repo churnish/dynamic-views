@@ -1,6 +1,9 @@
 /* Plugin CSS custom properties: wrapper variables, derived values, and color compositions */
 
-:root {
+/* Obsidian defines ALL CSS variables on body (.theme-dark/.theme-light),
+   NOT on :root. Wrappers must live on body so var() references to
+   Obsidian variables resolve against the correct element. */
+body {
   /* Sizing */
   --dynamic-views-size-2-1: 2px;
   --dynamic-views-size-2-2: 4px;
@@ -153,9 +156,7 @@
     --interactive-accent-hover,
     hsl(255, 90%, 76%)
   );
-}
 
-body {
   /* Clamp thumbnail aspect ratio to 0.5-2.0 range */
   --dynamic-views-thumbnail-aspect-ratio: clamp(
     0.5,

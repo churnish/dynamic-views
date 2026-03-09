@@ -61,6 +61,25 @@ describe('measureScalableHeight', () => {
     expect(measureScalableHeight(card)).toBe(0);
   });
 
+  it('returns full height for poster cards with images', () => {
+    const card = document.createElement('div');
+    card.classList.add('image-format-poster');
+    const poster = document.createElement('div');
+    poster.classList.add('card-poster');
+    card.appendChild(poster);
+    Object.defineProperty(card, 'offsetHeight', {
+      configurable: true,
+      value: 300,
+    });
+    expect(measureScalableHeight(card)).toBe(300);
+  });
+
+  it('returns 0 for poster cards without images', () => {
+    const card = document.createElement('div');
+    card.classList.add('image-format-poster');
+    expect(measureScalableHeight(card)).toBe(0);
+  });
+
   it('ignores non-direct-child wrapper', () => {
     const card = document.createElement('div');
     card.classList.add('card-cover-top');

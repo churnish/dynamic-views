@@ -71,6 +71,7 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: var(--dynamic-views-line-height-tight);
+    text-align: left;
     word-break: break-word;
     overflow-wrap: break-word;
     -webkit-user-select: text;
@@ -90,13 +91,36 @@ body.dynamic-views-text-preview-align-right .dynamic-views .card-text-preview {
   text-align: right;
 }
 
-body.dynamic-views-text-preview-align-justify .dynamic-views .card-text-preview {
+body.dynamic-views-text-preview-align-justify
+  .dynamic-views
+  .card-text-preview {
   text-align: justify;
 }
 
 body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
   hyphens: auto;
   -webkit-hyphens: auto;
+}
+
+body.dynamic-views-text-preview-keep-newlines
+  .dynamic-views
+  .card-text-preview:has(> p) {
+  /* Override -webkit-box line-clamp — JS handles per-paragraph truncation.
+     Scoped to :has(> p) so cards without paragraph breaks keep native clamp. */
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  /* CSS safety net: clips at correct visual height before JS runs */
+  max-height: calc(var(--dynamic-views-text-preview-lines, 5) * 1lh);
+
+  p {
+    margin: 0;
+    white-space: pre-line;
+  }
+
+  p + p {
+    margin-top: 1lh;
+  }
 }
 
 .dynamic-views {

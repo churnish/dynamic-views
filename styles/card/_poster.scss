@@ -105,7 +105,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
   will-change: transform; /* iOS WebKit: own GPU layer so ::after overlay repaint doesn't swallow transform transition */
   transition:
     transform var(--dynamic-views-anim-duration-fast) ease,
-    opacity var(--dynamic-views-anim-duration-fast) ease,
+    opacity var(--dynamic-views-anim-duration-moderate) ease,
     filter var(--dynamic-views-anim-duration-moderate);
 }
 
@@ -115,7 +115,9 @@ body.dynamic-views-poster-disable-reveal-zoom
   .card.image-format-poster
   .card-poster
   img {
-  transition: filter var(--dynamic-views-anim-duration-moderate);
+  transition:
+    filter var(--dynamic-views-anim-duration-moderate),
+    opacity var(--dynamic-views-anim-duration-moderate);
 }
 
 /* Poster: zoom on tap reveal (mobile) */
@@ -190,6 +192,9 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+  --dynamic-views-text-normal: #fafafa;
+  --dynamic-views-text-muted: #f5f5f5;
+  --dynamic-views-text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }
 
 .dynamic-views.poster-mode-gradient
@@ -442,6 +447,9 @@ body.dynamic-views-poster-theme-match.theme-light
   --text-normal: #222222;
   --text-muted: #333333;
   --text-faint: color-mix(in srgb, #333333 60%, transparent);
+  --dynamic-views-text-normal: #222222;
+  --dynamic-views-text-muted: #333333;
+  --dynamic-views-text-faint: color-mix(in srgb, #333333 60%, transparent);
 }
 
 /* Poster background variants */
@@ -483,4 +491,7 @@ body.dynamic-views-poster-theme-match.theme-dark
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+  --dynamic-views-text-normal: #fafafa;
+  --dynamic-views-text-muted: #f5f5f5;
+  --dynamic-views-text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }

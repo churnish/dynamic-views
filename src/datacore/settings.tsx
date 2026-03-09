@@ -396,8 +396,8 @@ export function Settings({
                   >
                     <input
                       type="range"
-                      min="50"
-                      max="100"
+                      min="64"
+                      max="128"
                       step="1"
                       value={settings.thumbnailSize}
                       onChange={(e: unknown) => {

@@ -344,7 +344,9 @@ export function handleJsxImageError(
   // Hide broken image to prevent placeholder icon
   imgEl.addClass('dynamic-views-hidden');
 
-  // Fix null assertions
+  // Mark broken URL so filterBrokenUrls() can skip it on re-render
+  if (imgEl.src) markImageBroken(imgEl.src);
+
   const cardEl = imgEl.closest('.card');
   if (
     !cardEl ||

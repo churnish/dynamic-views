@@ -70,6 +70,10 @@ body.dynamic-views-dragging .tooltip {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+/* Must override .dynamic-views-empty's min-height:unset when dropdown is open */
+.dynamic-views.dynamic-views-dropdown-expanded {
+  min-height: var(--dynamic-views-dropdown-min-height);
+}
 .dynamic-views-query-results-constrained {
   max-height: var(--dynamic-views-query-max-height);
   overflow-y: auto;

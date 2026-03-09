@@ -253,8 +253,8 @@ export function getBasesViewOptions(
           type: 'slider',
           displayName: 'Size',
           key: 'thumbnailSize',
-          min: 50,
-          max: 100,
+          min: 64,
+          max: 128,
           step: 1,
           default: d.thumbnailSize,
           shouldHide: (config: BasesConfig) =>
@@ -617,7 +617,8 @@ export function readBasesSettings(
  */
 export function extractBasesTemplate(
   config: BasesConfig,
-  defaults: ViewDefaults
+  defaults: ViewDefaults,
+  viewType: 'grid' | 'masonry'
 ): Partial<ViewDefaults> {
   // Merge BASES_DEFAULTS so fallbacks and sparse filter use actual Bases defaults
   const mergedDefaults = { ...defaults, ...BASES_DEFAULTS };
@@ -723,6 +724,14 @@ export function extractBasesTemplate(
   // Filter to only non-default values (sparse)
   const result: Partial<ViewDefaults> = {};
   for (const key of Object.keys(full) as (keyof ViewDefaults)[]) {
+    // minimumColumns has a view-type-specific default (masonry=2, grid=1)
+    if (key === 'minimumColumns') {
+      const minColDefault = viewType === 'masonry' ? 2 : 1;
+      if (full[key] !== minColDefault) {
+        (result as Record<string, unknown>)[key] = full[key];
+      }
+      continue;
+    }
     if (full[key] !== mergedDefaults[key]) {
       (result as Record<string, unknown>)[key] = full[key];
     }

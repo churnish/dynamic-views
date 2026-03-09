@@ -48,6 +48,9 @@ export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
 /** Thumbnail stacking threshold multiplier (card stacks when width < thumbnail * this) */
 export const THUMBNAIL_STACK_MULTIPLIER = 3;
 
+/** Custom event dispatched when a Datacore dropdown opens (closes dropdowns in other queries) */
+export const DROPDOWN_OPENED_EVENT = 'dynamic-views:dropdown-opened';
+
 /** Fixed hover growth per side in px. Scale = 1 + (2 * HOVER_GROWTH_PX) / height. */
 export const HOVER_GROWTH_PX = 4;
 

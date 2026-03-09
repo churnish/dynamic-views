@@ -11,6 +11,39 @@
   transition: none !important;
 }
 
+/* Themes can dim images via img:not(:hover) — our img has pointer-events: none,
+   so :hover never fires. Use hover-intent-active instead.
+   [data-type] bumps specificity above theme selectors. */
+.workspace-leaf-content[data-type]
+  .dynamic-views
+  .card.hover-intent-active:not(.image-format-backdrop, .image-format-poster)
+  img {
+  opacity: 1;
+  transition: opacity var(--dynamic-views-anim-duration-moderate);
+}
+
+/* Poster: theme dimming suppressed on hover (poster.scss owns transition timing) */
+.workspace-leaf-content[data-type]
+  .dynamic-views
+  .card.image-format-poster.hover-intent-active
+  img {
+  opacity: 1;
+}
+
+/* Backdrop + revealed poster: our overlays handle darkening, suppress theme dimming. */
+.workspace-leaf-content[data-type]
+  .dynamic-views
+  .card.image-format-backdrop
+  .card-backdrop
+  img,
+.workspace-leaf-content[data-type]
+  .dynamic-views
+  .card.image-format-poster:is(.poster-revealed, .poster-hover-active)
+  .card-poster
+  img {
+  opacity: 1;
+}
+
 /* Fullbleed image formats (backdrop + poster) */
 .dynamic-views {
   .card:is(.image-format-backdrop, .image-format-poster) {

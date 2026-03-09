@@ -85,8 +85,12 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  min-height: 270px;
+  min-height: 150px;
   overflow: visible;
+}
+
+.dynamic-views.dynamic-views-empty {
+  min-height: unset;
 }
 
 /* Bottom spacing for phone to push view end indicator above mobile toolbar */
