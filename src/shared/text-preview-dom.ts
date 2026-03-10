@@ -119,20 +119,18 @@ const KEEP_NEWLINES_CLASS = 'dynamic-views-text-preview-keep-newlines';
 const TEXT_PREVIEW_LINES_VAR = '--dynamic-views-text-preview-lines';
 const DEFAULT_LINE_BUDGET = 5;
 
-// Per-paragraph clamp must set inline styles because each <p> gets individually
-// computed display/clamp values at runtime — CSS classes cannot express this.
-// webkitBoxOrient is deprecated but required for -webkit-line-clamp (no replacement).
-/* eslint-disable obsidianmd/no-static-styles-assignment, @typescript-eslint/no-deprecated */
+// Per-paragraph clamp uses CSS classes for static properties (display, box-orient,
+// overflow) and setProperty for dynamic -webkit-line-clamp values per <p>.
 
+const PARA_CLAMPED_CLASS = 'dynamic-views-para-clamped';
+const PARA_HIDDEN_CLASS = 'dynamic-views-para-hidden';
 const TRUNCATION_INDICATOR_CLASS = 'dynamic-views-truncation-indicator';
 
-/** Clear inline clamp styles and any appended truncation indicator from a paragraph. */
+/** Clear clamp classes, inline clamp value, and truncation indicator from a paragraph. */
 function clearParagraphStyles(p: HTMLElement): void {
-  p.style.display = '';
-  p.style.webkitLineClamp = '';
-  p.style.webkitBoxOrient = '';
-  p.style.overflow = '';
-  p.style.marginTop = '';
+  p.classList.remove(PARA_CLAMPED_CLASS, PARA_HIDDEN_CLASS);
+  p.style.removeProperty('-webkit-line-clamp');
+  p.style.removeProperty('margin-top');
   p.querySelector(`.${TRUNCATION_INDICATOR_CLASS}`)?.remove();
 }
 
@@ -142,10 +140,8 @@ function clearParagraphStyles(p: HTMLElement): void {
  * -webkit-line-clamp produces `…` even though the text itself fits.
  */
 function forceEllipsisOnLastVisible(p: HTMLElement, textLines: number): void {
-  p.style.display = '-webkit-box';
-  p.style.webkitLineClamp = String(textLines);
-  p.style.webkitBoxOrient = 'vertical';
-  p.style.overflow = 'hidden';
+  p.classList.add(PARA_CLAMPED_CLASS);
+  p.style.setProperty('-webkit-line-clamp', String(textLines));
   const indicator = p.ownerDocument.createElement('span');
   indicator.className = TRUNCATION_INDICATOR_CLASS;
   indicator.textContent = '\u2026';
@@ -202,7 +198,8 @@ function applyClampFromMeasurements(
       1,
       Math.round(heights[lastVisibleIdx] / lineHeight)
     );
-    const clampVal = parseInt(lastP.style.webkitLineClamp) || 0;
+    const clampVal =
+      parseInt(lastP.style.getPropertyValue('-webkit-line-clamp')) || 0;
 
     if (clampVal === 0 || clampVal >= textLines) {
       forceEllipsisOnLastVisible(lastP, clampVal || textLines);
@@ -212,20 +209,16 @@ function applyClampFromMeasurements(
 
 /** Apply -webkit-line-clamp to a paragraph. */
 function clampParagraph(p: HTMLElement, lines: number): void {
-  p.style.display = '-webkit-box';
-  p.style.webkitLineClamp = String(lines);
-  p.style.webkitBoxOrient = 'vertical';
-  p.style.overflow = 'hidden';
+  p.classList.add(PARA_CLAMPED_CLASS);
+  p.style.setProperty('-webkit-line-clamp', String(lines));
 }
 
 /** Hide all paragraphs from index `start` onward. */
 function hideFrom(paragraphs: HTMLElement[], start: number): void {
   for (let j = start; j < paragraphs.length; j++) {
-    paragraphs[j].style.display = 'none';
+    paragraphs[j].classList.add(PARA_HIDDEN_CLASS);
   }
 }
-
-/* eslint-enable obsidianmd/no-static-styles-assignment, @typescript-eslint/no-deprecated */
 
 /**
  * Per-paragraph line clamp for a single text preview element.

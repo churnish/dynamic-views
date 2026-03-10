@@ -339,8 +339,8 @@ describe('applyPerParagraphClamp', () => {
 
     // No paragraph should be hidden or clamped
     for (const p of paragraphs) {
-      expect(p.style.display).toBe('');
-      expect(p.style.webkitLineClamp).toBe('');
+      expect(p.classList.contains('dynamic-views-para-clamped')).toBe(false);
+      expect(p.classList.contains('dynamic-views-para-hidden')).toBe(false);
     }
   });
 
@@ -351,10 +351,8 @@ describe('applyPerParagraphClamp', () => {
 
     applyPerParagraphClamp(el);
 
-    expect(p.style.display).toBe('-webkit-box');
-    expect(p.style.webkitLineClamp).toBe('3');
-    expect(p.style.webkitBoxOrient).toBe('vertical');
-    expect(p.style.overflow).toBe('hidden');
+    expect(p.classList.contains('dynamic-views-para-clamped')).toBe(true);
+    expect(p.style.getPropertyValue('-webkit-line-clamp')).toBe('3');
   });
 
   it('clamps the overflowing paragraph and hides subsequent ones', () => {
@@ -369,12 +367,20 @@ describe('applyPerParagraphClamp', () => {
     applyPerParagraphClamp(el);
 
     // p0: no clamping
-    expect(paragraphs[0].style.display).toBe('');
+    expect(paragraphs[0].classList.contains('dynamic-views-para-clamped')).toBe(
+      false
+    );
     // p1: clamped to 2 lines
-    expect(paragraphs[1].style.display).toBe('-webkit-box');
-    expect(paragraphs[1].style.webkitLineClamp).toBe('2');
+    expect(paragraphs[1].classList.contains('dynamic-views-para-clamped')).toBe(
+      true
+    );
+    expect(paragraphs[1].style.getPropertyValue('-webkit-line-clamp')).toBe(
+      '2'
+    );
     // p2: hidden
-    expect(paragraphs[2].style.display).toBe('none');
+    expect(paragraphs[2].classList.contains('dynamic-views-para-hidden')).toBe(
+      true
+    );
   });
 
   it('force-ellipsis when margin consumes budget with no remaining lines', () => {
@@ -389,15 +395,25 @@ describe('applyPerParagraphClamp', () => {
 
     applyPerParagraphClamp(el);
 
-    expect(paragraphs[0].style.display).toBe('');
+    expect(paragraphs[0].classList.contains('dynamic-views-para-clamped')).toBe(
+      false
+    );
     // p1: force-ellipsis (fits but has hidden siblings)
-    expect(paragraphs[1].style.display).toBe('-webkit-box');
-    expect(paragraphs[1].style.webkitLineClamp).toBe('1');
+    expect(paragraphs[1].classList.contains('dynamic-views-para-clamped')).toBe(
+      true
+    );
+    expect(paragraphs[1].style.getPropertyValue('-webkit-line-clamp')).toBe(
+      '1'
+    );
     expect(
       paragraphs[1].querySelector('.dynamic-views-truncation-indicator')
     ).not.toBeNull();
-    expect(paragraphs[2].style.display).toBe('none');
-    expect(paragraphs[3].style.display).toBe('none');
+    expect(paragraphs[2].classList.contains('dynamic-views-para-hidden')).toBe(
+      true
+    );
+    expect(paragraphs[3].classList.contains('dynamic-views-para-hidden')).toBe(
+      true
+    );
   });
 
   it('hides paragraph when margin consumes budget instead of removing margin', () => {
@@ -412,16 +428,26 @@ describe('applyPerParagraphClamp', () => {
 
     applyPerParagraphClamp(el);
 
-    expect(paragraphs[0].style.display).toBe('');
+    expect(paragraphs[0].classList.contains('dynamic-views-para-clamped')).toBe(
+      false
+    );
     // p1: force-ellipsis (fits but has hidden siblings)
-    expect(paragraphs[1].style.display).toBe('-webkit-box');
-    expect(paragraphs[1].style.webkitLineClamp).toBe('1');
+    expect(paragraphs[1].classList.contains('dynamic-views-para-clamped')).toBe(
+      true
+    );
+    expect(paragraphs[1].style.getPropertyValue('-webkit-line-clamp')).toBe(
+      '1'
+    );
     expect(
       paragraphs[1].querySelector('.dynamic-views-truncation-indicator')
     ).not.toBeNull();
     // p2, p3: hidden (margin would have collapsed spacing)
-    expect(paragraphs[2].style.display).toBe('none');
-    expect(paragraphs[3].style.display).toBe('none');
+    expect(paragraphs[2].classList.contains('dynamic-views-para-hidden')).toBe(
+      true
+    );
+    expect(paragraphs[3].classList.contains('dynamic-views-para-hidden')).toBe(
+      true
+    );
   });
 
   it('is idempotent — running twice produces same result', () => {
@@ -432,8 +458,9 @@ describe('applyPerParagraphClamp', () => {
     // Capture state after first run
     const paragraphs = el.querySelectorAll('p');
     const firstRunStyles = Array.from(paragraphs).map((p) => ({
-      display: p.style.display,
-      clamp: p.style.webkitLineClamp,
+      clamped: p.classList.contains('dynamic-views-para-clamped'),
+      hidden: p.classList.contains('dynamic-views-para-hidden'),
+      clamp: p.style.getPropertyValue('-webkit-line-clamp'),
     }));
 
     // Need to re-mock because offsetHeight on hidden elements would be 0
@@ -441,8 +468,9 @@ describe('applyPerParagraphClamp', () => {
     applyPerParagraphClamp(el);
 
     const secondRunStyles = Array.from(paragraphs).map((p) => ({
-      display: p.style.display,
-      clamp: p.style.webkitLineClamp,
+      clamped: p.classList.contains('dynamic-views-para-clamped'),
+      hidden: p.classList.contains('dynamic-views-para-hidden'),
+      clamp: p.style.getPropertyValue('-webkit-line-clamp'),
     }));
 
     expect(secondRunStyles).toEqual(firstRunStyles);
@@ -455,9 +483,15 @@ describe('applyPerParagraphClamp', () => {
 
     applyPerParagraphClamp(el);
 
-    expect(paragraphs[0].style.display).toBe('-webkit-box');
-    expect(paragraphs[0].style.webkitLineClamp).toBe('2');
-    expect(paragraphs[1].style.display).toBe('none');
+    expect(paragraphs[0].classList.contains('dynamic-views-para-clamped')).toBe(
+      true
+    );
+    expect(paragraphs[0].style.getPropertyValue('-webkit-line-clamp')).toBe(
+      '2'
+    );
+    expect(paragraphs[1].classList.contains('dynamic-views-para-hidden')).toBe(
+      true
+    );
 
     // Simulate budget change: re-mock with budget 10
     vi.restoreAllMocks();
@@ -478,9 +512,13 @@ describe('applyPerParagraphClamp', () => {
     applyPerParagraphClamp(el);
 
     // Stale styles should be cleared — all paragraphs fit now
-    expect(paragraphs[0].style.display).toBe('');
-    expect(paragraphs[0].style.webkitLineClamp).toBe('');
-    expect(paragraphs[1].style.display).toBe('');
+    expect(paragraphs[0].classList.contains('dynamic-views-para-clamped')).toBe(
+      false
+    );
+    expect(paragraphs[0].style.getPropertyValue('-webkit-line-clamp')).toBe('');
+    expect(paragraphs[1].classList.contains('dynamic-views-para-hidden')).toBe(
+      false
+    );
   });
 });
 

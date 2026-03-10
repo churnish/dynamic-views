@@ -121,6 +121,17 @@ body.dynamic-views-text-preview-keep-newlines
   p + p {
     margin-top: 1lh;
   }
+
+  /* Per-paragraph JS clamp utility classes (text-preview-dom.ts) */
+  > p.dynamic-views-para-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  > p.dynamic-views-para-hidden {
+    display: none;
+  }
 }
 
 .dynamic-views {
