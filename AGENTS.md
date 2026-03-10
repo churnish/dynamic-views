@@ -1,6 +1,7 @@
 # Dynamic Views
 
 - **Error surfacing**: `new Notice()` ONLY for user-initiated action failures and confirmations. Internal and background failures MUST use `console.error`/`console.warn` — NEVER surface notices for operations the user did NOT trigger.
+- **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
 
 ## Terminology
 
@@ -19,36 +20,7 @@
 - **Future parity**: Datacore will gain full property display parity with Bases — configurable property lists, custom timestamp properties, labels, icons, and ALL rendering features. Shared helpers in `render-utils.ts` (`isTimestampProperty`, `getTimestampIcon`) already accept both `BasesResolvedSettings` and `ResolvedSettings`.
 - **Lay the foundation**: When working on shared infrastructure (helpers, types, rendering logic), ALWAYS design it to work with both backends. Wire up Datacore call sites even when the feature is NOT yet observable there.
 
-## Performance
+## Navigation
 
-- **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
-
-## Docs
-
-Use @docs/project-structure.md as a navigational guide before reading or editing any file in the codebase. ALWAYS update it when adding, removing, or renaming source, test, or docs.
-
-Consult @wiki/wiki-structure.md to find user-facing, human-verified plugin wiki pages that document how features and settings are meant to function.
-
-### docs/architecture/
-
-Read...
-
-- **card-dom-structure.md** before working on card internals, card CSS selectors, property rows, or DOM differences between Bases and Datacore — documents the full card hierarchy, class names, property row structure, and backend divergences.
-- **grid-layout.md** before working on grid layout, CSS Grid columns, content visibility, or grid-specific resize/infinite scroll — documents the full architecture, data structures, render pipeline, guard system, and invariants.
-- **masonry-layout.md** before working on masonry layout, virtual scrolling, resize handling, or infinite scroll — documents the full architecture, data structures, render pipeline, guard system, and invariants.
-- **property-layout.md** before working on property pairing, width measurement, scroll gradients, compact mode, or property position settings — documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and invariants.
-- **bases-v-datacore-differences.md** before working on cross-backend code, shared infrastructure, or any feature that touches both Bases and Datacore — documents rendering model, event handling, cleanup, state, and common pitfalls from backend divergence.
-- **settings-resolution.md** before working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants.
-- **image-loading.md** before working on image loading, caching, aspect ratios, broken URL tracking, embed extraction, or the content-loader dedup pipeline — documents the two-tier cache architecture, fallback chain, load handler wiring, and invariants.
-- **slideshow.md** before working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants.
-- **write-path-safety.md** before adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption.
-
-### docs/patterns/
-
-Read...
-
-- **eslint-config.md** before modifying `eslint.config.js`, adding eslint overrides, or troubleshooting lint errors.
-- **scss-nesting-conventions.md** before adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat.
-- **datacore-ref-callback-patterns.md** before attaching event listeners or stateful behavior in `card-renderer.tsx` ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution.
-- **style-settings-fallbacks.md** before adding or modifying `class-select` settings in `_style-settings.scss` — documents the fallback selector pattern for CSS defaults that must work without the Style Settings plugin installed.
-- **electron-css-quirks.md** before writing nested `:has()` selectors or working around `-webkit-line-clamp` truncation behavior — documents Blink/Electron CSS rendering quirks and rejected fixes.
+- **Docs**: Consult @docs/project-structure.md and @docs/index.md before reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files. When working on a complex system with no existing doc covering it, suggest creating an architectural doc. Proactively keep ALL docs up-to-date by running the `/document` skill.
+- **Wiki**: Consult @wiki/wiki-structure.md for user-facing, human-verified plugin wiki pages that document how features and settings are meant to function.

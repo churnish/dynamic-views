@@ -4,7 +4,6 @@ description: Maps every source, test, and stylesheet file in the Dynamic Views p
 author: 🤖 Generated with Claude Code
 last updated: 2026-03-06
 ---
-
 # Project structure
 
 ```
@@ -158,24 +157,8 @@ dynamic-views/
 │   ├── _plugin-settings.scss         # Plugin settings tab styling
 │   └── _utilities.scss               # Utility classes
 │
-├── docs/                        # Project docs
-│   ├── project-structure.md          # This file — navigational map
-│   ├── architecture/
-│   │   ├── bases-v-datacore-differences.md
-│   │   ├── card-dom-structure.md
-│   │   ├── grid-layout.md
-│   │   ├── image-loading.md
-│   │   ├── masonry-layout.md
-│   │   ├── property-layout.md
-│   │   ├── settings-resolution.md
-│   │   ├── slideshow.md
-│   │   └── write-path-safety.md
-│   └── patterns/
-│       ├── datacore-ref-callback-patterns.md
-│       ├── electron-css-quirks.md
-│       ├── eslint-config.md
-│       ├── scss-nesting-conventions.md
-│       └── style-settings-fallbacks.md
+├── docs/                             # Project docs
+│   └── ...
 ├── archive/                          # Preserved deprecated code
 │   └── ...
 └── .github/                          # CI workflows, issue templates
