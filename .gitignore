@@ -1,14 +1,12 @@
+* 2
+* 2.*
+
 .claude/
 .vscode/
 cc-chats/
-coverage/
 node_modules/
-screenshots/
 
-* [0-9]
-* [0-9].*
 *.js.map
-*.map
 *.zip
 
 .DS_Store

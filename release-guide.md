@@ -1,14 +1,12 @@
 ---
 title: Release guide
-description: >-
-  End-to-end release workflow: npm version commands,
-  preversion/version/postversion lifecycle, GitHub Action build, wiki
-  publishing, and rollback procedures.
+description: "End-to-end release workflow: npm version commands, preversion/version/postversion lifecycle, GitHub Action build, wiki publishing, and rollback procedures."
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-09T00:00:00.000Z
 ---
-
 # Release guide
+
+> [!warning] Source of truth: `plugins/knowledge/release-guide.md`. Copied to each plugin's root during `npm version` via `version-bump.mjs`. Edit the source, not the copy.
 
 ## Commands
 
@@ -53,7 +51,6 @@ npm updates the `version` field in `package.json` (only runs if preversion succe
 ```
 
 `version-bump.mjs` (without `--preflight`) re-validates, then:
-
 - **Pulls latest README** from `origin/main` (so the release ships the GitHub-edited version).
 - **Syncs version to `manifest.json`** to match `package.json`.
 

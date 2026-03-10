@@ -18,5 +18,5 @@
     "skipLibCheck": true
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "node_modules.nosync", "tests", "archive"]
+  "exclude": ["node_modules", "tests", "archive"]
 }
