@@ -7,6 +7,7 @@ last updated: 2026-03-11
 # Release guide
 
 > **Warning**
+>
 > Source of truth: `plugins/knowledge/release-guide.md`. Copied to each plugin's `docs/` during `npm version` via `version-bump.mjs`. Edit the source, not the copy.
 
 ## Commands
