@@ -19,6 +19,8 @@ const DEFAULT_CREATED_TIME_PROPERTY = 'created time';
 const DEFAULT_MODIFIED_TIME_PROPERTY = 'modified time';
 
 // Description containing proper nouns (not subject to sentence case)
+const OPEN_RANDOM_DESC =
+  'When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.';
 const CONTEXT_MENU_DESC =
   'Show commands to create new Grid or Masonry base in folder context menus.';
 
@@ -208,6 +210,20 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
                     | 'disabled'
                     | 'base-files'
                     | 'all-views',
+                });
+              })
+          )
+      )
+      .addSetting((s) =>
+        s
+          .setName('Open random file in a new tab')
+          .setDesc(OPEN_RANDOM_DESC)
+          .addToggle((toggle) =>
+            toggle
+              .setValue(settings.openRandomInNewTab)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setPluginSettings({
+                  openRandomInNewTab: value,
                 });
               })
           )

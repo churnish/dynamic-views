@@ -9,6 +9,7 @@ import type {
 export const PLUGIN_SETTINGS: PluginSettings = {
   randomizeAction: 'shuffle',
   openFileAction: 'card',
+  openRandomInNewTab: true,
   smartTimestamp: true,
   createdTimeProperty: 'created time',
   modifiedTimeProperty: 'modified time',

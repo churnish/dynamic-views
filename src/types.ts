@@ -8,6 +8,7 @@
 export interface PluginSettings {
   randomizeAction: string;
   openFileAction: 'card' | 'title';
+  openRandomInNewTab: boolean;
   smartTimestamp: boolean;
   createdTimeProperty: string;
   modifiedTimeProperty: string;

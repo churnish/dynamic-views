@@ -213,7 +213,9 @@ export default class DynamicViews extends Plugin {
           .forEach((el) => {
             el.classList.remove('is-zoomed');
           });
-        await openRandomFile(this.app, getPaneType(evt, true));
+        const defaultInNewTab =
+          this.persistenceManager.getPluginSettings().openRandomInNewTab;
+        await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
       }
     );
 
@@ -229,7 +231,9 @@ export default class DynamicViews extends Plugin {
           .forEach((el) => {
             el.classList.remove('is-zoomed');
           });
-        await openRandomFile(this.app, true);
+        const openInNewPane =
+          this.persistenceManager.getPluginSettings().openRandomInNewTab;
+        await openRandomFile(this.app, openInNewPane);
       },
     });
 

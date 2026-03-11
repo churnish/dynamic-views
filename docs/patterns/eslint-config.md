@@ -2,9 +2,8 @@
 title: ESLint configuration
 description: ESLint config structure, project overrides, and bot vs local differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-03
+last updated: 2026-03-11
 ---
-
 # ESLint configuration
 
 This project uses `eslint-plugin-obsidianmd`'s `recommended` config, which bundles JS recommended, TypeScript type-checked, and Obsidian-specific rules.
@@ -38,3 +37,22 @@ The Obsidian review bot and local ESLint use the same ruleset but differ in beha
 ## Moment.js
 
 Obsidian re-exports moment.js as a named export: `import { moment } from 'obsidian'`. This is the correct import — no `eslint-disable` comments needed. Do NOT import from the `'moment'` package directly (`no-restricted-imports` blocks it). The test mock in `tests/__mocks__/obsidian.ts` exports a matching `moment` stub.
+
+## Restricted disable directives
+
+`@eslint-community/eslint-plugin-eslint-comments` with `no-restricted-disable` blocks `eslint-disable` for `obsidianmd/*` rules. The Obsidian review bot strips all directives before scanning, so suppression is useless — fix the underlying violation instead. The `@eslint-community/eslint-comments/*` pattern is also restricted to prevent self-suppression.
+
+## Sentence case rule workaround
+
+The `obsidianmd/ui/sentence-case` rule flags inline string literals in `.setName()` and `.setDesc()` that contain mid-sentence capitals (e.g., `Ctrl/Cmd`, proper nouns like `Grid` or `Masonry`). Since `obsidianmd/*` rules cannot be suppressed with `eslint-disable` (see above), extract the string to a `const` variable — the rule only checks inline string literals, not variable references.
+
+```ts
+// Flagged by sentence-case
+.setDesc('Hold Ctrl/Cmd to override.')
+
+// Passes — extracted to const
+const OPEN_RANDOM_DESC = 'Hold Ctrl/Cmd to override.';
+.setDesc(OPEN_RANDOM_DESC)
+```
+
+Existing examples in `plugin-settings.ts`: `CONTEXT_MENU_DESC`, `OPEN_RANDOM_DESC`.

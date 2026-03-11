@@ -14,6 +14,7 @@ vi.mock('../src/constants', () => ({
   PLUGIN_SETTINGS: {
     randomizeAction: 'shuffle',
     openFileAction: 'card',
+    openRandomInNewTab: true,
     smartTimestamp: true,
     createdTimeProperty: 'created time',
     modifiedTimeProperty: 'modified time',
@@ -80,6 +81,7 @@ describe('PersistenceManager', () => {
     mockPlugin = {
       loadData: vi.fn().mockResolvedValue(null),
       saveData: vi.fn().mockResolvedValue(undefined),
+      app: { workspace: { trigger: vi.fn() } },
     } as any;
 
     manager = new PersistenceManager(mockPlugin);
