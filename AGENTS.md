@@ -22,5 +22,5 @@
 
 ## Navigation
 
-- **Docs**: Consult @docs/project-structure.md and @docs/index.md before reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files. When working on a complex system with no existing doc covering it, suggest creating an architectural doc. Proactively keep ALL docs up-to-date by running the `/document` skill.
+- **Docs**: Consult @docs/project-structure.md and @docs/index.md before reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files. When working on a complex system with no existing doc covering it, suggest creating an architectural doc. `docs/release-guide.md` — read before running a release, bumping versions, or troubleshooting the release pipeline. Proactively keep ALL docs up-to-date by running the `/document` skill.
 - **Wiki**: Consult @wiki/wiki-structure.md for user-facing, human-verified plugin wiki pages that document how features and settings are meant to function.

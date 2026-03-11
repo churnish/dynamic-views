@@ -36,8 +36,9 @@ const sharedDocs = ['release-guide.md'];
 for (const doc of sharedDocs) {
   const src = join(knowledgeDir, doc);
   if (existsSync(src)) {
-    writeFileSync(doc, readFileSync(src, 'utf8'));
-    execSync(`git add "${doc}"`, { stdio: 'inherit' });
+    const dest = join('docs', doc);
+    writeFileSync(dest, readFileSync(src, 'utf8'));
+    execSync(`git add "${dest}"`, { stdio: 'inherit' });
     console.log(`Synced ${doc} from knowledge/`);
   } else {
     console.warn(`Skipping ${doc}: not found at ${src}`);

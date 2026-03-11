@@ -14,7 +14,6 @@ dynamic-views/
 ├── eslint.config.js                  # Lint rules (obsidianmd plugin)
 ├── vitest.config.ts                  # Test config (vitest, jsdom)
 ├── version-bump.mjs                  # Version bump + lint pre-check
-├── release-guide.md                  # Release workflow
 ├── tsconfig.json
 ├── package.json
 ├── manifest.json
