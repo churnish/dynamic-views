@@ -1275,24 +1275,21 @@ export class DynamicViewsGridView extends BasesView {
                 if (scrollBefore > 0) {
                   this.scrollEl.scrollTop = scrollBefore;
                 }
+              }
 
-                // Re-initialize gradients after column change (card widths changed)
-                const feed = this.feedContainerRef.current;
-                if (feed) {
-                  (this.observerWindow ?? window).requestAnimationFrame(() => {
-                    // Guard: skip if stale render or disconnected
-                    if (!feed.isConnected) return;
-
-                    // Sync responsive classes before gradient init
-                    syncResponsiveClasses(
-                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
-                    );
-                    initializeScrollGradients(feed);
-                    setHoverScaleForCards(
-                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
-                    );
-                  });
-                }
+              // Card width may change within same column count — re-sync
+              const feed = this.feedContainerRef.current;
+              if (feed?.isConnected) {
+                (this.observerWindow ?? window).requestAnimationFrame(() => {
+                  if (!feed.isConnected) return;
+                  syncResponsiveClasses(
+                    Array.from(feed.querySelectorAll<HTMLElement>('.card'))
+                  );
+                  initializeScrollGradients(feed);
+                  setHoverScaleForCards(
+                    Array.from(feed.querySelectorAll<HTMLElement>('.card'))
+                  );
+                });
               }
             } finally {
               this.isUpdatingColumns = false;

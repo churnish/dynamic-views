@@ -2173,6 +2173,11 @@ export class DynamicViewsMasonryView extends BasesView {
       // causing stale layout after hotkey window resize.
       if (this.masonryContainer?.isConnected) {
         this.updateLayoutRef.current?.('resize-observer');
+        const mounted = this.virtualItems
+          .filter((v) => v.el?.isConnected)
+          .map((v) => v.el!);
+        syncResponsiveClasses(mounted);
+        initializeScrollGradients(this.masonryContainer);
       }
     };
 
@@ -2628,6 +2633,8 @@ export class DynamicViewsMasonryView extends BasesView {
     this.hasExplicitScrollHeights = true;
     item.el = handle.el;
     item.handle = handle;
+    syncResponsiveClasses([handle.el]);
+    initializeScrollGradientsForCards([handle.el]);
   }
 
   /** Unmount a virtual item: cleanup, remove from DOM, clear refs */
@@ -2762,6 +2769,13 @@ export class DynamicViewsMasonryView extends BasesView {
       this.pendingDeferredResize = false;
       this.masonryContainer?.classList.add('masonry-skip-transition');
       this.updateLayoutRef.current?.('resize-observer');
+      if (this.masonryContainer?.isConnected) {
+        const cards = Array.from(
+          this.masonryContainer.querySelectorAll<HTMLElement>('.card')
+        );
+        syncResponsiveClasses(cards);
+        initializeScrollGradients(this.masonryContainer);
+      }
       this.scheduleDeferredRemeasure(true);
       return;
     }

@@ -1532,7 +1532,10 @@ export class SharedCardRenderer {
       // Skip content-hidden cards (dimension reads trigger Chromium warnings)
       if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
       for (const entry of entries) {
-        const cardWidth = entry.contentRect.width;
+        // Use offsetWidth (border-box, rounded) to match syncResponsiveClasses.
+        // contentRect.width is content-box subpixel — at boundary widths (e.g.
+        // 389.5 vs offsetWidth 406) the two disagree and create an infinite toggle loop.
+        const cardWidth = (entry.target as HTMLElement).offsetWidth;
 
         // Skip if card hasn't been sized yet (masonry sets width)
         if (cardWidth <= 0) continue;

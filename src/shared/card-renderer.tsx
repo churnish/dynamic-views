@@ -1904,7 +1904,8 @@ function Card({
 
         const responsiveObserver = new ResizeObserver((entries) => {
           for (const entry of entries) {
-            const cardWidth = entry.contentRect.width;
+            // Use offsetWidth (border-box) to match syncResponsiveClasses — see shared-renderer.ts
+            const cardWidth = (entry.target as HTMLElement).offsetWidth;
 
             // Compact mode
             if (breakpoint > 0) {

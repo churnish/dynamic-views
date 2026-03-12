@@ -562,25 +562,21 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
 
   /** Toggle card width debug badges (live-updating via ResizeObserver) */
   debugWidths() {
-    const ATTR = 'data-dv-debug-widths';
+    const ATTR = 'data-dynamic-views-debug-widths';
     // Collect documents from all windows (main + popouts)
     const docs = [document, ...this.getAllPopoutDocuments()];
 
-    const existing = docs.some((d) => d.querySelector(`[${ATTR}]`));
-    if (existing) {
-      docs.forEach((d) =>
-        d.querySelectorAll(`[${ATTR}]`).forEach((badge) => {
-          (badge as HTMLElement & { _ro?: ResizeObserver })._ro?.disconnect();
-          badge.remove();
-        })
-      );
-      console.debug('width badges OFF');
-      return;
-    }
+    // Remove existing badges before reapplying (idempotent)
+    docs.forEach((d) =>
+      d.querySelectorAll(`[${ATTR}]`).forEach((badge) => {
+        (badge as HTMLElement & { _ro?: ResizeObserver })._ro?.disconnect();
+        badge.remove();
+      })
+    );
 
     let count = 0;
     docs.forEach((d) =>
-      d.querySelectorAll('.card').forEach((card) => {
+      d.querySelectorAll('.dynamic-views .card').forEach((card) => {
         const badge = d.createElement('div');
         badge.setAttribute(ATTR, '');
         Object.assign(badge.style, {
@@ -599,7 +595,9 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
         const update = () => {
           badge.textContent = `${Math.round(card.getBoundingClientRect().width)}px`;
         };
-        const ro = new ResizeObserver(update);
+        const win = (card.ownerDocument.defaultView ??
+          window) as typeof globalThis;
+        const ro = new win.ResizeObserver(update);
         ro.observe(card);
         (badge as HTMLElement & { _ro?: ResizeObserver })._ro = ro;
         update();
