@@ -63,7 +63,7 @@ body:is(
   .card-backdrop
   img {
   filter: brightness(
-      calc(1 - var(--dynamic-views-backdrop-overlay-dark, 70) * 0.01)
+      calc(1 - var(--dynamic-views-backdrop-overlay-dark, 60) * 0.01)
     )
     blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
 }
