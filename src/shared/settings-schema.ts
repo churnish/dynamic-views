@@ -14,6 +14,7 @@ import type {
   BasesResolvedSettings,
 } from '../types';
 import { VIEW_DEFAULTS, BASES_DEFAULTS } from '../constants';
+import { VALID_VIEW_VALUES } from './view-validation';
 import { stripNotePrefix } from '../utils/property';
 
 /** Minimal Bases config interface — subset of BasesViewConfig used by settings readers */
@@ -439,6 +440,20 @@ function createConfigGetters(config: BasesConfig) {
   };
 }
 
+/** Validate a config value against VALID_VIEW_VALUES, with optional stale config fallback */
+function getValidEnum<T extends string>(
+  config: BasesConfig,
+  field: keyof typeof VALID_VIEW_VALUES,
+  defaultValue: T,
+  previousValue?: T
+): T {
+  const value = config.get(field as string);
+  const valid = VALID_VIEW_VALUES[field];
+  if (valid?.includes(value as string)) return value as T;
+  if (previousValue !== undefined) return previousValue;
+  return defaultValue;
+}
+
 /**
  * Read settings from Bases config
  * Maps Bases config values to BasesResolvedSettings by merging:
@@ -520,71 +535,42 @@ export function readBasesSettings(
     fallbackToContent: getBool('fallbackToContent', defaults.fallbackToContent),
     textPreviewLines: getNumber('textPreviewLines', defaults.textPreviewLines),
     imageProperty,
-    fallbackToEmbeds: (() => {
-      const value = config.get('fallbackToEmbeds');
-      return value === 'always' ||
-        value === 'if-unavailable' ||
-        value === 'never'
-        ? value
-        : defaults.fallbackToEmbeds;
-    })(),
-    imageFormat: (() => {
-      const value = config.get('imageFormat');
-      if (
-        value === 'thumbnail' ||
-        value === 'cover' ||
-        value === 'poster' ||
-        value === 'backdrop'
-      ) {
-        return value;
-      }
-      // Stale config guard: use previous value if available
-      if (previousSettings?.imageFormat !== undefined) {
-        return previousSettings.imageFormat;
-      }
-      return defaults.imageFormat;
-    })(),
+    fallbackToEmbeds: getValidEnum(
+      config,
+      'fallbackToEmbeds',
+      defaults.fallbackToEmbeds
+    ),
+    imageFormat: getValidEnum(
+      config,
+      'imageFormat',
+      defaults.imageFormat,
+      previousSettings?.imageFormat
+    ),
     thumbnailSize: getNumber('thumbnailSize', defaults.thumbnailSize),
-    imagePosition: (() => {
-      const value = config.get('imagePosition');
-      return value === 'left' ||
-        value === 'right' ||
-        value === 'top' ||
-        value === 'bottom'
-        ? value
-        : defaults.imagePosition;
-    })(),
-    imageFit: (() => {
-      const value = config.get('imageFit');
-      return value === 'crop' || value === 'contain'
-        ? value
-        : defaults.imageFit;
-    })(),
-    posterDisplayMode: (() => {
-      const value = config.get('posterDisplayMode');
-      return value === 'fade' || value === 'overlay'
-        ? value
-        : defaults.posterDisplayMode;
-    })(),
+    imagePosition: getValidEnum(
+      config,
+      'imagePosition',
+      defaults.imagePosition
+    ),
+    imageFit: getValidEnum(config, 'imageFit', defaults.imageFit),
+    posterDisplayMode: getValidEnum(
+      config,
+      'posterDisplayMode',
+      defaults.posterDisplayMode
+    ),
     imageRatio: getNumber('imageRatio', defaults.imageRatio),
-    propertyLabels: (() => {
-      const value = config.get('propertyLabels');
-      if (value === 'hide' || value === 'inline' || value === 'above') {
-        return value;
-      }
-      // Stale config guard: use previous value if available
-      if (previousSettings?.propertyLabels !== undefined) {
-        return previousSettings.propertyLabels;
-      }
-      return defaults.propertyLabels;
-    })(),
+    propertyLabels: getValidEnum(
+      config,
+      'propertyLabels',
+      defaults.propertyLabels,
+      previousSettings?.propertyLabels
+    ),
     pairProperties: getBool('pairProperties', defaults.pairProperties),
-    rightPropertyPosition: (() => {
-      const value = config.get('rightPropertyPosition');
-      return value === 'left' || value === 'column' || value === 'right'
-        ? value
-        : defaults.rightPropertyPosition;
-    })(),
+    rightPropertyPosition: getValidEnum(
+      config,
+      'rightPropertyPosition',
+      defaults.rightPropertyPosition
+    ),
     invertPropertyPairing: getString(
       'invertPropertyPairing',
       defaults.invertPropertyPairing
@@ -652,59 +638,40 @@ export function extractBasesTemplate(
       mergedDefaults.textPreviewLines
     ),
     imageProperty: getString('imageProperty', mergedDefaults.imageProperty),
-    fallbackToEmbeds: (() => {
-      const value = config.get('fallbackToEmbeds');
-      return value === 'always' ||
-        value === 'if-unavailable' ||
-        value === 'never'
-        ? value
-        : mergedDefaults.fallbackToEmbeds;
-    })(),
-    imageFormat: (() => {
-      const value = config.get('imageFormat');
-      return value === 'thumbnail' ||
-        value === 'cover' ||
-        value === 'poster' ||
-        value === 'backdrop'
-        ? value
-        : mergedDefaults.imageFormat;
-    })(),
+    fallbackToEmbeds: getValidEnum(
+      config,
+      'fallbackToEmbeds',
+      mergedDefaults.fallbackToEmbeds
+    ),
+    imageFormat: getValidEnum(
+      config,
+      'imageFormat',
+      mergedDefaults.imageFormat
+    ),
     thumbnailSize: getNumber('thumbnailSize', mergedDefaults.thumbnailSize),
-    imagePosition: (() => {
-      const value = config.get('imagePosition');
-      return value === 'left' ||
-        value === 'right' ||
-        value === 'top' ||
-        value === 'bottom'
-        ? value
-        : mergedDefaults.imagePosition;
-    })(),
-    imageFit: (() => {
-      const value = config.get('imageFit');
-      return value === 'crop' || value === 'contain'
-        ? value
-        : mergedDefaults.imageFit;
-    })(),
-    posterDisplayMode: (() => {
-      const value = config.get('posterDisplayMode');
-      return value === 'fade' || value === 'overlay'
-        ? value
-        : mergedDefaults.posterDisplayMode;
-    })(),
+    imagePosition: getValidEnum(
+      config,
+      'imagePosition',
+      mergedDefaults.imagePosition
+    ),
+    imageFit: getValidEnum(config, 'imageFit', mergedDefaults.imageFit),
+    posterDisplayMode: getValidEnum(
+      config,
+      'posterDisplayMode',
+      mergedDefaults.posterDisplayMode
+    ),
     imageRatio: getNumber('imageRatio', mergedDefaults.imageRatio),
-    propertyLabels: (() => {
-      const value = config.get('propertyLabels');
-      return value === 'hide' || value === 'inline' || value === 'above'
-        ? value
-        : mergedDefaults.propertyLabels;
-    })(),
+    propertyLabels: getValidEnum(
+      config,
+      'propertyLabels',
+      mergedDefaults.propertyLabels
+    ),
     pairProperties: getBool('pairProperties', mergedDefaults.pairProperties),
-    rightPropertyPosition: (() => {
-      const value = config.get('rightPropertyPosition');
-      return value === 'left' || value === 'column' || value === 'right'
-        ? value
-        : mergedDefaults.rightPropertyPosition;
-    })(),
+    rightPropertyPosition: getValidEnum(
+      config,
+      'rightPropertyPosition',
+      mergedDefaults.rightPropertyPosition
+    ),
     invertPropertyPairing: getString(
       'invertPropertyPairing',
       mergedDefaults.invertPropertyPairing

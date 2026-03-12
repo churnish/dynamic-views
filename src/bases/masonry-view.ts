@@ -1068,7 +1068,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
       if (
         renderHash === this.renderState.lastRenderHash &&
-        this.masonryContainer?.children.length
+        this.masonryContainer?.children.length &&
+        changedPaths.size === 0
       ) {
         // Obsidian may fire onDataUpdated before config.getOrder() is updated.
         // Schedule delayed re-checks at increasing intervals to catch late config updates.
@@ -2638,6 +2639,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.focusState.hoveredEl = null;
     }
     item.handle?.cleanup();
+    this.cardRenderer.abortCardRerenderControllers(item.el!);
     item.el!.style.removeProperty('height');
     this.cardResizeObserver?.unobserve(item.el!);
     item.el?.remove();
@@ -3002,13 +3004,54 @@ export class DynamicViewsMasonryView extends BasesView {
       );
 
       // Update VirtualItem references (mounted and unmounted)
+      const replacedCardEls: HTMLElement[] = [];
+
       for (const item of this.virtualItems) {
         if (item.cardData.path === path) {
+          const oldCard = item.cardData;
           item.cardData = newCard;
           item.entry = freshEntry;
 
-          // Surgical DOM update for mounted card
-          if (item.el) {
+          if (item.el && SharedCardRenderer.hasImageChanged(oldCard, newCard)) {
+            if (this.focusState.hoveredEl === item.el) {
+              this.focusState.hoveredEl = null;
+            }
+            item.handle?.cleanup();
+            this.cardRenderer.abortCardRerenderControllers(item.el);
+            this.cardResizeObserver?.unobserve(item.el);
+            const parent = item.el.parentElement;
+            if (!parent) continue;
+            const nextSibling = item.el.nextSibling;
+            item.el.remove();
+
+            const tempContainer = item.el.ownerDocument.createElement('div');
+            const handle = this.renderCard(
+              tempContainer,
+              newCard,
+              freshEntry,
+              item.index,
+              settings
+            );
+            parent.insertBefore(handle.el, nextSibling);
+
+            // Re-apply masonry positioning (no explicit height — let natural flow trigger relayout)
+            handle.el.style.width = `${item.width}px`;
+            handle.el.style.left = `${item.x}px`;
+            handle.el.style.top = `${item.y}px`;
+            handle.el.classList.add('masonry-positioned');
+            handle.el.style.setProperty(
+              '--hover-scale-x',
+              computeHoverScale(item.width)
+            );
+            handle.el.style.setProperty(
+              '--hover-scale-y',
+              computeHoverScale(item.height)
+            );
+
+            item.el = handle.el;
+            item.handle = handle;
+            replacedCardEls.push(handle.el);
+          } else if (item.el) {
             this.cardRenderer.updateCardContent(
               item.el,
               newCard,
@@ -3017,6 +3060,13 @@ export class DynamicViewsMasonryView extends BasesView {
             );
           }
         }
+      }
+
+      // Post-insert measurement passes for replaced cards
+      if (replacedCardEls.length > 0) {
+        syncResponsiveClasses(replacedCardEls);
+        initializeTitleTruncationForCards(replacedCardEls);
+        initializeTextPreviewClampForCards(replacedCardEls);
       }
     }
 

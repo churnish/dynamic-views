@@ -39,6 +39,7 @@ vi.mock('../../src/constants', () => ({
     displaySecondAsSubtitle: false,
     propertyLabels: 'inline',
   },
+  DATACORE_DEFAULTS: {},
 }));
 
 /** Minimal mock implementing the BasesConfig interface */

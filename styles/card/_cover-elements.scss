@@ -162,7 +162,7 @@ body.dynamic-views-cover-circular
     .card-cover-slideshow
     .dynamic-views-image-embed
     img.hover-zoom-eligible {
-    scale: 1.05;
+    scale: 1.05; /* scale (not transform) — avoids conflicting with slideshow slide animation transforms */
   }
 
   /* Cover hover zoom — cover mode: zoom on cover hover intent */
@@ -181,7 +181,7 @@ body.dynamic-views-cover-circular
     .card-cover-slideshow
     .dynamic-views-image-embed
     img.hover-zoom-eligible {
-    scale: 1.05;
+    scale: 1.05; /* scale (not transform) — avoids conflicting with slideshow slide animation transforms */
   }
 }
 

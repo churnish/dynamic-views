@@ -461,7 +461,9 @@ export class SharedCardRenderer {
   private slideshowCleanups: (() => void)[] = [];
   private cardScopes: Scope[] = [];
   private cardAbortControllers: AbortController[] = [];
-  private cardRerenderControllers = new Map<HTMLElement, AbortController[]>();
+  private propertyRerenderController = new Map<HTMLElement, AbortController>();
+  private subtitleRerenderController = new Map<HTMLElement, AbortController>();
+  private urlIconRerenderController = new Map<HTMLElement, AbortController>();
   private activeScope: Scope | null = null;
 
   constructor(
@@ -500,10 +502,14 @@ export class SharedCardRenderer {
     this.cardAbortControllers = [];
 
     // Abort all rerender-specific controllers
-    this.cardRerenderControllers.forEach((list) =>
-      list.forEach((c) => c.abort())
-    );
-    this.cardRerenderControllers.clear();
+    for (const map of [
+      this.propertyRerenderController,
+      this.subtitleRerenderController,
+      this.urlIconRerenderController,
+    ]) {
+      map.forEach((c) => c.abort());
+      map.clear();
+    }
 
     // Cleanup viewers only on view destruction (viewer persists across re-renders)
     if (forceViewerCleanup) {
@@ -511,23 +517,16 @@ export class SharedCardRenderer {
     }
   }
 
-  private abortCardRerenderControllers(cardEl: HTMLElement): void {
-    const list = this.cardRerenderControllers.get(cardEl);
-    if (list) {
-      for (const c of list) c.abort();
-      this.cardRerenderControllers.delete(cardEl);
+  /** Abort all rerender controllers for a card (property, subtitle, URL icon) */
+  public abortCardRerenderControllers(cardEl: HTMLElement): void {
+    for (const map of [
+      this.propertyRerenderController,
+      this.subtitleRerenderController,
+      this.urlIconRerenderController,
+    ]) {
+      map.get(cardEl)?.abort();
+      map.delete(cardEl);
     }
-  }
-
-  private trackRerenderController(cardEl: HTMLElement): AbortController {
-    const controller = new AbortController();
-    let list = this.cardRerenderControllers.get(cardEl);
-    if (!list) {
-      list = [];
-      this.cardRerenderControllers.set(cardEl, list);
-    }
-    list.push(controller);
-    return controller;
   }
 
   /**
@@ -2083,7 +2082,6 @@ export class SharedCardRenderer {
     entry: BasesEntry,
     settings: BasesResolvedSettings
   ): void {
-    this.abortCardRerenderControllers(cardEl);
     this.updateTitleText(cardEl, card, entry, settings);
     this.rerenderSubtitle(cardEl, card, entry, settings);
     this.rerenderProperties(cardEl, card, entry, settings);
@@ -2091,6 +2089,101 @@ export class SharedCardRenderer {
     updateTextPreviewDOM(cardEl, card.textPreview || '');
     const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
     if (previewEl) applyPerParagraphClamp(previewEl);
+    this.updateUrlIcon(cardEl, card);
+  }
+
+  /** Compare old/new CardData image URLs to detect image changes */
+  static hasImageChanged(
+    oldCard: CardData | undefined,
+    newCard: CardData
+  ): boolean {
+    const oldUrl = oldCard?.imageUrl;
+    const newUrl = newCard.imageUrl;
+    if (!oldUrl && !newUrl) return false;
+    if (!oldUrl || !newUrl) return true;
+    const oldArr = Array.isArray(oldUrl) ? oldUrl : [oldUrl];
+    const newArr = Array.isArray(newUrl) ? newUrl : [newUrl];
+    if (oldArr.length !== newArr.length) return true;
+    return oldArr.some((url, i) => url !== newArr[i]);
+  }
+
+  /** Surgically update URL icon in card header */
+  private updateUrlIcon(cardEl: HTMLElement, card: CardData): void {
+    const headerEl = cardEl.querySelector<HTMLElement>('.card-header');
+    const existingIcon = cardEl.querySelector<HTMLAnchorElement>(
+      '.card-title-url-icon'
+    );
+
+    if (card.hasValidUrl && card.urlValue) {
+      if (existingIcon) {
+        existingIcon.href = card.urlValue;
+        existingIcon.setAttribute('aria-label', card.urlValue);
+        if (/^https?:\/\//i.test(card.urlValue)) {
+          existingIcon.target = '_blank';
+          existingIcon.rel = 'noopener noreferrer';
+        } else {
+          existingIcon.removeAttribute('target');
+          existingIcon.removeAttribute('rel');
+        }
+        const dragText = existingIcon.querySelector('.dynamic-views-drag-text');
+        if (dragText) dragText.textContent = card.urlValue;
+      } else if (headerEl) {
+        this.urlIconRerenderController.get(cardEl)?.abort();
+        const urlIconAbort = new AbortController();
+        this.urlIconRerenderController.set(cardEl, urlIconAbort);
+        const { signal } = urlIconAbort;
+        const iconEl = headerEl.createEl('a', {
+          cls: 'card-title-url-icon text-icon-button svg-icon',
+          href: card.urlValue,
+        });
+        iconEl.setAttribute('aria-label', card.urlValue);
+        if (/^https?:\/\//i.test(card.urlValue)) {
+          iconEl.target = '_blank';
+          iconEl.rel = 'noopener noreferrer';
+        }
+        setIcon(iconEl, getUrlIcon());
+        const dragText = iconEl.createSpan('dynamic-views-drag-text');
+        dragText.textContent = card.urlValue;
+
+        iconEl.addEventListener('click', (e) => e.stopPropagation(), {
+          signal,
+        });
+        iconEl.addEventListener(
+          'mousedown',
+          () => {
+            const body = iconEl.ownerDocument.body;
+            body.addClass('dynamic-views-dragging');
+            iconEl.ownerDocument.addEventListener(
+              'mouseup',
+              () => body.removeClass('dynamic-views-dragging'),
+              { once: true }
+            );
+          },
+          { signal }
+        );
+        iconEl.addEventListener(
+          'dragstart',
+          (e) => {
+            e.stopPropagation();
+            if (e.dataTransfer) e.dataTransfer.effectAllowed = 'link';
+          },
+          { signal }
+        );
+        iconEl.addEventListener(
+          'dragend',
+          () => {
+            const body = iconEl.ownerDocument.body;
+            body.querySelector('.tooltip')?.remove();
+            body.removeClass('dynamic-views-dragging');
+          },
+          { signal }
+        );
+      }
+    } else if (existingIcon) {
+      this.urlIconRerenderController.get(cardEl)?.abort();
+      this.urlIconRerenderController.delete(cardEl);
+      existingIcon.remove();
+    }
   }
 
   /**
@@ -2113,9 +2206,10 @@ export class SharedCardRenderer {
       el.remove();
     }
 
-    // Fresh signal for new property event listeners (scroll gradients, etc.)
-    // Old listeners are on removed DOM — harmless until next full cleanup
-    const propAbort = this.trackRerenderController(cardEl);
+    // Abort previous property controller, create fresh signal
+    this.propertyRerenderController.get(cardEl)?.abort();
+    const propAbort = new AbortController();
+    this.propertyRerenderController.set(cardEl, propAbort);
 
     // Re-render properties (appends new containers at end of bodyEl;
     // internally calls measurePropertyFieldsForCard + setupScrollGradients)
@@ -2143,8 +2237,10 @@ export class SharedCardRenderer {
     const subtitleEl = cardEl.querySelector<HTMLElement>('.card-subtitle');
     const hasSubtitle = !!(settings.subtitleProperty && card.subtitle);
 
-    // Subtitle disappeared: remove stale element
+    // Subtitle disappeared: remove stale element and abort its controller
     if (subtitleEl && !hasSubtitle) {
+      this.subtitleRerenderController.get(cardEl)?.abort();
+      this.subtitleRerenderController.delete(cardEl);
       subtitleEl.remove();
       return;
     }
@@ -2164,7 +2260,10 @@ export class SharedCardRenderer {
       targetEl.empty();
     }
 
-    const propAbort = this.trackRerenderController(cardEl);
+    // Abort previous subtitle controller, create fresh signal
+    this.subtitleRerenderController.get(cardEl)?.abort();
+    const propAbort = new AbortController();
+    this.subtitleRerenderController.set(cardEl, propAbort);
 
     this.renderPropertyContent(
       targetEl,

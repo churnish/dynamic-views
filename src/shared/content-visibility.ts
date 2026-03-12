@@ -17,9 +17,11 @@ export const CONTENT_HIDDEN_CLASS = 'content-hidden';
 
 export function setupContentVisibility(scrollContainer: HTMLElement): {
   observe: (card: HTMLElement) => void;
+  unobserve: (card: HTMLElement) => void;
   disconnect: () => void;
 } {
-  if (Platform.isMobile) return { observe: () => {}, disconnect: () => {} };
+  if (Platform.isMobile)
+    return { observe: () => {}, unobserve: () => {}, disconnect: () => {} };
 
   const margin = `${PANE_MULTIPLIER * 100}% 0px`;
 
@@ -37,6 +39,7 @@ export function setupContentVisibility(scrollContainer: HTMLElement): {
 
   return {
     observe: (card: HTMLElement) => observer.observe(card),
+    unobserve: (card: HTMLElement) => observer.unobserve(card),
     disconnect: () => observer.disconnect(),
   };
 }

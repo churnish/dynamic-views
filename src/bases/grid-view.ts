@@ -901,7 +901,8 @@ export class DynamicViewsGridView extends BasesView {
 
       if (
         renderHash === this.renderState.lastRenderHash &&
-        this.feedContainerRef.current?.children.length
+        this.feedContainerRef.current?.children.length &&
+        changedPaths.size === 0
       ) {
         // Obsidian may fire onDataUpdated before config.getOrder() is updated.
         // Schedule delayed re-checks at increasing intervals to catch late config updates.
@@ -1466,12 +1467,14 @@ export class DynamicViewsGridView extends BasesView {
     );
 
     // Rebuild CardData and update DOM for each changed card
+    const replacedCardEls: HTMLElement[] = [];
+
     for (const path of changedPaths) {
       const stored = this.cardDataByPath.get(path);
       const freshEntry = changedEntries.find((e) => e.file.path === path);
       if (!freshEntry) continue;
 
-      // Rebuild CardData from fresh entry + cached content
+      const oldCard = stored?.cardData;
       const newCard = basesEntryToCardData(
         this.app,
         freshEntry,
@@ -1483,17 +1486,34 @@ export class DynamicViewsGridView extends BasesView {
         this.contentCache.images[path]
       );
 
-      // Update stored references
       if (stored) {
         stored.cardData = newCard;
         stored.entry = freshEntry;
       }
 
-      // Surgical DOM update for mounted card
       const cardEl = this.containerEl.querySelector<HTMLElement>(
         `[data-path="${CSS.escape(path)}"]`
       );
-      if (cardEl) {
+      if (!cardEl) continue;
+
+      if (SharedCardRenderer.hasImageChanged(oldCard, newCard)) {
+        this.contentVisibility?.unobserve(cardEl);
+        const parent = cardEl.parentElement;
+        if (!parent) continue;
+        const nextSibling = cardEl.nextSibling;
+        cardEl.remove();
+
+        const tempContainer = cardEl.ownerDocument.createElement('div');
+        const handle = this.renderCard(
+          tempContainer,
+          newCard,
+          freshEntry,
+          0,
+          settings
+        );
+        parent.insertBefore(handle.el, nextSibling);
+        replacedCardEls.push(handle.el);
+      } else {
         this.cardRenderer.updateCardContent(
           cardEl,
           newCard,
@@ -1501,6 +1521,14 @@ export class DynamicViewsGridView extends BasesView {
           settings
         );
       }
+    }
+
+    // Post-insert measurement passes for replaced cards
+    if (replacedCardEls.length > 0) {
+      syncResponsiveClasses(replacedCardEls);
+      initializeTitleTruncationForCards(replacedCardEls);
+      initializeTextPreviewClampForCards(replacedCardEls);
+      setHoverScaleForCards(replacedCardEls);
     }
 
     // Re-initialize scroll gradients (property widths may have changed)
