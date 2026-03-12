@@ -391,7 +391,7 @@ export function getBasesViewOptions(
             one: 'One',
             two: 'Two',
           },
-          default: d.minimumColumns === 1 ? 'one' : 'two',
+          default: d.minimumColumns === 1 ? 'one' : 'two', // Set at line 51 via getMinimumColumnsDefault()
         },
         {
           type: 'text',
@@ -617,6 +617,8 @@ export function extractBasesTemplate(
 ): Partial<ViewDefaults> {
   // Merge BASES_DEFAULTS so fallbacks and sparse filter use actual Bases defaults
   const mergedDefaults = { ...defaults, ...BASES_DEFAULTS };
+  // Apply view-type-specific defaults before template merge
+  mergedDefaults.minimumColumns = getMinimumColumnsDefault(viewType);
 
   const { getString, getBool, getNumber } = createConfigGetters(config);
 

@@ -26,7 +26,7 @@
     flex: 1 1 auto !important;
   }
 
-  /* Right stays at content width; no margin-left: auto (left's growth handles alignment) */
+  /* Defeats .property-measured fixed width (line ~175) — compact mode needs content-sized right column */
   .card.compact-mode .property-pair .pair-right,
   .card.compact-mode .property-pair.property-measured .pair-right {
     flex: 0 1 auto !important;

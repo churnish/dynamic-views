@@ -1797,6 +1797,9 @@ body.is-mobile
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
+body.is-mobile
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],

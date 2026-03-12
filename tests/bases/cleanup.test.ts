@@ -476,6 +476,73 @@ describe('cleanUpBaseFile', () => {
     expect(viewIds?.get('Renamed View')?.isNew).toBe(false);
   });
 
+  it('should convert numeric minimumColumns in template to YAML string for new views', async () => {
+    const file = createMockFile('test.base');
+
+    // Template with minimumColumns: 2 (number) → YAML should get 'two'
+    plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
+      minimumColumns: 2,
+    });
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: 'dynamic-views-grid',
+          name: 'New View',
+          // No id — treated as new view
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    expect(result.views[0].minimumColumns).toBe('two');
+
+    // Now test minimumColumns: 1 → 'one'
+    plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
+      minimumColumns: 1,
+    });
+    const getResult2 = setupVaultProcess(app, {
+      views: [
+        {
+          type: 'dynamic-views-grid',
+          name: 'Another New View',
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result2 = getResult2() as { views: Record<string, unknown>[] };
+    expect(result2.views[0].minimumColumns).toBe('one');
+  });
+
+  it('should overwrite pre-existing schema default keys with template values for new views', async () => {
+    const file = createMockFile('test.base');
+
+    // Template overrides imageFormat to 'poster'
+    plugin.persistenceManager.getSettingsTemplate.mockReturnValue({
+      imageFormat: 'poster',
+    });
+    // New view (no id) already has imageFormat: 'thumbnail' — Obsidian pre-populates
+    // schema defaults in the YAML before cleanUpBaseFile runs
+    const getResult = setupVaultProcess(app, {
+      views: [
+        {
+          type: 'dynamic-views-grid',
+          name: 'New View',
+          imageFormat: 'thumbnail',
+        },
+      ],
+    });
+
+    await cleanUpBaseFile(app, file, plugin);
+
+    const result = getResult() as { views: Record<string, unknown>[] };
+    // Template must unconditionally overwrite the pre-existing schema default
+    expect(result.views[0].imageFormat).toBe('poster');
+  });
+
   it('should not inject template values into existing view YAML', async () => {
     const file = createMockFile('test.base');
     plugin.persistenceManager.getSettingsTemplate.mockReturnValue({

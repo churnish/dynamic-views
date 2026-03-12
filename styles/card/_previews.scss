@@ -154,10 +154,15 @@ body.dynamic-views-text-preview-keep-newlines
     display: none;
   }
 
+  /* Hidden by default — shown only when .multi-image is present */
+  .thumbnail-indicator {
+    display: none;
+  }
+
   .card-thumbnail.multi-image .thumbnail-indicator {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: var(--size-2-2);
+    right: var(--size-2-2);
     display: flex;
     align-items: center;
     justify-content: center;
