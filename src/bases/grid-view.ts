@@ -4,7 +4,13 @@
  */
 
 import type { BasesViewConfig, BasesAllOptions } from 'obsidian';
-import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
+import {
+  BasesView,
+  BasesEntry,
+  Events,
+  QueryController,
+  TFile,
+} from 'obsidian';
 import { CardData } from '../shared/card-renderer';
 import {
   basesEntryToCardData,
@@ -558,15 +564,9 @@ export class DynamicViewsGridView extends BasesView {
     );
 
     // Re-render when plugin settings change from the settings tab
-    const pluginSettingsHandler = () => this.onDataUpdated();
-    document.body.addEventListener(
-      PLUGIN_SETTINGS_CHANGE,
-      pluginSettingsHandler
-    );
-    this.register(() =>
-      document.body.removeEventListener(
-        PLUGIN_SETTINGS_CHANGE,
-        pluginSettingsHandler
+    this.registerEvent(
+      (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () =>
+        this.onDataUpdated()
       )
     );
 

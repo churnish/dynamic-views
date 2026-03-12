@@ -2044,9 +2044,10 @@ export class SharedCardRenderer {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
-    // Apply Extension mode logic (mirrors title resolution in renderCard)
-    // Style Settings classes live on the main window's document.body only —
-    // cardEl.ownerDocument.body would miss them in popout windows
+    // Apply Extension mode logic (mirrors title resolution in renderCard).
+    // handleDocumentChange syncs dynamic-views-* classes to popout bodies,
+    // so cardEl.ownerDocument.body is equivalent — using document.body here
+    // is a conservative choice that always reads from the source of truth.
     const isExtMode = document.body.classList.contains(
       'dynamic-views-file-type-ext'
     );

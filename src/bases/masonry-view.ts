@@ -4,7 +4,13 @@
  */
 
 import type { BasesViewConfig, BasesAllOptions } from 'obsidian';
-import { BasesView, BasesEntry, QueryController, TFile } from 'obsidian';
+import {
+  BasesView,
+  BasesEntry,
+  Events,
+  QueryController,
+  TFile,
+} from 'obsidian';
 import { CardData } from '../shared/card-renderer';
 import {
   basesEntryToCardData,
@@ -663,19 +669,11 @@ export class DynamicViewsMasonryView extends BasesView {
     );
 
     // Re-render when plugin settings change from the settings tab
-    const pluginSettingsHandler = () => {
-      resetGapCache();
-      this.onDataUpdated();
-    };
-    document.body.addEventListener(
-      PLUGIN_SETTINGS_CHANGE,
-      pluginSettingsHandler
-    );
-    this.register(() =>
-      document.body.removeEventListener(
-        PLUGIN_SETTINGS_CHANGE,
-        pluginSettingsHandler
-      )
+    this.registerEvent(
+      (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () => {
+        resetGapCache();
+        this.onDataUpdated();
+      })
     );
 
     // Setup hover-to-start keyboard navigation
@@ -777,19 +775,14 @@ export class DynamicViewsMasonryView extends BasesView {
       this.onDataUpdated();
     }, this.containerEl);
 
-    // Recreate observers in the new window's V8 isolate — old observers
-    // are bound to the destroyed popout and won't fire for new DOM.
-    // Calls setupMasonryLayout directly (not via render pipeline) because
-    // rapid-fire layout-change events cause version-cancel aborts that
-    // prevent the async render from reaching setupMasonryLayout.
+    // Disconnect old observers — bound to destroyed popout's V8 isolate.
+    // Render pipeline's setupMasonryLayout recreates them in the new
+    // window context via the observerWindow !== currentWindow guard.
     this.layoutResizeObserver?.disconnect();
     this.layoutResizeObserver = null;
     this.cardResizeObserver?.disconnect();
     this.cardResizeObserver = null;
     this.observerWindow = null;
-    if (this.lastRenderedSettings && this.masonryContainer?.isConnected) {
-      this.setupMasonryLayout(this.lastRenderedSettings);
-    }
   }
 
   onload(): void {

@@ -205,7 +205,7 @@ export class PersistenceManager {
 
     this.data.pluginSettings = sparse;
     await this.save();
-    document.body.dispatchEvent(new Event(PLUGIN_SETTINGS_CHANGE));
+    this.plugin.app.workspace.trigger(PLUGIN_SETTINGS_CHANGE);
   }
 
   // ============================================================================

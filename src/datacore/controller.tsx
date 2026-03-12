@@ -613,9 +613,8 @@ export function View({
         return prev;
       });
     };
-    document.body.addEventListener(PLUGIN_SETTINGS_CHANGE, handler);
-    return () =>
-      document.body.removeEventListener(PLUGIN_SETTINGS_CHANGE, handler);
+    const ref = (app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, handler);
+    return () => app.workspace.offref(ref);
   }, [app]);
 
   // Validate and fallback query

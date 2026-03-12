@@ -22,6 +22,7 @@ vi.mock('../src/constants', () => ({
     revealInNotebookNavigator: 'disable',
     showYoutubeThumbnails: true,
     showCardLinkCovers: true,
+    contextMenuCommands: true,
   },
   VIEW_DEFAULTS: {
     cardSize: 300,
