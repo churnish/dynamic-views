@@ -7,17 +7,35 @@
     min-width: 0;
   }
 
-  /* Compact mode: wrap paired properties — stay side-by-side when both fit, stack when they don't */
+  /* Compact mode: wrap paired properties — stay side-by-side when both fit, stack when they don't.
+     Keeps non-compact gap (4-3) so flex-wrap accounts for full spacing in wrapping calc. */
   .card.compact-mode .property-pair {
     flex-wrap: wrap;
-    gap: var(--dynamic-views-size-2-2);
   }
 
   .card.compact-mode .property-pair .property,
   .card.compact-mode .property-pair.property-measured .property {
     width: auto !important;
     max-width: 100% !important;
-    flex: 1 1 0 !important;
+  }
+
+  /* Left grows to fill → pushes right to card edge when side-by-side */
+  .card.compact-mode .property-pair .pair-left,
+  .card.compact-mode .property-pair.property-measured .pair-left {
+    flex: 1 1 auto !important;
+  }
+
+  /* Right stays at content width; no margin-left: auto (left's growth handles alignment) */
+  .card.compact-mode .property-pair .pair-right,
+  .card.compact-mode .property-pair.property-measured .pair-right {
+    flex: 0 1 auto !important;
+    margin-left: 0 !important;
+  }
+
+  /* Stacked right-side content left-aligns (right-positioning comes from flex-grow, not justify) */
+  .card.compact-mode .property-pair .pair-right .property-content,
+  .card.compact-mode .property-pair .pair-right .property-content-wrapper {
+    justify-content: flex-start;
   }
 
   /* Meta-field: scrollable container */
@@ -114,10 +132,15 @@
     max-width: 50%;
   }
 
-  /* Right-side property: push to card edge regardless of measurement state.
+  /* Right-side property: push to card edge in right-position mode (default).
      Measured: field widths fill the row, auto margin resolves to 0.
-     Unmeasured: absorbs leftover space so right content sits flush at card edge. */
-  .property-pair .pair-right {
+     Unmeasured: absorbs leftover space so right content sits flush at card edge.
+     Left/column modes: pair-right sits adjacent to pair-left, no push. */
+  &:not(.dynamic-views-paired-property-left):not(
+      .dynamic-views-paired-property-column
+    )
+    .property-pair
+    .pair-right {
     margin-left: auto;
   }
 

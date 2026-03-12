@@ -4,7 +4,6 @@ description: Image URL resolution, two-tier dedup cache, broken URL tracking, as
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-06
 ---
-
 # Image loading and caching pipeline
 
 The image loading pipeline resolves property values and in-note embeds into renderable URLs, deduplicates concurrent loads via a two-tier cache, tracks broken URLs to skip on re-render, caches aspect ratios to prevent layout flash, and orchestrates fade-in transitions via a double-rAF pattern. Bases and Datacore share the same core logic but diverge in handler wiring (imperative listeners vs JSX ref callbacks).
@@ -227,3 +226,14 @@ Called when all card images fail to load at runtime. First unconditionally adds 
 8. Embed paths deduplicated -- no image loaded twice even if referenced multiple ways
 9. `cover-ready` class is the single source of truth for "image processing complete" -- both success and error paths set it
 10. Broken URL set is session-scoped and never persisted -- avoids stale entries across restarts
+
+## Reactive image updates (Bases)
+
+When a file's content changes and the image URL differs between old and new `CardData`, the card views detect this via `SharedCardRenderer.hasImageChanged()`:
+
+- Normalizes `imageUrl` (which may be `undefined`, `string`, or `string[]` for backdrop/slideshow) to arrays
+- Compares length and element-wise equality
+
+This drives the update strategy in `updateCardsInPlace`:
+- **Image changed** → full card replacement via `renderCard` (image DOM is too intertwined with cover/slideshow/aspect-ratio to patch)
+- **Image unchanged** → surgical `updateCardContent()` (title, subtitle, properties, text preview, URL icon)

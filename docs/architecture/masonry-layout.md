@@ -2,9 +2,8 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-09
+last updated: 2026-03-12
 ---
-
 # Masonry layout system
 
 The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling; Datacore uses declarative Preact/JSX rendering without virtual scrolling. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
@@ -146,6 +145,23 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 3. For each changed path: find `VirtualItem` with matching path, find fresh `BasesEntry` from `allEntries`, rebuild `CardData` via `basesEntryToCardData()`, update `item.cardData` and `item.entry`.
 4. For mounted cards (`item.el`): call `updateCardContent()` — updates title, subtitle, properties, and text preview DOM.
 5. Record previous height per card, measure new height. If any height changed, trigger `remeasureAndReposition("content-update")`.
+
+#### Image change detection
+
+When `hasImageChanged(oldCard, newCard)` returns `true`, the VirtualItem's card is fully replaced:
+
+1. Clear `focusState.hoveredEl` if it references the old card
+2. `handle.cleanup()` + `abortCardRerenderControllers(item.el)` — cancel in-flight renders
+3. `cardResizeObserver.unobserve(item.el)` — remove from resize tracking
+4. Remove old card, call view's `renderCard` wrapper (re-registers resize observer)
+5. Re-apply masonry positioning: `width`, `left`, `top`, `masonry-positioned` class, hover scale CSS vars
+6. Update `item.el` and `item.handle` references
+
+Post-insert: `syncResponsiveClasses`, `initializeTitleTruncation`, `initializeTextPreviewClamp` for replaced cards.
+
+When image is unchanged, `updateCardContent()` handles surgical DOM updates including `updateUrlIcon`.
+
+**Guard**: `changedPaths.size === 0` on the `renderHash` early return prevents content-only changes from being skipped.
 
 ### 4. Property reorder (fast path)
 
@@ -337,6 +353,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 - **Detection**: `observerWindow` field tracks the window context of existing observers. On each `setupMasonryLayout` call, `masonryContainer.ownerDocument.defaultView` is compared against `observerWindow`. On mismatch (view moved to a different window), existing observers are disconnected and nullified, forcing re-creation in the correct context.
 - **Creation**: Guarded observers (`layoutResizeObserver`, `cardResizeObserver`) use `new (this.observerWindow ?? window).ResizeObserver(...)`. The `scrollResizeObserver` (recreated each call) uses a local `const RO = (container.ownerDocument.defaultView ?? window).ResizeObserver`.
 - **Per-card observers** (in `shared-renderer.ts`): No field needed — derive the window inline from `cardEl.ownerDocument.defaultView` at each creation site.
+- **Popout lifecycle**: `handleDocumentChange` (called when a view moves between windows) only tears down observers — disconnects and nullifies `layoutResizeObserver`, `cardResizeObserver`, and `observerWindow`. It does NOT call `setupMasonryLayout` directly. The render pipeline triggers `setupMasonryLayout` via `onDataUpdated()`, which recreates observers in the correct window context via the `observerWindow` guard. This avoids a double layout pass.
 
 ## Group collapse/expand lifecycle
 

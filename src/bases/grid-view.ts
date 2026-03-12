@@ -605,9 +605,6 @@ export class DynamicViewsGridView extends BasesView {
         }
       }
     }
-    // Remove FOUC guard injected by window-open handler
-    newDoc.getElementById('dynamic-views-fouc-guard')?.remove();
-
     // Rebind style observer to new document's body
     this.disconnectStyleObserver?.();
     this.disconnectStyleObserver = setupStyleSettingsObserver(
@@ -1498,6 +1495,7 @@ export class DynamicViewsGridView extends BasesView {
 
       if (SharedCardRenderer.hasImageChanged(oldCard, newCard)) {
         this.contentVisibility?.unobserve(cardEl);
+        this.cardRenderer.abortCardRerenderControllers(cardEl);
         const parent = cardEl.parentElement;
         if (!parent) continue;
         const nextSibling = cardEl.nextSibling;

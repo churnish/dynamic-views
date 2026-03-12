@@ -4,7 +4,6 @@ description: Patterns for CSS defaults that work with or without the Style Setti
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-26
 ---
-
 # Style Settings fallback selectors
 
 ## Problem

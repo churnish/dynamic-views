@@ -2,9 +2,8 @@
 title: Electron CSS quirks
 description: Blink/Electron CSS rendering quirks affecting selectors, text truncation, overflow clipping, and container queries.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-08
+last updated: 2026-03-12
 ---
-
 # Electron CSS quirks
 
 ## Nested `:has()` inside `:has()` is broken
@@ -169,3 +168,31 @@ JS `IntersectionObserver` + zero-height sentinel approach. A sentinel div at eac
 
 - `src/bases/sticky-heading.ts` — Sentinel IO observer
 - `styles/_grid-masonry-shared.scss` — `.stuck` z-index rule, sentinel CSS, `@container` border rule
+
+## `-webkit-line-clamp` ignores block margins
+
+**Discovered**: 2026-03-09 on Electron 39.5.
+
+`-webkit-line-clamp` counts only text lines — block-level margins between elements (e.g., `<p>` with `margin-top`) do not consume any line budget. A container with `-webkit-line-clamp: 4` and six `<p>` children separated by `1lh` margins shows 4 lines of text plus all inter-paragraph margins, not 4 "visual lines" including margins.
+
+No CSS-only mechanism exists to make `-webkit-line-clamp` count block margins as lines. The unprefixed `line-clamp: auto` with `max-height` is the future spec answer, but CSSWG reverted the dual-clamping resolution in January 2026 due to 4% page-load compatibility impact.
+
+Related findings:
+
+- **`<br>` elements behave identically** — they produce the same result as `\n` with `white-space: pre-line`. Neither consumes a clamp line.
+- **`gap` is not an alternative** — `gap` does not work on `display: -webkit-box` (legacy flexbox). Only modern `flex`/`grid` support it.
+
+### Workaround
+
+JS per-paragraph clamping: measure each `<p>` height against a line budget, hide overflow paragraphs with `display: none`, and apply `-webkit-line-clamp` only to the last visible paragraph. See `applyClampFromMeasurements` in `text-preview-dom.ts`.
+
+### Affected files
+
+- `src/shared/text-preview-dom.ts` — JS per-paragraph clamp algorithm
+- `styles/card/_previews.scss` — `:has(> p)` dual-path: native clamp for single-block text, `display: block` for multi-paragraph
+
+## `display: -webkit-box` computes as `flow-root`
+
+**Discovered**: 2026-03-09 on Chrome 142 (Electron 36).
+
+`display: -webkit-box` computes to `flow-root` in Chrome 142+. Despite the different computed value, `-webkit-line-clamp` still functions correctly — the truncation and ellipsis behavior is unchanged. This is a DevTools display quirk, not a functional regression.

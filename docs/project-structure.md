@@ -123,6 +123,7 @@ dynamic-views/
 │   ├── bases/
 │   │   ├── cleanup.test.ts
 │   │   ├── grid-scroll.test.ts
+│   │   ├── shared-renderer.test.ts
 │   │   ├── sync-responsive-classes.test.ts
 │   │   └── utils.test.ts
 │   ├── shared/

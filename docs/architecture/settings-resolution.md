@@ -4,7 +4,6 @@ description: Three-layer merge of defaults, templates, and per-view config into 
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-06
 ---
-
 # Settings resolution pipeline
 
 The settings resolution pipeline merges static defaults, template overrides, and per-view config into fully resolved settings objects for both Bases and Datacore backends. Covers the three-layer resolution chain, sparse storage pattern, position-based title/subtitle derivation, stale config guards, type coercion, template system, and migration.

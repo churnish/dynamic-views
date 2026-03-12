@@ -17,6 +17,11 @@ import { VIEW_DEFAULTS, BASES_DEFAULTS } from '../constants';
 import { VALID_VIEW_VALUES } from './view-validation';
 import { stripNotePrefix } from '../utils/property';
 
+/** Masonry defaults to 2 minimum columns; all other view types default to 1. */
+export function getMinimumColumnsDefault(viewType?: string): 1 | 2 {
+  return viewType === 'masonry' ? 2 : 1;
+}
+
 /** Minimal Bases config interface — subset of BasesViewConfig used by settings readers */
 interface BasesConfig {
   get(key: string): unknown;
@@ -42,6 +47,8 @@ export function getBasesViewOptions(
   // Existing views (have an id from cleanUpBaseFile) use plain defaults —
   // otherwise template-polluted defaults override user-cleared settings.
   const d = { ...VIEW_DEFAULTS, ...BASES_DEFAULTS };
+  // Apply view-type-specific defaults before template merge so template can override them
+  d.minimumColumns = getMinimumColumnsDefault(viewType);
   if (viewType) {
     try {
       const plugin = window.app?.plugins?.plugins?.['dynamic-views'];
@@ -384,7 +391,7 @@ export function getBasesViewOptions(
             one: 'One',
             two: 'Two',
           },
-          default: viewType === 'masonry' ? 'two' : 'one',
+          default: d.minimumColumns === 1 ? 'one' : 'two',
         },
         {
           type: 'text',
@@ -470,10 +477,12 @@ export function readBasesSettings(
   previousSettings?: Partial<BasesResolvedSettings>,
   templateOverrides?: Partial<ViewDefaults>
 ): BasesResolvedSettings {
-  // Template overrides serve as fallbacks for new views whose config isn't populated yet
+  // Template overrides serve as fallbacks for new views whose config isn't populated yet.
+  // View-type-specific defaults applied before template so template can override them.
   const defaults = {
     ...VIEW_DEFAULTS,
     ...BASES_DEFAULTS,
+    minimumColumns: getMinimumColumnsDefault(viewType),
     ...templateOverrides,
   };
 
@@ -580,10 +589,10 @@ export function readBasesSettings(
     urlProperty,
     minimumColumns: (() => {
       const value = config.get('minimumColumns');
-      if (value === 'one') return 1;
-      if (value === 'two') return 2;
-      const fallback = viewType === 'masonry' ? 2 : defaults.minimumColumns;
-      return fallback;
+      if (value === 'one' || value === 1) return 1;
+      if (value === 'two' || value === 2) return 2;
+      // defaults already has template overrides merged — use it for both view types.
+      return defaults.minimumColumns === 1 ? 1 : 2;
     })(),
     cssclasses: getString('cssclasses', defaults.cssclasses),
   };
@@ -681,8 +690,8 @@ export function extractBasesTemplate(
     urlProperty: getString('urlProperty', mergedDefaults.urlProperty),
     minimumColumns: (() => {
       const value = config.get('minimumColumns');
-      if (value === 'one') return 1;
-      if (value === 'two') return 2;
+      if (value === 'one' || value === 1) return 1;
+      if (value === 'two' || value === 2) return 2;
       return mergedDefaults.minimumColumns;
     })(),
     cssclasses: getString('cssclasses', mergedDefaults.cssclasses),
@@ -693,7 +702,7 @@ export function extractBasesTemplate(
   for (const key of Object.keys(full) as (keyof ViewDefaults)[]) {
     // minimumColumns has a view-type-specific default (masonry=2, grid=1)
     if (key === 'minimumColumns') {
-      const minColDefault = viewType === 'masonry' ? 2 : 1;
+      const minColDefault = getMinimumColumnsDefault(viewType);
       if (full[key] !== minColDefault) {
         (result as Record<string, unknown>)[key] = full[key];
       }

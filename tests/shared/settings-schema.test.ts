@@ -296,3 +296,48 @@ describe('extractBasesTemplate', () => {
     expect(result.minimumColumns).toBeUndefined();
   });
 });
+
+describe('readBasesSettings — getValidEnum branches', () => {
+  it('should return valid enum value from config', () => {
+    const config = createMockConfig({ imageFormat: 'cover' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.imageFormat).toBe('cover');
+  });
+
+  it('should return default for invalid enum value without previousSettings', () => {
+    const config = createMockConfig({ imageFormat: 'invalid' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.imageFormat).toBe('thumbnail');
+  });
+
+  it('should return previousValue for invalid enum value with previousSettings', () => {
+    const config = createMockConfig({ imageFormat: 'invalid' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS, 'grid', {
+      imageFormat: 'poster',
+    });
+    expect(result.imageFormat).toBe('poster');
+  });
+
+  it('should return valid enum value even when previousSettings provided', () => {
+    const config = createMockConfig({ imageFormat: 'backdrop' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS, 'grid', {
+      imageFormat: 'poster',
+    });
+    expect(result.imageFormat).toBe('backdrop');
+  });
+
+  it('should return previousValue for propertyLabels with invalid config', () => {
+    const config = createMockConfig({ propertyLabels: 'bogus' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS, 'grid', {
+      propertyLabels: 'above',
+    });
+    expect(result.propertyLabels).toBe('above');
+  });
+
+  it('should return default for enum field without previousValue path', () => {
+    // fallbackToEmbeds does NOT pass previousValue — always falls back to default
+    const config = createMockConfig({ fallbackToEmbeds: 'nonsense' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.fallbackToEmbeds).toBe('always');
+  });
+});

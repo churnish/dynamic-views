@@ -4,7 +4,6 @@ description: CSS Grid column layout for card views. Render pipeline, guard syste
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-09
 ---
-
 # Grid layout system
 
 The grid layout system renders cards in a CSS Grid-based equal-height column layout. Both backends share the same card rendering pipeline (`card-renderer.tsx`) and settings schema. Bases uses imperative DOM manipulation with IntersectionObserver-based content visibility; Datacore uses declarative Preact/JSX rendering. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
@@ -126,6 +125,20 @@ Triggered when file **content** changed (mtime differs) but file paths and setti
 3. For each changed path: find fresh `BasesEntry` from `allEntries`, rebuild `CardData` via `basesEntryToCardData()`, update `cardDataByPath` with fresh entry and cardData.
 4. Call `updateCardContent()` on each card element — updates title, subtitle, properties, and text preview DOM in-place.
 5. **No relayout needed** — CSS Grid auto-adjusts row heights when content changes.
+
+#### Image change detection
+
+When `hasImageChanged(oldCard, newCard)` returns `true`, the card cannot be surgically updated — the image DOM subtree (cover wrapper, slideshow, aspect ratio, fade-in) is too complex. Instead:
+
+1. `contentVisibility.unobserve(cardEl)` — remove from IO before DOM removal
+2. `abortCardRerenderControllers(cardEl)` — cancel in-flight subtitle/URL icon renders
+3. Remove old card, call view's `renderCard` wrapper (which re-registers content-visibility observer + keyboard nav)
+4. Insert new card at same DOM position
+5. Post-insert passes: `syncResponsiveClasses`, `initializeTitleTruncation`, `initializeTextPreviewClamp`, `setHoverScaleForCards`
+
+When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlIcon`) surgically.
+
+**Guard**: `changedPaths.size === 0` on the `renderHash` early return prevents content-only changes (mtime changed, paths/settings unchanged) from being skipped.
 
 ### 3. Property reorder fast path (`updatePropertyOrder`)
 

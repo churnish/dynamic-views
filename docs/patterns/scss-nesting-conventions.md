@@ -4,7 +4,6 @@ description: Rules for nesting selectors in SCSS partials — what to nest under
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-14
 ---
-
 # SCSS nesting conventions
 
 ## Nest under `.dynamic-views { }`

@@ -4,7 +4,6 @@ description: Property pairing, width measurement, scroll gradients, and vertical
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-06
 ---
-
 # Property layout system
 
 ## Overview
@@ -325,10 +324,10 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 ### Behavior
 
-- **Conditional stacking via `flex-wrap: wrap`**: Pairs stay side-by-side when combined content fits; wrap to separate lines when content overflows. No `flex-direction: column` — wrapping is intrinsic.
-- **Width overrides**: `width: auto !important; max-width: 100% !important; flex: 1 0 auto !important`. Overrides measured widths if card was previously in non-compact measured state.
+- **Content-based stacking via `flex-wrap: wrap` + `flex: 1 1 auto`**: Flexbox line-breaking uses the max-content width as hypothetical main size. Short properties (timestamps, tags) stay side-by-side; long properties (file names, URLs) stack when combined content + gap exceeds card width. No `flex-direction: column` — wrapping is intrinsic.
+- **Width overrides**: `width: auto !important; max-width: 100% !important; flex: 1 1 auto !important`. Overrides measured widths if card was previously in non-compact measured state.
 - **Measurement still skipped**: `measureSideBySideSet()` returns early when card has `.compact-mode`. `queueCardSets()` also skips. CSS flex-wrap handles layout without JS measurement.
-- **Alignment inherited**: No compact-mode alignment resets. Right-side properties inherit the view's `rightPropertyPosition` setting (right/left/column). This ensures side-by-side pairs in compact mode keep right-alignment, matching non-compact behavior.
+- **Left-aligned**: Compact-mode `.pair-right` content resets to `justify-content: flex-start` — right-alignment on stacked full-width properties would be visually inconsistent.
 
 ## Settings reference
 

@@ -757,9 +757,6 @@ export class DynamicViewsMasonryView extends BasesView {
         }
       }
     }
-    // Remove FOUC guard injected by window-open handler
-    newDoc.getElementById('dynamic-views-fouc-guard')?.remove();
-
     // Rebind PROPERTY_MEASURED listener to new document
     if (this.handlePropertyMeasured) {
       oldDoc.removeEventListener(

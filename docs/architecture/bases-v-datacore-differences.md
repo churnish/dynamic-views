@@ -2,9 +2,8 @@
 title: Bases v Datacore differences
 description: Architectural differences between the Bases (imperative DOM) and Datacore (Preact JSX) backends — rendering, events, cleanup, state, and common pitfalls.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-09
+last updated: 2026-03-12
 ---
-
 # Bases v Datacore differences
 
 Architectural comparison of the Bases and Datacore backends. For masonry-specific divergences (virtual scrolling, resize strategy, layout guards), see `masonry-layout.md`.
@@ -65,7 +64,7 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | **Module-scope pitfall**  | `measureCanvas` uses `document.createElement('canvas')` — intentional (never inserted into DOM) | Same `measureCanvas` (Datacore calls `initializeTitleTruncation` from `shared-renderer.ts`) |
 | **Shared utility**        | `getOwnerWindow()` from `utils/owner-window.ts` — both backends import it                       | Same                                                                                        |
 
-Both backends listen for `PLUGIN_SETTINGS_CHANGE` on `document.body` (module scope) — Bases in `grid-view.ts`/`masonry-view.ts`, Datacore in `controller.tsx`. In popout windows, `document.body` resolves to the main window's body, so views in popouts miss plugin settings changes. The event is dispatched in `persistence.ts`.
+`PLUGIN_SETTINGS_CHANGE` is dispatched via `app.workspace.trigger()` in `persistence.ts`. Bases views (`grid-view.ts`/`masonry-view.ts`) listen via `registerEvent((this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, ...))` for auto-cleanup on view unload. Datacore (`controller.tsx`) listens via `(app.workspace as Events).on()` inside a `useEffect` with `offref` cleanup. The `as Events` cast is needed because `Workspace.on()` overloads don't accept custom event strings. `app.workspace` is a shared JS object across all Electron windows, so popout views receive the event correctly.
 
 **Rule**: Never use bare `document`, `window`, `ResizeObserver`, `IntersectionObserver`, or `requestAnimationFrame` for elements that may be in a popout. Derive from `el.ownerDocument` / `el.ownerDocument.defaultView`.
 
@@ -90,7 +89,7 @@ Both backends listen for `PLUGIN_SETTINGS_CHANGE` on `document.body` (module sco
 | **View ID**         | YAML `id` field in `.base` file                                                                         | 6-char query ID string in code block                                                                  |
 | **UI state**        | `BasesUIState { collapsedGroups }` per view ID                                                          | `DatacoreState { sortMethod, viewMode, widthMode, searchQuery, resultLimit, settings? }` per query ID |
 | **Persistence**     | `persistenceManager.getBasesState(viewId)` / `setBasesState()`                                          | `persistenceManager.getDatacoreState(queryId)` / `setDatacoreState()`                                 |
-| **Settings sync**   | Bases API handles it natively                                                                           | `layout-change` workspace event triggers re-read; `PLUGIN_SETTINGS_CHANGE` on `document.body`         |
+| **Settings sync**   | Bases API handles it natively                                                                           | `layout-change` workspace event triggers re-read; `PLUGIN_SETTINGS_CHANGE` via `app.workspace`         |
 | **Sparse storage**  | Only `collapsedGroups` stored; empty → entry deleted                                                    | Only non-default values stored; all defaults → entry deleted                                          |
 
 ## Cleanup
@@ -155,9 +154,9 @@ Both backends listen for `PLUGIN_SETTINGS_CHANGE` on `document.body` (module sco
 
 Bugs that have occurred from backend divergence.
 
-### Popout `document.body` event dispatch
+### Workspace event dispatch pattern
 
-`PLUGIN_SETTINGS_CHANGE` is dispatched on `document.body` (module scope) in `persistence.ts`. Both Bases (`grid-view.ts`/`masonry-view.ts`) and Datacore (`controller.tsx`) listen on `document.body`. In popout windows, `document.body` resolves to the main window's body, so views in popouts miss plugin settings changes. **Status**: Known limitation affecting both backends.
+`PLUGIN_SETTINGS_CHANGE` is dispatched via `app.workspace.trigger()` and received via `(app.workspace as Events).on()`. The `as Events` cast is required because `Workspace.on()` has typed overloads for built-in events only. Bases views use `registerEvent()` for auto-cleanup on view unload; Datacore uses `useEffect` with `offref` cleanup. Previously dispatched on `document.body`, which failed in popout windows because `document.body` resolves to the main window's body in the module scope.
 
 ### Ref callback `setIcon` churn
 

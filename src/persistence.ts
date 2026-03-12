@@ -21,6 +21,7 @@ import {
   VALID_VIEW_VALUES,
   VIEW_DEFAULTS_TYPES,
 } from './shared/view-validation';
+import { getMinimumColumnsDefault } from './shared/settings-schema';
 
 const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
 const DATACORE_DEFAULTS_KEYS = new Set(Object.keys(DATACORE_DEFAULTS));
@@ -85,7 +86,7 @@ function cleanupTemplateSettings(
 
     // minimumColumns: view-type-specific default (templates store numbers)
     if (key === 'minimumColumns') {
-      const minColDefault = viewType === 'masonry' ? 2 : 1;
+      const minColDefault = getMinimumColumnsDefault(viewType);
       if (settings[key] === minColDefault) {
         delete settings[key];
         changed = true;

@@ -4,7 +4,6 @@ description: Card DOM hierarchy, class names, property rows, and backend diverge
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-06
 ---
-
 # Card DOM structure
 
 Internal DOM hierarchy of cards in Grid and Masonry views, for both Bases and Datacore backends.

@@ -80,19 +80,6 @@ export default class DynamicViews extends Plugin {
     this.persistenceManager = new PersistenceManager(this);
     await this.persistenceManager.load();
 
-    // Hide DV content in popout windows until handleDocumentChange runs.
-    // Obsidian mirrors body classes instantly and recreates .view-content
-    // (destroying inline styles), so a body-class CSS override doesn't work.
-    this.registerEvent(
-      this.app.workspace.on('window-open', (wsWindow) => {
-        const guard = wsWindow.doc.createElement('style');
-        guard.id = 'dynamic-views-fouc-guard';
-        guard.textContent =
-          '.workspace-leaf-content[data-type="bases"] > .view-content { visibility: hidden !important; }';
-        wsWindow.doc.head.appendChild(guard);
-      })
-    );
-
     // Set initial body classes for settings
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.add(
@@ -213,9 +200,9 @@ export default class DynamicViews extends Plugin {
           .forEach((el) => {
             el.classList.remove('is-zoomed');
           });
-        const defaultInNewTab =
+        const openInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
-        await openRandomFile(this.app, getPaneType(evt, defaultInNewTab));
+        await openRandomFile(this.app, getPaneType(evt, openInNewTab));
       }
     );
 
@@ -231,9 +218,9 @@ export default class DynamicViews extends Plugin {
           .forEach((el) => {
             el.classList.remove('is-zoomed');
           });
-        const openInNewPane =
+        const openInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
-        await openRandomFile(this.app, openInNewPane);
+        await openRandomFile(this.app, openInNewTab);
       },
     });
 
@@ -573,16 +560,66 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     return null;
   }
 
-  onunload() {
-    // Remove FOUC guards from any open popout windows
-    (
+  /** Toggle card width debug badges (live-updating via ResizeObserver) */
+  debugWidths() {
+    const ATTR = 'data-dv-debug-widths';
+    // Collect documents from all windows (main + popouts)
+    const docs = [document, ...this.getAllPopoutDocuments()];
+
+    const existing = docs.some((d) => d.querySelector(`[${ATTR}]`));
+    if (existing) {
+      docs.forEach((d) =>
+        d.querySelectorAll(`[${ATTR}]`).forEach((badge) => {
+          (badge as HTMLElement & { _ro?: ResizeObserver })._ro?.disconnect();
+          badge.remove();
+        })
+      );
+      console.debug('width badges OFF');
+      return;
+    }
+
+    let count = 0;
+    docs.forEach((d) =>
+      d.querySelectorAll('.card').forEach((card) => {
+        const badge = d.createElement('div');
+        badge.setAttribute(ATTR, '');
+        Object.assign(badge.style, {
+          position: 'absolute',
+          top: '2px',
+          right: '2px',
+          background: 'rgba(0,0,0,.75)',
+          color: '#fff',
+          fontSize: '11px',
+          padding: '1px 4px',
+          borderRadius: '3px',
+          zIndex: '9999',
+          pointerEvents: 'none',
+          fontFamily: 'monospace',
+        });
+        const update = () => {
+          badge.textContent = `${Math.round(card.getBoundingClientRect().width)}px`;
+        };
+        const ro = new ResizeObserver(update);
+        ro.observe(card);
+        (badge as HTMLElement & { _ro?: ResizeObserver })._ro = ro;
+        update();
+        card.appendChild(badge);
+        count++;
+      })
+    );
+    console.debug(`width badges ON (${count} cards)`);
+  }
+
+  private getAllPopoutDocuments(): Document[] {
+    const floating = (
       this.app.workspace as unknown as {
         floatingSplit?: { children: { doc: Document }[] };
       }
-    ).floatingSplit?.children.forEach((wsWindow) => {
-      wsWindow.doc.getElementById('dynamic-views-fouc-guard')?.remove();
-    });
+    ).floatingSplit?.children;
+    return floating ? floating.map((w) => w.doc) : [];
+  }
 
+  onunload() {
     // Remove body classes added during load
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(

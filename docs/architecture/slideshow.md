@@ -4,7 +4,6 @@ description: Card cover image slideshow — navigation, gesture detection, anima
 author: "\U0001F916 Generated with Claude Code"
 last updated: 2026-03-06
 ---
-
 # Slideshow system
 
 ## Overview

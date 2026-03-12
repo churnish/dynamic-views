@@ -4,7 +4,6 @@ description: Inventories all file write operations, documents allowed APIs, and 
 author: 🤖 Generated with Claude Code
 last updated: 2026-03-09
 ---
-
 # Write path safety
 
 All file write operations in Dynamic Views, the APIs they use, and the invariants that prevent data corruption. Consult before adding new write paths or modifying existing ones.

@@ -170,14 +170,25 @@ export async function cleanUpBaseFile(
             migrations.push({ oldId: idField, newId });
           }
 
-          // New view (not rename) — apply template defaults to YAML
+          // New view (not rename) — override schema defaults with template.
+          // Obsidian pre-populates config from getBasesViewOptions() schema
+          // defaults before cleanUpBaseFile runs, so keys already exist —
+          // must overwrite, not just fill missing.
           if (isNew) {
             const vt = viewType === 'dynamic-views-grid' ? 'grid' : 'masonry';
             const template = plugin.persistenceManager.getSettingsTemplate(vt);
             if (template) {
               for (const [key, value] of Object.entries(template)) {
-                if (!(key in viewObj)) {
-                  viewObj[key] = value;
+                // Templates store minimumColumns as number (1|2) but
+                // Bases YAML uses dropdown keys ('one'|'two')
+                const yamlValue =
+                  key === 'minimumColumns' && typeof value === 'number'
+                    ? value === 1
+                      ? 'one'
+                      : 'two'
+                    : value;
+                if (viewObj[key] !== yamlValue) {
+                  viewObj[key] = yamlValue;
                   changeCount++;
                 }
               }

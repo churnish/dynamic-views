@@ -4,7 +4,6 @@ description: Patterns and gotchas for attaching event listeners in card-renderer
 author: 🤖 Generated with Claude Code
 last updated: 2026-02-19
 ---
-
 # Datacore ref callback patterns
 
 ## The re-render problem
