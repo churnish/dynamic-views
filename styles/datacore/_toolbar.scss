@@ -166,7 +166,7 @@ body.dynamic-views-disable-toolbar-shadow
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     transition: all var(--dynamic-views-anim-duration-fast);
     color: var(--dynamic-views-text-normal);
     box-shadow: none;
@@ -256,7 +256,7 @@ body.dynamic-views-disable-toolbar-shadow
     position: relative;
     display: flex;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     padding: 6px 8px;
     border-radius: 6px;
     cursor: pointer;

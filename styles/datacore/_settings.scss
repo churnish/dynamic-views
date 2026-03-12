@@ -43,7 +43,7 @@
   .setting-item {
     display: flex !important;
     flex-direction: column !important;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     align-items: flex-start !important;
     width: 100%;
     max-width: 100%;
@@ -88,7 +88,7 @@
   .setting-item-info {
     display: flex;
     flex-direction: column;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     text-align: left !important;
   }
 

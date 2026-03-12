@@ -3,7 +3,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: var(--dynamic-views-size-4-2);
+    gap: var(--size-4-2);
   }
 
   .card-title-block {
@@ -113,7 +113,7 @@ body.dynamic-views-file-type-ext
 
   .card-title-icon {
     float: left;
-    margin-right: var(--dynamic-views-size-2-2);
+    margin-right: var(--size-2-2);
     display: none;
   }
 
@@ -138,7 +138,7 @@ body.dynamic-views-file-type-flair .dynamic-views .card-title-ext {
   pointer-events: none;
   cursor: default;
   float: left;
-  margin-right: var(--dynamic-views-size-2-2);
+  margin-right: var(--size-2-2);
 }
 
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before {
@@ -392,7 +392,7 @@ body.dynamic-views-title-divider
   .dynamic-views
   .card:has(.card-previews, .card-properties-top, .card-properties-bottom)
   .card-header {
-  padding-bottom: var(--dynamic-views-size-4-2);
+  padding-bottom: var(--size-4-2);
   border-bottom: 1px solid var(--dynamic-views-background-modifier-border);
 }
 

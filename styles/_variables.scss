@@ -4,15 +4,6 @@
    NOT on :root. Wrappers must live on body so var() references to
    Obsidian variables resolve against the correct element. */
 body {
-  /* Sizing */
-  --dynamic-views-size-2-1: 2px;
-  --dynamic-views-size-2-2: 4px;
-  --dynamic-views-size-2-3: 6px;
-  --dynamic-views-size-4-2: 8px;
-  --dynamic-views-size-4-3: 12px;
-  --dynamic-views-size-4-4: 16px;
-  --dynamic-views-size-4-6: 24px;
-
   /* Typography */
   --dynamic-views-line-height-tight: var(--line-height-tight, 1.3);
   --dynamic-views-font-ui-small: var(--font-ui-small, 13px);

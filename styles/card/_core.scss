@@ -11,7 +11,7 @@
   /* Spacing between card-header and card-body, and between body children */
   .card .card-content,
   .card .card-body {
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
   }
 
   /* Grid: card-content fills available space, aligns children to top */

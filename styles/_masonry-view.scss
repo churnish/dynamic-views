@@ -38,8 +38,8 @@
 
     /* Masonry: Thumbnail top/bottom positioning */
     .card.card-thumbnail-top .card-thumbnail {
-      margin-top: var(--dynamic-views-size-4-2);
-      margin-bottom: var(--dynamic-views-size-4-2);
+      margin-top: var(--size-4-2);
+      margin-bottom: var(--size-4-2);
     }
 
     .card .card-text-preview {
@@ -88,9 +88,7 @@
   .dynamic-views-masonry
     .dynamic-views-group-section:not(:last-child)
     > .masonry-container {
-    height: calc(
-      var(--masonry-height, auto) + var(--dynamic-views-size-4-4) + 1px
-    );
+    height: calc(var(--masonry-height, auto) + var(--size-4-4) + 1px);
   }
 
   /* Hide cards during layout recalc - fade out with opacity transition.

@@ -50,11 +50,11 @@
 
 .dynamic-views .list-properties {
   display: inline-flex;
-  gap: var(--dynamic-views-size-2-2);
+  gap: var(--size-2-2);
   align-items: center;
   flex-wrap: wrap;
   font-size: 0.9em;
-  margin-left: var(--dynamic-views-size-4-2);
+  margin-left: var(--size-4-2);
 }
 
 .dynamic-views .list-properties.list-path {

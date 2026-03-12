@@ -2,7 +2,7 @@
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
   container-type: inline-size;
-  --bases-view-padding: var(--dynamic-views-size-4-3);
+  --bases-view-padding: var(--size-4-3);
 }
 
 /* View background - Bases files only (not embeds) */
@@ -41,7 +41,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
   position: sticky;
   top: -12px;
   overflow: visible;
-  padding-bottom: calc(var(--dynamic-views-size-2-2) + 1px);
+  padding-bottom: calc(var(--size-2-2) + 1px);
   container-type: scroll-state;
   container-name: dynamic-views-group-heading;
 
@@ -155,14 +155,14 @@ body.dynamic-views-hide-group-property-labels
   .bases-group-heading {
     display: flex;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
   }
 
   /* Clickable region: chevron + property + value */
   .bases-group-collapse-region {
     display: flex;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     cursor: pointer;
   }
 
@@ -201,7 +201,7 @@ body.dynamic-views-hide-group-property-labels
   .bases-group-count {
     color: var(--dynamic-views-text-muted);
     font-size: var(--dynamic-views-font-ui-smaller);
-    padding-left: var(--dynamic-views-size-2-3);
+    padding-left: var(--size-2-3);
   }
 
   /* Group header value containers - match vanilla Bases structure */
@@ -209,7 +209,7 @@ body.dynamic-views-hide-group-property-labels
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
   }
 
   .bases-group-value .value-list-element {

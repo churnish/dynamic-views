@@ -1,6 +1,6 @@
 /* Settings header */
 .dynamic-views-settings-header {
-  margin-bottom: var(--dynamic-views-size-4-6);
+  margin-bottom: var(--size-4-6);
 }
 
 .dynamic-views-settings-header-links {
@@ -82,11 +82,11 @@
 /* Add padding only when visible and not last.
    Currently inactive as sub-items is last child; retained for future structure changes. */
 .setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
-  padding-bottom: var(--dynamic-views-size-4-4);
+  padding-bottom: var(--size-4-4);
 }
 
 .setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item)::before {
-  bottom: var(--dynamic-views-size-4-4);
+  bottom: var(--size-4-4);
 }
 
 /* Remove bottom padding from setting when sub-items hidden and last in group */

@@ -2,15 +2,16 @@
   .property-pair {
     display: flex;
     flex-direction: row;
-    gap: var(--dynamic-views-size-4-3);
+    gap: var(--size-4-3);
     width: 100%;
     min-width: 0;
   }
 
   /* Compact mode: wrap paired properties — stay side-by-side when both fit, stack when they don't.
-     Keeps non-compact gap (4-3) so flex-wrap accounts for full spacing in wrapping calc. */
+     column-gap (4-3) controls wrapping calc; row-gap (2-2) matches .card-properties container gap. */
   .card.compact-mode .property-pair {
     flex-wrap: wrap;
+    row-gap: var(--size-2-2);
   }
 
   .card.compact-mode .property-pair .property,
@@ -59,7 +60,7 @@
 
   /* Gap between inline property label and content */
   .property:has(.property-label-inline) {
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
   }
 
   /* Vertical layout when property labels are on top */
@@ -191,7 +192,7 @@
     );
     font-family: var(--dynamic-views-property-label-font, inherit);
     color: var(--dynamic-views-text-faint);
-    margin-bottom: var(--dynamic-views-size-2-1);
+    margin-bottom: var(--size-2-1);
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -343,7 +344,7 @@ body.dynamic-views-property-label-small-caps
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
   }
 
   /* Timestamp wrapper - flex container for icon positioning */
@@ -361,14 +362,14 @@ body.dynamic-views-property-label-small-caps
     opacity: 0.7;
     width: 1em;
     height: 1em;
-    margin-right: var(--dynamic-views-size-2-2);
+    margin-right: var(--size-2-2);
   }
 
   /* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
   .property-pair .pair-right .timestamp-icon {
     order: 2;
     margin-right: 0;
-    margin-left: var(--dynamic-views-size-2-2);
+    margin-left: var(--size-2-2);
   }
 }
 
@@ -381,7 +382,7 @@ body.dynamic-views-timestamp-icon-hide .dynamic-views .timestamp-icon {
 body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: var(--dynamic-views-size-2-2);
+  margin-left: var(--size-2-2);
 }
 
 /* Center positioning: odd fields show icon on right ONLY in side-by-side */
@@ -392,7 +393,7 @@ body.dynamic-views-timestamp-icon-center
   .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: var(--dynamic-views-size-2-2);
+  margin-left: var(--size-2-2);
 }
 
 /* Center positioning: even fields show icon on left ONLY in side-by-side */
@@ -402,7 +403,7 @@ body.dynamic-views-timestamp-icon-center
   .pair-right
   .timestamp-icon {
   order: 0;
-  margin-right: var(--dynamic-views-size-2-2);
+  margin-right: var(--size-2-2);
   margin-left: 0;
 }
 
@@ -413,7 +414,7 @@ body.dynamic-views-timestamp-icon-left
   .pair-right
   .timestamp-icon {
   order: 0;
-  margin-right: var(--dynamic-views-size-2-2);
+  margin-right: var(--size-2-2);
   margin-left: 0;
 }
 
@@ -427,7 +428,7 @@ body:is(
   .timestamp-icon {
   order: 2;
   margin-right: 0;
-  margin-left: var(--dynamic-views-size-2-2);
+  margin-left: var(--size-2-2);
 }
 
 .dynamic-views {
@@ -440,7 +441,7 @@ body:is(
   .tags-wrapper {
     display: flex;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     white-space: nowrap;
     flex-shrink: 0;
     min-width: 0;
@@ -542,7 +543,7 @@ body:is(
   .property-content {
     display: flex;
     align-items: center;
-    gap: var(--dynamic-views-size-2-2);
+    gap: var(--size-2-2);
     flex-shrink: 0;
     white-space: nowrap;
     min-height: var(--dynamic-views-property-content-height, 20px);
