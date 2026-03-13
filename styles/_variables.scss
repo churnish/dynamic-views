@@ -61,6 +61,7 @@ body {
   );
 
   /* Layout */
+  --dynamic-views-bases-view-padding: var(--bases-view-padding, 12px);
   --dynamic-views-view-bottom-spacing: var(--view-bottom-spacing, 0px);
   --dynamic-views-bases-table-border-color: var(
     --bases-table-border-color,

@@ -6,7 +6,7 @@
     overflow: clip;
     /* Extend clip boundary so hover transforms aren't clipped on edge rows
        and sticky group header borders (negative-margin) remain visible */
-    overflow-clip-margin: var(--bases-view-padding);
+    overflow-clip-margin: var(--dynamic-views-bases-view-padding);
 
     .card .card-previews {
       flex-grow: 1;

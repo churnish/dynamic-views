@@ -94,10 +94,12 @@ function calculateWidthParams(
   const fileLineWidth =
     parseFloat(cs.getPropertyValue('--file-line-width')) || 700;
   const fileMargins = parseFloat(cs.getPropertyValue('--file-margins')) || 16;
-  // Use at least --bases-view-padding so Datacore matches Bases width on mobile
+  // Use at least --dynamic-views-bases-view-padding so Datacore matches Bases width on mobile
   const containerCs = container ? getComputedStyle(container) : cs;
   const basesViewPadding =
-    parseFloat(containerCs.getPropertyValue('--bases-view-padding')) || 12;
+    parseFloat(
+      containerCs.getPropertyValue('--dynamic-views-bases-view-padding')
+    ) || 12;
   const effectiveMargins = Math.max(fileMargins, basesViewPadding);
   const availableWidth =
     section.getBoundingClientRect().width - effectiveMargins * 2;

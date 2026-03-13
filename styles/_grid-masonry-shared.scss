@@ -1,8 +1,9 @@
-/* Enable container queries and set view padding variable for Obsidian's default .bases-view */
+/* Enable container queries and set view padding for plugin's custom view types
+   (Obsidian only sets --bases-view-padding for its own types: cards, list, table) */
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
-  container-type: inline-size;
   --bases-view-padding: var(--size-4-3);
+  container-type: inline-size;
 }
 
 /* View background - Bases files only (not embeds) */
@@ -52,8 +53,8 @@ body:not(.dynamic-views-disable-sticky-group-header)
     position: absolute;
     top: 0;
     bottom: 0;
-    left: calc(-1 * var(--bases-view-padding));
-    right: calc(-1 * var(--bases-view-padding));
+    left: calc(-1 * var(--dynamic-views-bases-view-padding));
+    right: calc(-1 * var(--dynamic-views-bases-view-padding));
     background: var(--dynamic-views-background-primary);
     z-index: -1;
     pointer-events: none; /* Background only — don't expand collapse-region's click target */
@@ -73,8 +74,8 @@ body:not(.dynamic-views-disable-sticky-group-header)
     content: '';
     position: absolute;
     bottom: 0;
-    left: calc(-1 * var(--bases-view-padding));
-    right: calc(-1 * var(--bases-view-padding));
+    left: calc(-1 * var(--dynamic-views-bases-view-padding));
+    right: calc(-1 * var(--dynamic-views-bases-view-padding));
     height: 1px;
     background: var(--dynamic-views-bases-table-border-color);
   }
@@ -262,7 +263,7 @@ body.dynamic-views-hide-group-property-labels
       position: absolute;
       inset: 0;
       z-index: 5;
-      border-radius: var(--dynamic-views-card-border-radius, 8px);
+      border-radius: inherit;
       box-shadow: inset 0 0 0 var(--card-border-visual) var(--card-border-color);
       pointer-events: none;
       transition: box-shadow var(--dynamic-views-anim-duration-fast) ease-in-out;
