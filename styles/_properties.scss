@@ -35,7 +35,10 @@
 
   /* Left mode compact: no flex-grow on pair-left — extra space flows to end of row,
      keeping both properties clustered left instead of pushing pair-right to card edge. */
-  &.dynamic-views-paired-property-left .card.compact-mode .property-pair .pair-left,
+  &.dynamic-views-paired-property-left
+    .card.compact-mode
+    .property-pair
+    .pair-left,
   &.dynamic-views-paired-property-left
     .card.compact-mode
     .property-pair.property-measured
@@ -56,10 +59,23 @@
     flex: 1 1 auto !important;
   }
 
-  /* Stacked right-side content left-aligns (right-positioning comes from flex-grow, not justify) */
+  /* Compact: reset right-mode order/alignment — at narrow widths, natural left-to-right
+     reading order and left-aligned labels are clearer than mirrored positioning. */
   .card.compact-mode .property-pair .pair-right .property-content,
   .card.compact-mode .property-pair .pair-right .property-content-wrapper {
     justify-content: flex-start;
+  }
+
+  .card.compact-mode .property-pair .pair-right .property-label {
+    text-align: left;
+  }
+
+  .card.compact-mode .property-pair .pair-right .property-label-inline {
+    order: 0;
+  }
+
+  .card.compact-mode .property-pair .pair-right .property-content {
+    order: 0;
   }
 
   /* Compact stacked: when any pair wraps, force ALL pairs to stack.
