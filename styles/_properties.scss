@@ -33,6 +33,16 @@
     margin-left: 0 !important;
   }
 
+  /* Left mode compact: no flex-grow on pair-left — extra space flows to end of row,
+     keeping both properties clustered left instead of pushing pair-right to card edge. */
+  &.dynamic-views-paired-property-left .card.compact-mode .property-pair .pair-left,
+  &.dynamic-views-paired-property-left
+    .card.compact-mode
+    .property-pair.property-measured
+    .pair-left {
+    flex: 0 1 auto !important;
+  }
+
   /* Column mode compact: equal flex-grow for both sides (overrides compact's grow-left/shrink-right).
      flex-basis: auto preserves wrapping for compact-stacked detection; basis 0 would prevent it. */
   &.dynamic-views-paired-property-column

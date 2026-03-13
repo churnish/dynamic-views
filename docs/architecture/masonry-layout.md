@@ -85,6 +85,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 - **`cachedGroupOffsets: Map<string | undefined, number>`** — Cached vertical offset (relative to scroll container) per group. Refreshed synchronously before every `syncVirtualScroll()` call. Eliminates `getBoundingClientRect` from the scroll/resize hot path.
 - **`pendingResizeWidth: number | null`** — Latest container width from `ResizeObserver`. Never reset — deferred resize at scroll-idle reads the most recent value, which is always the correct target width. Used by the resize fast path to avoid a forced `getBoundingClientRect` reflow.
 - **`mountRemeasureTimeout: ReturnType<typeof setTimeout> | null`** — Timer handle for the mount-triggered remeasure throttle. Set when the first new card is mounted in `syncVirtualScroll` during scroll; cleared in `onMountRemeasure`. While active, subsequent mounts do not reset the timer (leading throttle). `isScrollRemeasurePending()` checks both `scrollRemeasureTimeout` and `mountRemeasureTimeout` to defer competing work at 6 guard sites.
+- **`initialRemeasureTimeout: ReturnType<typeof setTimeout> | null`** — Timer handle for the 500ms initial remeasure safety net. Set in `processDataUpdate` after `setupMasonryLayout` completes. Cancelled only when `remeasureAndReposition` detects drift, on re-render, or on unload.
 - **`hasExplicitScrollHeights: boolean`** — Tracks whether cards have explicit `style.height` set during `mountVirtualItem` to prevent scroll-back drift. When true, `remeasureAndReposition` clears the explicit heights before DOM measurement. Set in `mountVirtualItem`, cleared in `remeasureAndReposition`.
 
 ## Render pipeline
@@ -107,6 +108,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - Remove `masonry-resizing` class. `syncVirtualScroll()`.
 4. Setup infinite scroll (scroll listener + ResizeObserver).
 5. Post-insert measurement passes (see §Post-insert measurement passes).
+6. Schedule initial remeasure safety net (`INITIAL_REMEASURE_MS`, 500ms). See §Initial remeasure safety net.
 
 ### 2. Batch append (infinite scroll)
 
@@ -330,6 +332,14 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 - **Behavior**: The first mount in `syncVirtualScroll` starts the timer. Subsequent mounts during the cooldown are ignored — the timer is not reset. When it fires, `onMountRemeasure()` calls `remeasureAndReposition(skipTransition=true)` to correct proportional height drift. No `scheduleDeferredRemeasure` is called — remaining drift is caught by the next throttle tick or `cardResizeObserver`.
 - **Guard helper**: `isScrollRemeasurePending()` checks both `scrollRemeasureTimeout` and `mountRemeasureTimeout`. Used at 6 guard sites across the layout pipeline to defer competing work while either timer is active.
 - **Relation to scroll-idle**: `onScrollIdle` only fires when `pendingDeferredResize` is set. For mount-only scroll sessions, `cardResizeObserver` is the post-scroll safety net.
+
+### Initial remeasure safety net
+
+- **Pattern**: Single `setTimeout` via `initialRemeasureTimeout`, `INITIAL_REMEASURE_MS` (500ms). Scheduled in `processDataUpdate` after the `setupMasonryLayout` block completes.
+- **Purpose**: The deferred remeasure (double-rAF, ~32ms) fires too early for slow async height changes — uncached images load at ~350ms+, text preview layout may settle late. The safety net catches drift that the deferred remeasure misses.
+- **Cancellation**: Cancelled when `remeasureAndReposition` detects actual drift (`needsReposition === true`) — placed after the drift check so the safety net survives no-drift calls (e.g., the deferred remeasure at ~32ms). Also cancelled on re-render (reset block in `processDataUpdate`) and in `onunload`.
+- **Guards**: Same as `cardResizeObserver` RAF callback — `containerEl.isConnected`, `batchLayoutPending`, `resizeCorrectionTimeout`, `lastLayoutCardWidth`, `lastRenderedSettings`.
+- **Relation to mount remeasure**: `mountRemeasureTimeout` (200ms) handles scroll-triggered mount drift. `initialRemeasureTimeout` (500ms) handles initial render drift. Both are independent timers with separate lifecycles.
 
 ### Image-load coalescing
 
