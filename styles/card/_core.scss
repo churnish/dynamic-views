@@ -8,8 +8,12 @@
     cursor: pointer;
   }
 
-  /* Spacing between card-header and card-body, and between body children */
-  .card .card-content,
+  /* Spacing between card-header and card-body */
+  .card .card-content {
+    gap: var(--size-2-3);
+  }
+
+  /* Spacing between body children (previews, properties) */
   .card .card-body {
     gap: var(--size-2-2);
   }
@@ -80,7 +84,8 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
 /* Card border color on hover presets */
 @media (hover: hover) {
   .dynamic-views .card.hover-intent-active:hover {
-    --card-border-visual: var(--dynamic-views-card-border-thickness-hover, 1px);
+    /* Visual-only: changes ::after box-shadow without reflowing cover/poster/backdrop insets */
+    --card-border-thickness-rendered: var(--dynamic-views-card-border-thickness-hover, 1px);
   }
 
   /* Muted (default) */
