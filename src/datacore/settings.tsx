@@ -312,7 +312,7 @@ export function Settings({
           )}
           <div className="setting-item setting-item-dropdown">
             <div className="setting-item-info">
-              <label>Show image embeds</label>
+              <label>Show note images</label>
             </div>
             <select
               value={settings.fallbackToEmbeds}

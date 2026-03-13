@@ -218,7 +218,7 @@ export function getBasesViewOptions(
         },
         {
           type: 'dropdown',
-          displayName: 'Show image embeds',
+          displayName: 'Show note images',
           key: 'fallbackToEmbeds',
           options: {
             always: 'Always',
