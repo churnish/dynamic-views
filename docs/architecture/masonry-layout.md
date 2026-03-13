@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-12
+last updated: 2026-03-13
 ---
 # Masonry layout system
 
@@ -408,7 +408,7 @@ Cards use `position: absolute` with direct inline styles for per-card positionin
 | `masonry-resizing`        | Masonry container | Hides cards during initial layout measurement.                                                                                                                                                      |
 | `masonry-measuring`       | Masonry container | Forces content rendering for accurate `offsetHeight` reads (overrides `content-visibility`).                                                                                                        |
 | `masonry-correcting`      | Masonry container | Eased top/left transitions (`--masonry-reposition-duration`) during post-resize correction and scroll remeasure.                                                                                    |
-| `masonry-resize-active`   | Masonry container | Keeps top/left/height transitions (`--masonry-reposition-duration`) during active resize — cards animate to new positions. Width is not transitioned; left positions assume target width instantly. |
+| `masonry-resize-active`   | Masonry container | Keeps top/left transitions (`--masonry-reposition-duration`) during active resize — cards animate to new positions. Width and height are not transitioned; height snaps to match proportional scaling so cover/poster images stay in sync with card dimensions. |
 | `masonry-skip-transition` | Masonry container | Disables position transitions during scroll-idle remeasure and deferred layout — ensures positions update in sync with `scrollTop` compensation.                                                    |
 
 ## Keyboard navigation

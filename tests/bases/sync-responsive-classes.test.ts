@@ -114,6 +114,9 @@ describe('syncResponsiveClasses', () => {
     });
   });
 
+  // compact-stacked wrapping detection is handled by the per-card RO
+  // (not syncResponsiveClasses) — verified empirically via DevTools.
+
   describe('return value', () => {
     it('returns true when classes changed', () => {
       const card = createCard({ width: 300 });

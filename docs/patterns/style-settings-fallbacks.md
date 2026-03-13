@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-26
+last updated: 2026-03-14
 ---
 # Style Settings fallback selectors
 
@@ -114,6 +114,22 @@ body.css-settings-manager:not(.dynamic-views-hide-pin-toolbar)
 
 Without Style Settings, `.css-settings-manager` is absent, so the entire rule is inert — the element stays hidden by default.
 
+## `variable-number-slider` fallback (CSS)
+
+Style Settings `variable-number-slider` sets a CSS custom property (e.g., `--dynamic-views-card-border-thickness`) via the `.css-settings-manager` `<style>` element. Without Style Settings installed — or before the user changes the slider — the variable is undefined. Use the native CSS `var()` fallback:
+
+```scss
+/* 1px fallback used when Style Settings is not installed */
+--card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
+```
+
+The `default:` field in the `@settings` YAML only controls the slider's initial UI position — it does NOT set the CSS variable.
+
+### When adding a new `variable-number-slider` setting
+
+1. Every consumer of the variable MUST include a fallback value matching the `default:` in `@settings`.
+2. If multiple consumers read the same variable, resolve it once into a local variable with the fallback, then reference the local variable downstream.
+
 ## Avoid re-renders from Style Settings changes
 
 Re-renders from Style Settings changes are disruptive — they reset scroll position. Only add settings to `getStyleSettingsHash()` when they genuinely affect rendered card content (text, icons, layout). Do NOT add settings that only affect:
@@ -128,7 +144,8 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Setting                   | Default        | Fallback file                                                    |
 | ------------------------- | -------------- | ---------------------------------------------------------------- |
 | Poster overlay tint       | dark           | `_poster.scss`                                                   |
-| Cover background          | plain          | `_cover-placeholders.scss`, `_cover-elements.scss`               |
+| Cover background          | dimmed         | `_cover-placeholders.scss`, `_cover-elements.scss`               |
+| Poster background         | dimmed         | `_poster.scss`                                                   |
 | Cover hover zoom          | card           | `_cover-elements.scss`                                           |
 | Show cover placeholder    | Grid           | `_cover-side.scss`, `_cover-placeholders.scss`                   |
 | Card border color (hover) | muted          | `_core.scss`                                                     |
@@ -150,3 +167,25 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 | Setting          | Toggle class                     | Fallback file   |
 | ---------------- | -------------------------------- | --------------- |
 | Hide pin toolbar | `dynamic-views-hide-pin-toolbar` | `_toolbar.scss` |
+
+### `variable-number-slider` (CSS)
+
+| Setting                    | Variable                                        | Default | Fallback file                          |
+| -------------------------- | ----------------------------------------------- | ------- | -------------------------------------- |
+| Backdrop light overlay     | `--dynamic-views-backdrop-overlay-light`          | 70   | `_backdrop.scss`                        |
+| Backdrop dark overlay      | `--dynamic-views-backdrop-overlay-dark`            | 60   | `_backdrop.scss`                        |
+| Backdrop overlay blur      | `--dynamic-views-backdrop-overlay-blur`            | 0    | `_backdrop.scss`                        |
+| Card spacing (desktop)     | `--dynamic-views-card-spacing-desktop`             | 8    | `_grid-view.scss`, `_masonry-view.scss` |
+| Card spacing (mobile)      | `--dynamic-views-card-spacing-mobile`              | 6    | `_grid-view.scss`, `_masonry-view.scss` |
+| Padding                    | `--dynamic-views-card-padding`                     | 8    | `_grid-masonry-shared.scss`             |
+| Border radius              | `--dynamic-views-card-border-radius`               | 8    | `_grid-masonry-shared.scss`             |
+| Border thickness           | `--dynamic-views-card-border-thickness`             | 1    | `_grid-masonry-shared.scss`             |
+| Border thickness (hover)   | `--dynamic-views-card-border-thickness-hover`       | 1    | `_core.scss`                            |
+| Cover border radius        | `--dynamic-views-cover-border-radius`               | 0    | `_cover.scss`                           |
+| Cover inset                | `--dynamic-views-cover-inset`                       | 0    | `_grid-masonry-shared.scss`             |
+| Zoom sensitivity           | `--dynamic-views-zoom-sensitivity`                  | 0.08 | `_image-viewer.scss`                    |
+| Poster light overlay       | `--dynamic-views-poster-overlay-light`              | 70   | `_poster.scss`                          |
+| Poster dark overlay        | `--dynamic-views-poster-overlay-dark`               | 70   | `_poster.scss`                          |
+| Poster overlay blur        | `--dynamic-views-poster-overlay-blur`               | 0    | `_poster.scss`                          |
+| Max slideshow images       | `--dynamic-views-slideshow-max-images`              | 10   | `_slideshow.scss`                       |
+| Thumbnail border radius    | `--dynamic-views-thumbnail-border-radius`           | 4    | `_previews.scss`                        |

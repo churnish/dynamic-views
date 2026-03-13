@@ -2,7 +2,7 @@
 title: Settings resolution pipeline
 description: Three-layer merge of defaults, templates, and per-view config into resolved settings. Covers sparse storage, type coercion, stale guards, and migration.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-06
+last updated: 2026-03-12
 ---
 # Settings resolution pipeline
 
@@ -39,7 +39,7 @@ Plugin-level settings from the settings tab. Not per-view.
 | `showCardLinkCovers`        | `boolean`                                         | Fetch card link cover images          |
 | `contextMenuCommands`       | `boolean`                                         | Show plugin commands in context menus |
 
-**Migrated fields**: `omitFirstLine` was migrated to a Style Settings `class-select` (read via `getOmitFirstLineMode()` in JS). `openRandomInNewTab` was hardcoded to `true` and removed from settings.
+**Migrated fields**: `omitFirstLine` was migrated to a Style Settings `class-select` (read via `getOmitFirstLineMode()` in JS).
 
 ### ViewDefaults (`src/types.ts`)
 
@@ -139,11 +139,12 @@ Return type: `ResolvedSettings`.
 
 ### Schema defaults path
 
-`getBasesViewOptions()` in `settings-schema.ts`. Called by Obsidian BEFORE view constructor to populate the settings GUI.
+`getBasesViewOptions()` in `settings-schema.ts`. Called when the **settings panel is opened**, NOT on view creation or file open. Populates dropdown defaults and option lists.
 
 ```
-1. VIEW_DEFAULTS + BASES_DEFAULTS   (static merge)
-2. template (if new view)           (Object.assign onto merged defaults)
+1. VIEW_DEFAULTS + BASES_DEFAULTS              (static merge)
+2. getMinimumColumnsDefault(viewType)          (view-type-specific: masonry=2, grid=1)
+3. template (if new view)                      (Object.assign onto merged defaults)
 ```
 
 New view detection: `!config || config.get('id') == null`. The `id` field is assigned by `cleanUpBaseFile()` on first render — absence means never rendered.
@@ -223,8 +224,9 @@ Bases YAML stores dropdown values as strings (`"one"`, `"two"`), but `ViewDefaul
 | `extractBasesTemplate()`    | YAML string -> number   | Same coercion, stores number in template                                            |
 | `cleanupTemplateSettings()` | Skip type check         | `minimumColumns` excluded from type validation (YAML string !== default number)     |
 | `getBasesViewOptions()`     | Number -> YAML string   | Schema `default` uses `'one'`/`'two'` strings for the dropdown                      |
-| `cleanUpBaseFile()`         | YAML string validation  | Enum validation via `VALID_VIEW_VALUES` (compares against `['one', 'two']` strings) |
-| View-type-specific default  | Masonry: `2`, Grid: `1` | Not in `BASES_DEFAULTS`; handled inline in each coercion site                       |
+| `cleanUpBaseFile()` cleanup | YAML string validation  | Enum validation via `VALID_VIEW_VALUES` (compares against `['one', 'two']` strings) |
+| `cleanUpBaseFile()` inject  | Template number -> YAML | `1` -> `'one'`, `2` -> `'two'` when injecting template into new view YAML           |
+| View-type-specific default  | Masonry: `2`, Grid: `1` | Via `getMinimumColumnsDefault(viewType)` — single source of truth                   |
 
 ## Template system
 
@@ -239,17 +241,22 @@ Bases YAML stores dropdown values as strings (`"one"`, `"two"`), but `ViewDefaul
 
 **Schema defaults** (GUI population): `getBasesViewOptions()` applies template values via `Object.assign(d, template)` before building the schema. Only applies when `isNewView` (`!config || config.get('id') == null`).
 
-**YAML injection** (`cleanUpBaseFile()`): When a new view is detected (needs new ID and is not a rename), template values are injected directly into the YAML object:
+**YAML injection** (`cleanUpBaseFile()`): When a new view is detected (needs new ID and is not a rename), template values are injected directly into the YAML object, **unconditionally overwriting** existing values:
 
 ```ts
 for (const [key, value] of Object.entries(template)) {
-  if (!(key in viewObj)) {
-    viewObj[key] = value;
+  const yamlValue =
+    key === 'minimumColumns' && typeof value === 'number'
+      ? value === 1 ? 'one' : 'two'
+      : value;
+  if (viewObj[key] !== yamlValue) {
+    viewObj[key] = yamlValue;
+    changeCount++;
   }
 }
 ```
 
-Only injects keys not already present in the view YAML.
+Unconditional override is required because Obsidian pre-populates ALL schema defaults into the `.base` YAML config when creating a new view through the UI — `cleanUpBaseFile` runs AFTER this pre-population, so all keys already exist. A `if (!(key in viewObj))` guard would silently skip every template value.
 
 **Config fallbacks** (`readBasesSettings()`): `templateOverrides` are spread into `defaults` so config reads fall back to template values before static defaults.
 
@@ -290,6 +297,8 @@ Invalid enum values are reset to the first valid value from `VALID_VIEW_VALUES`.
 5. **`BASES_DEFAULTS.displayFirstAsTitle = true`** overrides `VIEW_DEFAULTS.displayFirstAsTitle = false`. This is the primary behavioral difference between backends — Bases derives title from property order by default.
 6. **Per-query Datacore state is isolated by `QUERY_ID`.** Each code block instance has its own persisted settings and UI state.
 7. **Stale config guards prevent reverts from duplicate callbacks.** `imageFormat` and `propertyLabels` fall back to `previousSettings` when config returns invalid values.
-8. **`minimumColumns` requires coercion at every boundary.** Bases YAML stores `"one"`/`"two"` strings; internal types use `1 | 2` numbers. Masonry defaults to `2`, Grid to `1`.
+8. **`minimumColumns` requires coercion at every boundary.** Bases YAML stores `"one"`/`"two"` strings; internal types use `1 | 2` numbers. Masonry defaults to `2`, Grid to `1`. All sites use `getMinimumColumnsDefault(viewType)` as single source of truth.
 9. **Sparse storage ensures new defaults propagate.** Only non-default values are persisted, so adding a new default or changing an existing one automatically applies to all users who haven't overridden it.
 10. **Template cleanup runs on every plugin load.** Stale keys, wrong types, and invalid enum values are removed from templates before use.
+11. **Obsidian pre-populates schema defaults into new `.base` YAML.** `cleanUpBaseFile()` runs AFTER this, so template injection must unconditionally overwrite — not guard with `if (!(key in viewObj))`.
+12. **`getBasesViewOptions()` is NOT called on view creation.** Only called when the settings panel is opened. Template injection for new views happens in `cleanUpBaseFile()`, not via schema defaults.

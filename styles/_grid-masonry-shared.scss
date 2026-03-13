@@ -3,6 +3,7 @@
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
   --bases-view-padding: var(--size-4-3);
+  --dynamic-views-bases-view-padding: var(--bases-view-padding);
   container-type: inline-size;
 }
 

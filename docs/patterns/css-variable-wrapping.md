@@ -66,10 +66,11 @@ body.dynamic-views-backdrop-theme-dark .dynamic-views .card.image-format-backdro
 
 ### Override sites
 
-Five sites currently redefine both bare and wrapped text variables:
+Six sites currently redefine both bare and wrapped variables:
 
 - `_poster.scss` — gradient overlay (dark text), gradient overlay (light text), full overlay (dark text)
 - `_backdrop.scss` — dark overlay (light text), light overlay (dark text)
+- `_grid-masonry-shared.scss` — `--bases-view-padding` on plugin view types (Obsidian sets this on `.workspace-leaf-content`, not `body`, so the `body`-level wrapper resolves to the fallback; the redefinition on `.bases-view[data-view-type]` provides the correct inherited value)
 
 ## When adding a new wrapper
 

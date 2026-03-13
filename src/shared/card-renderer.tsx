@@ -81,6 +81,7 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   computeInvertPairs,
+  hasWrappedPairs,
 } from './property-helpers';
 import {
   shouldUseNotebookNavigator,
@@ -90,6 +91,11 @@ import {
 } from '../utils/notebook-navigator';
 import { measurePropertyFields } from './property-measure';
 import { getOwnerWindow } from '../utils/owner-window';
+
+/** Tracks last card width when compact-stacked was evaluated.
+ *  Prevents infinite RO loop: toggling compact-stacked changes card height,
+ *  which re-triggers RO. By checking width, we skip height-only re-fires. */
+const compactWidthCache = new WeakMap<HTMLElement, number>();
 
 /**
  * Extended container element with focus management properties
@@ -1909,7 +1915,24 @@ function Card({
 
             // Compact mode
             if (breakpoint > 0) {
-              cardEl.classList.toggle('compact-mode', cardWidth < breakpoint);
+              const isCompact = cardWidth < breakpoint;
+              cardEl.classList.toggle('compact-mode', isCompact);
+              if (isCompact) {
+                // Only re-evaluate when width changed — skip height-only
+                // RO fires from compact-stacked toggling
+                if (compactWidthCache.get(cardEl) !== cardWidth) {
+                  compactWidthCache.set(cardEl, cardWidth);
+                  cardEl.classList.remove('compact-stacked');
+                  void cardEl.offsetHeight;
+                  cardEl.classList.toggle(
+                    'compact-stacked',
+                    hasWrappedPairs(cardEl)
+                  );
+                }
+              } else {
+                cardEl.classList.remove('compact-stacked');
+                compactWidthCache.delete(cardEl);
+              }
             }
 
             // Thumbnail stacking via CSS class only (CSS order handles positioning)

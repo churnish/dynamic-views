@@ -102,6 +102,7 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   computeInvertPairs,
+  hasWrappedPairs,
 } from '../shared/property-helpers';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -379,6 +380,11 @@ export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
 
 // dragManager type declared in datacore/types.d.ts
 
+/** Tracks last card width when compact-stacked was evaluated.
+ *  Prevents infinite RO loop: toggling compact-stacked changes card height,
+ *  which re-triggers RO. By checking width, we skip height-only re-fires. */
+const compactWidthCache = new WeakMap<HTMLElement, number>();
+
 /**
  * Batch-sync responsive classes (compact-mode, thumbnail-stack) for cards.
  * Uses read-then-write pattern to avoid layout thrashing:
@@ -443,6 +449,7 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
 
     if (shouldBeCompact !== wasCompact) {
       card.classList.toggle('compact-mode', shouldBeCompact);
+      if (!shouldBeCompact) card.classList.remove('compact-stacked');
       anyChanged = true;
     }
     if (thumb && shouldBeStacked !== wasStacked) {
@@ -450,6 +457,9 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
       anyChanged = true;
     }
   }
+
+  // Compact-stacked wrapping detection is handled by the per-card RO
+  // (with compactWidthCache to prevent infinite height-change loops).
 
   return anyChanged;
 }
@@ -1540,9 +1550,27 @@ export class SharedCardRenderer {
         // Skip if card hasn't been sized yet (masonry sets width)
         if (cardWidth <= 0) continue;
 
-        // Compact mode
+        // Compact mode + wrapping detection
         if (breakpoint > 0) {
-          cardEl.classList.toggle('compact-mode', cardWidth < breakpoint);
+          const isCompact = cardWidth < breakpoint;
+          cardEl.classList.toggle('compact-mode', isCompact);
+          if (isCompact) {
+            // Only re-evaluate wrapping when width changed — height-only
+            // changes (from compact-stacked toggling) must be skipped to
+            // prevent infinite RO loop.
+            if (compactWidthCache.get(cardEl) !== cardWidth) {
+              compactWidthCache.set(cardEl, cardWidth);
+              cardEl.classList.remove('compact-stacked');
+              void cardEl.offsetHeight;
+              cardEl.classList.toggle(
+                'compact-stacked',
+                hasWrappedPairs(cardEl)
+              );
+            }
+          } else {
+            cardEl.classList.remove('compact-stacked');
+            compactWidthCache.delete(cardEl);
+          }
         }
 
         // Thumbnail stacking: class toggle + optional DOM move

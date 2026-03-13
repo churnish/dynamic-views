@@ -72,6 +72,23 @@ export function shouldCollapseField(
   return false;
 }
 
+/** Check if any `.property-pair` in a compact card has wrapped (right child below left). */
+export function hasWrappedPairs(card: HTMLElement): boolean {
+  const pairs = card.querySelectorAll<HTMLElement>('.property-pair');
+  for (const pair of pairs) {
+    const left = pair.querySelector<HTMLElement>('.pair-left');
+    const right = pair.querySelector<HTMLElement>('.pair-right');
+    if (
+      left &&
+      right &&
+      right.getBoundingClientRect().top > left.getBoundingClientRect().top + 1
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * When pairProperties is OFF, compute which property indices should pair.
  * Single inverted props can trigger pairing (default: pair up).

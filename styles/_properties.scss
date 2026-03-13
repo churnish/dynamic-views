@@ -33,10 +33,31 @@
     margin-left: 0 !important;
   }
 
+  /* Column mode compact: equal flex-grow for both sides (overrides compact's grow-left/shrink-right).
+     flex-basis: auto preserves wrapping for compact-stacked detection; basis 0 would prevent it. */
+  &.dynamic-views-paired-property-column
+    .card.compact-mode
+    .property-pair
+    .pair-right,
+  &.dynamic-views-paired-property-column
+    .card.compact-mode
+    .property-pair.property-measured
+    .pair-right {
+    flex: 1 1 auto !important;
+  }
+
   /* Stacked right-side content left-aligns (right-positioning comes from flex-grow, not justify) */
   .card.compact-mode .property-pair .pair-right .property-content,
   .card.compact-mode .property-pair .pair-right .property-content-wrapper {
     justify-content: flex-start;
+  }
+
+  /* Compact stacked: when any pair wraps, force ALL pairs to stack.
+     Set by JS wrapping detection in syncResponsiveClasses / per-card RO. */
+  .card.compact-stacked .property-pair {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: var(--size-2-2);
   }
 
   /* Meta-field: scrollable container */
@@ -162,6 +183,15 @@
   /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
   &.dynamic-views-paired-property-column .property-pair .property {
     flex: 1 1 0;
+  }
+
+  /* Column mode: orphan (unpaired) property stays at half-width to preserve grid structure.
+     :has(.property-pair) ensures this only applies when pairing is active — without it,
+     all properties get constrained to 50% when pairing is off (no .property-pair wrappers). */
+  &.dynamic-views-paired-property-column
+    .card-properties:has(.property-pair)
+    > .property {
+    max-width: 50%;
   }
 
   /* Odd fields (left side) use --field1-width */

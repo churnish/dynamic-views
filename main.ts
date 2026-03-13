@@ -560,7 +560,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     return null;
   }
 
-  /** Toggle card width debug badges (live-updating via ResizeObserver) */
+  /** Refresh card width debug badges (idempotent, live-updating via ResizeObserver) */
   debugWidths() {
     const ATTR = 'data-dynamic-views-debug-widths';
     // Collect documents from all windows (main + popouts)
@@ -593,7 +593,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
           fontFamily: 'monospace',
         });
         const update = () => {
-          badge.textContent = `${Math.round(card.getBoundingClientRect().width)}px`;
+          badge.textContent = `${(card as HTMLElement).offsetWidth}px`;
         };
         const win = (card.ownerDocument.defaultView ??
           window) as typeof globalThis;
@@ -605,7 +605,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
         count++;
       })
     );
-    console.debug(`width badges ON (${count} cards)`);
+    console.debug(`refreshed width badges (${count} cards)`);
   }
 
   private getAllPopoutDocuments(): Document[] {

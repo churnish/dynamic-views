@@ -30,6 +30,10 @@ export const MASONRY_CORRECTION_MS = 200;
  * --masonry-reposition-duration in _core.scss must not exceed this value. */
 export const MOUNT_REMEASURE_MS = 200;
 
+/** Delay for safety net remeasure after initial render.
+ * Catches slow async height changes that the double-rAF deferred remeasure misses. */
+export const INITIAL_REMEASURE_MS = 500;
+
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 
