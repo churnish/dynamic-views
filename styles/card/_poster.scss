@@ -95,29 +95,26 @@ body.dynamic-views-poster-disable-scroll
   -webkit-mask-image: none;
 }
 
-/* Poster reveal zoom transition (all platforms — needed for both hover and tap).
-   filter transition for overlay tint on reveal (300ms, independent of zoom speed). */
+/* Poster img: opacity for load fade-in + theme dimming,
+   filter for overlay tint. Independent of zoom. */
+.dynamic-views .card.image-format-poster .card-poster img {
+  transition:
+    opacity var(--dynamic-views-anim-duration-moderate) ease,
+    filter var(--dynamic-views-anim-duration-moderate);
+}
+
+/* Poster reveal zoom (all platforms — hover and tap).
+   will-change promotes to GPU layer for smooth transform on iOS WebKit. */
 body:not(.dynamic-views-poster-disable-reveal-zoom)
   .dynamic-views
   .card.image-format-poster
   .card-poster
   img {
-  will-change: transform; /* iOS WebKit: own GPU layer so ::after overlay repaint doesn't swallow transform transition */
+  will-change: transform;
   transition:
     transform var(--dynamic-views-anim-duration-fast) ease,
     opacity var(--dynamic-views-anim-duration-moderate) ease,
     filter var(--dynamic-views-anim-duration-moderate);
-}
-
-/* When reveal zoom is disabled, still transition filter for overlay tint */
-body.dynamic-views-poster-disable-reveal-zoom
-  .dynamic-views.poster-mode-overlay
-  .card.image-format-poster
-  .card-poster
-  img {
-  transition:
-    filter var(--dynamic-views-anim-duration-moderate),
-    opacity var(--dynamic-views-anim-duration-moderate);
 }
 
 /* Poster: zoom on tap reveal (mobile) */
