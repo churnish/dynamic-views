@@ -59,15 +59,27 @@
     flex: 1 1 auto !important;
   }
 
-  /* Compact: reset right-mode alignment — justify-content and text-align are reset because
-     at narrow widths left-alignment is clearer. Order reversal (value-then-label) is kept
+  /* Compact: reset right-mode alignment for left/column modes — right mode keeps
+     right-alignment at all widths. Order reversal (value-then-label) is kept
      for side-by-side pairs but reset in compact-stacked below. */
-  .card.compact-mode .property-pair .pair-right .property-content,
-  .card.compact-mode .property-pair .pair-right .property-content-wrapper {
+  &:not(.dynamic-views-paired-property-right)
+    .card.compact-mode
+    .property-pair
+    .pair-right
+    .property-content,
+  &:not(.dynamic-views-paired-property-right)
+    .card.compact-mode
+    .property-pair
+    .pair-right
+    .property-content-wrapper {
     justify-content: flex-start;
   }
 
-  .card.compact-mode .property-pair .pair-right .property-label {
+  &:not(.dynamic-views-paired-property-right)
+    .card.compact-mode
+    .property-pair
+    .pair-right
+    .property-label {
     text-align: left;
   }
 
@@ -87,6 +99,18 @@
 
   .card.compact-stacked .property-pair .pair-right .property-content {
     order: 0;
+  }
+
+  /* Stacked: reset right-mode alignment — full-width stacked properties should all
+     left-align for consistent reading flow (right-alignment only for side-by-side). */
+  .card.compact-stacked .property-pair .pair-right .property-content,
+  .card.compact-stacked .property-pair .pair-right .property-content-wrapper {
+    justify-content: flex-start;
+  }
+
+  .card.compact-stacked .property-pair .pair-right .property-label,
+  .card.compact-stacked .property-pair .pair-right .property-label-inline {
+    text-align: left;
   }
 
   /* Stacked: reset right-side icon to left edge — when wrapped, "edge" flips to left
