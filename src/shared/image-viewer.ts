@@ -201,6 +201,19 @@ interface ViewerGestureControls {
   setAltDragMode: (enabled: boolean) => void;
 }
 
+/** Constrained viewer: returns true when the key event should be ignored (viewer's leaf is not active). */
+function isConstrainedViewerInactive(el: CloneElement, doc: Document): boolean {
+  if (!el.classList.contains('dynamic-views-viewer-fixed')) return false;
+  const orig = el.__originalEmbed;
+  const activeLeaf = doc.activeElement?.closest('.workspace-leaf');
+  return (
+    doc.activeElement !== el &&
+    !orig?.closest('.workspace-leaf.mod-active') &&
+    !!activeLeaf &&
+    activeLeaf !== orig?.closest('.workspace-leaf')
+  );
+}
+
 /**
  * Setup zoom and pan gestures for an image in the viewer
  * @param imgEl - The image element
@@ -214,7 +227,7 @@ function setupImageViewerGestures(
 ): ViewerGestureControls {
   const isMobileMode = mode === 'mobile';
   let panzoomInstance: PanzoomObject | null = null;
-  let spacebarHandler: ((e: KeyboardEvent) => void) | null = null;
+  let imageViewerKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   let errorHandler: (() => void) | null = null;
   let contextmenuHandler: ((e: MouseEvent) => void) | null = null;
   let mobileTouchHandler: ((e: TouchEvent) => void) | null = null;
@@ -396,19 +409,9 @@ function setupImageViewerGestures(
     }
 
     // Keyboard shortcuts — desktop only
-    spacebarHandler = (e: KeyboardEvent) => {
-      // Constrained viewer: only handle keys when the viewer has focus or its leaf is active
-      if (container.classList.contains('dynamic-views-viewer-fixed')) {
-        const orig = (container as CloneElement).__originalEmbed;
-        const activeLeaf = gestureDoc.activeElement?.closest('.workspace-leaf');
-        if (
-          gestureDoc.activeElement !== container &&
-          !orig?.closest('.workspace-leaf.mod-active') &&
-          !!activeLeaf &&
-          activeLeaf !== orig?.closest('.workspace-leaf')
-        )
-          return;
-      }
+    imageViewerKeyHandler = (e: KeyboardEvent) => {
+      if (isConstrainedViewerInactive(container as CloneElement, gestureDoc))
+        return;
       if (e.code === 'Space') {
         e.preventDefault();
         e.stopPropagation();
@@ -429,7 +432,7 @@ function setupImageViewerGestures(
         container.dataset.lastKeyTime = String(Date.now());
       }
     };
-    gestureDoc.addEventListener('keydown', spacebarHandler, true);
+    gestureDoc.addEventListener('keydown', imageViewerKeyHandler, true);
 
     // Right-click to reset zoom/pan
     contextmenuHandler = (e: MouseEvent) => {
@@ -484,6 +487,7 @@ function setupImageViewerGestures(
 
     const momentumTick = () => {
       cancelAnimationFrame(mobileAnimFrame);
+      if (scale <= 1) return; // No momentum at base zoom — pan is clamped to 0
       const now = Date.now();
       const dt = now - lastTime;
       panX += Math.cos(direction) * velocity * dt;
@@ -673,8 +677,8 @@ function setupImageViewerGestures(
         }
         panzoomInstance.destroy();
       }
-      if (spacebarHandler) {
-        gestureDoc.removeEventListener('keydown', spacebarHandler, true);
+      if (imageViewerKeyHandler) {
+        gestureDoc.removeEventListener('keydown', imageViewerKeyHandler, true);
       }
       if (contextmenuHandler) {
         container.removeEventListener('contextmenu', contextmenuHandler, true);
@@ -892,19 +896,7 @@ function openImageViewer(
 
       // Desktop only: spacebar to toggle maximize, R/ArrowDown to reset (when panzoom disabled)
       const onSpacebar = (e: KeyboardEvent) => {
-        // Constrained viewer: only handle keys when the viewer has focus or its leaf is active
-        if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
-          const orig = cloneEl.__originalEmbed;
-          const activeLeaf =
-            viewerDoc.activeElement?.closest('.workspace-leaf');
-          if (
-            viewerDoc.activeElement !== cloneEl &&
-            !orig?.closest('.workspace-leaf.mod-active') &&
-            !!activeLeaf &&
-            activeLeaf !== orig?.closest('.workspace-leaf')
-          )
-            return;
-        }
+        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
         if (e.code === 'Space') {
           e.preventDefault();
           e.stopPropagation();
@@ -1076,19 +1068,7 @@ function openImageViewer(
     if (!isMobile) {
       onEscape = (e: KeyboardEvent) => {
         if (e.key !== 'Escape') return;
-        // Constrained viewer: only handle Escape when the viewer has focus or its leaf is active
-        if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
-          const orig = cloneEl.__originalEmbed;
-          const activeLeaf =
-            viewerDoc.activeElement?.closest('.workspace-leaf');
-          if (
-            viewerDoc.activeElement !== cloneEl &&
-            !orig?.closest('.workspace-leaf.mod-active') &&
-            !!activeLeaf &&
-            activeLeaf !== orig?.closest('.workspace-leaf')
-          )
-            return;
-        }
+        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       };
     }
@@ -1099,19 +1079,7 @@ function openImageViewer(
       onCopy = (e: KeyboardEvent) => {
         const isCopyShortcut = (e.metaKey || e.ctrlKey) && e.key === 'c';
         if (!isCopyShortcut) return;
-        // Constrained viewer: only handle copy when the viewer has focus or its leaf is active
-        if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
-          const orig = cloneEl.__originalEmbed;
-          const activeLeaf =
-            viewerDoc.activeElement?.closest('.workspace-leaf');
-          if (
-            viewerDoc.activeElement !== cloneEl &&
-            !orig?.closest('.workspace-leaf.mod-active') &&
-            !!activeLeaf &&
-            activeLeaf !== orig?.closest('.workspace-leaf')
-          )
-            return;
-        }
+        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -1175,6 +1143,7 @@ function openImageViewer(
     if (!isMobile) {
       onEnter = (e: KeyboardEvent) => {
         if (e.key !== 'Enter') return;
+        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
         const src = imgEl.src;
         const vaultPath = getVaultPathFromResourceUrl(src);
         if (!vaultPath) return;
@@ -1186,11 +1155,18 @@ function openImageViewer(
       };
     }
 
-    // Mobile: block all hotkeys so Obsidian doesn't activate underlying card/link
+    // Mobile: block desktop hotkeys so Obsidian doesn't activate underlying card/link
     let onBlockKeys: ((e: KeyboardEvent) => void) | null = null;
     if (isMobile) {
       onBlockKeys = (e: KeyboardEvent) => {
-        if (e.code === 'Space' || e.key === 'Enter' || e.key === 'Escape') {
+        if (
+          e.code === 'Space' ||
+          e.key === 'Enter' ||
+          e.key === 'Escape' ||
+          e.key === 'r' ||
+          e.key === 'R' ||
+          e.key === 'ArrowDown'
+        ) {
           e.preventDefault();
           e.stopPropagation();
         }
@@ -1230,19 +1206,7 @@ function openImageViewer(
 
       onAltKeyDown = (e: KeyboardEvent) => {
         if (e.key !== 'Alt' || altHeld) return;
-        // Constrained viewer: only handle Alt when the viewer has focus or its leaf is active
-        if (cloneEl.classList.contains('dynamic-views-viewer-fixed')) {
-          const orig = cloneEl.__originalEmbed;
-          const activeLeaf =
-            viewerDoc.activeElement?.closest('.workspace-leaf');
-          if (
-            viewerDoc.activeElement !== cloneEl &&
-            !orig?.closest('.workspace-leaf.mod-active') &&
-            !!activeLeaf &&
-            activeLeaf !== orig?.closest('.workspace-leaf')
-          )
-            return;
-        }
+        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
         enableAltDrag();
       };
 
