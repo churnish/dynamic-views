@@ -231,6 +231,7 @@ On first `ResizeObserver` callback, `isFirstResize` forces `visibleCards.add(car
 | `.property-collapsed` | Field        | Empty/missing field hidden (`display: none`).                                |
 | `.is-scrollable`      | Field        | Content overflows wrapper width (set by scroll gradient system).             |
 | `.compact-mode`       | Card         | Card below compact breakpoint — pairs stack vertically.                      |
+| `.compact-stacked`    | Card         | Set by JS when `hasWrappedPairs()` returns true: all pairs stack vertically. |
 | `.content-hidden`     | Card         | Off-screen card with `content-visibility: hidden` (measurement skipped).     |
 
 **Default unmeasured state**: `.property-pair .property { flex: 0 1 auto; max-width: 50% }` — each field can shrink but never exceeds half the pair width. Measurement replaces this with explicit widths.
@@ -329,6 +330,29 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 - **Measurement still skipped**: `measureSideBySideSet()` returns early when card has `.compact-mode`. `queueCardSets()` also skips. CSS flex-wrap handles layout without JS measurement.
 - **Left-aligned**: Compact-mode `.pair-right` content resets to `justify-content: flex-start` — right-alignment on stacked full-width properties would be visually inconsistent.
 
+### Compact stacked
+
+`flex-wrap: wrap` in compact mode produces content-aware wrapping — short pairs stay side-by-side while long ones stack. When any pair wraps, `.compact-stacked` is added to force all pairs to stack vertically, ensuring visual consistency.
+
+**`hasWrappedPairs()` detection** (`property-helpers.ts`): Queries all `.property-pair` elements on the card, compares `getBoundingClientRect().top` of `.pair-left` vs `.pair-right` with +1px tolerance. Returns `true` if any right child is below its left sibling.
+
+**`compactWidthCache` loop prevention**: Toggling `.compact-stacked` changes card height, which fires the `ResizeObserver`, which would re-evaluate wrapping — creating an infinite loop. A `WeakMap<HTMLElement, number>` (`compactWidthCache`, present in both `shared-renderer.ts` and `card-renderer.tsx`) tracks the last width at which wrapping was evaluated. The RO skips re-evaluation when only height changed (same width in cache). Cache entries are deleted when a card exits compact mode or becomes `.content-hidden` (Bases only).
+
+**Detection flow**:
+
+1. `compact-mode` toggled on card → check if card has `.compact-mode`.
+2. If compact and width changed (cache miss): remove `.compact-stacked`, force reflow (`void cardEl.offsetHeight`), call `hasWrappedPairs()`, conditionally add `.compact-stacked`.
+3. If not compact: remove `.compact-stacked`, delete cache entry.
+
+**CSS rules for stacked mode** (`_properties.scss`):
+
+- `.card.compact-stacked .property-pair`: `flex-direction: column; flex-wrap: nowrap; gap: var(--size-2-2)`.
+- Order resets: `.pair-right .property-label-inline` and `.property-content` reset to `order: 0` (label-then-value natural reading order).
+- Alignment resets: `.pair-right .property-content` and `.property-content-wrapper` reset to `justify-content: flex-start`; labels reset to `text-align: left`.
+- Timestamp icon: edge-mode reset flips pair-right icon to left (`order: 0`); right-mode override keeps icon right (`order: 2`, specificity 0,7,1); center-mode override keeps icon right (`order: 2`, specificity 0,7,1).
+
+**Right mode two-layer alignment**: In side-by-side compact, right-alignment is preserved (`flex-end`, order reversal) — compact resets are scoped via `:not(.dynamic-views-paired-property-right)`. In compact-stacked, left-alignment is forced — pair-right spans full width, and right-aligning it creates inconsistency with the pair-left row above.
+
 ## Settings reference
 
 > For the full settings resolution pipeline (three-layer merge, sparse storage, template system), see [settings-resolution.md](settings-resolution.md).
@@ -367,3 +391,4 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 8. **Width cache prevents redundant measurement.** `cardWidthCache` (WeakMap) stores last measured `clientWidth` per card. Measurements are skipped when width changes by less than 0.5px (`WIDTH_TOLERANCE`).
 9. **Scroll position resets after measurement.** Both wrappers have `scrollLeft` reset to 0 after widths are applied, ensuring gradients start in the correct state.
 10. **`property-measuring` is always removed.** The `finally` block in `measureSideBySideSet()` guarantees `property-measuring` is removed even if measurement throws.
+11. **`compact-stacked` requires `compact-mode`.** `compact-stacked` is only set on cards that already have `.compact-mode`. Removing `.compact-mode` always removes `.compact-stacked`.

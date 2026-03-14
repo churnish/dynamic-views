@@ -44,9 +44,9 @@ dynamic-views/
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Panzoom image viewer
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
-│   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes
+│   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes; compact wrapping detection
 │   │   ├── property-measure.ts       # Measures property field widths + scroll gradients
-│   │   ├── render-utils.ts           # Date/timestamp/property rendering functions
+│   │   ├── render-utils.ts           # Date/timestamp/property rendering functions, tag drag handler factory
 │   │   ├── scroll-gradient.ts        # Horizontal scroll gradients for properties
 │   │   ├── scroll-preservation.ts    # Scroll position save/restore
 │   │   ├── settings-schema.ts        # Universal settings schema parser

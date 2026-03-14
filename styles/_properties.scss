@@ -476,7 +476,8 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
   margin-left: var(--size-2-2);
 }
 
-/* Right mode: keep icon on right in compact-stacked (beats the order-reset above) */
+/* Right mode: keep icon on right in compact-stacked.
+   Specificity 0,7,1 beats the stacked edge reset (0,6,0) at line ~118. */
 body.dynamic-views-timestamp-icon-right
   .dynamic-views
   .card.compact-stacked
@@ -510,7 +511,8 @@ body.dynamic-views-timestamp-icon-center
   margin-left: 0;
 }
 
-/* Center mode compact-stacked: both icons face right (no "center" when stacked) */
+/* Center mode compact-stacked: both icons face right (no "center" when stacked).
+   Specificity 0,7,1 beats the stacked edge reset (0,6,0) at line ~118. */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
   .card.compact-stacked

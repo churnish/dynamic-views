@@ -3,6 +3,7 @@ import {
   isFileProperty,
   isFormulaProperty,
   shouldCollapseField,
+  hasWrappedPairs,
 } from '../../src/shared/property-helpers';
 
 describe('property-helpers', () => {
@@ -144,6 +145,84 @@ describe('property-helpers', () => {
       expect(shouldCollapseField('#tag', 'tags', true, 'all', 'inline')).toBe(
         false
       );
+    });
+  });
+
+  describe('hasWrappedPairs', () => {
+    /** Build a `.property-pair` element with optional left/right children. */
+    function createPair(opts: {
+      leftTop: number;
+      rightTop: number;
+      omitLeft?: boolean;
+      omitRight?: boolean;
+    }): HTMLElement {
+      const pair = document.createElement('div');
+      pair.classList.add('property-pair');
+
+      if (!opts.omitLeft) {
+        const left = document.createElement('div');
+        left.classList.add('pair-left');
+        left.getBoundingClientRect = () => ({ top: opts.leftTop }) as DOMRect;
+        pair.appendChild(left);
+      }
+
+      if (!opts.omitRight) {
+        const right = document.createElement('div');
+        right.classList.add('pair-right');
+        right.getBoundingClientRect = () => ({ top: opts.rightTop }) as DOMRect;
+        pair.appendChild(right);
+      }
+
+      return pair;
+    }
+
+    it('returns false when no .property-pair elements exist', () => {
+      const card = document.createElement('div');
+      expect(hasWrappedPairs(card)).toBe(false);
+    });
+
+    it('returns false when all pairs are on the same line', () => {
+      const card = document.createElement('div');
+      card.appendChild(createPair({ leftTop: 100, rightTop: 100 }));
+      card.appendChild(createPair({ leftTop: 120, rightTop: 120 }));
+      expect(hasWrappedPairs(card)).toBe(false);
+    });
+
+    it('returns true when one pair has wrapped (right below left)', () => {
+      const card = document.createElement('div');
+      card.appendChild(createPair({ leftTop: 100, rightTop: 100 }));
+      card.appendChild(createPair({ leftTop: 120, rightTop: 140 }));
+      expect(hasWrappedPairs(card)).toBe(true);
+    });
+
+    it('returns false when difference is exactly 1px (tolerance boundary)', () => {
+      const card = document.createElement('div');
+      // right.top === left.top + 1 — not strictly greater, so no wrap
+      card.appendChild(createPair({ leftTop: 100, rightTop: 101 }));
+      expect(hasWrappedPairs(card)).toBe(false);
+    });
+
+    it('returns true when difference is 1.5px (just over tolerance boundary)', () => {
+      const card = document.createElement('div');
+      // right.top > left.top + 1 — wrapping detected
+      card.appendChild(createPair({ leftTop: 100, rightTop: 101.5 }));
+      expect(hasWrappedPairs(card)).toBe(true);
+    });
+
+    it('skips pairs missing .pair-left and counts remaining pairs correctly', () => {
+      const card = document.createElement('div');
+      card.appendChild(
+        createPair({ leftTop: 100, rightTop: 140, omitLeft: true })
+      );
+      expect(hasWrappedPairs(card)).toBe(false);
+    });
+
+    it('skips pairs missing .pair-right and counts remaining pairs correctly', () => {
+      const card = document.createElement('div');
+      card.appendChild(
+        createPair({ leftTop: 100, rightTop: 140, omitRight: true })
+      );
+      expect(hasWrappedPairs(card)).toBe(false);
     });
   });
 });

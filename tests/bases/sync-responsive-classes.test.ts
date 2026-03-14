@@ -114,6 +114,24 @@ describe('syncResponsiveClasses', () => {
     });
   });
 
+  describe('compact-stacked cleanup', () => {
+    it('removes both compact-mode and compact-stacked when card widens above breakpoint', () => {
+      // Start narrow: card has both classes pre-applied (as set by the per-card RO)
+      const card = createCard({ width: 300 });
+      card.classList.add('compact-mode', 'compact-stacked');
+
+      // Widen above the 390px breakpoint
+      Object.defineProperty(card, 'offsetWidth', {
+        configurable: true,
+        value: 400,
+      });
+      syncResponsiveClasses([card]);
+
+      expect(card.classList.contains('compact-mode')).toBe(false);
+      expect(card.classList.contains('compact-stacked')).toBe(false);
+    });
+  });
+
   // compact-stacked wrapping detection is handled by the per-card RO
   // (not syncResponsiveClasses) — verified empirically via DevTools.
 
