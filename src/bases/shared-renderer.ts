@@ -39,7 +39,11 @@ import {
   setupElementScrollGradient,
   setupVerticalScrollGradient,
 } from '../shared/scroll-gradient';
-import { getTimestampIcon, isTimestampProperty } from '../shared/render-utils';
+import {
+  createTagDragHandler,
+  getTimestampIcon,
+  isTimestampProperty,
+} from '../shared/render-utils';
 import {
   showTagHashPrefix,
   getHideEmptyMode,
@@ -1070,6 +1074,11 @@ export class SharedCardRenderer {
 
     // Drag handler — use dragLink (not dragFile) to match vanilla Bases ghost icon
     const handleDrag = (e: DragEvent) => {
+      cardEl.classList.remove(
+        'hover-intent-active',
+        'poster-hover-active',
+        'cover-hover-active'
+      );
       const dragData = this.app.dragManager.dragLink(e, card.path, '');
       this.app.dragManager.onDragStart(e, dragData);
     };
@@ -1370,6 +1379,17 @@ export class SharedCardRenderer {
           'dragstart',
           (e) => {
             e.stopPropagation();
+            cardEl.classList.remove(
+              'hover-intent-active',
+              'poster-hover-active',
+              'cover-hover-active'
+            );
+            // Deferred pointer-events: none clears stuck :hover pseudo-class
+            // on the icon. Must defer — setting it synchronously during
+            // dragstart aborts the drag (see context 7.24).
+            setTimeout(() => {
+              iconEl.style.pointerEvents = 'none';
+            }, 0);
             if (e.dataTransfer) {
               e.dataTransfer.effectAllowed = 'copyLink';
               // Native <a> sets text/uri-list + text/html — Obsidian prefers
@@ -1386,6 +1406,7 @@ export class SharedCardRenderer {
             const body = iconEl.ownerDocument.body;
             body.querySelector('.tooltip')?.remove();
             body.removeClass('dynamic-views-dragging');
+            iconEl.style.removeProperty('pointer-events');
           },
           { signal }
         );
@@ -1572,6 +1593,8 @@ export class SharedCardRenderer {
             if (compactWidthCache.get(cardEl) !== cardWidth) {
               compactWidthCache.set(cardEl, cardWidth);
               cardEl.classList.remove('compact-stacked');
+              // Force reflow so hasWrappedPairs measures flex-wrap layout,
+              // not the flex-direction: column from compact-stacked
               void cardEl.offsetHeight;
               if (hasWrappedPairs(cardEl)) {
                 cardEl.classList.add('compact-stacked');
@@ -2206,6 +2229,17 @@ export class SharedCardRenderer {
           'dragstart',
           (e) => {
             e.stopPropagation();
+            cardEl.classList.remove(
+              'hover-intent-active',
+              'poster-hover-active',
+              'cover-hover-active'
+            );
+            // Deferred pointer-events: none clears stuck :hover pseudo-class
+            // on the icon. Must defer — setting it synchronously during
+            // dragstart aborts the drag (see context 7.24).
+            setTimeout(() => {
+              iconEl.style.pointerEvents = 'none';
+            }, 0);
             if (e.dataTransfer) {
               e.dataTransfer.effectAllowed = 'copyLink';
               // Native <a> sets text/uri-list + text/html — Obsidian prefers
@@ -2222,6 +2256,7 @@ export class SharedCardRenderer {
             const body = iconEl.ownerDocument.body;
             body.querySelector('.tooltip')?.remove();
             body.removeClass('dynamic-views-dragging');
+            iconEl.style.removeProperty('pointer-events');
           },
           { signal }
         );
@@ -2814,18 +2849,7 @@ export class SharedCardRenderer {
         tagEl.tabIndex = -1;
         tagEl.addEventListener(
           'dragstart',
-          (e) => {
-            e.stopPropagation();
-            e.dataTransfer?.clearData();
-            e.dataTransfer?.setData('text/plain', '#' + tag);
-            this.app.dragManager.onDragStart(e, {
-              type: 'text',
-              title: tag,
-              icon: 'hashtag',
-            });
-            // Clear draggable so editor's dragover accepts the drop via its else-path
-            (this.app.dragManager as Record<string, unknown>).draggable = null;
-          },
+          createTagDragHandler(this.app, tag),
           { signal }
         );
         tagEl.addEventListener(
@@ -2864,18 +2888,7 @@ export class SharedCardRenderer {
         tagEl.tabIndex = -1;
         tagEl.addEventListener(
           'dragstart',
-          (e) => {
-            e.stopPropagation();
-            e.dataTransfer?.clearData();
-            e.dataTransfer?.setData('text/plain', '#' + tag);
-            this.app.dragManager.onDragStart(e, {
-              type: 'text',
-              title: tag,
-              icon: 'hashtag',
-            });
-            // Clear draggable so editor's dragover accepts the drop via its else-path
-            (this.app.dragManager as Record<string, unknown>).draggable = null;
-          },
+          createTagDragHandler(this.app, tag),
           { signal }
         );
         tagEl.addEventListener(

@@ -72,7 +72,11 @@ import {
   THUMBNAIL_STACK_MULTIPLIER,
 } from './constants';
 import { setupHoverIntent } from './hover-intent';
-import { isTimestampProperty, getTimestampIcon } from './render-utils';
+import {
+  createTagDragHandler,
+  getTimestampIcon,
+  isTimestampProperty,
+} from './render-utils';
 import { applyPerParagraphClamp } from './text-preview-dom';
 
 import {
@@ -94,9 +98,7 @@ import { getOwnerWindow } from '../utils/owner-window';
 
 /** Tracks last card width when compact-stacked was evaluated.
  *  Prevents infinite RO loop: toggling compact-stacked changes card height,
- *  which re-triggers RO. By checking width, we skip height-only re-fires.
- *  Cleared when cards become content-hidden so wrapping is re-evaluated
- *  when they return to view (content-hidden skips the RO callback). */
+ *  which re-triggers RO. By checking width, we skip height-only re-fires. */
 const compactWidthCache = new WeakMap<HTMLElement, number>();
 
 /**
@@ -143,6 +145,13 @@ function renderFileExt(extInfo: { ext: string } | null) {
  */
 function createCardDragHandler(app: App, path: string) {
   return (e: DragEvent) => {
+    (e.currentTarget as HTMLElement)
+      ?.closest('.card')
+      ?.classList.remove(
+        'hover-intent-active',
+        'poster-hover-active',
+        'cover-hover-active'
+      );
     const dragData = app.dragManager.dragLink(e, path, '');
     app.dragManager.onDragStart(e, dragData);
   };
@@ -374,18 +383,7 @@ function renderTagsList(tags: string[], app: App, showHashPrefix: boolean) {
             className="tag"
             draggable={true}
             tabIndex={-1}
-            onDragStart={(e: DragEvent) => {
-              e.stopPropagation();
-              e.dataTransfer?.clearData();
-              e.dataTransfer?.setData('text/plain', '#' + tag);
-              app.dragManager.onDragStart(e, {
-                type: 'text',
-                title: tag,
-                icon: 'hashtag',
-              });
-              // Clear draggable so editor's dragover accepts the drop via its else-path
-              (app.dragManager as Record<string, unknown>).draggable = null;
-            }}
+            onDragStart={createTagDragHandler(app, tag)}
             onClick={(e: MouseEvent) => {
               e.preventDefault();
               if (
@@ -1868,6 +1866,11 @@ function Card({
             true;
           cardEl.addEventListener('dragstart', (e: DragEvent) => {
             e.stopImmediatePropagation();
+            cardEl.classList.remove(
+              'hover-intent-active',
+              'poster-hover-active',
+              'cover-hover-active'
+            );
             const dragData = app.dragManager.dragLink(e, card.path, '');
             app.dragManager.onDragStart(e, dragData);
           });
@@ -1937,6 +1940,8 @@ function Card({
                 if (compactWidthCache.get(cardEl) !== cardWidth) {
                   compactWidthCache.set(cardEl, cardWidth);
                   cardEl.classList.remove('compact-stacked');
+                  // Force reflow so hasWrappedPairs measures flex-wrap layout,
+                  // not the flex-direction: column from compact-stacked
                   void cardEl.offsetHeight;
                   if (hasWrappedPairs(cardEl)) {
                     cardEl.classList.add('compact-stacked');
@@ -2304,6 +2309,16 @@ function Card({
                   });
                   el.addEventListener('dragstart', (e) => {
                     e.stopPropagation();
+                    el.closest('.card')?.classList.remove(
+                      'hover-intent-active',
+                      'poster-hover-active',
+                      'cover-hover-active'
+                    );
+                    // Deferred pointer-events: none clears stuck :hover
+                    // pseudo-class. Must defer — synchronous change aborts drag.
+                    setTimeout(() => {
+                      el.style.pointerEvents = 'none';
+                    }, 0);
                     if (e.dataTransfer) {
                       e.dataTransfer.effectAllowed = 'copyLink';
                       // Native <a> sets text/uri-list + text/html — Obsidian prefers
@@ -2316,6 +2331,7 @@ function Card({
                     const body = el.ownerDocument.body;
                     body.querySelector('.tooltip')?.remove();
                     body.removeClass('dynamic-views-dragging');
+                    el.style.removeProperty('pointer-events');
                   });
                 }}
               />

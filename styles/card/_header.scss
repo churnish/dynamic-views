@@ -87,7 +87,10 @@ body.dynamic-views-file-type-ext
 }
 
 @media (hover: hover) {
-  .dynamic-views .card:not(.hover-intent-active) .card-title-url-icon {
+  body:not(.dynamic-views-dragging)
+    .dynamic-views
+    .card:not(.hover-intent-active)
+    .card-title-url-icon {
     pointer-events: none;
   }
 
