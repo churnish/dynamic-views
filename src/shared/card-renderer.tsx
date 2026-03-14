@@ -2304,7 +2304,13 @@ function Card({
                   });
                   el.addEventListener('dragstart', (e) => {
                     e.stopPropagation();
-                    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'link';
+                    if (e.dataTransfer) {
+                      e.dataTransfer.effectAllowed = 'copyLink';
+                      // Native <a> sets text/uri-list + text/html — Obsidian prefers
+                      // uri-list and wraps as [url](url). Clear all, set plain text only.
+                      e.dataTransfer.clearData();
+                      e.dataTransfer.setData('text/plain', card.urlValue!);
+                    }
                   });
                   el.addEventListener('dragend', () => {
                     const body = el.ownerDocument.body;
