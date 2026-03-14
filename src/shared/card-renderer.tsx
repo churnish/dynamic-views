@@ -1933,7 +1933,7 @@ function Card({
               cardEl.classList.toggle('compact-mode', isCompact);
               if (isCompact) {
                 // Re-evaluate wrapping when width changed — see
-                // shared-renderer.ts for full explanation
+                // compactWidthCache declaration for full explanation
                 if (compactWidthCache.get(cardEl) !== cardWidth) {
                   compactWidthCache.set(cardEl, cardWidth);
                   cardEl.classList.remove('compact-stacked');

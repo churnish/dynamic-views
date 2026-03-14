@@ -10,6 +10,9 @@
  */
 const cssTextCache = new Map<string, string>();
 
+/** Matches `dynamic-views-` prefixed class names on body */
+const DV_CLASS_PATTERN = /\bdynamic-views-\S+/g;
+
 /**
  * Clear the CSS variable cache.
  * Call at start of render cycle to pick up any style changes.
@@ -392,11 +395,11 @@ export function setupStyleSettingsObserver(
         mutation.attributeName === 'class'
       ) {
         // Skip when no dynamic-views- class changed (e.g., is-grabbing, theme classes)
-        const dvPattern = /\bdynamic-views-\S+/g;
         const oldDV =
-          (mutation.oldValue ?? '').match(dvPattern)?.sort().join(' ') ?? '';
+          (mutation.oldValue ?? '').match(DV_CLASS_PATTERN)?.sort().join(' ') ??
+          '';
         const newDV =
-          doc.body.className.match(dvPattern)?.sort().join(' ') ?? '';
+          doc.body.className.match(DV_CLASS_PATTERN)?.sort().join(' ') ?? '';
         if (oldDV === newDV) break;
 
         // Re-apply default when Style Settings strips all file-type classes
