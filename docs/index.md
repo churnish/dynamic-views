@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-13
+last updated: 2026-03-14
 ---
 # Doc index
 
@@ -17,6 +17,7 @@ last updated: 2026-03-13
 | [bases-v-datacore-differences.md](architecture/bases-v-datacore-differences.md) | Working on cross-backend code, shared infrastructure, or any feature that touches both Bases and Datacore — documents rendering model, event handling, cleanup, state, and common pitfalls from backend divergence. |
 | [settings-resolution.md](architecture/settings-resolution.md) | Working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants. |
 | [image-loading.md](architecture/image-loading.md) | Working on image loading, caching, aspect ratios, broken URL tracking, embed extraction, or the content-loader dedup pipeline — documents the two-tier cache architecture, fallback chain, load handler wiring, and invariants. |
+| [image-viewer.md](architecture/image-viewer.md) | Working on image viewer gestures, keyboard handlers, constrained vs fullscreen modes, Panzoom integration, mobile touch handling, or viewer cleanup — documents the dual-mode gesture system, keyboard handler map, leaf guard pattern, cleanup lifecycle, and invariants. |
 | [slideshow.md](architecture/slideshow.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
 | [write-path-safety.md](architecture/write-path-safety.md) | Adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption. |
 
@@ -24,6 +25,7 @@ last updated: 2026-03-13
 
 | Doc | Read before |
 |---|---|
+| [overview.md](overview.md) | First time working on this codebase, or need a high-level understanding of the plugin's architecture, backends, and major subsystems. |
 | [release-guide.md](release-guide.md) | Running a release, bumping versions, or troubleshooting the release pipeline — documents the full npm version lifecycle, GitHub Action build, wiki publishing, and rollback procedures. |
 
 ## patterns/
