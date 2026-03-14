@@ -59,8 +59,9 @@
     flex: 1 1 auto !important;
   }
 
-  /* Compact: reset right-mode order/alignment — at narrow widths, natural left-to-right
-     reading order and left-aligned labels are clearer than mirrored positioning. */
+  /* Compact: reset right-mode alignment — justify-content and text-align are reset because
+     at narrow widths left-alignment is clearer. Order reversal (value-then-label) is kept
+     for side-by-side pairs but reset in compact-stacked below. */
   .card.compact-mode .property-pair .pair-right .property-content,
   .card.compact-mode .property-pair .pair-right .property-content-wrapper {
     justify-content: flex-start;
@@ -70,20 +71,30 @@
     text-align: left;
   }
 
-  .card.compact-mode .property-pair .pair-right .property-label-inline {
-    order: 0;
-  }
-
-  .card.compact-mode .property-pair .pair-right .property-content {
-    order: 0;
-  }
-
   /* Compact stacked: when any pair wraps, force ALL pairs to stack.
      Set by JS wrapping detection in syncResponsiveClasses / per-card RO. */
   .card.compact-stacked .property-pair {
     flex-direction: column;
     flex-wrap: nowrap;
     gap: var(--size-2-2);
+  }
+
+  /* Stacked: reset right-mode order reversal — in vertical stack, label-then-value
+     is the natural reading order (order reversal only makes sense side-by-side). */
+  .card.compact-stacked .property-pair .pair-right .property-label-inline {
+    order: 0;
+  }
+
+  .card.compact-stacked .property-pair .pair-right .property-content {
+    order: 0;
+  }
+
+  /* Stacked: reset right-side icon to left edge — when wrapped, "edge" flips to left
+     (the property spans the full card width, so left is the natural outer edge). */
+  .card.compact-stacked .property-pair .pair-right .timestamp-icon {
+    order: 0;
+    margin-right: var(--size-2-2);
+    margin-left: 0;
   }
 
   /* Meta-field: scrollable container */
@@ -441,6 +452,18 @@ body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
   margin-left: var(--size-2-2);
 }
 
+/* Right mode: keep icon on right in compact-stacked (beats the order-reset above) */
+body.dynamic-views-timestamp-icon-right
+  .dynamic-views
+  .card.compact-stacked
+  .property-pair
+  .pair-right
+  .timestamp-icon {
+  order: 2;
+  margin-right: 0;
+  margin-left: var(--size-2-2);
+}
+
 /* Center positioning: odd fields show icon on right ONLY in side-by-side */
 body.dynamic-views-timestamp-icon-center
   .dynamic-views
@@ -461,6 +484,18 @@ body.dynamic-views-timestamp-icon-center
   order: 0;
   margin-right: var(--size-2-2);
   margin-left: 0;
+}
+
+/* Center mode compact-stacked: both icons face right (no "center" when stacked) */
+body.dynamic-views-timestamp-icon-center
+  .dynamic-views
+  .card.compact-stacked
+  .property-pair
+  .pair-right
+  .timestamp-icon {
+  order: 2;
+  margin-right: 0;
+  margin-left: var(--size-2-2);
 }
 
 /* Left positioning: even fields reset to left ONLY in side-by-side (counters edge default) */
