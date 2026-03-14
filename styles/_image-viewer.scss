@@ -113,17 +113,12 @@ body:not(.dynamic-views-image-viewer-disabled)
     max-width var(--dynamic-views-anim-duration-fast) ease;
 }
 
-/* Limit zoomed images to 90% viewport (non-phone) / 80vh height (phone, width inherits 100vw from initial rule) */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-phone)
+/* Limit zoomed images to 90% viewport (desktop/tablet constrained use full viewport via mobile gestures) */
+body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
   > .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 90vh;
   max-width: 90vw;
-}
-body:not(.dynamic-views-image-viewer-disabled).is-phone
-  > .dynamic-views-image-embed.is-zoomed
-  img {
-  max-height: 80vh;
 }
 
 /* Constrained mode (non-phone, fullscreen disabled): limit to 90% of view */
@@ -146,9 +141,8 @@ body.dynamic-views-zoom-disabled:not(
   max-width: 100%;
 }
 
-/* Disable drag in fullscreen mode */
-body.is-phone > .dynamic-views-image-embed.is-zoomed img,
-body:not(.dynamic-views-image-viewer-disable-fullscreen)
+/* Disable drag in fullscreen mode (desktop only — mobile uses iOS system drag & drop) */
+body:not(.is-mobile):not(.dynamic-views-image-viewer-disable-fullscreen)
   > .dynamic-views-image-embed.is-zoomed
   img {
   -webkit-user-drag: none;
