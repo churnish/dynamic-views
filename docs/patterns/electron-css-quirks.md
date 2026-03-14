@@ -60,8 +60,8 @@ Replace nested `:has()` with adjacent sibling combinator `+` plus a simple `:has
 
 ### Files affected by this fix
 
-- `styles/_grid-view.scss` — Grid properties-bottom spacing
-- `styles/_masonry-view.scss` — Masonry properties-bottom spacing (both cover-bottom and non-cover variants)
+- [styles/_grid-view.scss](../../styles/_grid-view.scss) — Grid properties-bottom spacing
+- [styles/_masonry-view.scss](../../styles/_masonry-view.scss) — Masonry properties-bottom spacing (both cover-bottom and non-cover variants)
 
 ## `-webkit-line-clamp` preserves trailing whitespace
 
@@ -86,7 +86,7 @@ A binary-search approach was prototyped and confirmed working:
 
 ### Affected file
 
-- `styles/card/_previews.scss` — `.card-text-preview` uses `-webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5)`
+- [styles/card/_previews.scss](../../styles/card/_previews.scss) — `.card-text-preview` uses `-webkit-line-clamp: var(--dynamic-views-text-preview-lines, 5)`
 
 ## Stuck `:hover` after drag
 
@@ -98,7 +98,7 @@ This is a longstanding Chromium behavior, not Electron-specific.
 
 ### Mitigation
 
-Gate visible hover effects behind a JS-managed class rather than pure `:hover`. Dynamic Views uses `hover-intent-active` (set by `hover-intent.ts` on mousemove-after-mouseenter, removed on mouseleave/dragend). CSS hover styles are scoped to `.hover-intent-active:hover`, so the stuck `:hover` has no visual effect because the class is removed in `dragend`.
+Gate visible hover effects behind a JS-managed class rather than pure `:hover`. Dynamic Views uses `hover-intent-active` (set by [hover-intent.ts](../../src/shared/hover-intent.ts) on mousemove-after-mouseenter, removed on mouseleave/dragend). CSS hover styles are scoped to `.hover-intent-active:hover`, so the stuck `:hover` has no visual effect because the class is removed in `dragend`.
 
 ```scss
 // Wrong: visible artifact from stuck :hover
@@ -114,8 +114,8 @@ Gate visible hover effects behind a JS-managed class rather than pure `:hover`. 
 
 ### Files
 
-- `src/shared/hover-intent.ts` — `hover-intent-active` class management
-- `styles/_hover-states.scss` — All card hover styles gated by `.hover-intent-active:hover`
+- [src/shared/hover-intent.ts](../../src/shared/hover-intent.ts) — `hover-intent-active` class management
+- [styles/_hover-states.scss](../../styles/_hover-states.scss) — All card hover styles gated by `.hover-intent-active:hover`
 
 ## `overflow-clip-margin` ignored with per-axis `overflow-y: clip`
 
@@ -148,7 +148,7 @@ Switch to the shorthand `overflow: clip` + `overflow-clip-margin: <value>`. The 
 
 ### Affected file
 
-- `styles/_masonry-view.scss` — `.dynamic-views-masonry` overflow and clip margin
+- [styles/_masonry-view.scss](../../styles/_masonry-view.scss) — `.dynamic-views-masonry` overflow and clip margin
 
 ## `@container scroll-state(stuck)` cannot style the container element
 
@@ -166,8 +166,8 @@ JS `IntersectionObserver` + zero-height sentinel approach. A sentinel div at eac
 
 ### Files
 
-- `src/bases/sticky-heading.ts` — Sentinel IO observer
-- `styles/_grid-masonry-shared.scss` — `.stuck` z-index rule, sentinel CSS, `@container` border rule
+- [src/bases/sticky-heading.ts](../../src/bases/sticky-heading.ts) — Sentinel IO observer
+- [styles/_grid-masonry-shared.scss](../../styles/_grid-masonry-shared.scss) — `.stuck` z-index rule, sentinel CSS, `@container` border rule
 
 ## `-webkit-line-clamp` ignores block margins
 
@@ -184,12 +184,12 @@ Related findings:
 
 ### Workaround
 
-JS per-paragraph clamping: measure each `<p>` height against a line budget, hide overflow paragraphs with `display: none`, and apply `-webkit-line-clamp` only to the last visible paragraph. See `applyClampFromMeasurements` in `text-preview-dom.ts`.
+JS per-paragraph clamping: measure each `<p>` height against a line budget, hide overflow paragraphs with `display: none`, and apply `-webkit-line-clamp` only to the last visible paragraph. See `applyClampFromMeasurements` in [text-preview-dom.ts](../../src/shared/text-preview-dom.ts).
 
 ### Affected files
 
-- `src/shared/text-preview-dom.ts` — JS per-paragraph clamp algorithm
-- `styles/card/_previews.scss` — `:has(> p)` dual-path: native clamp for single-block text, `display: block` for multi-paragraph
+- [src/shared/text-preview-dom.ts](../../src/shared/text-preview-dom.ts) — JS per-paragraph clamp algorithm
+- [styles/card/_previews.scss](../../styles/card/_previews.scss) — `:has(> p)` dual-path: native clamp for single-block text, `display: block` for multi-paragraph
 
 ## `display: -webkit-box` computes as `flow-root`
 

@@ -8,7 +8,7 @@ last updated: 2026-02-19
 
 ## The re-render problem
 
-In `card-renderer.tsx`, the Preact ref callback runs on every re-render. Datacore triggers 7+ re-renders per card during initialization. Each render creates a new `scrollController = new AbortController()` and calls `cleanupCardScrollListeners(card.path)`, which aborts the previous signal. Any event listeners attached with `scrollController.signal` are destroyed on the next render.
+In [card-renderer.tsx](../../src/shared/card-renderer.tsx), the Preact ref callback runs on every re-render. Datacore triggers 7+ re-renders per card during initialization. Each render creates a new `scrollController = new AbortController()` and calls `cleanupCardScrollListeners(card.path)`, which aborts the previous signal. Any event listeners attached with `scrollController.signal` are destroyed on the next render.
 
 ## The cross-container collision
 

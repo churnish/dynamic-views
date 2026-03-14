@@ -100,7 +100,7 @@ Top-level persisted structure.
 
 ### Bases path
 
-`readBasesSettings()` in `settings-schema.ts`. Called on every `onDataUpdated()`.
+`readBasesSettings()` in [settings-schema.ts](../../src/shared/settings-schema.ts). Called on every `onDataUpdated()`.
 
 ```
 1. VIEW_DEFAULTS                    (static)
@@ -117,7 +117,7 @@ Return type: `BasesResolvedSettings` (includes computed `_skipLeadingProperties`
 
 ### Datacore path
 
-`getPersistedSettings()` in `controller.tsx`. Called via `dc.useCallback`.
+`getPersistedSettings()` in [controller.tsx](../../src/datacore/controller.tsx). Called via `dc.useCallback`.
 
 ```
 1. pluginSettings                   (plugin-level)
@@ -139,7 +139,7 @@ Return type: `ResolvedSettings`.
 
 ### Schema defaults path
 
-`getBasesViewOptions()` in `settings-schema.ts`. Called when the **settings panel is opened**, NOT on view creation or file open. Populates dropdown defaults and option lists.
+`getBasesViewOptions()` in [settings-schema.ts](../../src/shared/settings-schema.ts). Called when the **settings panel is opened**, NOT on view creation or file open. Populates dropdown defaults and option lists.
 
 ```
 1. VIEW_DEFAULTS + BASES_DEFAULTS              (static merge)

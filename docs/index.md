@@ -32,9 +32,9 @@ last updated: 2026-03-14
 
 | Doc | Read before |
 |---|---|
-| [eslint-config.md](patterns/eslint-config.md) | Modifying `eslint.config.js`, adding eslint overrides, or troubleshooting lint errors. |
+| [eslint-config.md](patterns/eslint-config.md) | Modifying [eslint.config.js](../eslint.config.js), adding eslint overrides, or troubleshooting lint errors. |
 | [scss-nesting-conventions.md](patterns/scss-nesting-conventions.md) | Adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat. |
-| [datacore-ref-callback-patterns.md](patterns/datacore-ref-callback-patterns.md) | Attaching event listeners or stateful behavior in `card-renderer.tsx` ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution. |
+| [datacore-ref-callback-patterns.md](patterns/datacore-ref-callback-patterns.md) | Attaching event listeners or stateful behavior in [card-renderer.tsx](../src/shared/card-renderer.tsx) ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution. |
 | [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding or modifying Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`) — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |
 | [css-variable-wrapping.md](patterns/css-variable-wrapping.md) | Adding, modifying, or locally overriding external Obsidian CSS variables — documents the plugin-namespaced wrapper pattern, resolution semantics, and the local override gotcha. |
 | [electron-css-quirks.md](patterns/electron-css-quirks.md) | Writing nested `:has()` selectors or working around `-webkit-line-clamp` truncation behavior — documents Blink/Electron CSS rendering quirks and rejected fixes. |

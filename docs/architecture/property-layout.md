@@ -303,7 +303,7 @@ During queued measurement, gradient targets are collected into `gradientBatch[]`
 
 ### Masonry relayout coordination
 
-> For the full masonry layout guard system and how `"property-measured"` sources are handled, see `masonry-layout.md`.
+> For the full masonry layout guard system and how `"property-measured"` sources are handled, see [masonry-layout.md](masonry-layout.md).
 
 The `PROPERTY_MEASURED` custom event (dispatched on each processed card's `ownerDocument` after gradient batch flush) is listened to by masonry views to trigger a relayout — property measurement can change card heights. The masonry listener is bound to `this.containerEl.ownerDocument` at construction time. When a masonry view moves to a popout window, `handleDocumentChange(oldDoc, newDoc)` removes the listener from the old document and rebinds it to the new one — without this, the listener stays on the main window's document and misses events dispatched on the popout's document.
 
@@ -331,7 +331,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 ## Settings reference
 
-> For the full settings resolution pipeline (three-layer merge, sparse storage, template system), see `settings-resolution.md`.
+> For the full settings resolution pipeline (three-layer merge, sparse storage, template system), see [settings-resolution.md](settings-resolution.md).
 
 ### View settings (Bases config / Datacore settings)
 
@@ -339,7 +339,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 | ------------------------ | ------------------------------- | -------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `propertyLabels`         | `'hide' \| 'inline' \| 'above'` | `'hide'` (ViewDefaults) / `'inline'` (Bases)       | Label display mode.                                | Both renderers, measurement (label width), CSS.                                                                            |
 | `pairProperties`         | `boolean`                       | `false` (ViewDefaults + Bases) / `true` (Datacore) | Whether properties pair by default.                | Both renderers (pairing algorithm).                                                                                        |
-| `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'right'`                                          | Right-side field alignment mode. Bases-only.       | `applyViewContainerStyles()` (Bases), `_properties.scss`, measurement skip in `measurePropertyFields()`/`queueCardSets()`. |
+| `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'right'`                                          | Right-side field alignment mode. Bases-only.       | `applyViewContainerStyles()` (Bases), [_properties.scss](../../styles/_properties.scss), measurement skip in `measurePropertyFields()`/`queueCardSets()`. |
 | `invertPropertyPairing`  | `string`                        | `''`                                               | Comma-separated names to invert pairing behavior.  | Both renderers via `parsePropertyList()`.                                                                                  |
 | `showPropertiesAbove`    | `boolean`                       | `false`                                            | Default vertical position for properties.          | Datacore renderer (top/bottom split).                                                                                      |
 | `invertPropertyPosition` | `string`                        | `''`                                               | Comma-separated names to invert vertical position. | Datacore renderer (top/bottom split).                                                                                      |

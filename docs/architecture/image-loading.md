@@ -62,7 +62,7 @@ loadImageForEntry(path, ...)
 
 ## Image path resolution
 
-### Processing pipeline (`image.ts`)
+### Processing pipeline ([image.ts](../../src/utils/image.ts))
 
 | Step | Function                      | Sync/Async | What it does                                                                                     |
 | ---- | ----------------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
@@ -122,7 +122,7 @@ Parses file content to find image references not declared in properties.
 
 - `markImageBroken(url)`: Called on any load error
 - `filterBrokenUrls(urls)`: Removes known-broken before render (early exit if Set empty)
-- Cleared on plugin load and unload via `initExternalBlobCache()` / `cleanupExternalBlobCache()` in `slideshow.ts` (see `slideshow.md` for the external blob cache lifecycle)
+- Cleared on plugin load and unload via `initExternalBlobCache()` / `cleanupExternalBlobCache()` in [slideshow.ts](../../src/shared/slideshow.ts) (see [slideshow.md](slideshow.md) for the external blob cache lifecycle)
 
 ## Aspect ratio caching
 
@@ -141,7 +141,7 @@ Parses file content to find image references not declared in properties.
 
 ### Bases path (`setupImageLoadHandler()`)
 
-> For slideshow-specific image navigation, preloading, and failed image recovery, see `slideshow.md`.
+> For slideshow-specific image navigation, preloading, and failed image recovery, see [slideshow.md](slideshow.md).
 
 1. Apply cached metadata upfront (`applyCachedImageMetadata`)
 2. Check already-loaded state (`complete && naturalWidth > 0 && naturalHeight > 0 && !cover-ready`)

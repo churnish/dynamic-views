@@ -6,7 +6,7 @@ last updated: 2026-03-13
 ---
 # Masonry layout system
 
-The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math (`masonry-layout.ts`). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling; Datacore uses declarative Preact/JSX rendering without virtual scrolling. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
+The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math ([masonry-layout.ts](../../src/utils/masonry-layout.ts)). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling; Datacore uses declarative Preact/JSX rendering without virtual scrolling. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
 
 ## Files
 
@@ -92,7 +92,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 ### 1. Initial render
 
-`processDataUpdate()` → `setupMasonryLayout(settings)` → `updateLayoutRef.current("initial-render")`. For the full settings resolution chain, see `settings-resolution.md`.
+`processDataUpdate()` → `setupMasonryLayout(settings)` → `updateLayoutRef.current("initial-render")`. For the full settings resolution chain, see [settings-resolution.md](settings-resolution.md).
 
 1. Clear container, create masonry container element.
 2. Render groups/cards with `renderCard()`. Push `VirtualItem` per card with `x=0, y=0, height=0`.
@@ -278,7 +278,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 
 ### Truncation ordering invariant
 
-`initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` (`shared-renderer.ts`) enforces this:
+`initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)) enforces this:
 
 1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp`
 
@@ -307,7 +307,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 | `"card-disconnected-fallback"` | Per-group batch layout found disconnected cards                     | Full measurement (blocked if unmounted items).                                           |
 | `"content-update"`             | In-place card update changed height                                 | Full measurement (blocked if unmounted items).                                           |
 | `"queued-update"`              | Dequeued from reentrant guard                                       | Full measurement (blocked if unmounted items).                                           |
-| `"property-measured"`          | Property field width measurement settled (see `property-layout.md`) | Full measurement (blocked if unmounted items).                                           |
+| `"property-measured"`          | Property field width measurement settled (see [property-layout.md](property-layout.md)) | Full measurement (blocked if unmounted items).                                           |
 
 ## Throttle and debounce patterns
 
@@ -343,7 +343,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 
 ### Image-load coalescing
 
-> For the full image loading pipeline, dedup caching, and fade-in pattern, see `image-loading.md`.
+> For the full image loading pipeline, dedup caching, and fade-in pattern, see [image-loading.md](image-loading.md).
 
 - **Pattern**: Single RAF debounce via `pendingImageRelayout` flag.
 - **Effect**: ~60 concurrent image loads → 1 layout per frame instead of 60.
@@ -362,7 +362,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 - **Problem**: Plugin code runs in the main window's module context. `new ResizeObserver()` / `new IntersectionObserver()` resolve to the main window's constructor. In Electron, each popout BrowserWindow has its own V8 isolate — observers from the main window silently fail to fire callbacks for DOM elements in a popout window.
 - **Detection**: `observerWindow` field tracks the window context of existing observers. On each `setupMasonryLayout` call, `masonryContainer.ownerDocument.defaultView` is compared against `observerWindow`. On mismatch (view moved to a different window), existing observers are disconnected and nullified, forcing re-creation in the correct context.
 - **Creation**: Guarded observers (`layoutResizeObserver`, `cardResizeObserver`) use `new (this.observerWindow ?? window).ResizeObserver(...)`. The `scrollResizeObserver` (recreated each call) uses a local `const RO = (container.ownerDocument.defaultView ?? window).ResizeObserver`.
-- **Per-card observers** (in `shared-renderer.ts`): No field needed — derive the window inline from `cardEl.ownerDocument.defaultView` at each creation site.
+- **Per-card observers** (in [shared-renderer.ts](../../src/bases/shared-renderer.ts)): No field needed — derive the window inline from `cardEl.ownerDocument.defaultView` at each creation site.
 - **Popout lifecycle**: `handleDocumentChange` (called when a view moves between windows) only tears down observers — disconnects and nullifies `layoutResizeObserver`, `cardResizeObserver`, and `observerWindow`. It does NOT call `setupMasonryLayout` directly. The render pipeline triggers `setupMasonryLayout` via `onDataUpdated()`, which recreates observers in the correct window context via the `observerWindow` guard. This avoids a double layout pass.
 
 ## Group collapse/expand lifecycle
@@ -459,7 +459,7 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 
 ## Bases v Datacore
 
-For broader architectural differences (rendering model, events, cleanup, state), see `bases-v-datacore-differences.md`. This section covers masonry-specific divergences.
+For broader architectural differences (rendering model, events, cleanup, state), see [bases-v-datacore-differences.md](bases-v-datacore-differences.md). This section covers masonry-specific divergences.
 
 Both backends share the same pure layout math (`calculateMasonryLayout()`, `calculateIncrementalMasonryLayout()`, `repositionWithStableColumns()`) and the same greedy shortest-column algorithm. They diverge in rendering model, state management, and performance strategy.
 
@@ -514,7 +514,7 @@ Both backends share the same pure layout math (`calculateMasonryLayout()`, `calc
 - **Incremental append** — `calculateIncrementalMasonryLayout()` continues from previous `columnHeights` when container width is stable.
 - **Batch height reads** — Single forced reflow per layout pass (read all `offsetHeight` values before writing positions).
 - **Infinite scroll** — `displayedCount` incremented by `columns × ROWS_PER_COLUMN` (capped at `MAX_BATCH_SIZE`) when within `PANE_MULTIPLIER × viewport height` from bottom. Leading + trailing throttle.
-- **Card rendering** — Both backends produce `CardData` and render through shared `card-renderer.tsx` logic (title, subtitle, properties, image, text preview).
+- **Card rendering** — Both backends produce `CardData` and render through shared [card-renderer.tsx](../../src/shared/card-renderer.tsx) logic (title, subtitle, properties, image, text preview).
 - **CSS classes** — `masonry-container`, `masonry-positioned`, `masonry-measuring` used by both.
 - **Responsive classes** — `syncResponsiveClasses()` runs after layout in both backends.
 - **Scroll gradients** — `initializeScrollGradients()` applied to property rows in both.

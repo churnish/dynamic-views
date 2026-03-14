@@ -10,7 +10,7 @@ Internal DOM hierarchy of cards in Grid and Masonry views, for both Bases and Da
 
 ## Rendering model
 
-|               | Bases (`shared-renderer.ts`)                      | Datacore (`card-renderer.tsx`)                                                      |
+|               | Bases ([shared-renderer.ts](../../src/bases/shared-renderer.ts))                      | Datacore ([card-renderer.tsx](../../src/shared/card-renderer.tsx))                                                      |
 | ------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **Method**    | Imperative DOM (`createDiv`, `createEl`)          | Declarative JSX (Preact)                                                            |
 | **Container** | Cards appended directly to view-managed container | `CardRenderer` returns wrapping `div.dynamic-views-grid` / `.dynamic-views-masonry` |
@@ -77,7 +77,7 @@ div.card                                    ← data-path="{path}"
 
 ## Property rows
 
-> For the full measurement pipeline, pairing logic, width allocation, and alignment modes, see `property-layout.md`.
+> For the full measurement pipeline, pairing logic, width allocation, and alignment modes, see [property-layout.md](property-layout.md).
 
 Inside `.card-properties-top` or `.card-properties-bottom`:
 
@@ -108,13 +108,16 @@ div.property-pair.property-pair-{N}
 
 ## Spacing
 
-`.card-content` and `.card-body` use `gap: var(--size-4-1)` (4px) declared in `styles/card/_core.scss`. This provides uniform spacing between all card sections (header↔body, propsTop↔previews↔propsBottom).
+`.card-content` and `.card-body` use separate gaps declared in [styles/card/_core.scss](../../styles/card/_core.scss):
+
+- `.card-content` (header↔body): `gap: var(--size-2-3)`
+- `.card-body` (propsTop↔previews↔propsBottom): `gap: var(--size-2-2)`
 
 Key behaviors:
 
-- **`margin-top: auto`**: Works with gap — gap provides the 4px minimum, auto absorbs remaining space. Used on `.card-properties-bottom` in Grid (fixed-height cards) to push it to the bottom.
+- **`margin-top: auto`**: Works with gap — gap provides the minimum, auto absorbs remaining space. Used on `.card-properties-bottom` in Grid (fixed-height cards) to push it to the bottom.
 - **`display: none` children**: Gap automatically skips them — no compensation rules needed for hidden placeholders.
-- **No owl selectors**: The previous `> * + *:not(:empty)` approach required 7+ scattered padding/margin compensation rules across `_grid-view.scss`, `_masonry-view.scss`, and `_cover-elements.scss`. Gap eliminated all of them.
+- **No owl selectors**: The previous `> * + *:not(:empty)` approach required 7+ scattered padding/margin compensation rules across [_grid-view.scss](../../styles/_grid-view.scss), [_masonry-view.scss](../../styles/_masonry-view.scss), and [_cover-elements.scss](../../styles/card/_cover-elements.scss). Gap eliminated all of them.
 
 ## Backend differences
 

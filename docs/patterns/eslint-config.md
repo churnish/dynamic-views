@@ -55,4 +55,4 @@ const OPEN_RANDOM_DESC = 'Hold Ctrl/Cmd to override.';
 .setDesc(OPEN_RANDOM_DESC)
 ```
 
-Existing examples in `plugin-settings.ts`: `CONTEXT_MENU_DESC`, `OPEN_RANDOM_DESC`.
+Existing examples in [plugin-settings.ts](../../src/plugin-settings.ts): `CONTEXT_MENU_DESC`, `OPEN_RANDOM_DESC`.

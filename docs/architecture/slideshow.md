@@ -100,7 +100,7 @@ Last-to-First wrap reversal: exit-right + enter-right (reversed direction to sig
 
 ### CSS animations
 
-All four keyframes use `--dynamic-views-anim-duration-moderate` (plugin-derived variable, set to `var(--anim-duration-moderate, 300ms)` in `_variables.scss`) with `ease` timing and `forwards` fill mode. JS reads the Obsidian variable `--anim-duration-moderate` directly at navigator init for timeout synchronization (fallback 300ms); both resolve to the same value.
+All four keyframes use `--dynamic-views-anim-duration-moderate` (plugin-derived variable, set to `var(--anim-duration-moderate, 300ms)` in [_variables.scss](../../styles/_variables.scss)) with `ease` timing and `forwards` fill mode. JS reads the Obsidian variable `--anim-duration-moderate` directly at navigator init for timeout synchronization (fallback 300ms); both resolve to the same value.
 
 ## Gesture boundary detection (peak + decay)
 
@@ -176,9 +176,9 @@ User rapidly navigates backward past the first image (First-to-Last wrap), then 
 - Stop advancing if `skipped >= imageUrls.length` or `newIndex === currentIndex`
 - Call `onAllFailed()` when all exhausted
 
-### Global tracking (`brokenImageUrls` in `image-loader.ts`)
+### Global tracking (`brokenImageUrls` in [image-loader.ts](../../src/shared/image-loader.ts))
 
-> For the full broken URL tracking lifecycle, two-tier dedup cache, and aspect ratio caching, see `image-loading.md`.
+> For the full broken URL tracking lifecycle, two-tier dedup cache, and aspect ratio caching, see [image-loading.md](image-loading.md).
 
 - Session-scoped `Set<string>`, survives across cards/navigators
 - `markImageBroken(url)` on load error
@@ -220,7 +220,7 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 ## Hover intent integration
 
-`setupHoverIntent()` in `hover-intent.ts` requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
+`setupHoverIntent()` in [hover-intent.ts](../../src/shared/hover-intent.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
 
 - **Arrow visibility**: Gated by `.hover-intent-active` class on the card (set by the shared hover intent system in both renderers)
 - **Image preload**: Fires on hover intent activation (deduped with `preloadGuard`)
@@ -228,7 +228,7 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 ## Visibility reset
 
-The IntersectionObserver that watches the slideshow container lives in the renderers (`src/bases/shared-renderer.ts` and `src/shared/card-renderer.tsx`), NOT in `slideshow.ts`:
+The IntersectionObserver that watches the slideshow container lives in the renderers ([src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts) and [src/shared/card-renderer.tsx](../../src/shared/card-renderer.tsx)), NOT in [slideshow.ts](../../src/shared/slideshow.ts):
 
 1. Track `wasHidden` flag (initially `false`)
 2. On not intersecting: set `wasHidden = true`
@@ -266,9 +266,9 @@ Cache eviction at `BLOB_CACHE_LIMIT` (150): iterates entries, revokes first blob
 
 ### Per-slideshow (AbortController)
 
-**Datacore** (`card-renderer.tsx`): `AbortController` stored on `element._slideshowController`. On re-render: abort previous controller before creating new one.
+**Datacore** ([card-renderer.tsx](../../src/shared/card-renderer.tsx)): `AbortController` stored on `element._slideshowController`. On re-render: abort previous controller before creating new one.
 
-**Bases** (`shared-renderer.ts`): Abort closure `() => controller.abort()` pushed to `slideshowCleanups[]` array (`(() => void)[]`) on the `SharedCardRenderer` instance. On batch cleanup or per-card teardown: iterate and call each cleanup function.
+**Bases** ([shared-renderer.ts](../../src/bases/shared-renderer.ts)): Abort closure `() => controller.abort()` pushed to `slideshowCleanups[]` array (`(() => void)[]`) on the `SharedCardRenderer` instance. On batch cleanup or per-card teardown: iterate and call each cleanup function.
 
 Both backends share the same abort behavior:
 

@@ -42,7 +42,7 @@ Not required by Obsidian guidelines, but enforced in this plugin for safety:
 
 ### 1. `.base` file cleanup — `vault.process()` + `stringifyYaml()`
 
-- **Location**: `src/bases/utils.ts`, `cleanUpBaseFile()`
+- **Location**: [src/bases/utils.ts](../../src/bases/utils.ts), `cleanUpBaseFile()`
 - **Trigger**: Automatic on first render of any DV view
 - **Scope**: Parses `.base` YAML, removes stale DV keys, resets invalid enums, assigns persistence IDs, applies template defaults, re-serializes
 - **Guards**: `try/catch` on `parseYaml` returns original content; `changeCount === 0` skips rewrite; caller-view guard prevents race with `config.set()`
@@ -50,7 +50,7 @@ Not required by Obsidian guidelines, but enforced in this plugin for safety:
 
 ### 2. Markdown checkbox toggle — `processFrontMatter()`
 
-- **Location**: `src/bases/shared-renderer.ts`, `src/shared/card-renderer.tsx`
+- **Location**: [src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts), [src/shared/card-renderer.tsx](../../src/shared/card-renderer.tsx)
 - **Trigger**: User clicks a checkbox property on a card
 - **Scope**: Sets a single boolean in the note's YAML frontmatter
 - **Guards**: `instanceof TFile` check before write
@@ -58,34 +58,34 @@ Not required by Obsidian guidelines, but enforced in this plugin for safety:
 
 ### 3. Datacore query sync — `vault.process()` + string replacement
 
-- **Location**: `src/datacore/controller.tsx`, `src/datacore/query-sync.ts`
+- **Location**: [src/datacore/controller.tsx](../../src/datacore/controller.tsx), [src/datacore/query-sync.ts](../../src/datacore/query-sync.ts)
 - **Trigger**: User edits a DQL query in the toolbar
 - **Scope**: Replaces query text between DQL START/END markers in the code block
 - **Guards**: Returns original content if markers not found; `isSyncing`/`pendingSync` serializes concurrent writes
 
 ### 4. Plugin data — `Plugin.saveData()`
 
-- **Location**: `src/persistence.ts`, `PersistenceManager.save()`
+- **Location**: [src/persistence.ts](../../src/persistence.ts), `PersistenceManager.save()`
 - **Trigger**: Any settings/state change
 - **Scope**: Writes sparse plugin config to `data.json`
 - **Guards**: Input sanitization via `sanitizeObject`; `searchQuery` truncated to 500 chars
 
 ### 5. New file creation — `vault.create()`
 
-- **Location**: `main.ts` (commands), `src/datacore/controller.tsx` (toolbar)
+- **Location**: [main.ts](../../main.ts) (commands), [src/datacore/controller.tsx](../../src/datacore/controller.tsx) (toolbar)
 - **Trigger**: User invokes create command
 - **Scope**: Creates new `.md` or `.base` files with template content
 - **Guards**: `getAvailablePath` / `getAvailableBasePath` prevents name collisions; `try/catch` with Notice
 
 ### 6. Bases config — `config.set()`
 
-- **Location**: `src/bases/utils.ts`
+- **Location**: [src/bases/utils.ts](../../src/bases/utils.ts)
 - **Trigger**: Template toggle reset on render, user toggle
 - **Scope**: Sets `isTemplate` key in `.base` YAML
 
 ### 7. Editor insertion — `editor.replaceRange()` / `replaceSelection()`
 
-- **Location**: `main.ts`
+- **Location**: [main.ts](../../main.ts)
 - **Trigger**: User insert command, card drag-and-drop into editor
 - **Scope**: Inserts query template or wiki link at cursor position
 

@@ -8,7 +8,7 @@ last updated: 2026-03-14
 
 ## Problem
 
-The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from `_style-settings.scss` and adds the selected value as a body class (e.g., `body.dynamic-views-poster-theme-dark`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
+The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from [_style-settings.scss](../../styles/_style-settings.scss) and adds the selected value as a body class (e.g., `body.dynamic-views-poster-theme-dark`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
 
 ## Fallback pattern
 
@@ -120,7 +120,7 @@ Style Settings `variable-number-slider` sets a CSS custom property (e.g., `--dyn
 
 ```scss
 /* 1px fallback used when Style Settings is not installed */
---card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
+--card-border-thickness-fixed: var(--dynamic-views-card-border-thickness, 1px);
 ```
 
 The `default:` field in the `@settings` YAML only controls the slider's initial UI position — it does NOT set the CSS variable.
@@ -143,13 +143,13 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 
 | Setting                   | Default        | Fallback file                                                    |
 | ------------------------- | -------------- | ---------------------------------------------------------------- |
-| Poster overlay tint       | dark           | `_poster.scss`                                                   |
-| Cover background          | dimmed         | `_cover-placeholders.scss`, `_cover-elements.scss`               |
-| Poster background         | dimmed         | `_poster.scss`                                                   |
-| Cover hover zoom          | card           | `_cover-elements.scss`                                           |
-| Show cover placeholder    | Grid           | `_cover-side.scss`, `_cover-placeholders.scss`                   |
-| Card border color (hover) | muted          | `_core.scss`                                                     |
-| Card background (hover)   | transparent    | `_hover-states.scss`                                             |
+| Poster overlay tint       | dark           | [_poster.scss](../../styles/card/_poster.scss)                                                   |
+| Cover background          | dimmed         | [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss)               |
+| Poster background         | dimmed         | [_poster.scss](../../styles/card/_poster.scss)                                                   |
+| Cover hover zoom          | card           | [_cover-elements.scss](../../styles/card/_cover-elements.scss)                                           |
+| Show cover placeholder    | Grid           | [_cover-side.scss](../../styles/card/_cover-side.scss), [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss)                   |
+| Card border color (hover) | muted          | [_core.scss](../../styles/card/_core.scss)                                                     |
+| Card background (hover)   | transparent    | [_hover-states.scss](../../styles/_hover-states.scss)                                             |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
@@ -158,34 +158,16 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 
 | Setting                  | Toggle class                                    | Fallback file        |
 | ------------------------ | ----------------------------------------------- | -------------------- |
-| Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | `_hover-states.scss` |
-| Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | `_poster.scss`       |
-| Image viewer fullscreen  | `dynamic-views-image-viewer-disable-fullscreen` | `_image-viewer.scss` |
+| Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | [_poster.scss](../../styles/card/_poster.scss)       |
+| Image viewer fullscreen  | `dynamic-views-image-viewer-disable-fullscreen` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
 
 ### `class-toggle` — `.css-settings-manager` gate (CSS)
 
 | Setting          | Toggle class                     | Fallback file   |
 | ---------------- | -------------------------------- | --------------- |
-| Hide pin toolbar | `dynamic-views-hide-pin-toolbar` | `_toolbar.scss` |
+| Hide pin toolbar | `dynamic-views-hide-pin-toolbar` | [_toolbar.scss](../../styles/datacore/_toolbar.scss) |
 
 ### `variable-number-slider` (CSS)
 
-| Setting                    | Variable                                        | Default | Fallback file                          |
-| -------------------------- | ----------------------------------------------- | ------- | -------------------------------------- |
-| Backdrop light overlay     | `--dynamic-views-backdrop-overlay-light`          | 70   | `_backdrop.scss`                        |
-| Backdrop dark overlay      | `--dynamic-views-backdrop-overlay-dark`            | 60   | `_backdrop.scss`                        |
-| Backdrop overlay blur      | `--dynamic-views-backdrop-overlay-blur`            | 0    | `_backdrop.scss`                        |
-| Card spacing (desktop)     | `--dynamic-views-card-spacing-desktop`             | 8    | `_grid-view.scss`, `_masonry-view.scss` |
-| Card spacing (mobile)      | `--dynamic-views-card-spacing-mobile`              | 6    | `_grid-view.scss`, `_masonry-view.scss` |
-| Padding                    | `--dynamic-views-card-padding`                     | 8    | `_grid-masonry-shared.scss`             |
-| Border radius              | `--dynamic-views-card-border-radius`               | 8    | `_grid-masonry-shared.scss`             |
-| Border thickness           | `--dynamic-views-card-border-thickness`             | 1    | `_grid-masonry-shared.scss`             |
-| Border thickness (hover)   | `--dynamic-views-card-border-thickness-hover`       | 1    | `_core.scss`                            |
-| Cover border radius        | `--dynamic-views-cover-border-radius`               | 0    | `_cover.scss`                           |
-| Cover inset                | `--dynamic-views-cover-inset`                       | 0    | `_grid-masonry-shared.scss`             |
-| Zoom sensitivity           | `--dynamic-views-zoom-sensitivity`                  | 0.08 | `_image-viewer.scss`                    |
-| Poster light overlay       | `--dynamic-views-poster-overlay-light`              | 70   | `_poster.scss`                          |
-| Poster dark overlay        | `--dynamic-views-poster-overlay-dark`               | 70   | `_poster.scss`                          |
-| Poster overlay blur        | `--dynamic-views-poster-overlay-blur`               | 0    | `_poster.scss`                          |
-| Max slideshow images       | `--dynamic-views-slideshow-max-images`              | 10   | `_slideshow.scss`                       |
-| Thumbnail border radius    | `--dynamic-views-thumbnail-border-radius`           | 4    | `_previews.scss`                        |
+All `variable-number-slider` settings use the native `var()` fallback pattern. The fallback value must match the `default:` in [_style-settings.scss](../../styles/_style-settings.scss). Examples: `var(--dynamic-views-card-border-thickness, 1px)`, `var(--dynamic-views-card-padding, 8px)`.

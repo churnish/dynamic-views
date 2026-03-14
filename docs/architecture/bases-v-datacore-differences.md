@@ -6,7 +6,7 @@ last updated: 2026-03-12
 ---
 # Bases v Datacore differences
 
-Architectural comparison of the Bases and Datacore backends. For masonry-specific divergences (virtual scrolling, resize strategy, layout guards), see `masonry-layout.md`.
+Architectural comparison of the Bases and Datacore backends. For masonry-specific divergences (virtual scrolling, resize strategy, layout guards), see [masonry-layout.md](masonry-layout.md).
 
 ## Rendering model
 
@@ -42,7 +42,7 @@ Architectural comparison of the Bases and Datacore backends. For masonry-specifi
 
 ### The WeakMap pattern (Datacore only)
 
-For state that must survive re-renders and avoid path collisions, use `WeakMap<HTMLElement, ...>`. Full details in `datacore-ref-callback-patterns.md`.
+For state that must survive re-renders and avoid path collisions, use `WeakMap<HTMLElement, ...>`. Full details in [datacore-ref-callback-patterns.md](../patterns/datacore-ref-callback-patterns.md).
 
 Key properties:
 
@@ -61,10 +61,10 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | ------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | **Observer construction** | `getOwnerWindow(cardEl).ResizeObserver` / `.IntersectionObserver`                               | Same — `getOwnerWindow(containerRef.current).ResizeObserver`                                |
 | **rAF**                   | `getOwnerWindow(cardEl).requestAnimationFrame()`                                                | Same pattern                                                                                |
-| **Module-scope pitfall**  | `measureCanvas` uses `document.createElement('canvas')` — intentional (never inserted into DOM) | Same `measureCanvas` (Datacore calls `initializeTitleTruncation` from `shared-renderer.ts`) |
+| **Module-scope pitfall**  | `measureCanvas` uses `document.createElement('canvas')` — intentional (never inserted into DOM) | Same `measureCanvas` (Datacore calls `initializeTitleTruncation` from [shared-renderer.ts](../../src/bases/shared-renderer.ts)) |
 | **Shared utility**        | `getOwnerWindow()` from `utils/owner-window.ts` — both backends import it                       | Same                                                                                        |
 
-`PLUGIN_SETTINGS_CHANGE` is dispatched via `app.workspace.trigger()` in `persistence.ts`. Bases views (`grid-view.ts`/`masonry-view.ts`) listen via `registerEvent((this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, ...))` for auto-cleanup on view unload. Datacore (`controller.tsx`) listens via `(app.workspace as Events).on()` inside a `useEffect` with `offref` cleanup. The `as Events` cast is needed because `Workspace.on()` overloads don't accept custom event strings. `app.workspace` is a shared JS object across all Electron windows, so popout views receive the event correctly.
+`PLUGIN_SETTINGS_CHANGE` is dispatched via `app.workspace.trigger()` in [persistence.ts](../../src/persistence.ts). Bases views ([grid-view.ts](../../src/bases/grid-view.ts)/[masonry-view.ts](../../src/bases/masonry-view.ts)) listen via `registerEvent((this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, ...))` for auto-cleanup on view unload. Datacore ([controller.tsx](../../src/datacore/controller.tsx)) listens via `(app.workspace as Events).on()` inside a `useEffect` with `offref` cleanup. The `as Events` cast is needed because `Workspace.on()` overloads don't accept custom event strings. `app.workspace` is a shared JS object across all Electron windows, so popout views receive the event correctly.
 
 **Rule**: Never use bare `document`, `window`, `ResizeObserver`, `IntersectionObserver`, or `requestAnimationFrame` for elements that may be in a popout. Derive from `el.ownerDocument` / `el.ownerDocument.defaultView`.
 
@@ -72,20 +72,20 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 
 |                      | Bases                                                                           | Datacore                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Outer wrapper**    | `.dynamic-views` (view container)                                               | `div.dynamic-views` (returned by `View` in `controller.tsx`); its parent (Datacore code block container) is not plugin-controlled |
+| **Outer wrapper**    | `.dynamic-views` (view container)                                               | `div.dynamic-views` (returned by `View` in [controller.tsx](../../src/datacore/controller.tsx)); its parent (Datacore code block container) is not plugin-controlled |
 | **Layout container** | `.dynamic-views-masonry` or `.dynamic-views-grid`                               | `div.dynamic-views-masonry` or `div.dynamic-views-grid` (returned by `CardRenderer`)                                              |
 | **Group sections**   | `.dynamic-views-group-section` → `.masonry-container` / CSS Grid                | Flat — no group sections (Datacore doesn't support grouping yet)                                                                  |
-| **Card DOM**         | Identical class names and nesting — see `card-dom-structure.md` for divergences | Same                                                                                                                              |
+| **Card DOM**         | Identical class names and nesting — see [card-dom-structure.md](card-dom-structure.md) for divergences | Same                                                                                                                              |
 
 ## Settings and state
 
-> For the full resolution chain, sparse storage, stale config guards, and template system, see `settings-resolution.md`.
+> For the full resolution chain, sparse storage, stale config guards, and template system, see [settings-resolution.md](settings-resolution.md).
 
 |                     | Bases                                                                                                   | Datacore                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **Settings source** | `.base` YAML → Obsidian Bases API: `config.get()`, `config.getOrder()`                                  | Code block markers + `persistenceManager.getDatacoreState(queryId)`                                   |
 | **Settings type**   | `BasesResolvedSettings` = `PluginSettings & ViewDefaults` + `_displayNameMap`, `_skipLeadingProperties` | `ResolvedSettings` = `PluginSettings & ViewDefaults & DatacoreDefaults` + `_displayNameMap`           |
-| **Property layout** | `rightPropertyPosition` applied via `applyViewContainerStyles()` (see `property-layout.md`)             | `rightPropertyPosition` not consumed — known parity gap (see `property-layout.md`)                    |
+| **Property layout** | `rightPropertyPosition` applied via `applyViewContainerStyles()` (see [property-layout.md](property-layout.md))             | `rightPropertyPosition` not consumed — known parity gap (see [property-layout.md](property-layout.md))                    |
 | **View ID**         | YAML `id` field in `.base` file                                                                         | 6-char query ID string in code block                                                                  |
 | **UI state**        | `BasesUIState { collapsedGroups }` per view ID                                                          | `DatacoreState { sortMethod, viewMode, widthMode, searchQuery, resultLimit, settings? }` per query ID |
 | **Persistence**     | `persistenceManager.getBasesState(viewId)` / `setBasesState()`                                          | `persistenceManager.getDatacoreState(queryId)` / `setDatacoreState()`                                 |
@@ -110,38 +110,38 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 
 | Module                  | Purpose                                                                                           |
 | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `constants.ts`          | Infinite scroll, throttling, batch size constants                                                 |
-| `data-transform.ts`     | Normalizes Datacore/Bases data → `CardData` interface                                             |
-| `content-loader.ts`     | Async image/text loading with dedup                                                               |
-| `image-loader.ts`       | Image aspect ratio caching + fallbacks                                                            |
-| `context-menu.ts`       | Right-click menus for cards/links                                                                 |
-| `scroll-gradient.ts`    | Horizontal/vertical gradient masks for scrollable content                                         |
-| `keyboard-nav.ts`       | Arrow key focus management                                                                        |
-| `hover-intent.ts`       | Mousemove-after-mouseenter hover intent utility                                                   |
-| `property-measure.ts`   | Property field width measurement + scroll gradients                                               |
-| `property-helpers.ts`   | Tag/file/formula type checks, pair computation                                                    |
-| `render-utils.ts`       | Date/timestamp rendering — accepts both settings types                                            |
-| `content-visibility.ts` | `CONTENT_HIDDEN_CLASS` consumed by `keyboard-nav.ts`, `scroll-gradient.ts`, `property-measure.ts` |
-| `view-validation.ts`    | ViewDefaults validation — used by `persistence.ts` (serves both backends)                         |
-| `slideshow.ts`          | Card image slideshow (animation + swipe)                                                          |
-| `image-viewer.ts`       | Panzoom image viewer                                                                              |
+| [constants.ts](../../src/shared/constants.ts)          | Infinite scroll, throttling, batch size constants                                                 |
+| [data-transform.ts](../../src/shared/data-transform.ts)     | Normalizes Datacore/Bases data → `CardData` interface                                             |
+| [content-loader.ts](../../src/shared/content-loader.ts)     | Async image/text loading with dedup                                                               |
+| [image-loader.ts](../../src/shared/image-loader.ts)       | Image aspect ratio caching + fallbacks                                                            |
+| [context-menu.ts](../../src/shared/context-menu.ts)       | Right-click menus for cards/links                                                                 |
+| [scroll-gradient.ts](../../src/shared/scroll-gradient.ts)    | Horizontal/vertical gradient masks for scrollable content                                         |
+| [keyboard-nav.ts](../../src/shared/keyboard-nav.ts)       | Arrow key focus management                                                                        |
+| [hover-intent.ts](../../src/shared/hover-intent.ts)       | Mousemove-after-mouseenter hover intent utility                                                   |
+| [property-measure.ts](../../src/shared/property-measure.ts)   | Property field width measurement + scroll gradients                                               |
+| [property-helpers.ts](../../src/shared/property-helpers.ts)   | Tag/file/formula type checks, pair computation                                                    |
+| [render-utils.ts](../../src/shared/render-utils.ts)       | Date/timestamp rendering — accepts both settings types                                            |
+| [content-visibility.ts](../../src/shared/content-visibility.ts) | `CONTENT_HIDDEN_CLASS` consumed by [keyboard-nav.ts](../../src/shared/keyboard-nav.ts), [scroll-gradient.ts](../../src/shared/scroll-gradient.ts), [property-measure.ts](../../src/shared/property-measure.ts) |
+| [view-validation.ts](../../src/shared/view-validation.ts)    | ViewDefaults validation — used by [persistence.ts](../../src/persistence.ts) (serves both backends)                         |
+| [slideshow.ts](../../src/shared/slideshow.ts)          | Card image slideshow (animation + swipe)                                                          |
+| [image-viewer.ts](../../src/shared/image-viewer.ts)       | Panzoom image viewer                                                                              |
 
-`data-transform.ts` provides parallel transform functions per backend: `datacoreResultToCardData()` / `transformDatacoreResults()` and `basesEntryToCardData()` / `transformBasesEntries()`.
+[data-transform.ts](../../src/shared/data-transform.ts) provides parallel transform functions per backend: `datacoreResultToCardData()` / `transformDatacoreResults()` and `basesEntryToCardData()` / `transformBasesEntries()`.
 
 ### Datacore only (despite being in `shared/`)
 
 | Module              | Reason                                                  |
 | ------------------- | ------------------------------------------------------- |
-| `card-renderer.tsx` | Preact JSX — returns JSX components, not imperative DOM |
+| [card-renderer.tsx](../../src/shared/card-renderer.tsx) | Preact JSX — returns JSX components, not imperative DOM |
 
 ### Bases only (despite being in `shared/`)
 
 | Module                   | Reason                                                                           |
 | ------------------------ | -------------------------------------------------------------------------------- |
-| `virtual-scroll.ts`      | Only imported by `bases/masonry-view.ts`                                         |
-| `scroll-preservation.ts` | Only imported by `bases/grid-view.ts` and `bases/masonry-view.ts`                |
-| `settings-schema.ts`     | Only imported by `bases/utils.ts`, `bases/grid-view.ts`, `bases/masonry-view.ts` |
-| `text-preview-dom.ts`    | Only imported by `bases/grid-view.ts` and `bases/masonry-view.ts`                |
+| [virtual-scroll.ts](../../src/shared/virtual-scroll.ts)      | Only imported by [bases/masonry-view.ts](../../src/bases/masonry-view.ts)                                         |
+| [scroll-preservation.ts](../../src/shared/scroll-preservation.ts) | Only imported by [bases/grid-view.ts](../../src/bases/grid-view.ts) and [bases/masonry-view.ts](../../src/bases/masonry-view.ts)                |
+| [settings-schema.ts](../../src/shared/settings-schema.ts)     | Only imported by [bases/utils.ts](../../src/bases/utils.ts), [bases/grid-view.ts](../../src/bases/grid-view.ts), [bases/masonry-view.ts](../../src/bases/masonry-view.ts) |
+| [text-preview-dom.ts](../../src/shared/text-preview-dom.ts)    | Only imported by [bases/grid-view.ts](../../src/bases/grid-view.ts) and [bases/masonry-view.ts](../../src/bases/masonry-view.ts)                |
 
 ### Bases functions used by Datacore
 
@@ -168,17 +168,17 @@ Bases attaches classes directly to the card element (`.card.image-format-cover`)
 
 ### `scrollController` recreation on re-render
 
-Each Datacore `Card` render creates a new `AbortController`. The ref callback aborts the previous one via `cleanupCardScrollListeners(card.path)`. Listeners attached with the old signal are silently removed. **Fix**: Use WeakMap pattern for listeners that must survive re-renders. See `datacore-ref-callback-patterns.md`.
+Each Datacore `Card` render creates a new `AbortController`. The ref callback aborts the previous one via `cleanupCardScrollListeners(card.path)`. Listeners attached with the old signal are silently removed. **Fix**: Use WeakMap pattern for listeners that must survive re-renders. See [datacore-ref-callback-patterns.md](../patterns/datacore-ref-callback-patterns.md).
 
 ### Cross-container `card.path` collision
 
-Module-level `Map<string, AbortController>` keyed by `card.path` in `card-renderer.tsx`. When the same file appears in two Dynamic Views containers, one container's cleanup aborts the other's signal. **Fix**: Use `WeakMap<HTMLElement, ...>` instead of path-keyed Map.
+Module-level `Map<string, AbortController>` keyed by `card.path` in [card-renderer.tsx](../../src/shared/card-renderer.tsx). When the same file appears in two Dynamic Views containers, one container's cleanup aborts the other's signal. **Fix**: Use `WeakMap<HTMLElement, ...>` instead of path-keyed Map.
 
 ### Style Settings text preview cache invalidation
 
 Both backends must invalidate cached text previews when Style Settings toggles change (`omitFirstLine`, `keepPreviewHeadings`, `keepPreviewNewlines`), but they use completely different mechanisms:
 
-- **Bases**: `getStyleSettingsHash()` returns a hash of all JS-relevant Style Settings values. On each render cycle, `grid-view.ts`/`masonry-view.ts` compare `styleSettingsHash !== lastStyleSettingsHash` and clear `contentCache.textPreviews = {}` on mismatch. Simple and total — all cached entries are discarded.
+- **Bases**: `getStyleSettingsHash()` returns a hash of all JS-relevant Style Settings values. On each render cycle, [grid-view.ts](../../src/bases/grid-view.ts)/[masonry-view.ts](../../src/bases/masonry-view.ts) compare `styleSettingsHash !== lastStyleSettingsHash` and clear `contentCache.textPreviews = {}` on mismatch. Simple and total — all cached entries are discarded.
 - **Datacore**: `_styleRevision` (a Preact state counter) is bumped by the MutationObserver when body classes change, triggering a re-render. The content loading effect re-runs because `omitFirstLine`/`keepPreviewHeadings`/`keepPreviewNewlines` are in its dependency array. A `prevTextPreviewSettingsRef` tracks a composite key of the three values; when it changes, the cache copy loop is skipped so all text previews reload from scratch.
 
 **Past bug**: Datacore's cache copy loop only checked mtime, not whether Style Settings changed. When SS toggles changed, the effect re-ran but copied stale cached entries forward, so text previews never updated. Fixed by adding the `prevTextPreviewSettingsRef` composite key check.
