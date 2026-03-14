@@ -56,7 +56,7 @@
    .is-grouped .bases-cards-container .bases-cards-group padding
    (3 classes, same specificity — last-write wins). */
 .is-grouped .dynamic-views-group-section > .dynamic-views-group {
-  padding: 0 0 var(--size-4-4) 0;
+  padding: 0 0 var(--size-4-3) 0;
   border-color: var(--dynamic-views-background-modifier-border);
   border-width: 0 0 1px 0;
   border-style: solid;

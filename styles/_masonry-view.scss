@@ -81,14 +81,14 @@
     contain: layout style;
   }
 
-  /* Grouped masonry: explicit height + border-box eats padding-bottom and
-     border-bottom (set by _grid-view.scss for group divider spacing). Extend
-     height to accommodate both. Last group has neither (reset by
+  /* Grouped masonry: explicit height + border-box eats padding-bottom (--size-4-3)
+     and border-bottom (1px), both set by _grid-view.scss for group divider spacing.
+     Extend height to accommodate both. Last group has neither (reset by
      _grid-masonry-shared.scss) so exclude it. */
   .dynamic-views-masonry
     .dynamic-views-group-section:not(:last-child)
     > .masonry-container {
-    height: calc(var(--masonry-height, auto) + var(--size-4-4) + 1px);
+    height: calc(var(--masonry-height, auto) + var(--size-4-3) + 1px);
   }
 
   /* Hide cards during layout recalc - fade out with opacity transition.
