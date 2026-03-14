@@ -382,7 +382,9 @@ export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
 
 /** Tracks last card width when compact-stacked was evaluated.
  *  Prevents infinite RO loop: toggling compact-stacked changes card height,
- *  which re-triggers RO. By checking width, we skip height-only re-fires. */
+ *  which re-triggers RO. By checking width, we skip height-only re-fires.
+ *  Cleared when cards become content-hidden so wrapping is re-evaluated
+ *  when they return to view (content-hidden skips the RO callback). */
 const compactWidthCache = new WeakMap<HTMLElement, number>();
 
 /**
@@ -1539,8 +1541,12 @@ export class SharedCardRenderer {
     const cardObserver = new RO((entries) => {
       // Guard against race with cleanup or element removal
       if (signal.aborted || !cardEl.isConnected) return;
-      // Skip content-hidden cards (dimension reads trigger Chromium warnings)
-      if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
+      // Skip content-hidden cards (dimension reads trigger Chromium warnings).
+      // Delete cache so wrapping is re-evaluated when the card becomes visible.
+      if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) {
+        compactWidthCache.delete(cardEl);
+        return;
+      }
       for (const entry of entries) {
         // Use offsetWidth (border-box, rounded) to match syncResponsiveClasses.
         // contentRect.width is content-box subpixel — at boundary widths (e.g.
@@ -1555,17 +1561,15 @@ export class SharedCardRenderer {
           const isCompact = cardWidth < breakpoint;
           cardEl.classList.toggle('compact-mode', isCompact);
           if (isCompact) {
-            // Only re-evaluate wrapping when width changed — height-only
-            // changes (from compact-stacked toggling) must be skipped to
-            // prevent infinite RO loop.
+            // Re-evaluate wrapping when width changed. Cache prevents
+            // infinite RO loop from height changes when toggling stacked.
             if (compactWidthCache.get(cardEl) !== cardWidth) {
               compactWidthCache.set(cardEl, cardWidth);
               cardEl.classList.remove('compact-stacked');
               void cardEl.offsetHeight;
-              cardEl.classList.toggle(
-                'compact-stacked',
-                hasWrappedPairs(cardEl)
-              );
+              if (hasWrappedPairs(cardEl)) {
+                cardEl.classList.add('compact-stacked');
+              }
             }
           } else {
             cardEl.classList.remove('compact-stacked');
@@ -2794,8 +2798,24 @@ export class SharedCardRenderer {
           text: showHashPrefix ? '#' + tag : tag,
           href: '#',
         });
-        tagEl.draggable = false;
+        tagEl.draggable = true;
         tagEl.tabIndex = -1;
+        tagEl.addEventListener(
+          'dragstart',
+          (e) => {
+            e.stopPropagation();
+            e.dataTransfer?.clearData();
+            e.dataTransfer?.setData('text/plain', '#' + tag);
+            this.app.dragManager.onDragStart(e, {
+              type: 'text',
+              title: tag,
+              icon: 'hashtag',
+            });
+            // Clear draggable so editor's dragover accepts the drop via its else-path
+            (this.app.dragManager as Record<string, unknown>).draggable = null;
+          },
+          { signal }
+        );
         tagEl.addEventListener(
           'click',
           (e) => {
@@ -2828,8 +2848,24 @@ export class SharedCardRenderer {
           text: showHashPrefix ? '#' + tag : tag,
           href: '#',
         });
-        tagEl.draggable = false;
+        tagEl.draggable = true;
         tagEl.tabIndex = -1;
+        tagEl.addEventListener(
+          'dragstart',
+          (e) => {
+            e.stopPropagation();
+            e.dataTransfer?.clearData();
+            e.dataTransfer?.setData('text/plain', '#' + tag);
+            this.app.dragManager.onDragStart(e, {
+              type: 'text',
+              title: tag,
+              icon: 'hashtag',
+            });
+            // Clear draggable so editor's dragover accepts the drop via its else-path
+            (this.app.dragManager as Record<string, unknown>).draggable = null;
+          },
+          { signal }
+        );
         tagEl.addEventListener(
           'click',
           (e) => {

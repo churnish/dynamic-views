@@ -238,13 +238,6 @@ export function getZoomSensitivityDesktop(): number {
 }
 
 /**
- * Get zoom sensitivity for mobile (hardcoded - no user setting)
- */
-export function getZoomSensitivityMobile(): number {
-  return 0.6;
-}
-
-/**
  * Check if slideshow is enabled (default behavior)
  * Returns false when user enables "Disable slideshow"
  */
@@ -398,6 +391,14 @@ export function setupStyleSettingsObserver(
         mutation.type === 'attributes' &&
         mutation.attributeName === 'class'
       ) {
+        // Skip when no dynamic-views- class changed (e.g., is-grabbing, theme classes)
+        const dvPattern = /\bdynamic-views-\S+/g;
+        const oldDV =
+          (mutation.oldValue ?? '').match(dvPattern)?.sort().join(' ') ?? '';
+        const newDV =
+          doc.body.className.match(dvPattern)?.sort().join(' ') ?? '';
+        if (oldDV === newDV) break;
+
         // Re-apply default when Style Settings strips all file-type classes
         if (!FILE_TYPE_CLASSES.some((c) => doc.body.classList.contains(c))) {
           doc.body.classList.add('dynamic-views-file-type-ext');

@@ -94,7 +94,9 @@ import { getOwnerWindow } from '../utils/owner-window';
 
 /** Tracks last card width when compact-stacked was evaluated.
  *  Prevents infinite RO loop: toggling compact-stacked changes card height,
- *  which re-triggers RO. By checking width, we skip height-only re-fires. */
+ *  which re-triggers RO. By checking width, we skip height-only re-fires.
+ *  Cleared when cards become content-hidden so wrapping is re-evaluated
+ *  when they return to view (content-hidden skips the RO callback). */
 const compactWidthCache = new WeakMap<HTMLElement, number>();
 
 /**
@@ -370,8 +372,20 @@ function renderTagsList(tags: string[], app: App, showHashPrefix: boolean) {
             key={tag}
             href="#"
             className="tag"
-            draggable={false}
+            draggable={true}
             tabIndex={-1}
+            onDragStart={(e: DragEvent) => {
+              e.stopPropagation();
+              e.dataTransfer?.clearData();
+              e.dataTransfer?.setData('text/plain', '#' + tag);
+              app.dragManager.onDragStart(e, {
+                type: 'text',
+                title: tag,
+                icon: 'hashtag',
+              });
+              // Clear draggable so editor's dragover accepts the drop via its else-path
+              (app.dragManager as Record<string, unknown>).draggable = null;
+            }}
             onClick={(e: MouseEvent) => {
               e.preventDefault();
               if (
@@ -1918,16 +1932,15 @@ function Card({
               const isCompact = cardWidth < breakpoint;
               cardEl.classList.toggle('compact-mode', isCompact);
               if (isCompact) {
-                // Only re-evaluate when width changed — skip height-only
-                // RO fires from compact-stacked toggling
+                // Re-evaluate wrapping when width changed — see
+                // shared-renderer.ts for full explanation
                 if (compactWidthCache.get(cardEl) !== cardWidth) {
                   compactWidthCache.set(cardEl, cardWidth);
                   cardEl.classList.remove('compact-stacked');
                   void cardEl.offsetHeight;
-                  cardEl.classList.toggle(
-                    'compact-stacked',
-                    hasWrappedPairs(cardEl)
-                  );
+                  if (hasWrappedPairs(cardEl)) {
+                    cardEl.classList.add('compact-stacked');
+                  }
                 }
               } else {
                 cardEl.classList.remove('compact-stacked');
