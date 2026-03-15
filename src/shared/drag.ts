@@ -71,11 +71,60 @@ export function createExternalLinkDragHandler(
 export function createUrlIconDragHandlers(
   iconEl: HTMLElement,
   urlValue: string
-): { onDragStart: (e: DragEvent) => void; onDragEnd: () => void } {
+): {
+  onDragStart: (e: DragEvent) => void;
+  onDragEnd: () => void;
+  onTouchStart: () => void;
+} {
+  // iOS: Obsidian creates tooltip from aria-label ~1-2s after native drag ends.
+  // Strip aria-label on touchstart, restore after the tooltip creation window.
+  let savedAriaLabel: string | null = null;
+
+  const cleanup = () => {
+    const doc = iconEl.ownerDocument;
+    doc.removeEventListener('drop', cleanup);
+    const body = doc.body;
+    body.querySelector('.tooltip')?.remove();
+    body.removeClass('dynamic-views-dragging');
+    iconEl.style.removeProperty('pointer-events');
+    if (savedAriaLabel !== null) {
+      const label = savedAriaLabel;
+      savedAriaLabel = null;
+      setTimeout(() => iconEl.setAttribute('aria-label', label), 3000);
+    }
+  };
+
+  const onTouchStart = () => {
+    const doc = iconEl.ownerDocument;
+    // Fresh registration — only one listener active at a time
+    doc.removeEventListener('drop', cleanup);
+    doc.addEventListener('drop', cleanup, { once: true });
+    // Strip aria-label to prevent deferred tooltip creation after drag
+    savedAriaLabel = iconEl.getAttribute('aria-label');
+    if (savedAriaLabel) iconEl.removeAttribute('aria-label');
+    // Cancel fallback if touch ends without drag
+    iconEl.addEventListener(
+      'touchend',
+      () => {
+        doc.removeEventListener('drop', cleanup);
+        if (savedAriaLabel !== null) {
+          iconEl.setAttribute('aria-label', savedAriaLabel);
+          savedAriaLabel = null;
+        }
+      },
+      { once: true }
+    );
+  };
+
   return {
     onDragStart: (e) => {
       e.stopPropagation();
-      clearCardHoverState(iconEl.closest('.card'));
+      // Only remove hover-intent-active and cover-hover-active — NOT
+      // poster-hover-active, which controls pointer-events: auto on
+      // .card-content. Removing it hides the content area (including
+      // this icon), aborting the drag.
+      const card = iconEl.closest('.card');
+      card?.classList.remove('hover-intent-active', 'cover-hover-active');
       // Must defer — synchronous change during dragstart aborts the drag
       setTimeout(() => {
         iconEl.setCssStyles({ pointerEvents: 'none' });
@@ -89,12 +138,8 @@ export function createUrlIconDragHandlers(
         e.dataTransfer.setData('text/plain', urlValue);
       }
     },
-    onDragEnd: () => {
-      const body = iconEl.ownerDocument.body;
-      body.querySelector('.tooltip')?.remove();
-      body.removeClass('dynamic-views-dragging');
-      iconEl.style.removeProperty('pointer-events');
-    },
+    onDragEnd: cleanup,
+    onTouchStart,
   };
 }
 
