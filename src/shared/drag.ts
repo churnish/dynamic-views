@@ -200,8 +200,7 @@ function patchWindowDataTransfer(win: Window & typeof globalThis): () => void {
     if (format === 'text/uri-list' && this.types.includes(DRAG_MARKER)) {
       return '';
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- .call() on untyped ref
-    return origGetData.call(this, format);
+    return origGetData.call(this, format) as string;
   };
   return () => {
     proto.getData = origGetData;
