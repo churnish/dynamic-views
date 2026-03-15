@@ -176,6 +176,8 @@ export class DynamicViewsGridView extends BasesView {
   };
   private focusState: FocusState = { cardIndex: 0, hoveredEl: null };
   private focusCleanup: (() => void) | null = null;
+  private keyboardNav: { cleanup: () => void; reattach: () => void } | null =
+    null;
   private templateInitializedRef = { value: false };
   private templateCooldownRef = {
     value: null as ReturnType<typeof setTimeout> | null,
@@ -683,14 +685,14 @@ export class DynamicViewsGridView extends BasesView {
     );
 
     // Setup hover-to-start keyboard navigation
-    const cleanupKeyboard = setupHoverKeyboardNavigation(
+    this.keyboardNav = setupHoverKeyboardNavigation(
       () => this.focusState.hoveredEl,
       () => this.feedContainerRef.current,
       (index) => {
         this.focusState.cardIndex = index;
       }
     );
-    this.register(cleanupKeyboard);
+    this.register(this.keyboardNav.cleanup);
 
     // Setup scroll preservation (handles tab switching, scroll tracking, reset detection)
     if (this.leafId) {
@@ -702,6 +704,36 @@ export class DynamicViewsGridView extends BasesView {
         app: this.app,
       });
     }
+  }
+
+  /** Cancel pending RAFs, disconnect observers, and clear window reference.
+   *  RAFs must be canceled BEFORE nullifying observerWindow — IDs are per-window. */
+  private teardownObservers(): void {
+    if (this.virtualScrollRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.virtualScrollRafId
+      );
+      this.virtualScrollRafId = null;
+    }
+    if (this.cardResizeRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.cardResizeRafId
+      );
+      this.cardResizeRafId = null;
+    }
+    if (this.resizeRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(this.resizeRafId);
+      this.resizeRafId = null;
+    }
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.cardResizeObserver?.disconnect();
+    this.cardResizeObserver = null;
+    if (this.mountRemeasureTimeout !== null) {
+      clearTimeout(this.mountRemeasureTimeout);
+      this.mountRemeasureTimeout = null;
+    }
+    this.observerWindow = null;
   }
 
   /** Handle view moving to a different document (popout window) */
@@ -724,33 +756,10 @@ export class DynamicViewsGridView extends BasesView {
       this.containerEl
     );
 
-    // Cancel pending RAFs BEFORE nullifying observerWindow — RAF IDs are
-    // per-window, so canceling on the wrong window is a no-op.
-    if (this.virtualScrollRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.virtualScrollRafId
-      );
-      this.virtualScrollRafId = null;
-    }
-    if (this.cardResizeRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.cardResizeRafId
-      );
-      this.cardResizeRafId = null;
-    }
+    this.teardownObservers();
 
-    // Disconnect old observers — bound to destroyed popout's V8 isolate.
-    // Grid uses CSS Grid for layout, so observer absence is safe until
-    // the next render cycle recreates them.
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = null;
-    this.observerWindow = null;
-    this.cardResizeObserver?.disconnect();
-    this.cardResizeObserver = null;
-    if (this.mountRemeasureTimeout !== null) {
-      clearTimeout(this.mountRemeasureTimeout);
-      this.mountRemeasureTimeout = null;
-    }
+    // Rebind keydown listener to the new document (was on old document)
+    this.keyboardNav?.reattach();
 
     // Force processDataUpdate to fall through to full render (which
     // recreates observers in the new window context). Without this, the
@@ -2632,12 +2641,7 @@ export class DynamicViewsGridView extends BasesView {
 
   onunload(): void {
     this.scrollPreservation?.cleanup();
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-    if (this.resizeRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(this.resizeRafId);
-    }
+    this.teardownObservers();
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);
     }
@@ -2651,20 +2655,6 @@ export class DynamicViewsGridView extends BasesView {
     if (this.scrollThrottle.timeoutId !== null) {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
-    if (this.virtualScrollRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.virtualScrollRafId
-      );
-    }
-    if (this.cardResizeRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.cardResizeRafId
-      );
-    }
-    if (this.mountRemeasureTimeout !== null) {
-      clearTimeout(this.mountRemeasureTimeout);
-    }
-    this.cardResizeObserver?.disconnect();
     this.stickyHeadings?.disconnect();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();

@@ -174,6 +174,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private lastTitleProperty: string | null = null;
   private lastSubtitleProperty: string | null = null;
   private focusCleanup: (() => void) | null = null;
+  private keyboardNav: { cleanup: () => void; reattach: () => void } | null =
+    null;
   private templateInitializedRef = { value: false };
   private templateCooldownRef = {
     value: null as ReturnType<typeof setTimeout> | null,
@@ -679,14 +681,14 @@ export class DynamicViewsMasonryView extends BasesView {
     );
 
     // Setup hover-to-start keyboard navigation
-    const cleanupKeyboard = setupHoverKeyboardNavigation(
+    this.keyboardNav = setupHoverKeyboardNavigation(
       () => this.focusState.hoveredEl,
       () => this.containerRef.current,
       (index) => {
         this.focusState.cardIndex = index;
       }
     );
-    this.register(cleanupKeyboard);
+    this.register(this.keyboardNav.cleanup);
 
     // Listen for property measurement completion to trigger masonry relayout
     // (card heights may have changed during async property field measurement)
@@ -746,6 +748,34 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
+  /** Cancel pending RAFs, disconnect observers, and clear window reference.
+   *  RAFs must be canceled BEFORE nullifying observerWindow — IDs are per-window. */
+  private teardownObservers(): void {
+    if (this.cardResizeRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.cardResizeRafId
+      );
+      this.cardResizeRafId = null;
+    }
+    if (this.virtualScrollRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.virtualScrollRafId
+      );
+      this.virtualScrollRafId = null;
+    }
+    if (this.deferredRemeasureRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.deferredRemeasureRafId
+      );
+      this.deferredRemeasureRafId = null;
+    }
+    this.layoutResizeObserver?.disconnect();
+    this.layoutResizeObserver = null;
+    this.cardResizeObserver?.disconnect();
+    this.cardResizeObserver = null;
+    this.observerWindow = null;
+  }
+
   /** Handle view moving to a different document (popout window) */
   private handleDocumentChange(oldDoc: Document, newDoc: Document): void {
     // Sync body classes from main window so CSS rules match immediately
@@ -774,14 +804,10 @@ export class DynamicViewsMasonryView extends BasesView {
       this.onDataUpdated();
     }, this.containerEl);
 
-    // Disconnect old observers — bound to destroyed popout's V8 isolate.
-    // Render pipeline's setupMasonryLayout recreates them in the new
-    // window context via the observerWindow !== currentWindow guard.
-    this.layoutResizeObserver?.disconnect();
-    this.layoutResizeObserver = null;
-    this.cardResizeObserver?.disconnect();
-    this.cardResizeObserver = null;
-    this.observerWindow = null;
+    this.teardownObservers();
+
+    // Rebind keydown listener to the new document (was on old document)
+    this.keyboardNav?.reattach();
 
     // Force processDataUpdate to fall through to setupMasonryLayout (which
     // recreates observers in the new window context). Without this, the
@@ -3822,12 +3848,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.resizeCorrectionTimeout !== null) {
       clearTimeout(this.resizeCorrectionTimeout);
     }
-    if (this.cardResizeRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.cardResizeRafId
-      );
-    }
-
+    this.teardownObservers();
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);
     }
@@ -3847,11 +3868,6 @@ export class DynamicViewsMasonryView extends BasesView {
     // Clean up property measurement observer for this window only
     const cleanupWindow = getOwnerWindow(this.containerEl);
     cleanupVisibilityObserver(cleanupWindow);
-    if (this.virtualScrollRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.virtualScrollRafId
-      );
-    }
     if (this.scrollRemeasureTimeout !== null) {
       clearTimeout(this.scrollRemeasureTimeout);
     }
@@ -3860,11 +3876,6 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (this.initialRemeasureTimeout !== null) {
       clearTimeout(this.initialRemeasureTimeout);
-    }
-    if (this.deferredRemeasureRafId !== null) {
-      (this.observerWindow ?? window).cancelAnimationFrame(
-        this.deferredRemeasureRafId
-      );
     }
     this.focusCleanup?.();
     this.stickyHeadings?.disconnect();
