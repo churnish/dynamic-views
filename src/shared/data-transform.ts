@@ -770,9 +770,16 @@ export function resolveBasesProperty(
     // Internal links: have sourcePath/display AND no URI scheme
     // External links: have URI scheme (https://, obsidian://, etc.)
     if (!hasUriScheme(result) && typeof data === 'string') {
-      const valueObj = value as { sourcePath?: unknown; display?: unknown };
+      const valueObj = value as {
+        sourcePath?: unknown;
+        display?: { data?: string };
+      };
       if (valueObj.sourcePath !== undefined || valueObj.display !== undefined) {
         // Wrap internal link in wikilink syntax for renderTextWithLinks
+        const displayText = valueObj.display?.data;
+        if (displayText && displayText !== result) {
+          return `[[${result}|${displayText}]]`;
+        }
         return `[[${result}]]`;
       }
     }

@@ -337,7 +337,8 @@ export function measureSideBySideSet(
 
       // Add inline label width + gap (use cached value)
       if (cachedLabelGap === null) {
-        cachedLabelGap = parseFloat(getComputedStyle(field1).gap) || 4;
+        cachedLabelGap =
+          parseFloat(getOwnerWindow(field1).getComputedStyle(field1).gap) || 4;
       }
       if (inlineLabel1) {
         width1 += inlineLabel1.scrollWidth + cachedLabelGap;
@@ -348,7 +349,8 @@ export function measureSideBySideSet(
 
       // Read field gap from CSS variable (use cached value)
       if (cachedFieldGap === null) {
-        cachedFieldGap = parseFloat(getComputedStyle(set).gap) || 8;
+        cachedFieldGap =
+          parseFloat(getOwnerWindow(set).getComputedStyle(set).gap) || 8;
       }
       const fieldGap = cachedFieldGap;
       const availableWidth = containerWidth - fieldGap;

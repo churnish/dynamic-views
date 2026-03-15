@@ -2,7 +2,7 @@
 title: Slideshow system
 description: Card cover image slideshow — navigation, gesture detection, animation, preloading, failed image recovery, and visibility reset.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-06
+updated: 2026-03-06
 ---
 # Slideshow system
 

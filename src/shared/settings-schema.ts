@@ -415,7 +415,7 @@ export function getBasesViewOptions(
 }
 
 /**
- * Additional options specific to masonry view
+ * Additional options specific to Masonry view
  */
 export function getMasonryViewOptions(
   config?: BasesViewConfig

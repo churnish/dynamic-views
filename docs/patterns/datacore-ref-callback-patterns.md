@@ -2,7 +2,7 @@
 title: Datacore ref callback patterns
 description: Patterns and gotchas for attaching event listeners in card-renderer.tsx Preact ref callbacks.
 author: 🤖 Generated with Claude Code
-last updated: 2026-02-19
+updated: 2026-02-19
 ---
 # Datacore ref callback patterns
 

@@ -85,7 +85,10 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
 @media (hover: hover) {
   .dynamic-views .card.hover-intent-active:hover {
     /* Visual-only: changes ::after box-shadow without reflowing cover/poster/backdrop insets */
-    --card-border-thickness-rendered: var(--dynamic-views-card-border-thickness-hover, 1px);
+    --card-border-thickness-rendered: var(
+      --dynamic-views-card-border-thickness-hover,
+      1px
+    );
   }
 
   /* Muted (default) */

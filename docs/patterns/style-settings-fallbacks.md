@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-14
+updated: 2026-03-14
 ---
 # Style Settings fallback selectors
 

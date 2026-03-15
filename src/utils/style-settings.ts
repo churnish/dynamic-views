@@ -11,7 +11,7 @@
 const cssTextCache = new Map<string, string>();
 
 /** Matches `dynamic-views-` prefixed class names on body */
-const DV_CLASS_PATTERN = /\bdynamic-views-\S+/g;
+const DYNAMIC_VIEWS_CLASS_PATTERN = /\bdynamic-views-\S+/g;
 
 /**
  * Clear the CSS variable cache.
@@ -396,10 +396,15 @@ export function setupStyleSettingsObserver(
       ) {
         // Skip when no dynamic-views- class changed (e.g., is-grabbing, theme classes)
         const oldDV =
-          (mutation.oldValue ?? '').match(DV_CLASS_PATTERN)?.sort().join(' ') ??
-          '';
+          (mutation.oldValue ?? '')
+            .match(DYNAMIC_VIEWS_CLASS_PATTERN)
+            ?.sort()
+            .join(' ') ?? '';
         const newDV =
-          doc.body.className.match(DV_CLASS_PATTERN)?.sort().join(' ') ?? '';
+          doc.body.className
+            .match(DYNAMIC_VIEWS_CLASS_PATTERN)
+            ?.sort()
+            .join(' ') ?? '';
         if (oldDV === newDV) break;
 
         // Re-apply default when Style Settings strips all file-type classes

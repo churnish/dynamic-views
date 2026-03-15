@@ -2,7 +2,7 @@
 title: CSS variable wrapping
 description: Plugin-namespaced CSS variable wrappers, resolution semantics, and the local override gotcha.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-14
+updated: 2026-03-14
 ---
 # CSS variable wrapping
 

@@ -3,7 +3,7 @@
   .card.image-format-backdrop {
     position: relative;
     overflow: hidden;
-    --backdrop-inset: var(--card-border-thickness);
+    --backdrop-inset: var(--card-border-thickness-fixed);
 
     .card-backdrop {
       position: absolute;

@@ -29,6 +29,7 @@ import type { DatacoreAPI } from './src/datacore/types';
 import {
   initExternalBlobCache,
   cleanupExternalBlobCache,
+  setDocumentProvider,
 } from './src/shared/slideshow';
 import {
   openRandomFile,
@@ -36,6 +37,7 @@ import {
   getPaneType,
 } from './src/utils/randomize';
 import { clearInFlightLoads } from './src/shared/content-loader';
+import { installDropTextPatch } from './src/shared/drag';
 import { invalidateCacheForFile } from './src/shared/image-loader';
 import { getNotebookNavigatorAPI } from './src/utils/notebook-navigator';
 
@@ -77,6 +79,8 @@ export default class DynamicViews extends Plugin {
 
   async onload() {
     initExternalBlobCache();
+    setDocumentProvider(() => [document, ...this.getAllPopoutDocuments()]);
+    this.register(installDropTextPatch(this.app));
     this.persistenceManager = new PersistenceManager(this);
     await this.persistenceManager.load();
 
@@ -181,12 +185,7 @@ export default class DynamicViews extends Plugin {
     );
 
     this.addRibbonIcon('shuffle', 'Shuffle base', () => {
-      // Close any zoomed images
-      document
-        .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
-        .forEach((el) => {
-          el.classList.remove('is-zoomed');
-        });
+      this.closeAllZoomedImages();
       toggleShuffleActiveView(this.app);
     });
 
@@ -194,12 +193,7 @@ export default class DynamicViews extends Plugin {
       'dices',
       'Open random file from base',
       async (evt: MouseEvent) => {
-        // Close any zoomed images
-        document
-          .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
-          .forEach((el) => {
-            el.classList.remove('is-zoomed');
-          });
+        this.closeAllZoomedImages();
         const openInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, getPaneType(evt, openInNewTab));
@@ -212,12 +206,7 @@ export default class DynamicViews extends Plugin {
       name: 'Open random file from base',
       icon: 'dices',
       callback: async () => {
-        // Close any zoomed images
-        document
-          .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
-          .forEach((el) => {
-            el.classList.remove('is-zoomed');
-          });
+        this.closeAllZoomedImages();
         const openInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, openInNewTab);
@@ -229,12 +218,7 @@ export default class DynamicViews extends Plugin {
       name: 'Shuffle base',
       icon: 'shuffle',
       callback: () => {
-        // Close any zoomed images
-        document
-          .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
-          .forEach((el) => {
-            el.classList.remove('is-zoomed');
-          });
+        this.closeAllZoomedImages();
         toggleShuffleActiveView(this.app);
       },
     });
@@ -244,7 +228,7 @@ export default class DynamicViews extends Plugin {
       name: 'Fold all groups',
       icon: 'lucide-minimize-2',
       checkCallback: (checking) => {
-        const view = this.getActiveDVGroupedView();
+        const view = this.getActiveDynamicViewsGroupedView();
         if (!view) return false;
         if (!checking) view.foldAllGroups();
         return true;
@@ -256,7 +240,7 @@ export default class DynamicViews extends Plugin {
       name: 'Unfold all groups',
       icon: 'lucide-maximize-2',
       checkCallback: (checking) => {
-        const view = this.getActiveDVGroupedView();
+        const view = this.getActiveDynamicViewsGroupedView();
         if (!view) return false;
         if (!checking) view.unfoldAllGroups();
         return true;
@@ -538,7 +522,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     return true;
   }
 
-  private getActiveDVGroupedView():
+  private getActiveDynamicViewsGroupedView():
     | DynamicViewsGridView
     | DynamicViewsMasonryView
     | null {
@@ -549,13 +533,14 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
         view?: DynamicViewsGridView | DynamicViewsMasonryView;
       };
     };
-    const dvView = view?.controller?.view;
-    if (!dvView) return null;
+    const dynamicViewsView = view?.controller?.view;
+    if (!dynamicViewsView) return null;
     if (
-      (dvView.type === GRID_VIEW_TYPE || dvView.type === MASONRY_VIEW_TYPE) &&
-      dvView.isGrouped
+      (dynamicViewsView.type === GRID_VIEW_TYPE ||
+        dynamicViewsView.type === MASONRY_VIEW_TYPE) &&
+      dynamicViewsView.isGrouped
     ) {
-      return dvView;
+      return dynamicViewsView;
     }
     return null;
   }
@@ -608,7 +593,16 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     console.debug(`refreshed width badges (${count} cards)`);
   }
 
-  private getAllPopoutDocuments(): Document[] {
+  private closeAllZoomedImages(): void {
+    const docs = [document, ...this.getAllPopoutDocuments()];
+    for (const doc of docs) {
+      doc
+        .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
+        .forEach((el) => el.classList.remove('is-zoomed'));
+    }
+  }
+
+  getAllPopoutDocuments(): Document[] {
     const floating = (
       this.app.workspace as unknown as {
         floatingSplit?: { children: { doc: Document }[] };

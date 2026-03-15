@@ -2,7 +2,7 @@
 title: Write path safety
 description: Inventories all file write operations, documents allowed APIs, and lists invariants that prevent data corruption.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-09
+updated: 2026-03-09
 ---
 # Write path safety
 
@@ -43,8 +43,8 @@ Not required by Obsidian guidelines, but enforced in this plugin for safety:
 ### 1. `.base` file cleanup — `vault.process()` + `stringifyYaml()`
 
 - **Location**: [src/bases/utils.ts](../../src/bases/utils.ts), `cleanUpBaseFile()`
-- **Trigger**: Automatic on first render of any DV view
-- **Scope**: Parses `.base` YAML, removes stale DV keys, resets invalid enums, assigns persistence IDs, applies template defaults, re-serializes
+- **Trigger**: Automatic on first render of any Dynamic Views view
+- **Scope**: Parses `.base` YAML, removes stale Dynamic Views keys, resets invalid enums, assigns persistence IDs, applies template defaults, re-serializes
 - **Guards**: `try/catch` on `parseYaml` returns original content; `changeCount === 0` skips rewrite; caller-view guard prevents race with `config.set()`
 - **Accepted risk**: `ALLOWED_VIEW_KEYS` allowlist strips unrecognized keys — forward-compatibility risk if Obsidian adds new Bases-native view keys, accepted to prevent stale key accumulation
 

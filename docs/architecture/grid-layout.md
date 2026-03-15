@@ -2,7 +2,7 @@
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and Bases/Datacore differences.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-15
+updated: 2026-03-15
 ---
 # Grid layout system
 

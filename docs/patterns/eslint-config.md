@@ -2,7 +2,7 @@
 title: ESLint configuration
 description: ESLint config structure, project overrides, and bot vs local differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-11
+updated: 2026-03-11
 ---
 # ESLint configuration
 

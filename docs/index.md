@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-14
+updated: 2026-03-14
 ---
 # Doc index
 

@@ -2,7 +2,7 @@
 title: Bases v Datacore differences
 description: Architectural differences between the Bases (imperative DOM) and Datacore (Preact JSX) backends — rendering, events, cleanup, state, and common pitfalls.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-12
+updated: 2026-03-12
 ---
 # Bases v Datacore differences
 
@@ -181,7 +181,7 @@ Both backends must invalidate cached text previews when Style Settings toggles c
 - **Bases**: `getStyleSettingsHash()` returns a hash of all JS-relevant Style Settings values. On each render cycle, [grid-view.ts](../../src/bases/grid-view.ts)/[masonry-view.ts](../../src/bases/masonry-view.ts) compare `styleSettingsHash !== lastStyleSettingsHash` and clear `contentCache.textPreviews = {}` on mismatch. Simple and total — all cached entries are discarded.
 - **Datacore**: `_styleRevision` (a Preact state counter) is bumped by the MutationObserver when body classes change, triggering a re-render. The content loading effect re-runs because `omitFirstLine`/`keepPreviewHeadings`/`keepPreviewNewlines` are in its dependency array. A `prevTextPreviewSettingsRef` tracks a composite key of the three values; when it changes, the cache copy loop is skipped so all text previews reload from scratch.
 
-**Past bug**: Datacore's cache copy loop only checked mtime, not whether Style Settings changed. When SS toggles changed, the effect re-ran but copied stale cached entries forward, so text previews never updated. Fixed by adding the `prevTextPreviewSettingsRef` composite key check.
+**Past bug**: Datacore's cache copy loop only checked mtime, not whether Style Settings changed. When Style Settings toggles changed, the effect re-ran but copied stale cached entries forward, so text previews never updated. Fixed by adding the `prevTextPreviewSettingsRef` composite key check.
 
 ### Title link structure divergence
 

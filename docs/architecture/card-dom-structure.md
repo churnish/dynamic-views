@@ -2,7 +2,7 @@
 title: Card DOM structure
 description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-06
+updated: 2026-03-06
 ---
 # Card DOM structure
 

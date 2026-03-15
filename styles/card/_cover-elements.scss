@@ -194,25 +194,27 @@ body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-top.image-format-cover
   .card-cover-wrapper {
-  border-bottom: var(--card-border-thickness) solid var(--card-border-color);
+  border-bottom: var(--card-border-thickness-fixed) solid
+    var(--card-border-color);
 }
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper {
-  border-top: var(--card-border-thickness) solid var(--card-border-color);
+  border-top: var(--card-border-thickness-fixed) solid var(--card-border-color);
 }
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-left.image-format-cover
   .card-cover-wrapper {
-  border-right: var(--card-border-thickness) solid var(--card-border-color);
+  border-right: var(--card-border-thickness-fixed) solid
+    var(--card-border-color);
 }
 body.dynamic-views-show-cover-border
   .dynamic-views
   .card.card-cover-right.image-format-cover
   .card-cover-wrapper {
-  border-left: var(--card-border-thickness) solid var(--card-border-color);
+  border-left: var(--card-border-thickness-fixed) solid var(--card-border-color);
 }
 
 /* ============================================

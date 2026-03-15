@@ -13,6 +13,7 @@ import { isExternalUrl } from '../utils/image';
 import { isSlideshowLoopingDisabled } from '../utils/style-settings';
 import { setupHoverIntent } from './hover-intent';
 import { brokenImageUrls, markImageBroken } from './image-loader';
+import { getOwnerWindow } from '../utils/owner-window';
 
 // Blob URL cache for external images to prevent re-downloads
 // Obsidian's Electron sends Cache-Control: no-cache on cross-origin requests,
@@ -26,6 +27,13 @@ const pendingFetches = new Map<string, Promise<string | null>>();
 const failedValidationUrls = new Set<string>();
 // Prevent orphaned blob URLs from in-flight fetches during cleanup
 let isCleanedUp = false;
+
+/** Provider for all open documents (main + popouts). Set by plugin onload. */
+let getDocuments: () => Document[] = () => [document];
+
+export function setDocumentProvider(fn: () => Document[]): void {
+  getDocuments = fn;
+}
 
 /**
  * Validate blob URL loads as an image
@@ -82,6 +90,7 @@ export function createPreloadBrokenHandler(
 /** Initialize blob URL cache state — call on plugin load */
 export function initExternalBlobCache(): void {
   isCleanedUp = false;
+  getDocuments = () => [document];
   brokenImageUrls.clear();
 }
 
@@ -91,6 +100,7 @@ export function initExternalBlobCache(): void {
  */
 export function cleanupExternalBlobCache(): void {
   isCleanedUp = true;
+  getDocuments = () => [document];
   externalBlobCache.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
   externalBlobCache.clear();
   pendingFetches.clear();
@@ -136,9 +146,12 @@ export async function getExternalBlobUrl(url: string): Promise<string | null> {
 
       // Safe eviction: only revoke blob URLs not currently displayed by any <img>
       if (externalBlobCache.size >= BLOB_CACHE_LIMIT) {
+        const docs = getDocuments();
         for (const [origUrl, cachedBlobUrl] of externalBlobCache) {
           if (
-            !document.querySelector(`img[src="${CSS.escape(cachedBlobUrl)}"]`)
+            !docs.some((doc) =>
+              doc.querySelector(`img[src="${CSS.escape(cachedBlobUrl)}"]`)
+            )
           ) {
             URL.revokeObjectURL(cachedBlobUrl);
             externalBlobCache.delete(origUrl);
@@ -234,9 +247,9 @@ export function createSlideshowNavigator(
   let animationDuration = SLIDESHOW_ANIMATION_MS;
   const elements = getElements();
   if (elements) {
-    const cssValue = getComputedStyle(elements.imageEmbed).getPropertyValue(
-      '--anim-duration-moderate'
-    );
+    const cssValue = getOwnerWindow(elements.imageEmbed)
+      .getComputedStyle(elements.imageEmbed)
+      .getPropertyValue('--anim-duration-moderate');
     const parsed = parseInt(cssValue);
     if (!isNaN(parsed) && parsed > 0) {
       animationDuration = parsed;

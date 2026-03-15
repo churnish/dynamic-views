@@ -11,6 +11,7 @@
  */
 
 import { Platform } from 'obsidian';
+import { getOwnerWindow } from '../utils/owner-window';
 import { PANE_MULTIPLIER } from './constants';
 
 export const CONTENT_HIDDEN_CLASS = 'content-hidden';
@@ -25,7 +26,8 @@ export function setupContentVisibility(scrollContainer: HTMLElement): {
 
   const margin = `${PANE_MULTIPLIER * 100}% 0px`;
 
-  const observer = new IntersectionObserver(
+  const win = getOwnerWindow(scrollContainer);
+  const observer = new win.IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         entry.target.classList.toggle(

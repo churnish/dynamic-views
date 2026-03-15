@@ -91,7 +91,7 @@ export function ListView({
               >
                 {titleValue}
               </a>
-              {/* Properties - inline display (list view doesn't use 2-set layout) */}
+              {/* Properties - inline display (List view doesn't use 2-set layout) */}
               {(() => {
                 // Transform to get resolved properties
                 const card: CardData = datacoreResultToCardData(

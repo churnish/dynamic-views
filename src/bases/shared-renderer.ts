@@ -3,6 +3,9 @@
  * Consolidates duplicate card rendering logic from Grid and Masonry
  */
 
+/** Per-card hover parent — new popovers on the same parent auto-dismiss the previous one. */
+const cardHoverParents = new WeakMap<HTMLElement, { hoverPopover: null }>();
+
 import {
   App,
   TFile,
@@ -39,11 +42,13 @@ import {
   setupElementScrollGradient,
   setupVerticalScrollGradient,
 } from '../shared/scroll-gradient';
+import { getTimestampIcon, isTimestampProperty } from '../shared/render-utils';
 import {
+  createCardDragHandler,
+  createExternalLinkDragHandler,
   createTagDragHandler,
-  getTimestampIcon,
-  isTimestampProperty,
-} from '../shared/render-utils';
+  createUrlIconDragHandlers,
+} from '../shared/drag';
 import {
   showTagHashPrefix,
   getHideEmptyMode,
@@ -316,7 +321,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
     const fullText = (textEl.textContent || '').trim();
     if (!fullText) continue;
 
-    const style = getComputedStyle(titleEl);
+    const style = getOwnerWindow(titleEl).getComputedStyle(titleEl);
     const width = titleEl.offsetWidth;
 
     // Skip if not visible
@@ -552,6 +557,7 @@ export class SharedCardRenderer {
   private renderTextWithLinks(
     container: HTMLElement,
     text: string,
+    sourcePath: string,
     signal?: AbortSignal
   ): void {
     const segments = findLinksInText(text);
@@ -561,7 +567,7 @@ export class SharedCardRenderer {
         // Wrap text in span to preserve whitespace in flex containers
         container.createSpan({ text: segment.content });
       } else {
-        this.renderLink(container, segment.link, signal);
+        this.renderLink(container, segment.link, sourcePath, signal);
       }
     }
   }
@@ -569,6 +575,7 @@ export class SharedCardRenderer {
   private renderLink(
     container: HTMLElement,
     link: ParsedLink,
+    sourcePath: string,
     signal?: AbortSignal
   ): void {
     // Internal link (wikilink or markdown internal)
@@ -637,6 +644,26 @@ export class SharedCardRenderer {
         },
         { signal }
       );
+      el.addEventListener(
+        'mouseenter',
+        (e) => {
+          const card = el.closest('.card');
+          const hp =
+            card instanceof HTMLElement
+              ? cardHoverParents.get(card)
+              : undefined;
+          if (!hp) return;
+          this.app.workspace.trigger('hover-link', {
+            event: e,
+            source: 'bases',
+            hoverParent: hp,
+            targetEl: el,
+            linktext: link.url,
+            sourcePath,
+          });
+        },
+        { signal }
+      );
       return;
     }
 
@@ -685,16 +712,7 @@ export class SharedCardRenderer {
     );
     el.addEventListener(
       'dragstart',
-      (e) => {
-        e.stopPropagation();
-        e.dataTransfer?.clearData();
-        // Bare link (caption === url) → plain URL; captioned → markdown link
-        const dragText =
-          link.caption === link.url
-            ? link.url
-            : `[${link.caption}](${link.url})`;
-        e.dataTransfer?.setData('text/plain', dragText);
-      },
+      createExternalLinkDragHandler(link.caption, link.url),
       { signal }
     );
     el.addEventListener(
@@ -736,6 +754,10 @@ export class SharedCardRenderer {
 
     // Create card element
     const cardEl = container.createDiv('card');
+
+    // Shared hover parent — new popovers on the same parent auto-dismiss the previous one
+    const hoverParent: { hoverPopover: null } = { hoverPopover: null };
+    cardHoverParents.set(cardEl, hoverParent);
 
     const format = settings.imageFormat;
     const position = settings.imagePosition;
@@ -992,7 +1014,7 @@ export class SharedCardRenderer {
     );
 
     // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
-    if (window.matchMedia('(hover: hover)').matches) {
+    if (getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches) {
       setupHoverIntent(
         cardEl,
         () => {
@@ -1011,7 +1033,7 @@ export class SharedCardRenderer {
     // Gates content reveal (via CSS) and scroll access on desktop.
     if (
       isPoster &&
-      window.matchMedia('(hover: hover)').matches &&
+      getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches &&
       !hasBodyClass('dynamic-views-poster-reveal-press')
     ) {
       setupHoverIntent(
@@ -1037,7 +1059,7 @@ export class SharedCardRenderer {
           this.app.workspace.trigger('hover-link', {
             event: e,
             source: 'bases',
-            hoverParent: { hoverPopover: null },
+            hoverParent,
             targetEl: cardEl,
             linktext: card.path,
             sourcePath: card.path,
@@ -1073,15 +1095,7 @@ export class SharedCardRenderer {
     }
 
     // Drag handler — use dragLink (not dragFile) to match vanilla Bases ghost icon
-    const handleDrag = (e: DragEvent) => {
-      cardEl.classList.remove(
-        'hover-intent-active',
-        'poster-hover-active',
-        'cover-hover-active'
-      );
-      const dragData = this.app.dragManager.dragLink(e, card.path, '');
-      this.app.dragManager.onDragStart(e, dragData);
-    };
+    const handleDrag = createCardDragHandler(this.app, card.path);
 
     // Helper to render title content into a container
     const renderTitleContent = (titleEl: HTMLElement) => {
@@ -1141,7 +1155,7 @@ export class SharedCardRenderer {
               this.app.workspace.trigger('hover-link', {
                 event: e,
                 source: 'bases',
-                hoverParent: { hoverPopover: null },
+                hoverParent,
                 targetEl: link,
                 linktext: card.path,
                 sourcePath: card.path,
@@ -1375,41 +1389,9 @@ export class SharedCardRenderer {
           },
           { signal }
         );
-        iconEl.addEventListener(
-          'dragstart',
-          (e) => {
-            e.stopPropagation();
-            cardEl.classList.remove(
-              'hover-intent-active',
-              'poster-hover-active',
-              'cover-hover-active'
-            );
-            // Deferred pointer-events: none clears stuck :hover pseudo-class
-            // on the icon. Must defer — setting it synchronously during
-            // dragstart aborts the drag (see context 7.24).
-            setTimeout(() => {
-              iconEl.style.pointerEvents = 'none';
-            }, 0);
-            if (e.dataTransfer) {
-              e.dataTransfer.effectAllowed = 'copyLink';
-              // Native <a> sets text/uri-list + text/html — Obsidian prefers
-              // uri-list and wraps as [url](url). Clear all, set plain text only.
-              e.dataTransfer.clearData();
-              e.dataTransfer.setData('text/plain', card.urlValue!);
-            }
-          },
-          { signal }
-        );
-        iconEl.addEventListener(
-          'dragend',
-          () => {
-            const body = iconEl.ownerDocument.body;
-            body.querySelector('.tooltip')?.remove();
-            body.removeClass('dynamic-views-dragging');
-            iconEl.style.removeProperty('pointer-events');
-          },
-          { signal }
-        );
+        const urlDrag = createUrlIconDragHandlers(iconEl, card.urlValue);
+        iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
+        iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
       }
     }
 
@@ -1470,8 +1452,7 @@ export class SharedCardRenderer {
     if (hasTextPreview || showThumbnail) {
       // Insert before .card-properties-bottom if it exists (DOM order: top → previews → bottom)
       const bottomProps = bodyEl.querySelector('.card-properties-bottom');
-      previewsEl = document.createElement('div');
-      previewsEl.className = 'card-previews';
+      previewsEl = bodyEl.createDiv('card-previews');
       if (bottomProps) {
         bodyEl.insertBefore(previewsEl, bottomProps);
       } else {
@@ -1532,7 +1513,10 @@ export class SharedCardRenderer {
 
     // Cover hover zoom intent: always listen on .card-cover (created by renderCoverWrapper above).
     // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
-    if (format === 'cover' && window.matchMedia('(hover: hover)').matches) {
+    if (
+      format === 'cover' &&
+      getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches
+    ) {
       const coverEl = cardEl.querySelector('.card-cover') as HTMLElement;
       if (coverEl) {
         setupHoverIntent(
@@ -2225,41 +2209,9 @@ export class SharedCardRenderer {
           },
           { signal }
         );
-        iconEl.addEventListener(
-          'dragstart',
-          (e) => {
-            e.stopPropagation();
-            cardEl.classList.remove(
-              'hover-intent-active',
-              'poster-hover-active',
-              'cover-hover-active'
-            );
-            // Deferred pointer-events: none clears stuck :hover pseudo-class
-            // on the icon. Must defer — setting it synchronously during
-            // dragstart aborts the drag (see context 7.24).
-            setTimeout(() => {
-              iconEl.style.pointerEvents = 'none';
-            }, 0);
-            if (e.dataTransfer) {
-              e.dataTransfer.effectAllowed = 'copyLink';
-              // Native <a> sets text/uri-list + text/html — Obsidian prefers
-              // uri-list and wraps as [url](url). Clear all, set plain text only.
-              e.dataTransfer.clearData();
-              e.dataTransfer.setData('text/plain', card.urlValue!);
-            }
-          },
-          { signal }
-        );
-        iconEl.addEventListener(
-          'dragend',
-          () => {
-            const body = iconEl.ownerDocument.body;
-            body.querySelector('.tooltip')?.remove();
-            body.removeClass('dynamic-views-dragging');
-            iconEl.style.removeProperty('pointer-events');
-          },
-          { signal }
-        );
+        const urlDrag = createUrlIconDragHandlers(iconEl, card.urlValue);
+        iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
+        iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
       }
     } else if (existingIcon) {
       this.urlIconRerenderController.get(cardEl)?.abort();
@@ -2757,7 +2709,7 @@ export class SharedCardRenderer {
           nonEmptyItems.forEach((item, idx) => {
             const span = listWrapper.createSpan();
             const listItem = span.createSpan({ cls: 'list-item' });
-            this.renderTextWithLinks(listItem, item, signal);
+            this.renderTextWithLinks(listItem, item, card.path, signal);
             if (idx < nonEmptyItems.length - 1) {
               span.createSpan({ cls: 'list-separator', text: separator });
             }
@@ -3079,7 +3031,7 @@ export class SharedCardRenderer {
     } else {
       // Generic property - wrap in div for proper scrolling (consistent with tags/paths)
       const textWrapper = propertyContent.createDiv('text-wrapper');
-      this.renderTextWithLinks(textWrapper, stringValue, signal);
+      this.renderTextWithLinks(textWrapper, stringValue, card.path, signal);
     }
 
     // Remove propertyContent wrapper if it ended up empty (e.g., tags with no values)

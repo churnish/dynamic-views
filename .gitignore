@@ -6,6 +6,7 @@
 cc-chats/
 node_modules/
 assets/
+plans/
 
 *.map
 *.zip

@@ -463,8 +463,7 @@ describe('applyPerParagraphClamp', () => {
       clamp: p.style.getPropertyValue('-webkit-line-clamp'),
     }));
 
-    // Need to re-mock because offsetHeight on hidden elements would be 0
-    // in a real browser, but our mocks are fixed
+    // Second run with same fixed mocks — proves clearParagraphStyles + re-apply is stable
     applyPerParagraphClamp(el);
 
     const secondRunStyles = Array.from(paragraphs).map((p) => ({

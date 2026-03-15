@@ -11,13 +11,15 @@ export function setupClickOutside(
     }
   };
 
+  const doc = containerElement.ownerDocument;
+
   // Use setTimeout to avoid closing immediately when opening
   setTimeout(() => {
-    document.addEventListener('click', handleClick);
+    doc.addEventListener('click', handleClick);
   }, 0);
 
   // Return cleanup function
   return () => {
-    document.removeEventListener('click', handleClick);
+    doc.removeEventListener('click', handleClick);
   };
 }

@@ -3,7 +3,6 @@
  * Pure functions used by both Bases (DOM) and Datacore (JSX) views
  */
 
-import type { App } from 'obsidian';
 import { moment } from 'obsidian';
 import type { BasesResolvedSettings } from '../types';
 import { isSameProperty } from '../utils/property';
@@ -206,23 +205,4 @@ export function extractTimestamp(
   }
 
   return null;
-}
-
-/** Factory for tag drag handlers — used by both Bases and Datacore tag rendering. */
-export function createTagDragHandler(
-  app: App,
-  tag: string
-): (e: DragEvent) => void {
-  return (e) => {
-    e.stopPropagation();
-    e.dataTransfer?.clearData();
-    e.dataTransfer?.setData('text/plain', '#' + tag);
-    app.dragManager.onDragStart(e, {
-      type: 'text',
-      title: tag,
-      icon: 'hashtag',
-    });
-    // Clear draggable so editor's dragover accepts the drop via its else-path
-    (app.dragManager as Record<string, unknown>).draggable = null;
-  };
 }

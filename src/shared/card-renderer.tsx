@@ -72,11 +72,13 @@ import {
   THUMBNAIL_STACK_MULTIPLIER,
 } from './constants';
 import { setupHoverIntent } from './hover-intent';
+import { getTimestampIcon, isTimestampProperty } from './render-utils';
 import {
+  createCardDragHandler,
+  createExternalLinkDragHandler,
   createTagDragHandler,
-  getTimestampIcon,
-  isTimestampProperty,
-} from './render-utils';
+  createUrlIconDragHandlers,
+} from './drag';
 import { applyPerParagraphClamp } from './text-preview-dom';
 
 import {
@@ -140,24 +142,6 @@ function renderFileExt(extInfo: { ext: string } | null) {
 }
 
 /**
- * Create a drag handler for card elements — uses dragLink (not dragFile)
- * to match vanilla Bases ghost icon.
- */
-function createCardDragHandler(app: App, path: string) {
-  return (e: DragEvent) => {
-    (e.currentTarget as HTMLElement)
-      ?.closest('.card')
-      ?.classList.remove(
-        'hover-intent-active',
-        'poster-hover-active',
-        'cover-hover-active'
-      );
-    const dragData = app.dragManager.dragLink(e, path, '');
-    app.dragManager.onDragStart(e, dragData);
-  };
-}
-
-/**
  * Set up title truncation with extension preservation.
  * Truncates title text while keeping extension visible at end.
  */
@@ -170,11 +154,12 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
   const fullText = (textEl.textContent || '').trim();
   if (fullText.length === 0) return; // Skip empty titles
 
+  const win = getOwnerWindow(titleEl);
   const ellipsis = '…';
 
   // Get max height from CSS (returns 0 if invalid)
   const getMaxHeight = () => {
-    const style = getComputedStyle(titleEl);
+    const style = win.getComputedStyle(titleEl);
     const lineHeight = parseFloat(style.lineHeight);
     const maxLines = parseInt(
       style.getPropertyValue('--dynamic-views-title-lines') || '2'
@@ -227,7 +212,7 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
 
   // Only truncate in Extension mode (when extension suffix is visible)
   const isExtensionMode = () =>
-    extEl && getComputedStyle(extEl).display !== 'none';
+    extEl && win.getComputedStyle(extEl).display !== 'none';
 
   const check = () => {
     if (isExtensionMode()) {
@@ -236,7 +221,7 @@ function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
     // Non-extension modes use CSS line-clamp (no JS needed)
   };
 
-  const observer = new ResizeObserver(check);
+  const observer = new win.ResizeObserver(check);
   observer.observe(titleEl);
   check(); // Initial check
 
@@ -325,16 +310,7 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
       onClick={(e: MouseEvent) => {
         e.stopPropagation();
       }}
-      onDragStart={(e: DragEvent) => {
-        e.stopPropagation();
-        e.dataTransfer?.clearData();
-        // Bare link (caption === url) → plain URL; captioned → markdown link
-        const dragText =
-          link.caption === link.url
-            ? link.url
-            : `[${link.caption}](${link.url})`;
-        e.dataTransfer?.setData('text/plain', dragText);
-      }}
+      onDragStart={createExternalLinkDragHandler(link.caption, link.url)}
       onContextMenu={(e: MouseEvent) => {
         showExternalLinkContextMenu(e, link.url);
       }}
@@ -1433,25 +1409,26 @@ export function CardRenderer({
         };
 
         // Register event listeners
-        document.addEventListener('keydown', handleKeydown, { capture: true });
-        document.addEventListener('focusin', handleDocumentFocusin);
+        const doc = el.ownerDocument;
+        doc.addEventListener('keydown', handleKeydown, { capture: true });
+        doc.addEventListener('focusin', handleDocumentFocusin);
         el.addEventListener('focusin', handleFocusin);
         el.addEventListener('focusout', handleFocusout);
         el.addEventListener('mousedown', handleMouseDown, { capture: true });
-        document.addEventListener('mouseup', handleMouseUp, { capture: true });
+        doc.addEventListener('mouseup', handleMouseUp, { capture: true });
 
         // Store cleanup function in WeakMap keyed by element (survives across renders)
         containerCleanupMap.set(el, () => {
-          document.removeEventListener('keydown', handleKeydown, {
+          doc.removeEventListener('keydown', handleKeydown, {
             capture: true,
           });
-          document.removeEventListener('focusin', handleDocumentFocusin);
+          doc.removeEventListener('focusin', handleDocumentFocusin);
           el.removeEventListener('focusin', handleFocusin);
           el.removeEventListener('focusout', handleFocusout);
           el.removeEventListener('mousedown', handleMouseDown, {
             capture: true,
           });
-          document.removeEventListener('mouseup', handleMouseUp, {
+          doc.removeEventListener('mouseup', handleMouseUp, {
             capture: true,
           });
         });
@@ -1864,15 +1841,10 @@ function Card({
         ) {
           (cardEl as HTMLElement & { __cardDragBound?: true }).__cardDragBound =
             true;
+          const dragHandler = createCardDragHandler(app, card.path);
           cardEl.addEventListener('dragstart', (e: DragEvent) => {
             e.stopImmediatePropagation();
-            cardEl.classList.remove(
-              'hover-intent-active',
-              'poster-hover-active',
-              'cover-hover-active'
-            );
-            const dragData = app.dragManager.dragLink(e, card.path, '');
-            app.dragManager.onDragStart(e, dragData);
+            dragHandler(e);
           });
         }
 
@@ -1914,18 +1886,19 @@ function Card({
           existingResponsiveObserver.disconnect();
         }
 
+        const cardWin = getOwnerWindow(cardEl);
         const breakpoint =
           parseFloat(
-            getComputedStyle(document.body).getPropertyValue(
-              '--dynamic-views-compact-breakpoint'
-            )
+            cardWin
+              .getComputedStyle(cardEl.ownerDocument.body)
+              .getPropertyValue('--dynamic-views-compact-breakpoint')
           ) || 390;
 
         const needsThumbnailStacking =
           format === 'thumbnail' &&
           (position === 'left' || position === 'right');
 
-        const responsiveObserver = new ResizeObserver((entries) => {
+        const responsiveObserver = new cardWin.ResizeObserver((entries) => {
           for (const entry of entries) {
             // Use offsetWidth (border-box) to match syncResponsiveClasses — see shared-renderer.ts
             const cardWidth = (entry.target as HTMLElement).offsetWidth;
@@ -1972,7 +1945,10 @@ function Card({
 
         // Cover hover zoom intent: always listen on .card-cover.
         // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
-        if (format === 'cover' && window.matchMedia('(hover: hover)').matches) {
+        if (
+          format === 'cover' &&
+          cardWin.matchMedia('(hover: hover)').matches
+        ) {
           const coverEl = cardEl.querySelector('.card-cover') as HTMLElement;
           if (coverEl) {
             const existing = cardHoverIntentState.get(cardEl);
@@ -1993,7 +1969,7 @@ function Card({
         }
 
         // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
-        if (window.matchMedia('(hover: hover)').matches) {
+        if (cardWin.matchMedia('(hover: hover)').matches) {
           const existing = cardHoverIntentActive.get(cardEl);
           if (!existing || existing.signal.aborted) {
             existing?.abort();
@@ -2307,32 +2283,9 @@ function Card({
                       { once: true }
                     );
                   });
-                  el.addEventListener('dragstart', (e) => {
-                    e.stopPropagation();
-                    el.closest('.card')?.classList.remove(
-                      'hover-intent-active',
-                      'poster-hover-active',
-                      'cover-hover-active'
-                    );
-                    // Deferred pointer-events: none clears stuck :hover
-                    // pseudo-class. Must defer — synchronous change aborts drag.
-                    setTimeout(() => {
-                      el.style.pointerEvents = 'none';
-                    }, 0);
-                    if (e.dataTransfer) {
-                      e.dataTransfer.effectAllowed = 'copyLink';
-                      // Native <a> sets text/uri-list + text/html — Obsidian prefers
-                      // uri-list and wraps as [url](url). Clear all, set plain text only.
-                      e.dataTransfer.clearData();
-                      e.dataTransfer.setData('text/plain', card.urlValue!);
-                    }
-                  });
-                  el.addEventListener('dragend', () => {
-                    const body = el.ownerDocument.body;
-                    body.querySelector('.tooltip')?.remove();
-                    body.removeClass('dynamic-views-dragging');
-                    el.style.removeProperty('pointer-events');
-                  });
+                  const urlDrag = createUrlIconDragHandlers(el, card.urlValue!);
+                  el.addEventListener('dragstart', urlDrag.onDragStart);
+                  el.addEventListener('dragend', urlDrag.onDragEnd);
                 }}
               />
             )}

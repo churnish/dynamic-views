@@ -2,7 +2,7 @@
 title: Image loading and caching pipeline
 description: Image URL resolution, two-tier dedup cache, broken URL tracking, aspect ratio caching, and load handler wiring for both backends.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-06
+updated: 2026-03-06
 ---
 # Image loading and caching pipeline
 

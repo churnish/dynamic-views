@@ -2,7 +2,7 @@
 title: Electron CSS quirks
 description: Blink/Electron CSS rendering quirks affecting selectors, text truncation, overflow clipping, and container queries.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-12
+updated: 2026-03-12
 ---
 # Electron CSS quirks
 

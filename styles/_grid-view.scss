@@ -21,6 +21,27 @@
   min-width: 0;
   overflow: hidden;
   container-type: inline-size;
+
+  /* Override mobile content-visibility: auto — virtual scrolling replaces it.
+     Without this, buffer-zone cards return contain-intrinsic-height (300px)
+     instead of actual offsetHeight during measurement. */
+  content-visibility: visible;
+}
+
+/* Lightweight placeholder for unmounted virtual scroll cards.
+   Maintains CSS Grid flow while card is not in DOM. */
+.dynamic-views-grid .dynamic-views-grid-placeholder {
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  /* Height/min-height set via inline style from VirtualItem.height */
+}
+
+/* Height-locked card during mount: prevents row reflow until deferred passes
+   (title truncation, text clamp, scroll gradients) complete.
+   Inline style.height set from placeholder height; overflow clips content. */
+.dynamic-views-grid .card.dynamic-views-height-locked {
+  overflow: hidden;
 }
 
 /* Grid-specific: prevent empty cards from stretching */
@@ -79,7 +100,7 @@
 }
 
 .dynamic-views {
-  /* Unified grid layout for all grid views (all width modes) */
+  /* Unified grid layout for all Grid views (all width modes) */
   .dynamic-views-grid {
     display: grid;
     grid-template-columns: repeat(var(--dynamic-views-grid-columns, 1), 1fr);

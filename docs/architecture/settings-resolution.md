@@ -2,7 +2,7 @@
 title: Settings resolution pipeline
 description: Three-layer merge of defaults, templates, and per-view config into resolved settings. Covers sparse storage, type coercion, stale guards, and migration.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-12
+updated: 2026-03-12
 ---
 # Settings resolution pipeline
 

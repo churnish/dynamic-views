@@ -90,12 +90,13 @@ function calculateWidthParams(
   targetWidth: number;
   canExpandToMax: boolean;
 } {
-  const cs = getComputedStyle(section);
+  const win = getOwnerWindow(section);
+  const cs = win.getComputedStyle(section);
   const fileLineWidth =
     parseFloat(cs.getPropertyValue('--file-line-width')) || 700;
   const fileMargins = parseFloat(cs.getPropertyValue('--file-margins')) || 16;
   // Use at least --dynamic-views-bases-view-padding so Datacore matches Bases width on mobile
-  const containerCs = container ? getComputedStyle(container) : cs;
+  const containerCs = container ? win.getComputedStyle(container) : cs;
   const basesViewPadding =
     parseFloat(
       containerCs.getPropertyValue('--dynamic-views-bases-view-padding')
@@ -568,12 +569,12 @@ export function View({
 
   // Setup hover-to-start keyboard navigation
   dc.useEffect(() => {
-    const cleanup = setupHoverKeyboardNavigation(
+    const keyboardNav = setupHoverKeyboardNavigation(
       () => hoveredCardRef.current,
       () => containerRef.current,
       setFocusableCardIndex
     );
-    return cleanup;
+    return keyboardNav.cleanup;
   }, []);
 
   // Style Settings revision - triggers re-render when CSS variables change
@@ -1630,8 +1631,9 @@ export function View({
       // Don't require scrollHeight > clientHeight — content may not overflow
       // yet at mount time but will once more cards load via infinite scroll.
       let element: HTMLElement | null = containerRef.current;
+      const win = getOwnerWindow(containerRef.current);
       while (element && !scrollableElement) {
-        const style = window.getComputedStyle(element);
+        const style = win.getComputedStyle(element);
         const overflowY = style.overflowY;
         if (overflowY === 'auto' || overflowY === 'scroll') {
           scrollableElement = element;
@@ -2065,7 +2067,9 @@ export function View({
         .map((p) => `[[${p.$name}]]`)
         .join('\n');
 
-      void navigator.clipboard.writeText(links);
+      void getOwnerWindow(containerRef.current).navigator.clipboard.writeText(
+        links
+      );
       setShowLimitDropdown(false);
       new Notice('Copied to your clipboard');
     },

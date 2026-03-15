@@ -2,7 +2,7 @@
 title: Plugin overview
 description: High-level overview of the Dynamic Views plugin — what it does, backends, data flow, and major subsystems.
 author: "\U0001F916 Generated with Claude Code"
-last updated: 2026-03-14
+updated: 2026-03-14
 ---
 # Plugin overview
 

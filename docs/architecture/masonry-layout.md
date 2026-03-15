@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-15
+updated: 2026-03-15
 ---
 # Masonry layout system
 

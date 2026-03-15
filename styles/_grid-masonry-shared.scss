@@ -4,6 +4,7 @@
 .bases-view[data-view-type='dynamic-views-masonry'] {
   --bases-view-padding: var(--size-4-3);
   --dynamic-views-bases-view-padding: var(--bases-view-padding);
+  scroll-padding-block: var(--dynamic-views-bases-view-padding);
   container-type: inline-size;
 }
 
@@ -249,11 +250,14 @@ body.dynamic-views-hide-group-property-labels
       scale var(--dynamic-views-anim-duration-fast) ease,
       translate var(--dynamic-views-anim-duration-fast) ease;
     /* Border thickness: layout (insets, dividers) vs visual (::after).
-       Hover only changes --card-border-visual to avoid layout reflow. */
-    --card-border-thickness: var(--dynamic-views-card-border-thickness, 1px);
-    --card-border-visual: var(--card-border-thickness);
+       Hover only changes --card-border-thickness-rendered to avoid layout reflow. */
+    --card-border-thickness-fixed: var(
+      --dynamic-views-card-border-thickness,
+      1px
+    );
+    --card-border-thickness-rendered: var(--card-border-thickness-fixed);
     --cover-inset-computed: calc(
-      var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness)
+      var(--dynamic-views-cover-inset, 0px) + var(--card-border-thickness-fixed)
     );
     /* Resolved card border color — shared by ::after and cover-content divider */
     --card-border-color: var(--dynamic-views-background-modifier-border);
@@ -265,7 +269,8 @@ body.dynamic-views-hide-group-property-labels
       inset: 0;
       z-index: 5;
       border-radius: inherit;
-      box-shadow: inset 0 0 0 var(--card-border-visual) var(--card-border-color);
+      box-shadow: inset 0 0 0 var(--card-border-thickness-rendered)
+        var(--card-border-color);
       pointer-events: none;
       transition: box-shadow var(--dynamic-views-anim-duration-fast) ease-in-out;
     }

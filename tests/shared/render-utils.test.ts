@@ -175,30 +175,32 @@ describe('render-utils', () => {
   });
 
   describe('getTimestampIcon', () => {
-    const baseSettings = {
+    const standardSettings = {
       createdTimeProperty: 'created time',
     } as Settings;
 
     it('should return "calendar" for file.ctime', () => {
-      expect(getTimestampIcon('file.ctime', baseSettings)).toBe('calendar');
+      expect(getTimestampIcon('file.ctime', standardSettings)).toBe('calendar');
     });
 
     it('should return "calendar" for "created time"', () => {
-      expect(getTimestampIcon('created time', baseSettings)).toBe('calendar');
+      expect(getTimestampIcon('created time', standardSettings)).toBe(
+        'calendar'
+      );
     });
 
     it('should return "calendar" for custom createdTimeProperty', () => {
       const settings = {
-        ...baseSettings,
+        ...standardSettings,
         createdTimeProperty: 'date_created',
       } as Settings;
       expect(getTimestampIcon('date_created', settings)).toBe('calendar');
     });
 
     it('should return "clock" for other properties', () => {
-      expect(getTimestampIcon('file.mtime', baseSettings)).toBe('clock');
-      expect(getTimestampIcon('modified time', baseSettings)).toBe('clock');
-      expect(getTimestampIcon('updated', baseSettings)).toBe('clock');
+      expect(getTimestampIcon('file.mtime', standardSettings)).toBe('clock');
+      expect(getTimestampIcon('modified time', standardSettings)).toBe('clock');
+      expect(getTimestampIcon('updated', standardSettings)).toBe('clock');
     });
 
     it('should return "calendar" for note.-prefixed custom created property', () => {

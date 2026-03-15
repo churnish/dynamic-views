@@ -183,12 +183,15 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
                 await this.plugin.persistenceManager.setPluginSettings({
                   openFileAction: value,
                 });
-                // Update body classes for CSS
-                document.body.classList.remove(
-                  'dynamic-views-open-on-card',
-                  'dynamic-views-open-on-title'
-                );
-                document.body.classList.add(`dynamic-views-open-on-${value}`);
+                // Update body classes for CSS (main + popout windows)
+                const docs = [document, ...this.plugin.getAllPopoutDocuments()];
+                for (const doc of docs) {
+                  doc.body.classList.remove(
+                    'dynamic-views-open-on-card',
+                    'dynamic-views-open-on-title'
+                  );
+                  doc.body.classList.add(`dynamic-views-open-on-${value}`);
+                }
               })
           )
       )

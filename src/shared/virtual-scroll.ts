@@ -1,5 +1,5 @@
 /**
- * Virtual scrolling for Masonry
+ * Virtual scrolling for card views
  * Only renders cards within viewport + buffer; unmounted cards are lightweight JS objects
  */
 
@@ -9,19 +9,19 @@ import type { CardHandle } from '../bases/shared-renderer';
 
 /** Lightweight representation of a card's position and data when unmounted */
 export interface VirtualItem {
-  /** Position in the flat card list */
+  /** Position in the flat card list (grid caches via rebuildGroupIndex) */
   index: number;
-  /** --masonry-left value */
+  /** X offset within group container */
   x: number;
-  /** --masonry-top value */
+  /** Y offset within group container */
   y: number;
-  /** --masonry-width value */
+  /** Card width */
   width: number;
-  /** Current height (may be proportionally scaled) */
+  /** Current height (may be proportionally scaled or row-stretched for grid) */
   height: number;
   /** Height at original measurement width */
   measuredHeight: number;
-  /** cardWidth when height was DOM-measured (not scaled) */
+  /** Card width when height was DOM-measured (not scaled) */
   measuredAtWidth: number;
   /** Height of scalable portion (top/bottom cover) at measurement width */
   scalableHeight: number;
@@ -31,7 +31,7 @@ export interface VirtualItem {
   cardData: CardData;
   /** Bases entry for rendering */
   entry: BasesEntry;
-  /** Column index in the masonry grid (stable across same-column-count resize) */
+  /** Column index (masonry: stable across same-column-count resize; grid: unused) */
   col: number;
   /** Group key (undefined for ungrouped) */
   groupKey: string | undefined;
@@ -62,7 +62,11 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
     return 0;
   }
   // Fixed cover height: CSS-determined, doesn't scale with width
-  if (document.body.classList.contains('dynamic-views-fixed-cover-height')) {
+  if (
+    cardEl.ownerDocument.body.classList.contains(
+      'dynamic-views-fixed-cover-height'
+    )
+  ) {
     return 0;
   }
   const wrapper = cardEl.querySelector<HTMLElement>(

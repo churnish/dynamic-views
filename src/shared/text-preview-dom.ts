@@ -1,4 +1,5 @@
 import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { getOwnerWindow } from '../utils/owner-window';
 
 /**
  * Updates the text preview DOM inside a card element.
@@ -122,6 +123,7 @@ const DEFAULT_LINE_BUDGET = 5;
 // Per-paragraph clamp uses CSS classes for static properties (display, box-orient,
 // overflow) and setProperty for dynamic -webkit-line-clamp values per <p>.
 
+// Counterparts defined in styles/card/_previews.scss
 const PARA_CLAMPED_CLASS = 'dynamic-views-para-clamped';
 const PARA_HIDDEN_CLASS = 'dynamic-views-para-hidden';
 const TRUNCATION_INDICATOR_CLASS = 'dynamic-views-truncation-indicator';
@@ -130,7 +132,6 @@ const TRUNCATION_INDICATOR_CLASS = 'dynamic-views-truncation-indicator';
 function clearParagraphStyles(p: HTMLElement): void {
   p.classList.remove(PARA_CLAMPED_CLASS, PARA_HIDDEN_CLASS);
   p.style.removeProperty('-webkit-line-clamp');
-  p.style.removeProperty('margin-top');
   p.querySelector(`.${TRUNCATION_INDICATOR_CLASS}`)?.remove();
 }
 
@@ -235,7 +236,7 @@ export function applyPerParagraphClamp(previewEl: HTMLElement): void {
     clearParagraphStyles(p);
   }
 
-  const style = getComputedStyle(previewEl);
+  const style = getOwnerWindow(previewEl).getComputedStyle(previewEl);
   const lineHeight = parseFloat(style.lineHeight);
   if (!lineHeight || lineHeight <= 0) return;
 
@@ -295,7 +296,7 @@ function batchApplyClamp(previews: Iterable<HTMLElement>): void {
   }> = [];
 
   for (const { el, paragraphs } of collected) {
-    const style = getComputedStyle(el);
+    const style = getOwnerWindow(el).getComputedStyle(el);
     const lineHeight = parseFloat(style.lineHeight);
     if (!lineHeight || lineHeight <= 0) continue;
     const budget =

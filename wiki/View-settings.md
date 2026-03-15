@@ -11,7 +11,7 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 | Setting                             | Description                                  | Default |
 | ----------------------------------- | -------------------------------------------- | ------- |
 | Display first property as title     | Use the first visible property as card title | On      |
-| Title lines                         | Maximum lines before truncating              | 2       |
+| Lines                         | Maximum lines before truncating              | 2       |
 | Display second property as subtitle | Use the second property as subtitle          | Off     |
 
 ## Text preview
@@ -20,7 +20,7 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | ------- |
 | Text preview property                     | Visible property to display as preview text                                                        | None    |
 | Show note content if property unavailable | Fall back to displaying note content when a note does not have the property, or its value is empty | On      |
-| Text preview lines                        | Maximum lines before truncating                                                                    | 5       |
+| Lines                        | Maximum lines before truncating                                                                    | 5       |
 
 ## Image
 
@@ -39,8 +39,8 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 
 | Setting                     | Description                                                                            | Default                                   |
 | --------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Property labels             | How to display property names                                                          | Hide&nbsp;(Grid)<br>Inline&nbsp;(Masonry) |
-| URL property                | Visible property to display as a URL button (↗)                                        | None                                      |
+| Property labels             | How to display property names                                                          | Inline |
+| URL property                | Visible property to display as an 'Open URL' button (↗)                                        | None                                      |
 | Pair properties             | Display properties side-by-side                                                        | Off                                       |
 | Right property position     | Placement of the second property in a pair                                             | Right                                     |
 | Invert pairing for property | Properties not to pair (if pairing enabled), or that should pair (if pairing disabled) | None                                      |

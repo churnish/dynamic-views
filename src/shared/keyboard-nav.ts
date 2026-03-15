@@ -1,5 +1,5 @@
 /**
- * Shared keyboard navigation utilities for card/masonry views
+ * Shared keyboard navigation utilities for card/Masonry views
  * Used by both Datacore and Bases implementations
  *
  * Focus terminology:
@@ -246,7 +246,8 @@ export function isArrowKey(key: string): boolean {
 export function isImageViewerBlockingNav(
   container: HTMLElement | null
 ): boolean {
-  const viewer = document.querySelector('.dynamic-views-image-embed.is-zoomed');
+  const doc = container?.ownerDocument ?? document;
+  const viewer = doc.querySelector('.dynamic-views-image-embed.is-zoomed');
   if (!viewer) return false;
   // Fullscreen viewer → block all nav
   if (!viewer.classList.contains('dynamic-views-viewer-fixed')) return true;
@@ -329,13 +330,14 @@ export function setupHoverKeyboardNavigation(
   getHoveredCard: () => HTMLElement | null,
   getContainerRef: () => HTMLElement | null,
   setFocusableIndex: (index: number) => void
-): () => void {
+): { cleanup: () => void; reattach: () => void } {
   const handleKeydown = (e: KeyboardEvent) => {
     if (isImageViewerBlockingNav(getContainerRef())) return;
     if (!isArrowKey(e.key)) return;
 
     const hoveredCard = getHoveredCard();
-    const activeEl = document.activeElement as HTMLElement | null;
+    const doc = getContainerRef()?.ownerDocument ?? document;
+    const activeEl = doc.activeElement as HTMLElement | null;
     const isCardFocused = activeEl?.classList.contains('card');
 
     // Check the DOM-focused card's container for visible focus state
@@ -404,7 +406,41 @@ export function setupHoverKeyboardNavigation(
     // Case 4: Not hovering and no card has DOM focus → do nothing
   };
 
-  document.addEventListener('keydown', handleKeydown, { capture: true });
-  return () =>
-    document.removeEventListener('keydown', handleKeydown, { capture: true });
+  // Deferred attach — container ref is null at init for all 3 call sites.
+  // Polls until mounted, then binds to the correct document (popout-safe).
+  let listenerDoc: Document | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const attach = () => {
+    const doc = getContainerRef()?.ownerDocument ?? document;
+    if (listenerDoc === doc) return; // Already on correct document
+    if (listenerDoc)
+      listenerDoc.removeEventListener('keydown', handleKeydown, {
+        capture: true,
+      });
+    doc.addEventListener('keydown', handleKeydown, { capture: true });
+    listenerDoc = doc;
+  };
+
+  // Polls until the container mounts (typically <1 frame). Cleanup
+  // cancels the timeout if the view is destroyed before mount.
+  const waitForContainer = () => {
+    if (getContainerRef()) {
+      attach();
+    } else {
+      timeoutId = setTimeout(waitForContainer, 0);
+    }
+  };
+  waitForContainer();
+
+  return {
+    cleanup: () => {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (listenerDoc)
+        listenerDoc.removeEventListener('keydown', handleKeydown, {
+          capture: true,
+        });
+    },
+    reattach: attach,
+  };
 }

@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-06
+updated: 2026-03-06
 ---
 # Project structure
 
@@ -40,13 +40,14 @@ dynamic-views/
 │   │   ├── content-visibility.ts     # IntersectionObserver-based visibility management
 │   │   ├── context-menu.ts           # Right-click menus for cards/links
 │   │   ├── data-transform.ts         # Normalizes Datacore/Bases data -> CardData
+│   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL icon)
 │   │   ├── hover-intent.ts           # Shared hover intent (mousemove-after-mouseenter) utility
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Panzoom image viewer
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
 │   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes; compact wrapping detection
 │   │   ├── property-measure.ts       # Measures property field widths + scroll gradients
-│   │   ├── render-utils.ts           # Date/timestamp/property rendering functions, tag drag handler factory
+│   │   ├── render-utils.ts           # Date/timestamp/property rendering functions
 │   │   ├── scroll-gradient.ts        # Horizontal scroll gradients for properties
 │   │   ├── scroll-preservation.ts    # Scroll position save/restore
 │   │   ├── settings-schema.ts        # Universal settings schema parser
