@@ -67,8 +67,8 @@ export function createExternalLinkDragHandler(
   };
 }
 
-/** Factory for URL icon drag — defers pointer-events to avoid drag abort. */
-export function createUrlIconDragHandlers(
+/** Factory for URL button drag — defers pointer-events to avoid drag abort. */
+export function createUrlButtonDragHandlers(
   iconEl: HTMLElement,
   urlValue: string
 ): {
@@ -116,26 +116,44 @@ export function createUrlIconDragHandlers(
     );
   };
 
+  // Body class for CSS gating — added on mousedown (before dragstart fires)
+  iconEl.addEventListener('mousedown', () => {
+    const body = iconEl.ownerDocument.body;
+    body.addClass('dynamic-views-dragging');
+    iconEl.ownerDocument.addEventListener(
+      'mouseup',
+      () => body.removeClass('dynamic-views-dragging'),
+      { once: true }
+    );
+  });
+
   return {
     onDragStart: (e) => {
       e.stopPropagation();
-      // Only remove hover-intent-active and cover-hover-active — NOT
-      // poster-hover-active, which controls pointer-events: auto on
-      // .card-content. Removing it hides the content area (including
-      // this icon), aborting the drag.
       const card = iconEl.closest('.card');
+      // Remove non-poster hover classes synchronously
       card?.classList.remove('hover-intent-active', 'cover-hover-active');
-      // Must defer — synchronous change during dragstart aborts the drag
+      // Defer poster-hover-active removal and icon pointer-events —
+      // synchronous removal sets pointer-events: none on .card-content,
+      // aborting the drag. Deferred runs after drag subsystem takes over.
       setTimeout(() => {
+        card?.classList.remove('poster-hover-active');
         iconEl.setCssStyles({ pointerEvents: 'none' });
       }, 0);
       if (e.dataTransfer) {
+        // 'link' alone rejects drops into CodeMirror (uses dropEffect 'copy').
+        // 'copyLink' allows both copy and link operations.
         e.dataTransfer.effectAllowed = 'copyLink';
         // Native <a> sets text/uri-list + text/html — Obsidian prefers
         // uri-list and wraps as [url](url). Clear all, set plain text only.
         e.dataTransfer.clearData();
         e.dataTransfer.setData(DRAG_MARKER, '');
-        e.dataTransfer.setData('text/plain', urlValue);
+        // Read from dataset for freshness — Preact re-renders may update
+        // the URL without re-binding event listeners (see __dragBound guard)
+        e.dataTransfer.setData(
+          'text/plain',
+          iconEl.dataset.dvUrlValue ?? urlValue
+        );
       }
     },
     onDragEnd: cleanup,

@@ -311,7 +311,7 @@ export function getSlideshowMaxImages(): number {
  * Get URL button icon from Style Settings
  * Accepts both "lucide-donut" and "donut" formats
  */
-export function getUrlIcon(): string {
+export function getUrlButtonIcon(): string {
   let icon = getCSSTextVariable('--dynamic-views-url-icon', 'arrow-up-right');
   // Strip "lucide-" prefix if present (case-insensitive)
   if (icon.toLowerCase().startsWith('lucide-')) {
@@ -346,7 +346,7 @@ export function getStyleSettingsHash(): string {
     getCompactBreakpoint(),
     getZoomSensitivityDesktop(),
     // Other
-    getUrlIcon(),
+    getUrlButtonIcon(),
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),

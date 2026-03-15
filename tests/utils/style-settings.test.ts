@@ -12,7 +12,7 @@ import {
   getEmptyValueMarker,
   shouldHideMissingProperties,
   getHideEmptyMode,
-  getUrlIcon,
+  getUrlButtonIcon,
   clearStyleSettingsCache,
   getOmitFirstLineMode,
   shouldKeepPreviewHeadings,
@@ -388,9 +388,9 @@ describe('style-settings', () => {
     });
   });
 
-  describe('getUrlIcon', () => {
+  describe('getUrlButtonIcon', () => {
     it('should return default icon', () => {
-      expect(getUrlIcon()).toBe('arrow-up-right');
+      expect(getUrlButtonIcon()).toBe('arrow-up-right');
     });
 
     it('should return custom value from CSS variable', () => {
@@ -399,7 +399,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-url-icon' ? 'external-link' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe('external-link');
+      expect(getUrlButtonIcon()).toBe('external-link');
     });
 
     it('should strip double quotes from value', () => {
@@ -408,7 +408,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-url-icon' ? '"link"' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe('link');
+      expect(getUrlButtonIcon()).toBe('link');
     });
 
     it('should strip lowercase "lucide-" prefix', () => {
@@ -417,7 +417,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-url-icon' ? 'lucide-donut' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe('donut');
+      expect(getUrlButtonIcon()).toBe('donut');
     });
 
     it('should strip mixed-case "Lucide-" prefix', () => {
@@ -426,7 +426,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-url-icon' ? 'Lucide-globe' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe('globe');
+      expect(getUrlButtonIcon()).toBe('globe');
     });
 
     it('should strip uppercase "LUCIDE-" prefix', () => {
@@ -435,7 +435,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-url-icon' ? 'LUCIDE-arrow-up' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe('arrow-up');
+      expect(getUrlButtonIcon()).toBe('arrow-up');
     });
 
     it('should handle quoted value with lucide- prefix', () => {
@@ -444,7 +444,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-url-icon' ? '"lucide-star"' : '',
       } as CSSStyleDeclaration);
 
-      expect(getUrlIcon()).toBe('star');
+      expect(getUrlButtonIcon()).toBe('star');
     });
   });
 

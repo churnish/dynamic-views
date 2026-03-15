@@ -18,7 +18,7 @@ import {
   isSlideshowIndicatorEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
-  getUrlIcon,
+  getUrlButtonIcon,
   hasBodyClass,
 } from '../utils/style-settings';
 import {
@@ -77,7 +77,7 @@ import {
   createCardDragHandler,
   createExternalLinkDragHandler,
   createTagDragHandler,
-  createUrlIconDragHandlers,
+  createUrlButtonDragHandlers,
 } from './drag';
 import { applyPerParagraphClamp } from './text-preview-dom';
 
@@ -312,9 +312,19 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
       onClick={(e: MouseEvent) => {
         e.stopPropagation();
       }}
-      onDragStart={createExternalLinkDragHandler(link.caption, link.url)}
       onContextMenu={(e: MouseEvent) => {
         showExternalLinkContextMenu(e, link.url);
+      }}
+      ref={(el: HTMLElement | null) => {
+        if (!el) return;
+        // Native listener — Preact JSX event props interfere with
+        // Chromium's drag lifecycle on <a> elements (context 13)
+        if ((el as HTMLElement & { __dragBound?: true }).__dragBound) return;
+        (el as HTMLElement & { __dragBound?: true }).__dragBound = true;
+        el.addEventListener(
+          'dragstart',
+          createExternalLinkDragHandler(link.caption, link.url)
+        );
       }}
     >
       {link.caption}
@@ -2259,11 +2269,14 @@ function Card({
                 }
                 onClick={(e: MouseEvent) => {
                   e.stopPropagation();
+                  (e.currentTarget as HTMLElement)?.ownerDocument.body
+                    .querySelector('.tooltip')
+                    ?.remove();
                 }}
                 ref={(el: HTMLElement | null) => {
                   if (!el) return;
                   if (!el.hasChildNodes()) {
-                    setIcon(el, getUrlIcon());
+                    setIcon(el, getUrlButtonIcon());
                     // Hidden text for native link drag ghost — Chromium uses
                     // textContent to generate the 2-line ghost (title + URL).
                     // Without text, only the SVG icon appears as the ghost.
@@ -2271,7 +2284,16 @@ function Card({
                     dragText.className = 'dynamic-views-drag-text';
                     dragText.textContent = card.urlValue!;
                     el.appendChild(dragText);
+                  } else {
+                    // Preact recycles elements — refresh ghost text on re-render
+                    const dragText = el.querySelector(
+                      '.dynamic-views-drag-text'
+                    );
+                    if (dragText) dragText.textContent = card.urlValue!;
                   }
+                  // Store fresh URL for drag handlers (Preact re-renders
+                  // reuse the element but __dragBound skips re-binding)
+                  el.dataset.dvUrlValue = card.urlValue!;
                   // Native listeners for drag — Preact's JSX event props
                   // interfere with Chromium's native drag initiation on <a>
                   // elements, causing intermittent failures. addEventListener
@@ -2280,18 +2302,15 @@ function Card({
                     return;
                   (el as HTMLElement & { __dragBound?: true }).__dragBound =
                     true;
-                  el.addEventListener('mousedown', () => {
-                    const body = el.ownerDocument.body;
-                    body.addClass('dynamic-views-dragging');
-                    el.ownerDocument.addEventListener(
-                      'mouseup',
-                      () => body.removeClass('dynamic-views-dragging'),
-                      { once: true }
-                    );
-                  });
-                  const urlDrag = createUrlIconDragHandlers(el, card.urlValue!);
+                  const urlDrag = createUrlButtonDragHandlers(
+                    el,
+                    card.urlValue!
+                  );
                   el.addEventListener('dragstart', urlDrag.onDragStart);
                   el.addEventListener('dragend', urlDrag.onDragEnd);
+                  el.addEventListener('touchstart', urlDrag.onTouchStart, {
+                    passive: true,
+                  });
                 }}
               />
             )}

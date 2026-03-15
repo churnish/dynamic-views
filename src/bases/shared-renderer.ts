@@ -47,7 +47,7 @@ import {
   createCardDragHandler,
   createExternalLinkDragHandler,
   createTagDragHandler,
-  createUrlIconDragHandlers,
+  createUrlButtonDragHandlers,
 } from '../shared/drag';
 import {
   showTagHashPrefix,
@@ -61,7 +61,7 @@ import {
   isSlideshowIndicatorEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
-  getUrlIcon,
+  getUrlButtonIcon,
   getCompactBreakpoint,
   hasBodyClass,
 } from '../utils/style-settings';
@@ -484,7 +484,10 @@ export class SharedCardRenderer {
   private cardAbortControllers: AbortController[] = [];
   private propertyRerenderController = new Map<HTMLElement, AbortController>();
   private subtitleRerenderController = new Map<HTMLElement, AbortController>();
-  private urlIconRerenderController = new Map<HTMLElement, AbortController>();
+  private urlButtonRerenderController = new Map<
+    HTMLElement,
+    AbortController
+  >();
   private activeScope: Scope | null = null;
 
   constructor(
@@ -526,7 +529,7 @@ export class SharedCardRenderer {
     for (const map of [
       this.propertyRerenderController,
       this.subtitleRerenderController,
-      this.urlIconRerenderController,
+      this.urlButtonRerenderController,
     ]) {
       map.forEach((c) => c.abort());
       map.clear();
@@ -538,12 +541,12 @@ export class SharedCardRenderer {
     }
   }
 
-  /** Abort all rerender controllers for a card (property, subtitle, URL icon) */
+  /** Abort all rerender controllers for a card (property, subtitle, URL button) */
   public abortCardRerenderControllers(cardEl: HTMLElement): void {
     for (const map of [
       this.propertyRerenderController,
       this.subtitleRerenderController,
-      this.urlIconRerenderController,
+      this.urlButtonRerenderController,
     ]) {
       map.get(cardEl)?.abort();
       map.delete(cardEl);
@@ -1359,7 +1362,7 @@ export class SharedCardRenderer {
           iconEl.target = '_blank';
           iconEl.rel = 'noopener noreferrer';
         }
-        setIcon(iconEl, getUrlIcon());
+        setIcon(iconEl, getUrlButtonIcon());
         // Hidden text for native link drag ghost — Chromium uses textContent
         // to generate the 2-line ghost (title + URL). Without text, only the
         // SVG icon appears as the ghost.
@@ -1370,28 +1373,17 @@ export class SharedCardRenderer {
           'click',
           (e) => {
             e.stopPropagation();
+            iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
           },
           { signal }
         );
-        // Hide tooltips during drag via CSS class on body
-        iconEl.addEventListener(
-          'mousedown',
-          () => {
-            const body = iconEl.ownerDocument.body;
-            body.addClass('dynamic-views-dragging');
-            iconEl.ownerDocument.addEventListener(
-              'mouseup',
-              () => {
-                body.removeClass('dynamic-views-dragging');
-              },
-              { once: true }
-            );
-          },
-          { signal }
-        );
-        const urlDrag = createUrlIconDragHandlers(iconEl, card.urlValue);
+        const urlDrag = createUrlButtonDragHandlers(iconEl, card.urlValue);
         iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
         iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
+        iconEl.addEventListener('touchstart', urlDrag.onTouchStart, {
+          signal,
+          passive: true,
+        });
       }
     }
 
@@ -2137,7 +2129,7 @@ export class SharedCardRenderer {
     updateTextPreviewDOM(cardEl, card.textPreview || '');
     const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
     if (previewEl) applyPerParagraphClamp(previewEl);
-    this.updateUrlIcon(cardEl, card);
+    this.updateUrlButton(cardEl, card);
   }
 
   /** Compare old/new CardData image URLs to detect image changes */
@@ -2155,8 +2147,8 @@ export class SharedCardRenderer {
     return oldArr.some((url, i) => url !== newArr[i]);
   }
 
-  /** Surgically update URL icon in card header */
-  private updateUrlIcon(cardEl: HTMLElement, card: CardData): void {
+  /** Surgically update URL button in card header */
+  private updateUrlButton(cardEl: HTMLElement, card: CardData): void {
     const headerEl = cardEl.querySelector<HTMLElement>('.card-header');
     const existingIcon = cardEl.querySelector<HTMLAnchorElement>(
       '.card-title-url-icon'
@@ -2176,9 +2168,9 @@ export class SharedCardRenderer {
         const dragText = existingIcon.querySelector('.dynamic-views-drag-text');
         if (dragText) dragText.textContent = card.urlValue;
       } else if (headerEl) {
-        this.urlIconRerenderController.get(cardEl)?.abort();
+        this.urlButtonRerenderController.get(cardEl)?.abort();
         const urlIconAbort = new AbortController();
-        this.urlIconRerenderController.set(cardEl, urlIconAbort);
+        this.urlButtonRerenderController.set(cardEl, urlIconAbort);
         const { signal } = urlIconAbort;
         const iconEl = headerEl.createEl('a', {
           cls: 'card-title-url-icon text-icon-button svg-icon',
@@ -2189,33 +2181,29 @@ export class SharedCardRenderer {
           iconEl.target = '_blank';
           iconEl.rel = 'noopener noreferrer';
         }
-        setIcon(iconEl, getUrlIcon());
+        setIcon(iconEl, getUrlButtonIcon());
         const dragText = iconEl.createSpan('dynamic-views-drag-text');
         dragText.textContent = card.urlValue;
 
-        iconEl.addEventListener('click', (e) => e.stopPropagation(), {
-          signal,
-        });
         iconEl.addEventListener(
-          'mousedown',
-          () => {
-            const body = iconEl.ownerDocument.body;
-            body.addClass('dynamic-views-dragging');
-            iconEl.ownerDocument.addEventListener(
-              'mouseup',
-              () => body.removeClass('dynamic-views-dragging'),
-              { once: true }
-            );
+          'click',
+          (e) => {
+            e.stopPropagation();
+            iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
           },
           { signal }
         );
-        const urlDrag = createUrlIconDragHandlers(iconEl, card.urlValue);
+        const urlDrag = createUrlButtonDragHandlers(iconEl, card.urlValue);
         iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
         iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
+        iconEl.addEventListener('touchstart', urlDrag.onTouchStart, {
+          signal,
+          passive: true,
+        });
       }
     } else if (existingIcon) {
-      this.urlIconRerenderController.get(cardEl)?.abort();
-      this.urlIconRerenderController.delete(cardEl);
+      this.urlButtonRerenderController.get(cardEl)?.abort();
+      this.urlButtonRerenderController.delete(cardEl);
       existingIcon.remove();
     }
   }
