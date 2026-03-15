@@ -724,14 +724,8 @@ export class DynamicViewsGridView extends BasesView {
       this.containerEl
     );
 
-    // Disconnect old observers — bound to destroyed popout's V8 isolate.
-    // Grid uses CSS Grid for layout, so observer absence is safe until
-    // the next render cycle recreates them.
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = null;
-    this.observerWindow = null;
-    this.cardResizeObserver?.disconnect();
-    this.cardResizeObserver = null;
+    // Cancel pending RAFs BEFORE nullifying observerWindow — RAF IDs are
+    // per-window, so canceling on the wrong window is a no-op.
     if (this.virtualScrollRafId !== null) {
       (this.observerWindow ?? window).cancelAnimationFrame(
         this.virtualScrollRafId
@@ -744,6 +738,15 @@ export class DynamicViewsGridView extends BasesView {
       );
       this.cardResizeRafId = null;
     }
+
+    // Disconnect old observers — bound to destroyed popout's V8 isolate.
+    // Grid uses CSS Grid for layout, so observer absence is safe until
+    // the next render cycle recreates them.
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.observerWindow = null;
+    this.cardResizeObserver?.disconnect();
+    this.cardResizeObserver = null;
     if (this.mountRemeasureTimeout !== null) {
       clearTimeout(this.mountRemeasureTimeout);
       this.mountRemeasureTimeout = null;
@@ -2427,6 +2430,7 @@ export class DynamicViewsGridView extends BasesView {
     if (this.cardResizeObserver && this.observerWindow === currentWindow)
       return;
 
+    this.observerWindow = currentWindow;
     this.cardResizeObserver?.disconnect();
     this.cardResizeObserver = new currentWindow.ResizeObserver(() => {
       if (this.lastMeasuredCardWidth === 0 || !this.lastRenderedSettings)
