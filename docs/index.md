@@ -20,6 +20,7 @@ updated: 2026-03-15
 | [image-viewer.md](architecture/image-viewer.md) | Working on image viewer gestures, keyboard handlers, constrained vs fullscreen modes, Panzoom integration, mobile touch handling, or viewer cleanup — documents the dual-mode gesture system, keyboard handler map, leaf guard pattern, cleanup lifecycle, and invariants. |
 | [keyboard-nav.md](architecture/keyboard-nav.md) | Working on keyboard focus management, arrow-key navigation, hover-to-start or tab-to-start activation, roving tabindex, or focus state flags — documents the spatial navigation algorithm, activation flows, container state interfaces, popout rebinding, and invariants. |
 | [slideshow.md](architecture/slideshow.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
+| [drag-handlers.md](architecture/drag-handlers.md) | Working on drag handlers, DataTransfer, drop behavior, hover suppression during drag, or iOS touch handling — documents the factory system, platform quirks, dataset freshness pattern, and drag ghost implementation. |
 | [write-path-safety.md](architecture/write-path-safety.md) | Adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption. |
 
 ## Root
@@ -35,7 +36,8 @@ updated: 2026-03-15
 |---|---|
 | [eslint-config.md](patterns/eslint-config.md) | Modifying [eslint.config.js](../eslint.config.js), adding eslint overrides, or troubleshooting lint errors. |
 | [scss-nesting-conventions.md](patterns/scss-nesting-conventions.md) | Adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat. |
-| [datacore-ref-callback-patterns.md](patterns/datacore-ref-callback-patterns.md) | Attaching event listeners or stateful behavior in [card-renderer.tsx](../src/shared/card-renderer.tsx) ref callbacks — documents re-render signal churn, cross-container collisions, and the WeakMap solution. |
+| [datacore-ref-callback-patterns.md](patterns/datacore-ref-callback-patterns.md) | Attaching event listeners or stateful behavior in [card-renderer.tsx](../src/shared/card-renderer.tsx) ref callbacks — documents re-render signal churn, cross-container collisions, WeakMap pattern, and `__dragBound` + dataset freshness pattern. |
 | [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding or modifying Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`) — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |
 | [css-variable-wrapping.md](patterns/css-variable-wrapping.md) | Adding, modifying, or locally overriding external Obsidian CSS variables — documents the plugin-namespaced wrapper pattern, resolution semantics, and the local override gotcha. |
+| [debug-commands.md](patterns/debug-commands.md) | Using runtime diagnostic commands (sync notice, card width badges) — documents console invocations, toggle semantics, and teardown. |
 | [electron-css-quirks.md](patterns/electron-css-quirks.md) | Writing nested `:has()` selectors or working around `-webkit-line-clamp` truncation behavior — documents Blink/Electron CSS rendering quirks and rejected fixes. |

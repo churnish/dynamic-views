@@ -174,6 +174,10 @@ Each Datacore `Card` render creates a new `AbortController`. The ref callback ab
 
 Module-level `Map<string, AbortController>` keyed by `card.path` in [card-renderer.tsx](../../src/shared/card-renderer.tsx). When the same file appears in two Dynamic Views containers, one container's cleanup aborts the other's signal. **Fix**: Use `WeakMap<HTMLElement, ...>` instead of path-keyed Map.
 
+### Drag handlers
+
+Preact JSX event props (`onDragStart`) interfere with Chromium's drag lifecycle — use native `addEventListener` in ref callbacks with `__dragBound` guard. See [`drag-handlers.md`](drag-handlers.md).
+
 ### Style Settings text preview cache invalidation
 
 Both backends must invalidate cached text previews when Style Settings toggles change (`omitFirstLine`, `keepPreviewHeadings`, `keepPreviewNewlines`), but they use completely different mechanisms:

@@ -2,7 +2,7 @@
 title: Datacore ref callback patterns
 description: Patterns and gotchas for attaching event listeners in card-renderer.tsx Preact ref callbacks.
 author: 🤖 Generated with Claude Code
-updated: 2026-02-19
+updated: 2026-03-15
 ---
 # Datacore ref callback patterns
 
@@ -60,7 +60,36 @@ if (
 }
 ```
 
+## Pattern: `__dragBound` expando guard + dataset freshness
+
+For native event listeners that must NOT be re-bound on re-render (e.g., drag handlers where Preact JSX props interfere with Chromium's drag lifecycle — see [`drag-handlers.md`](../architecture/drag-handlers.md)), use a boolean expando as a one-time bind guard. Store mutable data on `el.dataset.*` and read it in the handler, so the closure-captured value serves only as fallback.
+
+```ts
+ref={(el: HTMLElement | null) => {
+  if (!el) return;
+  // Refresh dataset BEFORE guard — runs on every re-render
+  el.dataset.dvMyValue = currentValue;
+  if ((el as HTMLElement & { __dragBound?: true }).__dragBound) return;
+  (el as HTMLElement & { __dragBound?: true }).__dragBound = true;
+  el.addEventListener('dragstart', (e) => {
+    const val = el.dataset.dvMyValue ?? currentValue; // dataset wins, closure fallback
+    e.dataTransfer?.setData('text/plain', val);
+  });
+}}
+```
+
+Properties:
+
+- **One-time bind**: expando prevents duplicate `addEventListener` calls across re-renders
+- **Fresh data**: dataset is updated every re-render, so the handler always reads current values
+- **No cleanup needed**: listener dies with the element (no `AbortController` required)
+- **Closure fallback**: `?? currentValue` covers the theoretical case where dataset is unset
+
+This pattern is used for URL button drag (`dataset.dvUrlValue`) and external link drag (`dataset.dvLinkCaption`, `dataset.dvLinkUrl`). It differs from the WeakMap pattern above — WeakMap is for stateful features that need abort/re-setup; `__dragBound` is for fire-and-forget listeners that only need fresh data.
+
 ## Current usages
 
-- `cardHoverIntentState` — cover hover zoom (tracks `zoomMode` for Style Settings changes)
+- `cardHoverIntentState` — cover hover zoom (simple on/off, keyed by card element)
 - `cardHoverIntentActive` — card-level hover intent: gates cursor, link hover effects, and keyboard nav (simple on/off)
+- `__dragBound` — URL button and external link drag handlers (dataset freshness, no re-bind)
+- `__cardDragBound` — card-level drag handler when `openFileAction === 'card'` (one-time bind, no dataset freshness needed)
