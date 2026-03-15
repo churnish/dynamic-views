@@ -41,6 +41,10 @@ import { installDropTextPatch } from './src/shared/drag';
 import { invalidateCacheForFile } from './src/shared/image-loader';
 import { getNotebookNavigatorAPI } from './src/utils/notebook-navigator';
 
+// Toggle: app.saveLocalStorage('dynamic-views-sync-notice', '0')
+// Reset:  app.saveLocalStorage('dynamic-views-sync-notice', null)
+const SYNC_NOTICE_KEY = 'dynamic-views-sync-notice';
+
 // Plugin/feature names (proper nouns, not subject to sentence case)
 const DATACORE = 'Datacore';
 const GRID = 'Grid';
@@ -78,6 +82,12 @@ export default class DynamicViews extends Plugin {
   }
 
   async onload() {
+    const syncRaw = this.app.loadLocalStorage(SYNC_NOTICE_KEY) as string | null;
+    if (syncRaw !== null) {
+      const next = String(Number(syncRaw) + 1);
+      this.app.saveLocalStorage(SYNC_NOTICE_KEY, next);
+      new Notice(next, 0);
+    }
     initExternalBlobCache();
     setDocumentProvider(() => [document, ...this.getAllPopoutDocuments()]);
     this.register(installDropTextPatch(this.app));

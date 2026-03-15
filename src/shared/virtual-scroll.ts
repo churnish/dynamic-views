@@ -77,7 +77,12 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
 
 /**
  * Estimate the height of an unmounted card using split proportional scaling.
- * Cover area scales linearly with card width; text content stays fixed.
+ * Cover area scales linearly with card width; text content assumed fixed.
+ *
+ * Known limitation (#358): `fixedHeight` IS width-dependent — text wraps less
+ * at wider widths, producing shorter cards. After column count increases,
+ * estimates systematically overshoot (observed -72 to -137px per card),
+ * causing visible scroll compensation in `remeasureMountedCards()`.
  */
 export function estimateUnmountedHeight(
   item: Pick<

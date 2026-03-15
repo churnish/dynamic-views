@@ -83,10 +83,6 @@ export function createUrlButtonDragHandlers(
   onDragEnd: () => void;
   onTouchStart: () => void;
 } {
-  // iOS: Obsidian creates tooltip from aria-label ~1-2s after native drag ends.
-  // Strip aria-label on touchstart, restore after the tooltip creation window.
-  let savedAriaLabel: string | null = null;
-
   const cleanup = () => {
     const doc = iconEl.ownerDocument;
     doc.removeEventListener('drop', cleanup);
@@ -94,11 +90,23 @@ export function createUrlButtonDragHandlers(
     body.querySelector('.tooltip')?.remove();
     body.removeClass('dynamic-views-dragging');
     iconEl.style.removeProperty('pointer-events');
-    if (savedAriaLabel !== null) {
-      const label = savedAriaLabel;
-      savedAriaLabel = null;
-      setTimeout(() => iconEl.setAttribute('aria-label', label), 3000);
-    }
+    // iOS: Obsidian creates tooltip from aria-label ~1-2s after native drag
+    // ends. MutationObserver catches and removes it. Scoped to urlValue to
+    // avoid removing unrelated tooltips.
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const n of m.addedNodes) {
+          if (
+            (n as Element).classList?.contains('tooltip') &&
+            (n as Element).textContent === urlValue
+          ) {
+            (n as Element).remove();
+          }
+        }
+      }
+    });
+    mo.observe(body, { childList: true });
+    setTimeout(() => mo.disconnect(), 3000);
   };
 
   const onTouchStart = () => {
@@ -106,22 +114,14 @@ export function createUrlButtonDragHandlers(
     // Fresh registration — only one listener active at a time
     doc.removeEventListener('drop', cleanup);
     doc.addEventListener('drop', cleanup, { once: true });
-    // Strip aria-label to prevent deferred tooltip creation after drag
-    savedAriaLabel = iconEl.getAttribute('aria-label');
-    if (savedAriaLabel) iconEl.removeAttribute('aria-label');
-    // Cancel fallback if touch ends without drag (touchcancel fires
-    // when iOS steals the gesture, e.g., swipe-to-go-back or notification)
-    const restoreOnCancel = () => {
-      iconEl.removeEventListener('touchend', restoreOnCancel);
-      iconEl.removeEventListener('touchcancel', restoreOnCancel);
-      doc.removeEventListener('drop', cleanup);
-      if (savedAriaLabel !== null) {
-        iconEl.setAttribute('aria-label', savedAriaLabel);
-        savedAriaLabel = null;
-      }
-    };
-    iconEl.addEventListener('touchend', restoreOnCancel, { once: true });
-    iconEl.addEventListener('touchcancel', restoreOnCancel, { once: true });
+    // Cancel fallback if touch ends without drag
+    iconEl.addEventListener(
+      'touchend',
+      () => {
+        doc.removeEventListener('drop', cleanup);
+      },
+      { once: true }
+    );
   };
 
   // Body class for CSS gating — added on mousedown (before dragstart fires)
