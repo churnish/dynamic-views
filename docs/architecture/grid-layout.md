@@ -135,7 +135,7 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 
 `onDataUpdated()` → `queueMicrotask()` → `processDataUpdate()`
 
-1. `applyCssOnlySettings()` — set CSS variables (`textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`) directly on container. Bypasses throttle for instant feedback.
+1. `applyCssOnlySettings()` — set CSS variables (`textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`) and CSS classes (`posterDisplayMode`, `imageFit`) directly on container. Bypasses throttle for instant feedback.
 2. Read settings with stale-config fallback (`lastRenderedSettings`), normalize property names. (For the full resolution chain, stale config guards, and sparse storage, see [settings-resolution.md](settings-resolution.md).)
 3. Apply per-view CSS classes and variables (`applyViewContainerStyles`).
 4. Compute `renderHash` (data paths + mtimes + settings + style settings + sort + shuffle + collapse + properties).
@@ -150,8 +150,8 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
    - Clear container, render group sections with headers and cards.
    - Post-insert measurement passes (see §Post-insert measurement passes).
    - Setup virtual scrolling: create `VirtualItem` for each card, `rebuildGroupIndex()`, `measureAllCardPositions()`, `updateCachedGroupOffsets()`, `setupCardResizeObserver()`. Cards start fully mounted; `syncVirtualScroll` activates on first user scroll.
-   - Setup ResizeObserver (double-RAF debounce for column recalculation).
    - Setup infinite scroll (scroll listener).
+   - Setup ResizeObserver (double-RAF debounce for column recalculation).
    - Restore scroll position, remove height preservation.
 
 ### 2. Content update fast path (`updateCardsInPlace`)
@@ -176,8 +176,8 @@ Triggered when file **content** changed (mtime differs) but file paths and setti
 
 When `hasImageChanged(oldCard, newCard)` returns `true`, the card cannot be surgically updated — the image DOM subtree (cover wrapper, slideshow, aspect ratio, fade-in) is too complex. Instead:
 
-1. `abortCardRerenderControllers(cardEl)` — cancel in-flight subtitle/URL icon renders
-2. Clean up old card (handle cleanup, abort controllers, unobserve from ResizeObserver, remove element). Re-render card at correct DOM position, update VirtualItem element reference
+1. Clean up old card: `handle.cleanup()`, `abortCardRerenderControllers(cardEl)`, unobserve from ResizeObserver, remove element.
+2. Re-render card at correct DOM position, update VirtualItem element reference, observe with ResizeObserver.
 3. Insert new card at same DOM position with height-lock. Immediate passes: `syncResponsiveClasses`, `setHoverScaleForCards`
 4. Deferred passes via `scheduleMountRemeasure`: `initializeScrollGradientsForCards`, `initializeTitleTruncationForCards`, `initializeTextPreviewClampForCards`, then release height lock
 
@@ -302,15 +302,16 @@ Triggered when only property **order** changed (not the set of properties, not o
 2. Update header DOM class (`collapsed`).
 3. Persist to `basesState` (async — in-memory Set is authoritative).
 4. **Expanding**: call `expandGroup()` — surgically populate only this group's cards without full re-render.
-5. **Collapsing**: empty group container first. Then cleanup all group's VirtualItems (handles, ResizeObserver, placeholders, path map). `virtualItemsByGroup.delete()`. `rebuildVirtualItemsOrder()` to reconstruct flat array in DOM order. `groupContainers.delete()`. `rebuildGroupIndex()`. `updateCachedGroupOffsets()`. Scroll header to viewport top if it was stuck. Invalidate `lastRenderHash`. Dispatch scroll event to trigger infinite scroll check (collapsing reduces height).
+5. **Collapsing**: empty group container first. Then cleanup all group's VirtualItems (handles, ResizeObserver, placeholders, path map). `virtualItemsByGroup.delete()`. `rebuildVirtualItemsOrder()` to reconstruct flat array in DOM order. `groupContainers.delete()`. `rebuildGroupIndex()`. `updateCachedGroupOffsets()`. Invalidate `lastRenderHash`. Scroll header to viewport top if it was stuck. Dispatch scroll event to trigger infinite scroll check (collapsing reduces height).
 
 **Expand** (`expandGroup`):
 
 1. Find matching group in data.
 2. Load content (cache-hit no-op for already-loaded entries).
-3. Create new VirtualItems for group's cards. Set group container and items-by-group. `rebuildVirtualItemsOrder()`. `rebuildGroupIndex()`. Measure card positions. `updateCachedGroupOffsets()`. If `hasUserScrolled`, immediately cull items outside viewport.
+3. Create new VirtualItems for group's cards. Set group container and items-by-group. `rebuildVirtualItemsOrder()`. `rebuildGroupIndex()`.
 4. Post-insert measurement passes scoped to group (see §Post-insert measurement passes).
-5. Invalidate `lastRenderHash` so next `onDataUpdated()` doesn't skip.
+5. Measure card positions. `updateCachedGroupOffsets()`. If `hasUserScrolled`, immediately cull items outside viewport.
+6. Invalidate `lastRenderHash` so next `onDataUpdated()` doesn't skip.
 
 **Fold/unfold all** (`foldAllGroups`, `unfoldAllGroups`):
 
@@ -340,27 +341,28 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 | Initial render (full render path)        | All 5             | Container. Then: create VirtualItems, measure positions, setup card ResizeObserver.                              |
 | Batch append (`appendBatch`)             | All 5             | `*ForCards` — new cards only. Create VirtualItems, cull if scrolled.                                            |
 | Group expand (`expandGroup`)             | All 5             | Container — scoped to group. Create VirtualItems, cull if scrolled.                                             |
-| Resize (`updateColumns`)                 | 1, 2, 5           | Container (in RAF after column CSS variable update). Full remount-and-cull on column change. Deferred 3, 4 via `scheduleMountRemeasure` for newly mounted cards. |
-| Property reorder (`updatePropertyOrder`) | 2 only            | Container — properties changed, title/subtitle/text unchanged.                                                   |
-| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4 | 2: container-level after loop. 3, 4: per-card via `updateCardContent`. Image-change replacement: immediate 1, 5 + deferred 3, 4 via `scheduleMountRemeasure`. |
+| Resize (`updateColumns`)                 | 1, 2, 5           | Container (in RAF after column CSS variable update). Full remount-and-cull on column change. Deferred 2, 3, 4 via `scheduleMountRemeasure` for newly mounted cards. |
+| Property reorder (`updatePropertyOrder`) | 2 only            | Container — title, subtitle, and properties updated (order-derived `displayFirstAsTitle` may change title/subtitle). |
+| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4 | 2: container-level after loop. 3, 4: per-card via `updateCardContent`. Image-change replacement: immediate 1, 5 + deferred 2, 3, 4 via `scheduleMountRemeasure`. |
 | `onDataUpdated` CSS fast-path            | 4 only            | Container — re-measures clamps after CSS variable change.                                                        |
 
 ### Truncation ordering invariant
 
 `initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)) enforces this:
 
-1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp`
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 6. `updateUrlIcon`
 
 ## Render guard system
 
-`processDataUpdate()` has 4 sequential guards:
+`processDataUpdate()` has 5 sequential guards:
 
-| #   | Guard                     | Behavior                                                                                                         |
-| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 1   | `!this.data`              | Return early — data not yet initialized (race with MutationObserver).                                            |
-| 2   | `isLoading`               | Return early — batch append in progress, full re-render would corrupt state.                                     |
-| 3   | `renderHash === lastHash` | Return early — nothing changed. Schedule delayed re-checks (100/250/500ms) for late Obsidian config updates.     |
-| 4   | `renderState.version`     | Incremented on each render. Stale async operations (content loading) bail when version mismatches on completion. |
+| #   | Guard                        | Behavior                                                                                                         |
+| --- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | `shouldProcessDataUpdate()`  | Hybrid throttle — leading + trailing edge. Suppresses calls during cooldown (see §Data update throttle below).   |
+| 2   | `!this.data`                 | Return early — data not yet initialized (race with MutationObserver).                                            |
+| 3   | `isLoading`                  | Return early — batch append in progress, full re-render would corrupt state.                                     |
+| 4   | `renderHash === lastHash`    | Return early — nothing changed. Schedule delayed re-checks (100/250/500ms) for late Obsidian config updates.     |
+| 5   | `renderState.version`        | Incremented on each render. Stale async operations (content loading) bail when version mismatches on completion. |
 
 ### Data update throttle
 
@@ -386,7 +388,7 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 ### Scroll throttle
 
 - **Pattern**: Leading + trailing, 100ms cooldown (`SCROLL_THROTTLE_MS`).
-- **Leading**: Runs `checkAndLoadMore()` immediately.
+- **Leading**: Runs `checkAndLoadMore()` immediately. Subsequent calls during cooldown are suppressed.
 - **Trailing**: Runs after cooldown to catch scroll position changes during throttle.
 
 ### Image-load handling
@@ -457,6 +459,8 @@ Groups use CSS `subgrid` to inherit parent column structure, ensuring cards alig
 
 ## Keyboard navigation
 
+See [keyboard-nav.md](keyboard-nav.md) for the full architecture. Summary of grid-specific wiring:
+
 Arrow keys navigate spatially across all virtual items using absolute coordinates.
 
 1. `setupHoverKeyboardNavigation()` — hover transfers focus target from mouse to keyboard. First arrow key activates visible focus ring.
@@ -497,8 +501,8 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 4. **`previousDisplayedCount` ensures incremental append correctness.** Batch append renders only cards from `previousDisplayedCount` to `displayedCount`, never re-rendering existing cards.
 5. **`collapsedGroups` is loaded once from persistence.** First render loads from `basesState`; thereafter the in-memory `Set` is authoritative. Reloading on every `onDataUpdated` would wipe state due to style-settings-triggered callbacks with stale persistence.
 6. **Container height is preserved during DOM wipe.** `--dynamic-views-preserve-height` sets `min-height` before clearing the container, preventing the scroll parent from resetting scroll position.
-7. **Virtual scrolling replaces content visibility.** Grid uses full virtual scrolling (mount/unmount) instead of IO-based `content-hidden` toggling. `content-visibility: visible` is set on all grid cards to override mobile's `content-visibility: auto`. iOS compatibility is maintained because virtual scrolling doesn't trigger the WebKit reflow loop. The `content-hidden` class may still be transiently referenced by keyboard navigation for focus target cleanup, but is not the primary visibility mechanism.
-8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, and `thumbnailSize` changes.
+7. **Virtual scrolling replaces content visibility.** Grid uses full virtual scrolling (mount/unmount) instead of IO-based `content-hidden` toggling. `content-visibility: visible` is set on all grid cards to override mobile's `content-visibility: auto`. iOS compatibility is maintained because virtual scrolling doesn't trigger the WebKit reflow loop. The `content-hidden` class is defensively removed from keyboard navigation targets before focusing, but is not the primary visibility mechanism for grid.
+8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables and classes directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`, `posterDisplayMode`, and `imageFit` changes.
 9. **`appendBatch` must chain `checkAndLoadMore` after completing.** Without chaining, a batch that doesn't fill the viewport stalls infinite scroll permanently — the scroll listener never fires because there's nothing to scroll. The chain is version-guarded — aborted batches must NOT chain.
 10. **`hasUserScrolled` gates virtual scroll activation.** Initial render mounts all cards for measurement. Virtual scrolling (unmounting far cards) activates only after first user scroll, matching the mount-all-then-cull pattern.
 11. **`isLayoutBusy` prevents concurrent layout operations.** Set during batch append, column-change reflow, and group expand. `syncVirtualScroll` skips when busy; `cardResizeObserver` defers via `cardResizeDirty` flag.

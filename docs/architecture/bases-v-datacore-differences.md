@@ -116,7 +116,7 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | [image-loader.ts](../../src/shared/image-loader.ts)       | Image aspect ratio caching + fallbacks                                                            |
 | [context-menu.ts](../../src/shared/context-menu.ts)       | Right-click menus for cards/links                                                                 |
 | [scroll-gradient.ts](../../src/shared/scroll-gradient.ts)    | Horizontal/vertical gradient masks for scrollable content                                         |
-| [keyboard-nav.ts](../../src/shared/keyboard-nav.ts)       | Arrow key focus management                                                                        |
+| [keyboard-nav.ts](../../src/shared/keyboard-nav.ts)       | Arrow key focus management — see [keyboard-nav.md](keyboard-nav.md) for Bases/Datacore divergences (Scope integration, listener counts, popout rebinding) |
 | [hover-intent.ts](../../src/shared/hover-intent.ts)       | Mousemove-after-mouseenter hover intent utility                                                   |
 | [property-measure.ts](../../src/shared/property-measure.ts)   | Property field width measurement + scroll gradients                                               |
 | [property-helpers.ts](../../src/shared/property-helpers.ts)   | Tag/file/formula type checks, pair computation                                                    |

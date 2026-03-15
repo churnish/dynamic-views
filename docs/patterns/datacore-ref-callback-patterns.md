@@ -38,7 +38,7 @@ Properties:
 - **Survives re-renders**: idempotent — skips setup if already active
 - **No path collisions**: keyed by DOM element, not `card.path`
 - **No cleanup needed**: WeakMap entries are GC'd with the element
-- **Key stability**: cards are keyed by `card.path` (line ~1530), so Preact reuses the same DOM element for the same path
+- **Key stability**: cards are keyed by `card.path` (via the `key` prop in `card-renderer.tsx`), so Preact reuses the same DOM element for the same path
 
 If the feature has modes that can change at runtime (e.g., Style Settings toggles), store the mode alongside the controller to detect changes:
 

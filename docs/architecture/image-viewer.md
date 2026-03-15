@@ -77,7 +77,7 @@ All desktop keyboard handlers use capture-phase listeners and are guarded by `is
 |---|---|---|---|
 | `onBlockKeys` | Space, Enter, Escape, R, ArrowDown | `openImageViewer` | `preventDefault()` + `stopPropagation()`. Prevents underlying card/link activation. |
 
-`stopPropagation()` is required because the card element underneath the overlay retains focus and has its own keydown handler — `preventDefault()` alone only blocks browser default actions, not other JS listeners.
+`stopPropagation()` is required because the card element underneath the overlay retains focus and has its own keydown handler — `preventDefault()` alone only blocks browser default actions, not other JS listeners. See [keyboard-nav.md](keyboard-nav.md) for the card-side blocking mechanism (`isImageViewerBlockingNav()`).
 
 ### Constrained viewer leaf guard
 

@@ -423,6 +423,8 @@ Cards use `position: absolute` with direct inline styles for per-card positionin
 
 ## Keyboard navigation
 
+See [keyboard-nav.md](keyboard-nav.md) for the full architecture. Summary of masonry-specific wiring:
+
 Arrow keys navigate spatially across all cards, including unmounted ones.
 
 1. `renderCard()` passes `getVirtualRects` callback → returns `VirtualCardRect[]` from `virtualItems`.

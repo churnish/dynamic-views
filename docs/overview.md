@@ -78,7 +78,7 @@ The plugin entry point is [main.ts](../main.ts) — it registers Bases view type
 | Context menus | [context-menu.ts](../src/shared/context-menu.ts) | Right-click menus for cards and links, used by both backends. |
 | Settings resolution | [persistence.ts](../src/persistence.ts)<br>[settings-schema.ts](../src/shared/settings-schema.ts) | Three-layer merge: defaults, template, per-view runtime config. |
 | Text previews | [text-preview-dom.ts](../src/shared/text-preview-dom.ts)<br>[text-preview.ts](../src/utils/text-preview.ts) | Markdown stripping and DOM mutation for card text. |
-| Keyboard navigation | [keyboard-nav.ts](../src/shared/keyboard-nav.ts) | Arrow key focus management across card grid. |
+| Keyboard navigation | [keyboard-nav.ts](../src/shared/keyboard-nav.ts) | Arrow key focus management across card grid. See [architecture/keyboard-nav.md](architecture/keyboard-nav.md). |
 
 ## Styles
 
