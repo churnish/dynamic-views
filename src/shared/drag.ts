@@ -55,14 +55,21 @@ export function createCardDragHandler(
 
 /** Factory for external link drag — formats as markdown link when captioned. */
 export function createExternalLinkDragHandler(
+  el: HTMLElement,
   caption: string,
   url: string
 ): (e: DragEvent) => void {
+  // Store on element for freshness — Preact re-renders may update
+  // link props without re-binding (see __dragBound guard)
+  el.dataset.dvLinkCaption = caption;
+  el.dataset.dvLinkUrl = url;
   return (e) => {
     e.stopPropagation();
+    const c = el.dataset.dvLinkCaption ?? caption;
+    const u = el.dataset.dvLinkUrl ?? url;
     e.dataTransfer?.clearData();
     e.dataTransfer?.setData(DRAG_MARKER, '');
-    const dragText = caption === url ? url : `[${caption}](${url})`;
+    const dragText = c === u ? u : `[${c}](${u})`;
     e.dataTransfer?.setData('text/plain', dragText);
   };
 }
@@ -102,18 +109,19 @@ export function createUrlButtonDragHandlers(
     // Strip aria-label to prevent deferred tooltip creation after drag
     savedAriaLabel = iconEl.getAttribute('aria-label');
     if (savedAriaLabel) iconEl.removeAttribute('aria-label');
-    // Cancel fallback if touch ends without drag
-    iconEl.addEventListener(
-      'touchend',
-      () => {
-        doc.removeEventListener('drop', cleanup);
-        if (savedAriaLabel !== null) {
-          iconEl.setAttribute('aria-label', savedAriaLabel);
-          savedAriaLabel = null;
-        }
-      },
-      { once: true }
-    );
+    // Cancel fallback if touch ends without drag (touchcancel fires
+    // when iOS steals the gesture, e.g., swipe-to-go-back or notification)
+    const restoreOnCancel = () => {
+      iconEl.removeEventListener('touchend', restoreOnCancel);
+      iconEl.removeEventListener('touchcancel', restoreOnCancel);
+      doc.removeEventListener('drop', cleanup);
+      if (savedAriaLabel !== null) {
+        iconEl.setAttribute('aria-label', savedAriaLabel);
+        savedAriaLabel = null;
+      }
+    };
+    iconEl.addEventListener('touchend', restoreOnCancel, { once: true });
+    iconEl.addEventListener('touchcancel', restoreOnCancel, { once: true });
   };
 
   // Body class for CSS gating — added on mousedown (before dragstart fires)

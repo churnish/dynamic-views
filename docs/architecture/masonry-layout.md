@@ -161,7 +161,7 @@ When `hasImageChanged(oldCard, newCard)` returns `true`, the VirtualItem's card 
 
 Post-insert: `syncResponsiveClasses`, `initializeTitleTruncation`, `initializeTextPreviewClamp` for replaced cards.
 
-When image is unchanged, `updateCardContent()` handles surgical DOM updates including `updateUrlIcon`.
+When image is unchanged, `updateCardContent()` handles surgical DOM updates including `updateUrlButton`.
 
 **Guard**: `changedPaths.size === 0` on the `renderHash` early return prevents content-only changes from being skipped.
 
@@ -199,7 +199,7 @@ When image is unchanged, `updateCardContent()` handles surgical DOM updates incl
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
 2. **Pre-read `scrollTop` and `clientHeight`** from `scrollEl` before the style write loop — reading these after inline style changes would trigger forced reflow in `syncVirtualScroll`.
 3. `proportionalResizeLayout()` — single pass over all cards per group:
-   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area and poster cards scale linearly; text content stays constant.
+   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area and poster cards scale linearly; text content assumed constant. Known limitation (#358): `fixedHeight` is actually width-dependent (text wraps less at wider widths), causing systematic overestimation after column count increases.
    - Reads `item.col` directly for stable column assignment when column count unchanged. Falls back to greedy shortest-column for column count changes.
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.

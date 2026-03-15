@@ -42,7 +42,7 @@ vi.mock('../../src/utils/style-settings', () => ({
   isSlideshowIndicatorEnabled: vi.fn(),
   isThumbnailScrubbingDisabled: vi.fn(),
   getSlideshowMaxImages: vi.fn(),
-  getUrlIcon: vi.fn(),
+  getUrlButtonIcon: vi.fn(),
   getCompactBreakpoint: vi.fn(),
   hasBodyClass: vi.fn(),
 }));

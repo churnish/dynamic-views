@@ -181,7 +181,7 @@ When `hasImageChanged(oldCard, newCard)` returns `true`, the card cannot be surg
 3. Insert new card at same DOM position with height-lock. Immediate passes: `syncResponsiveClasses`, `setHoverScaleForCards`
 4. Deferred passes via `scheduleMountRemeasure`: `initializeScrollGradientsForCards`, `initializeTitleTruncationForCards`, `initializeTextPreviewClampForCards`, then release height lock
 
-When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlIcon`) surgically.
+When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlButton`) surgically.
 
 **Guard**: `changedPaths.size === 0` on the `renderHash` early return prevents content-only changes (mtime changed, paths/settings unchanged) from being skipped.
 
@@ -283,7 +283,7 @@ Triggered when only property **order** changed (not the set of properties, not o
 1. Scheduled via `requestAnimationFrame` (skip-if-pending debounce). Each sync refreshes `cachedGroupOffsets` before the mount/unmount pass.
 2. Calculates viewport bounds + buffer (1× viewport above and below).
 3. For each item: mount if in view and unmounted, unmount if out of view and mounted.
-4. Uses `estimateUnmountedHeight()` for unmounted items — split proportional scaling (cover scales with width, text stays fixed).
+4. Uses `estimateUnmountedHeight()` for unmounted items — split proportional scaling (cover scales with width, text assumed fixed). Known limitation (#358): `fixedHeight` is actually width-dependent (text wraps less at wider widths), causing systematic overestimation after column count increases.
 
 **Card resize handling**:
 
@@ -350,7 +350,7 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 
 `initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)) enforces this:
 
-1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 6. `updateUrlIcon`
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 6. `updateUrlButton`
 
 ## Render guard system
 

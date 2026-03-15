@@ -317,13 +317,16 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
       }}
       ref={(el: HTMLElement | null) => {
         if (!el) return;
+        // Refresh dataset for stale-closure freshness on re-render
+        el.dataset.dvLinkCaption = link.caption;
+        el.dataset.dvLinkUrl = link.url;
         // Native listener — Preact JSX event props interfere with
         // Chromium's drag lifecycle on <a> elements (context 13)
         if ((el as HTMLElement & { __dragBound?: true }).__dragBound) return;
         (el as HTMLElement & { __dragBound?: true }).__dragBound = true;
         el.addEventListener(
           'dragstart',
-          createExternalLinkDragHandler(link.caption, link.url)
+          createExternalLinkDragHandler(el, link.caption, link.url)
         );
       }}
     >

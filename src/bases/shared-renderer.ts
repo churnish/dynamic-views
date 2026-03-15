@@ -484,10 +484,7 @@ export class SharedCardRenderer {
   private cardAbortControllers: AbortController[] = [];
   private propertyRerenderController = new Map<HTMLElement, AbortController>();
   private subtitleRerenderController = new Map<HTMLElement, AbortController>();
-  private urlButtonRerenderController = new Map<
-    HTMLElement,
-    AbortController
-  >();
+  private urlButtonRerenderController = new Map<HTMLElement, AbortController>();
   private activeScope: Scope | null = null;
 
   constructor(
@@ -715,7 +712,7 @@ export class SharedCardRenderer {
     );
     el.addEventListener(
       'dragstart',
-      createExternalLinkDragHandler(link.caption, link.url),
+      createExternalLinkDragHandler(el, link.caption, link.url),
       { signal }
     );
     el.addEventListener(
@@ -2169,9 +2166,9 @@ export class SharedCardRenderer {
         if (dragText) dragText.textContent = card.urlValue;
       } else if (headerEl) {
         this.urlButtonRerenderController.get(cardEl)?.abort();
-        const urlIconAbort = new AbortController();
-        this.urlButtonRerenderController.set(cardEl, urlIconAbort);
-        const { signal } = urlIconAbort;
+        const urlButtonAbort = new AbortController();
+        this.urlButtonRerenderController.set(cardEl, urlButtonAbort);
+        const { signal } = urlButtonAbort;
         const iconEl = headerEl.createEl('a', {
           cls: 'card-title-url-icon text-icon-button svg-icon',
           href: card.urlValue,
