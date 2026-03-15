@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-last updated: 2026-03-13
+last updated: 2026-03-15
 ---
 # Masonry layout system
 
@@ -324,7 +324,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 - **Pattern**: Leading + trailing, 100ms cooldown (`SCROLL_THROTTLE_MS`).
 - **Leading**: Runs `this.checkAndLoadMore(totalEntries, settings)` immediately. Schedules `syncVirtualScroll` via RAF.
 - **Trailing**: Runs after cooldown if events arrived during it.
-- **No inline closure**: The scroll listener delegates directly to `checkAndLoadMore` — no separate `checkAndLoad` closure. This matches the grid view pattern. The `setupInfiniteScroll` signature requires `settings: BasesResolvedSettings` (non-optional) since the call site always provides it.
+- **No inline closure**: The scroll listener delegates directly to `checkAndLoadMore` — no separate `checkAndLoad` closure. This matches the Grid view pattern. The `setupInfiniteScroll` signature requires `settings: BasesResolvedSettings` (non-optional) since the call site always provides it.
 
 ### Mount remeasure throttle
 
@@ -363,7 +363,7 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 - **Detection**: `observerWindow` field tracks the window context of existing observers. On each `setupMasonryLayout` call, `masonryContainer.ownerDocument.defaultView` is compared against `observerWindow`. On mismatch (view moved to a different window), existing observers are disconnected and nullified, forcing re-creation in the correct context.
 - **Creation**: Guarded observers (`layoutResizeObserver`, `cardResizeObserver`) use `new (this.observerWindow ?? window).ResizeObserver(...)`. The `scrollResizeObserver` (recreated each call) uses a local `const RO = (container.ownerDocument.defaultView ?? window).ResizeObserver`.
 - **Per-card observers** (in [shared-renderer.ts](../../src/bases/shared-renderer.ts)): No field needed — derive the window inline from `cardEl.ownerDocument.defaultView` at each creation site.
-- **Popout lifecycle**: `handleDocumentChange` (called when a view moves between windows) only tears down observers — disconnects and nullifies `layoutResizeObserver`, `cardResizeObserver`, and `observerWindow`. It does NOT call `setupMasonryLayout` directly. The render pipeline triggers `setupMasonryLayout` via `onDataUpdated()`, which recreates observers in the correct window context via the `observerWindow` guard. This avoids a double layout pass.
+- **Popout lifecycle**: `handleDocumentChange` calls `teardownObservers()` — cancels all pending RAFs (`cardResizeRafId`, `virtualScrollRafId`, `deferredRemeasureRafId`), clears `mountRemeasureTimeout`, disconnects all observers (`layoutResizeObserver`, `cardResizeObserver`, `scrollResizeObserver`), and nullifies `observerWindow`. RAFs are canceled BEFORE nullifying `observerWindow` because RAF IDs are per-window (see `electron-popout-quirks.md`). After teardown, `renderState.lastRenderHash` is invalidated to force `processDataUpdate` past its hash-based early return — without this, the render pipeline skips observer recreation since the underlying data hasn't changed. `setupMasonryLayout` then recreates observers in the correct window context via the `observerWindow` guard. The same `teardownObservers()` method is called from `onunload` for view cleanup.
 
 ## Group collapse/expand lifecycle
 

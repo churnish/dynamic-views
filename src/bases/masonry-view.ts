@@ -748,7 +748,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
-  /** Cancel pending RAFs, disconnect observers, and clear window reference.
+  /** Cancel pending RAFs and timeouts, disconnect observers, and clear window reference.
    *  RAFs must be canceled BEFORE nullifying observerWindow — IDs are per-window. */
   private teardownObservers(): void {
     if (this.cardResizeRafId !== null) {
@@ -769,10 +769,16 @@ export class DynamicViewsMasonryView extends BasesView {
       );
       this.deferredRemeasureRafId = null;
     }
+    if (this.mountRemeasureTimeout !== null) {
+      clearTimeout(this.mountRemeasureTimeout);
+      this.mountRemeasureTimeout = null;
+    }
     this.layoutResizeObserver?.disconnect();
     this.layoutResizeObserver = null;
     this.cardResizeObserver?.disconnect();
     this.cardResizeObserver = null;
+    this.scrollResizeObserver?.disconnect();
+    this.scrollResizeObserver = null;
     this.observerWindow = null;
   }
 

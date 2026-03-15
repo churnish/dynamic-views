@@ -706,7 +706,7 @@ export class DynamicViewsGridView extends BasesView {
     }
   }
 
-  /** Cancel pending RAFs, disconnect observers, and clear window reference.
+  /** Cancel pending RAFs and timeouts, disconnect observers, and clear window reference.
    *  RAFs must be canceled BEFORE nullifying observerWindow — IDs are per-window. */
   private teardownObservers(): void {
     if (this.virtualScrollRafId !== null) {
