@@ -268,16 +268,14 @@ describe('masonry-layout', () => {
 
       // Check card1
       expect(card1.classList.contains('masonry-positioned')).toBe(true);
-      expect(card1.style.getPropertyValue('--masonry-width')).toBe(
-        `${result.cardWidth}px`
-      );
-      expect(card1.style.getPropertyValue('--masonry-left')).toBe('0px');
-      expect(card1.style.getPropertyValue('--masonry-top')).toBe('0px');
+      expect(card1.style.width).toBe(`${result.cardWidth}px`);
+      expect(card1.style.left).toBe('0px');
+      expect(card1.style.top).toBe('0px');
 
       // Check card2
       expect(card2.classList.contains('masonry-positioned')).toBe(true);
-      expect(card2.style.getPropertyValue('--masonry-left')).toBeTruthy();
-      expect(card2.style.getPropertyValue('--masonry-top')).toBeTruthy();
+      expect(card2.style.left).toBeTruthy();
+      expect(card2.style.top).toBeTruthy();
     });
   });
 

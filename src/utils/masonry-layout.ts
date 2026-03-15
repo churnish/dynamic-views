@@ -228,13 +228,13 @@ export function applyMasonryLayout(
     `${result.containerHeight}px`
   );
 
-  // Position each card using CSS custom properties
+  // Position each card using inline styles
   cards.forEach((card, index) => {
     const pos = result.positions[index];
     card.classList.add('masonry-positioned');
-    card.style.setProperty('--masonry-width', `${result.cardWidth}px`);
-    card.style.setProperty('--masonry-left', `${pos.left}px`);
-    card.style.setProperty('--masonry-top', `${pos.top}px`);
+    card.style.width = `${result.cardWidth}px`;
+    card.style.left = `${pos.left}px`;
+    card.style.top = `${pos.top}px`;
 
     // Log first 3 cards applied
     if (index < 3) {

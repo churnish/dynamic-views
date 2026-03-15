@@ -1171,9 +1171,9 @@ export function View({
         const cards = container.querySelectorAll<HTMLElement>('.card');
         cards.forEach((card) => {
           card.classList.remove('masonry-positioned');
-          card.style.removeProperty('--masonry-width');
-          card.style.removeProperty('--masonry-left');
-          card.style.removeProperty('--masonry-top');
+          card.style.removeProperty('width');
+          card.style.removeProperty('left');
+          card.style.removeProperty('top');
         });
         container.classList.remove('masonry-container');
         container.style.removeProperty('--masonry-height');
@@ -1251,12 +1251,9 @@ export function View({
           const newCards = cards.slice(prevCount);
 
           // Pre-set width on new cards before measuring
-          newCards.forEach((card) =>
-            card.style.setProperty(
-              '--masonry-width',
-              `${lastResult.cardWidth}px`
-            )
-          );
+          newCards.forEach((card) => {
+            card.style.width = `${lastResult.cardWidth}px`;
+          });
 
           // Force content rendering for accurate measurement
           // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
