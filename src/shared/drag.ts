@@ -83,22 +83,33 @@ export function createUrlButtonDragHandlers(
   onDragEnd: () => void;
   onTouchStart: () => void;
 } {
+  let cleanedUp = false;
   const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
     const doc = iconEl.ownerDocument;
     doc.removeEventListener('drop', cleanup);
     const body = doc.body;
-    body.querySelector('.tooltip')?.remove();
+    // Scope removal to matching tooltip text to avoid removing unrelated tooltips
+    const currentUrl = iconEl.dataset.dvUrlValue ?? urlValue;
+    for (const tip of body.querySelectorAll('.tooltip')) {
+      if (tip.textContent === currentUrl) {
+        tip.remove();
+        break;
+      }
+    }
     body.removeClass('dynamic-views-dragging');
     iconEl.style.removeProperty('pointer-events');
     // iOS: Obsidian creates tooltip from aria-label ~1-2s after native drag
-    // ends. MutationObserver catches and removes it. Scoped to urlValue to
+    // ends. MutationObserver catches and removes it. Scoped to URL text to
     // avoid removing unrelated tooltips.
-    const mo = new MutationObserver((mutations) => {
+    const win = (doc.defaultView ?? window) as typeof globalThis;
+    const mo = new win.MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const n of m.addedNodes) {
           if (
             (n as Element).classList?.contains('tooltip') &&
-            (n as Element).textContent === urlValue
+            (n as Element).textContent === currentUrl
           ) {
             (n as Element).remove();
           }
@@ -110,11 +121,15 @@ export function createUrlButtonDragHandlers(
   };
 
   const onTouchStart = () => {
+    cleanedUp = false;
     const doc = iconEl.ownerDocument;
     // Fresh registration — only one listener active at a time
     doc.removeEventListener('drop', cleanup);
     doc.addEventListener('drop', cleanup, { once: true });
-    // Cancel fallback if touch ends without drag
+    // Cancel fallback if touch ends without drag.
+    // Cannot use touchcancel here — iOS fires touchcancel when native drag
+    // STARTS (dual meaning: drag started vs gesture stolen), which would
+    // remove the drop listener we need for drag cleanup.
     iconEl.addEventListener(
       'touchend',
       () => {

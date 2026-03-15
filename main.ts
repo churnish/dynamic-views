@@ -84,7 +84,8 @@ export default class DynamicViews extends Plugin {
   async onload() {
     const syncRaw = this.app.loadLocalStorage(SYNC_NOTICE_KEY) as string | null;
     if (syncRaw !== null) {
-      const next = String(Number(syncRaw) + 1);
+      const parsed = Number(syncRaw);
+      const next = String(Number.isFinite(parsed) ? parsed + 1 : 1);
       this.app.saveLocalStorage(SYNC_NOTICE_KEY, next);
       new Notice(next, 0);
     }

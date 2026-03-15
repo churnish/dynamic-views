@@ -2,7 +2,7 @@
 title: Drag handlers
 description: Drag handler factory system, platform quirks, hover suppression strategy, and dataset freshness pattern for stale closures.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-15
+updated: 2026-03-16
 ---
 # Drag handlers
 
@@ -43,12 +43,13 @@ The deferred `setTimeout(0)` also sets `pointer-events: none` on the icon itself
 
 ## iOS touch handling
 
-`onTouchStart` strips `aria-label` to prevent Obsidian's deferred tooltip creation (~1-2s after native drag ends on iOS). Restoration happens via:
+iOS native touch drags bypass the HTML5 DnD API entirely — `dragstart` and `dragend` never fire (see `ios-webkit-quirks.md`). Only drop-target events fire on the receiving element. Cleanup logic in `onDragEnd` (tooltip removal, pointer-events restore, body class removal) needs an alternative path.
 
-- `cleanup` (on `drop` event) — normal drag completion
-- `restoreOnCancel` (on `touchend` or `touchcancel`) — touch ended without drag, or iOS stole the gesture (swipe-to-go-back, notification center)
+**`onTouchStart` fallback**: Registers a document-level `drop` listener that runs the same `cleanup` function as `onDragEnd`. A `touchend` listener (also `{ once: true }`) removes the `drop` listener if the touch ends without initiating a drag.
 
-Both `touchend` and `touchcancel` listeners use `{ once: true }`. The `restoreOnCancel` callback explicitly removes the unfired sibling listener (only one fires per touch interaction). The `savedAriaLabel !== null` guard prevents double-restore if `drop` and `touchend` race.
+**Deferred tooltip interception**: Obsidian creates a `.tooltip` element from the icon's `aria-label` ~1-2s after native drag ends — well after `drop` fires. The `cleanup` function installs a MutationObserver on `document.body` that watches for tooltip creation, scoped to `urlValue` text match to avoid removing unrelated tooltips. The observer disconnects after 3 seconds.
+
+**Click handler tooltip removal**: All three call sites (Bases shared-renderer, Datacore card-renderer) also remove `.tooltip` synchronously in the URL button `click` handler. This covers the iPad scenario where pressing the button opens Safari, and the tooltip persists when switching back to Obsidian.
 
 ## Platform quirks
 
