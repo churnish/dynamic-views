@@ -97,7 +97,7 @@ export function calculateMasonryDimensions(params: {
 
 /**
  * Calculate masonry layout positions for cards
- * IMPORTANT: Cards should already have their width set via --masonry-width
+ * IMPORTANT: Cards should already have their width set via style.width
  * to ensure accurate height measurements (text wrapping depends on width)
  */
 export function calculateMasonryLayout(
@@ -206,8 +206,8 @@ export function calculateMasonryLayout(
 }
 
 /**
- * Apply masonry layout directly to DOM elements
- * Used when bypassing React for performance
+ * Apply masonry layout directly to DOM elements via inline styles
+ * Main Datacore positioning path — applies positions via direct inline styles
  */
 export function applyMasonryLayout(
   container: HTMLElement,

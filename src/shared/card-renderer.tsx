@@ -111,6 +111,8 @@ interface CardContainerElement extends HTMLElement {
   _intentionalFocus?: boolean;
   _lastKey?: string | null;
   _mouseDown?: boolean;
+  /** Preserved across Preact ref cycles (only initialized when `undefined`),
+   *  unlike the other transient fields that reset on every ref cycle. */
   _keyboardNavActive?: boolean;
 }
 

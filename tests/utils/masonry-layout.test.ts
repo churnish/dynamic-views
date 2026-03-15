@@ -222,7 +222,7 @@ describe('masonry-layout', () => {
   });
 
   describe('applyMasonryLayout', () => {
-    it('should apply CSS custom properties to container', () => {
+    it('should set container class and height', () => {
       const container = document.createElement('div');
       const cards = [document.createElement('div')];
 
@@ -246,7 +246,7 @@ describe('masonry-layout', () => {
       );
     });
 
-    it('should apply CSS custom properties to cards', () => {
+    it('should apply inline positioning styles to cards', () => {
       const container = document.createElement('div');
       const card1 = document.createElement('div');
       const card2 = document.createElement('div');

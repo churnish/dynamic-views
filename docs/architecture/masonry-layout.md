@@ -469,7 +469,7 @@ Both backends share the same pure layout math (`calculateMasonryLayout()`, `calc
 | ----------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | **Rendering model**     | Imperative DOM manipulation via `renderCard()`.           | Declarative Preact/JSX components via `CardRenderer`.             |
 | **State management**    | Instance fields + `{ current }` ref boxes on view class.  | Preact hooks (`dc.useState`, `dc.useRef`, `dc.useEffect`).        |
-| **Card positioning**    | Direct inline styles (`style.left`, `style.top`).         | CSS custom properties (`--masonry-left`, `--masonry-top`).        |
+| **Card positioning**    | Direct inline styles (`style.left`, `style.top`).         | Direct inline styles (`style.left`, `style.top`).                 |
 | **Virtual scrolling**   | Full `VirtualItem[]` tracking with mount/unmount.         | Not implemented — all displayed cards rendered in DOM.            |
 | **Resize strategy**     | 3-tier: proportional fast path → correction → fallback.   | Full recalculation via double-RAF throttle. No proportional path. |
 | **Resize cost**         | ~3-5ms/frame (proportional), ~6-9ms (correction).         | Full `calculateMasonryLayout()` per frame.                        |
@@ -506,7 +506,7 @@ Both backends share the same pure layout math (`calculateMasonryLayout()`, `calc
 | `calculateIncrementalMasonryLayout()` | Both     | Continues greedy placement from previous `columnHeights`.                                                                                                                                                                                                                                                                                                              |
 | `repositionWithStableColumns()`       | Both     | Reposition with heights changed but column assignments preserved.                                                                                                                                                                                                                                                                                                      |
 | `computeGreedyColumnHeights()`        | Bases    | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 8`. |
-| `applyMasonryLayout()`                | Datacore | Applies a `MasonryLayoutResult` to DOM elements via CSS custom properties.                                                                                                                                                                                                                                                                                             |
+| `applyMasonryLayout()`                | Datacore | Applies a `MasonryLayoutResult` to DOM elements via direct inline styles.                                                                                                                                                                                                                                                                                              |
 
 ### Shared behavior
 
