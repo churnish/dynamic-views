@@ -1292,12 +1292,16 @@ export function CardRenderer({
           return;
         }
 
-        // Initialize focus management properties (always reset to ensure clean state)
+        // Initialize focus management properties (transient props reset to clean state)
         const container = el as CardContainerElement;
         container._intentionalFocus = false;
         container._lastKey = null;
         container._mouseDown = false;
-        container._keyboardNavActive = false;
+        // Only initialize on first mount — preserve across Preact re-render
+        // ref cycles (inline ref fires null→el on every render, re-running setup)
+        if (container._keyboardNavActive === undefined) {
+          container._keyboardNavActive = false;
+        }
 
         // Track last key for Tab detection in focusin
         // Note: Arrow key navigation is handled by setupHoverKeyboardNavigation in view layer
