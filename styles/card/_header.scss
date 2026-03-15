@@ -94,6 +94,12 @@ body.dynamic-views-file-type-ext
     pointer-events: none;
   }
 
+  /* Suppress Obsidian's .text-icon-button:hover background during drag —
+     :hover pseudo-class stays stuck on drag source (Chromium quirk) */
+  body.dynamic-views-dragging .card-title-url-icon {
+    background-color: transparent !important;
+  }
+
   /* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
   .dynamic-views
     .card.image-format-poster.hover-intent-active
