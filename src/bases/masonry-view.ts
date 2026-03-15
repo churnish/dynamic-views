@@ -782,6 +782,12 @@ export class DynamicViewsMasonryView extends BasesView {
     this.cardResizeObserver?.disconnect();
     this.cardResizeObserver = null;
     this.observerWindow = null;
+
+    // Force processDataUpdate to fall through to setupMasonryLayout (which
+    // recreates observers in the new window context). Without this, the
+    // renderHash early return prevents observer recreation — cards keep
+    // stale inline positions from the old window width.
+    this.renderState.lastRenderHash = '';
   }
 
   onload(): void {

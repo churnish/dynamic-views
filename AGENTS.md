@@ -13,12 +13,21 @@
 - **Press over click/tap**: In all user-facing text, prefer 'press' over 'click' and 'tap'.
 - **Style Settings**: NEVER abbreviate to 'SS' in comments, docs, or user-facing text. ALWAYS use the full name 'Style Settings'. To refer to a singular option, use 'style setting' (lowercase).
 - **Text preview**: When referring to the Markdown-stripped text shown on cards, ALWAYS use 'text preview' NOT 'preview'. Use 'previews' (plural) ONLY when referring to both text preview and thumbnail image format collectively.
+- **Properties**: Use "properties" (NOT "frontmatter", "front-matter", or "YAML") when referring to YAML metadata at the top of Markdown files.
+- **Markdown**: "Markdown" is a proper noun and MUST be capitalized.
 
 ## Datacore parity
 
 - **Current state**: Datacore card views display ONLY hardcoded properties (`file.tags`, `file.mtime`). Custom user-defined properties are NOT yet supported.
 - **Future work**: Datacore will gain full property display parity with Bases — configurable property lists, custom timestamp properties, labels, icons, and ALL rendering features. Shared helpers in `render-utils.ts` (`isTimestampProperty`, `getTimestampIcon`) already accept both `BasesResolvedSettings` and `ResolvedSettings`.
 - **Lay the foundation**: When working on shared infrastructure (helpers, types, rendering logic), ALWAYS design it to work with both backends. Wire up Datacore call sites even when the feature is NOT yet observable there.
+
+## Popout safety
+
+- **Derive from DOM**: In `src/shared/`, `src/bases/`, and `src/datacore/`, NEVER use bare `document`, `window`, `new ResizeObserver`, `new IntersectionObserver`, `getComputedStyle`, `matchMedia`, `navigator`, or `document.createElement`. ALWAYS derive from the nearest DOM element via `getOwnerWindow(el)` (`src/utils/owner-window.ts`) or `el.ownerDocument`. `ResizeObserver` from the wrong window silently fails on popout elements.
+- **Module-level code**: When module-level code needs all open documents (no DOM element in scope), use the `setDocumentProvider` pattern — a module-level setter registered from `main.ts` onload via `getAllPopoutDocuments()`.
+- **Safe exceptions**: `document.body.classList` reads for config classes (Style Settings syncs to all documents), `setTimeout`/`setInterval`/`requestIdleCallback` (process-level), `new Image()` for network validation (never inserted into DOM), offscreen `document.createElement('canvas')` for measurement.
+- **Reference**: See `knowledge/electron-popout-quirks.md` for the full list of cross-window pitfalls, safe patterns, and mitigations.
 
 ## Navigation
 

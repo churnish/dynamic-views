@@ -43,6 +43,7 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
+  MOUNT_REMEASURE_MS,
   computeHoverScale,
 } from '../shared/constants';
 import {
@@ -64,6 +65,7 @@ import {
 import {
   initializeContainerFocus,
   setupHoverKeyboardNavigation,
+  type VirtualCardRect,
 } from '../shared/keyboard-nav';
 import {
   ScrollPreservation,
@@ -84,7 +86,11 @@ import type {
   SortState,
   FocusState,
 } from '../types';
-import { setupContentVisibility } from '../shared/content-visibility';
+import {
+  VirtualItem,
+  measureScalableHeight,
+  estimateUnmountedHeight,
+} from '../shared/virtual-scroll';
 import { setupStickyHeadingObserver } from './sticky-heading';
 import {
   initializeTextPreviewClamp,
@@ -206,8 +212,6 @@ export class DynamicViewsGridView extends BasesView {
   private lastColumnCount: number = 0;
   private resizeRafId: number | null = null;
   private lastObservedWidth: number = 0;
-  private contentVisibility: ReturnType<typeof setupContentVisibility> | null =
-    null;
   private stickyHeadings: ReturnType<typeof setupStickyHeadingObserver> | null =
     null;
   private hasBatchAppended: boolean = false;
@@ -222,6 +226,24 @@ export class DynamicViewsGridView extends BasesView {
     timeoutId: null,
     callback: null,
   };
+
+  // Virtual scroll state
+  private virtualItems: VirtualItem[] = [];
+  private virtualItemsByGroup = new Map<string | undefined, VirtualItem[]>();
+  private virtualItemByPath = new Map<string, VirtualItem>();
+  private groupContainers = new Map<string | undefined, HTMLElement>();
+  private placeholderEls = new Map<VirtualItem, HTMLElement>();
+  private cachedGroupOffsets = new Map<string | undefined, number>();
+  private hasUserScrolled = false;
+  private isCompensatingScroll = false;
+  private isLayoutBusy = false;
+  private virtualScrollRafId: number | null = null;
+  private cardResizeObserver: ResizeObserver | null = null;
+  private cardResizeRafId: number | null = null;
+  private cardResizeDirty = false;
+  private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private newlyMountedEls: HTMLElement[] = [];
+  private lastMeasuredCardWidth = 0;
 
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
@@ -282,6 +304,46 @@ export class DynamicViewsGridView extends BasesView {
       // scroll (prevents flicker). Empty first so the measurement reflects
       // the final layout (group content removed).
       if (groupEl) groupEl.empty();
+
+      // Find matching groupKey for VirtualItem cleanup
+      let matchingGroupKey: string | undefined;
+      let foundGroup = false;
+      for (const k of this.groupContainers.keys()) {
+        if (this.getCollapseKey(k) === collapseKey) {
+          matchingGroupKey = k;
+          foundGroup = true;
+          break;
+        }
+      }
+      if (foundGroup) {
+        // Cleanup VirtualItems for collapsed group
+        for (const item of this.virtualItems) {
+          if (item.groupKey === matchingGroupKey) {
+            if (item.el) {
+              item.handle?.cleanup();
+              this.cardResizeObserver?.unobserve(item.el);
+              if (this.focusState.hoveredEl === item.el)
+                this.focusState.hoveredEl = null;
+            }
+            const placeholder = this.placeholderEls.get(item);
+            if (placeholder) {
+              placeholder.remove();
+              this.placeholderEls.delete(item);
+            }
+            this.virtualItemByPath.delete(item.cardData.path);
+          }
+        }
+
+        // Remove from virtualItemsByGroup and rebuild order
+        this.virtualItemsByGroup.delete(matchingGroupKey);
+        this.rebuildVirtualItemsOrder();
+        this.groupContainers.delete(matchingGroupKey);
+        this.rebuildGroupIndex();
+
+        // Refresh offsets — later groups moved up
+        this.updateCachedGroupOffsets();
+      }
+
       this.renderState.lastRenderHash = '';
       const headerTop = headerEl.getBoundingClientRect().top;
       const scrollTop = this.scrollEl.getBoundingClientRect().top;
@@ -384,26 +446,76 @@ export class DynamicViewsGridView extends BasesView {
           )
       : 0;
 
+    this.isLayoutBusy = true;
+
+    const groupKey =
+      collapseKey === UNDEFINED_GROUP_KEY_SENTINEL ? undefined : collapseKey;
+    const newItems: VirtualItem[] = [];
+
     for (let i = 0; i < cards.length; i++) {
-      this.renderCard(
+      const handle = this.renderCard(
         groupEl,
         cards[i],
         entries[i],
         precedingCards + i,
         settings
       );
+      const item: VirtualItem = {
+        index: 0,
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        measuredHeight: 0,
+        measuredAtWidth: 0,
+        scalableHeight: 0,
+        fixedHeight: 0,
+        col: 0,
+        cardData: cards[i],
+        entry: entries[i],
+        groupKey,
+        el: handle.el,
+        handle,
+      };
+      newItems.push(item);
+      this.virtualItemByPath.set(cards[i].path, item);
+      this.cardResizeObserver?.observe(handle.el);
     }
 
+    this.groupContainers.set(groupKey, groupEl);
+    this.virtualItemsByGroup.set(groupKey, newItems);
+    this.rebuildVirtualItemsOrder(); // Splice in DOM order
+    this.rebuildGroupIndex(); // Refresh cached item.index values
+
     // Post-render hooks scoped to this group
-    syncResponsiveClasses(
-      Array.from(groupEl.querySelectorAll<HTMLElement>('.card'))
+    const groupCards = Array.from(
+      groupEl.querySelectorAll<HTMLElement>('.card')
     );
+    syncResponsiveClasses(groupCards);
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
     initializeTextPreviewClamp(groupEl);
-    setHoverScaleForCards(
-      Array.from(groupEl.querySelectorAll<HTMLElement>('.card'))
-    );
+    setHoverScaleForCards(groupCards);
+
+    // Measure new card positions
+    for (const item of newItems) {
+      if (item.el && item.height === 0) {
+        const groupContainer = this.groupContainers.get(item.groupKey);
+        item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
+        item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
+        item.height = item.el.offsetHeight;
+        item.width = item.el.offsetWidth;
+        item.measuredHeight = item.height;
+        item.measuredAtWidth = item.width;
+        item.scalableHeight = measureScalableHeight(item.el);
+        item.fixedHeight = item.measuredHeight - item.scalableHeight;
+      }
+    }
+    this.updateCachedGroupOffsets();
+
+    this.isLayoutBusy = false;
+    // Immediate cull: expanding a large group can dump many cards into DOM
+    if (this.hasUserScrolled) this.syncVirtualScroll();
 
     // Observe newly expanded heading for sticky stuck detection
     const newHeading = groupEl
@@ -612,12 +724,36 @@ export class DynamicViewsGridView extends BasesView {
       this.containerEl
     );
 
-    // Disconnect old observer — bound to destroyed popout's V8 isolate.
+    // Disconnect old observers — bound to destroyed popout's V8 isolate.
     // Grid uses CSS Grid for layout, so observer absence is safe until
-    // the next render cycle recreates it in renderCardBatch.
+    // the next render cycle recreates them.
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.observerWindow = null;
+    this.cardResizeObserver?.disconnect();
+    this.cardResizeObserver = null;
+    if (this.virtualScrollRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.virtualScrollRafId
+      );
+      this.virtualScrollRafId = null;
+    }
+    if (this.cardResizeRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.cardResizeRafId
+      );
+      this.cardResizeRafId = null;
+    }
+    if (this.mountRemeasureTimeout !== null) {
+      clearTimeout(this.mountRemeasureTimeout);
+      this.mountRemeasureTimeout = null;
+    }
+
+    // Force processDataUpdate to fall through to full render (which
+    // recreates observers in the new window context). Without this, the
+    // renderHash early return prevents observer recreation — infinite
+    // scroll and card resize detection stay broken in the popout.
+    this.renderState.lastRenderHash = '';
   }
 
   onload(): void {
@@ -1089,6 +1225,34 @@ export class DynamicViewsGridView extends BasesView {
       });
       this.containerEl.addClass('dynamic-views-height-preserved');
 
+      // Reset virtual scroll state
+      this.virtualItems = [];
+      this.virtualItemsByGroup.clear();
+      this.virtualItemByPath.clear();
+      this.groupContainers.clear();
+      this.placeholderEls.clear();
+      this.cachedGroupOffsets.clear();
+      this.hasUserScrolled = false;
+      this.isLayoutBusy = false;
+      this.cardResizeDirty = false;
+      this.newlyMountedEls = [];
+      if (this.virtualScrollRafId !== null) {
+        (this.observerWindow ?? window).cancelAnimationFrame(
+          this.virtualScrollRafId
+        );
+        this.virtualScrollRafId = null;
+      }
+      if (this.mountRemeasureTimeout !== null) {
+        clearTimeout(this.mountRemeasureTimeout);
+        this.mountRemeasureTimeout = null;
+      }
+      if (this.cardResizeRafId !== null) {
+        (this.observerWindow ?? window).cancelAnimationFrame(
+          this.cardResizeRafId
+        );
+        this.cardResizeRafId = null;
+      }
+
       // Clear and re-render
       this.containerEl.empty();
       this.cardDataByPath.clear();
@@ -1157,6 +1321,7 @@ export class DynamicViewsGridView extends BasesView {
           'dynamic-views-group bases-cards-group'
         );
         setGroupKeyDataset(groupEl, groupKey);
+        this.groupContainers.set(groupKey, groupEl);
 
         // Skip card rendering for collapsed groups
         if (isCollapsed) continue;
@@ -1186,7 +1351,32 @@ export class DynamicViewsGridView extends BasesView {
           const card = cards[i];
           const entry = groupEntries[i];
           this.cardDataByPath.set(card.path, { cardData: card, entry });
-          this.renderCard(groupEl, card, entry, displayedSoFar + i, settings);
+          const handle = this.renderCard(
+            groupEl,
+            card,
+            entry,
+            displayedSoFar + i,
+            settings
+          );
+          const item: VirtualItem = {
+            index: 0, // Unused by grid — array position is the identity
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            measuredHeight: 0,
+            measuredAtWidth: 0,
+            scalableHeight: 0,
+            fixedHeight: 0,
+            col: 0,
+            cardData: card,
+            entry,
+            groupKey,
+            el: handle.el,
+            handle,
+          };
+          this.virtualItems.push(item);
+          this.virtualItemByPath.set(card.path, item);
         }
 
         displayedSoFar += entriesToDisplay;
@@ -1210,6 +1400,17 @@ export class DynamicViewsGridView extends BasesView {
       setHoverScaleForCards(
         Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
       );
+
+      // Measure card positions and build group index for virtual scrolling
+      this.rebuildGroupIndex();
+      this.measureAllCardPositions();
+      this.updateCachedGroupOffsets();
+
+      // Setup cardResizeObserver and observe all initial cards
+      this.setupCardResizeObserver();
+      for (const item of this.virtualItems) {
+        if (item.el) this.cardResizeObserver!.observe(item.el);
+      }
 
       // Rebuild sticky heading observer for all non-collapsed group headings
       this.stickyHeadings?.disconnect();
@@ -1275,21 +1476,125 @@ export class DynamicViewsGridView extends BasesView {
                 if (scrollBefore > 0) {
                   this.scrollEl.scrollTop = scrollBefore;
                 }
-              }
 
-              // Card width may change within same column count — re-sync
-              const feed = this.feedContainerRef.current;
-              if (feed?.isConnected) {
+                // Remount-and-cull: column change invalidates height estimates
+                this.isLayoutBusy = true;
                 (this.observerWindow ?? window).requestAnimationFrame(() => {
-                  if (!feed.isConnected) return;
-                  syncResponsiveClasses(
-                    Array.from(feed.querySelectorAll<HTMLElement>('.card'))
-                  );
-                  initializeScrollGradients(feed);
-                  setHoverScaleForCards(
-                    Array.from(feed.querySelectorAll<HTMLElement>('.card'))
-                  );
+                  if (!this.containerEl?.isConnected) {
+                    this.isLayoutBusy = false;
+                    return;
+                  }
+
+                  const rvSettings = this.lastRenderedSettings;
+                  if (!rvSettings) {
+                    this.isLayoutBusy = false;
+                    return;
+                  }
+
+                  // Refresh group offsets — column change reflows CSS Grid
+                  this.updateCachedGroupOffsets();
+
+                  const rvScrollTop = this.scrollEl.scrollTop;
+                  const paneHeight = this.scrollEl.clientHeight;
+                  const visibleTop = rvScrollTop - paneHeight;
+                  const visibleBottom = rvScrollTop + paneHeight + paneHeight;
+
+                  // Phase 1: Mount all items in viewport + buffer
+                  for (const item of this.virtualItems) {
+                    if (!item.el && item.height > 0) {
+                      const containerOffsetY = this.cachedGroupOffsets.get(
+                        item.groupKey
+                      );
+                      if (containerOffsetY === undefined) continue;
+                      const itemTop = containerOffsetY + item.y;
+                      const itemBottom = itemTop + item.height;
+                      if (itemBottom > visibleTop && itemTop < visibleBottom) {
+                        this.mountVirtualItem(item, rvSettings);
+                      }
+                    }
+                  }
+
+                  // Phase 2: Measure actual heights and positions
+                  const newCardWidth =
+                    this.virtualItems.find((v) => v.el)?.width ?? 0;
+                  this.lastMeasuredCardWidth = newCardWidth;
+                  for (const item of this.virtualItems) {
+                    if (item.el) {
+                      const groupEl = this.groupContainers.get(item.groupKey);
+                      item.x = item.el.offsetLeft - (groupEl?.offsetLeft ?? 0);
+                      item.height = item.el.offsetHeight;
+                      item.width = item.el.offsetWidth;
+                      item.measuredHeight = item.height;
+                      item.measuredAtWidth = item.width;
+                      item.scalableHeight = measureScalableHeight(item.el);
+                      item.fixedHeight =
+                        item.measuredHeight - item.scalableHeight;
+                    } else if (newCardWidth > 0) {
+                      item.height = estimateUnmountedHeight(item, newCardWidth);
+                    }
+                  }
+
+                  this.recomputeYPositions();
+
+                  // Update placeholder heights BEFORE group offsets
+                  for (const item of this.virtualItems) {
+                    if (!item.el) {
+                      const placeholder = this.placeholderEls.get(item);
+                      if (placeholder) {
+                        placeholder.style.height = `${item.height}px`;
+                        placeholder.style.minHeight = `${item.height}px`;
+                      }
+                    }
+                  }
+
+                  this.updateCachedGroupOffsets();
+
+                  // Phase 3: Cull — unmount items now outside viewport
+                  for (const item of this.virtualItems) {
+                    if (!item.el) continue;
+                    const containerOffsetY = this.cachedGroupOffsets.get(
+                      item.groupKey
+                    );
+                    if (containerOffsetY === undefined) continue;
+                    const itemTop = containerOffsetY + item.y;
+                    const itemBottom = itemTop + item.height;
+                    if (!(itemBottom > visibleTop && itemTop < visibleBottom)) {
+                      this.unmountVirtualItem(item);
+                    }
+                  }
+
+                  // Sync responsive classes on mounted cards only
+                  const mountedCards = this.virtualItems
+                    .filter((v) => v.el)
+                    .map((v) => v.el!);
+                  syncResponsiveClasses(mountedCards);
+                  initializeScrollGradients(this.feedContainerRef.current!);
+                  setHoverScaleForCards(mountedCards);
+
+                  this.isLayoutBusy = false;
+
+                  // Schedule deferred passes for cards mounted in Phase 1
+                  if (this.newlyMountedEls.length > 0) {
+                    this.scheduleMountRemeasure();
+                  }
+
+                  this.syncVirtualScroll();
                 });
+              } else {
+                // Card width may change within same column count — re-sync
+                const feed = this.feedContainerRef.current;
+                if (feed?.isConnected) {
+                  (this.observerWindow ?? window).requestAnimationFrame(() => {
+                    if (!feed.isConnected) return;
+                    syncResponsiveClasses(
+                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
+                    );
+                    initializeScrollGradients(feed);
+                    setHoverScaleForCards(
+                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
+                    );
+                  });
+                }
               }
             } finally {
               this.isUpdatingColumns = false;
@@ -1372,9 +1677,13 @@ export class DynamicViewsGridView extends BasesView {
         onHoverEnd: () => {
           this.focusState.hoveredEl = null;
         },
+        getVirtualRects: () => this.getVirtualRects(),
+        onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
       }
     );
-    this.contentVisibility?.observe(handle.el);
+    // Caller is responsible for cardResizeObserver.observe() —
+    // mountVirtualItem, appendBatch, expandGroup, and content update
+    // each observe at the appropriate point in their flow.
     return handle;
   }
 
@@ -1384,19 +1693,10 @@ export class DynamicViewsGridView extends BasesView {
     settings: BasesResolvedSettings,
     sortMethod: string
   ): void {
-    const feedEl = this.feedContainerRef.current;
-    if (!feedEl) return;
-
-    for (const cardEl of feedEl.querySelectorAll<HTMLElement>(
-      '.card[data-path]'
-    )) {
-      const path = cardEl.dataset.path;
-      if (!path) continue;
-      const stored = this.cardDataByPath.get(path);
+    for (const item of this.virtualItems) {
+      const stored = this.cardDataByPath.get(item.cardData.path);
       if (!stored) continue;
 
-      // Rebuild CardData with new settings (cheap: property lookups only).
-      // Preserves cached textPreview and imageUrl from previous render.
       stored.cardData = basesEntryToCardData(
         this.app,
         stored.entry,
@@ -1407,28 +1707,33 @@ export class DynamicViewsGridView extends BasesView {
         stored.cardData.textPreview,
         stored.cardData.imageUrl
       );
+      item.cardData = stored.cardData;
 
-      this.cardRenderer.updateTitleText(
-        cardEl,
-        stored.cardData,
-        stored.entry,
-        settings
-      );
-      this.cardRenderer.rerenderSubtitle(
-        cardEl,
-        stored.cardData,
-        stored.entry,
-        settings
-      );
-      this.cardRenderer.rerenderProperties(
-        cardEl,
-        stored.cardData,
-        stored.entry,
-        settings
-      );
+      // Only update DOM for mounted cards
+      if (item.el) {
+        this.cardRenderer.updateTitleText(
+          item.el,
+          stored.cardData,
+          stored.entry,
+          settings
+        );
+        this.cardRenderer.rerenderSubtitle(
+          item.el,
+          stored.cardData,
+          stored.entry,
+          settings
+        );
+        this.cardRenderer.rerenderProperties(
+          item.el,
+          stored.cardData,
+          stored.entry,
+          settings
+        );
+      }
     }
 
-    initializeScrollGradients(feedEl);
+    const feedEl = this.feedContainerRef.current;
+    if (feedEl) initializeScrollGradients(feedEl);
     this.scrollPreservation?.restoreAfterRender();
   }
 
@@ -1485,28 +1790,54 @@ export class DynamicViewsGridView extends BasesView {
         stored.entry = freshEntry;
       }
 
-      const cardEl = this.containerEl.querySelector<HTMLElement>(
-        `[data-path="${CSS.escape(path)}"]`
-      );
-      if (!cardEl) continue;
+      const vItem = this.virtualItemByPath.get(path);
+      if (vItem) {
+        vItem.cardData = newCard;
+        vItem.entry = freshEntry;
+      }
+
+      // Unmounted: skip DOM update (next mount uses fresh cardData)
+      if (!vItem?.el) continue;
+
+      const cardEl = vItem.el; // Non-null — continue above guarantees el exists
 
       if (SharedCardRenderer.hasImageChanged(oldCard, newCard)) {
-        this.contentVisibility?.unobserve(cardEl);
-        this.cardRenderer.abortCardRerenderControllers(cardEl);
-        const parent = cardEl.parentElement;
-        if (!parent) continue;
-        const nextSibling = cardEl.nextSibling;
-        cardEl.remove();
+        const groupEl = vItem.el.parentElement;
+        if (!groupEl) continue;
+        const nextSibling = vItem.el.nextSibling;
 
-        const tempContainer = cardEl.ownerDocument.createElement('div');
+        // Cleanup old card
+        vItem.handle?.cleanup();
+        this.cardRenderer.abortCardRerenderControllers(vItem.el);
+        this.cardResizeObserver?.unobserve(vItem.el);
+        vItem.el.remove();
+
+        // Render into connected group container (appends at end for offsetWidth reads),
+        // then move to correct slot. Uses cached index instead of hardcoded 0.
         const handle = this.renderCard(
-          tempContainer,
+          groupEl,
           newCard,
           freshEntry,
-          0,
+          vItem.index,
           settings
         );
-        parent.insertBefore(handle.el, nextSibling);
+        if (nextSibling) {
+          groupEl.insertBefore(handle.el, nextSibling);
+        }
+        // If was last child, renderCard already appended at correct position.
+
+        vItem.el = handle.el;
+        vItem.handle = handle;
+        this.cardResizeObserver?.observe(handle.el);
+
+        // Height-lock + deferred passes (same as mountVirtualItem)
+        handle.el.style.height = `${vItem.height}px`;
+        handle.el.addClass('dynamic-views-height-locked');
+        syncResponsiveClasses([handle.el]);
+        setHoverScaleForCards([handle.el]);
+        this.newlyMountedEls.push(handle.el);
+        this.scheduleMountRemeasure();
+
         replacedCardEls.push(handle.el);
       } else {
         this.cardRenderer.updateCardContent(
@@ -1518,19 +1849,9 @@ export class DynamicViewsGridView extends BasesView {
       }
     }
 
-    // Post-insert measurement passes for replaced cards
-    if (replacedCardEls.length > 0) {
-      syncResponsiveClasses(replacedCardEls);
-      initializeTitleTruncationForCards(replacedCardEls);
-      initializeTextPreviewClampForCards(replacedCardEls);
-      setHoverScaleForCards(replacedCardEls);
-    }
-
     // Re-initialize scroll gradients (property widths may have changed)
     const feedEl = this.feedContainerRef.current;
     if (feedEl) initializeScrollGradients(feedEl);
-
-    // Grid: CSS auto-handles row height changes, no relayout needed
   }
 
   /** Check if more content needed after layout completes, and load if so */
@@ -1572,6 +1893,8 @@ export class DynamicViewsGridView extends BasesView {
     // Increment render version to cancel any stale onDataUpdated renders
     this.renderState.version++;
     const currentVersion = this.renderState.version;
+
+    this.isLayoutBusy = true;
 
     try {
       const groupedData = this.data.groupedData;
@@ -1751,15 +2074,40 @@ export class DynamicViewsGridView extends BasesView {
           const card = cards[i];
           const entry = groupEntries[i];
           this.cardDataByPath.set(card.path, { cardData: card, entry });
-          const { el: cardEl } = this.renderCard(
+          const handle = this.renderCard(
             groupEl,
             card,
             entry,
             startIndex + newCardsRendered,
             settings
           );
-          newCardEls.push(cardEl);
+          newCardEls.push(handle.el);
+
+          const item: VirtualItem = {
+            index: 0,
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            measuredHeight: 0,
+            measuredAtWidth: 0,
+            scalableHeight: 0,
+            fixedHeight: 0,
+            col: 0,
+            cardData: card,
+            entry,
+            groupKey: currentGroupKey,
+            el: handle.el,
+            handle,
+          };
+          this.virtualItems.push(item);
+          this.virtualItemByPath.set(card.path, item);
+          this.cardResizeObserver?.observe(handle.el);
           newCardsRendered++;
+        }
+
+        if (!this.groupContainers.has(currentGroupKey)) {
+          this.groupContainers.set(currentGroupKey, groupEl);
         }
 
         displayedSoFar += groupEntriesToDisplay;
@@ -1781,6 +2129,27 @@ export class DynamicViewsGridView extends BasesView {
         setHoverScaleForCards(newCardEls);
       }
 
+      this.rebuildGroupIndex();
+      // Measure new cards (single reflow after batch)
+      for (const item of this.virtualItems) {
+        if (item.el && item.height === 0) {
+          const groupContainer = this.groupContainers.get(item.groupKey);
+          item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
+          item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
+          item.height = item.el.offsetHeight;
+          item.width = item.el.offsetWidth;
+          item.measuredHeight = item.height;
+          item.measuredAtWidth = item.width;
+          item.scalableHeight = measureScalableHeight(item.el);
+          item.fixedHeight = item.measuredHeight - item.scalableHeight;
+        }
+      }
+      this.updateCachedGroupOffsets();
+
+      // Clear guard, then sync
+      this.isLayoutBusy = false;
+      if (this.hasUserScrolled) this.syncVirtualScroll();
+
       // Mark that batch append occurred (for end indicator)
       this.hasBatchAppended = true;
 
@@ -1799,16 +2168,6 @@ export class DynamicViewsGridView extends BasesView {
 
   private setupInfiniteScroll(totalEntries: number): void {
     const scrollContainer = this.scrollEl;
-
-    // Recreate content-visibility observer (old IO entries auto-cleaned on DOM wipe)
-    this.contentVisibility?.disconnect();
-    this.contentVisibility = setupContentVisibility(scrollContainer);
-    // Observe all cards already rendered (initial render happens before this call)
-    for (const card of this.containerEl.querySelectorAll<HTMLElement>(
-      '.card'
-    )) {
-      this.contentVisibility.observe(card);
-    }
 
     // Clean up existing listener (don't use this.register() since this method is called multiple times)
     if (this.scrollThrottle.listener) {
@@ -1830,22 +2189,26 @@ export class DynamicViewsGridView extends BasesView {
       if (this.hasBatchAppended) {
         this.showEndIndicator();
       }
-      return;
     }
 
-    // Create scroll handler with throttling (scroll tracking is in constructor)
+    // Create scroll handler: virtual scroll sync + infinite scroll throttle
     this.scrollThrottle.listener = () => {
-      // Throttle: skip if cooldown active
-      if (this.scrollThrottle.timeoutId !== null) {
+      if (!this.hasUserScrolled) {
+        this.hasUserScrolled = true;
+      }
+
+      if (this.isCompensatingScroll) {
+        this.isCompensatingScroll = false;
         return;
       }
 
-      this.checkAndLoadMore(totalEntries);
+      this.scheduleVirtualScrollSync();
 
-      // Start throttle cooldown with trailing call
+      // Infinite scroll check (no-op when all loaded)
+      if (this.scrollThrottle.timeoutId !== null) return;
+      this.checkAndLoadMore(totalEntries);
       this.scrollThrottle.timeoutId = window.setTimeout(() => {
         this.scrollThrottle.timeoutId = null;
-        // Trailing call catches scroll position changes during throttle
         this.checkAndLoadMore(totalEntries);
       }, SCROLL_THROTTLE_MS);
     };
@@ -1857,6 +2220,401 @@ export class DynamicViewsGridView extends BasesView {
 
     // Trigger initial check in case viewport already needs more content
     this.checkAndLoadMore(totalEntries);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Virtual scroll infrastructure
+  // ---------------------------------------------------------------------------
+
+  private rebuildGroupIndex(): void {
+    this.virtualItemsByGroup.clear();
+    for (let i = 0; i < this.virtualItems.length; i++) {
+      const item = this.virtualItems[i];
+      item.index = i; // Cache flat index — avoids O(n) indexOf per mount
+      let group = this.virtualItemsByGroup.get(item.groupKey);
+      if (!group) {
+        group = [];
+        this.virtualItemsByGroup.set(item.groupKey, group);
+      }
+      group.push(item);
+    }
+  }
+
+  /** Rebuild virtualItems array in DOM group order (call after expand/collapse) */
+  private rebuildVirtualItemsOrder(): void {
+    const containers =
+      this.feedContainerRef.current?.querySelectorAll<HTMLElement>(
+        ':scope > .dynamic-views-group-section > .dynamic-views-group'
+      );
+    if (!containers) return;
+    this.virtualItems = [];
+    for (const container of containers) {
+      for (const [gk, el] of this.groupContainers) {
+        if (el === container) {
+          const items = this.virtualItemsByGroup.get(gk);
+          if (items) this.virtualItems.push(...items);
+          break;
+        }
+      }
+    }
+  }
+
+  private measureAllCardPositions(): void {
+    // Both card and groupContainer share .dynamic-views-group-section as
+    // offsetParent (has position: relative). Subtraction gives position
+    // relative to the .dynamic-views-group (cards container).
+    for (const item of this.virtualItems) {
+      if (!item.el) continue;
+      const groupContainer = this.groupContainers.get(item.groupKey);
+      item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
+      item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
+      item.height = item.el.offsetHeight;
+      item.width = item.el.offsetWidth;
+      item.measuredHeight = item.height;
+      item.measuredAtWidth = item.width;
+      item.scalableHeight = measureScalableHeight(item.el);
+      item.fixedHeight = item.measuredHeight - item.scalableHeight;
+    }
+    this.lastMeasuredCardWidth = this.virtualItems[0]?.width ?? 0;
+  }
+
+  private updateCachedGroupOffsets(): void {
+    const scrollRect = this.scrollEl.getBoundingClientRect();
+    const scrollTop = this.scrollEl.scrollTop;
+    this.cachedGroupOffsets.clear();
+    for (const [groupKey, container] of this.groupContainers) {
+      if (!container.isConnected) continue;
+      const containerRect = container.getBoundingClientRect();
+      this.cachedGroupOffsets.set(
+        groupKey,
+        containerRect.top - scrollRect.top + scrollTop
+      );
+    }
+  }
+
+  private unmountVirtualItem(item: VirtualItem): void {
+    if (!item.el) return;
+    if (this.focusState.hoveredEl === item.el) {
+      this.focusState.hoveredEl = null;
+    }
+
+    const placeholder = item.el.ownerDocument.createElement('div');
+    placeholder.className = 'dynamic-views-grid-placeholder';
+    // Height matches stretched row height — prevents row collapse
+    placeholder.style.height = `${item.height}px`;
+    placeholder.style.minHeight = `${item.height}px`;
+
+    item.el.replaceWith(placeholder);
+    this.placeholderEls.set(item, placeholder);
+
+    item.handle?.cleanup();
+    this.cardRenderer.abortCardRerenderControllers(item.el);
+    this.cardResizeObserver?.unobserve(item.el);
+    item.el = null;
+    item.handle = null;
+  }
+
+  private mountVirtualItem(
+    item: VirtualItem,
+    settings: BasesResolvedSettings
+  ): void {
+    const placeholder = this.placeholderEls.get(item);
+    if (!placeholder?.isConnected) return;
+
+    // Render into connected group container (appends at end).
+    // renderCard requires connected DOM for offsetWidth/getComputedStyle reads.
+    const groupContainer = placeholder.parentElement!;
+    const handle = this.cardRenderer.renderCard(
+      groupContainer,
+      item.cardData,
+      item.entry,
+      settings,
+      {
+        index: item.index,
+        focusableCardIndex: this.focusState.cardIndex,
+        containerRef: this.feedContainerRef,
+        onFocusChange: (newIndex: number) => {
+          this.focusState.cardIndex = newIndex;
+        },
+        onHoverStart: (el: HTMLElement) => {
+          this.focusState.hoveredEl = el;
+        },
+        onHoverEnd: () => {
+          this.focusState.hoveredEl = null;
+        },
+        getVirtualRects: () => this.getVirtualRects(),
+        onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
+      }
+    );
+
+    // Atomic swap: move card from end of container to placeholder's slot
+    placeholder.replaceWith(handle.el);
+    this.placeholderEls.delete(item);
+
+    // Height-lock: prevent row reflow until deferred passes complete.
+    // Card stays at placeholder height — mount/unmount never changes row geometry.
+    handle.el.style.height = `${item.height}px`;
+    handle.el.addClass('dynamic-views-height-locked');
+
+    item.el = handle.el;
+    item.handle = handle;
+
+    this.cardResizeObserver?.observe(handle.el);
+
+    // Fast sync passes (no height impact)
+    syncResponsiveClasses([handle.el]);
+    setHoverScaleForCards([handle.el]);
+
+    // Track for scoped deferred passes in onMountRemeasure
+    this.newlyMountedEls.push(handle.el);
+  }
+
+  private syncVirtualScroll(): void {
+    if (!this.virtualItems.length || !this.lastRenderedSettings) return;
+    if (!this.hasUserScrolled) return;
+    if (this.isLayoutBusy) return;
+
+    const scrollTop = this.scrollEl.scrollTop;
+    const paneHeight = this.scrollEl.clientHeight;
+    const visibleTop = scrollTop - paneHeight;
+    const visibleBottom = scrollTop + paneHeight + paneHeight;
+
+    let mountedNew = false;
+    const settings = this.lastRenderedSettings;
+
+    for (const item of this.virtualItems) {
+      if (item.height === 0) continue;
+
+      const containerOffsetY = this.cachedGroupOffsets.get(item.groupKey);
+      if (containerOffsetY === undefined) continue;
+      const itemTop = containerOffsetY + item.y;
+      const itemBottom = itemTop + item.height;
+      const inView = itemBottom > visibleTop && itemTop < visibleBottom;
+
+      if (inView && !item.el) {
+        this.mountVirtualItem(item, settings);
+        mountedNew = true;
+      } else if (!inView && item.el) {
+        this.unmountVirtualItem(item);
+      }
+    }
+
+    if (mountedNew) this.scheduleMountRemeasure();
+  }
+
+  private scheduleMountRemeasure(): void {
+    if (this.mountRemeasureTimeout !== null) return;
+    if (this.isLayoutBusy) return;
+    this.mountRemeasureTimeout = setTimeout(() => {
+      this.mountRemeasureTimeout = null;
+      this.onMountRemeasure();
+    }, MOUNT_REMEASURE_MS);
+  }
+
+  private scheduleVirtualScrollSync(): void {
+    if (this.virtualScrollRafId !== null) return;
+    this.virtualScrollRafId = (
+      this.observerWindow ?? window
+    ).requestAnimationFrame(() => {
+      this.virtualScrollRafId = null;
+      this.updateCachedGroupOffsets();
+      this.syncVirtualScroll();
+    });
+  }
+
+  private setupCardResizeObserver(): void {
+    const currentWindow = this.containerEl.ownerDocument.defaultView ?? window;
+    if (this.cardResizeObserver && this.observerWindow === currentWindow)
+      return;
+
+    this.cardResizeObserver?.disconnect();
+    this.cardResizeObserver = new currentWindow.ResizeObserver(() => {
+      if (this.lastMeasuredCardWidth === 0 || !this.lastRenderedSettings)
+        return;
+      if (this.isLayoutBusy) {
+        this.cardResizeDirty = true;
+        return;
+      }
+      // During mount remeasure window: set dirty flag, don't double-remeasure.
+      // onMountRemeasure will check the flag and reschedule.
+      if (this.mountRemeasureTimeout !== null) {
+        this.cardResizeDirty = true;
+        return;
+      }
+
+      if (this.cardResizeRafId !== null) {
+        (this.observerWindow ?? window).cancelAnimationFrame(
+          this.cardResizeRafId
+        );
+      }
+      this.cardResizeRafId = (
+        this.observerWindow ?? window
+      ).requestAnimationFrame(() => {
+        this.cardResizeRafId = null;
+        if (!this.containerEl?.isConnected) return;
+        if (this.lastMeasuredCardWidth === 0 || !this.lastRenderedSettings)
+          return;
+        if (this.isLayoutBusy) {
+          this.cardResizeDirty = true;
+          return;
+        }
+        this.remeasureMountedCards();
+      });
+    });
+  }
+
+  private remeasureMountedCards(): void {
+    const feedEl = this.feedContainerRef.current;
+    if (!feedEl?.isConnected) return;
+
+    // Check for height drift in mounted cards
+    let needsReposition = false;
+    for (const item of this.virtualItems) {
+      if (item.el && Math.abs(item.el.offsetHeight - item.height) > 1) {
+        needsReposition = true;
+        break;
+      }
+    }
+    if (!needsReposition) return;
+
+    // Scroll anchoring: record first visible mounted card
+    const scrollTop = this.scrollEl.scrollTop;
+    let anchorItem: VirtualItem | null = null;
+    let anchorOldY = 0;
+
+    for (const item of this.virtualItems) {
+      if (!item.el) continue;
+      const offset = this.cachedGroupOffsets.get(item.groupKey) ?? 0;
+      const absY = offset + item.y;
+      if (absY + item.height > scrollTop) {
+        anchorItem = item;
+        anchorOldY = absY;
+        break;
+      }
+    }
+
+    // Remeasure all mounted cards, keep estimates for unmounted
+    for (const item of this.virtualItems) {
+      if (item.el) {
+        item.height = item.el.offsetHeight;
+        item.measuredHeight = item.height;
+        item.measuredAtWidth = item.el.offsetWidth;
+        item.scalableHeight = measureScalableHeight(item.el);
+        item.fixedHeight = item.measuredHeight - item.scalableHeight;
+      }
+    }
+
+    // Recompute y positions from row heights
+    this.recomputeYPositions();
+
+    // Update placeholder heights BEFORE group offsets (order matters)
+    for (const item of this.virtualItems) {
+      if (!item.el) {
+        const placeholder = this.placeholderEls.get(item);
+        if (placeholder) {
+          placeholder.style.height = `${item.height}px`;
+          placeholder.style.minHeight = `${item.height}px`;
+        }
+      }
+    }
+
+    // Update group offsets AFTER placeholders (depends on correct DOM heights)
+    this.updateCachedGroupOffsets();
+
+    // Scroll compensation
+    if (anchorItem) {
+      const newOffset = this.cachedGroupOffsets.get(anchorItem.groupKey) ?? 0;
+      const newAbsY = newOffset + anchorItem.y;
+      const delta = newAbsY - anchorOldY;
+      if (Math.abs(delta) > 1) {
+        this.isCompensatingScroll = true;
+        this.scrollEl.scrollTop = scrollTop + delta;
+      }
+    }
+
+    this.syncVirtualScroll();
+  }
+
+  private recomputeYPositions(): void {
+    const columns = this.lastColumnCount;
+    const gap = getCardSpacing(this.containerEl);
+
+    for (const [, groupItems] of this.virtualItemsByGroup) {
+      let y = 0;
+      for (let i = 0; i < groupItems.length; i += columns) {
+        const rowEnd = Math.min(i + columns, groupItems.length);
+        let rowHeight = 0;
+        for (let j = i; j < rowEnd; j++) {
+          rowHeight = Math.max(rowHeight, groupItems[j].measuredHeight);
+        }
+        for (let j = i; j < rowEnd; j++) {
+          groupItems[j].y = y;
+          groupItems[j].height = rowHeight; // Stretch normalization
+        }
+        y += rowHeight + gap;
+      }
+    }
+  }
+
+  private onMountRemeasure(): void {
+    if (!this.containerEl?.isConnected) return;
+    if (this.lastMeasuredCardWidth <= 0) return;
+    if (!this.lastRenderedSettings) return;
+    if (this.isLayoutBusy) {
+      // Reschedule — layout-modifying operation in progress
+      this.scheduleMountRemeasure();
+      return;
+    }
+
+    // Run deferred expensive passes on newly mounted cards only
+    const newEls = this.newlyMountedEls.filter((el) => el.isConnected);
+    this.newlyMountedEls = [];
+
+    if (newEls.length) {
+      initializeScrollGradientsForCards(newEls);
+      initializeTitleTruncationForCards(newEls);
+      initializeTextPreviewClampForCards(newEls);
+
+      // Release height locks
+      for (const el of newEls) {
+        el.style.removeProperty('height');
+        el.removeClass('dynamic-views-height-locked');
+      }
+    }
+
+    this.remeasureMountedCards();
+
+    // Handle deferred cardResizeObserver events
+    if (this.cardResizeDirty) {
+      this.cardResizeDirty = false;
+      // Schedule follow-up remeasure for changes during the mount window
+      this.scheduleMountRemeasure();
+    }
+  }
+
+  private getVirtualRects(): VirtualCardRect[] {
+    return this.virtualItems.map((item, arrayIndex) => {
+      // Add group offset to y for absolute positioning.
+      // Without this, all groups overlap near y=0.
+      const groupOffsetY = this.cachedGroupOffsets.get(item.groupKey) ?? 0;
+      return {
+        index: arrayIndex, // Array position — stable identity
+        x: item.x, // Already absolute (groups span full width via subgrid)
+        y: item.y + groupOffsetY, // Convert group-local to absolute
+        width: item.width,
+        height: item.height,
+        el: item.el,
+      };
+    });
+  }
+
+  private mountVirtualItemByIndex(arrayIndex: number): HTMLElement | null {
+    const item = this.virtualItems[arrayIndex];
+    if (!item) return null;
+    if (item.el) return item.el;
+    if (!this.lastRenderedSettings) return null;
+    this.mountVirtualItem(item, this.lastRenderedSettings);
+    return item.el;
   }
 
   /** Show end-of-content indicator when all items are displayed */
@@ -1889,7 +2647,20 @@ export class DynamicViewsGridView extends BasesView {
     if (this.scrollThrottle.timeoutId !== null) {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
-    this.contentVisibility?.disconnect();
+    if (this.virtualScrollRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.virtualScrollRafId
+      );
+    }
+    if (this.cardResizeRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.cardResizeRafId
+      );
+    }
+    if (this.mountRemeasureTimeout !== null) {
+      clearTimeout(this.mountRemeasureTimeout);
+    }
+    this.cardResizeObserver?.disconnect();
     this.stickyHeadings?.disconnect();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();
