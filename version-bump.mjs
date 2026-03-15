@@ -10,12 +10,12 @@ const targetVersion = process.env.npm_package_version;
 
 try {
   execSync(
-    'npx eslint . --rule \'no-console: ["error", {"allow": ["log","warn","error","info"]}]\'',
+    'npx eslint . --rule \'no-console: ["error", {"allow": ["warn","error","debug"]}]\'',
     { stdio: 'inherit' }
   );
 } catch {
   console.error(
-    '\n⚠ ESLint failed. Fix lint errors (or ungated console.debug) before releasing.\n'
+    '\n⚠ ESLint failed. Fix lint errors (or ungated console.log) before releasing.\n'
   );
   process.exit(1);
 }
