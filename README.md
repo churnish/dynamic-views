@@ -31,7 +31,6 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - _Shuffle view_ button
 - _Open random file_ button
 - Fold sections when grouping by property
-- Show result count for each group
 - Full keyboard navigation support
 - Apply CSS snippets to individual views
 
