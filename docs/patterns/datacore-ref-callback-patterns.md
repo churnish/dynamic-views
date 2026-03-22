@@ -89,7 +89,6 @@ This pattern is used for URL button drag (`dataset.dvUrlValue`) and external lin
 
 ## Current usages
 
-- `cardHoverIntentState` — cover hover zoom (simple on/off, keyed by card element)
 - `cardHoverIntentActive` — card-level hover intent: gates cursor, link hover effects, and keyboard nav (simple on/off)
 - `__dragBound` — URL button and external link drag handlers (dataset freshness, no re-bind)
 - `__cardDragBound` — card-level drag handler when `openFileAction === 'card'` (one-time bind, no dataset freshness needed)

@@ -2,7 +2,6 @@ import { vi } from 'vitest';
 import type { Mock } from 'vitest';
 import {
   formatTimestamp,
-  shouldShowTimestampIcon,
   getTimestampIcon,
   isTimestampProperty,
   isDateValue,
@@ -18,7 +17,6 @@ vi.mock('../../src/utils/style-settings', () => ({
   getDatetimeFormat: vi.fn(() => 'YYYY-MM-DD, HH:mm'),
   getDateFormat: vi.fn(() => 'YYYY-MM-DD'),
   getTimeFormat: vi.fn(() => 'HH:mm'),
-  showTimestampIcon: vi.fn(),
 }));
 
 describe('render-utils', () => {
@@ -28,7 +26,6 @@ describe('render-utils', () => {
     getDatetimeFormat: Mock;
     getDateFormat: Mock;
     getTimeFormat: Mock;
-    showTimestampIcon: Mock;
   };
 
   beforeEach(async () => {
@@ -159,18 +156,6 @@ describe('render-utils', () => {
       const now = Date.now();
       const result = formatTimestamp(now - 1000, false, true);
       expect(result).toBe(`${now - 1000}-YYYY-MM-DD, HH:mm`);
-    });
-  });
-
-  describe('shouldShowTimestampIcon', () => {
-    it('should return true when style-settings returns true', () => {
-      mockStyleSettings.showTimestampIcon.mockReturnValue(true);
-      expect(shouldShowTimestampIcon()).toBe(true);
-    });
-
-    it('should return false when style-settings returns false', () => {
-      mockStyleSettings.showTimestampIcon.mockReturnValue(false);
-      expect(shouldShowTimestampIcon()).toBe(false);
     });
   });
 

@@ -3,7 +3,6 @@ import type { MockInstance } from 'vitest';
 import {
   getMinMasonryColumns,
   getMinGridColumns,
-  showTimestampIcon,
   getTagStyle,
   getCardSpacing,
   shouldShowRecentTimeOnly,
@@ -12,7 +11,6 @@ import {
   getEmptyValueMarker,
   shouldHideMissingProperties,
   getHideEmptyMode,
-  getUrlButtonIcon,
   clearStyleSettingsCache,
   getOmitFirstLineMode,
   shouldKeepPreviewHeadings,
@@ -114,23 +112,6 @@ describe('style-settings', () => {
       } as CSSStyleDeclaration);
 
       expect(getMinGridColumns()).toBe(1.5);
-    });
-  });
-
-  describe('showTimestampIcon', () => {
-    it('should return true by default', () => {
-      expect(showTimestampIcon()).toBe(true);
-    });
-
-    it('should return false when hide class is present', () => {
-      mockClassList.add('dynamic-views-timestamp-icon-hide');
-      expect(showTimestampIcon()).toBe(false);
-    });
-
-    it('should return true when hide class is removed', () => {
-      mockClassList.add('dynamic-views-timestamp-icon-hide');
-      mockClassList.delete('dynamic-views-timestamp-icon-hide');
-      expect(showTimestampIcon()).toBe(true);
     });
   });
 
@@ -385,66 +366,6 @@ describe('style-settings', () => {
     it('should return all when all class is present', () => {
       mockClassList.add('dynamic-views-empty-properties-hide');
       expect(getHideEmptyMode()).toBe('all');
-    });
-  });
-
-  describe('getUrlButtonIcon', () => {
-    it('should return default icon', () => {
-      expect(getUrlButtonIcon()).toBe('arrow-up-right');
-    });
-
-    it('should return custom value from CSS variable', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-url-icon' ? 'external-link' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getUrlButtonIcon()).toBe('external-link');
-    });
-
-    it('should strip double quotes from value', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-url-icon' ? '"link"' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getUrlButtonIcon()).toBe('link');
-    });
-
-    it('should strip lowercase "lucide-" prefix', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-url-icon' ? 'lucide-donut' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getUrlButtonIcon()).toBe('donut');
-    });
-
-    it('should strip mixed-case "Lucide-" prefix', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-url-icon' ? 'Lucide-globe' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getUrlButtonIcon()).toBe('globe');
-    });
-
-    it('should strip uppercase "LUCIDE-" prefix', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-url-icon' ? 'LUCIDE-arrow-up' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getUrlButtonIcon()).toBe('arrow-up');
-    });
-
-    it('should handle quoted value with lucide- prefix', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-url-icon' ? '"lucide-star"' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getUrlButtonIcon()).toBe('star');
     });
   });
 

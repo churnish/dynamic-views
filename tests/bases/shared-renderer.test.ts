@@ -34,7 +34,6 @@ vi.mock('../../src/shared/render-utils', () => ({
 vi.mock('../../src/utils/style-settings', () => ({
   showTagHashPrefix: vi.fn(),
   getHideEmptyMode: vi.fn(),
-  showTimestampIcon: vi.fn(),
   getEmptyValueMarker: vi.fn(),
   shouldHideMissingProperties: vi.fn(),
   getListSeparator: vi.fn(),
@@ -42,7 +41,6 @@ vi.mock('../../src/utils/style-settings', () => ({
   isSlideshowIndicatorEnabled: vi.fn(),
   isThumbnailScrubbingDisabled: vi.fn(),
   getSlideshowMaxImages: vi.fn(),
-  getUrlButtonIcon: vi.fn(),
   getCompactBreakpoint: vi.fn(),
   hasBodyClass: vi.fn(),
 }));

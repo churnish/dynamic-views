@@ -126,7 +126,7 @@ body.dynamic-views-cover-circular
 }
 
 /* Hover zoom for cover images (desktop only).
-   Transitions are always declared; the scale/transform change only fires via .cover-hover-active (JS hover intent). */
+   Transitions are always declared; the scale/transform change only fires via .hover-intent-active (card-level JS hover intent). */
 @media (hover: hover) {
   /* Default transition for single-image covers */
   .dynamic-views
@@ -139,12 +139,9 @@ body.dynamic-views-cover-circular
       opacity var(--dynamic-views-anim-duration-fast) ease;
   }
 
-  /* Cover hover zoom — card mode (default): zoom on card hover intent.
-     Mode logic lives in CSS so switching Style Settings mode works without re-render. */
-  body:is(
-      .dynamic-views-cover-hover-zoom-card,
-      :not([class*='dynamic-views-cover-hover-zoom-'])
-    )
+  /* Cover hover zoom — enabled by default, disabled via Style Settings toggle.
+     Uses hover-intent-active (card-level JS class) to trigger zoom. */
+  body:not(.dynamic-views-cover-disable-hover-zoom)
     .dynamic-views
     .card.image-format-cover.hover-intent-active
     .card-cover:not(.card-cover-slideshow)
@@ -153,35 +150,13 @@ body.dynamic-views-cover-circular
     transform: scale(1.05);
   }
 
-  body:is(
-      .dynamic-views-cover-hover-zoom-card,
-      :not([class*='dynamic-views-cover-hover-zoom-'])
-    )
+  body:not(.dynamic-views-cover-disable-hover-zoom)
     .dynamic-views
     .card.image-format-cover.hover-intent-active
     .card-cover-slideshow
     .dynamic-views-image-embed
     img.hover-zoom-eligible {
-    scale: 1.05; /* scale (not transform) — avoids conflicting with slideshow slide animation transforms */
-  }
-
-  /* Cover hover zoom — cover mode: zoom on cover hover intent */
-  body.dynamic-views-cover-hover-zoom-cover
-    .dynamic-views
-    .card.image-format-cover.cover-hover-active
-    .card-cover:not(.card-cover-slideshow)
-    .dynamic-views-image-embed
-    img {
-    transform: scale(1.05);
-  }
-
-  body.dynamic-views-cover-hover-zoom-cover
-    .dynamic-views
-    .card.image-format-cover.cover-hover-active
-    .card-cover-slideshow
-    .dynamic-views-image-embed
-    img.hover-zoom-eligible {
-    scale: 1.05; /* scale (not transform) — avoids conflicting with slideshow slide animation transforms */
+    scale: 1.05;
   }
 }
 

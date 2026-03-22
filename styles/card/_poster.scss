@@ -104,7 +104,7 @@ body.dynamic-views-poster-disable-scroll
 }
 
 /* Poster reveal zoom (all platforms — hover and tap).
-   will-change promotes to GPU layer for smooth transform on iOS WebKit. */
+   will-change promotes to GPU layer for smooth transform on WebKit. */
 body:not(.dynamic-views-poster-disable-reveal-zoom)
   .dynamic-views
   .card.image-format-poster
@@ -366,15 +366,6 @@ body:is(
       opacity: 1;
     }
   }
-}
-
-/* Poster: disable raise animation */
-body.dynamic-views-poster-disable-raise
-  .dynamic-views
-  .card.image-format-poster:has(.card-poster)
-  .card-content {
-  transform: none;
-  transition: opacity var(--dynamic-views-anim-duration-moderate);
 }
 
 /* Grid: all poster cards get aspect-ratio (override height:100% to prevent width expansion) */

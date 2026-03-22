@@ -21,10 +21,12 @@
   min-width: 0;
   overflow: hidden;
   container-type: inline-size;
+}
 
-  /* Override mobile content-visibility: auto — virtual scrolling replaces it.
-     Without this, buffer-zone cards return contain-intrinsic-height (300px)
-     instead of actual offsetHeight during measurement. */
+/* Override iOS content-visibility: auto (body.is-ios .dynamic-views .card) —
+   virtual scrolling replaces browser-managed visibility in Grid.
+   Without this, cards collapse to header-only height in CSS Grid rows. */
+body.is-ios .dynamic-views-grid .card {
   content-visibility: visible;
 }
 
@@ -37,11 +39,18 @@
   /* Height/min-height set via inline style from VirtualItem.height */
 }
 
-/* Height-locked card during mount: prevents row reflow until deferred passes
-   (title truncation, text clamp, scroll gradients) complete.
+/* Height-locked card during mount: prevents row reflow until locks release.
    Inline style.height set from placeholder height; overflow clips content. */
 .dynamic-views-grid .card.dynamic-views-height-locked {
   overflow: hidden;
+}
+
+/* WebKit: contain:size prevents CSS Grid intrinsic sizing on placeholders
+   and height-locked cards. Desktop excluded — contain:size breaks
+   align-items:stretch causing height oscillation on lock release. */
+body.is-ios .dynamic-views-grid .dynamic-views-grid-placeholder,
+body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
+  contain: size layout style paint;
 }
 
 /* Grid-specific: prevent empty cards from stretching */
@@ -145,4 +154,14 @@
     height: 0;
     padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
   }
+}
+
+/* Measurement lane: offscreen container for iOS pre-mount height reads.
+   Same column width as grid — cards get correct CSS here before insertion. */
+.dynamic-views-measure-lane {
+  position: absolute;
+  visibility: hidden;
+  contain: layout style paint;
+  overflow: hidden;
+  pointer-events: none;
 }

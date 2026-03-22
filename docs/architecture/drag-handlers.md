@@ -33,17 +33,17 @@ The `getData` patch returns `''` for `text/uri-list` when `DRAG_MARKER` is prese
 
 ## Hover suppression on dragstart
 
-Three JS-toggled classes control hover effects: `hover-intent-active`, `poster-hover-active`, `cover-hover-active`. All are removed on dragstart, but with constraints:
+Two JS-toggled classes control hover effects: `hover-intent-active`, `poster-hover-active`. Both are removed on dragstart, but with constraints:
 
-**Card-level handlers** (`createCardDragHandler`, Bases `handleDrag`): remove all three synchronously via `clearCardHoverState()`.
+**Card-level handlers** (`createCardDragHandler`, Bases `handleDrag`): remove both synchronously via `clearCardHoverState()`.
 
-**URL button handlers** (`createUrlButtonDragHandlers`): remove `hover-intent-active` and `cover-hover-active` synchronously, but **defer** `poster-hover-active` removal via `setTimeout(0)`. This is because `poster-hover-active` controls `pointer-events: auto` on `.card-content` — synchronous removal sets `pointer-events: none`, aborting the drag before the drag subsystem takes over. The deferred removal runs after dragstart completes.
+**URL button handlers** (`createUrlButtonDragHandlers`): remove `hover-intent-active` synchronously, but **defer** `poster-hover-active` removal via `setTimeout(0)`. This is because `poster-hover-active` controls `pointer-events: auto` on `.card-content` — synchronous removal sets `pointer-events: none`, aborting the drag before the drag subsystem takes over. The deferred removal runs after dragstart completes.
 
 The deferred `setTimeout(0)` also sets `pointer-events: none` on the icon itself, clearing the stuck `:hover` pseudo-class (Chromium keeps `:hover` on the drag source throughout the drag operation — see platform quirks).
 
-## iOS touch handling
+## WebKit touch handling
 
-iOS native touch drags bypass the HTML5 DnD API entirely — `dragstart` and `dragend` never fire (see `ios-webkit-quirks.md`). Only drop-target events fire on the receiving element. Cleanup logic in `onDragEnd` (tooltip removal, pointer-events restore, body class removal) needs an alternative path.
+WebKit native touch drags bypass the HTML5 DnD API entirely — `dragstart` and `dragend` never fire (see `ios-webkit-quirks.md`). Only drop-target events fire on the receiving element. Cleanup logic in `onDragEnd` (tooltip removal, pointer-events restore, body class removal) needs an alternative path.
 
 **`onTouchStart` fallback**: Registers a document-level `drop` listener that runs the same `cleanup` function as `onDragEnd`. A `touchend` listener (also `{ once: true }`) removes the `drop` listener if the touch ends without initiating a drag.
 

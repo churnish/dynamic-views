@@ -4,6 +4,7 @@ import type { DatacoreAPI, RefObject } from './types';
 import type { App, TFile } from 'obsidian';
 import type DynamicViews from '../../main';
 import { setupClickOutside } from '../utils/dropdown-position';
+import { getOwnerWindow } from '../utils/owner-window';
 
 interface ResultsDropdownMenuProps {
   menuRef?: RefObject<HTMLDivElement | null>;
@@ -384,6 +385,31 @@ export function Toolbar({
       return setupClickOutside(queryMenuRef.current, onCloseAllDropdowns);
     }
   }, [showQueryEditor, onCloseAllDropdowns]);
+
+  // Mod+Enter to apply query — must use window-level capture listener
+  // because Obsidian's keymap handler on document intercepts Mod+Enter
+  // before Preact's onKeyDown fires. stopImmediatePropagation (not
+  // stopPropagation) prevents other capture-phase listeners on the same
+  // window from seeing the event.
+  const onApplyQueryRef = dc.useRef(onApplyQuery);
+  onApplyQueryRef.current = onApplyQuery;
+  dc.useEffect(() => {
+    if (!showQueryEditor || !queryMenuRef.current) return;
+    const win = getOwnerWindow(queryMenuRef.current);
+    const handler = (e: KeyboardEvent): void => {
+      if (
+        e.key === 'Enter' &&
+        (e.metaKey || e.ctrlKey) &&
+        queryMenuRef.current?.contains(e.target as Node)
+      ) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        onApplyQueryRef.current!();
+      }
+    };
+    win.addEventListener('keydown', handler, true);
+    return () => win.removeEventListener('keydown', handler, true);
+  }, [showQueryEditor]);
 
   dc.useEffect(() => {
     if (showSettings && settingsButtonRef.current) {
@@ -1102,7 +1128,7 @@ export function Toolbar({
                       '--dynamic-views-query-height': `${evt.target.scrollHeight}px`,
                     });
                   }}
-                  className="query-input"
+                  className="dynamic-views-query-input"
                   placeholder='#tag&#10;path("path/to/folder")&#10;key = "value"'
                   ref={(el: HTMLTextAreaElement | null) => {
                     if (el) {

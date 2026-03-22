@@ -41,10 +41,6 @@ import { installDropTextPatch } from './src/shared/drag';
 import { invalidateCacheForFile } from './src/shared/image-loader';
 import { getNotebookNavigatorAPI } from './src/utils/notebook-navigator';
 
-// Toggle: app.saveLocalStorage('dynamic-views-sync-notice', '0')
-// Reset:  app.saveLocalStorage('dynamic-views-sync-notice', null)
-const SYNC_NOTICE_KEY = 'dynamic-views-sync-notice';
-
 // Plugin/feature names (proper nouns, not subject to sentence case)
 const DATACORE = 'Datacore';
 const GRID = 'Grid';
@@ -82,13 +78,6 @@ export default class DynamicViews extends Plugin {
   }
 
   async onload() {
-    const syncRaw = this.app.loadLocalStorage(SYNC_NOTICE_KEY) as string | null;
-    if (syncRaw !== null) {
-      const parsed = Number(syncRaw);
-      const next = String(Number.isFinite(parsed) ? parsed + 1 : 1);
-      this.app.saveLocalStorage(SYNC_NOTICE_KEY, next);
-      new Notice(next, 0);
-    }
     initExternalBlobCache();
     setDocumentProvider(() => [document, ...this.getAllPopoutDocuments()]);
     this.register(installDropTextPatch(this.app));
@@ -122,19 +111,10 @@ export default class DynamicViews extends Plugin {
       options: masonryViewOptions,
     });
 
-    // Notify Style Settings to parse our CSS (overrides default class below if installed)
+    // Notify Style Settings to parse our CSS (applies stored class-select values).
+    // Extension mode is the CSS default (no body class needed) — see _header.scss
+    // :not() fallback pattern. No file-type class is added here.
     this.app.workspace.trigger('parse-style-settings');
-
-    // Default file format indicator when Style Settings is not installed
-    const fileTypeClasses = [
-      'dynamic-views-file-type-ext',
-      'dynamic-views-file-type-flair',
-      'dynamic-views-file-type-icon',
-      'dynamic-views-file-type-none',
-    ];
-    if (!fileTypeClasses.some((c) => document.body.classList.contains(c))) {
-      document.body.classList.add('dynamic-views-file-type-ext');
-    }
 
     this.addCommand({
       id: 'create-datacore-note',

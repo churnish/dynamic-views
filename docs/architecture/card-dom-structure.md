@@ -25,7 +25,7 @@ div.card                                    ← data-path="{path}"
 │ [format classes: image-format-{cover|thumbnail|poster|backdrop}]
 │ [position classes: card-cover-{top|bottom|left|right}, card-thumbnail-{position}]
 │ [state: clickable-card, compact-mode, thumbnail-stack]
-│ [transient: hover-intent-active, cover-hover-active, poster-hover-active, poster-revealed]
+│ [transient: hover-intent-active, poster-hover-active, poster-revealed]
 │
 ├─ div.card-cover-wrapper                   ← cover format, position=top|left (before .card-content)
 │   ├─ div.card-cover                       ← single image

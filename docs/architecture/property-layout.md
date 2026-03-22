@@ -2,7 +2,7 @@
 title: Property layout system
 description: Property pairing, width measurement, scroll gradients, and vertical positioning inside cards for both backends.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-06
+updated: 2026-03-16
 ---
 # Property layout system
 
@@ -14,9 +14,9 @@ The property layout system controls how property rows are arranged inside cards 
 
 | File                             | Role                                                                   |
 | -------------------------------- | ---------------------------------------------------------------------- |
-| `src/shared/property-measure.ts` | Width measurement pipeline, visibility gating, queue system.           |
+| `src/shared/property-measure.ts` | Width measurement pipeline, synchronous measurement, ResizeObserver.   |
 | `src/shared/scroll-gradient.ts`  | Horizontal/vertical gradient indicators for overflowing content.       |
-| `src/shared/property-helpers.ts` | `computeInvertPairs()`, `shouldCollapseField()`, property type checks. |
+| `src/shared/property-helpers.ts` | `computeInvertPairs()`, `shouldCollapseField()`, property type checks, batched compact-stacked detection. |
 | `src/shared/card-renderer.tsx`   | Datacore property rendering, `PropertySet` grouping, top/bottom split. |
 | `src/bases/shared-renderer.ts`   | Bases property rendering, container class application, measurement.    |
 | `src/utils/property.ts`          | `parsePropertyList()` — comma-separated string to `Set<string>`.       |
@@ -108,23 +108,23 @@ Paired property widths are measured by JavaScript to allocate space proportional
 
 1. Skips if column mode (`.dynamic-views-paired-property-column` on view container).
 2. Finds all `.property-pair` elements and the `.card-properties` container.
-3. Registers the card with an `IntersectionObserver` (100px rootMargin) for visibility gating.
-4. Creates a `ResizeObserver` on the card element — queues measurement on size changes.
+3. Performs synchronous initial measurement via `measureCardPairsSynchronous()` — completes before first paint.
+4. Creates a `ResizeObserver` on the card element for resize-triggered remeasurement.
 
-### Visibility gating
+### Synchronous measurement
 
-A per-window `Map<Window, IntersectionObserver>` (`visibilityObservers`) tracks which cards are in or near the viewport (100px margin). `getVisibilityObserver(win)` creates or reuses an observer for the card's owning window — popout windows need their own observer since `IntersectionObserver` is bound to its document's viewport. `cleanupVisibilityObserver()` supports targeted per-window cleanup. `queueCardSets()` skips cards not in `visibleCards`. On first resize, `visibleCards.add(cardEl)` is called immediately to ensure initial measurement.
+`measureCardPairsSynchronous(cardEl, sets, cardProps)` measures all property pairs in a card synchronously. Guards skip compact mode, column mode, content-hidden cards, and cards whose width hasn't changed (width cache with 0.5px tolerance). Each set triggers one forced reflow via `measureSideBySideSet()`. Gradient updates and `PROPERTY_MEASURED` event dispatch happen inline after all sets are measured.
 
-### Queue system
+This replaced an earlier async queue system (`SETS_PER_FRAME = 5` per RAF, `IntersectionObserver` visibility gating). Virtual scrolling bounds the DOM-resident card count tightly enough that synchronous measurement completes within a single frame without perceptible jank. The async queue caused 2-3 frames of visible flicker as the unmeasured CSS state (`flex: 0 1 auto; max-width: 50%`) was painted before `.property-measured` was applied.
 
-Property sets are queued for measurement to prevent frame drops:
+### Two-tier width caching
 
-- **`setQueue: QueuedSet[]`** — FIFO queue of `{ set: HTMLElement, card: HTMLElement }`.
-- **`queuedSets: Set<HTMLElement>`** — O(1) duplicate detection.
-- **`MAX_QUEUE_SIZE = 500`** — queue overflow guard.
-- **`SETS_PER_FRAME = 5`** — maximum sets processed per `requestAnimationFrame`.
+Two caches prevent redundant measurement at different granularities:
 
-`queueCardSets()` also checks a width cache (`WeakMap<HTMLElement, number>`) with 0.5px tolerance to skip redundant measurements when card width hasn't changed.
+- **`cardWidthCache`** (`WeakMap<HTMLElement, number>`): Prevents redundant measurement of the same live DOM element. Stores last measured `clientWidth` per card. Measurements are skipped when width changes by less than 0.5px (`WIDTH_TOLERANCE`). Auto-cleans when card elements are garbage collected.
+- **`persistentWidthCache`** (`Map<string, CachedCardMeasurement>`): Prevents forced reflows on re-mount of previously-measured files. Keyed by file path (`data-path`), stores `{ containerWidth, pairs[] }` where each pair has `field1`/`field2` width strings. On virtual scroll re-mount, cached widths are applied directly (CSS var set + class toggle) — zero forced reflows. Cache is invalidated by `resetPersistentWidthCache()` (settings change), `remeasurePropertyFields()` (label mode change), and in-place card updates (fresh DOM on a reused card element triggers per-path deletion).
+
+The persistent cache lookup in `measureCardPairsSynchronous()` runs after the `cardWidthCache` width-change check and before the measurement loop. On cache hit (same pair count, container width within tolerance), it applies cached CSS vars, resets scroll positions, collects gradient targets, and returns early. On cache miss (first measurement or width change), the full measurement loop runs and stores results into the persistent cache before gradient application.
 
 ### Two-phase measurement
 
@@ -185,7 +185,7 @@ Gap values are read once from CSS and cached (with fallbacks for unparseable val
 - **`cachedFieldGap`**: `parseFloat(getComputedStyle(set).gap) || 8` — gap between paired fields.
 - **`cachedLabelGap`**: `parseFloat(getComputedStyle(field).gap) || 4` — gap between inline label and content.
 
-Both caches are cleared by `resetGapCache()` on theme/settings changes.
+Gap values are Obsidian hardcoded constants (`--size-*` vars) — read once on first use and never reset.
 
 ### CSS custom properties
 
@@ -211,13 +211,9 @@ After applying CSS vars, the set gets `property-measured` class. CSS switches fr
 }
 ```
 
-### First-render special handling
-
-On first `ResizeObserver` callback, `isFirstResize` forces `visibleCards.add(cardEl)` so the card is immediately eligible for measurement — the `IntersectionObserver` may not have fired yet.
-
 ### Remeasurement
 
-`remeasurePropertyFields(container)` clears all `.property-measured` states and CSS vars, then re-measures in chunks of `MEASUREMENT_CHUNK_SIZE = 5` per frame. Called when property label mode changes.
+`remeasurePropertyFields(container)` clears all `.property-measured` states and CSS vars, then re-measures all sets synchronously. Called when property label mode changes — low frequency, bounded card count due to virtual scrolling.
 
 ## CSS state machine
 
@@ -234,9 +230,9 @@ On first `ResizeObserver` callback, `isFirstResize` forces `visibleCards.add(car
 | `.compact-stacked`    | Card         | Set by JS when `hasWrappedPairs()` returns true: all pairs stack vertically. |
 | `.content-hidden`     | Card         | Off-screen card with `content-visibility: hidden` (measurement skipped).     |
 
-**Default unmeasured state**: `.property-pair .property { flex: 0 1 auto; max-width: 50% }` — each field can shrink but never exceeds half the pair width. Measurement replaces this with explicit widths.
+**Default unmeasured state**: `.property-pair:not(.property-measured) { visibility: hidden }` hides pairs before measurement completes. Column mode and compact mode override this with `visibility: visible` since they skip JS measurement. Sync measurement applies `.property-measured` before first paint in normal flow, so the hidden state is never visible.
 
-**State transitions**: unmounted → default (`flex: 0 1 auto; max-width: 50%`) → `.property-measuring` → measure → `.property-measured` (CSS vars active). Compact mode bypasses measurement entirely.
+**State transitions**: unmounted → default (hidden via `visibility: hidden`) → `.property-measuring` → measure → `.property-measured` (CSS vars active, visible). Compact mode and column mode bypass measurement entirely (visible immediately).
 
 **Collapsed pairs**: When one field has `.property-collapsed`, the visible partner expands (`max-width: 100%; flex: 1 1 auto`). When both are collapsed, the `.property-pair` wrapper gets `display: none`.
 
@@ -244,7 +240,7 @@ On first `ResizeObserver` callback, `isFirstResize` forces `visibleCards.add(car
 
 Controlled by the `rightPropertyPosition` view setting, which adds a class to the view container. **Bases-only**: `applyViewContainerStyles()` is called exclusively from Bases views. Datacore does not consume `rightPropertyPosition` — this is a known parity gap.
 
-### Right (default)
+### Right
 
 Class: `dynamic-views-paired-property-right`. This class is always applied by `applyViewContainerStyles()` for consistency/debuggability, but has no matching CSS selectors — right alignment is the CSS default without any class override.
 
@@ -261,11 +257,11 @@ Class: `dynamic-views-paired-property-left`.
 - Resets inline label order to `order: 0` (label before content).
 - Resets above label to `text-align: left`.
 
-### Column
+### Column (default)
 
 Class: `dynamic-views-paired-property-column`.
 
-- **Skips JS measurement entirely** — `measurePropertyFields()` returns early, `queueCardSets()` returns early.
+- **Skips JS measurement entirely** — `measurePropertyFields()` returns early, `measureCardPairsSynchronous()` returns early.
 - CSS rule: `.property-pair .property { flex: 1 1 0 }` gives each field equal width.
 - Left-alignment (same CSS overrides as left mode).
 
@@ -295,12 +291,9 @@ Scroll position is compared against `SCROLL_TOLERANCE = 1` (unitless numeric, pi
 
 When a right-side field (`.pair-right`) gets `.is-scrollable`, its wrapper alignment flips from `justify-content: flex-end` to `flex-start`. This ensures the user sees content from the left edge and can scroll right to see more.
 
-### Batch processing after measurement
+### Gradient application after measurement
 
-During queued measurement, gradient targets are collected into `gradientBatch[]` rather than updating immediately. The batch is flushed:
-
-- **On queue drain**: After all sets are processed, a `requestAnimationFrame` processes the gradient batch, then dispatches `PROPERTY_MEASURED` event on each processed card's `ownerDocument` (not necessarily `window.document` — popout windows have their own `Document` instance). The event fires regardless of whether gradients were collected.
-- **On early flush** (`MAX_GRADIENT_BATCH_SIZE = 100`): If the batch exceeds 100 entries mid-queue, a RAF flush runs but does not dispatch the event — processing continues and the terminal dispatch fires on queue drain.
+During synchronous measurement, gradient targets are collected into a local array. After all sets are measured, `updateScrollGradient()` is called on each target inline — no RAF deferral. The `PROPERTY_MEASURED` event is dispatched on the card's `ownerDocument` (not necessarily `window.document` — popout windows have their own `Document` instance) after gradient application.
 
 ### Masonry relayout coordination
 
@@ -327,7 +320,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 - **Content-based stacking via `flex-wrap: wrap` + `flex: 1 1 auto`**: Flexbox line-breaking uses the max-content width as hypothetical main size. Short properties (timestamps, tags) stay side-by-side; long properties (file names, URLs) stack when combined content + gap exceeds card width. No `flex-direction: column` — wrapping is intrinsic.
 - **Width overrides**: `width: auto !important; max-width: 100% !important; flex: 1 1 auto !important`. Overrides measured widths if card was previously in non-compact measured state.
-- **Measurement still skipped**: `measureSideBySideSet()` returns early when card has `.compact-mode`. `queueCardSets()` also skips. CSS flex-wrap handles layout without JS measurement.
+- **Measurement still skipped**: `measureSideBySideSet()` returns early when card has `.compact-mode`. `measureCardPairsSynchronous()` also skips. CSS flex-wrap handles layout without JS measurement.
 - **Left-aligned**: Compact-mode `.pair-right` content resets to `justify-content: flex-start` — right-alignment on stacked full-width properties would be visually inconsistent.
 
 ### Compact stacked
@@ -336,13 +329,23 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 **`hasWrappedPairs()` detection** (`property-helpers.ts`): Queries all `.property-pair` elements on the card, compares `getBoundingClientRect().top` of `.pair-left` vs `.pair-right` with +1px tolerance. Returns `true` if any right child is below its left sibling.
 
-**`compactWidthCache` loop prevention**: Toggling `.compact-stacked` changes card height, which fires the `ResizeObserver`, which would re-evaluate wrapping — creating an infinite loop. A `WeakMap<HTMLElement, number>` (`compactWidthCache`, present in both `shared-renderer.ts` and `card-renderer.tsx`) tracks the last width at which wrapping was evaluated. The RO skips re-evaluation when only height changed (same width in cache). Cache entries are deleted when a card exits compact mode or becomes `.content-hidden` (Bases only).
+**RAF-batched detection**: Detection is batched via `queueCompactStackedCheck()` in `property-helpers.ts`. Per-card `ResizeObserver` callbacks queue cards; a single `requestAnimationFrame` per document processes each document's batch independently (1 forced reflow per document per frame, not N). Cards are partitioned by `ownerDocument` into `pendingCardsByDoc` (`Map<Document, Set<HTMLElement>>`) with separate RAF IDs per document (`batchRafIds`). This prevents cross-window interference: forced reflow only flushes one document's layout, and row sync comparisons are meaningless across different viewports. The `compactWidthCache` (`WeakMap<HTMLElement, number>`) is shared module-level state in `property-helpers.ts` — both Bases (`shared-renderer.ts`) and Datacore (`card-renderer.tsx`) import the same functions.
+
+**Three-phase batch pattern**:
+
+1. **Write**: Remove `.compact-stacked` from all queued cards.
+2. **Reflow**: Single `void eligible[0].offsetHeight` — collapses N per-card reflows into 1 per document.
+3. **Read**: Call `hasWrappedPairs()` on each card.
+4. **Row sync** (Grid only): Group grid cards by `getBoundingClientRect().top` (1px tolerance). If ANY card in a row wraps, ALL cards in that row get `.compact-stacked`. Cross-group contamination is geometrically impossible — groups are sequential in document flow with intervening headers, so cards in different groups never share the same `.top`.
+5. **Write**: Apply `.compact-stacked` where wrapping detected (including row-synced cards).
+
+**`compactWidthCache` loop prevention**: Toggling `.compact-stacked` changes card height, which fires the `ResizeObserver`, which would re-evaluate wrapping — creating an infinite loop. The cache tracks the last width at which wrapping was evaluated. `queueCompactStackedCheck()` skips re-evaluation when only height changed (same width in cache). `cancelCompactStackedCheck()` removes the card from the batch, clears the class, and deletes the cache entry (used when exiting compact mode). `invalidateCompactStackedCache()` clears the cache entry and removes the card from the pending batch (used when cards become `.content-hidden` so wrapping is re-evaluated when they return to view).
 
 **Detection flow**:
 
-1. `compact-mode` toggled on card → check if card has `.compact-mode`.
-2. If compact and width changed (cache miss): remove `.compact-stacked`, force reflow (`void cardEl.offsetHeight`), call `hasWrappedPairs()`, conditionally add `.compact-stacked`.
-3. If not compact: remove `.compact-stacked`, delete cache entry.
+1. Per-card RO fires → `queueCompactStackedCheck(cardEl, cardWidth)` checks cache, queues if width changed.
+2. RAF fires → batch processes all queued cards: remove `.compact-stacked`, force 1 reflow, read `hasWrappedPairs()`, apply `.compact-stacked`.
+3. If not compact: `cancelCompactStackedCheck(cardEl)` removes class and cache entry.
 
 **CSS rules for stacked mode** (`_properties.scss`):
 
@@ -363,7 +366,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 | ------------------------ | ------------------------------- | -------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `propertyLabels`         | `'hide' \| 'inline' \| 'above'` | `'hide'` (ViewDefaults) / `'inline'` (Bases)       | Label display mode.                                | Both renderers, measurement (label width), CSS.                                                                            |
 | `pairProperties`         | `boolean`                       | `false` (ViewDefaults + Bases) / `true` (Datacore) | Whether properties pair by default.                | Both renderers (pairing algorithm).                                                                                        |
-| `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'right'`                                          | Right-side field alignment mode. Bases-only.       | `applyViewContainerStyles()` (Bases), [_properties.scss](../../styles/_properties.scss), measurement skip in `measurePropertyFields()`/`queueCardSets()`. |
+| `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'column'`                                         | Right-side field alignment mode. Bases-only.       | `applyViewContainerStyles()` (Bases), [_properties.scss](../../styles/_properties.scss), measurement skip in `measurePropertyFields()`/`measureCardPairsSynchronous()`. |
 | `invertPropertyPairing`  | `string`                        | `''`                                               | Comma-separated names to invert pairing behavior.  | Both renderers via `parsePropertyList()`.                                                                                  |
 | `showPropertiesAbove`    | `boolean`                       | `false`                                            | Default vertical position for properties.          | Datacore renderer (top/bottom split).                                                                                      |
 | `invertPropertyPosition` | `string`                        | `''`                                               | Comma-separated names to invert vertical position. | Datacore renderer (top/bottom split).                                                                                      |
@@ -377,18 +380,20 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 | `dynamic-views-property-label-case`         | `class-select`    | preserve | Label text-transform (preserve/lowercase/uppercase). Options: `dynamic-views-property-label-case-{preserve,lowercase,uppercase}`. |
 | `dynamic-views-property-label-bold`         | `class-toggle`    | off      | Bold labels.                                                                                                                      |
 | `dynamic-views-property-label-small-caps`   | `class-toggle`    | off      | Small caps labels.                                                                                                                |
-| `dynamic-views-timestamp-icon`              | `class-select`    | edge     | Timestamp icon position. Options: `dynamic-views-timestamp-icon-{edge,left,center,right,hide}`.                                   |
 
 ## Invariants
 
-1. **Measurement requires DOM attachment.** `processSetQueue()` checks `set.isConnected && card.isConnected` before calling `measureSideBySideSet()`. Measurement of disconnected elements produces zero widths.
-2. **Column mode must not trigger JS measurement.** Both `measurePropertyFields()` and `queueCardSets()` check for `.dynamic-views-paired-property-column` and return early. Column mode relies on `flex: 1 1 0` CSS only.
-3. **Compact mode must not trigger JS measurement.** Three guards: `queueCardSets()` skips at queue time, `processSetQueue()` checks each item before processing (catches cards that became compact between queueing and processing), and `measureSideBySideSet()` returns early. CSS forces `width: 100% !important`.
-4. **Gradient batch must flush before `PROPERTY_MEASURED` fires.** The event is dispatched in the same RAF as gradient processing, after the batch is cleared. Masonry relayout handlers can rely on gradients being applied.
-5. **Content-hidden cards must not be measured.** Reading dimensions on cards with `content-visibility: hidden` triggers Chromium console warnings and returns incorrect values. Both measurement and gradient code skip `.content-hidden` cards.
-6. **Gap caches must be reset on theme change.** `resetGapCache()` clears `cachedFieldGap` and `cachedLabelGap`. Stale values produce incorrect width allocation after theme switches.
-7. **`pendingFlush` prevents concurrent RAF batches.** While a gradient flush is in-flight, new queue processing is deferred (`!isProcessingSets && !pendingFlush` gate) to avoid interleaved read/write cycles.
-8. **Width cache prevents redundant measurement.** `cardWidthCache` (WeakMap) stores last measured `clientWidth` per card. Measurements are skipped when width changes by less than 0.5px (`WIDTH_TOLERANCE`).
+1. **Measurement requires DOM attachment.** `measureCardPairsSynchronous()` checks `set.isConnected` before calling `measureSideBySideSet()`. Measurement of disconnected elements produces zero widths.
+2. **Column mode must not trigger JS measurement.** Both `measurePropertyFields()` and `measureCardPairsSynchronous()` check for `.dynamic-views-paired-property-column` and return early. Column mode relies on `flex: 1 1 0` CSS only.
+3. **Compact mode must not trigger JS measurement.** Two guards: `measureCardPairsSynchronous()` skips at entry, and `measureSideBySideSet()` returns early. CSS forces `width: 100% !important`.
+4. **Gradients are applied before `PROPERTY_MEASURED` fires.** Both happen synchronously in `measureCardPairsSynchronous()` — gradient updates first, then event dispatch. Masonry relayout handlers can rely on gradients being applied.
+5. **Content-hidden cards must not be measured.** Reading dimensions on cards with `content-visibility: hidden` triggers Chromium console warnings and returns incorrect values. Both `measureCardPairsSynchronous()` and `measureSideBySideSet()` skip `.content-hidden` cards.
+6. **Gap values are read-once constants.** `cachedFieldGap` and `cachedLabelGap` are read from Obsidian's hardcoded `--size-*` CSS vars on first use and never reset.
+7. **Unmeasured pairs are hidden via CSS.** `.property-pair:not(.property-measured) { visibility: hidden }` prevents flicker from the unmeasured flex state. Column mode and compact mode override with `visibility: visible` since they skip JS measurement.
+8. **Width caches prevent redundant measurement.** `cardWidthCache` (WeakMap) prevents re-measuring the same live element; `persistentWidthCache` (Map) prevents forced reflows on re-mount of previously-measured files. Both use 0.5px `WIDTH_TOLERANCE`. The persistent cache is invalidated on settings change (`resetPersistentWidthCache`), label mode change (`remeasurePropertyFields`), and in-place card updates (fresh DOM on a reused element triggers per-path deletion).
 9. **Scroll position resets after measurement.** Both wrappers have `scrollLeft` reset to 0 after widths are applied, ensuring gradients start in the correct state.
 10. **`property-measuring` is always removed.** The `finally` block in `measureSideBySideSet()` guarantees `property-measuring` is removed even if measurement throws.
-11. **`compact-stacked` requires `compact-mode`.** `compact-stacked` is only set on cards that already have `.compact-mode`. Removing `.compact-mode` always removes `.compact-stacked`.
+11. **Compact-exit triggers property re-measurement.** `syncResponsiveClasses` collects cards exiting compact mode and calls `remeasureCardPairs()` after all class toggles. This is necessary because the property RO fires before `compact-mode` is removed — measurement skipped at compact guard, no subsequent RO event.
+12. **In-place updates invalidate persistent cache.** When `measureCardPairsSynchronous` detects fresh DOM (unmeasured sets) on a reused card element (`cardWidthCache` hit), it deletes the persistent cache entry for that file path before re-measuring. This prevents stale cached widths from being applied after property value changes.
+13. **`compact-stacked` requires `compact-mode`.** `cancelCompactStackedCheck` always runs on compact exit (via `syncResponsiveClasses`). Batched detection guards on `.compact-mode` presence — non-compact cards are filtered out before measurement.
+14. **Batch state requires no explicit cleanup.** Module-level `pendingCardsByDoc`, `batchRafIds`, and `compactWidthCache` are self-managing. `isConnected` + `compact-mode` guards handle stale entries. WeakMap allows GC of removed card elements. Per-document `Set` entries are cleared after each batch.

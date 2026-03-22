@@ -1,5 +1,6 @@
 /* Settings header */
 .dynamic-views-settings-header {
+  container-type: inline-size;
   margin-bottom: var(--size-4-6);
 }
 
@@ -9,6 +10,16 @@
   align-items: center;
   flex-wrap: wrap;
   color: var(--dynamic-views-text-muted);
+
+  @container (max-width: 460px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--size-4-2);
+
+    .dynamic-views-header-separator {
+      display: none;
+    }
+  }
 }
 
 .dynamic-views-header-link {

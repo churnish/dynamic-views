@@ -7,6 +7,24 @@
     min-width: 0;
   }
 
+  /* Hide pairs pending first measurement — fallback for async paths
+     (ResizeObserver, content-visibility toggle). Sync measurement
+     applies .property-measured before first paint in normal flow. */
+  .property-pair:not(.property-measured) {
+    visibility: hidden;
+  }
+
+  /* Column mode: measurement skipped — visible immediately */
+  &.dynamic-views-paired-property-column
+    .property-pair:not(.property-measured) {
+    visibility: visible;
+  }
+
+  /* Compact mode: measurement skipped — visible immediately */
+  .card.compact-mode .property-pair:not(.property-measured) {
+    visibility: visible;
+  }
+
   /* Compact mode: wrap paired properties — stay side-by-side when both fit, stack when they don't.
      column-gap (4-3) controls wrapping calc; row-gap (2-2) matches .card-properties container gap. */
   .card.compact-mode .property-pair {
@@ -111,14 +129,6 @@
   .card.compact-stacked .property-pair .pair-right .property-label,
   .card.compact-stacked .property-pair .pair-right .property-label-inline {
     text-align: left;
-  }
-
-  /* Stacked: reset right-side icon to left edge — when wrapped, "edge" flips to left
-     (the property spans the full card width, so left is the natural outer edge). */
-  .card.compact-stacked .property-pair .pair-right .timestamp-icon {
-    order: 0;
-    margin-right: var(--size-2-2);
-    margin-left: 0;
   }
 
   /* Meta-field: scrollable container */
@@ -300,7 +310,7 @@
     flex-shrink: 0;
     z-index: 2;
     background: inherit;
-    min-height: var(--dynamic-views-property-content-height, 20px);
+    min-height: var(--dynamic-views-property-content-height, 1lh);
     display: flex;
     align-items: center;
   }
@@ -451,101 +461,10 @@ body.dynamic-views-property-label-small-caps
     flex-shrink: 0;
     align-self: center;
     opacity: 0.7;
-    width: 1em;
-    height: 1em;
+    width: 1lh;
+    height: 1lh;
     margin-right: var(--size-2-2);
   }
-
-  /* Edge positioning is default: even fields show icon on right ONLY in side-by-side */
-  .property-pair .pair-right .timestamp-icon {
-    order: 2;
-    margin-right: 0;
-    margin-left: var(--size-2-2);
-  }
-}
-
-/* Hide icon when "hide" option selected */
-body.dynamic-views-timestamp-icon-hide .dynamic-views .timestamp-icon {
-  display: none;
-}
-
-/* When icon is on right for all fields */
-body.dynamic-views-timestamp-icon-right .dynamic-views .timestamp-icon {
-  order: 2;
-  margin-right: 0;
-  margin-left: var(--size-2-2);
-}
-
-/* Right mode: keep icon on right in compact-stacked.
-   Specificity 0,7,1 beats the stacked edge reset (0,6,0) at line ~118. */
-body.dynamic-views-timestamp-icon-right
-  .dynamic-views
-  .card.compact-stacked
-  .property-pair
-  .pair-right
-  .timestamp-icon {
-  order: 2;
-  margin-right: 0;
-  margin-left: var(--size-2-2);
-}
-
-/* Center positioning: odd fields show icon on right ONLY in side-by-side */
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-pair
-  .pair-left
-  .timestamp-icon {
-  order: 2;
-  margin-right: 0;
-  margin-left: var(--size-2-2);
-}
-
-/* Center positioning: even fields show icon on left ONLY in side-by-side */
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .property-pair
-  .pair-right
-  .timestamp-icon {
-  order: 0;
-  margin-right: var(--size-2-2);
-  margin-left: 0;
-}
-
-/* Center mode compact-stacked: both icons face right (no "center" when stacked).
-   Specificity 0,7,1 beats the stacked edge reset (0,6,0) at line ~118. */
-body.dynamic-views-timestamp-icon-center
-  .dynamic-views
-  .card.compact-stacked
-  .property-pair
-  .pair-right
-  .timestamp-icon {
-  order: 2;
-  margin-right: 0;
-  margin-left: var(--size-2-2);
-}
-
-/* Left positioning: even fields reset to left ONLY in side-by-side (counters edge default) */
-body.dynamic-views-timestamp-icon-left
-  .dynamic-views
-  .property-pair
-  .pair-right
-  .timestamp-icon {
-  order: 0;
-  margin-right: var(--size-2-2);
-  margin-left: 0;
-}
-
-/* Subtitle timestamp icon: center/right moves icon to right side */
-body:is(
-    .dynamic-views-timestamp-icon-center,
-    .dynamic-views-timestamp-icon-right
-  )
-  .dynamic-views
-  .card-subtitle
-  .timestamp-icon {
-  order: 2;
-  margin-right: 0;
-  margin-left: var(--size-2-2);
 }
 
 .dynamic-views {
@@ -562,7 +481,7 @@ body:is(
     white-space: nowrap;
     flex-shrink: 0;
     min-width: 0;
-    min-height: 20px;
+    min-height: 1lh;
   }
 
   .path-wrapper {
@@ -570,7 +489,7 @@ body:is(
     align-items: center;
     white-space: nowrap;
     flex-shrink: 0;
-    height: 20px;
+    height: 1lh;
   }
 
   .text-wrapper {
@@ -578,7 +497,7 @@ body:is(
     align-items: center;
     white-space: nowrap;
     flex-shrink: 0;
-    height: 20px;
+    height: 1lh;
   }
 
   /* Preserve whitespace in text spans within flex containers */
@@ -663,7 +582,7 @@ body:is(
     gap: var(--size-2-2);
     flex-shrink: 0;
     white-space: nowrap;
-    min-height: var(--dynamic-views-property-content-height, 20px);
+    min-height: var(--dynamic-views-property-content-height, 1lh);
     color: inherit;
     min-width: 0;
     flex: 0 0 auto;

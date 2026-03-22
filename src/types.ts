@@ -12,11 +12,12 @@ export interface PluginSettings {
   smartTimestamp: boolean;
   createdTimeProperty: string;
   modifiedTimeProperty: string;
-  preventSidebarSwipe: 'disabled' | 'base-files' | 'all-views';
+  preventSidebarSwipe: boolean;
   revealInNotebookNavigator: 'disable' | 'files-folders' | 'tags' | 'all';
   showYoutubeThumbnails: boolean;
   showCardLinkCovers: boolean;
   contextMenuCommands: boolean;
+  immersiveScroll: boolean;
 }
 
 /** Per-view visual defaults (shared across Bases and Datacore) */

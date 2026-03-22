@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-15
+updated: 2026-03-18
 ---
 # Masonry layout system
 
@@ -86,6 +86,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 - **`pendingResizeWidth: number | null`** — Latest container width from `ResizeObserver`. Never reset — deferred resize at scroll-idle reads the most recent value, which is always the correct target width. Used by the resize fast path to avoid a forced `getBoundingClientRect` reflow.
 - **`mountRemeasureTimeout: ReturnType<typeof setTimeout> | null`** — Timer handle for the mount-triggered remeasure throttle. Set when the first new card is mounted in `syncVirtualScroll` during scroll; cleared in `onMountRemeasure`. While active, subsequent mounts do not reset the timer (leading throttle). `isScrollRemeasurePending()` checks both `scrollRemeasureTimeout` and `mountRemeasureTimeout` to defer competing work at 6 guard sites.
 - **`initialRemeasureTimeout: ReturnType<typeof setTimeout> | null`** — Timer handle for the 500ms initial remeasure safety net. Set in `processDataUpdate` after `setupMasonryLayout` completes. Cancelled only when `remeasureAndReposition` detects drift, on re-render, or on unload.
+- **`compensatingScrollCount: number`** — Suppresses scroll listener during programmatic scroll adjustments. Counter (not boolean) — recursive `remeasureMountedCards` can set `scrollTop` multiple times per RAF, each triggering a scroll event.
 - **`hasExplicitScrollHeights: boolean`** — Tracks whether cards have explicit `style.height` set during `mountVirtualItem` to prevent scroll-back drift. When true, `remeasureAndReposition` clears the explicit heights before DOM measurement. Set in `mountVirtualItem`, cleared in `remeasureAndReposition`.
 
 ## Render pipeline
@@ -138,7 +139,8 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 1. `changedPaths.size > 0` — at least one file has a new mtime.
 2. `!settingsChanged` — settings hash unchanged.
-3. `pathsUnchanged` — sorted file paths match previous render.
+3. `pathsUnchanged` — sorted file paths match previous render (set membership, not order).
+4. `orderUnchanged` — entry order matches previous render. Uses `lastMtimes` Map insertion order (preserved across renders) compared element-wise against current `allEntries`. When Bases re-sorts by any property, the order differs and the fast path is skipped, triggering a full re-render that places cards at their correct positions.
 
 **Execution**:
 
@@ -199,7 +201,7 @@ When image is unchanged, `updateCardContent()` handles surgical DOM updates incl
 1. Read container width from `pendingResizeWidth` cache (no `getBoundingClientRect` reflow).
 2. **Pre-read `scrollTop` and `clientHeight`** from `scrollEl` before the style write loop — reading these after inline style changes would trigger forced reflow in `syncVirtualScroll`.
 3. `proportionalResizeLayout()` — single pass over all cards per group:
-   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight`. Cover area and poster cards scale linearly; text content assumed constant. Known limitation (#358): `fixedHeight` is actually width-dependent (text wraps less at wider widths), causing systematic overestimation after column count increases.
+   - Split proportional height: `scalableHeight × (cardWidth / measuredAtWidth) + fixedHeight × sqrt(measuredAtWidth / cardWidth)`. Cover area scales linearly; text content scales as sqrt (k=0.5) to approximate text-wrapping behavior. Sqrt minimizes average absolute error empirically — text reflow is discrete (lines wrap at specific thresholds), so lower k avoids overpredicting growth for items that don't reflow at a given width change.
    - Reads `item.col` directly for stable column assignment when column count unchanged. Falls back to greedy shortest-column for column count changes.
    - Update VirtualItem positions in-place (bypasses `updateVirtualItemPositions`).
    - Apply inline `width`, `left`, `top`, `height` to mounted cards.

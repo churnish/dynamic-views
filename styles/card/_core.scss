@@ -228,3 +228,142 @@ body.dynamic-views-card-shadow-dramatic
     box-shadow: var(--dynamic-views-shadow-l);
   }
 }
+
+/* Shadow color presets — set shared variable, consumed by tier override below */
+/* Default — no rule needed, shadow vars flow through from body unchanged */
+body.dynamic-views-card-shadow-color-accent
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-accent);
+}
+body.dynamic-views-card-shadow-color-red
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-red);
+}
+body.dynamic-views-card-shadow-color-orange
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-orange);
+}
+body.dynamic-views-card-shadow-color-yellow
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-yellow);
+}
+body.dynamic-views-card-shadow-color-green
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-green);
+}
+body.dynamic-views-card-shadow-color-cyan
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-cyan);
+}
+body.dynamic-views-card-shadow-color-blue
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-blue);
+}
+body.dynamic-views-card-shadow-color-purple
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-purple);
+}
+body.dynamic-views-card-shadow-color-pink
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(--dynamic-views-color-pink);
+}
+body.dynamic-views-card-shadow-color-custom
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --card-shadow-color: var(
+    --dynamic-views-card-shadow-color-custom,
+    var(--dynamic-views-color-accent)
+  );
+}
+
+/* Shadow tier override — rebuilds shadow vars from --card-shadow-color using
+   Obsidian default theme geometry + relative color syntax (not color-mix —
+   color-mix(in srgb, color, transparent) contaminates RGB channels because
+   transparent = rgba(0,0,0,0)). Theme shadow geometry lost (acceptable —
+   user explicitly chose custom color).
+
+   Alpha values = Obsidian default × multiplier per theme:
+     Light 3×  — colored shadows need boost over black to read on light backgrounds
+     Dark  6.5× — dark backgrounds absorb color, need higher alpha for prominence
+
+   Obsidian defaults (black):
+     xs: 0.015, 0.065
+     s:  0.028, 0.042, 0.07
+     l:  0.071, 0.112, 0.1  */
+
+// Light mode (3×)
+body:is(
+    .dynamic-views-card-shadow-color-accent,
+    .dynamic-views-card-shadow-color-red,
+    .dynamic-views-card-shadow-color-orange,
+    .dynamic-views-card-shadow-color-yellow,
+    .dynamic-views-card-shadow-color-green,
+    .dynamic-views-card-shadow-color-cyan,
+    .dynamic-views-card-shadow-color-blue,
+    .dynamic-views-card-shadow-color-purple,
+    .dynamic-views-card-shadow-color-pink,
+    .dynamic-views-card-shadow-color-custom
+  )
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --dynamic-views-shadow-xs:
+    0 1px 6px rgb(from var(--card-shadow-color) r g b / 0.045),
+    0 4px 24px rgb(from var(--card-shadow-color) r g b / 0.195);
+  --dynamic-views-shadow-s:
+    0px 1px 2px rgb(from var(--card-shadow-color) r g b / 0.084),
+    0px 3.4px 6.7px rgb(from var(--card-shadow-color) r g b / 0.126),
+    0px 15px 30px rgb(from var(--card-shadow-color) r g b / 0.21);
+  --dynamic-views-shadow-l:
+    0px 1.8px 7.3px rgb(from var(--card-shadow-color) r g b / 0.213),
+    0px 6.3px 24.7px rgb(from var(--card-shadow-color) r g b / 0.336),
+    0px 15px 30px rgb(from var(--card-shadow-color) r g b / 0.3);
+}
+
+// Dark mode (6.5×)
+body.theme-dark:is(
+    .dynamic-views-card-shadow-color-accent,
+    .dynamic-views-card-shadow-color-red,
+    .dynamic-views-card-shadow-color-orange,
+    .dynamic-views-card-shadow-color-yellow,
+    .dynamic-views-card-shadow-color-green,
+    .dynamic-views-card-shadow-color-cyan,
+    .dynamic-views-card-shadow-color-blue,
+    .dynamic-views-card-shadow-color-purple,
+    .dynamic-views-card-shadow-color-pink,
+    .dynamic-views-card-shadow-color-custom
+  )
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card {
+  --dynamic-views-shadow-xs:
+    0 1px 6px rgb(from var(--card-shadow-color) r g b / 0.098),
+    0 4px 24px rgb(from var(--card-shadow-color) r g b / 0.423);
+  --dynamic-views-shadow-s:
+    0px 1px 2px rgb(from var(--card-shadow-color) r g b / 0.182),
+    0px 3.4px 6.7px rgb(from var(--card-shadow-color) r g b / 0.273),
+    0px 15px 30px rgb(from var(--card-shadow-color) r g b / 0.455);
+  --dynamic-views-shadow-l:
+    0px 1.8px 7.3px rgb(from var(--card-shadow-color) r g b / 0.462),
+    0px 6.3px 24.7px rgb(from var(--card-shadow-color) r g b / 0.728),
+    0px 15px 30px rgb(from var(--card-shadow-color) r g b / 0.65);
+}

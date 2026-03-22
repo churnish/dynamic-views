@@ -8,6 +8,7 @@ import {
   BasesView,
   BasesEntry,
   Events,
+  Platform,
   QueryController,
   TFile,
 } from 'obsidian';
@@ -25,6 +26,7 @@ import {
   clearStyleSettingsCache,
 } from '../utils/style-settings';
 import { PLUGIN_SETTINGS_CHANGE } from '../constants';
+import { ImmersiveScrollController } from './immersive-scroll';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -54,7 +56,7 @@ import {
   SCROLL_THROTTLE_MS,
   MASONRY_CORRECTION_MS,
   INITIAL_REMEASURE_MS,
-  MOUNT_REMEASURE_MS,
+  HIDDEN_BUFFER_MULTIPLIER,
   computeHoverScale,
 } from '../shared/constants';
 import {
@@ -84,8 +86,7 @@ import {
 } from '../shared/scroll-preservation';
 import {
   PROPERTY_MEASURED,
-  cleanupVisibilityObserver,
-  resetGapCache,
+  resetPersistentWidthCache,
 } from '../shared/property-measure';
 import {
   buildDisplayToSyntaxMap,
@@ -212,6 +213,11 @@ export class DynamicViewsMasonryView extends BasesView {
   private batchLayoutPending: boolean = false;
   private pendingImageRelayout: boolean = false;
   private pendingDeferredResize = false;
+  /** Blocks synchronous onMountRemeasure while unmounted post-resize cards remain.
+   *  Set when pendingDeferredResize clears; cleared when all items are measured
+   *  at the current width. Prevents cascade CLS from correcting post-resize cards
+   *  alongside never-measured cards during scroll. */
+  private postResizeScrollActive = false;
   private resizeCorrectionTimeout: number | null = null;
 
   private scrollResizeObserver: ResizeObserver | null = null;
@@ -228,11 +234,12 @@ export class DynamicViewsMasonryView extends BasesView {
   private groupContainers: Map<string | undefined, HTMLElement> = new Map();
   private virtualScrollRafId: number | null = null;
   private scrollRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
-  private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private inMountRemeasure = false;
   private initialRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private hasExplicitScrollHeights = false;
-  private isCompensatingScroll = false;
+  private compensatingScrollCount = 0;
   private deferredRemeasureRafId: number | null = null;
+  private resizeCorrectionRafId: number | null = null;
   private hasUserScrolled = false;
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
@@ -242,8 +249,10 @@ export class DynamicViewsMasonryView extends BasesView {
    *  target width regardless of when the deferral was scheduled. */
   private pendingResizeWidth: number | null = null;
   private cachedGroupOffsets: Map<string | undefined, number> = new Map();
+  private groupOffsetsDirty = true;
   private lastLayoutCardWidth: number = 0;
   private lastLayoutGap: number = 0;
+  private cardVerticalPadding: number | null = null;
   private lastLayoutMinColumns: number = 1;
   private lastLayoutIsGrouped: boolean = false;
   private propertyMeasuredTimeout: number | null = null;
@@ -260,6 +269,7 @@ export class DynamicViewsMasonryView extends BasesView {
   };
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
+  private immersive: ImmersiveScrollController | null = null;
 
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
@@ -341,6 +351,7 @@ export class DynamicViewsMasonryView extends BasesView {
         this.rebuildGroupIndex();
         this.groupLayoutResults.delete(collapseGroupKey);
         this.cachedGroupOffsets.delete(collapseGroupKey);
+        this.groupOffsetsDirty = true;
       }
 
       this.renderState.lastRenderHash = '';
@@ -650,9 +661,28 @@ export class DynamicViewsMasonryView extends BasesView {
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
+    // Setup immersive mobile scrolling
+    if (Platform.isPhone) {
+      const ownerDoc = this.scrollEl.ownerDocument;
+      const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
+      const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
+      if (viewContent && navbarEl) {
+        this.immersive = new ImmersiveScrollController({
+          scrollEl: this.scrollEl,
+          container: this.containerEl,
+          viewContent,
+          navbarEl,
+        });
+        if (pluginSettings.immersiveScroll) {
+          this.immersive.mount();
+        }
+        this.register(() => this.immersive?.unmount());
+      }
+    }
+
     // Watch for Dynamic Views Style Settings changes only
     this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
-      resetGapCache(); // Invalidate gap cache on settings change
+      resetPersistentWidthCache(); // Invalidate persistent width cache on settings change
       this.onDataUpdated();
     }, this.containerEl);
     this.register(() => this.disconnectStyleObserver?.());
@@ -675,7 +705,16 @@ export class DynamicViewsMasonryView extends BasesView {
     // Re-render when plugin settings change from the settings tab
     this.registerEvent(
       (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () => {
-        resetGapCache();
+        const newSettings = this.plugin.persistenceManager.getPluginSettings();
+        setupBasesSwipePrevention(this.containerEl, this.app, newSettings);
+        if (this.immersive) {
+          if (newSettings.immersiveScroll) {
+            this.immersive.mount();
+          } else {
+            this.immersive.unmount();
+          }
+        }
+        resetPersistentWidthCache();
         this.onDataUpdated();
       })
     );
@@ -769,9 +808,11 @@ export class DynamicViewsMasonryView extends BasesView {
       );
       this.deferredRemeasureRafId = null;
     }
-    if (this.mountRemeasureTimeout !== null) {
-      clearTimeout(this.mountRemeasureTimeout);
-      this.mountRemeasureTimeout = null;
+    if (this.resizeCorrectionRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.resizeCorrectionRafId
+      );
+      this.resizeCorrectionRafId = null;
     }
     this.layoutResizeObserver?.disconnect();
     this.layoutResizeObserver = null;
@@ -806,7 +847,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Rebind style observer to new document's body
     this.disconnectStyleObserver?.();
     this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
-      resetGapCache();
+      resetPersistentWidthCache();
       this.onDataUpdated();
     }, this.containerEl);
 
@@ -1079,14 +1120,18 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Detect files with changed content (mtime changed but paths unchanged)
       const changedPaths = new Set<string>();
-      const currentPaths = allEntries
-        .map((e) => e.file.path)
-        .sort()
-        .join('\0');
-      const lastPaths = Array.from(this.renderState.lastMtimes.keys())
-        .sort()
-        .join('\0');
-      const pathsUnchanged = currentPaths === lastPaths;
+      const currentPaths = allEntries.map((e) => e.file.path);
+      const lastKeys = Array.from(this.renderState.lastMtimes.keys());
+      const pathsUnchanged =
+        [...currentPaths].sort().join('\0') === [...lastKeys].sort().join('\0');
+      // Detect sort-order changes: when a sort-relevant property is edited,
+      // Bases re-sorts allEntries AND updates mtime, so changedPaths is
+      // non-empty and the renderHash early-exit is bypassed. This check is
+      // the only gate that prevents the in-place path from preserving stale
+      // DOM positions when the sort order has actually changed.
+      const orderUnchanged =
+        lastKeys.length === currentPaths.length &&
+        currentPaths.every((p, i) => p === lastKeys[i]);
 
       for (const entry of allEntries) {
         const path = entry.file.path;
@@ -1097,7 +1142,8 @@ export class DynamicViewsMasonryView extends BasesView {
         }
       }
 
-      // Update mtime tracking
+      // Update mtime tracking — insertion order must match allEntries (Bases
+      // sort order) so the next render's orderUnchanged check works correctly.
       this.renderState.lastMtimes.clear();
       for (const entry of allEntries) {
         this.renderState.lastMtimes.set(entry.file.path, entry.file.stat.mtime);
@@ -1134,8 +1180,13 @@ export class DynamicViewsMasonryView extends BasesView {
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
 
-      // If only content changed (not paths/settings), update in-place
-      if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {
+      // If only content changed (not paths/settings/order), update in-place
+      if (
+        changedPaths.size > 0 &&
+        !settingsChanged &&
+        pathsUnchanged &&
+        orderUnchanged
+      ) {
         await this.updateCardsInPlace(
           changedPaths,
           allEntries,
@@ -1292,10 +1343,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.virtualItems = [];
       this.hasExplicitScrollHeights = false;
       this.pendingDeferredResize = false;
-      if (this.mountRemeasureTimeout !== null) {
-        clearTimeout(this.mountRemeasureTimeout);
-        this.mountRemeasureTimeout = null;
-      }
+      this.postResizeScrollActive = false;
       if (this.initialRemeasureTimeout !== null) {
         clearTimeout(this.initialRemeasureTimeout);
         this.initialRemeasureTimeout = null;
@@ -1303,6 +1351,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.virtualItemsByGroup.clear();
       this.groupContainers.clear();
       this.cachedGroupOffsets.clear();
+      this.groupOffsetsDirty = true;
       this.hasUserScrolled = false;
 
       // Cleanup card renderer observers before re-rendering
@@ -1545,6 +1594,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private setupMasonryLayout(settings: BasesResolvedSettings): void {
     if (!this.masonryContainer) return;
+    this.cardVerticalPadding = null;
 
     const minColumns = settings.minimumColumns;
 
@@ -1937,6 +1987,7 @@ export class DynamicViewsMasonryView extends BasesView {
             // DOM measurement branch handles its own sync — set flag so `finally` skips it.
             // Must sync after correction: re-measured heights shift positions, potentially
             // moving items in/out of viewport range.
+            this.groupOffsetsDirty = true;
             this.updateCachedGroupOffsets();
             this.syncVirtualScroll();
             fastPathHandledSync = true;
@@ -2172,6 +2223,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Mount/unmount cards based on updated positions.
         // Fast path handles its own sync — skip here.
         if (!fastPathHandledSync) {
+          this.groupOffsetsDirty = true;
           this.updateCachedGroupOffsets();
           this.syncVirtualScroll();
         }
@@ -2229,6 +2281,23 @@ export class DynamicViewsMasonryView extends BasesView {
         this.masonryContainer?.classList.add('masonry-correcting');
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.('resize-correction');
+        // Skip post-correction passes when correction was deferred to scroll-idle
+        // (onScrollIdle already runs syncResponsiveClasses + initializeScrollGradientsForCards).
+        if (!this.pendingDeferredResize) {
+          // Deferred to next frame to avoid forcing reflow after the correction
+          // path's inline style writes.
+          this.resizeCorrectionRafId = (
+            this.observerWindow ?? window
+          ).requestAnimationFrame(() => {
+            this.resizeCorrectionRafId = null;
+            if (!this.masonryContainer?.isConnected) return;
+            const mounted = this.virtualItems
+              .filter((v) => v.el?.isConnected)
+              .map((v) => v.el!);
+            syncResponsiveClasses(mounted);
+            initializeScrollGradientsForCards(mounted);
+          });
+        }
         // Remove after transition completes
         window.setTimeout(() => {
           this.masonryContainer?.classList.remove('masonry-correcting');
@@ -2240,11 +2309,9 @@ export class DynamicViewsMasonryView extends BasesView {
       // causing stale layout after hotkey window resize.
       if (this.masonryContainer?.isConnected) {
         this.updateLayoutRef.current?.('resize-observer');
-        const mounted = this.virtualItems
-          .filter((v) => v.el?.isConnected)
-          .map((v) => v.el!);
-        syncResponsiveClasses(mounted);
-        initializeScrollGradientsForCards(mounted);
+        // syncResponsiveClasses + initializeScrollGradientsForCards deferred to
+        // post-resize correction — reading offsetWidth/clientWidth after style
+        // writes forces full-document style recalculation (6935 elements, 41–189ms).
       }
     };
 
@@ -2418,19 +2485,34 @@ export class DynamicViewsMasonryView extends BasesView {
       this.masonryContainer?.classList.add('masonry-correcting');
     }
 
-    // Scroll anchor: record absolute Y of first visible mounted card
-    // so we can compensate scrollTop after positions shift
+    // Per-column scroll anchors: record absolute Y + visible weight for
+    // each column so we can pick the weighted-median compensation after
+    // relayout — minimizes total visible displacement across all columns
     const scrollTop = this.scrollEl.scrollTop;
-    let anchorItem: VirtualItem | null = null;
-    let anchorAbsY = 0;
+    const viewportBottom = scrollTop + this.scrollEl.clientHeight;
+
+    interface ColumnAnchor {
+      item: VirtualItem;
+      absY: number;
+      visiblePx: number;
+    }
+    const columnAnchors: ColumnAnchor[] = [];
+    const seenCols = new Set<number>();
+
     for (const item of this.virtualItems) {
-      if (!item.el) continue;
+      if (!item.el || seenCols.has(item.col)) continue;
       const offset = this.cachedGroupOffsets.get(item.groupKey) ?? 0;
       const absY = offset + item.y;
-      if (absY + item.height > scrollTop) {
-        anchorItem = item;
-        anchorAbsY = absY;
-        break;
+      const cardBottom = absY + item.height;
+      if (cardBottom > scrollTop) {
+        seenCols.add(item.col);
+        const visibleTop = Math.max(absY, scrollTop);
+        const visibleBottom = Math.min(cardBottom, viewportBottom);
+        const visiblePx = Math.max(0, visibleBottom - visibleTop);
+        // Skip mounted cards beyond viewport (in buffer zone)
+        if (visiblePx > 0) {
+          columnAnchors.push({ item, absY, visiblePx });
+        }
       }
     }
     for (const groupKey of this.virtualItemsByGroup.keys()) {
@@ -2548,15 +2630,37 @@ export class DynamicViewsMasonryView extends BasesView {
       this.updateVirtualItemPositions(groupKey, result);
     }
     this.masonryContainer?.classList.remove('masonry-measuring');
+    this.groupOffsetsDirty = true;
     this.updateCachedGroupOffsets();
 
-    // Compensate scroll position so viewport content stays visually anchored.
-    if (anchorItem) {
-      const newOffset = this.cachedGroupOffsets.get(anchorItem.groupKey) ?? 0;
-      const newAbsY = newOffset + anchorItem.y;
-      const delta = newAbsY - anchorAbsY;
+    // Compensate scroll: weighted median of per-column deltas minimizes
+    // total visible displacement (vs single-anchor which fixes one column)
+    if (columnAnchors.length > 0) {
+      const deltas: { delta: number; weight: number }[] = [];
+      for (const anchor of columnAnchors) {
+        const newOffset =
+          this.cachedGroupOffsets.get(anchor.item.groupKey) ?? 0;
+        const newAbsY = newOffset + anchor.item.y;
+        deltas.push({ delta: newAbsY - anchor.absY, weight: anchor.visiblePx });
+      }
+
+      // Weighted median: sort by delta, find where cumulative weight crosses 50%
+      deltas.sort((a, b) => a.delta - b.delta);
+      let delta = deltas[0].delta;
+      const totalWeight = deltas.reduce((sum, d) => sum + d.weight, 0);
+      if (totalWeight > 0) {
+        let cumulative = 0;
+        for (const d of deltas) {
+          cumulative += d.weight;
+          if (cumulative >= totalWeight / 2) {
+            delta = d.delta;
+            break;
+          }
+        }
+      }
+
       if (delta !== 0) {
-        this.isCompensatingScroll = true;
+        this.compensatingScrollCount++;
         this.scrollEl.scrollTop = scrollTop + delta;
       }
     }
@@ -2662,7 +2766,9 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Compute and cache container offsets for syncVirtualScroll.
    *  Must be called synchronously before syncVirtualScroll — offsets depend on
    *  current scrollTop and are only valid within the same synchronous block. */
-  private updateCachedGroupOffsets(): void {
+  private updateCachedGroupOffsets(force = false): void {
+    if (!force && !this.groupOffsetsDirty) return;
+    this.groupOffsetsDirty = false;
     const scrollRect = this.scrollEl.getBoundingClientRect();
     const scrollTop = this.scrollEl.scrollTop;
     this.cachedGroupOffsets.clear();
@@ -2674,6 +2780,15 @@ export class DynamicViewsMasonryView extends BasesView {
         containerRect.top - scrollRect.top + scrollTop
       );
     }
+  }
+
+  private cacheCardVerticalPadding(el: HTMLElement): void {
+    if (this.cardVerticalPadding !== null) return;
+    const win = el.ownerDocument.defaultView;
+    if (!win) return;
+    const cs = win.getComputedStyle(el);
+    this.cardVerticalPadding =
+      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   }
 
   /** Mount a virtual item: render card, apply stored position, set refs */
@@ -2709,6 +2824,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.hasExplicitScrollHeights = true;
     item.el = handle.el;
     item.handle = handle;
+    this.cacheCardVerticalPadding(handle.el);
     syncResponsiveClasses([handle.el]);
     initializeScrollGradientsForCards([handle.el]);
   }
@@ -2720,6 +2836,10 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     item.handle?.cleanup();
     this.cardRenderer.abortCardRerenderControllers(item.el!);
+    if (item.el!.classList.contains(CONTENT_HIDDEN_CLASS)) {
+      item.el!.classList.remove(CONTENT_HIDDEN_CLASS);
+      item.el!.style.removeProperty('contain-intrinsic-height');
+    }
     item.el!.style.removeProperty('height');
     this.cardResizeObserver?.unobserve(item.el!);
     item.el?.remove();
@@ -2733,24 +2853,33 @@ export class DynamicViewsMasonryView extends BasesView {
     paneHeight: number;
   }): void {
     if (!this.virtualItems.length || !this.lastRenderedSettings) return;
-    // Only sync after user has scrolled — prevents premature unmounting
-    // during initial render and batch loading
     if (!this.hasUserScrolled) return;
     const scrollTop = cached?.scrollTop ?? this.scrollEl.scrollTop;
     const paneHeight = cached?.paneHeight ?? this.scrollEl.clientHeight;
     const settings = this.lastRenderedSettings;
 
-    // Use cached container offsets — computed after layout updates, not every scroll frame
     if (this.cachedGroupOffsets.size === 0) return;
     const offsets = this.cachedGroupOffsets;
 
-    // Buffer = 1x pane height above/below — scales with pane size
-    const visibleTop = scrollTop - paneHeight;
-    const visibleBottom = scrollTop + paneHeight + paneHeight;
+    // Tier 1 (mount zone): viewport ± 1× paneHeight — fully rendered
+    const mountTop = scrollTop - paneHeight;
+    const mountBottom = scrollTop + paneHeight + paneHeight;
 
-    let mountedNew = false;
+    // Tier 2 (content-hidden zone): desktop only — viewport ± HIDDEN_BUFFER_MULTIPLIER × paneHeight.
+    // Cards mounted + measured, then content-hidden. Mobile keeps 1×P mount zone:
+    // masonry lacks a momentum mount cap — 2×P mounts during flick scroll drop frames on mobile.
+    const useHiddenBuffer = !Platform.isMobile;
+    const hiddenTop = useHiddenBuffer
+      ? scrollTop - paneHeight * HIDDEN_BUFFER_MULTIPLIER
+      : mountTop;
+    const hiddenBottom = useHiddenBuffer
+      ? scrollTop + paneHeight * (HIDDEN_BUFFER_MULTIPLIER + 1)
+      : mountBottom;
+
+    let mountedNeverMeasured = false;
+    let mountedPostResize = false;
+    const hiddenZonePreMeasure: VirtualItem[] = [];
     for (const item of this.virtualItems) {
-      // Skip items not yet positioned (height 0 = created but not laid out)
       if (item.height === 0) continue;
 
       const containerOffsetY = offsets.get(item.groupKey);
@@ -2758,38 +2887,95 @@ export class DynamicViewsMasonryView extends BasesView {
 
       const itemTop = containerOffsetY + item.y;
       const itemBottom = itemTop + item.height;
-      const inView = itemBottom > visibleTop && itemTop < visibleBottom;
+      const inMountZone = itemBottom > mountTop && itemTop < mountBottom;
 
-      if (inView && !item.el) {
-        const container = this.groupContainers.get(item.groupKey);
-        if (container) {
-          this.mountVirtualItem(item, container, settings);
-          mountedNew = true;
+      if (inMountZone) {
+        if (!item.el) {
+          const container = this.groupContainers.get(item.groupKey);
+          if (container) {
+            this.mountVirtualItem(item, container, settings);
+            if (item.measuredAtWidth === 0) {
+              mountedNeverMeasured = true;
+            } else if (
+              Math.abs(item.measuredAtWidth - this.lastLayoutCardWidth) > 1
+            ) {
+              mountedPostResize = true;
+            }
+          }
+        } else if (item.el.classList.contains(CONTENT_HIDDEN_CLASS)) {
+          // Content-hidden → mount zone: restore rendering
+          item.el.classList.remove(CONTENT_HIDDEN_CLASS);
+          item.el.style.removeProperty('contain-intrinsic-height');
         }
-      } else if (!inView && item.el) {
-        this.unmountVirtualItem(item);
+      } else if (itemBottom > hiddenTop && itemTop < hiddenBottom) {
+        // Content-hidden zone: mount for measurement, then hide
+        if (!item.el) {
+          const container = this.groupContainers.get(item.groupKey);
+          if (container) {
+            this.mountVirtualItem(item, container, settings);
+            if (item.measuredAtWidth === 0) {
+              mountedNeverMeasured = true;
+            } else if (
+              Math.abs(item.measuredAtWidth - this.lastLayoutCardWidth) > 1
+            ) {
+              mountedPostResize = true;
+              hiddenZonePreMeasure.push(item);
+            }
+          }
+        } else if (
+          useHiddenBuffer &&
+          !item.el.classList.contains(CONTENT_HIDDEN_CLASS)
+        ) {
+          // Already mounted + measured (from a previous cycle) → hide
+          item.el.classList.add(CONTENT_HIDDEN_CLASS);
+          item.el.style.setProperty(
+            'contain-intrinsic-height',
+            `${Math.max(0, item.height - (this.cardVerticalPadding ?? 0))}px`
+          );
+        }
+      } else {
+        // Beyond content-hidden zone: full unmount
+        if (item.el) {
+          this.unmountVirtualItem(item);
+        }
       }
     }
 
-    // Mount-triggered remeasure: throttle (fire every MOUNT_REMEASURE_MS during
-    // scroll with mounts). Not reset on subsequent mounts — spreads corrections
-    // across the scroll instead of accumulating them until scroll idle.
-    if (
-      mountedNew &&
-      this.mountRemeasureTimeout === null &&
-      this.resizeCorrectionTimeout === null &&
-      this.lastLayoutCardWidth > 0 &&
-      !this.batchLayoutPending
-    ) {
-      this.mountRemeasureTimeout = setTimeout(() => {
-        this.mountRemeasureTimeout = null;
-        this.onMountRemeasure();
-      }, MOUNT_REMEASURE_MS);
+    // Eager pre-measurement: measure post-resize cards in the content-hidden
+    // zone. Updates measurement baselines only — NOT item.height or positions.
+    // When these cards get unmounted, estimateUnmountedHeight returns exact
+    // heights, reducing cross-column differential at scroll-idle correction.
+    if (hiddenZonePreMeasure.length > 0) {
+      this.eagerPreMeasure(hiddenZonePreMeasure);
     }
 
-    // Scroll-idle debounce: reset on every tick for deferred flags only.
-    // Handles pendingDeferredResize which needs true scroll idle.
-    if (this.pendingDeferredResize) {
+    // Synchronous mount remeasure: measure + reposition in the same frame
+    // cards are mounted. Eliminates the 200ms estimation→correction gap that
+    // causes visible CLS on first scroll through unmeasured cards.
+    if (
+      mountedNeverMeasured &&
+      !this.inMountRemeasure &&
+      this.resizeCorrectionTimeout === null &&
+      this.lastLayoutCardWidth > 0 &&
+      !this.batchLayoutPending &&
+      !this.pendingDeferredResize &&
+      !this.postResizeScrollActive
+    ) {
+      this.inMountRemeasure = true;
+      this.onMountRemeasure();
+      this.inMountRemeasure = false;
+    }
+
+    // Scroll-idle debounce: fire onScrollIdle 200ms after scroll stops.
+    // While postResizeScrollActive, reset on EVERY scroll frame — not just
+    // frames that mount new cards. Without this, frames with no new mounts
+    // don't reset the debounce, causing scroll-idle to fire mid-scroll
+    // during natural mount-zone gaps.
+    if (
+      this.pendingDeferredResize ||
+      this.postResizeScrollActive ||
+      mountedPostResize
+    ) {
       if (this.scrollRemeasureTimeout !== null) {
         clearTimeout(this.scrollRemeasureTimeout);
       }
@@ -2803,14 +2989,11 @@ export class DynamicViewsMasonryView extends BasesView {
   /** True when any scroll-related remeasure timer is pending.
    *  Used by guard sites to defer work during active scroll. */
   private isScrollRemeasurePending(): boolean {
-    return (
-      this.scrollRemeasureTimeout !== null ||
-      this.mountRemeasureTimeout !== null
-    );
+    return this.scrollRemeasureTimeout !== null || this.inMountRemeasure;
   }
 
-  /** Fires during scroll to correct height drift from recently mounted cards.
-   *  Throttled by MOUNT_REMEASURE_MS — corrections blend with scroll motion. */
+  /** Correct height drift from recently mounted cards.
+   *  Called synchronously from syncVirtualScroll after new mounts. */
   private onMountRemeasure(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.batchLayoutPending) return;
@@ -2819,6 +3002,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (!this.lastRenderedSettings) return;
     // Deferred resize takes priority — let scroll-idle handle it
     if (this.pendingDeferredResize) return;
+    if (this.postResizeScrollActive) return;
     this.remeasureAndReposition(
       this.lastLayoutWidth,
       this.lastLayoutCardWidth,
@@ -2828,6 +3012,10 @@ export class DynamicViewsMasonryView extends BasesView {
       this.lastLayoutIsGrouped,
       true // skipTransition — instant correction during scroll
     );
+    // Re-evaluate zones: apply content-hidden to measured cards in hidden buffer,
+    // mount newly-in-range items from position changes.
+    // Group offsets already refreshed by remeasureAndReposition() internally.
+    this.syncVirtualScroll();
   }
 
   /** Runs deferred layout work after scroll settles. Reschedules itself when
@@ -2843,6 +3031,7 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
       this.pendingDeferredResize = false;
+      this.postResizeScrollActive = true;
       this.masonryContainer?.classList.add('masonry-skip-transition');
       this.updateLayoutRef.current?.('resize-observer');
       if (this.masonryContainer?.isConnected) {
@@ -2875,6 +3064,48 @@ export class DynamicViewsMasonryView extends BasesView {
       true
     );
     if (didWork) this.scheduleDeferredRemeasure(true);
+    // Clear post-resize guard: after scroll-idle correction, mounted cards
+    // are at correct heights. Remaining unmounted post-resize cards will be
+    // handled by scroll-idle debounce (mountedPostResize condition) when
+    // they mount — no need to wait for ALL items to match current width.
+    if (this.postResizeScrollActive) {
+      this.postResizeScrollActive = false;
+    }
+  }
+
+  /** Pre-measure post-resize cards in the content-hidden zone.
+   *  Updates measurement baselines (measuredHeight, measuredAtWidth,
+   *  scalableHeight, fixedHeight) without changing item.height or
+   *  positions — cards are invisible, so the mismatch is harmless.
+   *  When these cards later get unmounted, estimateUnmountedHeight
+   *  returns exact heights (measuredAtWidth === cardWidth), reducing
+   *  cross-column differential during scroll-idle batch correction. */
+  private eagerPreMeasure(items: VirtualItem[]): void {
+    // Write batch: remove explicit heights for natural measurement
+    for (const item of items) {
+      item.el!.style.removeProperty('height');
+    }
+    // Read batch: one forced reflow, then read all heights
+    const measurements: Array<{ h: number; scalable: number }> = [];
+    for (const item of items) {
+      measurements.push({
+        h: item.el!.offsetHeight,
+        scalable: measureScalableHeight(item.el!),
+      });
+    }
+    // Write batch: restore explicit heights, update measurement baselines
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const m = measurements[i];
+      // Restore explicit height to ESTIMATED value — item.height unchanged
+      // so remeasureAndReposition still detects drift and repositions
+      item.el!.style.height = `${item.height}px`;
+      // Update measurement baselines for estimateUnmountedHeight
+      item.measuredHeight = m.h;
+      item.measuredAtWidth = this.lastLayoutCardWidth;
+      item.scalableHeight = m.scalable;
+      item.fixedHeight = m.h - m.scalable;
+    }
   }
 
   /** Schedule virtual scroll sync on next animation frame */
@@ -3619,6 +3850,7 @@ export class DynamicViewsMasonryView extends BasesView {
           this.batchLayoutPending = false;
           this.isLoading = false;
 
+          this.groupOffsetsDirty = true;
           this.updateCachedGroupOffsets();
           this.syncVirtualScroll();
 
@@ -3769,8 +4001,8 @@ export class DynamicViewsMasonryView extends BasesView {
     this.scrollThrottle.listener = () => {
       // Skip sync for programmatic scroll compensation — positions were
       // just recalculated, syncing would cascade into another remeasure
-      if (this.isCompensatingScroll) {
-        this.isCompensatingScroll = false;
+      if (this.compensatingScrollCount > 0) {
+        this.compensatingScrollCount--;
         return;
       }
       // Activate virtual scrolling on first user scroll
@@ -3833,6 +4065,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Trigger initial checks
     this.checkAndLoadMore(totalEntries, settings);
+    this.groupOffsetsDirty = true;
     this.updateCachedGroupOffsets();
     this.syncVirtualScroll();
   }
@@ -3871,14 +4104,8 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.scrollResizeObserver) {
       this.scrollResizeObserver.disconnect();
     }
-    // Clean up property measurement observer for this window only
-    const cleanupWindow = getOwnerWindow(this.containerEl);
-    cleanupVisibilityObserver(cleanupWindow);
     if (this.scrollRemeasureTimeout !== null) {
       clearTimeout(this.scrollRemeasureTimeout);
-    }
-    if (this.mountRemeasureTimeout !== null) {
-      clearTimeout(this.mountRemeasureTimeout);
     }
     if (this.initialRemeasureTimeout !== null) {
       clearTimeout(this.initialRemeasureTimeout);

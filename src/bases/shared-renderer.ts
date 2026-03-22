@@ -53,7 +53,6 @@ import {
   showTagHashPrefix,
   getHideEmptyMode,
   type HideEmptyMode,
-  showTimestampIcon,
   getEmptyValueMarker,
   shouldHideMissingProperties,
   getListSeparator,
@@ -61,9 +60,9 @@ import {
   isSlideshowIndicatorEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
-  getUrlButtonIcon,
   getCompactBreakpoint,
   hasBodyClass,
+  isExtensionMode,
 } from '../utils/style-settings';
 import {
   getPropertyLabel,
@@ -103,7 +102,10 @@ import {
   navigateToFolderInNotebookNavigator,
   revealFileInNotebookNavigator,
 } from '../utils/notebook-navigator';
-import { measurePropertyFields } from '../shared/property-measure';
+import {
+  measurePropertyFields,
+  remeasureCardPairs,
+} from '../shared/property-measure';
 import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
 import {
   isTagProperty,
@@ -111,7 +113,9 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   computeInvertPairs,
-  hasWrappedPairs,
+  queueCompactStackedCheck,
+  cancelCompactStackedCheck,
+  invalidateCompactStackedCache,
 } from '../shared/property-helpers';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -144,7 +148,8 @@ function truncateTitleWithCanvas(
   fullText: string,
   containerWidth: number,
   font: string,
-  maxLines: number
+  maxLines: number,
+  suffixText = ''
 ): void {
   if (!fullText || containerWidth <= 0 || maxLines <= 0) return;
 
@@ -153,8 +158,10 @@ function truncateTitleWithCanvas(
 
   const ellipsis = '…';
   const ellipsisWidth = ctx.measureText(ellipsis).width;
-  // Total width available across all lines, minus ellipsis
-  const availableWidth = containerWidth * maxLines - ellipsisWidth;
+  const suffixWidth = suffixText ? ctx.measureText(suffixText).width : 0;
+  // Total width available across all lines, minus ellipsis and extension suffix
+  const availableWidth =
+    containerWidth * maxLines - ellipsisWidth - suffixWidth;
 
   // Measure full text width
   const fullWidth = ctx.measureText(fullText).width;
@@ -308,6 +315,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
     width: number;
     font: string;
     maxLines: number;
+    suffixText: string;
   }> = [];
 
   for (const titleEl of titles) {
@@ -327,6 +335,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
     // Skip if not visible
     if (width <= 0) continue;
 
+    const suffixEl = titleEl.querySelector('.card-title-ext-suffix');
     measurements.push({
       textEl,
       fullText,
@@ -334,20 +343,26 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
       font: style.font,
       maxLines:
         parseInt(style.getPropertyValue('--dynamic-views-title-lines')) || 2,
+      suffixText: suffixEl?.textContent || '',
     });
   }
 
   // Phase 2: Calculate and apply truncations (no layout reads)
   for (const m of measurements) {
-    truncateTitleWithCanvas(m.textEl, m.fullText, m.width, m.font, m.maxLines);
+    truncateTitleWithCanvas(
+      m.textEl,
+      m.fullText,
+      m.width,
+      m.font,
+      m.maxLines,
+      m.suffixText
+    );
   }
 }
 
 export function initializeTitleTruncation(container: HTMLElement): void {
-  // Only run when extension mode is enabled
-  if (!document.body.classList.contains('dynamic-views-file-type-ext')) {
-    return;
-  }
+  // Only run in Extension mode (max-height truncation via canvas measurement)
+  if (!isExtensionMode()) return;
 
   // Skip if scroll mode is enabled (no truncation)
   if (document.body.classList.contains('dynamic-views-title-overflow-scroll')) {
@@ -367,10 +382,8 @@ export function initializeTitleTruncation(container: HTMLElement): void {
 export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
   if (cards.length === 0) return;
 
-  // Only run when extension mode is enabled
-  if (!document.body.classList.contains('dynamic-views-file-type-ext')) {
-    return;
-  }
+  // Only run in Extension mode (max-height truncation via canvas measurement)
+  if (!isExtensionMode()) return;
 
   // Skip if scroll mode is enabled (no truncation)
   if (document.body.classList.contains('dynamic-views-title-overflow-scroll')) {
@@ -388,13 +401,6 @@ export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
 }
 
 // dragManager type declared in datacore/types.d.ts
-
-/** Tracks last card width when compact-stacked was evaluated.
- *  Prevents infinite RO loop: toggling compact-stacked changes card height,
- *  which re-triggers RO. By checking width, we skip height-only re-fires.
- *  Cleared when cards become content-hidden so wrapping is re-evaluated
- *  when they return to view (content-hidden skips the RO callback). */
-const compactWidthCache = new WeakMap<HTMLElement, number>();
 
 /**
  * Batch-sync responsive classes (compact-mode, thumbnail-stack) for cards.
@@ -444,6 +450,7 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
 
   // Phase 2: Apply all class changes (no layout reads)
   let anyChanged = false;
+  const exitedCompact: HTMLElement[] = [];
   for (const {
     card,
     cardWidth,
@@ -460,7 +467,10 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
 
     if (shouldBeCompact !== wasCompact) {
       card.classList.toggle('compact-mode', shouldBeCompact);
-      if (!shouldBeCompact) card.classList.remove('compact-stacked');
+      if (!shouldBeCompact) {
+        cancelCompactStackedCheck(card);
+        exitedCompact.push(card);
+      }
       anyChanged = true;
     }
     if (thumb && shouldBeStacked !== wasStacked) {
@@ -469,8 +479,15 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
     }
   }
 
-  // Compact-stacked wrapping detection is handled by the per-card RO
-  // (with compactWidthCache to prevent infinite height-change loops).
+  // Phase 3: Trigger property measurement on cards that exited compact mode.
+  // The property RO may have already fired and skipped (compact guard) with no
+  // subsequent event — card width didn't change, only the class was removed.
+  for (const card of exitedCompact) {
+    remeasureCardPairs(card);
+  }
+
+  // Compact-stacked wrapping detection is handled by RAF-batched
+  // queueCompactStackedCheck() in property-helpers.ts (per-card RO queues).
 
   return anyChanged;
 }
@@ -1203,10 +1220,7 @@ export class SharedCardRenderer {
         }
 
         // Add extension suffix inside link for Extension mode
-        if (
-          extInfo &&
-          document.body.classList.contains('dynamic-views-file-type-ext')
-        ) {
+        if (extInfo && isExtensionMode()) {
           link.createSpan({
             cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
@@ -1221,10 +1235,7 @@ export class SharedCardRenderer {
         });
 
         // Add extension suffix for Extension mode
-        if (
-          extInfo &&
-          document.body.classList.contains('dynamic-views-file-type-ext')
-        ) {
+        if (extInfo && isExtensionMode()) {
           titleEl.createSpan({
             cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
@@ -1295,17 +1306,20 @@ export class SharedCardRenderer {
     const hasImage = imageUrls.length > 0;
 
     // Check if title or subtitle will be rendered
-    // In Extension mode, use basename when title property includes an extension
-    // (the extension suffix is appended separately by renderTitleContent)
-    const isExtMode = document.body.classList.contains(
-      'dynamic-views-file-type-ext'
+    // In Ext/Flair/Icon modes, use basename when title property includes an
+    // extension — the extension is shown via a separate element (suffix/badge/icon).
+    // In None mode, keep the full title since no separate indicator exists.
+    const showsExtSeparately = !document.body.classList.contains(
+      'dynamic-views-file-type-none'
     );
     const titleProp = settings.titleProperty || '';
     const titleHasExtension =
       titleProp === 'file.name' || titleProp === 'file.fullname';
     const isFullname = titleProp === 'file.fullname';
     const displayTitle =
-      isExtMode && titleHasExtension ? entry.file.basename : card.title;
+      showsExtSeparately && titleHasExtension
+        ? entry.file.basename
+        : card.title;
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
@@ -1359,7 +1373,7 @@ export class SharedCardRenderer {
           iconEl.target = '_blank';
           iconEl.rel = 'noopener noreferrer';
         }
-        setIcon(iconEl, getUrlButtonIcon());
+        setIcon(iconEl, 'arrow-up-right');
         // Hidden text for native link drag ghost — Chromium uses textContent
         // to generate the 2-line ghost (title + URL). Without text, only the
         // SVG icon appears as the ghost.
@@ -1500,23 +1514,6 @@ export class SharedCardRenderer {
       );
     }
 
-    // Cover hover zoom intent: always listen on .card-cover (created by renderCoverWrapper above).
-    // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
-    if (
-      format === 'cover' &&
-      getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches
-    ) {
-      const coverEl = cardEl.querySelector('.card-cover') as HTMLElement;
-      if (coverEl) {
-        setupHoverIntent(
-          coverEl,
-          () => cardEl.classList.add('cover-hover-active'),
-          () => cardEl.classList.remove('cover-hover-active'),
-          signal
-        );
-      }
-    }
-
     // Card-level responsive behaviors (single ResizeObserver)
     // Use cached breakpoint to avoid getComputedStyle per card
     const breakpoint = getCompactBreakpoint();
@@ -1542,9 +1539,9 @@ export class SharedCardRenderer {
       // Guard against race with cleanup or element removal
       if (signal.aborted || !cardEl.isConnected) return;
       // Skip content-hidden cards (dimension reads trigger Chromium warnings).
-      // Delete cache so wrapping is re-evaluated when the card becomes visible.
+      // Invalidate cache so wrapping is re-evaluated when the card becomes visible.
       if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) {
-        compactWidthCache.delete(cardEl);
+        invalidateCompactStackedCache(cardEl);
         return;
       }
       for (const entry of entries) {
@@ -1561,21 +1558,9 @@ export class SharedCardRenderer {
           const isCompact = cardWidth < breakpoint;
           cardEl.classList.toggle('compact-mode', isCompact);
           if (isCompact) {
-            // Re-evaluate wrapping when width changed. Cache prevents
-            // infinite RO loop from height changes when toggling stacked.
-            if (compactWidthCache.get(cardEl) !== cardWidth) {
-              compactWidthCache.set(cardEl, cardWidth);
-              cardEl.classList.remove('compact-stacked');
-              // Force reflow so hasWrappedPairs measures flex-wrap layout,
-              // not the flex-direction: column from compact-stacked
-              void cardEl.offsetHeight;
-              if (hasWrappedPairs(cardEl)) {
-                cardEl.classList.add('compact-stacked');
-              }
-            }
+            queueCompactStackedCheck(cardEl, cardWidth);
           } else {
-            cardEl.classList.remove('compact-stacked');
-            compactWidthCache.delete(cardEl);
+            cancelCompactStackedCheck(cardEl);
           }
         }
 
@@ -1763,7 +1748,6 @@ export class SharedCardRenderer {
     }
 
     // Hover zoom eligibility: only first hovered slide gets zoom effect.
-    // Always listen on card — cover-hover-active (from setupHoverIntent) gates whether zoom fires.
     const clearHoverZoom = setupHoverZoomEligibility(
       cardEl,
       imageEmbedContainer,
@@ -2080,18 +2064,18 @@ export class SharedCardRenderer {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
-    // Apply Extension mode logic (mirrors title resolution in renderCard).
-    // handleDocumentChange syncs dynamic-views-* classes to popout bodies,
-    // so cardEl.ownerDocument.body is equivalent — using document.body here
-    // is a conservative choice that always reads from the source of truth.
-    const isExtMode = document.body.classList.contains(
-      'dynamic-views-file-type-ext'
+    // Mirror title resolution from renderCard — strip extension when a
+    // separate indicator (suffix/badge/icon) shows it. None mode keeps it.
+    const showsExtSeparately = !document.body.classList.contains(
+      'dynamic-views-file-type-none'
     );
     const titleProp = settings.titleProperty || '';
     const titleHasExtension =
       titleProp === 'file.name' || titleProp === 'file.fullname';
     const displayTitle =
-      isExtMode && titleHasExtension ? entry.file.basename : card.title;
+      showsExtSeparately && titleHasExtension
+        ? entry.file.basename
+        : card.title;
 
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(
@@ -2178,7 +2162,7 @@ export class SharedCardRenderer {
           iconEl.target = '_blank';
           iconEl.rel = 'noopener noreferrer';
         }
-        setIcon(iconEl, getUrlButtonIcon());
+        setIcon(iconEl, 'arrow-up-right');
         const dragText = iconEl.createSpan('dynamic-views-drag-text');
         dragText.textContent = card.urlValue;
 
@@ -2763,7 +2747,7 @@ export class SharedCardRenderer {
     if (isTimestampProperty(propertyName, settings)) {
       // stringValue is already formatted by data-transform
       const timestampWrapper = propertyContent.createSpan();
-      if (showTimestampIcon() && settings.propertyLabels === 'hide') {
+      if (settings.propertyLabels === 'hide') {
         const iconName = getTimestampIcon(propertyName, settings);
         const iconEl = timestampWrapper.createSpan('timestamp-icon');
         setIcon(iconEl, iconName);

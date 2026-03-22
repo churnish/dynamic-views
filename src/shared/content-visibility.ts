@@ -5,7 +5,7 @@
  * ~50% margin) with scrollport-rooted observation at PANE_MULTIPLIER distance,
  * matching the infinite scroll loading zone to eliminate skeleton flashes.
  *
- * Disabled on mobile: iOS WebKit enters an infinite reflow loop when IO-toggled
+ * Disabled on mobile: WebKit enters an infinite reflow loop when IO-toggled
  * content-visibility: hidden changes card geometry, re-triggering the observer.
  * Mobile falls back to CSS content-visibility: auto (browser-managed).
  */
@@ -21,7 +21,7 @@ export function setupContentVisibility(scrollContainer: HTMLElement): {
   unobserve: (card: HTMLElement) => void;
   disconnect: () => void;
 } {
-  if (Platform.isMobile)
+  if (Platform.isIosApp)
     return { observe: () => {}, unobserve: () => {}, disconnect: () => {} };
 
   const margin = `${PANE_MULTIPLIER * 100}% 0px`;

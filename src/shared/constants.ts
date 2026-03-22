@@ -11,6 +11,10 @@ export const SCROLL_TOLERANCE = 1;
 /** Pane height multiplier for infinite scroll trigger threshold */
 export const PANE_MULTIPLIER = 3;
 
+/** Content-hidden zone multiplier — cards between 1× and this × paneHeight get
+ *  content-visibility: hidden instead of full unmount (non-WebKit only). */
+export const HIDDEN_BUFFER_MULTIPLIER = 2;
+
 /** Scroll event throttle in milliseconds */
 export const SCROLL_THROTTLE_MS = 100;
 
@@ -29,6 +33,11 @@ export const MASONRY_CORRECTION_MS = 200;
 /** Throttle interval for post-mount remeasure during scroll.
  * --masonry-reposition-duration in _core.scss must not exceed this value. */
 export const MOUNT_REMEASURE_MS = 200;
+
+/** Max WebKit momentum duration — height-lock releases and scrollTop writes
+ *  are suppressed for this long after touchend to preserve compositor-driven
+ *  deceleration (which is killed by any programmatic scrollTop write). */
+export const MOMENTUM_GUARD_MS = 3000;
 
 /** Delay for safety net remeasure after initial render.
  * Catches slow async height changes that the double-rAF deferred remeasure misses. */
@@ -66,3 +75,12 @@ export function computeHoverScale(height: number): string {
   if (height <= 0) return '';
   return String(Math.min(1 + (HOVER_GROWTH_PX * 2) / height, MAX_HOVER_SCALE));
 }
+
+/** Accumulated downward scroll (px) to trigger immersive hide */
+export const IMMERSIVE_HIDE_DEAD_ZONE = 30;
+/** Accumulated upward scroll (px) to trigger immersive show */
+export const IMMERSIVE_SHOW_DEAD_ZONE = 15;
+/** scrollTop threshold — always show bars when near top */
+export const IMMERSIVE_TOP_ZONE = 50;
+/** Scroll-idle debounce for bridge settle */
+export const IMMERSIVE_SCROLL_IDLE_MS = 150;

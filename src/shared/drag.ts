@@ -5,11 +5,7 @@
 
 import type { App } from 'obsidian';
 
-const HOVER_CLASSES = [
-  'hover-intent-active',
-  'poster-hover-active',
-  'cover-hover-active',
-] as const;
+const HOVER_CLASSES = ['hover-intent-active', 'poster-hover-active'] as const;
 
 /**
  * Marker MIME type set on DataTransfer during plugin-initiated drags.
@@ -100,7 +96,7 @@ export function createUrlButtonDragHandlers(
     }
     body.removeClass('dynamic-views-dragging');
     iconEl.style.removeProperty('pointer-events');
-    // iOS: Obsidian creates tooltip from aria-label ~1-2s after native drag
+    // WebKit: Obsidian creates tooltip from aria-label ~1-2s after native drag
     // ends. MutationObserver catches and removes it. Scoped to URL text to
     // avoid removing unrelated tooltips.
     const win = (doc.defaultView ?? window) as typeof globalThis;
@@ -127,7 +123,7 @@ export function createUrlButtonDragHandlers(
     doc.removeEventListener('drop', cleanup);
     doc.addEventListener('drop', cleanup, { once: true });
     // Cancel fallback if touch ends without drag.
-    // Cannot use touchcancel here — iOS fires touchcancel when native drag
+    // Cannot use touchcancel here — WebKit fires touchcancel when native drag
     // STARTS (dual meaning: drag started vs gesture stolen), which would
     // remove the drop listener we need for drag cleanup.
     iconEl.addEventListener(
@@ -155,7 +151,7 @@ export function createUrlButtonDragHandlers(
       e.stopPropagation();
       const card = iconEl.closest('.card');
       // Remove non-poster hover classes synchronously
-      card?.classList.remove('hover-intent-active', 'cover-hover-active');
+      card?.classList.remove('hover-intent-active');
       // Defer poster-hover-active removal and icon pointer-events —
       // synchronous removal sets pointer-events: none on .card-content,
       // aborting the drag. Deferred runs after drag subsystem takes over.

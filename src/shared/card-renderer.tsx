@@ -10,7 +10,6 @@ import type { RefObject } from '../datacore/types';
 import {
   showTagHashPrefix,
   getHideEmptyMode,
-  showTimestampIcon,
   getEmptyValueMarker,
   shouldHideMissingProperties,
   getListSeparator,
@@ -18,7 +17,6 @@ import {
   isSlideshowIndicatorEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
-  getUrlButtonIcon,
   hasBodyClass,
 } from '../utils/style-settings';
 import {
@@ -87,7 +85,8 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   computeInvertPairs,
-  hasWrappedPairs,
+  queueCompactStackedCheck,
+  cancelCompactStackedCheck,
 } from './property-helpers';
 import {
   shouldUseNotebookNavigator,
@@ -97,11 +96,6 @@ import {
 } from '../utils/notebook-navigator';
 import { measurePropertyFields } from './property-measure';
 import { getOwnerWindow } from '../utils/owner-window';
-
-/** Tracks last card width when compact-stacked was evaluated.
- *  Prevents infinite RO loop: toggling compact-stacked changes card height,
- *  which re-triggers RO. By checking width, we skip height-only re-fires. */
-const compactWidthCache = new WeakMap<HTMLElement, number>();
 
 /**
  * Extended container element with focus management properties
@@ -503,12 +497,6 @@ const cardPropertyObservers = new Map<string, ResizeObserver[]>();
 // Module-level Map to store AbortControllers for scroll listener cleanup
 const cardScrollAbortControllers = new Map<string, AbortController>();
 
-/** Per-element hover intent state (WeakMap avoids path collisions across containers) */
-const cardHoverIntentState = new WeakMap<
-  HTMLElement,
-  { controller: AbortController }
->();
-
 /** Per-element card hover intent state (survives Preact re-renders) */
 const cardHoverIntentActive = new WeakMap<HTMLElement, AbortController>();
 
@@ -760,7 +748,6 @@ function CoverSlideshow({
     }
 
     // Hover zoom eligibility: only first hovered slide gets zoom effect.
-    // Always listen on card — cover-hover-active (from setupHoverIntent) gates whether zoom fires.
     const clearHoverZoom = setupHoverZoomEligibility(
       cardEl,
       imageEmbed,
@@ -1098,7 +1085,7 @@ function renderProperty(
         <div className="property-content-wrapper" tabIndex={-1}>
           <div className="property-content">
             <span>
-              {showTimestampIcon() && settings.propertyLabels === 'hide' && (
+              {settings.propertyLabels === 'hide' && (
                 <svg
                   className="timestamp-icon"
                   xmlns="http://www.w3.org/2000/svg"
@@ -1878,24 +1865,19 @@ function Card({
           scrollController.signal
         );
 
-        // Measure side-by-side property field widths (double RAF to ensure DOM is ready)
-        getOwnerWindow(cardEl).requestAnimationFrame(() => {
-          getOwnerWindow(cardEl).requestAnimationFrame(() => {
-            // Guard against race: card may be unmounted before inner RAF executes
-            if (!cardEl.isConnected) return;
-
-            const existingPropertyObservers = cardPropertyObservers.get(
-              card.path
-            );
-            if (existingPropertyObservers) {
-              existingPropertyObservers.forEach((obs) => obs.disconnect());
-            }
-            const propertyObservers = measurePropertyFields(cardEl);
-            if (propertyObservers.length > 0) {
-              cardPropertyObservers.set(card.path, propertyObservers);
-            }
-          });
-        });
+        // Measure side-by-side property field widths (sync measurement + RO for resize)
+        if (cardEl.isConnected) {
+          const existingPropertyObservers = cardPropertyObservers.get(
+            card.path
+          );
+          if (existingPropertyObservers) {
+            existingPropertyObservers.forEach((obs) => obs.disconnect());
+          }
+          const propertyObservers = measurePropertyFields(cardEl);
+          if (propertyObservers.length > 0) {
+            cardPropertyObservers.set(card.path, propertyObservers);
+          }
+        }
 
         // Setup responsive behaviors (compact mode, thumbnail stacking)
         const existingResponsiveObserver = cardResponsiveObservers.get(
@@ -1927,21 +1909,9 @@ function Card({
               const isCompact = cardWidth < breakpoint;
               cardEl.classList.toggle('compact-mode', isCompact);
               if (isCompact) {
-                // Re-evaluate wrapping when width changed — see
-                // compactWidthCache declaration for full explanation
-                if (compactWidthCache.get(cardEl) !== cardWidth) {
-                  compactWidthCache.set(cardEl, cardWidth);
-                  cardEl.classList.remove('compact-stacked');
-                  // Force reflow so hasWrappedPairs measures flex-wrap layout,
-                  // not the flex-direction: column from compact-stacked
-                  void cardEl.offsetHeight;
-                  if (hasWrappedPairs(cardEl)) {
-                    cardEl.classList.add('compact-stacked');
-                  }
-                }
+                queueCompactStackedCheck(cardEl, cardWidth);
               } else {
-                cardEl.classList.remove('compact-stacked');
-                compactWidthCache.delete(cardEl);
+                cancelCompactStackedCheck(cardEl);
               }
             }
 
@@ -1961,31 +1931,6 @@ function Card({
         });
         responsiveObserver.observe(cardEl);
         cardResponsiveObservers.set(card.path, responsiveObserver);
-
-        // Cover hover zoom intent: always listen on .card-cover.
-        // CSS gates which mode activates zoom (card vs cover) via body class — no re-render needed.
-        if (
-          format === 'cover' &&
-          cardWin.matchMedia('(hover: hover)').matches
-        ) {
-          const coverEl = cardEl.querySelector('.card-cover') as HTMLElement;
-          if (coverEl) {
-            const existing = cardHoverIntentState.get(cardEl);
-            if (!existing || existing.controller.signal.aborted) {
-              existing?.controller.abort();
-              const hoverAbort = new AbortController();
-              cardHoverIntentState.set(cardEl, {
-                controller: hoverAbort,
-              });
-              setupHoverIntent(
-                coverEl,
-                () => cardEl.classList.add('cover-hover-active'),
-                () => cardEl.classList.remove('cover-hover-active'),
-                hoverAbort.signal
-              );
-            }
-          }
-        }
 
         // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
         if (cardWin.matchMedia('(hover: hover)').matches) {
@@ -2279,7 +2224,7 @@ function Card({
                 ref={(el: HTMLElement | null) => {
                   if (!el) return;
                   if (!el.hasChildNodes()) {
-                    setIcon(el, getUrlButtonIcon());
+                    setIcon(el, 'arrow-up-right');
                     // Hidden text for native link drag ghost — Chromium uses
                     // textContent to generate the 2-line ghost (title + URL).
                     // Without text, only the SVG icon appears as the ghost.

@@ -29,14 +29,14 @@ describe('setupContentVisibility', () => {
 
   beforeEach(() => {
     scrollContainer = document.createElement('div');
-    (Platform as { isMobile: boolean }).isMobile = false;
+    (Platform as { isIosApp: boolean }).isIosApp = false;
     mockObserve.mockClear();
     mockDisconnect.mockClear();
     (global.IntersectionObserver as Mock).mockClear();
   });
 
   afterEach(() => {
-    (Platform as { isMobile: boolean }).isMobile = false;
+    (Platform as { isIosApp: boolean }).isIosApp = false;
   });
 
   it('returns observe and disconnect functions', () => {
@@ -67,8 +67,8 @@ describe('setupContentVisibility', () => {
     expect(mockDisconnect).toHaveBeenCalled();
   });
 
-  it('returns no-op functions on mobile (no IO created)', () => {
-    (Platform as { isMobile: boolean }).isMobile = true;
+  it('returns no-op functions on iOS (no IO created)', () => {
+    (Platform as { isIosApp: boolean }).isIosApp = true;
     const result = setupContentVisibility(scrollContainer);
 
     const card = document.createElement('div');

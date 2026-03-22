@@ -131,6 +131,22 @@ export class PersistenceManager {
       };
     }
 
+    // Migrate preventSidebarSwipe: stale string → boolean
+    let pluginSettingsDirty = false;
+    const swipeVal = this.data.pluginSettings.preventSidebarSwipe;
+    if (typeof swipeVal === 'string') {
+      if (swipeVal === 'disabled') {
+        (
+          this.data.pluginSettings as Record<string, unknown>
+        ).preventSidebarSwipe = false;
+      } else {
+        // Any other string maps to true (the default) — remove for sparse storage
+        delete (this.data.pluginSettings as Record<string, unknown>)
+          .preventSidebarSwipe;
+      }
+      pluginSettingsDirty = true;
+    }
+
     // Clean up stale keys/values in templates
     let templatesDirty = false;
     for (const viewType of ['grid', 'masonry', 'datacore'] as const) {
@@ -167,7 +183,7 @@ export class PersistenceManager {
       }
     }
 
-    if (templatesDirty || dcStatesDirty) {
+    if (pluginSettingsDirty || templatesDirty || dcStatesDirty) {
       await this.save();
     }
   }

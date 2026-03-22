@@ -4,6 +4,7 @@ import {
   serializeGroupKey,
   handleTemplateToggle,
   getSortMethod,
+  setupBasesSwipePrevention,
 } from '../../src/bases/utils';
 import { Notice } from 'obsidian';
 
@@ -499,5 +500,65 @@ describe('getSortMethod', () => {
       getDisplayName: (p: string) => (p === 'file.mtime' ? 'modified time' : p),
     };
     expect(getSortMethod(config)).toBe('modified time-desc');
+  });
+});
+
+describe('setupBasesSwipePrevention', () => {
+  /** Create a minimal mock App with isMobile */
+  function createMockApp(isMobile: boolean) {
+    return { isMobile } as unknown as Parameters<
+      typeof setupBasesSwipePrevention
+    >[1];
+  }
+
+  /** Create a minimal mock PluginSettings with preventSidebarSwipe */
+  function createMockPluginSettings(preventSidebarSwipe: boolean) {
+    return { preventSidebarSwipe } as unknown as Parameters<
+      typeof setupBasesSwipePrevention
+    >[2];
+  }
+
+  it('should set data-ignore-swipe when mobile + enabled', () => {
+    const container = document.createElement('div');
+    setupBasesSwipePrevention(
+      container,
+      createMockApp(true),
+      createMockPluginSettings(true)
+    );
+    expect(container.dataset.ignoreSwipe).toBe('true');
+  });
+
+  it('should NOT set data-ignore-swipe when desktop', () => {
+    const container = document.createElement('div');
+    setupBasesSwipePrevention(
+      container,
+      createMockApp(false),
+      createMockPluginSettings(true)
+    );
+    expect(container.dataset.ignoreSwipe).toBeUndefined();
+  });
+
+  it('should remove existing data-ignore-swipe when disabled', () => {
+    const container = document.createElement('div');
+    container.dataset.ignoreSwipe = 'true';
+
+    setupBasesSwipePrevention(
+      container,
+      createMockApp(true),
+      createMockPluginSettings(false)
+    );
+    expect(container.dataset.ignoreSwipe).toBeUndefined();
+  });
+
+  it('should remove existing data-ignore-swipe when switching from mobile to desktop', () => {
+    const container = document.createElement('div');
+    container.dataset.ignoreSwipe = 'true';
+
+    setupBasesSwipePrevention(
+      container,
+      createMockApp(false),
+      createMockPluginSettings(true)
+    );
+    expect(container.dataset.ignoreSwipe).toBeUndefined();
   });
 });

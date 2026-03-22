@@ -275,10 +275,6 @@ export async function cleanUpBaseFile(
   return viewIds;
 }
 
-/** CSS selector for embedded view detection - centralized for maintainability */
-export const EMBEDDED_VIEW_SELECTOR =
-  '.markdown-preview-view, .markdown-reading-view, .markdown-source-view';
-
 /** Sentinel value for undefined group keys in dataset storage */
 export const UNDEFINED_GROUP_KEY_SENTINEL = '__dynamic-views-undefined__';
 
@@ -302,13 +298,6 @@ export function getGroupKeyDataset(el: HTMLElement): string | undefined {
 }
 
 /**
- * Check if a container element is embedded within a markdown view
- */
-export function isEmbeddedView(containerEl: HTMLElement): boolean {
-  return containerEl.closest(EMBEDDED_VIEW_SELECTOR) !== null;
-}
-
-/**
  * Setup swipe prevention on mobile if enabled based on settings
  * Uses Obsidian's native data-ignore-swipe attribute to opt out of sidebar swipe detection
  */
@@ -317,14 +306,12 @@ export function setupBasesSwipePrevention(
   app: App,
   pluginSettings: PluginSettings
 ): void {
-  const isEmbedded = isEmbeddedView(containerEl);
-  const shouldPrevent =
-    app.isMobile &&
-    (pluginSettings.preventSidebarSwipe === 'all-views' ||
-      (pluginSettings.preventSidebarSwipe === 'base-files' && !isEmbedded));
+  const shouldPrevent = app.isMobile && pluginSettings.preventSidebarSwipe;
 
   if (shouldPrevent) {
     containerEl.dataset.ignoreSwipe = 'true';
+  } else {
+    delete containerEl.dataset.ignoreSwipe;
   }
 }
 

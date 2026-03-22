@@ -13,11 +13,12 @@ export const PLUGIN_SETTINGS: PluginSettings = {
   smartTimestamp: true,
   createdTimeProperty: 'created time',
   modifiedTimeProperty: 'modified time',
-  preventSidebarSwipe: 'disabled',
+  preventSidebarSwipe: true,
   revealInNotebookNavigator: 'disable',
   showYoutubeThumbnails: true,
   showCardLinkCovers: true,
   contextMenuCommands: true,
+  immersiveScroll: false,
 };
 
 export const VIEW_DEFAULTS: ViewDefaults = {
@@ -46,7 +47,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   // Properties
   propertyLabels: 'hide',
   pairProperties: false,
-  rightPropertyPosition: 'right',
+  rightPropertyPosition: 'column',
   invertPropertyPairing: '',
   showPropertiesAbove: false,
   invertPropertyPosition: '',

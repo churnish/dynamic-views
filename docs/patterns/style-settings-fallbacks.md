@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-14
+updated: 2026-03-19
 ---
 # Style Settings fallback selectors
 
@@ -46,11 +46,35 @@ body:not([class*='dynamic-views-card-background-hover-'])
 - **JS-driven defaults**: The JS code has its own fallback. Example: `getTagStyle()` returns `"outline"` when no body class matches — tag rendering uses the JS return value, not CSS body class gating.
 - **Unreachable without Style Settings**: If a setting group's parent requires a body class that only Style Settings sets, the child settings are unreachable without the plugin.
 
+## `class-select` — `:not()` exclusion (CSS)
+
+When the default mode has CSS rules that other modes must override, use `:not()` to exclude the other modes instead of requiring a body class for the default:
+
+```scss
+/* Extension mode is the default — fires when no other mode is active */
+body:not(
+    .dynamic-views-file-type-flair,
+    .dynamic-views-file-type-icon,
+    .dynamic-views-file-type-none
+  )
+  .dynamic-views
+  .card-title {
+  /* extension-specific overrides */
+}
+```
+
+This eliminates the need for a body class on the default mode entirely. The plugin JS never adds the default class — Style Settings manages the non-default classes, and the CSS baseline handles the rest.
+
+This pattern also avoids the `initClasses` race: Style Settings' `initClasses` adds the `@settings` `default:` class to body, then applies the stored value without removing the default. Both classes coexist. By not depending on a body class for the default mode, the race is structurally impossible.
+
+Prefer `:not()` exclusion over `:is()` + `:not([class*="..."])` when the default mode needs CSS overrides and all non-default modes are known. Use the `:is()` pattern when the default has a named class that Style Settings explicitly manages.
+
 ## When adding a new `class-select` setting
 
 1. Check if the default option needs a CSS rule (or is the natural baseline).
-2. If it needs a rule, add the `:is(.default-class, :not([class*="prefix-"]))` fallback.
-3. If the setting is nested under a parent that requires Style Settings, skip the fallback.
+2. If the default needs a rule AND all non-default options are known, use the `:not()` exclusion pattern — no body class for the default.
+3. If the default needs a rule but non-default options may be added later, use the `:is(.default-class, :not([class*="prefix-"]))` fallback.
+4. If the setting is nested under a parent that requires Style Settings, skip the fallback.
 
 ## `class-toggle` fallback — inverted toggle (CSS)
 
@@ -135,7 +159,7 @@ The `default:` field in the `@settings` YAML only controls the slider's initial 
 Re-renders from Style Settings changes are disruptive — they reset scroll position. Only add settings to `getStyleSettingsHash()` when they genuinely affect rendered card content (text, icons, layout). Do NOT add settings that only affect:
 
 - **CSS-only toggles** (hover zoom, poster mode, cursor) — body class changes are picked up by CSS automatically.
-- **JS event listener targets** (e.g., cover hover zoom mode) — design listeners to work without rebinding. Example: `setupHoverZoomEligibility` always listens on `cardEl`; the mode-dependent `cover-hover-active` class (from `setupHoverIntent`) gates activation in CSS.
+- **JS event listener targets** — design listeners to work without rebinding. Example: `setupHoverZoomEligibility` always listens on `cardEl`.
 
 ## Current fallbacks
 
@@ -146,10 +170,11 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Poster overlay tint       | dark           | [_poster.scss](../../styles/card/_poster.scss)                                                   |
 | Cover background          | dimmed         | [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss)               |
 | Poster background         | dimmed         | [_poster.scss](../../styles/card/_poster.scss)                                                   |
-| Cover hover zoom          | card           | [_cover-elements.scss](../../styles/card/_cover-elements.scss)                                           |
 | Show cover placeholder    | Grid           | [_cover-side.scss](../../styles/card/_cover-side.scss), [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss)                   |
 | Card border color (hover) | muted          | [_core.scss](../../styles/card/_core.scss)                                                     |
 | Card background (hover)   | transparent    | [_hover-states.scss](../../styles/_hover-states.scss)                                             |
+| Card shadow color         | Default        | No CSS fallback needed — Default passes theme shadow vars through unchanged |
+| File format indicator    | Extension      | [_header.scss](../../styles/card/_header.scss) — `:not()` exclusion pattern (no body class for default)  |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
@@ -161,6 +186,7 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 | Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-states.scss](../../styles/_hover-states.scss) |
 | Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | [_poster.scss](../../styles/card/_poster.scss)       |
 | Image viewer fullscreen  | `dynamic-views-image-viewer-disable-fullscreen` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
+| Cover hover zoom         | `dynamic-views-cover-disable-hover-zoom`        | [_cover-elements.scss](../../styles/card/_cover-elements.scss) |
 
 ### `class-toggle` — `.css-settings-manager` gate (CSS)
 

@@ -141,7 +141,7 @@ body.dynamic-views-zoom-disabled:not(
   max-width: 100%;
 }
 
-/* Disable drag in fullscreen mode (desktop only — mobile uses iOS system drag & drop) */
+/* Disable drag in fullscreen mode (desktop only — mobile uses system drag & drop) */
 body:not(.is-mobile):not(.dynamic-views-image-viewer-disable-fullscreen)
   > .dynamic-views-image-embed.is-zoomed
   img {

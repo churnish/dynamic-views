@@ -2,6 +2,7 @@
 
 - **Error surfacing**: `new Notice()` ONLY for user-initiated action failures and confirmations. Internal and background failures MUST use `console.error`/`console.warn` — NEVER surface notices for operations the user did NOT trigger.
 - **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
+- **`--size-*` over `px`**: Use Obsidian's `--size-*` CSS variables (e.g., `var(--size-2-2)`) instead of hardcoded pixel values whenever a matching token exists.
 
 ## Terminology
 
@@ -15,6 +16,7 @@
 - **Text preview**: When referring to the Markdown-stripped text shown on cards, ALWAYS use 'text preview' NOT 'preview'. Use 'previews' (plural) ONLY when referring to both text preview and thumbnail image format collectively.
 - **Properties**: In user-facing text, use 'properties' (NOT 'frontmatter', 'front-matter', or 'YAML') when referring to YAML metadata at the top of Markdown files. 'Frontmatter' and 'YAML' are acceptable in code, comments, docs, and tests.
 - **Markdown**: 'Markdown' is a proper noun and MUST be capitalized.
+- **WebKit over iOS/iPadOS**: In comments, identifiers, docs, and chat, use 'WebKit' when code targets both iOS and iPadOS (both use WKWebView). Use 'iOS' or 'iPadOS' ONLY when targeting one platform specifically. `Platform.isIosApp` and other external Obsidian API names are exemptions. NEVER use 'WebKit' in user-facing text (README, wiki, settings, notices) — use 'iOS' and 'iPadOS' instead.
 
 ## Datacore parity
 

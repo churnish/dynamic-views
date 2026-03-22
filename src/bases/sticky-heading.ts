@@ -17,7 +17,8 @@ export function setupStickyHeadingObserver(scrollContainer: HTMLElement): {
   observe: (heading: HTMLElement) => void;
   disconnect: () => void;
 } {
-  if (Platform.isMobile) return { observe: () => {}, disconnect: () => {} };
+  // WebKit: IO-based sticky heading detection causes reflow loop (same as content-visibility)
+  if (Platform.isIosApp) return { observe: () => {}, disconnect: () => {} };
 
   const sentinels = new Map<HTMLElement, HTMLElement>();
 

@@ -51,7 +51,7 @@ Key properties:
 - **Auto-cleanup**: entries GC'd with the element
 - **Key stability**: cards keyed by `card.path` in JSX, so Preact reuses the same DOM element
 
-Current usages: `cardHoverIntentState` (cover hover zoom), `cardHoverIntentActive` (card-level hover intent), `containerCleanupMap` (container cleanup functions), `containerCssClassesMap` (previous cssclasses tracking to avoid unnecessary DOM mutations).
+Current usages: `cardHoverIntentActive` (card-level hover intent), `containerCleanupMap` (container cleanup functions), `containerCssClassesMap` (previous cssclasses tracking to avoid unnecessary DOM mutations).
 
 ## `document`/`window` scope
 

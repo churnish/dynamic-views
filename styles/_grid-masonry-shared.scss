@@ -70,7 +70,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
 }
 
 /* Border below sticky group headers when stuck — spans full pane width.
-   Progressive enhancement: iOS WebKit doesn't yet support scroll-state() container queries. */
+   Progressive enhancement: WebKit doesn't yet support scroll-state() container queries. */
 @container dynamic-views-group-heading scroll-state(stuck: top) {
   .bases-group-count::after {
     content: '';
@@ -141,6 +141,10 @@ body.dynamic-views-hide-group-property-labels
     flex-direction: column;
     min-height: 0;
     flex-grow: 1;
+
+    &:empty {
+      display: none;
+    }
   }
 
   /* Override vanilla Bases absolute positioning - we use static flow layout */
@@ -283,9 +287,9 @@ body.dynamic-views-hide-group-property-labels
   }
 }
 
-/* Mobile: browser-managed content-visibility (IO-based toggling causes
-   infinite reflow loop on iOS WebKit) */
-body.is-mobile .dynamic-views .card {
+/* iOS: browser-managed content-visibility (IO-based toggling causes
+   infinite reflow loop on WebKit) */
+body.is-ios .dynamic-views .card {
   content-visibility: auto;
   contain-intrinsic-height: auto 300px;
 }

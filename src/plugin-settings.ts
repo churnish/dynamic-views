@@ -111,21 +111,30 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       'book-open',
       'Wiki'
     );
-    linksContainer.createSpan({ text: ' • ' });
+    linksContainer.createSpan({
+      text: ' • ',
+      cls: 'dynamic-views-header-separator',
+    });
     createHeaderLink(
       linksContainer,
       'https://github.com/churnish/dynamic-views/issues',
       'bug',
       'Report bug'
     );
-    linksContainer.createSpan({ text: ' • ' });
+    linksContainer.createSpan({
+      text: ' • ',
+      cls: 'dynamic-views-header-separator',
+    });
     createHeaderLink(
       linksContainer,
       'https://github.com/churnish/dynamic-views/issues',
       'lightbulb',
       'Request feature'
     );
-    linksContainer.createSpan({ text: ' • ' });
+    linksContainer.createSpan({
+      text: ' • ',
+      cls: 'dynamic-views-header-separator',
+    });
     createHeaderLink(
       linksContainer,
       'https://github.com/churnish/dynamic-views/discussions/categories/q-a',
@@ -197,22 +206,32 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName('Prevent sidebar swipe on mobile')
+          .setName('Disable mobile sidebar swipe')
           .setDesc(
             'Prevent sidebars from opening unintentionally when scrolling horizontally in a plugin view.'
           )
-          .addDropdown((dropdown) =>
-            dropdown
-              .addOption('all-views', 'In all views')
-              .addOption('base-files', 'In base files')
-              .addOption('disabled', 'Disable')
+          .addToggle((toggle) =>
+            toggle
               .setValue(settings.preventSidebarSwipe)
               .onChange(async (value) => {
                 await this.plugin.persistenceManager.setPluginSettings({
-                  preventSidebarSwipe: value as
-                    | 'disabled'
-                    | 'base-files'
-                    | 'all-views',
+                  preventSidebarSwipe: value,
+                });
+              })
+          )
+      )
+      .addSetting((s) =>
+        s
+          .setName('Immersive mobile scrolling')
+          .setDesc(
+            'Automatically hide navigation when scrolling down. Scroll up to reveal again.'
+          )
+          .addToggle((toggle) =>
+            toggle
+              .setValue(settings.immersiveScroll)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setPluginSettings({
+                  immersiveScroll: value,
                 });
               })
           )

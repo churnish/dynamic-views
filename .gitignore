@@ -7,6 +7,8 @@ cc-chats/
 node_modules/
 assets/
 plans/
+profiling/
+temp/
 
 *.map
 *.zip

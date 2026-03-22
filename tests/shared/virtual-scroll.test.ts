@@ -104,8 +104,8 @@ describe('estimateUnmountedHeight', () => {
       measuredAtWidth: 300,
       height: 300,
     };
-    // 200 * (150 / 300) + 100 = 100 + 100 = 200
-    expect(estimateUnmountedHeight(item, 150)).toBe(200);
+    // 200 * (150 / 300) + 100 * sqrt(300 / 150) = 100 + 141.42 ≈ 241.42
+    expect(estimateUnmountedHeight(item, 150)).toBeCloseTo(241.42, 1);
   });
 
   it('returns fixedHeight when scalableHeight is 0', () => {
@@ -115,8 +115,8 @@ describe('estimateUnmountedHeight', () => {
       measuredAtWidth: 300,
       height: 120,
     };
-    // 0 * ratio + 120 = 120
-    expect(estimateUnmountedHeight(item, 450)).toBe(120);
+    // 0 + 120 * sqrt(300 / 450) = 120 * 0.8165 ≈ 97.98
+    expect(estimateUnmountedHeight(item, 450)).toBeCloseTo(97.98, 1);
   });
 
   it('falls back to item.height when measuredAtWidth is 0', () => {
@@ -136,8 +136,8 @@ describe('estimateUnmountedHeight', () => {
       measuredAtWidth: 200,
       height: 150,
     };
-    // 100 * (400 / 200) + 50 = 200 + 50 = 250
-    expect(estimateUnmountedHeight(item, 400)).toBe(250);
+    // 100 * (400 / 200) + 50 * sqrt(200 / 400) = 200 + 35.36 ≈ 235.36
+    expect(estimateUnmountedHeight(item, 400)).toBeCloseTo(235.36, 1);
   });
 
   it('scales proportionally when width halves', () => {
@@ -147,8 +147,8 @@ describe('estimateUnmountedHeight', () => {
       measuredAtWidth: 200,
       height: 150,
     };
-    // 100 * (100 / 200) + 50 = 50 + 50 = 100
-    expect(estimateUnmountedHeight(item, 100)).toBe(100);
+    // 100 * (100 / 200) + 50 * sqrt(200 / 100) = 50 + 70.71 ≈ 120.71
+    expect(estimateUnmountedHeight(item, 100)).toBeCloseTo(120.71, 1);
   });
 
   it('returns exact measuredHeight at original width', () => {
@@ -158,7 +158,61 @@ describe('estimateUnmountedHeight', () => {
       measuredAtWidth: 300,
       height: 250,
     };
-    // 180 * (300 / 300) + 70 = 180 + 70 = 250 = measuredHeight
+    // 180 * (300 / 300) + 70 * sqrt(1) = 180 + 70 = 250 = measuredHeight
     expect(estimateUnmountedHeight(item, 300)).toBe(250);
+  });
+
+  it('fixedHeight scales with sqrt when card narrows (column increase)', () => {
+    const item = {
+      scalableHeight: 0,
+      fixedHeight: 150,
+      measuredAtWidth: 500,
+      height: 150,
+    };
+    // 0 + 150 * sqrt(500 / 200) = 150 * 1.5811 ≈ 237.17
+    expect(estimateUnmountedHeight(item, 200)).toBeCloseTo(237.17, 1);
+  });
+
+  it('fixedHeight scales with sqrt when card widens (column decrease)', () => {
+    const item = {
+      scalableHeight: 0,
+      fixedHeight: 150,
+      measuredAtWidth: 200,
+      height: 150,
+    };
+    // 0 + 150 * sqrt(200 / 500) = 150 * 0.6325 ≈ 94.87
+    expect(estimateUnmountedHeight(item, 500)).toBeCloseTo(94.87, 1);
+  });
+
+  it('pure text card (scalableHeight=0) scales entirely with sqrt', () => {
+    const item = {
+      scalableHeight: 0,
+      fixedHeight: 200,
+      measuredAtWidth: 300,
+      height: 200,
+    };
+    // 0 + 200 * sqrt(300 / 150) = 200 * 1.4142 ≈ 282.84
+    expect(estimateUnmountedHeight(item, 150)).toBeCloseTo(282.84, 1);
+  });
+
+  it('pure image card (fixedHeight=0) is unaffected by sqrt scaling', () => {
+    const item = {
+      scalableHeight: 300,
+      fixedHeight: 0,
+      measuredAtWidth: 300,
+      height: 300,
+    };
+    // 300 * (150 / 300) + 0 = 150
+    expect(estimateUnmountedHeight(item, 150)).toBe(150);
+  });
+
+  it('falls back to item.height when cardWidth is 0', () => {
+    const item = {
+      scalableHeight: 200,
+      fixedHeight: 100,
+      measuredAtWidth: 300,
+      height: 250,
+    };
+    expect(estimateUnmountedHeight(item, 0)).toBe(250);
   });
 });

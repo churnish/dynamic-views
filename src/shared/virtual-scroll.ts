@@ -19,7 +19,7 @@ export interface VirtualItem {
   width: number;
   /** Current height (may be proportionally scaled or row-stretched for grid) */
   height: number;
-  /** Height at original measurement width */
+  /** Height at original measurement width (or estimated height for unmounted items after resize) */
   measuredHeight: number;
   /** Card width when height was DOM-measured (not scaled) */
   measuredAtWidth: number;
@@ -77,12 +77,11 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
 
 /**
  * Estimate the height of an unmounted card using split proportional scaling.
- * Cover area scales linearly with card width; text content assumed fixed.
- *
- * Known limitation (#358): `fixedHeight` IS width-dependent — text wraps less
- * at wider widths, producing shorter cards. After column count increases,
- * estimates systematically overshoot (observed -72 to -137px per card),
- * causing visible scroll compensation in `remeasureMountedCards()`.
+ * Cover area scales linearly with card width (aspect ratio preserved).
+ * Text content (header, properties, text preview) scales as sqrt(widthRatio).
+ * k=0.5 minimizes average absolute error empirically — text reflow is discrete
+ * (lines wrap at specific thresholds), so lower k avoids overpredicting growth
+ * for items that don't reflow at a given width change.
  */
 export function estimateUnmountedHeight(
   item: Pick<
@@ -91,10 +90,17 @@ export function estimateUnmountedHeight(
   >,
   cardWidth: number
 ): number {
-  if (item.measuredAtWidth > 0) {
+  if (item.measuredAtWidth > 0 && cardWidth > 0) {
+    // Cover area scales linearly with width (aspect ratio preserved).
+    // Text content (header, properties, text preview) wraps more at narrower
+    // widths and less at wider widths — approximate as sqrt(widthRatio).
+    // k=0.5 minimizes average absolute error empirically: text reflow is discrete
+    // (lines either wrap or don't), so lower k avoids overpredicting growth for
+    // items that don't actually reflow at a given width change.
+    const widthRatio = item.measuredAtWidth / cardWidth;
     return (
       item.scalableHeight * (cardWidth / item.measuredAtWidth) +
-      item.fixedHeight
+      item.fixedHeight * Math.sqrt(widthRatio)
     );
   }
   return item.height;

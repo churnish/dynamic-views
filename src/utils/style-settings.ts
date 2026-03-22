@@ -107,15 +107,6 @@ export function getCompactBreakpoint(): number {
 }
 
 /**
- * Check if timestamp icon should be shown
- * Returns true for all icon positions (left, right, inner, outer)
- * Returns false only when explicitly hidden
- */
-export function showTimestampIcon(): boolean {
-  return !hasBodyClass('dynamic-views-timestamp-icon-hide');
-}
-
-/**
  * Get tag style from body class
  */
 export function getTagStyle(): 'plain' | 'theme' | 'minimal' {
@@ -308,16 +299,15 @@ export function getSlideshowMaxImages(): number {
 }
 
 /**
- * Get URL button icon from Style Settings
- * Accepts both "lucide-donut" and "donut" formats
+ * Check if Extension mode is active (the default file-type indicator).
+ * Mirrors the CSS `:not()` fallback pattern — true when no other mode class is present.
  */
-export function getUrlButtonIcon(): string {
-  let icon = getCSSTextVariable('--dynamic-views-url-icon', 'arrow-up-right');
-  // Strip "lucide-" prefix if present (case-insensitive)
-  if (icon.toLowerCase().startsWith('lucide-')) {
-    icon = icon.slice(7);
-  }
-  return icon;
+export function isExtensionMode(): boolean {
+  return (
+    !hasBodyClass('dynamic-views-file-type-flair') &&
+    !hasBodyClass('dynamic-views-file-type-icon') &&
+    !hasBodyClass('dynamic-views-file-type-none')
+  );
 }
 
 /**
@@ -345,14 +335,14 @@ export function getStyleSettingsHash(): string {
     // Layout
     getCompactBreakpoint(),
     getZoomSensitivityDesktop(),
-    // Other
-    getUrlButtonIcon(),
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
     hasBodyClass('dynamic-views-hidden-file-extensions'),
     // Poster reveal mode (affects JS click handlers, not CSS-only)
     hasBodyClass('dynamic-views-poster-reveal-press'),
+    // File-type indicator (affects JS suffix creation + truncation)
+    isExtensionMode(),
     // Text preview content options (affect stripped text output)
     shouldKeepPreviewHeadings(),
     shouldKeepPreviewNewlines(),
@@ -375,8 +365,8 @@ export function setupStyleSettingsObserver(
   const win = doc.defaultView ?? window;
   const MO = win.MutationObserver ?? MutationObserver;
 
-  // Mutually exclusive class-select groups that must always have one active member.
-  // When Style Settings is disabled it strips all managed classes — re-add the default.
+  // Mutually exclusive class-select groups. When multiple are present (Style Settings
+  // race), keep only the last. When all are absent, CSS :not() fallback applies Ext default.
   const FILE_TYPE_CLASSES = [
     'dynamic-views-file-type-ext',
     'dynamic-views-file-type-flair',
@@ -407,10 +397,20 @@ export function setupStyleSettingsObserver(
             .join(' ') ?? '';
         if (oldDV === newDV) break;
 
-        // Re-apply default when Style Settings strips all file-type classes
-        if (!FILE_TYPE_CLASSES.some((c) => doc.body.classList.contains(c))) {
-          doc.body.classList.add('dynamic-views-file-type-ext');
-        }
+        // Enforce mutual exclusivity when Style Settings applies a new value.
+        // Deferred: class-select fires two mutations (remove old, add new) —
+        // checking synchronously sees the intermediate state.
+        queueMicrotask(() => {
+          const active = FILE_TYPE_CLASSES.filter((c) =>
+            doc.body.classList.contains(c)
+          );
+          if (active.length > 1) {
+            // Keep only the last one (most recently added by Style Settings)
+            for (const c of active.slice(0, -1)) {
+              doc.body.classList.remove(c);
+            }
+          }
+        });
 
         // Clean up stale imperative classes when press mode toggled OFF
         if (

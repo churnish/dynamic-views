@@ -27,7 +27,7 @@ body.dynamic-views-open-on-title .dynamic-views-bases-container {
   cursor: default;
 }
 
-/* Card-level block: Bases container sets user-select: text (for iOS WebKit)
+/* Card-level block: Bases container sets user-select: text (for WebKit)
    which cascades into cards. This stops the cascade — only element-level
    overrides (title, subtitle, properties) allow selection. */
 body.dynamic-views-open-on-title .dynamic-views .card {

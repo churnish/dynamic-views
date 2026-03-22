@@ -12,7 +12,6 @@ import {
   getDatetimeFormat,
   getDateFormat,
   getTimeFormat,
-  showTimestampIcon,
 } from '../utils/style-settings';
 
 /**
@@ -75,13 +74,6 @@ export function formatTimestamp(
 
   // Full datetime for styled
   return moment(timestamp).format(getDatetimeFormat());
-}
-
-/**
- * Check if timestamp icon should be shown
- */
-export function shouldShowTimestampIcon(): boolean {
-  return showTimestampIcon();
 }
 
 /**

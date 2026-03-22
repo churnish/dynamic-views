@@ -8,6 +8,7 @@ import {
   BasesView,
   BasesEntry,
   Events,
+  Platform,
   QueryController,
   TFile,
 } from 'obsidian';
@@ -25,10 +26,12 @@ import {
   clearStyleSettingsCache,
 } from '../utils/style-settings';
 import { PLUGIN_SETTINGS_CHANGE } from '../constants';
+import { ImmersiveScrollController } from './immersive-scroll';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
 } from '../shared/scroll-gradient';
+import { resetPersistentWidthCache } from '../shared/property-measure';
 import {
   SharedCardRenderer,
   initializeTitleTruncation,
@@ -44,6 +47,8 @@ import {
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
   MOUNT_REMEASURE_MS,
+  MOMENTUM_GUARD_MS,
+  HIDDEN_BUFFER_MULTIPLIER,
   computeHoverScale,
 } from '../shared/constants';
 import {
@@ -96,6 +101,7 @@ import {
   initializeTextPreviewClamp,
   initializeTextPreviewClampForCards,
 } from '../shared/text-preview-dom';
+import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
 
 // Extend Obsidian types
 declare module 'obsidian' {
@@ -236,16 +242,27 @@ export class DynamicViewsGridView extends BasesView {
   private groupContainers = new Map<string | undefined, HTMLElement>();
   private placeholderEls = new Map<VirtualItem, HTMLElement>();
   private cachedGroupOffsets = new Map<string | undefined, number>();
+  private groupOffsetsDirty = true;
   private hasUserScrolled = false;
-  private isCompensatingScroll = false;
+  private compensatingScrollCount = 0;
   private isLayoutBusy = false;
   private virtualScrollRafId: number | null = null;
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
   private cardResizeDirty = false;
   private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isMountRemeasuring = false;
   private newlyMountedEls: HTMLElement[] = [];
   private lastMeasuredCardWidth = 0;
+  private cardVerticalPadding: number | null = null;
+  // iOS momentum mitigation state (all gated on this.measureLane)
+  private measureLane: HTMLElement | null = null;
+  private scrollMountLockedEls = new Set<HTMLElement>();
+  private scrollIdleTimeout: ReturnType<typeof setTimeout> | null = null;
+  private touchActive = true;
+  private lastTouchEndTime = 0;
+  private touchAbort: AbortController | null = null;
+  private immersive: ImmersiveScrollController | null = null;
 
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
@@ -343,6 +360,7 @@ export class DynamicViewsGridView extends BasesView {
         this.rebuildGroupIndex();
 
         // Refresh offsets — later groups moved up
+        this.groupOffsetsDirty = true;
         this.updateCachedGroupOffsets();
       }
 
@@ -502,6 +520,7 @@ export class DynamicViewsGridView extends BasesView {
     // Measure new card positions
     for (const item of newItems) {
       if (item.el && item.height === 0) {
+        this.cacheCardVerticalPadding(item.el);
         const groupContainer = this.groupContainers.get(item.groupKey);
         item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
         item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
@@ -513,6 +532,7 @@ export class DynamicViewsGridView extends BasesView {
         item.fixedHeight = item.measuredHeight - item.scalableHeight;
       }
     }
+    this.groupOffsetsDirty = true;
     this.updateCachedGroupOffsets();
 
     this.isLayoutBusy = false;
@@ -657,11 +677,30 @@ export class DynamicViewsGridView extends BasesView {
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
+    // Setup immersive mobile scrolling
+    if (Platform.isPhone) {
+      const ownerDoc = this.scrollEl.ownerDocument;
+      const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
+      const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
+      if (viewContent && navbarEl) {
+        this.immersive = new ImmersiveScrollController({
+          scrollEl: this.scrollEl,
+          container: this.containerEl,
+          viewContent,
+          navbarEl,
+        });
+        if (pluginSettings.immersiveScroll) {
+          this.immersive.mount();
+        }
+        this.register(() => this.immersive?.unmount());
+      }
+    }
+
     // Watch for Style Settings and plugin settings changes
-    this.disconnectStyleObserver = setupStyleSettingsObserver(
-      () => this.onDataUpdated(),
-      this.containerEl
-    );
+    this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
+      resetPersistentWidthCache();
+      this.onDataUpdated();
+    }, this.containerEl);
     this.register(() => this.disconnectStyleObserver?.());
 
     // Detect popout move: sync body classes + rebind observer to new document
@@ -672,6 +711,7 @@ export class DynamicViewsGridView extends BasesView {
           this.currentDoc = ownerDoc;
           this.handleDocumentChange(ownerDoc);
           // Re-render to recalculate layout with new window context
+          resetPersistentWidthCache();
           this.onDataUpdated();
         }
       })
@@ -679,9 +719,19 @@ export class DynamicViewsGridView extends BasesView {
 
     // Re-render when plugin settings change from the settings tab
     this.registerEvent(
-      (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () =>
-        this.onDataUpdated()
-      )
+      (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () => {
+        const newSettings = this.plugin.persistenceManager.getPluginSettings();
+        setupBasesSwipePrevention(this.containerEl, this.app, newSettings);
+        if (this.immersive) {
+          if (newSettings.immersiveScroll) {
+            this.immersive.mount();
+          } else {
+            this.immersive.unmount();
+          }
+        }
+        resetPersistentWidthCache();
+        this.onDataUpdated();
+      })
     );
 
     // Setup hover-to-start keyboard navigation
@@ -751,10 +801,10 @@ export class DynamicViewsGridView extends BasesView {
     }
     // Rebind style observer to new document's body
     this.disconnectStyleObserver?.();
-    this.disconnectStyleObserver = setupStyleSettingsObserver(
-      () => this.onDataUpdated(),
-      this.containerEl
-    );
+    this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
+      resetPersistentWidthCache();
+      this.onDataUpdated();
+    }, this.containerEl);
 
     this.teardownObservers();
 
@@ -1020,14 +1070,18 @@ export class DynamicViewsGridView extends BasesView {
 
       // Detect files with changed content (mtime changed but paths unchanged)
       const changedPaths = new Set<string>();
-      const currentPaths = allEntries
-        .map((e) => e.file.path)
-        .sort()
-        .join('\0');
-      const lastPaths = Array.from(this.renderState.lastMtimes.keys())
-        .sort()
-        .join('\0');
-      const pathsUnchanged = currentPaths === lastPaths;
+      const currentPaths = allEntries.map((e) => e.file.path);
+      const lastKeys = Array.from(this.renderState.lastMtimes.keys());
+      const pathsUnchanged =
+        [...currentPaths].sort().join('\0') === [...lastKeys].sort().join('\0');
+      // Detect sort-order changes: when a sort-relevant property is edited,
+      // Bases re-sorts allEntries AND updates mtime, so changedPaths is
+      // non-empty and the renderHash early-exit is bypassed. This check is
+      // the only gate that prevents the in-place path from preserving stale
+      // DOM positions when the sort order has actually changed.
+      const orderUnchanged =
+        lastKeys.length === currentPaths.length &&
+        currentPaths.every((p, i) => p === lastKeys[i]);
 
       for (const entry of allEntries) {
         const path = entry.file.path;
@@ -1038,7 +1092,8 @@ export class DynamicViewsGridView extends BasesView {
         }
       }
 
-      // Update mtime tracking
+      // Update mtime tracking — insertion order must match allEntries (Bases
+      // sort order) so the next render's orderUnchanged check works correctly.
       this.renderState.lastMtimes.clear();
       for (const entry of allEntries) {
         this.renderState.lastMtimes.set(entry.file.path, entry.file.stat.mtime);
@@ -1089,8 +1144,13 @@ export class DynamicViewsGridView extends BasesView {
         this.renderState.lastSettingsHash !== null &&
         this.renderState.lastSettingsHash !== settingsHash;
 
-      // If only content changed (not paths/settings), update in-place
-      if (changedPaths.size > 0 && !settingsChanged && pathsUnchanged) {
+      // If only content changed (not paths/settings/order), update in-place
+      if (
+        changedPaths.size > 0 &&
+        !settingsChanged &&
+        pathsUnchanged &&
+        orderUnchanged
+      ) {
         await this.updateCardsInPlace(
           changedPaths,
           allEntries,
@@ -1244,10 +1304,17 @@ export class DynamicViewsGridView extends BasesView {
       this.groupContainers.clear();
       this.placeholderEls.clear();
       this.cachedGroupOffsets.clear();
+      this.groupOffsetsDirty = true;
+      this.cardVerticalPadding = null;
       this.hasUserScrolled = false;
       this.isLayoutBusy = false;
       this.cardResizeDirty = false;
       this.newlyMountedEls = [];
+      this.scrollMountLockedEls.clear();
+      if (this.scrollIdleTimeout !== null) {
+        clearTimeout(this.scrollIdleTimeout);
+        this.scrollIdleTimeout = null;
+      }
       if (this.virtualScrollRafId !== null) {
         (this.observerWindow ?? window).cancelAnimationFrame(
           this.virtualScrollRafId
@@ -1267,7 +1334,24 @@ export class DynamicViewsGridView extends BasesView {
 
       // Clear and re-render
       this.containerEl.empty();
+      this.measureLane = null;
       this.cardDataByPath.clear();
+
+      // Pre-measurement lane for WebKit — render cards offscreen at column width,
+      // run all deferred passes, read final height before grid insertion.
+      // Eliminates secondary height drift that causes scrollTop compensation writes
+      // (which kill WebKit compositor-driven momentum deceleration).
+      if (Platform.isIosApp) {
+        const gap = getCardSpacing(this.containerEl);
+        const containerWidth = Math.floor(
+          this.containerEl.getBoundingClientRect().width
+        );
+        const laneWidth = (containerWidth - (cols - 1) * gap) / cols;
+        this.measureLane = this.containerEl.createDiv(
+          'dynamic-views-measure-lane dynamic-views-grid'
+        );
+        this.measureLane.style.width = `${laneWidth}px`;
+      }
 
       // Reset batch append state for full re-render
       this.previousDisplayedCount = 0;
@@ -1416,6 +1500,7 @@ export class DynamicViewsGridView extends BasesView {
       // Measure card positions and build group index for virtual scrolling
       this.rebuildGroupIndex();
       this.measureAllCardPositions();
+      this.groupOffsetsDirty = true;
       this.updateCachedGroupOffsets();
 
       // Setup cardResizeObserver and observe all initial cards
@@ -1476,6 +1561,16 @@ export class DynamicViewsGridView extends BasesView {
             try {
               const cols = this.calculateColumnCount();
 
+              // Sync measurement lane width (iOS only)
+              if (this.measureLane) {
+                const gap = getCardSpacing(this.containerEl);
+                const containerWidth = Math.floor(
+                  this.containerEl.getBoundingClientRect().width
+                );
+                const laneWidth = (containerWidth - (cols - 1) * gap) / cols;
+                this.measureLane.style.width = `${laneWidth}px`;
+              }
+
               // Only update if changed
               if (cols !== this.lastColumnCount) {
                 // Save scroll before CSS change, restore after (prevents reflow reset)
@@ -1504,7 +1599,15 @@ export class DynamicViewsGridView extends BasesView {
                   }
 
                   // Refresh group offsets — column change reflows CSS Grid
+                  this.groupOffsetsDirty = true;
                   this.updateCachedGroupOffsets();
+
+                  // Unmount content-hidden cards: can't measure at new width
+                  for (const item of this.virtualItems) {
+                    if (item.el?.classList.contains(CONTENT_HIDDEN_CLASS)) {
+                      this.unmountVirtualItem(item);
+                    }
+                  }
 
                   const rvScrollTop = this.scrollEl.scrollTop;
                   const paneHeight = this.scrollEl.clientHeight;
@@ -1527,8 +1630,9 @@ export class DynamicViewsGridView extends BasesView {
                   }
 
                   // Phase 2: Measure actual heights and positions
+                  // Read from DOM — item.width is stale (from pre-resize).
                   const newCardWidth =
-                    this.virtualItems.find((v) => v.el)?.width ?? 0;
+                    this.virtualItems.find((v) => v.el)?.el?.offsetWidth ?? 0;
                   this.lastMeasuredCardWidth = newCardWidth;
                   for (const item of this.virtualItems) {
                     if (item.el) {
@@ -1543,6 +1647,7 @@ export class DynamicViewsGridView extends BasesView {
                         item.measuredHeight - item.scalableHeight;
                     } else if (newCardWidth > 0) {
                       item.height = estimateUnmountedHeight(item, newCardWidth);
+                      item.measuredHeight = item.height;
                     }
                   }
 
@@ -1559,6 +1664,7 @@ export class DynamicViewsGridView extends BasesView {
                     }
                   }
 
+                  this.groupOffsetsDirty = true;
                   this.updateCachedGroupOffsets();
 
                   // Phase 3: Cull — unmount items now outside viewport
@@ -1585,9 +1691,10 @@ export class DynamicViewsGridView extends BasesView {
 
                   this.isLayoutBusy = false;
 
-                  // Schedule deferred passes for cards mounted in Phase 1
+                  // Run deferred passes inline so height changes settle
+                  // before syncVirtualScroll — no visible jump.
                   if (this.newlyMountedEls.length > 0) {
-                    this.scheduleMountRemeasure();
+                    this.onMountRemeasure();
                   }
 
                   this.syncVirtualScroll();
@@ -2145,6 +2252,7 @@ export class DynamicViewsGridView extends BasesView {
       // Measure new cards (single reflow after batch)
       for (const item of this.virtualItems) {
         if (item.el && item.height === 0) {
+          this.cacheCardVerticalPadding(item.el);
           const groupContainer = this.groupContainers.get(item.groupKey);
           item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
           item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
@@ -2156,6 +2264,7 @@ export class DynamicViewsGridView extends BasesView {
           item.fixedHeight = item.measuredHeight - item.scalableHeight;
         }
       }
+      this.groupOffsetsDirty = true;
       this.updateCachedGroupOffsets();
 
       // Clear guard, then sync
@@ -2205,16 +2314,31 @@ export class DynamicViewsGridView extends BasesView {
 
     // Create scroll handler: virtual scroll sync + infinite scroll throttle
     this.scrollThrottle.listener = () => {
+      // Skip sync for programmatic scroll compensation — positions were
+      // just recalculated, syncing would cascade into another remeasure
+      if (this.compensatingScrollCount > 0) {
+        this.compensatingScrollCount--;
+        return;
+      }
+
       if (!this.hasUserScrolled) {
         this.hasUserScrolled = true;
       }
 
-      if (this.isCompensatingScroll) {
-        this.isCompensatingScroll = false;
-        return;
-      }
-
       this.scheduleVirtualScrollSync();
+
+      // Schedule height-lock release after scroll quiesces (iOS only).
+      // Cards mounted during scroll are locked to placeholder height to
+      // prevent CSS Grid row reflows. Release once scrolling stops.
+      if (this.measureLane) {
+        if (this.scrollIdleTimeout !== null) {
+          clearTimeout(this.scrollIdleTimeout);
+        }
+        this.scrollIdleTimeout = setTimeout(() => {
+          this.scrollIdleTimeout = null;
+          this.releaseScrollMountLocks();
+        }, MOUNT_REMEASURE_MS);
+      }
 
       // Infinite scroll check (no-op when all loaded)
       if (this.scrollThrottle.timeoutId !== null) return;
@@ -2229,6 +2353,53 @@ export class DynamicViewsGridView extends BasesView {
     scrollContainer.addEventListener('scroll', this.scrollThrottle.listener, {
       passive: true,
     });
+
+    // WebKit momentum guard — track touch state to suppress scrollTop writes
+    // during inertial deceleration (kills compositor momentum)
+    if (Platform.isIosApp) {
+      this.touchAbort?.abort();
+      this.touchActive = true;
+      this.touchAbort = new AbortController();
+      const signal = this.touchAbort.signal;
+
+      scrollContainer.addEventListener(
+        'touchstart',
+        () => {
+          this.touchActive = true;
+          // Flush deferred remeasure from updateCardsInPlace image-change path
+          if (this.mountRemeasureTimeout !== null) {
+            clearTimeout(this.mountRemeasureTimeout);
+            this.mountRemeasureTimeout = null;
+            this.onMountRemeasure();
+          }
+          // User touch cancels momentum — flush all deferred work
+          if (this.scrollIdleTimeout !== null) {
+            clearTimeout(this.scrollIdleTimeout);
+            this.scrollIdleTimeout = null;
+          }
+          this.releaseScrollMountLocks();
+        },
+        { passive: true, signal }
+      );
+
+      scrollContainer.addEventListener(
+        'touchend',
+        () => {
+          this.touchActive = false;
+          this.lastTouchEndTime = performance.now();
+        },
+        { passive: true, signal }
+      );
+
+      scrollContainer.addEventListener(
+        'touchcancel',
+        () => {
+          this.touchActive = false;
+          this.lastTouchEndTime = performance.now();
+        },
+        { passive: true, signal }
+      );
+    }
 
     // Trigger initial check in case viewport already needs more content
     this.checkAndLoadMore(totalEntries);
@@ -2271,12 +2442,23 @@ export class DynamicViewsGridView extends BasesView {
     }
   }
 
+  /** Cache card vertical padding from the first measured card. */
+  private cacheCardVerticalPadding(el: HTMLElement): void {
+    if (this.cardVerticalPadding !== null) return;
+    const win = el.ownerDocument.defaultView;
+    if (!win) return;
+    const cs = win.getComputedStyle(el);
+    this.cardVerticalPadding =
+      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  }
+
   private measureAllCardPositions(): void {
     // Both card and groupContainer share .dynamic-views-group-section as
     // offsetParent (has position: relative). Subtraction gives position
     // relative to the .dynamic-views-group (cards container).
     for (const item of this.virtualItems) {
       if (!item.el) continue;
+      this.cacheCardVerticalPadding(item.el);
       const groupContainer = this.groupContainers.get(item.groupKey);
       item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
       item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
@@ -2290,7 +2472,9 @@ export class DynamicViewsGridView extends BasesView {
     this.lastMeasuredCardWidth = this.virtualItems[0]?.width ?? 0;
   }
 
-  private updateCachedGroupOffsets(): void {
+  private updateCachedGroupOffsets(force = false): void {
+    if (!force && !this.groupOffsetsDirty) return;
+    this.groupOffsetsDirty = false;
     const scrollRect = this.scrollEl.getBoundingClientRect();
     const scrollTop = this.scrollEl.scrollTop;
     this.cachedGroupOffsets.clear();
@@ -2312,7 +2496,6 @@ export class DynamicViewsGridView extends BasesView {
 
     const placeholder = item.el.ownerDocument.createElement('div');
     placeholder.className = 'dynamic-views-grid-placeholder';
-    // Height matches stretched row height — prevents row collapse
     placeholder.style.height = `${item.height}px`;
     placeholder.style.minHeight = `${item.height}px`;
 
@@ -2322,6 +2505,7 @@ export class DynamicViewsGridView extends BasesView {
     item.handle?.cleanup();
     this.cardRenderer.abortCardRerenderControllers(item.el);
     this.cardResizeObserver?.unobserve(item.el);
+    this.scrollMountLockedEls.delete(item.el);
     item.el = null;
     item.handle = null;
   }
@@ -2333,11 +2517,10 @@ export class DynamicViewsGridView extends BasesView {
     const placeholder = this.placeholderEls.get(item);
     if (!placeholder?.isConnected) return;
 
-    // Render into connected group container (appends at end).
-    // renderCard requires connected DOM for offsetWidth/getComputedStyle reads.
-    const groupContainer = placeholder.parentElement!;
+    const renderTarget = this.measureLane ?? placeholder.parentElement!;
+
     const handle = this.cardRenderer.renderCard(
-      groupContainer,
+      renderTarget,
       item.cardData,
       item.entry,
       settings,
@@ -2359,26 +2542,57 @@ export class DynamicViewsGridView extends BasesView {
       }
     );
 
-    // Atomic swap: move card from end of container to placeholder's slot
-    placeholder.replaceWith(handle.el);
-    this.placeholderEls.delete(item);
+    if (this.measureLane) {
+      // iOS: render into measurement lane, run ALL deferred passes, read height
+      syncResponsiveClasses([handle.el]);
+      setHoverScaleForCards([handle.el]);
+      initializeScrollGradientsForCards([handle.el]);
+      initializeTitleTruncationForCards([handle.el]);
+      initializeTextPreviewClampForCards([handle.el]);
 
-    // Height-lock: prevent row reflow until deferred passes complete.
-    // Card stays at placeholder height — mount/unmount never changes row geometry.
-    handle.el.style.height = `${item.height}px`;
-    handle.el.addClass('dynamic-views-height-locked');
+      const measuredHeight = handle.el.offsetHeight;
+      const measuredWidth = handle.el.offsetWidth;
+      const scalableHeight = measureScalableHeight(handle.el);
 
-    item.el = handle.el;
-    item.handle = handle;
+      // Height-lock to placeholder height before grid insertion (Mechanism 2)
+      handle.el.style.height = `${item.height}px`;
+      handle.el.addClass('dynamic-views-height-locked');
+      this.scrollMountLockedEls.add(handle.el);
 
-    this.cardResizeObserver?.observe(handle.el);
+      placeholder.replaceWith(handle.el);
+      this.placeholderEls.delete(item);
 
-    // Fast sync passes (no height impact)
-    syncResponsiveClasses([handle.el]);
-    setHoverScaleForCards([handle.el]);
+      item.el = handle.el;
+      item.handle = handle;
+      item.measuredHeight = measuredHeight;
+      item.height = measuredHeight; // Normalized to row height by recomputeYPositions
+      item.measuredAtWidth = measuredWidth;
+      item.scalableHeight = scalableHeight;
+      item.fixedHeight = measuredHeight - scalableHeight;
+    } else {
+      // Desktop: height-lock + deferred passes
+      placeholder.replaceWith(handle.el);
+      this.placeholderEls.delete(item);
 
-    // Track for scoped deferred passes in onMountRemeasure
-    this.newlyMountedEls.push(handle.el);
+      handle.el.style.height = `${item.height}px`;
+      handle.el.addClass('dynamic-views-height-locked');
+
+      item.el = handle.el;
+      item.handle = handle;
+
+      syncResponsiveClasses([handle.el]);
+      setHoverScaleForCards([handle.el]);
+
+      this.newlyMountedEls.push(handle.el);
+    }
+
+    // Defer ResizeObserver for async height changes (image loads)
+    const elToObserve = handle.el;
+    (this.observerWindow ?? window).requestAnimationFrame(() => {
+      if (elToObserve.isConnected && this.cardResizeObserver) {
+        this.cardResizeObserver.observe(elToObserve);
+      }
+    });
   }
 
   private syncVirtualScroll(): void {
@@ -2388,8 +2602,23 @@ export class DynamicViewsGridView extends BasesView {
 
     const scrollTop = this.scrollEl.scrollTop;
     const paneHeight = this.scrollEl.clientHeight;
+
+    // Tier 1 (mount zone): viewport ± 1× paneHeight
     const visibleTop = scrollTop - paneHeight;
     const visibleBottom = scrollTop + paneHeight + paneHeight;
+
+    // Hysteresis: wider unmount zone (0.25× gap) prevents boundary oscillation
+    // during WebKit momentum deceleration (card enters mount zone → mounts →
+    // next frame exits → unmounts → flicker). Only affects unmount decisions.
+    const unmountTop = scrollTop - paneHeight * 1.25;
+    const unmountBottom = scrollTop + paneHeight * 2.25;
+
+    // Tier 2 (content-hidden zone): viewport ± HIDDEN_BUFFER_MULTIPLIER × paneHeight
+    // WebKit reflow loop with content-visibility toggling — skip on WebKit
+    const useContentHidden = !Platform.isIosApp;
+    const hiddenTop = scrollTop - paneHeight * HIDDEN_BUFFER_MULTIPLIER;
+    const hiddenBottom =
+      scrollTop + paneHeight * (HIDDEN_BUFFER_MULTIPLIER + 1);
 
     let mountedNew = false;
     const settings = this.lastRenderedSettings;
@@ -2401,17 +2630,65 @@ export class DynamicViewsGridView extends BasesView {
       if (containerOffsetY === undefined) continue;
       const itemTop = containerOffsetY + item.y;
       const itemBottom = itemTop + item.height;
-      const inView = itemBottom > visibleTop && itemTop < visibleBottom;
+      const inVisible = itemBottom > visibleTop && itemTop < visibleBottom;
 
-      if (inView && !item.el) {
-        this.mountVirtualItem(item, settings);
-        mountedNew = true;
-      } else if (!inView && item.el) {
-        this.unmountVirtualItem(item);
+      if (inVisible) {
+        if (!item.el) {
+          // Unmounted → mount
+          this.mountVirtualItem(item, settings);
+          mountedNew = true;
+        } else if (item.el.classList.contains(CONTENT_HIDDEN_CLASS)) {
+          // Content-hidden → visible (cheap restore)
+          item.el.classList.remove(CONTENT_HIDDEN_CLASS);
+          item.el.style.removeProperty('contain-intrinsic-height');
+        }
+      } else if (
+        useContentHidden &&
+        itemBottom > hiddenTop &&
+        itemTop < hiddenBottom
+      ) {
+        // Near off-screen: content-hidden tier (desktop only)
+        if (item.el && !item.el.classList.contains(CONTENT_HIDDEN_CLASS)) {
+          // Visible → content-hidden
+          item.el.classList.add(CONTENT_HIDDEN_CLASS);
+          item.el.style.setProperty(
+            'contain-intrinsic-height',
+            `${Math.max(0, item.height - (this.cardVerticalPadding ?? 0))}px`
+          );
+        }
+        // Unmounted items in hidden zone stay unmounted — don't mount just to hide
+      } else if (itemTop >= unmountBottom || itemBottom <= unmountTop) {
+        // Far off-screen: full unmount
+        if (item.el) {
+          this.unmountVirtualItem(item);
+        }
       }
+      // Items between mount zone and unmount zone: leave as-is (hysteresis)
     }
 
-    if (mountedNew) this.scheduleMountRemeasure();
+    // Run deferred passes inline (same RAF) so height changes + scroll
+    // compensation happen before browser paints — invisible to the user.
+    if (mountedNew) {
+      if (this.measureLane) {
+        // Pre-measured cards: recompute row heights, sync placeholders
+        this.recomputeYPositions();
+        for (const item of this.virtualItems) {
+          if (item.el && this.scrollMountLockedEls.has(item.el)) {
+            item.el.style.height = `${item.height}px`;
+          } else if (!item.el) {
+            const ph = this.placeholderEls.get(item);
+            if (ph) {
+              ph.style.height = `${item.height}px`;
+              ph.style.minHeight = `${item.height}px`;
+            }
+          }
+        }
+        this.groupOffsetsDirty = true;
+        this.updateCachedGroupOffsets();
+      } else {
+        this.onMountRemeasure();
+      }
+    }
   }
 
   private scheduleMountRemeasure(): void {
@@ -2448,9 +2725,20 @@ export class DynamicViewsGridView extends BasesView {
         this.cardResizeDirty = true;
         return;
       }
-      // During mount remeasure window: set dirty flag, don't double-remeasure.
+      // During mount remeasure: set dirty flag, don't double-remeasure.
       // onMountRemeasure will check the flag and reschedule.
-      if (this.mountRemeasureTimeout !== null) {
+      if (this.mountRemeasureTimeout !== null || this.isMountRemeasuring) {
+        this.cardResizeDirty = true;
+        return;
+      }
+      // WebKit momentum: defer all remeasure work — CSS Grid row reflow
+      // from height reads/writes causes visible content shifting during
+      // compositor-driven inertial deceleration
+      if (
+        this.measureLane &&
+        !this.touchActive &&
+        performance.now() - this.lastTouchEndTime < MOMENTUM_GUARD_MS
+      ) {
         this.cardResizeDirty = true;
         return;
       }
@@ -2471,9 +2759,50 @@ export class DynamicViewsGridView extends BasesView {
           this.cardResizeDirty = true;
           return;
         }
+        // Re-check momentum inside RAF — may have entered momentum between
+        // the outer callback and this frame
+        if (
+          this.measureLane &&
+          !this.touchActive &&
+          performance.now() - this.lastTouchEndTime < MOMENTUM_GUARD_MS
+        ) {
+          this.cardResizeDirty = true;
+          return;
+        }
         this.remeasureMountedCards();
       });
     });
+  }
+
+  /** Release height locks from scroll mounts (iOS only).
+   *  Deferred during WebKit momentum — row reflow from lock release causes
+   *  visible content shifts during compositor deceleration. */
+  private releaseScrollMountLocks(): void {
+    if (this.scrollMountLockedEls.size === 0 && !this.cardResizeDirty) return;
+
+    // Defer until momentum ends
+    if (
+      !this.touchActive &&
+      performance.now() - this.lastTouchEndTime < MOMENTUM_GUARD_MS
+    ) {
+      const remaining =
+        MOMENTUM_GUARD_MS - (performance.now() - this.lastTouchEndTime) + 50;
+      this.scrollIdleTimeout = setTimeout(() => {
+        this.scrollIdleTimeout = null;
+        this.releaseScrollMountLocks();
+      }, remaining);
+      return;
+    }
+
+    for (const el of this.scrollMountLockedEls) {
+      if (el.isConnected) {
+        el.style.removeProperty('height');
+        el.removeClass('dynamic-views-height-locked');
+      }
+    }
+    this.scrollMountLockedEls.clear();
+    this.cardResizeDirty = false;
+    this.remeasureMountedCards();
   }
 
   private remeasureMountedCards(): void {
@@ -2532,6 +2861,7 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     // Update group offsets AFTER placeholders (depends on correct DOM heights)
+    this.groupOffsetsDirty = true;
     this.updateCachedGroupOffsets();
 
     // Scroll compensation
@@ -2540,8 +2870,18 @@ export class DynamicViewsGridView extends BasesView {
       const newAbsY = newOffset + anchorItem.y;
       const delta = newAbsY - anchorOldY;
       if (Math.abs(delta) > 1) {
-        this.isCompensatingScroll = true;
-        this.scrollEl.scrollTop = scrollTop + delta;
+        // WebKit: skip scrollTop writes during momentum — kills compositor deceleration.
+        // DOM mutations are safe (confirmed empirically), only scrollTop writes kill momentum.
+        if (
+          this.measureLane &&
+          !this.touchActive &&
+          performance.now() - this.lastTouchEndTime < MOMENTUM_GUARD_MS
+        ) {
+          // Skip — momentum active. Compensation deferred to lock release.
+        } else {
+          this.compensatingScrollCount++;
+          this.scrollEl.scrollTop = scrollTop + delta;
+        }
       }
     }
 
@@ -2579,30 +2919,40 @@ export class DynamicViewsGridView extends BasesView {
       return;
     }
 
+    this.isMountRemeasuring = true;
+
     // Run deferred expensive passes on newly mounted cards only
     const newEls = this.newlyMountedEls.filter((el) => el.isConnected);
     this.newlyMountedEls = [];
 
     if (newEls.length) {
-      initializeScrollGradientsForCards(newEls);
-      initializeTitleTruncationForCards(newEls);
-      initializeTextPreviewClampForCards(newEls);
-
-      // Release height locks
+      // Release height locks BEFORE deferred passes — passes must see natural
+      // card height (matching initial render order). Running passes while
+      // height-locked produces different text clamp/gradient results → drift.
       for (const el of newEls) {
         el.style.removeProperty('height');
         el.removeClass('dynamic-views-height-locked');
       }
+
+      initializeScrollGradientsForCards(newEls);
+      initializeTitleTruncationForCards(newEls);
+      initializeTextPreviewClampForCards(newEls);
     }
 
     this.remeasureMountedCards();
 
-    // Handle deferred cardResizeObserver events
-    if (this.cardResizeDirty) {
-      this.cardResizeDirty = false;
-      // Schedule follow-up remeasure for changes during the mount window
-      this.scheduleMountRemeasure();
-    }
+    // Defer clearing — ResizeObserver callbacks from lock release fire
+    // between RAF and paint (same frame). Previously-mounted cards in
+    // the same row also resize when the row height changes. Keep the
+    // guard active so those RO callbacks set cardResizeDirty instead
+    // of triggering a second (oscillating) remeasure.
+    (this.observerWindow ?? window).requestAnimationFrame(() => {
+      this.isMountRemeasuring = false;
+      if (this.cardResizeDirty) {
+        this.cardResizeDirty = false;
+        this.remeasureMountedCards();
+      }
+    });
   }
 
   private getVirtualRects(): VirtualCardRect[] {
@@ -2656,6 +3006,14 @@ export class DynamicViewsGridView extends BasesView {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
     this.stickyHeadings?.disconnect();
+    this.measureLane?.remove();
+    this.measureLane = null;
+    this.scrollMountLockedEls.clear();
+    if (this.scrollIdleTimeout !== null) {
+      clearTimeout(this.scrollIdleTimeout);
+      this.scrollIdleTimeout = null;
+    }
+    this.touchAbort?.abort();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction

@@ -9,224 +9,161 @@ import { updateScrollGradient } from './scroll-gradient';
 /** Cache of last measured container width per card (auto-cleans via WeakMap) */
 const cardWidthCache = new WeakMap<HTMLElement, number>();
 
-/** Cache for getComputedStyle gap values */
-let cachedFieldGap: number | null = null;
-let cachedLabelGap: number | null = null;
-
-/** Reset gap caches when theme/settings change */
-export function resetGapCache(): void {
-  cachedFieldGap = null;
-  cachedLabelGap = null;
+interface CachedPairWidths {
+  field1: string;
+  field2: string;
 }
 
-/** Track visible cards via IntersectionObserver */
-const visibleCards = new Set<HTMLElement>();
-const visibilityObservers = new Map<
-  Window & typeof globalThis,
-  IntersectionObserver
->();
-
-function getVisibilityObserver(
-  win: Window & typeof globalThis
-): IntersectionObserver {
-  let observer = visibilityObservers.get(win);
-  if (!observer) {
-    observer = new win.IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const card = entry.target as HTMLElement;
-          if (entry.isIntersecting) {
-            visibleCards.add(card);
-          } else {
-            visibleCards.delete(card);
-          }
-        });
-      },
-      { rootMargin: '100px' } // Measure slightly before visible
-    );
-    visibilityObservers.set(win, observer);
-  }
-  return observer;
+interface CachedCardMeasurement {
+  containerWidth: number;
+  pairs: CachedPairWidths[];
 }
 
-/**
- * Cleanup visibility observer and tracked cards.
- * @param win - If provided, cleans up only that window's observer.
- *              If omitted, disconnects all observers (use on plugin unload only).
- */
-export function cleanupVisibilityObserver(
-  win?: Window & typeof globalThis
-): void {
-  if (win) {
-    const obs = visibilityObservers.get(win);
-    if (obs) {
-      obs.disconnect();
-      visibilityObservers.delete(win);
-    }
-    visibleCards.forEach((card) => {
-      if (getOwnerWindow(card) === win) visibleCards.delete(card);
-    });
-  } else {
-    visibilityObservers.forEach((obs) => obs.disconnect());
-    visibilityObservers.clear();
-    visibleCards.clear();
-  }
+/** Persistent width cache keyed by file path — survives DOM element lifecycle.
+ *  Applied on re-mount to skip forced reflows. */
+const persistentWidthCache = new Map<string, CachedCardMeasurement>();
+
+/** Cached gap values — Obsidian's --size-* vars are hardcoded constants,
+ *  so these are read once on first use and never reset. */
+let cachedFieldGap: number | undefined;
+let cachedLabelGap: number | undefined;
+
+/** Clear persistent width cache when settings change (label mode, pairing config) */
+export function resetPersistentWidthCache(): void {
+  persistentWidthCache.clear();
 }
-
-/** Global set queue to prevent frame drops */
-interface QueuedSet {
-  set: HTMLElement;
-  card: HTMLElement;
-}
-const setQueue: QueuedSet[] = [];
-/** Set for O(1) duplicate detection */
-const queuedSets = new Set<HTMLElement>();
-let isProcessingSets = false;
-let pendingFlush = false;
-const gradientBatch: HTMLElement[] = [];
-
-/** Track documents that had cards processed this queue cycle */
-const processedDocuments = new Set<Document>();
-
-/** Sets to process per frame */
-const SETS_PER_FRAME = 5;
-
-/** Maximum queue size to prevent unbounded growth */
-const MAX_QUEUE_SIZE = 500;
-
-/** Maximum gradient batch size before early flush */
-const MAX_GRADIENT_BATCH_SIZE = 100;
 
 /** Event name for masonry relayout coordination */
 export const PROPERTY_MEASURED = 'dynamic-views:property-measured';
 
-/** Process queued sets in batches per frame */
-function processSetQueue(): void {
-  const win = getOwnerWindow(setQueue[0]?.card);
-
-  if (setQueue.length === 0) {
-    isProcessingSets = false;
-    queuedSets.clear(); // Clear dedup set when queue empty
-    // Flush gradient batch when queue empty, then dispatch event in RAF
-    // Set pendingFlush to prevent new queue processing until flush completes
-    if (gradientBatch.length > 0) {
-      pendingFlush = true;
-      win.requestAnimationFrame(() => {
-        // Clear and process batch inside RAF to avoid race condition
-        // (new items added between slice and RAF execution would be lost)
-        const batch = gradientBatch.slice();
-        gradientBatch.length = 0;
-        batch.forEach((field) => updateScrollGradient(field));
-        pendingFlush = false;
-        processedDocuments.forEach((doc) => {
-          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
-        });
-        processedDocuments.clear();
-      });
-    } else {
-      win.requestAnimationFrame(() => {
-        processedDocuments.forEach((doc) => {
-          doc.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
-        });
-        processedDocuments.clear();
-      });
-    }
-    return;
-  }
-
-  // Clear stale documents from any interrupted previous cycle
-  if (!isProcessingSets) processedDocuments.clear();
-  isProcessingSets = true;
-
-  // Process up to SETS_PER_FRAME sets per frame
-  for (let i = 0; i < SETS_PER_FRAME && setQueue.length > 0; i++) {
-    const item = setQueue.shift();
-    if (item) {
-      const { set, card } = item;
-      queuedSets.delete(set); // Remove from dedup set
-      // Check both set AND card are connected
-      if (
-        set.isConnected &&
-        card.isConnected &&
-        !card.classList.contains('compact-mode')
-      ) {
-        set.classList.remove('property-measured');
-        measureSideBySideSet(set, gradientBatch);
-        processedDocuments.add(set.ownerDocument);
-      }
-    }
-  }
-
-  // Early flush if gradient batch is large (prevents unbounded memory growth)
-  // Use RAF to maintain consistent timing and prevent layout thrashing
-  // Set pendingFlush to prevent concurrent RAF batches
-  if (gradientBatch.length >= MAX_GRADIENT_BATCH_SIZE) {
-    pendingFlush = true;
-    const batch = gradientBatch.slice();
-    gradientBatch.length = 0;
-    win.requestAnimationFrame(() => {
-      batch.forEach((field) => updateScrollGradient(field));
-      pendingFlush = false;
-      // No event dispatch here — processing continues; terminal dispatch fires on queue drain.
-    });
-  }
-
-  // Continue processing
-  win.requestAnimationFrame(processSetQueue);
-}
-
 /** Width cache tolerance to avoid redundant measurements from rounding */
 const WIDTH_TOLERANCE = 0.5;
 
-/** Queue all sets from a card for measurement */
-function queueCardSets(
+/**
+ * Measures all property pairs in a card synchronously.
+ * One forced reflow per set via measureSideBySideSet.
+ */
+function measureCardPairsSynchronous(
   cardEl: HTMLElement,
   sets: NodeListOf<Element>,
   cardProps: HTMLElement
 ): void {
-  // Only measure visible cards
-  if (!visibleCards.has(cardEl)) return;
-
-  // Skip compact mode cards before queuing
+  // Skip compact mode
   if (cardEl.classList.contains('compact-mode')) return;
 
-  // Skip if column mode — default CSS already handles equal widths
+  // Skip column mode
   const viewContainer = cardEl.closest('.dynamic-views');
   if (viewContainer?.classList.contains('dynamic-views-paired-property-column'))
     return;
 
-  // Check width and cache with tolerance
+  // Skip content-hidden cards
+  if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
+
+  // Width cache check
   const currentWidth = cardProps.clientWidth;
   if (currentWidth <= 0) return;
-
   const lastWidth = cardWidthCache.get(cardEl);
   if (
     lastWidth !== undefined &&
     Math.abs(lastWidth - currentWidth) < WIDTH_TOLERANCE
   ) {
-    return;
+    // Width unchanged — but if any set lacks .property-measured (fresh DOM
+    // from re-render), fall through to measure them.
+    let allMeasured = true;
+    for (let i = 0; i < sets.length; i++) {
+      if (!sets[i].classList.contains('property-measured')) {
+        allMeasured = false;
+        break;
+      }
+    }
+    if (allMeasured) return;
+    // Card element reused (in-place update) with fresh DOM — persistent cache
+    // may have stale widths from before the property value change.
+    // Re-mount (virtual scroll) has lastWidth undefined — cache is trusted.
+    const stalePath = cardEl.getAttribute('data-path');
+    if (stalePath) persistentWidthCache.delete(stalePath);
   }
   cardWidthCache.set(cardEl, currentWidth);
 
-  // Add each set to queue with O(1) dedup and size limit
-  sets.forEach((setEl) => {
-    const set = setEl as HTMLElement;
-    // O(1) duplicate check via Set
-    if (!queuedSets.has(set)) {
-      // Enforce queue size limit
-      if (setQueue.length >= MAX_QUEUE_SIZE) {
-        console.warn('[property-measure] Queue overflow, skipping measurement');
-        return;
-      }
-      queuedSets.add(set);
-      setQueue.push({ set, card: cardEl });
-    }
-  });
-
-  // Start processing if not already running and no flush pending
-  if (!isProcessingSets && !pendingFlush) {
-    getOwnerWindow(sets[0]).requestAnimationFrame(processSetQueue);
+  // Clear stale measurement state — container width changed (or first mount).
+  // Without this, measureSideBySideSet skips sets that still have
+  // .property-measured from the old width, leaving stale CSS vars.
+  for (let i = 0; i < sets.length; i++) {
+    const set = sets[i] as HTMLElement;
+    set.classList.remove('property-measured');
+    set.style.removeProperty('--field1-width');
+    set.style.removeProperty('--field2-width');
   }
+
+  // Try persistent cache — zero forced reflows
+  const filePath = cardEl.getAttribute('data-path');
+  if (filePath) {
+    const cached = persistentWidthCache.get(filePath);
+    if (
+      cached &&
+      cached.pairs.length === sets.length &&
+      Math.abs(cached.containerWidth - currentWidth) < WIDTH_TOLERANCE
+    ) {
+      const gradientTargets: HTMLElement[] = [];
+      for (let i = 0; i < sets.length; i++) {
+        const set = sets[i] as HTMLElement;
+        if (!set.isConnected) continue;
+        const pair = cached.pairs[i];
+        set.style.setProperty('--field1-width', pair.field1);
+        set.style.setProperty('--field2-width', pair.field2);
+        set.classList.add('property-measured');
+
+        // Reset scroll position (defensive — fresh DOM has scrollLeft 0)
+        const w1 = set.querySelector(
+          LEFT_FIELD_SELECTOR + ' .property-content-wrapper'
+        ) as HTMLElement;
+        const w2 = set.querySelector(
+          RIGHT_FIELD_SELECTOR + ' .property-content-wrapper'
+        ) as HTMLElement;
+        if (w1) w1.scrollLeft = 0;
+        if (w2) w2.scrollLeft = 0;
+
+        if (pair.field1 !== '0px') {
+          const f = set.querySelector(LEFT_FIELD_SELECTOR) as HTMLElement;
+          if (f) gradientTargets.push(f);
+        }
+        if (pair.field2 !== '0px') {
+          const f = set.querySelector(RIGHT_FIELD_SELECTOR) as HTMLElement;
+          if (f) gradientTargets.push(f);
+        }
+      }
+      gradientTargets.forEach((field) => updateScrollGradient(field));
+      cardEl.ownerDocument.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
+      return;
+    }
+  }
+
+  // Measure each set synchronously (gradient targets collected inline)
+  const gradientTargets: HTMLElement[] = [];
+  for (const setEl of sets) {
+    const set = setEl as HTMLElement;
+    if (!set.isConnected) continue;
+    measureSideBySideSet(set, gradientTargets);
+  }
+
+  // Store in persistent cache
+  if (filePath) {
+    const pairs: CachedPairWidths[] = [];
+    for (const setEl of sets) {
+      const set = setEl as HTMLElement;
+      pairs.push({
+        field1: set.style.getPropertyValue('--field1-width') || '0px',
+        field2: set.style.getPropertyValue('--field2-width') || '0px',
+      });
+    }
+    persistentWidthCache.set(filePath, { containerWidth: currentWidth, pairs });
+  }
+
+  // Apply gradients synchronously (cheap — just class toggles)
+  gradientTargets.forEach((field) => updateScrollGradient(field));
+
+  // Dispatch PROPERTY_MEASURED for masonry relayout (debounced at 100ms in listener)
+  cardEl.ownerDocument.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
 }
 
 /** Field selector for left side of pair */
@@ -336,7 +273,7 @@ export function measureSideBySideSet(
       }
 
       // Add inline label width + gap (use cached value)
-      if (cachedLabelGap === null) {
+      if (cachedLabelGap === undefined) {
         cachedLabelGap =
           parseFloat(getOwnerWindow(field1).getComputedStyle(field1).gap) || 4;
       }
@@ -348,7 +285,7 @@ export function measureSideBySideSet(
       }
 
       // Read field gap from CSS variable (use cached value)
-      if (cachedFieldGap === null) {
+      if (cachedFieldGap === undefined) {
         cachedFieldGap =
           parseFloat(getOwnerWindow(set).getComputedStyle(set).gap) || 8;
       }
@@ -404,13 +341,10 @@ export function measureSideBySideSet(
   }
 }
 
-/** Chunk size for batched measurements (prevents long frames) */
-const MEASUREMENT_CHUNK_SIZE = 5;
-
 /**
- * Resets measurement state and re-measures all side-by-side sets in a container
- * Call this when property label mode changes
- * Uses chunked processing to prevent frame drops with many sets
+ * Resets measurement state and re-measures all side-by-side sets in a container.
+ * Called when property label mode changes — low frequency, bounded card count
+ * due to virtual scrolling.
  */
 export function remeasurePropertyFields(container: HTMLElement): void {
   const viewContainer = container.closest('.dynamic-views') ?? container;
@@ -425,6 +359,14 @@ export function remeasurePropertyFields(container: HTMLElement): void {
   );
   if (sets.length === 0) return;
 
+  // Invalidate persistent cache for affected cards (label mode changed)
+  container
+    .querySelectorAll<HTMLElement>('.card[data-path]')
+    .forEach((card) => {
+      const path = card.getAttribute('data-path');
+      if (path) persistentWidthCache.delete(path);
+    });
+
   // Clear measured state for all sets first (batch DOM writes)
   sets.forEach((set) => {
     set.classList.remove('property-measured');
@@ -432,36 +374,25 @@ export function remeasurePropertyFields(container: HTMLElement): void {
     set.style.removeProperty('--field2-width');
   });
 
-  // Process sets in chunks across frames to prevent freeze
-  let index = 0;
+  // Re-measure synchronously
   const gradientTargets: HTMLElement[] = [];
-  const win = getOwnerWindow(container);
-
-  function processChunk(): void {
-    const end = Math.min(index + MEASUREMENT_CHUNK_SIZE, sets.length);
-    while (index < end) {
-      measureSideBySideSet(sets[index], gradientTargets);
-      index++;
+  sets.forEach((set) => {
+    if (
+      set.isConnected &&
+      !set.closest('.card')?.classList.contains('compact-mode')
+    ) {
+      measureSideBySideSet(set, gradientTargets);
     }
+  });
 
-    if (index < sets.length) {
-      // More sets to process - schedule next chunk
-      win.requestAnimationFrame(processChunk);
-    } else if (gradientTargets.length > 0) {
-      // All done - update gradients
-      win.requestAnimationFrame(() => {
-        gradientTargets.forEach((field) => updateScrollGradient(field));
-      });
-    }
-  }
-
-  win.requestAnimationFrame(processChunk);
+  gradientTargets.forEach((field) => updateScrollGradient(field));
+  container.ownerDocument.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
 }
 
 /**
  * Measures all side-by-side property sets in a card element.
- * Uses IntersectionObserver for visibility + ResizeObserver for size changes.
- * Returns observers for cleanup.
+ * Performs synchronous initial measurement, then sets up a ResizeObserver
+ * for resize-triggered remeasurement. Returns observers for cleanup.
  */
 export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
   // Skip measurement if column mode — default CSS is already 50-50
@@ -483,29 +414,33 @@ export function measurePropertyFields(cardEl: HTMLElement): ResizeObserver[] {
   if (!cardEl.ownerDocument.defaultView) return [];
   const cardWindow = getOwnerWindow(cardEl);
 
-  // Register with visibility observer
-  getVisibilityObserver(cardWindow).observe(cardEl);
+  // Synchronous initial measurement (card is already in DOM with layout)
+  if (
+    !cardEl.classList.contains(CONTENT_HIDDEN_CLASS) &&
+    cardProps.clientWidth > 0
+  ) {
+    measureCardPairsSynchronous(cardEl, sets, cardProps);
+  }
 
-  // Track if this is the first resize (initial appearance)
-  let isFirstResize = true;
-
-  // ResizeObserver handles size changes
+  // ResizeObserver for subsequent resize-triggered remeasurement
   const observer = new cardWindow.ResizeObserver(() => {
-    // Skip content-hidden cards (dimension reads trigger Chromium warnings)
     if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return;
-    // Skip in compact mode or if container has no width
-    if (cardEl.classList.contains('compact-mode')) return;
-    if (cardProps.clientWidth <= 0) return;
-
-    if (isFirstResize) {
-      // Initial appearance - mark as visible for immediate measurement
-      isFirstResize = false;
-      visibleCards.add(cardEl);
-    }
-    // Width cache in queueCardSets prevents redundant measurements
-    queueCardSets(cardEl, sets, cardProps);
+    measureCardPairsSynchronous(cardEl, sets, cardProps);
   });
   observer.observe(cardEl);
 
   return [observer];
+}
+
+/**
+ * Triggers property measurement on an existing card (e.g., after compact-mode removal).
+ * Queries pairs fresh — safe after DOM mutations.
+ */
+export function remeasureCardPairs(cardEl: HTMLElement): void {
+  const sets = cardEl.querySelectorAll('.property-pair');
+  if (sets.length === 0) return;
+  const cardProps = cardEl.querySelector('.card-properties') as HTMLElement;
+  if (!cardProps || cardProps.clientWidth <= 0) return;
+  if (!cardEl.ownerDocument.defaultView) return;
+  measureCardPairsSynchronous(cardEl, sets, cardProps);
 }

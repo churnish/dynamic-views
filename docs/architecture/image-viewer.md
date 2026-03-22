@@ -45,7 +45,7 @@ No Panzoom. Direct `touchstart`/`touchmove`/`touchend` listeners on the containe
 - **Pan**: One-finger drag. Clamped: `maxPan = imgDim * (scale-1) / scale / 2` — prevents showing empty space.
 - **Momentum**: Linear velocity decay after touch release (`momentumTick` — `velocity -= Math.min(0.003 * dt, velocity)`, clamped to prevent negative overshoot). Scale guard: `if (scale <= 1) return` — no momentum at 1x zoom since pan is clamped to 0.
 - **Snap-back**: Pinching below 1x snaps back to 1x.
-- **iOS drag & drop**: Touch handler uses `{ passive: true }`. iOS fires `touchcancel` when it takes over for drag, cleaning up handler state. At scale=1, maxPan=0 so microtremor during long-press hold is clamped.
+- **WebKit drag & drop**: Touch handler uses `{ passive: true }`. WebKit fires `touchcancel` when it takes over for drag, cleaning up handler state. At scale=1, maxPan=0 so microtremor during long-press hold is clamped.
 
 ### Desktop: zoom-disabled mode
 

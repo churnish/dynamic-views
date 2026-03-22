@@ -3,6 +3,9 @@
  * Used by both Bases (shared-renderer.ts) and Datacore (card-renderer.tsx) renderers
  */
 
+import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { getOwnerWindow } from '../utils/owner-window';
+
 /**
  * Check if a property is a tag property (tags or file tags)
  */
@@ -87,6 +90,115 @@ export function hasWrappedPairs(card: HTMLElement): boolean {
     }
   }
   return false;
+}
+
+// --- Batched compact-stacked detection ---
+// Per-document partitioning: main window and popout windows batch independently
+
+const compactWidthCache = new WeakMap<HTMLElement, number>();
+const pendingCardsByDoc = new Map<Document, Set<HTMLElement>>();
+const batchRafIds = new Map<Document, number>();
+
+/**
+ * Queue a compact card for batched wrapping detection.
+ * Cache-checks internally — safe to call on every RO fire.
+ */
+export function queueCompactStackedCheck(
+  cardEl: HTMLElement,
+  cardWidth: number
+): void {
+  if (compactWidthCache.get(cardEl) === cardWidth) return;
+  compactWidthCache.set(cardEl, cardWidth);
+
+  const doc = cardEl.ownerDocument;
+  let docPending = pendingCardsByDoc.get(doc);
+  if (!docPending) {
+    docPending = new Set();
+    pendingCardsByDoc.set(doc, docPending);
+  }
+  docPending.add(cardEl);
+
+  if (!batchRafIds.has(doc)) {
+    const win = getOwnerWindow(cardEl);
+    batchRafIds.set(
+      doc,
+      win.requestAnimationFrame(() => processCompactStackedBatch(doc))
+    );
+  }
+}
+
+/** Cancel pending check + remove compact-stacked state + clear cache. */
+export function cancelCompactStackedCheck(cardEl: HTMLElement): void {
+  pendingCardsByDoc.get(cardEl.ownerDocument)?.delete(cardEl);
+  cardEl.classList.remove('compact-stacked');
+  compactWidthCache.delete(cardEl);
+}
+
+/** Clear cache entry + remove from pending batch (for content-hidden skip). */
+export function invalidateCompactStackedCache(cardEl: HTMLElement): void {
+  compactWidthCache.delete(cardEl);
+  pendingCardsByDoc.get(cardEl.ownerDocument)?.delete(cardEl);
+}
+
+function processCompactStackedBatch(doc: Document): void {
+  batchRafIds.delete(doc);
+  const docPending = pendingCardsByDoc.get(doc);
+  if (!docPending || docPending.size === 0) return;
+
+  const cards = [...docPending];
+  docPending.clear();
+  pendingCardsByDoc.delete(doc);
+
+  // Safety: skip disconnected, non-compact, and content-hidden cards
+  const eligible = cards.filter(
+    (c) =>
+      c.isConnected &&
+      c.classList.contains('compact-mode') &&
+      !c.classList.contains(CONTENT_HIDDEN_CLASS)
+  );
+  if (eligible.length === 0) return;
+
+  // Write phase: remove compact-stacked from all pending cards
+  for (const cardEl of eligible) {
+    cardEl.classList.remove('compact-stacked');
+  }
+
+  // Single forced reflow per document (collapses N reflows into 1)
+  void eligible[0].offsetHeight;
+
+  // Read phase: collect wrapping state for all cards
+  const wrapped: boolean[] = [];
+  for (const cardEl of eligible) {
+    wrapped.push(hasWrappedPairs(cardEl));
+  }
+
+  // Row-level sync for Grid views: if ANY card in a row needs stacking, ALL do
+  const gridCards = eligible.filter((c) => c.closest('.dynamic-views-grid'));
+  // Single card has no row peers to sync
+  if (gridCards.length > 1) {
+    const eligibleIndex = new Map(eligible.map((el, i) => [el, i]));
+    // Read top positions (no additional reflow — still in read phase)
+    const tops = gridCards.map((c) => c.getBoundingClientRect().top);
+
+    // Group by row (1px tolerance for subpixel rounding)
+    const ROW_TOLERANCE = 1;
+    for (let i = 0; i < gridCards.length; i++) {
+      if (!wrapped[eligibleIndex.get(gridCards[i])!]) continue;
+      // Propagate stacking to all cards in the same row
+      for (let j = 0; j < gridCards.length; j++) {
+        if (Math.abs(tops[i] - tops[j]) <= ROW_TOLERANCE) {
+          wrapped[eligibleIndex.get(gridCards[j])!] = true;
+        }
+      }
+    }
+  }
+
+  // Write phase: apply compact-stacked where needed
+  for (let i = 0; i < eligible.length; i++) {
+    if (wrapped[i]) {
+      eligible[i].classList.add('compact-stacked');
+    }
+  }
 }
 
 /**

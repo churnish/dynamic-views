@@ -85,7 +85,7 @@ const MOCK_PLUGIN_SETTINGS: any = {
   smartTimestamp: true,
   createdTimeProperty: 'created time',
   modifiedTimeProperty: 'modified time',
-  preventSidebarSwipe: 'disabled',
+  preventSidebarSwipe: true,
   revealInNotebookNavigator: 'disable',
   showYoutubeThumbnails: true,
   showCardLinkCovers: true,

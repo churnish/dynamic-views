@@ -554,18 +554,16 @@ export function View({
   }, [settings, QUERY_ID, persistenceManager]);
 
   // Setup swipe prevention on mobile if enabled (Datacore is always embedded)
-  // Note: preventSidebarSwipe intentionally omitted from deps - global settings require restart
   dc.useEffect(() => {
-    const pluginSettings = persistenceManager.getPluginSettings();
-    if (
-      app.isMobile &&
-      pluginSettings.preventSidebarSwipe === 'all-views' &&
-      explorerRef.current
-    ) {
+    if (app.isMobile && settings.preventSidebarSwipe && explorerRef.current) {
       explorerRef.current.dataset.ignoreSwipe = 'true';
       return () => explorerRef.current?.removeAttribute('data-ignore-swipe');
     }
-  }, [app.isMobile, persistenceManager]);
+    // Setting disabled or not mobile — ensure attribute is removed
+    if (explorerRef.current) {
+      delete explorerRef.current.dataset.ignoreSwipe;
+    }
+  }, [app.isMobile, settings.preventSidebarSwipe]);
 
   // Setup hover-to-start keyboard navigation
   dc.useEffect(() => {
@@ -1256,7 +1254,7 @@ export function View({
           });
 
           // Force content rendering for accurate measurement
-          // (iOS WebKit returns intrinsic fallback for content-visibility: auto)
+          // (WebKit returns intrinsic fallback for content-visibility: auto)
           container.classList.add('masonry-measuring');
           try {
             void newCards[0]?.offsetHeight;

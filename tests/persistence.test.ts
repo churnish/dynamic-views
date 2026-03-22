@@ -18,7 +18,7 @@ vi.mock('../src/constants', () => ({
     smartTimestamp: true,
     createdTimeProperty: 'created time',
     modifiedTimeProperty: 'modified time',
-    preventSidebarSwipe: 'disabled',
+    preventSidebarSwipe: true,
     revealInNotebookNavigator: 'disable',
     showYoutubeThumbnails: true,
     showCardLinkCovers: true,
@@ -133,6 +133,58 @@ describe('PersistenceManager', () => {
       expect(settings.randomizeAction).toBe('random');
       // Default value preserved
       expect(settings.smartTimestamp).toBe(true);
+    });
+  });
+
+  describe('preventSidebarSwipe migration (via load)', () => {
+    it('should migrate "disabled" to false and trigger save', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { preventSidebarSwipe: 'disabled' },
+      });
+      await manager.load();
+
+      expect(manager.getPluginSettings().preventSidebarSwipe).toBe(false);
+      expect(mockPlugin.saveData).toHaveBeenCalled();
+    });
+
+    it('should migrate "all-views" by deleting (falls back to default true)', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { preventSidebarSwipe: 'all-views' },
+      });
+      await manager.load();
+
+      expect(manager.getPluginSettings().preventSidebarSwipe).toBe(true);
+      expect(mockPlugin.saveData).toHaveBeenCalled();
+    });
+
+    it('should migrate "base-files" by deleting (falls back to default true)', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { preventSidebarSwipe: 'base-files' },
+      });
+      await manager.load();
+
+      expect(manager.getPluginSettings().preventSidebarSwipe).toBe(true);
+      expect(mockPlugin.saveData).toHaveBeenCalled();
+    });
+
+    it('should not migrate when already boolean true', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { preventSidebarSwipe: true },
+      });
+      await manager.load();
+
+      expect(manager.getPluginSettings().preventSidebarSwipe).toBe(true);
+      expect(mockPlugin.saveData).not.toHaveBeenCalled();
+    });
+
+    it('should not migrate when already boolean false', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { preventSidebarSwipe: false },
+      });
+      await manager.load();
+
+      expect(manager.getPluginSettings().preventSidebarSwipe).toBe(false);
+      expect(mockPlugin.saveData).not.toHaveBeenCalled();
     });
   });
 

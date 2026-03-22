@@ -1,28 +1,12 @@
 ---
 title: Debug commands
-description: Console-invokable diagnostic commands for runtime debugging — sync verification, layout inspection.
+description: Console-invokable diagnostic commands for runtime debugging — layout inspection.
 author: 🤖 Generated with Claude Code
 updated: 2026-03-15
 ---
 # Debug commands
 
-Runtime diagnostic commands invokable from the developer console (Cmd+Opt+I on Mac, Safari Inspector on iOS). All commands are idempotent — safe to run multiple times.
-
-## Sync notice
-
-Confirms that a new build reached a device after iCloud sync. Shows an auto-incrementing number as a persistent Notice on each plugin load.
-
-**Use case**: Build on Mac → iCloud syncs `main.js` to iOS → reload plugin on iOS → notice confirms new code is running.
-
-| Action | Command |
-|---|---|
-| Enable | `app.saveLocalStorage('dynamic-views-sync-notice', '0')` |
-| Disable + reset | `app.saveLocalStorage('dynamic-views-sync-notice', null)` |
-
-- **State**: Stored in `localStorage` via Obsidian's `App#saveLocalStorage` — per-device, persists across reloads.
-- **Counter**: Increments in `onload()`. Each hot-reload or manual plugin reload bumps the number.
-- **Notice**: Duration 0 (persists until dismissed).
-- **Source**: `main.ts`, `SYNC_NOTICE_KEY` constant.
+Runtime diagnostic commands invokable from the developer console (Cmd+Opt+I on Mac, Safari Inspector on mobile). All commands are idempotent — safe to run multiple times.
 
 ## Card width badges
 

@@ -17,6 +17,7 @@ dynamic-views/
 ├── src/
 │   ├── bases/                        # Bases backend (Obsidian native API)
 │   │   ├── grid-view.ts              # Grid layout view
+│   │   ├── immersive-scroll.ts       # Immersive mobile scrolling (hide/show bars on scroll)
 │   │   ├── masonry-view.ts           # Masonry layout view
 │   │   ├── shared-renderer.ts        # Shared card rendering (deduplicates grid/masonry)
 │   │   ├── sticky-heading.ts         # Sentinel IO for sticky group heading stuck state

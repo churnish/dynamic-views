@@ -33,7 +33,7 @@ Plugin-level settings from the settings tab. Not per-view.
 | `modifiedTimeProperty`      | `string`                                          | Property name for modified time       |
 | `randomizeAction`           | `string`                                          | Shuffle/randomize behavior            |
 | `openFileAction`            | `'card' \| 'title'`                               | What click target opens files         |
-| `preventSidebarSwipe`       | `'disabled' \| 'base-files' \| 'all-views'`       | Prevent sidebar swipe on mobile       |
+| `preventSidebarSwipe`       | `boolean`                                         | Prevent sidebar swipe on mobile       |
 | `revealInNotebookNavigator` | `'disable' \| 'files-folders' \| 'tags' \| 'all'` | Notebook Navigator integration        |
 | `showYoutubeThumbnails`     | `boolean`                                         | Fetch YouTube thumbnails              |
 | `showCardLinkCovers`        | `boolean`                                         | Fetch card link cover images          |
