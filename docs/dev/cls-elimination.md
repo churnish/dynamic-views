@@ -2,7 +2,7 @@
 title: CLS elimination
 description: Post-resize scroll-idle CLS in masonry layout (#358) — problem definition, proven constraints, estimation model, industry survey, all tried approaches, remaining candidates, and key source files.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-21
+updated: 2026-03-22
 ---
 # CLS elimination (#358)
 
@@ -35,6 +35,10 @@ When the user scrolls after resize and stops, `onScrollIdle` → `remeasureAndRe
 7. **"Zero DOM reads" in proportionalResizeLayout is a real constraint**: Adding a forced reflow (clear height + set width + read offsetHeight) to the proportional resize path caused p95 = 20.7ms and max = 142.5ms frame times (9% of frames over 16ms budget). `offsetHeight` reads alone cost <1ms for ~80 cards, but the style invalidation + reflow from clearing/setting inline styles on every resize frame is expensive. The old estimation path (3-5ms) must remain the primary resize path.
 
 8. **Image-load cover insertion is a secondary CLS source, not primary**: Cards mount without cover/img elements (height 193-280px). When images load, cover wrappers appear (~200px), causing 67-90px height deltas per card and up to 283px position shifts. However, CLS is visible in views with zero images — the estimation error corrections (7-13 mounted cards shifting 5-25px simultaneously via `remeasureAndReposition`) ARE perceptible. The image-load cascade (120 layout calls observed in session `f9de8344`) was measured in a view WITH images and incorrectly generalized as the primary source. Both sources contribute: estimation error is the baseline CLS present in all views, image-load adds on top in views with covers.
+
+17. **`cardResizeObserver` is the empirically verified source of continuous post-resize scroll CLS on main branch**: ~100 calls per scroll session via the RO feedback loop (constraint #5). However, suppressing it had zero visible effect — the CLS the user perceives may have a different source during manual pane-border resize (vs programmatic sidebar toggle).
+
+18. **Position propagation is fundamentally limited by non-uniform per-card estimation error**: A uniform per-column delta closes the boundary gap between flush-stacked and unmounted zones but cannot fix the distributed spacing errors within the shifted zone (3-33px per card, 800-3000px total over 200+ cards per column).
 
 ## Estimation model
 
@@ -186,22 +190,34 @@ DevTools Performance trace captured during resize→scroll→idle→`remeasureAn
 
 **Why rejected**: Column count changes during resize (e.g., 4→2 cols) require reparenting cards between wrappers. Reparenting ~500 cards triggers full layout recalculation, breaking the proportional resize fast path (zero-DOM-read, single-pass, 3-5ms/frame at 60fps).
 
+### Phase 8: Directional flush stacking — REVERTED
+
+Redesigned reverse placement as directional flush stacking. Newly-mounting cards during post-resize scroll are measured on mount and positioned off-screen (forward below viewport, reverse above). `remeasureAndReposition` runs at scroll-idle — flush-stacked cards have zero drift. All 5 plan gaps from Phase 4 addressed upfront.
+
+Core mechanism implemented and runtime-verified but CLS not yet eliminated. ~6 seed cards (already mounted before deferred resize relayout) remain stale and produce minimum CLS at scroll-idle correction. Flush stacking + position propagation were implemented and tested but failed to eliminate CLS.
+
+**See [cls-reverse-placement.md](cls-reverse-placement.md)** for the full implementation details, bugs found, and the Phase 4→Phase 8 evolution.
+
+### Phase 8.2: Position propagation — REVERTED
+
+Propagated per-column Y deltas from flush-stacked zone to unmounted zone after each `flushStackMounts` batch. Three boundary detection iterations: `seenMounted` gate (skipped mounted items — wrong side seeding), flush-stacking signature filter (no boundary gate — -12111px deltas), `seenFlush` gate (correct boundary but blank space persisted).
+
+**Result**: Propagation closed the boundary gap (verified: 366 items shifted +81 to +164px forward, 500+ items shifted -9 to -114px reverse). But blank space persisted (3352px max gap). Root cause: uniform per-column delta corrects the boundary offset but not the non-uniform per-card spacing errors within the shifted zone. Each card has 3-33px estimation error; over 200+ cards per column, total distributed error is 800-3000px.
+
+Also extended propagation to mounted off-screen items (writing `style.top` for items outside viewport). Still ineffective — the spacing error is structural, not an offset problem.
+
+### Phase 8.3: cardResizeObserver suppression — REVERTED
+
+Empirical trace on main branch identified `cardResizeObserver` as the sole source of continuous CLS during post-resize scroll: ~100 `cardResizeObserver` → `remeasureAndReposition` calls per scroll session. `onScrollIdle` fired once at end. `onMountRemeasure` fired zero times.
+
+Fix attempted: `postResizeScrollActive` guard on `cardResizeObserver` + `scrollRemeasureTimeout` cancel after setting guard. Zero visible effect on user's manual reproduction (pane border drag + scroll). The trace was done with programmatic sidebar toggle — may trigger different timing than manual pane resize.
+
 ### Accept as inherent limitation — DEFERRED
 
 Single batch jump at scroll-idle after resize may be the best achievable behavior for virtual-scrolling masonry with absolute positioning and discrete text reflow.
 
-- **Evidence for**: Three compensation approaches (Phases 2a-2c) targeting cross-column differential produced zero improvement. Transform-based positioning (Phase 3) eliminating `top`/`left` layout invalidation also produced zero improvement. Five independent approaches across two attack vectors (scroll compensation and layout invalidation) have all failed. The estimation error is structural. Cross-column differential is provably unfixable by scroll compensation. The remaining `width`/`height` writes and `getBoundingClientRect()` forced reflows cannot be eliminated without fundamentally changing the layout model.
-- **Evidence against**: Width-bucket caching and detached offscreen measurement attack a third vector — estimation accuracy — which has not been fully explored. Phase 8 (directional flush stacking) attacks a fourth vector — mount-time positioning — which is currently in progress.
-
-## Active work
-
-### Phase 8: Directional flush stacking — IN PROGRESS
-
-Redesigned reverse placement as directional flush stacking. Newly-mounting cards during post-resize scroll are measured on mount and positioned off-screen (forward below viewport, reverse above). `remeasureAndReposition` runs at scroll-idle — flush-stacked cards have zero drift. All 5 plan gaps from Phase 4 addressed upfront.
-
-Core mechanism implemented and runtime-verified but CLS not yet eliminated. ~6 seed cards (already mounted before deferred resize relayout) remain stale and produce minimum CLS at scroll-idle correction.
-
-**See [cls-reverse-placement.md](cls-reverse-placement.md)** for the full implementation details, bugs found, and the Phase 4→Phase 8 evolution.
+- **Evidence for**: Three compensation approaches (Phases 2a-2c) targeting cross-column differential produced zero improvement. Transform-based positioning (Phase 3) eliminating `top`/`left` layout invalidation also produced zero improvement. Position propagation (Phase 8.2) proved that uniform per-column deltas cannot fix non-uniform per-card estimation errors. The error is distributed across cards, not concentrated at a boundary. cardResizeObserver suppression (Phase 8.3) had zero visible effect despite eliminating ~100 RO feedback loop calls per scroll. Seven independent approaches across four attack vectors (scroll compensation, layout invalidation, mount-time positioning, RO loop suppression) have all failed. The estimation error is structural. Cross-column differential is provably unfixable by scroll compensation. The remaining `width`/`height` writes and `getBoundingClientRect()` forced reflows cannot be eliminated without fundamentally changing the layout model.
+- **Evidence against**: Width-bucket caching and detached offscreen measurement attack a third vector — estimation accuracy — which has not been fully explored.
 
 ## Remaining candidates
 
@@ -247,13 +263,15 @@ Reserve cover height in the card DOM at mount time using cached aspect ratios, B
 - `7e845376-c46c-464b-aff7-51388c1220cc` — Phases 2a–4. Empirical findings extracted to [cls-reverse-placement.md](cls-reverse-placement.md).
 - `f9de8344-bdcf-4307-a26f-1eb770532cbb` — Phase 5 RO feedback loop suppression, Phase 6 actual mounted-card measurement (reverted — resize jank). Key discoveries: setTimeout vs double-RAF ordering, image-load cover insertion as primary CLS source.
 - `a1535935-e203-442b-90bd-d33132f172a9` — Phase 8 directional flush stacking.
+- `5c11119f-07d9-4edc-8afc-0a0cb51ba6b2` — Phase 8.1/8.2 flush stacking, position propagation attempts, directional growth architecture design.
+- `697a1bea-eb5a-4f32-a45e-1e99895d8c75` — Phase 8.2 position propagation (reverted), Phase 8.3 cardResizeObserver suppression (reverted). Empirical CLS trace on main branch.
 - Pre-Phase-1: scroll compensation fixes (5 fixes, referenced as `4eb5606b` in issue comments — full UUID unknown)
 - Pre-Phase-1: estimation model optimization k=0.75→0.5, industry survey (referenced as `d52099d0` in issue comments — full UUID unknown)
 
 ## Key source files
 
-- `src/bases/masonry-view.ts` — `remeasureAndReposition`, `syncVirtualScroll`, `onScrollIdle`, `eagerPreMeasure`, `scheduleDeferredRemeasure`, `seedDirectionalTracking`, `flushStackMounts`, `masonry-correcting` (JS-only class, no CSS selector)
-- `src/utils/masonry-layout.ts` — `repositionWithStableColumns`, `calculateMasonryLayout`, `pickReverseGreedyColumn`
+- `src/bases/masonry-view.ts` — `remeasureAndReposition`, `syncVirtualScroll`, `onScrollIdle`, `eagerPreMeasure`, `scheduleDeferredRemeasure`
+- `src/utils/masonry-layout.ts` — `repositionWithStableColumns`, `calculateMasonryLayout`
 - `src/shared/virtual-scroll.ts` — `VirtualItem`, `estimateUnmountedHeight`, `measureScalableHeight`
 - `src/shared/constants.ts` — `MASONRY_CORRECTION_MS` (200ms), `HIDDEN_BUFFER_MULTIPLIER` (2), `POST_RESIZE_SAFETY_MS` (2s)
 - `styles/_masonry-view.scss` — `masonry-skip-transition`, `--masonry-reposition-duration`

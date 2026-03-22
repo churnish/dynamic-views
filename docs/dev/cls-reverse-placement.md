@@ -2,11 +2,11 @@
 title: CLS reverse placement
 description: Deep dive into reverse masonry placement for CLS elimination (#358) — Phase 4 design, bugs, and failure analysis; Phase 8 directional flush stacking design, implementation, and bugs.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-21
+updated: 2026-03-22
 ---
 # CLS reverse placement
 
-Experiment log for reverse placement approaches in [CLS elimination (#358)](cls-elimination.md). Covers Phase 4 (reverse greedy — REVERTED) and Phase 8 (directional flush stacking — IN PROGRESS).
+Experiment log for reverse placement approaches in [CLS elimination (#358)](cls-elimination.md). Covers Phase 4 (reverse greedy — REVERTED) and Phase 8 (directional flush stacking — REVERTED).
 
 ## Terminology
 
@@ -186,7 +186,7 @@ Each reactive patch fixed one gap but interacted with other patches. The accumul
 
 **Requirement for Phase 8**: Must explicitly address ALL 5 gaps as first-class design concerns, not afterthoughts.
 
-## Phase 8: Directional flush stacking — IN PROGRESS
+## Phase 8: Directional flush stacking — REVERTED
 
 Redesigned reverse placement as directional flush stacking. Newly-mounting cards during post-resize scroll are measured on mount and positioned off-screen (forward below viewport, reverse above). `remeasureAndReposition` runs at scroll-idle — flush-stacked cards have zero drift. All 5 plan gaps addressed upfront.
 
@@ -234,6 +234,10 @@ During scroll-idle `remeasureAndReposition`:
 The loop self-terminates because there's no drift. `masonry-skip-transition` persists until `scheduleDeferredRemeasure`'s cleanup runs.
 
 **Pre-existing vulnerability**: if an image loads between the main correction and RAF₂, the image-load height change creates drift. RAF_RO's `remeasureAndReposition` may run after `masonry-skip-transition` is removed, causing transitions. Not a Phase 8 regression — the same vulnerability exists in the current `onScrollIdle` → `remeasureAndReposition` → `scheduleDeferredRemeasure` path.
+
+### Phase 8.2: Position propagation — REVERTED
+
+Phase 8.2 (session `697a1bea`) attempted position propagation to close the gap between flush-stacked and unmounted zones. Three iterations of boundary detection logic (seenMounted, flush signature, seenFlush). Propagation closed the boundary gap but couldn't fix non-uniform per-card spacing errors (3352px blank space). Extended to mounted off-screen items — still ineffective. Reverted.
 
 ## Related research
 
