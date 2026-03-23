@@ -206,9 +206,9 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName('Disable mobile sidebar swipe')
+          .setName('Disable sidebar swipe')
           .setDesc(
-            'Prevent sidebars from opening unintentionally when scrolling horizontally in a plugin view.'
+            'Prevent sidebars from opening unintentionally when scrolling horizontally on mobile.'
           )
           .addToggle((toggle) =>
             toggle
@@ -222,9 +222,9 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName('Immersive mobile scrolling')
+          .setName('Full screen')
           .setDesc(
-            'Automatically hide navigation when scrolling down. Scroll up to reveal again.'
+            'Automatically hide interface elements when scrolling down on phone.'
           )
           .addToggle((toggle) =>
             toggle

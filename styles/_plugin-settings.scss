@@ -73,21 +73,25 @@
   box-shadow: inset 0 0 0 1px var(--dynamic-views-background-modifier-border);
 }
 
-/* Indented sub-settings */
+/* Indented sub-settings — scaleX hairline technique bypasses WebKit's
+   pixel-snapping that rounds vertical borders to 2 device pixels at
+   unfavorable x-offsets on 3x DPR displays */
 .setting-sub-items {
   margin-inline-start: 20px;
   padding-left: 1em;
   position: relative;
-}
 
-.setting-sub-items::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background-color: var(--dynamic-views-background-modifier-border);
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--dynamic-views-background-modifier-border);
+    transform: scaleX(0.333);
+    transform-origin: left center;
+  }
 }
 
 /* Add padding only when visible and not last.
@@ -96,9 +100,6 @@
   padding-bottom: var(--size-4-4);
 }
 
-.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item)::before {
-  bottom: var(--size-4-4);
-}
 
 /* Remove bottom padding from setting when sub-items hidden and last in group */
 .setting-items
