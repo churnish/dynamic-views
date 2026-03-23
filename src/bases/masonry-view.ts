@@ -2995,7 +2995,12 @@ export class DynamicViewsMasonryView extends BasesView {
           this.lastLayoutIsGrouped,
           true // skipTransition — instant, blends with scroll motion
         );
-        if (!didWork) {
+        if (didWork) {
+          // Positions changed — re-sync mount/unmount decisions.
+          // lastScrollCorrectionTime throttle prevents re-entering the
+          // correction block on this recursive call.
+          this.syncVirtualScroll();
+        } else {
           this.postResizeScrollActive = false;
           this.masonryContainer?.classList.remove('masonry-skip-transition');
         }
