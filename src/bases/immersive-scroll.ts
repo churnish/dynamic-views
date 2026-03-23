@@ -432,10 +432,9 @@ export class ImmersiveScrollController {
 
       this.programmaticScroll = true;
 
-      // Direct height calculation — no unlock-relock dance.
-      // Bars hidden → scroll container gets totalShift more flex space.
-      this.lockedScrollHeight += this.totalShift;
-      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+      // Unlock → measure → relock. The 2s settle delay outlasts the iOS
+      // scroll indicator fade, so the unlock-relock is invisible.
+      this.scrollEl.style.removeProperty('height');
       setBridge(this.container, 'translateY(0)', 'none');
       this.scrollEl.scrollTop = before - this.totalShift;
       this.settled = true;
@@ -443,6 +442,8 @@ export class ImmersiveScrollController {
       requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
+        this.lockedScrollHeight = this.scrollEl.offsetHeight;
+        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
       });
     };
   }
@@ -472,7 +473,7 @@ export class ImmersiveScrollController {
 
     void capacitorStatusBar?.show();
 
-    // Idle: remove classes + relock height at calculated value
+    // Idle: remove classes + unlock → measure → relock height
     this.pendingLayout = () => {
       // Block all scroll events during settle — class removal and height
       // changes produce layout-induced scroll deltas on iOS WebKit
@@ -484,10 +485,10 @@ export class ImmersiveScrollController {
         this.scrollEl.scrollTop += this.totalShift;
       }
 
-      // Direct height calculation — no unlock-relock dance.
-      // Bars restored → scroll container loses totalShift of flex space.
-      this.lockedScrollHeight -= this.totalShift;
-      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+      // Unlock → remove classes → flex recalculates → measure → relock.
+      // The 2s settle delay outlasts the iOS scroll indicator fade,
+      // so the unlock-relock is invisible.
+      this.scrollEl.style.removeProperty('height');
       this.body.classList.remove('immersive-active', 'immersive-showing');
       this.isActiveHider = false;
 
@@ -502,6 +503,8 @@ export class ImmersiveScrollController {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
         this.accumulatedDelta = 0;
+        this.lockedScrollHeight = this.scrollEl.offsetHeight;
+        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
         setStyle(this.container, 'transform', 'translateY(0)');
       });
     };
@@ -531,16 +534,18 @@ export class ImmersiveScrollController {
     if (!target) return;
 
     const isCard = target.closest('.dynamic-views-card') != null;
-    const isCoverImage = target.closest('.card-cover') != null;
+    const isImage =
+      target.closest('.card-cover') != null ||
+      target.closest('.card-thumbnail') != null;
     const isOpenOnTitle = this.body.classList.contains(
       'dynamic-views-open-on-title'
     );
     const isTitleLink = target.closest('.dynamic-views-card-title a') != null;
 
-    // Don't reveal bars when tapping a cover image — let image viewer handle it.
+    // Don't reveal bars when tapping a card image — let image viewer handle it.
     // Exception: reveal if image viewer disabled via Style Settings AND
     // open file action is 'press on title' (image tap is non-interactive).
-    if (isCoverImage) {
+    if (isImage) {
       const viewerDisabled = this.body.classList.contains(
         'dynamic-views-image-viewer-disabled'
       );

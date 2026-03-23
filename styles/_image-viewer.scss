@@ -56,11 +56,6 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   background: var(--dynamic-views-background-primary);
 }
 
-/* Hide phone navbar when fullscreen image viewer is active (phone is always fullscreen) */
-body.is-phone:has(.dynamic-views-image-embed.is-zoomed) .mobile-navbar {
-  display: none;
-}
-
 /* Fullscreen image viewer: phone (always) or desktop/tablet with fullscreen enabled */
 body:not(.dynamic-views-image-viewer-disabled).is-phone
   > .dynamic-views-image-embed.is-zoomed,
