@@ -96,5 +96,7 @@ export const IMMERSIVE_SHOW_SUSTAIN_MS = 80;
 export const IMMERSIVE_TOP_ZONE = 50;
 /** Minimum ms between hide/show transitions */
 export const IMMERSIVE_TOGGLE_COOLDOWN_MS = 300;
-/** Scroll-idle debounce for bridge settle */
-export const IMMERSIVE_SCROLL_IDLE_MS = 150;
+/** Scroll-idle debounce for bridge settle.
+ *  2s outlasts the iOS native scroll indicator fade (~1.5s),
+ *  so the settle's scrollTop adjustment is invisible. */
+export const IMMERSIVE_SCROLL_IDLE_MS = 2000;

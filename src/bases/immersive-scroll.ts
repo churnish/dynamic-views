@@ -13,7 +13,9 @@ import {
   IMMERSIVE_HIDE_DEAD_ZONE,
   IMMERSIVE_SHOW_DEAD_ZONE,
   IMMERSIVE_TOP_ZONE,
+  IMMERSIVE_TOGGLE_COOLDOWN_MS,
   IMMERSIVE_SCROLL_IDLE_MS,
+  IMMERSIVE_SHOW_SUSTAIN_MS,
 } from '../shared/constants';
 
 export interface ImmersiveElements {
@@ -81,8 +83,8 @@ export class ImmersiveScrollController {
   private scrollIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private isActiveHider = false;
   private pendingRafId: number | null = null;
-  private isTouching = false;
-  private lastTouchEndTime = 0;
+  private lastToggleTime = 0;
+  private directionChangeTime = 0;
   private lockedScrollHeight = 0;
 
   // Bound handlers for add/removeEventListener
@@ -143,6 +145,7 @@ export class ImmersiveScrollController {
     this.settled = false;
     this.prevScrollTop = this.scrollEl.scrollTop;
     this.accumulatedDelta = 0;
+    this.directionChangeTime = 0;
     this.programmaticScroll = false;
     this.pendingLayout = null;
     this.isActiveHider = false;
@@ -186,8 +189,6 @@ export class ImmersiveScrollController {
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
-    this.isTouching = false;
-
     // Clean up bridge + locked height
     this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
@@ -340,21 +341,33 @@ export class ImmersiveScrollController {
       (this.accumulatedDelta < 0 && delta > 0)
     ) {
       this.accumulatedDelta = 0;
+      this.directionChangeTime = Date.now();
     }
     this.accumulatedDelta += delta;
 
-    if (this.accumulatedDelta > IMMERSIVE_HIDE_DEAD_ZONE && !this.barsHidden) {
+    // Cooldown prevents rapid cycling (deceleration bounce, layout-induced deltas)
+    if (Date.now() - this.lastToggleTime < IMMERSIVE_TOGGLE_COOLDOWN_MS) {
+      // Reset accumulator so layout-induced deltas don't leak past cooldown
+      this.accumulatedDelta = 0;
+      return;
+    }
+
+    if (
+      this.accumulatedDelta > IMMERSIVE_HIDE_DEAD_ZONE &&
+      !this.barsHidden &&
+      Date.now() - this.directionChangeTime >= IMMERSIVE_SHOW_SUSTAIN_MS
+    ) {
       this.barsHidden = true;
+      this.lastToggleTime = Date.now();
       this.hideBarsUI();
       this.accumulatedDelta = 0;
     } else if (
       this.accumulatedDelta < -IMMERSIVE_SHOW_DEAD_ZONE &&
       this.barsHidden &&
-      // Active touch OR within 200ms grace after touchend — iOS delivers
-      // trailing scroll events after touchend fires
-      (this.isTouching || Date.now() - this.lastTouchEndTime < 200)
+      Date.now() - this.directionChangeTime >= IMMERSIVE_SHOW_SUSTAIN_MS
     ) {
       this.barsHidden = false;
+      this.lastToggleTime = Date.now();
       this.showBarsUI();
       this.accumulatedDelta = 0;
     }
@@ -419,8 +432,10 @@ export class ImmersiveScrollController {
 
       this.programmaticScroll = true;
 
-      // Unlock → flex recalculates → settle → relock
-      this.scrollEl.style.removeProperty('height');
+      // Direct height calculation — no unlock-relock dance.
+      // Bars hidden → scroll container gets totalShift more flex space.
+      this.lockedScrollHeight += this.totalShift;
+      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
       setBridge(this.container, 'translateY(0)', 'none');
       this.scrollEl.scrollTop = before - this.totalShift;
       this.settled = true;
@@ -428,11 +443,8 @@ export class ImmersiveScrollController {
       requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
-        this.lockedScrollHeight = this.scrollEl.offsetHeight;
-        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
       });
     };
-
   }
 
   /** SHOW — single CSS class override (momentum-safe), class removal at idle. */
@@ -460,17 +472,22 @@ export class ImmersiveScrollController {
 
     void capacitorStatusBar?.show();
 
-    // Idle: unlock height → remove classes → relock
+    // Idle: remove classes + relock height at calculated value
     this.pendingLayout = () => {
+      // Block all scroll events during settle — class removal and height
+      // changes produce layout-induced scroll deltas on iOS WebKit
+      this.programmaticScroll = true;
+
       setBridge(this.container, 'translateY(0)', 'none');
 
       if (this.settled) {
-        this.programmaticScroll = true;
         this.scrollEl.scrollTop += this.totalShift;
       }
 
-      // Unlock → remove classes → flex recalculates
-      this.scrollEl.style.removeProperty('height');
+      // Direct height calculation — no unlock-relock dance.
+      // Bars restored → scroll container loses totalShift of flex space.
+      this.lockedScrollHeight -= this.totalShift;
+      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
       this.body.classList.remove('immersive-active', 'immersive-showing');
       this.isActiveHider = false;
 
@@ -484,8 +501,7 @@ export class ImmersiveScrollController {
       this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
-        this.lockedScrollHeight = this.scrollEl.offsetHeight;
-        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+        this.accumulatedDelta = 0;
         setStyle(this.container, 'transform', 'translateY(0)');
       });
     };
@@ -496,15 +512,11 @@ export class ImmersiveScrollController {
   // ---------------------------------------------------------------------------
 
   private onTouchStart(e: TouchEvent): void {
-    this.isTouching = true;
     this.touchStartY = e.touches[0].clientY;
     this.touchStartTime = Date.now();
   }
 
   private onTouchEnd(e: TouchEvent): void {
-    this.isTouching = false;
-    this.lastTouchEndTime = Date.now();
-
     if (!this.barsHidden) return;
 
     const dy = Math.abs(
