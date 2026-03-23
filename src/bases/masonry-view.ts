@@ -116,6 +116,16 @@ import {
 } from '../shared/virtual-scroll';
 import { getOwnerWindow } from '../utils/owner-window';
 
+// ── CLS source isolation diagnostic (#358) ──
+// Console: __clsDiag.noAll = true → disable all correction paths
+// Then repro (scroll down, resize pane, scroll up). CLS gone = source found.
+// Individual: noResizeCorrection, noScrollIdle, noCardRO
+const clsDiag = (): Record<string, boolean> =>
+  ((window as unknown as Record<string, unknown>).__clsDiag ??= {}) as Record<
+    string,
+    boolean
+  >;
+
 // Extend Obsidian types
 declare module 'obsidian' {
   interface BasesView {
@@ -2279,6 +2289,12 @@ export class DynamicViewsMasonryView extends BasesView {
         this.resizeCorrectionTimeout = null;
         this.masonryContainer?.classList.remove('masonry-resize-active');
         this.masonryContainer?.classList.add('masonry-correcting');
+        if (clsDiag().noResizeCorrection) {
+          window.setTimeout(() => {
+            this.masonryContainer?.classList.remove('masonry-correcting');
+          }, MASONRY_CORRECTION_MS);
+          return;
+        }
         // Post-resize correction: re-measure mounted cards + update baselines
         this.updateLayoutRef.current?.('resize-correction');
         // Skip post-correction passes when correction was deferred to scroll-idle
@@ -2344,6 +2360,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.cardResizeObserver = new (
         this.observerWindow ?? window
       ).ResizeObserver(() => {
+        if (clsDiag().noCardRO || clsDiag().noAll) return;
         // Skip during active resize, scroll remeasure, batch layout, or pre-layout state
         if (
           this.resizeCorrectionTimeout !== null ||
@@ -2429,6 +2446,7 @@ export class DynamicViewsMasonryView extends BasesView {
     isGrouped: boolean,
     skipTransition = false
   ): boolean {
+    if (clsDiag().noAll) return false;
     // Clear explicit scroll heights so cards reflow to natural height for
     // accurate measurement. Without this, offsetHeight returns the explicit
     // value which always matches item.height — drift would never be detected.
@@ -2797,6 +2815,7 @@ export class DynamicViewsMasonryView extends BasesView {
     container: HTMLElement,
     settings: BasesResolvedSettings
   ): void {
+    if (clsDiag().noMount) return;
     const handle = this.renderCard(
       container,
       item.cardData,
@@ -2995,6 +3014,7 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Correct height drift from recently mounted cards.
    *  Called synchronously from syncVirtualScroll after new mounts. */
   private onMountRemeasure(): void {
+    if (clsDiag().noAll) return;
     if (!this.containerEl?.isConnected) return;
     if (this.batchLayoutPending) return;
     if (this.resizeCorrectionTimeout !== null) return;
@@ -3021,6 +3041,7 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Runs deferred layout work after scroll settles. Reschedules itself when
    *  blocked by a pending batch layout to avoid silently dropping work. */
   private onScrollIdle(): void {
+    if (clsDiag().noScrollIdle) return;
     if (!this.containerEl?.isConnected) return;
     if (this.pendingDeferredResize) {
       if (this.batchLayoutPending) {
@@ -3061,9 +3082,9 @@ export class DynamicViewsMasonryView extends BasesView {
       this.lastLayoutMinColumns,
       this.lastLayoutGap,
       this.lastLayoutIsGrouped,
-      true
+      false
     );
-    if (didWork) this.scheduleDeferredRemeasure(true);
+    if (didWork) this.scheduleDeferredRemeasure(false);
     // Clear post-resize guard: after scroll-idle correction, mounted cards
     // are at correct heights. Remaining unmounted post-resize cards will be
     // handled by scroll-idle debounce (mountedPostResize condition) when
@@ -3124,6 +3145,7 @@ export class DynamicViewsMasonryView extends BasesView {
    *  Uses double-RAF to run after async height changes (e.g. cover-ready,
    *  image aspect ratio updates) have settled. */
   private scheduleDeferredRemeasure(skipTransition = false): void {
+    if (clsDiag().noAll) return;
     if (this.deferredRemeasureRafId !== null) return;
     this.deferredRemeasureRafId = (
       this.observerWindow ?? window
