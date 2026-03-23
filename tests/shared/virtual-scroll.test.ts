@@ -2,6 +2,7 @@ import {
   measureScalableHeight,
   estimateUnmountedHeight,
 } from '../../src/shared/virtual-scroll';
+import { UNMEASURED_CARD_HEIGHT } from '../../src/shared/constants';
 
 function createCard(classes: string[], wrapperHeight?: number): HTMLElement {
   const card = document.createElement('div');
@@ -214,5 +215,15 @@ describe('estimateUnmountedHeight', () => {
       height: 250,
     };
     expect(estimateUnmountedHeight(item, 0)).toBe(250);
+  });
+
+  it('returns UNMEASURED_CARD_HEIGHT when measuredAtWidth=0 and height=0', () => {
+    const item = {
+      scalableHeight: 0,
+      fixedHeight: 0,
+      measuredAtWidth: 0,
+      height: 0,
+    };
+    expect(estimateUnmountedHeight(item, 300)).toBe(UNMEASURED_CARD_HEIGHT);
   });
 });

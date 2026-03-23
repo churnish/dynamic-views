@@ -6,6 +6,7 @@
 import type { BasesEntry } from 'obsidian';
 import type { CardData } from './card-renderer';
 import type { CardHandle } from '../bases/shared-renderer';
+import { UNMEASURED_CARD_HEIGHT } from './constants';
 
 /** Lightweight representation of a card's position and data when unmounted */
 export interface VirtualItem {
@@ -103,7 +104,7 @@ export function estimateUnmountedHeight(
       item.fixedHeight * Math.sqrt(widthRatio)
     );
   }
-  return item.height;
+  return item.height > 0 ? item.height : UNMEASURED_CARD_HEIGHT;
 }
 
 /**

@@ -27,8 +27,17 @@ export const MAX_BATCH_SIZE = 70;
 /** Throttle interval for resize layout updates in milliseconds */
 export const RESIZE_THROTTLE_MS = 100;
 
+/** Fallback height for virtual items that have never been DOM-measured.
+ *  Used to prevent 0-height compression in layout calculations.
+ *  Conservative estimate — corrected when the item mounts and gets measured. */
+export const UNMEASURED_CARD_HEIGHT = 200;
+
 /** Masonry correction delay and transition duration in ms (must match CSS masonry-correcting) */
 export const MASONRY_CORRECTION_MS = 200;
+
+/** Throttle interval for scroll-concurrent CLS correction.
+ *  During post-resize scroll, corrections run at most once per this interval. */
+export const SCROLL_CORRECTION_INTERVAL_MS = 1000;
 
 /** Throttle interval for post-mount remeasure during scroll.
  * --masonry-reposition-duration in _core.scss must not exceed this value. */
@@ -79,8 +88,13 @@ export function computeHoverScale(height: number): string {
 /** Accumulated downward scroll (px) to trigger immersive hide */
 export const IMMERSIVE_HIDE_DEAD_ZONE = 30;
 /** Accumulated upward scroll (px) to trigger immersive show */
-export const IMMERSIVE_SHOW_DEAD_ZONE = 15;
+export const IMMERSIVE_SHOW_DEAD_ZONE = 20;
+
+/** Minimum sustained upward scroll duration (ms) before triggering show */
+export const IMMERSIVE_SHOW_SUSTAIN_MS = 80;
 /** scrollTop threshold — always show bars when near top */
 export const IMMERSIVE_TOP_ZONE = 50;
+/** Minimum ms between hide/show transitions */
+export const IMMERSIVE_TOGGLE_COOLDOWN_MS = 300;
 /** Scroll-idle debounce for bridge settle */
 export const IMMERSIVE_SCROLL_IDLE_MS = 150;
