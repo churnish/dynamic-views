@@ -14,9 +14,7 @@ body:
       options:
         - label: I have searched existing issues and this is not a duplicate
           required: true
-        - label: I have updated to the latest version of Dynamic Views
-          required: true
-        - label: I have updated to the latest version of Obsidian
+        - label: I have updated to the latest versions of Obsidian, Obsidian installer, and Dynamic Views
           required: true
         - label: I can reproduce the issue in the sandbox vault, or after disabling all other third-party plugins and CSS snippets, switching to default theme, then restarting Obsidian
           required: false
@@ -66,8 +64,8 @@ body:
         Paste Obsidian debug info here:
 
         1. Open Command palette.
-        2. Search for then select "Show debug info".
-        3. Press "Copy to clipboard".
+        2. Search for then select **Show debug info**.
+        3. Press **Copy to clipboard**.
         4. Paste the copied text here.
       placeholder: Paste debug info here...
       render: text
@@ -125,7 +123,7 @@ body:
         To share your Style Settings configuration:
 
         1. Open Style Settings.
-        2. Press the cloud button to the right of the Dynamic Views section.
+        2. Press the cloud button to the right of the **Dynamic Views** section.
         3. Paste the copied text here.
       placeholder: Paste Style Settings here...
       render: json

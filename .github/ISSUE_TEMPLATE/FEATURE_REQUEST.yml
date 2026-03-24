@@ -14,9 +14,7 @@ body:
       options:
         - label: I have searched existing issues and this is not a duplicate
           required: true
-        - label: I have updated to the latest version of Dynamic Views
-          required: true
-        - label: I have updated to the latest version of Obsidian
+        - label: I have updated to the latest versions of Obsidian, Obsidian installer, and Dynamic Views
           required: true
   - type: checkboxes
     id: affected-views
@@ -77,8 +75,8 @@ body:
         To share your Obsidian debug info:
 
         1. Open Command palette.
-        2. Search for then select "Show debug info".
-        3. Press "Copy to clipboard".
+        2. Search for then select **Show debug info**.
+        3. Press **Copy to clipboard**.
         4. Paste the copied text here.
       placeholder: Paste debug info here...
       render: text
