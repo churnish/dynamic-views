@@ -4,7 +4,7 @@ description: Empirical research for immersive mobile scrolling (GitHub #132) —
 author: "\U0001F916 Generated with Claude Code"
 updated: 2026-03-24
 ---
-# Immersive scroll
+# Full screen
 
 ## Terminology
 

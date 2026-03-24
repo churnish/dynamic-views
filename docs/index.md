@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-21
+updated: 2026-03-22
 ---
 # Doc index
 
@@ -42,7 +42,8 @@ Empirical development artifacts — research logs, optimization tracking, and in
 |---|---|
 | [cls-elimination.md](dev/cls-elimination.md) | Working on post-resize scroll-idle CLS (#358) — documents the problem, proven constraints, all tried approaches with results, remaining candidates, and cross-session empirical findings. |
 | [cls-reverse-placement.md](dev/cls-reverse-placement.md) | Continuing reverse masonry placement (#358) — documents the shared design, Phase 4 (reverse greedy) bugs and failure analysis, Phase 8 (directional flush stacking) implementation and bugs, and testing environment quirks. |
-| [immersive-scroll.md](dev/immersive-scroll.md) | Working on immersive mobile scrolling (#132) — documents empirical findings, WebKit compositor constraints, CSS scroll-driven animation research, rejected approaches, the space reclaim constraint, navbar hide behavior, and the v84 inline-only animation architecture. |
+| [cls-source-isolation.md](dev/cls-source-isolation.md) | Investigating the actual source of visible CLS (#358) — diagnostic experiments, measurement methodology, Layout Shift API limitations, ruled-out sources, and remaining unknowns. |
+| [full-screen.md](dev/full-screen.md) | Working on full screen mobile scrolling (#132) — documents empirical findings, WebKit compositor constraints, CSS scroll-driven animation research, rejected approaches, the space reclaim constraint, navbar hide behavior, and the v84 inline-only animation architecture. |
 | [masonry-roadmap.md](dev/masonry-roadmap.md) | Working on masonry performance — documents all optimizations by subsystem (scroll, resize, image loading, rendering, virtual scroll, grouped masonry), priority table from T1-T12 profiling, Datacore parity gaps, and status tracking. |
 
 ## patterns/

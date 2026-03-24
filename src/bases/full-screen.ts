@@ -416,21 +416,29 @@ export class FullScreenController {
     this.settled = false;
     void capacitorStatusBar?.hide();
 
-    // Navbar: double-rAF inline transform animation
+    // Navbar: animated hide via inline transform + opacity.
+    // WebKit needs double-rAF — passive scroll listener optimization
+    // collapses transition+target into one style recalc if set in same frame.
+    // Android Chromium doesn't have this issue — single rAF is sufficient.
     const navbarHeight = this.getNavbarHeight();
     const navTransition = 'transform 0.3s ease-out, opacity 0.2s ease-out';
+    const applyNavbarHide = (): void => {
+      setStyle(
+        this.navbarEl,
+        'transform',
+        `translateY(${navbarHeight}px)`,
+        'important'
+      );
+      setStyle(this.navbarEl, 'opacity', '0', 'important');
+      setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
+    };
     this.pendingRafId = requestAnimationFrame(() => {
       setStyle(this.navbarEl, 'transition', navTransition, 'important');
-      this.pendingRafId = requestAnimationFrame(() => {
-        setStyle(
-          this.navbarEl,
-          'transform',
-          `translateY(${navbarHeight}px)`,
-          'important'
-        );
-        setStyle(this.navbarEl, 'opacity', '0', 'important');
-        setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
-      });
+      if (this.isAndroid) {
+        applyNavbarHide();
+      } else {
+        this.pendingRafId = requestAnimationFrame(applyNavbarHide);
+      }
     });
 
     // Idle settle: remove bridge + scrollTop -= totalShift
@@ -485,7 +493,7 @@ export class FullScreenController {
     // Idle: remove classes + unlock → measure → relock height
     this.pendingLayout = () => {
       // Block all scroll events during settle — class removal and height
-      // changes produce layout-induced scroll deltas on iOS WebKit
+      // changes produce layout-induced scroll deltas on WebKit
       this.programmaticScroll = true;
 
       setBridge(this.container, 'translateY(0)', 'none');
