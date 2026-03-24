@@ -1,5 +1,5 @@
 /**
- * Immersive mobile scrolling — hides navigation bars on scroll-down,
+ * Full screen mobile scrolling — hides navigation bars on scroll-down,
  * shows on scroll-up. Uses a bridge architecture (translateY on container)
  * to prevent visual jumps during bar hide/show transitions.
  *
@@ -10,22 +10,22 @@
  */
 
 import {
-  IMMERSIVE_HIDE_DEAD_ZONE,
-  IMMERSIVE_SHOW_DEAD_ZONE,
-  IMMERSIVE_TOP_ZONE,
-  IMMERSIVE_TOGGLE_COOLDOWN_MS,
-  IMMERSIVE_SCROLL_IDLE_MS,
-  IMMERSIVE_SHOW_SUSTAIN_MS,
+  FULL_SCREEN_HIDE_DEAD_ZONE,
+  FULL_SCREEN_SHOW_DEAD_ZONE,
+  FULL_SCREEN_TOP_ZONE,
+  FULL_SCREEN_TOGGLE_COOLDOWN_MS,
+  FULL_SCREEN_SCROLL_IDLE_MS,
+  FULL_SCREEN_SHOW_SUSTAIN_MS,
 } from '../shared/constants';
 
-export interface ImmersiveElements {
+export interface FullScreenElements {
   scrollEl: HTMLElement; // .bases-view
   container: HTMLElement; // .dynamic-views-bases-container
   viewContent: HTMLElement; // .view-content
   navbarEl: HTMLElement; // .mobile-navbar
 }
 
-const STYLE_ID = 'immersive-scroll-css';
+const STYLE_ID = 'full-screen-css';
 
 /** Ref-counted singleton for the injected <style> element */
 let styleRefCount = 0;
@@ -62,13 +62,14 @@ function setBridge(
   el.style.setProperty('transform', transform);
 }
 
-export class ImmersiveScrollController {
+export class FullScreenController {
   private readonly scrollEl: HTMLElement;
   private readonly container: HTMLElement;
   private readonly viewContent: HTMLElement;
   private readonly navbarEl: HTMLElement;
   private readonly ownerDoc: Document;
   private readonly body: HTMLElement;
+  private readonly isAndroid: boolean;
 
   // State
   private mounted = false;
@@ -96,13 +97,14 @@ export class ImmersiveScrollController {
   private touchStartY = 0;
   private touchStartTime = 0;
 
-  constructor(elements: ImmersiveElements) {
+  constructor(elements: FullScreenElements) {
     this.scrollEl = elements.scrollEl;
     this.container = elements.container;
     this.viewContent = elements.viewContent;
     this.navbarEl = elements.navbarEl;
     this.ownerDoc = this.scrollEl.ownerDocument;
     this.body = this.ownerDoc.body;
+    this.isAndroid = this.body.classList.contains('is-android');
 
     this.onScrollBound = (): void => this.onScroll();
     this.onTouchStartBound = (e: TouchEvent): void => this.onTouchStart(e);
@@ -125,18 +127,18 @@ export class ImmersiveScrollController {
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
 
-    // Measure totalShift: toggle immersive-active, read scrollEl rect delta
+    // Measure totalShift: toggle full-screen-active, read scrollEl rect delta
     const beforeTop = this.scrollEl.getBoundingClientRect().top;
-    this.body.classList.add('immersive-active');
+    this.body.classList.add('full-screen-active');
     const afterTop = this.scrollEl.getBoundingClientRect().top;
-    this.body.classList.remove('immersive-active');
+    this.body.classList.remove('full-screen-active');
     this.totalShift = beforeTop - afterTop;
 
     // Pre-promote container onto compositor layer
     setStyle(this.container, 'transform', 'translateY(0)');
 
     // Lock scroll container height — decouples clientHeight from flex layout
-    // changes during immersive transitions (prevents scroll indicator teleport)
+    // changes during full screen transitions (prevents scroll indicator teleport)
     this.lockedScrollHeight = this.scrollEl.offsetHeight;
     setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
 
@@ -184,9 +186,9 @@ export class ImmersiveScrollController {
       clearTimeout(this.scrollIdleTimer);
       this.scrollIdleTimer = null;
     }
-    // Remove immersive classes only if this instance set them
+    // Remove full screen classes only if this instance set them
     if (this.isActiveHider) {
-      this.body.classList.remove('immersive-active', 'immersive-showing');
+      this.body.classList.remove('full-screen-active', 'full-screen-showing');
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
@@ -230,72 +232,72 @@ export class ImmersiveScrollController {
     const style = this.ownerDoc.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-.is-phone.immersive-active [data-type='bases'] .view-header {
+.is-phone.full-screen-active [data-type='bases'] .view-header {
   transform: translateY(-${headerOffset}px) !important;
   opacity: 0 !important;
   pointer-events: none !important;
 }
-.is-phone.immersive-active [data-type='bases'] .bases-header {
+.is-phone.full-screen-active [data-type='bases'] .bases-header {
   visibility: hidden !important;
   pointer-events: none !important;
   margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
   transition: none !important;
 }
-.is-phone.immersive-active [data-type='bases'] .bases-search-row {
+.is-phone.full-screen-active [data-type='bases'] .bases-search-row {
   visibility: hidden !important;
   transition: none !important;
 }
-.is-phone.immersive-active [data-type='bases'] .view-content {
+.is-phone.full-screen-active [data-type='bases'] .view-content {
   margin-top: 0 !important;
   transition: none !important;
 }
-.is-phone.immersive-active,
-.is-phone.immersive-active .app-container,
-.is-phone.immersive-active .workspace {
+.is-phone.full-screen-active,
+.is-phone.full-screen-active .app-container,
+.is-phone.full-screen-active .workspace {
   background-color: var(--background-primary) !important;
 }
-.is-phone.immersive-active [data-type='bases']::after {
+.is-phone.full-screen-active [data-type='bases']::after {
   display: none !important;
 }
-.is-phone.immersive-active .workspace-split.mod-root {
+.is-phone.full-screen-active .workspace-split.mod-root {
   -webkit-mask-image: none !important;
   mask-image: none !important;
 }
-.is-phone.immersive-active [data-type='bases']::before {
+.is-phone.full-screen-active [data-type='bases']::before {
   content: '' !important;
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  height: env(safe-area-inset-top, 0px) !important;
+  height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
   background: linear-gradient(
     to bottom,
     var(--background-primary) 0px,
-    transparent env(safe-area-inset-top, 0px)
+    transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
   ) !important;
   z-index: 10 !important;
   pointer-events: none !important;
 }
-.is-phone.immersive-active.immersive-showing [data-type='bases'] .view-header {
+.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-.is-phone.immersive-active.immersive-showing [data-type='bases'] .bases-header {
+.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .bases-header {
   visibility: visible !important;
   pointer-events: auto !important;
   margin-bottom: 0px !important;
   transition: none !important;
 }
-.is-phone.immersive-active.immersive-showing [data-type='bases'] .bases-search-row {
+.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .bases-search-row {
   visibility: visible !important;
   transition: none !important;
 }
-.is-phone.immersive-active.immersive-showing [data-type='bases'] .view-content {
+.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .view-content {
   margin-top: var(--view-top-spacing, 99px) !important;
   transition: none !important;
 }
-.is-phone.immersive-active.immersive-showing [data-type='bases']::before {
+.is-phone.full-screen-active.full-screen-showing [data-type='bases']::before {
   content: none !important;
 }`;
     this.ownerDoc.head.appendChild(style);
@@ -323,11 +325,11 @@ export class ImmersiveScrollController {
           this.pendingLayout();
           this.pendingLayout = null;
         }
-      }, IMMERSIVE_SCROLL_IDLE_MS);
+      }, FULL_SCREEN_SCROLL_IDLE_MS);
     }
 
     // Auto-show near top
-    if (currentTop <= IMMERSIVE_TOP_ZONE) {
+    if (currentTop <= FULL_SCREEN_TOP_ZONE) {
       if (this.barsHidden) {
         this.barsHidden = false;
         this.showBarsUI();
@@ -347,25 +349,31 @@ export class ImmersiveScrollController {
     this.accumulatedDelta += delta;
 
     // Cooldown prevents rapid cycling (deceleration bounce, layout-induced deltas)
-    if (Date.now() - this.lastToggleTime < IMMERSIVE_TOGGLE_COOLDOWN_MS) {
+    if (Date.now() - this.lastToggleTime < FULL_SCREEN_TOGGLE_COOLDOWN_MS) {
       // Reset accumulator so layout-induced deltas don't leak past cooldown
       this.accumulatedDelta = 0;
       return;
     }
 
+    // Sustain gate: require direction to hold for 80ms before toggling.
+    // Filters iOS deceleration bounce (reverse-direction noise at momentum end).
+    // Skipped on Android — Chromium fling decelerates monotonically (no bounce).
+    const sustainMet = this.isAndroid ||
+      Date.now() - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
+
     if (
-      this.accumulatedDelta > IMMERSIVE_HIDE_DEAD_ZONE &&
+      this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
       !this.barsHidden &&
-      Date.now() - this.directionChangeTime >= IMMERSIVE_SHOW_SUSTAIN_MS
+      sustainMet
     ) {
       this.barsHidden = true;
       this.lastToggleTime = Date.now();
       this.hideBarsUI();
       this.accumulatedDelta = 0;
     } else if (
-      this.accumulatedDelta < -IMMERSIVE_SHOW_DEAD_ZONE &&
+      this.accumulatedDelta < -FULL_SCREEN_SHOW_DEAD_ZONE &&
       this.barsHidden &&
-      Date.now() - this.directionChangeTime >= IMMERSIVE_SHOW_SUSTAIN_MS
+      sustainMet
     ) {
       this.barsHidden = false;
       this.lastToggleTime = Date.now();
@@ -382,18 +390,18 @@ export class ImmersiveScrollController {
   private hideBarsUI(): void {
     this.isActiveHider = true;
 
-    // Remove immersive-showing if rapid show→hide before idle
-    this.body.classList.remove('immersive-showing');
+    // Remove full-screen-showing if rapid show→hide before idle
+    this.body.classList.remove('full-screen-showing');
 
     // Clear show-path navbar inlines
     this.navbarEl.style.removeProperty('transform');
     this.navbarEl.style.removeProperty('opacity');
     this.navbarEl.style.removeProperty('transition');
 
-    // Re-measure ONLY in clean state (no immersive classes).
-    // During rapid show→hide, immersive-active is still on body —
+    // Re-measure ONLY in clean state (no full screen classes).
+    // During rapid show→hide, full-screen-active is still on body —
     // getComputedStyle would read margin-top: 0 (class rule) instead of ~99px.
-    if (!this.body.classList.contains('immersive-active')) {
+    if (!this.body.classList.contains('full-screen-active')) {
       this.originalMarginTop =
         parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
       const toolbar = this.viewContent
@@ -404,7 +412,7 @@ export class ImmersiveScrollController {
 
     // Bridge + class (scroll container height is locked — clientHeight unchanged)
     setBridge(this.container, `translateY(${this.totalShift}px)`, 'none');
-    this.body.classList.add('immersive-active');
+    this.body.classList.add('full-screen-active');
     this.settled = false;
     void capacitorStatusBar?.hide();
 
@@ -457,8 +465,8 @@ export class ImmersiveScrollController {
       this.pendingRafId = null;
     }
 
-    // Single class op — higher specificity overrides immersive-active
-    this.body.classList.add('immersive-showing');
+    // Single class op — higher specificity overrides full-screen-active
+    this.body.classList.add('full-screen-showing');
 
     // Bridge only — scroll container height is locked, no geometry compensation
     if (this.settled) {
@@ -490,7 +498,7 @@ export class ImmersiveScrollController {
       // The 2s settle delay outlasts the iOS scroll indicator fade,
       // so the unlock-relock is invisible.
       this.scrollEl.style.removeProperty('height');
-      this.body.classList.remove('immersive-active', 'immersive-showing');
+      this.body.classList.remove('full-screen-active', 'full-screen-showing');
       this.isActiveHider = false;
 
       // Navbar cleanup

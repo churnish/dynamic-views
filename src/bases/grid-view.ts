@@ -26,7 +26,7 @@ import {
   clearStyleSettingsCache,
 } from '../utils/style-settings';
 import { PLUGIN_SETTINGS_CHANGE } from '../constants';
-import { ImmersiveScrollController } from './immersive-scroll';
+import { FullScreenController } from './full-screen';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -262,7 +262,7 @@ export class DynamicViewsGridView extends BasesView {
   private touchActive = true;
   private lastTouchEndTime = 0;
   private touchAbort: AbortController | null = null;
-  private immersive: ImmersiveScrollController | null = null;
+  private fullScreen: FullScreenController | null = null;
 
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
@@ -677,24 +677,8 @@ export class DynamicViewsGridView extends BasesView {
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
-    // Setup immersive mobile scrolling
-    if (Platform.isPhone) {
-      const ownerDoc = this.scrollEl.ownerDocument;
-      const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
-      const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
-      if (viewContent && navbarEl) {
-        this.immersive = new ImmersiveScrollController({
-          scrollEl: this.scrollEl,
-          container: this.containerEl,
-          viewContent,
-          navbarEl,
-        });
-        if (pluginSettings.fullScreen) {
-          this.immersive.mount();
-        }
-        this.register(() => this.immersive?.unmount());
-      }
-    }
+    // Setup full screen mobile scrolling (deferred — navbar may not exist yet on Android)
+    if (Platform.isPhone) this.initFullScreen();
 
     // Watch for Style Settings and plugin settings changes
     this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
@@ -722,11 +706,11 @@ export class DynamicViewsGridView extends BasesView {
       (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () => {
         const newSettings = this.plugin.persistenceManager.getPluginSettings();
         setupBasesSwipePrevention(this.containerEl, this.app, newSettings);
-        if (this.immersive) {
+        if (this.fullScreen) {
           if (newSettings.fullScreen) {
-            this.immersive.mount();
+            this.fullScreen.mount();
           } else {
-            this.immersive.unmount();
+            this.fullScreen.unmount();
           }
         }
         resetPersistentWidthCache();
@@ -754,6 +738,29 @@ export class DynamicViewsGridView extends BasesView {
         app: this.app,
       });
     }
+  }
+
+  /** Lazy-init full screen controller. Called from constructor and retried
+   *  from onDataUpdated() — on Android, .mobile-navbar may not exist yet at
+   *  construction time (FUSE filesystem delays DOM assembly). */
+  private initFullScreen(): void {
+    if (this.fullScreen) return;
+    const ownerDoc = this.scrollEl.ownerDocument;
+    const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
+    const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
+    if (!viewContent || !navbarEl) return;
+
+    this.fullScreen = new FullScreenController({
+      scrollEl: this.scrollEl,
+      container: this.containerEl,
+      viewContent,
+      navbarEl,
+    });
+    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
+    if (pluginSettings.fullScreen) {
+      this.fullScreen.mount();
+    }
+    this.register(() => this.fullScreen?.unmount());
   }
 
   /** Cancel pending RAFs and timeouts, disconnect observers, and clear window reference.
@@ -823,6 +830,9 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   onDataUpdated(): void {
+    // Retry full screen init if constructor missed it (Android: navbar not yet in DOM)
+    if (Platform.isPhone && !this.fullScreen) this.initFullScreen();
+
     // Defensive: catch stale document after popout drag-back
     // (layout-change handler may miss the document swap due to timing)
     const ownerDoc = this.containerEl.ownerDocument;

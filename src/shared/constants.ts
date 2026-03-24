@@ -85,18 +85,18 @@ export function computeHoverScale(height: number): string {
   return String(Math.min(1 + (HOVER_GROWTH_PX * 2) / height, MAX_HOVER_SCALE));
 }
 
-/** Accumulated downward scroll (px) to trigger immersive hide */
-export const IMMERSIVE_HIDE_DEAD_ZONE = 30;
-/** Accumulated upward scroll (px) to trigger immersive show */
-export const IMMERSIVE_SHOW_DEAD_ZONE = 20;
+/** Accumulated downward scroll (px) to trigger full screen hide */
+export const FULL_SCREEN_HIDE_DEAD_ZONE = 30;
+/** Accumulated upward scroll (px) to trigger full screen show */
+export const FULL_SCREEN_SHOW_DEAD_ZONE = 20;
 
 /** Minimum sustained upward scroll duration (ms) before triggering show */
-export const IMMERSIVE_SHOW_SUSTAIN_MS = 80;
+export const FULL_SCREEN_SHOW_SUSTAIN_MS = 80;
 /** scrollTop threshold — always show bars when near top */
-export const IMMERSIVE_TOP_ZONE = 50;
+export const FULL_SCREEN_TOP_ZONE = 50;
 /** Minimum ms between hide/show transitions */
-export const IMMERSIVE_TOGGLE_COOLDOWN_MS = 300;
+export const FULL_SCREEN_TOGGLE_COOLDOWN_MS = 300;
 /** Scroll-idle debounce for bridge settle.
  *  2s outlasts the iOS native scroll indicator fade (~1.5s),
  *  so the settle's scrollTop adjustment is invisible. */
-export const IMMERSIVE_SCROLL_IDLE_MS = 2000;
+export const FULL_SCREEN_SCROLL_IDLE_MS = 2000;

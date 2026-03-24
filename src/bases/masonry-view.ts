@@ -26,7 +26,7 @@ import {
   clearStyleSettingsCache,
 } from '../utils/style-settings';
 import { PLUGIN_SETTINGS_CHANGE } from '../constants';
-import { ImmersiveScrollController } from './immersive-scroll';
+import { FullScreenController } from './full-screen';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -270,7 +270,7 @@ export class DynamicViewsMasonryView extends BasesView {
   };
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
-  private immersive: ImmersiveScrollController | null = null;
+  private fullScreen: FullScreenController | null = null;
 
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
@@ -662,24 +662,8 @@ export class DynamicViewsMasonryView extends BasesView {
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
 
-    // Setup immersive mobile scrolling
-    if (Platform.isPhone) {
-      const ownerDoc = this.scrollEl.ownerDocument;
-      const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
-      const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
-      if (viewContent && navbarEl) {
-        this.immersive = new ImmersiveScrollController({
-          scrollEl: this.scrollEl,
-          container: this.containerEl,
-          viewContent,
-          navbarEl,
-        });
-        if (pluginSettings.fullScreen) {
-          this.immersive.mount();
-        }
-        this.register(() => this.immersive?.unmount());
-      }
-    }
+    // Setup full screen mobile scrolling (deferred — navbar may not exist yet on Android)
+    if (Platform.isPhone) this.initFullScreen();
 
     // Watch for Dynamic Views Style Settings changes only
     this.disconnectStyleObserver = setupStyleSettingsObserver(() => {
@@ -708,11 +692,11 @@ export class DynamicViewsMasonryView extends BasesView {
       (this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, () => {
         const newSettings = this.plugin.persistenceManager.getPluginSettings();
         setupBasesSwipePrevention(this.containerEl, this.app, newSettings);
-        if (this.immersive) {
+        if (this.fullScreen) {
           if (newSettings.fullScreen) {
-            this.immersive.mount();
+            this.fullScreen.mount();
           } else {
-            this.immersive.unmount();
+            this.fullScreen.unmount();
           }
         }
         resetPersistentWidthCache();
@@ -787,6 +771,29 @@ export class DynamicViewsMasonryView extends BasesView {
         app: this.app,
       });
     }
+  }
+
+  /** Lazy-init full screen controller. Called from constructor and retried
+   *  from onDataUpdated() — on Android, .mobile-navbar may not exist yet at
+   *  construction time (FUSE filesystem delays DOM assembly). */
+  private initFullScreen(): void {
+    if (this.fullScreen) return;
+    const ownerDoc = this.scrollEl.ownerDocument;
+    const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
+    const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
+    if (!viewContent || !navbarEl) return;
+
+    this.fullScreen = new FullScreenController({
+      scrollEl: this.scrollEl,
+      container: this.containerEl,
+      viewContent,
+      navbarEl,
+    });
+    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
+    if (pluginSettings.fullScreen) {
+      this.fullScreen.mount();
+    }
+    this.register(() => this.fullScreen?.unmount());
   }
 
   /** Cancel pending RAFs and timeouts, disconnect observers, and clear window reference.
@@ -872,6 +879,9 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   onDataUpdated(): void {
+    // Retry full screen init if constructor missed it (Android: navbar not yet in DOM)
+    if (Platform.isPhone && !this.fullScreen) this.initFullScreen();
+
     // Defensive: catch stale document after popout drag-back
     // (layout-change handler may miss the document swap due to timing)
     const ownerDoc = this.containerEl.ownerDocument;
@@ -1551,6 +1561,7 @@ export class DynamicViewsMasonryView extends BasesView {
         if (this.resizeCorrectionTimeout !== null) return;
         if (this.lastLayoutCardWidth <= 0) return;
         if (!this.lastRenderedSettings) return;
+        if (this.postResizeScrollActive) return;
         this.remeasureAndReposition(
           this.lastLayoutWidth,
           this.lastLayoutCardWidth,
@@ -1672,6 +1683,7 @@ export class DynamicViewsMasonryView extends BasesView {
           (this.observerWindow ?? window).requestAnimationFrame(() => {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
+            if (this.postResizeScrollActive) return;
             if (this.resizeCorrectionTimeout !== null) return;
             if (this.isScrollRemeasurePending()) return;
             if (this.batchLayoutPending) return;
@@ -2242,7 +2254,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Synchronous resize handler — proportional scaling runs directly in
     // the ResizeObserver callback (RO fires at most once per frame).
-    // DOM measurement correction 200ms after resize ends.
+    // Height correction deferred to scroll-concurrent path (Layer 1) —
+    // 200ms after resize ends, postResizeScrollActive flag is set.
     const throttledResize = (entries: ResizeObserverEntry[]) => {
       if (entries.length === 0) return;
       const newWidth = Math.floor(entries[0].contentRect.width);
@@ -2266,19 +2279,23 @@ export class DynamicViewsMasonryView extends BasesView {
         // on hidden cards returns 0, which corrupts baselines and positions.
         if (this.masonryContainer.getBoundingClientRect().width === 0) return;
 
-        const didWork = this.remeasureAndReposition(
-          this.lastLayoutWidth,
-          this.lastLayoutCardWidth,
-          this.lastRenderedSettings,
-          this.lastLayoutMinColumns,
-          this.lastLayoutGap,
-          this.lastLayoutIsGrouped,
-          true // skipTransition — instant correction
-        );
+        // Defer height correction to scroll-concurrent path (Layer 1).
+        // Positions from proportionalResizeLayout are already set — only
+        // height measurement is deferred. Scroll motion masks the CLS.
+        this.postResizeScrollActive = true;
+        this.masonryContainer?.classList.add('masonry-skip-transition');
 
-        if (didWork) {
-          this.syncVirtualScroll();
+        // Safety net: clear flag if user never scrolls (2s).
+        // Does NOT correct — cards keep estimated heights until scroll.
+        if (this.postResizeIdleTimeout !== null) {
+          clearTimeout(this.postResizeIdleTimeout);
         }
+        this.postResizeIdleTimeout = setTimeout(() => {
+          this.postResizeIdleTimeout = null;
+          if (!this.postResizeScrollActive) return;
+          this.postResizeScrollActive = false;
+          this.masonryContainer?.classList.remove('masonry-skip-transition');
+        }, 2000);
 
         // Post-correction: responsive classes + scroll gradients
         this.resizeCorrectionRafId = (
@@ -2338,6 +2355,7 @@ export class DynamicViewsMasonryView extends BasesView {
         if (
           this.resizeCorrectionTimeout !== null ||
           this.isScrollRemeasurePending() ||
+          this.postResizeScrollActive ||
           this.batchLayoutPending ||
           this.lastLayoutCardWidth === 0 ||
           !this.lastRenderedSettings
@@ -2359,6 +2377,7 @@ export class DynamicViewsMasonryView extends BasesView {
             this.batchLayoutPending ||
             this.resizeCorrectionTimeout !== null ||
             this.isScrollRemeasurePending() ||
+            this.postResizeScrollActive ||
             this.lastLayoutCardWidth === 0 ||
             !this.lastRenderedSettings
           )
@@ -2451,7 +2470,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     if (!needsReposition) {
       this.masonryContainer?.classList.remove('masonry-measuring');
-      if (skipTransition) {
+      if (skipTransition && !this.postResizeScrollActive) {
         (this.observerWindow ?? window).requestAnimationFrame(() => {
           this.masonryContainer?.classList.remove('masonry-skip-transition');
         });
@@ -2958,18 +2977,18 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Reset scroll-idle safety net while postResizeScrollActive. If the
-    // user stops scrolling, the timeout fires one final syncVirtualScroll
-    // which clears the flag (didWork=false path).
+    // user stops scrolling, the timeout clears the flag only — no correction.
     if (this.postResizeScrollActive) {
       if (this.postResizeIdleTimeout !== null) {
         clearTimeout(this.postResizeIdleTimeout);
       }
+      // Clear flag only — no correction. Cards keep estimated heights
+      // until next scroll-through.
       this.postResizeIdleTimeout = setTimeout(() => {
         this.postResizeIdleTimeout = null;
         if (!this.postResizeScrollActive) return;
-        this.groupOffsetsDirty = true;
-        this.updateCachedGroupOffsets();
-        this.syncVirtualScroll();
+        this.postResizeScrollActive = false;
+        this.masonryContainer?.classList.remove('masonry-skip-transition');
       }, 2000);
     }
 
