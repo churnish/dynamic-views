@@ -325,7 +325,7 @@ export class FullScreenController {
           this.pendingLayout();
           this.pendingLayout = null;
         }
-      }, FULL_SCREEN_SCROLL_IDLE_MS);
+      }, this.isAndroid ? 150 : FULL_SCREEN_SCROLL_IDLE_MS);
     }
 
     // Auto-show near top
