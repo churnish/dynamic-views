@@ -207,11 +207,9 @@ export class FullScreenController {
   // ---------------------------------------------------------------------------
 
   private onScroll(): void {
-    // Visibility guard — skip if container detached or hidden
-    if (!this.container.isConnected || this.container.offsetHeight <= 0) return;
+    if (!this.container.isConnected || this.programmaticScroll) return;
 
-    if (this.programmaticScroll) return;
-
+    const now = Date.now();
     const currentTop = this.scrollEl.scrollTop;
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
@@ -248,12 +246,12 @@ export class FullScreenController {
       (this.accumulatedDelta < 0 && delta > 0)
     ) {
       this.accumulatedDelta = 0;
-      this.directionChangeTime = Date.now();
+      this.directionChangeTime = now;
     }
     this.accumulatedDelta += delta;
 
     // Cooldown prevents rapid cycling (deceleration bounce, layout-induced deltas)
-    if (Date.now() - this.lastToggleTime < FULL_SCREEN_TOGGLE_COOLDOWN_MS) {
+    if (now - this.lastToggleTime < FULL_SCREEN_TOGGLE_COOLDOWN_MS) {
       // Reset accumulator so layout-induced deltas don't leak past cooldown
       this.accumulatedDelta = 0;
       return;
@@ -264,7 +262,7 @@ export class FullScreenController {
     // Skipped on Android — Chromium fling decelerates monotonically (no bounce).
     const sustainMet =
       this.isAndroid ||
-      Date.now() - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
+      now - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
 
     if (
       this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
@@ -272,7 +270,7 @@ export class FullScreenController {
       sustainMet
     ) {
       this.barsHidden = true;
-      this.lastToggleTime = Date.now();
+      this.lastToggleTime = now;
       this.hideBarsUI();
       this.accumulatedDelta = 0;
     } else if (
@@ -281,7 +279,7 @@ export class FullScreenController {
       sustainMet
     ) {
       this.barsHidden = false;
-      this.lastToggleTime = Date.now();
+      this.lastToggleTime = now;
       this.showBarsUI();
       this.accumulatedDelta = 0;
     }
@@ -378,22 +376,33 @@ export class FullScreenController {
       this.pendingRafId = null;
     }
 
-    // Single class op — higher specificity overrides full-screen-active
+    // Single class op — higher specificity overrides full-screen-active.
+    // Triggers header CSS transition (Obsidian's native transform + opacity).
     this.body.classList.add('full-screen-showing');
 
-    // Bridge only — scroll container height is locked, no geometry compensation
-    if (this.settled) {
-      setBridge(this.container, `translateY(-${this.totalShift}px)`, 'none');
+    // Bridge + navbar restore. On Android, defer to next frame so the header
+    // transition starts on its own compositor layer before layout work lands.
+    const applyShowLayout = (): void => {
+      // Bridge only — scroll container height is locked, no geometry compensation
+      if (this.settled) {
+        setBridge(this.container, `translateY(-${this.totalShift}px)`, 'none');
+      } else {
+        setBridge(this.container, 'translateY(0)', 'none');
+      }
+
+      // Navbar restore (inline — navbar is shared, not scoped to [data-type='bases'])
+      setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
+      setStyle(this.navbarEl, 'opacity', '1', 'important');
+      this.navbarEl.style.removeProperty('pointer-events');
+
+      void capacitorStatusBar?.show();
+    };
+
+    if (this.isAndroid) {
+      this.pendingRafId = requestAnimationFrame(applyShowLayout);
     } else {
-      setBridge(this.container, 'translateY(0)', 'none');
+      applyShowLayout();
     }
-
-    // Navbar restore (inline — navbar is shared, not scoped to [data-type='bases'])
-    setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-    setStyle(this.navbarEl, 'opacity', '1', 'important');
-    this.navbarEl.style.removeProperty('pointer-events');
-
-    void capacitorStatusBar?.show();
 
     // Idle: remove classes + unlock → measure → relock height
     this.pendingLayout = () => {
