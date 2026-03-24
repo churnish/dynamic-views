@@ -320,8 +320,7 @@ export default class DynamicViews extends Plugin {
     this.registerEvent(
       this.app.workspace.on('file-menu', (menu, file) => {
         if (!(file instanceof TFolder)) return;
-        if (!this.persistenceManager.getPluginSettings().contextMenuCommands)
-          return;
+        if (!this.persistenceManager.getPluginSettings().folderCommands) return;
 
         menu.addItem((item) =>
           item
@@ -410,7 +409,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
         await leaf.openFile(file, { eState: { rename: 'all' } });
       }
     } catch (error) {
-      new Notice(`Failed to create file. Check console for details.`);
+      new Notice(`Failed to create note.`);
       console.error('File creation failed:', error);
     }
   }
@@ -440,7 +439,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
         await leaf.openFile(file, { eState: { rename: 'all' } });
       }
     } catch (error) {
-      new Notice(`Failed to create base file. Check console for details.`);
+      new Notice(`Failed to create file.`);
       console.error('Base file creation failed:', error);
     }
   }
@@ -457,8 +456,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
     this.nnRegisteredApi = nnApi;
 
     const dispose = nnApi.menus.registerFolderMenu(({ addItem, folder }) => {
-      if (!this.persistenceManager.getPluginSettings().contextMenuCommands)
-        return;
+      if (!this.persistenceManager.getPluginSettings().folderCommands) return;
 
       const added: MenuItem[] = [];
       addItem((item) => {

@@ -164,7 +164,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
         cls: 'setting-item-description',
       });
       appearanceTip.appendText('Tip: Run ');
-      appearanceTip.createEl('em').appendText('Show style settings view');
+      appearanceTip.createEl('strong').appendText('Show style settings view');
       appearanceTip.appendText(
         ' in the Command palette to open settings in a tab.'
       );
@@ -179,7 +179,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           .setDesc(
             createFragment((frag) => {
               frag.appendText('How files should open when pressed. ');
-              frag.createEl('em', { text: 'Press on title' });
+              frag.createEl('strong', { text: 'Press on title' });
               frag.appendText(' enables card text selection.');
             })
           )
@@ -206,62 +206,14 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       )
       .addSetting((s) =>
         s
-          .setName('Disable sidebar swipe')
-          .setDesc(
-            'Prevent sidebars from opening unintentionally when scrolling horizontally on mobile.'
-          )
-          .addToggle((toggle) =>
-            toggle
-              .setValue(settings.preventSidebarSwipe)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setPluginSettings({
-                  preventSidebarSwipe: value,
-                });
-              })
-          )
-      )
-      .addSetting((s) =>
-        s
-          .setName('Full screen')
-          .setDesc(
-            'Automatically hide interface elements when scrolling down on phone.'
-          )
-          .addToggle((toggle) =>
-            toggle
-              .setValue(settings.immersiveScroll)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setPluginSettings({
-                  immersiveScroll: value,
-                });
-              })
-          )
-      )
-      .addSetting((s) =>
-        s
-          .setName('Open random file in a new tab')
-          .setDesc(OPEN_RANDOM_DESC)
-          .addToggle((toggle) =>
-            toggle
-              .setValue(settings.openRandomInNewTab)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setPluginSettings({
-                  openRandomInNewTab: value,
-                });
-              })
-          )
-      )
-      .addSetting((s) =>
-        s
           .setName('Folder commands')
           .setDesc(CONTEXT_MENU_DESC)
           .addToggle((toggle) =>
-            toggle
-              .setValue(settings.contextMenuCommands)
-              .onChange(async (value) => {
-                await this.plugin.persistenceManager.setPluginSettings({
-                  contextMenuCommands: value,
-                });
-              })
+            toggle.setValue(settings.folderCommands).onChange(async (value) => {
+              await this.plugin.persistenceManager.setPluginSettings({
+                folderCommands: value,
+              });
+            })
           )
       )
       // Smart timestamp toggle (sub-settings in separate container below)
@@ -325,6 +277,51 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 
     // Initialize visibility
     updateSmartTimestampVisibility(settings.smartTimestamp);
+
+    // Open random — placed after smart timestamp in the General group
+    new Setting((generalGroupItems as HTMLElement) ?? containerEl)
+      .setName('Open random file in new tab')
+      .setDesc(OPEN_RANDOM_DESC)
+      .addToggle((toggle) =>
+        toggle.setValue(settings.openRandomInNewTab).onChange(async (value) => {
+          await this.plugin.persistenceManager.setPluginSettings({
+            openRandomInNewTab: value,
+          });
+        })
+      );
+
+    new SettingGroup(containerEl)
+      .setHeading('Mobile')
+      .addSetting((s) =>
+        s
+          .setName('Full screen')
+          .setDesc(
+            'Automatically hide interface elements when scrolling down on phone.'
+          )
+          .addToggle((toggle) =>
+            toggle.setValue(settings.fullScreen).onChange(async (value) => {
+              await this.plugin.persistenceManager.setPluginSettings({
+                fullScreen: value,
+              });
+            })
+          )
+      )
+      .addSetting((s) =>
+        s
+          .setName('Disable sidebar swipe')
+          .setDesc(
+            'Prevent sidebars from opening unintentionally when scrolling horizontally on mobile.'
+          )
+          .addToggle((toggle) =>
+            toggle
+              .setValue(settings.preventSidebarSwipe)
+              .onChange(async (value) => {
+                await this.plugin.persistenceManager.setPluginSettings({
+                  preventSidebarSwipe: value,
+                });
+              })
+          )
+      );
 
     new SettingGroup(containerEl)
       .setHeading('Integrations')

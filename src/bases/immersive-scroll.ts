@@ -3,7 +3,7 @@
  * shows on scroll-up. Uses a bridge architecture (translateY on container)
  * to prevent visual jumps during bar hide/show transitions.
  *
- * Guards: Platform.isPhone && body.has('auto-full-screen') && settings.immersiveScroll
+ * Guards: Platform.isPhone && body.has('auto-full-screen') && settings.fullScreen
  *
  * TODO: when Safari ships overflow-anchor, skip bridge entirely —
  * just toggle class and let browser handle scroll anchoring.

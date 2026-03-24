@@ -73,9 +73,7 @@
   box-shadow: inset 0 0 0 1px var(--dynamic-views-background-modifier-border);
 }
 
-/* Indented sub-settings — scaleX hairline technique bypasses WebKit's
-   pixel-snapping that rounds vertical borders to 2 device pixels at
-   unfavorable x-offsets on 3x DPR displays */
+/* Indented sub-settings */
 .setting-sub-items {
   margin-inline-start: 20px;
   padding-left: 1em;
@@ -89,9 +87,15 @@
     bottom: 0;
     width: 1px;
     background-color: var(--dynamic-views-background-modifier-border);
-    transform: scaleX(0.333);
-    transform-origin: left center;
   }
+}
+
+/* Mobile: scaleX(0.333) produces 1 device pixel on all mobile DPRs
+   (2x: 0.666→1, 2.625x: 0.875→1, 3x: 1.0→1). Without it, the 1px
+   pseudo-element rounds to 2 device pixels at unfavorable x-offsets. */
+.is-mobile .setting-sub-items::before {
+  transform: scaleX(0.333);
+  transform-origin: left center;
 }
 
 /* Add padding only when visible and not last.
@@ -99,7 +103,6 @@
 .setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
   padding-bottom: var(--size-4-4);
 }
-
 
 /* Remove bottom padding from setting when sub-items hidden and last in group */
 .setting-items

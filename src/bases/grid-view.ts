@@ -689,7 +689,7 @@ export class DynamicViewsGridView extends BasesView {
           viewContent,
           navbarEl,
         });
-        if (pluginSettings.immersiveScroll) {
+        if (pluginSettings.fullScreen) {
           this.immersive.mount();
         }
         this.register(() => this.immersive?.unmount());
@@ -723,7 +723,7 @@ export class DynamicViewsGridView extends BasesView {
         const newSettings = this.plugin.persistenceManager.getPluginSettings();
         setupBasesSwipePrevention(this.containerEl, this.app, newSettings);
         if (this.immersive) {
-          if (newSettings.immersiveScroll) {
+          if (newSettings.fullScreen) {
             this.immersive.mount();
           } else {
             this.immersive.unmount();

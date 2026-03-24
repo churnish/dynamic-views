@@ -241,6 +241,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private resizeCorrectionRafId: number | null = null;
   private hasUserScrolled = false;
   private lastScrollCorrectionTime = 0;
+  private postResizeIdleTimeout: ReturnType<typeof setTimeout> | null = null;
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
   private displayedSoFar: number = 0;
@@ -673,7 +674,7 @@ export class DynamicViewsMasonryView extends BasesView {
           viewContent,
           navbarEl,
         });
-        if (pluginSettings.immersiveScroll) {
+        if (pluginSettings.fullScreen) {
           this.immersive.mount();
         }
         this.register(() => this.immersive?.unmount());
@@ -708,7 +709,7 @@ export class DynamicViewsMasonryView extends BasesView {
         const newSettings = this.plugin.persistenceManager.getPluginSettings();
         setupBasesSwipePrevention(this.containerEl, this.app, newSettings);
         if (this.immersive) {
-          if (newSettings.immersiveScroll) {
+          if (newSettings.fullScreen) {
             this.immersive.mount();
           } else {
             this.immersive.unmount();
@@ -1344,6 +1345,10 @@ export class DynamicViewsMasonryView extends BasesView {
       this.virtualItems = [];
       this.hasExplicitScrollHeights = false;
       this.postResizeScrollActive = false;
+      if (this.postResizeIdleTimeout !== null) {
+        clearTimeout(this.postResizeIdleTimeout);
+        this.postResizeIdleTimeout = null;
+      }
       if (this.initialRemeasureTimeout !== null) {
         clearTimeout(this.initialRemeasureTimeout);
         this.initialRemeasureTimeout = null;
@@ -2952,6 +2957,22 @@ export class DynamicViewsMasonryView extends BasesView {
       this.masonryContainer?.classList.add('masonry-skip-transition');
     }
 
+    // Reset scroll-idle safety net while postResizeScrollActive. If the
+    // user stops scrolling, the timeout fires one final syncVirtualScroll
+    // which clears the flag (didWork=false path).
+    if (this.postResizeScrollActive) {
+      if (this.postResizeIdleTimeout !== null) {
+        clearTimeout(this.postResizeIdleTimeout);
+      }
+      this.postResizeIdleTimeout = setTimeout(() => {
+        this.postResizeIdleTimeout = null;
+        if (!this.postResizeScrollActive) return;
+        this.groupOffsetsDirty = true;
+        this.updateCachedGroupOffsets();
+        this.syncVirtualScroll();
+      }, 2000);
+    }
+
     // Synchronous mount remeasure: measure + reposition in the same frame
     // cards are mounted. Eliminates the 200ms estimation→correction gap that
     // causes visible CLS on first scroll through unmeasured cards.
@@ -2972,6 +2993,8 @@ export class DynamicViewsMasonryView extends BasesView {
     // Scroll motion masks position shifts from height corrections.
     // Cards that never get scrolled past keep estimated heights — acceptable
     // because they correct on first scroll-through.
+    // Safety net: if the user stops scrolling mid-correction, the idle
+    // timeout below fires one final sync to clear postResizeScrollActive.
     if (
       this.postResizeScrollActive &&
       !this.inMountRemeasure &&
@@ -2997,11 +3020,15 @@ export class DynamicViewsMasonryView extends BasesView {
         );
         if (didWork) {
           // Positions changed — re-sync mount/unmount decisions.
-          // lastScrollCorrectionTime throttle prevents re-entering the
-          // correction block on this recursive call.
+          // SCROLL_CORRECTION_INTERVAL_MS (1000ms) throttle prevents
+          // re-entering the correction block on this recursive call.
           this.syncVirtualScroll();
         } else {
           this.postResizeScrollActive = false;
+          if (this.postResizeIdleTimeout !== null) {
+            clearTimeout(this.postResizeIdleTimeout);
+            this.postResizeIdleTimeout = null;
+          }
           this.masonryContainer?.classList.remove('masonry-skip-transition');
         }
       }
@@ -4051,6 +4078,9 @@ export class DynamicViewsMasonryView extends BasesView {
     this.renderState.abortController?.abort();
     if (this.resizeCorrectionTimeout !== null) {
       clearTimeout(this.resizeCorrectionTimeout);
+    }
+    if (this.postResizeIdleTimeout !== null) {
+      clearTimeout(this.postResizeIdleTimeout);
     }
     this.teardownObservers();
     if (this.trailingUpdate.timeoutId !== null) {
