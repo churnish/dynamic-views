@@ -1,0 +1,101 @@
+// Full screen mobile — hides view header, bases toolbar, and search row
+// when bars are hidden (full-screen-active). Restores when bars are
+// showing (full-screen-showing). Uses !important throughout to override
+// Obsidian's inline and !important styles on these elements.
+
+// .is-phone is Obsidian's body class — leave flat per nesting conventions.
+
+.is-phone.full-screen-active [data-type='bases'] .view-header {
+  transform: translateY(
+    calc(
+      (var(--view-header-height, 44px) + var(--safe-area-inset-top, 47px)) * -1
+    )
+  ) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.is-phone.full-screen-active [data-type='bases'] .bases-header {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active [data-type='bases'] .bases-search-row {
+  visibility: hidden !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active [data-type='bases'] .view-content {
+  margin-top: 0 !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active,
+.is-phone.full-screen-active .app-container,
+.is-phone.full-screen-active .workspace {
+  background-color: var(--background-primary, #ffffff) !important;
+}
+
+.is-phone.full-screen-active [data-type='bases']::after {
+  display: none !important;
+}
+
+.is-phone.full-screen-active .workspace-split.mod-root {
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+
+.is-phone.full-screen-active [data-type='bases']::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
+  background: linear-gradient(
+    to bottom,
+    var(--background-primary, #ffffff) 0px,
+    transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+  ) !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+// full-screen-showing: higher-specificity overrides to restore bars
+
+.is-phone.full-screen-active.full-screen-showing
+  [data-type='bases']
+  .view-header {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing
+  [data-type='bases']
+  .bases-header {
+  visibility: visible !important;
+  pointer-events: auto !important;
+  margin-bottom: 0px !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing
+  [data-type='bases']
+  .bases-search-row {
+  visibility: visible !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing
+  [data-type='bases']
+  .view-content {
+  margin-top: var(--view-top-spacing, 99px) !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type='bases']::before {
+  content: none !important;
+}

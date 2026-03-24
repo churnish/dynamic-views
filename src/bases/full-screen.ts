@@ -15,6 +15,7 @@ import {
   FULL_SCREEN_TOP_ZONE,
   FULL_SCREEN_TOGGLE_COOLDOWN_MS,
   FULL_SCREEN_SCROLL_IDLE_MS,
+  FULL_SCREEN_SCROLL_IDLE_ANDROID_MS,
   FULL_SCREEN_SHOW_SUSTAIN_MS,
 } from '../shared/constants';
 
@@ -24,11 +25,6 @@ export interface FullScreenElements {
   viewContent: HTMLElement; // .view-content
   navbarEl: HTMLElement; // .mobile-navbar
 }
-
-const STYLE_ID = 'full-screen-css';
-
-/** Ref-counted singleton for the injected <style> element */
-let styleRefCount = 0;
 
 // Capacitor StatusBar plugin — hides/shows iOS system status bar elements
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -120,9 +116,6 @@ export class FullScreenController {
 
     this.mounted = true;
 
-    // Inject shared <style> (ref-counted singleton)
-    this.injectStyle();
-
     // Store original margin-top (before class changes it)
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
@@ -204,103 +197,9 @@ export class FullScreenController {
     this.navbarEl.style.removeProperty('pointer-events');
     this.navbarEl.style.removeProperty('transition');
 
-    // Decrement style ref count; remove <style> if zero
-    styleRefCount--;
-    if (styleRefCount <= 0) {
-      styleRefCount = 0;
-      this.ownerDoc.getElementById(STYLE_ID)?.remove();
-    }
-
     this.pendingLayout = null;
     this.barsHidden = false;
     this.settled = false;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Style injection
-  // ---------------------------------------------------------------------------
-
-  private injectStyle(): void {
-    styleRefCount++;
-    if (this.ownerDoc.getElementById(STYLE_ID)) return;
-
-    const bodyCS = getComputedStyle(this.body);
-    const headerOffset =
-      (parseFloat(bodyCS.getPropertyValue('--view-header-height')) || 44) +
-      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-top')) || 47);
-
-    const style = this.ownerDoc.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = `
-.is-phone.full-screen-active [data-type='bases'] .view-header {
-  transform: translateY(-${headerOffset}px) !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-.is-phone.full-screen-active [data-type='bases'] .bases-header {
-  visibility: hidden !important;
-  pointer-events: none !important;
-  margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
-  transition: none !important;
-}
-.is-phone.full-screen-active [data-type='bases'] .bases-search-row {
-  visibility: hidden !important;
-  transition: none !important;
-}
-.is-phone.full-screen-active [data-type='bases'] .view-content {
-  margin-top: 0 !important;
-  transition: none !important;
-}
-.is-phone.full-screen-active,
-.is-phone.full-screen-active .app-container,
-.is-phone.full-screen-active .workspace {
-  background-color: var(--background-primary) !important;
-}
-.is-phone.full-screen-active [data-type='bases']::after {
-  display: none !important;
-}
-.is-phone.full-screen-active .workspace-split.mod-root {
-  -webkit-mask-image: none !important;
-  mask-image: none !important;
-}
-.is-phone.full-screen-active [data-type='bases']::before {
-  content: '' !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
-  background: linear-gradient(
-    to bottom,
-    var(--background-primary) 0px,
-    transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
-  ) !important;
-  z-index: 10 !important;
-  pointer-events: none !important;
-}
-.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .view-header {
-  transform: translateY(0) !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .bases-header {
-  visibility: visible !important;
-  pointer-events: auto !important;
-  margin-bottom: 0px !important;
-  transition: none !important;
-}
-.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .bases-search-row {
-  visibility: visible !important;
-  transition: none !important;
-}
-.is-phone.full-screen-active.full-screen-showing [data-type='bases'] .view-content {
-  margin-top: var(--view-top-spacing, 99px) !important;
-  transition: none !important;
-}
-.is-phone.full-screen-active.full-screen-showing [data-type='bases']::before {
-  content: none !important;
-}`;
-    this.ownerDoc.head.appendChild(style);
   }
 
   // ---------------------------------------------------------------------------
@@ -320,12 +219,17 @@ export class FullScreenController {
     // Idle settle for pending layout (hide settle or show class removal)
     if (this.scrollIdleTimer != null) clearTimeout(this.scrollIdleTimer);
     if (this.pendingLayout) {
-      this.scrollIdleTimer = setTimeout(() => {
-        if (this.pendingLayout) {
-          this.pendingLayout();
-          this.pendingLayout = null;
-        }
-      }, this.isAndroid ? 150 : FULL_SCREEN_SCROLL_IDLE_MS);
+      this.scrollIdleTimer = setTimeout(
+        () => {
+          if (this.pendingLayout) {
+            this.pendingLayout();
+            this.pendingLayout = null;
+          }
+        },
+        this.isAndroid
+          ? FULL_SCREEN_SCROLL_IDLE_ANDROID_MS
+          : FULL_SCREEN_SCROLL_IDLE_MS
+      );
     }
 
     // Auto-show near top
@@ -358,7 +262,8 @@ export class FullScreenController {
     // Sustain gate: require direction to hold for 80ms before toggling.
     // Filters iOS deceleration bounce (reverse-direction noise at momentum end).
     // Skipped on Android — Chromium fling decelerates monotonically (no bounce).
-    const sustainMet = this.isAndroid ||
+    const sustainMet =
+      this.isAndroid ||
       Date.now() - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
 
     if (
@@ -456,7 +361,7 @@ export class FullScreenController {
       this.scrollEl.scrollTop = before - this.totalShift;
       this.settled = true;
 
-      requestAnimationFrame(() => {
+      this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
         this.lockedScrollHeight = this.scrollEl.offsetHeight;

@@ -100,3 +100,7 @@ export const FULL_SCREEN_TOGGLE_COOLDOWN_MS = 300;
  *  2s outlasts the iOS native scroll indicator fade (~1.5s),
  *  so the settle's scrollTop adjustment is invisible. */
 export const FULL_SCREEN_SCROLL_IDLE_MS = 2000;
+/** Android settle debounce — Android Chromium scrollbar never fades,
+ *  so the settle scrollTop adjustment is always visible regardless of timing.
+ *  150ms is enough for Chromium fling to fully stop (scrollend fires at ~1ms). */
+export const FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 150;

@@ -1529,7 +1529,7 @@ settings:
         collapsed: true
     -
         id: dynamic-views-file-type-indicator
-        title: File format indicator
+        title: File type indicator
         description: How file types are indicated on cards.
         type: class-select
         allowEmpty: false
@@ -1549,8 +1549,8 @@ settings:
                 value: dynamic-views-file-type-none
     -
         id: dynamic-views-hidden-file-extensions
-        title: Hide file formats
-        description: Comma-separated list of formats to hide (e.g., md, base, canvas).
+        title: Hide file types
+        description: Comma-separated list of file types to hide (e.g., md, base, canvas).
         type: variable-text
         default: md
     -
@@ -3246,6 +3246,83 @@ body.is-ios .dynamic-views .card {
   contain-intrinsic-height: auto 300px;
 }
 
+.is-phone.full-screen-active [data-type=bases] .view-header {
+  transform: translateY(calc((var(--view-header-height, 44px) + var(--safe-area-inset-top, 47px)) * -1)) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.is-phone.full-screen-active [data-type=bases] .bases-header {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active [data-type=bases] .bases-search-row {
+  visibility: hidden !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active [data-type=bases] .view-content {
+  margin-top: 0 !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active,
+.is-phone.full-screen-active .app-container,
+.is-phone.full-screen-active .workspace {
+  background-color: var(--background-primary, #ffffff) !important;
+}
+
+.is-phone.full-screen-active [data-type=bases]::after {
+  display: none !important;
+}
+
+.is-phone.full-screen-active .workspace-split.mod-root {
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+
+.is-phone.full-screen-active [data-type=bases]::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
+  background: linear-gradient(to bottom, var(--background-primary, #ffffff) 0px, transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-header {
+  visibility: visible !important;
+  pointer-events: auto !important;
+  margin-bottom: 0px !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-search-row {
+  visibility: visible !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-content {
+  margin-top: var(--view-top-spacing, 99px) !important;
+  transition: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases]::before {
+  content: none !important;
+}
+
 /* Card spacing setting - Bases files and embeds */
 :is(.workspace-leaf-content[data-type=bases], .bases-embed) .dynamic-views .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
@@ -3431,11 +3508,6 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-phone).dynamic-views-imag
 /* Constrained mode: solid background when maximized */
 body:not(.dynamic-views-image-viewer-disabled):not(.is-phone).dynamic-views-image-viewer-disable-fullscreen > .dynamic-views-image-embed.is-zoomed.is-maximized {
   background: var(--dynamic-views-background-primary);
-}
-
-/* Hide phone navbar when fullscreen image viewer is active (phone is always fullscreen) */
-body.is-phone:has(.dynamic-views-image-embed.is-zoomed) .mobile-navbar {
-  display: none;
 }
 
 /* Fullscreen image viewer: phone (always) or desktop/tablet with fullscreen enabled */
@@ -7640,7 +7712,6 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
   padding-left: 1em;
   position: relative;
 }
-
 .setting-sub-items::before {
   content: "";
   position: absolute;
@@ -7651,14 +7722,18 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
   background-color: var(--dynamic-views-background-modifier-border);
 }
 
+/* Mobile: scaleX(0.333) produces 1 device pixel on all mobile DPRs
+   (2x: 0.666→1, 2.625x: 0.875→1, 3x: 1.0→1). Without it, the 1px
+   pseudo-element rounds to 2 device pixels at unfavorable x-offsets. */
+.is-mobile .setting-sub-items::before {
+  transform: scaleX(0.333);
+  transform-origin: left center;
+}
+
 /* Add padding only when visible and not last.
    Currently inactive as sub-items is last child; retained for future structure changes. */
 .setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
   padding-bottom: var(--size-4-4);
-}
-
-.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item)::before {
-  bottom: var(--size-4-4);
 }
 
 /* Remove bottom padding from setting when sub-items hidden and last in group */
