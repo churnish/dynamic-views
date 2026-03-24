@@ -1550,7 +1550,7 @@ settings:
         collapsed: true
     -
         id: dynamic-views-file-type-indicator
-        title: File format indicator
+        title: File type indicator
         description: How file types are indicated on cards.
         type: class-select
         allowEmpty: false
@@ -1570,8 +1570,8 @@ settings:
                 value: dynamic-views-file-type-none
     -
         id: dynamic-views-hidden-file-extensions
-        title: Hide file formats
-        description: Comma-separated list of formats to hide (e.g., md, base, canvas).
+        title: Hide file types
+        description: Comma-separated list of file types to hide (e.g., md, base, canvas).
         type: variable-text
         default: md
     -

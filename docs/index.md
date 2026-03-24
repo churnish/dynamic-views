@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-22
+updated: 2026-03-25
 ---
 # Doc index
 
@@ -33,6 +33,7 @@ Stable reference docs for subsystem internals — data structures, render pipeli
 | [slideshow.md](architecture/slideshow.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
 | [drag-handlers.md](architecture/drag-handlers.md) | Working on drag handlers, DataTransfer, drop behavior, hover suppression during drag, or WebKit touch handling — documents the factory system, platform quirks, dataset freshness pattern, and drag ghost implementation. |
 | [write-path-safety.md](architecture/write-path-safety.md) | Adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption. |
+| [full-screen.md](architecture/full-screen.md) | Working on full screen bar hide/show, bridge+settle system, direction detection, height locking, or platform-specific branches — documents the complete architecture, settle sequence, and invariants. |
 
 ## dev/
 

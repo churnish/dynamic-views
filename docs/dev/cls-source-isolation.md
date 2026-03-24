@@ -2,7 +2,7 @@
 title: CLS source isolation
 description: CLS source identified in masonry layout (#358) — onScrollIdle → remeasureAndReposition. Diagnostic experiments, methodology, the globalThis bug that invalidated Phase 9.2, and the confirmed CLS mechanism.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-23
+updated: 2026-03-24
 ---
 # CLS source isolation (#358)
 
@@ -10,24 +10,36 @@ updated: 2026-03-23
 
 After pane resize + scroll, visible position jumps on masonry cards. 10 fix attempts failed across five attack vectors — scroll compensation, layout invalidation, reverse placement, RO suppression, and opacity masking. All targeted the correction pipeline — Phase 9.2 concluded the corrections were NOT the source. **That conclusion was wrong** due to a `globalThis` bug (see below). The correction pipeline IS the source.
 
-## CLS source — identified
+## CLS sources — identified
 
-**Source**: `onScrollIdle` → `remeasureAndReposition`
+Two correction paths share the same CLS-producing mechanism. Which fires depends on whether scroll is active when `resize-correction` enters `updateLayoutRef`.
 
-**Trigger**: `scrollRemeasureTimeout` (200ms debounce) expires during scroll. The timer resets only when `mountedPostResize` is true (a post-resize card mounts that frame). Zones with no post-resize cards to mount create 200ms gaps where the timer fires mid-scroll.
+### Path A: `resize-correction` (at rest)
 
-**Mechanism**:
+**Source**: `resizeCorrectionTimeout` → `updateLayoutRef('resize-correction')` inline DOM measurement branch.
+
+**Trigger**: 200ms after resize ends, when `isScrollRemeasurePending()` is false. This is the primary CLS for the **resize → wait → scroll** repro.
+
+### Path B: `onScrollIdle` → `remeasureAndReposition` (scroll-idle)
+
+**Source**: `scrollRemeasureTimeout` debounce → `onScrollIdle` → `remeasureAndReposition`.
+
+**Trigger**: `scrollRemeasureTimeout` (200ms debounce) expires during scroll. The timer resets only when `mountedPostResize` is true (a post-resize card mounts that frame). Zones with no post-resize cards to mount create 200ms gaps where the timer fires mid-scroll. This is the CLS for the **resize → scroll immediately** repro.
+
+### Shared mechanism
 
 1. Pane resize narrows cards → title text wraps (1→2 lines)
 2. Cards keep explicit `style.height` during scroll (prevents CLS during active scrolling)
-3. `scrollRemeasureTimeout` fires (200ms gap in post-resize card mounts)
-4. `onScrollIdle` → `remeasureAndReposition` clears explicit `style.height`
+3. Correction fires (Path A at rest, Path B at scroll-idle)
+4. Correction clears explicit `style.height`
 5. Cards grow to natural height (text wrap adds ~20-30px)
 6. Downstream cards in each column shift down → **visible CLS**
 
-**Pattern**: Discrete jumps at specific points during scroll, not continuous. Each jump corresponds to one `scrollRemeasureTimeout` expiration.
+**Pattern**: Discrete jumps when the user is stationary. Path A: 200ms after resize ends. Path B: 200ms after scroll stops (or mid-scroll due to timer bug).
 
 **Key observation**: With corrections disabled (`noAll`), card heights remain clamped — title text wraps but is clipped by the explicit height constraint. No height change → no column reposition → no CLS.
+
+**Session `e1bfc13f` discovery**: Path A updates `measuredAtWidth` on all mounted cards. After Path A runs, newly-mounting cards during scroll match `lastLayoutCardWidth` — `mountedPostResize` never triggers. Scroll-concurrent corrections gated on `mountedPostResize` do not fire for the resize-then-wait-then-scroll repro. Confirmed via `console.trace` instrumentation.
 
 ## The `globalThis` bug
 
@@ -96,6 +108,8 @@ All code that writes `style.top`/`style.left` to masonry cards, with context on 
 - **`onScrollIdle`** → `remeasureAndReposition` — batch correction, `skipTransition=true`. **This is the CLS source.** Fires via `scrollRemeasureTimeout` (200ms debounce) which resets only on post-resize card mount frames — NOT on scroll events.
 - **`onScrollIdle` deferred path** → `updateLayoutRef('resize-observer')` — full layout recalc (only when `pendingDeferredResize`)
 - **`scheduleDeferredRemeasure`** → `remeasureAndReposition` — double-RAF follow-up correction
+
+> **Note**: `onScrollIdle` was removed in `6fb3ae0` (path unification). Correction now runs scroll-concurrent inside `syncVirtualScroll`, throttled by `SCROLL_CORRECTION_INTERVAL_MS` (1000ms). The CLS mechanism (height clearing → text wrap → column cascade) is unchanged — only the timing moved from scroll-idle to scroll-concurrent.
 
 ### From async events
 

@@ -13,7 +13,7 @@ The image viewer can be fully disabled in Style Settings, along with individual 
 | Maximize                         | <kbd>Space</kbd>                          |
 | Exit maximize                    | <kbd>Space</kbd>                          |
 | Reset pan & zoom                 | <kbd>R</kbd> / <kbd>↓</kbd> / Right-click  |
-| Copy image                       | <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd> |
+| Copy image                       | <kbd>Ctrl/⌘</kbd>+<kbd>C</kbd>             |
 | Drag & drop <br>(fullscreen)     | Hold <kbd>Alt</kbd>+drag                  |
 | Drag & drop <br>(non-fullscreen) | Drag                                      |
 | Open file                        | <kbd>Enter</kbd>                          |

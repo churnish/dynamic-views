@@ -95,15 +95,15 @@ manifest.version = targetVersion;
 writeFileSync('manifest.json', JSON.stringify(manifest, null, '\t') + '\n');
 execSync('git add manifest.json', { stdio: 'inherit' });
 
-if (existsSync('versions.json')) {
-  let versions = JSON.parse(readFileSync('versions.json', 'utf8'));
-  const lastMinVersion = Object.values(versions).pop();
-  if (lastMinVersion !== manifest.minAppVersion) {
-    versions[targetVersion] = manifest.minAppVersion;
-    writeFileSync('versions.json', JSON.stringify(versions, null, '\t') + '\n');
-    execSync('git add versions.json', { stdio: 'inherit' });
-    console.log(`Updated versions.json for ${targetVersion}`);
-  }
+let versions = existsSync('versions.json')
+  ? JSON.parse(readFileSync('versions.json', 'utf8'))
+  : {};
+const lastMinVersion = Object.values(versions).pop();
+if (lastMinVersion !== manifest.minAppVersion) {
+  versions[targetVersion] = manifest.minAppVersion;
+  writeFileSync('versions.json', JSON.stringify(versions, null, '\t') + '\n');
+  execSync('git add versions.json', { stdio: 'inherit' });
+  console.log(`Updated versions.json for ${targetVersion}`);
 }
 
 console.log(`Updated manifest.json to version ${targetVersion}`);

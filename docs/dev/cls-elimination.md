@@ -2,17 +2,19 @@
 title: CLS elimination
 description: Post-resize scroll-idle CLS in masonry layout (#358) — problem definition, proven constraints, estimation model, industry survey, all tried approaches, remaining candidates, and key source files.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-22
+updated: 2026-03-24
 ---
 # CLS elimination (#358)
 
-Post-resize scroll-idle CLS in masonry layout. When `remeasureAndReposition` fires after scroll stops, height corrections cascade through columns and the single-anchor `scrollTop` compensation produces a visible jump. Affects both Grid and Masonry (both share `estimateUnmountedHeight`), but Masonry is the primary focus — Grid has simpler correction paths.
+Post-resize CLS in masonry layout. After pane resize (column count change) and scroll, visible position jumps on masonry cards. Affects both Grid and Masonry (both share `estimateUnmountedHeight`), but Masonry is the primary focus — Grid has simpler correction paths.
+
+> **Note**: Phase 9.2 originally concluded the correction pipeline was NOT the source. **This was wrong** — a `globalThis` bug made all diagnostic guards no-ops (see [cls-source-isolation.md](cls-source-isolation.md)). Session `f4ae5162` identified the source: `onScrollIdle` → `remeasureAndReposition` clearing explicit heights → cards grow from text wrap → column reposition cascade.
 
 ## Problem
 
-After a pane resize that changes column count (e.g., 4→2), ~960 unmounted cards have estimated heights with 20-100px error per card. Root cause: `estimateUnmountedHeight()` splits card height into `scalableHeight` (covers — scales linearly with width) and `fixedHeight` (text, properties, header — scales as `sqrt(widthRatio)` with k=0.5). But text reflow is discrete — no continuous function predicts it exactly. Per-card estimation error: 20-100px. Aggregate scroll compensations up to -453px observed after column increase.
+After a pane resize that changes column count (e.g., 4→2), ~960 unmounted cards have estimated heights with 20-100px error per card. The estimation model (`estimateUnmountedHeight()`) splits card height into `scalableHeight` (covers — scales linearly with width) and `fixedHeight` (text, properties, header — scales as `sqrt(widthRatio)` with k=0.5). But text reflow is discrete — no continuous function predicts it exactly. Per-card estimation error: 20-100px. Aggregate scroll compensations up to -453px observed after column increase.
 
-When the user scrolls after resize and stops, `onScrollIdle` → `remeasureAndReposition` measures all mounted cards, recalculates positions via `repositionWithStableColumns`, and compensates `scrollTop`. Height corrections in one column cascade through all subsequent cards in that column. The scroll compensation anchors ONE card but cannot compensate cross-column differential shifts — producing visible CLS.
+The visible CLS during post-resize scroll has been attributed to various subsystems across 10 phases of investigation — all were ruled out or produced zero improvement. The source remains unidentified (see constraint #15 and [cls-source-isolation.md](cls-source-isolation.md)).
 
 ## Requirements
 
@@ -24,7 +26,7 @@ When the user scrolls after resize and stops, `onScrollIdle` → `remeasureAndRe
 
 2. **Estimation cannot be perfect**: text reflow is discrete (lines either wrap or don't). 20-100px error at ~40% width change is structural.
 
-3. **Visible jump is from MOUNTED card corrections**: Phase 1e proved that 84% of unmounted items having exact estimates doesn't reduce the visible jump. The CLS comes from mounted cards being corrected to actual heights, not from unmounted estimation errors.
+3. **Visible jump is from MOUNTED card height corrections**: Phase 1e proved that 84% of unmounted items having exact estimates doesn't reduce the visible jump. Originally superseded by constraint #15 (Phase 9.2), but #15 was invalidated by the `globalThis` bug. Session `f4ae5162` confirmed: CLS comes from `remeasureAndReposition` clearing explicit `style.height` → cards grow from text wrap → column cascade.
 
 4. **Cross-column residuals (~10-30px) are NOT the CLS source**: Three independent compensation approaches targeting per-column residuals all produced zero perceptible improvement (see Phases 2a, 2b, 2c below). The visible jump must come from something else.
 
@@ -36,9 +38,29 @@ When the user scrolls after resize and stops, `onScrollIdle` → `remeasureAndRe
 
 8. **Image-load cover insertion is a secondary CLS source, not primary**: Cards mount without cover/img elements (height 193-280px). When images load, cover wrappers appear (~200px), causing 67-90px height deltas per card and up to 283px position shifts. However, CLS is visible in views with zero images — the estimation error corrections (7-13 mounted cards shifting 5-25px simultaneously via `remeasureAndReposition`) ARE perceptible. The image-load cascade (120 layout calls observed in session `f9de8344`) was measured in a view WITH images and incorrectly generalized as the primary source. Both sources contribute: estimation error is the baseline CLS present in all views, image-load adds on top in views with covers.
 
-17. **`cardResizeObserver` is the empirically verified source of continuous post-resize scroll CLS on main branch**: ~100 calls per scroll session via the RO feedback loop (constraint #5). However, suppressing it had zero visible effect — the CLS the user perceives may have a different source during manual pane-border resize (vs programmatic sidebar toggle).
+9. **`cardResizeObserver` is the empirically verified source of continuous post-resize scroll CLS on main branch**: ~100 calls per scroll session via the RO feedback loop (constraint #5). However, suppressing it had zero visible effect — the CLS the user perceives may have a different source during manual pane-border resize (vs programmatic sidebar toggle).
 
-18. **Position propagation is fundamentally limited by non-uniform per-card estimation error**: A uniform per-column delta closes the boundary gap between flush-stacked and unmounted zones but cannot fix the distributed spacing errors within the shifted zone (3-33px per card, 800-3000px total over 200+ cards per column).
+10. **Position propagation is fundamentally limited by non-uniform per-card estimation error**: A uniform per-column delta closes the boundary gap between flush-stacked and unmounted zones but cannot fix the distributed spacing errors within the shifted zone (3-33px per card, 800-3000px total over 200+ cards per column).
+
+11. **`masonry-correcting` is a CSS no-op**: The class is added/removed in JS but has zero CSS rules in any SCSS file. It does nothing visually — pure timing marker.
+
+12. **Layout Shift API excludes user-input-associated shifts**: `PerformanceObserver` with `layout-shift` type filters out shifts within 500ms of user input via `hadRecentInput`. Resize drag and scroll are both user input. CLS metrics from this API do NOT capture the shifts the user perceives during resize+scroll. Do NOT use Layout Shift API to measure this specific CLS.
+
+13. **CSS `transition: top/left` on cards is reported as CLS by the Layout Shift API**: Each animation frame of a CSS position transition is counted as a separate layout shift. Animated transitions produce MORE measured CLS (spread across many frames) than instant snaps (one frame), even though they look smoother. However, per constraint #12, this measurement is unreliable during user input.
+
+14. **Animated position corrections cause transition interruption cascade**: Removing `skipTransition=true` from correction paths enables CSS transitions, but `cardResizeObserver` fires ~16ms after each correction (height clearing triggers RO). Each re-entrant correction interrupts the in-progress transition, restarting it from the interpolated position. Combined with instant `scrollTop` compensation, this produces layout corruption (overlapping cards, empty space). A transition guard (`transitionGuardActive` flag blocking RO + deferred remeasure for the transition duration) prevents the cascade but doesn't address the underlying CLS.
+
+15. **~~The CLS source is NOT the correction pipeline~~** *(invalidated)*: Phase 9.2 used `globalThis.__clsDiag` for runtime guards, but esbuild does not map `globalThis` to `window` — all guards were no-ops. Session `f4ae5162` re-tested with `window.__clsDiag` and confirmed: `noAll` (all corrections disabled) **eliminates CLS**. `noScrollIdle` alone also eliminates CLS. The correction pipeline IS the source. See [cls-source-isolation.md](cls-source-isolation.md).
+
+16. **`isScrollRemeasurePending()` must NOT include `postResizeScrollActive`**: Adding `postResizeScrollActive` to `isScrollRemeasurePending()` blocks `resize-observer` and `resize-correction` sources in `updateLayoutRef` (line 1625-1634), preventing column count changes and proportional repositioning during resize. The `postResizeScrollActive` guard must be applied directly at specific correction paths (cardRO, image-load, property-measured, `scheduleDeferredRemeasure`) instead.
+
+17. **Two CLS repro patterns, same root cause**: (1) Resize → scroll immediately (<200ms): `onScrollIdle` → `remeasureAndReposition` (Path B). (2) Resize → wait → scroll: `resize-correction` → `updateLayoutRef` inline code (Path A). Both share the same mechanism: clearing explicit `style.height` → cards reflow to natural height → downstream cards shift. Path A fires at rest (200ms after resize). Path B fires at scroll-idle. Both produce a jump when the user is stationary.
+
+18. **`resize-correction` updates `measuredAtWidth` on all mounted cards**: After Path A runs, newly-mounting cards during scroll match `lastLayoutCardWidth` — `mountedPostResize` never triggers. Scroll-concurrent corrections that gate on `mountedPostResize` do not fire for the resize-then-wait-then-scroll repro. Confirmed empirically via `console.trace` instrumentation (zero `remeasureAndReposition` calls during scroll).
+
+19. **Scroll-concurrent correction only addresses repro #1**: Moving `remeasureAndReposition` to fire during scroll does not address the primary CLS from `resize-correction` (Path A), which fires at rest before any scroll happens. The fix must address the shared height-clearing mechanism across both paths.
+
+20. **Scroll-concurrent correction requires follow-up virtual scroll sync**: `remeasureAndReposition` inside `syncVirtualScroll` changes item Y positions, but mount/unmount decisions were already made earlier in the same call. Without a recursive `syncVirtualScroll()` after `didWork`, stale mounted items remain at wrong positions — producing blank columns. The `SCROLL_CORRECTION_INTERVAL_MS` (1000ms) throttle prevents re-entering the correction block on the recursive call.
 
 ## Estimation model
 
@@ -212,24 +234,52 @@ Empirical trace on main branch identified `cardResizeObserver` as the sole sourc
 
 Fix attempted: `postResizeScrollActive` guard on `cardResizeObserver` + `scrollRemeasureTimeout` cancel after setting guard. Zero visible effect on user's manual reproduction (pane border drag + scroll). The trace was done with programmatic sidebar toggle — may trigger different timing than manual pane resize.
 
-### Accept as inherent limitation — DEFERRED
+### Phase 9: Crossfade opacity masking — REVERTED
 
-Single batch jump at scroll-idle after resize may be the best achievable behavior for virtual-scrolling masonry with absolute positioning and discrete text reflow.
+Applied `masonry-fade-correcting` CSS class (opacity 0.4 with `transition: opacity 70ms ease !important`) to dim cards before position corrections. Three iterations:
 
-- **Evidence for**: Three compensation approaches (Phases 2a-2c) targeting cross-column differential produced zero improvement. Transform-based positioning (Phase 3) eliminating `top`/`left` layout invalidation also produced zero improvement. Position propagation (Phase 8.2) proved that uniform per-column deltas cannot fix non-uniform per-card estimation errors. The error is distributed across cards, not concentrated at a boundary. cardResizeObserver suppression (Phase 8.3) had zero visible effect despite eliminating ~100 RO feedback loop calls per scroll. Seven independent approaches across four attack vectors (scroll compensation, layout invalidation, mount-time positioning, RO loop suppression) have all failed. The estimation error is structural. Cross-column differential is provably unfixable by scroll compensation. The remaining `width`/`height` writes and `getBoundingClientRect()` forced reflows cannot be eliminated without fundamentally changing the layout model.
+- **v1**: Added class and called `remeasureAndReposition` in same RAF — browser batched both into one paint, dimmed state never rendered.
+- **v2**: RAF separation inside `scheduleDeferredRemeasure` — wrapped only the follow-up correction, but the primary CLS source was `updateLayoutRef('resize-observer')` running synchronously before `scheduleDeferredRemeasure`.
+- **v3**: Added class in `onScrollIdle` before `updateLayoutRef`, deferred layout to RAF — but the `pendingDeferredResize` branch never fires for the user's repro (resize → then scroll). The actual CLS comes from the non-deferred `onScrollIdle` path which had only 2-3px corrections (imperceptible).
+
+**Why it failed**: Applied to wrong code path. `pendingDeferredResize` requires resize correction to fire DURING active scroll (rare timing). The user's repro (resize → then scroll) means the correction fires before scroll starts.
+
+### Phase 9.1: Animated CSS transitions — REVERTED
+
+Removed `skipTransition=true` from all correction paths so `remeasureAndReposition` writes positions that animate via existing CSS `transition: top 200ms, left 200ms` on `.masonry-positioned`. Visually working at 1s and 2s test durations. At 500ms, layout corruption appeared (overlapping cards, empty space).
+
+**Root cause of corruption**: `cardResizeObserver` feedback loop — height clearing in `remeasureAndReposition` fires RO ~16ms later, which calls `remeasureAndReposition` again while the previous CSS transition is in progress. Each re-entry interrupts the transition and applies instant `scrollTop` compensation against the full position delta while cards are mid-animation. At longer durations (1-2s) the interruption happens when cards have barely moved (~1-3% displacement) so corruption is invisible. At 500ms the interruption is visible (~6% displacement per frame).
+
+A transition guard (`transitionGuardActive` flag blocking `cardResizeObserver`, `scheduleDeferredRemeasure`, and `onMountRemeasure` for `MASONRY_CORRECTION_MS + 16ms`) was implemented and prevented the cascade, but the underlying CLS was unchanged because corrections are not the CLS source (constraint #15).
+
+### Phase 9.2: CLS source isolation — INVALIDATED
+
+Systematic elimination of CLS source candidates. Four experiments disabled individual subsystems; CLS persisted through all. **All experiments were invalid** — diagnostic guards used `globalThis.__clsDiag` which esbuild does not map to `window`, making every guard a no-op. Key finding that remains valid: the Layout Shift API is unreliable for this problem (`hadRecentInput` filtering).
+
+Session `f4ae5162` re-ran elimination experiments with working guards (`window.__clsDiag`). Results: `noAll` (all corrections disabled) **eliminates CLS**. `noScrollIdle` alone eliminates CLS. Source identified as `onScrollIdle` → `remeasureAndReposition` clearing explicit heights → text-wrap height growth → column reposition cascade.
+
+**See [cls-source-isolation.md](cls-source-isolation.md)** for the corrected experiments and full CLS mechanism.
+
+### Phase 10: Scroll-concurrent correction — COMMITTED
+
+Inverted the correction timing: instead of correcting at scroll-idle (all prior phases), correct DURING active scroll so scroll motion masks the visual shift. Never correct at rest. Implemented throttled `remeasureAndReposition` in `syncVirtualScroll` (every `SCROLL_CORRECTION_INTERVAL_MS` = 1000ms during scroll), gated on `postResizeScrollActive`. Removed the non-deferred `onScrollIdle` correction path entirely.
+
+**Result**: Does not address the primary CLS repro (resize → wait → scroll). `resize-correction` (Path A) fires 200ms after resize and updates `measuredAtWidth` on all mounted cards. By the time the user scrolls, newly-mounting cards already match `lastLayoutCardWidth` — `mountedPostResize` never triggers, so the scroll-concurrent correction never activates. Confirmed via `console.trace` instrumentation: zero `remeasureAndReposition` calls during scroll.
+
+**Key discovery**: The visible CLS is from `resize-correction` itself (Path A, `updateLayoutRef('resize-correction')` inline code), not from `onScrollIdle` → `remeasureAndReposition` (Path B). Both paths share the same height-clearing + repositioning mechanism, but the primary repro only triggers Path A.
+
+**Status**: Committed on main (`6fb3ae0`). Path unification replaced dual Path A/B with single `remeasureAndReposition` call from resize-correction. Removed `pendingDeferredResize`, `scrollRemeasureTimeout`, `onScrollIdle`. `isScrollRemeasurePending()` simplified to `inMountRemeasure` only. Hidden-tab guard added (zero-width container check). Sparse layout regression fixed (`3a4258f`) — scroll-concurrent correction inside `syncVirtualScroll` needed follow-up `syncVirtualScroll()` after `remeasureAndReposition` changed positions. Scroll-idle safety net (`postResizeIdleTimeout`, 2s) clears `postResizeScrollActive` if user stops scrolling mid-correction.
+
+### Accept as inherent limitation — REJECTED
+
+The CLS is NOT an inherent limitation of virtual masonry — it is caused by the correction pipeline. The correction is necessary (cards need accurate heights), but its timing and visual impact can be improved.
+
+- **Evidence for**: Three compensation approaches (Phases 2a-2c) targeting cross-column differential produced zero improvement. Transform-based positioning (Phase 3) eliminating `top`/`left` layout invalidation also produced zero improvement. Position propagation (Phase 8.2) proved that uniform per-column deltas cannot fix non-uniform per-card estimation errors. The error is distributed across cards, not concentrated at a boundary. cardResizeObserver suppression (Phase 8.3) had zero visible effect despite eliminating ~100 RO feedback loop calls per scroll. Phase 9.2 proved that the correction pipeline is not the CLS source — disabling all corrections produces the same visible CLS. The Layout Shift API is unreliable for this measurement (constraint #12). Ten independent approaches across five attack vectors have failed. The estimation error is structural. Cross-column differential is provably unfixable by scroll compensation. The remaining `width`/`height` writes and `getBoundingClientRect()` forced reflows cannot be eliminated without fundamentally changing the layout model.
 - **Evidence against**: Width-bucket caching and detached offscreen measurement attack a third vector — estimation accuracy — which has not been fully explored.
 
 ## Remaining candidates
 
-### 1. Crossfade masking
-
-Opacity fade (~150ms) during `remeasureAndReposition` correction. Cards fade to 0.3–0.5 opacity, positions snap, cards fade back. Hides the jump behind a visual transition.
-
-- **Pros**: Simple CSS. Doesn't need to solve the positioning problem — just hides it.
-- **Cons**: Perceptible flash/flicker. May feel janky in its own way. Battery cost from compositing opacity changes on 60+ cards.
-- **Effort**: Low (~20 lines CSS + JS).
-
-### 2. Width-bucket exact height cache
+### 1. Width-bucket exact height cache
 
 Cache exact measured heights keyed by card width (rounded to nearest 10px). Users drag through a small set of widths — after one resize cycle, many cards have cached exact heights for common widths.
 
@@ -237,7 +287,7 @@ Cache exact measured heights keyed by card width (rounded to nearest 10px). User
 - **Cons**: First resize at a new width still has full error. Cache invalidated by content changes. Memory cost scales with cards × width buckets.
 - **Effort**: Medium (~50-80 lines).
 
-### 3. Detached offscreen measurement
+### 2. Detached offscreen measurement
 
 Create an invisible measurement container, clone card stubs into it at target width, measure `offsetHeight` via `requestIdleCallback` scheduling. Pre-populate exact heights before cards enter mount zone.
 
@@ -245,13 +295,25 @@ Create an invisible measurement container, clone card stubs into it at target wi
 - **Cons**: High complexity. Cloning card stubs requires maintaining a rendering pipeline for stubs. `requestIdleCallback` scheduling adds latency. DOM cloning is expensive for 500+ cards.
 - **Effort**: Very high (~200+ lines, new subsystem).
 
-### 4. Pre-mount cover space reservation
+### 3. Pre-mount cover space reservation
 
 Reserve cover height in the card DOM at mount time using cached aspect ratios, BEFORE the image loads. The `imageMetadataCache` already stores aspect ratios for previously-seen images. When a card mounts with a known image URL, render the cover wrapper with `padding-top` based on the cached ratio — same technique used post-load, just applied earlier. Cards would mount at their final height, eliminating the ~200px jump when images load.
 
 - **Pros**: Addresses the secondary CLS source (~200px per card from image-load). Zero resize performance cost. Uses existing cache infrastructure. Complements estimation-error fixes.
 - **Cons**: First-ever image load still has no cached ratio (must fall back to default). Cache is in-memory only — lost on app restart.
 - **Effort**: Medium (~30-50 lines). Modify card rendering to check cache at mount and apply cover height pre-emptively.
+
+### 4. Defer height correction to scroll
+
+Path A (`resize-correction`) still runs 200ms after resize and corrects mounted cards — this is the primary CLS. The idea: defer the height-clearing step of `resize-correction` to fire during scroll motion instead. `resize-correction` would update widths and positions using estimates but NOT clear explicit `style.height`. Height measurement deferred to scroll-concurrent path when the user scrolls.
+
+- **Pros**: Zero CLS at rest. Scroll motion masks the correction. Addresses both repro patterns.
+- **Cons**: Cards sit at estimated heights after resize until first scroll (text may be clipped or have extra space). Requires splitting `resize-correction` into width/position update vs height correction.
+- **Effort**: Medium-high. Modify `updateLayoutRef('resize-correction')` to skip height clearing, ensure `mountedPostResize` triggers for mounted cards that still have stale heights.
+
+### 5. Visual reference
+
+See `一/Masonry CLS mechanism.canvas` — audited flowchart of the full CLS mechanism, both correction paths, key functions, and remaining candidates.
 
 ## References
 
@@ -265,13 +327,18 @@ Reserve cover height in the card DOM at mount time using cached aspect ratios, B
 - `a1535935-e203-442b-90bd-d33132f172a9` — Phase 8 directional flush stacking.
 - `5c11119f-07d9-4edc-8afc-0a0cb51ba6b2` — Phase 8.1/8.2 flush stacking, position propagation attempts, directional growth architecture design.
 - `697a1bea-eb5a-4f32-a45e-1e99895d8c75` — Phase 8.2 position propagation (reverted), Phase 8.3 cardResizeObserver suppression (reverted). Empirical CLS trace on main branch.
+- `bd6310f2-f04e-428c-bce6-934dbe977b87` — Phase 9 crossfade masking (wrong code path), Phase 9.1 animated transitions (layout corruption from RO feedback loop), Phase 9.2 CLS source isolation (corrections not the source, Layout Shift API unreliable). Key discoveries: `masonry-correcting` is CSS no-op, `pendingDeferredResize` timing, transition interruption cascade, Layout Shift API `hadRecentInput` filtering.
 - Pre-Phase-1: scroll compensation fixes (5 fixes, referenced as `4eb5606b` in issue comments — full UUID unknown)
 - Pre-Phase-1: estimation model optimization k=0.75→0.5, industry survey (referenced as `d52099d0` in issue comments — full UUID unknown)
+- `f4ae5162-1f22-4494-b8dc-305ce1037c48` — CLS source identified (`globalThis` bug found). Handoff session for `e1bfc13f`.
+- `e1bfc13f-6e9c-43c3-916a-12396e05b99a` — Phase 10 scroll-concurrent correction (incomplete). Two CLS repro patterns identified (Path A vs Path B). Canvas consolidated and audited. Constraints #16-19.
+- `80d28af2-4d57-43c3-9261-479dd5a723fa` — Path unification (dual Path A/B → single `remeasureAndReposition`). Handoff session for `b4ff3a0f`.
+- `b4ff3a0f-adad-40a6-b475-3bd0ff1421c3` — Sparse layout regression fix (`3a4258f`). Scroll-concurrent correction follow-up sync. `postResizeIdleTimeout` safety net.
 
 ## Key source files
 
-- `src/bases/masonry-view.ts` — `remeasureAndReposition`, `syncVirtualScroll`, `onScrollIdle`, `eagerPreMeasure`, `scheduleDeferredRemeasure`
+- `src/bases/masonry-view.ts` — `remeasureAndReposition`, `syncVirtualScroll`, `eagerPreMeasure`, `scheduleDeferredRemeasure`, `postResizeIdleTimeout`
 - `src/utils/masonry-layout.ts` — `repositionWithStableColumns`, `calculateMasonryLayout`
 - `src/shared/virtual-scroll.ts` — `VirtualItem`, `estimateUnmountedHeight`, `measureScalableHeight`
-- `src/shared/constants.ts` — `MASONRY_CORRECTION_MS` (200ms), `HIDDEN_BUFFER_MULTIPLIER` (2), `POST_RESIZE_SAFETY_MS` (2s)
+- `src/shared/constants.ts` — `MASONRY_CORRECTION_MS` (200ms), `HIDDEN_BUFFER_MULTIPLIER` (2), `SCROLL_CORRECTION_INTERVAL_MS` (1000ms)
 - `styles/_masonry-view.scss` — `masonry-skip-transition`, `--masonry-reposition-duration`
