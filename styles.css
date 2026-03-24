@@ -3296,31 +3296,31 @@ body.is-ios .dynamic-views .card {
   pointer-events: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
-  transform: translateY(0) !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-header {
+.is-phone.full-screen-active.full-screen-restoring [data-type=bases] .bases-header {
   visibility: visible !important;
   pointer-events: auto !important;
   margin-bottom: 0px !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-search-row {
+.is-phone.full-screen-active.full-screen-restoring [data-type=bases] .bases-search-row {
   visibility: visible !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-content {
+.is-phone.full-screen-active.full-screen-restoring [data-type=bases] .view-content {
   margin-top: var(--view-top-spacing, 99px) !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases]::before {
+.is-phone.full-screen-active.full-screen-restoring [data-type=bases]::before {
   content: none !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* Card spacing setting - Bases files and embeds */

@@ -376,33 +376,22 @@ export class FullScreenController {
       this.pendingRafId = null;
     }
 
-    // Single class op — higher specificity overrides full-screen-active.
-    // Triggers header CSS transition (Obsidian's native transform + opacity).
+    // Single class op — higher specificity overrides full-screen-active
     this.body.classList.add('full-screen-showing');
 
-    // Bridge + navbar restore. On Android, defer to next frame so the header
-    // transition starts on its own compositor layer before layout work lands.
-    const applyShowLayout = (): void => {
-      // Bridge only — scroll container height is locked, no geometry compensation
-      if (this.settled) {
-        setBridge(this.container, `translateY(-${this.totalShift}px)`, 'none');
-      } else {
-        setBridge(this.container, 'translateY(0)', 'none');
-      }
-
-      // Navbar restore (inline — navbar is shared, not scoped to [data-type='bases'])
-      setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-      setStyle(this.navbarEl, 'opacity', '1', 'important');
-      this.navbarEl.style.removeProperty('pointer-events');
-
-      void capacitorStatusBar?.show();
-    };
-
-    if (this.isAndroid) {
-      this.pendingRafId = requestAnimationFrame(applyShowLayout);
+    // Bridge only — scroll container height is locked, no geometry compensation
+    if (this.settled) {
+      setBridge(this.container, `translateY(-${this.totalShift}px)`, 'none');
     } else {
-      applyShowLayout();
+      setBridge(this.container, 'translateY(0)', 'none');
     }
+
+    // Navbar restore (inline — navbar is shared, not scoped to [data-type='bases'])
+    setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
+    setStyle(this.navbarEl, 'opacity', '1', 'important');
+    this.navbarEl.style.removeProperty('pointer-events');
+
+    void capacitorStatusBar?.show();
 
     // Idle: remove classes + unlock → measure → relock height
     this.pendingLayout = () => {
