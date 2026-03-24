@@ -37,7 +37,9 @@ Plugin-level settings from the settings tab. Not per-view.
 | `revealInNotebookNavigator` | `'disable' \| 'files-folders' \| 'tags' \| 'all'` | Notebook Navigator integration        |
 | `showYoutubeThumbnails`     | `boolean`                                         | Fetch YouTube thumbnails              |
 | `showCardLinkCovers`        | `boolean`                                         | Fetch card link cover images          |
-| `contextMenuCommands`       | `boolean`                                         | Show plugin commands in context menus |
+| `folderCommands`            | `boolean`                                         | Show folder commands in context menus |
+| `fullScreen`                | `boolean`                                         | Hide interface on scroll (phone)      |
+| `openRandomInNewTab`        | `boolean`                                         | Open random file in new tab           |
 
 **Migrated fields**: `omitFirstLine` was migrated to a Style Settings `class-select` (read via `getOmitFirstLineMode()` in JS).
 

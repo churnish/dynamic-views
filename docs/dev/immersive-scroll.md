@@ -2,7 +2,7 @@
 title: Immersive scroll
 description: Empirical research for immersive mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, and the v84 inline-only animation architecture.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-20
+updated: 2026-03-24
 ---
 # Immersive scroll
 
@@ -513,7 +513,88 @@ Single-phase: all changes (compositor + layout) apply simultaneously via classLi
 
 v59's CSS class approach was superseded by v84's inline-only animation, which correctly separates CSS class (layout) from inline styles (compositor animation). CSS class handles layout mutations (margin, pointer-events). Inline `style.setProperty()` with double-rAF handles compositor animation (transform, opacity). This resolves the WebKit passive scroll listener optimization that collapsed v58's transitions.
 
-**Current state**: Bar animations work correctly via double-rAF inline styles. Space reclaim during momentum scroll remains an open problem (see "Space reclaim constraint (v87–v98)" above). See also "Space reclaim: gap zone analysis (v111–v145)" for continued investigation.
+**Current state**: Bar animations work correctly via double-rAF inline styles. Space reclaim uses bridge + idle settle architecture: `translateY(totalShift)` bridge on scroll child at hide time (momentum-safe), then `scrollTop -= totalShift` + bridge removal at scroll-idle (2s debounce). The 2s settle delay outlasts the iOS scroll indicator fade (~1.5s), making the settle invisible. Scroll container height is locked (`style.height`) to decouple `clientHeight` from flex layout changes — unlock-measure-relock at settle. Minor intermittent content jumps from scroll viewport clipping artifact are accepted as the Pareto optimum (see "Pareto frontier" above).
+
+## Direction detection
+
+### Temporal-spatial hybrid
+
+Direction detection uses a combined threshold: accumulated scroll delta (spatial) must exceed a dead zone AND the direction must be sustained for a minimum duration (temporal). Constants in `shared/constants.ts`:
+
+| Parameter | Value | Purpose |
+|---|---|---|
+| `IMMERSIVE_HIDE_DEAD_ZONE` | 30px | Accumulated downward scroll to trigger hide |
+| `IMMERSIVE_SHOW_DEAD_ZONE` | 20px | Accumulated upward scroll to trigger show |
+| `IMMERSIVE_SHOW_SUSTAIN_MS` | 80ms | Minimum sustained direction before triggering |
+| `IMMERSIVE_TOP_ZONE` | 50px | `scrollTop` threshold — always show bars near top |
+| `IMMERSIVE_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
+
+On each scroll event: if the delta reverses direction, the accumulator resets to zero and `directionChangeTime` records the reversal timestamp. The sustain gate (`Date.now() - directionChangeTime >= 80ms`) prevents false triggers from deceleration bounce — short-lived delta reversals at the end of a fling.
+
+### Why touch gate failed
+
+Early prototypes gated show on `touchstart` (require active finger to reveal bars). iOS consumes `touchstart` during momentum stops — the event fires but the finger-down that halts momentum is not reliably delivered as a separate `touchstart` before scroll events resume. The sustain gate replaced the touch gate entirely.
+
+### Sustain gate on both directions
+
+The 80ms sustain gate applies to BOTH hide AND show. Deceleration bounce produces brief reversals in both directions:
+
+- **Scroll-down deceleration**: brief upward delta → false show trigger
+- **Scroll-up deceleration**: brief downward delta → false hide trigger
+
+Without the sustain gate on hide, rapid hide→show cycling occurred during fast downward scrolls.
+
+### Cooldown accumulator reset
+
+During the 300ms cooldown after a toggle, scroll events still fire. The `immersive-showing` CSS class restores `margin-top: ~99px` on `.view-content`, which causes WebKit to fire layout-induced scroll deltas (~250px compensation). Without resetting the accumulator during cooldown, these synthetic deltas leak past the cooldown and immediately trigger the opposite transition. Fix: `accumulatedDelta = 0` on every scroll event during cooldown.
+
+### Layout-induced scroll deltas
+
+The `immersive-showing` class restores margin-top on `.view-content`. WebKit compensates by adjusting the scroll position, producing a large synthetic scroll delta (~250px, equal to `totalShift`). These deltas are not user-initiated but are indistinguishable from real scroll events. The cooldown accumulator reset (above) and the `programmaticScroll` guard during settle handle both sources.
+
+## Settle architecture
+
+### Bridge + idle settle
+
+The settle resolves the gap between the immediate bridge (momentum-safe visual compensation) and the final layout state (correct scroll position without bridge). Sequence:
+
+1. **HIDE**: `translateY(totalShift)` on scroll child + `immersive-active` class. Scroll container height locked.
+2. **IDLE (2s debounce)**: Unlock height → remove bridge → `scrollTop -= totalShift` → re-measure → relock height.
+3. **SHOW**: `immersive-showing` class override. If settled, reverse bridge `translateY(-totalShift)`.
+4. **SHOW IDLE (2s debounce)**: Remove bridge → if settled, `scrollTop += totalShift` → remove classes → unlock → re-measure → relock.
+
+### 2s settle delay
+
+`IMMERSIVE_SCROLL_IDLE_MS = 2000`. The settle involves a `scrollTop` write and height unlock-relock, both of which cause the iOS native scroll indicator to flash. The 2s delay outlasts the scroll indicator's fade-out (~1.5s after last scroll event), so the settle is invisible to the user.
+
+### Unlock-measure-relock
+
+Scroll container height is locked via inline `style.height` to prevent `clientHeight` from changing during `immersive-active` (flex layout changes would resize the scroll container, causing scroll indicator teleport). At settle:
+
+1. Remove inline `height` (unlock)
+2. Remove bridge / adjust `scrollTop`
+3. Read `offsetHeight` (measure true flex-calculated height)
+4. Set inline `height` again (relock)
+
+Direct height calculation (`currentHeight + totalShift`) was rejected — it compounded rounding errors across rapid hide/show cycles. The unlock-measure-relock approach reads the browser's authoritative value each time.
+
+### `flex: 1` overrides inline `height`
+
+The locked `height` doesn't truly constrain the scroll container because `.bases-view` has `flex: 1` in Obsidian's layout. The inline `height` acts as a `flex-basis` hint that WebKit respects during the brief transition period. True locking would require `flex: 0 0 auto`, but this was rejected — it creates a visible gap strip at the bottom of the viewport when bars are hidden (the flex container no longer stretches to fill available space).
+
+### Scroll indicator jump
+
+The scroll indicator jumps when bars hide/show because the scroll container's effective height changes (margin-top removal adds ~99px + toolbar collapse adds ~52px). This matches Safari's native address bar behavior — the scroll indicator repositions when the viewport resizes. Accepted as inherent to the architecture.
+
+### Pareto frontier confirmed
+
+Three objectives cannot all be achieved simultaneously on iOS WebKit:
+
+1. **Immediate status bar** — status bar bg updates in the same frame as bar hide
+2. **No content jump** — zero visual displacement
+3. **Preserved momentum** — iOS fling continues uninterrupted
+
+The bridge + idle settle architecture (v144) achieves immediate status bar + preserved momentum with minor intermittent jumps. See "Pareto frontier" section above for the full analysis and comparison table.
 
 ## SCSS implementation
 
@@ -538,9 +619,9 @@ transition: transform 0.3s ease-in-out, opacity 0.2s ease-in-out;
 
 ## Diagnostic tools
 
-- **Prototype convention**: Each prototype IIFE must call `window.__cleanupImmersive()` at the top before initializing. Cleanup is part of the script, not a separate manual step.
-- **Prototype workflow**: Write to `temp/test-immersive-vNN.js`, `pbcopy`, paste in Safari Web Inspector console on iOS.
-- **Plan file**: `plans/132-immersive-mobile-scrolling.md` (outdated — needs update after v59 finalized).
+- **Safari Web Inspector**: Connect Mac to iOS device, inspect Obsidian's WKWebView via Safari Develop menu. Use Layers tab for compositing reasons, paint flashing for repaint visualization, and Frames view for main-thread fallback detection.
+- **Chrome DevTools MCP**: Use `evaluate_script` for runtime instrumentation on desktop (scroll event logging, `getBoundingClientRect` sampling, `getComputedStyle` reads). Use `list_console_messages` to retrieve diagnostic output.
+- **Cleanup convention**: Each diagnostic IIFE must call `window.__cleanupImmersive()` at the top before initializing. Cleanup is part of the script, not a separate manual step.
 - **Listener leak** (v34 bug): anonymous scroll fallback never removed by cleanup. Always use named function references.
 - **A/B isolation test**: Animate ONE target inside scroll container with anonymous `scroll(nearest)`, no `timeline-scope`. If smooth, topology/timeline-scope is the culprit.
 

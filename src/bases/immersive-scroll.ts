@@ -146,6 +146,7 @@ export class ImmersiveScrollController {
     this.prevScrollTop = this.scrollEl.scrollTop;
     this.accumulatedDelta = 0;
     this.directionChangeTime = 0;
+    this.lastToggleTime = 0;
     this.programmaticScroll = false;
     this.pendingLayout = null;
     this.isActiveHider = false;
