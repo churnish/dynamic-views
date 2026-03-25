@@ -76,7 +76,7 @@ import {
 } from '../shared/image-viewer';
 import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
 import type DynamicViews from '../../main';
-import type { BasesResolvedSettings } from '../types';
+import type { BasesResolvedSettings, LayoutSource } from '../types';
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
@@ -507,7 +507,9 @@ export class SharedCardRenderer {
   constructor(
     protected app: App,
     protected plugin: DynamicViews,
-    protected updateLayoutRef: { current: ((source?: string) => void) | null }
+    protected updateLayoutRef: {
+      current: ((source?: LayoutSource) => void) | null;
+    }
   ) {}
 
   // Wrapper that tags image-load relayouts with source for coalescing in masonry
@@ -761,7 +763,7 @@ export class SharedCardRenderer {
       onFocusChange?: (index: number) => void;
       onHoverStart?: (el: HTMLElement) => void;
       onHoverEnd?: () => void;
-      getVirtualRects?: () => VirtualCardRect[];
+      getVirtualRects?: () => readonly VirtualCardRect[];
       onMountItem?: (index: number) => HTMLElement | null;
     }
   ): CardHandle {

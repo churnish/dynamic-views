@@ -120,6 +120,17 @@ export interface PluginData {
 export type ViewMode = 'grid' | 'masonry' | 'list';
 export type WidthMode = 'normal' | 'wide' | 'max';
 
+export type LayoutSource =
+  | 'initial-render'
+  | 'resize-observer'
+  | 'image-load'
+  | 'image-coalesced'
+  | 'expand-group'
+  | 'compact-mode-sync'
+  | 'property-measured'
+  | 'queued-update'
+  | 'card-disconnected-fallback';
+
 // ============================================================================
 // View State Interfaces (shared between grid-view.ts and masonry-view.ts)
 // ============================================================================

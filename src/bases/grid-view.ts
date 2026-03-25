@@ -25,7 +25,11 @@ import {
   getCardSpacing,
   clearStyleSettingsCache,
 } from '../utils/style-settings';
-import { PLUGIN_SETTINGS_CHANGE } from '../constants';
+import {
+  CSS_ONLY_SETTINGS_KEYS,
+  ORDER_DERIVED_SETTINGS_KEYS,
+  PLUGIN_SETTINGS_CHANGE,
+} from '../constants';
 import { FullScreenController } from './full-screen';
 import {
   initializeScrollGradients,
@@ -135,6 +139,8 @@ export class DynamicViewsGridView extends BasesView {
   private scrollEl: HTMLElement;
   private leafId: string;
   private containerEl: HTMLElement;
+  /** Embedded .base views (via ![[file.base]]) skip the end indicator */
+  private isEmbedded: boolean;
   /** Resolves from registry each time — survives hot-reload / plugin re-enable */
   private get plugin(): DynamicViews {
     return this.app.plugins.plugins['dynamic-views'] as DynamicViews;
@@ -648,6 +654,7 @@ export class DynamicViewsGridView extends BasesView {
 
     // Store scroll parent reference
     this.scrollEl = scrollEl;
+    this.isEmbedded = !!scrollEl.closest('.internal-embed');
     // Find leaf by matching container (getLeaf() creates new leaf if pinned, activeLeaf is deprecated)
     this.leafId = '';
     this.app.workspace.iterateAllLeaves((leaf) => {
@@ -1003,16 +1010,8 @@ export class DynamicViewsGridView extends BasesView {
       const visibleProperties = this.config.getOrder();
       // Exclude CSS-only settings from hash — they're applied instantly via
       // applyCssOnlySettings() and don't need a full DOM rebuild
-      const CSS_ONLY_KEYS = new Set([
-        'textPreviewLines',
-        'titleLines',
-        'imageRatio',
-        'thumbnailSize',
-        'posterDisplayMode',
-        'imageFit',
-      ]);
       const hashableSettings = Object.fromEntries(
-        Object.entries(settings).filter(([k]) => !CSS_ONLY_KEYS.has(k))
+        Object.entries(settings).filter(([k]) => !CSS_ONLY_SETTINGS_KEYS.has(k))
       );
       const settingsHash =
         JSON.stringify(hashableSettings) +
@@ -1026,14 +1025,9 @@ export class DynamicViewsGridView extends BasesView {
       // Further exclude order-derived settings for reorder detection
       // (titleProperty, subtitleProperty, _skipLeadingProperties change when
       // displayFirstAsTitle derives them from property order positions)
-      const ORDER_DERIVED_KEYS = new Set([
-        'titleProperty',
-        'subtitleProperty',
-        '_skipLeadingProperties',
-      ]);
       const orderIndependentSettings = Object.fromEntries(
         Object.entries(hashableSettings).filter(
-          ([k]) => !ORDER_DERIVED_KEYS.has(k)
+          ([k]) => !ORDER_DERIVED_SETTINGS_KEYS.has(k)
         )
       );
       const settingsHashExcludingOrder =
@@ -1083,7 +1077,8 @@ export class DynamicViewsGridView extends BasesView {
       const currentPaths = allEntries.map((e) => e.file.path);
       const lastKeys = Array.from(this.renderState.lastMtimes.keys());
       const pathsUnchanged =
-        [...currentPaths].sort().join('\0') === [...lastKeys].sort().join('\0');
+        currentPaths.length === lastKeys.length &&
+        currentPaths.every((p) => this.renderState.lastMtimes.has(p));
       // Detect sort-order changes: when a sort-relevant property is edited,
       // Bases re-sorts allEntries AND updates mtime, so changedPaths is
       // non-empty and the renderHash early-exit is bypassed. This check is
@@ -2990,8 +2985,9 @@ export class DynamicViewsGridView extends BasesView {
     return item.el;
   }
 
-  /** Show end-of-content indicator when all items are displayed */
+  /** Show end-of-content indicator when all items are displayed (standalone .base files only) */
   private showEndIndicator(): void {
+    if (this.isEmbedded) return;
     // Guard against disconnected container (RAF callback after view destroyed)
     if (!this.containerEl?.isConnected) return;
     // Avoid duplicates

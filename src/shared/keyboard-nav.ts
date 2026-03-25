@@ -72,7 +72,7 @@ export function handleArrowNavigation(
   currentCard: HTMLElement,
   container: HTMLElement,
   onNavigate?: (targetCard: HTMLElement, index: number) => void,
-  virtualRects?: VirtualCardRect[],
+  virtualRects?: readonly VirtualCardRect[],
   onMountItem?: (index: number) => HTMLElement | null
 ): void {
   // Virtual scrolling path: use stored positions for all items
@@ -201,7 +201,7 @@ function findBestTargetIndex(
 function handleVirtualArrowNavigation(
   e: KeyboardEvent,
   currentCard: HTMLElement,
-  virtualRects: VirtualCardRect[],
+  virtualRects: readonly VirtualCardRect[],
   onNavigate?: (targetCard: HTMLElement, index: number) => void,
   onMountItem?: (index: number) => HTMLElement | null
 ): void {

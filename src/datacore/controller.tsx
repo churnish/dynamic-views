@@ -2242,9 +2242,6 @@ export function View({
         className={`results-container${settings.queryHeight > 0 && !isScrolledToBottom ? ' with-fade' : ''}`}
       >
         {renderView()}
-        {displayedCount >= sorted.length && sorted.length > 0 && (
-          <div className="dynamic-views-end-indicator" />
-        )}
       </div>
 
       <div ref={loadMoreRef} />

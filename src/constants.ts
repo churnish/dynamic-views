@@ -106,6 +106,21 @@ export const DEFAULT_DATACORE_STATE = {
   settings: undefined,
 };
 
+export const CSS_ONLY_SETTINGS_KEYS = new Set([
+  'textPreviewLines',
+  'titleLines',
+  'imageRatio',
+  'thumbnailSize',
+  'posterDisplayMode',
+  'imageFit',
+]);
+
+export const ORDER_DERIVED_SETTINGS_KEYS = new Set([
+  'titleProperty',
+  'subtitleProperty',
+  '_skipLeadingProperties',
+]);
+
 export const STORAGE_KEY_PREFIX = 'dynamic-views';
 
 /** Custom event dispatched when plugin-level settings change */
