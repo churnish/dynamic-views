@@ -4248,8 +4248,10 @@ body:not(.dynamic-views-file-type-flair,
 .dynamic-views .card-title-icon svg {
   /* calc derives boosted font-size on Android (1lh is boosted, ratio is constant) */
   width: calc(1lh / var(--dynamic-views-line-height-tight));
-  height: 1lh;
+  height: 1lh; /* Intentionally 1lh (not calc) — matches line box for vertical-align */
   vertical-align: bottom;
+  /* Optical lift: JS-measured fraction × rendered font-size (boosted-safe via 1lh) */
+  transform: translateY(calc(var(--dynamic-views-icon-optical-offset, 0) * 1lh / var(--dynamic-views-line-height-tight)));
   color: var(--dynamic-views-text-normal);
   stroke-width: var(--dynamic-views-icon-xs-stroke-width);
 }
@@ -6069,6 +6071,8 @@ body.dynamic-views-property-label-small-caps .dynamic-views .property-label-inli
   width: calc(1lh / var(--dynamic-views-line-height-tight));
   height: calc(1lh / var(--dynamic-views-line-height-tight));
   margin-right: var(--size-2-2);
+  /* Optical lift: JS-measured fraction × rendered font-size (boosted-safe via 1lh) */
+  transform: translateY(calc(var(--dynamic-views-icon-optical-offset, 0) * 1lh / var(--dynamic-views-line-height-tight)));
 }
 
 .dynamic-views .timestamp-icon svg {
@@ -6681,7 +6685,9 @@ body.dynamic-views-title-color-normal {
 }
 
 body.dynamic-views-title-color-accent {
-  --dynamic-views-title-color-hover-color: var(--dynamic-views-text-accent-hover);
+  --dynamic-views-title-color-hover-color: var(
+    --dynamic-views-text-accent-hover
+  );
 }
 
 body:is(.dynamic-views-title-color-red, .dynamic-views-title-color-orange, .dynamic-views-title-color-yellow, .dynamic-views-title-color-green, .dynamic-views-title-color-cyan, .dynamic-views-title-color-blue, .dynamic-views-title-color-purple, .dynamic-views-title-color-pink, .dynamic-views-title-color-custom) {
@@ -6705,7 +6711,9 @@ body.dynamic-views-subtitle-color-normal {
 }
 
 body.dynamic-views-subtitle-color-accent {
-  --dynamic-views-subtitle-color-hover-color: var(--dynamic-views-text-accent-hover);
+  --dynamic-views-subtitle-color-hover-color: var(
+    --dynamic-views-text-accent-hover
+  );
 }
 
 body:is(.dynamic-views-subtitle-color-red, .dynamic-views-subtitle-color-orange, .dynamic-views-subtitle-color-yellow, .dynamic-views-subtitle-color-green, .dynamic-views-subtitle-color-cyan, .dynamic-views-subtitle-color-blue, .dynamic-views-subtitle-color-purple, .dynamic-views-subtitle-color-pink, .dynamic-views-subtitle-color-custom) {
@@ -6729,7 +6737,9 @@ body.dynamic-views-property-color-with-labels-normal {
 }
 
 body.dynamic-views-property-color-with-labels-accent {
-  --dynamic-views-property-with-label-color-hover-color: var(--dynamic-views-text-accent-hover);
+  --dynamic-views-property-with-label-color-hover-color: var(
+    --dynamic-views-text-accent-hover
+  );
 }
 
 body:is(.dynamic-views-property-color-with-labels-red, .dynamic-views-property-color-with-labels-orange, .dynamic-views-property-color-with-labels-yellow, .dynamic-views-property-color-with-labels-green, .dynamic-views-property-color-with-labels-cyan, .dynamic-views-property-color-with-labels-blue, .dynamic-views-property-color-with-labels-purple, .dynamic-views-property-color-with-labels-pink) {
@@ -6760,7 +6770,9 @@ body.dynamic-views-property-color-without-labels-normal {
 }
 
 body.dynamic-views-property-color-without-labels-accent {
-  --dynamic-views-property-no-label-color-hover-color: var(--dynamic-views-text-accent-hover);
+  --dynamic-views-property-no-label-color-hover-color: var(
+    --dynamic-views-text-accent-hover
+  );
 }
 
 body:is(.dynamic-views-property-color-without-labels-red, .dynamic-views-property-color-without-labels-orange, .dynamic-views-property-color-without-labels-yellow, .dynamic-views-property-color-without-labels-green, .dynamic-views-property-color-without-labels-cyan, .dynamic-views-property-color-without-labels-blue, .dynamic-views-property-color-without-labels-purple, .dynamic-views-property-color-without-labels-pink) {

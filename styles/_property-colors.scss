@@ -1,3 +1,4 @@
+@use 'sass:list';
 @use 'sass:string';
 
 // Color setting mixin — generates semantic, preset, and custom color rules.
@@ -93,4 +94,81 @@
   $include-semantics: false,
   $include-accent: false,
   $include-custom: false
+);
+
+// Derives hover color for each color preset.
+// Sets --dynamic-views-{$var-stem}-hover-color on body.
+@mixin hover-color-vars(
+  $class-stem,
+  $var-stem: $class-stem,
+  $custom-hover-var: null,
+  $custom-fallback: --dynamic-views-text-muted
+) {
+  $colors: 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';
+
+  // Semantic: one step brighter
+  body.dynamic-views-#{$class-stem}-faint {
+    --dynamic-views-#{$var-stem}-hover-color: var(--dynamic-views-text-muted);
+  }
+  body.dynamic-views-#{$class-stem}-muted {
+    --dynamic-views-#{$var-stem}-hover-color: var(--dynamic-views-text-normal);
+  }
+  // Normal: same as non-hover (no visible change, avoids IACVT)
+  body.dynamic-views-#{$class-stem}-normal {
+    --dynamic-views-#{$var-stem}-hover-color: var(--dynamic-views-text-normal);
+  }
+  body.dynamic-views-#{$class-stem}-accent {
+    --dynamic-views-#{$var-stem}-hover-color: var(
+      --dynamic-views-text-accent-hover
+    );
+  }
+
+  // Named colors: 15% white mix
+  $color-list: ();
+  @each $c in $colors {
+    $color-list: list.append(
+      $color-list,
+      string.unquote('.dynamic-views-#{$class-stem}-#{$c}'),
+      comma
+    );
+  }
+  @if not $custom-hover-var {
+    // Custom uses same color-mix as named colors
+    $color-list: list.append(
+      $color-list,
+      string.unquote('.dynamic-views-#{$class-stem}-custom'),
+      comma
+    );
+  }
+  body:is(#{$color-list}) {
+    --dynamic-views-#{$var-stem}-hover-color: color-mix(
+      in hsl,
+      var(--dynamic-views-#{$var-stem}-value),
+      white 15%
+    );
+  }
+
+  // Custom with dedicated hover variable (property groups only)
+  @if $custom-hover-var {
+    body.dynamic-views-#{$class-stem}-custom {
+      --dynamic-views-#{$var-stem}-hover-color: var(
+        #{$custom-hover-var},
+        var(#{$custom-fallback})
+      );
+    }
+  }
+}
+
+@include hover-color-vars('title-color', 'title-color');
+@include hover-color-vars('subtitle-color', 'subtitle-color');
+@include hover-color-vars(
+  'property-color-with-labels',
+  'property-with-label-color',
+  $custom-hover-var: '--dynamic-views-property-color-with-labels-custom-hover'
+);
+@include hover-color-vars(
+  'property-color-without-labels',
+  'property-no-label-color',
+  $custom-hover-var:
+    '--dynamic-views-property-color-without-labels-custom-hover'
 );
