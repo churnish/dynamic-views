@@ -1865,6 +1865,7 @@ export class DynamicViewsMasonryView extends BasesView {
                   `${result.containerHeight}px`
                 );
 
+                result.measuredAtCardWidth = cardWidth;
                 this.groupLayoutResults.set(groupKey, result);
                 this.updateVirtualItemPositions(groupKey, result);
               }
@@ -3044,7 +3045,15 @@ export class DynamicViewsMasonryView extends BasesView {
         onHoverEnd: () => {
           this.focusState.hoveredEl = null;
         },
-        getVirtualRects: () => this.virtualItems,
+        getVirtualRects: () =>
+          this.virtualItems.map((v) => ({
+            index: v.index,
+            x: v.x,
+            y: v.y + (this.cachedGroupOffsets.get(v.groupKey) ?? 0),
+            width: v.width,
+            height: v.height,
+            el: v.el,
+          })),
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
       }
     );

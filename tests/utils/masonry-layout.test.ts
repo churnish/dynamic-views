@@ -547,4 +547,86 @@ describe('masonry-layout', () => {
       expect(result).toEqual([0, 0, 0]);
     });
   });
+
+  describe('imbalance threshold (stable vs greedy)', () => {
+    // Tests the threshold used by resolveStableOrGreedy in masonry-view.ts:
+    // useGreedy = stableRange > greedyRange * 1.5 && stableRange - greedyRange > gap * 8
+
+    const gap = 8;
+    const columns = 3;
+    const cardWidth = 200;
+    const step = cardWidth + gap;
+
+    function computeImbalance(
+      stableHeights: number[],
+      columnAssignments: number[]
+    ): { stableRange: number; greedyRange: number; shouldUseGreedy: boolean } {
+      // Stable: place cards into assigned columns
+      const stableCols = new Array(columns).fill(0) as number[];
+      for (let i = 0; i < stableHeights.length; i++) {
+        stableCols[columnAssignments[i]] += stableHeights[i] + gap;
+      }
+      const stableRange = Math.max(...stableCols) - Math.min(...stableCols);
+
+      const greedyCols = computeGreedyColumnHeights(
+        stableHeights,
+        columns,
+        gap
+      );
+      const greedyRange = Math.max(...greedyCols) - Math.min(...greedyCols);
+
+      const shouldUseGreedy =
+        stableRange > greedyRange * 1.5 && stableRange - greedyRange > gap * 8;
+      return { stableRange, greedyRange, shouldUseGreedy };
+    }
+
+    it('should NOT trigger greedy when stable columns are balanced', () => {
+      // 6 cards evenly distributed across 3 columns
+      const heights = [100, 100, 100, 100, 100, 100];
+      const assignments = [0, 1, 2, 0, 1, 2];
+      const { shouldUseGreedy } = computeImbalance(heights, assignments);
+      expect(shouldUseGreedy).toBe(false);
+    });
+
+    it('should NOT trigger greedy when imbalance is below absolute threshold', () => {
+      // Small imbalance: range diff < gap * 8 = 64px
+      const heights = [100, 100, 100, 150, 100, 100];
+      const assignments = [0, 1, 2, 0, 1, 2];
+      const { stableRange, greedyRange, shouldUseGreedy } = computeImbalance(
+        heights,
+        assignments
+      );
+      // stableRange - greedyRange is small, absolute threshold not met
+      expect(stableRange - greedyRange).toBeLessThanOrEqual(gap * 8);
+      expect(shouldUseGreedy).toBe(false);
+    });
+
+    it('should trigger greedy when stable assignment creates severe imbalance', () => {
+      // All tall cards assigned to column 0, short cards to 1 and 2
+      const heights = [300, 300, 50, 300, 50, 50];
+      const assignments = [0, 0, 1, 0, 1, 2];
+      const { stableRange, greedyRange, shouldUseGreedy } = computeImbalance(
+        heights,
+        assignments
+      );
+      // Stable piles 3×300 in col0 vs 2×50 in col1 — massive imbalance
+      expect(stableRange).toBeGreaterThan(greedyRange * 1.5);
+      expect(stableRange - greedyRange).toBeGreaterThan(gap * 8);
+      expect(shouldUseGreedy).toBe(true);
+    });
+
+    it('should NOT trigger greedy when stable matches greedy assignment', () => {
+      // When stable column assignments happen to match greedy's choice,
+      // both produce identical ranges — ratio is 1.0, threshold not met
+      const heights = [100, 100, 100, 100, 100, 100];
+      // Round-robin matches greedy for equal heights
+      const assignments = [0, 1, 2, 0, 1, 2];
+      const { stableRange, greedyRange, shouldUseGreedy } = computeImbalance(
+        heights,
+        assignments
+      );
+      expect(stableRange).toBe(greedyRange);
+      expect(shouldUseGreedy).toBe(false);
+    });
+  });
 });

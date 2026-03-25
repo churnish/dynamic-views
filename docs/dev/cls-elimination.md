@@ -2,7 +2,7 @@
 title: CLS elimination
 description: Post-resize scroll-idle CLS in masonry layout (#358) — problem definition, proven constraints, estimation model, industry survey, all tried approaches, remaining candidates, and key source files.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-24
+updated: 2026-03-25
 ---
 # CLS elimination (#358)
 
@@ -277,9 +277,31 @@ The CLS is NOT an inherent limitation of virtual masonry — it is caused by the
 - **Evidence for**: Three compensation approaches (Phases 2a-2c) targeting cross-column differential produced zero improvement. Transform-based positioning (Phase 3) eliminating `top`/`left` layout invalidation also produced zero improvement. Position propagation (Phase 8.2) proved that uniform per-column deltas cannot fix non-uniform per-card estimation errors. The error is distributed across cards, not concentrated at a boundary. cardResizeObserver suppression (Phase 8.3) had zero visible effect despite eliminating ~100 RO feedback loop calls per scroll. Phase 9.2 proved that the correction pipeline is not the CLS source — disabling all corrections produces the same visible CLS. The Layout Shift API is unreliable for this measurement (constraint #12). Ten independent approaches across five attack vectors have failed. The estimation error is structural. Cross-column differential is provably unfixable by scroll compensation. The remaining `width`/`height` writes and `getBoundingClientRect()` forced reflows cannot be eliminated without fundamentally changing the layout model.
 - **Evidence against**: Width-bucket caching and detached offscreen measurement attack a third vector — estimation accuracy — which has not been fully explored.
 
+### Layer 1: Defer height correction to scroll — COMMITTED
+
+`resize-correction` no longer calls `remeasureAndReposition`. Instead, it sets `postResizeScrollActive = true` directly, deferring height correction to the scroll-concurrent path. The 2s idle timeout clears the flag without correcting if the user never scrolls.
+
+**Constraint #18 workaround**: Instead of relying on `mountedPostResize` (which requires `measuredAtWidth` mismatch), `postResizeScrollActive` is set directly by the resize-correction timeout. This bypasses the constraint entirely — scroll-concurrent correction activates on first scroll regardless of `measuredAtWidth` state.
+
+**Guards added**: `cardResizeObserver`, image-load coalescing, `initialRemeasureTimeout`, and the `remeasureAndReposition` early-exit skip-transition cleanup all check `postResizeScrollActive` to prevent at-rest corrections during the deferral window.
+
+**Result**: Zero CLS at rest for both repro patterns (resize → wait → scroll, and resize → scroll immediately). Both converge to the same scroll-concurrent correction mechanism. Corrections during scroll are masked by motion.
+
+**Trade-off**: Between resize-end and first scroll, cards have estimated heights (~9px avg clipping). Addressable by the scrollHeight pre-read candidate.
+
+**Status**: Committed on main (`3b45d24`). Also includes masonry simplification (`eccfe72`) — extracted `resolveStableOrGreedy`, `applyCardPositions`, `createVirtualItem` helpers, `LayoutSource` type union, `get win()` getter, shared constants. Net -183 lines.
+
 ## Remaining candidates
 
-### 1. Width-bucket exact height cache
+### 1. scrollHeight pre-read
+
+`scrollHeight` returns natural content height even when `style.height` is set (`max(content height, element height)`). At-rest correction without forced reflow: read `scrollHeight` on all mounted cards (no style changes → no reflow), grow only cards where `scrollHeight > currentHeight`, skip cards where content fits. Only catches "too short" cards — "too tall" cards keep extra space (deferred to scroll).
+
+- **Pros**: Eliminates the Layer 1 text-clipping trade-off. No forced reflow.
+- **Cons**: Only catches growth, not shrinkage. Needs empirical verification — unclear if `scrollHeight` captures all card content (covers, properties, text previews).
+- **Effort**: Medium (~30-50 lines).
+
+### 2. Width-bucket exact height cache
 
 Cache exact measured heights keyed by card width (rounded to nearest 10px). Users drag through a small set of widths — after one resize cycle, many cards have cached exact heights for common widths.
 
@@ -287,33 +309,25 @@ Cache exact measured heights keyed by card width (rounded to nearest 10px). User
 - **Cons**: First resize at a new width still has full error. Cache invalidated by content changes. Memory cost scales with cards × width buckets.
 - **Effort**: Medium (~50-80 lines).
 
-### 2. Detached offscreen measurement
-
-Create an invisible measurement container, clone card stubs into it at target width, measure `offsetHeight` via `requestIdleCallback` scheduling. Pre-populate exact heights before cards enter mount zone.
-
-- **Pros**: Perfect heights before mount. No scroll-idle correction needed for pre-measured cards.
-- **Cons**: High complexity. Cloning card stubs requires maintaining a rendering pipeline for stubs. `requestIdleCallback` scheduling adds latency. DOM cloning is expensive for 500+ cards.
-- **Effort**: Very high (~200+ lines, new subsystem).
-
 ### 3. Pre-mount cover space reservation
 
 Reserve cover height in the card DOM at mount time using cached aspect ratios, BEFORE the image loads. The `imageMetadataCache` already stores aspect ratios for previously-seen images. When a card mounts with a known image URL, render the cover wrapper with `padding-top` based on the cached ratio — same technique used post-load, just applied earlier. Cards would mount at their final height, eliminating the ~200px jump when images load.
 
 - **Pros**: Addresses the secondary CLS source (~200px per card from image-load). Zero resize performance cost. Uses existing cache infrastructure. Complements estimation-error fixes.
 - **Cons**: First-ever image load still has no cached ratio (must fall back to default). Cache is in-memory only — lost on app restart.
-- **Effort**: Medium (~30-50 lines). Modify card rendering to check cache at mount and apply cover height pre-emptively.
+- **Effort**: Medium (~30-50 lines).
 
-### 4. Defer height correction to scroll
+### 4. Velocity-proportional correction throttle
 
-Path A (`resize-correction`) still runs 200ms after resize and corrects mounted cards — this is the primary CLS. The idea: defer the height-clearing step of `resize-correction` to fire during scroll motion instead. `resize-correction` would update widths and positions using estimates but NOT clear explicit `style.height`. Height measurement deferred to scroll-concurrent path when the user scrolls.
+Refinement over binary scroll-concurrent. Correction throttle interval scales inversely with scroll velocity: fast scroll = correct every 500ms, slow scroll = every 2000ms. Simplest form: replace fixed `SCROLL_CORRECTION_INTERVAL_MS` with `Math.max(500, 2000 - velocity * k)`. ~5 lines.
 
-- **Pros**: Zero CLS at rest. Scroll motion masks the correction. Addresses both repro patterns.
-- **Cons**: Cards sit at estimated heights after resize until first scroll (text may be clipped or have extra space). Requires splitting `resize-correction` into width/position update vs height correction.
-- **Effort**: Medium-high. Modify `updateLayoutRef('resize-correction')` to skip height clearing, ensure `mountedPostResize` triggers for mounted cards that still have stale heights.
+- **Pros**: Better masking of corrections during slow scroll.
+- **Cons**: Over-engineering — the binary approach captures 90% of the benefit. The primary CLS is at rest (velocity=0), which velocity-proportional doesn't address.
+- **Effort**: Low (~5 lines). Consider only if scroll-concurrent correction itself is perceptible.
 
 ### 5. Visual reference
 
-See `一/Masonry CLS mechanism.canvas` — audited flowchart of the full CLS mechanism, both correction paths, key functions, and remaining candidates.
+See `一/Masonry CLS mechanism.canvas` — audited flowchart of the full CLS mechanism, function graph, and remaining candidates.
 
 ## References
 
@@ -334,6 +348,7 @@ See `一/Masonry CLS mechanism.canvas` — audited flowchart of the full CLS mec
 - `e1bfc13f-6e9c-43c3-916a-12396e05b99a` — Phase 10 scroll-concurrent correction (incomplete). Two CLS repro patterns identified (Path A vs Path B). Canvas consolidated and audited. Constraints #16-19.
 - `80d28af2-4d57-43c3-9261-479dd5a723fa` — Path unification (dual Path A/B → single `remeasureAndReposition`). Handoff session for `b4ff3a0f`.
 - `b4ff3a0f-adad-40a6-b475-3bd0ff1421c3` — Sparse layout regression fix (`3a4258f`). Scroll-concurrent correction follow-up sync. `postResizeIdleTimeout` safety net.
+- `9e52cedb-aa5a-4cf4-afa7-5111024373c4` — Layer 1 defer height correction to scroll (`3b45d24`). Masonry simplification (`eccfe72`). CLS mechanism canvas extensively updated. scrollHeight pre-read candidate proposed.
 
 ## Key source files
 
