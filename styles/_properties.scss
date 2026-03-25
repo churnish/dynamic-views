@@ -461,12 +461,6 @@ body.dynamic-views-property-label-small-caps
   }
 }
 
-/* Optical centering: text visual center sits higher than bounding box center
-   because digits have no descenders — nudge icon up to match */
-.dynamic-views .timestamp-icon {
-  margin-top: -1px;
-}
-
 .dynamic-views {
   .timestamp-icon svg {
     width: 100% !important;

@@ -145,7 +145,6 @@ body:not(
     width: calc(1lh / var(--dynamic-views-line-height-tight));
     height: 1lh;
     vertical-align: bottom;
-    margin-top: -1px; /* Optical centering: icon visual center vs text glyph center */
     color: var(--dynamic-views-text-normal);
     stroke-width: var(--dynamic-views-icon-xs-stroke-width);
   }

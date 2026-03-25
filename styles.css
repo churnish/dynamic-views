@@ -4250,7 +4250,6 @@ body:not(.dynamic-views-file-type-flair,
   width: calc(1lh / var(--dynamic-views-line-height-tight));
   height: 1lh;
   vertical-align: bottom;
-  margin-top: -1px; /* Optical centering: icon visual center vs text glyph center */
   color: var(--dynamic-views-text-normal);
   stroke-width: var(--dynamic-views-icon-xs-stroke-width);
 }
@@ -6072,12 +6071,6 @@ body.dynamic-views-property-label-small-caps .dynamic-views .property-label-inli
   margin-right: var(--size-2-2);
 }
 
-/* Optical centering: text visual center sits higher than bounding box center
-   because digits have no descenders — nudge icon up to match */
-.dynamic-views .timestamp-icon {
-  margin-top: -1px;
-}
-
 .dynamic-views .timestamp-icon svg {
   width: 100% !important;
   height: 100% !important;
@@ -6675,6 +6668,116 @@ body.dynamic-views-title-hover-color-pink {
   --dynamic-views-title-hover-color-value: var(--dynamic-views-color-pink);
 }
 
+body.dynamic-views-title-color-faint {
+  --dynamic-views-title-color-hover-color: var(--dynamic-views-text-muted);
+}
+
+body.dynamic-views-title-color-muted {
+  --dynamic-views-title-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-title-color-normal {
+  --dynamic-views-title-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-title-color-accent {
+  --dynamic-views-title-color-hover-color: var(--dynamic-views-text-accent-hover);
+}
+
+body:is(.dynamic-views-title-color-red, .dynamic-views-title-color-orange, .dynamic-views-title-color-yellow, .dynamic-views-title-color-green, .dynamic-views-title-color-cyan, .dynamic-views-title-color-blue, .dynamic-views-title-color-purple, .dynamic-views-title-color-pink, .dynamic-views-title-color-custom) {
+  --dynamic-views-title-color-hover-color: color-mix(
+    in hsl,
+    var(--dynamic-views-title-color-value),
+    white 15%
+  );
+}
+
+body.dynamic-views-subtitle-color-faint {
+  --dynamic-views-subtitle-color-hover-color: var(--dynamic-views-text-muted);
+}
+
+body.dynamic-views-subtitle-color-muted {
+  --dynamic-views-subtitle-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-subtitle-color-normal {
+  --dynamic-views-subtitle-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-subtitle-color-accent {
+  --dynamic-views-subtitle-color-hover-color: var(--dynamic-views-text-accent-hover);
+}
+
+body:is(.dynamic-views-subtitle-color-red, .dynamic-views-subtitle-color-orange, .dynamic-views-subtitle-color-yellow, .dynamic-views-subtitle-color-green, .dynamic-views-subtitle-color-cyan, .dynamic-views-subtitle-color-blue, .dynamic-views-subtitle-color-purple, .dynamic-views-subtitle-color-pink, .dynamic-views-subtitle-color-custom) {
+  --dynamic-views-subtitle-color-hover-color: color-mix(
+    in hsl,
+    var(--dynamic-views-subtitle-color-value),
+    white 15%
+  );
+}
+
+body.dynamic-views-property-color-with-labels-faint {
+  --dynamic-views-property-with-label-color-hover-color: var(--dynamic-views-text-muted);
+}
+
+body.dynamic-views-property-color-with-labels-muted {
+  --dynamic-views-property-with-label-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-property-color-with-labels-normal {
+  --dynamic-views-property-with-label-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-property-color-with-labels-accent {
+  --dynamic-views-property-with-label-color-hover-color: var(--dynamic-views-text-accent-hover);
+}
+
+body:is(.dynamic-views-property-color-with-labels-red, .dynamic-views-property-color-with-labels-orange, .dynamic-views-property-color-with-labels-yellow, .dynamic-views-property-color-with-labels-green, .dynamic-views-property-color-with-labels-cyan, .dynamic-views-property-color-with-labels-blue, .dynamic-views-property-color-with-labels-purple, .dynamic-views-property-color-with-labels-pink) {
+  --dynamic-views-property-with-label-color-hover-color: color-mix(
+    in hsl,
+    var(--dynamic-views-property-with-label-color-value),
+    white 15%
+  );
+}
+
+body.dynamic-views-property-color-with-labels-custom {
+  --dynamic-views-property-with-label-color-hover-color: var(
+    --dynamic-views-property-color-with-labels-custom-hover,
+    var(--dynamic-views-text-muted)
+  );
+}
+
+body.dynamic-views-property-color-without-labels-faint {
+  --dynamic-views-property-no-label-color-hover-color: var(--dynamic-views-text-muted);
+}
+
+body.dynamic-views-property-color-without-labels-muted {
+  --dynamic-views-property-no-label-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-property-color-without-labels-normal {
+  --dynamic-views-property-no-label-color-hover-color: var(--dynamic-views-text-normal);
+}
+
+body.dynamic-views-property-color-without-labels-accent {
+  --dynamic-views-property-no-label-color-hover-color: var(--dynamic-views-text-accent-hover);
+}
+
+body:is(.dynamic-views-property-color-without-labels-red, .dynamic-views-property-color-without-labels-orange, .dynamic-views-property-color-without-labels-yellow, .dynamic-views-property-color-without-labels-green, .dynamic-views-property-color-without-labels-cyan, .dynamic-views-property-color-without-labels-blue, .dynamic-views-property-color-without-labels-purple, .dynamic-views-property-color-without-labels-pink) {
+  --dynamic-views-property-no-label-color-hover-color: color-mix(
+    in hsl,
+    var(--dynamic-views-property-no-label-color-value),
+    white 15%
+  );
+}
+
+body.dynamic-views-property-color-without-labels-custom {
+  --dynamic-views-property-no-label-color-hover-color: var(
+    --dynamic-views-property-color-without-labels-custom-hover,
+    var(--dynamic-views-text-muted)
+  );
+}
+
 /* Tag style: Outline (default) - reset all theme styles, apply only plugin styles */
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
 body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
@@ -6822,103 +6925,40 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 }
 
 @media (hover: hover) {
-  /* Title hover colors (when open-on-title enabled) */
+  /* Title hover: open-on-title (or poster-reveal-press + open-on-card) → hover title link.
+     Fallback chain: explicit title-hover-color → derived from title-color preset. */
   :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-color-faint .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-muted);
+  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card):is([class*=dynamic-views-title-color-],
+  [class*=dynamic-views-title-hover-color-]) .dynamic-views .card.hover-intent-active .card-title a:hover {
+    color: var(--dynamic-views-title-hover-color-value, var(--dynamic-views-title-color-hover-color));
   }
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-color-muted .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-normal);
-  }
-  /* Normal - no hover color change */
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-color-accent .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-accent-hover);
-  }
-  /* Title color variants (red-pink, custom): 15% white mix using --dynamic-views-title-color-value */
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card):is(.dynamic-views-title-color-red,
-  .dynamic-views-title-color-orange,
-  .dynamic-views-title-color-yellow,
-  .dynamic-views-title-color-green,
-  .dynamic-views-title-color-cyan,
-  .dynamic-views-title-color-blue,
-  .dynamic-views-title-color-purple,
-  .dynamic-views-title-color-pink,
-  .dynamic-views-title-color-custom) .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: color-mix(in hsl, var(--dynamic-views-title-color-value), white 15%);
-  }
-  /* Explicit title hover color: open-on-title → hover over title link */
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-hover-color-faint .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-faint);
-  }
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-hover-color-muted .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-muted);
-  }
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-hover-color-normal .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-normal);
-  }
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-hover-color-accent .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-text-accent-hover);
-  }
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card):is(.dynamic-views-title-hover-color-red,
-  .dynamic-views-title-hover-color-orange,
-  .dynamic-views-title-hover-color-yellow,
-  .dynamic-views-title-hover-color-green,
-  .dynamic-views-title-hover-color-cyan,
-  .dynamic-views-title-hover-color-blue,
-  .dynamic-views-title-hover-color-purple,
-  .dynamic-views-title-hover-color-pink) .dynamic-views .card.hover-intent-active .card-title a:hover {
+  /* Title hover: open-on-card (no poster-reveal) → hover card changes title.
+     Explicit title-hover-color only — does NOT derive from title-color. */
+  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press,
+  .dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card.hover-intent-active:hover .card-title {
     color: var(--dynamic-views-title-hover-color-value);
   }
-  :is(body.dynamic-views-open-on-title,
-  body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card).dynamic-views-title-hover-color-custom .dynamic-views .card.hover-intent-active .card-title a:hover {
-    color: var(--dynamic-views-title-hover-color-custom, var(--dynamic-views-text-normal));
-  }
-  /* Explicit title hover color: open-on-card → hover over card */
-  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press).dynamic-views-title-hover-color-faint .dynamic-views .card.hover-intent-active:hover .card-title,
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-faint .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
-    color: var(--dynamic-views-text-faint);
-  }
-  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press).dynamic-views-title-hover-color-muted .dynamic-views .card.hover-intent-active:hover .card-title,
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-muted .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
-    color: var(--dynamic-views-text-muted);
-  }
-  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press).dynamic-views-title-hover-color-normal .dynamic-views .card.hover-intent-active:hover .card-title,
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-normal .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
-    color: var(--dynamic-views-text-normal);
-  }
-  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press).dynamic-views-title-hover-color-accent .dynamic-views .card.hover-intent-active:hover .card-title,
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-accent .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
-    color: var(--dynamic-views-text-accent-hover);
-  }
-  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press):is(.dynamic-views-title-hover-color-red,
-  .dynamic-views-title-hover-color-orange,
-  .dynamic-views-title-hover-color-yellow,
-  .dynamic-views-title-hover-color-green,
-  .dynamic-views-title-hover-color-cyan,
-  .dynamic-views-title-hover-color-blue,
-  .dynamic-views-title-hover-color-purple,
-  .dynamic-views-title-hover-color-pink) .dynamic-views .card.hover-intent-active:hover .card-title,
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press:is(.dynamic-views-title-hover-color-red,
-  .dynamic-views-title-hover-color-orange,
-  .dynamic-views-title-hover-color-yellow,
-  .dynamic-views-title-hover-color-green,
-  .dynamic-views-title-hover-color-cyan,
-  .dynamic-views-title-hover-color-blue,
-  .dynamic-views-title-hover-color-purple,
-  .dynamic-views-title-hover-color-pink) .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
+  /* Title hover: open-on-card + poster-reveal → hover non-poster card changes title */
+  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press:not(.dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
     color: var(--dynamic-views-title-hover-color-value);
   }
-  body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press).dynamic-views-title-hover-color-custom .dynamic-views .card.hover-intent-active:hover .card-title,
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press.dynamic-views-title-hover-color-custom .dynamic-views .card:not(.image-format-poster).hover-intent-active:hover .card-title {
-    color: var(--dynamic-views-title-hover-color-custom, var(--dynamic-views-text-normal));
+  /* Subtitle hover — exclude real links which keep default hover */
+  body[class*=dynamic-views-subtitle-color-] .dynamic-views .card.hover-intent-active .card-subtitle :is(a:not(.internal-link, .external-link),
+  .folder-segment,
+  .filename-segment):hover {
+    color: var(--dynamic-views-subtitle-color-hover-color);
+  }
+  /* Property hover — with labels */
+  body[class*=dynamic-views-property-color-with-labels-] .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  .folder-segment,
+  .filename-segment):hover {
+    color: var(--dynamic-views-property-with-label-color-hover-color);
+  }
+  /* Property hover — without labels */
+  body[class*=dynamic-views-property-color-without-labels-] .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  .folder-segment,
+  .filename-segment):hover {
+    color: var(--dynamic-views-property-no-label-color-hover-color);
   }
   /* Poster hover mode: apply title hover color on :hover (not hover-intent) so
      the color is correct from the start of the 300ms content fade-in.
@@ -6934,109 +6974,6 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press,
   .dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card.image-format-poster.has-poster:hover .card-title {
     color: var(--dynamic-views-title-hover-color-value);
-  }
-  /* Subtitle hover colors (when clickable) — exclude real links which keep default hover */
-  body.dynamic-views-subtitle-color-faint .dynamic-views .card.hover-intent-active .card-subtitle :is(a:not(.internal-link, .external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-muted);
-  }
-  body.dynamic-views-subtitle-color-muted .dynamic-views .card.hover-intent-active .card-subtitle :is(a:not(.internal-link, .external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-normal);
-  }
-  /* Normal - no hover color change */
-  body.dynamic-views-subtitle-color-accent .dynamic-views .card.hover-intent-active .card-subtitle :is(a:not(.internal-link, .external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-accent-hover);
-  }
-  /* Subtitle color variants: 15% white mix using --dynamic-views-subtitle-color-value */
-  body:is(.dynamic-views-subtitle-color-red,
-  .dynamic-views-subtitle-color-orange,
-  .dynamic-views-subtitle-color-yellow,
-  .dynamic-views-subtitle-color-green,
-  .dynamic-views-subtitle-color-cyan,
-  .dynamic-views-subtitle-color-blue,
-  .dynamic-views-subtitle-color-purple,
-  .dynamic-views-subtitle-color-pink,
-  .dynamic-views-subtitle-color-custom) .dynamic-views .card.hover-intent-active .card-subtitle :is(a:not(.internal-link, .external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: color-mix(in hsl, var(--dynamic-views-subtitle-color-value), white 15%);
-  }
-  /* Property hover colors - with labels */
-  body.dynamic-views-property-color-with-labels-faint .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-muted);
-  }
-  body.dynamic-views-property-color-with-labels-muted .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-normal);
-  }
-  /* Normal - no hover color change */
-  body.dynamic-views-property-color-with-labels-accent .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-accent-hover);
-  }
-  /* Property with labels color variants: 15% white mix using --dynamic-views-property-with-label-color-value */
-  body:is(.dynamic-views-property-color-with-labels-red,
-  .dynamic-views-property-color-with-labels-orange,
-  .dynamic-views-property-color-with-labels-yellow,
-  .dynamic-views-property-color-with-labels-green,
-  .dynamic-views-property-color-with-labels-cyan,
-  .dynamic-views-property-color-with-labels-blue,
-  .dynamic-views-property-color-with-labels-purple,
-  .dynamic-views-property-color-with-labels-pink) .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: color-mix(in hsl, var(--dynamic-views-property-with-label-color-value), white 15%);
-  }
-  /* Custom uses pre-computed hover variable */
-  body.dynamic-views-property-color-with-labels-custom .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-property-color-with-labels-custom-hover, var(--dynamic-views-text-muted));
-  }
-  /* Property hover colors - without labels */
-  body.dynamic-views-property-color-without-labels-faint .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-muted);
-  }
-  body.dynamic-views-property-color-without-labels-muted .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-normal);
-  }
-  /* Normal - no hover color change */
-  body.dynamic-views-property-color-without-labels-accent .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-text-accent-hover);
-  }
-  /* Property without labels color variants: 15% white mix using --dynamic-views-property-no-label-color-value */
-  body:is(.dynamic-views-property-color-without-labels-red,
-  .dynamic-views-property-color-without-labels-orange,
-  .dynamic-views-property-color-without-labels-yellow,
-  .dynamic-views-property-color-without-labels-green,
-  .dynamic-views-property-color-without-labels-cyan,
-  .dynamic-views-property-color-without-labels-blue,
-  .dynamic-views-property-color-without-labels-purple,
-  .dynamic-views-property-color-without-labels-pink) .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: color-mix(in hsl, var(--dynamic-views-property-no-label-color-value), white 15%);
-  }
-  /* Custom uses pre-computed hover variable */
-  body.dynamic-views-property-color-without-labels-custom .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
-  .folder-segment,
-  .filename-segment):hover {
-    color: var(--dynamic-views-property-color-without-labels-custom-hover, var(--dynamic-views-text-muted));
   }
   /* Card background on hover options */
   /* Transparent (default) */
