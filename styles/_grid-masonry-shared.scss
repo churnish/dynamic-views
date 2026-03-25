@@ -16,23 +16,6 @@
   background-color: var(--dynamic-views-view-background);
 }
 
-/* Collapse empty cards (no visible content) - requires :has() (Electron 22+) */
-:is(.dynamic-views-grid, .dynamic-views-masonry)
-  .card:not(
-    :has(
-      .card-header,
-      .card-cover img,
-      .card-thumbnail img,
-      .card-text-preview,
-      .card-properties
-    )
-  ) {
-  height: auto;
-  min-height: 0;
-  padding: 0;
-  line-height: 0;
-}
-
 /* Sticky group headers (default: on) — collapsed headers should not stick.
    Headers are inside .dynamic-views-group-section wrappers so sticky
    scopes to each group's content height, not the entire feed. */
