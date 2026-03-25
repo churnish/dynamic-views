@@ -2984,18 +2984,6 @@ label.toggle-switch input[type=checkbox]:checked + span.toggle-slider {
   background-color: var(--dynamic-views-view-background);
 }
 
-/* Collapse empty cards (no visible content) - requires :has() (Electron 22+) */
-:is(.dynamic-views-grid, .dynamic-views-masonry) .card:not(:has(.card-header,
-.card-cover img,
-.card-thumbnail img,
-.card-text-preview,
-.card-properties)) {
-  height: auto;
-  min-height: 0;
-  padding: 0;
-  line-height: 0;
-}
-
 /* Sticky group headers (default: on) — collapsed headers should not stick.
    Headers are inside .dynamic-views-group-section wrappers so sticky
    scopes to each group's content height, not the entire feed. */
@@ -3296,31 +3284,31 @@ body.is-ios .dynamic-views .card {
   pointer-events: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-restoring [data-type=bases] .bases-header {
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-header {
   visibility: visible !important;
   pointer-events: auto !important;
   margin-bottom: 0px !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-restoring [data-type=bases] .bases-search-row {
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-search-row {
   visibility: visible !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-restoring [data-type=bases] .view-content {
+.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-content {
   margin-top: var(--view-top-spacing, 99px) !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-restoring [data-type=bases]::before {
+.is-phone.full-screen-active.full-screen-showing [data-type=bases]::before {
   content: none !important;
-}
-
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
-  transform: translateY(0) !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
 }
 
 /* Card spacing setting - Bases files and embeds */
@@ -3337,10 +3325,16 @@ body.is-ios .dynamic-views .card {
   margin: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-width: 0;
   overflow: hidden;
   container-type: inline-size;
+}
+
+/* height: 100% fills subgrid row → equal-height cards + margin-top: auto alignment.
+   Datacore grids have no constrained row height, so 100% would resolve to the
+   entire grid height and create a feedback loop. */
+:is(.workspace-leaf-content[data-type=bases], .bases-embed) .dynamic-views-grid .card {
+  height: 100%;
 }
 
 /* Override iOS content-visibility: auto (body.is-ios .dynamic-views .card) —
@@ -3371,15 +3365,6 @@ body.is-ios .dynamic-views-grid .card {
 body.is-ios .dynamic-views-grid .dynamic-views-grid-placeholder,
 body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
   contain: size layout style paint;
-}
-
-/* Grid-specific: prevent empty cards from stretching */
-.dynamic-views-grid .card:not(:has(.card-header,
-.card-cover img,
-.card-thumbnail img,
-.card-text-preview,
-.card-properties)) {
-  align-self: start;
 }
 
 /* Group section wrappers span full grid width and use subgrid */

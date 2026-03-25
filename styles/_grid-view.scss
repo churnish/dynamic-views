@@ -17,10 +17,18 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-width: 0;
   overflow: hidden;
   container-type: inline-size;
+}
+
+/* height: 100% fills subgrid row → equal-height cards + margin-top: auto alignment.
+   Datacore grids have no constrained row height, so 100% would resolve to the
+   entire grid height and create a feedback loop. */
+:is(.workspace-leaf-content[data-type='bases'], .bases-embed)
+  .dynamic-views-grid
+  .card {
+  height: 100%;
 }
 
 /* Override iOS content-visibility: auto (body.is-ios .dynamic-views .card) —
@@ -51,20 +59,6 @@ body.is-ios .dynamic-views-grid .card {
 body.is-ios .dynamic-views-grid .dynamic-views-grid-placeholder,
 body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
   contain: size layout style paint;
-}
-
-/* Grid-specific: prevent empty cards from stretching */
-.dynamic-views-grid
-  .card:not(
-    :has(
-      .card-header,
-      .card-cover img,
-      .card-thumbnail img,
-      .card-text-preview,
-      .card-properties
-    )
-  ) {
-  align-self: start;
 }
 
 /* Group section wrappers span full grid width and use subgrid */
