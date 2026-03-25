@@ -568,10 +568,10 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Calculate initial card count based on container dimensions */
   private calculateInitialCount(settings: BasesResolvedSettings): number {
-    // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
-    const containerWidth = Math.floor(
-      this.containerEl.getBoundingClientRect().width
-    );
+    // Use cached width from previous layout — avoids forced reflow on
+    // the old DOM before containerEl.empty() clears it.
+    // On first render lastLayoutWidth is 0 → hits the zero-width fallback below.
+    const containerWidth = this.lastLayoutWidth;
     const minColumns = settings.minimumColumns;
     const gap = getCardSpacing(this.containerEl);
     const cardSize = settings.cardSize;
@@ -1500,20 +1500,21 @@ export class DynamicViewsMasonryView extends BasesView {
         this.updateLayoutRef.current('initial-render');
       }
 
-      // Sync responsive classes after layout sets widths (ResizeObservers are async)
-      // Must run before gradient init which checks compact-mode state
+      // Responsive classes handled inside updateLayoutRef Phase 1.5
       if (this.masonryContainer) {
-        const cards = Array.from(
-          this.masonryContainer.querySelectorAll<HTMLElement>('.card')
-        );
-        // Re-run layout only if responsive classes changed (affects card heights)
-        if (syncResponsiveClasses(cards)) {
-          this.updateLayoutRef.current?.('compact-mode-sync');
-        }
-
-        initializeScrollGradients(this.masonryContainer);
-        initializeTitleTruncation(this.masonryContainer);
+        // initializeTextPreviewClamp must stay synchronous — writes
+        // -webkit-line-clamp / display:none in keep-newlines mode,
+        // which changes card heights. No-op when keep-newlines is OFF.
         initializeTextPreviewClamp(this.masonryContainer);
+
+        // Defer cosmetic reads to RAF — avoids forcing a reflow after
+        // Phase 4 position writes. One-frame delay is invisible.
+        const mc = this.masonryContainer;
+        this.win.requestAnimationFrame(() => {
+          if (!mc?.isConnected) return;
+          initializeScrollGradients(mc);
+          initializeTitleTruncation(mc);
+        });
 
         // Rebuild sticky heading observer for all non-collapsed group headings
         this.stickyHeadings?.disconnect();
@@ -1909,6 +1910,13 @@ export class DynamicViewsMasonryView extends BasesView {
         }
         this.hasExplicitScrollHeights = false;
 
+        // Phase 1.5: Sync responsive classes before height reads.
+        // syncResponsiveClasses reads offsetWidth (triggers reflow of Phase 1
+        // widths), then writes compact-mode classes. Phase 2 below absorbs
+        // any layout invalidation from class writes.
+        // Eliminates post-layout compact-mode-sync relayout.
+        syncResponsiveClasses(allCards);
+
         // Phase 2: Single forced reflow
         void allCards[0]?.offsetHeight;
 
@@ -2049,10 +2057,17 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Mount/unmount cards based on updated positions.
         // Fast path handles its own sync — skip here.
+        // Skip when !hasUserScrolled — syncVirtualScroll returns immediately
+        // (line 2742) and updateCachedGroupOffsets would force a post-Phase-4
+        // reflow (~200-445ms). Offsets are computed lazily: on first scroll
+        // via scheduleVirtualScrollSync, or by remeasureAndReposition when
+        // groupOffsetsDirty is set (Change 7).
         if (!fastPathHandledSync) {
           this.groupOffsetsDirty = true;
-          this.updateCachedGroupOffsets();
-          this.syncVirtualScroll();
+          if (this.hasUserScrolled) {
+            this.updateCachedGroupOffsets();
+            this.syncVirtualScroll();
+          }
         }
 
         // Catch post-measurement height drift (e.g. image load → aspect ratio
@@ -2254,6 +2269,15 @@ export class DynamicViewsMasonryView extends BasesView {
     const gap = this.lastLayoutGap;
     const isGrouped = this.lastLayoutIsGrouped;
     if (!settings || cardWidth <= 0) return false;
+
+    // Lazy offset refresh: when updateCachedGroupOffsets was skipped in the
+    // finally block (hasUserScrolled = false), compute offsets now before the
+    // anchor read at line ~2345. At double-RAF / 500ms timing, the browser
+    // has already painted — getBoundingClientRect reads are free (~0ms).
+    if (this.groupOffsetsDirty) {
+      this.updateCachedGroupOffsets();
+    }
+
     // Clear explicit scroll heights so cards reflow to natural height for
     // accurate measurement. Without this, offsetHeight returns the explicit
     // value which always matches item.height — drift would never be detected.
@@ -3888,10 +3912,17 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Trigger initial checks
-    this.checkAndLoadMore(totalEntries, settings);
     this.groupOffsetsDirty = true;
-    this.updateCachedGroupOffsets();
-    this.syncVirtualScroll();
+    if (this.hasUserScrolled) {
+      this.updateCachedGroupOffsets();
+      this.syncVirtualScroll();
+    }
+    // Defer initial fill check — scroll metrics read in RAF is reflow-free
+    // (browser has already painted layout from updateLayoutRef)
+    this.win.requestAnimationFrame(() => {
+      if (!this.containerEl?.isConnected) return;
+      this.checkAndLoadMore(totalEntries, settings);
+    });
   }
 
   /** Show end-of-content indicator when all items are displayed (standalone .base files only) */
