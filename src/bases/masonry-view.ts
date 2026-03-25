@@ -1167,9 +1167,17 @@ export class DynamicViewsMasonryView extends BasesView {
         this.scrollPreservation?.restoreAfterRender();
 
         // Viewport may be underfilled after CSS-only setting change or
-        // duplicate onDataUpdated killing the batch chain mid-append
+        // duplicate onDataUpdated killing the batch chain mid-append.
+        // Deferred to next frame: restoreAfterRender writes scrollTop above,
+        // and checkAndLoadMore reads scrollHeight/clientHeight — same-frame
+        // read after write forces a synchronous reflow.
         if (this.lastRenderedSettings) {
-          this.checkAndLoadMore(this.totalEntries, this.lastRenderedSettings);
+          const settingsForCheck = this.lastRenderedSettings;
+          const totalForCheck = this.totalEntries;
+          this.win.requestAnimationFrame(() => {
+            if (!this.containerEl?.isConnected || !settingsForCheck) return;
+            this.checkAndLoadMore(totalForCheck, settingsForCheck);
+          });
         }
         return;
       }
@@ -1682,6 +1690,7 @@ export class DynamicViewsMasonryView extends BasesView {
       const gap = getCardSpacing(this.containerEl);
       const isGrouped = this.containerEl.classList.contains('is-grouped');
       let cardWidth = 0;
+      let oldContainerHeightsForSync = new Map<string | undefined, number>();
       try {
         // Hide cards during initial render only
         if (!skipHiding) {
@@ -1751,6 +1760,15 @@ export class DynamicViewsMasonryView extends BasesView {
             (v) => !v.el && v.height > 0
           );
           if (hasPriorHeights) {
+            // Snapshot for synthetic offset computation (image-coalesced branch)
+            const oldContainerHeightsCoalesced = new Map<
+              string | undefined,
+              number
+            >();
+            for (const [key, result] of this.groupLayoutResults) {
+              oldContainerHeightsCoalesced.set(key, result.containerHeight);
+            }
+
             if (source === 'resize-observer') {
               // ── Proportional branch: single-pass, zero DOM reads ──
               // Inlines greedy placement + VirtualItem update + style writes
@@ -1884,8 +1902,10 @@ export class DynamicViewsMasonryView extends BasesView {
             // DOM measurement branch handles its own sync — set flag so `finally` skips it.
             // Must sync after correction: re-measured heights shift positions, potentially
             // moving items in/out of viewport range.
-            this.groupOffsetsDirty = true;
-            this.updateCachedGroupOffsets();
+            this.updateGroupOffsetsSynthetic(oldContainerHeightsCoalesced);
+            if (this.groupOffsetsDirty) {
+              this.updateCachedGroupOffsets();
+            }
             this.syncVirtualScroll();
             fastPathHandledSync = true;
             return;
@@ -1930,6 +1950,13 @@ export class DynamicViewsMasonryView extends BasesView {
         for (const item of this.virtualItems) {
           if (item.el) {
             item.scalableHeight = measureScalableHeight(item.el);
+          }
+        }
+
+        // Snapshot for synthetic offsets in finally block
+        if (this.hasUserScrolled) {
+          for (const [key, result] of this.groupLayoutResults) {
+            oldContainerHeightsForSync.set(key, result.containerHeight);
           }
         }
 
@@ -2065,7 +2092,15 @@ export class DynamicViewsMasonryView extends BasesView {
         if (!fastPathHandledSync) {
           this.groupOffsetsDirty = true;
           if (this.hasUserScrolled) {
-            this.updateCachedGroupOffsets();
+            // Synthetic offsets only valid when group structure is stable
+            // (resize, image-load). For initial-render / data refresh,
+            // groupLayoutResults was cleared — use DOM reads directly.
+            if (oldContainerHeightsForSync.size > 0) {
+              this.updateGroupOffsetsSynthetic(oldContainerHeightsForSync);
+            }
+            if (this.groupOffsetsDirty) {
+              this.updateCachedGroupOffsets();
+            }
             this.syncVirtualScroll();
           }
         }
@@ -2199,17 +2234,15 @@ export class DynamicViewsMasonryView extends BasesView {
 
     if (!this.cardResizeObserver) {
       this.cardResizeObserver = new this.win.ResizeObserver(() => {
-        // Skip during active resize, scroll remeasure, batch layout, pre-layout
-        // state, or before first scroll (avoids forced reflow from
-        // updateCachedGroupOffsets before virtual scroll is active)
+        // Skip during active resize, scroll remeasure, batch layout, or
+        // pre-layout state
         if (
           this.resizeCorrectionTimeout !== null ||
           this.isScrollRemeasurePending() ||
           this.postResizeScrollActive ||
           this.batchLayoutPending ||
           this.lastLayoutCardWidth === 0 ||
-          !this.lastRenderedSettings ||
-          !this.hasUserScrolled
+          !this.lastRenderedSettings
         ) {
           return;
         }
@@ -2377,10 +2410,12 @@ export class DynamicViewsMasonryView extends BasesView {
       gap,
     });
 
+    // ── Read phase: measure all groups (single reflow) ──
+    // measureScalableHeight reads child offsetHeight — must remain in read phase
+    const groupHeightsMap = new Map<string | undefined, number[]>();
     for (const groupKey of this.virtualItemsByGroup.keys()) {
       const groupItems = this.virtualItemsByGroup.get(groupKey)!;
       if (groupItems.length === 0) continue;
-
       const heights = groupItems.map((item) => {
         if (item.el) {
           const h = item.el.offsetHeight;
@@ -2389,6 +2424,18 @@ export class DynamicViewsMasonryView extends BasesView {
         }
         return estimateUnmountedHeight(item, cardWidth);
       });
+      groupHeightsMap.set(groupKey, heights);
+    }
+
+    // Snapshot for synthetic offset computation after writes
+    const oldContainerHeights = new Map<string | undefined, number>();
+    for (const [key, result] of this.groupLayoutResults) {
+      oldContainerHeights.set(key, result.containerHeight);
+    }
+
+    // ── Calculate + write phase: zero DOM reads ──
+    for (const [groupKey, heights] of groupHeightsMap) {
+      const groupItems = this.virtualItemsByGroup.get(groupKey)!;
 
       const existingResult = this.groupLayoutResults.get(groupKey);
 
@@ -2436,8 +2483,10 @@ export class DynamicViewsMasonryView extends BasesView {
       this.updateVirtualItemPositions(groupKey, result);
     }
     this.masonryContainer?.classList.remove('masonry-measuring');
-    this.groupOffsetsDirty = true;
-    this.updateCachedGroupOffsets();
+    this.updateGroupOffsetsSynthetic(oldContainerHeights);
+    if (this.groupOffsetsDirty) {
+      this.updateCachedGroupOffsets();
+    }
 
     // Compensate scroll: weighted median of per-column deltas minimizes
     // total visible displacement (vs single-anchor which fixes one column)
@@ -2696,6 +2745,38 @@ export class DynamicViewsMasonryView extends BasesView {
         containerRect.top - scrollRect.top + scrollTop
       );
     }
+  }
+
+  /** Compute group offsets from known height deltas — zero DOM reads.
+   *  Falls back to dirty flag if any group offset is unknown.
+   *  Collects updates in a temporary map to avoid partial mutation on bailout. */
+  private updateGroupOffsetsSynthetic(
+    oldContainerHeights: Map<string | undefined, number>
+  ): void {
+    if (this.cachedGroupOffsets.size === 0) {
+      this.groupOffsetsDirty = true;
+      return;
+    }
+    // Compute into temporary map — apply atomically only on success
+    const updatedOffsets = new Map<string | undefined, number>();
+    let cumulativeDelta = 0;
+    for (const groupKey of this.virtualItemsByGroup.keys()) {
+      const oldOffset = this.cachedGroupOffsets.get(groupKey);
+      if (oldOffset === undefined) {
+        // Unknown group — bail without mutating cachedGroupOffsets
+        this.groupOffsetsDirty = true;
+        return;
+      }
+      updatedOffsets.set(groupKey, oldOffset + cumulativeDelta);
+      const oldH = oldContainerHeights.get(groupKey) ?? 0;
+      const newH = this.groupLayoutResults.get(groupKey)?.containerHeight ?? 0;
+      cumulativeDelta += newH - oldH;
+    }
+    // Atomic commit — all or nothing
+    for (const [key, offset] of updatedOffsets) {
+      this.cachedGroupOffsets.set(key, offset);
+    }
+    this.groupOffsetsDirty = false;
   }
 
   private cacheCardVerticalPadding(el: HTMLElement): void {
