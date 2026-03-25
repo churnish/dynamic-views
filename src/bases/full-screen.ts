@@ -453,14 +453,14 @@ export class FullScreenController {
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
-    const isCard = target.closest('.dynamic-views-card') != null;
+    const isCard = target.closest('.card') != null;
     const isImage =
       target.closest('.card-cover') != null ||
       target.closest('.card-thumbnail') != null;
     const isOpenOnTitle = this.body.classList.contains(
       'dynamic-views-open-on-title'
     );
-    const isTitleLink = target.closest('.dynamic-views-card-title a') != null;
+    const isTitleLink = target.closest('.card-title a') != null;
 
     // Don't reveal bars when tapping a card image — let image viewer handle it.
     // Exception: reveal if image viewer disabled via Style Settings AND
@@ -471,6 +471,9 @@ export class FullScreenController {
       );
       if (!viewerDisabled || !isOpenOnTitle) return;
     }
+
+    // Poster cards with images: tap toggles poster-revealed — never reveal bars
+    if (target.closest('.image-format-poster.has-poster')) return;
 
     // Show bars if: tapped outside a card, OR card is in open-on-title mode
     // and tap was not on the title link itself
