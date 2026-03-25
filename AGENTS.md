@@ -3,6 +3,7 @@
 - **Error surfacing**: `new Notice()` ONLY for user-initiated action failures and confirmations. Internal and background failures MUST use `console.error`/`console.warn` — NEVER surface notices for operations the user did NOT trigger.
 - **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
 - **`--size-*` over `px`**: Use Obsidian's `--size-*` CSS variables (e.g., `var(--size-2-2)`) instead of hardcoded pixel values whenever a matching token exists.
+- **No `:has()` in card selectors**: NEVER use `:has()` on elements inside `.dynamic-views` that exist in quantity (cards, properties, covers, previews) or re-evaluate on interaction. `:has()` causes upward style invalidation — with N cards × M properties, a single class toggle triggers O(N×M) recalculation. Use render-time CSS classes instead (e.g., `.has-label`, `.has-poster`).
 
 ## Terminology
 
