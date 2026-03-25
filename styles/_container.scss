@@ -49,13 +49,6 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
   display: none;
 }
 
-/* Enable container queries for responsive button visibility */
-.markdown-reading-view,
-.markdown-source-view {
-  container-type: inline-size;
-  container-name: dynamic-views-pane;
-}
-
 /* Width system: JS applies inline styles per-query for wide/max modes */
 
 /* Allow code block to overflow in Live Preview (for transform-based centering) */

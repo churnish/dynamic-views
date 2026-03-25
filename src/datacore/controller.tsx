@@ -60,6 +60,7 @@ import {
   getOmitFirstLineMode,
 } from '../utils/style-settings';
 import { getOwnerWindow } from '../utils/owner-window';
+import { observeToolbarCompact } from './toolbar-compact';
 
 import {
   calculateMasonryLayout,
@@ -565,6 +566,12 @@ export function View({
       delete explorerRef.current.dataset.ignoreSwipe;
     }
   }, [app.isMobile, settings.preventSidebarSwipe]);
+
+  // Toolbar compact mode — toggles narrow class based on --file-line-width
+  dc.useEffect(() => {
+    if (!explorerRef.current) return;
+    return observeToolbarCompact(explorerRef.current);
+  }, []);
 
   // Setup hover-to-start keyboard navigation
   dc.useEffect(() => {

@@ -32,6 +32,7 @@ dynamic-views/
 │   │   ├── query-sync.ts             # Query processing + code block sync
 │   │   ├── settings.tsx              # View settings panel component
 │   │   ├── toolbar.tsx               # Toolbar with dropdowns + controls
+│   │   ├── toolbar-compact.ts       # Toolbar compact observer (--file-line-width threshold)
 │   │   └── types.d.ts                # Datacore API + Preact type defs
 │   │
 │   ├── shared/                       # Cross-backend shared logic

@@ -2062,13 +2062,6 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
   display: none;
 }
 
-/* Enable container queries for responsive button visibility */
-.markdown-reading-view,
-.markdown-source-view {
-  container-type: inline-size;
-  container-name: dynamic-views-pane;
-}
-
 /* Width system: JS applies inline styles per-query for wide/max modes */
 /* Allow code block to overflow in Live Preview (for transform-based centering) */
 .markdown-source-view:has(.block-language-datacorejsx) :is(.cm-contentContainer, .cm-content) {
@@ -5253,7 +5246,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom) .dynamic-views .card.image-f
 }
 
 /* Fade: bottom-align content where tint provides contrast, with light text (hardcoded dark fade) */
-.dynamic-views.poster-mode-fade .card.image-format-poster:has(.card-poster) {
+.dynamic-views.poster-mode-fade .card.image-format-poster.has-poster {
   justify-content: flex-end;
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
@@ -5263,7 +5256,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom) .dynamic-views .card.image-f
   --dynamic-views-text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }
 
-.dynamic-views.poster-mode-fade .card.image-format-poster:has(.card-poster) .card-content {
+.dynamic-views.poster-mode-fade .card.image-format-poster.has-poster .card-content {
   flex: 0 1 auto;
   max-height: 70%;
 }
@@ -5328,7 +5321,7 @@ body:is(.dynamic-views-poster-theme-light,
    ============================================ */
 /* Poster: content hidden by default (only if card has image) */
 /* Poster: show content on click (tap toggle) */
-.dynamic-views .card.image-format-poster:has(.card-poster) .card-content {
+.dynamic-views .card.image-format-poster.has-poster .card-content {
   opacity: 0;
   pointer-events: none;
   transform: translateY(0.75rem);
@@ -5340,7 +5333,7 @@ body:is(.dynamic-views-poster-theme-light,
 .dynamic-views.poster-mode-fade .card.image-format-poster .card-poster::after {
   opacity: 0;
 }
-.dynamic-views .card.image-format-poster.poster-revealed:has(.card-poster) .card-content {
+.dynamic-views .card.image-format-poster.poster-revealed.has-poster .card-content {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -5354,7 +5347,7 @@ body:is(.dynamic-views-poster-theme-light,
 
 /* Poster: reveal content on hover intent (desktop only, hover mode) */
 @media (hover: hover) {
-  body:not(.dynamic-views-poster-reveal-press) .dynamic-views .card.image-format-poster.poster-hover-active:has(.card-poster) .card-content {
+  body:not(.dynamic-views-poster-reveal-press) .dynamic-views .card.image-format-poster.poster-hover-active.has-poster .card-content {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
@@ -5372,40 +5365,40 @@ body:is(.dynamic-views-poster-theme-light,
   height: auto;
   aspect-ratio: 1/var(--dynamic-views-image-aspect-ratio, 1);
 }
-.dynamic-views:not(:has(.dynamic-views-grid)) .card.image-format-poster:has(.card-poster) {
+.dynamic-views .dynamic-views-masonry .card.image-format-poster.has-poster {
   aspect-ratio: 1/var(--dynamic-views-image-aspect-ratio, 1);
 }
 .dynamic-views {
   /* Masonry contain: shrink to actual aspect ratio (collapse letterbox bars) */
 }
-.dynamic-views.image-fit-contain:not(:has(.dynamic-views-grid)) .card.image-format-poster:has(.card-poster) {
+.dynamic-views.image-fit-contain .dynamic-views-masonry .card.image-format-poster.has-poster {
   aspect-ratio: 1/min(var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1)), var(--dynamic-views-image-aspect-ratio, 1));
 }
 
 /* Masonry contain + fixed poster height: force slider value (bars visible) */
-body.dynamic-views-fixed-poster-height [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-poster:has(.card-poster) {
+body.dynamic-views-fixed-poster-height [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-poster.has-poster {
   aspect-ratio: 1/var(--dynamic-views-image-aspect-ratio, 1);
 }
 
 /* Card mode: poster cards with images have pointer cursor */
-body.dynamic-views-open-on-card .dynamic-views .card.image-format-poster:has(.card-poster) {
+body.dynamic-views-open-on-card .dynamic-views .card.image-format-poster.has-poster {
   cursor: pointer;
 }
 
 /* Press mode: pointer on poster cards regardless of open action (press toggles reveal) */
-body.dynamic-views-poster-reveal-press .dynamic-views .card.image-format-poster:has(.card-poster) {
+body.dynamic-views-poster-reveal-press .dynamic-views .card.image-format-poster.has-poster {
   cursor: pointer;
 }
 
 /* Mobile: always pointer cursor for reveal toggle, even in title mode */
 @media (hover: none) {
-  body.dynamic-views-open-on-title .dynamic-views .card.image-format-poster:has(.card-poster) {
+  body.dynamic-views-open-on-title .dynamic-views .card.image-format-poster.has-poster {
     cursor: pointer;
   }
 }
 /* Overlay: text color overrides (light tint → dark text) */
-body.dynamic-views-poster-theme-light .dynamic-views.poster-mode-overlay .card.image-format-poster:has(.card-poster),
-body.dynamic-views-poster-theme-match.theme-light .dynamic-views.poster-mode-overlay .card.image-format-poster:has(.card-poster) {
+body.dynamic-views-poster-theme-light .dynamic-views.poster-mode-overlay .card.image-format-poster.has-poster,
+body.dynamic-views-poster-theme-match.theme-light .dynamic-views.poster-mode-overlay .card.image-format-poster.has-poster {
   --text-normal: #222222;
   --text-muted: #333333;
   --text-faint: color-mix(in srgb, #333333 60%, transparent);
@@ -5430,8 +5423,8 @@ body.dynamic-views-poster-bg-custom .dynamic-views .card.image-format-poster .ca
 
 /* Overlay: text color overrides (dark tint → light text) */
 body:is(.dynamic-views-poster-theme-dark,
-:not([class*=dynamic-views-poster-theme-])) .dynamic-views.poster-mode-overlay .card.image-format-poster:has(.card-poster),
-body.dynamic-views-poster-theme-match.theme-dark .dynamic-views.poster-mode-overlay .card.image-format-poster:has(.card-poster) {
+:not([class*=dynamic-views-poster-theme-])) .dynamic-views.poster-mode-overlay .card.image-format-poster.has-poster,
+body.dynamic-views-poster-theme-match.theme-dark .dynamic-views.poster-mode-overlay .card.image-format-poster.has-poster {
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
@@ -5792,13 +5785,13 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
 .dynamic-views {
   /* Gap between inline property label and content */
 }
-.dynamic-views .property:has(.property-label-inline) {
+.dynamic-views .property.has-label-inline {
   gap: var(--size-2-2);
 }
 .dynamic-views {
   /* Vertical layout when property labels are on top */
 }
-.dynamic-views .property:has(.property-label) {
+.dynamic-views .property.has-label {
   flex-direction: column;
   align-items: stretch;
   overflow-x: visible; /* Override overflow - labels should not scroll */
@@ -5806,7 +5799,7 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
 .dynamic-views {
   /* Property labels should never scroll */
 }
-.dynamic-views .property:has(.property-label) .property-label {
+.dynamic-views .property.has-label .property-label {
   flex-shrink: 0;
   overflow: visible;
 }
@@ -5826,15 +5819,15 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
 .dynamic-views {
   /* For inline labels: wrapper takes remaining space after label */
 }
-.dynamic-views .property:has(.property-label-inline) .property-content-wrapper {
+.dynamic-views .property.has-label-inline .property-content-wrapper {
   flex: 1 1 0;
   min-width: 0;
 }
 .dynamic-views {
   /* For property labels above or no property labels: wrapper takes full width */
 }
-.dynamic-views .property:has(.property-label) .property-content-wrapper,
-.dynamic-views .property:not(:has(.property-label)):not(:has(.property-label-inline)) .property-content-wrapper {
+.dynamic-views .property.has-label .property-content-wrapper,
+.dynamic-views .property:not(.has-label):not(.has-label-inline) .property-content-wrapper {
   width: 100%;
 }
 .dynamic-views {
@@ -5885,7 +5878,7 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
      Safety net for Bases imperative-DOM path where handleEmptyField applies
      property-collapsed after async rendering. Datacore pre-filters instead. */
 }
-.dynamic-views .property-pair:has(> .property-collapsed) > .property:not(.property-collapsed) {
+.dynamic-views .property-pair.pair-has-collapsed > .property:not(.property-collapsed) {
   max-width: 100%;
   flex: 1 1 auto;
 }
@@ -5903,10 +5896,10 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
 }
 .dynamic-views {
   /* Column mode: orphan (unpaired) property stays at half-width to preserve grid structure.
-     :has(.property-pair) ensures this only applies when pairing is active — without it,
+     .has-pairs ensures this only applies when pairing is active — without it,
      all properties get constrained to 50% when pairing is off (no .property-pair wrappers). */
 }
-.dynamic-views.dynamic-views-paired-property-column .card-properties:has(.property-pair) > .property {
+.dynamic-views.dynamic-views-paired-property-column .card-properties.has-pairs > .property {
   max-width: 50%;
 }
 .dynamic-views {
@@ -5967,13 +5960,13 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
 .dynamic-views {
   /* Property text color application - with labels */
 }
-.dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
+.dynamic-views .property:is(.has-label, .has-label-inline) {
   color: var(--dynamic-views-property-with-label-color-value, var(--dynamic-views-text-muted));
 }
 .dynamic-views {
   /* Property text color application - without labels */
 }
-.dynamic-views .property:not(:has(:is(.property-label, .property-label-inline))) {
+.dynamic-views .property:not(.has-label, .has-label-inline) {
   color: var(--dynamic-views-property-no-label-color-value, var(--dynamic-views-text-faint));
 }
 .dynamic-views {
@@ -6029,7 +6022,7 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
   }
 }
 /* Right alignment for full-row properties with inline labels - value only */
-body.dynamic-views-full-row-align-right .dynamic-views .card-properties > .property:has(.property-label-inline) .property-content-wrapper {
+body.dynamic-views-full-row-align-right .dynamic-views .card-properties > .property.has-label-inline .property-content-wrapper {
   flex: 0 1 auto;
   margin-left: auto;
 }
@@ -6074,7 +6067,7 @@ body.dynamic-views-property-label-small-caps .dynamic-views .property-label-inli
 .dynamic-views {
   /* Timestamp wrapper - flex container for icon positioning */
 }
-.dynamic-views .property-content > span:has(.timestamp-icon) {
+.dynamic-views .property-content > span.has-timestamp-icon {
   display: inline-flex;
   align-items: center;
   gap: 0;
@@ -6087,7 +6080,7 @@ body.dynamic-views-property-label-small-caps .dynamic-views .property-label-inli
   flex-shrink: 0;
   align-self: center;
   opacity: 0.7;
-  width: 1lh;
+  width: 1em;
   height: 1lh;
   margin-right: var(--size-2-2);
 }
@@ -6362,15 +6355,15 @@ body.dynamic-views-property-label-color-custom .dynamic-views :is(.property-labe
   color: var(--dynamic-views-property-label-color-custom, var(--dynamic-views-text-faint));
 }
 
-body.dynamic-views-property-color-with-labels-faint .dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
+body.dynamic-views-property-color-with-labels-faint .dynamic-views .property:is(.has-label, .has-label-inline) {
   color: var(--dynamic-views-text-faint);
 }
 
-body.dynamic-views-property-color-with-labels-muted .dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
+body.dynamic-views-property-color-with-labels-muted .dynamic-views .property:is(.has-label, .has-label-inline) {
   color: var(--dynamic-views-text-muted);
 }
 
-body.dynamic-views-property-color-with-labels-normal .dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
+body.dynamic-views-property-color-with-labels-normal .dynamic-views .property:is(.has-label, .has-label-inline) {
   color: var(--dynamic-views-text-normal);
 }
 
@@ -6417,19 +6410,19 @@ body.dynamic-views-property-color-with-labels-custom {
   );
 }
 
-body.dynamic-views-property-color-with-labels-custom .dynamic-views .property:has(:is(.property-label, .property-label-inline)) {
+body.dynamic-views-property-color-with-labels-custom .dynamic-views .property:is(.has-label, .has-label-inline) {
   color: var(--dynamic-views-property-color-with-labels-custom, var(--dynamic-views-text-faint));
 }
 
-body.dynamic-views-property-color-without-labels-faint .dynamic-views .property:not(:has(:is(.property-label, .property-label-inline))) {
+body.dynamic-views-property-color-without-labels-faint .dynamic-views .property:not(.has-label, .has-label-inline) {
   color: var(--dynamic-views-text-faint);
 }
 
-body.dynamic-views-property-color-without-labels-muted .dynamic-views .property:not(:has(:is(.property-label, .property-label-inline))) {
+body.dynamic-views-property-color-without-labels-muted .dynamic-views .property:not(.has-label, .has-label-inline) {
   color: var(--dynamic-views-text-muted);
 }
 
-body.dynamic-views-property-color-without-labels-normal .dynamic-views .property:not(:has(:is(.property-label, .property-label-inline))) {
+body.dynamic-views-property-color-without-labels-normal .dynamic-views .property:not(.has-label, .has-label-inline) {
   color: var(--dynamic-views-text-normal);
 }
 
@@ -6476,7 +6469,7 @@ body.dynamic-views-property-color-without-labels-custom {
   );
 }
 
-body.dynamic-views-property-color-without-labels-custom .dynamic-views .property:not(:has(:is(.property-label, .property-label-inline))) {
+body.dynamic-views-property-color-without-labels-custom .dynamic-views .property:not(.has-label, .has-label-inline) {
   color: var(--dynamic-views-property-color-without-labels-custom, var(--dynamic-views-text-faint));
 }
 
@@ -6940,13 +6933,13 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
      mouseenter alone — the gap causes a flash of normal color.
      All presets resolve to --dynamic-views-title-hover-color-value (see _variables.scss). */
   body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press,
-  .dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card.image-format-poster:has(.card-poster) .card-title {
+  .dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card.image-format-poster.has-poster .card-title {
     /* Sync color transition with content opacity fade (300ms) so the
        hover→normal color shift is masked by the fade-out on mouse-leave */
     transition: color var(--dynamic-views-anim-duration-moderate);
   }
   body.dynamic-views-open-on-card:not(.dynamic-views-poster-reveal-press,
-  .dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card.image-format-poster:has(.card-poster):hover .card-title {
+  .dynamic-views-title-hover-color-no-change)[class*=dynamic-views-title-hover-color-] .dynamic-views .card.image-format-poster.has-poster:hover .card-title {
     color: var(--dynamic-views-title-hover-color-value);
   }
   /* Subtitle hover colors (when clickable) — exclude real links which keep default hover */
@@ -6981,18 +6974,18 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
     color: color-mix(in hsl, var(--dynamic-views-subtitle-color-value), white 15%);
   }
   /* Property hover colors - with labels */
-  body.dynamic-views-property-color-with-labels-faint .dynamic-views .card.hover-intent-active .property:has(:is(.property-label, .property-label-inline)) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-with-labels-faint .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-text-muted);
   }
-  body.dynamic-views-property-color-with-labels-muted .dynamic-views .card.hover-intent-active .property:has(:is(.property-label, .property-label-inline)) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-with-labels-muted .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-text-normal);
   }
   /* Normal - no hover color change */
-  body.dynamic-views-property-color-with-labels-accent .dynamic-views .card.hover-intent-active .property:has(:is(.property-label, .property-label-inline)) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-with-labels-accent .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-text-accent-hover);
@@ -7005,30 +6998,30 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   .dynamic-views-property-color-with-labels-cyan,
   .dynamic-views-property-color-with-labels-blue,
   .dynamic-views-property-color-with-labels-purple,
-  .dynamic-views-property-color-with-labels-pink) .dynamic-views .card.hover-intent-active .property:has(:is(.property-label, .property-label-inline)) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  .dynamic-views-property-color-with-labels-pink) .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: color-mix(in hsl, var(--dynamic-views-property-with-label-color-value), white 15%);
   }
   /* Custom uses pre-computed hover variable */
-  body.dynamic-views-property-color-with-labels-custom .dynamic-views .card.hover-intent-active .property:has(:is(.property-label, .property-label-inline)) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-with-labels-custom .dynamic-views .card.hover-intent-active .property:is(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-property-color-with-labels-custom-hover, var(--dynamic-views-text-muted));
   }
   /* Property hover colors - without labels */
-  body.dynamic-views-property-color-without-labels-faint .dynamic-views .card.hover-intent-active .property:not(:has(:is(.property-label, .property-label-inline))) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-without-labels-faint .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-text-muted);
   }
-  body.dynamic-views-property-color-without-labels-muted .dynamic-views .card.hover-intent-active .property:not(:has(:is(.property-label, .property-label-inline))) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-without-labels-muted .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-text-normal);
   }
   /* Normal - no hover color change */
-  body.dynamic-views-property-color-without-labels-accent .dynamic-views .card.hover-intent-active .property:not(:has(:is(.property-label, .property-label-inline))) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-without-labels-accent .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-text-accent-hover);
@@ -7041,13 +7034,13 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   .dynamic-views-property-color-without-labels-cyan,
   .dynamic-views-property-color-without-labels-blue,
   .dynamic-views-property-color-without-labels-purple,
-  .dynamic-views-property-color-without-labels-pink) .dynamic-views .card.hover-intent-active .property:not(:has(:is(.property-label, .property-label-inline))) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  .dynamic-views-property-color-without-labels-pink) .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: color-mix(in hsl, var(--dynamic-views-property-no-label-color-value), white 15%);
   }
   /* Custom uses pre-computed hover variable */
-  body.dynamic-views-property-color-without-labels-custom .dynamic-views .card.hover-intent-active .property:not(:has(:is(.property-label, .property-label-inline))) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
+  body.dynamic-views-property-color-without-labels-custom .dynamic-views .card.hover-intent-active .property:not(.has-label, .has-label-inline) .property-content :is(a:not(.tag):not(.internal-link):not(.external-link),
   .folder-segment,
   .filename-segment):hover {
     color: var(--dynamic-views-property-color-without-labels-custom-hover, var(--dynamic-views-text-muted));
@@ -7079,7 +7072,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   /* Lift masonry container above sticky group headers when a card is hovered —
      contain: layout on .masonry-container traps card z-index */
   body:is(.dynamic-views-card-hover-enlarge,
-  :not(.dynamic-views-card-hover-disable-elevate)) .workspace-leaf-content[data-type=bases] .dynamic-views-masonry .masonry-container:has(.card.hover-intent-active:hover) {
+  :not(.dynamic-views-card-hover-disable-elevate)) .workspace-leaf-content[data-type=bases] .dynamic-views-masonry .masonry-container.has-hover-card {
     z-index: 11;
   }
   /* Gate pointer cursor behind hover intent on desktop */
@@ -7101,10 +7094,10 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
     cursor: default;
   }
   /* Poster cards: higher specificity needed (default rule uses body class selector) */
-  body.dynamic-views-open-on-card .dynamic-views .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+  body.dynamic-views-open-on-card .dynamic-views .card:not(.hover-intent-active).image-format-poster.has-poster {
     cursor: default;
   }
-  body.dynamic-views-poster-reveal-press .dynamic-views .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+  body.dynamic-views-poster-reveal-press .dynamic-views .card:not(.hover-intent-active).image-format-poster.has-poster {
     cursor: default;
   }
   /* Text cursor: higher specificity needed (default rule uses body.dynamic-views-open-on-title) */
@@ -7491,115 +7484,126 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
 }
 
 /* Hide grid during 0-width tab transitions (prevents single-column flash) */
-@container dynamic-views-pane (max-width: 50px) {
+/* Datacore: JS class from toolbar-compact.ts observer */
+.dynamic-views-hidden .dynamic-views-grid,
+.dynamic-views-hidden .dynamic-views-masonry {
+  visibility: hidden;
+}
+
+/* Bases: container query on .bases-view (has container-type: inline-size) */
+@container (max-width: 50px) {
   .dynamic-views-grid,
   .dynamic-views-masonry {
     visibility: hidden;
   }
 }
-@container dynamic-views-pane (max-width: 700px) and (min-width: 51px) {
-  .dynamic-views .controls-wrapper {
-    padding: 8px 0;
-  }
-  .dynamic-views .width-toggle-btn {
-    display: none;
-  }
-  .dynamic-views {
-    /* Re-anchor query dropdown to controls-wrapper (button is too narrow) */
-  }
-  .dynamic-views .query-dropdown-wrapper {
-    position: static;
-  }
-  .dynamic-views .query-dropdown-menu {
-    left: 0;
-    right: 0;
-    min-width: 0;
-  }
-  .dynamic-views.wide, .dynamic-views.max {
-    width: 100%;
-    max-width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-  }
-  .dynamic-views .results-count-wrapper-compact {
-    display: flex;
-  }
-  .dynamic-views .create-note-button-compact {
-    display: flex;
-  }
-  .dynamic-views .search-controls {
-    display: none !important;
-  }
-  .dynamic-views .results-count-wrapper {
-    display: none !important;
-  }
-  .dynamic-views .create-note-button {
-    display: none !important;
-  }
-  .dynamic-views .settings-panel {
-    max-width: 100%;
-  }
-  .dynamic-views {
-    /* Stack properties on narrow cards */
-  }
-  .dynamic-views .card-properties {
-    justify-content: flex-start !important;
-    flex-wrap: nowrap;
-  }
-  .dynamic-views .tags-wrapper,
-  .dynamic-views .path-wrapper {
-    justify-content: flex-start !important;
-    flex-wrap: wrap;
-  }
-  .dynamic-views {
-    /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
-  }
-  .dynamic-views .card.thumbnail-stack .card-previews {
-    flex-direction: column;
-    flex-grow: 0;
-  }
-  .dynamic-views {
-    /* Thumbnail order for stacked layout - left goes above text, right stays below.
-       Only applies inside card-content; DOM manipulation handles position when moved outside. */
-  }
-  .dynamic-views .card.thumbnail-stack.card-thumbnail-left .card-previews :is(.card-thumbnail, .card-thumbnail-placeholder) {
-    order: -1;
-  }
-  .dynamic-views {
-    /* Settings panel responsive */
-  }
-  .dynamic-views .setting-item-text {
-    flex-direction: column !important;
-    gap: var(--size-2-2);
-  }
-  .dynamic-views .setting-item-text .setting-item-info {
-    min-width: 0;
-  }
-  .dynamic-views .setting-text-input,
-  .dynamic-views .dropdown {
-    width: 100%;
-  }
-  .search-controls-compact {
-    display: block;
-    width: 100%;
-    padding: 0;
-    margin-top: 8px;
-  }
-  .search-controls-compact .search-input-container {
-    width: 100%;
-    max-width: 100%;
-    padding: 0;
-    margin-bottom: 8px;
-  }
-  .search-controls-compact .desktop-search {
-    width: 100%;
-  }
-  .compact-bottom-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-  }
+/* Datacore compact: JS class toggled when view width < --file-line-width */
+.dynamic-views-narrow .controls-wrapper {
+  padding: 8px 0;
+}
+.dynamic-views-narrow .width-toggle-btn {
+  display: none;
+}
+.dynamic-views-narrow {
+  /* Re-anchor query dropdown to controls-wrapper (button is too narrow) */
+}
+.dynamic-views-narrow .query-dropdown-wrapper {
+  position: static;
+}
+.dynamic-views-narrow .query-dropdown-menu {
+  left: 0;
+  right: 0;
+  min-width: 0;
+}
+.dynamic-views-narrow .results-count-wrapper-compact {
+  display: flex;
+}
+.dynamic-views-narrow .create-note-button-compact {
+  display: flex;
+}
+.dynamic-views-narrow .search-controls {
+  display: none !important;
+}
+.dynamic-views-narrow .results-count-wrapper {
+  display: none !important;
+}
+.dynamic-views-narrow .create-note-button {
+  display: none !important;
+}
+.dynamic-views-narrow .settings-panel {
+  max-width: 100%;
+}
+.dynamic-views-narrow {
+  /* Stack properties on narrow cards */
+}
+.dynamic-views-narrow .card-properties {
+  justify-content: flex-start !important;
+  flex-wrap: nowrap;
+}
+.dynamic-views-narrow .tags-wrapper,
+.dynamic-views-narrow .path-wrapper {
+  justify-content: flex-start !important;
+  flex-wrap: wrap;
+}
+.dynamic-views-narrow {
+  /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
+}
+.dynamic-views-narrow .card.thumbnail-stack .card-previews {
+  flex-direction: column;
+  flex-grow: 0;
+}
+.dynamic-views-narrow {
+  /* Thumbnail order for stacked layout - left goes above text, right stays below.
+     Only applies inside card-content; DOM manipulation handles position when moved outside. */
+}
+.dynamic-views-narrow .card.thumbnail-stack.card-thumbnail-left .card-previews :is(.card-thumbnail, .card-thumbnail-placeholder) {
+  order: -1;
+}
+.dynamic-views-narrow {
+  /* Settings panel responsive */
+}
+.dynamic-views-narrow .setting-item-text {
+  flex-direction: column !important;
+  gap: var(--size-2-2);
+}
+.dynamic-views-narrow .setting-item-text .setting-item-info {
+  min-width: 0;
+}
+.dynamic-views-narrow .setting-text-input,
+.dynamic-views-narrow .dropdown {
+  width: 100%;
+}
+
+.dynamic-views-narrow .search-controls-compact {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin-top: 8px;
+}
+.dynamic-views-narrow .search-controls-compact .search-input-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin-bottom: 8px;
+}
+.dynamic-views-narrow .search-controls-compact .desktop-search {
+  width: 100%;
+}
+
+.dynamic-views-narrow .compact-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Exception: preserve nowrap in subtitle scroll mode */
+body.dynamic-views-subtitle-overflow-scroll .dynamic-views-narrow .card-subtitle .path-wrapper {
+  flex-wrap: nowrap;
+}
+
+/* Bases compact: container query on .bases-view (has container-type: inline-size) */
+@container (max-width: 699px) and (min-width: 51px) {
   .bases-view .tags-wrapper,
   .bases-view .path-wrapper {
     justify-content: flex-start !important;
@@ -7613,7 +7617,6 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
     order: -1;
   }
   /* Exception: preserve nowrap in subtitle scroll mode */
-  body.dynamic-views-subtitle-overflow-scroll .dynamic-views .card-subtitle .path-wrapper,
   body.dynamic-views-subtitle-overflow-scroll .bases-view .card-subtitle .path-wrapper {
     flex-wrap: nowrap;
   }

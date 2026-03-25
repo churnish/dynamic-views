@@ -17,133 +17,145 @@
 }
 
 /* Hide grid during 0-width tab transitions (prevents single-column flash) */
-@container dynamic-views-pane (max-width: 50px) {
+
+/* Datacore: JS class from toolbar-compact.ts observer */
+.dynamic-views-hidden {
   .dynamic-views-grid,
   .dynamic-views-masonry {
     visibility: hidden;
   }
 }
 
-@container dynamic-views-pane (max-width: 700px) and (min-width: 51px) {
-  .dynamic-views {
-    .controls-wrapper {
-      padding: 8px 0;
-    }
+/* Bases: container query on .bases-view (has container-type: inline-size) */
+@container (max-width: 50px) {
+  .dynamic-views-grid,
+  .dynamic-views-masonry {
+    visibility: hidden;
+  }
+}
 
-    .width-toggle-btn {
-      display: none;
-    }
+/* Datacore compact: JS class toggled when view width < --file-line-width */
+.dynamic-views-narrow {
+  .controls-wrapper {
+    padding: 8px 0;
+  }
 
-    /* Re-anchor query dropdown to controls-wrapper (button is too narrow) */
-    .query-dropdown-wrapper {
-      position: static;
-    }
+  .width-toggle-btn {
+    display: none;
+  }
 
-    .query-dropdown-menu {
-      left: 0;
-      right: 0;
+  /* Re-anchor query dropdown to controls-wrapper (button is too narrow) */
+  .query-dropdown-wrapper {
+    position: static;
+  }
+
+  .query-dropdown-menu {
+    left: 0;
+    right: 0;
+    min-width: 0;
+  }
+
+  .results-count-wrapper-compact {
+    display: flex;
+  }
+
+  .create-note-button-compact {
+    display: flex;
+  }
+
+  .search-controls {
+    display: none !important;
+  }
+
+  .results-count-wrapper {
+    display: none !important;
+  }
+
+  .create-note-button {
+    display: none !important;
+  }
+
+  .settings-panel {
+    max-width: 100%;
+  }
+
+  /* Stack properties on narrow cards */
+  .card-properties {
+    justify-content: flex-start !important;
+    flex-wrap: nowrap;
+  }
+
+  .tags-wrapper,
+  .path-wrapper {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
+  .card.thumbnail-stack .card-previews {
+    flex-direction: column;
+    flex-grow: 0;
+  }
+
+  /* Thumbnail order for stacked layout - left goes above text, right stays below.
+     Only applies inside card-content; DOM manipulation handles position when moved outside. */
+  .card.thumbnail-stack.card-thumbnail-left
+    .card-previews
+    :is(.card-thumbnail, .card-thumbnail-placeholder) {
+    order: -1;
+  }
+
+  /* Settings panel responsive */
+  .setting-item-text {
+    flex-direction: column !important;
+    gap: var(--size-2-2);
+
+    .setting-item-info {
       min-width: 0;
     }
-
-    &.wide,
-    &.max {
-      width: 100%;
-      max-width: 100%;
-      margin-left: 0;
-      margin-right: 0;
-    }
-
-    .results-count-wrapper-compact {
-      display: flex;
-    }
-
-    .create-note-button-compact {
-      display: flex;
-    }
-
-    .search-controls {
-      display: none !important;
-    }
-
-    .results-count-wrapper {
-      display: none !important;
-    }
-
-    .create-note-button {
-      display: none !important;
-    }
-
-    .settings-panel {
-      max-width: 100%;
-    }
-
-    /* Stack properties on narrow cards */
-    .card-properties {
-      justify-content: flex-start !important;
-      flex-wrap: nowrap;
-    }
-
-    .tags-wrapper,
-    .path-wrapper {
-      justify-content: flex-start !important;
-      flex-wrap: wrap;
-    }
-
-    /* Compact breakpoint: move thumbnails below text previews (only for stacked thumbnails) */
-    .card.thumbnail-stack .card-previews {
-      flex-direction: column;
-      flex-grow: 0;
-    }
-
-    /* Thumbnail order for stacked layout - left goes above text, right stays below.
-       Only applies inside card-content; DOM manipulation handles position when moved outside. */
-    .card.thumbnail-stack.card-thumbnail-left
-      .card-previews
-      :is(.card-thumbnail, .card-thumbnail-placeholder) {
-      order: -1;
-    }
-
-    /* Settings panel responsive */
-    .setting-item-text {
-      flex-direction: column !important;
-      gap: var(--size-2-2);
-
-      .setting-item-info {
-        min-width: 0;
-      }
-    }
-
-    .setting-text-input,
-    .dropdown {
-      width: 100%;
-    }
   }
 
-  .search-controls-compact {
-    display: block;
+  .setting-text-input,
+  .dropdown {
     width: 100%;
+  }
+}
+
+.dynamic-views-narrow .search-controls-compact {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin-top: 8px;
+
+  .search-input-container {
+    width: 100%;
+    max-width: 100%;
     padding: 0;
-    margin-top: 8px;
-
-    .search-input-container {
-      width: 100%;
-      max-width: 100%;
-      padding: 0;
-      margin-bottom: 8px;
-    }
-
-    .desktop-search {
-      width: 100%;
-    }
+    margin-bottom: 8px;
   }
 
-  .compact-bottom-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .desktop-search {
     width: 100%;
   }
+}
 
+.dynamic-views-narrow .compact-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Exception: preserve nowrap in subtitle scroll mode */
+body.dynamic-views-subtitle-overflow-scroll
+  .dynamic-views-narrow
+  .card-subtitle
+  .path-wrapper {
+  flex-wrap: nowrap;
+}
+
+/* Bases compact: container query on .bases-view (has container-type: inline-size) */
+@container (max-width: 699px) and (min-width: 51px) {
   .bases-view {
     .tags-wrapper,
     .path-wrapper {
@@ -164,10 +176,6 @@
   }
 
   /* Exception: preserve nowrap in subtitle scroll mode */
-  body.dynamic-views-subtitle-overflow-scroll
-    .dynamic-views
-    .card-subtitle
-    .path-wrapper,
   body.dynamic-views-subtitle-overflow-scroll
     .bases-view
     .card-subtitle
