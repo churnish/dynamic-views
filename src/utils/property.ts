@@ -289,6 +289,18 @@ export function getFirstBasesPropertyValue(
   return null;
 }
 
+/** Derive file name from $path when $name is unavailable (_Canvas, _GenericFile) */
+export function datacoreFileName(file: DatacoreFile): string {
+  return (
+    file.$name ||
+    file.$path
+      ?.split('/')
+      .pop()
+      ?.replace(/\.[^.]+$/, '') ||
+    ''
+  );
+}
+
 /**
  * Get first non-empty property value from comma-separated list (Datacore)
  * Accepts any property type (text, number, checkbox, date, datetime, list)

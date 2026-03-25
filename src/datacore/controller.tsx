@@ -48,6 +48,7 @@ import {
   loadImagesForEntries,
 } from '../shared/content-loader';
 import {
+  datacoreFileName,
   getFirstDatacorePropertyValue,
   getAllDatacoreImagePropertyValues,
 } from '../utils/property';
@@ -717,7 +718,7 @@ export function View({
         parsedSearchTerms;
 
       filtered = filtered.filter((p) => {
-        const fileName = (p.$name || '').toLowerCase();
+        const fileName = datacoreFileName(p).toLowerCase();
         const fileTags = (p.$tags || []).map((t: string) => t.toLowerCase());
 
         const posNameMatch = posNameTerms.every((term) =>
@@ -750,12 +751,12 @@ export function View({
       switch (sortMethod) {
         case 'name-asc':
           sorted = filtered.sort((a, b) =>
-            (a.$name || '').localeCompare(b.$name || '')
+            datacoreFileName(a).localeCompare(datacoreFileName(b))
           );
           break;
         case 'name-desc':
           sorted = filtered.sort((a, b) =>
-            (b.$name || '').localeCompare(a.$name || '')
+            datacoreFileName(b).localeCompare(datacoreFileName(a))
           );
           break;
         case 'mtime-asc':
@@ -1036,7 +1037,7 @@ export function View({
                 path: p.$path,
                 file,
                 textPreviewData: textPreviewValue as unknown,
-                fileName: p.$name,
+                fileName: datacoreFileName(p),
                 titleString,
               };
             } catch (e: unknown) {
@@ -2059,7 +2060,7 @@ export function View({
 
       const links = sorted
         .slice(0, limit > 0 ? limit : sorted.length)
-        .map((p) => `[[${p.$name}]]`)
+        .map((p) => `[[${datacoreFileName(p)}]]`)
         .join('\n');
 
       void getOwnerWindow(containerRef.current).navigator.clipboard.writeText(

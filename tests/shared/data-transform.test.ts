@@ -12,7 +12,32 @@ import {
 import { App, TFile } from 'obsidian';
 
 // Mock dependencies
-vi.mock('../../src/utils/property');
+vi.mock('../../src/utils/property', async () => {
+  return {
+    datacoreFileName: (file: any) =>
+      file.$name ||
+      file.$path
+        ?.split('/')
+        .pop()
+        ?.replace(/\.[^.]+$/, '') ||
+      '',
+    getFirstDatacorePropertyValue: vi.fn(),
+    getFirstBasesPropertyValue: vi.fn(),
+    getAllDatacoreImagePropertyValues: vi.fn().mockReturnValue([]),
+    getFirstDatacoreDatePropertyValue: vi.fn(),
+    getFirstBasesDatePropertyValue: vi.fn(),
+    isValidUri: vi.fn(),
+    isCheckboxProperty: vi.fn().mockReturnValue(false),
+    isSameProperty: vi.fn((a: string, b: string) => a === b),
+    stripNotePrefix: vi.fn((s: string) => s),
+    toDisplayName: vi.fn(),
+    toSyntaxName: vi.fn(),
+    parsePropertyList: vi.fn().mockReturnValue(new Set()),
+    buildDisplayToSyntaxMap: vi.fn().mockReturnValue({}),
+    buildSyntaxToDisplayMap: vi.fn().mockReturnValue({}),
+    remapPropertyNames: vi.fn(),
+  };
+});
 vi.mock('../../src/shared/render-utils', () => ({
   formatTimestamp: vi.fn((ts: number) =>
     ts != null ? `formatted-${ts}` : null

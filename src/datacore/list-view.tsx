@@ -1,5 +1,8 @@
 import type { ResolvedSettings } from '../types';
-import { getFirstDatacorePropertyValue } from '../utils/property';
+import {
+  datacoreFileName,
+  getFirstDatacorePropertyValue,
+} from '../utils/property';
 import type { DatacoreAPI, DatacoreFile } from './types';
 import type { App } from 'obsidian';
 import { datacoreResultToCardData } from '../shared/data-transform';
@@ -59,7 +62,7 @@ export function ListView({
             settings.titleProperty
           );
           if (Array.isArray(rawTitle)) rawTitle = rawTitle[0];
-          const titleValue = dc.coerce.string(rawTitle || p.$name);
+          const titleValue = dc.coerce.string(rawTitle || datacoreFileName(p));
 
           return (
             <li key={p.$path} className="list-item">

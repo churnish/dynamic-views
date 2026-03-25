@@ -132,6 +132,13 @@ describe('property', () => {
       expect(result).toBe('valid value');
     });
 
+    it('should return null when field() returns undefined (Canvas objects)', () => {
+      mockPage.field = vi.fn().mockReturnValue(undefined);
+
+      const result = getFirstDatacorePropertyValue(mockPage, 'prop1, prop2');
+      expect(result).toBeNull();
+    });
+
     it('should return null when no properties exist', () => {
       mockPage.value = vi.fn().mockReturnValue(null);
 
@@ -216,6 +223,16 @@ describe('property', () => {
 
     it('should return null for empty property string', () => {
       expect(getFirstDatacoreDatePropertyValue(mockPage, '')).toBeNull();
+    });
+
+    it('should return null when field() returns undefined (Canvas objects)', () => {
+      mockPage.field = vi.fn().mockReturnValue(undefined);
+
+      const result = getFirstDatacoreDatePropertyValue(
+        mockPage,
+        'prop1, prop2'
+      );
+      expect(result).toBeNull();
     });
 
     it('should return DateTime objects with toMillis method', () => {
@@ -357,6 +374,13 @@ describe('property', () => {
           value: mockPage.value(...args),
         })),
       };
+    });
+
+    it('should return empty array when field() returns undefined (Canvas objects)', () => {
+      mockPage.field = vi.fn().mockReturnValue(undefined);
+
+      const result = getAllDatacoreImagePropertyValues(mockPage, 'img');
+      expect(result).toEqual([]);
     });
 
     it('should return empty array for empty property string', () => {

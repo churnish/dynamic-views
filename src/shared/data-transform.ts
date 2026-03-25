@@ -8,6 +8,7 @@ import type { CardData } from './card-renderer';
 import type { BasesResolvedSettings } from '../types';
 import type { DatacoreAPI, DatacoreFile } from '../datacore/types';
 import {
+  datacoreFileName,
   getFirstDatacorePropertyValue,
   getFirstBasesPropertyValue,
   isValidUri,
@@ -215,7 +216,7 @@ export function resolveTimestampProperty(
 
 /**
  * Transform Datacore result into CardData
- * Handles Datacore-specific API (p.field(), p.$path, etc.)
+ * Handles Datacore-specific API (p.field(key)?.value, p.$path, etc.)
  */
 export function datacoreResultToCardData(
   app: App,
@@ -249,7 +250,7 @@ export function datacoreResultToCardData(
       }
       // Special case: file.name in Datacore → use $name
       if (prop === 'file.name' || prop === 'file name') {
-        title = result.$name || '';
+        title = datacoreFileName(result);
         break;
       }
       // Try regular property
@@ -276,7 +277,7 @@ export function datacoreResultToCardData(
   // Create base card data
   const cardData: CardData = {
     path,
-    name: result.$name || '',
+    name: datacoreFileName(result),
     title,
     tags,
     yamlTags,
