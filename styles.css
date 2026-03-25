@@ -4250,8 +4250,6 @@ body:not(.dynamic-views-file-type-flair,
   width: calc(1lh / var(--dynamic-views-line-height-tight));
   height: 1lh; /* Intentionally 1lh (not calc) — matches line box for vertical-align */
   vertical-align: bottom;
-  /* Optical lift: JS-measured fraction × rendered font-size (boosted-safe via 1lh) */
-  transform: translateY(calc(var(--dynamic-views-icon-optical-offset, 0) * 1lh / var(--dynamic-views-line-height-tight)));
   color: var(--dynamic-views-text-normal);
   stroke-width: var(--dynamic-views-icon-xs-stroke-width);
 }
@@ -7757,4 +7755,20 @@ body.dynamic-views-dragging .tooltip {
 
 .dynamic-views .dynamic-views-query-input {
   height: var(--dynamic-views-query-height, auto);
+}
+
+/* Offscreen measurement for icon optical alignment (icon-alignment.ts) */
+.dynamic-views-measure-row {
+  display: inline-flex;
+  align-items: center;
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.dynamic-views-measure-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--measure-size);
+  height: var(--measure-size);
 }

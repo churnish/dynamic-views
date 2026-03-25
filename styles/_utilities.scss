@@ -84,3 +84,18 @@ body.dynamic-views-dragging .tooltip {
     height: var(--dynamic-views-query-height, auto);
   }
 }
+
+/* Offscreen measurement for icon optical alignment (icon-alignment.ts) */
+.dynamic-views-measure-row {
+  display: inline-flex;
+  align-items: center;
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.dynamic-views-measure-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--measure-size);
+  height: var(--measure-size);
+}

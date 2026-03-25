@@ -143,7 +143,7 @@ body:not(
   .card-title-icon svg {
     /* calc derives boosted font-size on Android (1lh is boosted, ratio is constant) */
     width: calc(1lh / var(--dynamic-views-line-height-tight));
-    height: 1lh;
+    height: 1lh; /* Intentionally 1lh (not calc) — matches line box for vertical-align */
     vertical-align: bottom;
     color: var(--dynamic-views-text-normal);
     stroke-width: var(--dynamic-views-icon-xs-stroke-width);

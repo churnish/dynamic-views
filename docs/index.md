@@ -46,6 +46,7 @@ Empirical development artifacts — research logs, optimization tracking, and in
 | [cls-source-isolation.md](dev/cls-source-isolation.md) | Investigating the actual source of visible CLS (#358) — diagnostic experiments, measurement methodology, Layout Shift API limitations, ruled-out sources, and remaining unknowns. |
 | [full-screen.md](dev/full-screen.md) | Working on full screen mobile scrolling (#132) — documents empirical findings, WebKit compositor constraints, CSS scroll-driven animation research, rejected approaches, the space reclaim constraint, navbar hide behavior, and the v84 inline-only animation architecture. |
 | [masonry-roadmap.md](dev/masonry-roadmap.md) | Working on masonry performance — documents all optimizations by subsystem (scroll, resize, image loading, rendering, virtual scroll, grouped masonry), priority table from T1-T12 profiling, Datacore parity gaps, and status tracking. |
+| [icon-alignment.md](dev/icon-alignment.md) | Working on icon vertical alignment with text — documents all failed approaches (CSS, canvas TextMetrics, offscreen DOM), Android text autosizing constraints, the offscreen measurement exemption, and the live DOM measurement solution. |
 
 ## patterns/
 
@@ -56,7 +57,7 @@ Reusable conventions and recipes — coding patterns, CSS quirks, and configurat
 | [eslint-config.md](patterns/eslint-config.md) | Modifying [eslint.config.js](../eslint.config.js), adding eslint overrides, or troubleshooting lint errors. |
 | [scss-nesting-conventions.md](patterns/scss-nesting-conventions.md) | Adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat. |
 | [datacore-ref-callback-patterns.md](patterns/datacore-ref-callback-patterns.md) | Attaching event listeners or stateful behavior in [card-renderer.tsx](../src/shared/card-renderer.tsx) ref callbacks — documents re-render signal churn, cross-container collisions, WeakMap pattern, and `__dragBound` + dataset freshness pattern. |
-| [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding, modifying, or debugging Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`) — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |
+| [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding, modifying, or debugging Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`), or consolidating per-variant body-class rules into CSS variable consumption with `[class*=...]` gates — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |
 | [css-variable-wrapping.md](patterns/css-variable-wrapping.md) | Adding, modifying, or locally overriding external Obsidian CSS variables — documents the plugin-namespaced wrapper pattern, resolution semantics, and the local override gotcha. |
 | [debug-commands.md](patterns/debug-commands.md) | Using runtime diagnostic commands (card width badges) — documents console invocations, toggle semantics, and teardown. |
 | [electron-css-quirks.md](patterns/electron-css-quirks.md) | Writing nested `:has()` selectors or working around `-webkit-line-clamp` truncation behavior — documents Blink/Electron CSS rendering quirks and rejected fixes. |

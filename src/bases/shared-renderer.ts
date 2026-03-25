@@ -1542,21 +1542,18 @@ export class SharedCardRenderer {
     }
 
     // Structural content classes (replace CSS :has() selectors).
-    // has-card-content = card has properties or previews below the header.
-    // Used by CSS to distinguish cover-only cards from cards with body content.
     // Exclude thumbnail-placeholder-only previews — hidden by CSS when placeholder setting is off,
     // so card-body should collapse to avoid gap from card-content flex layout.
-    if (
-      bodyEl.querySelector(
-        '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)'
-      )
-    ) {
+    const visibleBodySelector =
+      '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
+
+    // has-body-content: body has visible properties or previews.
+    // Drives card-body display:none when empty (prevents gap below subtitle).
+    if (bodyEl.querySelector(visibleBodySelector)) {
       bodyEl.classList.add('has-body-content');
     }
-    const hasCardContent = !!cardEl.querySelector(
-      '.card-previews, .card-properties-top, .card-properties-bottom'
-    );
-    if (hasCardContent) {
+    // has-card-content: card-level flag for cover padding and title divider CSS rules.
+    if (cardEl.querySelector(visibleBodySelector)) {
       cardEl.classList.add('has-card-content');
     }
     if (cardEl.querySelector('.card-properties-bottom')) {

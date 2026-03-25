@@ -2299,23 +2299,18 @@ function Card({
           className="card-body"
           ref={(el: HTMLElement | null) => {
             if (!el) return;
-            // has-body-content + has-card-content: set from ref to match Bases
-            // (checks actual DOM children, not raw data — handles empty property filtering)
-            // Exclude thumbnail-placeholder-only previews — hidden by CSS when placeholder
-            // setting is off, so card-body should collapse to avoid gap.
-            if (
-              el.querySelector(
-                '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)'
-              )
-            ) {
+            // Exclude thumbnail-placeholder-only previews — hidden by CSS when
+            // placeholder setting is off, so card-body should collapse.
+            const visibleBodySelector =
+              '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
+
+            // has-body-content: drives card-body display:none when empty.
+            if (el.querySelector(visibleBodySelector)) {
               el.classList.add('has-body-content');
             }
+            // has-card-content: drives cover padding and title divider CSS.
             const cardEl = el.closest('.card');
-            if (
-              cardEl?.querySelector(
-                '.card-previews, .card-properties-top, .card-properties-bottom'
-              )
-            ) {
+            if (cardEl?.querySelector(visibleBodySelector)) {
               cardEl.classList.add('has-card-content');
             }
             if (format === 'poster') {
