@@ -100,6 +100,9 @@ describe('property', () => {
     beforeEach(() => {
       mockPage = {
         value: vi.fn(),
+        field: vi.fn((...args: unknown[]) => ({
+          value: mockPage.value(...args),
+        })),
       };
     });
 
@@ -205,6 +208,9 @@ describe('property', () => {
     beforeEach(() => {
       mockPage = {
         value: vi.fn(),
+        field: vi.fn((...args: unknown[]) => ({
+          value: mockPage.value(...args),
+        })),
       };
     });
 
@@ -347,6 +353,9 @@ describe('property', () => {
     beforeEach(() => {
       mockPage = {
         value: vi.fn(),
+        field: vi.fn((...args: unknown[]) => ({
+          value: mockPage.value(...args),
+        })),
       };
     });
 

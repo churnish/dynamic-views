@@ -1025,7 +1025,7 @@ export function View({
               }
 
               // Get title for first line comparison
-              let titleValue: unknown = p.value(settings.titleProperty);
+              let titleValue: unknown = p.field(settings.titleProperty)?.value;
               if (Array.isArray(titleValue))
                 titleValue = titleValue[0] as unknown;
               const titleString = titleValue

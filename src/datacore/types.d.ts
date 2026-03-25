@@ -159,8 +159,11 @@ export interface DatacoreFile {
   /** Backlinks to this file */
   $backlinks: unknown[];
 
-  /** Get a metadata value by key */
+  /** Get a metadata value by key (only on _MarkdownPage and _GenericFile, NOT _Canvas) */
   value(key: string): unknown;
+
+  /** Get a field object by key (available on ALL file types including _Canvas) */
+  field(key: string): { value: unknown } | undefined;
 
   /** User-defined frontmatter properties */
   [key: string]: unknown;

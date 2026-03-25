@@ -305,7 +305,7 @@ export function getFirstDatacorePropertyValue(
     .filter((p) => p);
 
   for (const prop of properties) {
-    const value: unknown = page.value(prop);
+    const value: unknown = page.field(prop)?.value;
 
     // Check if property exists (not null/undefined)
     if (value !== null && value !== undefined) {
@@ -365,7 +365,7 @@ export function getFirstDatacoreDatePropertyValue(
     .filter((p) => p);
 
   for (const prop of properties) {
-    const value: unknown = page.value(prop);
+    const value: unknown = page.field(prop)?.value;
 
     // Only accept DateTime objects (have toMillis method)
     if (value && typeof value === 'object' && 'toMillis' in value) {
@@ -438,7 +438,7 @@ export function getAllDatacoreImagePropertyValues(
   const allImages: string[] = [];
 
   for (const prop of properties) {
-    const value: unknown = page.value(prop);
+    const value: unknown = page.field(prop)?.value;
 
     // Skip if property doesn't exist
     if (value === null || value === undefined) continue;

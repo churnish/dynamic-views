@@ -215,7 +215,7 @@ export function resolveTimestampProperty(
 
 /**
  * Transform Datacore result into CardData
- * Handles Datacore-specific API (p.value(), p.$path, etc.)
+ * Handles Datacore-specific API (p.field(), p.$path, etc.)
  */
 export function datacoreResultToCardData(
   app: App,
@@ -264,7 +264,7 @@ export function datacoreResultToCardData(
   }
 
   // Get YAML tags only from 'tags' property
-  const yamlTagsRaw = result.value('tags');
+  const yamlTagsRaw = result.field('tags')?.value;
   const yamlTags: string[] = stripTagHashes(
     Array.isArray(yamlTagsRaw)
       ? yamlTagsRaw.filter((t): t is string => typeof t === 'string')

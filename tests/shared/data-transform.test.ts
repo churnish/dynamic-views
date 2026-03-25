@@ -55,6 +55,7 @@ describe('data-transform', () => {
         $ctime: { toMillis: () => 1000000 },
         $mtime: { toMillis: () => 2000000 },
         value: vi.fn().mockReturnValue(['yaml-tag']),
+        field: vi.fn().mockReturnValue({ value: ['yaml-tag'] }),
       };
 
       const mockDC: any = {
@@ -88,6 +89,7 @@ describe('data-transform', () => {
         $ctime: { toMillis: () => 0 },
         $mtime: { toMillis: () => 0 },
         value: vi.fn().mockReturnValue([]),
+        field: vi.fn().mockReturnValue({ value: [] }),
       };
 
       const mockDC: any = {
@@ -112,6 +114,7 @@ describe('data-transform', () => {
         $name: 'file',
         $tags: [],
         value: vi.fn().mockReturnValue([]),
+        field: vi.fn().mockReturnValue({ value: [] }),
       };
 
       const mockDC: any = {
@@ -139,6 +142,7 @@ describe('data-transform', () => {
         $ctime: { toMillis: () => 0 },
         $mtime: { toMillis: () => 0 },
         value: vi.fn().mockReturnValue([]),
+        field: vi.fn().mockReturnValue({ value: [] }),
       };
 
       const mockDC: any = {
@@ -168,6 +172,7 @@ describe('data-transform', () => {
         $ctime: { toMillis: () => 0 },
         $mtime: { toMillis: () => 0 },
         value: vi.fn().mockReturnValue([]),
+        field: vi.fn().mockReturnValue({ value: [] }),
       };
 
       const mockDC: any = {
@@ -379,6 +384,7 @@ describe('data-transform', () => {
           $ctime: { toMillis: () => 1000 },
           $mtime: { toMillis: () => 2000 },
           value: vi.fn().mockReturnValue([]),
+          field: vi.fn().mockReturnValue({ value: [] }),
         },
         {
           $path: 'file2.md',
@@ -387,6 +393,7 @@ describe('data-transform', () => {
           $ctime: { toMillis: () => 3000 },
           $mtime: { toMillis: () => 4000 },
           value: vi.fn().mockReturnValue([]),
+          field: vi.fn().mockReturnValue({ value: [] }),
         },
       ];
 
@@ -456,6 +463,7 @@ describe('data-transform', () => {
           $ctime: { toMillis: () => 0 },
           $mtime: { toMillis: () => 0 },
           value: vi.fn().mockReturnValue([]),
+          field: vi.fn().mockReturnValue({ value: [] }),
         },
       ];
 
