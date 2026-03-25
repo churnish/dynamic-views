@@ -74,6 +74,7 @@ import {
   handleImageViewerTrigger,
   cleanupAllViewers,
 } from '../shared/image-viewer';
+import { applyIconOpticalOffset } from '../shared/icon-alignment';
 import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
 import type DynamicViews from '../../main';
 import type { BasesResolvedSettings, LayoutSource } from '../types';
@@ -293,6 +294,9 @@ export function applyCssOnlySettings(
   containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
   const imageFit = (config.get('imageFit') as string) ?? 'crop';
   containerEl.classList.add(`image-fit-${imageFit}`);
+
+  // Icon optical alignment (font-dependent, cheap canvas measurement)
+  applyIconOpticalOffset(containerEl);
 }
 
 /**
@@ -1537,8 +1541,16 @@ export class SharedCardRenderer {
       );
     }
 
-    // Mark card with structural content classes (for CSS targeting without :has())
-    if (bodyEl.children.length > 0) {
+    // Structural content classes (replace CSS :has() selectors).
+    // has-card-content = card has properties or previews below the header.
+    // Used by CSS to distinguish cover-only cards from cards with body content.
+    // Exclude thumbnail-placeholder-only previews — hidden by CSS when placeholder setting is off,
+    // so card-body should collapse to avoid gap from card-content flex layout.
+    if (
+      bodyEl.querySelector(
+        '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)'
+      )
+    ) {
       bodyEl.classList.add('has-body-content');
     }
     const hasCardContent = !!cardEl.querySelector(

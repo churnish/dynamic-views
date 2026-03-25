@@ -42,6 +42,7 @@ import {
   markImageBroken,
 } from './image-loader';
 import { handleImageViewerTrigger, cleanupAllViewers } from './image-viewer';
+import { applyIconOpticalOffset } from './icon-alignment';
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
@@ -1295,6 +1296,9 @@ export function CardRenderer({
           containerCssClassesMap.set(el, customClasses);
         }
 
+        // Icon optical alignment (font-dependent, cheap canvas measurement)
+        applyIconOpticalOffset(el);
+
         // Skip if already setup (avoid duplicates on re-render)
         if (containerCleanupMap.has(el)) {
           return;
@@ -1614,13 +1618,9 @@ function Card({
     cardClasses.push('clickable-card');
   }
 
-  // Content-presence classes (replace CSS :has() selectors)
+  // Preview flags (used for card-previews className and card-body)
   const hasTextPreview = !!card.textPreview;
   const showThumbnail = format === 'thumbnail' && hasImageSource;
-  const hasProps = !!card.properties?.length;
-  if (hasTextPreview || showThumbnail || hasProps) {
-    cardClasses.push('has-card-content');
-  }
 
   // Cache scroll mode checks (avoid repeated DOM queries in ref callbacks)
   const isTitleScrollMode = document.body.classList.contains(
@@ -2296,9 +2296,29 @@ function Card({
 
         {/* Universal card-body: properties + previews */}
         <div
-          className={`card-body${hasTextPreview || showThumbnail || hasProps ? ' has-body-content' : ''}`}
+          className="card-body"
           ref={(el: HTMLElement | null) => {
-            if (el && format === 'poster') {
+            if (!el) return;
+            // has-body-content + has-card-content: set from ref to match Bases
+            // (checks actual DOM children, not raw data — handles empty property filtering)
+            // Exclude thumbnail-placeholder-only previews — hidden by CSS when placeholder
+            // setting is off, so card-body should collapse to avoid gap.
+            if (
+              el.querySelector(
+                '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)'
+              )
+            ) {
+              el.classList.add('has-body-content');
+            }
+            const cardEl = el.closest('.card');
+            if (
+              cardEl?.querySelector(
+                '.card-previews, .card-properties-top, .card-properties-bottom'
+              )
+            ) {
+              cardEl.classList.add('has-card-content');
+            }
+            if (format === 'poster') {
               setupVerticalScrollGradient(el, scrollController.signal);
             }
           }}
