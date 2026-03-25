@@ -1,6 +1,6 @@
 ---
-title: Immersive scroll
-description: Empirical research for immersive mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, and the v84 inline-only animation architecture.
+title: Full screen
+description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, and the v84 inline-only animation architecture.
 author: "\U0001F916 Generated with Claude Code"
 updated: 2026-03-24
 ---
@@ -32,10 +32,10 @@ Hard UX constraints:
 - **Responsive**: Bars must hide/show during active scroll, not deferred to scrollend. Post-momentum toggling feels broken.
 - **Tap-to-reveal**: Tap without scrolling shows bars.
 - **Top fade mask**: Must NOT use `-webkit-mask-image` on scroll container (kills momentum — v50). Use a separate fixed overlay div with opacity toggle.
-- **Status bar bg**: Must hide with the header — native Obsidian immersive hides it. Content or a matching background must fill the safe area zone when bars are hidden.
+- **Status bar bg**: Must hide with the header — native Obsidian full screen hides it. Content or a matching background must fill the safe area zone when bars are hidden.
 - **Momentum-safe**: During iOS momentum scroll, ONLY compositor-safe changes (transform, opacity) are allowed. `scrollTop` writes and layout-affecting style mutations (margin/padding changes via class toggles) both kill momentum by forcing WebKit compositor sync. All layout mutations must be deferred to a scroll-idle debounce — NOT `scrollend`, which fires at finger-lift before momentum begins.
 
-## Obsidian native immersive internals
+## Obsidian native full screen internals
 
 ### Body classes
 
@@ -45,7 +45,7 @@ Hard UX constraints:
 | `auto-full-screen` | Full screen appearance setting enabled | Phone only |
 | `is-hidden-nav` | Bars currently hidden | Both (works in Bases views) |
 
-Immersive scroll only activates when `auto-full-screen` is present.
+Full screen only activates when `auto-full-screen` is present.
 
 ### Hide/show mechanics
 
@@ -90,7 +90,7 @@ Immersive scroll only activates when `auto-full-screen` is present.
 
 ### Scroll event
 
-Native immersive is driven by internal `markdown-scroll` event (CodeMirror-level). Bases views don't fire this event. Plugin must implement own scroll detection.
+Native full screen is driven by internal `markdown-scroll` event (CodeMirror-level). Bases views don't fire this event. Plugin must implement own scroll detection.
 
 ### Undocumented APIs to track
 
@@ -121,7 +121,7 @@ Bases leaf hierarchy:
 1. **Toolbar collapse** (`.bases-header` transform)
 2. **99px `margin-top` gap fill** on `.view-content`
 
-These are layout changes (reflow), which cause scroll interruption. Markdown views don't need them. Native immersive works in markdown because content reflow is minimal (just header/navbar transform). In Bases views, toolbar collapse + gap reclamation amplifies jank to unacceptable levels.
+These are layout changes (reflow), which cause scroll interruption. Markdown views don't need them. Native full screen works in markdown because content reflow is minimal (just header/navbar transform). In Bases views, toolbar collapse + gap reclamation amplifies jank to unacceptable levels.
 
 ## WebKit compositor architecture
 
@@ -246,7 +246,7 @@ Moot. Instant layout (`margin-top: 0` with `transition: none`) eliminates the ga
 
 ### Safe area and top bar animation (v78–v80)
 
-**Correction (v106)**: Native Obsidian immersive DOES hide the status bar bg — `is-hidden-nav` CSS handles it. Earlier conclusion that `.app-container` bg "cannot be animated" was wrong. The fix is to add `is-hidden-nav` immediately (not defer it). v78–v80 findings below apply to custom CSS approaches only, not to the native class toggle.
+**Correction (v106)**: Native Obsidian full screen DOES hide the status bar bg — `is-hidden-nav` CSS handles it. Earlier conclusion that `.app-container` bg "cannot be animated" was wrong. The fix is to add `is-hidden-nav` immediately (not defer it). v78–v80 findings below apply to custom CSS approaches only, not to the native class toggle.
 
 Earlier custom approaches to hide the safe area bg all failed:
 
@@ -293,7 +293,7 @@ On floating-nav phones, the view-header is `position: fixed` — no flex allocat
 
 ### Deferred layout + scrollTop compensation
 
-Even when `immersive-active` class toggle and `scrollTop` adjustment are synchronous in the same JS frame, WebKit may render them in separate composites — producing a visible scroll position jump.
+Even when `full-screen-active` class toggle and `scrollTop` adjustment are synchronous in the same JS frame, WebKit may render them in separate composites — producing a visible scroll position jump.
 
 ## Space reclaim: gap zone analysis (v111–v145)
 
@@ -353,9 +353,9 @@ All three must be applied via CSS class, not `is-hidden-nav`. `is-hidden-nav` wa
 
 ### Scroll child bridge: Pareto optimum (v139–v144)
 
-The best achievable architecture for immersive scroll on iOS:
+The best achievable architecture for full screen on iOS:
 
-1. **HIDE (immediate, momentum-safe)**: `translateY(+totalShift)` bridge on scroll child + `immersive-active` class toggle. No `scrollTop` writes.
+1. **HIDE (immediate, momentum-safe)**: `translateY(+totalShift)` bridge on scroll child + `full-screen-active` class toggle. No `scrollTop` writes.
 2. **IDLE (150ms debounce)**: Remove bridge + `scrollTop -= totalShift`. Safe at idle (no momentum).
 3. **SHOW pre-settle**: Remove bridge + remove class. No `scrollTop` write needed.
 4. **SHOW post-settle**: Reverse bridge `translateY(-totalShift)` + remove class. Idle: `scrollTop += totalShift`.
@@ -364,7 +364,7 @@ The bridge produces zero visual jump MOST of the time but has **intermittent min
 
 ### Pareto frontier
 
-A [Pareto frontier](https://en.wikipedia.org/wiki/Pareto_front) is the set of solutions where improving one objective requires degrading another. For immersive scroll on iOS WebKit, the three objectives are:
+A [Pareto frontier](https://en.wikipedia.org/wiki/Pareto_front) is the set of solutions where improving one objective requires degrading another. For full screen on iOS WebKit, the three objectives are:
 
 1. **Immediate status bar** — bars hide instantly, status bar bg updates in the same frame
 2. **No content jump** — zero visual displacement of scroll content
@@ -402,7 +402,7 @@ The `overflow-anchor` CSS property (Safari Technology Preview 238+, estimated pr
 
 ### Measurement ordering bug (v133–v137)
 
-The `totalShift` measurement toggles the `immersive-active` class and reads `getBoundingClientRect().top` before/after. In v133–v137, this measurement ran BEFORE the `<style>` element defining the class rules was inserted into the DOM. Result: `totalShift=0`, no bridge compensation. Always insert CSS before measuring.
+The `totalShift` measurement toggles the `full-screen-active` class and reads `getBoundingClientRect().top` before/after. In v133–v137, this measurement ran BEFORE the `<style>` element defining the class rules was inserted into the DOM. Result: `totalShift=0`, no bridge compensation. Always insert CSS before measuring.
 
 ### scrollTop writes are unconditionally fatal (v145)
 
@@ -470,7 +470,7 @@ v145 confirmed: `scrollTop` writes in the same synchronous tick as `classList.ad
 | v130 | margin:0 immediately + translateY(+99) on view-content | Status bar not fixed. Transform pushes visual bounds to y=99 — `getBoundingClientRect().top = 99`. iOS status bar responds to visual position, not layout position. |
 | v131 | margin:0 on view-content + translateY on scroll child (v112 architecture with continuous reduction) | Status bar still not fixed. Contradicts v112 finding — under investigation. |
 | v132 | v112 CSS class (margin:0 + toolbar collapse + bg-color) + v120 idle-settle bridge | Bridge only compensated marginTop (99px), not toolbar collapse (52px). Uncompensated 52px jump + scrollbar resize. |
-| v132b | Control: faithful v112 reproduction (animated bridge, `immersive-active` class, no `is-hidden-nav`) | Status bar confirmed working. Validates that toolbar flow collapse + ancestor bg-color + margin:0 are the required ingredients. Content jump present (same as v112). |
+| v132b | Control: faithful v112 reproduction (animated bridge, `full-screen-active` class, no `is-hidden-nav`) | Status bar confirmed working. Validates that toolbar flow collapse + ancestor bg-color + margin:0 are the required ingredients. Content jump present (same as v112). |
 | v133-v137 | Measured bridge + animated/idle settle | `totalShift=0` — measurement ran BEFORE `<style>` element insertion. All bridge values were zero. No compensation applied. |
 | v138 | v137 fix: style insertion before measurement + setTimeout animated bridge | Animation fires correctly (`totalShift=151`). Perceived 2x scroll speed during 300ms bridge animation — bridge settle compounds with ongoing scroll velocity. |
 | v139-v140 | Hold bridge until idle settle (no animation) | Content position correct most of the time. Intermittent minor jumps from scroll viewport clipping artifact. Best result so far. |
@@ -523,11 +523,11 @@ Direction detection uses a combined threshold: accumulated scroll delta (spatial
 
 | Parameter | Value | Purpose |
 |---|---|---|
-| `IMMERSIVE_HIDE_DEAD_ZONE` | 30px | Accumulated downward scroll to trigger hide |
-| `IMMERSIVE_SHOW_DEAD_ZONE` | 20px | Accumulated upward scroll to trigger show |
-| `IMMERSIVE_SHOW_SUSTAIN_MS` | 80ms | Minimum sustained direction before triggering |
-| `IMMERSIVE_TOP_ZONE` | 50px | `scrollTop` threshold — always show bars near top |
-| `IMMERSIVE_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
+| `FULL_SCREEN_HIDE_DEAD_ZONE` | 30px | Accumulated downward scroll to trigger hide |
+| `FULL_SCREEN_SHOW_DEAD_ZONE` | 20px | Accumulated upward scroll to trigger show |
+| `FULL_SCREEN_SHOW_SUSTAIN_MS` | 80ms | Minimum sustained direction before triggering |
+| `FULL_SCREEN_TOP_ZONE` | 50px | `scrollTop` threshold — always show bars near top |
+| `FULL_SCREEN_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
 
 On each scroll event: if the delta reverses direction, the accumulator resets to zero and `directionChangeTime` records the reversal timestamp. The sustain gate (`Date.now() - directionChangeTime >= 80ms`) prevents false triggers from deceleration bounce — short-lived delta reversals at the end of a fling.
 
@@ -546,11 +546,11 @@ Without the sustain gate on hide, rapid hide→show cycling occurred during fast
 
 ### Cooldown accumulator reset
 
-During the 300ms cooldown after a toggle, scroll events still fire. The `immersive-showing` CSS class restores `margin-top: ~99px` on `.view-content`, which causes WebKit to fire layout-induced scroll deltas (~250px compensation). Without resetting the accumulator during cooldown, these synthetic deltas leak past the cooldown and immediately trigger the opposite transition. Fix: `accumulatedDelta = 0` on every scroll event during cooldown.
+During the 300ms cooldown after a toggle, scroll events still fire. The `full-screen-showing` CSS class restores `margin-top: ~99px` on `.view-content`, which causes WebKit to fire layout-induced scroll deltas (~250px compensation). Without resetting the accumulator during cooldown, these synthetic deltas leak past the cooldown and immediately trigger the opposite transition. Fix: `accumulatedDelta = 0` on every scroll event during cooldown.
 
 ### Layout-induced scroll deltas
 
-The `immersive-showing` class restores margin-top on `.view-content`. WebKit compensates by adjusting the scroll position, producing a large synthetic scroll delta (~250px, equal to `totalShift`). These deltas are not user-initiated but are indistinguishable from real scroll events. The cooldown accumulator reset (above) and the `programmaticScroll` guard during settle handle both sources.
+The `full-screen-showing` class restores margin-top on `.view-content`. WebKit compensates by adjusting the scroll position, producing a large synthetic scroll delta (~250px, equal to `totalShift`). These deltas are not user-initiated but are indistinguishable from real scroll events. The cooldown accumulator reset (above) and the `programmaticScroll` guard during settle handle both sources.
 
 ## Settle architecture
 
@@ -558,18 +558,18 @@ The `immersive-showing` class restores margin-top on `.view-content`. WebKit com
 
 The settle resolves the gap between the immediate bridge (momentum-safe visual compensation) and the final layout state (correct scroll position without bridge). Sequence:
 
-1. **HIDE**: `translateY(totalShift)` on scroll child + `immersive-active` class. Scroll container height locked.
+1. **HIDE**: `translateY(totalShift)` on scroll child + `full-screen-active` class. Scroll container height locked.
 2. **IDLE (2s debounce)**: Unlock height → remove bridge → `scrollTop -= totalShift` → re-measure → relock height.
-3. **SHOW**: `immersive-showing` class override. If settled, reverse bridge `translateY(-totalShift)`.
+3. **SHOW**: `full-screen-showing` class override. If settled, reverse bridge `translateY(-totalShift)`.
 4. **SHOW IDLE (2s debounce)**: Remove bridge → if settled, `scrollTop += totalShift` → remove classes → unlock → re-measure → relock.
 
 ### 2s settle delay
 
-`IMMERSIVE_SCROLL_IDLE_MS = 2000`. The settle involves a `scrollTop` write and height unlock-relock, both of which cause the iOS native scroll indicator to flash. The 2s delay outlasts the scroll indicator's fade-out (~1.5s after last scroll event), so the settle is invisible to the user.
+`FULL_SCREEN_IDLE_MS = 2000`. The settle involves a `scrollTop` write and height unlock-relock, both of which cause the iOS native scroll indicator to flash. The 2s delay outlasts the scroll indicator's fade-out (~1.5s after last scroll event), so the settle is invisible to the user.
 
 ### Unlock-measure-relock
 
-Scroll container height is locked via inline `style.height` to prevent `clientHeight` from changing during `immersive-active` (flex layout changes would resize the scroll container, causing scroll indicator teleport). At settle:
+Scroll container height is locked via inline `style.height` to prevent `clientHeight` from changing during `full-screen-active` (flex layout changes would resize the scroll container, causing scroll indicator teleport). At settle:
 
 1. Remove inline `height` (unlock)
 2. Remove bridge / adjust `scrollTop`
@@ -621,7 +621,7 @@ transition: transform 0.3s ease-in-out, opacity 0.2s ease-in-out;
 
 - **Safari Web Inspector**: Connect Mac to iOS device, inspect Obsidian's WKWebView via Safari Develop menu. Use Layers tab for compositing reasons, paint flashing for repaint visualization, and Frames view for main-thread fallback detection.
 - **Chrome DevTools MCP**: Use `evaluate_script` for runtime instrumentation on desktop (scroll event logging, `getBoundingClientRect` sampling, `getComputedStyle` reads). Use `list_console_messages` to retrieve diagnostic output.
-- **Cleanup convention**: Each diagnostic IIFE must call `window.__cleanupImmersive()` at the top before initializing. Cleanup is part of the script, not a separate manual step.
+- **Cleanup convention**: Each diagnostic IIFE must call `window.__cleanupFullScreen()` at the top before initializing. Cleanup is part of the script, not a separate manual step.
 - **Listener leak** (v34 bug): anonymous scroll fallback never removed by cleanup. Always use named function references.
 - **A/B isolation test**: Animate ONE target inside scroll container with anonymous `scroll(nearest)`, no `timeline-scope`. If smooth, topology/timeline-scope is the culprit.
 
