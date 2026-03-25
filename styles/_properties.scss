@@ -458,13 +458,8 @@ body.dynamic-views-property-label-small-caps
     width: calc(1lh / var(--dynamic-views-line-height-tight));
     height: calc(1lh / var(--dynamic-views-line-height-tight));
     margin-right: var(--size-2-2);
-    /* Optical lift: JS-measured fraction × rendered font-size (boosted-safe via 1lh) */
-    transform: translateY(
-      calc(
-        var(--dynamic-views-icon-optical-offset, 0) * 1lh /
-          var(--dynamic-views-line-height-tight)
-      )
-    );
+    /* Optical lift: JS-measured px delta from live DOM icon/text center comparison */
+    transform: translateY(var(--dynamic-views-icon-optical-offset, 0px));
   }
 }
 

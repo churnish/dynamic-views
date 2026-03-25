@@ -507,6 +507,7 @@ export class SharedCardRenderer {
   private subtitleRerenderController = new Map<HTMLElement, AbortController>();
   private urlButtonRerenderController = new Map<HTMLElement, AbortController>();
   private activeScope: Scope | null = null;
+  private iconAlignmentMeasured = false;
 
   constructor(
     protected app: App,
@@ -525,6 +526,7 @@ export class SharedCardRenderer {
    * Cleanup observers, scopes, event listeners, and zoom state when renderer is destroyed
    */
   public cleanup(forceViewerCleanup = false): void {
+    this.iconAlignmentMeasured = false;
     this.propertyObservers.forEach((obs) => obs.disconnect());
     this.propertyObservers = [];
 
@@ -2814,6 +2816,19 @@ export class SharedCardRenderer {
         timestampWrapper.classList.add('has-timestamp-icon');
       }
       timestampWrapper.appendText(stringValue);
+
+      // One-shot: measure icon alignment from first real timestamp
+      // Deferred to rAF so the browser has laid out the new elements
+      if (settings.propertyLabels === 'hide' && !this.iconAlignmentMeasured) {
+        this.iconAlignmentMeasured = true;
+        const containerEl =
+          timestampWrapper.closest<HTMLElement>('.dynamic-views');
+        if (containerEl) {
+          getOwnerWindow(containerEl).requestAnimationFrame(() =>
+            applyIconOpticalOffset(containerEl)
+          );
+        }
+      }
     } else if (
       (propertyName === 'tags' || propertyName === 'note.tags') &&
       card.yamlTags.length > 0
