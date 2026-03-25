@@ -14,11 +14,11 @@ Full screen hides the header, toolbar, search row, and navbar during downward sc
 |---|---|
 | `src/bases/full-screen.ts` | Full screen controller — scroll listener, direction detection, hide/show/settle logic |
 | `src/shared/constants.ts` | Tuning constants (`FULL_SCREEN_*`) |
-| `styles/_compact.scss` | `immersive-active` and `immersive-showing` class rules |
+| `styles/_full-screen.scss` | `full-screen-active` and `full-screen-showing` class rules |
 
 ## System overview
 
-On mobile, Bases card views have a fixed header, a static toolbar (`.bases-header`), an optional search row, and a fixed navbar. Native Obsidian immersive scroll works in markdown views (driven by CodeMirror's internal `markdown-scroll` event) but not in Bases views — Bases doesn't fire that event. The plugin implements its own scroll-driven bar management.
+On mobile, Bases card views have a fixed header, a static toolbar (`.bases-header`), an optional search row, and a fixed navbar. Native Obsidian full screen works in markdown views (driven by CodeMirror's internal `markdown-scroll` event) but not in Bases views — Bases doesn't fire that event. The plugin implements its own scroll-driven bar management.
 
 ### Bases vs markdown constraint
 
@@ -61,17 +61,17 @@ The bridge resolves the fundamental conflict: hiding bars requires layout mutati
 
 ### Hide sequence
 
-1. **Immediate (momentum-safe)**: Apply `immersive-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `translateY(totalShift)` bridge on scroll child (`.dynamic-views-bases-container`). Lock scroll container height via inline `style.height`. Animate header/navbar via inline styles (transform + opacity) using the double-rAF pattern.
+1. **Immediate (momentum-safe)**: Apply `full-screen-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `translateY(totalShift)` bridge on scroll child (`.dynamic-views-bases-container`). Lock scroll container height via inline `style.height`. Animate header/navbar via inline styles (transform + opacity) using the double-rAF pattern.
 2. **Idle (debounced)**: Remove bridge (`translateY` reset) -> `scrollTop -= totalShift` -> re-measure height -> relock.
 
 ### Show sequence
 
-3. **Immediate**: Apply `immersive-showing` CSS class override. If settled (bridge already removed), apply reverse bridge `translateY(-totalShift)`. Animate header/navbar back via inline styles using double-rAF.
-4. **Idle (debounced)**: Remove bridge -> if settled, `scrollTop += totalShift` -> remove all immersive classes -> unlock height -> re-measure -> relock.
+3. **Immediate**: Apply `full-screen-showing` CSS class override. If settled (bridge already removed), apply reverse bridge `translateY(-totalShift)`. Animate header/navbar back via inline styles using double-rAF.
+4. **Idle (debounced)**: Remove bridge -> if settled, `scrollTop += totalShift` -> remove all full-screen classes -> unlock height -> re-measure -> relock.
 
 ### `totalShift` measurement
 
-`totalShift` is measured once at initialization: toggle `immersive-active` class, read `getBoundingClientRect().top` before/after on the scroll container, then remove the class. The CSS rules defining the class MUST be in the DOM before measurement — inserting the `<style>` element after measuring produces `totalShift = 0`.
+`totalShift` is measured once at initialization: toggle `full-screen-active` class, read `getBoundingClientRect().top` before/after on the scroll container, then remove the class.
 
 ### Why a bridge
 
@@ -113,19 +113,19 @@ Without the sustain gate on hide, rapid hide/show cycling occurred during fast d
 
 ### Cooldown accumulator reset
 
-During the 300ms cooldown after a toggle, scroll events still fire. The `immersive-showing` class restores `margin-top` on `.view-content`, which causes WebKit to fire layout-induced scroll deltas (~250px compensation). Without resetting the accumulator during cooldown, these synthetic deltas leak past the cooldown and immediately trigger the opposite transition.
+During the 300ms cooldown after a toggle, scroll events still fire. The `full-screen-showing` class restores `margin-top` on `.view-content`, which causes WebKit to fire layout-induced scroll deltas (~250px compensation). Without resetting the accumulator during cooldown, these synthetic deltas leak past the cooldown and immediately trigger the opposite transition.
 
 Fix: `accumulatedDelta = 0` on every scroll event during cooldown.
 
 ### Layout-induced scroll deltas
 
-When `immersive-showing` restores margin-top, WebKit compensates by adjusting scroll position, producing a large synthetic scroll delta (~250px, equal to `totalShift`). These deltas are not user-initiated but are indistinguishable from real scroll events. The cooldown accumulator reset and the `programmaticScroll` guard during settle handle both sources.
+When `full-screen-showing` restores margin-top, WebKit compensates by adjusting scroll position, producing a large synthetic scroll delta (~250px, equal to `totalShift`). These deltas are not user-initiated but are indistinguishable from real scroll events. The cooldown accumulator reset and the `programmaticScroll` guard during settle handle both sources.
 
 ## Height locking
 
 ### Why lock
 
-Scroll container height is locked via inline `style.height` to prevent `clientHeight` from changing during `immersive-active`. Without locking, flex layout changes (margin removal, toolbar collapse) resize the scroll container, causing the scroll indicator to teleport.
+Scroll container height is locked via inline `style.height` to prevent `clientHeight` from changing during `full-screen-active`. Without locking, flex layout changes (margin removal, toolbar collapse) resize the scroll container, causing the scroll indicator to teleport.
 
 ### Unlock-measure-relock pattern
 
@@ -148,14 +148,16 @@ The locked `height` doesn't truly constrain the scroll container because `.bases
 
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_MS = 2000ms`. Outlasts the native scroll indicator fade (~1.5s after last scroll event), making the settle's `scrollTop` write invisible.
 - **Sustain gate**: 80ms on both directions. Required because iOS momentum produces deceleration bounce (brief delta reversals).
-- **Double-rAF**: Required for bar animations. WebKit's passive scroll listener optimization collapses transition + target into one style recalc without it. See `knowledge/webkit-compositor-constraints.md`.
+- **Double-rAF**: Required for bar hide animations. WebKit's passive scroll listener optimization collapses transition + target into one style recalc without it. See `knowledge/webkit-compositor-constraints.md`.
+- **Show path**: Synchronous — no two-frame split.
 - **Scroll indicator**: Jumps when bars hide/show because the scroll container's effective height changes. Matches Safari's native address bar behavior. Accepted.
 
 ### Android
 
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 150ms`. Android Chromium's scrollbar never auto-fades, so the settle's `scrollTop` adjustment is visible regardless of timing. 150ms is enough for Chromium fling to fully stop (`scrollend` fires at ~1ms after last scroll event on Chromium).
-- **Sustain gate**: Same 80ms. Android Chromium produces less deceleration bounce than iOS but the gate still prevents edge-case false triggers.
-- **Double-rAF**: Not strictly needed (Chromium doesn't collapse transitions in passive listeners) but used for code path consistency.
+- **Sustain gate**: Bypassed. Android Chromium produces less deceleration bounce than iOS and the gate is unnecessary.
+- **Single-rAF**: Bar hide uses a single `requestAnimationFrame` (not double-rAF). Chromium doesn't collapse transitions in passive listeners.
+- **Show path**: Synchronous — same as iOS, no two-frame split.
 - **Scrollbar**: Never auto-fades. Scrollbar resize during settle is always visible — accepted as inherent to the platform.
 
 ## Invariants
@@ -163,9 +165,8 @@ The locked `height` doesn't truly constrain the scroll container because `.bases
 1. **Momentum safety**: NEVER write `scrollTop` during momentum or active touch. `scrollTop` writes are only safe at true scroll-idle (detected via scroll debounce, NOT `scrollend` on WebKit).
 2. **Bridge math**: `translateY(totalShift)` on hide, `translateY(-totalShift)` on reverse show. Bridge and `scrollTop` adjustment must use the same `totalShift` value.
 3. **Pre-promotion**: Elements that receive `transform` during scroll must be pre-promoted with `transform: translateY(0)` at initialization. First-time layer promotion kills momentum.
-4. **CSS before measurement**: The `<style>` element defining `immersive-active` rules must be in the DOM before `totalShift` measurement. Measuring before insertion produces `totalShift = 0`.
-5. **Cooldown accumulator reset**: `accumulatedDelta` must be reset to 0 on every scroll event during cooldown. Layout-induced synthetic deltas (~250px) would otherwise trigger the opposite transition immediately.
-6. **Height lock lifecycle**: Lock at hide time, unlock-measure-relock at settle, unlock at full show cleanup. Never leave height locked after all immersive classes are removed.
-7. **Programmatic scroll guard**: `scrollTop` writes during settle must set a `programmaticScroll` flag. The scroll handler must check this flag and skip direction detection for the resulting synthetic scroll event.
-8. **No `will-change: transform` on scroll containers**: Breaks scroll event detection on child containers. Use `transform: translateY(0)` for pre-promotion instead.
-9. **Instant layout only**: Layout mutations during scroll must use `transition: none`. Animated transitions (any duration > 0) cause continuous relayout that kills momentum.
+4. **Cooldown accumulator reset**: `accumulatedDelta` must be reset to 0 on every scroll event during cooldown. Layout-induced synthetic deltas (~250px) would otherwise trigger the opposite transition immediately.
+5. **Height lock lifecycle**: Lock at hide time, unlock-measure-relock at settle, unlock at full show cleanup. Never leave height locked after all full-screen classes are removed.
+6. **Programmatic scroll guard**: `scrollTop` writes during settle must set a `programmaticScroll` flag. The scroll handler must check this flag and skip direction detection for the resulting synthetic scroll event.
+7. **No `will-change: transform` on scroll containers**: Breaks scroll event detection on child containers. Use `transform: translateY(0)` for pre-promotion instead.
+8. **Instant layout only**: Layout mutations during scroll must use `transition: none`. Animated transitions (any duration > 0) cause continuous relayout that kills momentum.
