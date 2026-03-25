@@ -3426,7 +3426,7 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
 .dynamic-views {
   /* Grid view cover-top with properties-bottom: push properties down */
 }
-.dynamic-views .dynamic-views-grid .card.card-cover-top.image-format-cover:has(.card-properties-bottom) .card-properties-bottom {
+.dynamic-views .dynamic-views-grid .card.card-cover-top.image-format-cover.has-properties-bottom .card-properties-bottom {
   margin-top: auto;
 }
 .dynamic-views .dynamic-views-grid .card.card-cover-top.image-format-cover .card-cover,
@@ -3466,14 +3466,14 @@ body:not(.dynamic-views-image-viewer-disabled) > .dynamic-views-image-embed.is-z
 }
 
 /* Ensure drag ghost appears above image viewer overlay */
-body:has(.dynamic-views-image-embed.is-zoomed) {
+body.dynamic-views-image-zoomed {
   --layer-dragged-item: 51;
 }
 
 /* Suppress card focus ring while viewer is open — keyboard events trigger
    :focus-visible on the still-focused card, which is a visual artifact.
    Reset to normal card border instead of none (::after is shared). */
-body:has(.dynamic-views-image-embed.is-zoomed) .dynamic-views .card:focus-visible::after {
+body.dynamic-views-image-zoomed .dynamic-views .card:focus-visible::after {
   box-shadow: inset 0 0 0 1px var(--card-border-color, var(--dynamic-views-background-modifier-border));
 }
 
@@ -3923,25 +3923,25 @@ body.theme-dark:is(.dynamic-views-card-shadow-color-accent,
 }
 
 /* When card-content only has text preview (no thumbnails), use column layout */
-.dynamic-views .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(:has(.card-cover)) {
+.dynamic-views .card-previews.text-only {
   flex-direction: column;
 }
 .dynamic-views {
   /* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
 }
-.dynamic-views .card.card-thumbnail-left .card-previews:has(.card-text-preview-wrapper) {
+.dynamic-views .card.card-thumbnail-left .card-previews.has-text-preview {
   flex-direction: row-reverse;
 }
 .dynamic-views {
   /* Thumbnail right: align thumbnail to the right when no text preview */
 }
-.dynamic-views .card.card-thumbnail-right .card-previews:not(:has(.card-text-preview-wrapper)) {
+.dynamic-views .card.card-thumbnail-right .card-previews:not(.has-text-preview) {
   justify-content: flex-end;
 }
 .dynamic-views {
   /* Stacked: left-align thumbnail when no text preview */
 }
-.dynamic-views .card.thumbnail-stack.card-thumbnail-right .card-previews:not(:has(.card-text-preview-wrapper)) {
+.dynamic-views .card.thumbnail-stack.card-thumbnail-right .card-previews:not(.has-text-preview) {
   justify-content: flex-start;
 }
 .dynamic-views .card-text-preview-wrapper {
@@ -3985,31 +3985,31 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
   -webkit-hyphens: auto;
 }
 
-body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview:has(> p) {
+body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.has-paragraphs {
   /* Override -webkit-box line-clamp — JS handles per-paragraph truncation.
-     Scoped to :has(> p) so cards without paragraph breaks keep native clamp. */
+     Scoped to .has-paragraphs so cards without paragraph breaks keep native clamp. */
   display: block;
   -webkit-line-clamp: unset;
   -webkit-box-orient: initial;
   /* CSS safety net: clips at correct visual height before JS runs */
   max-height: calc(var(--dynamic-views-text-preview-lines, 5) * 1lh);
 }
-body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview:has(> p) p {
+body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.has-paragraphs p {
   margin: 0;
   white-space: pre-line;
 }
-body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview:has(> p) p + p {
+body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.has-paragraphs p + p {
   margin-top: 1lh;
 }
-body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview:has(> p) {
+body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.has-paragraphs {
   /* Per-paragraph JS clamp utility classes (text-preview-dom.ts) */
 }
-body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview:has(> p) > p.dynamic-views-para-clamped {
+body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.has-paragraphs > p.dynamic-views-para-clamped {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview:has(> p) > p.dynamic-views-para-hidden {
+body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.has-paragraphs > p.dynamic-views-para-hidden {
   display: none;
 }
 
@@ -4126,13 +4126,13 @@ body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
 
 /* Collapse card-previews when it only has a hidden thumbnail placeholder
    (see also: card-body collapse below; gap declared in card/_core.scss) */
-body:not(.dynamic-views-show-thumbnail-placeholder) .dynamic-views .card-previews:has(> .card-thumbnail-placeholder:only-child) {
+body:not(.dynamic-views-show-thumbnail-placeholder) .dynamic-views .card-previews.thumbnail-placeholder-only {
   display: none;
 }
 
 /* Collapse card-body when its only content is a hidden card-previews
    (prevents gap on title-only cards — sibling of rule above; gap declared in card/_core.scss) */
-body:not(.dynamic-views-show-thumbnail-placeholder) .dynamic-views .card-body:has(> .card-previews:only-child > .card-thumbnail-placeholder:only-child) {
+body:not(.dynamic-views-show-thumbnail-placeholder) .dynamic-views .card-body:not(.has-body-content) {
   display: none;
 }
 
@@ -4246,9 +4246,11 @@ body:not(.dynamic-views-file-type-flair,
   display: none;
 }
 .dynamic-views .card-title-icon svg {
-  width: 1em;
-  height: calc(1em * var(--dynamic-views-line-height-tight));
+  /* calc derives boosted font-size on Android (1lh is boosted, ratio is constant) */
+  width: calc(1lh / var(--dynamic-views-line-height-tight));
+  height: 1lh;
   vertical-align: bottom;
+  margin-top: -1px; /* Optical centering: icon visual center vs text glyph center */
   color: var(--dynamic-views-text-normal);
   stroke-width: var(--dynamic-views-icon-xs-stroke-width);
 }
@@ -4459,7 +4461,7 @@ body.dynamic-views-subtitle-overflow-scroll .dynamic-views .card-subtitle :is(.p
 }
 
 /* Title divider line — only when card has content below title (excludes cover-bottom-only cards) */
-body.dynamic-views-title-divider .dynamic-views .card:has(.card-previews, .card-properties-top, .card-properties-bottom) .card-header {
+body.dynamic-views-title-divider .dynamic-views .card.has-card-content .card-header {
   padding-bottom: var(--size-4-2);
   border-bottom: 1px solid var(--dynamic-views-background-modifier-border);
 }
@@ -4512,8 +4514,8 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
 .dynamic-views {
   /* Title-subtitle: explicitly zero gap (card-body gap would add spacing; title and subtitle should sit flush) */
 }
-.dynamic-views .card.image-format-cover:has(.card-cover-wrapper:not(.card-cover-wrapper-placeholder)) .card-title + .card-subtitle,
-.dynamic-views .card.image-format-cover:has(.card-cover-wrapper-placeholder) .card-title + .card-subtitle {
+.dynamic-views .card.image-format-cover.has-cover .card-title + .card-subtitle,
+.dynamic-views .card.image-format-cover.has-cover-wrapper-placeholder .card-title + .card-subtitle {
   margin-top: 0;
 }
 .dynamic-views {
@@ -4568,27 +4570,15 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
      ============================================ */
   /* Cover-only cards: zero padding, reset wrapper margins */
 }
-.dynamic-views .card.card-cover-top.image-format-cover:not(:has(.card-header,
-.card-previews,
-.card-properties-top,
-.card-properties-bottom)),
-.dynamic-views .card.card-cover-bottom.image-format-cover:not(:has(.card-header,
-.card-previews,
-.card-properties-top,
-.card-properties-bottom)) {
+.dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content),
+.dynamic-views .card.card-cover-bottom.image-format-cover:not(.has-card-content) {
   padding: 0;
 }
 .dynamic-views {
   /* Reset negative margins since padding is 0 */
 }
-.dynamic-views .card.card-cover-top.image-format-cover:not(:has(.card-header,
-.card-previews,
-.card-properties-top,
-.card-properties-bottom)) .card-cover-wrapper,
-.dynamic-views .card.card-cover-bottom.image-format-cover:not(:has(.card-header,
-.card-previews,
-.card-properties-top,
-.card-properties-bottom)) .card-cover-wrapper {
+.dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content) .card-cover-wrapper,
+.dynamic-views .card.card-cover-bottom.image-format-cover:not(.has-card-content) .card-cover-wrapper {
   margin: 0;
 }
 .dynamic-views {
@@ -4946,58 +4936,60 @@ body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both 
 }
 
 /* Masonry with placeholders disabled: zero title-subtitle gap (higher specificity to beat card-body gap) */
-body.dynamic-views-show-cover-placeholder-grid .dynamic-views .dynamic-views-masonry .card.image-format-cover:has(.card-cover-wrapper-placeholder) .card-title + .card-subtitle,
-body.dynamic-views-show-cover-placeholder-none .dynamic-views .dynamic-views-masonry .card.image-format-cover:has(.card-cover-wrapper-placeholder) .card-title + .card-subtitle {
+body.dynamic-views-show-cover-placeholder-grid .dynamic-views .dynamic-views-masonry .card.image-format-cover.has-cover-wrapper-placeholder .card-title + .card-subtitle,
+body.dynamic-views-show-cover-placeholder-none .dynamic-views .dynamic-views-masonry .card.image-format-cover.has-cover-wrapper-placeholder .card-title + .card-subtitle {
   margin-top: 0;
 }
 
 /* Grid: spacing for side covers when cover element OR visible placeholder exists */
 /* Cover-left: content padding */
-.dynamic-views .dynamic-views-grid .card.card-cover-left.image-format-cover:has(.card-cover) > .card-content,
+.dynamic-views .dynamic-views-grid .card.card-cover-left.image-format-cover.has-cover > .card-content,
 body:is(.dynamic-views-show-cover-placeholder-grid,
 .dynamic-views-show-cover-placeholder-both,
-:not([class*=dynamic-views-show-cover-placeholder-])) .dynamic-views .dynamic-views-grid .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) > .card-content {
+:not([class*=dynamic-views-show-cover-placeholder-])) .dynamic-views .dynamic-views-grid .card.card-cover-left.image-format-cover.has-cover-placeholder > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
   margin-left: var(--side-cover-offset);
 }
 
 /* Cover-right: content padding */
-.dynamic-views .dynamic-views-grid .card.card-cover-right.image-format-cover:has(.card-cover) > .card-content,
+.dynamic-views .dynamic-views-grid .card.card-cover-right.image-format-cover.has-cover > .card-content,
 body:is(.dynamic-views-show-cover-placeholder-grid,
 .dynamic-views-show-cover-placeholder-both,
-:not([class*=dynamic-views-show-cover-placeholder-])) .dynamic-views .dynamic-views-grid .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) > .card-content {
+:not([class*=dynamic-views-show-cover-placeholder-])) .dynamic-views .dynamic-views-grid .card.card-cover-right.image-format-cover.has-cover-placeholder > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
 }
 
 /* Side cover: minimum card height */
-.dynamic-views .dynamic-views-grid .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(.card-cover),
+.dynamic-views .dynamic-views-grid .card:is(.card-cover-left, .card-cover-right).image-format-cover.has-cover,
 body:is(.dynamic-views-show-cover-placeholder-grid,
 .dynamic-views-show-cover-placeholder-both,
-:not([class*=dynamic-views-show-cover-placeholder-])) .dynamic-views .dynamic-views-grid .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(.card-cover-placeholder) {
+:not([class*=dynamic-views-show-cover-placeholder-])) .dynamic-views .dynamic-views-grid .card:is(.card-cover-left,
+.card-cover-right).image-format-cover.has-cover-placeholder {
   min-height: var(--dynamic-views-side-cover-height, 150px);
 }
 
 /* Masonry: spacing for side covers when cover element OR visible placeholder exists.
    No :not() fallback — default placeholder is Grid-only, Masonry requires explicit opt-in. */
 /* Cover-left: content padding */
-.dynamic-views .dynamic-views-masonry .card.card-cover-left.image-format-cover:has(.card-cover) > .card-content,
+.dynamic-views .dynamic-views-masonry .card.card-cover-left.image-format-cover.has-cover > .card-content,
 body:is(.dynamic-views-show-cover-placeholder-masonry,
-.dynamic-views-show-cover-placeholder-both) .dynamic-views .dynamic-views-masonry .card.card-cover-left.image-format-cover:has(.card-cover-placeholder) > .card-content {
+.dynamic-views-show-cover-placeholder-both) .dynamic-views .dynamic-views-masonry .card.card-cover-left.image-format-cover.has-cover-placeholder > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
   margin-left: var(--side-cover-offset);
 }
 
 /* Cover-right: content padding */
-.dynamic-views .dynamic-views-masonry .card.card-cover-right.image-format-cover:has(.card-cover) > .card-content,
+.dynamic-views .dynamic-views-masonry .card.card-cover-right.image-format-cover.has-cover > .card-content,
 body:is(.dynamic-views-show-cover-placeholder-masonry,
-.dynamic-views-show-cover-placeholder-both) .dynamic-views .dynamic-views-masonry .card.card-cover-right.image-format-cover:has(.card-cover-placeholder) > .card-content {
+.dynamic-views-show-cover-placeholder-both) .dynamic-views .dynamic-views-masonry .card.card-cover-right.image-format-cover.has-cover-placeholder > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
 }
 
 /* Side cover: minimum card height */
-.dynamic-views .dynamic-views-masonry .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(.card-cover),
+.dynamic-views .dynamic-views-masonry .card:is(.card-cover-left, .card-cover-right).image-format-cover.has-cover,
 body:is(.dynamic-views-show-cover-placeholder-masonry,
-.dynamic-views-show-cover-placeholder-both) .dynamic-views .dynamic-views-masonry .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(.card-cover-placeholder) {
+.dynamic-views-show-cover-placeholder-both) .dynamic-views .dynamic-views-masonry .card:is(.card-cover-left,
+.card-cover-right).image-format-cover.has-cover-placeholder {
   min-height: var(--dynamic-views-side-cover-height, 150px);
 }
 
@@ -5098,10 +5090,10 @@ body:is(.dynamic-views-backdrop-theme-light,
 }
 
 /* Backdrop text color overrides (light overlay → dark text) */
-body.dynamic-views-backdrop-theme-light .dynamic-views .card.image-format-backdrop:has(.card-backdrop),
+body.dynamic-views-backdrop-theme-light .dynamic-views .card.image-format-backdrop.has-backdrop,
 body:is(.dynamic-views-backdrop-theme-match,
 :not(.dynamic-views-backdrop-theme-light,
-.dynamic-views-backdrop-theme-dark)).theme-light .dynamic-views .card.image-format-backdrop:has(.card-backdrop) {
+.dynamic-views-backdrop-theme-dark)).theme-light .dynamic-views .card.image-format-backdrop.has-backdrop {
   --text-normal: #222222;
   --text-muted: #333333;
   --text-faint: color-mix(in srgb, #333333 60%, transparent);
@@ -5111,10 +5103,10 @@ body:is(.dynamic-views-backdrop-theme-match,
 }
 
 /* Backdrop text color overrides (dark overlay → light text) */
-body.dynamic-views-backdrop-theme-dark .dynamic-views .card.image-format-backdrop:has(.card-backdrop),
+body.dynamic-views-backdrop-theme-dark .dynamic-views .card.image-format-backdrop.has-backdrop,
 body:is(.dynamic-views-backdrop-theme-match,
 :not(.dynamic-views-backdrop-theme-light,
-.dynamic-views-backdrop-theme-dark)).theme-dark .dynamic-views .card.image-format-backdrop:has(.card-backdrop) {
+.dynamic-views-backdrop-theme-dark)).theme-dark .dynamic-views .card.image-format-backdrop.has-backdrop {
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
@@ -5883,12 +5875,6 @@ body.dynamic-views-hide-slideshow-indicator .dynamic-views .slideshow-indicator 
   flex: 1 1 auto;
 }
 .dynamic-views {
-  /* Both pair properties collapsed: hide the empty wrapper */
-}
-.dynamic-views .property-pair:not(:has(> .property:not(.property-collapsed))) {
-  display: none;
-}
-.dynamic-views {
   /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
 }
 .dynamic-views.dynamic-views-paired-property-column .property-pair .property {
@@ -6080,9 +6066,16 @@ body.dynamic-views-property-label-small-caps .dynamic-views .property-label-inli
   flex-shrink: 0;
   align-self: center;
   opacity: 0.7;
-  width: 1em;
-  height: 1lh;
+  /* calc derives boosted font-size on Android (1lh is boosted, ratio is constant) */
+  width: calc(1lh / var(--dynamic-views-line-height-tight));
+  height: calc(1lh / var(--dynamic-views-line-height-tight));
   margin-right: var(--size-2-2);
+}
+
+/* Optical centering: text visual center sits higher than bounding box center
+   because digits have no descenders — nudge icon up to match */
+.dynamic-views .timestamp-icon {
+  margin-top: -1px;
 }
 
 .dynamic-views .timestamp-icon svg {
@@ -7289,7 +7282,7 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
 .dynamic-views .dynamic-views-masonry .card.card-thumbnail-right .card-previews {
   flex-direction: row;
 }
-.dynamic-views .dynamic-views-masonry .card.card-thumbnail-left .card-previews:has(.card-text-preview-wrapper) {
+.dynamic-views .dynamic-views-masonry .card.card-thumbnail-left .card-previews.has-text-preview {
   flex-direction: row-reverse;
 }
 .dynamic-views .dynamic-views-masonry {
@@ -7367,7 +7360,7 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
 .dynamic-views {
   /* Hide end indicator during resize - use display:none to fully remove from flow */
 }
-.dynamic-views:has(.masonry-resizing) .dynamic-views-end-indicator {
+.dynamic-views.has-masonry-resizing .dynamic-views-end-indicator {
   display: none;
 }
 .dynamic-views {
@@ -7490,7 +7483,8 @@ body.dynamic-views-no-fade-truncated-text .dynamic-views .card.image-format-post
   visibility: hidden;
 }
 
-/* Bases: container query on .bases-view (has container-type: inline-size) */
+/* Bases only: unnamed container query resolves to .bases-view (has container-type: inline-size).
+   Datacore handles this via toolbar-compact.ts observer (dynamic-views-hidden class). */
 @container (max-width: 50px) {
   .dynamic-views-grid,
   .dynamic-views-masonry {
@@ -7602,7 +7596,8 @@ body.dynamic-views-subtitle-overflow-scroll .dynamic-views-narrow .card-subtitle
   flex-wrap: nowrap;
 }
 
-/* Bases compact: container query on .bases-view (has container-type: inline-size) */
+/* Bases only: unnamed container query resolves to .bases-view (has container-type: inline-size).
+   Datacore handles this via toolbar-compact.ts observer (dynamic-views-narrow class). */
 @container (max-width: 699px) and (min-width: 51px) {
   .bases-view .tags-wrapper,
   .bases-view .path-wrapper {

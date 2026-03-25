@@ -141,9 +141,11 @@ body:not(
   }
 
   .card-title-icon svg {
-    width: 1em;
-    height: calc(1em * var(--dynamic-views-line-height-tight));
+    /* calc derives boosted font-size on Android (1lh is boosted, ratio is constant) */
+    width: calc(1lh / var(--dynamic-views-line-height-tight));
+    height: 1lh;
     vertical-align: bottom;
+    margin-top: -1px; /* Optical centering: icon visual center vs text glyph center */
     color: var(--dynamic-views-text-normal);
     stroke-width: var(--dynamic-views-icon-xs-stroke-width);
   }
@@ -415,7 +417,7 @@ body.dynamic-views-subtitle-overflow-scroll
 /* Title divider line — only when card has content below title (excludes cover-bottom-only cards) */
 body.dynamic-views-title-divider
   .dynamic-views
-  .card:has(.card-previews, .card-properties-top, .card-properties-bottom)
+  .card.has-card-content
   .card-header {
   padding-bottom: var(--size-4-2);
   border-bottom: 1px solid var(--dynamic-views-background-modifier-border);

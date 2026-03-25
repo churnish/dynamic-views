@@ -28,26 +28,23 @@
 
 /* When card-content only has text preview (no thumbnails), use column layout */
 .dynamic-views {
-  .card-previews:not(:has(.card-thumbnail, .card-thumbnail-placeholder)):not(
-      :has(.card-cover)
-    ) {
+  .card-previews.text-only {
     flex-direction: column;
   }
 
   /* Thumbnail left: reverse row to place thumbnail on left (only when text preview exists) */
-  .card.card-thumbnail-left .card-previews:has(.card-text-preview-wrapper) {
+  .card.card-thumbnail-left .card-previews.has-text-preview {
     flex-direction: row-reverse;
   }
 
   /* Thumbnail right: align thumbnail to the right when no text preview */
-  .card.card-thumbnail-right
-    .card-previews:not(:has(.card-text-preview-wrapper)) {
+  .card.card-thumbnail-right .card-previews:not(.has-text-preview) {
     justify-content: flex-end;
   }
 
   /* Stacked: left-align thumbnail when no text preview */
   .card.thumbnail-stack.card-thumbnail-right
-    .card-previews:not(:has(.card-text-preview-wrapper)) {
+    .card-previews:not(.has-text-preview) {
     justify-content: flex-start;
   }
 
@@ -104,9 +101,9 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
 
 body.dynamic-views-text-preview-keep-newlines
   .dynamic-views
-  .card-text-preview:has(> p) {
+  .card-text-preview.has-paragraphs {
   /* Override -webkit-box line-clamp — JS handles per-paragraph truncation.
-     Scoped to :has(> p) so cards without paragraph breaks keep native clamp. */
+     Scoped to .has-paragraphs so cards without paragraph breaks keep native clamp. */
   display: block;
   -webkit-line-clamp: unset;
   -webkit-box-orient: initial;
@@ -273,7 +270,7 @@ body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
    (see also: card-body collapse below; gap declared in card/_core.scss) */
 body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
-  .card-previews:has(> .card-thumbnail-placeholder:only-child) {
+  .card-previews.thumbnail-placeholder-only {
   display: none;
 }
 
@@ -281,8 +278,6 @@ body:not(.dynamic-views-show-thumbnail-placeholder)
    (prevents gap on title-only cards — sibling of rule above; gap declared in card/_core.scss) */
 body:not(.dynamic-views-show-thumbnail-placeholder)
   .dynamic-views
-  .card-body:has(
-    > .card-previews:only-child > .card-thumbnail-placeholder:only-child
-  ) {
+  .card-body:not(.has-body-content) {
   display: none;
 }

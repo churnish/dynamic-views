@@ -151,19 +151,19 @@
   }
 
   /* Gap between inline property label and content */
-  .property:has(.property-label-inline) {
+  .property.has-label-inline {
     gap: var(--size-2-2);
   }
 
   /* Vertical layout when property labels are on top */
-  .property:has(.property-label) {
+  .property.has-label {
     flex-direction: column;
     align-items: stretch;
     overflow-x: visible; /* Override overflow - labels should not scroll */
   }
 
   /* Property labels should never scroll */
-  .property:has(.property-label) .property-label {
+  .property.has-label .property-label {
     flex-shrink: 0;
     overflow: visible;
   }
@@ -182,15 +182,14 @@
   }
 
   /* For inline labels: wrapper takes remaining space after label */
-  .property:has(.property-label-inline) .property-content-wrapper {
+  .property.has-label-inline .property-content-wrapper {
     flex: 1 1 0;
     min-width: 0;
   }
 
   /* For property labels above or no property labels: wrapper takes full width */
-  .property:has(.property-label) .property-content-wrapper,
-  .property:not(:has(.property-label)):not(:has(.property-label-inline))
-    .property-content-wrapper {
+  .property.has-label .property-content-wrapper,
+  .property:not(.has-label):not(.has-label-inline) .property-content-wrapper {
     width: 100%;
   }
 
@@ -240,15 +239,9 @@
   /* Collapsed pair partner: expand visible property to full width.
      Safety net for Bases imperative-DOM path where handleEmptyField applies
      property-collapsed after async rendering. Datacore pre-filters instead. */
-  .property-pair:has(> .property-collapsed)
-    > .property:not(.property-collapsed) {
+  .property-pair.pair-has-collapsed > .property:not(.property-collapsed) {
     max-width: 100%;
     flex: 1 1 auto;
-  }
-
-  /* Both pair properties collapsed: hide the empty wrapper */
-  .property-pair:not(:has(> .property:not(.property-collapsed))) {
-    display: none;
   }
 
   /* Column mode: 50-50 split (measurement is skipped, so this is the final state) */
@@ -257,10 +250,10 @@
   }
 
   /* Column mode: orphan (unpaired) property stays at half-width to preserve grid structure.
-     :has(.property-pair) ensures this only applies when pairing is active — without it,
+     .has-pairs ensures this only applies when pairing is active — without it,
      all properties get constrained to 50% when pairing is off (no .property-pair wrappers). */
   &.dynamic-views-paired-property-column
-    .card-properties:has(.property-pair)
+    .card-properties.has-pairs
     > .property {
     max-width: 50%;
   }
@@ -324,7 +317,7 @@
   }
 
   /* Property text color application - with labels */
-  .property:has(:is(.property-label, .property-label-inline)) {
+  .property:is(.has-label, .has-label-inline) {
     color: var(
       --dynamic-views-property-with-label-color-value,
       var(--dynamic-views-text-muted)
@@ -332,7 +325,7 @@
   }
 
   /* Property text color application - without labels */
-  .property:not(:has(:is(.property-label, .property-label-inline))) {
+  .property:not(.has-label, .has-label-inline) {
     color: var(
       --dynamic-views-property-no-label-color-value,
       var(--dynamic-views-text-faint)
@@ -396,7 +389,7 @@
 body.dynamic-views-full-row-align-right
   .dynamic-views
   .card-properties
-  > .property:has(.property-label-inline)
+  > .property.has-label-inline
   .property-content-wrapper {
   flex: 0 1 auto;
   margin-left: auto;
@@ -449,7 +442,7 @@ body.dynamic-views-property-label-small-caps
   }
 
   /* Timestamp wrapper - flex container for icon positioning */
-  .property-content > span:has(.timestamp-icon) {
+  .property-content > span.has-timestamp-icon {
     display: inline-flex;
     align-items: center;
     gap: 0;
@@ -461,10 +454,17 @@ body.dynamic-views-property-label-small-caps
     flex-shrink: 0;
     align-self: center;
     opacity: 0.7;
-    width: 1lh;
-    height: 1lh;
+    /* calc derives boosted font-size on Android (1lh is boosted, ratio is constant) */
+    width: calc(1lh / var(--dynamic-views-line-height-tight));
+    height: calc(1lh / var(--dynamic-views-line-height-tight));
     margin-right: var(--size-2-2);
   }
+}
+
+/* Optical centering: text visual center sits higher than bounding box center
+   because digits have no descenders — nudge icon up to match */
+.dynamic-views .timestamp-icon {
+  margin-top: -1px;
 }
 
 .dynamic-views {

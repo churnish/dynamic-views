@@ -1038,10 +1038,14 @@ export class SharedCardRenderer {
         cardEl,
         () => {
           cardEl.classList.add('hover-intent-active');
+          cardEl.closest('.masonry-container')?.classList.add('has-hover-card');
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
           cardEl.classList.remove('hover-intent-active');
+          cardEl
+            .closest('.masonry-container')
+            ?.classList.remove('has-hover-card');
           keyboardNav?.onHoverEnd?.();
         },
         signal
@@ -1408,6 +1412,7 @@ export class SharedCardRenderer {
     // POSTER: absolute-positioned image fills entire card, content hidden until hover
     if (format === 'poster' && hasImage) {
       const bgWrapper = cardEl.createDiv('card-poster');
+      cardEl.classList.add('has-poster');
       const img = bgWrapper.createEl('img', {
         attr: { src: imageUrls[0], alt: '' },
       });
@@ -1423,6 +1428,7 @@ export class SharedCardRenderer {
     // BACKDROP: absolute-positioned image fills entire card
     if (format === 'backdrop' && hasImage) {
       const bgWrapper = cardEl.createDiv('card-backdrop');
+      cardEl.classList.add('has-backdrop');
       const img = bgWrapper.createEl('img', {
         attr: { src: imageUrls[0], alt: '' },
       });
@@ -1465,9 +1471,15 @@ export class SharedCardRenderer {
       }
 
       if (hasTextPreview && card.textPreview) {
+        previewsEl.classList.add('has-text-preview');
         const wrapper = previewsEl.createDiv('card-text-preview-wrapper');
         const previewDiv = wrapper.createDiv('card-text-preview');
         setPreviewContent(previewDiv, card.textPreview);
+
+        // has-paragraphs: mark when text preview contains <p> children
+        if (previewDiv.querySelector('p')) {
+          previewDiv.classList.add('has-paragraphs');
+        }
       }
 
       // Thumbnail (all positions now inside card-previews)
@@ -1495,7 +1507,16 @@ export class SharedCardRenderer {
           }
         } else {
           previewsEl.createDiv('card-thumbnail-placeholder');
+          // Only a placeholder child — mark for CSS targeting
+          if (!hasTextPreview) {
+            previewsEl.classList.add('thumbnail-placeholder-only');
+          }
         }
+      }
+
+      // text-only: previews has text but no image elements
+      if (hasTextPreview && !showThumbnail) {
+        previewsEl.classList.add('text-only');
       }
     }
 
@@ -1514,6 +1535,20 @@ export class SharedCardRenderer {
         card,
         signal
       );
+    }
+
+    // Mark card with structural content classes (for CSS targeting without :has())
+    if (bodyEl.children.length > 0) {
+      bodyEl.classList.add('has-body-content');
+    }
+    const hasCardContent = !!cardEl.querySelector(
+      '.card-previews, .card-properties-top, .card-properties-bottom'
+    );
+    if (hasCardContent) {
+      cardEl.classList.add('has-card-content');
+    }
+    if (cardEl.querySelector('.card-properties-bottom')) {
+      cardEl.classList.add('has-properties-bottom');
     }
 
     // Card-level responsive behaviors (single ResizeObserver)
@@ -1637,6 +1672,7 @@ export class SharedCardRenderer {
     );
 
     if (hasImage) {
+      cardEl.classList.add('has-cover');
       const maxSlideshow = getSlideshowMaxImages();
       const slideshowUrls = imageUrls.slice(0, maxSlideshow);
       const shouldShowSlideshow =
@@ -1669,6 +1705,10 @@ export class SharedCardRenderer {
         );
       }
     } else {
+      cardEl.classList.add(
+        'has-cover-placeholder',
+        'has-cover-wrapper-placeholder'
+      );
       coverWrapper.createDiv('card-cover-placeholder');
     }
   }
@@ -2454,6 +2494,9 @@ export class SharedCardRenderer {
           )
         ) {
           fieldEl.addClass('property-collapsed');
+          fieldEl
+            .closest('.property-pair')
+            ?.classList.add('pair-has-collapsed');
         } else {
           const placeholderContent = fieldEl.createDiv('property-content');
           const markerSpan =
@@ -2462,6 +2505,7 @@ export class SharedCardRenderer {
         }
       } else if (settings.propertyLabels === 'hide') {
         fieldEl.addClass('property-collapsed');
+        fieldEl.closest('.property-pair')?.classList.add('pair-has-collapsed');
       }
     };
 
@@ -2481,6 +2525,9 @@ export class SharedCardRenderer {
           const pairEl = container.createDiv(
             `property-pair property-pair-${pairNum}`
           );
+          if (!container.classList.contains('has-pairs')) {
+            container.classList.add('has-pairs');
+          }
 
           const fieldEls: HTMLElement[] = [];
           const hasContent: boolean[] = [];
@@ -2638,6 +2685,7 @@ export class SharedCardRenderer {
         propertyName,
         settings._displayNameMap
       );
+      container.addClass('has-label');
     }
 
     // Add inline label if enabled (as sibling, before property-content)
@@ -2645,6 +2693,7 @@ export class SharedCardRenderer {
       const labelSpan = container.createSpan('property-label-inline');
       labelSpan.textContent =
         getPropertyLabel(propertyName, settings._displayNameMap) + ' ';
+      container.addClass('has-label-inline');
     }
 
     // Wrapper for scrolling content (gradients applied here)
@@ -2753,6 +2802,7 @@ export class SharedCardRenderer {
         const iconName = getTimestampIcon(propertyName, settings);
         const iconEl = timestampWrapper.createSpan('timestamp-icon');
         setIcon(iconEl, iconName);
+        timestampWrapper.classList.add('has-timestamp-icon');
       }
       timestampWrapper.appendText(stringValue);
     } else if (

@@ -18,7 +18,7 @@
       flex-direction: row;
     }
 
-    .card.card-thumbnail-left .card-previews:has(.card-text-preview-wrapper) {
+    .card.card-thumbnail-left .card-previews.has-text-preview {
       flex-direction: row-reverse;
     }
 
@@ -103,7 +103,7 @@
   }
 
   /* Hide end indicator during resize - use display:none to fully remove from flow */
-  &:has(.masonry-resizing) .dynamic-views-end-indicator {
+  &.has-masonry-resizing .dynamic-views-end-indicator {
     display: none;
   }
 

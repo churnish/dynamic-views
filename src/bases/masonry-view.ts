@@ -257,7 +257,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private postResizeIdleTimeout: ReturnType<typeof setTimeout> | null = null;
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
-  private displayedSoFar: number = 0;
+  private renderedCount: number = 0;
   /** Latest container width from ResizeObserver. Never reset — deferred resize
    *  at scroll-idle reads the most recent value, which is always the correct
    *  target width regardless of when the deferral was scheduled. */
@@ -492,12 +492,10 @@ export class DynamicViewsMasonryView extends BasesView {
     this.rebuildGroupIndex();
 
     // Masonry layout calculation + post-render hooks
+    // Phase 1.5 inside updateLayoutRef handles syncResponsiveClasses for all
+    // cards (including newly expanded), so no separate call needed here.
     if (this.updateLayoutRef.current) {
       this.updateLayoutRef.current('expand-group');
-    }
-    const newCards = Array.from(groupEl.querySelectorAll<HTMLElement>('.card'));
-    if (syncResponsiveClasses(newCards)) {
-      this.updateLayoutRef.current?.('compact-mode-sync');
     }
     initializeScrollGradients(groupEl);
     initializeTitleTruncation(groupEl);
@@ -1492,7 +1490,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Track state for batch append and end indicator
       this.previousDisplayedCount = displayedSoFar;
-      this.displayedSoFar = displayedSoFar;
+      this.renderedCount = displayedSoFar;
       this.rebuildGroupIndex();
 
       // Initial layout calculation (sets inline width on cards)
@@ -1688,6 +1686,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Hide cards during initial render only
         if (!skipHiding) {
           this.masonryContainer.classList.add('masonry-resizing');
+          this.containerEl.classList.add('has-masonry-resizing');
         }
 
         // Collect all cards
@@ -2053,15 +2052,16 @@ export class DynamicViewsMasonryView extends BasesView {
 
         if (!skipHiding && this.masonryContainer?.isConnected) {
           this.masonryContainer.classList.remove('masonry-resizing');
+          this.containerEl.classList.remove('has-masonry-resizing');
         }
 
         // Mount/unmount cards based on updated positions.
         // Fast path handles its own sync — skip here.
         // Skip when !hasUserScrolled — syncVirtualScroll returns immediately
-        // (line 2742) and updateCachedGroupOffsets would force a post-Phase-4
-        // reflow (~200-445ms). Offsets are computed lazily: on first scroll
-        // via scheduleVirtualScrollSync, or by remeasureAndReposition when
-        // groupOffsetsDirty is set (Change 7).
+        // and updateCachedGroupOffsets would force an expensive reflow
+        // (~200-445ms). Offsets are computed lazily: on first scroll via
+        // scheduleVirtualScrollSync, or by remeasureAndReposition when
+        // groupOffsetsDirty is set.
         if (!fastPathHandledSync) {
           this.groupOffsetsDirty = true;
           if (this.hasUserScrolled) {
@@ -2080,7 +2080,7 @@ export class DynamicViewsMasonryView extends BasesView {
         this.win.requestAnimationFrame(() => {
           if (!this.containerEl?.isConnected) return;
           if (
-            this.displayedSoFar >= this.totalEntries &&
+            this.renderedCount >= this.totalEntries &&
             this.totalEntries > 0
           ) {
             this.showEndIndicator();
@@ -2131,22 +2131,25 @@ export class DynamicViewsMasonryView extends BasesView {
         // Trades a single position jump (200ms after resize) for accurate text
         // rendering. Subsequent corrections guarded by scroll.
         this.masonryContainer?.classList.add('masonry-skip-transition');
-        this.remeasureAndReposition(true);
+        const didWork = this.remeasureAndReposition(true);
 
-        // Guard remaining corrections (unmounted cards mounting during scroll)
-        // behind scroll-concurrent path.
-        this.postResizeScrollActive = true;
+        // Only guard subsequent corrections when the at-rest correction
+        // actually repositioned cards. When no reposition was needed,
+        // async paths (cardRO, image-load) must remain unblocked.
+        if (didWork) {
+          this.postResizeScrollActive = true;
 
-        // Safety net: clear flag if user never scrolls (2s).
-        if (this.postResizeIdleTimeout !== null) {
-          clearTimeout(this.postResizeIdleTimeout);
+          // Safety net: clear flag if user never scrolls (2s).
+          if (this.postResizeIdleTimeout !== null) {
+            clearTimeout(this.postResizeIdleTimeout);
+          }
+          this.postResizeIdleTimeout = setTimeout(() => {
+            this.postResizeIdleTimeout = null;
+            if (!this.postResizeScrollActive) return;
+            this.postResizeScrollActive = false;
+            this.masonryContainer?.classList.remove('masonry-skip-transition');
+          }, 2000);
         }
-        this.postResizeIdleTimeout = setTimeout(() => {
-          this.postResizeIdleTimeout = null;
-          if (!this.postResizeScrollActive) return;
-          this.postResizeScrollActive = false;
-          this.masonryContainer?.classList.remove('masonry-skip-transition');
-        }, 2000);
 
         // Post-correction: responsive classes + scroll gradients
         this.resizeCorrectionRafId = this.win.requestAnimationFrame(() => {
@@ -2196,14 +2199,17 @@ export class DynamicViewsMasonryView extends BasesView {
 
     if (!this.cardResizeObserver) {
       this.cardResizeObserver = new this.win.ResizeObserver(() => {
-        // Skip during active resize, scroll remeasure, batch layout, or pre-layout state
+        // Skip during active resize, scroll remeasure, batch layout, pre-layout
+        // state, or before first scroll (avoids forced reflow from
+        // updateCachedGroupOffsets before virtual scroll is active)
         if (
           this.resizeCorrectionTimeout !== null ||
           this.isScrollRemeasurePending() ||
           this.postResizeScrollActive ||
           this.batchLayoutPending ||
           this.lastLayoutCardWidth === 0 ||
-          !this.lastRenderedSettings
+          !this.lastRenderedSettings ||
+          !this.hasUserScrolled
         ) {
           return;
         }
@@ -3503,7 +3509,7 @@ export class DynamicViewsMasonryView extends BasesView {
       // Update state for next append - use currCount (captured at start)
       // to ensure consistency even if this.displayedCount changed during async
       this.previousDisplayedCount = currCount;
-      this.displayedSoFar = displayedSoFar;
+      this.renderedCount = displayedSoFar;
       this.rebuildGroupIndex();
 
       if (newCardsRendered > 0 && newCardsPerGroup.size > 0) {
@@ -3713,7 +3719,7 @@ export class DynamicViewsMasonryView extends BasesView {
           if (this.renderState.version === currentVersion) {
             this.checkAndLoadMore(totalEntries, settings);
             if (
-              this.displayedSoFar >= this.totalEntries &&
+              this.renderedCount >= this.totalEntries &&
               this.totalEntries > 0
             ) {
               this.showEndIndicator();
@@ -3722,10 +3728,11 @@ export class DynamicViewsMasonryView extends BasesView {
         };
 
         // Schedule via image load + double RAF (same pattern as before)
-        const isFixedCoverHeight = document.body.classList.contains(
+        const body = this.containerEl.ownerDocument.body;
+        const isFixedCoverHeight = body.classList.contains(
           'dynamic-views-fixed-cover-height'
         );
-        const isFixedPosterHeight = document.body.classList.contains(
+        const isFixedPosterHeight = body.classList.contains(
           'dynamic-views-fixed-poster-height'
         );
 

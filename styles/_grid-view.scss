@@ -136,7 +136,7 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
 
   /* Grid view cover-top with properties-bottom: push properties down */
   .dynamic-views-grid
-    .card.card-cover-top.image-format-cover:has(.card-properties-bottom)
+    .card.card-cover-top.image-format-cover.has-properties-bottom
     .card-properties-bottom {
     margin-top: auto;
   }

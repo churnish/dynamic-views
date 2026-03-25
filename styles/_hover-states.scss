@@ -230,7 +230,7 @@
       .dynamic-views-title-hover-color-no-change
     )[class*='dynamic-views-title-hover-color-']
     .dynamic-views
-    .card.image-format-poster:has(.card-poster)
+    .card.image-format-poster.has-poster
     .card-title {
     /* Sync color transition with content opacity fade (300ms) so the
        hover→normal color shift is masked by the fade-out on mouse-leave */
@@ -241,7 +241,7 @@
       .dynamic-views-title-hover-color-no-change
     )[class*='dynamic-views-title-hover-color-']
     .dynamic-views
-    .card.image-format-poster:has(.card-poster):hover
+    .card.image-format-poster.has-poster:hover
     .card-title {
     color: var(--dynamic-views-title-hover-color-value);
   }
@@ -312,7 +312,7 @@
   body.dynamic-views-property-color-with-labels-faint
     .dynamic-views
     .card.hover-intent-active
-    .property:has(:is(.property-label, .property-label-inline))
+    .property:is(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -324,7 +324,7 @@
   body.dynamic-views-property-color-with-labels-muted
     .dynamic-views
     .card.hover-intent-active
-    .property:has(:is(.property-label, .property-label-inline))
+    .property:is(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -337,7 +337,7 @@
   body.dynamic-views-property-color-with-labels-accent
     .dynamic-views
     .card.hover-intent-active
-    .property:has(:is(.property-label, .property-label-inline))
+    .property:is(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -359,7 +359,7 @@
     )
     .dynamic-views
     .card.hover-intent-active
-    .property:has(:is(.property-label, .property-label-inline))
+    .property:is(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -376,7 +376,7 @@
   body.dynamic-views-property-color-with-labels-custom
     .dynamic-views
     .card.hover-intent-active
-    .property:has(:is(.property-label, .property-label-inline))
+    .property:is(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -393,7 +393,7 @@
   body.dynamic-views-property-color-without-labels-faint
     .dynamic-views
     .card.hover-intent-active
-    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -405,7 +405,7 @@
   body.dynamic-views-property-color-without-labels-muted
     .dynamic-views
     .card.hover-intent-active
-    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -418,7 +418,7 @@
   body.dynamic-views-property-color-without-labels-accent
     .dynamic-views
     .card.hover-intent-active
-    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -440,7 +440,7 @@
     )
     .dynamic-views
     .card.hover-intent-active
-    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -457,7 +457,7 @@
   body.dynamic-views-property-color-without-labels-custom
     .dynamic-views
     .card.hover-intent-active
-    .property:not(:has(:is(.property-label, .property-label-inline)))
+    .property:not(.has-label, .has-label-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
@@ -531,7 +531,7 @@
     )
     .workspace-leaf-content[data-type='bases']
     .dynamic-views-masonry
-    .masonry-container:has(.card.hover-intent-active:hover) {
+    .masonry-container.has-hover-card {
     z-index: 11;
   }
 
@@ -566,13 +566,13 @@
   /* Poster cards: higher specificity needed (default rule uses body class selector) */
   body.dynamic-views-open-on-card
     .dynamic-views
-    .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+    .card:not(.hover-intent-active).image-format-poster.has-poster {
     cursor: default;
   }
 
   body.dynamic-views-poster-reveal-press
     .dynamic-views
-    .card:not(.hover-intent-active).image-format-poster:has(.card-poster) {
+    .card:not(.hover-intent-active).image-format-poster.has-poster {
     cursor: default;
   }
 

@@ -15,12 +15,8 @@
   }
 
   /* Title-subtitle: explicitly zero gap (card-body gap would add spacing; title and subtitle should sit flush) */
-  .card.image-format-cover:has(
-      .card-cover-wrapper:not(.card-cover-wrapper-placeholder)
-    )
-    .card-title
-    + .card-subtitle,
-  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
+  .card.image-format-cover.has-cover .card-title + .card-subtitle,
+  .card.image-format-cover.has-cover-wrapper-placeholder
     .card-title
     + .card-subtitle {
     margin-top: 0;
@@ -89,43 +85,15 @@
      ============================================ */
 
   /* Cover-only cards: zero padding, reset wrapper margins */
-  .card.card-cover-top.image-format-cover:not(
-      :has(
-        .card-header,
-        .card-previews,
-        .card-properties-top,
-        .card-properties-bottom
-      )
-    ),
-  .card.card-cover-bottom.image-format-cover:not(
-      :has(
-        .card-header,
-        .card-previews,
-        .card-properties-top,
-        .card-properties-bottom
-      )
-    ) {
+  .card.card-cover-top.image-format-cover:not(.has-card-content),
+  .card.card-cover-bottom.image-format-cover:not(.has-card-content) {
     padding: 0;
   }
 
   /* Reset negative margins since padding is 0 */
-  .card.card-cover-top.image-format-cover:not(
-      :has(
-        .card-header,
-        .card-previews,
-        .card-properties-top,
-        .card-properties-bottom
-      )
-    )
+  .card.card-cover-top.image-format-cover:not(.has-card-content)
     .card-cover-wrapper,
-  .card.card-cover-bottom.image-format-cover:not(
-      :has(
-        .card-header,
-        .card-previews,
-        .card-properties-top,
-        .card-properties-bottom
-      )
-    )
+  .card.card-cover-bottom.image-format-cover:not(.has-card-content)
     .card-cover-wrapper {
     margin: 0;
   }

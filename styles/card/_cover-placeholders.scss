@@ -235,13 +235,13 @@ body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
 body.dynamic-views-show-cover-placeholder-grid
   .dynamic-views
   .dynamic-views-masonry
-  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
+  .card.image-format-cover.has-cover-wrapper-placeholder
   .card-title
   + .card-subtitle,
 body.dynamic-views-show-cover-placeholder-none
   .dynamic-views
   .dynamic-views-masonry
-  .card.image-format-cover:has(.card-cover-wrapper-placeholder)
+  .card.image-format-cover.has-cover-wrapper-placeholder
   .card-title
   + .card-subtitle {
   margin-top: 0;

@@ -69,12 +69,12 @@
 @include color-setting(
   'property-color-with-labels',
   $var-stem: 'property-with-label-color',
-  $selector: '.property:has(:is(.property-label, .property-label-inline))'
+  $selector: '.property:is(.has-label, .has-label-inline)'
 );
 @include color-setting(
   'property-color-without-labels',
   $var-stem: 'property-no-label-color',
-  $selector: '.property:not(:has(:is(.property-label, .property-label-inline)))'
+  $selector: '.property:not(.has-label, .has-label-inline)'
 );
 @include color-setting('subtitle-color', $selector: '.card-subtitle');
 @include color-setting(

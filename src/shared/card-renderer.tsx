@@ -1084,7 +1084,13 @@ function renderProperty(
         {labelInline}
         <div className="property-content-wrapper" tabIndex={-1}>
           <div className="property-content">
-            <span>
+            <span
+              className={
+                settings.propertyLabels === 'hide'
+                  ? 'has-timestamp-icon'
+                  : undefined
+              }
+            >
               {settings.propertyLabels === 'hide' && (
                 <svg
                   className="timestamp-icon"
@@ -1572,13 +1578,23 @@ function Card({
     if (format === 'cover') {
       cardClasses.push('image-format-cover');
       cardClasses.push(`card-cover-${position}`);
+      if (imageArray.length > 0) {
+        cardClasses.push('has-cover');
+      } else {
+        cardClasses.push(
+          'has-cover-placeholder',
+          'has-cover-wrapper-placeholder'
+        );
+      }
     } else if (format === 'thumbnail') {
       cardClasses.push('image-format-thumbnail');
       cardClasses.push(`card-thumbnail-${position}`);
     } else if (format === 'poster') {
       cardClasses.push('image-format-poster');
+      if (imageArray.length > 0) cardClasses.push('has-poster');
     } else if (format === 'backdrop') {
       cardClasses.push('image-format-backdrop');
+      if (imageArray.length > 0) cardClasses.push('has-backdrop');
     }
   }
 
@@ -1596,6 +1612,14 @@ function Card({
 
   if (settings.openFileAction === 'card' && !isPosterClickReveal) {
     cardClasses.push('clickable-card');
+  }
+
+  // Content-presence classes (replace CSS :has() selectors)
+  const hasTextPreview = !!card.textPreview;
+  const showThumbnail = format === 'thumbnail' && hasImageSource;
+  const hasProps = !!card.properties?.length;
+  if (hasTextPreview || showThumbnail || hasProps) {
+    cardClasses.push('has-card-content');
   }
 
   // Cache scroll mode checks (avoid repeated DOM queries in ref callbacks)
@@ -1829,6 +1853,11 @@ function Card({
           // Cleanup scroll listeners when card unmounts
           cleanupCardScrollListeners(card.path);
           return;
+        }
+
+        // has-properties-bottom: set from ref since bottom elements are computed in JSX IIFE
+        if (cardEl.querySelector('.card-properties-bottom')) {
+          cardEl.classList.add('has-properties-bottom');
         }
 
         // Poster cards: remove draggable attribute so the URL <a> is the sole
@@ -2267,7 +2296,7 @@ function Card({
 
         {/* Universal card-body: properties + previews */}
         <div
-          className="card-body"
+          className={`card-body${hasTextPreview || showThumbnail || hasProps ? ' has-body-content' : ''}`}
           ref={(el: HTMLElement | null) => {
             if (el && format === 'poster') {
               setupVerticalScrollGradient(el, scrollController.signal);
@@ -2280,6 +2309,12 @@ function Card({
             const hideEmptyMode = getHideEmptyMode();
             const hideMissing = shouldHideMissingProperties();
             const { propertyLabels } = settings;
+            const labelClass =
+              propertyLabels === 'above'
+                ? ' has-label'
+                : propertyLabels === 'inline'
+                  ? ' has-label-inline'
+                  : '';
 
             // Parse override lists for O(1) lookup
             const invertPairingSet = parsePropertyList(
@@ -2302,6 +2337,8 @@ function Card({
             // Build top/bottom property elements
             const topElements: JSX.Element[] = [];
             const bottomElements: JSX.Element[] = [];
+            let topHasPairs = false;
+            let bottomHasPairs = false;
 
             if (props && props.length > 0) {
               // Pre-filter: exclude properties that will be collapsed
@@ -2394,7 +2431,7 @@ function Card({
                         return (
                           <div
                             key={`field-${p.fieldIndex}`}
-                            className={`property property-${p.fieldIndex} ${posClass}`}
+                            className={`property property-${p.fieldIndex} ${posClass}${labelClass}`}
                           >
                             {p.name &&
                               renderPropertyContent(
@@ -2410,14 +2447,19 @@ function Card({
                       })}
                     </div>
                   );
-                  if (isAbove) topElements.push(pairElement);
-                  else bottomElements.push(pairElement);
+                  if (isAbove) {
+                    topElements.push(pairElement);
+                    topHasPairs = true;
+                  } else {
+                    bottomElements.push(pairElement);
+                    bottomHasPairs = true;
+                  }
                 } else {
                   const p = set.items[0];
                   const fieldElement = (
                     <div
                       key={`field-${p.fieldIndex}`}
-                      className={`property property-${p.fieldIndex}`}
+                      className={`property property-${p.fieldIndex}${labelClass}`}
                     >
                       {p.name &&
                         renderPropertyContent(
@@ -2440,7 +2482,9 @@ function Card({
             return (
               <>
                 {topElements.length > 0 && (
-                  <div className="card-properties card-properties-top">
+                  <div
+                    className={`card-properties card-properties-top${topHasPairs ? ' has-pairs' : ''}`}
+                  >
                     {topElements}
                   </div>
                 )}
@@ -2449,11 +2493,13 @@ function Card({
                 {(card.textPreview ||
                   (format === 'thumbnail' &&
                     (imageArray.length > 0 || hasImageSource))) && (
-                  <div className="card-previews">
+                  <div
+                    className={`card-previews${hasTextPreview ? ' has-text-preview' : ''}${hasTextPreview && !showThumbnail ? ' text-only' : ''}${!hasTextPreview && showThumbnail && imageArray.length === 0 ? ' thumbnail-placeholder-only' : ''}`}
+                  >
                     {card.textPreview && (
                       <div className="card-text-preview-wrapper">
                         <div
-                          className="card-text-preview"
+                          className={`card-text-preview${preserveNewlines && card.textPreview.includes('\n') ? ' has-paragraphs' : ''}`}
                           ref={
                             preserveNewlines && card.textPreview.includes('\n')
                               ? (el: HTMLElement | null) => {
@@ -2735,7 +2781,9 @@ function Card({
                 )}
 
                 {bottomElements.length > 0 && (
-                  <div className="card-properties card-properties-bottom">
+                  <div
+                    className={`card-properties card-properties-bottom${bottomHasPairs ? ' has-pairs' : ''}`}
+                  >
                     {bottomElements}
                   </div>
                 )}

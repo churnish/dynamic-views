@@ -67,6 +67,12 @@ function closeImageViewer(
 ): void {
   cloneEl.remove();
 
+  // Remove body zoom class when no viewers remain
+  const doc = cloneEl.ownerDocument;
+  if (doc && !doc.querySelector('.dynamic-views-image-embed.is-zoomed')) {
+    doc.body.classList.remove('dynamic-views-image-zoomed');
+  }
+
   // O(1) lookup using stored reference instead of iterating map
   const original = cloneEl.__originalEmbed;
   if (original) {
@@ -746,6 +752,7 @@ function openImageViewer(
   // Clone the embed element for viewing (original stays on card)
   const cloneEl = embedEl.cloneNode(true) as CloneElement;
   cloneEl.classList.add('is-zoomed');
+  embedEl.ownerDocument.body.classList.add('dynamic-views-image-zoomed');
 
   // Store reference to original for O(1) cleanup lookup
   cloneEl.__originalEmbed = embedEl;

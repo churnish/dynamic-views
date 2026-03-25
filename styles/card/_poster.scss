@@ -181,7 +181,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 }
 
 /* Fade: bottom-align content where tint provides contrast, with light text (hardcoded dark fade) */
-.dynamic-views.poster-mode-fade .card.image-format-poster:has(.card-poster) {
+.dynamic-views.poster-mode-fade .card.image-format-poster.has-poster {
   justify-content: flex-end;
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
@@ -192,7 +192,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 }
 
 .dynamic-views.poster-mode-fade
-  .card.image-format-poster:has(.card-poster)
+  .card.image-format-poster.has-poster
   .card-content {
   flex: 0 1 auto;
   max-height: 70%;
@@ -321,7 +321,7 @@ body:is(
 /* Poster: content hidden by default (only if card has image) */
 /* Poster: show content on click (tap toggle) */
 .dynamic-views {
-  .card.image-format-poster:has(.card-poster) .card-content {
+  .card.image-format-poster.has-poster .card-content {
     opacity: 0;
     pointer-events: none;
     transform: translateY(0.75rem);
@@ -335,7 +335,7 @@ body:is(
     opacity: 0;
   }
 
-  .card.image-format-poster.poster-revealed:has(.card-poster) .card-content {
+  .card.image-format-poster.poster-revealed.has-poster .card-content {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
@@ -352,8 +352,7 @@ body:is(
 /* Poster: reveal content on hover intent (desktop only, hover mode) */
 @media (hover: hover) {
   body:not(.dynamic-views-poster-reveal-press) .dynamic-views {
-    .card.image-format-poster.poster-hover-active:has(.card-poster)
-      .card-content {
+    .card.image-format-poster.poster-hover-active.has-poster .card-content {
       opacity: 1;
       pointer-events: auto;
       transform: translateY(0);
@@ -376,13 +375,14 @@ body:is(
     aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
   }
 
-  &:not(:has(.dynamic-views-grid)) .card.image-format-poster:has(.card-poster) {
+  .dynamic-views-masonry .card.image-format-poster.has-poster {
     aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
   }
 
   /* Masonry contain: shrink to actual aspect ratio (collapse letterbox bars) */
-  &.image-fit-contain:not(:has(.dynamic-views-grid))
-    .card.image-format-poster:has(.card-poster) {
+  &.image-fit-contain
+    .dynamic-views-masonry
+    .card.image-format-poster.has-poster {
     aspect-ratio: 1 /
       min(
         var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1)),
@@ -395,21 +395,21 @@ body:is(
 body.dynamic-views-fixed-poster-height
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
-  .card.image-format-poster:has(.card-poster) {
+  .card.image-format-poster.has-poster {
   aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
 }
 
 /* Card mode: poster cards with images have pointer cursor */
 body.dynamic-views-open-on-card
   .dynamic-views
-  .card.image-format-poster:has(.card-poster) {
+  .card.image-format-poster.has-poster {
   cursor: pointer;
 }
 
 /* Press mode: pointer on poster cards regardless of open action (press toggles reveal) */
 body.dynamic-views-poster-reveal-press
   .dynamic-views
-  .card.image-format-poster:has(.card-poster) {
+  .card.image-format-poster.has-poster {
   cursor: pointer;
 }
 
@@ -417,7 +417,7 @@ body.dynamic-views-poster-reveal-press
 @media (hover: none) {
   body.dynamic-views-open-on-title
     .dynamic-views
-    .card.image-format-poster:has(.card-poster) {
+    .card.image-format-poster.has-poster {
     cursor: pointer;
   }
 }
@@ -425,10 +425,10 @@ body.dynamic-views-poster-reveal-press
 /* Overlay: text color overrides (light tint → dark text) */
 body.dynamic-views-poster-theme-light
   .dynamic-views.poster-mode-overlay
-  .card.image-format-poster:has(.card-poster),
+  .card.image-format-poster.has-poster,
 body.dynamic-views-poster-theme-match.theme-light
   .dynamic-views.poster-mode-overlay
-  .card.image-format-poster:has(.card-poster) {
+  .card.image-format-poster.has-poster {
   --text-normal: #222222;
   --text-muted: #333333;
   --text-faint: color-mix(in srgb, #333333 60%, transparent);
@@ -469,10 +469,10 @@ body:is(
     :not([class*='dynamic-views-poster-theme-'])
   )
   .dynamic-views.poster-mode-overlay
-  .card.image-format-poster:has(.card-poster),
+  .card.image-format-poster.has-poster,
 body.dynamic-views-poster-theme-match.theme-dark
   .dynamic-views.poster-mode-overlay
-  .card.image-format-poster:has(.card-poster) {
+  .card.image-format-poster.has-poster {
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);

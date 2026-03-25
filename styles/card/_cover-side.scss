@@ -3,7 +3,7 @@
 /* Cover-left: content padding */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover)
+  .card.card-cover-left.image-format-cover.has-cover
   > .card-content,
 body:is(
     .dynamic-views-show-cover-placeholder-grid,
@@ -12,7 +12,7 @@ body:is(
   )
   .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  .card.card-cover-left.image-format-cover.has-cover-placeholder
   > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
   margin-left: var(--side-cover-offset);
@@ -21,7 +21,7 @@ body:is(
 /* Cover-right: content padding */
 .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover)
+  .card.card-cover-right.image-format-cover.has-cover
   > .card-content,
 body:is(
     .dynamic-views-show-cover-placeholder-grid,
@@ -30,7 +30,7 @@ body:is(
   )
   .dynamic-views
   .dynamic-views-grid
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  .card.card-cover-right.image-format-cover.has-cover-placeholder
   > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
 }
@@ -38,9 +38,7 @@ body:is(
 /* Side cover: minimum card height */
 .dynamic-views
   .dynamic-views-grid
-  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
-    .card-cover
-  ),
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover.has-cover,
 body:is(
     .dynamic-views-show-cover-placeholder-grid,
     .dynamic-views-show-cover-placeholder-both,
@@ -48,9 +46,10 @@ body:is(
   )
   .dynamic-views
   .dynamic-views-grid
-  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
-    .card-cover-placeholder
-  ) {
+  .card:is(
+    .card-cover-left,
+    .card-cover-right
+  ).image-format-cover.has-cover-placeholder {
   min-height: var(--dynamic-views-side-cover-height, 150px);
 }
 
@@ -60,7 +59,7 @@ body:is(
 /* Cover-left: content padding */
 .dynamic-views
   .dynamic-views-masonry
-  .card.card-cover-left.image-format-cover:has(.card-cover)
+  .card.card-cover-left.image-format-cover.has-cover
   > .card-content,
 body:is(
     .dynamic-views-show-cover-placeholder-masonry,
@@ -68,7 +67,7 @@ body:is(
   )
   .dynamic-views
   .dynamic-views-masonry
-  .card.card-cover-left.image-format-cover:has(.card-cover-placeholder)
+  .card.card-cover-left.image-format-cover.has-cover-placeholder
   > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
   margin-left: var(--side-cover-offset);
@@ -77,7 +76,7 @@ body:is(
 /* Cover-right: content padding */
 .dynamic-views
   .dynamic-views-masonry
-  .card.card-cover-right.image-format-cover:has(.card-cover)
+  .card.card-cover-right.image-format-cover.has-cover
   > .card-content,
 body:is(
     .dynamic-views-show-cover-placeholder-masonry,
@@ -85,7 +84,7 @@ body:is(
   )
   .dynamic-views
   .dynamic-views-masonry
-  .card.card-cover-right.image-format-cover:has(.card-cover-placeholder)
+  .card.card-cover-right.image-format-cover.has-cover-placeholder
   > .card-content {
   max-width: calc(100% - var(--side-cover-offset));
 }
@@ -93,17 +92,16 @@ body:is(
 /* Side cover: minimum card height */
 .dynamic-views
   .dynamic-views-masonry
-  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
-    .card-cover
-  ),
+  .card:is(.card-cover-left, .card-cover-right).image-format-cover.has-cover,
 body:is(
     .dynamic-views-show-cover-placeholder-masonry,
     .dynamic-views-show-cover-placeholder-both
   )
   .dynamic-views
   .dynamic-views-masonry
-  .card:is(.card-cover-left, .card-cover-right).image-format-cover:has(
-    .card-cover-placeholder
-  ) {
+  .card:is(
+    .card-cover-left,
+    .card-cover-right
+  ).image-format-cover.has-cover-placeholder {
   min-height: var(--dynamic-views-side-cover-height, 150px);
 }
