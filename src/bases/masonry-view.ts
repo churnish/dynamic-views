@@ -1167,6 +1167,12 @@ export class DynamicViewsMasonryView extends BasesView {
           }, delay);
         }
         this.scrollPreservation?.restoreAfterRender();
+
+        // Viewport may be underfilled after CSS-only setting change or
+        // duplicate onDataUpdated killing the batch chain mid-append
+        if (this.lastRenderedSettings) {
+          this.checkAndLoadMore(this.totalEntries, this.lastRenderedSettings);
+        }
         return;
       }
 
@@ -2106,14 +2112,17 @@ export class DynamicViewsMasonryView extends BasesView {
         // on hidden cards returns 0, which corrupts baselines and positions.
         if (this.masonryContainer.getBoundingClientRect().width === 0) return;
 
-        // Defer height correction to scroll-concurrent path (Layer 1).
-        // Positions from proportionalResizeLayout are already set — only
-        // height measurement is deferred. Scroll motion masks the CLS.
-        this.postResizeScrollActive = true;
+        // One-time at-rest correction: fix estimated heights on mounted cards.
+        // Trades a single position jump (200ms after resize) for accurate text
+        // rendering. Subsequent corrections guarded by scroll.
         this.masonryContainer?.classList.add('masonry-skip-transition');
+        this.remeasureAndReposition(true);
+
+        // Guard remaining corrections (unmounted cards mounting during scroll)
+        // behind scroll-concurrent path.
+        this.postResizeScrollActive = true;
 
         // Safety net: clear flag if user never scrolls (2s).
-        // Does NOT correct — cards keep estimated heights until scroll.
         if (this.postResizeIdleTimeout !== null) {
           clearTimeout(this.postResizeIdleTimeout);
         }

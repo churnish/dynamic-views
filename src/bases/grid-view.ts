@@ -253,6 +253,7 @@ export class DynamicViewsGridView extends BasesView {
   private compensatingScrollCount = 0;
   private isLayoutBusy = false;
   private virtualScrollRafId: number | null = null;
+  private totalEntries = 0;
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
   private cardResizeDirty = false;
@@ -1138,6 +1139,10 @@ export class DynamicViewsGridView extends BasesView {
           );
         }
         this.scrollPreservation?.restoreAfterRender();
+
+        // Viewport may be underfilled after CSS-only setting change or
+        // duplicate onDataUpdated killing the batch chain mid-append
+        this.checkAndLoadMore(this.totalEntries);
         return;
       }
 
@@ -1532,6 +1537,8 @@ export class DynamicViewsGridView extends BasesView {
         }
       }
 
+      this.totalEntries = effectiveTotal;
+
       // Setup infinite scroll
       this.setupInfiniteScroll(effectiveTotal);
 
@@ -1760,6 +1767,10 @@ export class DynamicViewsGridView extends BasesView {
 
       // Remove height preservation now that scroll is restored
       this.containerEl.removeClass('dynamic-views-height-preserved');
+
+      // Re-check viewport fill — preserved height inflates scrollHeight,
+      // masking underfill from the initial checkAndLoadMore in setupInfiniteScroll
+      this.checkAndLoadMore(this.totalEntries);
 
       // Clear skip-cover-fade after cached image load events have fired.
       // Double-rAF lets the browser process queued load events for cached images
@@ -2891,6 +2902,9 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     this.syncVirtualScroll();
+
+    // Viewport may be underfilled after cards shrank (e.g., CSS-only setting change)
+    this.checkAndLoadMore(this.totalEntries);
   }
 
   private recomputeYPositions(): void {
