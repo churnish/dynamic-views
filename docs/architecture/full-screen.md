@@ -1,12 +1,12 @@
 ---
 title: Full screen architecture
-description: Bridge+settle system for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, and platform-specific branches.
+description: Bridge+settle system (iOS) and bridge-less path (Android) for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, short-view guard, and platform-specific branches.
 author: "\U0001F916 Generated with Claude Code"
 updated: 2026-03-26
 ---
 # Full screen architecture
 
-Full screen hides the header, toolbar, search row, and navbar during downward scroll in Bases card views on mobile, reclaiming screen space for content. The system uses a bridge+settle architecture: compositor-safe visual compensation during momentum scroll, followed by real layout changes at scroll-idle. Direction detection uses a temporal-spatial hybrid algorithm with dead zones, a sustain gate, and a cooldown to prevent false triggers. This doc covers the stable architecture — for empirical research, rejected approaches, and prototype history, see [full-screen.md](../dev/full-screen.md).
+Full screen hides the header, toolbar, search row, and navbar during downward scroll in Bases card views on mobile, reclaiming screen space for content. On iOS, the system uses a bridge+settle architecture: `margin-top` on the scroll child adjusts `scrollHeight` in sync with visual displacement, preventing false scroll boundaries during momentum scroll, followed by real layout changes at scroll-idle. On Android, a bridge-less path applies class toggle + `scrollTop` adjustment synchronously (Chromium's compositor survives `scrollTop` writes during active scroll). Direction detection uses a temporal-spatial hybrid algorithm with dead zones, a sustain gate, and a cooldown to prevent false triggers. This doc covers the stable architecture — for empirical research, rejected approaches, and prototype history, see [full-screen.md](../dev/full-screen.md).
 
 ## Files
 
@@ -57,25 +57,48 @@ Bases leaf hierarchy, top to bottom:
 
 ## Bridge + settle architecture
 
-The bridge resolves the fundamental conflict: hiding bars requires layout mutations (margin, toolbar collapse), but layout mutations during iOS momentum scroll kill the momentum. The bridge provides immediate visual compensation using compositor-safe transforms, then swaps for real layout at scroll-idle.
+The bridge resolves the fundamental conflict on iOS: hiding bars requires layout mutations (margin, toolbar collapse), but layout mutations during iOS momentum scroll kill the momentum. The bridge applies `margin-top` on the scroll child (`.dynamic-views-bases-container`) to visually compensate for the layout shift. Unlike `translateY` (which displaces visually without changing `scrollHeight`), `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, eliminating false top/bottom at scroll boundaries. Real layout changes swap in at scroll-idle. Android does NOT use a bridge — Chromium's compositor tolerates `scrollTop` writes during active scroll, so class toggle + `scrollTop` adjustment happen synchronously (see Platform branches).
+
+### Short-view guard
+
+Before hiding, the controller checks whether the view has enough scrollable range. The guard evaluates only when `accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE && !barsHidden` — not on every scroll event.
+
+- **Threshold**: `scrollableRange >= 3 * totalShift`. Pre-hide range must be at least 3x `totalShift` because hiding bars increases the viewport by `totalShift`, shrinking the scrollable range by the same amount. 3x ensures the post-hide range (2x `totalShift`) leaves meaningful scroll distance.
+- **Re-measurement**: The guard calls `measureTotalShift()` to get the authoritative value before evaluating (see `totalShift` measurement below).
 
 ### Hide sequence
 
-1. **Immediate (momentum-safe)**: Apply `full-screen-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `translateY(totalShift)` bridge on scroll child (`.dynamic-views-bases-container`). Lock scroll container height via inline `style.height`. Animate header/navbar via inline styles (transform + opacity) using the double-rAF pattern.
-2. **Idle (debounced)**: Remove bridge (`translateY` reset) -> `scrollTop -= totalShift` -> re-measure height -> relock.
+#### iOS (bridge + deferred settle)
+
+1. **Immediate (momentum-safe)**: Apply `full-screen-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `margin-top: totalShift` bridge on scroll child (`.dynamic-views-bases-container`) — increases `scrollHeight` to keep coordinate space aligned. Lock scroll container height via inline `style.height`. Animate header/navbar via inline styles (transform + opacity) using the double-rAF pattern.
+2. **Idle (debounced)**: Remove `margin-top` -> `scrollTop -= totalShift` -> re-measure height -> relock.
+
+#### Android (bridge-less)
+
+1. **Immediate**: Unlock height -> apply `full-screen-active` CSS class -> `scrollTop -= totalShift` in the same synchronous tick. Chromium's compositor-based scrolling survives `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no `pendingLayout`.
+2. **rAF**: Clear `programmaticScroll`, relock height, animate navbar (single rAF sufficient on Chromium).
 
 ### Show sequence
 
-3. **Immediate**: Apply `full-screen-showing` CSS class override. If settled (bridge already removed), apply reverse bridge `translateY(-totalShift)`. Animate header/navbar back via inline styles using double-rAF.
-4. **Idle (debounced)**: Remove bridge -> if settled, `scrollTop += totalShift` -> remove all full-screen classes -> unlock height -> re-measure -> relock.
+#### iOS (bridge + deferred settle)
+
+3. **Immediate**: Apply `full-screen-showing` CSS class override. If settled (margin already removed), apply reverse bridge `margin-top: -totalShift` (pulls content up to compensate for `.view-content` margin restoration). If not settled, remove `margin-top` (bars returning, shift no longer needed). Animate header/navbar back via inline styles using double-rAF.
+4. **Idle (debounced)**: Remove `margin-top` -> if settled, `scrollTop += totalShift` -> remove all full-screen classes -> unlock height -> re-measure -> relock.
+
+#### Android (bridge-less)
+
+3. **Immediate**: Apply `full-screen-showing` CSS class override (higher specificity restores bars visually — direct class removal causes white flash, see Platform branches below). `scrollTop += totalShift` immediate. Clear `programmaticScroll` in rAF so `onScroll` resumes processing. Restore navbar inline styles.
+4. **Idle (150ms)**: Remove `full-screen-active` + `full-screen-showing` classes -> unlock height -> re-measure -> relock. Deferred via `pendingLayout`.
 
 ### `totalShift` measurement
 
-`totalShift` is measured once at initialization: toggle `full-screen-active` class, read `getBoundingClientRect().top` before/after on the scroll container, then remove the class.
+`totalShift` is initially measured at mount time: toggle `full-screen-active` class, read `getBoundingClientRect().top` before/after on the scroll container, then remove the class.
+
+**Mount-time measurement bug**: `getBoundingClientRect` returns 0 when `[data-type='bases']` CSS selectors don't match at construction time (the leaf hasn't received its `data-type` attribute yet). The `measureTotalShift()` method provides the authoritative re-measurement from live DOM: `getComputedStyle(viewContent).marginTop + toolbar.offsetHeight`. It is called both at guard evaluation time and inside `hideBarsUI()`, and is gated on `!body.classList.contains('full-screen-active')` (otherwise `marginTop` reads as 0 from the class rule).
 
 ### Why a bridge
 
-Direct `scrollTop` compensation is impossible — `scrollTop` writes kill scroll unconditionally (during momentum, active touch, and idle). See `knowledge/webkit-compositor-constraints.md` for details. The bridge uses `translateY` on the scroll child to visually cancel the layout shift without touching `scrollTop`, then swaps for a real `scrollTop` adjustment at idle when no scroll is active.
+Direct `scrollTop` compensation is impossible — `scrollTop` writes kill scroll unconditionally (during momentum, active touch, and idle). See `knowledge/webkit-compositor-constraints.md` for details. The bridge uses `margin-top` on the scroll child to visually cancel the layout shift. Unlike the previous `translateY` approach, `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, so there are no false top/bottom at scroll boundaries. At idle when no scroll is active, the margin is removed and a real `scrollTop` adjustment takes its place.
 
 ## Direction detection
 
@@ -181,19 +204,24 @@ In open-on-card mode, card body taps don't reveal bars — the card's click hand
 
 ### Android
 
-- **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 150ms`. Android Chromium's scrollbar never auto-fades, so the settle's `scrollTop` adjustment is visible regardless of timing. 150ms is enough for Chromium fling to fully stop (`scrollend` fires at ~1ms after last scroll event on Chromium).
+- **Bridge-less architecture**: Android uses NO bridge. Class toggle + `scrollTop` adjustment in the same synchronous tick. Chromium's compositor-based scrolling is resilient to `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no deferred settle needed.
+- **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 150ms`. Used only for show path class cleanup (`pendingLayout`).
 - **Sustain gate**: Bypassed. Android Chromium produces less deceleration bounce than iOS and the gate is unnecessary.
 - **Single-rAF**: Bar hide uses a single `requestAnimationFrame` (not double-rAF). Chromium doesn't collapse transitions in passive listeners.
-- **Show path**: Synchronous — same as iOS, no two-frame split.
+- **Show path**: Uses `full-screen-showing` CSS override (higher specificity) to restore bars visually. Direct class removal (`classList.remove('full-screen-active')`) causes a white flash — Chromium renders intermediate layout states within a single synchronous tick, so the 99px `margin-top` gap appears as a white strip before `scrollTop` compensation takes effect. `scrollTop += totalShift` is immediate. Class cleanup deferred to idle (150ms) via `pendingLayout`.
+- **`programmaticScroll` deadlock**: `programmaticScroll = true` blocks ALL scroll events in `onScroll`. If not cleared promptly (via rAF), the idle timer never fires and `pendingLayout` never runs — causing a deadlock where bars can only hide once. The rAF clear after `scrollTop` writes is load-bearing.
 - **Scrollbar**: Never auto-fades. Scrollbar resize during settle is always visible — accepted as inherent to the platform.
 
 ## Invariants
 
-1. **Momentum safety**: NEVER write `scrollTop` during momentum or active touch. `scrollTop` writes are only safe at true scroll-idle (detected via scroll debounce, NOT `scrollend` on WebKit).
-2. **Bridge math**: `translateY(totalShift)` on hide, `translateY(-totalShift)` on reverse show. Bridge and `scrollTop` adjustment must use the same `totalShift` value.
-3. **Pre-promotion**: Elements that receive `transform` during scroll must be pre-promoted with `transform: translateY(0)` at initialization. First-time layer promotion kills momentum.
+1. **Momentum safety (iOS)**: NEVER write `scrollTop` during momentum or active touch. `scrollTop` writes are only safe at true scroll-idle (detected via scroll debounce, NOT `scrollend` on WebKit).
+2. **Bridge math (iOS only)**: `margin-top: totalShift` on hide (positive margin increases `scrollHeight`), `margin-top: -totalShift` on reverse show (negative margin decreases `scrollHeight`). Bridge and `scrollTop` adjustment must use the same `totalShift` value. Android uses no bridge.
+3. **No pre-promotion needed**: The `margin-top` bridge does not involve compositor layers, so no `transform: translateY(0)` pre-promotion is required at initialization.
 4. **Cooldown accumulator reset**: `accumulatedDelta` must be reset to 0 on every scroll event during cooldown. Layout-induced synthetic deltas (~250px) would otherwise trigger the opposite transition immediately.
 5. **Height lock lifecycle**: Lock at hide time, unlock-measure-relock at settle, unlock at full show cleanup. Never leave height locked after all full-screen classes are removed.
-6. **Programmatic scroll guard**: `scrollTop` writes during settle must set a `programmaticScroll` flag. The scroll handler must check this flag and skip direction detection for the resulting synthetic scroll event.
+6. **Programmatic scroll guard**: `scrollTop` writes must set a `programmaticScroll` flag. The scroll handler must check this flag and skip processing. On Android, the flag MUST be cleared in the next rAF — blocking it longer prevents the idle timer from firing `pendingLayout`, causing a deadlock.
 7. **No `will-change: transform` on scroll containers**: Breaks scroll event detection on child containers. Use `transform: translateY(0)` for pre-promotion instead.
 8. **Instant layout only**: Layout mutations during scroll must use `transition: none`. Animated transitions (any duration > 0) cause continuous relayout that kills momentum.
+9. **`measureTotalShift()` before hide**: Mount-time `getBoundingClientRect` may return 0 if CSS selectors don't match at construction time. `measureTotalShift()` must be called before any hide to ensure the authoritative value. Only valid when `full-screen-active` is NOT on body.
+10. **Short-view guard**: Hide must be skipped when `scrollableRange < 3 * totalShift`. Post-hide range would be only `2 * totalShift`, leaving insufficient scroll distance.
+11. **Android: no direct class removal on show**: `classList.remove('full-screen-active')` without `full-screen-showing` causes a white flash — Chromium renders the intermediate 99px margin gap. Always use the `full-screen-showing` CSS override first, then defer class removal to idle.

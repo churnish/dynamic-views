@@ -2,7 +2,7 @@
 title: Full screen
 description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, and the v84 inline-only animation architecture.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-24
+updated: 2026-03-26
 ---
 # Full screen
 
@@ -404,9 +404,35 @@ The `overflow-anchor` CSS property (Safari Technology Preview 238+, estimated pr
 
 The `totalShift` measurement toggles the `full-screen-active` class and reads `getBoundingClientRect().top` before/after. In v133–v137, this measurement ran BEFORE the `<style>` element defining the class rules was inserted into the DOM. Result: `totalShift=0`, no bridge compensation. Always insert CSS before measuring.
 
+### Mount-time `totalShift=0` bug
+
+`getBoundingClientRect` at mount time returns 0 when `[data-type='bases']` CSS selectors don't match at construction time — the leaf hasn't received its `data-type` attribute yet, so the `full-screen-active` class toggle produces no layout change. Fix: `measureTotalShift()` method re-measures from live DOM (`getComputedStyle(viewContent).marginTop + toolbar.offsetHeight`). Called at guard evaluation time and inside `hideBarsUI()`. Gated on `!body.classList.contains('full-screen-active')` — otherwise `marginTop` reads as 0 from the class rule.
+
 ### scrollTop writes are unconditionally fatal (v145)
 
 v145 confirmed: `scrollTop` writes in the same synchronous tick as `classList.add()` + instant layout changes still kill momentum. The compositor sync from `scrollTop` is a separate, non-cancelable operation that cannot be masked by batching with other changes. This strengthens v96's finding and closes the `scrollTop`-during-momentum approach permanently.
+
+### Short-view guard
+
+Views with insufficient scrollable range must not enter full screen — hiding bars increases viewport height by `totalShift`, shrinking the scrollable range. If the pre-hide range is too small, the post-hide range leaves near-zero scroll distance, causing immediate show-trigger or unusable scroll.
+
+Empirical data (iPhone 13, 3 cards): `scrollableRange=352`, `totalShift=150`, post-hide range = `352 - 150 = 202`, remaining meaningful scroll = `202 - 150 = 52px` (below show dead zone threshold). With the 2x guard (`range >= 2 * totalShift`), hide was allowed but scroll felt broken. The 3x guard (`range >= 3 * totalShift = 450`) correctly blocks hide — `352 < 450`, no full screen.
+
+Guard is evaluated only when `accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE && !barsHidden` — not on every scroll event.
+
+### Bridge-less Android path
+
+Chromium's compositor-based scrolling is fundamentally different from iOS WebKit — `scrollTop` writes during active scroll do NOT kill the scroll. This enables a much simpler architecture on Android: class toggle + `scrollTop` adjustment in the same synchronous tick, no bridge, no deferred settle.
+
+**Hide path**: Unlock height -> `full-screen-active` class toggle -> `scrollTop -= totalShift` -> `settled = true` immediately. Height relock + navbar animation in a single rAF.
+
+**Show path**: `full-screen-showing` CSS override (higher specificity) restores bars visually. `scrollTop += totalShift` immediate. Class cleanup deferred to idle (150ms) via `pendingLayout`.
+
+**Key empirical findings**:
+
+- **White flash on direct class removal**: `classList.remove('full-screen-active')` on show causes a white flash — Chromium renders intermediate layout states within a single synchronous tick. The 99px `margin-top` gap appears as a white strip before `scrollTop` compensation takes effect. The `full-screen-showing` CSS override (higher specificity) avoids this by restoring bars visually without removing the layout class.
+- **`programmaticScroll` deadlock**: `programmaticScroll = true` blocks ALL scroll events in `onScroll`. If not cleared promptly (via rAF), the idle timer never fires and `pendingLayout` never runs — bars can only hide once. The rAF clear is load-bearing.
+- **iOS bottom-settle**: On iOS, the bridge's `translateY(totalShift)` makes the last `totalShift` px unreachable until settle. When `scrollTop >= scrollHeight - clientHeight - 1`, force immediate settle — at the scroll boundary there's no momentum to kill, so `scrollTop` writes are safe.
 
 ## Rejected approaches
 
@@ -479,6 +505,7 @@ v145 confirmed: `scrollTop` writes in the same synchronous tick as `classList.ad
 | v143 | Cached totalShift — no forced reflow in hide path | Eliminates getComputedStyle/offsetHeight during hide. Minor jumps persist. |
 | v144 | Inline `transition: none` on view-content before class removal | Prevents margin-top transition on show. Minor jumps persist. |
 | v145 | scrollTop correction in same sync tick as layout change (no bridge) | Momentum killed instantly. Confirms scrollTop writes are unconditionally fatal — even batched with layout changes. |
+| v146 | `margin-top` bridge on scroll child (replaces `translateY` bridge) | Replaces `translateY(totalShift)` with `margin-top: totalShift` on `.dynamic-views-bases-container`. Unlike `translateY`, `margin-top` adjusts `scrollHeight` in sync with visual displacement — eliminates false top/bottom at scroll boundaries. Reverse bridge uses `margin-top: -totalShift` for settled show path. Bottom-settle workaround removed (no longer needed). |
 
 ## Navbar hide behavior
 
@@ -513,7 +540,7 @@ Single-phase: all changes (compositor + layout) apply simultaneously via classLi
 
 v59's CSS class approach was superseded by v84's inline-only animation, which correctly separates CSS class (layout) from inline styles (compositor animation). CSS class handles layout mutations (margin, pointer-events). Inline `style.setProperty()` with double-rAF handles compositor animation (transform, opacity). This resolves the WebKit passive scroll listener optimization that collapsed v58's transitions.
 
-**Current state**: Bar animations work correctly via double-rAF inline styles. Space reclaim uses bridge + idle settle architecture: `translateY(totalShift)` bridge on scroll child at hide time (momentum-safe), then `scrollTop -= totalShift` + bridge removal at scroll-idle (2s debounce). The 2s settle delay outlasts the iOS scroll indicator fade (~1.5s), making the settle invisible. Scroll container height is locked (`style.height`) to decouple `clientHeight` from flex layout changes — unlock-measure-relock at settle. Minor intermittent content jumps from scroll viewport clipping artifact are accepted as the Pareto optimum (see "Pareto frontier" above).
+**Current state**: Bar animations work correctly via double-rAF inline styles (iOS) / single-rAF (Android). On iOS, space reclaim uses bridge + idle settle architecture: `margin-top: totalShift` bridge on scroll child at hide time (momentum-safe — adjusts `scrollHeight` in sync with visual displacement, no false scroll boundaries), then `scrollTop -= totalShift` + margin removal at scroll-idle (2s debounce). The 2s settle delay outlasts the iOS scroll indicator fade (~1.5s), making the settle invisible. On Android, a bridge-less path applies class toggle + `scrollTop` adjustment synchronously — Chromium's compositor survives `scrollTop` writes during active scroll (see "Bridge-less Android path" below). Scroll container height is locked (`style.height`) to decouple `clientHeight` from flex layout changes — unlock-measure-relock at settle. A short-view guard (`scrollableRange >= 3 * totalShift`) prevents hide on views with insufficient scroll range. Minor intermittent content jumps on iOS from scroll viewport clipping artifact are accepted as the Pareto optimum (see "Pareto frontier" above).
 
 ## Direction detection
 
@@ -558,10 +585,10 @@ The `full-screen-showing` class restores margin-top on `.view-content`. WebKit c
 
 The settle resolves the gap between the immediate bridge (momentum-safe visual compensation) and the final layout state (correct scroll position without bridge). Sequence:
 
-1. **HIDE**: `translateY(totalShift)` on scroll child + `full-screen-active` class. Scroll container height locked.
-2. **IDLE (2s debounce)**: Unlock height → remove bridge → `scrollTop -= totalShift` → re-measure → relock height.
-3. **SHOW**: `full-screen-showing` class override. If settled, reverse bridge `translateY(-totalShift)`.
-4. **SHOW IDLE (2s debounce)**: Remove bridge → if settled, `scrollTop += totalShift` → remove classes → unlock → re-measure → relock.
+1. **HIDE**: `margin-top: totalShift` on scroll child + `full-screen-active` class. Scroll container height locked.
+2. **IDLE (2s debounce)**: Unlock height → remove `margin-top` → `scrollTop -= totalShift` → re-measure → relock height.
+3. **SHOW**: `full-screen-showing` class override. If settled, reverse bridge `margin-top: -totalShift`. If not settled, remove `margin-top`.
+4. **SHOW IDLE (2s debounce)**: Remove `margin-top` → if settled, `scrollTop += totalShift` → remove classes → unlock → re-measure → relock.
 
 ### 2s settle delay
 
