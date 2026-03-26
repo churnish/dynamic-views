@@ -2,7 +2,7 @@
 title: Bases v Datacore differences
 description: Architectural differences between the Bases (imperative DOM) and Datacore (Preact JSX) backends — rendering, events, cleanup, state, and common pitfalls.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-12
+updated: 2026-03-25
 ---
 # Bases v Datacore differences
 
@@ -76,6 +76,15 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | **Layout container** | `.dynamic-views-masonry` or `.dynamic-views-grid`                               | `div.dynamic-views-masonry` or `div.dynamic-views-grid` (returned by `CardRenderer`)                                              |
 | **Group sections**   | `.dynamic-views-group-section` → `.masonry-container` / CSS Grid                | Flat — no group sections (Datacore doesn't support grouping yet)                                                                  |
 | **Card DOM**         | Identical class names and nesting — see [card-dom-structure.md](card-dom-structure.md) for divergences | Same                                                                                                                              |
+
+### Compact breakpoint
+
+| | Bases | Datacore |
+|---|---|---|
+| **Mechanism** | CSS `@container` query on `.bases-view` (unnamed, has `container-type: inline-size`) | JS `ResizeObserver` in `toolbar-compact.ts` toggles classes on `.dynamic-views` |
+| **Threshold** | Hardcoded `699px` (CSS container queries cannot use variables) | Dynamic `--file-line-width` with `700` fallback |
+| **Narrow class** | N/A (CSS query handles it) | `dynamic-views-narrow` |
+| **Zero-width guard** | `@container (max-width: 50px)` hides grid/masonry | `dynamic-views-hidden` class at `width <= 50` |
 
 ## Settings and state
 
@@ -153,6 +162,24 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 ## Common pitfalls
 
 Bugs that have occurred from backend divergence.
+
+### Datacore file type API divergence
+
+**Observed**: 2026-03-25, Datacore 0.1.29
+
+`dc.query('@file')` returns three runtime types with different API surfaces:
+
+| Type | `.value()` | `.field()` | `.$name` |
+|---|---|---|---|
+| `_MarkdownPage` | Yes | Yes | Yes |
+| `_GenericFile` | Yes | Yes | No |
+| `_Canvas` | No | Yes | No |
+
+**Rule**: Always use `page.field(key)?.value` (not `page.value(key)`) — it's the universal accessor. `value()` is sugar for `field(key)?.value` but only exists on two of three types. For file names, use `datacoreFileName()` from `utils/property.ts` — it falls back to deriving from `$path` when `$name` is missing.
+
+### Grid card `height: 100%` scoping
+
+`.dynamic-views-grid .card { height: 100% }` is scoped to Bases contexts (`:is([data-type='bases'], .bases-embed)`) because Bases Grid uses subgrid which constrains row heights. In Datacore, the grid parent has no height constraint — `100%` resolves against the unconstrained parent, creating a ~16M px feedback loop. Bottom property alignment in Datacore still works via `flex-grow: 1` on `.card-previews`.
 
 ### Workspace event dispatch pattern
 

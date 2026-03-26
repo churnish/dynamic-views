@@ -16,79 +16,80 @@
  * corrections on Android.
  */
 
+import { Platform } from 'obsidian';
 import { getOwnerWindow } from '../utils/owner-window';
 
 /** CSS variable name for the icon optical offset (px value). */
 const OFFSET_VAR = '--dynamic-views-icon-optical-offset';
 
+/** Corrections beyond this are likely measurement errors, not real offsets. */
+const MAX_CORRECTION_PX = 5;
+
+/** Filters rounding noise from high-DPI desktop fonts (2% tolerance). */
+const BOOST_DETECTION_THRESHOLD = 1.02;
+
 /**
  * Measure and apply the icon optical alignment correction to a container.
  *
- * Finds the first `.has-timestamp-icon` wrapper inside `container`,
- * measures the vertical center delta between the `.timestamp-icon` and
- * the adjacent text node (Bases) or span element (Datacore), and stores
- * the result as a px value on the container.
+ * Finds the first `.has-timestamp-icon` wrapper, measures the vertical
+ * center delta between the `.timestamp-icon` and the adjacent text, and
+ * stores the result as a px value on the container.
  *
- * No-ops when no timestamp icon is rendered yet. Skips corrections
- * larger than 5px as a layout thrash guard.
+ * Returns true if measurement succeeded, false if no timestamp icon found.
+ * Skips corrections larger than 5px as a layout thrash guard.
  */
-export function applyIconOpticalOffset(container: HTMLElement): void {
+export function applyIconOpticalOffset(container: HTMLElement): boolean {
   const wrapper = container.querySelector<HTMLElement>('.has-timestamp-icon');
-  if (!wrapper) return;
+  if (!wrapper) return false;
 
   const icon = wrapper.querySelector<HTMLElement>('.timestamp-icon');
-  if (!icon) return;
+  if (!icon) return false;
 
   const textNode = wrapper.lastChild;
-  if (!textNode) return;
+  if (!textNode) return false;
 
   const iconRect = icon.getBoundingClientRect();
   const iconCenterY = iconRect.top + iconRect.height / 2;
 
-  let textCenterY: number;
-
+  // Get text bounding rect — Bases uses a bare text node, Datacore uses a span
+  let textRect: DOMRect;
   if (textNode.nodeType === 3) {
-    // Bases: bare text node — measure via Range
     const range = wrapper.ownerDocument.createRange();
     range.selectNodeContents(textNode);
-    const textRect = range.getBoundingClientRect();
-    textCenterY = textRect.top + textRect.height / 2;
-  } else if (textNode instanceof HTMLElement) {
-    // Datacore: span element containing text
-    const textRect = textNode.getBoundingClientRect();
-    textCenterY = textRect.top + textRect.height / 2;
+    textRect = range.getBoundingClientRect();
+    range.detach();
+  } else if (textNode.nodeType === 1) {
+    textRect = (textNode as HTMLElement).getBoundingClientRect();
   } else {
-    return;
+    return false;
   }
 
-  let delta = textCenterY - iconCenterY;
+  let delta = textRect.top + textRect.height / 2 - iconCenterY;
 
-  // Scale by text boost ratio² on Android.
-  // CSS 1em resolves to pre-boost SpecifiedFontSize, while
-  // getComputedStyle().fontSize returns the boosted value.
-  // Squaring the ratio matches the desktop perceptual correction exactly.
-  const doc = wrapper.ownerDocument;
-  const boostProbe = doc.createElement('span');
-  boostProbe.classList.add('dynamic-views-boost-probe');
-  wrapper.appendChild(boostProbe);
-  const preBoost = boostProbe.getBoundingClientRect().width;
-  boostProbe.remove();
+  // Android text autosizer: boosted text shifts the perceptual ink center
+  // higher than the layout-box center. Scale by boostRatio² to match the
+  // desktop perceptual correction. CSS 1em = pre-boost SpecifiedFontSize,
+  // getComputedStyle().fontSize = boosted value.
+  if (Platform.isAndroidApp) {
+    const boostProbe = wrapper.ownerDocument.createElement('span');
+    boostProbe.classList.add('dynamic-views-boost-probe');
+    wrapper.appendChild(boostProbe);
+    const preBoost = boostProbe.getBoundingClientRect().width;
+    boostProbe.remove();
 
-  if (preBoost > 0) {
-    const boostWin = getOwnerWindow(wrapper);
-    const postBoost = parseFloat(boostWin.getComputedStyle(wrapper).fontSize);
-    const boostRatio = postBoost / preBoost;
-    if (boostRatio > 1.02) {
-      delta *= boostRatio * boostRatio;
+    if (preBoost > 0) {
+      const postBoost = parseFloat(
+        getOwnerWindow(wrapper).getComputedStyle(wrapper).fontSize
+      );
+      const boostRatio = postBoost / preBoost;
+      if (boostRatio > BOOST_DETECTION_THRESHOLD) {
+        delta *= boostRatio * boostRatio;
+      }
     }
   }
 
-  // Layout thrash guard: skip unreasonable corrections
-  if (Math.abs(delta) > 5) return;
+  if (Math.abs(delta) > MAX_CORRECTION_PX) return false;
 
-  if (delta !== 0) {
-    container.style.setProperty(OFFSET_VAR, `${delta}px`);
-  } else {
-    container.style.removeProperty(OFFSET_VAR);
-  }
+  container.style.setProperty(OFFSET_VAR, `${delta}px`);
+  return true;
 }

@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-19
+updated: 2026-03-25
 ---
 # Style Settings fallback selectors
 
@@ -154,6 +154,40 @@ The `default:` field in the `@settings` YAML only controls the slider's initial 
 1. Every consumer of the variable MUST include a fallback value matching the `default:` in `@settings`.
 2. If multiple consumers read the same variable, resolve it once into a local variable with the fallback, then reference the local variable downstream.
 
+## Body-level variable + attribute selector gate
+
+When multiple `class-select` presets all resolve to a single CSS variable consumed by one rule, use a `[class*=...]` attribute selector gate to prevent IACVT (invalid at computed value time) when no preset class is present.
+
+**Problem**: Some body classes are JS-managed (e.g., `dynamic-views-open-on-title`) and always present regardless of Style Settings installation. If a consumption rule matches via the JS class but the color preset variable is undefined (no Style Settings), `var(--undefined)` triggers IACVT — the property becomes `inherit`, overriding lower-specificity rules.
+
+**Solution**: Add `[class*='dynamic-views-{setting-prefix}-']` to the consumption rule. This only matches when at least one preset class from that setting group exists on body:
+
+```scss
+/* Gate: rule only fires when a title-color preset is active */
+body:is(
+    .dynamic-views-open-on-title,
+    .dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+  ):is(
+    [class*='dynamic-views-title-color-'],
+    [class*='dynamic-views-title-hover-color-']
+  )
+  .dynamic-views
+  .card.hover-intent-active
+  .card-title
+  a:hover {
+  color: var(
+    --dynamic-views-title-hover-color-value,
+    var(--dynamic-views-title-color-hover-color)
+  );
+}
+```
+
+The body-level variable assignments (`hover-color-vars` mixin in [_property-colors.scss](../../styles/_property-colors.scss)) have zero hover-path cost — they only re-evaluate when body classes change (rare Style Settings events). The consumption rules in [_hover-states.scss](../../styles/_hover-states.scss) are the only card-level rules evaluated during hover recalculations.
+
+**Specificity**: `[class*='...']` has the same specificity as a class selector (0,1,0), so the gate adds specificity equivalent to the per-variant body class it replaces.
+
+**When to use**: Color preset consolidation where N body-class variants all set the same CSS variable, consumed by one rule. NOT needed when the consumption rule's other selectors already require a Style Settings class (no JS-managed classes in the chain).
+
 ## Avoid re-renders from Style Settings changes
 
 Re-renders from Style Settings changes are disruptive — they reset scroll position. Only add settings to `getStyleSettingsHash()` when they genuinely affect rendered card content (text, icons, layout). Do NOT add settings that only affect:
@@ -178,6 +212,16 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
+
+### Body-level variable + `[class*=...]` gate
+
+| Setting group | Gate selector | Variable | Consumption file |
+| --- | --- | --- | --- |
+| Title color (hover, open-on-title) | `[class*='dynamic-views-title-color-']`, `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-color-hover-color`, `--dynamic-views-title-hover-color-value` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Title color (hover, open-on-card) | `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-hover-color-value` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Subtitle color (hover) | `[class*='dynamic-views-subtitle-color-']` | `--dynamic-views-subtitle-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Property color with labels (hover) | `[class*='dynamic-views-property-color-with-labels-']` | `--dynamic-views-property-with-label-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Property color without labels (hover) | `[class*='dynamic-views-property-color-without-labels-']` | `--dynamic-views-property-no-label-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
 
 ### `class-toggle` — inverted (CSS)
 

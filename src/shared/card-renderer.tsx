@@ -507,6 +507,9 @@ const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
 // Module-level WeakMap to track previous cssclasses for each container (prevents unnecessary DOM mutations)
 const containerCssClassesMap = new WeakMap<HTMLElement, string[]>();
 
+// One-shot guard: prevent repeated icon alignment measurement on Preact re-renders
+const iconAlignmentMeasuredSet = new WeakSet<HTMLElement>();
+
 /**
  * Cleanup all card ResizeObservers (call when view is destroyed)
  */
@@ -1297,7 +1300,11 @@ export function CardRenderer({
         }
 
         // Icon optical alignment (live DOM measurement from first rendered timestamp)
-        applyIconOpticalOffset(el);
+        if (!iconAlignmentMeasuredSet.has(el)) {
+          if (applyIconOpticalOffset(el)) {
+            iconAlignmentMeasuredSet.add(el);
+          }
+        }
 
         // Skip if already setup (avoid duplicates on re-render)
         if (containerCleanupMap.has(el)) {

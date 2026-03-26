@@ -4,6 +4,7 @@ import {
   applyMasonryLayout,
   repositionWithStableColumns,
   computeGreedyColumnHeights,
+  computeSyntheticGroupOffsets,
 } from '../../src/utils/masonry-layout';
 
 describe('masonry-layout', () => {
@@ -627,6 +628,128 @@ describe('masonry-layout', () => {
       );
       expect(stableRange).toBe(greedyRange);
       expect(shouldUseGreedy).toBe(false);
+    });
+  });
+
+  describe('computeSyntheticGroupOffsets', () => {
+    it('should shift subsequent groups by cumulative height deltas', () => {
+      const keys = ['a', 'b', 'c'];
+      const cached = new Map([
+        ['a', 0],
+        ['b', 100],
+        ['c', 300],
+      ]);
+      const oldH = new Map([
+        ['a', 100],
+        ['b', 200],
+        ['c', 150],
+      ]);
+      // Group a grew by 20, group b shrank by 50
+      const newH = new Map([
+        ['a', 120],
+        ['b', 150],
+        ['c', 150],
+      ]);
+
+      const result = computeSyntheticGroupOffsets(keys, cached, oldH, newH);
+
+      expect(result).not.toBeNull();
+      expect(result!.get('a')).toBe(0); // First group: no shift
+      expect(result!.get('b')).toBe(120); // 100 + 20 (a's delta)
+      expect(result!.get('c')).toBe(270); // 300 + (20 - 50) = 270
+    });
+
+    it('should return null when cached offsets are empty', () => {
+      const result = computeSyntheticGroupOffsets(
+        ['a'],
+        new Map(),
+        new Map([['a', 100]]),
+        new Map([['a', 120]])
+      );
+      expect(result).toBeNull();
+    });
+
+    it('should return null when a group key has no cached offset', () => {
+      const result = computeSyntheticGroupOffsets(
+        ['a', 'b'],
+        new Map([['a', 0]]), // 'b' missing
+        new Map([
+          ['a', 100],
+          ['b', 200],
+        ]),
+        new Map([
+          ['a', 120],
+          ['b', 200],
+        ])
+      );
+      expect(result).toBeNull();
+    });
+
+    it('should not mutate cached offsets on bail', () => {
+      const cached = new Map([['a', 0]]);
+      computeSyntheticGroupOffsets(
+        ['a', 'unknown'],
+        cached,
+        new Map([['a', 100]]),
+        new Map([['a', 120]])
+      );
+      expect(cached.get('a')).toBe(0); // Unchanged
+    });
+
+    it('should handle single group (ungrouped mode)', () => {
+      const cached = new Map([[undefined, 12]]);
+      const result = computeSyntheticGroupOffsets(
+        [undefined],
+        cached,
+        new Map([[undefined, 500]]),
+        new Map([[undefined, 600]])
+      );
+      expect(result).not.toBeNull();
+      expect(result!.get(undefined)).toBe(12); // Single group — no shift
+    });
+
+    it('should return unchanged offsets when heights did not change', () => {
+      const cached = new Map([
+        ['a', 0],
+        ['b', 100],
+        ['c', 300],
+      ]);
+      const heights = new Map([
+        ['a', 100],
+        ['b', 200],
+        ['c', 150],
+      ]);
+
+      const result = computeSyntheticGroupOffsets(
+        ['a', 'b', 'c'],
+        cached,
+        heights,
+        heights // Same old and new
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.get('a')).toBe(0);
+      expect(result!.get('b')).toBe(100);
+      expect(result!.get('c')).toBe(300);
+    });
+
+    it('should default missing heights to 0', () => {
+      const cached = new Map([
+        ['a', 0],
+        ['b', 50],
+      ]);
+      // oldH missing 'a', newH missing 'b' — both default to 0
+      const result = computeSyntheticGroupOffsets(
+        ['a', 'b'],
+        cached,
+        new Map([['b', 100]]),
+        new Map([['a', 80]])
+      );
+      expect(result).not.toBeNull();
+      // a: 0 + 0 = 0. delta for a: 80 - 0 = 80
+      // b: 50 + 80 = 130
+      expect(result!.get('a')).toBe(0);
+      expect(result!.get('b')).toBe(130);
     });
   });
 });

@@ -340,3 +340,26 @@ export function computeGreedyColumnHeights(
   }
   return columnHeights;
 }
+
+/** Compute group offsets from cumulative container height deltas — zero DOM reads.
+ *  Returns updated offsets map on success, or null if any group offset is unknown
+ *  (caller should fall back to DOM-based offset computation). */
+export function computeSyntheticGroupOffsets(
+  groupKeys: Iterable<string | undefined>,
+  cachedOffsets: ReadonlyMap<string | undefined, number>,
+  oldContainerHeights: ReadonlyMap<string | undefined, number>,
+  newContainerHeights: ReadonlyMap<string | undefined, number>
+): Map<string | undefined, number> | null {
+  if (cachedOffsets.size === 0) return null;
+  const updated = new Map<string | undefined, number>();
+  let cumulativeDelta = 0;
+  for (const groupKey of groupKeys) {
+    const oldOffset = cachedOffsets.get(groupKey);
+    if (oldOffset === undefined) return null;
+    updated.set(groupKey, oldOffset + cumulativeDelta);
+    const oldH = oldContainerHeights.get(groupKey) ?? 0;
+    const newH = newContainerHeights.get(groupKey) ?? 0;
+    cumulativeDelta += newH - oldH;
+  }
+  return updated;
+}

@@ -295,7 +295,7 @@ The CLS is NOT an inherent limitation of virtual masonry — it is caused by the
 
 ### Layer 1: Defer height correction to scroll — COMMITTED
 
-`resize-correction` no longer calls `remeasureAndReposition`. Instead, it sets `postResizeScrollActive = true` directly, deferring height correction to the scroll-concurrent path. The 2s idle timeout clears the flag without correcting if the user never scrolls.
+`resize-correction` calls `remeasureAndReposition(true)` once to fix mounted card heights at rest (one-time position jump, 200ms after resize). Then sets `postResizeScrollActive = true` to guard remaining corrections (unmounted cards) behind the scroll-concurrent path. The 2s idle timeout clears the flag without correcting if the user never scrolls.
 
 **Constraint #18 workaround**: Instead of relying on `mountedPostResize` (which requires `measuredAtWidth` mismatch), `postResizeScrollActive` is set directly by the resize-correction timeout. This bypasses the constraint entirely — scroll-concurrent correction activates on first scroll regardless of `measuredAtWidth` state.
 
@@ -303,7 +303,7 @@ The CLS is NOT an inherent limitation of virtual masonry — it is caused by the
 
 **Result**: Zero CLS at rest for both repro patterns (resize → wait → scroll, and resize → scroll immediately). Both converge to the same scroll-concurrent correction mechanism. Corrections during scroll are masked by motion.
 
-**Trade-off**: Between resize-end and first scroll, cards have estimated heights (~9px avg clipping). scrollHeight pre-read attempted but failed (constraint #21 — blind zone). Addressable by width-bucket height cache.
+**Trade-off**: Between resize-end and first scroll, mounted cards have accurate heights from the at-rest correction. Unmounted cards keep estimated heights until they mount during scroll.
 
 **Status**: Committed on main (`3b45d24`). Also includes masonry simplification (`eccfe72`) — extracted `resolveStableOrGreedy`, `applyCardPositions`, `createVirtualItem` helpers, `LayoutSource` type union, `get win()` getter, shared constants. Net -183 lines.
 

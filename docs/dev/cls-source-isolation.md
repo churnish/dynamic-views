@@ -116,7 +116,7 @@ All code that writes `style.top`/`style.left` to masonry cards, with context on 
 - **`cardResizeObserver`** → `remeasureAndReposition` — RAF-debounced, guarded by `isScrollRemeasurePending()`
 - **`image-load`** → `remeasureAndReposition` — coalesced per-frame, guarded
 - **`property-measured`** → `updateLayoutRef` — idle callback after property width measurement
-- **~~`resize-correction`~~** — 200ms after resize ends. **Layer 1**: no longer calls `remeasureAndReposition` or `updateLayoutRef`. Sets `postResizeScrollActive` to defer correction to scroll-concurrent path.
+- **`resize-correction`** — 200ms after resize ends. Calls `remeasureAndReposition(true)` once for mounted cards, then sets `postResizeScrollActive` to guard remaining corrections behind scroll-concurrent path.
 
 ## `scrollRemeasureTimeout` behavior
 

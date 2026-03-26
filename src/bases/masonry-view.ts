@@ -41,6 +41,7 @@ import {
   calculateIncrementalMasonryLayout,
   repositionWithStableColumns,
   computeGreedyColumnHeights,
+  computeSyntheticGroupOffsets,
   type MasonryLayoutResult,
   type MasonryPosition,
 } from '../utils/masonry-layout';
@@ -133,6 +134,7 @@ declare module 'obsidian' {
 export const MASONRY_VIEW_TYPE = 'dynamic-views-masonry';
 
 export class DynamicViewsMasonryView extends BasesView {
+  // #region State & field declarations
   readonly type = MASONRY_VIEW_TYPE;
   private scrollEl: HTMLElement;
   private leafId: string;
@@ -284,7 +286,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
   private fullScreen: FullScreenController | null = null;
-
+  // #endregion State & field declarations
+  // #region Group collapse/expand
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
   private get currentFile(): TFile | null {
@@ -545,7 +548,8 @@ export class DynamicViewsMasonryView extends BasesView {
     );
     this.onDataUpdated();
   }
-
+  // #endregion Group collapse/expand
+  // #region Batch sizing
   /** Calculate batch size based on current column count */
   private getBatchSize(settings: BasesResolvedSettings): number {
     if (!this.masonryContainer) return MAX_BATCH_SIZE;
@@ -614,7 +618,8 @@ export class DynamicViewsMasonryView extends BasesView {
       void this.appendBatch(totalEntries, settings);
     }
   }
-
+  // #endregion Batch sizing
+  // #region Lifecycle
   /**
    * Handle template toggle changes
    * Called from onDataUpdated() since Obsidian calls that for config changes
@@ -899,7 +904,8 @@ export class DynamicViewsMasonryView extends BasesView {
     // Using queueMicrotask gives Obsidian time to finish updating config state.
     queueMicrotask(() => this.processDataUpdate());
   }
-
+  // #endregion Lifecycle
+  // #region Data processing
   /** Internal handler after config has settled */
   private processDataUpdate(): void {
     this.trailingUpdate.isTrailing = false;
@@ -1346,26 +1352,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.containerEl.empty();
 
       // Reset batch append state for full re-render
-      this.previousDisplayedCount = 0;
-      this.lastGroup.key = undefined;
-      this.lastGroup.container = null;
-      this.groupLayoutResults.clear();
-      this.virtualItems = [];
-      this.hasExplicitScrollHeights = false;
-      this.postResizeScrollActive = false;
-      if (this.postResizeIdleTimeout !== null) {
-        clearTimeout(this.postResizeIdleTimeout);
-        this.postResizeIdleTimeout = null;
-      }
-      if (this.initialRemeasureTimeout !== null) {
-        clearTimeout(this.initialRemeasureTimeout);
-        this.initialRemeasureTimeout = null;
-      }
-      this.virtualItemsByGroup.clear();
-      this.groupContainers.clear();
-      this.cachedGroupOffsets.clear();
-      this.groupOffsetsDirty = true;
-      this.hasUserScrolled = false;
+      this.resetVirtualState();
 
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
@@ -1587,7 +1574,8 @@ export class DynamicViewsMasonryView extends BasesView {
       });
     })();
   }
-
+  // #endregion Data processing
+  // #region Layout engine
   private setupMasonryLayout(settings: BasesResolvedSettings): void {
     if (!this.masonryContainer) return;
     this.cardVerticalPadding = null;
@@ -1820,10 +1808,7 @@ export class DynamicViewsMasonryView extends BasesView {
               // Group container heights changed — update offsets before sync.
               // Without this, syncVirtualScroll uses stale offsets and mounts
               // cards in wrong groups (blank viewport on grouped masonry resize).
-              this.updateGroupOffsetsSynthetic(oldContainerHeightsFastPath);
-              if (this.groupOffsetsDirty) {
-                this.updateCachedGroupOffsets();
-              }
+              this.refreshGroupOffsets(oldContainerHeightsFastPath);
               this.syncVirtualScroll({ scrollTop, paneHeight });
               fastPathHandledSync = true;
               return;
@@ -1909,10 +1894,7 @@ export class DynamicViewsMasonryView extends BasesView {
             // DOM measurement branch handles its own sync — set flag so `finally` skips it.
             // Must sync after correction: re-measured heights shift positions, potentially
             // moving items in/out of viewport range.
-            this.updateGroupOffsetsSynthetic(oldContainerHeightsFastPath);
-            if (this.groupOffsetsDirty) {
-              this.updateCachedGroupOffsets();
-            }
+            this.refreshGroupOffsets(oldContainerHeightsFastPath);
             this.syncVirtualScroll();
             fastPathHandledSync = true;
             return;
@@ -2099,15 +2081,11 @@ export class DynamicViewsMasonryView extends BasesView {
         if (!fastPathHandledSync) {
           this.groupOffsetsDirty = true;
           if (this.hasUserScrolled) {
-            // Synthetic offsets only valid when group structure is stable
-            // (resize, image-load). For initial-render / data refresh,
-            // groupLayoutResults was cleared — use DOM reads directly.
-            if (oldContainerHeightsForSync.size > 0) {
-              this.updateGroupOffsetsSynthetic(oldContainerHeightsForSync);
-            }
-            if (this.groupOffsetsDirty) {
-              this.updateCachedGroupOffsets();
-            }
+            this.refreshGroupOffsets(
+              oldContainerHeightsForSync.size > 0
+                ? oldContainerHeightsForSync
+                : undefined
+            );
             this.syncVirtualScroll();
           }
         }
@@ -2490,10 +2468,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.updateVirtualItemPositions(groupKey, result);
     }
     this.masonryContainer?.classList.remove('masonry-measuring');
-    this.updateGroupOffsetsSynthetic(oldContainerHeights);
-    if (this.groupOffsetsDirty) {
-      this.updateCachedGroupOffsets();
-    }
+    this.refreshGroupOffsets(oldContainerHeights);
 
     // Compensate scroll: weighted median of per-column deltas minimizes
     // total visible displacement (vs single-anchor which fixes one column)
@@ -2540,7 +2515,8 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     return true;
   }
-
+  // #endregion Layout engine
+  // #region Layout helpers
   /** Rebuild the groupKey → VirtualItem[] index.
    *  Must be called after any mutation to virtualItems (push, reset). */
   private rebuildGroupIndex(): void {
@@ -2734,7 +2710,8 @@ export class DynamicViewsMasonryView extends BasesView {
     const containerHeight = Math.round(maxH > 0 ? maxH - gap : 0);
     return { containerHeight, columnHeights, columnAssignments };
   }
-
+  // #endregion Layout helpers
+  // #region Group offsets
   /** Compute and cache container offsets for syncVirtualScroll.
    *  Must be called synchronously before syncVirtualScroll — offsets depend on
    *  current scrollTop and are only valid within the same synchronous block. */
@@ -2756,34 +2733,65 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Compute group offsets from known height deltas — zero DOM reads.
    *  Falls back to dirty flag if any group offset is unknown.
-   *  Collects updates in a temporary map to avoid partial mutation on bailout. */
+   *  Group structure must be stable (no adds/removes) for synthetic computation. */
   private updateGroupOffsetsSynthetic(
     oldContainerHeights: Map<string | undefined, number>
   ): void {
-    if (this.cachedGroupOffsets.size === 0) {
+    const newHeights = new Map<string | undefined, number>();
+    for (const [key, result] of this.groupLayoutResults) {
+      newHeights.set(key, result.containerHeight);
+    }
+    const result = computeSyntheticGroupOffsets(
+      this.virtualItemsByGroup.keys(),
+      this.cachedGroupOffsets,
+      oldContainerHeights,
+      newHeights
+    );
+    if (!result) {
       this.groupOffsetsDirty = true;
       return;
     }
-    // Compute into temporary map — apply atomically only on success
-    const updatedOffsets = new Map<string | undefined, number>();
-    let cumulativeDelta = 0;
-    for (const groupKey of this.virtualItemsByGroup.keys()) {
-      const oldOffset = this.cachedGroupOffsets.get(groupKey);
-      if (oldOffset === undefined) {
-        // Unknown group — bail without mutating cachedGroupOffsets
-        this.groupOffsetsDirty = true;
-        return;
-      }
-      updatedOffsets.set(groupKey, oldOffset + cumulativeDelta);
-      const oldH = oldContainerHeights.get(groupKey) ?? 0;
-      const newH = this.groupLayoutResults.get(groupKey)?.containerHeight ?? 0;
-      cumulativeDelta += newH - oldH;
-    }
-    // Atomic commit — all or nothing
-    for (const [key, offset] of updatedOffsets) {
+    for (const [key, offset] of result) {
       this.cachedGroupOffsets.set(key, offset);
     }
     this.groupOffsetsDirty = false;
+  }
+
+  /** Mark group offsets stale. Try synthetic update (zero DOM reads), fall back to DOM. */
+  private refreshGroupOffsets(
+    syntheticHeights?: Map<string | undefined, number>
+  ): void {
+    this.groupOffsetsDirty = true;
+    if (syntheticHeights && syntheticHeights.size > 0) {
+      this.updateGroupOffsetsSynthetic(syntheticHeights);
+    }
+    if (this.groupOffsetsDirty) {
+      this.updateCachedGroupOffsets();
+    }
+  }
+
+  /** Clear all virtual scroll state for a full re-render. */
+  private resetVirtualState(): void {
+    this.previousDisplayedCount = 0;
+    this.lastGroup.key = undefined;
+    this.lastGroup.container = null;
+    this.groupLayoutResults.clear();
+    this.virtualItems = [];
+    this.hasExplicitScrollHeights = false;
+    this.postResizeScrollActive = false;
+    if (this.postResizeIdleTimeout !== null) {
+      clearTimeout(this.postResizeIdleTimeout);
+      this.postResizeIdleTimeout = null;
+    }
+    if (this.initialRemeasureTimeout !== null) {
+      clearTimeout(this.initialRemeasureTimeout);
+      this.initialRemeasureTimeout = null;
+    }
+    this.virtualItemsByGroup.clear();
+    this.groupContainers.clear();
+    this.cachedGroupOffsets.clear();
+    this.groupOffsetsDirty = true;
+    this.hasUserScrolled = false;
   }
 
   private cacheCardVerticalPadding(el: HTMLElement): void {
@@ -2794,7 +2802,8 @@ export class DynamicViewsMasonryView extends BasesView {
     this.cardVerticalPadding =
       parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   }
-
+  // #endregion Group offsets
+  // #region Virtual scroll
   /** Mount a virtual item: render card, apply stored position, set refs */
   private mountVirtualItem(
     item: VirtualItem,
@@ -3146,7 +3155,8 @@ export class DynamicViewsMasonryView extends BasesView {
     this.mountVirtualItem(item, container, this.lastRenderedSettings);
     return item.el;
   }
-
+  // #endregion Virtual scroll
+  // #region Card rendering
   private renderCard(
     container: HTMLElement,
     card: CardData,
@@ -3374,7 +3384,8 @@ export class DynamicViewsMasonryView extends BasesView {
       initializeScrollGradients(this.masonryContainer);
     }
   }
-
+  // #endregion Card rendering
+  // #region Infinite scroll
   private async appendBatch(
     totalEntries: number,
     settings: BasesResolvedSettings
@@ -3792,8 +3803,7 @@ export class DynamicViewsMasonryView extends BasesView {
           this.batchLayoutPending = false;
           this.isLoading = false;
 
-          this.groupOffsetsDirty = true;
-          this.updateCachedGroupOffsets();
+          this.refreshGroupOffsets();
           this.syncVirtualScroll();
 
           // Initialize gradients for new cards only
@@ -4031,7 +4041,8 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     this.containerEl.createDiv('dynamic-views-end-indicator');
   }
-
+  // #endregion Infinite scroll
+  // #region Cleanup
   onunload(): void {
     this.scrollPreservation?.cleanup();
     this.renderState.abortController?.abort();
@@ -4065,7 +4076,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.stickyHeadings?.disconnect();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction
   }
-
+  // #endregion Cleanup
   focus(): void {
     this.containerEl.focus({ preventScroll: true });
   }

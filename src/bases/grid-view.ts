@@ -135,6 +135,7 @@ function setHoverScaleForCards(cards: HTMLElement[]): void {
 }
 
 export class DynamicViewsGridView extends BasesView {
+  // #region State & field declarations
   readonly type = GRID_VIEW_TYPE;
   private scrollEl: HTMLElement;
   private leafId: string;
@@ -271,6 +272,8 @@ export class DynamicViewsGridView extends BasesView {
   private touchAbort: AbortController | null = null;
   private fullScreen: FullScreenController | null = null;
 
+  // #endregion State & field declarations
+  // #region Group collapse/expand
   /** Get the current file by resolving from the leaf's view state (cached).
    *  controller.currentFile is a shared global that can return the wrong file. */
   private get currentFile(): TFile | null {
@@ -367,8 +370,7 @@ export class DynamicViewsGridView extends BasesView {
         this.rebuildGroupIndex();
 
         // Refresh offsets — later groups moved up
-        this.groupOffsetsDirty = true;
-        this.updateCachedGroupOffsets();
+        this.refreshGroupOffsets();
       }
 
       this.renderState.lastRenderHash = '';
@@ -539,8 +541,7 @@ export class DynamicViewsGridView extends BasesView {
         item.fixedHeight = item.measuredHeight - item.scalableHeight;
       }
     }
-    this.groupOffsetsDirty = true;
-    this.updateCachedGroupOffsets();
+    this.refreshGroupOffsets();
 
     this.isLayoutBusy = false;
     // Immediate cull: expanding a large group can dump many cards into DOM
@@ -590,7 +591,8 @@ export class DynamicViewsGridView extends BasesView {
     );
     this.onDataUpdated();
   }
-
+  // #endregion Group collapse/expand
+  // #region Batch sizing
   /** Calculate batch size based on current column count */
   private getBatchSize(settings: BasesResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
@@ -633,7 +635,8 @@ export class DynamicViewsGridView extends BasesView {
       Math.floor((containerWidth + gap) / (cardSize + gap))
     );
   }
-
+  // #endregion Batch sizing
+  // #region Lifecycle
   /**
    * Handle template toggle changes
    * Called from onDataUpdated() since Obsidian calls that for config changes
@@ -862,6 +865,44 @@ export class DynamicViewsGridView extends BasesView {
     queueMicrotask(() => this.processDataUpdate());
   }
 
+  /** Clear all virtual scroll state for a full re-render. */
+  private resetVirtualState(): void {
+    this.virtualItems = [];
+    this.virtualItemsByGroup.clear();
+    this.virtualItemByPath.clear();
+    this.groupContainers.clear();
+    this.placeholderEls.clear();
+    this.cachedGroupOffsets.clear();
+    this.groupOffsetsDirty = true;
+    this.cardVerticalPadding = null;
+    this.hasUserScrolled = false;
+    this.isLayoutBusy = false;
+    this.cardResizeDirty = false;
+    this.newlyMountedEls = [];
+    this.scrollMountLockedEls.clear();
+    if (this.scrollIdleTimeout !== null) {
+      clearTimeout(this.scrollIdleTimeout);
+      this.scrollIdleTimeout = null;
+    }
+    if (this.virtualScrollRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.virtualScrollRafId
+      );
+      this.virtualScrollRafId = null;
+    }
+    if (this.mountRemeasureTimeout !== null) {
+      clearTimeout(this.mountRemeasureTimeout);
+      this.mountRemeasureTimeout = null;
+    }
+    if (this.cardResizeRafId !== null) {
+      (this.observerWindow ?? window).cancelAnimationFrame(
+        this.cardResizeRafId
+      );
+      this.cardResizeRafId = null;
+    }
+  }
+  // #endregion Lifecycle
+  // #region Data processing
   /** Internal handler after config has settled */
   private processDataUpdate(): void {
     this.trailingUpdate.isTrailing = false;
@@ -1308,39 +1349,7 @@ export class DynamicViewsGridView extends BasesView {
       this.containerEl.addClass('dynamic-views-height-preserved');
 
       // Reset virtual scroll state
-      this.virtualItems = [];
-      this.virtualItemsByGroup.clear();
-      this.virtualItemByPath.clear();
-      this.groupContainers.clear();
-      this.placeholderEls.clear();
-      this.cachedGroupOffsets.clear();
-      this.groupOffsetsDirty = true;
-      this.cardVerticalPadding = null;
-      this.hasUserScrolled = false;
-      this.isLayoutBusy = false;
-      this.cardResizeDirty = false;
-      this.newlyMountedEls = [];
-      this.scrollMountLockedEls.clear();
-      if (this.scrollIdleTimeout !== null) {
-        clearTimeout(this.scrollIdleTimeout);
-        this.scrollIdleTimeout = null;
-      }
-      if (this.virtualScrollRafId !== null) {
-        (this.observerWindow ?? window).cancelAnimationFrame(
-          this.virtualScrollRafId
-        );
-        this.virtualScrollRafId = null;
-      }
-      if (this.mountRemeasureTimeout !== null) {
-        clearTimeout(this.mountRemeasureTimeout);
-        this.mountRemeasureTimeout = null;
-      }
-      if (this.cardResizeRafId !== null) {
-        (this.observerWindow ?? window).cancelAnimationFrame(
-          this.cardResizeRafId
-        );
-        this.cardResizeRafId = null;
-      }
+      this.resetVirtualState();
 
       // Clear and re-render
       this.containerEl.empty();
@@ -1510,8 +1519,7 @@ export class DynamicViewsGridView extends BasesView {
       // Measure card positions and build group index for virtual scrolling
       this.rebuildGroupIndex();
       this.measureAllCardPositions();
-      this.groupOffsetsDirty = true;
-      this.updateCachedGroupOffsets();
+      this.refreshGroupOffsets();
 
       // Setup cardResizeObserver and observe all initial cards
       this.setupCardResizeObserver();
@@ -1611,8 +1619,7 @@ export class DynamicViewsGridView extends BasesView {
                   }
 
                   // Refresh group offsets — column change reflows CSS Grid
-                  this.groupOffsetsDirty = true;
-                  this.updateCachedGroupOffsets();
+                  this.refreshGroupOffsets();
 
                   // Unmount content-hidden cards: can't measure at new width
                   for (const item of this.virtualItems) {
@@ -1676,8 +1683,7 @@ export class DynamicViewsGridView extends BasesView {
                     }
                   }
 
-                  this.groupOffsetsDirty = true;
-                  this.updateCachedGroupOffsets();
+                  this.refreshGroupOffsets();
 
                   // Phase 3: Cull — unmount items now outside viewport
                   for (const item of this.virtualItems) {
@@ -1786,7 +1792,8 @@ export class DynamicViewsGridView extends BasesView {
       // Note: Don't reset isLoading here - scroll listener may have started a batch
     })();
   }
-
+  // #endregion Data processing
+  // #region Card rendering
   private renderCard(
     container: HTMLElement,
     card: CardData,
@@ -1988,7 +1995,8 @@ export class DynamicViewsGridView extends BasesView {
     const feedEl = this.feedContainerRef.current;
     if (feedEl) initializeScrollGradients(feedEl);
   }
-
+  // #endregion Card rendering
+  // #region Infinite scroll
   /** Check if more content needed after layout completes, and load if so */
   private checkAndLoadMore(totalEntries: number): void {
     const settings = this.lastRenderedSettings;
@@ -2280,8 +2288,7 @@ export class DynamicViewsGridView extends BasesView {
           item.fixedHeight = item.measuredHeight - item.scalableHeight;
         }
       }
-      this.groupOffsetsDirty = true;
-      this.updateCachedGroupOffsets();
+      this.refreshGroupOffsets();
 
       // Clear guard, then sync
       this.isLayoutBusy = false;
@@ -2420,7 +2427,8 @@ export class DynamicViewsGridView extends BasesView {
     // Trigger initial check in case viewport already needs more content
     this.checkAndLoadMore(totalEntries);
   }
-
+  // #endregion Infinite scroll
+  // #region Virtual scroll
   // ---------------------------------------------------------------------------
   // Virtual scroll infrastructure
   // ---------------------------------------------------------------------------
@@ -2502,6 +2510,12 @@ export class DynamicViewsGridView extends BasesView {
         containerRect.top - scrollRect.top + scrollTop
       );
     }
+  }
+
+  /** Mark group offsets stale and recompute from DOM. */
+  private refreshGroupOffsets(): void {
+    this.groupOffsetsDirty = true;
+    this.updateCachedGroupOffsets();
   }
 
   private unmountVirtualItem(item: VirtualItem): void {
@@ -2877,8 +2891,7 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     // Update group offsets AFTER placeholders (depends on correct DOM heights)
-    this.groupOffsetsDirty = true;
-    this.updateCachedGroupOffsets();
+    this.refreshGroupOffsets();
 
     // Scroll compensation
     if (anchorItem) {
@@ -2973,7 +2986,8 @@ export class DynamicViewsGridView extends BasesView {
       }
     });
   }
-
+  // #endregion Virtual scroll
+  // #region Keyboard navigation
   private getVirtualRects(): VirtualCardRect[] {
     return this.virtualItems.map((item, arrayIndex) => {
       // Add group offset to y for absolute positioning.
@@ -2998,7 +3012,8 @@ export class DynamicViewsGridView extends BasesView {
     this.mountVirtualItem(item, this.lastRenderedSettings);
     return item.el;
   }
-
+  // #endregion Keyboard navigation
+  // #region Cleanup
   /** Show end-of-content indicator when all items are displayed (standalone .base files only) */
   private showEndIndicator(): void {
     if (this.isEmbedded) return;
@@ -3042,6 +3057,7 @@ export class DynamicViewsGridView extends BasesView {
   focus(): void {
     this.containerEl.focus({ preventScroll: true });
   }
+  // #endregion Cleanup
 }
 
 /** Export options for registration — type assertion needed because Obsidian's

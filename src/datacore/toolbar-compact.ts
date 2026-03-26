@@ -2,6 +2,7 @@ import { getOwnerWindow } from '../utils/owner-window';
 
 const NARROW_CLASS = 'dynamic-views-narrow';
 const HIDDEN_CLASS = 'dynamic-views-hidden';
+const DEFAULT_FILE_LINE_WIDTH = 700;
 
 /** Toggle narrow/hidden classes on a .dynamic-views container based on
  *  its width relative to --file-line-width. Returns cleanup function. */
@@ -18,7 +19,8 @@ export function observeToolbarCompact(container: HTMLElement): () => void {
     container.classList.remove(HIDDEN_CLASS);
     const cs = win.getComputedStyle(container);
     const threshold =
-      parseFloat(cs.getPropertyValue('--file-line-width')) || 700;
+      parseFloat(cs.getPropertyValue('--file-line-width')) ||
+      DEFAULT_FILE_LINE_WIDTH;
     container.classList.toggle(NARROW_CLASS, width < threshold);
   }
 

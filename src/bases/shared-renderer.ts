@@ -294,9 +294,6 @@ export function applyCssOnlySettings(
   containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
   const imageFit = (config.get('imageFit') as string) ?? 'crop';
   containerEl.classList.add(`image-fit-${imageFit}`);
-
-  // Icon optical alignment (live DOM measurement from first rendered timestamp)
-  applyIconOpticalOffset(containerEl);
 }
 
 /**

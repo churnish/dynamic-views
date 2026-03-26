@@ -2,7 +2,7 @@
 title: Card DOM structure
 description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-06
+updated: 2026-03-26
 ---
 # Card DOM structure
 
@@ -24,6 +24,8 @@ Both backends produce the same DOM structure with minor element-type differences
 div.card                                    ← data-path="{path}"
 │ [format classes: image-format-{cover|thumbnail|poster|backdrop}]
 │ [position classes: card-cover-{top|bottom|left|right}, card-thumbnail-{position}]
+│ [structural: has-card-content, has-properties-bottom, has-poster, has-backdrop,
+│              has-cover, has-cover-placeholder, has-cover-wrapper-placeholder]
 │ [state: clickable-card, compact-mode, thumbnail-stack]
 │ [transient: hover-intent-active, poster-hover-active, poster-revealed]
 │
@@ -105,6 +107,23 @@ div.property-pair.property-pair-{N}
   ├─ div.property.property-{N}.pair-left
   └─ div.property.property-{N+1}.pair-right
 ```
+
+## Structural content classes
+
+Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). Both backends set these via querySelector after card DOM is built.
+
+The shared selector (`visibleBodySelector`) used by both classes:
+
+```
+.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)
+```
+
+| Class | Element | Selector | CSS effect |
+|---|---|---|---|
+| `has-body-content` | `.card-body` | `visibleBodySelector` on body children | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
+| `has-card-content` | `.card` | `visibleBodySelector` on card descendants | Drives title divider border and cover-only padding resets |
+
+Both exclude `.card-previews.thumbnail-placeholder-only` — a previews container with only a thumbnail placeholder, hidden by CSS when the "Show thumbnail placeholder" style setting is off. The CSS rule scoping (`body:not(.dynamic-views-show-thumbnail-placeholder)`) ensures `card-body` is never hidden when placeholders are visible.
 
 ## Spacing
 

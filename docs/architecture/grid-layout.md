@@ -2,7 +2,7 @@
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and Bases/Datacore differences.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-18
+updated: 2026-03-25
 ---
 # Grid layout system
 
@@ -224,13 +224,22 @@ Triggered when only property **order** changed (not the set of properties, not o
 9. Show end indicator if all items displayed.
 10. `finally` block: clear `isLoading`. Then, if render version unchanged (batch not aborted), chain `checkAndLoadMore(totalEntries)` to load subsequent batches if still near bottom.
 
-`checkAndLoadMore(totalEntries)` — entry point for both the scroll listener and the post-batch chain.
+`checkAndLoadMore(totalEntries)` — viewport fill check with five entry points:
+
+1. **Scroll listener** — throttled, leading + trailing.
+2. **Post-batch chain** — at end of `appendBatch`, version-guarded.
+3. **Post-height-preservation removal** — after `dynamic-views-height-preserved` class is removed. The preserved height inflates `scrollHeight`, masking underfill from the initial `setupInfiniteScroll` call.
+4. **renderHash early-exit** — when `processDataUpdate` exits early (no data/settings change). Catches CSS-only setting changes and duplicate `onDataUpdated` calls that kill in-flight batch chains via `renderState.version` mismatch.
+5. **Post-card-remeasure** — at end of `remeasureMountedCards()`. Catches CSS-only setting changes (e.g., `textPreviewLines`) that shrink cards without triggering a full re-render.
+
+Guards:
 
 1. Reads `lastRenderedSettings` — returns early if unavailable.
-2. Guards: skip if `isLoading` or `displayedCount >= totalEntries`.
+2. Skip if `isLoading` or `displayedCount >= totalEntries`.
 3. Calculates `distanceFromBottom`; skips if `>= clientHeight × PANE_MULTIPLIER`.
-4. Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped at `MAX_BATCH_SIZE`. Returns `MAX_BATCH_SIZE` as fallback when container width is 0.
-5. Advances `displayedCount` and calls `appendBatch`.
+4. When both `scrollHeight` and `clientHeight` are 0 (hidden tab): `0 < 0` is false — safe no-op.
+
+Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped at `MAX_BATCH_SIZE`. Returns `MAX_BATCH_SIZE` as fallback when container width is 0. Advances `displayedCount` and calls `appendBatch`.
 
 ### 5. Resize
 
@@ -551,7 +560,7 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 6. **Container height is preserved during DOM wipe.** `--dynamic-views-preserve-height` sets `min-height` before clearing the container, preventing the scroll parent from resetting scroll position.
 7. **Virtual scrolling replaces content visibility.** Grid uses full virtual scrolling (mount/unmount) with a content-hidden intermediate tier on non-WebKit platforms. WebKit sets `content-visibility: visible` on all grid cards to override `content-visibility: auto`. WebKit compatibility is maintained because virtual scrolling doesn't trigger the reflow loop. The `content-hidden` class and `contain-intrinsic-height` inline style are removed from keyboard navigation targets before focusing.
 8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables and classes directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`, `posterDisplayMode`, and `imageFit` changes.
-9. **`appendBatch` must chain `checkAndLoadMore` after completing.** Without chaining, a batch that doesn't fill the viewport stalls infinite scroll permanently — the scroll listener never fires because there's nothing to scroll. The chain is version-guarded — aborted batches must NOT chain.
+9. **Viewport fill must be checked after any operation that changes content height.** Five call sites ensure `checkAndLoadMore` runs: scroll listener, post-batch chain (version-guarded — aborted batches must NOT chain), post-height-preservation removal, renderHash early-exit, and post-card-remeasure. Without these, a viewport that becomes underfilled (from settings change, batch chain killed by duplicate `onDataUpdated`, or CSS-only card shrinkage) stalls infinite scroll permanently.
 10. **`hasUserScrolled` gates virtual scroll activation.** Initial render mounts all cards for measurement. Virtual scrolling (unmounting far cards) activates only after first user scroll, matching the mount-all-then-cull pattern.
 11. **`isLayoutBusy` prevents concurrent layout operations.** Set during batch append, column-change reflow, and group expand. `syncVirtualScroll` skips when busy; `cardResizeObserver` defers via `cardResizeDirty` flag.
 12. **Height-locked mount prevents row reflow.** Cards mount with explicit `style.height` matching placeholder + `.dynamic-views-height-locked` class (overflow hidden). Released after deferred passes complete (`MOUNT_REMEASURE_MS`).

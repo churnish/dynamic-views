@@ -2,7 +2,7 @@
 title: Full screen architecture
 description: Bridge+settle system for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, and platform-specific branches.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-25
+updated: 2026-03-26
 ---
 # Full screen architecture
 
@@ -141,6 +141,33 @@ Direct height calculation (`currentHeight + totalShift`) was rejected — it com
 ### `flex: 1` override behavior
 
 The locked `height` doesn't truly constrain the scroll container because `.bases-view` has `flex: 1` in Obsidian's layout. The inline `height` acts as a `flex-basis` hint that WebKit respects during the brief transition period. True locking with `flex: 0 0 auto` was rejected — it creates a visible gap strip at the bottom of the viewport when bars are hidden.
+
+## Tap-to-reveal
+
+When bars are hidden, tapping reveals them. The `onTouchEnd` handler (passive `touchend` on scroll container) detects taps (< 10px movement, < 300ms duration) and decides whether to show bars or defer to the card's own click handler.
+
+### Exemptions
+
+Certain tap targets must NOT reveal bars — their tap has a dedicated function handled by the card's `click` event (which fires after `touchend`):
+
+| Target | Selector | Reason |
+|---|---|---|
+| **Cover image** | `.card-cover` | Opens image viewer |
+| **Thumbnail** | `.card-thumbnail` | Opens image viewer |
+| **Poster card with image** | `.image-format-poster.has-poster` | Toggles `poster-revealed` |
+
+Cover/thumbnail exemption has one exception: if image viewer is disabled (`dynamic-views-image-viewer-disabled`) AND open action is "press on title" (`dynamic-views-open-on-title`), the image tap is non-interactive, so bars reveal.
+
+Poster exemption is unconditional — poster tap-to-reveal is always active on mobile, independent of image viewer.
+
+### Bar reveal conditions
+
+After exemptions, bars show when:
+
+1. **Tap outside a card** — `!target.closest('.card')`
+2. **Open-on-title mode, non-title tap** — card body is non-interactive, so tap reveals bars. Title link taps (`.card-title a`) are exempt (they open the file).
+
+In open-on-card mode, card body taps don't reveal bars — the card's click handler opens the file.
 
 ## Platform branches
 

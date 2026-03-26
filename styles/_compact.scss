@@ -26,7 +26,8 @@
   }
 }
 
-/* Bases: container query on .bases-view (has container-type: inline-size) */
+/* Bases only: unnamed container query resolves to .bases-view (has container-type: inline-size).
+   Datacore handles this via toolbar-compact.ts observer (dynamic-views-hidden class). */
 @container (max-width: 50px) {
   .dynamic-views-grid,
   .dynamic-views-masonry {
@@ -154,7 +155,8 @@ body.dynamic-views-subtitle-overflow-scroll
   flex-wrap: nowrap;
 }
 
-/* Bases compact: container query on .bases-view (has container-type: inline-size) */
+/* Bases only: unnamed container query resolves to .bases-view (has container-type: inline-size).
+   Datacore handles this via toolbar-compact.ts observer (dynamic-views-narrow class). */
 @container (max-width: 699px) and (min-width: 51px) {
   .bases-view {
     .tags-wrapper,
