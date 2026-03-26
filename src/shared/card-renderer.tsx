@@ -1851,6 +1851,11 @@ function Card({
   const hasTitle = !!displayTitle;
   const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
+  // Prevents cover-only padding reset from zeroing padding on title-only cards.
+  if (hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) {
+    cardClasses.push('has-header');
+  }
+
   return (
     <div
       className={cardClasses.join(' ')}
@@ -2319,9 +2324,6 @@ function Card({
             const cardEl = el.closest('.card');
             if (cardEl?.querySelector(visibleBodySelector)) {
               cardEl.classList.add('has-card-content');
-            }
-            if (cardEl?.querySelector('.card-header')) {
-              cardEl.classList.add('has-header');
             }
             if (format === 'poster') {
               setupVerticalScrollGradient(el, scrollController.signal);

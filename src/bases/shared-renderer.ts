@@ -1558,7 +1558,6 @@ export class SharedCardRenderer {
     if (cardEl.querySelector('.card-properties-bottom')) {
       cardEl.classList.add('has-properties-bottom');
     }
-    // has-header: card has visible title/subtitle/URL content.
     // Prevents cover-only padding reset from zeroing padding on title-only cards.
     if (cardEl.querySelector('.card-header')) {
       cardEl.classList.add('has-header');
