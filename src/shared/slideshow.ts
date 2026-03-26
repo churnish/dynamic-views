@@ -630,10 +630,16 @@ export function setupSwipeGestures(
     { once: true }
   );
 
+  // Cache card element for hover intent check
+  const cardEl = coverEl.closest('.card');
+
   // Wheel events capture trackpad swipes
   coverEl.addEventListener(
     'wheel',
     (e) => {
+      // Require hover intent — prevents false triggers when cards scroll under stationary cursor
+      if (!cardEl?.classList.contains('hover-intent-active')) return;
+
       // Ignore predominantly vertical scrolling
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
 
