@@ -208,7 +208,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
   /* Slideshow indicator */
   .slideshow-indicator {
     position: absolute;
-    right: max(calc(var(--dynamic-views-card-padding, 8px) - 2px), 4px);
+    left: max(calc(var(--dynamic-views-card-padding, 8px) - 2px), 4px);
     top: max(calc(var(--dynamic-views-card-padding, 8px) - 1px), 4px);
     display: flex;
     align-items: center;
@@ -219,9 +219,8 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
     transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 
     svg {
-      width: var(--dynamic-views-icon-xs);
-      height: var(--dynamic-views-icon-xs);
-      transform: scaleX(-1);
+      width: 14px;
+      height: 14px;
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
         drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
     }

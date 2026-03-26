@@ -4214,8 +4214,8 @@ body:not(.dynamic-views-file-type-flair,
 }
 
 .is-mobile .dynamic-views .card-title-url-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 @media (hover: hover) {
@@ -5603,7 +5603,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 }
 .dynamic-views .slideshow-indicator {
   position: absolute;
-  right: max(var(--dynamic-views-card-padding, 8px) - 2px, 4px);
+  left: max(var(--dynamic-views-card-padding, 8px) - 2px, 4px);
   top: max(var(--dynamic-views-card-padding, 8px) - 1px, 4px);
   display: flex;
   align-items: center;
@@ -5616,7 +5616,6 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 .dynamic-views .slideshow-indicator svg {
   width: 14px;
   height: 14px;
-  transform: scaleX(-1);
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
 }
 

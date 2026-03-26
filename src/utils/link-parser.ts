@@ -9,6 +9,7 @@ export interface ParsedLink {
   caption: string;
   isEmbed: boolean;
   isWebUrl: boolean; // true for http/https, false for custom URIs like obsidian://
+  isMarkdownLink: boolean; // true for [text](url) format, false for bare/angle-bracket URLs
 }
 
 /**
@@ -105,6 +106,7 @@ export function findLinksInText(text: string): TextSegment[] {
         caption: match[2] || match[1],
         isEmbed: true,
         isWebUrl: false,
+        isMarkdownLink: false,
       };
     } else if (match[3] !== undefined) {
       // Group 3-4: Wikilink [[path|alias]]
@@ -114,6 +116,7 @@ export function findLinksInText(text: string): TextSegment[] {
         caption: match[4] || match[3],
         isEmbed: false,
         isWebUrl: false,
+        isMarkdownLink: false,
       };
     } else if (
       match[5] !== undefined ||
@@ -130,6 +133,7 @@ export function findLinksInText(text: string): TextSegment[] {
         caption: caption || path,
         isEmbed: true,
         isWebUrl: isWebUrl(path),
+        isMarkdownLink: true,
       };
     } else if (match[8] !== undefined) {
       // Group 8-10: Markdown link [caption](<path>) or [caption](path)
@@ -142,6 +146,7 @@ export function findLinksInText(text: string): TextSegment[] {
         caption: caption,
         isEmbed: false,
         isWebUrl: isWebUrl(path),
+        isMarkdownLink: true,
       };
     } else if (match[11] !== undefined) {
       // Group 11: Angle bracket URL <scheme://url>
@@ -152,6 +157,7 @@ export function findLinksInText(text: string): TextSegment[] {
         caption: url,
         isEmbed: false,
         isWebUrl: isWebUrl(url),
+        isMarkdownLink: false,
       };
     } else if (match[12] !== undefined) {
       // Group 12: Plain URL - strip trailing punctuation
@@ -162,6 +168,7 @@ export function findLinksInText(text: string): TextSegment[] {
         caption: cleanUrl,
         isEmbed: false,
         isWebUrl: isWebUrl(cleanUrl),
+        isMarkdownLink: false,
       };
       actualRaw = cleanUrl;
       // Add trailing punctuation as text after link

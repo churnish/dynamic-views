@@ -10,7 +10,11 @@ import { getOwnerWindow } from '../utils/owner-window';
  * Show context menu for external links (URLs)
  * Matches vanilla Obsidian external link menu
  */
-export function showExternalLinkContextMenu(e: MouseEvent, url: string): void {
+export function showExternalLinkContextMenu(
+  e: MouseEvent,
+  url: string,
+  displayText?: string
+): void {
   e.stopPropagation();
   e.preventDefault();
 
@@ -27,13 +31,27 @@ export function showExternalLinkContextMenu(e: MouseEvent, url: string): void {
 
   menu.addSeparator();
 
+  // "Copy" copies display text when present, raw URL for bare links
+  menu.addItem((item) =>
+    item
+      .setTitle('Copy')
+      .setIcon('lucide-copy')
+      .onClick(async () => {
+        await navigator.clipboard.writeText(
+          displayText ? `[${displayText}](${url})` : url
+        );
+      })
+  );
+
+  menu.addSeparator();
+
   menu.addItem((item) =>
     item
       .setTitle('Copy URL')
       .setIcon('lucide-link')
       .onClick(async () => {
         await navigator.clipboard.writeText(url);
-        new Notice('URL copied to clipboard');
+        new Notice('URL copied to your clipboard');
       })
   );
 

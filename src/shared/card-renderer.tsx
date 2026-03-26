@@ -308,7 +308,11 @@ function renderLink(link: ParsedLink, app: App): JSX.Element {
         e.stopPropagation();
       }}
       onContextMenu={(e: MouseEvent) => {
-        showExternalLinkContextMenu(e, link.url);
+        showExternalLinkContextMenu(
+          e,
+          link.url,
+          link.isMarkdownLink ? link.caption : undefined
+        );
       }}
       ref={(el: HTMLElement | null) => {
         if (!el) return;
@@ -2261,6 +2265,9 @@ function Card({
                   (e.currentTarget as HTMLElement)?.ownerDocument.body
                     .querySelector('.tooltip')
                     ?.remove();
+                }}
+                onContextMenu={(e: MouseEvent) => {
+                  showExternalLinkContextMenu(e, card.urlValue!);
                 }}
                 ref={(el: HTMLElement | null) => {
                   if (!el) return;

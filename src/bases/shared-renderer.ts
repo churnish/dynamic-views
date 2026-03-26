@@ -740,7 +740,11 @@ export class SharedCardRenderer {
     el.addEventListener(
       'contextmenu',
       (e) => {
-        showExternalLinkContextMenu(e, link.url);
+        showExternalLinkContextMenu(
+          e,
+          link.url,
+          link.isMarkdownLink ? link.caption : undefined
+        );
       },
       { signal }
     );
@@ -1394,6 +1398,13 @@ export class SharedCardRenderer {
           (e) => {
             e.stopPropagation();
             iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
+          },
+          { signal }
+        );
+        iconEl.addEventListener(
+          'contextmenu',
+          (e) => {
+            showExternalLinkContextMenu(e, card.urlValue!);
           },
           { signal }
         );
@@ -2225,6 +2236,13 @@ export class SharedCardRenderer {
           (e) => {
             e.stopPropagation();
             iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
+          },
+          { signal }
+        );
+        iconEl.addEventListener(
+          'contextmenu',
+          (e) => {
+            showExternalLinkContextMenu(e, card.urlValue!);
           },
           { signal }
         );
