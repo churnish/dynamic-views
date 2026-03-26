@@ -95,7 +95,14 @@ export function createUrlButtonDragHandlers(
       }
     }
     body.removeClass('dynamic-views-dragging');
-    iconEl.style.removeProperty('pointer-events');
+    // If the deferred setTimeout in onDragStart hasn't run yet (dragend fired
+    // before setTimeout(0)), schedule removal after it runs. Otherwise remove
+    // immediately.
+    if (pointerEventsSet) {
+      iconEl.style.removeProperty('pointer-events');
+    } else {
+      setTimeout(() => iconEl.style.removeProperty('pointer-events'), 0);
+    }
     // WebKit: Obsidian creates tooltip from aria-label ~1-2s after native drag
     // ends. MutationObserver catches and removes it. Scoped to URL text to
     // avoid removing unrelated tooltips.
@@ -146,9 +153,18 @@ export function createUrlButtonDragHandlers(
     );
   });
 
+  let pointerEventsSet = false;
+
   return {
     onDragStart: (e) => {
+      cleanedUp = false;
+      pointerEventsSet = false;
       e.stopPropagation();
+      const body = iconEl.ownerDocument.body;
+      // Ensure body class is set even if mousedown didn't fire on the icon
+      // (Preact event delegation can prevent mousedown from reaching the
+      // element while dragstart still fires on the native <a>)
+      body.addClass('dynamic-views-dragging');
       const card = iconEl.closest('.card');
       // Remove non-poster hover classes synchronously
       card?.classList.remove('hover-intent-active');
@@ -158,6 +174,7 @@ export function createUrlButtonDragHandlers(
       setTimeout(() => {
         card?.classList.remove('poster-hover-active');
         iconEl.setCssStyles({ pointerEvents: 'none' });
+        pointerEventsSet = true;
       }, 0);
       if (e.dataTransfer) {
         // 'link' alone rejects drops into CodeMirror (uses dropEffect 'copy').
