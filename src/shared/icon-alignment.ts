@@ -49,10 +49,7 @@ export function applyIconOpticalOffset(container: HTMLElement): void {
 
   if (textNode.nodeType === 3) {
     // Bases: bare text node — measure via Range
-    const win = getOwnerWindow(wrapper);
-    const range = win.document.createRange
-      ? win.document.createRange()
-      : wrapper.ownerDocument.createRange();
+    const range = wrapper.ownerDocument.createRange();
     range.selectNodeContents(textNode);
     const textRect = range.getBoundingClientRect();
     textCenterY = textRect.top + textRect.height / 2;

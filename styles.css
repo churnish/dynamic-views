@@ -7757,9 +7757,9 @@ body.dynamic-views-dragging .tooltip {
   height: var(--dynamic-views-query-height, auto);
 }
 
-/* Boost ratio probe for icon alignment (icon-alignment.ts).
-   width: 1em resolves to pre-boost font-size on Android (SpecifiedFontSize),
-   while getComputedStyle().fontSize returns the boosted value. */
+/* Boost ratio probe: width:1em resolves to pre-boost SpecifiedFontSize on
+   Android, while getComputedStyle().fontSize returns the boosted value.
+   Used by icon-alignment.ts to detect text autosizing ratio. */
 .dynamic-views-boost-probe {
   width: 1em;
   height: 0;

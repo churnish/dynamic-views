@@ -295,7 +295,7 @@ export function applyCssOnlySettings(
   const imageFit = (config.get('imageFit') as string) ?? 'crop';
   containerEl.classList.add(`image-fit-${imageFit}`);
 
-  // Icon optical alignment (font-dependent, cheap canvas measurement)
+  // Icon optical alignment (live DOM measurement from first rendered timestamp)
   applyIconOpticalOffset(containerEl);
 }
 
@@ -2820,10 +2820,10 @@ export class SharedCardRenderer {
       // One-shot: measure icon alignment from first real timestamp
       // Deferred to rAF so the browser has laid out the new elements
       if (settings.propertyLabels === 'hide' && !this.iconAlignmentMeasured) {
-        this.iconAlignmentMeasured = true;
         const containerEl =
           timestampWrapper.closest<HTMLElement>('.dynamic-views');
         if (containerEl) {
+          this.iconAlignmentMeasured = true;
           getOwnerWindow(containerEl).requestAnimationFrame(() =>
             applyIconOpticalOffset(containerEl)
           );

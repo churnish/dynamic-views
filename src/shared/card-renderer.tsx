@@ -1296,7 +1296,7 @@ export function CardRenderer({
           containerCssClassesMap.set(el, customClasses);
         }
 
-        // Icon optical alignment (font-dependent, cheap canvas measurement)
+        // Icon optical alignment (live DOM measurement from first rendered timestamp)
         applyIconOpticalOffset(el);
 
         // Skip if already setup (avoid duplicates on re-render)

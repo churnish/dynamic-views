@@ -44,6 +44,7 @@ dynamic-views/
 │   │   ├── data-transform.ts         # Normalizes Datacore/Bases data -> CardData
 │   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL icon)
 │   │   ├── hover-intent.ts           # Shared hover intent (mousemove-after-mouseenter) utility
+│   │   ├── icon-alignment.ts         # Timestamp icon optical vertical alignment (live DOM measurement + boost ratio)
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Panzoom image viewer
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
@@ -129,6 +130,8 @@ dynamic-views/
 │   │   ├── shared-renderer.test.ts
 │   │   ├── sync-responsive-classes.test.ts
 │   │   └── utils.test.ts
+│   ├── datacore/
+│   │   └── toolbar-compact.test.ts
 │   ├── shared/
 │   │   ├── constants.test.ts
 │   │   ├── content-loader.test.ts

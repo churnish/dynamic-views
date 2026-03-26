@@ -109,8 +109,9 @@ From Chromium source code analysis (`text_autosizer.cc`, `computed_style.cc`, `s
 
 - Store as px value (not fraction) — no `1lh / ratio` gymnastics needed since the live measurement already incorporates boosting
 - CSS simplifies to `transform: translateY(var(--dynamic-views-icon-optical-offset, 0px))`
-- Timing: measure after first timestamp card renders (ref callback or post-render hook)
-- Canvas fallback for views with no timestamp icons
+- Timing: Bases measures via rAF after first timestamp renders; Datacore via container ref re-runs
+- Boost ratio detection: `width: 1em` probe gives pre-boost font-size, `getComputedStyle().fontSize` gives post-boost. Scale delta by `boostRatio²` on Android
+- No-op for views with no timestamp icons (early return)
 
 ### Alternative: `text-size-adjust: none` on timestamp wrapper
 
