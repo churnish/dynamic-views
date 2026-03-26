@@ -208,25 +208,41 @@ body.dynamic-views-show-cover-placeholder-none
 }
 
 /* Masonry contain mode + fixed cover height + placeholder enabled: show placeholder */
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
+body:is(
+    .dynamic-views-fixed-cover-height,
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  ).dynamic-views-show-cover-placeholder-masonry
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
-  .card.image-format-cover:not(.cover-ready).card-cover-top
+  .card.image-format-cover:not(.image-ready).card-cover-top
   .card-cover-wrapper.card-cover-wrapper-placeholder,
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry
+body:is(
+    .dynamic-views-fixed-cover-height,
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  ).dynamic-views-show-cover-placeholder-masonry
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
-  .card.image-format-cover:not(.cover-ready).card-cover-bottom
+  .card.image-format-cover:not(.image-ready).card-cover-bottom
   .card-cover-wrapper.card-cover-wrapper-placeholder,
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
+body:is(
+    .dynamic-views-fixed-cover-height,
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  ).dynamic-views-show-cover-placeholder-both
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
-  .card.image-format-cover:not(.cover-ready).card-cover-top
+  .card.image-format-cover:not(.image-ready).card-cover-top
   .card-cover-wrapper.card-cover-wrapper-placeholder,
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both
+body:is(
+    .dynamic-views-fixed-cover-height,
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  ).dynamic-views-show-cover-placeholder-both
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
-  .card.image-format-cover:not(.cover-ready).card-cover-bottom
+  .card.image-format-cover:not(.image-ready).card-cover-bottom
   .card-cover-wrapper.card-cover-wrapper-placeholder {
   display: block;
 }

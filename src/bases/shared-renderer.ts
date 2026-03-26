@@ -1396,6 +1396,9 @@ export class SharedCardRenderer {
         // SVG icon appears as the ghost.
         const dragText = iconEl.createSpan('dynamic-views-drag-text');
         dragText.textContent = card.urlValue;
+        // Store for freshness — surgical updates refresh this without
+        // re-binding event listeners
+        iconEl.dataset.dvUrlValue = card.urlValue;
 
         iconEl.addEventListener(
           'click',
@@ -1408,7 +1411,10 @@ export class SharedCardRenderer {
         iconEl.addEventListener(
           'contextmenu',
           (e) => {
-            showExternalLinkContextMenu(e, card.urlValue!);
+            showExternalLinkContextMenu(
+              e,
+              (iconEl.dataset.dvUrlValue ?? card.urlValue) as string
+            );
           },
           { signal }
         );
@@ -2014,8 +2020,8 @@ export class SharedCardRenderer {
           getOwnerWindow(cardEl).requestAnimationFrame(() => {
             if (signal?.aborted || !cardEl.isConnected) return;
             handleAllImagesFailed(cardEl);
-            if (!cardEl.classList.contains('cover-ready')) {
-              cardEl.classList.add('cover-ready');
+            if (!cardEl.classList.contains('image-ready')) {
+              cardEl.classList.add('image-ready');
               cardEl.style.setProperty(
                 '--actual-aspect-ratio',
                 DEFAULT_ASPECT_RATIO.toString()
@@ -2212,6 +2218,7 @@ export class SharedCardRenderer {
         }
         const dragText = existingIcon.querySelector('.dynamic-views-drag-text');
         if (dragText) dragText.textContent = card.urlValue;
+        existingIcon.dataset.dvUrlValue = card.urlValue;
       } else if (headerEl) {
         this.urlButtonRerenderController.get(cardEl)?.abort();
         const urlButtonAbort = new AbortController();
@@ -2229,6 +2236,8 @@ export class SharedCardRenderer {
         setIcon(iconEl, 'arrow-up-right');
         const dragText = iconEl.createSpan('dynamic-views-drag-text');
         dragText.textContent = card.urlValue;
+        // Store for freshness — contextmenu handler reads from dataset
+        iconEl.dataset.dvUrlValue = card.urlValue;
 
         iconEl.addEventListener(
           'click',
@@ -2241,7 +2250,10 @@ export class SharedCardRenderer {
         iconEl.addEventListener(
           'contextmenu',
           (e) => {
-            showExternalLinkContextMenu(e, card.urlValue!);
+            showExternalLinkContextMenu(
+              e,
+              (iconEl.dataset.dvUrlValue ?? card.urlValue) as string
+            );
           },
           { signal }
         );

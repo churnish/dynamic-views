@@ -465,9 +465,23 @@ settings:
     -
         id: dynamic-views-fixed-cover-height
         title: Fixed height
-        description: Show background bars above and below contained images in Masonry.
-        type: class-toggle
-        default: false
+        description: Show background bars above and below contained images that don't fit.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-fixed-cover-height-grid
+        options:
+            -
+                label: In Grid
+                value: dynamic-views-fixed-cover-height-grid
+            -
+                label: In Masonry
+                value: dynamic-views-fixed-cover-height-masonry
+            -
+                label: In Grid & Masonry
+                value: dynamic-views-fixed-cover-height-both
+            -
+                label: Disable
+                value: dynamic-views-fixed-cover-height-none
     -
         id: dynamic-views-show-cover-placeholder
         title: Show placeholders
@@ -774,8 +788,22 @@ settings:
         id: dynamic-views-fixed-poster-height
         title: Fixed height
         description: Show background bars above and below contained images in poster cards.
-        type: class-toggle
-        default: false
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-fixed-poster-height-grid
+        options:
+            -
+                label: In Grid
+                value: dynamic-views-fixed-poster-height-grid
+            -
+                label: In Masonry
+                value: dynamic-views-fixed-poster-height-masonry
+            -
+                label: In Grid & Masonry
+                value: dynamic-views-fixed-poster-height-both
+            -
+                label: Disable
+                value: dynamic-views-fixed-poster-height-none
     -
         id: properties-heading
         title: Properties
@@ -3226,6 +3254,14 @@ body.is-ios .dynamic-views .card {
   contain-intrinsic-height: auto 300px;
 }
 
+/* iOS Masonry: content-visibility: auto breaks opacity transitions on WebKit —
+   compositor skips intermediate frames, causing images to stall then jump.
+   Override to visible once image-ready triggers the fade-in. Grid is already
+   exempt (content-visibility: visible for CSS Grid intrinsic sizing). */
+body.is-ios .dynamic-views-masonry .card.image-ready {
+  content-visibility: visible;
+}
+
 .is-phone.full-screen-active [data-type=bases] .view-header {
   transform: translateY(calc((var(--view-header-height, 44px) + var(--safe-area-inset-top, 47px)) * -1)) !important;
   opacity: 0 !important;
@@ -3252,7 +3288,7 @@ body.is-ios .dynamic-views .card {
 .is-phone.full-screen-active,
 .is-phone.full-screen-active .app-container,
 .is-phone.full-screen-active .workspace {
-  background-color: var(--background-primary, #ffffff) !important;
+  background-color: var(--dynamic-views-background-primary) !important;
 }
 
 .is-phone.full-screen-active [data-type=bases]::after {
@@ -3271,7 +3307,7 @@ body.is-ios .dynamic-views .card {
   left: 0 !important;
   right: 0 !important;
   height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
-  background: linear-gradient(to bottom, var(--background-primary, #ffffff) 0px, transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) !important;
+  background: linear-gradient(to bottom, var(--dynamic-views-background-primary) 0px, transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) !important;
   z-index: 10 !important;
   pointer-events: none !important;
 }
@@ -4107,7 +4143,7 @@ body.dynamic-views-show-thumbnail-placeholder .dynamic-views .card-thumbnail-pla
   -webkit-user-select: none;
   user-select: none;
 }
-.dynamic-views .card.cover-ready .card-thumbnail img {
+.dynamic-views .card.image-ready .card-thumbnail img {
   opacity: 1;
 }
 .dynamic-views.image-fit-contain .card .card-thumbnail img {
@@ -4211,11 +4247,16 @@ body:not(.dynamic-views-file-type-flair,
 .dynamic-views .card-title-url-icon svg {
   width: 20px;
   height: 20px;
+  color: var(--dynamic-views-text-faint);
+}
+.dynamic-views .card.image-format-poster .card-title-url-icon svg {
+  color: inherit;
 }
 
-.is-mobile .dynamic-views .card-title-url-icon svg {
+.is-mobile .dynamic-views .card-title-url-icon svg.svg-icon {
   width: 28px;
   height: 28px;
+  stroke-width: 1.5;
 }
 
 @media (hover: hover) {
@@ -4641,8 +4682,16 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
 }
 
 /* Masonry contain mode ON: use slider value (top/bottom bars visible) */
-body.dynamic-views-fixed-cover-height [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.card-cover-top.image-format-cover .card-cover,
-body.dynamic-views-fixed-cover-height [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.card-cover-bottom.image-format-cover .card-cover {
+body:is(.dynamic-views-fixed-cover-height-masonry,
+.dynamic-views-fixed-cover-height-both) [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.card-cover-top.image-format-cover .card-cover,
+body:is(.dynamic-views-fixed-cover-height-masonry,
+.dynamic-views-fixed-cover-height-both) [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.card-cover-bottom.image-format-cover .card-cover {
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Backward compat: old class-toggle → masonry fixed height */
+body.dynamic-views-fixed-cover-height:not([class*=dynamic-views-fixed-cover-height-]) [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.card-cover-top.image-format-cover .card-cover,
+body.dynamic-views-fixed-cover-height:not([class*=dynamic-views-fixed-cover-height-]) [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.card-cover-bottom.image-format-cover .card-cover {
   padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
 }
 
@@ -4758,7 +4807,7 @@ body.dynamic-views-cover-circular .dynamic-views .card.image-format-cover .card-
   -webkit-user-select: none;
   user-select: none;
 }
-.dynamic-views .card.image-format-cover.cover-ready .card-cover img {
+.dynamic-views .card.image-format-cover.image-ready .card-cover img {
   opacity: 1;
 }
 
@@ -4933,10 +4982,18 @@ body.dynamic-views-show-cover-placeholder-none .dynamic-views .dynamic-views-mas
 }
 
 /* Masonry contain mode + fixed cover height + placeholder enabled: show placeholder */
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.cover-ready).card-cover-top .card-cover-wrapper.card-cover-wrapper-placeholder,
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-masonry [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.cover-ready).card-cover-bottom .card-cover-wrapper.card-cover-wrapper-placeholder,
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.cover-ready).card-cover-top .card-cover-wrapper.card-cover-wrapper-placeholder,
-body.dynamic-views-fixed-cover-height.dynamic-views-show-cover-placeholder-both [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.cover-ready).card-cover-bottom .card-cover-wrapper.card-cover-wrapper-placeholder {
+body:is(.dynamic-views-fixed-cover-height,
+.dynamic-views-fixed-cover-height-masonry,
+.dynamic-views-fixed-cover-height-both).dynamic-views-show-cover-placeholder-masonry [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.image-ready).card-cover-top .card-cover-wrapper.card-cover-wrapper-placeholder,
+body:is(.dynamic-views-fixed-cover-height,
+.dynamic-views-fixed-cover-height-masonry,
+.dynamic-views-fixed-cover-height-both).dynamic-views-show-cover-placeholder-masonry [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.image-ready).card-cover-bottom .card-cover-wrapper.card-cover-wrapper-placeholder,
+body:is(.dynamic-views-fixed-cover-height,
+.dynamic-views-fixed-cover-height-masonry,
+.dynamic-views-fixed-cover-height-both).dynamic-views-show-cover-placeholder-both [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.image-ready).card-cover-top .card-cover-wrapper.card-cover-wrapper-placeholder,
+body:is(.dynamic-views-fixed-cover-height,
+.dynamic-views-fixed-cover-height-masonry,
+.dynamic-views-fixed-cover-height-both).dynamic-views-show-cover-placeholder-both [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-cover:not(.image-ready).card-cover-bottom .card-cover-wrapper.card-cover-wrapper-placeholder {
   display: block;
 }
 
@@ -5037,7 +5094,7 @@ body:is(.dynamic-views-show-cover-placeholder-masonry,
   -webkit-user-select: none;
   user-select: none;
 }
-.dynamic-views .card:is(.image-format-backdrop, .image-format-poster).cover-ready :is(.card-backdrop, .card-poster) img {
+.dynamic-views .card:is(.image-format-backdrop, .image-format-poster).image-ready :is(.card-backdrop, .card-poster) img {
   opacity: 1;
 }
 .dynamic-views .card:is(.image-format-backdrop, .image-format-poster) {
@@ -5267,32 +5324,26 @@ body:not(.dynamic-views-poster-disable-reveal-zoom) .dynamic-views .card.image-f
 /* Dark overlay defaults (unrevealed — identity filter with matching function list) */
 body:is(.dynamic-views-poster-theme-dark,
 .dynamic-views-poster-theme-match.theme-dark,
-:not(.dynamic-views-poster-theme-light,
-.dynamic-views-poster-theme-dark).theme-dark) .dynamic-views.poster-mode-overlay .card.image-format-poster .card-poster img {
+:not([class*=dynamic-views-poster-theme-])) .dynamic-views.poster-mode-overlay .card.image-format-poster .card-poster img {
   filter: brightness(1) blur(0px);
 }
 
 /* Light overlay defaults (unrevealed — double invert = identity) */
 body:is(.dynamic-views-poster-theme-light,
-.dynamic-views-poster-theme-match.theme-light,
-:not(.dynamic-views-poster-theme-light,
-.dynamic-views-poster-theme-dark).theme-light) .dynamic-views.poster-mode-overlay .card.image-format-poster .card-poster img {
+.dynamic-views-poster-theme-match.theme-light) .dynamic-views.poster-mode-overlay .card.image-format-poster .card-poster img {
   filter: invert(1) brightness(1) invert(1) blur(0px);
 }
 
 /* Dark overlay revealed (tap/press) */
 body:is(.dynamic-views-poster-theme-dark,
 .dynamic-views-poster-theme-match.theme-dark,
-:not(.dynamic-views-poster-theme-light,
-.dynamic-views-poster-theme-dark).theme-dark) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-revealed .card-poster img {
+:not([class*=dynamic-views-poster-theme-])) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-revealed .card-poster img {
   filter: brightness(calc(1 - var(--dynamic-views-poster-overlay-dark, 70) * 0.01)) blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
 /* Light overlay revealed (tap/press) */
 body:is(.dynamic-views-poster-theme-light,
-.dynamic-views-poster-theme-match.theme-light,
-:not(.dynamic-views-poster-theme-light,
-.dynamic-views-poster-theme-dark).theme-light) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-revealed .card-poster img {
+.dynamic-views-poster-theme-match.theme-light) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-revealed .card-poster img {
   filter: invert(1) brightness(calc(1 - var(--dynamic-views-poster-overlay-light, 70) * 0.01)) invert(1) blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
@@ -5301,15 +5352,12 @@ body:is(.dynamic-views-poster-theme-light,
   /* Dark hover reveal */
   body:is(.dynamic-views-poster-theme-dark,
   .dynamic-views-poster-theme-match.theme-dark,
-  :not(.dynamic-views-poster-theme-light,
-  .dynamic-views-poster-theme-dark).theme-dark):not(.dynamic-views-poster-reveal-press) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-hover-active .card-poster img {
+  :not([class*=dynamic-views-poster-theme-])):not(.dynamic-views-poster-reveal-press) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-hover-active .card-poster img {
     filter: brightness(calc(1 - var(--dynamic-views-poster-overlay-dark, 70) * 0.01)) blur(var(--dynamic-views-poster-overlay-blur, 0px));
   }
   /* Light hover reveal */
   body:is(.dynamic-views-poster-theme-light,
-  .dynamic-views-poster-theme-match.theme-light,
-  :not(.dynamic-views-poster-theme-light,
-  .dynamic-views-poster-theme-dark).theme-light):not(.dynamic-views-poster-reveal-press) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-hover-active .card-poster img {
+  .dynamic-views-poster-theme-match.theme-light):not(.dynamic-views-poster-reveal-press) .dynamic-views.poster-mode-overlay .card.image-format-poster.poster-hover-active .card-poster img {
     filter: invert(1) brightness(calc(1 - var(--dynamic-views-poster-overlay-light, 70) * 0.01)) invert(1) blur(var(--dynamic-views-poster-overlay-blur, 0px));
   }
 }
@@ -5373,7 +5421,9 @@ body:is(.dynamic-views-poster-theme-light,
 }
 
 /* Masonry contain + fixed poster height: force slider value (bars visible) */
-body.dynamic-views-fixed-poster-height [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-poster.has-poster {
+body:is(.dynamic-views-fixed-poster-height,
+.dynamic-views-fixed-poster-height-masonry,
+.dynamic-views-fixed-poster-height-both) [data-view-type=dynamic-views-masonry] .dynamic-views.image-fit-contain .card.image-format-poster.has-poster {
   aspect-ratio: 1/var(--dynamic-views-image-aspect-ratio, 1);
 }
 

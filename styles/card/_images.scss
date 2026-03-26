@@ -61,7 +61,7 @@
       user-select: none;
     }
 
-    &.cover-ready :is(.card-backdrop, .card-poster) img {
+    &.image-ready :is(.card-backdrop, .card-poster) img {
       opacity: 1;
     }
 

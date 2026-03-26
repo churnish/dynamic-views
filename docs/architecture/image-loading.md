@@ -144,7 +144,7 @@ Parses file content to find image references not declared in properties.
 > For slideshow-specific image navigation, preloading, and failed image recovery, see [slideshow.md](slideshow.md).
 
 1. Apply cached metadata upfront (`applyCachedImageMetadata`)
-2. Check already-loaded state (`complete && naturalWidth > 0 && naturalHeight > 0 && !cover-ready`)
+2. Check already-loaded state (`complete && naturalWidth > 0 && naturalHeight > 0 && !image-ready`)
 3. If loaded: force reflow (unless `skip-cover-fade`), call `handleImageLoad()` immediately
 4. Otherwise: register `load`/`error` listeners with `{ once: true }`
 5. Return cleanup function for listener removal
@@ -154,7 +154,7 @@ Parses file content to find image references not declared in properties.
 | Function                | Role                                                                                                                                                                                                                    |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `handleJsxImageRef()`   | Ref callback: applies cached metadata, handles already-loaded, adds fallback load listener. Edge case: `complete && naturalWidth === 0` falls through silently (neither immediate handling nor fallback listener fires) |
-| `handleJsxImageLoad()`  | `onLoad`: idempotency guard via `cover-ready` class, calls shared `handleImageLoad()`                                                                                                                                   |
+| `handleJsxImageLoad()`  | `onLoad`: idempotency guard via `image-ready` class, calls shared `handleImageLoad()`                                                                                                                                   |
 | `handleJsxImageError()` | `onError`: hides broken img, marks URL broken via `markImageBroken()`, sets default aspect ratio, calls `handleAllImagesFailed()`                                                                                       |
 
 ### Shared core (`handleImageLoad()`)
@@ -166,17 +166,17 @@ Executed by both backends after successful image load.
 3. Cache `aspectRatio = naturalHeight / naturalWidth`
 4. Set `--actual-aspect-ratio` CSS variable on card element
 5. Lock `dataset.aspectRatioSet` flag
-6. Fade-in: if `.skip-cover-fade` ancestor, add `cover-ready` immediately (no transition); otherwise double-rAF pattern
+6. Fade-in: if `.skip-cover-fade` ancestor, add `image-ready` immediately (no transition); otherwise double-rAF pattern
 7. Guard `isConnected` during both rAF callbacks
 8. Call optional `onLayoutUpdate` callback (masonry reflow)
 
 ### Double-rAF fade pattern
 
-Single `requestAnimationFrame` can be batched with the initial render paint. Double-rAF guarantees a paint cycle between setting `opacity: 0` and adding `cover-ready` (which transitions to `opacity: 1`).
+Single `requestAnimationFrame` can be batched with the initial render paint. Double-rAF guarantees a paint cycle between setting `opacity: 0` and adding `image-ready` (which transitions to `opacity: 1`).
 
 ```
 rAF #1: Browser observes opacity:0 state
-  rAF #2: Add cover-ready class -> triggers CSS transition
+  rAF #2: Add image-ready class -> triggers CSS transition
 ```
 
 Both callbacks guard `isConnected` to handle cards unmounted between frames.
@@ -191,7 +191,7 @@ Backdrop format supports multiple image URLs with sequential fallback on error.
 4. All listeners bound to `AbortSignal` for cleanup
 5. Double-rAF pattern on final failure (all images broken)
 
-**No placeholder injection**: Unlike cover/thumbnail, backdrop failure does NOT call `handleAllImagesFailed()`. The `<img>` is hidden and `cover-ready` is added, but the backdrop wrapper remains without placeholder elements.
+**No placeholder injection**: Unlike cover/thumbnail, backdrop failure does NOT call `handleAllImagesFailed()`. The `<img>` is hidden and `image-ready` is added, but the backdrop wrapper remains without placeholder elements.
 
 ## Placeholder injection (`handleAllImagesFailed()`)
 
@@ -209,7 +209,7 @@ Called when all card images fail to load at runtime. First unconditionally adds 
 | Per-caller cache hit      | Re-loading already-resolved path within a batch      | `loadImageForEntry()`                                 |
 | In-flight dedup           | Concurrent same-config loads across views            | `loadImageForEntry()`                                 |
 | `isConnected` check       | DOM access on unmounted cards during rAF             | `handleImageLoad()`, error handlers                   |
-| `cover-ready` class guard | Double-processing in JSX (ref + onLoad race)         | `handleJsxImageLoad/Ref()`, `setupImageLoadHandler()` |
+| `image-ready` class guard | Double-processing in JSX (ref + onLoad race)         | `handleJsxImageLoad/Ref()`, `setupImageLoadHandler()` |
 | `AbortSignal` check       | Orphaned operations after teardown                   | `setupBackdropImageLoader()`                          |
 | URL match on error        | Stale error handler after slideshow src swap         | `setupImageLoadHandler()` error                       |
 | Dimension validation      | Bad aspect ratios from corrupt/broken images (< 1px) | `handleImageLoad()`                                   |
@@ -224,7 +224,7 @@ Called when all card images fail to load at runtime. First unconditionally adds 
 6. Frontmatter stripped before embed parsing
 7. `aspectRatioSet` flag prevents aspect ratio updates during slideshow navigation after first successful load
 8. Embed paths deduplicated -- no image loaded twice even if referenced multiple ways
-9. `cover-ready` class is the single source of truth for "image processing complete" -- both success and error paths set it
+9. `image-ready` class is the single source of truth for "image processing complete" -- both success and error paths set it
 10. Broken URL set is session-scoped and never persisted -- avoids stale entries across restarts
 
 ## Reactive image updates (Bases)

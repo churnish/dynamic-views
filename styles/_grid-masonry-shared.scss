@@ -276,3 +276,11 @@ body.is-ios .dynamic-views .card {
   content-visibility: auto;
   contain-intrinsic-height: auto 300px;
 }
+
+/* iOS Masonry: content-visibility: auto breaks opacity transitions on WebKit —
+   compositor skips intermediate frames, causing images to stall then jump.
+   Override to visible once image-ready triggers the fade-in. Grid is already
+   exempt (content-visibility: visible for CSS Grid intrinsic sizing). */
+body.is-ios .dynamic-views-masonry .card.image-ready {
+  content-visibility: visible;
+}

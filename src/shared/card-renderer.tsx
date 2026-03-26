@@ -2276,7 +2276,11 @@ function Card({
                     ?.remove();
                 }}
                 onContextMenu={(e: MouseEvent) => {
-                  showExternalLinkContextMenu(e, card.urlValue!);
+                  showExternalLinkContextMenu(
+                    e,
+                    ((e.currentTarget as HTMLElement).dataset.dvUrlValue ??
+                      card.urlValue) as string
+                  );
                 }}
                 ref={(el: HTMLElement | null) => {
                   if (!el) return;
@@ -2743,7 +2747,7 @@ function Card({
                                       if (
                                         cardEl &&
                                         !cardEl.classList.contains(
-                                          'cover-ready'
+                                          'image-ready'
                                         )
                                       ) {
                                         getOwnerWindow(
@@ -2769,7 +2773,7 @@ function Card({
                                               '--actual-aspect-ratio',
                                               DEFAULT_ASPECT_RATIO.toString()
                                             );
-                                            cardEl.classList.add('cover-ready');
+                                            cardEl.classList.add('image-ready');
                                             if (updateLayoutRef.current)
                                               updateLayoutRef.current();
                                           });

@@ -169,8 +169,8 @@ body.dynamic-views-text-preview-keep-newlines
     transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 
     svg {
-      width: var(--dynamic-views-icon-xs);
-      height: var(--dynamic-views-icon-xs);
+      width: 14px;
+      height: 14px;
       transform: scaleX(-1);
       color: white;
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
@@ -248,7 +248,7 @@ body.dynamic-views-show-thumbnail-placeholder
     user-select: none;
   }
 
-  .card.cover-ready .card-thumbnail img {
+  .card.image-ready .card-thumbnail img {
     opacity: 1;
   }
 
