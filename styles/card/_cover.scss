@@ -79,11 +79,13 @@
     flex-grow: 1;
     min-height: 0;
   }
+}
 
-  /* ============================================
-     COVER-ONLY CARDS
-     ============================================ */
+/* ============================================
+   COVER-ONLY CARDS
+   ============================================ */
 
+.dynamic-views {
   /* Cover-only cards: zero padding, reset wrapper margins */
   .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header),
   .card.card-cover-bottom.image-format-cover:not(

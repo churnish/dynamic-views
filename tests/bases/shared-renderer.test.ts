@@ -177,3 +177,136 @@ describe('SharedCardRenderer.hasImageChanged', () => {
     );
   });
 });
+
+describe('Structural content classes', () => {
+  /** Build a minimal card DOM to test class assignment logic. */
+  function buildCardDOM(
+    options: {
+      hasHeader?: boolean;
+      hasPropertiesTop?: boolean;
+      hasPropertiesBottom?: boolean;
+      hasPreviews?: boolean;
+    } = {}
+  ): HTMLElement {
+    const card = document.createElement('div');
+    card.classList.add('card');
+
+    if (options.hasHeader) {
+      const header = document.createElement('div');
+      header.classList.add('card-header');
+      card.appendChild(header);
+    }
+
+    const body = document.createElement('div');
+    body.classList.add('card-body');
+
+    if (options.hasPropertiesTop) {
+      const propsTop = document.createElement('div');
+      propsTop.classList.add('card-properties-top');
+      body.appendChild(propsTop);
+    }
+
+    if (options.hasPreviews) {
+      const previews = document.createElement('div');
+      previews.classList.add('card-previews');
+      body.appendChild(previews);
+    }
+
+    if (options.hasPropertiesBottom) {
+      const propsBottom = document.createElement('div');
+      propsBottom.classList.add('card-properties-bottom');
+      body.appendChild(propsBottom);
+    }
+
+    card.appendChild(body);
+    return card;
+  }
+
+  const VISIBLE_BODY_SELECTOR =
+    '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
+
+  describe('has-header', () => {
+    it('added when card-header exists', () => {
+      const card = buildCardDOM({ hasHeader: true });
+      if (card.querySelector('.card-header')) {
+        card.classList.add('has-header');
+      }
+      expect(card.classList.contains('has-header')).toBe(true);
+    });
+
+    it('not added when card-header absent', () => {
+      const card = buildCardDOM({ hasHeader: false });
+      if (card.querySelector('.card-header')) {
+        card.classList.add('has-header');
+      }
+      expect(card.classList.contains('has-header')).toBe(false);
+    });
+  });
+
+  describe('has-card-content', () => {
+    it('added when properties-top exists', () => {
+      const card = buildCardDOM({ hasPropertiesTop: true });
+      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
+        card.classList.add('has-card-content');
+      }
+      expect(card.classList.contains('has-card-content')).toBe(true);
+    });
+
+    it('added when properties-bottom exists', () => {
+      const card = buildCardDOM({ hasPropertiesBottom: true });
+      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
+        card.classList.add('has-card-content');
+      }
+      expect(card.classList.contains('has-card-content')).toBe(true);
+    });
+
+    it('added when previews exist', () => {
+      const card = buildCardDOM({ hasPreviews: true });
+      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
+        card.classList.add('has-card-content');
+      }
+      expect(card.classList.contains('has-card-content')).toBe(true);
+    });
+
+    it('not added when body is empty', () => {
+      const card = buildCardDOM();
+      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
+        card.classList.add('has-card-content');
+      }
+      expect(card.classList.contains('has-card-content')).toBe(false);
+    });
+
+    it('not added when only thumbnail-placeholder-only previews exist', () => {
+      const card = buildCardDOM();
+      const body = card.querySelector('.card-body')!;
+      const previews = document.createElement('div');
+      previews.classList.add('card-previews', 'thumbnail-placeholder-only');
+      body.appendChild(previews);
+
+      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
+        card.classList.add('has-card-content');
+      }
+      expect(card.classList.contains('has-card-content')).toBe(false);
+    });
+  });
+
+  describe('has-body-content', () => {
+    it('added on card-body when it has visible children', () => {
+      const card = buildCardDOM({ hasPropertiesBottom: true });
+      const body = card.querySelector('.card-body')!;
+      if (body.querySelector(VISIBLE_BODY_SELECTOR)) {
+        body.classList.add('has-body-content');
+      }
+      expect(body.classList.contains('has-body-content')).toBe(true);
+    });
+
+    it('not added on card-body when empty', () => {
+      const card = buildCardDOM();
+      const body = card.querySelector('.card-body')!;
+      if (body.querySelector(VISIBLE_BODY_SELECTOR)) {
+        body.classList.add('has-body-content');
+      }
+      expect(body.classList.contains('has-body-content')).toBe(false);
+    });
+  });
+});

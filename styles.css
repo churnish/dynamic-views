@@ -4567,10 +4567,11 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
   flex-grow: 1;
   min-height: 0;
 }
+
+/* ============================================
+   COVER-ONLY CARDS
+   ============================================ */
 .dynamic-views {
-  /* ============================================
-     COVER-ONLY CARDS
-     ============================================ */
   /* Cover-only cards: zero padding, reset wrapper margins */
 }
 .dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header),

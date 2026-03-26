@@ -120,6 +120,10 @@ import {
 } from '../shared/property-helpers';
 import { getOwnerWindow } from '../utils/owner-window';
 
+/** Selector for visible body children — shared with card-renderer.tsx. */
+const VISIBLE_BODY_SELECTOR =
+  '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
+
 /** Per-card cleanup handle for individual card teardown (virtual scrolling) */
 export interface CardHandle {
   el: HTMLElement;
@@ -1552,18 +1556,13 @@ export class SharedCardRenderer {
     }
 
     // Structural content classes (replace CSS :has() selectors).
-    // Exclude thumbnail-placeholder-only previews — hidden by CSS when placeholder setting is off,
-    // so card-body should collapse to avoid gap from card-content flex layout.
-    const visibleBodySelector =
-      '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
-
     // has-body-content: body has visible properties or previews.
     // Drives card-body display:none when empty (prevents gap below subtitle).
-    if (bodyEl.querySelector(visibleBodySelector)) {
+    if (bodyEl.querySelector(VISIBLE_BODY_SELECTOR)) {
       bodyEl.classList.add('has-body-content');
     }
     // has-card-content: card-level flag for cover padding and title divider CSS rules.
-    if (cardEl.querySelector(visibleBodySelector)) {
+    if (cardEl.querySelector(VISIBLE_BODY_SELECTOR)) {
       cardEl.classList.add('has-card-content');
     }
     if (cardEl.querySelector('.card-properties-bottom')) {

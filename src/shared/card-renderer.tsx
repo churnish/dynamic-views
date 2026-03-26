@@ -98,6 +98,10 @@ import {
 import { measurePropertyFields } from './property-measure';
 import { getOwnerWindow } from '../utils/owner-window';
 
+/** Selector for visible body children — shared between card root and card-body refs. */
+const VISIBLE_BODY_SELECTOR =
+  '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
+
 /**
  * Extended container element with focus management properties
  * Used by CardRenderer for keyboard navigation and text selection
@@ -1876,6 +1880,11 @@ function Card({
           cardEl.classList.add('has-properties-bottom');
         }
 
+        // has-card-content: drives cover padding and title divider CSS.
+        if (cardEl.querySelector(VISIBLE_BODY_SELECTOR)) {
+          cardEl.classList.add('has-card-content');
+        }
+
         // Poster cards: remove draggable attribute so the URL <a> is the sole
         // drag source. Preact can't produce "absent" (undefined coerces to false,
         // which suppresses child drag in Chromium). removeAttribute after Preact's
@@ -2318,19 +2327,9 @@ function Card({
           className="card-body"
           ref={(el: HTMLElement | null) => {
             if (!el) return;
-            // Exclude thumbnail-placeholder-only previews — hidden by CSS when
-            // placeholder setting is off, so card-body should collapse.
-            const visibleBodySelector =
-              '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
-
             // has-body-content: drives card-body display:none when empty.
-            if (el.querySelector(visibleBodySelector)) {
+            if (el.querySelector(VISIBLE_BODY_SELECTOR)) {
               el.classList.add('has-body-content');
-            }
-            // has-card-content: drives cover padding and title divider CSS.
-            const cardEl = el.closest('.card');
-            if (cardEl?.querySelector(visibleBodySelector)) {
-              cardEl.classList.add('has-card-content');
             }
             if (format === 'poster') {
               setupVerticalScrollGradient(el, scrollController.signal);
