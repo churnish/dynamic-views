@@ -214,6 +214,24 @@ export class FullScreenController {
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
 
+    // Force settle at scroll boundary — bridge shifts content by totalShift,
+    // making the last totalShift px unreachable until settle. At the boundary
+    // there's no momentum to kill, so scrollTop writes are safe.
+    if (
+      this.barsHidden &&
+      !this.settled &&
+      this.pendingLayout &&
+      currentTop >= this.scrollEl.scrollHeight - this.scrollEl.clientHeight - 1
+    ) {
+      this.pendingLayout();
+      this.pendingLayout = null;
+      if (this.scrollIdleTimer != null) {
+        clearTimeout(this.scrollIdleTimer);
+        this.scrollIdleTimer = null;
+      }
+      return;
+    }
+
     // Idle settle for pending layout (hide settle or show class removal)
     if (this.scrollIdleTimer != null) clearTimeout(this.scrollIdleTimer);
     if (this.pendingLayout) {
@@ -264,10 +282,30 @@ export class FullScreenController {
       this.isAndroid ||
       now - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
 
+    // Evaluate hide guard only when accumulated delta exceeds dead zone
+    let canSettle = true;
+    if (
+      this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
+      !this.barsHidden
+    ) {
+      // Ensure totalShift is measured (mount-time getBoundingClientRect
+      // returns 0 when CSS selectors don't match at construction time)
+      this.measureTotalShift();
+
+      // Skip hide on short views — pre-hide range must be ≥ 3× totalShift.
+      // Hiding bars increases viewport by totalShift, shrinking the range
+      // by the same amount. 3× ensures post-hide range (2× totalShift)
+      // leaves meaningful scroll distance.
+      const scrollableRange =
+        this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
+      canSettle = scrollableRange >= 3 * this.totalShift;
+    }
+
     if (
       this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
       !this.barsHidden &&
-      sustainMet
+      sustainMet &&
+      canSettle
     ) {
       this.barsHidden = true;
       this.lastToggleTime = now;
@@ -283,6 +321,22 @@ export class FullScreenController {
       this.showBarsUI();
       this.accumulatedDelta = 0;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Measurement
+  // ---------------------------------------------------------------------------
+
+  /** Re-measure totalShift from live DOM. Only valid when full-screen-active
+   *  is NOT on body (otherwise margin-top reads as 0 from the class rule). */
+  private measureTotalShift(): void {
+    if (this.body.classList.contains('full-screen-active')) return;
+    this.originalMarginTop =
+      parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
+    const toolbar = this.viewContent
+      .closest('.workspace-leaf-content')
+      ?.querySelector<HTMLElement>('.bases-header');
+    this.totalShift = this.originalMarginTop + (toolbar?.offsetHeight ?? 0);
   }
 
   // ---------------------------------------------------------------------------
@@ -304,25 +358,11 @@ export class FullScreenController {
     // Re-measure ONLY in clean state (no full screen classes).
     // During rapid show→hide, full-screen-active is still on body —
     // getComputedStyle would read margin-top: 0 (class rule) instead of ~99px.
-    if (!this.body.classList.contains('full-screen-active')) {
-      this.originalMarginTop =
-        parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
-      const toolbar = this.viewContent
-        .closest('.workspace-leaf-content')
-        ?.querySelector<HTMLElement>('.bases-header');
-      this.totalShift = this.originalMarginTop + (toolbar?.offsetHeight ?? 0);
-    }
+    this.measureTotalShift();
 
-    // Bridge + class (scroll container height is locked — clientHeight unchanged)
-    setBridge(this.container, `translateY(${this.totalShift}px)`, 'none');
-    this.body.classList.add('full-screen-active');
-    this.settled = false;
     void capacitorStatusBar?.hide();
 
-    // Navbar: animated hide via inline transform + opacity.
-    // WebKit needs double-rAF — passive scroll listener optimization
-    // collapses transition+target into one style recalc if set in same frame.
-    // Android Chromium doesn't have this issue — single rAF is sufficient.
+    // Navbar: animated hide via inline transform + opacity
     const navbarHeight = this.getNavbarHeight();
     const navTransition = 'transform 0.3s ease-out, opacity 0.2s ease-out';
     const applyNavbarHide = (): void => {
@@ -335,13 +375,44 @@ export class FullScreenController {
       setStyle(this.navbarEl, 'opacity', '0', 'important');
       setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
     };
+
+    if (this.isAndroid) {
+      // Android: bridge-less — class + scrollTop in same synchronous tick.
+      // Chromium's compositor-based scrolling is resilient to scrollTop
+      // writes during active scroll (unlike iOS WebKit where they are fatal).
+      // No bridge, no deferred settle, no false-bottom artifact.
+      const before = this.scrollEl.scrollTop;
+      this.programmaticScroll = true;
+      this.scrollEl.style.removeProperty('height');
+      this.body.classList.add('full-screen-active');
+      if (before >= this.totalShift) {
+        this.scrollEl.scrollTop = before - this.totalShift;
+      }
+      this.settled = true;
+      this.pendingLayout = null;
+
+      this.pendingRafId = requestAnimationFrame(() => {
+        this.programmaticScroll = false;
+        this.prevScrollTop = this.scrollEl.scrollTop;
+        this.lockedScrollHeight = this.scrollEl.offsetHeight;
+        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+        // Navbar animation (single rAF sufficient on Chromium)
+        setStyle(this.navbarEl, 'transition', navTransition, 'important');
+        applyNavbarHide();
+      });
+      return;
+    }
+
+    // iOS: bridge + deferred settle (scrollTop writes kill momentum)
+    setBridge(this.container, `translateY(${this.totalShift}px)`, 'none');
+    this.body.classList.add('full-screen-active');
+    this.settled = false;
+
+    // WebKit needs double-rAF — passive scroll listener optimization
+    // collapses transition+target into one style recalc if set in same frame.
     this.pendingRafId = requestAnimationFrame(() => {
       setStyle(this.navbarEl, 'transition', navTransition, 'important');
-      if (this.isAndroid) {
-        applyNavbarHide();
-      } else {
-        this.pendingRafId = requestAnimationFrame(applyNavbarHide);
-      }
+      this.pendingRafId = requestAnimationFrame(applyNavbarHide);
     });
 
     // Idle settle: remove bridge + scrollTop -= totalShift
@@ -376,6 +447,56 @@ export class FullScreenController {
       this.pendingRafId = null;
     }
 
+    void capacitorStatusBar?.show();
+
+    if (this.isAndroid) {
+      // Android: bridge-less show. Use full-screen-showing CSS override to
+      // restore bars visually (avoids white flash from direct class removal),
+      // then adjust scrollTop immediately. Defer class cleanup to idle.
+      this.body.classList.add('full-screen-showing');
+
+      this.programmaticScroll = true;
+      if (this.settled) {
+        this.scrollEl.scrollTop += this.totalShift;
+      }
+
+      // Clear programmaticScroll in next frame so onScroll resumes
+      // processing — the idle timer needs scroll events to fire pendingLayout.
+      this.pendingRafId = requestAnimationFrame(() => {
+        this.programmaticScroll = false;
+        this.prevScrollTop = this.scrollEl.scrollTop;
+      });
+
+      // Navbar restore
+      setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
+      setStyle(this.navbarEl, 'opacity', '1', 'important');
+      this.navbarEl.style.removeProperty('pointer-events');
+
+      // Idle: remove classes + relock height
+      this.pendingLayout = () => {
+        this.programmaticScroll = true;
+        this.scrollEl.style.removeProperty('height');
+        this.body.classList.remove('full-screen-active', 'full-screen-showing');
+        this.isActiveHider = false;
+        this.settled = false;
+
+        this.navbarEl.style.removeProperty('transform');
+        this.navbarEl.style.removeProperty('opacity');
+        this.navbarEl.style.removeProperty('transition');
+
+        this.pendingRafId = requestAnimationFrame(() => {
+          this.programmaticScroll = false;
+          this.prevScrollTop = this.scrollEl.scrollTop;
+          this.accumulatedDelta = 0;
+          this.lockedScrollHeight = this.scrollEl.offsetHeight;
+          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+        });
+      };
+      return;
+    }
+
+    // iOS: bridge + deferred settle (scrollTop writes kill momentum)
+
     // Single class op — higher specificity overrides full-screen-active
     this.body.classList.add('full-screen-showing');
 
@@ -390,8 +511,6 @@ export class FullScreenController {
     setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
     setStyle(this.navbarEl, 'opacity', '1', 'important');
     this.navbarEl.style.removeProperty('pointer-events');
-
-    void capacitorStatusBar?.show();
 
     // Idle: remove classes + unlock → measure → relock height
     this.pendingLayout = () => {
