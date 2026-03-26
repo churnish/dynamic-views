@@ -2,8 +2,11 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-18
+updated: 2026-03-27
 ---
+> [!warning] Frozen
+> This doc is not being kept up to date due to extensive and frequent masonry work. Verify critical information against source code.
+
 # Masonry layout system
 
 The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math ([masonry-layout.ts](../../src/utils/masonry-layout.ts)). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling; Datacore uses declarative Preact/JSX rendering without virtual scrolling. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
@@ -82,7 +85,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 - **`virtualItems: VirtualItem[]`** — Flat array of all cards across all groups, in render order.
 - **`virtualItemsByGroup: Map<string | undefined, VirtualItem[]>`** — Pre-indexed groupKey → VirtualItem[] lookup. Rebuilt via `rebuildGroupIndex()` after any `virtualItems` mutation. Eliminates repeated O(n) filter scans in layout hot paths.
 - **`groupContainers: Map<string | undefined, HTMLElement>`** — DOM container per group for mounting cards.
-- **`cachedGroupOffsets: Map<string | undefined, number>`** — Cached vertical offset (relative to scroll container) per group. Refreshed synchronously before every `syncVirtualScroll()` call. Eliminates `getBoundingClientRect` from the scroll/resize hot path.
+- **`cachedGroupOffsets: Map<string | undefined, number>`** — Cached vertical offset (relative to scroll container) per group. Two refresh paths: (1) `updateCachedGroupOffsets()` reads `getBoundingClientRect` for each group container — used when group structure changes or offsets are unknown; (2) `updateGroupOffsetsSynthetic()` computes offsets from cumulative container height deltas with zero DOM reads — used in `remeasureAndReposition` where group structure is stable. The synthetic method uses an atomic commit pattern (temp map, all-or-nothing apply) and bails to dirty flag if any group offset is unknown. Both are gated by `groupOffsetsDirty`. Lazy refresh at the top of `remeasureAndReposition()` handles offsets skipped during initial render. Eliminates `getBoundingClientRect` from the scroll/resize hot path.
 - **`pendingResizeWidth: number | null`** — Latest container width from `ResizeObserver`. Never reset — deferred resize at scroll-idle reads the most recent value, which is always the correct target width. Used by the resize fast path to avoid a forced `getBoundingClientRect` reflow.
 - **`mountRemeasureTimeout: ReturnType<typeof setTimeout> | null`** — Timer handle for the mount-triggered remeasure throttle. Set when the first new card is mounted in `syncVirtualScroll` during scroll; cleared in `onMountRemeasure`. While active, subsequent mounts do not reset the timer (leading throttle). `isScrollRemeasurePending()` checks both `scrollRemeasureTimeout` and `mountRemeasureTimeout` to defer competing work at 6 guard sites.
 - **`initialRemeasureTimeout: ReturnType<typeof setTimeout> | null`** — Timer handle for the 500ms initial remeasure safety net. Set in `processDataUpdate` after `setupMasonryLayout` completes. Cancelled only when `remeasureAndReposition` detects drift, on re-render, or on unload.
@@ -98,16 +101,14 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 1. Clear container, create masonry container element.
 2. Render groups/cards with `renderCard()`. Push `VirtualItem` per card with `x=0, y=0, height=0`.
 3. `updateLayoutRef.current("initial-render")`:
-   - Add `masonry-resizing` class (hides cards during layout).
-   - Set inline `width` on all cards.
-   - Force single reflow (`void allCards[0]?.offsetHeight`).
-   - Read all heights in single pass (`allCards.map(c => c.offsetHeight)`).
-   - `calculateMasonryLayout()` per group.
-   - Apply inline `left` and `top` per card.
-   - `updateVirtualItemPositions()` stores positions in VirtualItems.
-   - Store result in `groupLayoutResults` with `measuredAtCardWidth`.
-   - Remove `masonry-resizing` class. `syncVirtualScroll()`.
-4. Setup infinite scroll (scroll listener + ResizeObserver).
+   - **Phase 1**: Add `masonry-resizing` + `masonry-measuring` classes. Set inline `width` on all cards, clear explicit heights.
+   - **Phase 1.5**: `syncResponsiveClasses(allCards)` — reads `offsetWidth` (triggers reflow of Phase 1 widths), writes compact-mode/thumbnail-stack classes. Eliminates the need for a post-layout `compact-mode-sync` relayout.
+   - **Phase 2**: Force single reflow (`void allCards[0]?.offsetHeight`) — absorbs Phase 1.5 class writes.
+   - **Phase 3**: Read all heights in single pass (`allCards.map(c => c.offsetHeight)`). Measure scalable heights.
+   - **Phase 4**: `calculateMasonryLayout()` per group. Apply inline `left` and `top` per card. `updateVirtualItemPositions()` stores positions in VirtualItems. Store result in `groupLayoutResults` with `measuredAtCardWidth`.
+   - **Finally**: Remove `masonry-resizing`/`masonry-measuring` classes. Refresh group offsets via `updateGroupOffsetsSynthetic()` with `updateCachedGroupOffsets()` fallback, then `syncVirtualScroll()` — skipped when `!hasUserScrolled` (both are no-ops before first scroll). `groupOffsetsDirty` flag set for lazy computation on first scroll or deferred remeasure.
+4. `initializeTextPreviewClamp` (synchronous — affects card heights in keep-newlines mode). `initializeScrollGradients` and `initializeTitleTruncation` deferred to RAF (cosmetic, no height impact).
+5. Setup infinite scroll (scroll listener + ResizeObserver). `checkAndLoadMore` deferred to RAF.
 5. Post-insert measurement passes (see §Post-insert measurement passes).
 6. Schedule initial remeasure safety net (`INITIAL_REMEASURE_MS`, 500ms). See §Initial remeasure safety net.
 
@@ -129,7 +130,17 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - Update VirtualItem positions for new cards (offset-aware mapping).
    - Disconnected-card guard: if any new card is disconnected (e.g., group container removed), bail and fall back to full `updateLayout("card-disconnected-fallback")`.
 6. Post-insert measurement passes — split: pass 1 before layout, passes 2-4 after (see §Post-insert measurement passes).
-7. Clear `batchLayoutPending`. `syncVirtualScroll()`. Check if more content needed.
+7. Clear `batchLayoutPending`. `syncVirtualScroll()`. Chain `checkAndLoadMore` if render version unchanged (version-guarded — aborted batches must NOT chain).
+
+`checkAndLoadMore(totalEntries, settings)` — viewport fill check with five entry points:
+
+1. **Scroll listener** — throttled, leading + trailing.
+2. **Post-batch chain** — at end of `appendBatch`, version-guarded.
+3. **Post-height-preservation removal** — after `dynamic-views-height-preserved` class is removed. The preserved height inflates `scrollHeight`, masking underfill from the initial `setupInfiniteScroll` call.
+4. **renderHash early-exit** — when `processDataUpdate` exits early (no data/settings change). Catches CSS-only setting changes and duplicate `onDataUpdated` calls that kill in-flight batch chains via `renderState.version` mismatch.
+5. **Post-card-remeasure** — in `cardResizeObserver` RAF callback after `remeasureAndReposition()` returns true. Catches CSS-only setting changes that shrink cards without triggering a full re-render.
+
+Guards: skip if `isLoading` or `displayedCount >= totalEntries`. Skip if `distanceFromBottom >= clientHeight × PANE_MULTIPLIER`. When both `scrollHeight` and `clientHeight` are 0 (hidden tab): `0 < 0` is false — safe no-op.
 
 ### 3. Content update fast path (`updateCardsInPlace`)
 
@@ -264,17 +275,19 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 
 ### Call sites
 
-| Call site                                | Passes used                | Variant                                                                    |
-| ---------------------------------------- | -------------------------- | -------------------------------------------------------------------------- |
-| Initial render (`setupMasonryLayout`)    | All 4                      | Container                                                                  |
-| Batch append (`appendBatch`)             | 1 before layout; 2-4 after | 1: per-group before layout calc. 2-4: `*ForCards` — visible new cards only |
-| Group expand (`expandGroup`)             | All 4                      | Container — scoped to group element                                        |
-| Property reorder (`updatePropertyOrder`) | 2 only                     | Container — properties changed, title/subtitle/text unchanged              |
-| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4          | 2: container-level after loop. 3, 4: per-card via `updateCardContent`      |
-| Property measured (`PROPERTY_MEASURED`)  | All 4                      | Container — after property field width measurement settles                 |
-| `onDataUpdated` CSS fast-path            | 4 only                     | Container — re-measures clamps after CSS variable change                   |
+| Call site                                | Passes used                              | Variant                                                                    |
+| ---------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------- |
+| Initial render (`processDataUpdate`)     | 1 inside layout (Phase 1.5); 4 sync; 2-3 deferred RAF | 1: inside `updateLayoutRef` before height reads. 4: synchronous (affects heights). 2-3: deferred to RAF (cosmetic). |
+| Batch append (`appendBatch`)             | 1 before layout; 2-4 after              | 1: per-group before layout calc. 2-4: `*ForCards` — visible new cards only |
+| Group expand (`expandGroup`)             | 1 inside layout (Phase 1.5); 2-4 after  | 1: inside `updateLayoutRef`. 2-4: container — scoped to group element      |
+| Property reorder (`updatePropertyOrder`) | 2 only                                   | Container — properties changed, title/subtitle/text unchanged              |
+| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4                        | 2: container-level after loop. 3, 4: per-card via `updateCardContent`      |
+| Property measured (`PROPERTY_MEASURED`)  | All 4                                    | Container — after property field width measurement settles                 |
+| `onDataUpdated` CSS fast-path            | 4 only                                   | Container — re-measures clamps after CSS variable change                   |
 
-Masonry batch append splits pass 1 from passes 2-4: `syncResponsiveClasses` runs per-group **before** layout calculation (compact-mode classes affect card heights used for positioning), while scroll gradients, title truncation, and text preview clamp run **after** layout on visible new cards only.
+**Phase 1.5 pattern**: For initial render and group expand, `syncResponsiveClasses` runs inside `updateLayoutRef.current` as Phase 1.5 — after Phase 1 sets widths but before Phase 2 reads heights. This ensures compact-mode classes are applied before height measurement, eliminating the need for a post-layout `compact-mode-sync` relayout. Batch append retains its pre-layout per-group pattern (same principle, different entry point).
+
+**Deferred cosmetic passes**: On initial render, `initializeScrollGradients` (pass 2) and `initializeTitleTruncation` (pass 3) are deferred to `requestAnimationFrame` — they don't affect card heights and deferring avoids a forced reflow after Phase 4 position writes. `initializeTextPreviewClamp` (pass 4) stays synchronous because it writes `-webkit-line-clamp` and `display: none` in keep-newlines mode, which changes card heights.
 
 After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition("content-update")` runs — this is a masonry relayout pass, not part of the measurement sequence.
 
@@ -356,7 +369,8 @@ After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition
 - **Pattern**: Single `ResizeObserver` instance observes all mounted cards. RAF-debounced (cancel-and-reschedule — at most one reflow per frame).
 - **Purpose**: Catch-all safety net for CSS-only height changes that bypass the normal layout pipeline — cover ratio slider, text preview lines, title lines, thumbnail size settings, and any future height-changing events.
 - **Lifecycle**: Created once in `setupMasonryLayout` (guarded by `!this.cardResizeObserver`). Registered for disconnect on view unload. Cards are observed in `renderCard` and unobserved in `unmountVirtualItem`. On full re-render, `containerEl.empty()` removes all card DOM nodes — ResizeObserver stops tracking removed elements automatically, so no explicit `disconnect` is needed between re-renders. After initial layout, the spurious RAF from card creation is cancelled to avoid a redundant no-op remeasure.
-- **Guards**: The callback returns early if `resizeCorrectionTimeout !== null` (resize in progress), `batchLayoutPending`, `lastLayoutCardWidth === 0` (pre-layout), or `!lastRenderedSettings`. The RAF callback re-checks the same conditions plus `containerEl.isConnected` before calling `remeasureAndReposition`.
+- **Guards (outer callback)**: Returns early if `resizeCorrectionTimeout !== null` (resize in progress), `isScrollRemeasurePending()`, `postResizeScrollActive`, `batchLayoutPending`, `lastLayoutCardWidth === 0` (pre-layout), or `!lastRenderedSettings`. Notably NOT gated on `hasUserScrolled` — CSS-only settings must trigger reflow before first scroll.
+- **Guards (RAF callback)**: Re-checks `!containerEl.isConnected`, `batchLayoutPending`, `resizeCorrectionTimeout`, `isScrollRemeasurePending()`, and `postResizeScrollActive` before calling `remeasureAndReposition`.
 - **Relation to `updateCardsInPlace`**: `updateCardsInPlace` retains its synchronous `remeasureAndReposition` call — content updates are infrequent, single events where RAF debounce would be a visible regression. The observer is a complementary catch-all, not a replacement for the direct call.
 
 ### Cross-window observer context
@@ -454,12 +468,13 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 2. **`groupLayoutResults` stores original measured heights**, not scaled. The proportional fast path intentionally omits `heights` from the stored result (scaled values would corrupt the merge in `appendBatch`). The DOM measurement and full layout paths store accurate DOM-measured heights. `appendBatch`'s merge handles missing heights via `?? []`.
 3. **`updateVirtualItemPositions` maps by group index.** `virtualItemsByGroup.get(key)[i]` ↔ `result.positions[i]`. Consistent because both use the same ordering. The proportional fast path bypasses this function and updates VirtualItems inline.
 4. **`batchLayoutPending` suppresses concurrent full relayouts** during incremental batch layout. Image-load and other relayouts would corrupt `groupLayoutResults` by including new-batch cards before the incremental layout positions them.
-5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Call `updateCachedGroupOffsets()` synchronously before sync. The function does a full `.clear()` + rebuild from `.dynamic-views-group-section` DOM elements — not incremental. The cache eliminates `getBoundingClientRect` from the scroll/resize hot path. Stale offsets cause incorrect mount/unmount decisions. **Exception**: the proportional resize branch skips offset refresh — the 1x-pane-height buffer absorbs drift, and post-resize correction refreshes offsets within 200ms.
+5. **`cachedGroupOffsets` must be refreshed before every `syncVirtualScroll()`.** Two paths: (a) `updateCachedGroupOffsets()` — full `.clear()` + rebuild via `getBoundingClientRect` per group container, used when group structure may have changed; (b) `updateGroupOffsetsSynthetic()` — computes new offsets from cumulative container height deltas (zero DOM reads), used in `remeasureAndReposition` where group structure is stable. The synthetic method bails (sets `groupOffsetsDirty`) if any group offset is unknown; call sites follow with `if (this.groupOffsetsDirty) this.updateCachedGroupOffsets()` as fallback. Stale offsets cause incorrect mount/unmount decisions. **Exception**: the proportional resize branch skips offset refresh — the 1x-pane-height buffer absorbs drift, and post-resize correction refreshes offsets within 200ms.
 6. **Virtual scroll sync runs unconditionally after every position change.** Full measurement, batch append, correction, and proportional resize all call `syncVirtualScroll()`. During same-column-count resize, sync is cheap (0-3 mounts at edges from proportional drift). Skipping sync during resize caused blank space as items drifted outside the viewport without remounting.
 7. **Post-mount remeasure uses a leading throttle during scroll.** When `syncVirtualScroll` mounts new cards, corrections are spread across the scroll via `mountRemeasureTimeout` (`MOUNT_REMEASURE_MS` = 200ms). The first mount starts the timer; subsequent mounts during the cooldown are ignored (timer not reset). `onMountRemeasure()` fires, calling `remeasureAndReposition(skipTransition=true)`. `scrollRemeasureTimeout` now handles only `pendingDeferredResize`. `cardResizeObserver` catches residual drift after scroll ends. Uses `repositionWithStableColumns()` to preserve column assignments — prevents cascading column switching from small height changes. In grouped mode, `remeasureAndReposition` checks whether stable reposition introduced excessive column imbalance: if the stable column-height range exceeds 1.5× the greedy range AND the absolute difference exceeds `gap × 8`, it falls back to a full `calculateMasonryLayout()` for that group. This prevents column drift from amplifying across incremental batch appends. Ungrouped mode always uses stable columns — visual stability during scroll outweighs minor imbalance with a single group. Mid-scroll corrections use `skipTransition=true` (instant) — remaining drift is caught by the post-scroll safety net. Scroll compensation adjusts `scrollTop` after remeasure to keep the first visible card anchored. Skipped during active resize (cards have explicit heights) and during `batchLayoutPending` (unpositioned batch cards would corrupt `groupLayoutResults` heights, causing ~2700px gaps at batch boundaries). Image-load relayout also uses `remeasureAndReposition()` (stable columns) rather than a full `calculateMasonryLayout()` call — this prevents column reassignment when images finish loading, since height changes at that point are minor corrections, not structural changes requiring column rebalancing.
 8. **`hasUserScrolled` prevents premature unmounting.** Virtual scroll activation is deferred until first scroll event. Before that, all cards are mounted and sync is a no-op.
-9. **`onScrollIdle` reschedules when blocked.** When `batchLayoutPending` prevents deferred work (`pendingDeferredResize` or standard remeasure), `onScrollIdle` reschedules itself via `setTimeout(MASONRY_CORRECTION_MS)` instead of silently dropping the work. The deferred flags persist across reschedules.
-10. **Mount remeasure and deferred resize are independent scheduling concerns in `syncVirtualScroll`.** The former `shouldScheduleRemeasure` block has been split: `mountRemeasureTimeout` handles the mount-triggered throttle (guarded by `mountedNew` — only starts when cards were actually mounted); `scrollRemeasureTimeout` handles `pendingDeferredResize` debounce only. `isScrollRemeasurePending()` checks both timers and is used at 6 guard sites to defer competing work while either is active.
+9. **Scroll-concurrent correction throttle**: `remeasureAndReposition` inside `syncVirtualScroll` is throttled by `SCROLL_CORRECTION_INTERVAL_MS` (1000ms). When `postResizeScrollActive` is true, only one correction runs per throttle interval. The throttle prevents re-entering the correction block on the recursive `syncVirtualScroll()` call after `remeasureAndReposition` changed positions.
+10. **Mount remeasure is synchronous**: Never-measured cards (`measuredAtWidth === 0`) trigger `onMountRemeasure` synchronously in the same frame they mount. Post-resize cards (`measuredAtWidth > 0` at different width) skip synchronous remeasure via the `postResizeScrollActive` guard, deferring correction to the scroll-concurrent throttled path.
+11. **`remeasureAndReposition` uses read-all/write-all batching.** The per-group loop is split into two passes: (1) read phase measures `offsetHeight` and `measureScalableHeight` for all groups into `groupHeightsMap`, then (2) calculate+write phase runs layout math and applies positions with zero DOM reads. This eliminates O(N) forced reflows from per-group read→write interleaving. `measureScalableHeight` reads child `offsetHeight` — must remain in the read phase. After the write phase, `updateGroupOffsetsSynthetic` computes new offsets from container height deltas; a `groupOffsetsDirty` fallback to `updateCachedGroupOffsets` handles group structure changes.
 
 ## Bases v Datacore
 

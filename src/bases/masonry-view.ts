@@ -1690,6 +1690,7 @@ export class DynamicViewsMasonryView extends BasesView {
       const gap = getCardSpacing(this.containerEl);
       const isGrouped = this.containerEl.classList.contains('is-grouped');
       let cardWidth = 0;
+      let oldContainerHeightsForSync = new Map<string | undefined, number>();
       try {
         // Hide cards during initial render only
         if (!skipHiding) {
@@ -1759,6 +1760,15 @@ export class DynamicViewsMasonryView extends BasesView {
             (v) => !v.el && v.height > 0
           );
           if (hasPriorHeights) {
+            // Snapshot for synthetic offset computation (both fast-path branches)
+            const oldContainerHeightsFastPath = new Map<
+              string | undefined,
+              number
+            >();
+            for (const [key, result] of this.groupLayoutResults) {
+              oldContainerHeightsFastPath.set(key, result.containerHeight);
+            }
+
             if (source === 'resize-observer') {
               // ── Proportional branch: single-pass, zero DOM reads ──
               // Inlines greedy placement + VirtualItem update + style writes
@@ -1807,6 +1817,13 @@ export class DynamicViewsMasonryView extends BasesView {
                 });
               }
               this.lastLayoutWidth = containerWidth;
+              // Group container heights changed — update offsets before sync.
+              // Without this, syncVirtualScroll uses stale offsets and mounts
+              // cards in wrong groups (blank viewport on grouped masonry resize).
+              this.updateGroupOffsetsSynthetic(oldContainerHeightsFastPath);
+              if (this.groupOffsetsDirty) {
+                this.updateCachedGroupOffsets();
+              }
               this.syncVirtualScroll({ scrollTop, paneHeight });
               fastPathHandledSync = true;
               return;
@@ -1892,7 +1909,10 @@ export class DynamicViewsMasonryView extends BasesView {
             // DOM measurement branch handles its own sync — set flag so `finally` skips it.
             // Must sync after correction: re-measured heights shift positions, potentially
             // moving items in/out of viewport range.
-            this.updateCachedGroupOffsets();
+            this.updateGroupOffsetsSynthetic(oldContainerHeightsFastPath);
+            if (this.groupOffsetsDirty) {
+              this.updateCachedGroupOffsets();
+            }
             this.syncVirtualScroll();
             fastPathHandledSync = true;
             return;
@@ -1937,6 +1957,13 @@ export class DynamicViewsMasonryView extends BasesView {
         for (const item of this.virtualItems) {
           if (item.el) {
             item.scalableHeight = measureScalableHeight(item.el);
+          }
+        }
+
+        // Snapshot for synthetic offsets in finally block
+        if (this.hasUserScrolled) {
+          for (const [key, result] of this.groupLayoutResults) {
+            oldContainerHeightsForSync.set(key, result.containerHeight);
           }
         }
 
@@ -2072,7 +2099,15 @@ export class DynamicViewsMasonryView extends BasesView {
         if (!fastPathHandledSync) {
           this.groupOffsetsDirty = true;
           if (this.hasUserScrolled) {
-            this.updateCachedGroupOffsets();
+            // Synthetic offsets only valid when group structure is stable
+            // (resize, image-load). For initial-render / data refresh,
+            // groupLayoutResults was cleared — use DOM reads directly.
+            if (oldContainerHeightsForSync.size > 0) {
+              this.updateGroupOffsetsSynthetic(oldContainerHeightsForSync);
+            }
+            if (this.groupOffsetsDirty) {
+              this.updateCachedGroupOffsets();
+            }
             this.syncVirtualScroll();
           }
         }
@@ -2283,7 +2318,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Lazy offset refresh: when updateCachedGroupOffsets was skipped in the
     // finally block (hasUserScrolled = false), compute offsets now before the
-    // anchor read in the columnAnchors loop below. At double-RAF / 500ms timing, the browser
+    // anchor read at line ~2345. At double-RAF / 500ms timing, the browser
     // has already painted — getBoundingClientRect reads are free (~0ms).
     if (this.groupOffsetsDirty) {
       this.updateCachedGroupOffsets();
