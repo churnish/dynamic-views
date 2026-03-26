@@ -219,11 +219,14 @@ export class FullScreenController {
       );
     }
 
-    // Auto-show near top — expanded zone while bridge is active (pre-settle)
-    // prevents the false top gap from becoming visible. Bridge removal +
-    // bar restoration cancel geometrically (net zero visual shift).
+    // Auto-show near top — expanded zone while bridge is active AND user is
+    // scrolling upward. During downward scroll, use normal zone to avoid
+    // hide→auto-show cycling (bars hide at ~80px, well below totalShift).
+    // accumulatedDelta reflects previous events (checked before update).
     const autoShowZone =
-      !this.settled && this.barsHidden ? this.totalShift : FULL_SCREEN_TOP_ZONE;
+      !this.settled && this.barsHidden && this.accumulatedDelta < 0
+        ? this.totalShift
+        : FULL_SCREEN_TOP_ZONE;
     if (currentTop <= autoShowZone) {
       if (this.barsHidden) {
         this.barsHidden = false;
