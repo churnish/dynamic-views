@@ -414,8 +414,8 @@ settings:
         description: Do not show gradient fade on scrollable text elements.
         type: class-toggle
     -
-        id: covers-heading
-        title: Covers
+        id: cover-heading
+        title: Cover
         type: heading
         level: 2
         collapsed: true
@@ -1471,8 +1471,8 @@ settings:
         description: Do not collapse newlines in text preview.
         type: class-toggle
     -
-        id: thumbnails-heading
-        title: Thumbnails
+        id: thumbnail-heading
+        title: Thumbnail
         type: heading
         level: 2
         collapsed: true
@@ -1785,7 +1785,6 @@ body {
   --dynamic-views-pill-radius: var(--pill-radius, 2em);
   /* Icons */
   --dynamic-views-icon-s: var(--icon-s, 16px);
-  --dynamic-views-icon-xs: var(--icon-xs, 14px);
   --dynamic-views-icon-xs-stroke-width: var(--icon-xs-stroke-width, 2px);
   --dynamic-views-icon-color: var(--icon-color, #5c5c5c);
   --dynamic-views-icon-color-active: var(
@@ -4048,8 +4047,8 @@ body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.
   transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 }
 .dynamic-views .card-thumbnail.multi-image .thumbnail-indicator svg {
-  width: var(--dynamic-views-icon-xs);
-  height: var(--dynamic-views-icon-xs);
+  width: 14px;
+  height: 14px;
   transform: scaleX(-1);
   color: white;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
@@ -4212,6 +4211,11 @@ body:not(.dynamic-views-file-type-flair,
 .dynamic-views .card-title-url-icon svg {
   width: 20px;
   height: 20px;
+}
+
+.is-mobile .dynamic-views .card-title-url-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 @media (hover: hover) {
@@ -4569,15 +4573,16 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
      ============================================ */
   /* Cover-only cards: zero padding, reset wrapper margins */
 }
-.dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content),
-.dynamic-views .card.card-cover-bottom.image-format-cover:not(.has-card-content) {
+.dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header),
+.dynamic-views .card.card-cover-bottom.image-format-cover:not(.has-card-content,
+.has-header) {
   padding: 0;
 }
 .dynamic-views {
   /* Reset negative margins since padding is 0 */
 }
-.dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content) .card-cover-wrapper,
-.dynamic-views .card.card-cover-bottom.image-format-cover:not(.has-card-content) .card-cover-wrapper {
+.dynamic-views .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header) .card-cover-wrapper,
+.dynamic-views .card.card-cover-bottom.image-format-cover:not(.has-card-content, .has-header) .card-cover-wrapper {
   margin: 0;
 }
 .dynamic-views {
@@ -5609,8 +5614,8 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
   transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 }
 .dynamic-views .slideshow-indicator svg {
-  width: var(--dynamic-views-icon-xs);
-  height: var(--dynamic-views-icon-xs);
+  width: 14px;
+  height: 14px;
   transform: scaleX(-1);
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
 }

@@ -85,15 +85,18 @@
      ============================================ */
 
   /* Cover-only cards: zero padding, reset wrapper margins */
-  .card.card-cover-top.image-format-cover:not(.has-card-content),
-  .card.card-cover-bottom.image-format-cover:not(.has-card-content) {
+  .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header),
+  .card.card-cover-bottom.image-format-cover:not(
+      .has-card-content,
+      .has-header
+    ) {
     padding: 0;
   }
 
   /* Reset negative margins since padding is 0 */
-  .card.card-cover-top.image-format-cover:not(.has-card-content)
+  .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header)
     .card-cover-wrapper,
-  .card.card-cover-bottom.image-format-cover:not(.has-card-content)
+  .card.card-cover-bottom.image-format-cover:not(.has-card-content, .has-header)
     .card-cover-wrapper {
     margin: 0;
   }

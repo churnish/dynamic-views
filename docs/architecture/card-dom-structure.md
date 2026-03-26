@@ -24,7 +24,7 @@ Both backends produce the same DOM structure with minor element-type differences
 div.card                                    ← data-path="{path}"
 │ [format classes: image-format-{cover|thumbnail|poster|backdrop}]
 │ [position classes: card-cover-{top|bottom|left|right}, card-thumbnail-{position}]
-│ [structural: has-card-content, has-properties-bottom, has-poster, has-backdrop,
+│ [structural: has-card-content, has-header, has-properties-bottom, has-poster, has-backdrop,
 │              has-cover, has-cover-placeholder, has-cover-wrapper-placeholder]
 │ [state: clickable-card, compact-mode, thumbnail-stack]
 │ [transient: hover-intent-active, poster-hover-active, poster-revealed]
@@ -122,6 +122,7 @@ The shared selector (`visibleBodySelector`) used by both classes:
 |---|---|---|---|
 | `has-body-content` | `.card-body` | `visibleBodySelector` on body children | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
 | `has-card-content` | `.card` | `visibleBodySelector` on card descendants | Drives title divider border and cover-only padding resets |
+| `has-header` | `.card` | `.card-header` exists | Prevents cover-only padding reset from zeroing padding on title-only cards |
 
 Both exclude `.card-previews.thumbnail-placeholder-only` — a previews container with only a thumbnail placeholder, hidden by CSS when the "Show thumbnail placeholder" style setting is off. The CSS rule scoping (`body:not(.dynamic-views-show-thumbnail-placeholder)`) ensures `card-body` is never hidden when placeholders are visible.
 

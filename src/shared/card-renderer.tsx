@@ -2320,6 +2320,9 @@ function Card({
             if (cardEl?.querySelector(visibleBodySelector)) {
               cardEl.classList.add('has-card-content');
             }
+            if (cardEl?.querySelector('.card-header')) {
+              cardEl.classList.add('has-header');
+            }
             if (format === 'poster') {
               setupVerticalScrollGradient(el, scrollController.signal);
             }
