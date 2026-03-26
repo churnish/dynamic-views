@@ -804,7 +804,10 @@ export class DynamicViewsGridView extends BasesView {
     this.observerWindow = null;
   }
 
-  /** Handle view moving to a different document (popout window) */
+  /** Handle view moving to a different document (popout window).
+   *  Unlike masonry's (oldDoc, newDoc) signature, grid doesn't need oldDoc
+   *  because it has no document-level event listeners to rebind (no
+   *  PROPERTY_MEASURED — CSS Grid auto-reflows when property widths change). */
   private handleDocumentChange(newDoc: Document): void {
     // Sync body classes from main window so CSS rules match immediately
     if (newDoc !== document) {

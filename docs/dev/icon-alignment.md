@@ -2,7 +2,7 @@
 title: Icon optical vertical alignment
 description: Empirical findings, failed approaches, and constraints for aligning SVG timestamp icons with digit text across desktop, iOS, and Android — covers canvas TextMetrics limitations, Android text autosizing pitfalls, and the offscreen measurement exemption.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-25
+updated: 2026-03-26
 ---
 # Icon optical vertical alignment
 
@@ -103,19 +103,38 @@ From Chromium source code analysis (`text_autosizer.cc`, `computed_style.cc`, `s
 - No effect on desktop browsers (they don't run text inflation)
 - Chromium issue 340389272 tracks decoupling `text-size-adjust` from the autosizer
 
-## Current solution direction
+## Implemented solution
 
-**Live DOM measurement from the first real rendered timestamp.** Instead of a synthetic offscreen element, find the first `.has-timestamp-icon` wrapper in the container after cards render, measure icon center vs text center from live `getBoundingClientRect`/`Range` rects. This goes through the actual rendering pipeline including text boosting.
+**Live DOM measurement from the first real rendered timestamp** (`src/shared/icon-alignment.ts`).
 
-- Store as px value (not fraction) — no `1lh / ratio` gymnastics needed since the live measurement already incorporates boosting
-- CSS simplifies to `transform: translateY(var(--dynamic-views-icon-optical-offset, 0px))`
-- Timing: Bases measures via rAF after first timestamp renders; Datacore via container ref re-runs
-- Boost ratio detection: `width: 1em` probe gives pre-boost font-size, `getComputedStyle().fontSize` gives post-boost. Scale delta by `boostRatio²` on Android
-- No-op for views with no timestamp icons (early return)
+### Measurement
 
-### Alternative: `text-size-adjust: none` on timestamp wrapper
+- Find first `.has-timestamp-icon` wrapper via `querySelector`
+- Measure icon center (`getBoundingClientRect`) vs text center (`Range.getBoundingClientRect` for Bases text nodes, `getBoundingClientRect` for Datacore span elements)
+- Store delta as px value in `--dynamic-views-icon-optical-offset` on the container
+- CSS: `transform: translateY(var(--dynamic-views-icon-optical-offset, 0px))`
 
-Suppress boosting entirely for the icon+text pair. Icon and text both render at un-boosted size, alignment works naturally. Trade-off: timestamp text slightly smaller than surrounding boosted text, and a11y font scaling disabled for that element.
+### Android boost scaling
+
+On Android (`Platform.isAndroidApp`), scale delta by `boostRatio²`:
+- `width: 1em` probe gives pre-boost font-size (CSS `1em` = `SpecifiedFontSize`)
+- `getComputedStyle().fontSize` gives post-boost value
+- `boostRatio = postBoost / preBoost`, gated at > 1.02 to filter rounding noise
+- Quadratic scaling matches desktop perceptual correction (see `android-chromium-quirks.md`)
+
+### Timing
+
+- **Bases**: One-shot via `requestAnimationFrame` after first timestamp renders in `SharedCardRenderer.renderPropertyRow`. `iconAlignmentMeasured` flag prevents re-measurement; reset in `cleanup()`.
+- **Datacore**: Container ref callback with `WeakSet` guard. Only marks as measured when `applyIconOpticalOffset` returns true (found timestamps). Retries on subsequent re-renders until timestamps exist.
+
+### Backend differences
+
+- **Bases**: Timestamp text is a bare text node (`nodeType === 3`). `Range.getBoundingClientRect` returns the content area (asymmetric within line box) → non-zero delta (~0.45px on desktop).
+- **Datacore**: Timestamp text is a `<span>` element (`nodeType === 1`, checked via `nodeType` not `instanceof` for cross-window safety). `getBoundingClientRect` returns the line-height box (symmetric) → delta = 0, no correction needed.
+
+### Rejected alternative: `text-size-adjust: none` on timestamp wrapper
+
+Suppress boosting entirely for the icon+text pair. Eliminates the problem at the root but disables a11y font scaling for the element. Kept as a fallback if the measurement approach proves insufficient.
 
 ## Key references
 
