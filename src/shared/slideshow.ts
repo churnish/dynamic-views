@@ -601,6 +601,7 @@ export function createSlideshowNavigator(
  */
 export function setupSwipeGestures(
   coverEl: HTMLElement,
+  cardEl: HTMLElement,
   navigate: (direction: 1 | -1, honorGestureDirection?: boolean) => void,
   signal: AbortSignal
 ): void {
@@ -630,15 +631,32 @@ export function setupSwipeGestures(
     { once: true }
   );
 
-  // Cache card element for hover intent check
-  const cardEl = coverEl.closest('.card');
+  // On hover-capable devices, require hover intent before processing wheel gestures.
+  // Prevents false slide changes when cards scroll under a stationary cursor.
+  // Touch-primary devices (hover: none) skip the guard — hover intent is never set up
+  // there, and the false-trigger problem doesn't apply (no persistent cursor).
+  const ownerWin = getOwnerWindow(coverEl);
+  const requiresHoverIntent = ownerWin.matchMedia('(hover: hover)').matches;
 
   // Wheel events capture trackpad swipes
   coverEl.addEventListener(
     'wheel',
     (e) => {
-      // Require hover intent — prevents false triggers when cards scroll under stationary cursor
-      if (!cardEl?.classList.contains('hover-intent-active')) return;
+      if (
+        requiresHoverIntent &&
+        !cardEl.classList.contains('hover-intent-active')
+      ) {
+        // Reset gesture state so the next accepted event starts clean
+        accumulatedDeltaX = 0;
+        navigatedThisGesture = false;
+        lastDeltaX = 0;
+        if (gestureResetTimeout) {
+          clearTimeout(gestureResetTimeout);
+          gestureResetTimeout = null;
+        }
+        resetGestureState();
+        return;
+      }
 
       // Ignore predominantly vertical scrolling
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
@@ -726,7 +744,7 @@ export function setupSwipeGestures(
   const indicator = coverEl.querySelector(
     '.slideshow-indicator'
   ) as HTMLElement;
-  const isMobile = document.body.classList.contains('is-mobile');
+  const isMobile = coverEl.ownerDocument.body.classList.contains('is-mobile');
 
   coverEl.addEventListener(
     'touchstart',

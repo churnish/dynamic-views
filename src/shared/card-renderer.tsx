@@ -864,7 +864,7 @@ function CoverSlideshow({
     );
 
     // Setup swipe gestures
-    setupSwipeGestures(slideshowEl, navigate, signal);
+    setupSwipeGestures(slideshowEl, cardEl, navigate, signal);
   };
 
   return (

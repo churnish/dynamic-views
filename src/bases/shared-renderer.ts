@@ -366,7 +366,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
 }
 
 export function initializeTitleTruncation(container: HTMLElement): void {
-  // Only run in Extension mode (max-height truncation via canvas measurement)
+  // Only run in Extension mode (refines CSS line-clamp fallback via canvas measurement)
   if (!isExtensionMode()) return;
 
   // Skip if scroll mode is enabled (no truncation)
@@ -387,7 +387,7 @@ export function initializeTitleTruncation(container: HTMLElement): void {
 export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
   if (cards.length === 0) return;
 
-  // Only run in Extension mode (max-height truncation via canvas measurement)
+  // Only run in Extension mode (refines CSS line-clamp fallback via canvas measurement)
   if (!isExtensionMode()) return;
 
   // Skip if scroll mode is enabled (no truncation)
@@ -1924,7 +1924,7 @@ export class SharedCardRenderer {
     );
 
     // Setup swipe gestures
-    setupSwipeGestures(slideshowEl, navigate, signal);
+    setupSwipeGestures(slideshowEl, cardEl, navigate, signal);
   }
 
   /**

@@ -159,7 +159,7 @@ body.dynamic-views-text-preview-keep-newlines
   .card-thumbnail.multi-image .thumbnail-indicator {
     position: absolute;
     top: var(--size-2-2);
-    right: var(--size-2-2);
+    left: var(--size-2-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,7 +171,6 @@ body.dynamic-views-text-preview-keep-newlines
     svg {
       width: 14px;
       height: 14px;
-      transform: scaleX(-1);
       color: white;
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
         drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
