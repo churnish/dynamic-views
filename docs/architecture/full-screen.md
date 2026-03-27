@@ -1,12 +1,12 @@
 ---
 title: Full screen architecture
-description: Bridge+settle system (iOS) and bridge-less path (Android) for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, short-view guard, and platform-specific branches.
+description: Bridge+settle system (iOS) and WAAPI-driven bridge-less path (Android) for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, short-view guard, WebView compositor limitation, and platform-specific branches.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-26
+updated: 2026-03-27
 ---
 # Full screen architecture
 
-Full screen hides the header, toolbar, search row, and navbar during downward scroll in Bases card views on mobile, reclaiming screen space for content. On iOS, the system uses a bridge+settle architecture: `margin-top` on the scroll child adjusts `scrollHeight` in sync with visual displacement, preventing false scroll boundaries during momentum scroll, followed by real layout changes at scroll-idle. On Android, a bridge-less path applies class toggle + `scrollTop` adjustment synchronously (Chromium's compositor survives `scrollTop` writes during active scroll). Direction detection uses a temporal-spatial hybrid algorithm with dead zones, a sustain gate, and a cooldown to prevent false triggers. This doc covers the stable architecture — for empirical research, rejected approaches, and prototype history, see [full-screen.md](../dev/full-screen.md).
+Full screen hides the header, toolbar, search row, and navbar during downward scroll in Bases card views on mobile, reclaiming screen space for content. On iOS, the system uses a bridge+settle architecture: `margin-top` on the scroll child adjusts `scrollHeight` in sync with visual displacement, preventing false scroll boundaries during momentum scroll, followed by real layout changes at scroll-idle. On Android, a bridge-less hide path applies class toggle + `scrollTop` adjustment synchronously (Chromium's compositor survives `scrollTop` writes during active scroll), with bar animations driven by WAAPI (`element.animate()`) for better compositor scheduling on the single-threaded WebView compositor. The show path uses a reverse bridge (`margin-top: -totalShift`) to avoid a synchronous `scrollTop` write that exceeded one frame budget on Pixel 8a. Direction detection uses a temporal-spatial hybrid algorithm with dead zones, a sustain gate, and a cooldown to prevent false triggers. This doc covers the stable architecture — for empirical research, rejected approaches, and prototype history, see [full-screen.md](../dev/full-screen.md).
 
 ## Files
 
@@ -57,7 +57,7 @@ Bases leaf hierarchy, top to bottom:
 
 ## Bridge + settle architecture
 
-The bridge resolves the fundamental conflict on iOS: hiding bars requires layout mutations (margin, toolbar collapse), but layout mutations during iOS momentum scroll kill the momentum. The bridge applies `margin-top` on the scroll child (`.dynamic-views-bases-container`) to visually compensate for the layout shift. Unlike `translateY` (which displaces visually without changing `scrollHeight`), `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, eliminating false top/bottom at scroll boundaries. Real layout changes swap in at scroll-idle. Android does NOT use a bridge — Chromium's compositor tolerates `scrollTop` writes during active scroll, so class toggle + `scrollTop` adjustment happen synchronously (see Platform branches).
+The bridge resolves the fundamental conflict on iOS: hiding bars requires layout mutations (margin, toolbar collapse), but layout mutations during iOS momentum scroll kill the momentum. The bridge applies `margin-top` on the scroll child (`.dynamic-views-bases-container`) to visually compensate for the layout shift. Unlike `translateY` (which displaces visually without changing `scrollHeight`), `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, eliminating false top/bottom at scroll boundaries. Real layout changes swap in at scroll-idle. Android does NOT use a bridge on the hide path — Chromium's compositor tolerates `scrollTop` writes during active scroll, so class toggle + `scrollTop` adjustment happen synchronously. The show path uses a reverse bridge (`margin-top: -totalShift`) because the `scrollTop += totalShift` write forced 22-26ms synchronous layout on Pixel 8a. Bar animations use WAAPI (`element.animate()`) for better compositor scheduling on the single-threaded WebView compositor (see Platform branches).
 
 ### Short-view guard
 
@@ -73,22 +73,23 @@ Before hiding, the controller checks whether the view has enough scrollable rang
 1. **Immediate (momentum-safe)**: Apply `full-screen-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `margin-top: totalShift` bridge on scroll child (`.dynamic-views-bases-container`) — increases `scrollHeight` to keep coordinate space aligned. Lock scroll container height via inline `style.height`. Animate header/navbar via inline styles (transform + opacity) using the double-rAF pattern.
 2. **Idle (debounced)**: Remove `margin-top` -> `scrollTop -= totalShift` -> re-measure height -> relock.
 
-#### Android (bridge-less)
+#### Android (WAAPI + bridge-less)
 
-1. **Immediate**: Unlock height -> apply `full-screen-active` CSS class -> `scrollTop -= totalShift` in the same synchronous tick. Chromium's compositor-based scrolling survives `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no `pendingLayout`.
-2. **rAF**: Clear `programmaticScroll`, relock height, animate navbar (single rAF sufficient on Chromium).
+1. **Immediate**: Unlock height -> apply `full-screen-active` CSS class (sets `pointer-events: none` and `transition: none` only — NO `!important` transform/opacity in CSS) -> pin header at current position via inline `transform` (prevents flash during class application) -> `scrollTop -= totalShift` in the same synchronous tick. Chromium's compositor-based scrolling survives `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no `pendingLayout`.
+2. **rAF**: Clear `programmaticScroll`. Animate header and navbar hide via `element.animate()` (WAAPI) — transform + opacity to hidden state. `fill: 'forwards'` holds final frame. `onfinish` sets persistent inline `!important` styles. Cancel any existing animations before starting new ones (rapid cycling safety).
+3. **Idle**: Height relock deferred to idle (`requestIdleCallback` / `setTimeout` fallback). `offsetHeight` read moved out of the animation window to avoid forcing synchronous layout during the transition.
 
 ### Show sequence
 
 #### iOS (bridge + deferred settle)
 
-3. **Immediate**: Apply `full-screen-showing` CSS class override. If settled (margin already removed), apply reverse bridge `margin-top: -totalShift` (pulls content up to compensate for `.view-content` margin restoration). If not settled, remove `margin-top` (bars returning, shift no longer needed). Animate header/navbar back via inline styles using double-rAF.
+3. **Immediate**: Apply `full-screen-showing` CSS class override. If not settled (hide bridge still active), remove `margin-top` — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari's native address bar behavior); `scrollTop += totalShift` at idle compensates. Restore navbar via inline styles.
 4. **Idle (debounced)**: Remove `margin-top` -> if settled, `scrollTop += totalShift` -> remove all full-screen classes -> unlock height -> re-measure -> relock.
 
-#### Android (bridge-less)
+#### Android (WAAPI + reverse bridge)
 
-3. **Immediate**: Apply `full-screen-showing` CSS class override (higher specificity restores bars visually — direct class removal causes white flash, see Platform branches below). `scrollTop += totalShift` immediate. Clear `programmaticScroll` in rAF so `onScroll` resumes processing. Restore navbar inline styles.
-4. **Idle (150ms)**: Remove `full-screen-active` + `full-screen-showing` classes -> unlock height -> re-measure -> relock. Deferred via `pendingLayout`.
+3. **Immediate**: Cancel any in-flight WAAPI animations. Apply `full-screen-showing` CSS class override (higher specificity restores bars visually — direct class removal causes white flash, see Platform branches below). Apply reverse bridge: `margin-top: -totalShift` on scroll child (`.dynamic-views-bases-container`) instead of `scrollTop += totalShift`. The `scrollTop` write forced 22-26ms synchronous layout on Pixel 8a (exceeding one 16ms frame budget), causing visible jank. The negative margin achieves the same visual offset without triggering synchronous layout. Animate header and navbar show via `element.animate()` (WAAPI) — transform + opacity to visible state. `fill: 'forwards'` holds final frame. `onfinish` sets persistent inline styles and clears transform/opacity.
+4. **Idle (150ms)**: Remove reverse bridge (`margin-top`) -> `scrollTop += totalShift` (safe at idle, no scroll contention) -> remove `full-screen-active` + `full-screen-showing` classes -> unlock height -> re-measure -> relock -> cancel WAAPI animations (cleanup). Deferred via `pendingLayout`.
 
 ### `totalShift` measurement
 
@@ -120,10 +121,16 @@ All constants are in `src/shared/constants.ts`:
 | `FULL_SCREEN_HIDE_DEAD_ZONE` | 30px | Accumulated downward delta to trigger hide |
 | `FULL_SCREEN_SHOW_DEAD_ZONE` | 20px | Accumulated upward delta to trigger show |
 | `FULL_SCREEN_SHOW_SUSTAIN_MS` | 80ms | Minimum sustained direction before triggering |
-| `FULL_SCREEN_TOP_ZONE` | 50px | `scrollTop` threshold — always show bars near top |
+| `FULL_SCREEN_TOP_ZONE` | 50px | Baseline `scrollTop` threshold for auto-show near top. Expands to `totalShift` when bridge is active and scroll direction is upward (see Adaptive auto-show zone) |
 | `FULL_SCREEN_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
 | `FULL_SCREEN_SCROLL_IDLE_MS` | 2000ms | iOS settle debounce — outlasts scroll indicator fade (~1.5s) |
 | `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS` | 150ms | Android settle debounce — scrollbar never fades anyway |
+
+### Adaptive auto-show zone
+
+When the hide bridge is active (`!settled`) and the user is scrolling upward (`accumulatedDelta < 0`), the auto-show zone expands from `FULL_SCREEN_TOP_ZONE` (50px) to `totalShift` (~150px). This prevents the margin gap (empty space at the top of the scroll range created by the bridge) from becoming visible. Bridge removal and bar restoration cancel geometrically — the scroll child's `margin-top` removal shifts content up by `totalShift`, while `full-screen-showing` restoring `.view-content` margin shifts the scroll container down by `totalShift`. Net visual shift is zero.
+
+The expansion only activates during upward scroll to prevent hide→auto-show cycling: bars hide at ~80px (TOP_ZONE + HIDE_DEAD_ZONE), well below `totalShift`. During downward scroll (`accumulatedDelta >= 0`), the normal 50px zone applies. After settle, the bridge is removed and the normal zone applies in all directions.
 
 ### Sustain gate
 
@@ -204,18 +211,30 @@ In open-on-card mode, card body taps don't reveal bars — the card's click hand
 
 ### Android
 
-- **Bridge-less architecture**: Android uses NO bridge. Class toggle + `scrollTop` adjustment in the same synchronous tick. Chromium's compositor-based scrolling is resilient to `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no deferred settle needed.
+- **Bridge-less hide, reverse bridge show**: Android hide path uses NO bridge — class toggle + `scrollTop` adjustment in the same synchronous tick. Chromium's compositor-based scrolling is resilient to `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no deferred settle needed. Show path uses a reverse bridge (`margin-top: -totalShift` on scroll child) instead of synchronous `scrollTop += totalShift` — the `scrollTop` write forced 22-26ms synchronous layout on Pixel 8a. Bridge cleanup + `scrollTop` adjustment deferred to idle.
+- **WAAPI animations**: Header and navbar hide/show use `element.animate()` (Web Animations API) instead of CSS transitions. WAAPI gets better compositor scheduling on Chromium WebView for transform+opacity animations during active scroll. `fill: 'forwards'` holds the final frame; `onfinish` sets persistent inline `!important` state. Animations are cancelled before starting new ones (rapid cycling safety) and cancelled during idle cleanup and unmount.
+- **Split CSS rules**: iOS keeps `!important` transform/opacity in CSS class rules. Android CSS only sets `pointer-events` + `transition: none` — transform/opacity are controlled entirely via JS/WAAPI. This split exists because WAAPI animation effects are lower in the cascade than `!important` author declarations — WAAPI cannot override `!important` CSS.
+- **`will-change` pre-promotion**: `will-change: transform, opacity` on header (in CSS) and navbar (inline style at mount) pre-promotes elements to compositor layers, eliminating the first-transform layer promotion stall that otherwise causes a visible hitch on the first hide.
+- **Height relock deferred to idle**: `offsetHeight` forced layout moved out of the animation window to `requestIdleCallback` (with `setTimeout` fallback). Prevents synchronous layout during the transition frame.
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 150ms`. Used only for show path class cleanup (`pendingLayout`).
 - **Sustain gate**: Bypassed. Android Chromium produces less deceleration bounce than iOS and the gate is unnecessary.
 - **Single-rAF**: Bar hide uses a single `requestAnimationFrame` (not double-rAF). Chromium doesn't collapse transitions in passive listeners.
-- **Show path**: Uses `full-screen-showing` CSS override (higher specificity) to restore bars visually. Direct class removal (`classList.remove('full-screen-active')`) causes a white flash — Chromium renders intermediate layout states within a single synchronous tick, so the 99px `margin-top` gap appears as a white strip before `scrollTop` compensation takes effect. `scrollTop += totalShift` is immediate. Class cleanup deferred to idle (150ms) via `pendingLayout`.
+- **Show path**: Uses `full-screen-showing` CSS override (higher specificity) to restore bars visually. Direct class removal (`classList.remove('full-screen-active')`) causes a white flash — Chromium renders intermediate layout states within a single synchronous tick, so the 99px `margin-top` gap appears as a white strip before `scrollTop` compensation takes effect. Reverse bridge (`margin-top: -totalShift`) replaces the synchronous `scrollTop` write. Class cleanup deferred to idle (150ms) via `pendingLayout`.
 - **`programmaticScroll` deadlock**: `programmaticScroll = true` blocks ALL scroll events in `onScroll`. If not cleared promptly (via rAF), the idle timer never fires and `pendingLayout` never runs — causing a deadlock where bars can only hide once. The rAF clear after `scrollTop` writes is load-bearing.
 - **Scrollbar**: Never auto-fades. Scrollbar resize during settle is always visible — accepted as inherent to the platform.
+
+#### WebView compositor limitation
+
+Android WebView uses a single-threaded (synchronous) compositor — the impl thread and UI thread are the same thread. This is a fundamental architectural difference from desktop Chrome and iOS WKWebView, both of which have separate compositor threads/processes that handle animations concurrently with scroll processing.
+
+The practical impact: CSS transitions during active scroll compete with scroll processing for the same thread, causing 30-55ms frame gaps (2-3 dropped frames at 60fps). WAAPI gets better compositor scheduling than CSS transitions but does not fully eliminate contention — this is a WebView architectural limitation, not fixable at the application level.
+
+Source: Chromium WebView threading docs, synchronous compositing design doc.
 
 ## Invariants
 
 1. **Momentum safety (iOS)**: NEVER write `scrollTop` during momentum or active touch. `scrollTop` writes are only safe at true scroll-idle (detected via scroll debounce, NOT `scrollend` on WebKit).
-2. **Bridge math (iOS only)**: `margin-top: totalShift` on hide (positive margin increases `scrollHeight`), `margin-top: -totalShift` on reverse show (negative margin decreases `scrollHeight`). Bridge and `scrollTop` adjustment must use the same `totalShift` value. Android uses no bridge.
+2. **Bridge math (iOS only)**: `margin-top: totalShift` on hide (positive margin increases `scrollHeight`). On show, the hide bridge is removed when unsettled (geometric cancellation); no bridge is applied when settled — bars reappear naturally. Bridge and `scrollTop` adjustment must use the same `totalShift` value. Android uses no bridge.
 3. **No pre-promotion needed**: The `margin-top` bridge does not involve compositor layers, so no `transform: translateY(0)` pre-promotion is required at initialization.
 4. **Cooldown accumulator reset**: `accumulatedDelta` must be reset to 0 on every scroll event during cooldown. Layout-induced synthetic deltas (~250px) would otherwise trigger the opposite transition immediately.
 5. **Height lock lifecycle**: Lock at hide time, unlock-measure-relock at settle, unlock at full show cleanup. Never leave height locked after all full-screen classes are removed.
@@ -225,3 +244,5 @@ In open-on-card mode, card body taps don't reveal bars — the card's click hand
 9. **`measureTotalShift()` before hide**: Mount-time `getBoundingClientRect` may return 0 if CSS selectors don't match at construction time. `measureTotalShift()` must be called before any hide to ensure the authoritative value. Only valid when `full-screen-active` is NOT on body.
 10. **Short-view guard**: Hide must be skipped when `scrollableRange < 3 * totalShift`. Post-hide range would be only `2 * totalShift`, leaving insufficient scroll distance.
 11. **Android: no direct class removal on show**: `classList.remove('full-screen-active')` without `full-screen-showing` causes a white flash — Chromium renders the intermediate 99px margin gap. Always use the `full-screen-showing` CSS override first, then defer class removal to idle.
+12. **Android: no `!important` transform/opacity in CSS**: WAAPI animation effects are lower in the cascade than `!important` author declarations. Android header/navbar transform and opacity must NOT be in CSS `!important` rules — they are controlled entirely via WAAPI and inline styles.
+13. **WAAPI cancel before animate**: WAAPI animations must be cancelled before starting new ones. Rapid hide/show cycling without cancellation causes animation stacking and visual corruption.
