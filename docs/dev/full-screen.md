@@ -426,16 +426,16 @@ Chromium's compositor-based scrolling is fundamentally different from iOS WebKit
 
 **Hide path**: Pin header at visible position (inline styles) -> `full-screen-active` class toggle -> `scrollTop -= totalShift` -> `settled = true`. WAAPI `element.animate()` for header + navbar in rAF. Height relock deferred to idle.
 
-**Show path**: `full-screen-showing` CSS override (higher specificity) restores bars visually. Reverse bridge (`margin-top: -totalShift` on scroll child) instead of `scrollTop += totalShift`. WAAPI animations in rAF. Bridge cleanup + scrollTop adjust at idle (150ms).
+**Show path**: CSS `full-screen-showing` restores header INSTANTLY via `!important` transform/opacity rules (matching iOS CSS-driven behavior). Android-specific CSS overrides defer margin-top, toolbar, and search row restoration to idle — prevents the 99px gap flash. Navbar animates via WAAPI. `showBridgeActive` flag signals hide/idle that scrollTop wasn't adjusted during show. At idle (500ms), class removal restores defaults + scrollTop compensation.
 
 **Key empirical findings**:
 
 - **White flash on direct class removal**: `classList.remove('full-screen-active')` on show causes a white flash — Chromium renders intermediate layout states within a single synchronous tick. The 99px `margin-top` gap appears as a white strip before `scrollTop` compensation takes effect. The `full-screen-showing` CSS override (higher specificity) avoids this by restoring bars visually without removing the layout class.
 - **`programmaticScroll` deadlock**: `programmaticScroll = true` blocks ALL scroll events in `onScroll`. If not cleared promptly (via rAF), the idle timer never fires and `pendingLayout` never runs — bars can only hide once. The rAF clear is load-bearing.
 - **iOS bottom-settle (superseded)**: The `translateY` bridge made the last `totalShift` px unreachable until settle (false bottom). The `margin-top` bridge (v146) eliminates this — `scrollHeight` adjusts in sync with visual displacement. Bottom-settle workaround removed.
-- **`scrollTop +=` costs 22-26ms on show path**: Forced synchronous layout from `scrollTop += totalShift` exceeds one frame budget (16.67ms at 60fps). Measured via `performance.now()` on Pixel 8a. Fixed with reverse bridge.
+- **`scrollTop +=` costs 22-26ms on show path**: Forced synchronous layout from `scrollTop += totalShift` exceeds one frame budget (16.67ms at 60fps). Measured via `performance.now()` on Pixel 8a. Root cause was the 99px gap, not scrollTop — fixed with CSS-based instant header restore.
 - **CSS transitions drop 4-8 frames during hide**: Obsidian's native `transition: opacity 0.2s, transform 0.3s` on `.view-header` fires during `full-screen-active` class change, competing with scroll compositor. Frame gap data: 30-55ms gaps scattered throughout the 300ms animation window (not front-loaded).
-- **WAAPI replaces CSS transitions**: `element.animate()` for header and navbar. WAAPI cannot override `!important` CSS declarations (lower in the cascade) — Android CSS rules split to exclude transform/opacity, which are JS/WAAPI-controlled. `fill: 'forwards'` holds final frame; `onfinish` sets persistent inline `!important` state.
+- **WAAPI replaces CSS transitions**: `element.animate()` for navbar (both directions) and header (hide only). On the show path, the Android header is CSS-driven (`!important` transform/opacity in `full-screen-showing`) — WAAPI is not used. WAAPI cannot override `!important` CSS declarations (lower in the cascade) — Android CSS rules split to exclude transform/opacity, which are JS/WAAPI-controlled. `fill: 'forwards'` holds final frame (`onfinish` removed — `fill: forwards` is sufficient).
 - **Split CSS rules**: iOS keeps `!important` transform/opacity in `full-screen-active`/`full-screen-showing` CSS. Android CSS only sets `pointer-events` + `transition: none` — transform/opacity controlled entirely via JS/WAAPI.
 - **`will-change` pre-promotion**: `will-change: transform, opacity` on header (CSS, `.is-android` scoped) and navbar (inline at mount) pre-promotes to compositor layers, eliminating first-transform layer promotion stall.
 - **Height relock deferred to idle**: `offsetHeight` forced layout moved out of the 300ms animation window to idle settle. When done in a nested rAF during animation, it caused mid-animation jank.
@@ -449,6 +449,35 @@ Android WebView uses a synchronous compositing model where the impl thread and U
 CSS transitions during active scroll compete with scroll processing for the same frame budget on the same thread, causing 30-55ms frame gaps scattered throughout the animation. WAAPI (`element.animate()`) gets somewhat better compositor scheduling but doesn't fully eliminate the contention — it's an architectural limitation, not a fixable bug.
 
 Sources: Chromium WebView threading docs, synchronous compositing design doc, Chromium issue #40817676 (WebView performance slower than PWA), #40400865 (proposal to move WebView compositor to GPU thread). Facebook built a custom Chromium-based WebView to bypass this limitation.
+
+### Android show flash investigation
+
+**Observed**: 2026-03-27, Pixel 8a (Android WebView). Sessions: `1c4af413`, `62137565`, `900ee1b7`.
+
+**Root cause**: When `full-screen-showing` restores `margin-top: 99px` on `.view-content`, it creates a gap above the scroll container. On Android WebView's single-threaded compositor, the header WAAPI animation (starting from opacity:0) may not cover this gap on the first rendered frame — a timing race causes intermittent white flash ("nearly every other reveal").
+
+**Diagnostic evidence** (session `900ee1b7`):
+
+- Magenta scrim (z-index 99999, position fixed) was NOT always visible during flash — 3 states observed: no flash, full-screen magenta, top-third red. Never both colors simultaneously.
+- Red diagnostic background (replacing theme color on body/app-container/workspace) confirmed flash IS our background showing through the 99px gap.
+- The intermittent pattern = timing race on single-threaded compositor.
+
+**Failed approaches** (with session IDs):
+
+1. Idle delay 150→500ms (`1c4af413`) — fixed WAAPI cancel-before-complete, show flash persists
+2. `:not(.full-screen-showing)` scoping on mask-image/::after (`1c4af413`) — fixed bottom gradient, show flash persists
+3. Removed `onfinish` callbacks (`62137565`) — fixed cascade blocking, show flash persists
+4. Start-before-cancel WAAPI ordering (`62137565`) — eliminated cancel gap, show flash persists
+5. Background-color NOT scoped to `:not(.full-screen-showing)` (`1c4af413`) — prevents transparent intermediate, show flash persists
+6. Reverse bridge `margin-top: -totalShift` (`900ee1b7`) — eliminated forced scrollTop layout, show flash persists
+7. Batching class toggle + bridge + WAAPI into same rAF (`900ee1b7`) — eliminated inter-frame gap, show flash persists
+8. `visibility:hidden` → `opacity:0` + `will-change:opacity` on toolbar (`900ee1b7`) — kept compositor layer cached, show flash persists
+9. Deferred `capacitorStatusBar?.show()` to idle (`900ee1b7`) — moved system UI change, show flash persists
+10. Defer ALL layout to idle with Android CSS overrides (`900ee1b7`) — eliminated gap flash BUT toolbar/search pop in 500ms later. USER REJECTED.
+
+**Fix**: CSS-based instant header restore on Android. `full-screen-showing` sets `transform: translateY(0) !important` + `opacity: 1 !important` on the Android header (matching iOS behavior). The header covers the 99px gap instantly — no timing race with WAAPI first frame. WAAPI still used for navbar (bottom bar). Header hide WAAPI still works because `full-screen-showing` is removed before hide animations start.
+
+Android-specific CSS overrides also keep margin-top at 0 and toolbar/search hidden during the show state — these restore at idle when `full-screen-active` is removed. The `::before` gradient stays active during show on Android to cover the status bar area.
 
 ## Rejected approaches
 
@@ -526,6 +555,10 @@ Sources: Chromium WebView threading docs, synchronous compositing design doc, Ch
 | — | Double-rAF animation start on Android | Absorbs scroll frame tail but doesn't help — contention is throughout the 300ms animation, not just at start. |
 | — | `will-change: transform` alone on Android | Reduces per-frame paint cost (layer pre-promotion) but doesn't solve thread contention — compositor and scroll share the same thread on WebView. |
 | — | WAAPI with inline `!important` set simultaneously | No animation visible — inline `!important` styles override WAAPI animation effects in the cascade. Fix: remove inline `!important` before `.animate()`, set persistent state via `onfinish`. |
+| — | Reverse bridge (`margin-top: -totalShift`) on Android show | Eliminated forced scrollTop layout (22-26ms) but flash persisted — root cause was the 99px gap, not scrollTop. |
+| — | Batch class toggle + bridge + WAAPI into single rAF on Android | Eliminated inter-frame gap between CSS activation and WAAPI start but flash persisted. |
+| — | `visibility:hidden` → `opacity:0` + `will-change:opacity` on toolbar/search | Kept compositor layer cached for opacity flip but flash persisted — root cause was the margin gap, not rasterization. |
+| — | Defer ALL layout to idle (Android CSS overrides) | Eliminated 99px gap flash but toolbar/search restored 500ms later. User rejected — worse than original. |
 
 ## Navbar hide behavior
 
@@ -560,7 +593,7 @@ Single-phase: all changes (compositor + layout) apply simultaneously via classLi
 
 v59's CSS class approach was superseded by v84's inline-only animation, which correctly separates CSS class (layout) from inline styles (compositor animation). CSS class handles layout mutations (margin, pointer-events). Inline `style.setProperty()` with double-rAF handles compositor animation (transform, opacity). This resolves the WebKit passive scroll listener optimization that collapsed v58's transitions.
 
-**Current state**: On iOS, bar animations use double-rAF inline styles. Space reclaim uses bridge + idle settle architecture: `margin-top: totalShift` bridge on scroll child at hide time (momentum-safe — adjusts `scrollHeight` in sync with visual displacement, no false scroll boundaries), then `scrollTop -= totalShift` + margin removal at scroll-idle (2s debounce). The 2s settle delay outlasts the iOS scroll indicator fade (~1.5s), making the settle invisible. On Android, WAAPI `element.animate()` replaces CSS transitions for header and navbar — WebView's single-threaded compositor makes CSS transitions during active scroll inherently janky (see "WebView single-threaded compositor" below). The hide path is bridge-less (class + `scrollTop` synchronous), the show path uses a reverse bridge (`margin-top: -totalShift`) to avoid forced layout from `scrollTop` writes. CSS rules split: iOS keeps `!important` transform/opacity, Android only sets pointer-events + transition suppression (WAAPI cannot override `!important`). Scroll container height is locked (`style.height`) to decouple `clientHeight` from flex layout changes — unlock-measure-relock at settle. A short-view guard (`scrollableRange >= 3 * totalShift`) prevents hide on views with insufficient scroll range. Minor intermittent content jumps on iOS from scroll viewport clipping artifact are accepted as the Pareto optimum (see "Pareto frontier" above).
+**Current state**: On iOS, bar animations use double-rAF inline styles. Space reclaim uses bridge + idle settle architecture: `margin-top: totalShift` bridge on scroll child at hide time (momentum-safe — adjusts `scrollHeight` in sync with visual displacement, no false scroll boundaries), then `scrollTop -= totalShift` + margin removal at scroll-idle (2s debounce). The 2s settle delay outlasts the iOS scroll indicator fade (~1.5s), making the settle invisible. On Android, WAAPI `element.animate()` replaces CSS transitions — WebView's single-threaded compositor makes CSS transitions during active scroll inherently janky (see "WebView single-threaded compositor" below). The hide path is bridge-less (class + `scrollTop` synchronous) with WAAPI for header and navbar hide animations. The show path uses CSS-based instant header restore: `full-screen-showing` sets `transform: translateY(0) !important` + `opacity: 1 !important` on the Android header, covering the 99px gap without WAAPI timing race (see "Android show flash investigation" below). WAAPI is only used for navbar show animation. `showBridgeActive` is repurposed as a scrollTop-not-compensated signal (no literal bridge). `capacitorStatusBar?.show()` deferred to idle on Android. Android-specific CSS overrides keep margin-top at 0 and toolbar/search hidden during the show state — these restore at idle when `full-screen-active` is removed. CSS rules split: iOS keeps `!important` transform/opacity, Android only sets pointer-events + transition suppression (WAAPI cannot override `!important`). Scroll container height is locked (`style.height`) to decouple `clientHeight` from flex layout changes — unlock-measure-relock at settle. A short-view guard (`scrollableRange >= 3 * totalShift`) prevents hide on views with insufficient scroll range. Minor intermittent content jumps on iOS from scroll viewport clipping artifact are accepted as the Pareto optimum (see "Pareto frontier" above).
 
 ## Direction detection
 

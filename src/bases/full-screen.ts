@@ -84,6 +84,7 @@ export class FullScreenController {
   private lastToggleTime = 0;
   private directionChangeTime = 0;
   private lockedScrollHeight = 0;
+  private showBridgeActive = false;
 
   // Bound handlers for add/removeEventListener
   private readonly onScrollBound: () => void;
@@ -149,6 +150,7 @@ export class FullScreenController {
     this.directionChangeTime = 0;
     this.lastToggleTime = 0;
     this.programmaticScroll = false;
+    this.showBridgeActive = false;
     this.pendingLayout = null;
     this.isActiveHider = false;
 
@@ -239,6 +241,7 @@ export class FullScreenController {
     this.pendingLayout = null;
     this.barsHidden = false;
     this.settled = false;
+    this.showBridgeActive = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -425,7 +428,12 @@ export class FullScreenController {
       this.programmaticScroll = true;
       this.scrollEl.style.removeProperty('height');
       this.body.classList.add('full-screen-active');
-      if (before >= this.totalShift) {
+      // Skip scrollTop adjustment when show bridge was active —
+      // scrollTop wasn't changed during show, so hide doesn't need
+      // to compensate. Bridge already cleared in the cleanup block above.
+      if (this.showBridgeActive) {
+        this.showBridgeActive = false;
+      } else if (before >= this.totalShift) {
         this.scrollEl.scrollTop = before - this.totalShift;
       }
       this.settled = true;
@@ -454,8 +462,9 @@ export class FullScreenController {
         // Inline !important would beat WAAPI, so must be removed first.
         this.clearHeaderInlines();
 
-        // Navbar WAAPI hide — fill: forwards holds final frame,
-        // onfinish sets persistent inline state for post-animation CSS cascade
+        // Navbar WAAPI hide — fill: forwards holds final frame.
+        // No onfinish: persistent !important inlines would block show
+        // WAAPI's cascade (show relies on composite priority override).
         this.navbarAnim = this.navbarEl.animate(
           [
             { transform: 'translateY(0)', opacity: 1 },
@@ -464,9 +473,6 @@ export class FullScreenController {
           WAAPI_OPTS
         );
         setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
-        this.navbarAnim.onfinish = () => {
-          applyNavbarHide();
-        };
 
         // Header WAAPI hide
         if (this.viewHeaderEl) {
@@ -479,15 +485,6 @@ export class FullScreenController {
             WAAPI_OPTS
           );
           setStyle(hEl, 'pointer-events', 'none', 'important');
-          this.headerAnim.onfinish = () => {
-            setStyle(
-              hEl,
-              'transform',
-              `translateY(-${headerShift}px)`,
-              'important'
-            );
-            setStyle(hEl, 'opacity', '0', 'important');
-          };
         }
       });
       return;
@@ -540,22 +537,18 @@ export class FullScreenController {
       this.pendingRafId = null;
     }
 
-    void capacitorStatusBar?.show();
-
     if (this.isAndroid) {
-      // Android show: synchronous scrollTop + WAAPI animation.
-      // scrollTop += totalShift forces ~25ms layout but runs BEFORE the
-      // animation rAF — WAAPI on the compositor is unaffected. The reverse
-      // bridge approach was abandoned: bridge removal at idle produced a
-      // visible content jump (idle fires at 150ms while user is watching).
-      this.body.classList.add('full-screen-showing');
-
+      // Android show: WAAPI header + navbar, ::before scrim, reverse bridge.
+      //
+      // full-screen-showing restores margin-top: 99px + toolbar + search.
+      // An extended ::before (solid background, full 99px height) covers the
+      // gap while the header WAAPI slides in from above (matching iOS native
+      // animation). The reverse bridge offsets the layout shift. At idle,
+      // bridge removed + scrollTop compensated + classes removed.
       this.programmaticScroll = true;
-      if (this.settled) {
-        this.scrollEl.scrollTop += this.totalShift;
-      }
+      this.showBridgeActive = true;
 
-      // Read WAAPI "from" values from current inline state (set by hide)
+      // Read WAAPI "from" values BEFORE rAF — fill:forwards still active
       const navbarFrom =
         this.navbarEl.style.getPropertyValue('transform') ||
         `translateY(${this.getNavbarHeight()}px)`;
@@ -564,16 +557,40 @@ export class FullScreenController {
         `translateY(-${this.getHeaderShift()}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
+        // Cancel hide WAAPI on header BEFORE adding class — fill:forwards
+        // holds the header at hidden state. Must be removed so the show
+        // WAAPI can animate from the correct starting position.
+        this.headerAnim?.cancel();
+        this.headerAnim = null;
+        this.clearHeaderInlines();
+
+        // Class toggle: margin/toolbar/search restore + ::before scrim
+        // covers the 99px gap with solid background while header slides in.
+        this.body.classList.add('full-screen-showing');
+
+        // Reverse bridge: offset the layout shift from margin-top + toolbar
+        // restoration. Content stays visually in place. Bridge removed at idle.
+        if (this.settled) {
+          setStyle(this.container, 'margin-top', `-${this.totalShift}px`);
+          setStyle(this.container, 'transition', 'none');
+        }
+
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
 
-        // Cancel any running hide animations — removes fill: forwards hold
-        this.navbarAnim?.cancel();
-        this.headerAnim?.cancel();
+        // Start show WAAPI BEFORE canceling old animations (composite priority)
+        const oldNavbar = this.navbarAnim;
 
-        // Clear hide-path persistent inlines so WAAPI can override
-        this.clearNavbarInlines();
-        this.clearHeaderInlines();
+        // Header WAAPI show — slides in from above (::before scrim covers gap)
+        if (this.viewHeaderEl) {
+          this.headerAnim = this.viewHeaderEl.animate(
+            [
+              { transform: headerFrom, opacity: 0 },
+              { transform: 'translateY(0)', opacity: 1 },
+            ],
+            WAAPI_OPTS
+          );
+        }
 
         // Navbar WAAPI show
         this.navbarAnim = this.navbarEl.animate(
@@ -583,35 +600,30 @@ export class FullScreenController {
           ],
           WAAPI_OPTS
         );
-        this.navbarAnim.onfinish = () => {
-          setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-          setStyle(this.navbarEl, 'opacity', '1', 'important');
-          this.navbarEl.style.removeProperty('pointer-events');
-        };
+        oldNavbar?.cancel();
 
-        // Header WAAPI show
-        if (this.viewHeaderEl) {
-          const hEl = this.viewHeaderEl;
-          this.headerAnim = hEl.animate(
-            [
-              { transform: headerFrom, opacity: 0 },
-              { transform: 'translateY(0)', opacity: 1 },
-            ],
-            WAAPI_OPTS
-          );
-          this.headerAnim.onfinish = () => {
-            setStyle(hEl, 'transform', 'translateY(0)', 'important');
-            setStyle(hEl, 'opacity', '1', 'important');
-            setStyle(hEl, 'pointer-events', 'auto', 'important');
-          };
-        }
+        this.clearNavbarInlines();
       });
 
-      // Idle: remove classes + relock height (no bridge to clean up)
+      // Idle: remove bridge + compensate scrollTop + remove classes + relock.
+      // full-screen-showing already restored all layout (margin, toolbar,
+      // search). Class removal is a visual no-op — defaults match showing
+      // state. Bridge removal + scrollTop is the only geometric operation.
       this.pendingLayout = () => {
+        void capacitorStatusBar?.show();
+
         this.programmaticScroll = true;
 
         this.cancelAnimations();
+
+        // Remove reverse bridge + compensate scrollTop (safe at idle —
+        // no scroll contention, WAAPI finished at 300ms < 500ms idle)
+        if (this.showBridgeActive) {
+          this.container.style.removeProperty('margin-top');
+          this.container.style.removeProperty('transition');
+          this.scrollEl.scrollTop += this.totalShift;
+          this.showBridgeActive = false;
+        }
 
         this.scrollEl.style.removeProperty('height');
         this.body.classList.remove('full-screen-active', 'full-screen-showing');
@@ -633,6 +645,7 @@ export class FullScreenController {
     }
 
     // iOS: bridge + deferred settle (scrollTop writes kill momentum)
+    void capacitorStatusBar?.show();
 
     // Single class op — higher specificity overrides full-screen-active
     this.body.classList.add('full-screen-showing');

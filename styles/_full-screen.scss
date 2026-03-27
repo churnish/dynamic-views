@@ -26,15 +26,24 @@
   will-change: transform, opacity;
 }
 
+// Toolbar + search row: opacity:0 instead of visibility:hidden.
+// visibility:hidden removes the element from the compositor's paint list
+// entirely — re-showing requires rasterization from scratch. On Chromium
+// WebView's single-threaded compositor, this rasterization may not complete
+// within the frame budget, causing a one-frame white flash (the area behind
+// the toolbar). opacity:0 keeps the element painted and layer-cached, so
+// showing is a compositor-only opacity flip with no rasterization.
 .is-phone.full-screen-active [data-type='bases'] .bases-header {
-  visibility: hidden !important;
+  opacity: 0 !important;
   pointer-events: none !important;
   margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
   transition: none !important;
+  will-change: opacity;
 }
 
 .is-phone.full-screen-active [data-type='bases'] .bases-search-row {
-  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
   transition: none !important;
 }
 
@@ -43,17 +52,25 @@
   transition: none !important;
 }
 
+// Background stays active for both hide AND show — prevents white flash
+// from elements with transparent defaults (app-container, workspace).
 .is-phone.full-screen-active,
 .is-phone.full-screen-active .app-container,
 .is-phone.full-screen-active .workspace {
   background-color: var(--dynamic-views-background-primary) !important;
 }
 
-.is-phone.full-screen-active [data-type='bases']::after {
+// Cosmetic overrides: only while bars are hidden. :not(.full-screen-showing)
+// ensures these revert to defaults the instant showBarsUI adds full-screen-
+// showing — synced with navbar WAAPI. Removing full-screen-active at idle
+// is then a visual no-op (overrides already inactive).
+.is-phone.full-screen-active:not(.full-screen-showing)
+  [data-type='bases']::after {
   display: none !important;
 }
 
-.is-phone.full-screen-active .workspace-split.mod-root {
+.is-phone.full-screen-active:not(.full-screen-showing)
+  .workspace-split.mod-root {
   -webkit-mask-image: none !important;
   mask-image: none !important;
 }
@@ -85,17 +102,21 @@
   pointer-events: auto !important;
 }
 
-// Android: JS/WAAPI handles show animation — CSS only restores pointer-events
+// Android: WAAPI controls header animation on show (slide-in like iOS).
+// CSS only restores pointer-events — no transform/opacity (WAAPI can't
+// override !important). z-index ensures header animates ABOVE the ::before
+// scrim (z-index: 10) that covers the 99px gap.
 .is-android.is-phone.full-screen-active.full-screen-showing
   [data-type='bases']
   .view-header {
   pointer-events: auto !important;
+  z-index: 20 !important;
 }
 
 .is-phone.full-screen-active.full-screen-showing
   [data-type='bases']
   .bases-header {
-  visibility: visible !important;
+  opacity: 1 !important;
   pointer-events: auto !important;
   margin-bottom: 0px !important;
   transition: none !important;
@@ -104,7 +125,8 @@
 .is-phone.full-screen-active.full-screen-showing
   [data-type='bases']
   .bases-search-row {
-  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
   transition: none !important;
 }
 
@@ -115,6 +137,19 @@
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type='bases']::before {
+// iOS: remove ::before gradient on show — CSS header covers the status bar.
+.is-phone:not(.is-android).full-screen-active.full-screen-showing
+  [data-type='bases']::before {
   content: none !important;
+}
+
+// Android: extend ::before to cover the full margin-top gap (not just safe
+// area) with a solid background. Acts as a scrim while the header WAAPI
+// animation slides in from above. Without this, the gap shows the theme
+// background for the first frame of the animation (white flash). Removed
+// when full-screen-active is removed at idle.
+.is-android.is-phone.full-screen-active.full-screen-showing
+  [data-type='bases']::before {
+  height: var(--view-top-spacing, 99px) !important;
+  background: var(--dynamic-views-background-primary) !important;
 }
