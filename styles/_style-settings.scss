@@ -89,8 +89,8 @@ settings:
         collapsed: true
     -
         id: dynamic-views-card-spacing-desktop
-        title: Card spacing
-        description: Gap between cards on desktop.
+        title: Gap
+        description: Spacing between cards on desktop.
         type: variable-number-slider
         default: 8
         min: 0
@@ -99,8 +99,8 @@ settings:
         format: px
     -
         id: dynamic-views-card-spacing-mobile
-        title: Card spacing
-        description: Gap between cards on mobile.
+        title: Gap
+        description: Spacing between cards on mobile.
         type: variable-number-slider
         default: 6
         min: 0
@@ -117,7 +117,7 @@ settings:
         default-dark: '#'
     -
         id: dynamic-views-hide-end-indicator
-        title: Hide view end indicator
+        title: Hide end of view line
         description: Do not show horizontal rule at view bottom.
         type: class-toggle
         default: false
@@ -435,8 +435,8 @@ settings:
         description: Do not show gradient fade on scrollable text elements.
         type: class-toggle
     -
-        id: covers-heading
-        title: Covers
+        id: cover-heading
+        title: Cover
         type: heading
         level: 2
         collapsed: true
@@ -486,9 +486,23 @@ settings:
     -
         id: dynamic-views-fixed-cover-height
         title: Fixed height
-        description: Show background bars above and below contained images in Masonry.
-        type: class-toggle
-        default: false
+        description: Show background bars above and below contained images that don't fit.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-fixed-cover-height-grid
+        options:
+            -
+                label: In Grid
+                value: dynamic-views-fixed-cover-height-grid
+            -
+                label: In Masonry
+                value: dynamic-views-fixed-cover-height-masonry
+            -
+                label: In Grid & Masonry
+                value: dynamic-views-fixed-cover-height-both
+            -
+                label: Disable
+                value: dynamic-views-fixed-cover-height-none
     -
         id: dynamic-views-show-cover-placeholder
         title: Show placeholders
@@ -795,8 +809,22 @@ settings:
         id: dynamic-views-fixed-poster-height
         title: Fixed height
         description: Show background bars above and below contained images in poster cards.
-        type: class-toggle
-        default: false
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-fixed-poster-height-grid
+        options:
+            -
+                label: In Grid
+                value: dynamic-views-fixed-poster-height-grid
+            -
+                label: In Masonry
+                value: dynamic-views-fixed-poster-height-masonry
+            -
+                label: In Grid & Masonry
+                value: dynamic-views-fixed-poster-height-both
+            -
+                label: Disable
+                value: dynamic-views-fixed-poster-height-none
     -
         id: properties-heading
         title: Properties
@@ -1492,8 +1520,8 @@ settings:
         description: Do not collapse newlines in text preview.
         type: class-toggle
     -
-        id: thumbnails-heading
-        title: Thumbnails
+        id: thumbnail-heading
+        title: Thumbnail
         type: heading
         level: 2
         collapsed: true
