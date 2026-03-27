@@ -3262,10 +3262,16 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
   content-visibility: visible;
 }
 
-.is-phone.full-screen-active [data-type=bases] .view-header {
+.is-phone:not(.is-android).full-screen-active [data-type=bases] .view-header {
   transform: translateY(calc((var(--view-header-height, 44px) + var(--safe-area-inset-top, 47px)) * -1)) !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+.is-android.is-phone.full-screen-active [data-type=bases] .view-header {
+  pointer-events: none !important;
+  transition: none !important;
+  will-change: transform, opacity;
 }
 
 .is-phone.full-screen-active [data-type=bases] .bases-header {
@@ -3312,9 +3318,13 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
   pointer-events: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
+.is-phone:not(.is-android).full-screen-active.full-screen-showing [data-type=bases] .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.is-android.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
   pointer-events: auto !important;
 }
 
@@ -4073,7 +4083,7 @@ body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.
 .dynamic-views .card-thumbnail.multi-image .thumbnail-indicator {
   position: absolute;
   top: var(--size-2-2);
-  right: var(--size-2-2);
+  left: var(--size-2-2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4085,7 +4095,6 @@ body.dynamic-views-text-preview-keep-newlines .dynamic-views .card-text-preview.
 .dynamic-views .card-thumbnail.multi-image .thumbnail-indicator svg {
   width: 14px;
   height: 14px;
-  transform: scaleX(-1);
   color: white;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
 }

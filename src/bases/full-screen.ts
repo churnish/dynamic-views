@@ -55,6 +55,7 @@ export class FullScreenController {
   private readonly container: HTMLElement;
   private readonly viewContent: HTMLElement;
   private readonly navbarEl: HTMLElement;
+  private readonly viewHeaderEl: HTMLElement | null;
   private readonly ownerDoc: Document;
   private readonly body: HTMLElement;
   private readonly isAndroid: boolean;
@@ -81,6 +82,10 @@ export class FullScreenController {
   private readonly onTouchStartBound: (e: TouchEvent) => void;
   private readonly onTouchEndBound: (e: TouchEvent) => void;
 
+  // WAAPI animation handles (Android) — cancel before starting new ones
+  private headerAnim: Animation | null = null;
+  private navbarAnim: Animation | null = null;
+
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
@@ -90,6 +95,10 @@ export class FullScreenController {
     this.container = elements.container;
     this.viewContent = elements.viewContent;
     this.navbarEl = elements.navbarEl;
+    this.viewHeaderEl =
+      elements.viewContent.parentElement?.querySelector<HTMLElement>(
+        '.view-header'
+      ) ?? null;
     this.ownerDoc = this.scrollEl.ownerDocument;
     this.body = this.ownerDoc.body;
     this.isAndroid = this.body.classList.contains('is-android');
@@ -135,6 +144,13 @@ export class FullScreenController {
     this.pendingLayout = null;
     this.isActiveHider = false;
 
+    // Pre-promote navbar to compositor layer (Android only).
+    // Eliminates first-transform layer promotion stall during animation.
+    // Header is promoted via CSS (will-change on .full-screen-active rule).
+    if (this.isAndroid) {
+      setStyle(this.navbarEl, 'will-change', 'transform, opacity');
+    }
+
     // Attach listeners
     this.scrollEl.addEventListener('scroll', this.onScrollBound, {
       passive: true,
@@ -178,13 +194,27 @@ export class FullScreenController {
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transition');
     this.scrollEl.style.removeProperty('height');
-    this.viewContent.style.removeProperty('transition');
+
+    // Cancel WAAPI animations (Android)
+    this.navbarAnim?.cancel();
+    this.headerAnim?.cancel();
+    this.navbarAnim = null;
+    this.headerAnim = null;
 
     // Restore navbar
     this.navbarEl.style.removeProperty('transform');
     this.navbarEl.style.removeProperty('opacity');
     this.navbarEl.style.removeProperty('pointer-events');
     this.navbarEl.style.removeProperty('transition');
+    this.navbarEl.style.removeProperty('will-change');
+
+    // Restore header (Android JS-animated path)
+    if (this.viewHeaderEl) {
+      this.viewHeaderEl.style.removeProperty('transform');
+      this.viewHeaderEl.style.removeProperty('opacity');
+      this.viewHeaderEl.style.removeProperty('pointer-events');
+      this.viewHeaderEl.style.removeProperty('transition');
+    }
 
     this.pendingLayout = null;
     this.barsHidden = false;
@@ -328,10 +358,24 @@ export class FullScreenController {
     // Remove full-screen-showing if rapid show→hide before idle
     this.body.classList.remove('full-screen-showing');
 
-    // Clear show-path navbar inlines
+    // Cancel running WAAPI animations (rapid show→hide before finish)
+    this.navbarAnim?.cancel();
+    this.headerAnim?.cancel();
+    this.navbarAnim = null;
+    this.headerAnim = null;
+
+    // Clear show-path inlines (rapid show→hide before idle)
     this.navbarEl.style.removeProperty('transform');
     this.navbarEl.style.removeProperty('opacity');
     this.navbarEl.style.removeProperty('transition');
+    this.container.style.removeProperty('margin-top');
+    this.container.style.removeProperty('transition');
+    if (this.viewHeaderEl) {
+      this.viewHeaderEl.style.removeProperty('transform');
+      this.viewHeaderEl.style.removeProperty('opacity');
+      this.viewHeaderEl.style.removeProperty('pointer-events');
+      this.viewHeaderEl.style.removeProperty('transition');
+    }
 
     // Re-measure ONLY in clean state (no full screen classes).
     // During rapid show→hide, full-screen-active is still on body —
@@ -342,7 +386,7 @@ export class FullScreenController {
 
     // Navbar: animated hide via inline transform + opacity
     const navbarHeight = this.getNavbarHeight();
-    const navTransition = 'transform 0.3s ease-out, opacity 0.2s ease-out';
+    const barTransition = 'transform 0.3s ease-out, opacity 0.2s ease-out';
     const applyNavbarHide = (): void => {
       setStyle(
         this.navbarEl,
@@ -359,6 +403,15 @@ export class FullScreenController {
       // Chromium's compositor-based scrolling is resilient to scrollTop
       // writes during active scroll (unlike iOS WebKit where they are fatal).
       // No bridge, no deferred settle, no false-bottom artifact.
+
+      // Pin header at visible position via inline styles BEFORE class change.
+      // CSS `transition: none !important` on .view-header prevents Obsidian's
+      // native 0.3s transition from firing during the class change.
+      if (this.viewHeaderEl) {
+        setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
+        setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
+      }
+
       const before = this.scrollEl.scrollTop;
       this.programmaticScroll = true;
       this.scrollEl.style.removeProperty('height');
@@ -367,16 +420,69 @@ export class FullScreenController {
         this.scrollEl.scrollTop = before - this.totalShift;
       }
       this.settled = true;
-      this.pendingLayout = null;
+      // Height relock deferred to idle — offsetHeight forces layout that
+      // janks mid-animation if done during the 300ms animation window.
+      this.pendingLayout = () => {
+        this.lockedScrollHeight = this.scrollEl.offsetHeight;
+        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+        this.pendingLayout = null;
+      };
 
+      // WAAPI animations — compositor-promoted on Chromium. Unlike CSS
+      // transitions (main-thread style recalc every frame), WAAPI creates
+      // compositor-side KeyframeModels that interpolate on the GPU thread,
+      // freeing the main thread for scroll event processing.
+      const headerShift = this.getHeaderShift();
       this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
-        this.lockedScrollHeight = this.scrollEl.offsetHeight;
-        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-        // Navbar animation (single rAF sufficient on Chromium)
-        setStyle(this.navbarEl, 'transition', navTransition, 'important');
-        applyNavbarHide();
+
+        // Cancel any running show animations
+        this.navbarAnim?.cancel();
+        this.headerAnim?.cancel();
+
+        // Remove header pin — WAAPI overrides CSS from this frame.
+        // Inline !important would beat WAAPI, so must be removed first.
+        if (this.viewHeaderEl) {
+          this.viewHeaderEl.style.removeProperty('transform');
+          this.viewHeaderEl.style.removeProperty('opacity');
+        }
+
+        // Navbar WAAPI hide — fill: forwards holds final frame,
+        // onfinish sets persistent inline state for post-animation CSS cascade
+        this.navbarAnim = this.navbarEl.animate(
+          [
+            { transform: 'translateY(0)', opacity: 1 },
+            { transform: `translateY(${navbarHeight}px)`, opacity: 0 },
+          ],
+          { duration: 300, easing: 'ease-out', fill: 'forwards' }
+        );
+        setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
+        this.navbarAnim.onfinish = () => {
+          applyNavbarHide();
+        };
+
+        // Header WAAPI hide
+        if (this.viewHeaderEl) {
+          const hEl = this.viewHeaderEl;
+          this.headerAnim = hEl.animate(
+            [
+              { transform: 'translateY(0)', opacity: 1 },
+              { transform: `translateY(-${headerShift}px)`, opacity: 0 },
+            ],
+            { duration: 300, easing: 'ease-out', fill: 'forwards' }
+          );
+          setStyle(hEl, 'pointer-events', 'none', 'important');
+          this.headerAnim.onfinish = () => {
+            setStyle(
+              hEl,
+              'transform',
+              `translateY(-${headerShift}px)`,
+              'important'
+            );
+            setStyle(hEl, 'opacity', '0', 'important');
+          };
+        }
       });
       return;
     }
@@ -390,7 +496,7 @@ export class FullScreenController {
     // WebKit needs double-rAF — passive scroll listener optimization
     // collapses transition+target into one style recalc if set in same frame.
     this.pendingRafId = requestAnimationFrame(() => {
-      setStyle(this.navbarEl, 'transition', navTransition, 'important');
+      setStyle(this.navbarEl, 'transition', barTransition, 'important');
       this.pendingRafId = requestAnimationFrame(applyNavbarHide);
     });
 
@@ -430,64 +536,93 @@ export class FullScreenController {
     void capacitorStatusBar?.show();
 
     if (this.isAndroid) {
-      // === INSTRUMENTATION START (remove before commit) ===
-      const navCS = getComputedStyle(this.navbarEl);
-      const navInline = this.navbarEl.style;
-      console.log('[FS-SHOW] navbar state at showBarsUI entry:', {
-        inlineTransition: navInline.getPropertyValue('transition'),
-        computedTransition: navCS.transition,
-        inlineTransform: navInline.getPropertyValue('transform'),
-        computedTransform: navCS.transform,
-        inlineOpacity: navInline.getPropertyValue('opacity'),
-        computedOpacity: navCS.opacity,
-        timestamp: performance.now().toFixed(1),
-      });
-      // === INSTRUMENTATION END ===
-
-      // Android: bridge-less show. Use full-screen-showing CSS override to
-      // restore bars visually (avoids white flash from direct class removal),
-      // then adjust scrollTop immediately. Defer class cleanup to idle.
+      // Android show: reverse bridge instead of scrollTop write.
+      // scrollTop += totalShift forces synchronous layout (~25ms on Pixel,
+      // >1 frame budget) which jank the reveal animation. Reverse bridge
+      // (margin-top: -totalShift on scroll child) compensates visually
+      // without forced layout. Same pattern as iOS settled show path.
       this.body.classList.add('full-screen-showing');
 
       this.programmaticScroll = true;
       if (this.settled) {
-        this.scrollEl.scrollTop += this.totalShift;
+        setStyle(this.container, 'margin-top', `-${this.totalShift}px`);
+        setStyle(this.container, 'transition', 'none');
       }
 
-      // Clear programmaticScroll in next frame so onScroll resumes
-      // processing — the idle timer needs scroll events to fire pendingLayout.
+      // WAAPI animations — compositor-promoted on Chromium (same as hide).
+      const navbarFrom =
+        this.navbarEl.style.getPropertyValue('transform') ||
+        `translateY(${this.getNavbarHeight()}px)`;
+      const headerFrom =
+        this.viewHeaderEl?.style.getPropertyValue('transform') ||
+        `translateY(-${this.getHeaderShift()}px)`;
+
       this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
+
+        // Cancel any running hide animations — removes fill: forwards hold
+        this.navbarAnim?.cancel();
+        this.headerAnim?.cancel();
+
+        // Clear hide-path persistent inlines so WAAPI can override
+        this.navbarEl.style.removeProperty('transform');
+        this.navbarEl.style.removeProperty('opacity');
+        this.navbarEl.style.removeProperty('pointer-events');
+        if (this.viewHeaderEl) {
+          this.viewHeaderEl.style.removeProperty('transform');
+          this.viewHeaderEl.style.removeProperty('opacity');
+          this.viewHeaderEl.style.removeProperty('pointer-events');
+        }
+
+        // Navbar WAAPI show
+        this.navbarAnim = this.navbarEl.animate(
+          [
+            { transform: navbarFrom, opacity: 0 },
+            { transform: 'translateY(0)', opacity: 1 },
+          ],
+          { duration: 300, easing: 'ease-out', fill: 'forwards' }
+        );
+        this.navbarAnim.onfinish = () => {
+          setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
+          setStyle(this.navbarEl, 'opacity', '1', 'important');
+          this.navbarEl.style.removeProperty('pointer-events');
+        };
+
+        // Header WAAPI show
+        if (this.viewHeaderEl) {
+          const hEl = this.viewHeaderEl;
+          this.headerAnim = hEl.animate(
+            [
+              { transform: headerFrom, opacity: 0 },
+              { transform: 'translateY(0)', opacity: 1 },
+            ],
+            { duration: 300, easing: 'ease-out', fill: 'forwards' }
+          );
+          this.headerAnim.onfinish = () => {
+            setStyle(hEl, 'transform', 'translateY(0)', 'important');
+            setStyle(hEl, 'opacity', '1', 'important');
+            setStyle(hEl, 'pointer-events', 'auto', 'important');
+          };
+        }
       });
 
-      // Navbar restore
-      setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-      setStyle(this.navbarEl, 'opacity', '1', 'important');
-      this.navbarEl.style.removeProperty('pointer-events');
-
-      // === INSTRUMENTATION START (remove before commit) ===
-      console.log('[FS-SHOW] navbar state AFTER inline restore:', {
-        inlineTransition: this.navbarEl.style.getPropertyValue('transition'),
-        inlineTransform: this.navbarEl.style.getPropertyValue('transform'),
-        inlineOpacity: this.navbarEl.style.getPropertyValue('opacity'),
-        timestamp: performance.now().toFixed(1),
-      });
-      requestAnimationFrame(() => {
-        const cs = getComputedStyle(this.navbarEl);
-        console.log('[FS-SHOW] navbar computed in rAF:', {
-          transition: cs.transition,
-          transform: cs.transform,
-          opacity: cs.opacity,
-          timestamp: performance.now().toFixed(1),
-        });
-      });
-      // === INSTRUMENTATION END ===
-
-      // Idle: remove classes + relock height
+      // Idle: remove bridge + scrollTop adjust + class cleanup
       this.pendingLayout = () => {
         this.programmaticScroll = true;
+
+        // Cancel WAAPI animations before removing classes
+        this.navbarAnim?.cancel();
+        this.headerAnim?.cancel();
+        this.navbarAnim = null;
+        this.headerAnim = null;
+
         this.scrollEl.style.removeProperty('height');
+        this.container.style.removeProperty('margin-top');
+        this.container.style.removeProperty('transition');
+        if (this.settled) {
+          this.scrollEl.scrollTop += this.totalShift;
+        }
         this.body.classList.remove('full-screen-active', 'full-screen-showing');
         this.isActiveHider = false;
         this.settled = false;
@@ -495,6 +630,13 @@ export class FullScreenController {
         this.navbarEl.style.removeProperty('transform');
         this.navbarEl.style.removeProperty('opacity');
         this.navbarEl.style.removeProperty('transition');
+
+        if (this.viewHeaderEl) {
+          this.viewHeaderEl.style.removeProperty('transform');
+          this.viewHeaderEl.style.removeProperty('opacity');
+          this.viewHeaderEl.style.removeProperty('pointer-events');
+          this.viewHeaderEl.style.removeProperty('transition');
+        }
 
         this.pendingRafId = requestAnimationFrame(() => {
           this.programmaticScroll = false;
@@ -626,6 +768,15 @@ export class FullScreenController {
     return (
       (parseFloat(bodyCS.getPropertyValue('--navbar-height')) || 52) +
       (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-bottom')) || 34)
+    );
+  }
+
+  /** Header + safe area height — used for Android header hide animation */
+  private getHeaderShift(): number {
+    const bodyCS = getComputedStyle(this.body);
+    return (
+      (parseFloat(bodyCS.getPropertyValue('--view-header-height')) || 44) +
+      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-top')) || 47)
     );
   }
 }

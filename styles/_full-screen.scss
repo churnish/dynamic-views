@@ -5,7 +5,8 @@
 
 // .is-phone is Obsidian's body class — leave flat per nesting conventions.
 
-.is-phone.full-screen-active [data-type='bases'] .view-header {
+// iOS: CSS controls header hide/show (transform + opacity + pointer-events)
+.is-phone:not(.is-android).full-screen-active [data-type='bases'] .view-header {
   transform: translateY(
     calc(
       (var(--view-header-height, 44px) + var(--safe-area-inset-top, 47px)) * -1
@@ -13,6 +14,16 @@
   ) !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+// Android: JS/WAAPI controls header transform+opacity — CSS only handles
+// pointer-events and transition suppression. WAAPI cannot override
+// !important CSS declarations (lower in the cascade), so transform/opacity
+// must not be in CSS on Android.
+.is-android.is-phone.full-screen-active [data-type='bases'] .view-header {
+  pointer-events: none !important;
+  transition: none !important;
+  will-change: transform, opacity;
 }
 
 .is-phone.full-screen-active [data-type='bases'] .bases-header {
@@ -35,7 +46,7 @@
 .is-phone.full-screen-active,
 .is-phone.full-screen-active .app-container,
 .is-phone.full-screen-active .workspace {
-  background-color: var(--background-primary, #ffffff) !important;
+  background-color: var(--dynamic-views-background-primary) !important;
 }
 
 .is-phone.full-screen-active [data-type='bases']::after {
@@ -56,7 +67,7 @@
   height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
   background: linear-gradient(
     to bottom,
-    var(--background-primary, #ffffff) 0px,
+    var(--dynamic-views-background-primary) 0px,
     transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
   ) !important;
   z-index: 10 !important;
@@ -65,11 +76,19 @@
 
 // full-screen-showing: higher-specificity overrides to restore bars
 
-.is-phone.full-screen-active.full-screen-showing
+// iOS: CSS restores header on show
+.is-phone:not(.is-android).full-screen-active.full-screen-showing
   [data-type='bases']
   .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+// Android: JS/WAAPI handles show animation — CSS only restores pointer-events
+.is-android.is-phone.full-screen-active.full-screen-showing
+  [data-type='bases']
+  .view-header {
   pointer-events: auto !important;
 }
 
