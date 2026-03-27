@@ -557,6 +557,8 @@ export class FullScreenController {
         `translateY(-${this.getHeaderShift()}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
+        void capacitorStatusBar?.show();
+
         // Cancel hide WAAPI on header BEFORE adding class — fill:forwards
         // holds the header at hidden state. Must be removed so the show
         // WAAPI can animate from the correct starting position.
@@ -610,8 +612,6 @@ export class FullScreenController {
       // search). Class removal is a visual no-op — defaults match showing
       // state. Bridge removal + scrollTop is the only geometric operation.
       this.pendingLayout = () => {
-        void capacitorStatusBar?.show();
-
         this.programmaticScroll = true;
 
         this.cancelAnimations();
