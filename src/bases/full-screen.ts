@@ -19,7 +19,15 @@ import {
   FULL_SCREEN_SCROLL_IDLE_MS,
   FULL_SCREEN_SCROLL_IDLE_ANDROID_MS,
   FULL_SCREEN_SHOW_SUSTAIN_MS,
+  FULL_SCREEN_ANIM_MS,
 } from '../shared/constants';
+
+/** Shared WAAPI options for Android bar animations */
+const WAAPI_OPTS: KeyframeAnimationOptions = {
+  duration: FULL_SCREEN_ANIM_MS,
+  easing: 'ease-out',
+  fill: 'forwards' as FillMode,
+};
 
 export interface FullScreenElements {
   scrollEl: HTMLElement; // .bases-view
@@ -388,7 +396,6 @@ export class FullScreenController {
 
     // Navbar: animated hide via inline transform + opacity
     const navbarHeight = this.getNavbarHeight();
-    const barTransition = 'transform 0.3s ease-out, opacity 0.2s ease-out';
     const applyNavbarHide = (): void => {
       setStyle(
         this.navbarEl,
@@ -454,7 +461,7 @@ export class FullScreenController {
             { transform: 'translateY(0)', opacity: 1 },
             { transform: `translateY(${navbarHeight}px)`, opacity: 0 },
           ],
-          { duration: 300, easing: 'ease-out', fill: 'forwards' }
+          WAAPI_OPTS
         );
         setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
         this.navbarAnim.onfinish = () => {
@@ -469,7 +476,7 @@ export class FullScreenController {
               { transform: 'translateY(0)', opacity: 1 },
               { transform: `translateY(-${headerShift}px)`, opacity: 0 },
             ],
-            { duration: 300, easing: 'ease-out', fill: 'forwards' }
+            WAAPI_OPTS
           );
           setStyle(hEl, 'pointer-events', 'none', 'important');
           this.headerAnim.onfinish = () => {
@@ -494,8 +501,9 @@ export class FullScreenController {
 
     // WebKit needs double-rAF — passive scroll listener optimization
     // collapses transition+target into one style recalc if set in same frame.
+    const iosNavTransition = `transform ${FULL_SCREEN_ANIM_MS}ms ease-out, opacity 200ms ease-out`;
     this.pendingRafId = requestAnimationFrame(() => {
-      setStyle(this.navbarEl, 'transition', barTransition, 'important');
+      setStyle(this.navbarEl, 'transition', iosNavTransition, 'important');
       this.pendingRafId = requestAnimationFrame(applyNavbarHide);
     });
 
@@ -574,7 +582,7 @@ export class FullScreenController {
             { transform: navbarFrom, opacity: 0 },
             { transform: 'translateY(0)', opacity: 1 },
           ],
-          { duration: 300, easing: 'ease-out', fill: 'forwards' }
+          WAAPI_OPTS
         );
         this.navbarAnim.onfinish = () => {
           setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
@@ -590,7 +598,7 @@ export class FullScreenController {
               { transform: headerFrom, opacity: 0 },
               { transform: 'translateY(0)', opacity: 1 },
             ],
-            { duration: 300, easing: 'ease-out', fill: 'forwards' }
+            WAAPI_OPTS
           );
           this.headerAnim.onfinish = () => {
             setStyle(hEl, 'transform', 'translateY(0)', 'important');

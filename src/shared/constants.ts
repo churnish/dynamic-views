@@ -104,3 +104,5 @@ export const FULL_SCREEN_SCROLL_IDLE_MS = 2000;
  *  so the settle scrollTop adjustment is always visible regardless of timing.
  *  150ms is enough for Chromium fling to fully stop (scrollend fires at ~1ms). */
 export const FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 150;
+/** Bar hide/show animation duration (ms) — independent of TOGGLE_COOLDOWN_MS */
+export const FULL_SCREEN_ANIM_MS = 300;
