@@ -313,6 +313,18 @@ export function applyCssOnlySettings(
  * Uses read-then-write pattern to avoid layout thrashing.
  */
 function truncateTitleElements(titles: Iterable<HTMLElement>): void {
+  // Phase 0: Reset stale text (all writes, before any reads)
+  for (const titleEl of titles) {
+    if (titleEl.closest('.card')?.classList.contains(CONTENT_HIDDEN_CLASS))
+      continue;
+    const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
+    if (!textEl) continue;
+    const fullTitle = textEl.dataset.fullTitle;
+    if (fullTitle && textEl.textContent !== fullTitle) {
+      textEl.textContent = fullTitle;
+    }
+  }
+
   // Phase 1: Read all dimensions (forces 1 layout recalc)
   const measurements: Array<{
     textEl: HTMLElement;
@@ -331,7 +343,11 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
     const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
     if (!textEl) continue;
 
-    const fullText = (textEl.textContent || '').trim();
+    const fullText = (
+      textEl.dataset.fullTitle ||
+      textEl.textContent ||
+      ''
+    ).trim();
     if (!fullText) continue;
 
     const style = getOwnerWindow(titleEl).getComputedStyle(titleEl);
@@ -1158,6 +1174,7 @@ export class SharedCardRenderer {
           text: displayTitle,
           attr: {
             'data-href': card.path,
+            'data-full-title': displayTitle,
             href: card.path,
             draggable: 'true',
             'data-ext': extNoDot,
@@ -1248,7 +1265,7 @@ export class SharedCardRenderer {
         titleEl.createSpan({
           cls: 'card-title-text',
           text: displayTitle,
-          attr: { 'data-ext': extNoDot },
+          attr: { 'data-ext': extNoDot, 'data-full-title': displayTitle },
         });
 
         // Add extension suffix for Extension mode
@@ -2146,6 +2163,8 @@ export class SharedCardRenderer {
       showsExtSeparately && titleHasExtension
         ? entry.file.basename
         : card.title;
+
+    titleTextEl.dataset.fullTitle = displayTitle;
 
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(

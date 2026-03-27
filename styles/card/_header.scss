@@ -40,7 +40,9 @@
   }
 }
 
-/* Extension mode (default): use max-height for JS truncation measurement.
+/* Extension mode (default): CSS line-clamp provides the fallback ellipsis;
+   JS canvas truncation refines the text to fit title + … + extension suffix.
+   max-height is a pixel-based guard belt on top of line-clamp.
    Extension is the default file-type indicator — no body class needed.
    :not() ensures these rules yield when another mode is active. */
 body:not(
@@ -50,9 +52,6 @@ body:not(
   )
   .dynamic-views
   .card-title {
-  display: block;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
   max-height: calc(var(--dynamic-views-title-lines, 2) * 1lh);
 }
 
@@ -98,7 +97,18 @@ body:not(
   .card-title-url-icon svg {
     width: 20px;
     height: 20px;
+    color: var(--dynamic-views-text-faint);
   }
+
+  .card.image-format-poster .card-title-url-icon svg {
+    color: inherit;
+  }
+}
+
+.is-mobile .dynamic-views .card-title-url-icon svg.svg-icon {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
 }
 
 @media (hover: hover) {
