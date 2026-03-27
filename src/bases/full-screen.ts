@@ -543,20 +543,19 @@ export class FullScreenController {
     void capacitorStatusBar?.show();
 
     if (this.isAndroid) {
-      // Android show: reverse bridge instead of scrollTop write.
-      // scrollTop += totalShift forces synchronous layout (~25ms on Pixel,
-      // >1 frame budget) which jank the reveal animation. Reverse bridge
-      // (margin-top: -totalShift on scroll child) compensates visually
-      // without forced layout. Same pattern as iOS settled show path.
+      // Android show: synchronous scrollTop + WAAPI animation.
+      // scrollTop += totalShift forces ~25ms layout but runs BEFORE the
+      // animation rAF — WAAPI on the compositor is unaffected. The reverse
+      // bridge approach was abandoned: bridge removal at idle produced a
+      // visible content jump (idle fires at 150ms while user is watching).
       this.body.classList.add('full-screen-showing');
 
       this.programmaticScroll = true;
       if (this.settled) {
-        setStyle(this.container, 'margin-top', `-${this.totalShift}px`);
-        setStyle(this.container, 'transition', 'none');
+        this.scrollEl.scrollTop += this.totalShift;
       }
 
-      // WAAPI animations — compositor-promoted on Chromium (same as hide).
+      // Read WAAPI "from" values from current inline state (set by hide)
       const navbarFrom =
         this.navbarEl.style.getPropertyValue('transform') ||
         `translateY(${this.getNavbarHeight()}px)`;
@@ -608,19 +607,13 @@ export class FullScreenController {
         }
       });
 
-      // Idle: remove bridge + scrollTop adjust + class cleanup
+      // Idle: remove classes + relock height (no bridge to clean up)
       this.pendingLayout = () => {
         this.programmaticScroll = true;
 
-        // Cancel WAAPI animations before removing classes
         this.cancelAnimations();
 
         this.scrollEl.style.removeProperty('height');
-        this.container.style.removeProperty('margin-top');
-        this.container.style.removeProperty('transition');
-        if (this.settled) {
-          this.scrollEl.scrollTop += this.totalShift;
-        }
         this.body.classList.remove('full-screen-active', 'full-screen-showing');
         this.isActiveHider = false;
         this.settled = false;
