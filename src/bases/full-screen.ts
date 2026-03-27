@@ -163,6 +163,31 @@ export class FullScreenController {
     });
   }
 
+  /** Cancel and discard WAAPI animation handles (Android) */
+  private cancelAnimations(): void {
+    this.navbarAnim?.cancel();
+    this.headerAnim?.cancel();
+    this.navbarAnim = null;
+    this.headerAnim = null;
+  }
+
+  /** Clear navbar inline styles set during hide/show */
+  private clearNavbarInlines(): void {
+    this.navbarEl.style.removeProperty('transform');
+    this.navbarEl.style.removeProperty('opacity');
+    this.navbarEl.style.removeProperty('pointer-events');
+    this.navbarEl.style.removeProperty('transition');
+  }
+
+  /** Clear header inline styles set during hide/show */
+  private clearHeaderInlines(): void {
+    if (!this.viewHeaderEl) return;
+    this.viewHeaderEl.style.removeProperty('transform');
+    this.viewHeaderEl.style.removeProperty('opacity');
+    this.viewHeaderEl.style.removeProperty('pointer-events');
+    this.viewHeaderEl.style.removeProperty('transition');
+  }
+
   /** Idempotent — no-op if already unmounted */
   unmount(): void {
     if (!this.mounted) return;
@@ -196,25 +221,12 @@ export class FullScreenController {
     this.scrollEl.style.removeProperty('height');
 
     // Cancel WAAPI animations (Android)
-    this.navbarAnim?.cancel();
-    this.headerAnim?.cancel();
-    this.navbarAnim = null;
-    this.headerAnim = null;
+    this.cancelAnimations();
 
-    // Restore navbar
-    this.navbarEl.style.removeProperty('transform');
-    this.navbarEl.style.removeProperty('opacity');
-    this.navbarEl.style.removeProperty('pointer-events');
-    this.navbarEl.style.removeProperty('transition');
+    // Restore navbar + header
+    this.clearNavbarInlines();
     this.navbarEl.style.removeProperty('will-change');
-
-    // Restore header (Android JS-animated path)
-    if (this.viewHeaderEl) {
-      this.viewHeaderEl.style.removeProperty('transform');
-      this.viewHeaderEl.style.removeProperty('opacity');
-      this.viewHeaderEl.style.removeProperty('pointer-events');
-      this.viewHeaderEl.style.removeProperty('transition');
-    }
+    this.clearHeaderInlines();
 
     this.pendingLayout = null;
     this.barsHidden = false;
@@ -359,23 +371,13 @@ export class FullScreenController {
     this.body.classList.remove('full-screen-showing');
 
     // Cancel running WAAPI animations (rapid show→hide before finish)
-    this.navbarAnim?.cancel();
-    this.headerAnim?.cancel();
-    this.navbarAnim = null;
-    this.headerAnim = null;
+    this.cancelAnimations();
 
     // Clear show-path inlines (rapid show→hide before idle)
-    this.navbarEl.style.removeProperty('transform');
-    this.navbarEl.style.removeProperty('opacity');
-    this.navbarEl.style.removeProperty('transition');
+    this.clearNavbarInlines();
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transition');
-    if (this.viewHeaderEl) {
-      this.viewHeaderEl.style.removeProperty('transform');
-      this.viewHeaderEl.style.removeProperty('opacity');
-      this.viewHeaderEl.style.removeProperty('pointer-events');
-      this.viewHeaderEl.style.removeProperty('transition');
-    }
+    this.clearHeaderInlines();
 
     // Re-measure ONLY in clean state (no full screen classes).
     // During rapid show→hide, full-screen-active is still on body —
@@ -443,10 +445,7 @@ export class FullScreenController {
 
         // Remove header pin — WAAPI overrides CSS from this frame.
         // Inline !important would beat WAAPI, so must be removed first.
-        if (this.viewHeaderEl) {
-          this.viewHeaderEl.style.removeProperty('transform');
-          this.viewHeaderEl.style.removeProperty('opacity');
-        }
+        this.clearHeaderInlines();
 
         // Navbar WAAPI hide — fill: forwards holds final frame,
         // onfinish sets persistent inline state for post-animation CSS cascade
@@ -566,14 +565,8 @@ export class FullScreenController {
         this.headerAnim?.cancel();
 
         // Clear hide-path persistent inlines so WAAPI can override
-        this.navbarEl.style.removeProperty('transform');
-        this.navbarEl.style.removeProperty('opacity');
-        this.navbarEl.style.removeProperty('pointer-events');
-        if (this.viewHeaderEl) {
-          this.viewHeaderEl.style.removeProperty('transform');
-          this.viewHeaderEl.style.removeProperty('opacity');
-          this.viewHeaderEl.style.removeProperty('pointer-events');
-        }
+        this.clearNavbarInlines();
+        this.clearHeaderInlines();
 
         // Navbar WAAPI show
         this.navbarAnim = this.navbarEl.animate(
@@ -612,10 +605,7 @@ export class FullScreenController {
         this.programmaticScroll = true;
 
         // Cancel WAAPI animations before removing classes
-        this.navbarAnim?.cancel();
-        this.headerAnim?.cancel();
-        this.navbarAnim = null;
-        this.headerAnim = null;
+        this.cancelAnimations();
 
         this.scrollEl.style.removeProperty('height');
         this.container.style.removeProperty('margin-top');
@@ -627,16 +617,8 @@ export class FullScreenController {
         this.isActiveHider = false;
         this.settled = false;
 
-        this.navbarEl.style.removeProperty('transform');
-        this.navbarEl.style.removeProperty('opacity');
-        this.navbarEl.style.removeProperty('transition');
-
-        if (this.viewHeaderEl) {
-          this.viewHeaderEl.style.removeProperty('transform');
-          this.viewHeaderEl.style.removeProperty('opacity');
-          this.viewHeaderEl.style.removeProperty('pointer-events');
-          this.viewHeaderEl.style.removeProperty('transition');
-        }
+        this.clearNavbarInlines();
+        this.clearHeaderInlines();
 
         this.pendingRafId = requestAnimationFrame(() => {
           this.programmaticScroll = false;
@@ -690,9 +672,7 @@ export class FullScreenController {
       this.isActiveHider = false;
 
       // Navbar cleanup
-      this.navbarEl.style.removeProperty('transform');
-      this.navbarEl.style.removeProperty('opacity');
-      this.navbarEl.style.removeProperty('transition');
+      this.clearNavbarInlines();
 
       this.settled = false;
 

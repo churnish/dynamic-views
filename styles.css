@@ -68,8 +68,8 @@ settings:
         collapsed: true
     -
         id: dynamic-views-card-spacing-desktop
-        title: Card spacing
-        description: Gap between cards on desktop.
+        title: Gap
+        description: Spacing between cards on desktop.
         type: variable-number-slider
         default: 8
         min: 0
@@ -78,8 +78,8 @@ settings:
         format: px
     -
         id: dynamic-views-card-spacing-mobile
-        title: Card spacing
-        description: Gap between cards on mobile.
+        title: Gap
+        description: Spacing between cards on mobile.
         type: variable-number-slider
         default: 6
         min: 0
@@ -96,7 +96,7 @@ settings:
         default-dark: '#'
     -
         id: dynamic-views-hide-end-indicator
-        title: Hide view end indicator
+        title: Hide end of view line
         description: Do not show horizontal rule at view bottom.
         type: class-toggle
         default: false
@@ -4214,15 +4214,14 @@ body:not(.dynamic-views-show-thumbnail-placeholder) .dynamic-views .card-body:no
   display: none;
 }
 
-/* Extension mode (default): use max-height for JS truncation measurement.
+/* Extension mode (default): CSS line-clamp provides the fallback ellipsis;
+   JS canvas truncation refines the text to fit title + … + extension suffix.
+   max-height is a pixel-based guard belt on top of line-clamp.
    Extension is the default file-type indicator — no body class needed.
    :not() ensures these rules yield when another mode is active. */
 body:not(.dynamic-views-file-type-flair,
 .dynamic-views-file-type-icon,
 .dynamic-views-file-type-none) .dynamic-views .card-title {
-  display: block;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
   max-height: calc(var(--dynamic-views-title-lines, 2) * 1lh);
 }
 

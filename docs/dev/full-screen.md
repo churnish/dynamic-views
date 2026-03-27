@@ -521,7 +521,7 @@ Sources: Chromium WebView threading docs, synchronous compositing design doc, Ch
 | v143 | Cached totalShift — no forced reflow in hide path | Eliminates getComputedStyle/offsetHeight during hide. Minor jumps persist. |
 | v144 | Inline `transition: none` on view-content before class removal | Prevents margin-top transition on show. Minor jumps persist. |
 | v145 | scrollTop correction in same sync tick as layout change (no bridge) | Momentum killed instantly. Confirms scrollTop writes are unconditionally fatal — even batched with layout changes. |
-| v146 | `margin-top` bridge on scroll child (replaces `translateY` bridge) | Replaces `translateY(totalShift)` with `margin-top: totalShift` on `.dynamic-views-bases-container`. Unlike `translateY`, `margin-top` adjusts `scrollHeight` in sync with visual displacement — eliminates false top/bottom at scroll boundaries. Reverse bridge initially used `margin-top: -totalShift` for settled show path but was removed — settled show relies on natural downward content shift as bars reappear (same as Safari address bar behavior). Adaptive auto-show zone (`totalShift` threshold when bridge active + upward scroll) prevents false top gap from becoming visible. |
+| v146 | `margin-top` bridge on scroll child (replaces `translateY` bridge) | Replaces `translateY(totalShift)` with `margin-top: totalShift` on `.dynamic-views-bases-container`. Unlike `translateY`, `margin-top` adjusts `scrollHeight` in sync with visual displacement — eliminates false top/bottom at scroll boundaries. Reverse bridge initially used `margin-top: -totalShift` for settled show path but was removed on iOS — settled show relies on natural downward content shift as bars reappear (same as Safari address bar behavior). The reverse bridge remains in use on the Android show path, where `scrollTop += totalShift` exceeded one frame budget on Pixel 8a. Adaptive auto-show zone (`totalShift` threshold when bridge active + upward scroll) prevents false top gap from becoming visible. |
 | — | CSS transitions (300ms, inline `style.transition`) on Android | 30-55ms frame gaps scattered throughout animation — main-thread style recalc every frame competes with scroll processing on WebView's single-threaded compositor. |
 | — | Double-rAF animation start on Android | Absorbs scroll frame tail but doesn't help — contention is throughout the 300ms animation, not just at start. |
 | — | `will-change: transform` alone on Android | Reduces per-frame paint cost (layer pre-promotion) but doesn't solve thread contention — compositor and scroll share the same thread on WebView. |
@@ -612,7 +612,7 @@ The settle resolves the gap between the immediate bridge (momentum-safe visual c
 
 ### 2s settle delay
 
-`FULL_SCREEN_IDLE_MS = 2000`. The settle involves a `scrollTop` write and height unlock-relock, both of which cause the iOS native scroll indicator to flash. The 2s delay outlasts the scroll indicator's fade-out (~1.5s after last scroll event), so the settle is invisible to the user.
+`FULL_SCREEN_SCROLL_IDLE_MS = 2000`. The settle involves a `scrollTop` write and height unlock-relock, both of which cause the iOS native scroll indicator to flash. The 2s delay outlasts the scroll indicator's fade-out (~1.5s after last scroll event), so the settle is invisible to the user.
 
 ### Unlock-measure-relock
 
