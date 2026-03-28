@@ -546,6 +546,10 @@ export class FullScreenController {
   private hideBarsUI(): void {
     this.isActiveHider = true;
 
+    // Cancel WAAPI animations first — fill:forwards on toolbar/search would
+    // hold opacity at 1, preventing instant hide on both platforms.
+    this.cancelAnimations();
+
     // Remove show-state if rapid show→hide before idle
     if (this.isAndroid) {
       this.clearShowInlines();
@@ -558,9 +562,6 @@ export class FullScreenController {
       cancelAnimationFrame(this.capacitorRafId);
       this.capacitorRafId = null;
     }
-
-    // Cancel running WAAPI animations (rapid show→hide before finish)
-    this.cancelAnimations();
 
     // Clear show-path inlines (rapid show→hide before idle)
     this.clearNavbarInlines();
@@ -594,22 +595,12 @@ export class FullScreenController {
       // writes during active scroll (unlike iOS WebKit where they are fatal).
       // No bridge, no deferred settle, no false-bottom artifact.
 
-      // Pin header + toolbar + search at visible position via inline styles
-      // BEFORE class change. Inline !important overrides CSS, keeping elements
-      // visible until WAAPI takes over in the next rAF.
+      // Pin header at visible position via inline styles BEFORE class change.
+      // Inline !important overrides CSS, keeping it visible until WAAPI takes
+      // over in the next rAF. Toolbar/search hide instantly (no pin needed).
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
         setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
-      }
-      const toolbar =
-        this.leafContent.querySelector<HTMLElement>('.bases-header');
-      if (toolbar) {
-        setStyle(toolbar, 'opacity', '1', 'important');
-      }
-      const searchRow =
-        this.leafContent.querySelector<HTMLElement>('.bases-search-row');
-      if (searchRow) {
-        setStyle(searchRow, 'opacity', '1', 'important');
       }
 
       // Remove mask-image gradient on workspace split — no CSS rule for
@@ -656,12 +647,9 @@ export class FullScreenController {
         // Cancel any running show animations
         this.cancelAnimations();
 
-        // Remove header + toolbar + search pins — WAAPI overrides CSS
-        // from this frame. Inline !important would beat WAAPI, so must
-        // be removed first.
+        // Remove header pin — WAAPI overrides CSS from this frame.
+        // Inline !important would beat WAAPI, so must be removed first.
         this.clearHeaderInlines();
-        if (toolbar) toolbar.style.removeProperty('opacity');
-        if (searchRow) searchRow.style.removeProperty('opacity');
 
         // Navbar WAAPI hide — separate transform + opacity animations
         // to match native per-property timing. fill: forwards holds final
@@ -695,17 +683,8 @@ export class FullScreenController {
           setStyle(hEl, 'pointer-events', 'none', 'important');
         }
 
-        // Toolbar + search WAAPI hide — opacity only
-        if (toolbar) {
-          this.barAnims.push(
-            toolbar.animate([{ opacity: 1 }, { opacity: 0 }], UI_FADE_OPTS)
-          );
-        }
-        if (searchRow) {
-          this.barAnims.push(
-            searchRow.animate([{ opacity: 1 }, { opacity: 0 }], UI_FADE_OPTS)
-          );
-        }
+        // Toolbar + search: no WAAPI hide — instant snap to CSS opacity: 0.
+        // Pin cleared above, CSS takes over immediately.
       });
       return;
     }
@@ -895,27 +874,51 @@ export class FullScreenController {
       return;
     }
 
-    // iOS: bridge + deferred settle (scrollTop writes kill momentum)
+    // iOS: rAF + bridge + deferred settle (scrollTop writes kill momentum).
+    // rAF separates layout changes from opacity transition start — matches
+    // Android's natural compositor scheduling and prevents the CSS transition
+    // from firing in the same paint as the layout shift.
     void capacitorStatusBar?.show();
 
-    // Single class op — higher specificity overrides full-screen-active
-    this.leafContent.classList.add('full-screen-showing');
+    this.pendingRafId = requestAnimationFrame(() => {
+      // Single class op — higher specificity overrides full-screen-active
+      this.leafContent.classList.add('full-screen-showing');
 
-    // Bridge compensation — settled vs unsettled
-    if (!this.settled) {
-      // Hide bridge still active — remove it (bars returning, shift no longer needed).
-      // Bridge removal + bar restoration cancel geometrically (zero net shift).
-      this.container.style.removeProperty('margin-top');
-      this.container.style.removeProperty('transition');
-    }
-    // Settled: no reverse bridge — content shifts down naturally as bars
-    // appear (same as Safari address bar). Settle adjusts scrollTop at idle.
+      // Bridge compensation — settled vs unsettled
+      if (!this.settled) {
+        // Hide bridge still active — remove it (bars returning, shift no longer needed).
+        // Bridge removal + bar restoration cancel geometrically (zero net shift).
+        this.container.style.removeProperty('margin-top');
+        this.container.style.removeProperty('transition');
+      }
+      // Settled: no reverse bridge — content shifts down naturally as bars
+      // appear (same as Safari address bar). Settle adjusts scrollTop at idle.
 
-    // Navbar restore — transition from hide persists on the element,
-    // producing an animated reveal (slide up + fade in)
-    setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-    setStyle(this.navbarEl, 'opacity', '1', 'important');
-    this.navbarEl.style.removeProperty('pointer-events');
+      // Navbar restore — transition from hide persists on the element,
+      // producing an animated reveal (slide up + fade in)
+      setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
+      setStyle(this.navbarEl, 'opacity', '1', 'important');
+      this.navbarEl.style.removeProperty('pointer-events');
+
+      // Toolbar + search WAAPI fade-in — shared with Android.
+      // WebKit won't fire CSS transitions when the transition property
+      // and transitioned value change in the same style recalc, so WAAPI
+      // on both platforms.
+      const toolbar =
+        this.leafContent.querySelector<HTMLElement>('.bases-header');
+      if (toolbar) {
+        this.barAnims.push(
+          toolbar.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+        );
+      }
+      const searchRow =
+        this.leafContent.querySelector<HTMLElement>('.bases-search-row');
+      if (searchRow) {
+        this.barAnims.push(
+          searchRow.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+        );
+      }
+    });
 
     // Idle: remove classes + unlock → measure → relock height
     this.pendingLayout = () => {
@@ -934,6 +937,8 @@ export class FullScreenController {
       // The 2s settle delay outlasts the iOS scroll indicator fade,
       // so the unlock-relock is invisible.
       this.scrollEl.style.removeProperty('height');
+      // Cancel WAAPI before class removal — same reason as hide path
+      this.cancelAnimations();
       this.leafContent.classList.remove('full-screen-showing');
       this.body.classList.remove('full-screen-active');
       this.isActiveHider = false;

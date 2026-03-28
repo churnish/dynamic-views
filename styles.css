@@ -3290,19 +3290,11 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
   padding: 0 !important;
 }
 
-.is-phone:not(.is-android).full-screen-active [data-type=bases] .bases-header {
-  opacity: 0 !important;
-}
-
-.is-phone:not(.is-android).full-screen-active [data-type=bases] .bases-search-row {
-  opacity: 0 !important;
-}
-
-.is-android.is-phone.full-screen-active [data-type=bases] .bases-header {
+.is-phone.full-screen-active [data-type=bases] .bases-header {
   opacity: 0;
 }
 
-.is-android.is-phone.full-screen-active [data-type=bases] .bases-search-row {
+.is-phone.full-screen-active [data-type=bases] .bases-search-row {
   opacity: 0;
 }
 
@@ -3354,16 +3346,12 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
 }
 
 .is-phone.full-screen-active [data-type=bases].full-screen-showing .bases-header {
-  opacity: 1 !important;
   pointer-events: auto !important;
   margin-bottom: 0px !important;
-  transition: none !important;
 }
 
 .is-phone.full-screen-active [data-type=bases].full-screen-showing .bases-search-row {
-  opacity: 1 !important;
   pointer-events: auto !important;
-  transition: none !important;
   height: auto !important;
   overflow: visible !important;
   margin: unset !important;
