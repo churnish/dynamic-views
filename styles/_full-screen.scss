@@ -43,14 +43,25 @@
 .is-phone.full-screen-active [data-type='bases'] .bases-search-row {
   pointer-events: none !important;
   transition: none !important;
+  // Collapse vertical space — toolbar uses negative margin-bottom with a
+  // known height variable, but search row has no height variable. height: 0
+  // + overflow: hidden collapses it without removing from compositor layer.
+  height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 // iOS: CSS controls toolbar/search opacity — !important for class override
-.is-phone:not(.is-android).full-screen-active [data-type='bases'] .bases-header {
+.is-phone:not(.is-android).full-screen-active
+  [data-type='bases']
+  .bases-header {
   opacity: 0 !important;
 }
 
-.is-phone:not(.is-android).full-screen-active [data-type='bases'] .bases-search-row {
+.is-phone:not(.is-android).full-screen-active
+  [data-type='bases']
+  .bases-search-row {
   opacity: 0 !important;
 }
 
@@ -176,6 +187,10 @@
   opacity: 1 !important;
   pointer-events: auto !important;
   transition: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  margin: unset !important;
+  padding: unset !important;
 }
 
 .is-phone.full-screen-active

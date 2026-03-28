@@ -25,10 +25,37 @@ import {
   FULL_SCREEN_ANIM_MS,
 } from '../shared/constants';
 
-/** Shared WAAPI options for Android bar animations */
-const WAAPI_OPTS: KeyframeAnimationOptions = {
+// WAAPI options matching native Obsidian bar transitions.
+// Native uses CSS transitions with per-property timing:
+//   .view-header: opacity 200ms ease-in-out, transform 300ms ease-in-out
+//   .mobile-navbar: opacity 200ms ease-in-out, transform 300ms ease-out
+// WAAPI can't have per-property durations, so each property gets its own animation.
+
+/** Header slide: 300ms ease-in-out (matches native .view-header) */
+const HEADER_SLIDE_OPTS: KeyframeAnimationOptions = {
+  duration: FULL_SCREEN_ANIM_MS,
+  easing: 'ease-in-out',
+  fill: 'forwards' as FillMode,
+};
+
+/** Navbar slide: 300ms ease-out (matches native .mobile-navbar) */
+const NAVBAR_SLIDE_OPTS: KeyframeAnimationOptions = {
   duration: FULL_SCREEN_ANIM_MS,
   easing: 'ease-out',
+  fill: 'forwards' as FillMode,
+};
+
+/** Header/navbar opacity fade: 200ms ease-in-out (matches native) */
+const BAR_FADE_OPTS: KeyframeAnimationOptions = {
+  duration: 200,
+  easing: 'ease-in-out',
+  fill: 'forwards' as FillMode,
+};
+
+/** Toolbar/search opacity fade: 300ms ease-in-out */
+const UI_FADE_OPTS: KeyframeAnimationOptions = {
+  duration: FULL_SCREEN_ANIM_MS,
+  easing: 'ease-in-out',
   fill: 'forwards' as FillMode,
 };
 
@@ -95,11 +122,10 @@ export class FullScreenController {
   private readonly onTouchStartBound: (e: TouchEvent) => void;
   private readonly onTouchEndBound: (e: TouchEvent) => void;
 
-  // WAAPI animation handles (Android) — cancel before starting new ones
-  private headerAnim: Animation | null = null;
-  private navbarAnim: Animation | null = null;
-  private toolbarAnim: Animation | null = null;
-  private searchRowAnim: Animation | null = null;
+  // WAAPI animation handles (Android) — cancel before starting new ones.
+  // Array instead of named fields — per-property animations (transform vs
+  // opacity) double the handle count; an array simplifies lifecycle.
+  private barAnims: Animation[] = [];
   private capacitorRafId: number | null = null;
 
   // Touch tracking for tap-to-reveal
@@ -185,16 +211,10 @@ export class FullScreenController {
     });
   }
 
-  /** Cancel and discard WAAPI animation handles (Android) */
+  /** Cancel and discard all WAAPI animation handles (Android) */
   private cancelAnimations(): void {
-    this.navbarAnim?.cancel();
-    this.headerAnim?.cancel();
-    this.toolbarAnim?.cancel();
-    this.searchRowAnim?.cancel();
-    this.navbarAnim = null;
-    this.headerAnim = null;
-    this.toolbarAnim = null;
-    this.searchRowAnim = null;
+    for (const a of this.barAnims) a.cancel();
+    this.barAnims = [];
   }
 
   /** Clear navbar inline styles set during hide/show */
@@ -242,12 +262,16 @@ export class FullScreenController {
       setStyle(toolbar, 'transition', 'none', 'important');
     }
 
-    // Search row: restore pointer-events (WAAPI handles opacity)
+    // Search row: restore pointer-events + collapse overrides (WAAPI handles opacity)
     const searchRow =
       this.leafContent.querySelector<HTMLElement>('.bases-search-row');
     if (searchRow) {
       setStyle(searchRow, 'pointer-events', 'auto', 'important');
       setStyle(searchRow, 'transition', 'none', 'important');
+      setStyle(searchRow, 'height', 'auto', 'important');
+      setStyle(searchRow, 'overflow', 'visible', 'important');
+      setStyle(searchRow, 'margin', 'unset', 'important');
+      setStyle(searchRow, 'padding', 'unset', 'important');
     }
 
     // Header: pointer-events + z-index above ::before scrim.
@@ -260,7 +284,11 @@ export class FullScreenController {
     // ::before scrim: expand to full margin-top gap via CSS custom properties.
     // The ::before rule reads --dynamic-views-scrim-height and --dynamic-views-scrim-bg, falling
     // back to the standard gradient when absent.
-    setStyle(this.leafContent, '--dynamic-views-scrim-height', 'var(--view-top-spacing)');
+    setStyle(
+      this.leafContent,
+      '--dynamic-views-scrim-height',
+      'var(--view-top-spacing)'
+    );
     setStyle(
       this.leafContent,
       '--dynamic-views-scrim-bg',
@@ -274,8 +302,9 @@ export class FullScreenController {
 
     // Restore mask-image gradient on workspace split — remove inline
     // override set in hideBarsUI so Obsidian's normal CSS takes over.
-    const workspaceSplit =
-      this.body.querySelector<HTMLElement>('.workspace-split.mod-root');
+    const workspaceSplit = this.body.querySelector<HTMLElement>(
+      '.workspace-split.mod-root'
+    );
     if (workspaceSplit) {
       workspaceSplit.style.removeProperty('-webkit-mask-image');
       workspaceSplit.style.removeProperty('mask-image');
@@ -302,6 +331,10 @@ export class FullScreenController {
       searchRow.style.removeProperty('opacity');
       searchRow.style.removeProperty('pointer-events');
       searchRow.style.removeProperty('transition');
+      searchRow.style.removeProperty('height');
+      searchRow.style.removeProperty('overflow');
+      searchRow.style.removeProperty('margin');
+      searchRow.style.removeProperty('padding');
     }
 
     if (this.viewHeaderEl) {
@@ -346,8 +379,9 @@ export class FullScreenController {
       if (this.isAndroid) {
         this.clearShowInlines();
         // Clean up mask-image inline on workspace split
-        const workspaceSplit =
-          this.body.querySelector<HTMLElement>('.workspace-split.mod-root');
+        const workspaceSplit = this.body.querySelector<HTMLElement>(
+          '.workspace-split.mod-root'
+        );
         if (workspaceSplit) {
           workspaceSplit.style.removeProperty('-webkit-mask-image');
           workspaceSplit.style.removeProperty('mask-image');
@@ -581,8 +615,9 @@ export class FullScreenController {
       // Remove mask-image gradient on workspace split — no CSS rule for
       // Android (Obsidian's gradient value is unknown, can't use var fallback).
       // Show path removes inline → Obsidian's CSS takes over.
-      const workspaceSplit =
-        this.body.querySelector<HTMLElement>('.workspace-split.mod-root');
+      const workspaceSplit = this.body.querySelector<HTMLElement>(
+        '.workspace-split.mod-root'
+      );
       if (workspaceSplit) {
         setStyle(workspaceSplit, '-webkit-mask-image', 'none', 'important');
         setStyle(workspaceSplit, 'mask-image', 'none', 'important');
@@ -628,42 +663,47 @@ export class FullScreenController {
         if (toolbar) toolbar.style.removeProperty('opacity');
         if (searchRow) searchRow.style.removeProperty('opacity');
 
-        // Navbar WAAPI hide — fill: forwards holds final frame.
-        // No onfinish: persistent !important inlines would block show
-        // WAAPI's cascade (show relies on composite priority override).
-        this.navbarAnim = this.navbarEl.animate(
-          [
-            { transform: 'translateY(0)', opacity: 1 },
-            { transform: `translateY(${navbarHeight}px)`, opacity: 0 },
-          ],
-          WAAPI_OPTS
+        // Navbar WAAPI hide — separate transform + opacity animations
+        // to match native per-property timing. fill: forwards holds final
+        // frame. No onfinish: persistent !important inlines would block
+        // show WAAPI's cascade (show relies on composite priority override).
+        this.barAnims.push(
+          this.navbarEl.animate(
+            [
+              { transform: 'translateY(0)' },
+              { transform: `translateY(${navbarHeight}px)` },
+            ],
+            NAVBAR_SLIDE_OPTS
+          ),
+          this.navbarEl.animate([{ opacity: 1 }, { opacity: 0 }], BAR_FADE_OPTS)
         );
         setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
 
-        // Header WAAPI hide
+        // Header WAAPI hide — separate transform + opacity
         if (this.viewHeaderEl) {
           const hEl = this.viewHeaderEl;
-          this.headerAnim = hEl.animate(
-            [
-              { transform: 'translateY(0)', opacity: 1 },
-              { transform: `translateY(-${headerShift}px)`, opacity: 0 },
-            ],
-            WAAPI_OPTS
+          this.barAnims.push(
+            hEl.animate(
+              [
+                { transform: 'translateY(0)' },
+                { transform: `translateY(-${headerShift}px)` },
+              ],
+              HEADER_SLIDE_OPTS
+            ),
+            hEl.animate([{ opacity: 1 }, { opacity: 0 }], BAR_FADE_OPTS)
           );
           setStyle(hEl, 'pointer-events', 'none', 'important');
         }
 
-        // Toolbar + search WAAPI hide — fade out over same duration
+        // Toolbar + search WAAPI hide — opacity only
         if (toolbar) {
-          this.toolbarAnim = toolbar.animate(
-            [{ opacity: 1 }, { opacity: 0 }],
-            WAAPI_OPTS
+          this.barAnims.push(
+            toolbar.animate([{ opacity: 1 }, { opacity: 0 }], UI_FADE_OPTS)
           );
         }
         if (searchRow) {
-          this.searchRowAnim = searchRow.animate(
-            [{ opacity: 1 }, { opacity: 0 }],
-            WAAPI_OPTS
+          this.barAnims.push(
+            searchRow.animate([{ opacity: 1 }, { opacity: 0 }], UI_FADE_OPTS)
           );
         }
       });
@@ -758,57 +798,56 @@ export class FullScreenController {
         // override fill:forwards on the hide animation immediately.
         // Canceling hide FIRST would snap the header to CSS default
         // (visible, white bg) for one frame before show WAAPI starts.
-        const oldNavbar = this.navbarAnim;
-        const oldHeader = this.headerAnim;
-        const oldToolbar = this.toolbarAnim;
-        const oldSearchRow = this.searchRowAnim;
+        const oldAnims = [...this.barAnims];
+        this.barAnims = [];
 
-        // Header WAAPI show — slides in from above (::before scrim covers gap)
+        // Header WAAPI show — slides in from above (::before scrim covers gap).
+        // Separate transform + opacity to match native per-property timing.
         if (this.viewHeaderEl) {
-          this.headerAnim = this.viewHeaderEl.animate(
-            [
-              { transform: headerFrom, opacity: 0 },
-              { transform: 'translateY(0)', opacity: 1 },
-            ],
-            WAAPI_OPTS
+          this.barAnims.push(
+            this.viewHeaderEl.animate(
+              [{ transform: headerFrom }, { transform: 'translateY(0)' }],
+              HEADER_SLIDE_OPTS
+            ),
+            this.viewHeaderEl.animate(
+              [{ opacity: 0 }, { opacity: 1 }],
+              BAR_FADE_OPTS
+            )
           );
         }
-        oldHeader?.cancel();
+
+        // Cancel old AFTER starting new (composite priority — later-created
+        // animations override fill:forwards on older animations)
+        for (const a of oldAnims) a.cancel();
         this.clearHeaderInlines();
 
-        // Navbar WAAPI show
-        this.navbarAnim = this.navbarEl.animate(
-          [
-            { transform: navbarFrom, opacity: 0 },
-            { transform: 'translateY(0)', opacity: 1 },
-          ],
-          WAAPI_OPTS
+        // Navbar WAAPI show — separate transform + opacity
+        this.barAnims.push(
+          this.navbarEl.animate(
+            [{ transform: navbarFrom }, { transform: 'translateY(0)' }],
+            NAVBAR_SLIDE_OPTS
+          ),
+          this.navbarEl.animate([{ opacity: 0 }, { opacity: 1 }], BAR_FADE_OPTS)
         );
-        oldNavbar?.cancel();
-
         this.clearNavbarInlines();
 
-        // Toolbar + search WAAPI show — fade in over same duration.
+        // Toolbar + search WAAPI show — opacity only.
         // CSS opacity (no !important on Android) is overridden by WAAPI.
         const toolbar =
           this.leafContent.querySelector<HTMLElement>('.bases-header');
         if (toolbar) {
-          this.toolbarAnim = toolbar.animate(
-            [{ opacity: 0 }, { opacity: 1 }],
-            WAAPI_OPTS
+          this.barAnims.push(
+            toolbar.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
           );
         }
-        oldToolbar?.cancel();
 
         const searchRow =
           this.leafContent.querySelector<HTMLElement>('.bases-search-row');
         if (searchRow) {
-          this.searchRowAnim = searchRow.animate(
-            [{ opacity: 0 }, { opacity: 1 }],
-            WAAPI_OPTS
+          this.barAnims.push(
+            searchRow.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
           );
         }
-        oldSearchRow?.cancel();
 
         // Defer native status bar to next frame — separates window inset
         // change from CSS layout reflow on the single-threaded compositor.
