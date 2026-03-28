@@ -568,7 +568,7 @@ export class FullScreenController {
     }
 
     // Cancel WAAPI animations first — fill:forwards on toolbar/search would
-    // hold opacity at 1, preventing instant hide on both platforms.
+    // hold opacity at 1, preventing instant hide.
     this.cancelAnimations();
 
     // Remove show-state if rapid show→hide before idle
@@ -925,23 +925,31 @@ export class FullScreenController {
 
       this.programmaticScroll = false;
 
-      // Toolbar + search WAAPI fade-in — shared with Android.
-      // WebKit won't fire CSS transitions when the transition property
-      // and transitioned value change in the same style recalc, so WAAPI
-      // on both platforms.
-      if (this.toolbarEl) {
-        this.barAnims.push(
-          this.toolbarEl.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
-        );
-      }
-      if (this.searchRowEl) {
-        this.barAnims.push(
-          this.searchRowEl.animate(
-            [{ opacity: 0 }, { opacity: 1 }],
-            UI_FADE_OPTS
-          )
-        );
-      }
+      // Toolbar + search WAAPI fade-in — deferred to next frame.
+      // WebKit starts WAAPI immediately (classList.add is a single op
+      // with minimal layout work), so the fade begins ~1-2 frames
+      // earlier than Android where compositor contention from
+      // applyShowInlines delays the first painted frame. Nesting in a
+      // second rAF matches Android's natural timing. The extra frame
+      // is invisible — elements are already at opacity: 0.
+      requestAnimationFrame(() => {
+        if (this.toolbarEl) {
+          this.barAnims.push(
+            this.toolbarEl.animate(
+              [{ opacity: 0 }, { opacity: 1 }],
+              UI_FADE_OPTS
+            )
+          );
+        }
+        if (this.searchRowEl) {
+          this.barAnims.push(
+            this.searchRowEl.animate(
+              [{ opacity: 0 }, { opacity: 1 }],
+              UI_FADE_OPTS
+            )
+          );
+        }
+      });
     });
 
     // Idle: remove classes + unlock → measure → relock height
