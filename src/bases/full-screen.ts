@@ -5,6 +5,9 @@
  * adjusts scrollHeight in sync with visual displacement — no false
  * top/bottom at scroll boundaries.
  *
+ * All bar animations (header, navbar slide/fade) match native Obsidian
+ * full screen behavior in markdown views.
+ *
  * Guards: Platform.isPhone && body.has('auto-full-screen') && settings.fullScreen
  *
  * TODO: when Safari ships overflow-anchor, skip bridge entirely —
@@ -64,6 +67,7 @@ export class FullScreenController {
   private readonly viewContent: HTMLElement;
   private readonly navbarEl: HTMLElement;
   private readonly viewHeaderEl: HTMLElement | null;
+  private readonly leafContent: HTMLElement;
   private readonly ownerDoc: Document;
   private readonly body: HTMLElement;
   private readonly isAndroid: boolean;
@@ -94,6 +98,9 @@ export class FullScreenController {
   // WAAPI animation handles (Android) — cancel before starting new ones
   private headerAnim: Animation | null = null;
   private navbarAnim: Animation | null = null;
+  private toolbarAnim: Animation | null = null;
+  private searchRowAnim: Animation | null = null;
+  private capacitorRafId: number | null = null;
 
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
@@ -108,6 +115,11 @@ export class FullScreenController {
       elements.viewContent.parentElement?.querySelector<HTMLElement>(
         '.view-header'
       ) ?? null;
+    // iOS: full-screen-showing class lives on leaf content (not body).
+    // Android: class is never used — applyShowInlines/clearShowInlines
+    // bypass classList entirely to avoid style invalidation that exceeds
+    // the single-threaded WebView compositor's frame budget.
+    this.leafContent = elements.viewContent.parentElement!;
     this.ownerDoc = this.scrollEl.ownerDocument;
     this.body = this.ownerDoc.body;
     this.isAndroid = this.body.classList.contains('is-android');
@@ -177,8 +189,12 @@ export class FullScreenController {
   private cancelAnimations(): void {
     this.navbarAnim?.cancel();
     this.headerAnim?.cancel();
+    this.toolbarAnim?.cancel();
+    this.searchRowAnim?.cancel();
     this.navbarAnim = null;
     this.headerAnim = null;
+    this.toolbarAnim = null;
+    this.searchRowAnim = null;
   }
 
   /** Clear navbar inline styles set during hide/show */
@@ -198,6 +214,108 @@ export class FullScreenController {
     this.viewHeaderEl.style.removeProperty('transition');
   }
 
+  // ---------------------------------------------------------------------------
+  // Android show-state inline styles — bypass classList to avoid style
+  // invalidation that exceeds the single-threaded WebView compositor's
+  // frame budget. Any classList.add on any element triggers selector
+  // re-matching across the subtree; inline setProperty targets only the
+  // specific element with zero selector overhead.
+  // ---------------------------------------------------------------------------
+
+  /** Apply show-state CSS via inline styles (Android only) */
+  private applyShowInlines(): void {
+    // viewContent: restore margin-top (overrides full-screen-active's margin-top: 0)
+    setStyle(
+      this.viewContent,
+      'margin-top',
+      'var(--view-top-spacing)',
+      'important'
+    );
+    setStyle(this.viewContent, 'transition', 'none', 'important');
+
+    // Toolbar: restore pointer-events + margin (WAAPI handles opacity)
+    const toolbar =
+      this.leafContent.querySelector<HTMLElement>('.bases-header');
+    if (toolbar) {
+      setStyle(toolbar, 'pointer-events', 'auto', 'important');
+      setStyle(toolbar, 'margin-bottom', '0px', 'important');
+      setStyle(toolbar, 'transition', 'none', 'important');
+    }
+
+    // Search row: restore pointer-events (WAAPI handles opacity)
+    const searchRow =
+      this.leafContent.querySelector<HTMLElement>('.bases-search-row');
+    if (searchRow) {
+      setStyle(searchRow, 'pointer-events', 'auto', 'important');
+      setStyle(searchRow, 'transition', 'none', 'important');
+    }
+
+    // Header: pointer-events + z-index above ::before scrim.
+    // WAAPI handles transform + opacity — inline !important would block it.
+    if (this.viewHeaderEl) {
+      setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
+      setStyle(this.viewHeaderEl, 'z-index', '20', 'important');
+    }
+
+    // ::before scrim: expand to full margin-top gap via CSS custom properties.
+    // The ::before rule reads --dynamic-views-scrim-height and --dynamic-views-scrim-bg, falling
+    // back to the standard gradient when absent.
+    setStyle(this.leafContent, '--dynamic-views-scrim-height', 'var(--view-top-spacing)');
+    setStyle(
+      this.leafContent,
+      '--dynamic-views-scrim-bg',
+      'var(--dynamic-views-background-primary)'
+    );
+
+    // ::after scroll gradient: restore during show (hidden by default during
+    // full-screen-active). CSS reads --dynamic-views-after-display, falling
+    // back to 'none' when absent.
+    setStyle(this.leafContent, '--dynamic-views-after-display', 'block');
+
+    // Restore mask-image gradient on workspace split — remove inline
+    // override set in hideBarsUI so Obsidian's normal CSS takes over.
+    const workspaceSplit =
+      this.body.querySelector<HTMLElement>('.workspace-split.mod-root');
+    if (workspaceSplit) {
+      workspaceSplit.style.removeProperty('-webkit-mask-image');
+      workspaceSplit.style.removeProperty('mask-image');
+    }
+  }
+
+  /** Remove show-state inline styles (Android only) */
+  private clearShowInlines(): void {
+    this.viewContent.style.removeProperty('margin-top');
+    this.viewContent.style.removeProperty('transition');
+
+    const toolbar =
+      this.leafContent.querySelector<HTMLElement>('.bases-header');
+    if (toolbar) {
+      toolbar.style.removeProperty('opacity');
+      toolbar.style.removeProperty('pointer-events');
+      toolbar.style.removeProperty('margin-bottom');
+      toolbar.style.removeProperty('transition');
+    }
+
+    const searchRow =
+      this.leafContent.querySelector<HTMLElement>('.bases-search-row');
+    if (searchRow) {
+      searchRow.style.removeProperty('opacity');
+      searchRow.style.removeProperty('pointer-events');
+      searchRow.style.removeProperty('transition');
+    }
+
+    if (this.viewHeaderEl) {
+      this.viewHeaderEl.style.removeProperty('z-index');
+    }
+
+    // ::before scrim: revert to standard gradient
+    this.leafContent.style.removeProperty('--dynamic-views-scrim-height');
+    this.leafContent.style.removeProperty('--dynamic-views-scrim-bg');
+
+    // ::after scroll gradient: revert to hidden
+    this.leafContent.style.removeProperty('--dynamic-views-after-display');
+  }
+
   /** Idempotent — no-op if already unmounted */
   unmount(): void {
     if (!this.mounted) return;
@@ -208,10 +326,14 @@ export class FullScreenController {
     this.scrollEl.removeEventListener('touchstart', this.onTouchStartBound);
     this.scrollEl.removeEventListener('touchend', this.onTouchEndBound);
 
-    // Cancel pending rAF
+    // Cancel pending rAFs
     if (this.pendingRafId != null) {
       cancelAnimationFrame(this.pendingRafId);
       this.pendingRafId = null;
+    }
+    if (this.capacitorRafId != null) {
+      cancelAnimationFrame(this.capacitorRafId);
+      this.capacitorRafId = null;
     }
 
     // Clear timers
@@ -219,9 +341,21 @@ export class FullScreenController {
       clearTimeout(this.scrollIdleTimer);
       this.scrollIdleTimer = null;
     }
-    // Remove full screen classes only if this instance set them
+    // Remove full screen state only if this instance set it
     if (this.isActiveHider) {
-      this.body.classList.remove('full-screen-active', 'full-screen-showing');
+      if (this.isAndroid) {
+        this.clearShowInlines();
+        // Clean up mask-image inline on workspace split
+        const workspaceSplit =
+          this.body.querySelector<HTMLElement>('.workspace-split.mod-root');
+        if (workspaceSplit) {
+          workspaceSplit.style.removeProperty('-webkit-mask-image');
+          workspaceSplit.style.removeProperty('mask-image');
+        }
+      } else {
+        this.leafContent.classList.remove('full-screen-showing');
+      }
+      this.body.classList.remove('full-screen-active');
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
@@ -378,8 +512,18 @@ export class FullScreenController {
   private hideBarsUI(): void {
     this.isActiveHider = true;
 
-    // Remove full-screen-showing if rapid show→hide before idle
-    this.body.classList.remove('full-screen-showing');
+    // Remove show-state if rapid show→hide before idle
+    if (this.isAndroid) {
+      this.clearShowInlines();
+    } else {
+      this.leafContent.classList.remove('full-screen-showing');
+    }
+
+    // Cancel deferred capacitor status bar (rapid show→hide)
+    if (this.capacitorRafId != null) {
+      cancelAnimationFrame(this.capacitorRafId);
+      this.capacitorRafId = null;
+    }
 
     // Cancel running WAAPI animations (rapid show→hide before finish)
     this.cancelAnimations();
@@ -416,12 +560,32 @@ export class FullScreenController {
       // writes during active scroll (unlike iOS WebKit where they are fatal).
       // No bridge, no deferred settle, no false-bottom artifact.
 
-      // Pin header at visible position via inline styles BEFORE class change.
-      // CSS `transition: none !important` on .view-header prevents Obsidian's
-      // native 0.3s transition from firing during the class change.
+      // Pin header + toolbar + search at visible position via inline styles
+      // BEFORE class change. Inline !important overrides CSS, keeping elements
+      // visible until WAAPI takes over in the next rAF.
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
         setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
+      }
+      const toolbar =
+        this.leafContent.querySelector<HTMLElement>('.bases-header');
+      if (toolbar) {
+        setStyle(toolbar, 'opacity', '1', 'important');
+      }
+      const searchRow =
+        this.leafContent.querySelector<HTMLElement>('.bases-search-row');
+      if (searchRow) {
+        setStyle(searchRow, 'opacity', '1', 'important');
+      }
+
+      // Remove mask-image gradient on workspace split — no CSS rule for
+      // Android (Obsidian's gradient value is unknown, can't use var fallback).
+      // Show path removes inline → Obsidian's CSS takes over.
+      const workspaceSplit =
+        this.body.querySelector<HTMLElement>('.workspace-split.mod-root');
+      if (workspaceSplit) {
+        setStyle(workspaceSplit, '-webkit-mask-image', 'none', 'important');
+        setStyle(workspaceSplit, 'mask-image', 'none', 'important');
       }
 
       const before = this.scrollEl.scrollTop;
@@ -455,12 +619,14 @@ export class FullScreenController {
         this.prevScrollTop = this.scrollEl.scrollTop;
 
         // Cancel any running show animations
-        this.navbarAnim?.cancel();
-        this.headerAnim?.cancel();
+        this.cancelAnimations();
 
-        // Remove header pin — WAAPI overrides CSS from this frame.
-        // Inline !important would beat WAAPI, so must be removed first.
+        // Remove header + toolbar + search pins — WAAPI overrides CSS
+        // from this frame. Inline !important would beat WAAPI, so must
+        // be removed first.
         this.clearHeaderInlines();
+        if (toolbar) toolbar.style.removeProperty('opacity');
+        if (searchRow) searchRow.style.removeProperty('opacity');
 
         // Navbar WAAPI hide — fill: forwards holds final frame.
         // No onfinish: persistent !important inlines would block show
@@ -485,6 +651,20 @@ export class FullScreenController {
             WAAPI_OPTS
           );
           setStyle(hEl, 'pointer-events', 'none', 'important');
+        }
+
+        // Toolbar + search WAAPI hide — fade out over same duration
+        if (toolbar) {
+          this.toolbarAnim = toolbar.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            WAAPI_OPTS
+          );
+        }
+        if (searchRow) {
+          this.searchRowAnim = searchRow.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            WAAPI_OPTS
+          );
         }
       });
       return;
@@ -557,18 +737,11 @@ export class FullScreenController {
         `translateY(-${this.getHeaderShift()}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
-        void capacitorStatusBar?.show();
-
-        // Cancel hide WAAPI on header BEFORE adding class — fill:forwards
-        // holds the header at hidden state. Must be removed so the show
-        // WAAPI can animate from the correct starting position.
-        this.headerAnim?.cancel();
-        this.headerAnim = null;
-        this.clearHeaderInlines();
-
-        // Class toggle: margin/toolbar/search restore + ::before scrim
-        // covers the 99px gap with solid background while header slides in.
-        this.body.classList.add('full-screen-showing');
+        // Inline styles restore margin/toolbar/search — bypasses classList
+        // to avoid style invalidation that drops frames on the
+        // single-threaded Android WebView compositor. ::before scrim (always
+        // full-height on Android during full-screen-active) covers the gap.
+        this.applyShowInlines();
 
         // Reverse bridge: offset the layout shift from margin-top + toolbar
         // restoration. Content stays visually in place. Bridge removed at idle.
@@ -580,8 +753,15 @@ export class FullScreenController {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
 
-        // Start show WAAPI BEFORE canceling old animations (composite priority)
+        // Start show WAAPI BEFORE canceling old animations — later-created
+        // animations have higher composite priority (WAAPI §4.6) and
+        // override fill:forwards on the hide animation immediately.
+        // Canceling hide FIRST would snap the header to CSS default
+        // (visible, white bg) for one frame before show WAAPI starts.
         const oldNavbar = this.navbarAnim;
+        const oldHeader = this.headerAnim;
+        const oldToolbar = this.toolbarAnim;
+        const oldSearchRow = this.searchRowAnim;
 
         // Header WAAPI show — slides in from above (::before scrim covers gap)
         if (this.viewHeaderEl) {
@@ -593,6 +773,8 @@ export class FullScreenController {
             WAAPI_OPTS
           );
         }
+        oldHeader?.cancel();
+        this.clearHeaderInlines();
 
         // Navbar WAAPI show
         this.navbarAnim = this.navbarEl.animate(
@@ -605,12 +787,41 @@ export class FullScreenController {
         oldNavbar?.cancel();
 
         this.clearNavbarInlines();
+
+        // Toolbar + search WAAPI show — fade in over same duration.
+        // CSS opacity (no !important on Android) is overridden by WAAPI.
+        const toolbar =
+          this.leafContent.querySelector<HTMLElement>('.bases-header');
+        if (toolbar) {
+          this.toolbarAnim = toolbar.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            WAAPI_OPTS
+          );
+        }
+        oldToolbar?.cancel();
+
+        const searchRow =
+          this.leafContent.querySelector<HTMLElement>('.bases-search-row');
+        if (searchRow) {
+          this.searchRowAnim = searchRow.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            WAAPI_OPTS
+          );
+        }
+        oldSearchRow?.cancel();
+
+        // Defer native status bar to next frame — separates window inset
+        // change from CSS layout reflow on the single-threaded compositor.
+        this.capacitorRafId = requestAnimationFrame(() => {
+          this.capacitorRafId = null;
+          void capacitorStatusBar?.show();
+        });
       });
 
-      // Idle: remove bridge + compensate scrollTop + remove classes + relock.
-      // full-screen-showing already restored all layout (margin, toolbar,
-      // search). Class removal is a visual no-op — defaults match showing
-      // state. Bridge removal + scrollTop is the only geometric operation.
+      // Idle: remove bridge + compensate scrollTop + remove inlines/classes
+      // + relock. Inline styles already restored all layout (margin, toolbar,
+      // search). Removal is a visual no-op — defaults match showing state.
+      // Bridge removal + scrollTop is the only geometric operation.
       this.pendingLayout = () => {
         this.programmaticScroll = true;
 
@@ -626,7 +837,8 @@ export class FullScreenController {
         }
 
         this.scrollEl.style.removeProperty('height');
-        this.body.classList.remove('full-screen-active', 'full-screen-showing');
+        this.clearShowInlines();
+        this.body.classList.remove('full-screen-active');
         this.isActiveHider = false;
         this.settled = false;
 
@@ -648,7 +860,7 @@ export class FullScreenController {
     void capacitorStatusBar?.show();
 
     // Single class op — higher specificity overrides full-screen-active
-    this.body.classList.add('full-screen-showing');
+    this.leafContent.classList.add('full-screen-showing');
 
     // Bridge compensation — settled vs unsettled
     if (!this.settled) {
@@ -660,7 +872,8 @@ export class FullScreenController {
     // Settled: no reverse bridge — content shifts down naturally as bars
     // appear (same as Safari address bar). Settle adjusts scrollTop at idle.
 
-    // Navbar restore (inline — navbar is shared, not scoped to [data-type='bases'])
+    // Navbar restore — transition from hide persists on the element,
+    // producing an animated reveal (slide up + fade in)
     setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
     setStyle(this.navbarEl, 'opacity', '1', 'important');
     this.navbarEl.style.removeProperty('pointer-events');
@@ -682,7 +895,8 @@ export class FullScreenController {
       // The 2s settle delay outlasts the iOS scroll indicator fade,
       // so the unlock-relock is invisible.
       this.scrollEl.style.removeProperty('height');
-      this.body.classList.remove('full-screen-active', 'full-screen-showing');
+      this.leafContent.classList.remove('full-screen-showing');
+      this.body.classList.remove('full-screen-active');
       this.isActiveHider = false;
 
       // Navbar cleanup

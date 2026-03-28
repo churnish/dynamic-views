@@ -34,7 +34,6 @@
 // the toolbar). opacity:0 keeps the element painted and layer-cached, so
 // showing is a compositor-only opacity flip with no rasterization.
 .is-phone.full-screen-active [data-type='bases'] .bases-header {
-  opacity: 0 !important;
   pointer-events: none !important;
   margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
   transition: none !important;
@@ -42,9 +41,27 @@
 }
 
 .is-phone.full-screen-active [data-type='bases'] .bases-search-row {
-  opacity: 0 !important;
   pointer-events: none !important;
   transition: none !important;
+}
+
+// iOS: CSS controls toolbar/search opacity — !important for class override
+.is-phone:not(.is-android).full-screen-active [data-type='bases'] .bases-header {
+  opacity: 0 !important;
+}
+
+.is-phone:not(.is-android).full-screen-active [data-type='bases'] .bases-search-row {
+  opacity: 0 !important;
+}
+
+// Android: WAAPI controls toolbar/search opacity — no !important
+// (WAAPI sits below !important in the cascade and can't override it)
+.is-android.is-phone.full-screen-active [data-type='bases'] .bases-header {
+  opacity: 0;
+}
+
+.is-android.is-phone.full-screen-active [data-type='bases'] .bases-search-row {
+  opacity: 0;
 }
 
 .is-phone.full-screen-active [data-type='bases'] .view-content {
@@ -60,20 +77,34 @@
   background-color: var(--dynamic-views-background-primary) !important;
 }
 
-// Cosmetic overrides: only while bars are hidden. :not(.full-screen-showing)
-// ensures these revert to defaults the instant showBarsUI adds full-screen-
-// showing — synced with navbar WAAPI. Removing full-screen-active at idle
-// is then a visual no-op (overrides already inactive).
-.is-phone.full-screen-active:not(.full-screen-showing)
-  [data-type='bases']::after {
+// Cosmetic overrides: only while bars are hidden.
+
+// iOS: :not(.full-screen-showing) reverts the instant showBarsUI adds the class.
+.is-phone:not(.is-android).full-screen-active
+  [data-type='bases']:not(.full-screen-showing)::after {
   display: none !important;
 }
 
-.is-phone.full-screen-active:not(.full-screen-showing)
+.is-phone:not(.is-android).full-screen-active:not(
+    :has([data-type='bases'].full-screen-showing)
+  )
   .workspace-split.mod-root {
   -webkit-mask-image: none !important;
   mask-image: none !important;
 }
+
+// Android: full-screen-showing is never used (inline styles instead).
+// ::after display driven by CSS custom property — defaults to none (hidden)
+// when --dynamic-views-after-display is absent. applyShowInlines() sets
+// it to 'block' during show, clearShowInlines() removes it.
+.is-android.is-phone.full-screen-active [data-type='bases']::after {
+  display: var(--dynamic-views-after-display, none) !important;
+}
+
+// Android: mask-image managed entirely via inline styles in JS.
+// Hide sets mask-image: none on .workspace-split.mod-root; show removes
+// the inline so Obsidian's normal gradient CSS takes over. Can't use CSS
+// custom property because the restore value (Obsidian's gradient) is unknown.
 
 .is-phone.full-screen-active [data-type='bases']::before {
   content: '' !important;
@@ -91,30 +122,47 @@
   pointer-events: none !important;
 }
 
+// Android: ::before height and background driven by inline CSS custom
+// properties set in applyShowInlines(). Defaults to the standard gradient
+// when properties are absent (hide state). During show, JS sets
+// --dynamic-views-scrim-height and --dynamic-views-scrim-bg to expand the scrim to cover the
+// full margin-top gap while the header WAAPI slides in (z-index: 20).
+.is-android.is-phone.full-screen-active [data-type='bases']::before {
+  height: var(
+    --dynamic-views-scrim-height,
+    var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+  ) !important;
+  background: var(
+    --dynamic-views-scrim-bg,
+    linear-gradient(
+      to bottom,
+      var(--dynamic-views-background-primary) 0px,
+      transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+    )
+  ) !important;
+}
+
 // full-screen-showing: higher-specificity overrides to restore bars
 
+// full-screen-showing: lives on [data-type='bases'] (not body) to scope
+// style recalc to the leaf subtree. Adding a class to body triggers
+// document-wide selector matching that exceeds the single-threaded
+// Android WebView compositor's frame budget.
+
 // iOS: CSS restores header on show
-.is-phone:not(.is-android).full-screen-active.full-screen-showing
-  [data-type='bases']
+.is-phone:not(.is-android).full-screen-active
+  [data-type='bases'].full-screen-showing
   .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
 }
 
-// Android: WAAPI controls header animation on show (slide-in like iOS).
-// CSS only restores pointer-events — no transform/opacity (WAAPI can't
-// override !important). z-index ensures header animates ABOVE the ::before
-// scrim (z-index: 10) that covers the 99px gap.
-.is-android.is-phone.full-screen-active.full-screen-showing
-  [data-type='bases']
-  .view-header {
-  pointer-events: auto !important;
-  z-index: 20 !important;
-}
+// Android: header show state (pointer-events, z-index) is applied via
+// inline styles in applyShowInlines() — no CSS rule needed.
 
-.is-phone.full-screen-active.full-screen-showing
-  [data-type='bases']
+.is-phone.full-screen-active
+  [data-type='bases'].full-screen-showing
   .bases-header {
   opacity: 1 !important;
   pointer-events: auto !important;
@@ -122,34 +170,27 @@
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing
-  [data-type='bases']
+.is-phone.full-screen-active
+  [data-type='bases'].full-screen-showing
   .bases-search-row {
   opacity: 1 !important;
   pointer-events: auto !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing
-  [data-type='bases']
+.is-phone.full-screen-active
+  [data-type='bases'].full-screen-showing
   .view-content {
-  margin-top: var(--view-top-spacing, 99px) !important;
+  margin-top: var(--view-top-spacing) !important;
   transition: none !important;
 }
 
 // iOS: remove ::before gradient on show — CSS header covers the status bar.
-.is-phone:not(.is-android).full-screen-active.full-screen-showing
-  [data-type='bases']::before {
+.is-phone:not(.is-android).full-screen-active
+  [data-type='bases'].full-screen-showing::before {
   content: none !important;
 }
 
-// Android: extend ::before to cover the full margin-top gap (not just safe
-// area) with a solid background. Acts as a scrim while the header WAAPI
-// animation slides in from above. Without this, the gap shows the theme
-// background for the first frame of the animation (white flash). Removed
-// when full-screen-active is removed at idle.
-.is-android.is-phone.full-screen-active.full-screen-showing
-  [data-type='bases']::before {
-  height: var(--view-top-spacing, 99px) !important;
-  background: var(--dynamic-views-background-primary) !important;
-}
+// Android: ::before showing variant removed — scrim is always full-height
+// during full-screen-active (rule above base ::before). Inline styles in
+// applyShowInlines() handle the show state instead of classList.

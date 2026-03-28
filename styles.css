@@ -3275,7 +3275,6 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
 }
 
 .is-phone.full-screen-active [data-type=bases] .bases-header {
-  opacity: 0 !important;
   pointer-events: none !important;
   margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
   transition: none !important;
@@ -3283,9 +3282,24 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
 }
 
 .is-phone.full-screen-active [data-type=bases] .bases-search-row {
-  opacity: 0 !important;
   pointer-events: none !important;
   transition: none !important;
+}
+
+.is-phone:not(.is-android).full-screen-active [data-type=bases] .bases-header {
+  opacity: 0 !important;
+}
+
+.is-phone:not(.is-android).full-screen-active [data-type=bases] .bases-search-row {
+  opacity: 0 !important;
+}
+
+.is-android.is-phone.full-screen-active [data-type=bases] .bases-header {
+  opacity: 0;
+}
+
+.is-android.is-phone.full-screen-active [data-type=bases] .bases-search-row {
+  opacity: 0;
 }
 
 .is-phone.full-screen-active [data-type=bases] .view-content {
@@ -3299,13 +3313,17 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
   background-color: var(--dynamic-views-background-primary) !important;
 }
 
-.is-phone.full-screen-active:not(.full-screen-showing) [data-type=bases]::after {
+.is-phone:not(.is-android).full-screen-active [data-type=bases]:not(.full-screen-showing)::after {
   display: none !important;
 }
 
-.is-phone.full-screen-active:not(.full-screen-showing) .workspace-split.mod-root {
+.is-phone:not(.is-android).full-screen-active:not(:has([data-type=bases].full-screen-showing)) .workspace-split.mod-root {
   -webkit-mask-image: none !important;
   mask-image: none !important;
+}
+
+.is-android.is-phone.full-screen-active [data-type=bases]::after {
+  display: var(--dynamic-views-after-display, none) !important;
 }
 
 .is-phone.full-screen-active [data-type=bases]::before {
@@ -3320,42 +3338,37 @@ body.is-ios .dynamic-views-masonry .card.image-ready {
   pointer-events: none !important;
 }
 
-.is-phone:not(.is-android).full-screen-active.full-screen-showing [data-type=bases] .view-header {
+.is-android.is-phone.full-screen-active [data-type=bases]::before {
+  height: var(--dynamic-views-scrim-height, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) !important;
+  background: var(--dynamic-views-scrim-bg, linear-gradient(to bottom, var(--dynamic-views-background-primary) 0px, transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))) !important;
+}
+
+.is-phone:not(.is-android).full-screen-active [data-type=bases].full-screen-showing .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
   pointer-events: auto !important;
 }
 
-.is-android.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-header {
-  pointer-events: auto !important;
-  z-index: 20 !important;
-}
-
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-header {
+.is-phone.full-screen-active [data-type=bases].full-screen-showing .bases-header {
   opacity: 1 !important;
   pointer-events: auto !important;
   margin-bottom: 0px !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .bases-search-row {
+.is-phone.full-screen-active [data-type=bases].full-screen-showing .bases-search-row {
   opacity: 1 !important;
   pointer-events: auto !important;
   transition: none !important;
 }
 
-.is-phone.full-screen-active.full-screen-showing [data-type=bases] .view-content {
-  margin-top: var(--view-top-spacing, 99px) !important;
+.is-phone.full-screen-active [data-type=bases].full-screen-showing .view-content {
+  margin-top: var(--view-top-spacing) !important;
   transition: none !important;
 }
 
-.is-phone:not(.is-android).full-screen-active.full-screen-showing [data-type=bases]::before {
+.is-phone:not(.is-android).full-screen-active [data-type=bases].full-screen-showing::before {
   content: none !important;
-}
-
-.is-android.is-phone.full-screen-active.full-screen-showing [data-type=bases]::before {
-  height: var(--view-top-spacing, 99px) !important;
-  background: var(--dynamic-views-background-primary) !important;
 }
 
 /* Card spacing setting - Bases files and embeds */
@@ -5538,6 +5551,9 @@ body.dynamic-views-poster-theme-match.theme-dark .dynamic-views.poster-mode-over
   --dynamic-views-text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
 }
 
+.dynamic-views .card-cover-slideshow {
+  touch-action: pan-y;
+}
 .dynamic-views {
   /* Dual stacked images for slideshow */
 }
