@@ -23,6 +23,7 @@ import {
 } from '../shared/settings-schema';
 import {
   getCardSpacing,
+  getCompactBreakpoint,
   clearStyleSettingsCache,
 } from '../utils/style-settings';
 import {
@@ -50,6 +51,7 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
+  SCROLL_MOUNT_BUDGET,
   MOUNT_REMEASURE_MS,
   MOMENTUM_GUARD_MS,
   HIDDEN_BUFFER_MULTIPLIER,
@@ -1708,6 +1710,7 @@ export class DynamicViewsGridView extends BasesView {
                     .map((v) => v.el!);
                   syncResponsiveClasses(mountedCards);
                   initializeScrollGradients(this.feedContainerRef.current!);
+                  initializeTitleTruncationForCards(mountedCards);
                   setHoverScaleForCards(mountedCards);
 
                   this.isLayoutBusy = false;
@@ -1726,13 +1729,13 @@ export class DynamicViewsGridView extends BasesView {
                 if (feed?.isConnected) {
                   (this.observerWindow ?? window).requestAnimationFrame(() => {
                     if (!feed.isConnected) return;
-                    syncResponsiveClasses(
-                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
+                    const cards = Array.from(
+                      feed.querySelectorAll<HTMLElement>('.card')
                     );
+                    syncResponsiveClasses(cards);
                     initializeScrollGradients(feed);
-                    setHoverScaleForCards(
-                      Array.from(feed.querySelectorAll<HTMLElement>('.card'))
-                    );
+                    initializeTitleTruncationForCards(cards);
+                    setHoverScaleForCards(cards);
                   });
                 }
               }
@@ -2603,18 +2606,38 @@ export class DynamicViewsGridView extends BasesView {
       item.scalableHeight = scalableHeight;
       item.fixedHeight = measuredHeight - scalableHeight;
     } else {
-      // Desktop: height-lock + deferred passes
+      // Desktop: height-lock + cached responsive state (no layout reads).
+      // Deferred passes (gradients, truncation, clamp) in onMountRemeasure.
       placeholder.replaceWith(handle.el);
       this.placeholderEls.delete(item);
 
       handle.el.style.height = `${item.height}px`;
       handle.el.addClass('dynamic-views-height-locked');
+      handle.el.addClass('card-fade-in');
 
       item.el = handle.el;
       item.handle = handle;
 
-      syncResponsiveClasses([handle.el]);
-      setHoverScaleForCards([handle.el]);
+      // Hover scale from cached dimensions (masonry parity) — avoids
+      // offsetWidth/Height reads that force CSS Grid layout recalculation
+      handle.el.style.setProperty(
+        '--hover-scale-x',
+        computeHoverScale(item.width)
+      );
+      handle.el.style.setProperty(
+        '--hover-scale-y',
+        computeHoverScale(item.height)
+      );
+
+      // Compact-mode from cached card width — avoids offsetWidth read
+      const compactBreakpoint = getCompactBreakpoint();
+      if (
+        compactBreakpoint > 0 &&
+        this.lastMeasuredCardWidth > 0 &&
+        this.lastMeasuredCardWidth < compactBreakpoint
+      ) {
+        handle.el.classList.add('compact-mode');
+      }
 
       this.newlyMountedEls.push(handle.el);
     }
@@ -2654,6 +2677,8 @@ export class DynamicViewsGridView extends BasesView {
       scrollTop + paneHeight * (HIDDEN_BUFFER_MULTIPLIER + 1);
 
     let mountedNew = false;
+    let mountCount = 0;
+    let budgetExhausted = false;
     const settings = this.lastRenderedSettings;
 
     for (const item of this.virtualItems) {
@@ -2667,9 +2692,13 @@ export class DynamicViewsGridView extends BasesView {
 
       if (inVisible) {
         if (!item.el) {
-          // Unmounted → mount
-          this.mountVirtualItem(item, settings);
-          mountedNew = true;
+          if (mountCount < SCROLL_MOUNT_BUDGET) {
+            this.mountVirtualItem(item, settings);
+            mountedNew = true;
+            mountCount++;
+          } else {
+            budgetExhausted = true;
+          }
         } else if (item.el.classList.contains(CONTENT_HIDDEN_CLASS)) {
           // Content-hidden → visible (cheap restore)
           item.el.classList.remove(CONTENT_HIDDEN_CLASS);
@@ -2721,6 +2750,11 @@ export class DynamicViewsGridView extends BasesView {
       } else {
         this.onMountRemeasure();
       }
+    }
+
+    // Budget exceeded — schedule another sync frame to mount remaining cards
+    if (budgetExhausted) {
+      this.scheduleVirtualScrollSync();
     }
   }
 
@@ -2803,6 +2837,7 @@ export class DynamicViewsGridView extends BasesView {
           return;
         }
         this.remeasureMountedCards();
+        this.equalizeRowCoverHeights();
       });
     });
   }
@@ -2836,6 +2871,7 @@ export class DynamicViewsGridView extends BasesView {
     this.scrollMountLockedEls.clear();
     this.cardResizeDirty = false;
     this.remeasureMountedCards();
+    this.equalizeRowCoverHeights();
   }
 
   private remeasureMountedCards(): void {
@@ -2944,6 +2980,94 @@ export class DynamicViewsGridView extends BasesView {
     }
   }
 
+  /**
+   * When fixed cover height is OFF in Grid, equalize cover aspect ratios
+   * within each row so all covers match the tallest image.
+   * Batch reads then writes to avoid interleaved reflows.
+   */
+  private equalizeRowCoverHeights(): void {
+    if (!this.containerEl?.isConnected) return;
+
+    const body = this.containerEl.ownerDocument.body;
+    const isGridFixedHeight =
+      body.classList.contains('dynamic-views-fixed-cover-height-grid') ||
+      body.classList.contains('dynamic-views-fixed-cover-height-both');
+
+    // Collect all mounted cover cards
+    const coverCards: HTMLElement[] = [];
+    for (const [, groupItems] of this.virtualItemsByGroup) {
+      for (const item of groupItems) {
+        if (
+          item.el?.isConnected &&
+          (item.el.classList.contains('card-cover-top') ||
+            item.el.classList.contains('card-cover-bottom')) &&
+          item.el.classList.contains('image-format-cover')
+        ) {
+          coverCards.push(item.el);
+        }
+      }
+    }
+
+    if (isGridFixedHeight) {
+      // Clear stale values when fixed height is active
+      for (const card of coverCards) {
+        card.style.removeProperty('--row-cover-aspect-ratio');
+      }
+      return;
+    }
+
+    const columns = this.lastColumnCount;
+    if (columns <= 0) return;
+
+    const win = this.observerWindow ?? window;
+
+    // Process each group's cards by row
+    for (const [, groupItems] of this.virtualItemsByGroup) {
+      // Collect cover cards with their indices for row grouping
+      const indexedCovers: { index: number; el: HTMLElement }[] = [];
+      for (let i = 0; i < groupItems.length; i++) {
+        const el = groupItems[i].el;
+        if (
+          el?.isConnected &&
+          (el.classList.contains('card-cover-top') ||
+            el.classList.contains('card-cover-bottom')) &&
+          el.classList.contains('image-format-cover')
+        ) {
+          indexedCovers.push({ index: i, el });
+        }
+      }
+
+      // Read phase: batch all getComputedStyle reads
+      const ratios: { index: number; el: HTMLElement; ratio: number }[] = [];
+      for (const { index, el } of indexedCovers) {
+        const raw = win
+          .getComputedStyle(el)
+          .getPropertyValue('--actual-aspect-ratio');
+        const ratio = parseFloat(raw);
+        ratios.push({ index, el, ratio: isNaN(ratio) ? 0 : ratio });
+      }
+
+      // Group by row and find max per row
+      const rowMaxes = new Map<number, number>();
+      for (const { index, ratio } of ratios) {
+        const row = Math.floor(index / columns);
+        const current = rowMaxes.get(row) ?? 0;
+        if (ratio > current) rowMaxes.set(row, ratio);
+      }
+
+      // Write phase: set --row-cover-aspect-ratio on each card
+      for (const { index, el, ratio } of ratios) {
+        const row = Math.floor(index / columns);
+        const maxRatio = rowMaxes.get(row) ?? 0;
+        if (maxRatio > 0 && maxRatio !== ratio) {
+          el.style.setProperty('--row-cover-aspect-ratio', maxRatio.toString());
+        } else {
+          el.style.removeProperty('--row-cover-aspect-ratio');
+        }
+      }
+    }
+  }
+
   private onMountRemeasure(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.lastMeasuredCardWidth <= 0) return;
@@ -2969,12 +3093,19 @@ export class DynamicViewsGridView extends BasesView {
         el.removeClass('dynamic-views-height-locked');
       }
 
+      // Full responsive sync + hover scale after lock release — corrects
+      // cached approximations from mountVirtualItem. Batched: 1 forced
+      // layout for all newly mounted cards instead of per-card.
+      syncResponsiveClasses(newEls);
+      setHoverScaleForCards(newEls);
+
       initializeScrollGradientsForCards(newEls);
       initializeTitleTruncationForCards(newEls);
       initializeTextPreviewClampForCards(newEls);
     }
 
     this.remeasureMountedCards();
+    this.equalizeRowCoverHeights();
 
     // Defer clearing — ResizeObserver callbacks from lock release fire
     // between RAF and paint (same frame). Previously-mounted cards in
@@ -2986,6 +3117,7 @@ export class DynamicViewsGridView extends BasesView {
       if (this.cardResizeDirty) {
         this.cardResizeDirty = false;
         this.remeasureMountedCards();
+        this.equalizeRowCoverHeights();
       }
     });
   }

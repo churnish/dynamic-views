@@ -24,6 +24,7 @@ import {
 import {
   getCardSpacing,
   clearStyleSettingsCache,
+  isFixedHeightForMasonry,
 } from '../utils/style-settings';
 import {
   CSS_ONLY_SETTINGS_KEYS,
@@ -64,6 +65,7 @@ import {
   SCROLL_CORRECTION_INTERVAL_MS,
   INITIAL_REMEASURE_MS,
   HIDDEN_BUFFER_MULTIPLIER,
+  SCROLL_MOUNT_BUDGET,
   computeHoverScale,
 } from '../shared/constants';
 import {
@@ -91,10 +93,7 @@ import {
   ScrollPreservation,
   getLeafProps,
 } from '../shared/scroll-preservation';
-import {
-  PROPERTY_MEASURED,
-  resetPersistentWidthCache,
-} from '../shared/property-measure';
+import { resetPersistentWidthCache } from '../shared/property-measure';
 import {
   buildDisplayToSyntaxMap,
   buildSyntaxToDisplayMap,
@@ -152,8 +151,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private _previousCustomClasses: string[] = [];
   private currentDoc: Document = document;
   private disconnectStyleObserver: (() => void) | null = null;
-  private handlePropertyMeasured: (() => void) | null = null;
-
   // Consolidated state objects (shared patterns with grid-view)
   private contentCache: ContentCache = {
     textPreviews: {},
@@ -252,14 +249,12 @@ export class DynamicViewsMasonryView extends BasesView {
   private initialRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private hasExplicitScrollHeights = false;
   private compensatingScrollCount = 0;
-  private deferredRemeasureRafId: number | null = null;
   private resizeCorrectionRafId: number | null = null;
   private hasUserScrolled = false;
   private lastScrollCorrectionTime = 0;
   private postResizeIdleTimeout: ReturnType<typeof setTimeout> | null = null;
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
-  private renderedCount: number = 0;
   /** Latest container width from ResizeObserver. Never reset — deferred resize
    *  at scroll-idle reads the most recent value, which is always the correct
    *  target width regardless of when the deferral was scheduled. */
@@ -269,9 +264,6 @@ export class DynamicViewsMasonryView extends BasesView {
   private lastLayoutCardWidth: number = 0;
   private lastLayoutGap: number = 0;
   private cardVerticalPadding: number | null = null;
-  private lastLayoutMinColumns: number = 1;
-  private lastLayoutIsGrouped: boolean = false;
-  private propertyMeasuredTimeout: number | null = null;
   private stickyHeadings: ReturnType<typeof setupStickyHeadingObserver> | null =
     null;
   private lastDataUpdateTime = { value: 0 };
@@ -723,53 +715,6 @@ export class DynamicViewsMasonryView extends BasesView {
     );
     this.register(this.keyboardNav.cleanup);
 
-    // Listen for property measurement completion to trigger masonry relayout
-    // (card heights may have changed during async property field measurement)
-    // Debounce to batch multiple rapid-fire events, then run during browser idle
-    const scheduleIdleCallback =
-      typeof requestIdleCallback !== 'undefined'
-        ? requestIdleCallback
-        : (fn: () => void) => setTimeout(fn, 16); // Fallback: next frame
-    const handlePropertyMeasured = () => {
-      if (this.propertyMeasuredTimeout !== null) {
-        window.clearTimeout(this.propertyMeasuredTimeout);
-      }
-      this.propertyMeasuredTimeout = window.setTimeout(() => {
-        this.propertyMeasuredTimeout = null;
-        // Use idle callback to avoid blocking user interactions
-        // Guard against view destruction during idle wait
-        scheduleIdleCallback(() => {
-          if (!this.containerEl?.isConnected) return;
-          if (this.postResizeScrollActive) return;
-          this.updateLayoutRef.current?.('property-measured');
-          // Sync responsive classes and gradients after measurement (widths may have changed)
-          if (this.masonryContainer) {
-            const cards = Array.from(
-              this.masonryContainer.querySelectorAll<HTMLElement>('.card')
-            );
-            syncResponsiveClasses(cards);
-            initializeScrollGradients(this.masonryContainer);
-            initializeTitleTruncation(this.masonryContainer);
-            initializeTextPreviewClamp(this.masonryContainer);
-          }
-        });
-      }, 100);
-    };
-    this.handlePropertyMeasured = handlePropertyMeasured;
-    this.containerEl.ownerDocument.addEventListener(
-      PROPERTY_MEASURED,
-      handlePropertyMeasured
-    );
-    this.register(() => {
-      this.currentDoc.removeEventListener(
-        PROPERTY_MEASURED,
-        this.handlePropertyMeasured!
-      );
-      if (this.propertyMeasuredTimeout !== null) {
-        window.clearTimeout(this.propertyMeasuredTimeout);
-      }
-    });
-
     // Setup scroll preservation (handles tab switching, scroll tracking, reset detection)
     if (this.leafId) {
       this.scrollPreservation = new ScrollPreservation({
@@ -816,10 +761,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.win.cancelAnimationFrame(this.virtualScrollRafId);
       this.virtualScrollRafId = null;
     }
-    if (this.deferredRemeasureRafId !== null) {
-      this.win.cancelAnimationFrame(this.deferredRemeasureRafId);
-      this.deferredRemeasureRafId = null;
-    }
     if (this.resizeCorrectionRafId !== null) {
       this.win.cancelAnimationFrame(this.resizeCorrectionRafId);
       this.resizeCorrectionRafId = null;
@@ -845,14 +786,6 @@ export class DynamicViewsMasonryView extends BasesView {
           newDoc.body.classList.add(cls);
         }
       }
-    }
-    // Rebind PROPERTY_MEASURED listener to new document
-    if (this.handlePropertyMeasured) {
-      oldDoc.removeEventListener(
-        PROPERTY_MEASURED,
-        this.handlePropertyMeasured
-      );
-      newDoc.addEventListener(PROPERTY_MEASURED, this.handlePropertyMeasured);
     }
     // Rebind style observer to new document's body
     this.disconnectStyleObserver?.();
@@ -1485,7 +1418,6 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Track state for batch append and end indicator
       this.previousDisplayedCount = displayedSoFar;
-      this.renderedCount = displayedSoFar;
       this.rebuildGroupIndex();
 
       // Initial layout calculation (sets inline width on cards)
@@ -1602,7 +1534,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Defer non-critical full recalcs during active scroll.
       // Repositioning all cards mid-scroll causes visible snapping.
-      if (this.isScrollRemeasurePending()) {
+      if (this.inMountRemeasure) {
         if (source === 'property-measured') {
           // No new cards — mount remeasure handles height drift.
           return;
@@ -1653,10 +1585,9 @@ export class DynamicViewsMasonryView extends BasesView {
             this.pendingImageRelayout = false;
             if (this.postResizeScrollActive) return;
             if (this.resizeCorrectionTimeout !== null) return;
-            if (this.isScrollRemeasurePending()) return;
+            if (this.inMountRemeasure) return;
             if (this.batchLayoutPending) return;
-            const didWork = this.remeasureAndReposition();
-            if (didWork) this.scheduleDeferredRemeasure();
+            this.remeasureAndReposition();
           });
         }
         return;
@@ -1728,8 +1659,6 @@ export class DynamicViewsMasonryView extends BasesView {
         // Store for syncVirtualScroll's post-mount remeasure
         this.lastLayoutCardWidth = cardWidth;
         this.lastLayoutGap = gap;
-        this.lastLayoutMinColumns = minColumns;
-        this.lastLayoutIsGrouped = isGrouped;
 
         // Fast path: skip full remount when unmounted cards have prior heights.
         // Two branches:
@@ -2090,17 +2019,11 @@ export class DynamicViewsMasonryView extends BasesView {
           }
         }
 
-        // Catch post-measurement height drift (e.g. image load → aspect ratio
-        // update, cover-ready class). Double-RAF matches handleImageLoad timing.
-        if (source === 'initial-render' || source === 'compact-mode-sync') {
-          this.scheduleDeferredRemeasure();
-        }
-
         // Show end indicator if all items displayed (skip if 0 results)
         this.win.requestAnimationFrame(() => {
           if (!this.containerEl?.isConnected) return;
           if (
-            this.renderedCount >= this.totalEntries &&
+            this.virtualItems.length >= this.totalEntries &&
             this.totalEntries > 0
           ) {
             this.showEndIndicator();
@@ -2180,6 +2103,7 @@ export class DynamicViewsMasonryView extends BasesView {
             .map((v) => v.el!);
           syncResponsiveClasses(mounted);
           initializeScrollGradientsForCards(mounted);
+          initializeTitleTruncationForCards(mounted);
         });
       }, MASONRY_CORRECTION_MS);
 
@@ -2223,7 +2147,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // pre-layout state
         if (
           this.resizeCorrectionTimeout !== null ||
-          this.isScrollRemeasurePending() ||
+          this.inMountRemeasure ||
           this.postResizeScrollActive ||
           this.batchLayoutPending ||
           this.lastLayoutCardWidth === 0 ||
@@ -2241,12 +2165,11 @@ export class DynamicViewsMasonryView extends BasesView {
             !this.containerEl.isConnected ||
             this.batchLayoutPending ||
             this.resizeCorrectionTimeout !== null ||
-            this.isScrollRemeasurePending() ||
+            this.inMountRemeasure ||
             this.postResizeScrollActive
           )
             return;
-          const didWork = this.remeasureAndReposition();
-          if (didWork) this.scheduleDeferredRemeasure();
+          this.remeasureAndReposition();
         });
       });
       this.register(() => this.cardResizeObserver?.disconnect());
@@ -2289,10 +2212,10 @@ export class DynamicViewsMasonryView extends BasesView {
     const containerWidth = this.lastLayoutWidth;
     const cardWidth = this.lastLayoutCardWidth;
     const settings = this.lastRenderedSettings;
-    const minColumns = this.lastLayoutMinColumns;
     const gap = this.lastLayoutGap;
-    const isGrouped = this.lastLayoutIsGrouped;
+    const isGrouped = this.containerEl.classList.contains('is-grouped');
     if (!settings || cardWidth <= 0) return false;
+    const minColumns = settings.minimumColumns;
 
     // Lazy offset refresh: when updateCachedGroupOffsets was skipped in the
     // finally block (hasUserScrolled = false), compute offsets now before the
@@ -2821,6 +2744,7 @@ export class DynamicViewsMasonryView extends BasesView {
     handle.el.style.left = `${item.x}px`;
     handle.el.style.top = `${item.y}px`;
     handle.el.classList.add('masonry-positioned');
+    handle.el.classList.add('card-fade-in');
     // Set explicit height to match stored layout height. Prevents height drift
     // in freshly rendered cards from triggering remeasureAndReposition during
     // scroll — small per-card differences cascade through columns, causing
@@ -2891,6 +2815,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
     let mountedNeverMeasured = false;
     let mountedPostResize = false;
+    let mountCount = 0;
+    let budgetExhausted = false;
     const hiddenZonePreMeasure: VirtualItem[] = [];
     for (const item of this.virtualItems) {
       if (item.height === 0) continue;
@@ -2904,16 +2830,21 @@ export class DynamicViewsMasonryView extends BasesView {
 
       if (inMountZone) {
         if (!item.el) {
-          const container = this.groupContainers.get(item.groupKey);
-          if (container) {
-            this.mountVirtualItem(item, container, settings);
-            if (item.measuredAtWidth === 0) {
-              mountedNeverMeasured = true;
-            } else if (
-              Math.abs(item.measuredAtWidth - this.lastLayoutCardWidth) > 1
-            ) {
-              mountedPostResize = true;
+          if (mountCount < SCROLL_MOUNT_BUDGET) {
+            const container = this.groupContainers.get(item.groupKey);
+            if (container) {
+              this.mountVirtualItem(item, container, settings);
+              mountCount++;
+              if (item.measuredAtWidth === 0) {
+                mountedNeverMeasured = true;
+              } else if (
+                Math.abs(item.measuredAtWidth - this.lastLayoutCardWidth) > 1
+              ) {
+                mountedPostResize = true;
+              }
             }
+          } else {
+            budgetExhausted = true;
           }
         } else if (item.el.classList.contains(CONTENT_HIDDEN_CLASS)) {
           // Content-hidden → mount zone: restore rendering
@@ -3039,12 +2970,11 @@ export class DynamicViewsMasonryView extends BasesView {
         }
       }
     }
-  }
 
-  /** True when a synchronous mount remeasure is in progress.
-   *  Used by guard sites to defer work during active scroll. */
-  private isScrollRemeasurePending(): boolean {
-    return this.inMountRemeasure;
+    // Budget exceeded — schedule another sync frame to mount remaining cards
+    if (budgetExhausted) {
+      this.scheduleVirtualScrollSync();
+    }
   }
 
   /** Correct height drift from recently mounted cards.
@@ -3105,44 +3035,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.virtualScrollRafId = null;
       this.updateCachedGroupOffsets();
       this.syncVirtualScroll();
-    });
-  }
-
-  /** Schedule a deferred remeasure to catch post-measurement height drift.
-   *  Uses double-RAF to run after async height changes (e.g. cover-ready,
-   *  image aspect ratio updates) have settled. */
-  private scheduleDeferredRemeasure(skipTransition = false): void {
-    if (this.deferredRemeasureRafId !== null) return;
-    this.deferredRemeasureRafId = this.win.requestAnimationFrame(() => {
-      this.deferredRemeasureRafId = this.win.requestAnimationFrame(() => {
-        this.deferredRemeasureRafId = null;
-        const cleanupSkipTransition = () => {
-          if (skipTransition) {
-            this.win.requestAnimationFrame(() => {
-              this.masonryContainer?.classList.remove(
-                'masonry-skip-transition'
-              );
-            });
-          }
-        };
-        if (!this.containerEl?.isConnected) {
-          cleanupSkipTransition();
-          return;
-        }
-        if (this.batchLayoutPending) {
-          cleanupSkipTransition();
-          return;
-        }
-        if (this.resizeCorrectionTimeout !== null) {
-          cleanupSkipTransition();
-          return;
-        }
-        if (this.isScrollRemeasurePending() || this.postResizeScrollActive) {
-          cleanupSkipTransition();
-          return;
-        }
-        this.remeasureAndReposition(skipTransition);
-      });
     });
   }
 
@@ -3373,10 +3265,9 @@ export class DynamicViewsMasonryView extends BasesView {
       anyHeightChanged &&
       !this.batchLayoutPending &&
       this.resizeCorrectionTimeout === null &&
-      !this.isScrollRemeasurePending()
+      !this.inMountRemeasure
     ) {
-      const didWork = this.remeasureAndReposition();
-      if (didWork) this.scheduleDeferredRemeasure();
+      this.remeasureAndReposition();
     }
 
     // Re-initialize gradients unconditionally (content changed even if height didn't)
@@ -3608,7 +3499,6 @@ export class DynamicViewsMasonryView extends BasesView {
       // Update state for next append - use currCount (captured at start)
       // to ensure consistency even if this.displayedCount changed during async
       this.previousDisplayedCount = currCount;
-      this.renderedCount = displayedSoFar;
       this.rebuildGroupIndex();
 
       if (newCardsRendered > 0 && newCardsPerGroup.size > 0) {
@@ -3803,6 +3693,15 @@ export class DynamicViewsMasonryView extends BasesView {
           this.batchLayoutPending = false;
           this.isLoading = false;
 
+          // Catch height drift in previously-positioned cards whose image-load
+          // signals were blocked by batchLayoutPending (e.g., batch 1 covers
+          // shrank via --actual-aspect-ratio while batch 2 was appending).
+          this.win.requestAnimationFrame(() => {
+            if (!this.containerEl?.isConnected) return;
+            if (this.batchLayoutPending) return;
+            this.remeasureAndReposition();
+          });
+
           this.refreshGroupOffsets();
           this.syncVirtualScroll();
 
@@ -3817,7 +3716,7 @@ export class DynamicViewsMasonryView extends BasesView {
           if (this.renderState.version === currentVersion) {
             this.checkAndLoadMore(totalEntries, settings);
             if (
-              this.renderedCount >= this.totalEntries &&
+              this.virtualItems.length >= this.totalEntries &&
               this.totalEntries > 0
             ) {
               this.showEndIndicator();
@@ -3827,12 +3726,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Schedule via image load + double RAF (same pattern as before)
         const body = this.containerEl.ownerDocument.body;
-        const isFixedCoverHeight = body.classList.contains(
-          'dynamic-views-fixed-cover-height'
-        );
-        const isFixedPosterHeight = body.classList.contains(
-          'dynamic-views-fixed-poster-height'
-        );
+        const isFixedCoverHeight = isFixedHeightForMasonry(body, 'cover');
+        const isFixedPosterHeight = isFixedHeightForMasonry(body, 'poster');
 
         const allNewCards = [...newCardsPerGroup.values()].flat();
         const runAfterLayout = (fn: () => void) => {
