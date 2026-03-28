@@ -6,7 +6,7 @@ updated: 2026-03-27
 ---
 # Full screen architecture
 
-Full screen hides the header, toolbar, search row, and navbar during downward scroll in Bases card views on mobile, reclaiming screen space for content. On iOS, the system uses a bridge+settle architecture: `margin-top` on the scroll child adjusts `scrollHeight` in sync with visual displacement, preventing false scroll boundaries during momentum scroll, followed by real layout changes at scroll-idle. On Android, a bridge-less hide path applies class toggle + `scrollTop` adjustment synchronously (Chromium's compositor survives `scrollTop` writes during active scroll), with bar animations driven by WAAPI (`element.animate()`) for better compositor scheduling on the single-threaded WebView compositor. The show path uses a reverse bridge (`margin-top: -totalShift`) to avoid a synchronous `scrollTop` write that exceeded one frame budget on Pixel 8a. Direction detection uses a temporal-spatial hybrid algorithm with dead zones, a sustain gate, and a cooldown to prevent false triggers. This doc covers the stable architecture — for empirical research, rejected approaches, and prototype history, see [full-screen.md](../dev/full-screen.md).
+Full screen hides the header, toolbar, search row, and navbar during downward scroll in Bases card views on mobile, reclaiming screen space for content. All bar animations (header, navbar slide/fade) match native Obsidian full screen behavior in markdown views. On iOS, the system uses a bridge+settle architecture: `margin-top` on the scroll child adjusts `scrollHeight` in sync with visual displacement, preventing false scroll boundaries during momentum scroll, followed by real layout changes at scroll-idle. On Android, a bridge-less hide path applies class toggle + `scrollTop` adjustment synchronously (Chromium's compositor survives `scrollTop` writes during active scroll), with bar animations driven by WAAPI (`element.animate()`) for better compositor scheduling on the single-threaded WebView compositor. The show path uses a reverse bridge (`margin-top: -totalShift`) to avoid a synchronous `scrollTop` write that exceeded one frame budget on Pixel 8a. Direction detection uses a temporal-spatial hybrid algorithm with dead zones, a sustain gate, and a cooldown to prevent false triggers. This doc covers the stable architecture — for empirical research, rejected approaches, and prototype history, see [full-screen.md](../dev/full-screen.md).
 
 ## Files
 
@@ -15,6 +15,14 @@ Full screen hides the header, toolbar, search row, and navbar during downward sc
 | `src/bases/full-screen.ts` | Full screen controller — scroll listener, direction detection, hide/show/settle logic |
 | `src/shared/constants.ts` | Tuning constants (`FULL_SCREEN_*`) |
 | `styles/_full-screen.scss` | `full-screen-active` and `full-screen-showing` class rules |
+
+## Debug access
+
+Runtime path to the FullScreenController:
+
+`leaf.view.controller.view.fullScreen`
+
+Where `leaf` is any Bases leaf from `app.workspace.iterateAllLeaves()`.
 
 ## System overview
 
@@ -83,7 +91,7 @@ Before hiding, the controller checks whether the view has enough scrollable rang
 
 #### iOS (bridge + deferred settle)
 
-3. **Immediate**: Apply `full-screen-showing` CSS class override. If not settled (hide bridge still active), remove `margin-top` — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari's native address bar behavior); `scrollTop += totalShift` at idle compensates. Restore navbar via inline styles.
+3. **Immediate**: Apply `full-screen-showing` CSS class override. If not settled (hide bridge still active), remove `margin-top` — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari's native address bar behavior); `scrollTop += totalShift` at idle compensates. Restore navbar via inline styles — the inline `transition` from hide persists on the element, producing an animated reveal (slide up + fade in). Header animates via Obsidian's native `.view-header` transition (the iOS CSS rule does not suppress it, unlike Android which sets `transition: none`).
 4. **Idle (debounced)**: Remove `margin-top` -> if settled, `scrollTop += totalShift` -> remove all full-screen classes -> unlock height -> re-measure -> relock.
 
 #### Android (WAAPI + reverse bridge)
@@ -206,7 +214,7 @@ In open-on-card mode, card body taps don't reveal bars — the card's click hand
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_MS = 2000ms`. Outlasts the native scroll indicator fade (~1.5s after last scroll event), making the settle's `scrollTop` write invisible.
 - **Sustain gate**: 80ms on both directions. Required because iOS momentum produces deceleration bounce (brief delta reversals).
 - **Double-rAF**: Required for bar hide animations. WebKit's passive scroll listener optimization collapses transition + target into one style recalc without it. See `knowledge/webkit-compositor-constraints.md`.
-- **Show path**: Synchronous — no two-frame split.
+- **Show path**: Synchronous class toggle — no two-frame split. Navbar animates via the inline `transition` persisting from hide. Header animates via Obsidian's native `.view-header` transition (not suppressed on iOS).
 - **Scroll indicator**: Jumps when bars hide/show because the scroll container's effective height changes. Matches Safari's native address bar behavior. Accepted.
 
 ### Android

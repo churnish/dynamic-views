@@ -77,13 +77,11 @@
   display: none !important;
 }
 
-.is-phone:not(.is-android).full-screen-active:not(
-    :has([data-type='bases'].full-screen-showing)
-  )
-  .workspace-split.mod-root {
-  -webkit-mask-image: none !important;
-  mask-image: none !important;
-}
+// iOS + Android: mask-image on .workspace-split.mod-root managed via inline
+// styles in JS (hideBarsUI sets none, show idle removes). Previously used a
+// CSS :has() selector here, but :has() upward invalidation kills iOS momentum
+// scroll — WebKit re-evaluates ancestor :has() during compositor scroll,
+// preventing UIScrollView from resuming.
 
 // Android: full-screen-showing is never used (inline styles instead).
 // ::after display driven by CSS custom property — defaults to none (hidden)

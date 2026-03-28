@@ -250,6 +250,13 @@ export class FullScreenController {
     ]);
   }
 
+  /** Restore mask-image gradient on workspace split — remove inline override */
+  private restoreMaskImage(): void {
+    if (!this.workspaceSplitEl) return;
+    this.workspaceSplitEl.style.removeProperty('-webkit-mask-image');
+    this.workspaceSplitEl.style.removeProperty('mask-image');
+  }
+
   /** Clear header inline styles set during hide/show */
   private clearHeaderInlines(): void {
     if (!this.viewHeaderEl) return;
@@ -321,12 +328,7 @@ export class FullScreenController {
       ['--dynamic-views-after-display', 'block'],
     ]);
 
-    // Restore mask-image gradient on workspace split — remove inline
-    // override set in hideBarsUI so Obsidian's normal CSS takes over.
-    if (this.workspaceSplitEl) {
-      this.workspaceSplitEl.style.removeProperty('-webkit-mask-image');
-      this.workspaceSplitEl.style.removeProperty('mask-image');
-    }
+    this.restoreMaskImage();
   }
 
   /** Remove show-state inline styles (Android only) */
@@ -395,14 +397,10 @@ export class FullScreenController {
     if (this.isActiveHider) {
       if (this.isAndroid) {
         this.clearShowInlines();
-        // Clean up mask-image inline on workspace split
-        if (this.workspaceSplitEl) {
-          this.workspaceSplitEl.style.removeProperty('-webkit-mask-image');
-          this.workspaceSplitEl.style.removeProperty('mask-image');
-        }
       } else {
         this.leafContent.classList.remove('full-screen-showing');
       }
+      this.restoreMaskImage();
       this.body.classList.remove('full-screen-active');
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
@@ -597,6 +595,19 @@ export class FullScreenController {
 
     void capacitorStatusBar?.hide();
 
+    // Remove mask-image gradient on workspace split. Inline styles instead
+    // of CSS — :has() upward invalidation kills iOS momentum scroll.
+    // Show path removes inline → Obsidian's normal CSS takes over.
+    if (this.workspaceSplitEl) {
+      setStyle(
+        this.workspaceSplitEl,
+        '-webkit-mask-image',
+        'none',
+        'important'
+      );
+      setStyle(this.workspaceSplitEl, 'mask-image', 'none', 'important');
+    }
+
     // Navbar: animated hide via inline transform + opacity
     const navbarHeight = this.getNavbarHeight();
     const applyNavbarHide = (): void => {
@@ -619,19 +630,6 @@ export class FullScreenController {
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
         setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
-      }
-
-      // Remove mask-image gradient on workspace split — no CSS rule for
-      // Android (Obsidian's gradient value is unknown, can't use var fallback).
-      // Show path removes inline → Obsidian's CSS takes over.
-      if (this.workspaceSplitEl) {
-        setStyle(
-          this.workspaceSplitEl,
-          '-webkit-mask-image',
-          'none',
-          'important'
-        );
-        setStyle(this.workspaceSplitEl, 'mask-image', 'none', 'important');
       }
 
       const before = this.scrollEl.scrollTop;
@@ -896,60 +894,50 @@ export class FullScreenController {
       return;
     }
 
-    // iOS: rAF + bridge + deferred settle (scrollTop writes kill momentum).
-    // rAF separates layout changes from opacity transition start — matches
-    // Android's natural compositor scheduling and prevents the CSS transition
-    // from firing in the same paint as the layout shift.
+    // iOS: synchronous layout + rAF animation + deferred settle.
+    // Layout MUST be synchronous (same frame as scroll event) — deferring
+    // to rAF creates two consecutive compositor pauses that kill momentum.
+    // The hide path follows the same pattern: synchronous layout, rAF animation.
     void capacitorStatusBar?.show();
 
-    this.programmaticScroll = true;
+    // Synchronous layout — single compositor pause, UIScrollView resumes
+    this.leafContent.classList.add('full-screen-showing');
+
+    // Bridge compensation — settled vs unsettled
+    if (!this.settled) {
+      // Hide bridge still active — remove it (bars returning, shift no longer needed).
+      // Bridge removal + bar restoration cancel geometrically (zero net shift).
+      this.container.style.removeProperty('margin-top');
+      this.container.style.removeProperty('transition');
+    }
+    // Settled: no reverse bridge — content shifts down naturally as bars
+    // appear (same as Safari address bar). Settle adjusts scrollTop at idle.
+
+    // Navbar restore — transition from hide persists on the element,
+    // producing an animated reveal (slide up + fade in)
+    setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
+    setStyle(this.navbarEl, 'opacity', '1', 'important');
+    this.navbarEl.style.removeProperty('pointer-events');
+
+    // mask-image restore deferred to idle — removing the inline on
+    // .workspace-split.mod-root triggers subtree repaint that kills momentum.
+
+    // Toolbar + search WAAPI fade-in — deferred to rAF.
+    // WAAPI is compositor-driven (no continuous main-thread work).
     this.pendingRafId = requestAnimationFrame(() => {
-      // Single class op — higher specificity overrides full-screen-active
-      this.leafContent.classList.add('full-screen-showing');
-
-      // Bridge compensation — settled vs unsettled
-      if (!this.settled) {
-        // Hide bridge still active — remove it (bars returning, shift no longer needed).
-        // Bridge removal + bar restoration cancel geometrically (zero net shift).
-        this.container.style.removeProperty('margin-top');
-        this.container.style.removeProperty('transition');
+      if (this.toolbarEl) {
+        this.barAnims.push(
+          this.toolbarEl.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+        );
       }
-      // Settled: no reverse bridge — content shifts down naturally as bars
-      // appear (same as Safari address bar). Settle adjusts scrollTop at idle.
-
-      // Navbar restore — transition from hide persists on the element,
-      // producing an animated reveal (slide up + fade in)
-      setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-      setStyle(this.navbarEl, 'opacity', '1', 'important');
-      this.navbarEl.style.removeProperty('pointer-events');
-
-      this.programmaticScroll = false;
-
-      // Toolbar + search WAAPI fade-in — deferred to next frame.
-      // WebKit starts WAAPI immediately (classList.add is a single op
-      // with minimal layout work), so the fade begins ~1-2 frames
-      // earlier than Android where compositor contention from
-      // applyShowInlines delays the first painted frame. Nesting in a
-      // second rAF matches Android's natural timing. The extra frame
-      // is invisible — elements are already at opacity: 0.
-      requestAnimationFrame(() => {
-        if (this.toolbarEl) {
-          this.barAnims.push(
-            this.toolbarEl.animate(
-              [{ opacity: 0 }, { opacity: 1 }],
-              UI_FADE_OPTS
-            )
-          );
-        }
-        if (this.searchRowEl) {
-          this.barAnims.push(
-            this.searchRowEl.animate(
-              [{ opacity: 0 }, { opacity: 1 }],
-              UI_FADE_OPTS
-            )
-          );
-        }
-      });
+      if (this.searchRowEl) {
+        this.barAnims.push(
+          this.searchRowEl.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            UI_FADE_OPTS
+          )
+        );
+      }
     });
 
     // Idle: remove classes + unlock → measure → relock height
@@ -974,6 +962,8 @@ export class FullScreenController {
       this.leafContent.classList.remove('full-screen-showing');
       this.body.classList.remove('full-screen-active');
       this.isActiveHider = false;
+
+      this.restoreMaskImage();
 
       // Navbar cleanup
       this.clearNavbarInlines();
