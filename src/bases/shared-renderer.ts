@@ -154,7 +154,8 @@ function truncateTitleWithCanvas(
   containerWidth: number,
   font: string,
   maxLines: number,
-  suffixText = ''
+  suffixText = '',
+  overflows = false
 ): void {
   if (!fullText || containerWidth <= 0 || maxLines <= 0) return;
 
@@ -164,16 +165,25 @@ function truncateTitleWithCanvas(
   const ellipsis = '…';
   const ellipsisWidth = ctx.measureText(ellipsis).width;
   const suffixWidth = suffixText ? ctx.measureText(suffixText).width : 0;
-  // Total width available across all lines, minus ellipsis and extension suffix
-  const availableWidth =
-    containerWidth * maxLines - ellipsisWidth - suffixWidth;
+  // Raw available width: continuous ribbon model (ignores word-wrap gaps)
+  const rawAvailable = containerWidth * maxLines - ellipsisWidth - suffixWidth;
 
-  // Measure full text width
   const fullWidth = ctx.measureText(fullText).width;
-  if (fullWidth <= availableWidth) {
-    // No truncation needed
-    return;
+
+  // Word-wrap slack: CSS word-wrapping leaves gaps at line ends — words that
+  // don't fit on a line wrap to the next, wasting the tail. Estimate slack as
+  // half an average word width per line (expected unused tail per line break).
+  // Single-line titles have no word-wrap, so slack is zero.
+  let availableWidth = rawAvailable;
+  if (maxLines > 1) {
+    const wordCount = fullText.split(/\s+/).length;
+    const avgWordWidth = fullWidth / Math.max(wordCount, 1);
+    availableWidth -= maxLines * avgWordWidth * 0.75;
   }
+
+  if (fullWidth <= availableWidth) return; // Fits even with word-wrap slack
+  // Near boundary: between slack-adjusted and raw limit. Trust DOM measurement.
+  if (fullWidth <= rawAvailable && !overflows) return;
 
   // Binary search for truncation point using canvas (no layout reads)
   let low = 1;
@@ -333,6 +343,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
     font: string;
     maxLines: number;
     suffixText: string;
+    overflows: boolean;
   }> = [];
 
   for (const titleEl of titles) {
@@ -365,6 +376,7 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
       maxLines:
         parseInt(style.getPropertyValue('--dynamic-views-title-lines')) || 2,
       suffixText: suffixEl?.textContent || '',
+      overflows: titleEl.scrollHeight > titleEl.offsetHeight,
     });
   }
 
@@ -376,7 +388,8 @@ function truncateTitleElements(titles: Iterable<HTMLElement>): void {
       m.width,
       m.font,
       m.maxLines,
-      m.suffixText
+      m.suffixText,
+      m.overflows
     );
   }
 }
