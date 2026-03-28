@@ -21,7 +21,6 @@ dynamic-views/
 │   │   ├── masonry-view.ts           # Masonry layout view
 │   │   ├── shared-renderer.ts        # Shared card rendering (deduplicates grid/masonry)
 │   │   ├── sticky-heading.ts         # Sentinel IO for sticky group heading stuck state
-│   │   ├── swipe-interceptor.ts      # Touch gesture interception for panzoom on mobile
 │   │   └── utils.ts                  # Context menus, toolbar, property management
 │   │
 │   ├── datacore/                     # Datacore backend (Preact/JSX)

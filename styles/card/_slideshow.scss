@@ -1,4 +1,8 @@
 .dynamic-views {
+  .card-cover-slideshow {
+    touch-action: pan-y;
+  }
+
   /* Dual stacked images for slideshow */
   .slideshow-img {
     position: absolute !important; /* !important required - without it, images stack vertically causing blank slides */

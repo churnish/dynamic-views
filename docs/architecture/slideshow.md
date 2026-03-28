@@ -2,13 +2,13 @@
 title: Slideshow system
 description: Card cover image slideshow — navigation, gesture detection, animation, preloading, failed image recovery, and visibility reset.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-06
+updated: 2026-03-26
 ---
 # Slideshow system
 
 ## Overview
 
-The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans three files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache), `src/shared/hover-intent.ts` (mousemove-after-mouseenter activation utility), and `src/bases/swipe-interceptor.ts` (touch gesture interception for panzoom on mobile). Both renderers (`src/shared/card-renderer.tsx` for Datacore, `src/bases/shared-renderer.ts` for Bases) wire up the shared slideshow functions and own the visibility reset IntersectionObserver.
+The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-intent.ts` (mousemove-after-mouseenter activation utility). Both renderers (`src/shared/card-renderer.tsx` for Datacore, `src/bases/shared-renderer.ts` for Bases) wire up the shared slideshow functions and own the visibility reset IntersectionObserver.
 
 ## Files
 
@@ -16,7 +16,6 @@ The slideshow system enables multi-image navigation on card covers in Grid and M
 | -------------------------------- | --------------------------------------------------------------------- |
 | `src/shared/slideshow.ts`        | Navigator, gesture detection, animation, preload, external blob cache |
 | `src/shared/hover-intent.ts`     | Hover intent utility (mousemove-after-mouseenter activation)          |
-| `src/bases/swipe-interceptor.ts` | Touch gesture interception for panzoom on mobile                      |
 | `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, indicator, boundary dimming          |
 
 ## Navigator state
@@ -50,6 +49,8 @@ The slideshow system enables multi-image navigation on card covers in Grid and M
 | `decayEventCount`      | `number`                                | Wheel events since entering decay phase        |
 | `minSinceDecay`        | `number`                                | Minimum \|deltaX\| during current decay phase  |
 | `gestureResetTimeout`  | `ReturnType<typeof setTimeout> \| null` | Quiet period timeout for gesture end           |
+| `requiresHoverIntent`  | `boolean`                               | `true` on hover-capable devices (`(hover: hover)` media query) |
+| `cardEl`               | `HTMLElement`                           | Card ancestor for hover intent class check (parameter) |
 
 ## DOM structure
 
@@ -132,6 +133,10 @@ Immediate full reset if `sign(deltaX)` changes. Always intentional.
 
 150ms (`WHEEL_GESTURE_GAP_MS`) timeout with no wheel events resets all gesture state. Note: the quiet period reset does NOT clear `lastDeltaX`, so direction change detection works across gesture boundaries. This appears intentional — a new gesture in the opposite direction should still trigger a direction change reset.
 
+### DevTools testing caveat
+
+When testing wheel gestures via `dispatchEvent(new WheelEvent(...))` in DevTools, synchronous dispatches share gesture state — `navigatedThisGesture` persists across calls because the 150ms `gestureResetTimeout` never fires between them. Test navigation in isolation or add a 200ms delay between gesture sequences. Additionally, `e.defaultPrevented` is true for ALL horizontal wheel events that pass the hover intent guard (not just navigated ones), so it is not a reliable proxy for "navigation happened." Check `src` changes or animation classes instead.
+
 ## noLoop clamping
 
 When `isSlideshowLoopingDisabled()` returns true (Style Settings toggle), navigation clamps at boundaries instead of wrapping:
@@ -142,10 +147,16 @@ When `isSlideshowLoopingDisabled()` returns true (Style Settings toggle), naviga
 
 ## Touch swipe
 
+### Direction lock
+
+Primary: `touch-action: pan-y` on `.card-cover-slideshow` (CSS, compositor-level). Browser handles vertical scroll natively, only horizontal gestures reach JS. Industry standard — used by Hammer.js, @use-gesture, Swiper.js.
+
+Secondary: JS direction detection as fallback guard (see table below).
+
 | Parameter           | Value                                 | Notes                                                                            |
 | ------------------- | ------------------------------------- | -------------------------------------------------------------------------------- |
 | Swipe threshold     | 30px                                  | `TOUCH_SWIPE_THRESHOLD`                                                          |
-| Direction detection | 10px                                  | `SWIPE_DETECT_THRESHOLD` — must exceed before classifying horizontal vs vertical |
+| Direction detection | 16px                                  | `SWIPE_DETECT_THRESHOLD` — secondary JS guard, aligns with platform paging slop  |
 | Horizontal test     | \|deltaX\| > \|deltaY\|               | Only after detection threshold                                                   |
 | Direction mapping   | Swipe right = prev, swipe left = next | OPPOSITE of trackpad (natural scrolling)                                         |
 | One per swipe       | `touchNavigated` flag                 | Reset on `touchstart`                                                            |
@@ -222,6 +233,7 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 `setupHoverIntent()` in [hover-intent.ts](../../src/shared/hover-intent.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
 
+- **Wheel gesture guard**: On hover-capable devices (`(hover: hover)`), wheel events in `setupSwipeGestures` require `hover-intent-active` on the card before processing. Touch-primary devices bypass the guard (hover intent is never set up there). When the guard blocks an event, all gesture state is reset to prevent stale accumulation.
 - **Arrow visibility**: Gated by `.hover-intent-active` class on the card (set by the shared hover intent system in both renderers)
 - **Image preload**: Fires on hover intent activation (deduped with `preloadGuard`)
 - **Hover zoom eligibility**: `.hover-zoom-eligible` set on `mouseenter` to the current image, cleared from all images on `mouseleave`, cleared from old image (now `.slideshow-img-next`) after animation completes via the callback returned by `setupHoverZoomEligibility()`
@@ -294,7 +306,7 @@ Both backends share the same abort behavior:
 | `WHEEL_SWIPE_THRESHOLD`  | 5     | Accumulated deltaX to trigger navigation          |
 | `WHEEL_GESTURE_GAP_MS`   | 150   | Quiet period for gesture end detection (ms)       |
 | `TOUCH_SWIPE_THRESHOLD`  | 30    | Touch distance to trigger navigation (px)         |
-| `SWIPE_DETECT_THRESHOLD` | 10    | Minimum movement to classify swipe direction (px) |
+| `SWIPE_DETECT_THRESHOLD` | 16    | Minimum movement to classify swipe direction (px) |
 | `WHEEL_DECAY_RATIO`      | 0.3   | Decay phase entry (30% of peak)                   |
 | `WHEEL_DECAY_MIN_EVENTS` | 5     | Events before decay is confirmed                  |
 | `WHEEL_RESUME_RATIO`     | 3     | Acceleration ratio for new gesture detection      |
@@ -314,3 +326,5 @@ Both backends share the same abort behavior:
 8. **Blob URLs revoked and caches cleared on unload.** `isCleanedUp` flag prevents orphaned blob URLs from completing fetches after cleanup.
 9. **Touch direction mapping inverted vs trackpad.** Swipe right = previous (natural scrolling), positive deltaX = next (trackpad convention).
 10. **Visibility reset only on hidden-to-visible transition.** `wasHidden` flag prevents reset on initial intersection or repeated visible states.
+11. **Wheel gesture guard matches hover intent gate.** Both renderers gate `setupHoverIntent` behind `matchMedia('(hover: hover)')`. The wheel guard in `setupSwipeGestures` uses the same media query — if one is skipped, both are.
+12. **Gesture state reset on hover intent guard.** When the wheel handler's hover intent guard blocks an event, `accumulatedDeltaX`, `navigatedThisGesture`, `lastDeltaX`, `gestureResetTimeout`, and decay state are all reset. Without this, stale state from blocked events would leak into the next accepted gesture.

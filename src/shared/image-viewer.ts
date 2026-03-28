@@ -4,7 +4,7 @@
 
 import { Notice, Platform, TFile, type App } from 'obsidian';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
-import { setupTouchInterceptAll } from '../bases/swipe-interceptor';
+
 import { GESTURE_TIMEOUT_MS } from './constants';
 import { getZoomSensitivityDesktop } from '../utils/style-settings';
 import { getVaultPathFromResourceUrl, isExternalUrl } from '../utils/image';
@@ -874,8 +874,8 @@ function openImageViewer(
       const gestureMode: GestureMode = isMobile ? 'mobile' : 'desktop';
       gestureControls = setupImageViewerGestures(imgEl, cloneEl, gestureMode);
 
-      // On mobile, disable all touch gestures (sidebar swipes + pull-down) while panning
-      // Desktop uses simpler cleanup since touch interception not needed
+      // On mobile, block single-finger touch propagation on non-IMG elements so the
+      // mobile gesture handler gets exclusive control (prevents sidebar swipe + pull-down)
       if (isMobile) {
         cloneEl.dataset.ignoreSwipe = 'true';
         const swipeController = new AbortController();
@@ -1344,4 +1344,25 @@ function openImageViewer(
     // 4. Remove DOM element last
     cloneEl.remove();
   }
+}
+
+/**
+ * Block single-finger touch propagation on non-IMG elements in the image viewer.
+ * Prevents sidebar swipe and pull-down gestures from interfering with pan/pinch.
+ */
+function setupTouchInterceptAll(
+  container: HTMLElement,
+  signal: AbortSignal
+): void {
+  container.addEventListener(
+    'touchmove',
+    (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName !== 'IMG') {
+        e.stopPropagation();
+      }
+    },
+    { passive: false, signal }
+  );
 }
