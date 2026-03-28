@@ -27,7 +27,6 @@ body {
 
   /* Icons */
   --dynamic-views-icon-s: var(--icon-s, 16px);
-  --dynamic-views-icon-xs: var(--icon-xs, 14px);
   --dynamic-views-icon-xs-stroke-width: var(--icon-xs-stroke-width, 2px);
   --dynamic-views-icon-color: var(--icon-color, #5c5c5c);
   --dynamic-views-icon-color-active: var(
@@ -63,6 +62,13 @@ body {
   /* Layout */
   --dynamic-views-bases-view-padding: var(--bases-view-padding, 12px);
   --dynamic-views-view-bottom-spacing: var(--view-bottom-spacing, 0px);
+  --dynamic-views-view-top-spacing: var(--view-top-spacing, 99px);
+  --dynamic-views-bases-header-height: var(--bases-header-height, 52px);
+  --dynamic-views-view-header-height: var(--view-header-height, 44px);
+  --dynamic-views-safe-area-inset-top: var(
+    --safe-area-inset-top,
+    env(safe-area-inset-top, 0px)
+  );
   --dynamic-views-bases-table-border-color: var(
     --bases-table-border-color,
     #e0e0e0

@@ -186,6 +186,7 @@ export class FullScreenController {
     if (!this.body.classList.contains('auto-full-screen')) return;
 
     this.mounted = true;
+    this.container.classList.add('dynamic-views-full-screen-enabled');
 
     // Store original margin-top (before class changes it)
     this.originalMarginTop =
@@ -288,8 +289,14 @@ export class FullScreenController {
     );
     setStyle(this.viewContent, 'transition', 'none', 'important');
 
-    // Toolbar: restore pointer-events + margin (WAAPI handles opacity)
+    // Toolbar: restore layout + opacity. Inline opacity (no !important) overrides
+    // CSS opacity:0 in the cascade (inline > author). WAAPI animates on top —
+    // first keyframe (0) overrides the inline during animation, fill:forwards
+    // holds final value. Inline opacity:1 is the durable fallback after WAAPI
+    // completes — Android WebView's compositor doesn't reliably hold fill:forwards
+    // against CSS opacity:0 + will-change:opacity.
     if (this.toolbarEl) {
+      setStyle(this.toolbarEl, 'opacity', '1');
       setStyles(this.toolbarEl, [
         ['pointer-events', 'auto', 'important'],
         ['margin-bottom', '0px', 'important'],
@@ -297,8 +304,9 @@ export class FullScreenController {
       ]);
     }
 
-    // Search row: restore pointer-events + collapse overrides (WAAPI handles opacity)
+    // Search row: same opacity pattern as toolbar
     if (this.searchRowEl) {
+      setStyle(this.searchRowEl, 'opacity', '1');
       setStyles(this.searchRowEl, [
         ['pointer-events', 'auto', 'important'],
         ['transition', 'none', 'important'],
@@ -405,7 +413,8 @@ export class FullScreenController {
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
-    // Clean up bridge + locked height
+    // Clean up bridge + locked height + padding class
+    this.container.classList.remove('dynamic-views-full-screen-enabled');
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transition');
     this.scrollEl.style.removeProperty('height');
@@ -494,31 +503,14 @@ export class FullScreenController {
       this.isAndroid ||
       now - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
 
-    // Evaluate hide guard only when accumulated delta exceeds dead zone
-    let canSettle = true;
     if (
       this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
-      !this.barsHidden
+      !this.barsHidden &&
+      sustainMet
     ) {
       // Ensure totalShift is measured (mount-time getBoundingClientRect
       // returns 0 when CSS selectors don't match at construction time)
       this.measureTotalShift();
-
-      // Skip hide on short views — pre-hide range must be ≥ 3× totalShift.
-      // Hiding bars increases viewport by totalShift, shrinking the range
-      // by the same amount. 3× ensures post-hide range (2× totalShift)
-      // leaves meaningful scroll distance.
-      const scrollableRange =
-        this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
-      canSettle = scrollableRange >= 3 * this.totalShift;
-    }
-
-    if (
-      this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
-      !this.barsHidden &&
-      sustainMet &&
-      canSettle
-    ) {
       this.barsHidden = true;
       this.lastToggleTime = now;
       this.hideBarsUI();
@@ -565,10 +557,6 @@ export class FullScreenController {
       this.pendingRafId = null;
     }
 
-    // Cancel WAAPI animations first — fill:forwards on toolbar/search would
-    // hold opacity at 1, preventing instant hide.
-    this.cancelAnimations();
-
     // Remove show-state if rapid show→hide before idle
     if (this.isAndroid) {
       this.clearShowInlines();
@@ -581,6 +569,11 @@ export class FullScreenController {
       cancelAnimationFrame(this.capacitorRafId);
       this.capacitorRafId = null;
     }
+
+    // Cancel WAAPI animations — must be AFTER clearShowInlines so
+    // fill:forwards removal doesn't flash elements visible before
+    // inlines are cleared.
+    this.cancelAnimations();
 
     // Clear show-path inlines (rapid show→hide before idle)
     this.clearNavbarInlines();
@@ -624,12 +617,18 @@ export class FullScreenController {
       // writes during active scroll (unlike iOS WebKit where they are fatal).
       // No bridge, no deferred settle, no false-bottom artifact.
 
-      // Pin header at visible position via inline styles BEFORE class change.
-      // Inline !important overrides CSS, keeping it visible until WAAPI takes
-      // over in the next rAF. Toolbar/search hide instantly (no pin needed).
+      // Pin header + toolbar + search at visible position via inline styles
+      // BEFORE class change. Inline !important overrides CSS, keeping elements
+      // visible until WAAPI takes over in the next rAF.
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
         setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
+      }
+      if (this.toolbarEl) {
+        setStyle(this.toolbarEl, 'opacity', '1', 'important');
+      }
+      if (this.searchRowEl) {
+        setStyle(this.searchRowEl, 'opacity', '1', 'important');
       }
 
       const before = this.scrollEl.scrollTop;
@@ -650,6 +649,20 @@ export class FullScreenController {
       this.pendingLayout = () => {
         this.lockedScrollHeight = this.scrollEl.offsetHeight;
         setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+
+        // Safety net: if post-hide range collapsed below TOP_ZONE, force-show.
+        // Deferred to rAF so pendingLayout = null has already run — showBarsUI
+        // sets its own pendingLayout without being overwritten.
+        const postRange =
+          this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
+        if (postRange < FULL_SCREEN_TOP_ZONE) {
+          requestAnimationFrame(() => {
+            this.barsHidden = false;
+            this.lastToggleTime = Date.now();
+            this.showBarsUI();
+          });
+        }
+
         this.pendingLayout = null;
       };
 
@@ -665,9 +678,12 @@ export class FullScreenController {
         // Cancel any running show animations
         this.cancelAnimations();
 
-        // Remove header pin — WAAPI overrides CSS from this frame.
-        // Inline !important would beat WAAPI, so must be removed first.
+        // Remove header + toolbar + search pins — WAAPI overrides CSS
+        // from this frame. Inline !important would beat WAAPI, so must
+        // be removed first.
         this.clearHeaderInlines();
+        if (this.toolbarEl) this.toolbarEl.style.removeProperty('opacity');
+        if (this.searchRowEl) this.searchRowEl.style.removeProperty('opacity');
 
         // Navbar WAAPI hide — separate transform + opacity animations
         // to match native per-property timing. fill: forwards holds final
@@ -701,8 +717,27 @@ export class FullScreenController {
           setStyle(hEl, 'pointer-events', 'none', 'important');
         }
 
-        // Toolbar + search: no WAAPI hide — instant snap to CSS opacity: 0.
-        // Pin cleared above, CSS takes over immediately.
+        // Toolbar + search WAAPI hide — opacity only. WAAPI fill:forwards
+        // is required so show WAAPI wins by composite ordering (newer wins,
+        // WAAPI §4.6). Without a hide WAAPI, show's fill:forwards competes
+        // with CSS opacity:0 + will-change:opacity — Android WebView's
+        // compositor collapses back to CSS after animation completes.
+        if (this.toolbarEl) {
+          this.barAnims.push(
+            this.toolbarEl.animate(
+              [{ opacity: 1 }, { opacity: 0 }],
+              UI_FADE_OPTS
+            )
+          );
+        }
+        if (this.searchRowEl) {
+          this.barAnims.push(
+            this.searchRowEl.animate(
+              [{ opacity: 1 }, { opacity: 0 }],
+              UI_FADE_OPTS
+            )
+          );
+        }
       });
       return;
     }
@@ -742,6 +777,16 @@ export class FullScreenController {
         this.prevScrollTop = this.scrollEl.scrollTop;
         this.lockedScrollHeight = this.scrollEl.offsetHeight;
         setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+
+        // Safety net: if post-settle range collapsed below TOP_ZONE, force-show
+        const postRange =
+          this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
+        if (postRange < FULL_SCREEN_TOP_ZONE) {
+          requestAnimationFrame(() => {
+            this.barsHidden = false;
+            this.showBarsUI();
+          });
+        }
       });
     };
   }
@@ -817,6 +862,11 @@ export class FullScreenController {
         // animations override fill:forwards on older animations)
         for (const a of oldAnims) a.cancel();
         this.clearHeaderInlines();
+        // Restore z-index — clearHeaderInlines removes it but header must stay
+        // above ::before scrim (z-index: 10) during show animation.
+        if (this.viewHeaderEl) {
+          setStyle(this.viewHeaderEl, 'z-index', '20', 'important');
+        }
 
         // Navbar WAAPI show — separate transform + opacity
         this.barAnims.push(
