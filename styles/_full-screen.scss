@@ -38,6 +38,8 @@
   margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
   transition: none !important;
   will-change: opacity;
+  // No !important — WAAPI animation level sits below !important in the cascade
+  opacity: 0;
 }
 
 .is-phone.full-screen-active [data-type='bases'] .bases-search-row {
@@ -50,15 +52,7 @@
   overflow: hidden !important;
   margin: 0 !important;
   padding: 0 !important;
-}
-
-// Both platforms: WAAPI controls toolbar/search opacity — no !important
-// (WAAPI animation level sits below !important in the cascade).
-.is-phone.full-screen-active [data-type='bases'] .bases-header {
-  opacity: 0;
-}
-
-.is-phone.full-screen-active [data-type='bases'] .bases-search-row {
+  // No !important — WAAPI animation level sits below !important in the cascade
   opacity: 0;
 }
 

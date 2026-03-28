@@ -59,7 +59,7 @@ export const SLIDESHOW_ANIMATION_MS = 300;
 export const WIDE_MODE_MULTIPLIER = 1.75;
 
 /** Minimum movement in pixels to determine swipe direction */
-export const SWIPE_DETECT_THRESHOLD = 10;
+export const SWIPE_DETECT_THRESHOLD = 16;
 
 /** Delay in ms after gesture ends before allowing click events */
 export const GESTURE_TIMEOUT_MS = 50;
@@ -107,3 +107,5 @@ export const FULL_SCREEN_SCROLL_IDLE_MS = 2000;
 export const FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 500;
 /** Bar hide/show animation duration (ms) — independent of TOGGLE_COOLDOWN_MS */
 export const FULL_SCREEN_ANIM_MS = 300;
+/** Bar opacity fade duration (ms) — matches native header/navbar opacity transition */
+export const FULL_SCREEN_FADE_MS = 200;

@@ -23,6 +23,7 @@ import {
   FULL_SCREEN_SCROLL_IDLE_ANDROID_MS,
   FULL_SCREEN_SHOW_SUSTAIN_MS,
   FULL_SCREEN_ANIM_MS,
+  FULL_SCREEN_FADE_MS,
 } from '../shared/constants';
 
 // WAAPI options matching native Obsidian bar transitions.
@@ -35,28 +36,28 @@ import {
 const HEADER_SLIDE_OPTS: KeyframeAnimationOptions = {
   duration: FULL_SCREEN_ANIM_MS,
   easing: 'ease-in-out',
-  fill: 'forwards' as FillMode,
+  fill: 'forwards',
 };
 
 /** Navbar slide: 300ms ease-out (matches native .mobile-navbar) */
 const NAVBAR_SLIDE_OPTS: KeyframeAnimationOptions = {
   duration: FULL_SCREEN_ANIM_MS,
   easing: 'ease-out',
-  fill: 'forwards' as FillMode,
+  fill: 'forwards',
 };
 
 /** Header/navbar opacity fade: 200ms ease-in-out (matches native) */
 const BAR_FADE_OPTS: KeyframeAnimationOptions = {
-  duration: 200,
+  duration: FULL_SCREEN_FADE_MS,
   easing: 'ease-in-out',
-  fill: 'forwards' as FillMode,
+  fill: 'forwards',
 };
 
 /** Toolbar/search opacity fade: 300ms ease-in-out */
 const UI_FADE_OPTS: KeyframeAnimationOptions = {
   duration: FULL_SCREEN_ANIM_MS,
   easing: 'ease-in-out',
-  fill: 'forwards' as FillMode,
+  fill: 'forwards',
 };
 
 export interface FullScreenElements {
@@ -88,6 +89,18 @@ function setStyle(
   el.style.setProperty(prop, value, priority);
 }
 
+/** Batch-set inline style properties. Each entry: [prop, value, priority?] */
+function setStyles(el: HTMLElement, styles: [string, string, string?][]): void {
+  for (const [prop, value, priority] of styles) {
+    el.style.setProperty(prop, value, priority);
+  }
+}
+
+/** Batch-remove inline style properties */
+function clearStyles(el: HTMLElement, props: string[]): void {
+  for (const prop of props) el.style.removeProperty(prop);
+}
+
 export class FullScreenController {
   private readonly scrollEl: HTMLElement;
   private readonly container: HTMLElement;
@@ -98,6 +111,9 @@ export class FullScreenController {
   private readonly ownerDoc: Document;
   private readonly body: HTMLElement;
   private readonly isAndroid: boolean;
+  private readonly toolbarEl: HTMLElement | null;
+  private readonly searchRowEl: HTMLElement | null;
+  private readonly workspaceSplitEl: HTMLElement | null;
 
   // State
   private mounted = false;
@@ -149,6 +165,13 @@ export class FullScreenController {
     this.ownerDoc = this.scrollEl.ownerDocument;
     this.body = this.ownerDoc.body;
     this.isAndroid = this.body.classList.contains('is-android');
+    this.toolbarEl =
+      this.leafContent.querySelector<HTMLElement>('.bases-header');
+    this.searchRowEl =
+      this.leafContent.querySelector<HTMLElement>('.bases-search-row');
+    this.workspaceSplitEl = this.body.querySelector<HTMLElement>(
+      '.workspace-split.mod-root'
+    );
 
     this.onScrollBound = (): void => this.onScroll();
     this.onTouchStartBound = (e: TouchEvent): void => this.onTouchStart(e);
@@ -219,19 +242,24 @@ export class FullScreenController {
 
   /** Clear navbar inline styles set during hide/show */
   private clearNavbarInlines(): void {
-    this.navbarEl.style.removeProperty('transform');
-    this.navbarEl.style.removeProperty('opacity');
-    this.navbarEl.style.removeProperty('pointer-events');
-    this.navbarEl.style.removeProperty('transition');
+    clearStyles(this.navbarEl, [
+      'transform',
+      'opacity',
+      'pointer-events',
+      'transition',
+    ]);
   }
 
   /** Clear header inline styles set during hide/show */
   private clearHeaderInlines(): void {
     if (!this.viewHeaderEl) return;
-    this.viewHeaderEl.style.removeProperty('transform');
-    this.viewHeaderEl.style.removeProperty('opacity');
-    this.viewHeaderEl.style.removeProperty('pointer-events');
-    this.viewHeaderEl.style.removeProperty('transition');
+    clearStyles(this.viewHeaderEl, [
+      'transform',
+      'opacity',
+      'pointer-events',
+      'transition',
+      'z-index',
+    ]);
   }
 
   // ---------------------------------------------------------------------------
@@ -254,24 +282,24 @@ export class FullScreenController {
     setStyle(this.viewContent, 'transition', 'none', 'important');
 
     // Toolbar: restore pointer-events + margin (WAAPI handles opacity)
-    const toolbar =
-      this.leafContent.querySelector<HTMLElement>('.bases-header');
-    if (toolbar) {
-      setStyle(toolbar, 'pointer-events', 'auto', 'important');
-      setStyle(toolbar, 'margin-bottom', '0px', 'important');
-      setStyle(toolbar, 'transition', 'none', 'important');
+    if (this.toolbarEl) {
+      setStyles(this.toolbarEl, [
+        ['pointer-events', 'auto', 'important'],
+        ['margin-bottom', '0px', 'important'],
+        ['transition', 'none', 'important'],
+      ]);
     }
 
     // Search row: restore pointer-events + collapse overrides (WAAPI handles opacity)
-    const searchRow =
-      this.leafContent.querySelector<HTMLElement>('.bases-search-row');
-    if (searchRow) {
-      setStyle(searchRow, 'pointer-events', 'auto', 'important');
-      setStyle(searchRow, 'transition', 'none', 'important');
-      setStyle(searchRow, 'height', 'auto', 'important');
-      setStyle(searchRow, 'overflow', 'visible', 'important');
-      setStyle(searchRow, 'margin', 'unset', 'important');
-      setStyle(searchRow, 'padding', 'unset', 'important');
+    if (this.searchRowEl) {
+      setStyles(this.searchRowEl, [
+        ['pointer-events', 'auto', 'important'],
+        ['transition', 'none', 'important'],
+        ['height', 'auto', 'important'],
+        ['overflow', 'visible', 'important'],
+        ['margin', 'unset', 'important'],
+        ['padding', 'unset', 'important'],
+      ]);
     }
 
     // Header: pointer-events + z-index above ::before scrim.
@@ -284,69 +312,58 @@ export class FullScreenController {
     // ::before scrim: expand to full margin-top gap via CSS custom properties.
     // The ::before rule reads --dynamic-views-scrim-height and --dynamic-views-scrim-bg, falling
     // back to the standard gradient when absent.
-    setStyle(
-      this.leafContent,
-      '--dynamic-views-scrim-height',
-      'var(--view-top-spacing)'
-    );
-    setStyle(
-      this.leafContent,
-      '--dynamic-views-scrim-bg',
-      'var(--dynamic-views-background-primary)'
-    );
-
     // ::after scroll gradient: restore during show (hidden by default during
     // full-screen-active). CSS reads --dynamic-views-after-display, falling
     // back to 'none' when absent.
-    setStyle(this.leafContent, '--dynamic-views-after-display', 'block');
+    setStyles(this.leafContent, [
+      ['--dynamic-views-scrim-height', 'var(--view-top-spacing)'],
+      ['--dynamic-views-scrim-bg', 'var(--dynamic-views-background-primary)'],
+      ['--dynamic-views-after-display', 'block'],
+    ]);
 
     // Restore mask-image gradient on workspace split — remove inline
     // override set in hideBarsUI so Obsidian's normal CSS takes over.
-    const workspaceSplit = this.body.querySelector<HTMLElement>(
-      '.workspace-split.mod-root'
-    );
-    if (workspaceSplit) {
-      workspaceSplit.style.removeProperty('-webkit-mask-image');
-      workspaceSplit.style.removeProperty('mask-image');
+    if (this.workspaceSplitEl) {
+      this.workspaceSplitEl.style.removeProperty('-webkit-mask-image');
+      this.workspaceSplitEl.style.removeProperty('mask-image');
     }
   }
 
   /** Remove show-state inline styles (Android only) */
   private clearShowInlines(): void {
-    this.viewContent.style.removeProperty('margin-top');
-    this.viewContent.style.removeProperty('transition');
+    clearStyles(this.viewContent, ['margin-top', 'transition']);
 
-    const toolbar =
-      this.leafContent.querySelector<HTMLElement>('.bases-header');
-    if (toolbar) {
-      toolbar.style.removeProperty('opacity');
-      toolbar.style.removeProperty('pointer-events');
-      toolbar.style.removeProperty('margin-bottom');
-      toolbar.style.removeProperty('transition');
+    if (this.toolbarEl) {
+      clearStyles(this.toolbarEl, [
+        'opacity',
+        'pointer-events',
+        'margin-bottom',
+        'transition',
+      ]);
     }
 
-    const searchRow =
-      this.leafContent.querySelector<HTMLElement>('.bases-search-row');
-    if (searchRow) {
-      searchRow.style.removeProperty('opacity');
-      searchRow.style.removeProperty('pointer-events');
-      searchRow.style.removeProperty('transition');
-      searchRow.style.removeProperty('height');
-      searchRow.style.removeProperty('overflow');
-      searchRow.style.removeProperty('margin');
-      searchRow.style.removeProperty('padding');
+    if (this.searchRowEl) {
+      clearStyles(this.searchRowEl, [
+        'opacity',
+        'pointer-events',
+        'transition',
+        'height',
+        'overflow',
+        'margin',
+        'padding',
+      ]);
     }
 
     if (this.viewHeaderEl) {
       this.viewHeaderEl.style.removeProperty('z-index');
     }
 
-    // ::before scrim: revert to standard gradient
-    this.leafContent.style.removeProperty('--dynamic-views-scrim-height');
-    this.leafContent.style.removeProperty('--dynamic-views-scrim-bg');
-
-    // ::after scroll gradient: revert to hidden
-    this.leafContent.style.removeProperty('--dynamic-views-after-display');
+    // ::before scrim + ::after scroll gradient: revert to defaults
+    clearStyles(this.leafContent, [
+      '--dynamic-views-scrim-height',
+      '--dynamic-views-scrim-bg',
+      '--dynamic-views-after-display',
+    ]);
   }
 
   /** Idempotent — no-op if already unmounted */
@@ -379,12 +396,9 @@ export class FullScreenController {
       if (this.isAndroid) {
         this.clearShowInlines();
         // Clean up mask-image inline on workspace split
-        const workspaceSplit = this.body.querySelector<HTMLElement>(
-          '.workspace-split.mod-root'
-        );
-        if (workspaceSplit) {
-          workspaceSplit.style.removeProperty('-webkit-mask-image');
-          workspaceSplit.style.removeProperty('mask-image');
+        if (this.workspaceSplitEl) {
+          this.workspaceSplitEl.style.removeProperty('-webkit-mask-image');
+          this.workspaceSplitEl.style.removeProperty('mask-image');
         }
       } else {
         this.leafContent.classList.remove('full-screen-showing');
@@ -450,6 +464,7 @@ export class FullScreenController {
         : FULL_SCREEN_TOP_ZONE;
     if (currentTop <= autoShowZone) {
       if (this.barsHidden) {
+        this.lastToggleTime = now;
         this.barsHidden = false;
         this.showBarsUI();
         this.accumulatedDelta = 0;
@@ -532,10 +547,10 @@ export class FullScreenController {
     if (this.body.classList.contains('full-screen-active')) return;
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
-    const toolbar = this.viewContent
-      .closest('.workspace-leaf-content')
-      ?.querySelector<HTMLElement>('.bases-header');
-    this.totalShift = this.originalMarginTop + (toolbar?.offsetHeight ?? 0);
+    this.totalShift =
+      this.originalMarginTop +
+      (this.toolbarEl?.offsetHeight ?? 0) +
+      (this.searchRowEl?.offsetHeight ?? 0);
   }
 
   // ---------------------------------------------------------------------------
@@ -545,6 +560,12 @@ export class FullScreenController {
   /** HIDE — immediate, momentum-safe */
   private hideBarsUI(): void {
     this.isActiveHider = true;
+
+    // Cancel pending show rAF (rapid show→hide before rAF fires)
+    if (this.pendingRafId != null) {
+      cancelAnimationFrame(this.pendingRafId);
+      this.pendingRafId = null;
+    }
 
     // Cancel WAAPI animations first — fill:forwards on toolbar/search would
     // hold opacity at 1, preventing instant hide on both platforms.
@@ -579,14 +600,11 @@ export class FullScreenController {
     // Navbar: animated hide via inline transform + opacity
     const navbarHeight = this.getNavbarHeight();
     const applyNavbarHide = (): void => {
-      setStyle(
-        this.navbarEl,
-        'transform',
-        `translateY(${navbarHeight}px)`,
-        'important'
-      );
-      setStyle(this.navbarEl, 'opacity', '0', 'important');
-      setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
+      setStyles(this.navbarEl, [
+        ['transform', `translateY(${navbarHeight}px)`, 'important'],
+        ['opacity', '0', 'important'],
+        ['pointer-events', 'none', 'important'],
+      ]);
     };
 
     if (this.isAndroid) {
@@ -606,12 +624,14 @@ export class FullScreenController {
       // Remove mask-image gradient on workspace split — no CSS rule for
       // Android (Obsidian's gradient value is unknown, can't use var fallback).
       // Show path removes inline → Obsidian's CSS takes over.
-      const workspaceSplit = this.body.querySelector<HTMLElement>(
-        '.workspace-split.mod-root'
-      );
-      if (workspaceSplit) {
-        setStyle(workspaceSplit, '-webkit-mask-image', 'none', 'important');
-        setStyle(workspaceSplit, 'mask-image', 'none', 'important');
+      if (this.workspaceSplitEl) {
+        setStyle(
+          this.workspaceSplitEl,
+          '-webkit-mask-image',
+          'none',
+          'important'
+        );
+        setStyle(this.workspaceSplitEl, 'mask-image', 'none', 'important');
       }
 
       const before = this.scrollEl.scrollTop;
@@ -697,7 +717,7 @@ export class FullScreenController {
 
     // WebKit needs double-rAF — passive scroll listener optimization
     // collapses transition+target into one style recalc if set in same frame.
-    const iosNavTransition = `transform ${FULL_SCREEN_ANIM_MS}ms ease-out, opacity 200ms ease-out`;
+    const iosNavTransition = `transform ${FULL_SCREEN_ANIM_MS}ms ease-out, opacity ${FULL_SCREEN_FADE_MS}ms ease-in-out`;
     this.pendingRafId = requestAnimationFrame(() => {
       setStyle(this.navbarEl, 'transition', iosNavTransition, 'important');
       this.pendingRafId = requestAnimationFrame(applyNavbarHide);
@@ -812,19 +832,21 @@ export class FullScreenController {
 
         // Toolbar + search WAAPI show — opacity only.
         // CSS opacity (no !important on Android) is overridden by WAAPI.
-        const toolbar =
-          this.leafContent.querySelector<HTMLElement>('.bases-header');
-        if (toolbar) {
+        if (this.toolbarEl) {
           this.barAnims.push(
-            toolbar.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+            this.toolbarEl.animate(
+              [{ opacity: 0 }, { opacity: 1 }],
+              UI_FADE_OPTS
+            )
           );
         }
 
-        const searchRow =
-          this.leafContent.querySelector<HTMLElement>('.bases-search-row');
-        if (searchRow) {
+        if (this.searchRowEl) {
           this.barAnims.push(
-            searchRow.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+            this.searchRowEl.animate(
+              [{ opacity: 0 }, { opacity: 1 }],
+              UI_FADE_OPTS
+            )
           );
         }
 
@@ -880,6 +902,7 @@ export class FullScreenController {
     // from firing in the same paint as the layout shift.
     void capacitorStatusBar?.show();
 
+    this.programmaticScroll = true;
     this.pendingRafId = requestAnimationFrame(() => {
       // Single class op — higher specificity overrides full-screen-active
       this.leafContent.classList.add('full-screen-showing');
@@ -900,22 +923,23 @@ export class FullScreenController {
       setStyle(this.navbarEl, 'opacity', '1', 'important');
       this.navbarEl.style.removeProperty('pointer-events');
 
+      this.programmaticScroll = false;
+
       // Toolbar + search WAAPI fade-in — shared with Android.
       // WebKit won't fire CSS transitions when the transition property
       // and transitioned value change in the same style recalc, so WAAPI
       // on both platforms.
-      const toolbar =
-        this.leafContent.querySelector<HTMLElement>('.bases-header');
-      if (toolbar) {
+      if (this.toolbarEl) {
         this.barAnims.push(
-          toolbar.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+          this.toolbarEl.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
         );
       }
-      const searchRow =
-        this.leafContent.querySelector<HTMLElement>('.bases-search-row');
-      if (searchRow) {
+      if (this.searchRowEl) {
         this.barAnims.push(
-          searchRow.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+          this.searchRowEl.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            UI_FADE_OPTS
+          )
         );
       }
     });
