@@ -231,10 +231,6 @@ export function getZoomSensitivityDesktop(): number {
   return getCSSVariableAsNumber('--dynamic-views-zoom-sensitivity', 0.08);
 }
 
-/**
- * Check if slideshow is enabled (default behavior)
- * Returns false when user enables "Disable slideshow"
- */
 /** Check if fixed-height Style Settings is active for masonry views. */
 export function isFixedHeightForMasonry(
   body: Element,
@@ -249,6 +245,7 @@ export function isFixedHeightForMasonry(
   );
 }
 
+/** Returns false when "Disable slideshow" is enabled. */
 export function isSlideshowEnabled(): boolean {
   return !hasBodyClass('dynamic-views-slideshow-disabled');
 }
@@ -342,8 +339,6 @@ export function getStyleSettingsHash(): string {
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
     // Poster reveal mode (affects JS click handlers, not CSS-only)
     hasBodyClass('dynamic-views-poster-reveal-press'),
-    // File-type indicator (affects CSS suffix visibility)
-    hasBodyClass('dynamic-views-file-type-flair'),
     // Text preview content options (affect stripped text output)
     shouldKeepPreviewHeadings(),
     shouldKeepPreviewNewlines(),

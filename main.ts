@@ -112,8 +112,6 @@ export default class DynamicViews extends Plugin {
     });
 
     // Notify Style Settings to parse our CSS (applies stored class-select values).
-    // Extension mode is the CSS default (no body class needed) — see _header.scss
-    // :not() fallback pattern. No file-type class is added here.
     this.app.workspace.trigger('parse-style-settings');
 
     // TEMP DEBUG — kept intentionally for ongoing mount ordering work.

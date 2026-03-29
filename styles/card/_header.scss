@@ -225,7 +225,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     color: var(--dynamic-views-text-normal);
   }
 
-  /* Extension suffix underline on hover (hidden in Flair) */
+  /* Suffix underline on hover — suppressed in Flair (badge replaces suffix) */
   body:not(.dynamic-views-file-type-flair)
     .dynamic-views
     .card.hover-intent-active
