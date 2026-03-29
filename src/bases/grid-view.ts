@@ -260,7 +260,14 @@ export class DynamicViewsGridView extends BasesView {
   private committedRow: {
     groupKey: string | undefined;
     rowStart: number;
+    reverse: boolean;
   } | null = null;
+  private lastSyncScrollTop = 0;
+  private lastSyncTime = 0;
+  private hasCommittedAnyRow = false;
+  private jumpPending = false;
+  private lastScrollDown = true;
+  private scrollDirectionAccum = 0;
   private isLayoutBusy = false;
   private virtualScrollRafId: number | null = null;
   private totalEntries = 0;
@@ -882,6 +889,12 @@ export class DynamicViewsGridView extends BasesView {
     this.cachedGroupOffsets.clear();
     this.groupOffsetsDirty = true;
     this.committedRow = null;
+    this.hasCommittedAnyRow = false;
+    this.jumpPending = false;
+    this.lastScrollDown = true;
+    this.scrollDirectionAccum = 0;
+    this.lastSyncScrollTop = 0;
+    this.lastSyncTime = 0;
     this.cardVerticalPadding = null;
     this.hasUserScrolled = false;
     this.isLayoutBusy = false;
@@ -1508,7 +1521,7 @@ export class DynamicViewsGridView extends BasesView {
       // Track state for batch append
       this.previousDisplayedCount = displayedSoFar;
 
-      // Batch-initialize scroll gradients and title truncation after all cards rendered
+      // Batch-initialize scroll gradients after all cards rendered
       // Sync responsive classes before gradient init (ResizeObservers are async)
       syncResponsiveClasses(
         Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
@@ -2253,11 +2266,11 @@ export class DynamicViewsGridView extends BasesView {
       // to ensure consistency even if this.displayedCount changed during async
       this.previousDisplayedCount = currCount;
 
-      // Batch-initialize scroll gradients and title truncation for newly rendered cards only
+      // Batch-initialize scroll gradients for newly rendered cards only
       if (newCardEls.length > 0) {
         // Sync responsive classes before gradient init (ResizeObservers are async)
         syncResponsiveClasses(newCardEls);
-        // Initialize gradients/truncation for new cards only (avoids
+        // Initialize gradients for new cards only (avoids
         // re-scanning old content-hidden cards in the container)
         initializeScrollGradientsForCards(newCardEls);
         initializeTextPreviewClampForCards(newCardEls);
@@ -2577,7 +2590,7 @@ export class DynamicViewsGridView extends BasesView {
       item.fixedHeight = measuredHeight - scalableHeight;
     } else {
       // Desktop: height-lock + cached responsive state (no layout reads).
-      // Deferred passes (gradients, truncation, clamp) in onMountRemeasure.
+      // Deferred passes (gradients, clamp) in onMountRemeasure.
       placeholder.replaceWith(handle.el);
       this.placeholderEls.delete(item);
 
@@ -2653,6 +2666,45 @@ export class DynamicViewsGridView extends BasesView {
     const columns = this.lastColumnCount || 1;
     const paneCenter = scrollTop + paneHeight / 2;
 
+    // Velocity gate: suppress new row commits during rapid scrollTop changes
+    // (scrollbar drag, trackpad flick). Finish current committed row but
+    // don't start new ones at transient intermediate positions.
+    const now = performance.now();
+    const dt = now - this.lastSyncTime;
+    const scrollDelta = scrollTop - this.lastSyncScrollTop;
+    const velocity = dt > 0 ? (Math.abs(scrollDelta) / dt) * 1000 : 0;
+    // Accumulated delta with direction-change reset (same pattern as
+    // full-screen bar hide/show). Filters trackpad micro-reversals (19-39px)
+    // during deceleration that would flip row selection order momentarily.
+    if (
+      (this.scrollDirectionAccum > 0 && scrollDelta < 0) ||
+      (this.scrollDirectionAccum < 0 && scrollDelta > 0)
+    ) {
+      this.scrollDirectionAccum = 0;
+    }
+    this.scrollDirectionAccum += scrollDelta;
+    if (this.scrollDirectionAccum > 50) {
+      this.lastScrollDown = true;
+      this.scrollDirectionAccum = 50;
+    } else if (this.scrollDirectionAccum < -50) {
+      this.lastScrollDown = false;
+      this.scrollDirectionAccum = -50;
+    }
+    this.lastSyncScrollTop = scrollTop;
+    this.lastSyncTime = now;
+    const highVelocity = velocity > 4000;
+    // Scrollbar jump or fast flick — treat landing position as fresh start.
+    // Pre-jump direction and committed row are irrelevant at the new position.
+    // Jump detection: high velocity AND delta > paneHeight = scrollbar
+    // click-to-position or equivalent. Reset to cold start (topmost-first).
+    // Fast flicks have high velocity but delta ≤ paneHeight — stay directional.
+    const isJump = highVelocity && Math.abs(scrollDelta) > paneHeight;
+    if (isJump) {
+      this.jumpPending = true;
+      this.committedRow = null;
+      this.scrollDirectionAccum = 0;
+    }
+
     // Phase 1: Committed-row lock — finish one row before starting another.
     // Step 1: Validate committed row (still has unmounted items in mount zone?)
     if (this.committedRow) {
@@ -2690,9 +2742,7 @@ export class DynamicViewsGridView extends BasesView {
       const rowStart = this.committedRow.rowStart;
       const rowEnd = Math.min(rowStart + columns, groupItems.length);
       const off = this.cachedGroupOffsets.get(this.committedRow.groupKey)!;
-      const rowCenter =
-        off + groupItems[rowStart].y + groupItems[rowStart].height / 2;
-      const reverse = rowCenter < paneCenter;
+      const reverse = this.committedRow.reverse;
 
       for (
         let j = reverse ? rowEnd - 1 : rowStart;
@@ -2711,11 +2761,27 @@ export class DynamicViewsGridView extends BasesView {
       }
     }
 
-    // Step 3: If budget remains and no committed row, find closest unmounted row
-    if (mountCount < SCROLL_MOUNT_BUDGET && !this.committedRow) {
+    // Step 3: If budget remains and no committed row, find closest unmounted row.
+    // Cold start (first open or jump): visible rows topmost-first, left-to-right.
+    // Continuous scroll: directional — topmost for scroll-down, bottommost for
+    // scroll-up. Suppressed during high velocity to avoid transient positions.
+    if (
+      mountCount < SCROLL_MOUNT_BUDGET &&
+      !this.committedRow &&
+      !highVelocity
+    ) {
+      // Cold start: first open (!hasCommittedAnyRow) or jump (jumpPending).
+      // jumpPending stays active until all visible rows are mounted — prevents
+      // premature switch to directional after the first cold start row commits.
+      const coldStart = this.jumpPending || !this.hasCommittedAnyRow;
+
       let bestGroupKey: string | undefined;
       let bestRowStart = -1;
+      let bestRowTop = Infinity;
+      let bestRowBottom = -Infinity;
       let bestDist = Infinity;
+      let bestIsVisible = false;
+      let hasVisibleUnmounted = false;
 
       for (const [groupKey, groupItems] of this.virtualItemsByGroup) {
         const off = this.cachedGroupOffsets.get(groupKey);
@@ -2740,29 +2806,69 @@ export class DynamicViewsGridView extends BasesView {
           if (!hasUnmounted) continue;
           if (rowBottom <= visibleTop || rowTop >= visibleBottom) continue;
 
+          const isVisible =
+            rowTop < scrollTop + paneHeight && rowBottom > scrollTop;
+          if (isVisible) hasVisibleUnmounted = true;
           const dist = Math.abs((rowTop + rowBottom) / 2 - paneCenter);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestGroupKey = groupKey;
-            bestRowStart = i;
+
+          if (coldStart) {
+            // Cold start (first open or jump): visible rows topmost-first,
+            // then buffer by center proximity. Always top-to-bottom.
+            if (isVisible && !bestIsVisible) {
+              bestIsVisible = true;
+              bestRowTop = rowTop;
+              bestDist = dist;
+              bestGroupKey = groupKey;
+              bestRowStart = i;
+            } else if (isVisible && bestIsVisible && rowTop < bestRowTop) {
+              bestRowTop = rowTop;
+              bestDist = dist;
+              bestGroupKey = groupKey;
+              bestRowStart = i;
+            } else if (!isVisible && !bestIsVisible && dist < bestDist) {
+              bestDist = dist;
+              bestGroupKey = groupKey;
+              bestRowStart = i;
+            }
+          } else {
+            // Continuous scroll: directional — topmost for scroll-down,
+            // bottommost for scroll-up.
+            if (this.lastScrollDown) {
+              if (rowTop < bestRowTop) {
+                bestRowTop = rowTop;
+                bestGroupKey = groupKey;
+                bestRowStart = i;
+              }
+            } else {
+              if (rowBottom > bestRowBottom) {
+                bestRowBottom = rowBottom;
+                bestGroupKey = groupKey;
+                bestRowStart = i;
+              }
+            }
           }
         }
       }
 
-      if (bestRowStart >= 0) {
-        this.committedRow = {
-          groupKey: bestGroupKey,
-          rowStart: bestRowStart,
-        };
+      // Clear jumpPending once all visible rows are mounted — transition
+      // from cold start (topmost-first) to directional for buffer rows.
+      if (this.jumpPending && !hasVisibleUnmounted) {
+        this.jumpPending = false;
+      }
 
+      if (bestRowStart >= 0) {
         const groupItems = this.virtualItemsByGroup.get(bestGroupKey)!;
         const rowEnd = Math.min(bestRowStart + columns, groupItems.length);
         const off = this.cachedGroupOffsets.get(bestGroupKey)!;
-        const rowCenter =
-          off +
-          groupItems[bestRowStart].y +
-          groupItems[bestRowStart].height / 2;
-        const reverse = rowCenter < paneCenter;
+        const rowBtm =
+          off + groupItems[bestRowStart].y + groupItems[bestRowStart].height;
+        this.committedRow = {
+          groupKey: bestGroupKey,
+          rowStart: bestRowStart,
+          reverse: coldStart ? rowBtm <= scrollTop : !this.lastScrollDown,
+        };
+        this.hasCommittedAnyRow = true;
+        const reverse = this.committedRow.reverse;
 
         for (
           let j = reverse ? rowEnd - 1 : bestRowStart;
@@ -2862,13 +2968,24 @@ export class DynamicViewsGridView extends BasesView {
     }, MOUNT_REMEASURE_MS);
   }
 
+  // TODO: remove — temporary debug flag for slow-motion mount testing.
+  // Toggle: __slowMount() / __slowMount(false)
+  debugSlowMount = false;
+
   private scheduleVirtualScrollSync(): void {
     if (this.virtualScrollRafId !== null) return;
-    this.virtualScrollRafId = this.win.requestAnimationFrame(() => {
+    const delay = this.debugSlowMount ? 15 : 1;
+    let remaining = delay;
+    const step = () => {
+      if (--remaining > 0) {
+        this.win.requestAnimationFrame(step);
+        return;
+      }
       this.virtualScrollRafId = null;
       this.updateCachedGroupOffsets();
       this.syncVirtualScroll();
-    });
+    };
+    this.virtualScrollRafId = this.win.requestAnimationFrame(step);
   }
 
   private setupCardResizeObserver(): void {
@@ -3042,6 +3159,9 @@ export class DynamicViewsGridView extends BasesView {
       }
     }
 
+    // Scroll compensation shifted scrollTop — clear committed row so
+    // syncVirtualScroll re-selects the topmost visible row at the new position.
+    this.committedRow = null;
     this.syncVirtualScroll();
 
     // Viewport may be underfilled after cards shrank (e.g., CSS-only setting change)

@@ -116,6 +116,26 @@ export default class DynamicViews extends Plugin {
     // :not() fallback pattern. No file-type class is added here.
     this.app.workspace.trigger('parse-style-settings');
 
+    // TODO: remove — temporary debug toggle for slow-motion mount testing.
+    // Console: __slowMount() / __slowMount(false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    (this.app as any).__slowMount = (on = true) => {
+      let count = 0;
+      for (const leaf of this.app.workspace.getLeavesOfType('bases')) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        const view = (leaf as any).view?.controller?.view;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (view?.virtualItems?.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          view.debugSlowMount = on;
+          count++;
+        }
+      }
+      return count
+        ? `${on ? 'ON' : 'OFF'} for ${count} view(s)`
+        : 'No views found';
+    };
+
     this.addCommand({
       id: 'create-datacore-note',
       name: `Create new note with ${DATACORE} query`,
@@ -607,7 +627,6 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
       `dynamic-views-open-on-${settings.openFileAction}`
     );
     document.body.classList.remove(
-      'dynamic-views-file-type-ext',
       'dynamic-views-file-type-flair',
       'dynamic-views-file-type-icon',
       'dynamic-views-file-type-none'
