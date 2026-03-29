@@ -23,6 +23,7 @@ import {
 } from '../shared/settings-schema';
 import {
   getCardSpacing,
+  getCompactBreakpoint,
   clearStyleSettingsCache,
   isFixedHeightForMasonry,
 } from '../utils/style-settings';
@@ -48,8 +49,6 @@ import {
 } from '../utils/masonry-layout';
 import {
   SharedCardRenderer,
-  initializeTitleTruncation,
-  initializeTitleTruncationForCards,
   syncResponsiveClasses,
   applyViewContainerStyles,
   applyCssOnlySettings,
@@ -249,6 +248,9 @@ export class DynamicViewsMasonryView extends BasesView {
   private initialRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private hasExplicitScrollHeights = false;
   private compensatingScrollCount = 0;
+  private lastMountedCenterY: number | null = null;
+  private frozenAnchorY: number | null = null;
+  private anchorFresh = false;
   private resizeCorrectionRafId: number | null = null;
   private hasUserScrolled = false;
   private lastScrollCorrectionTime = 0;
@@ -264,6 +266,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private lastLayoutCardWidth: number = 0;
   private lastLayoutGap: number = 0;
   private cardVerticalPadding: number | null = null;
+  private newlyMountedEls: HTMLElement[] = [];
   private stickyHeadings: ReturnType<typeof setupStickyHeadingObserver> | null =
     null;
   private lastDataUpdateTime = { value: 0 };
@@ -493,7 +496,6 @@ export class DynamicViewsMasonryView extends BasesView {
       this.updateLayoutRef.current('expand-group');
     }
     initializeScrollGradients(groupEl);
-    initializeTitleTruncation(groupEl);
     initializeTextPreviewClamp(groupEl);
 
     // Observe newly expanded heading for sticky stuck detection
@@ -1438,7 +1440,6 @@ export class DynamicViewsMasonryView extends BasesView {
         this.win.requestAnimationFrame(() => {
           if (!mc?.isConnected) return;
           initializeScrollGradients(mc);
-          initializeTitleTruncation(mc);
         });
 
         // Rebuild sticky heading observer for all non-collapsed group headings
@@ -2103,7 +2104,6 @@ export class DynamicViewsMasonryView extends BasesView {
             .map((v) => v.el!);
           syncResponsiveClasses(mounted);
           initializeScrollGradientsForCards(mounted);
-          initializeTitleTruncationForCards(mounted);
         });
       }, MASONRY_CORRECTION_MS);
 
@@ -2700,6 +2700,10 @@ export class DynamicViewsMasonryView extends BasesView {
     this.lastGroup.container = null;
     this.groupLayoutResults.clear();
     this.virtualItems = [];
+    this.newlyMountedEls = [];
+    this.lastMountedCenterY = null;
+    this.frozenAnchorY = null;
+    this.anchorFresh = false;
     this.hasExplicitScrollHeights = false;
     this.postResizeScrollActive = false;
     if (this.postResizeIdleTimeout !== null) {
@@ -2762,8 +2766,17 @@ export class DynamicViewsMasonryView extends BasesView {
     item.el = handle.el;
     item.handle = handle;
     this.cacheCardVerticalPadding(handle.el);
-    syncResponsiveClasses([handle.el]);
-    initializeScrollGradientsForCards([handle.el]);
+    // Compact-mode from cached item width — avoids per-card offsetWidth read.
+    // Full syncResponsiveClasses + deferred passes batched in onMountRemeasure.
+    const compactBreakpoint = getCompactBreakpoint();
+    if (
+      compactBreakpoint > 0 &&
+      item.width > 0 &&
+      item.width < compactBreakpoint
+    ) {
+      handle.el.classList.add('compact-mode');
+    }
+    this.newlyMountedEls.push(handle.el);
   }
 
   /** Unmount a virtual item: cleanup, remove from DOM, clear refs */
@@ -2816,11 +2829,128 @@ export class DynamicViewsMasonryView extends BasesView {
     let mountedNeverMeasured = false;
     let mountedPostResize = false;
     let mountCount = 0;
-    let budgetExhausted = false;
     const hiddenZonePreMeasure: VirtualItem[] = [];
-    for (const item of this.virtualItems) {
-      if (item.height === 0) continue;
+    const len = this.virtualItems.length;
 
+    // Phase 1: Mount outward from center of visible mounted cards (budget-limited).
+    // Content-hidden items excluded — trailing buffer would shift anchor backward.
+    // Recompute anchor on fresh scroll events or non-scroll callers.
+    // Freeze for budget continuation frames to prevent anchor drift.
+    if (!this.anchorFresh) {
+      let mountedMinY = Infinity;
+      let mountedMaxY = -Infinity;
+      for (let i = 0; i < len; i++) {
+        const it = this.virtualItems[i];
+        if (!it.el || it.el.classList.contains(CONTENT_HIDDEN_CLASS)) continue;
+        const off = offsets.get(it.groupKey);
+        if (off === undefined) continue;
+        const top = off + it.y;
+        if (top < mountedMinY) mountedMinY = top;
+        const bot = top + it.height;
+        if (bot > mountedMaxY) mountedMaxY = bot;
+      }
+
+      const mountedCenter =
+        mountedMaxY > -Infinity
+          ? (mountedMinY + mountedMaxY) / 2
+          : (this.lastMountedCenterY ?? scrollTop + paneHeight / 2);
+
+      if (mountedMaxY > -Infinity) {
+        this.lastMountedCenterY = mountedCenter;
+      }
+
+      this.frozenAnchorY =
+        mountedCenter >= mountTop && mountedCenter <= mountBottom
+          ? mountedCenter
+          : scrollTop + paneHeight / 2;
+
+      this.anchorFresh = true;
+    }
+
+    const anchorY = this.frozenAnchorY ?? scrollTop + paneHeight / 2;
+
+    let pivot = len;
+    for (let p = 0; p < len; p++) {
+      const it = this.virtualItems[p];
+      if (it.height === 0) continue;
+      const off = offsets.get(it.groupKey);
+      if (off === undefined) continue;
+      if (off + it.y + it.height / 2 >= anchorY) {
+        pivot = p;
+        break;
+      }
+    }
+
+    let lo = pivot - 1;
+    let hi = pivot;
+    let loExit = lo < 0;
+    let hiExit = hi >= len;
+
+    while (!loExit || !hiExit) {
+      let idx: number;
+      if (loExit) {
+        idx = hi++;
+      } else if (hiExit) {
+        idx = lo--;
+      } else {
+        const loIt = this.virtualItems[lo];
+        const hiIt = this.virtualItems[hi];
+        const loOff = offsets.get(loIt.groupKey) ?? 0;
+        const hiOff = offsets.get(hiIt.groupKey) ?? 0;
+        const loDist = anchorY - (loOff + loIt.y + loIt.height / 2);
+        const hiDist = hiOff + hiIt.y + hiIt.height / 2 - anchorY;
+        if (loDist <= hiDist) {
+          idx = lo--;
+        } else {
+          idx = hi++;
+        }
+      }
+
+      if (lo < 0) loExit = true;
+      if (hi >= len) hiExit = true;
+
+      const item = this.virtualItems[idx];
+      if (item.height === 0) continue;
+      const containerOffsetY = offsets.get(item.groupKey);
+      if (containerOffsetY === undefined) continue;
+
+      const itemTop = containerOffsetY + item.y;
+      const itemBottom = itemTop + item.height;
+      const inMountZone = itemBottom > mountTop && itemTop < mountBottom;
+
+      if (!inMountZone) {
+        if (idx < pivot) loExit = true;
+        else hiExit = true;
+        continue;
+      }
+
+      if (!item.el) {
+        if (mountCount < SCROLL_MOUNT_BUDGET) {
+          const container = this.groupContainers.get(item.groupKey);
+          if (container) {
+            this.mountVirtualItem(item, container, settings);
+            if (!item.el) continue;
+            mountCount++;
+            if (item.measuredAtWidth === 0) {
+              mountedNeverMeasured = true;
+            } else if (
+              Math.abs(item.measuredAtWidth - this.lastLayoutCardWidth) > 1
+            ) {
+              mountedPostResize = true;
+            }
+          }
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Phase 2: Content-hidden, unmount, restore, budgetExhausted detection.
+    let budgetExhausted = false;
+
+    for (let i = 0; i < len; i++) {
+      const item = this.virtualItems[i];
+      if (item.height === 0) continue;
       const containerOffsetY = offsets.get(item.groupKey);
       if (containerOffsetY === undefined) continue;
 
@@ -2830,24 +2960,8 @@ export class DynamicViewsMasonryView extends BasesView {
 
       if (inMountZone) {
         if (!item.el) {
-          if (mountCount < SCROLL_MOUNT_BUDGET) {
-            const container = this.groupContainers.get(item.groupKey);
-            if (container) {
-              this.mountVirtualItem(item, container, settings);
-              mountCount++;
-              if (item.measuredAtWidth === 0) {
-                mountedNeverMeasured = true;
-              } else if (
-                Math.abs(item.measuredAtWidth - this.lastLayoutCardWidth) > 1
-              ) {
-                mountedPostResize = true;
-              }
-            }
-          } else {
-            budgetExhausted = true;
-          }
+          budgetExhausted = true;
         } else if (item.el.classList.contains(CONTENT_HIDDEN_CLASS)) {
-          // Content-hidden → mount zone: restore rendering
           item.el.classList.remove(CONTENT_HIDDEN_CLASS);
           item.el.style.removeProperty('contain-intrinsic-height');
         }
@@ -2870,7 +2984,6 @@ export class DynamicViewsMasonryView extends BasesView {
           useHiddenBuffer &&
           !item.el.classList.contains(CONTENT_HIDDEN_CLASS)
         ) {
-          // Already mounted + measured (from a previous cycle) → hide
           item.el.classList.add(CONTENT_HIDDEN_CLASS);
           item.el.style.setProperty(
             'contain-intrinsic-height',
@@ -2984,6 +3097,16 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.batchLayoutPending) return;
     if (this.resizeCorrectionTimeout !== null) return;
     if (this.postResizeScrollActive) return;
+
+    // Batch deferred passes on scroll-mounted cards (mirrors grid onMountRemeasure)
+    if (this.newlyMountedEls.length > 0) {
+      const newEls = this.newlyMountedEls.filter((el) => el.isConnected);
+      this.newlyMountedEls.length = 0;
+      syncResponsiveClasses(newEls);
+      initializeScrollGradientsForCards(newEls);
+      initializeTextPreviewClampForCards(newEls);
+    }
+
     this.remeasureAndReposition(
       true // skipTransition — instant correction during scroll
     );
@@ -3040,7 +3163,11 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Mount a specific virtual item by index (for keyboard nav to unmounted cards) */
   private mountVirtualItemByIndex(index: number): HTMLElement | null {
-    const item = this.virtualItems.find((v) => v.index === index);
+    // O(1) when indices are contiguous (common case), O(n) fallback after group collapse
+    const item =
+      this.virtualItems[index]?.index === index
+        ? this.virtualItems[index]
+        : this.virtualItems.find((v) => v.index === index);
     if (!item || item.el || !this.lastRenderedSettings) return item?.el ?? null;
     const container = this.groupContainers.get(item.groupKey);
     if (!container) return null;
@@ -3244,7 +3371,6 @@ export class DynamicViewsMasonryView extends BasesView {
       // Post-insert measurement passes for replaced cards
       if (replacedCardEls.length > 0) {
         syncResponsiveClasses(replacedCardEls);
-        initializeTitleTruncationForCards(replacedCardEls);
         initializeTextPreviewClampForCards(replacedCardEls);
       }
     }
@@ -3710,7 +3836,6 @@ export class DynamicViewsMasonryView extends BasesView {
             (c) => !c.classList.contains(CONTENT_HIDDEN_CLASS)
           );
           initializeScrollGradientsForCards(visibleNewCards);
-          initializeTitleTruncationForCards(visibleNewCards);
           initializeTextPreviewClampForCards(visibleNewCards);
 
           if (this.renderState.version === currentVersion) {
@@ -3855,6 +3980,7 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       // Activate virtual scrolling on first user scroll
       this.hasUserScrolled = true;
+      this.anchorFresh = false;
 
       // Virtual scroll sync (RAF-debounced, runs on every scroll)
       this.scheduleVirtualScrollSync();

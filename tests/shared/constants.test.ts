@@ -34,4 +34,25 @@ describe('constants', () => {
       expect(Number(result)).toBeCloseTo(1.008, 5);
     });
   });
+
+  describe('cached hover scale CSS roundtrip', () => {
+    it.each([
+      [206, 350], // typical grid card
+      [300, 150], // wide short card
+      [150, 800], // narrow tall card
+    ])(
+      'setProperty/getPropertyValue roundtrip for width=%i height=%i',
+      (width, height) => {
+        const el = document.createElement('div');
+        const scaleX = computeHoverScale(width);
+        const scaleY = computeHoverScale(height);
+
+        el.style.setProperty('--hover-scale-x', scaleX);
+        el.style.setProperty('--hover-scale-y', scaleY);
+
+        expect(el.style.getPropertyValue('--hover-scale-x')).toBe(scaleX);
+        expect(el.style.getPropertyValue('--hover-scale-y')).toBe(scaleY);
+      }
+    );
+  });
 });

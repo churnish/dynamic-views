@@ -83,6 +83,12 @@ export const HOVER_GROWTH_PX = 4;
 
 const MAX_HOVER_SCALE = 1.04;
 
+// Fixed cover height body classes (Style Settings class-select options)
+export const FIXED_COVER_HEIGHT_GRID = 'dynamic-views-fixed-cover-height-grid';
+export const FIXED_COVER_HEIGHT_MASONRY =
+  'dynamic-views-fixed-cover-height-masonry';
+export const FIXED_COVER_HEIGHT_BOTH = 'dynamic-views-fixed-cover-height-both';
+
 /** Size-adaptive hover scale for a card — consistent gap consumption regardless of height.
     Returns empty string for invalid heights (removes property, falls back to CSS default). */
 export function computeHoverScale(height: number): string {

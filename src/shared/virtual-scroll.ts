@@ -6,7 +6,12 @@
 import type { BasesEntry } from 'obsidian';
 import type { CardData } from './card-renderer';
 import type { CardHandle } from '../bases/shared-renderer';
-import { UNMEASURED_CARD_HEIGHT } from './constants';
+import {
+  UNMEASURED_CARD_HEIGHT,
+  FIXED_COVER_HEIGHT_GRID,
+  FIXED_COVER_HEIGHT_MASONRY,
+  FIXED_COVER_HEIGHT_BOTH,
+} from './constants';
 
 /** Lightweight representation of a card's position and data when unmounted */
 export interface VirtualItem {
@@ -42,6 +47,22 @@ export interface VirtualItem {
   handle: CardHandle | null;
 }
 
+/** Check if fixed cover height is active for this card's view context. */
+function isFixedCoverHeight(cardEl: HTMLElement): boolean {
+  const body = cardEl.ownerDocument.body;
+  const isMasonry = !!cardEl.closest('.dynamic-views-masonry');
+  if (isMasonry) {
+    return (
+      body.classList.contains(FIXED_COVER_HEIGHT_MASONRY) ||
+      body.classList.contains(FIXED_COVER_HEIGHT_BOTH)
+    );
+  }
+  return (
+    body.classList.contains(FIXED_COVER_HEIGHT_GRID) ||
+    body.classList.contains(FIXED_COVER_HEIGHT_BOTH)
+  );
+}
+
 /**
  * Measure the scalable portion of a card's height.
  * Only top/bottom covers scale linearly with card width (aspect ratio preserved).
@@ -63,11 +84,7 @@ export function measureScalableHeight(cardEl: HTMLElement): number {
     return 0;
   }
   // Fixed cover height: CSS-determined, doesn't scale with width
-  if (
-    cardEl.ownerDocument.body.classList.contains(
-      'dynamic-views-fixed-cover-height'
-    )
-  ) {
+  if (isFixedCoverHeight(cardEl)) {
     return 0;
   }
   const wrapper = cardEl.querySelector<HTMLElement>(
@@ -105,38 +122,4 @@ export function estimateUnmountedHeight(
     );
   }
   return item.height > 0 ? item.height : UNMEASURED_CARD_HEIGHT;
-}
-
-/**
- * Sync mounted/unmounted state for a list of items based on scroll position.
- * Items within viewport + buffer are mounted; items outside are unmounted.
- *
- * @param containerOffsetY - Position of the items' container top edge within
- *   the scroll container's scrollable area (container.getBoundingClientRect().top
- *   - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop)
- * @public
- */
-export function syncVisibleItems(
-  items: VirtualItem[],
-  scrollTop: number,
-  viewportHeight: number,
-  containerOffsetY: number,
-  bufferPx: number,
-  onMount: (item: VirtualItem) => void,
-  onUnmount: (item: VirtualItem) => void
-): void {
-  const visibleTop = scrollTop - bufferPx;
-  const visibleBottom = scrollTop + viewportHeight + bufferPx;
-
-  for (const item of items) {
-    const itemTop = containerOffsetY + item.y;
-    const itemBottom = itemTop + item.height;
-    const inView = itemBottom > visibleTop && itemTop < visibleBottom;
-
-    if (inView && !item.el) {
-      onMount(item);
-    } else if (!inView && item.el) {
-      onUnmount(item);
-    }
-  }
 }

@@ -4,7 +4,11 @@ import {
 } from '../../src/shared/virtual-scroll';
 import { UNMEASURED_CARD_HEIGHT } from '../../src/shared/constants';
 
-function createCard(classes: string[], wrapperHeight?: number): HTMLElement {
+function createCard(
+  classes: string[],
+  wrapperHeight?: number,
+  containerClass?: string
+): HTMLElement {
   const card = document.createElement('div');
   for (const cls of classes) {
     card.classList.add(cls);
@@ -18,12 +22,24 @@ function createCard(classes: string[], wrapperHeight?: number): HTMLElement {
     });
     card.appendChild(wrapper);
   }
+  if (containerClass) {
+    const container = document.createElement('div');
+    container.classList.add(containerClass);
+    container.appendChild(card);
+    document.body.appendChild(container);
+  }
   return card;
 }
 
 describe('measureScalableHeight', () => {
   afterEach(() => {
     document.body.className = '';
+    // Clean up containers appended during tests
+    for (const child of [...document.body.children]) {
+      if (child instanceof HTMLElement && child.tagName === 'DIV') {
+        child.remove();
+      }
+    }
   });
 
   it('returns wrapper height for top cover', () => {
@@ -51,10 +67,40 @@ describe('measureScalableHeight', () => {
     expect(measureScalableHeight(card)).toBe(0);
   });
 
-  it('returns 0 for top cover with fixed-cover-height mode', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height');
-    const card = createCard(['card-cover-top'], 200);
+  it('returns 0 for masonry card with fixed-cover-height-masonry', () => {
+    document.body.classList.add('dynamic-views-fixed-cover-height-masonry');
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-masonry');
     expect(measureScalableHeight(card)).toBe(0);
+  });
+
+  it('returns 0 for masonry card with fixed-cover-height-both', () => {
+    document.body.classList.add('dynamic-views-fixed-cover-height-both');
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-masonry');
+    expect(measureScalableHeight(card)).toBe(0);
+  });
+
+  it('returns 0 for grid card with fixed-cover-height-grid', () => {
+    document.body.classList.add('dynamic-views-fixed-cover-height-grid');
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
+    expect(measureScalableHeight(card)).toBe(0);
+  });
+
+  it('returns 0 for grid card with fixed-cover-height-both', () => {
+    document.body.classList.add('dynamic-views-fixed-cover-height-both');
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
+    expect(measureScalableHeight(card)).toBe(0);
+  });
+
+  it('returns wrapper height for grid card with fixed-cover-height-masonry', () => {
+    document.body.classList.add('dynamic-views-fixed-cover-height-masonry');
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
+    expect(measureScalableHeight(card)).toBe(200);
+  });
+
+  it('returns wrapper height for masonry card with fixed-cover-height-grid', () => {
+    document.body.classList.add('dynamic-views-fixed-cover-height-grid');
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-masonry');
+    expect(measureScalableHeight(card)).toBe(200);
   });
 
   it('returns 0 for top cover with no wrapper child', () => {
