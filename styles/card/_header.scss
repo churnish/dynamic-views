@@ -34,14 +34,23 @@
     overflow: hidden;
   }
 
+  /* Single-line titles: character-level truncation via text-overflow
+     instead of -webkit-line-clamp (which truncates at word boundaries for N=1) */
+  &.title-single-line .card-title {
+    display: block;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: unset;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
   /* Extension suffix element (hidden by default, shown in Extension mode) */
   .card-title-ext-suffix {
     display: none;
   }
 }
 
-/* Extension mode (default): CSS line-clamp provides the fallback ellipsis;
-   JS canvas truncation refines the text to fit title + … + extension suffix.
+/* Extension mode (default): CSS line-clamp truncates title text.
    max-height is a pixel-based guard belt on top of line-clamp.
    Extension is the default file-type indicator — no body class needed.
    :not() ensures these rules yield when another mode is active. */

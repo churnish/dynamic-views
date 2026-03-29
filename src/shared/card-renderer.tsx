@@ -143,93 +143,6 @@ function renderFileExt(extInfo: { ext: string } | null) {
 }
 
 /**
- * Set up title truncation with extension preservation.
- * Truncates title text while keeping extension visible at end.
- */
-function setupTitleTruncation(titleEl: HTMLElement, signal: AbortSignal): void {
-  const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
-  const extEl = titleEl.querySelector<HTMLElement>('.card-title-ext-suffix');
-
-  if (!textEl) return;
-
-  const fullText = (textEl.textContent || '').trim();
-  if (fullText.length === 0) return; // Skip empty titles
-
-  const win = getOwnerWindow(titleEl);
-  const ellipsis = '…';
-
-  // Get max height from CSS (returns 0 if invalid)
-  const getMaxHeight = () => {
-    const style = win.getComputedStyle(titleEl);
-    const lineHeight = parseFloat(style.lineHeight);
-    const maxLines = parseInt(
-      style.getPropertyValue('--dynamic-views-title-lines') || '2'
-    );
-    if (maxLines <= 0 || !isFinite(lineHeight)) return 0;
-    return Math.ceil(lineHeight * maxLines) + 1;
-  };
-
-  const truncate = () => {
-    // Skip if no width (hidden tab)
-    if (titleEl.offsetWidth === 0) return;
-
-    const maxHeight = getMaxHeight();
-    if (maxHeight <= 0) return; // Invalid CSS config
-
-    const currentText = textEl.textContent || '';
-
-    // Reset to full text only if currently truncated
-    if (currentText !== fullText) {
-      textEl.textContent = fullText;
-    }
-
-    // Check if truncation needed
-    if (titleEl.scrollHeight <= maxHeight) return;
-
-    // Binary search for max text that fits with ellipsis + extension
-    let low = 1;
-    let high = fullText.length;
-
-    while (low < high) {
-      const mid = Math.ceil((low + high) / 2);
-      textEl.textContent = fullText.slice(0, mid).trimEnd() + ellipsis;
-
-      if (titleEl.scrollHeight <= maxHeight) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    // Set final truncated text
-    textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
-
-    // Safety: reduce further if still overflowing
-    while (titleEl.scrollHeight > maxHeight && low > 1) {
-      low--;
-      textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
-    }
-  };
-
-  // Only truncate in Extension mode (when extension suffix is visible)
-  const isExtensionMode = () =>
-    extEl && win.getComputedStyle(extEl).display !== 'none';
-
-  const check = () => {
-    if (isExtensionMode()) {
-      truncate();
-    }
-    // Non-extension modes use CSS line-clamp (no JS needed)
-  };
-
-  const observer = new win.ResizeObserver(check);
-  observer.observe(titleEl);
-  check(); // Initial check
-
-  signal.addEventListener('abort', () => observer.disconnect());
-}
-
-/**
  * Render a single link as JSX
  */
 function renderLink(link: ParsedLink, app: App): JSX.Element {
@@ -1693,8 +1606,6 @@ function Card({
           if (!el) return;
           if (isTitleScrollMode) {
             setupElementScrollGradient(el, scrollController.signal);
-          } else {
-            setupTitleTruncation(el, scrollController.signal);
           }
         }}
       >

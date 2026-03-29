@@ -76,10 +76,7 @@ import {
 import type { CardData } from '../shared/card-renderer';
 import { setupHoverKeyboardNavigation } from '../shared/keyboard-nav';
 import { initializeScrollGradients } from '../shared/scroll-gradient';
-import {
-  initializeTitleTruncation,
-  syncResponsiveClasses,
-} from '../bases/shared-renderer';
+import { syncResponsiveClasses } from '../bases/shared-renderer';
 
 /** Shared width parameters computed from section CSS variables and dimensions. */
 function calculateWidthParams(
@@ -1240,6 +1237,10 @@ export function View({
           '--dynamic-views-title-lines',
           String(settings.titleLines)
         );
+        container.classList.toggle(
+          'title-single-line',
+          settings.titleLines === 1
+        );
         container.style.setProperty(
           '--dynamic-views-thumbnail-size',
           `${settings.thumbnailSize}px`
@@ -1342,7 +1343,6 @@ export function View({
             Array.from(container.querySelectorAll<HTMLElement>('.card'))
           );
           initializeScrollGradients(container);
-          initializeTitleTruncation(container);
         });
       });
     }
@@ -1457,6 +1457,7 @@ export function View({
       '--dynamic-views-title-lines',
       String(settings.titleLines)
     );
+    container.classList.toggle('title-single-line', settings.titleLines === 1);
     container.style.setProperty(
       '--dynamic-views-thumbnail-size',
       `${settings.thumbnailSize}px`
@@ -1551,7 +1552,6 @@ export function View({
         );
 
         initializeScrollGradients(container);
-        initializeTitleTruncation(container);
       });
     });
 

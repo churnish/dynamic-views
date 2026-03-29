@@ -62,7 +62,6 @@ import {
   getSlideshowMaxImages,
   getCompactBreakpoint,
   hasBodyClass,
-  isExtensionMode,
 } from '../utils/style-settings';
 import {
   getPropertyLabel,
@@ -130,81 +129,6 @@ export interface CardHandle {
   cleanup: () => void;
 }
 
-/**
- * Shared canvas for text measurement (avoids layout reads)
- */
-let measureCanvas: HTMLCanvasElement | null = null;
-let measureCtx: CanvasRenderingContext2D | null = null;
-
-function getMeasureContext(): CanvasRenderingContext2D {
-  if (!measureCanvas) {
-    measureCanvas = document.createElement('canvas');
-    measureCtx = measureCanvas.getContext('2d');
-  }
-  return measureCtx!;
-}
-
-/**
- * Truncate title text using canvas measureText (no layout reads).
- * Called with pre-read measurements to avoid layout thrashing.
- */
-function truncateTitleWithCanvas(
-  textEl: HTMLElement | Text,
-  fullText: string,
-  containerWidth: number,
-  font: string,
-  maxLines: number,
-  suffixText = '',
-  overflows = false
-): void {
-  if (!fullText || containerWidth <= 0 || maxLines <= 0) return;
-
-  const ctx = getMeasureContext();
-  ctx.font = font;
-
-  const ellipsis = '…';
-  const ellipsisWidth = ctx.measureText(ellipsis).width;
-  const suffixWidth = suffixText ? ctx.measureText(suffixText).width : 0;
-  // Raw available width: continuous ribbon model (ignores word-wrap gaps)
-  const rawAvailable = containerWidth * maxLines - ellipsisWidth - suffixWidth;
-
-  const fullWidth = ctx.measureText(fullText).width;
-
-  // Word-wrap slack: CSS word-wrapping leaves gaps at line ends — words that
-  // don't fit on a line wrap to the next, wasting the tail. Estimate slack as
-  // half an average word width per line (expected unused tail per line break).
-  // Single-line titles have no word-wrap, so slack is zero.
-  let availableWidth = rawAvailable;
-  if (maxLines > 1) {
-    const wordCount = fullText.split(/\s+/).length;
-    const avgWordWidth = fullWidth / Math.max(wordCount, 1);
-    availableWidth -= maxLines * avgWordWidth * 0.75;
-  }
-
-  if (fullWidth <= availableWidth) return; // Fits even with word-wrap slack
-  // Near boundary: between slack-adjusted and raw limit. Trust DOM measurement.
-  if (fullWidth <= rawAvailable && !overflows) return;
-
-  // Binary search for truncation point using canvas (no layout reads)
-  let low = 1;
-  let high = fullText.length;
-
-  while (low < high) {
-    const mid = Math.ceil((low + high) / 2);
-    const testText = fullText.slice(0, mid);
-    const testWidth = ctx.measureText(testText).width;
-
-    if (testWidth <= availableWidth) {
-      low = mid;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  // Apply truncated text
-  textEl.textContent = fullText.slice(0, low).trimEnd() + ellipsis;
-}
-
 const PAIRED_PROPERTY_CLASSES = [
   'dynamic-views-paired-property-left',
   'dynamic-views-paired-property-right',
@@ -246,6 +170,7 @@ export function applyViewContainerStyles(
     '--dynamic-views-title-lines',
     String(settings.titleLines)
   );
+  container.classList.toggle('title-single-line', settings.titleLines === 1);
 
   // Poster display mode — container class
   container.classList.remove('poster-mode-fade', 'poster-mode-overlay');
@@ -277,6 +202,7 @@ export function applyCssOnlySettings(
       '--dynamic-views-title-lines',
       String(titleLines)
     );
+    containerEl.classList.toggle('title-single-line', titleLines === 1);
   }
 
   const imageRatio = config.get('imageRatio');
@@ -308,130 +234,6 @@ export function applyCssOnlySettings(
   containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
   const imageFit = (config.get('imageFit') as string) ?? 'crop';
   containerEl.classList.add(`image-fit-${imageFit}`);
-}
-
-/**
- * Batch-initialize title truncation for all cards in container.
- * Uses read-then-write pattern to avoid layout thrashing:
- * - Phase 1: Read all title dimensions (1 layout recalc)
- * - Phase 2: Calculate and apply truncations (no layout reads)
- *
- * Only runs when extension mode is ON (CSS can't preserve extension).
- */
-/**
- * Core title truncation for a set of title elements.
- * Uses read-then-write pattern to avoid layout thrashing.
- */
-function truncateTitleElements(titles: Iterable<HTMLElement>): void {
-  // Phase 0: Reset stale text (all writes, before any reads)
-  for (const titleEl of titles) {
-    if (titleEl.closest('.card')?.classList.contains(CONTENT_HIDDEN_CLASS))
-      continue;
-    const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
-    if (!textEl) continue;
-    const fullTitle = textEl.dataset.fullTitle;
-    if (fullTitle && textEl.textContent !== fullTitle) {
-      textEl.textContent = fullTitle;
-    }
-  }
-
-  // Phase 1: Read all dimensions (forces 1 layout recalc)
-  const measurements: Array<{
-    textEl: HTMLElement;
-    fullText: string;
-    width: number;
-    font: string;
-    maxLines: number;
-    suffixText: string;
-    overflows: boolean;
-  }> = [];
-
-  for (const titleEl of titles) {
-    // Skip titles in content-hidden cards (dimension reads trigger Chromium warnings)
-    if (titleEl.closest('.card')?.classList.contains(CONTENT_HIDDEN_CLASS))
-      continue;
-
-    const textEl = titleEl.querySelector<HTMLElement>('.card-title-text');
-    if (!textEl) continue;
-
-    const fullText = (
-      textEl.dataset.fullTitle ||
-      textEl.textContent ||
-      ''
-    ).trim();
-    if (!fullText) continue;
-
-    const style = getOwnerWindow(titleEl).getComputedStyle(titleEl);
-    const width = titleEl.offsetWidth;
-
-    // Skip if not visible
-    if (width <= 0) continue;
-
-    const suffixEl = titleEl.querySelector('.card-title-ext-suffix');
-    measurements.push({
-      textEl,
-      fullText,
-      width,
-      font: style.font,
-      maxLines:
-        parseInt(style.getPropertyValue('--dynamic-views-title-lines')) || 2,
-      suffixText: suffixEl?.textContent || '',
-      overflows: titleEl.scrollHeight > titleEl.offsetHeight,
-    });
-  }
-
-  // Phase 2: Calculate and apply truncations (no layout reads)
-  for (const m of measurements) {
-    truncateTitleWithCanvas(
-      m.textEl,
-      m.fullText,
-      m.width,
-      m.font,
-      m.maxLines,
-      m.suffixText,
-      m.overflows
-    );
-  }
-}
-
-export function initializeTitleTruncation(container: HTMLElement): void {
-  // Only run in Extension mode (refines CSS line-clamp fallback via canvas measurement)
-  if (!isExtensionMode()) return;
-
-  // Skip if scroll mode is enabled (no truncation)
-  if (document.body.classList.contains('dynamic-views-title-overflow-scroll')) {
-    return;
-  }
-
-  const titles = container.querySelectorAll<HTMLElement>('.card-title');
-  if (titles.length === 0) return;
-
-  truncateTitleElements(titles);
-}
-
-/**
- * Card-scoped variant — truncates titles for specific cards only.
- * Use in appendBatch to avoid re-scanning old hidden cards in the container.
- */
-export function initializeTitleTruncationForCards(cards: HTMLElement[]): void {
-  if (cards.length === 0) return;
-
-  // Only run in Extension mode (refines CSS line-clamp fallback via canvas measurement)
-  if (!isExtensionMode()) return;
-
-  // Skip if scroll mode is enabled (no truncation)
-  if (document.body.classList.contains('dynamic-views-title-overflow-scroll')) {
-    return;
-  }
-
-  const titles: HTMLElement[] = [];
-  for (const card of cards) {
-    const title = card.querySelector<HTMLElement>('.card-title');
-    if (title) titles.push(title);
-  }
-
-  if (titles.length === 0) return;
-  truncateTitleElements(titles);
 }
 
 // dragManager type declared in datacore/types.d.ts
@@ -1187,7 +989,6 @@ export class SharedCardRenderer {
           text: displayTitle,
           attr: {
             'data-href': card.path,
-            'data-full-title': displayTitle,
             href: card.path,
             draggable: 'true',
             'data-ext': extNoDot,
@@ -1267,7 +1068,7 @@ export class SharedCardRenderer {
         }
 
         // Add extension suffix inside link for Extension mode
-        if (extInfo && isExtensionMode()) {
+        if (extInfo) {
           link.createSpan({
             cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
@@ -1278,11 +1079,11 @@ export class SharedCardRenderer {
         titleEl.createSpan({
           cls: 'card-title-text',
           text: displayTitle,
-          attr: { 'data-ext': extNoDot, 'data-full-title': displayTitle },
+          attr: { 'data-ext': extNoDot },
         });
 
         // Add extension suffix for Extension mode
-        if (extInfo && isExtensionMode()) {
+        if (extInfo) {
           titleEl.createSpan({
             cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
@@ -2177,8 +1978,6 @@ export class SharedCardRenderer {
         ? entry.file.basename
         : card.title;
 
-    titleTextEl.dataset.fullTitle = displayTitle;
-
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(
       (n) => n.nodeType === Node.TEXT_NODE
@@ -2208,7 +2007,6 @@ export class SharedCardRenderer {
     this.updateTitleText(cardEl, card, entry, settings);
     this.rerenderSubtitle(cardEl, card, entry, settings);
     this.rerenderProperties(cardEl, card, entry, settings);
-    initializeTitleTruncationForCards([cardEl]);
     updateTextPreviewDOM(cardEl, card.textPreview || '');
     const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
     if (previewEl) applyPerParagraphClamp(previewEl);
