@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-25
+updated: 2026-03-30
 ---
 # Style Settings fallback selectors
 
@@ -51,15 +51,14 @@ body:not([class*='dynamic-views-card-background-hover-'])
 When the default mode has CSS rules that other modes must override, use `:not()` to exclude the other modes instead of requiring a body class for the default:
 
 ```scss
-/* Extension mode is the default — fires when no other mode is active */
+/* Grid is the default — fires when neither masonry-only nor disabled */
 body:not(
-    .dynamic-views-file-type-flair,
-    .dynamic-views-file-type-icon,
-    .dynamic-views-file-type-none
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
   )
-  .dynamic-views
-  .card-title {
-  /* extension-specific overrides */
+  .dynamic-views-grid
+  .card-cover-wrapper {
+  /* grid-default overrides */
 }
 ```
 
@@ -68,6 +67,12 @@ This eliminates the need for a body class on the default mode entirely. The plug
 This pattern also avoids the `initClasses` race: Style Settings' `initClasses` adds the `@settings` `default:` class to body, then applies the stored value without removing the default. Both classes coexist. By not depending on a body class for the default mode, the race is structurally impossible.
 
 Prefer `:not()` exclusion over `:is()` + `:not([class*="..."])` when the default mode needs CSS overrides and all non-default modes are known. Use the `:is()` pattern when the default has a named class that Style Settings explicitly manages.
+
+## `class-select` — `allowEmpty` gotcha
+
+`allowEmpty: true` adds a visible blank dropdown entry with internal value `"none"`. There is no way to label it or hide it. Avoid `allowEmpty: true` when the default needs a visible name — use `allowEmpty: false` with an explicit default option instead, matching the pattern used by all other `class-select` settings in the plugin.
+
+YAML `default: none` (lowercase) is parsed as null by the YAML parser, breaking the setting entirely (makes it invisible in Style Settings). Use `default: None` (capitalized) if `allowEmpty: true` is unavoidable.
 
 ## When adding a new `class-select` setting
 
@@ -208,7 +213,7 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Card border color (hover) | muted          | [_core.scss](../../styles/card/_core.scss)                                                     |
 | Card background (hover)   | transparent    | [_hover-states.scss](../../styles/_hover-states.scss)                                             |
 | Card shadow color         | Default        | No CSS fallback needed — Default passes theme shadow vars through unchanged |
-| File format indicator    | Extension      | [_header.scss](../../styles/card/_header.scss) — `:not()` exclusion pattern (no body class for default)  |
+| File type indicator      | None           | [_header.scss](../../styles/card/_header.scss) — suffix visible by default, only Flair hides it  |
 | Fixed cover height       | Grid (slider)  | [_grid-view.scss](../../styles/_grid-view.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
 | Fixed poster height      | Masonry        | [_poster.scss](../../styles/card/_poster.scss) — backward compat via `:not([class*=...])` for old unsuffixed class |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
