@@ -461,6 +461,14 @@ export class FullScreenController {
       );
     }
 
+    // Cooldown prevents rapid cycling (deceleration bounce, layout-induced deltas).
+    // Checked BEFORE auto-show — on short views, Android bridge-less hide adjusts
+    // scrollTop to 0, which would trigger auto-show on the very next event.
+    if (now - this.lastToggleTime < FULL_SCREEN_TOGGLE_COOLDOWN_MS) {
+      this.accumulatedDelta = 0;
+      return;
+    }
+
     // Auto-show near top — expanded zone while bridge is active AND user is
     // scrolling upward. During downward scroll, use normal zone to avoid
     // hide→auto-show cycling (bars hide at ~80px, well below totalShift).
@@ -488,13 +496,6 @@ export class FullScreenController {
       this.directionChangeTime = now;
     }
     this.accumulatedDelta += delta;
-
-    // Cooldown prevents rapid cycling (deceleration bounce, layout-induced deltas)
-    if (now - this.lastToggleTime < FULL_SCREEN_TOGGLE_COOLDOWN_MS) {
-      // Reset accumulator so layout-induced deltas don't leak past cooldown
-      this.accumulatedDelta = 0;
-      return;
-    }
 
     // Sustain gate: require direction to hold for 80ms before toggling.
     // Filters iOS deceleration bounce (reverse-direction noise at momentum end).
@@ -649,20 +650,6 @@ export class FullScreenController {
       this.pendingLayout = () => {
         this.lockedScrollHeight = this.scrollEl.offsetHeight;
         setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-
-        // Safety net: if post-hide range collapsed below TOP_ZONE, force-show.
-        // Deferred to rAF so pendingLayout = null has already run — showBarsUI
-        // sets its own pendingLayout without being overwritten.
-        const postRange =
-          this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
-        if (postRange < FULL_SCREEN_TOP_ZONE) {
-          requestAnimationFrame(() => {
-            this.barsHidden = false;
-            this.lastToggleTime = Date.now();
-            this.showBarsUI();
-          });
-        }
-
         this.pendingLayout = null;
       };
 
@@ -777,16 +764,6 @@ export class FullScreenController {
         this.prevScrollTop = this.scrollEl.scrollTop;
         this.lockedScrollHeight = this.scrollEl.offsetHeight;
         setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-
-        // Safety net: if post-settle range collapsed below TOP_ZONE, force-show
-        const postRange =
-          this.scrollEl.scrollHeight - this.scrollEl.clientHeight;
-        if (postRange < FULL_SCREEN_TOP_ZONE) {
-          requestAnimationFrame(() => {
-            this.barsHidden = false;
-            this.showBarsUI();
-          });
-        }
       });
     };
   }

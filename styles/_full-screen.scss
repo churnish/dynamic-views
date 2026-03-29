@@ -9,7 +9,11 @@
 .is-phone:not(.is-android).full-screen-active [data-type='bases'] .view-header {
   transform: translateY(
     calc(
-      (var(--view-header-height, 44px) + var(--safe-area-inset-top, 47px)) * -1
+      (
+          var(--dynamic-views-view-header-height) +
+            var(--dynamic-views-safe-area-inset-top)
+        ) *
+        -1
     )
   ) !important;
   opacity: 0 !important;
@@ -35,7 +39,7 @@
 // showing is a compositor-only opacity flip with no rasterization.
 .is-phone.full-screen-active [data-type='bases'] .bases-header {
   pointer-events: none !important;
-  margin-bottom: calc(var(--bases-header-height, 52px) * -1) !important;
+  margin-bottom: calc(var(--dynamic-views-bases-header-height) * -1) !important;
   transition: none !important;
   will-change: opacity;
   // No !important — WAAPI animation level sits below !important in the cascade
@@ -102,11 +106,11 @@
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  height: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) !important;
+  height: var(--dynamic-views-safe-area-inset-top) !important;
   background: linear-gradient(
     to bottom,
     var(--dynamic-views-background-primary) 0px,
-    transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+    transparent var(--dynamic-views-safe-area-inset-top)
   ) !important;
   z-index: 10 !important;
   pointer-events: none !important;
@@ -120,14 +124,14 @@
 .is-android.is-phone.full-screen-active [data-type='bases']::before {
   height: var(
     --dynamic-views-scrim-height,
-    var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+    var(--dynamic-views-safe-area-inset-top)
   ) !important;
   background: var(
     --dynamic-views-scrim-bg,
     linear-gradient(
       to bottom,
       var(--dynamic-views-background-primary) 0px,
-      transparent var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+      transparent var(--dynamic-views-safe-area-inset-top)
     )
   ) !important;
 }
@@ -171,7 +175,7 @@
 .is-phone.full-screen-active
   [data-type='bases'].full-screen-showing
   .view-content {
-  margin-top: var(--view-top-spacing) !important;
+  margin-top: var(--dynamic-views-view-top-spacing) !important;
   transition: none !important;
 }
 
