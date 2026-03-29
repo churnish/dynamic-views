@@ -786,7 +786,7 @@ function openImageViewer(
   const isFullscreen =
     isPhone ||
     !viewerDoc.body.classList.contains(
-      'dynamic-views-image-viewer-disable-fullscreen'
+      'dynamic-views-image-viewer-constrain-to-pane'
     );
 
   // For constrained mode, extract opacity from theme's cover color

@@ -112,7 +112,7 @@ const isFullscreen = body.classList.contains(
 );
 // After
 const isFullscreen = !body.classList.contains(
-  'dynamic-views-image-viewer-disable-fullscreen'
+  'dynamic-views-image-viewer-constrain-to-pane'
 );
 ```
 
@@ -209,6 +209,8 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Card background (hover)   | transparent    | [_hover-states.scss](../../styles/_hover-states.scss)                                             |
 | Card shadow color         | Default        | No CSS fallback needed — Default passes theme shadow vars through unchanged |
 | File format indicator    | Extension      | [_header.scss](../../styles/card/_header.scss) — `:not()` exclusion pattern (no body class for default)  |
+| Fixed cover height       | Grid (slider)  | [_grid-view.scss](../../styles/_grid-view.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
+| Fixed poster height      | Masonry        | [_poster.scss](../../styles/card/_poster.scss) — backward compat via `:not([class*=...])` for old unsuffixed class |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
@@ -229,7 +231,7 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 | ------------------------ | ----------------------------------------------- | -------------------- |
 | Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-states.scss](../../styles/_hover-states.scss) |
 | Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | [_poster.scss](../../styles/card/_poster.scss)       |
-| Image viewer fullscreen  | `dynamic-views-image-viewer-disable-fullscreen` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
+| Image viewer fullscreen  | `dynamic-views-image-viewer-constrain-to-pane` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
 | Cover hover zoom         | `dynamic-views-cover-disable-hover-zoom`        | [_cover-elements.scss](../../styles/card/_cover-elements.scss) |
 
 ### `class-toggle` — `.css-settings-manager` gate (CSS)

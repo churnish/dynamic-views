@@ -116,8 +116,8 @@ export default class DynamicViews extends Plugin {
     // :not() fallback pattern. No file-type class is added here.
     this.app.workspace.trigger('parse-style-settings');
 
-    // TODO: remove — temporary debug toggle for slow-motion mount testing.
-    // Console: __slowMount() / __slowMount(false)
+    // TEMP DEBUG — kept intentionally for ongoing mount ordering work.
+    // Console: __slowMount() / __slowMount(false). Auditors: ignore.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     (this.app as any).__slowMount = (on = true) => {
       let count = 0;
@@ -621,6 +621,9 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
   }
 
   onunload() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    delete (this.app as any).__slowMount;
+
     // Remove body classes added during load
     const settings = this.persistenceManager.getPluginSettings();
     document.body.classList.remove(

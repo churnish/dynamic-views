@@ -972,6 +972,7 @@ export class SharedCardRenderer {
       }
 
       // Add file format indicator before title text (for Flair mode float:left)
+      const isFullname = settings.titleProperty === 'file.fullname';
       const extInfo = getFileExtInfo(card.path, isFullname);
       const extNoDot = extInfo?.ext.slice(1) || '';
       if (extInfo) {
@@ -1075,7 +1076,7 @@ export class SharedCardRenderer {
           });
         }
       } else {
-        // Render as plain text in a span for truncation
+        // Render as plain text span (CSS line-clamp / text-overflow targets this)
         titleEl.createSpan({
           cls: 'card-title-text',
           text: displayTitle,
@@ -1154,20 +1155,10 @@ export class SharedCardRenderer {
     const hasImage = imageUrls.length > 0;
 
     // Check if title or subtitle will be rendered
-    // In Ext/Flair/Icon modes, use basename when title property includes an
-    // extension — the extension is shown via a separate element (suffix/badge/icon).
-    // In None mode, keep the full title since no separate indicator exists.
-    const showsExtSeparately = !document.body.classList.contains(
-      'dynamic-views-file-type-none'
-    );
     const titleProp = settings.titleProperty || '';
     const titleHasExtension =
       titleProp === 'file.name' || titleProp === 'file.fullname';
-    const isFullname = titleProp === 'file.fullname';
-    const displayTitle =
-      showsExtSeparately && titleHasExtension
-        ? entry.file.basename
-        : card.title;
+    const displayTitle = titleHasExtension ? entry.file.basename : card.title;
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
@@ -1965,18 +1956,12 @@ export class SharedCardRenderer {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
-    // Mirror title resolution from renderCard — strip extension when a
-    // separate indicator (suffix/badge/icon) shows it. None mode keeps it.
-    const showsExtSeparately = !document.body.classList.contains(
-      'dynamic-views-file-type-none'
-    );
+    // Mirror title resolution from renderCard — strip extension when title
+    // property includes it, since the extension is shown via a separate element.
     const titleProp = settings.titleProperty || '';
     const titleHasExtension =
       titleProp === 'file.name' || titleProp === 'file.fullname';
-    const displayTitle =
-      showsExtSeparately && titleHasExtension
-        ? entry.file.basename
-        : card.title;
+    const displayTitle = titleHasExtension ? entry.file.basename : card.title;
 
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(

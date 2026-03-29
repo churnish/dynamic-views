@@ -699,9 +699,9 @@ settings:
         description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
     -
-        id: dynamic-views-image-viewer-disable-fullscreen
-        title: Disable fullscreen
-        description: Constrain overlay to file pane.
+        id: dynamic-views-image-viewer-constrain-to-pane
+        title: Constrain to pane
+        description: Keep image within pane bounds rather than open in full screen.
         type: class-toggle
     -
         id: dynamic-views-zoom-sensitivity
@@ -1582,26 +1582,17 @@ settings:
         description: How file types are indicated on cards.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-file-type-ext
+        default: dynamic-views-file-type-none
         options:
             -
-                label: Extension
-                value: dynamic-views-file-type-ext
+                label: None
+                value: dynamic-views-file-type-none
             -
                 label: Flair
                 value: dynamic-views-file-type-flair
             -
                 label: Icon
                 value: dynamic-views-file-type-icon
-            -
-                label: None
-                value: dynamic-views-file-type-none
-    -
-        id: dynamic-views-hidden-file-extensions
-        title: Hide file types
-        description: Comma-separated list of file types to hide (e.g., md, base, canvas).
-        type: variable-text
-        default: md
     -
         id: dynamic-views-title-divider
         title: Divider line
@@ -1817,9 +1808,6 @@ body.dynamic-views-slideshow-disabled
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-subtitle-color-custom'],
-body.dynamic-views-file-type-none
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-hidden-file-extensions'],
 body.dynamic-views-tag-style-theme
   .style-settings-container
   .setting-item:is(
@@ -1843,7 +1831,7 @@ body:not(.is-mobile)
   .setting-item[data-id='dynamic-views-card-spacing-mobile'],
 body.is-phone
   .style-settings-container
-  .setting-item[data-id='dynamic-views-image-viewer-disable-fullscreen'],
+  .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
 body.is-mobile
   .style-settings-container
   .setting-item[data-id='dynamic-views-backdrop-hover-zoom'],

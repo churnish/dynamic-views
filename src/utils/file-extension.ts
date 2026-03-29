@@ -5,9 +5,6 @@
 
 import { VALID_IMAGE_EXTENSIONS } from './image';
 
-// Cached hidden formats (set once per session)
-let cachedHiddenFormats: Set<string> | null = null;
-
 /**
  * Extract lowercase extension from path
  * Returns null for extensionless files or empty extensions
@@ -21,33 +18,10 @@ function extractExtension(path: string): string | null {
 }
 
 /**
- * Get hidden file formats from Style Settings CSS variable
- * Cached for performance - changes require reload
- */
-export function getHiddenFormats(): Set<string> {
-  if (cachedHiddenFormats) return cachedHiddenFormats;
-
-  const rawValue = getComputedStyle(document.body)
-    .getPropertyValue('--dynamic-views-hidden-file-extensions')
-    .trim();
-
-  // Explicitly cleared (literal "" or '') = show all
-  if (rawValue === '""' || rawValue === "''") {
-    cachedHiddenFormats = new Set();
-  } else {
-    const value = rawValue.replace(/['"]/g, '');
-    cachedHiddenFormats = value
-      ? new Set(value.split(',').map((e) => e.trim().toLowerCase()))
-      : new Set(['md']); // Default when not set
-  }
-
-  return cachedHiddenFormats;
-}
-
-/**
- * Get file format info for display
- * @param path - File path
- * @param forceShow - Bypass hidden formats check (for file.fullname)
+ * Get file format info for display.
+ * Excludes .md by default — Obsidian's file.name already strips it,
+ * so the suffix would add information not present in the title.
+ * @param forceShow - Show all extensions including .md (for file.fullname)
  */
 export function getFileExtInfo(
   path: string,
@@ -55,7 +29,7 @@ export function getFileExtInfo(
 ): { ext: string } | null {
   const ext = extractExtension(path);
   if (!ext) return null;
-  if (!forceShow && getHiddenFormats().has(ext)) return null;
+  if (!forceShow && ext === 'md') return null;
   return { ext: `.${ext}` };
 }
 
@@ -81,15 +55,10 @@ export function stripExtFromTitle(
   return title;
 }
 
-/**
- * Get Lucide icon name for file format
- * Returns null if format is hidden or no extension
- */
+/** Get Lucide icon name for file format. Excludes .md (no meaningful icon). */
 export function getFileTypeIcon(path: string): string | null {
   const ext = extractExtension(path);
-  if (!ext) return null;
-  if (getHiddenFormats().has(ext)) return null;
-
+  if (!ext || ext === 'md') return null;
   if (ext === 'canvas') return 'layout-dashboard';
   if (ext === 'base') return 'layout-list';
   if (ext === 'pdf') return 'file-text';

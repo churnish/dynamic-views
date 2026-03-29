@@ -235,6 +235,20 @@ export function getZoomSensitivityDesktop(): number {
  * Check if slideshow is enabled (default behavior)
  * Returns false when user enables "Disable slideshow"
  */
+/** Check if fixed-height Style Settings is active for masonry views. */
+export function isFixedHeightForMasonry(
+  body: Element,
+  prefix: 'cover' | 'poster'
+): boolean {
+  const base = `dynamic-views-fixed-${prefix}-height`;
+  const cl = body.classList;
+  return (
+    cl.contains(base) ||
+    cl.contains(`${base}-masonry`) ||
+    cl.contains(`${base}-both`)
+  );
+}
+
 export function isSlideshowEnabled(): boolean {
   return !hasBodyClass('dynamic-views-slideshow-disabled');
 }
@@ -299,18 +313,6 @@ export function getSlideshowMaxImages(): number {
 }
 
 /**
- * Check if Extension mode is active (the default file-type indicator).
- * Mirrors the CSS `:not()` fallback pattern — true when no other mode class is present.
- */
-export function isExtensionMode(): boolean {
-  return (
-    !hasBodyClass('dynamic-views-file-type-flair') &&
-    !hasBodyClass('dynamic-views-file-type-icon') &&
-    !hasBodyClass('dynamic-views-file-type-none')
-  );
-}
-
-/**
  * Get a hash of Style Settings that affect card rendering
  * Used to detect when cards need re-rendering due to Style Settings changes
  */
@@ -338,11 +340,10 @@ export function getStyleSettingsHash(): string {
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
-    hasBodyClass('dynamic-views-hidden-file-extensions'),
     // Poster reveal mode (affects JS click handlers, not CSS-only)
     hasBodyClass('dynamic-views-poster-reveal-press'),
-    // File-type indicator (affects JS suffix creation + truncation)
-    isExtensionMode(),
+    // File-type indicator (affects CSS suffix visibility)
+    hasBodyClass('dynamic-views-file-type-flair'),
     // Text preview content options (affect stripped text output)
     shouldKeepPreviewHeadings(),
     shouldKeepPreviewNewlines(),
@@ -366,12 +367,11 @@ export function setupStyleSettingsObserver(
   const MO = win.MutationObserver ?? MutationObserver;
 
   // Mutually exclusive class-select groups. When multiple are present (Style Settings
-  // race), keep only the last. When all are absent, CSS :not() fallback applies Ext default.
+  // race), keep only the last.
   const FILE_TYPE_CLASSES = [
-    'dynamic-views-file-type-ext',
+    'dynamic-views-file-type-none',
     'dynamic-views-file-type-flair',
     'dynamic-views-file-type-icon',
-    'dynamic-views-file-type-none',
   ];
 
   // Hash of JS-relevant Style Settings — only fire callback when actual values change

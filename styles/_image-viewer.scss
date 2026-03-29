@@ -35,7 +35,7 @@ body.dynamic-views-image-zoomed .dynamic-views .card:focus-visible::after {
 /* Constrained mode: overlay styling (non-phone, fullscreen disabled) */
 body:not(.dynamic-views-image-viewer-disabled):not(
     .is-phone
-  ).dynamic-views-image-viewer-disable-fullscreen
+  ).dynamic-views-image-viewer-constrain-to-pane
   > .dynamic-views-image-embed.is-zoomed {
   background: color-mix(
     in srgb,
@@ -49,7 +49,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 /* Constrained mode: solid background when maximized */
 body:not(.dynamic-views-image-viewer-disabled):not(
     .is-phone
-  ).dynamic-views-image-viewer-disable-fullscreen
+  ).dynamic-views-image-viewer-constrain-to-pane
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
   background: var(--dynamic-views-background-primary);
 }
@@ -58,7 +58,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 body:not(.dynamic-views-image-viewer-disabled).is-phone
   > .dynamic-views-image-embed.is-zoomed,
 body:not(.dynamic-views-image-viewer-disabled):not(
-    .dynamic-views-image-viewer-disable-fullscreen
+    .dynamic-views-image-viewer-constrain-to-pane
   ):not(.is-phone)
   > .dynamic-views-image-embed.is-zoomed {
   background: var(--dynamic-views-background-modifier-cover);
@@ -70,7 +70,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 body:not(.dynamic-views-image-viewer-disabled).is-phone
   > .dynamic-views-image-embed.is-zoomed.is-maximized,
 body:not(.dynamic-views-image-viewer-disabled):not(
-    .dynamic-views-image-viewer-disable-fullscreen
+    .dynamic-views-image-viewer-constrain-to-pane
   ):not(.is-phone)
   > .dynamic-views-image-embed.is-zoomed.is-maximized {
   background: var(--dynamic-views-background-primary);
@@ -78,7 +78,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 
 /* Scale image when maximized with panzoom disabled (non-phone fullscreen only) */
 body.dynamic-views-zoom-disabled:not(
-    .dynamic-views-image-viewer-disable-fullscreen
+    .dynamic-views-image-viewer-constrain-to-pane
   ):not(.is-phone)
   > .dynamic-views-image-embed.is-zoomed.is-maximized
   img {
@@ -117,7 +117,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
 /* Constrained mode (non-phone, fullscreen disabled): limit to 90% of view */
 body:not(.dynamic-views-image-viewer-disabled):not(
     .is-phone
-  ).dynamic-views-image-viewer-disable-fullscreen
+  ).dynamic-views-image-viewer-constrain-to-pane
   > .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 90%;
@@ -127,7 +127,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 /* Constrained mode maximized (non-phone, panzoom disabled): scale to 100% */
 body.dynamic-views-zoom-disabled:not(
     .is-phone
-  ).dynamic-views-image-viewer-disable-fullscreen
+  ).dynamic-views-image-viewer-constrain-to-pane
   > .dynamic-views-image-embed.is-zoomed.is-maximized
   img {
   max-height: 100%;
@@ -135,7 +135,7 @@ body.dynamic-views-zoom-disabled:not(
 }
 
 /* Disable drag in fullscreen mode (desktop only — mobile uses system drag & drop) */
-body:not(.is-mobile):not(.dynamic-views-image-viewer-disable-fullscreen)
+body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   > .dynamic-views-image-embed.is-zoomed
   img {
   -webkit-user-drag: none;

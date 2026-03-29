@@ -28,70 +28,38 @@
     text-align: left;
     margin: 0;
     line-height: var(--dynamic-views-line-height-tight);
+    max-height: calc(var(--dynamic-views-title-lines, 2) * 1lh);
     display: -webkit-box;
     -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  /* Single-line titles: character-level truncation via text-overflow
-     instead of -webkit-line-clamp (which truncates at word boundaries for N=1) */
+  // Single-line titles: character-level truncation via text-overflow
+  // instead of -webkit-line-clamp (which truncates at word boundaries for N=1)
   &.title-single-line .card-title {
     display: block;
     -webkit-line-clamp: unset;
     -webkit-box-orient: unset;
     white-space: nowrap;
     text-overflow: ellipsis;
+    max-height: none;
   }
 
-  /* Extension suffix element (hidden by default, shown in Extension mode) */
   .card-title-ext-suffix {
-    display: none;
+    display: inline;
+    opacity: 0.6;
+    font-weight: normal;
   }
 }
 
-/* Extension mode (default): CSS line-clamp truncates title text.
-   max-height is a pixel-based guard belt on top of line-clamp.
-   Extension is the default file-type indicator — no body class needed.
-   :not() ensures these rules yield when another mode is active. */
-body:not(
-    .dynamic-views-file-type-flair,
-    .dynamic-views-file-type-icon,
-    .dynamic-views-file-type-none
-  )
-  .dynamic-views
-  .card-title {
-  max-height: calc(var(--dynamic-views-title-lines, 2) * 1lh);
-}
-
-/* Show extension suffix inline in Extension mode (default) */
-body:not(
-    .dynamic-views-file-type-flair,
-    .dynamic-views-file-type-icon,
-    .dynamic-views-file-type-none
-  )
-  .dynamic-views
-  .card-title-ext-suffix {
-  display: inline;
-  opacity: 0.6;
-  font-weight: normal;
-}
-
-/* Extension inside link - use color-mix for text, underline only on hover */
-body:not(
-    .dynamic-views-file-type-flair,
-    .dynamic-views-file-type-icon,
-    .dynamic-views-file-type-none
-  )
-  .dynamic-views
-  .card-title
-  a
-  .card-title-ext-suffix {
-  display: inline;
-  opacity: 1;
-  color: color-mix(in srgb, currentColor 60%, transparent);
-  font-weight: normal;
-  text-decoration: none;
+.dynamic-views {
+  .card-title a .card-title-ext-suffix {
+    opacity: 1;
+    color: color-mix(in srgb, currentColor 60%, transparent);
+    font-weight: normal;
+    text-decoration: none;
+  }
 }
 
 .dynamic-views {
@@ -198,6 +166,11 @@ body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before {
   text-transform: uppercase;
 }
 
+/* Flair mode hides extension suffix (badge replaces it) */
+body.dynamic-views-file-type-flair .dynamic-views .card-title-ext-suffix {
+  display: none;
+}
+
 /* File type indicator: Icon */
 body.dynamic-views-file-type-icon .dynamic-views .card-title-ext {
   display: none;
@@ -252,12 +225,8 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     color: var(--dynamic-views-text-normal);
   }
 
-  /* Extension suffix underline on hover (default mode) */
-  body:not(
-      .dynamic-views-file-type-flair,
-      .dynamic-views-file-type-icon,
-      .dynamic-views-file-type-none
-    )
+  /* Extension suffix underline on hover (hidden in Flair) */
+  body:not(.dynamic-views-file-type-flair)
     .dynamic-views
     .card.hover-intent-active
     .card-title
