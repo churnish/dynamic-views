@@ -2,7 +2,7 @@
 title: Card DOM structure
 description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
 author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-26
+updated: 2026-03-27
 ---
 # Card DOM structure
 
@@ -110,19 +110,17 @@ div.property-pair.property-pair-{N}
 
 ## Structural content classes
 
-Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). Both backends set these via querySelector after card DOM is built.
-
-The shared selector (`visibleBodySelector`) used by both classes:
+Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). Both backends use the shared `VISIBLE_BODY_SELECTOR` module-level constant:
 
 ```
 .card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)
 ```
 
-| Class | Element | Selector | CSS effect |
-|---|---|---|---|
-| `has-body-content` | `.card-body` | `visibleBodySelector` on body children | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
-| `has-card-content` | `.card` | `visibleBodySelector` on card descendants | Drives title divider border and cover-only padding resets |
-| `has-header` | `.card` | `.card-header` exists | Prevents cover-only padding reset from zeroing padding on title-only cards |
+| Class | Element | Selector | Set from | CSS effect |
+|---|---|---|---|---|
+| `has-header` | `.card` | `.card-header` exists (Bases) / computed booleans (Datacore) | Bases: card root querySelector. Datacore: `cardClasses` array from `hasTitle \|\| hasSubtitle \|\| hasValidUrl` | Prevents cover-only padding reset from zeroing padding on title-only cards |
+| `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Bases: inline querySelector. Datacore: card root ref querySelector | Drives title divider border and cover-only padding resets |
+| `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Both: card-body ref querySelector | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
 
 Both exclude `.card-previews.thumbnail-placeholder-only` — a previews container with only a thumbnail placeholder, hidden by CSS when the "Show thumbnail placeholder" style setting is off. The CSS rule scoping (`body:not(.dynamic-views-show-thumbnail-placeholder)`) ensures `card-body` is never hidden when placeholders are visible.
 
@@ -131,7 +129,7 @@ Both exclude `.card-previews.thumbnail-placeholder-only` — a previews containe
 `.card-content` and `.card-body` use separate gaps declared in [styles/card/_core.scss](../../styles/card/_core.scss):
 
 - `.card-content` (header↔body): `gap: var(--size-2-3)`
-- `.card-body` (propsTop↔previews↔propsBottom): `gap: var(--size-2-2)`
+- `.card-body` (propsTop↔previews↔propsBottom): `gap: var(--size-2-3)`
 
 Key behaviors:
 

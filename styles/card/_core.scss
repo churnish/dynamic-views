@@ -1,5 +1,5 @@
 .dynamic-views {
-  /* Fade-in animation for batch-appended cards */
+  /* Fade-in animation for newly rendered cards (batch append + scroll mount) */
   .card.card-fade-in {
     animation: cardFadeIn var(--dynamic-views-anim-duration-fast) ease-out;
   }
@@ -15,7 +15,7 @@
 
   /* Spacing between body children (previews, properties) */
   .card .card-body {
-    gap: var(--size-2-2);
+    gap: var(--size-2-3);
   }
 
   /* Grid: card-content fills available space, aligns children to top */
