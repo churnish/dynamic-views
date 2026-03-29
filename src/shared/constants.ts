@@ -96,6 +96,12 @@ export function computeHoverScale(height: number): string {
   return String(Math.min(1 + (HOVER_GROWTH_PX * 2) / height, MAX_HOVER_SCALE));
 }
 
+/** Accumulated scroll delta (px) before committing to a new direction. Filters trackpad micro-reversals (19-39px) during deceleration. */
+export const DIRECTION_ACCUM_THRESHOLD = 50;
+
+/** Scroll velocity (px/s) above which row commits are suppressed to avoid transient positions during scrollbar drags and trackpad flicks. */
+export const HIGH_VELOCITY_THRESHOLD = 4000;
+
 /** Accumulated downward scroll (px) to trigger full screen hide */
 export const FULL_SCREEN_HIDE_DEAD_ZONE = 30;
 /** Accumulated upward scroll (px) to trigger full screen show */

@@ -56,6 +56,8 @@ import {
   FIXED_COVER_HEIGHT_GRID,
   FIXED_COVER_HEIGHT_BOTH,
   computeHoverScale,
+  DIRECTION_ACCUM_THRESHOLD,
+  HIGH_VELOCITY_THRESHOLD,
 } from '../shared/constants';
 import {
   setupBasesSwipePrevention,
@@ -262,6 +264,7 @@ export class DynamicViewsGridView extends BasesView {
     rowStart: number;
     reverse: boolean;
   } | null = null;
+  // Scroll direction + velocity tracking (Phase 1 committed-row ordering)
   private lastSyncScrollTop = 0;
   private lastSyncTime = 0;
   private hasCommittedAnyRow = false;
@@ -2683,16 +2686,16 @@ export class DynamicViewsGridView extends BasesView {
       this.scrollDirectionAccum = 0;
     }
     this.scrollDirectionAccum += scrollDelta;
-    if (this.scrollDirectionAccum > 50) {
+    if (this.scrollDirectionAccum > DIRECTION_ACCUM_THRESHOLD) {
       this.lastScrollDown = true;
-      this.scrollDirectionAccum = 50;
-    } else if (this.scrollDirectionAccum < -50) {
+      this.scrollDirectionAccum = DIRECTION_ACCUM_THRESHOLD;
+    } else if (this.scrollDirectionAccum < -DIRECTION_ACCUM_THRESHOLD) {
       this.lastScrollDown = false;
-      this.scrollDirectionAccum = -50;
+      this.scrollDirectionAccum = -DIRECTION_ACCUM_THRESHOLD;
     }
     this.lastSyncScrollTop = scrollTop;
     this.lastSyncTime = now;
-    const highVelocity = velocity > 4000;
+    const highVelocity = velocity > HIGH_VELOCITY_THRESHOLD;
     // Scrollbar jump or fast flick — treat landing position as fresh start.
     // Pre-jump direction and committed row are irrelevant at the new position.
     // Jump detection: high velocity AND delta > paneHeight = scrollbar
@@ -2744,21 +2747,19 @@ export class DynamicViewsGridView extends BasesView {
       const off = this.cachedGroupOffsets.get(this.committedRow.groupKey)!;
       const reverse = this.committedRow.reverse;
 
-      for (
-        let j = reverse ? rowEnd - 1 : rowStart;
-        reverse ? j >= rowStart : j < rowEnd;
-        reverse ? j-- : j++
-      ) {
-        if (mountCount >= SCROLL_MOUNT_BUDGET) break;
-        const it = groupItems[j];
-        if (it.el || it.height === 0) continue;
-        const top = off + it.y;
-        if (top + it.height > visibleTop && top < visibleBottom) {
-          this.mountVirtualItem(it, settings);
-          mountedNew = true;
-          mountCount++;
-        }
-      }
+      const step2 = this.mountRowRange(
+        groupItems,
+        rowStart,
+        rowEnd,
+        off,
+        reverse,
+        settings,
+        visibleTop,
+        visibleBottom,
+        SCROLL_MOUNT_BUDGET - mountCount
+      );
+      if (step2.mountedNew) mountedNew = true;
+      mountCount += step2.mounted;
     }
 
     // Step 3: If budget remains and no committed row, find closest unmounted row.
@@ -2806,6 +2807,7 @@ export class DynamicViewsGridView extends BasesView {
           if (!hasUnmounted) continue;
           if (rowBottom <= visibleTop || rowTop >= visibleBottom) continue;
 
+          // Actual viewport (not mount zone) — prioritize rows the user can see
           const isVisible =
             rowTop < scrollTop + paneHeight && rowBottom > scrollTop;
           if (isVisible) hasVisibleUnmounted = true;
@@ -2822,7 +2824,6 @@ export class DynamicViewsGridView extends BasesView {
               bestRowStart = i;
             } else if (isVisible && bestIsVisible && rowTop < bestRowTop) {
               bestRowTop = rowTop;
-              bestDist = dist;
               bestGroupKey = groupKey;
               bestRowStart = i;
             } else if (!isVisible && !bestIsVisible && dist < bestDist) {
@@ -2870,21 +2871,19 @@ export class DynamicViewsGridView extends BasesView {
         this.hasCommittedAnyRow = true;
         const reverse = this.committedRow.reverse;
 
-        for (
-          let j = reverse ? rowEnd - 1 : bestRowStart;
-          reverse ? j >= bestRowStart : j < rowEnd;
-          reverse ? j-- : j++
-        ) {
-          if (mountCount >= SCROLL_MOUNT_BUDGET) break;
-          const it = groupItems[j];
-          if (it.el || it.height === 0) continue;
-          const top = off + it.y;
-          if (top + it.height > visibleTop && top < visibleBottom) {
-            this.mountVirtualItem(it, settings);
-            mountedNew = true;
-            mountCount++;
-          }
-        }
+        const step3 = this.mountRowRange(
+          groupItems,
+          bestRowStart,
+          rowEnd,
+          off,
+          reverse,
+          settings,
+          visibleTop,
+          visibleBottom,
+          SCROLL_MOUNT_BUDGET - mountCount
+        );
+        if (step3.mountedNew) mountedNew = true;
+        mountCount += step3.mounted;
       }
     }
 
@@ -2953,8 +2952,10 @@ export class DynamicViewsGridView extends BasesView {
       }
     }
 
-    // Budget exceeded — schedule another sync frame to mount remaining cards
-    if (budgetExhausted) {
+    // Budget exceeded — schedule another sync frame to mount remaining cards.
+    // Skip during high velocity: the scroll handler will re-trigger sync anyway,
+    // and rescheduling causes wasted O(N) loops with no mounting.
+    if (budgetExhausted && !highVelocity) {
       this.scheduleVirtualScrollSync();
     }
   }
@@ -2968,8 +2969,40 @@ export class DynamicViewsGridView extends BasesView {
     }, MOUNT_REMEASURE_MS);
   }
 
-  // TODO: remove — temporary debug flag for slow-motion mount testing.
-  // Toggle: __slowMount() / __slowMount(false)
+  /** Mount items in [rowStart, rowEnd) that fall inside the mount zone, up to remainingBudget. */
+  private mountRowRange(
+    groupItems: VirtualItem[],
+    rowStart: number,
+    rowEnd: number,
+    off: number,
+    reverse: boolean,
+    settings: BasesResolvedSettings,
+    visibleTop: number,
+    visibleBottom: number,
+    remainingBudget: number
+  ): { mounted: number; mountedNew: boolean } {
+    let mounted = 0;
+    let mountedNew = false;
+    for (
+      let j = reverse ? rowEnd - 1 : rowStart;
+      reverse ? j >= rowStart : j < rowEnd;
+      reverse ? j-- : j++
+    ) {
+      if (mounted >= remainingBudget) break;
+      const it = groupItems[j];
+      if (it.el || it.height === 0) continue;
+      const top = off + it.y;
+      if (top + it.height > visibleTop && top < visibleBottom) {
+        this.mountVirtualItem(it, settings);
+        mountedNew = true;
+        mounted++;
+      }
+    }
+    return { mounted, mountedNew };
+  }
+
+  // TEMP DEBUG — kept intentionally for ongoing mount ordering work.
+  // Toggle: __slowMount() / __slowMount(false). Auditors: ignore.
   debugSlowMount = false;
 
   private scheduleVirtualScrollSync(): void {
@@ -3156,12 +3189,17 @@ export class DynamicViewsGridView extends BasesView {
           this.compensatingScrollCount++;
           this.scrollEl.scrollTop = scrollTop + delta;
         }
+        // Clear committed row only when compensation shifted scrollTop —
+        // syncVirtualScroll will re-select the topmost visible row at the new position.
+        this.committedRow = null;
       }
     }
 
-    // Scroll compensation shifted scrollTop — clear committed row so
-    // syncVirtualScroll re-selects the topmost visible row at the new position.
-    this.committedRow = null;
+    // Recursive sync is NOT redundant — recomputeYPositions shifted item.y,
+    // refreshGroupOffsets shifted cachedGroupOffsets, and scroll compensation
+    // shifted scrollTop. All three zone-boundary inputs changed, so items may
+    // now belong to different zones. The needsReposition early-exit above
+    // ensures this only runs when heights actually drifted.
     this.syncVirtualScroll();
 
     // Viewport may be underfilled after cards shrank (e.g., CSS-only setting change)
