@@ -57,6 +57,7 @@ import {
   computeHoverScale,
   DIRECTION_ACCUM_THRESHOLD,
   HIGH_VELOCITY_THRESHOLD,
+  GRID_ROW_BUDGET,
 } from '../shared/constants';
 import {
   setupBasesSwipePrevention,
@@ -1401,8 +1402,12 @@ export class DynamicViewsGridView extends BasesView {
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
 
-      // Toggle is-grouped class
+      // Toggle is-grouped class (container) + dynamic-views-grouped (leaf content
+      // for scrim rules — avoids :has() which exceeds Android compositor budget)
       this.containerEl.toggleClass('is-grouped', isGrouped);
+      this.containerEl
+        .closest('.workspace-leaf-content')
+        ?.toggleClass('dynamic-views-grouped', isGrouped);
 
       // Create cards feed container
       const feedEl = this.containerEl.createDiv(
@@ -2662,7 +2667,6 @@ export class DynamicViewsGridView extends BasesView {
       scrollTop + paneHeight * (HIDDEN_BUFFER_MULTIPLIER + 1);
 
     let mountedNew = false;
-    let mountCount = 0;
     const settings = this.lastRenderedSettings;
     const len = this.virtualItems.length;
     const columns = this.lastColumnCount || 1;
@@ -2704,15 +2708,16 @@ export class DynamicViewsGridView extends BasesView {
     if (isJump) {
       this.jumpPending = true;
       this.committedRow = null;
+      this.scrollingDown = scrollDelta > 0;
       this.scrollDirectionAccum = 0;
     }
 
-    // Phase 1: Committed-row lock — mount up to ROW_BUDGET complete rows per
-    // frame. Each loop iteration: validate committed row → mount it → or pick
-    // the next row. Rows complete atomically before the next one starts.
-    const ROW_BUDGET = 2;
+    // Phase 1: Committed-row lock — mount up to GRID_ROW_BUDGET complete rows
+    // per frame. Each loop iteration: validate committed row → mount it → or
+    // pick the next row. Rows complete atomically before the next one starts.
+    // Loop exits early if no items mounted in a pass (mount zone fully covered).
 
-    for (let rowPass = 0; rowPass < ROW_BUDGET; rowPass++) {
+    for (let rowPass = 0; rowPass < GRID_ROW_BUDGET; rowPass++) {
       let rowMountedThisPass = false;
 
       // Step 1: Validate committed row (still has unmounted items in mount zone?)
@@ -2765,7 +2770,6 @@ export class DynamicViewsGridView extends BasesView {
           columns
         );
         if (step2.mountedNew) mountedNew = true;
-        mountCount += step2.mounted;
         if (step2.mounted > 0) rowMountedThisPass = true;
       }
 
@@ -2887,7 +2891,6 @@ export class DynamicViewsGridView extends BasesView {
             columns
           );
           if (step3.mountedNew) mountedNew = true;
-          mountCount += step3.mounted;
           if (step3.mounted > 0) rowMountedThisPass = true;
         }
       }
@@ -2978,7 +2981,7 @@ export class DynamicViewsGridView extends BasesView {
     }, MOUNT_REMEASURE_MS);
   }
 
-  /** Mount items in [rowStart, rowEnd) that fall inside the mount zone, up to remainingBudget. */
+  /** Mount items in [rowStart, rowEnd) that fall inside the mount zone, up to maxMounts. */
   private mountRowRange(
     groupItems: VirtualItem[],
     rowStart: number,
@@ -2988,7 +2991,7 @@ export class DynamicViewsGridView extends BasesView {
     settings: BasesResolvedSettings,
     visibleTop: number,
     visibleBottom: number,
-    remainingBudget: number
+    maxMounts: number
   ): { mounted: number; mountedNew: boolean } {
     let mounted = 0;
     let mountedNew = false;
@@ -2997,7 +3000,7 @@ export class DynamicViewsGridView extends BasesView {
       reverse ? j >= rowStart : j < rowEnd;
       reverse ? j-- : j++
     ) {
-      if (mounted >= remainingBudget) break;
+      if (mounted >= maxMounts) break;
       const it = groupItems[j];
       if (it.el || it.height === 0) continue;
       const top = off + it.y;

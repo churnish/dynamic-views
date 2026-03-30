@@ -43,10 +43,14 @@ export const SCROLL_CORRECTION_INTERVAL_MS = 1000;
  * --masonry-reposition-duration in _core.scss must not exceed this value. */
 export const MOUNT_REMEASURE_MS = 200;
 
-/** Max cards to mount per syncVirtualScroll frame. Limits browser layout
- * cost from complex card DOM insertion into CSS Grid. Remaining items
- * mount in subsequent frames via rescheduled rAF. */
+/** Masonry mount budget fallback before first layout (card width unknown).
+ * After layout, Masonry derives its budget from GRID_ROW_BUDGET × columns. */
 export const SCROLL_MOUNT_BUDGET = 3;
+
+/** Mount budget multiplier: GRID_ROW_BUDGET × columns cards per frame. Grid
+ * mounts complete rows; Masonry mounts the equivalent card count for parity.
+ * Two row-equivalents balance viewport fill speed against per-frame layout. */
+export const GRID_ROW_BUDGET = 2;
 
 /** Max WebKit momentum duration — height-lock releases and scrollTop writes
  *  are suppressed for this long after touchend to preserve compositor-driven

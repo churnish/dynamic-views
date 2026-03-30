@@ -65,6 +65,7 @@ import {
   INITIAL_REMEASURE_MS,
   HIDDEN_BUFFER_MULTIPLIER,
   SCROLL_MOUNT_BUDGET,
+  GRID_ROW_BUDGET,
   computeHoverScale,
 } from '../shared/constants';
 import {
@@ -1292,8 +1293,12 @@ export class DynamicViewsMasonryView extends BasesView {
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
 
-      // Toggle is-grouped class
+      // Toggle is-grouped class (container) + dynamic-views-grouped (leaf content
+      // for scrim rules — avoids :has() which exceeds Android compositor budget)
       this.containerEl.toggleClass('is-grouped', isGrouped);
+      this.containerEl
+        .closest('.workspace-leaf-content')
+        ?.toggleClass('dynamic-views-grouped', isGrouped);
 
       // Create masonry container
       // Ungrouped: needs masonry-container for CSS height:auto rule
@@ -2829,6 +2834,18 @@ export class DynamicViewsMasonryView extends BasesView {
     let mountedNeverMeasured = false;
     let mountedPostResize = false;
     let mountCount = 0;
+    // Derive column count from stored layout values for mount budget.
+    // Matches Grid parity: GRID_ROW_BUDGET × columns cards per frame.
+    const mountBudget =
+      this.lastLayoutCardWidth > 0
+        ? Math.max(
+            1,
+            Math.floor(
+              (this.lastLayoutWidth + this.lastLayoutGap) /
+                (this.lastLayoutCardWidth + this.lastLayoutGap)
+            )
+          ) * GRID_ROW_BUDGET
+        : SCROLL_MOUNT_BUDGET;
     const hiddenZonePreMeasure: VirtualItem[] = [];
     const len = this.virtualItems.length;
 
@@ -2925,7 +2942,7 @@ export class DynamicViewsMasonryView extends BasesView {
       }
 
       if (!item.el) {
-        if (mountCount < SCROLL_MOUNT_BUDGET) {
+        if (mountCount < mountBudget) {
           const container = this.groupContainers.get(item.groupKey);
           if (container) {
             this.mountVirtualItem(item, container, settings);
