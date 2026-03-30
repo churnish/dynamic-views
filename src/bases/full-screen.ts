@@ -445,6 +445,23 @@ export class FullScreenController {
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
 
+    // Early reverse bridge removal — when scrolling near top with show
+    // bridge active, remove bridge + adjust scrollTop to eliminate false
+    // ceiling. The bridge offsets show layout shift but makes the first
+    // totalShift px inaccessible (container.margin-top = -totalShift).
+    // Removing bridge + adding totalShift to scrollTop is visually invisible
+    // (both shifts cancel). Runs before cooldown — coordinate correction,
+    // not a toggle. The idle pendingLayout still fires for full cleanup
+    // (remove full-screen-active, inlines, height lock).
+    if (this.showBridgeActive && currentTop <= this.totalShift) {
+      this.container.style.removeProperty('margin-top');
+      this.container.style.removeProperty('transition');
+      this.scrollEl.scrollTop = currentTop + this.totalShift;
+      this.prevScrollTop = this.scrollEl.scrollTop;
+      this.showBridgeActive = false;
+      return;
+    }
+
     // Idle settle for pending layout (hide settle or show class removal)
     if (this.scrollIdleTimer != null) clearTimeout(this.scrollIdleTimer);
     if (this.pendingLayout) {
@@ -478,7 +495,11 @@ export class FullScreenController {
         ? this.totalShift
         : FULL_SCREEN_TOP_ZONE;
     if (currentTop <= autoShowZone) {
-      if (this.barsHidden) {
+      // Only auto-show when user is scrolling UP or stationary — not during
+      // active downward scroll. Android bridge-less hide can land scrollTop
+      // at 0 (Math.max clamp), which would trigger auto-show on the next
+      // event if the user is still scrolling down post-hide.
+      if (this.barsHidden && delta <= 0) {
         this.lastToggleTime = now;
         this.barsHidden = false;
         this.showBarsUI();
@@ -641,8 +662,12 @@ export class FullScreenController {
       // to compensate. Bridge already cleared in the cleanup block above.
       if (this.showBridgeActive) {
         this.showBridgeActive = false;
-      } else if (before >= this.totalShift) {
-        this.scrollEl.scrollTop = before - this.totalShift;
+      } else {
+        // Clamp to 0 when near top — the skip guard (before >= totalShift)
+        // left scrollTop unchanged, making the first totalShift px of content
+        // inaccessible after hide. The auto-show delta<=0 check prevents the
+        // scrollTop=0 landing from triggering auto-show on the next event.
+        this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
       }
       this.settled = true;
       // Height relock deferred to idle — offsetHeight forces layout that
