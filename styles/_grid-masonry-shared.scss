@@ -28,8 +28,6 @@ body:not(.dynamic-views-disable-sticky-group-header)
   top: -12px;
   overflow: visible;
   padding-bottom: calc(var(--size-2-2) + 1px);
-  container-type: scroll-state;
-  container-name: dynamic-views-group-heading;
 
   /* Background pseudo-element — spans full pane width behind heading content.
      Positioned relative to heading (nearest positioned ancestor). */
@@ -45,24 +43,18 @@ body:not(.dynamic-views-disable-sticky-group-header)
     pointer-events: none; /* Background only — don't expand collapse-region's click target */
   }
 
-  /* JS-toggled: sentinel IO detects stuck state, sets z-index on heading itself.
-     Child z-index can't compete with cards in the grid stacking context. */
-  &.stuck {
-    z-index: 20;
-  }
-}
+  /* Always above cards — z-index only matters when stuck (overlapping cards).
+     When not stuck, heading is in normal flow above the grid, so z-index is
+     inert. Unconditional avoids the IO timing gap where cards briefly paint
+     above the heading between stuck position and .stuck class application. */
+  z-index: 20;
 
-/* Border below sticky group headers when stuck — spans full pane width.
-   Progressive enhancement: WebKit doesn't yet support scroll-state() container queries. */
-@container dynamic-views-group-heading scroll-state(stuck: top) {
-  .bases-group-count::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: calc(-1 * var(--dynamic-views-bases-view-padding));
-    right: calc(-1 * var(--dynamic-views-bases-view-padding));
-    height: 1px;
-    background: var(--dynamic-views-bases-table-border-color);
+  /* Hairline border when stuck — added to the existing background pseudo which
+     already spans full pane width via negative offsets. Masonry's overflow: clip
+     + overflow-clip-margin: bases-view-padding accommodates the extension. */
+  &.stuck > .bases-group-collapse-region::before {
+    border-bottom: var(--border-width, 0.5px) solid
+      var(--dynamic-views-bases-table-border-color);
   }
 }
 

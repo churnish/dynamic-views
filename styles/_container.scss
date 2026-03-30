@@ -95,17 +95,15 @@ body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
 
 /* Full screen scroll range: ensure card views are always scrollable when
    plugin full screen is mounted. Native markdown uses CM6 scrollPastEnd
-   (~50vh). We add view-top-spacing + toolbar + search row height so
-   post-hide scroll range exceeds TOP_ZONE, preventing stuck-hidden states
-   after settle. Search row is 53px across all phone sizes (fixed input +
-   4px 8px padding). Class added by FullScreenController.mount(), removed
+   (~50% pane height). JS sets --dynamic-views-scroll-past-end to 50% of
+   actual pane clientHeight at mount. Fallback 200px covers the window
+   before JS runs. Class added by FullScreenController.mount(), removed
    on unmount(). */
 .is-phone
   .workspace-leaf-content[data-type='bases']
   .dynamic-views-bases-container.dynamic-views-full-screen-enabled {
   margin-bottom: calc(
     var(--dynamic-views-view-bottom-spacing) +
-      var(--dynamic-views-view-top-spacing) +
-      var(--dynamic-views-bases-header-height) + 53px
+      var(--dynamic-views-scroll-past-end)
   );
 }

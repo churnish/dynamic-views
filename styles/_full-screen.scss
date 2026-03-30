@@ -107,12 +107,11 @@
   left: 0 !important;
   right: 0 !important;
   height: var(--dynamic-views-safe-area-inset-top) !important;
-  background: linear-gradient(
-    to bottom,
-    var(--dynamic-views-background-primary) 0px,
-    transparent var(--dynamic-views-safe-area-inset-top)
-  ) !important;
-  z-index: 10 !important;
+  background: var(--dynamic-views-background-primary) !important;
+  // Default 25: above sticky headings (z-index: 20) so scrolling headings
+  // disappear beneath the scrim. During show, JS sets --dynamic-views-scrim-z
+  // to 10 so the header WAAPI (z-index: 20) slides in above the scrim.
+  z-index: var(--dynamic-views-scrim-z, 25) !important;
   pointer-events: none !important;
 }
 
@@ -128,11 +127,7 @@
   ) !important;
   background: var(
     --dynamic-views-scrim-bg,
-    linear-gradient(
-      to bottom,
-      var(--dynamic-views-background-primary) 0px,
-      transparent var(--dynamic-views-safe-area-inset-top)
-    )
+    var(--dynamic-views-background-primary)
   ) !important;
 }
 
@@ -177,6 +172,27 @@
   .view-content {
   margin-top: var(--dynamic-views-view-top-spacing) !important;
   transition: none !important;
+}
+
+// Sticky group headers: stop below status bar when bars are hidden.
+// Normal top: -12px (grid-masonry-shared) sticks at viewport top — behind
+// the status bar when scroll container starts at screen edge. The -1px
+// tucks the heading under the ::before scrim to cover the subpixel gap
+// from non-integer safe-area-inset-top (e.g. 46.095px on Pixel 8a).
+// iOS: :not(.full-screen-showing) reverts during show (header covers area).
+// Android: full-screen-showing is never added, so override persists during
+// the ~2s show phase — harmless (header covers area, brief transition).
+body.is-phone.full-screen-active
+  [data-type='bases']:not(.full-screen-showing)
+  .dynamic-views.is-grouped
+  .bases-cards-container
+  .dynamic-views-group-section
+  > .bases-group-heading:not(.collapsed) {
+  top: calc(
+    var(--dynamic-views-safe-area-inset-top) - var(
+        --dynamic-views-bases-view-padding
+      ) - 1px
+  );
 }
 
 // iOS: remove ::before gradient on show — CSS header covers the status bar.

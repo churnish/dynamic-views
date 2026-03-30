@@ -204,6 +204,16 @@ export class FullScreenController {
     this.lockedScrollHeight = this.scrollEl.offsetHeight;
     setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
 
+    // Scroll range padding — mirrors native CM6 scrollPastEnd (~50% pane).
+    // Set as CSS variable so the margin-bottom calc in _container.scss adapts
+    // to actual pane height instead of fixed ~200px.
+    const scrollPadding = Math.round(this.scrollEl.clientHeight * 0.5);
+    setStyle(
+      this.container,
+      '--dynamic-views-scroll-past-end',
+      `${scrollPadding}px`
+    );
+
     // Reset state
     this.barsHidden = false;
     this.settled = false;
@@ -333,6 +343,7 @@ export class FullScreenController {
     setStyles(this.leafContent, [
       ['--dynamic-views-scrim-height', 'var(--view-top-spacing)'],
       ['--dynamic-views-scrim-bg', 'var(--dynamic-views-background-primary)'],
+      ['--dynamic-views-scrim-z', '10'],
       ['--dynamic-views-after-display', 'block'],
     ]);
 
@@ -372,6 +383,7 @@ export class FullScreenController {
     clearStyles(this.leafContent, [
       '--dynamic-views-scrim-height',
       '--dynamic-views-scrim-bg',
+      '--dynamic-views-scrim-z',
       '--dynamic-views-after-display',
     ]);
   }
@@ -417,6 +429,7 @@ export class FullScreenController {
     this.container.classList.remove('dynamic-views-full-screen-enabled');
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transition');
+    this.container.style.removeProperty('--dynamic-views-scroll-past-end');
     this.scrollEl.style.removeProperty('height');
 
     // Cancel WAAPI animations (Android)
@@ -1054,6 +1067,9 @@ export class FullScreenController {
 
     const target = e.target as HTMLElement | null;
     if (!target) return;
+
+    // Group collapse region: chevron + property + value trigger fold/unfold
+    if (target.closest('.bases-group-collapse-region')) return;
 
     const isCard = target.closest('.card') != null;
     const isImage =
