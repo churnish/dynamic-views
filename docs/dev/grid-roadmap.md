@@ -42,6 +42,8 @@ All done. Grid's virtual scroll uses a committed-row lock — fundamentally diff
 | High velocity suppression | Done | Row commits suppressed above `HIGH_VELOCITY_THRESHOLD` (4000 px/s). Jumps exempt (single discrete event). |
 | Content-visibility gating | Done | `CONTENT_HIDDEN_CLASS` toggled by scroll position. Cards in hidden buffer zone get `content-visibility: hidden` with `contain-intrinsic-height`. |
 | Budget continuation | Done | When budget exhausted, schedules another sync frame. Suppressed during high velocity (scroll handler re-triggers). Jumps exempt. |
+| Scroll-idle fallback | Done | 150ms debounced `scheduleVirtualScrollSync()` after scroll stops. Catches cases where velocity gate killed budgetExhausted reschedule on the last scroll event. |
+| Frame mount cap | Done | `frameMountCount` caps total mounts across recursive sync calls (sync → onMountRemeasure → recursive sync) to `GRID_ROW_BUDGET × columns` per frame. Prevents 60+ card cascade on wide panes. |
 
 ## 2. Style recalc (main bottleneck)
 
@@ -65,7 +67,7 @@ The dominant cost. CSS Grid invalidates all items when any item is inserted or r
 
 | Doc | Status | Notes |
 |---|---|---|
-| Committed-row lock in `docs/architecture/grid-layout.md` | Planned | Document: committed-row lock algorithm, cold start row selection, within-row direction, frozen anchor (masonry comparison), design evolution from direction-based → center-outward → mounted-center → committed-row lock. |
+| Committed-row lock in `docs/architecture/grid-layout.md` | Done | §6a: algorithm, row selection, direction tracking, velocity gate, jump lifecycle, frame mount cap, masonry comparison, design evolution, state fields, constants, invariants. |
 
 ## What NOT to do
 

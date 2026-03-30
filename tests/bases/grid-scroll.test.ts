@@ -11,6 +11,8 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   PANE_MULTIPLIER,
+  SCROLL_IDLE_SYNC_MS,
+  SCROLL_THROTTLE_MS,
 } from '../../src/shared/constants';
 
 // ---------------------------------------------------------------------------
@@ -170,5 +172,11 @@ describe('checkAndLoadMore guards', () => {
     expect(shouldLoad({ ...BASE, scrollTop, scrollHeight, clientHeight })).toBe(
       false
     );
+  });
+});
+
+describe('SCROLL_IDLE_SYNC_MS', () => {
+  it('must exceed SCROLL_THROTTLE_MS', () => {
+    expect(SCROLL_IDLE_SYNC_MS).toBeGreaterThan(SCROLL_THROTTLE_MS);
   });
 });

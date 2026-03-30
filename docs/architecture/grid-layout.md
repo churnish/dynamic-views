@@ -1,8 +1,8 @@
 ---
 title: Grid layout system
-description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and Bases/Datacore differences.
+description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, committed-row lock mount ordering, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-29
+updated: 2026-03-30
 ---
 # Grid layout system
 
@@ -130,6 +130,15 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 | `disconnectStyleObserver`| `(() => void) \| null`                    | Cleanup function for Style Settings MutationObserver.                                                         |
 | `lastDataUpdateTime`     | `{ value: number }`                       | Ref box for throttle timestamp tracking.                                                                      |
 | `trailingUpdate`         | `{ timeoutId, callback, isTrailing? }`    | Trailing edge throttle state for data updates.                                                                |
+| `committedRow`           | `{ groupKey, rowStart, reverse } \| null` | Currently locked row for Phase 1 committed-row lock. Cleared on completion, column change, or jump. |
+| `hasCommittedAnyRow`     | `boolean`                                 | First row commit flag — distinguishes cold start from continuous scroll in Step 3.                   |
+| `jumpPending`            | `boolean`                                 | Active during jump cold fill. Cleared when all visible rows mounted — transitions to directional.    |
+| `scrollingDown`          | `boolean`                                 | Current scroll direction (after 50px accumulator threshold). Controls Step 3 row selection.          |
+| `scrollDirectionAccum`   | `number`                                  | Signed delta accumulator with direction-change reset. Filters trackpad micro-reversals.              |
+| `lastSyncScrollTop`      | `number`                                  | ScrollTop at last sync — velocity + delta computation.                                              |
+| `lastSyncTime`           | `number`                                  | Timestamp at last sync — velocity computation.                                                      |
+| `frameMountCount`        | `number`                                  | Per-frame mount accumulator across recursive sync calls. Reset at top-level entry.                   |
+| `scrollIdleSyncId`       | `ReturnType<typeof setTimeout> \| null`   | Scroll-idle fallback sync timer — guarantees final sync after velocity gate blocks recovery.         |
 
 ## Render pipeline
 
@@ -353,6 +362,134 @@ Constants: `HIDDEN_BUFFER_MULTIPLIER = 2` (`src/shared/constants.ts`), `CONTENT_
 
 WebKit skips the content-hidden tier entirely — it enters infinite reflow loops with IO-toggled `content-visibility: hidden`. WebKit uses the single-tier mount/unmount system. Android gets the full three-tier system.
 
+### 6a. Mount ordering (committed-row lock)
+
+Phase 1 of `syncVirtualScroll()` controls which cards mount each frame. The committed-row lock ensures rows complete atomically — no partial rows (blank cards within a visible row).
+
+**Core idea**: Track a row identity (`groupKey` + `rowStartIndex`). Once any card from a row starts mounting, lock to that row until complete. When unlocked, pick the next row based on scroll context. Within a row, iterate left-to-right (or right-to-left for rows above the viewport during scroll-up).
+
+#### Algorithm (3-step loop)
+
+The loop runs up to `GRID_ROW_BUDGET` (2) iterations per frame. Each iteration mounts one complete row:
+
+```
+for rowPass < GRID_ROW_BUDGET:
+  Step 1: Validate — does committedRow still have unmounted items in mount zone?
+           If not, clear committedRow.
+  Step 2: Mount — if committedRow set, mount its items via mountRowRange().
+  Step 3: Select — if no committedRow, scan all groups for best unmounted row.
+           Commit to it and mount via mountRowRange().
+  Early exit: if nothing mounted this pass, break.
+```
+
+`mountRowRange(groupItems, rowStart, rowEnd, offset, reverse, ...)` iterates the row range, mounts unmounted items inside the mount zone, up to `columns` per call. Returns `{ mounted, mountedNew }`.
+
+#### Row selection (Step 3)
+
+Two modes based on scroll context:
+
+| Mode | Trigger | Selection | Within-row direction |
+|---|---|---|---|
+| Cold start | `!hasCommittedAnyRow` (first open) or `jumpPending` (scrollbar jump) | Visible rows topmost-first, then buffer by center proximity | Left-to-right. Reverse only for rows entirely above viewport (`rowBottom <= scrollTop`). |
+| Continuous | Normal scroll after first row commits | Topmost unmounted for scroll-down, bottommost for scroll-up | Left-to-right for scroll-down, right-to-left for scroll-up |
+
+Cold start covers both first view open (zero mounted cards) and scrollbar jumps (teleportation with no directional context).
+
+#### Direction tracking
+
+Scroll direction uses a signed accumulator with `DIRECTION_ACCUM_THRESHOLD` (50px) hysteresis:
+
+```
+scrollDirectionAccum += scrollDelta
+if opposite sign from previous: reset to 0
+if |accumulator| >= 50px: flip scrollingDown, clamp accumulator
+```
+
+Filters trackpad micro-reversals (19-39px) during deceleration that would flip row selection order momentarily. Mice (discrete ticks) have no momentum — accumulator is irrelevant, direction flips correctly.
+
+#### Velocity gate
+
+Suppresses Step 3 (new row selection) during rapid scroll (`velocity > HIGH_VELOCITY_THRESHOLD` = 4000 px/s). Step 2 (finish committed row) still runs. Prevents mounting at transient intermediate positions during scrollbar drags and trackpad flicks.
+
+**Jump carve-out**: `isJump = highVelocity && |scrollDelta| > paneHeight`. Scrollbar click-to-position jumps ARE the final position (single discrete event), so they bypass the velocity gate. Fast flicks have high velocity but `|scrollDelta| ≤ paneHeight` — stay gated.
+
+**Recovery**: Velocity gate blocks both Step 3 AND `budgetExhausted` reschedule. When scroll stops, no more events fire. The scroll-idle fallback (`SCROLL_IDLE_SYNC_MS` = 150ms debounced `scheduleVirtualScrollSync`) guarantees a final sync. At that point `velocity = 0` (same scrollTop, dt > 150ms), so all gates pass.
+
+#### Jump lifecycle
+
+```
+Jump detected (|scrollDelta| > paneHeight, highVelocity)
+  → jumpPending = true
+  → committedRow = null (pre-jump row irrelevant)
+  → scrollingDown = scrollDelta > 0
+  → scrollDirectionAccum = 0
+
+Cold start fills visible rows topmost-first (jumpPending active)
+
+All visible rows mounted
+  → jumpPending = false
+  → Transitions to continuous directional fill for buffer rows
+```
+
+#### Frame mount cap
+
+`frameMountCount` tracks total mounts across recursive `syncVirtualScroll` calls (sync → `onMountRemeasure` → `remeasureMountedCards` → recursive sync). Reset to 0 at top-level entry (`!this.isMountRemeasuring`). Cap = `GRID_ROW_BUDGET × lastColumnCount`. Prevents recursive cascade from mounting 60+ cards in a single frame on wide panes. `budgetExhausted` reschedule handles the remainder in subsequent frames.
+
+#### State fields
+
+| Field | Type | Purpose |
+|---|---|---|
+| `committedRow` | `{ groupKey, rowStart, reverse } \| null` | Currently locked row. Cleared on completion, column change, jump. |
+| `hasCommittedAnyRow` | `boolean` | Set on first row commit. Reset on `resetVirtualState()`. Distinguishes cold start from continuous. |
+| `jumpPending` | `boolean` | Active during jump cold fill. Cleared when all visible rows mounted. |
+| `scrollingDown` | `boolean` | Current scroll direction (after accumulator threshold). Controls Step 3 row selection. |
+| `scrollDirectionAccum` | `number` | Signed accumulator filtering micro-reversals. Clamped to ±`DIRECTION_ACCUM_THRESHOLD`. |
+| `lastSyncScrollTop` | `number` | ScrollTop at last sync — computes velocity and delta. |
+| `lastSyncTime` | `number` | Timestamp at last sync — computes velocity. |
+| `frameMountCount` | `number` | Per-frame mount accumulator across recursive sync calls. |
+| `scrollIdleSyncId` | `timeout \| null` | Scroll-idle fallback sync timer. |
+
+#### Comparison with Masonry
+
+Masonry uses a different mount ordering strategy: frozen viewport-center anchor.
+
+| Aspect | Grid (committed-row lock) | Masonry (frozen anchor) |
+|---|---|---|
+| Unit of work | Complete row (all columns) | Individual card |
+| Lock mechanism | Row identity (`groupKey` + `rowStartIndex`) | Anchor Y coordinate (frozen across continuation frames) |
+| Direction | Accumulated delta with 50px hysteresis | Two-pointer outward scan from anchor |
+| Row atomicity | Guaranteed — lock prevents partial rows | N/A — no row concept in absolute positioning |
+| Budget | `GRID_ROW_BUDGET` (2) rows/frame | `SCROLL_MOUNT_BUDGET` × `lastLayoutColumnCount` cards/frame |
+| Cold start | Topmost visible row first | Viewport center outward |
+
+Grid needs row atomicity because CSS Grid renders all items in a row simultaneously — a partial row shows blank cells. Masonry's absolute positioning means each card is independent.
+
+#### Design evolution
+
+The committed-row lock is the result of four prior approaches, each abandoned for specific reasons:
+
+1. **Direction-based iteration** — Reverse `virtualItems` loop on scroll-up. Failed: alternates and reverses break monotonicity, causing scattered mounts.
+2. **Viewport-center-outward scan** — Two-pointer expanding from center. Failed: alternates between rows above/below center rather than filling directionally.
+3. **Mounted-center anchor** — Scan outward from center of mounted cards. Failed: anchor drifts as cards mount, causing row splitting (7-10 frame delays for partial rows).
+4. **Frozen anchor** — Compute anchor once per scroll event, freeze for continuation frames. Worked (adopted for Masonry) but adds complexity for Grid where row atomicity is the real requirement. The committed-row lock is simpler and directly guarantees the invariant.
+
+#### Constants
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `GRID_ROW_BUDGET` | 2 | Max complete rows mounted per frame. |
+| `DIRECTION_ACCUM_THRESHOLD` | 50 | Signed pixel threshold before direction flips. |
+| `HIGH_VELOCITY_THRESHOLD` | 4000 | Velocity (px/s) above which Step 3 is suppressed. |
+| `SCROLL_IDLE_SYNC_MS` | 150 | Idle debounce (ms) for fallback sync after scroll stops. |
+
+#### Invariants
+
+1. **Rows complete atomically.** Once `committedRow` is set, all items in that row mount before any other row starts. Prevents blank cells in CSS Grid rows.
+2. **Cold start is always topmost-first.** Jumps and first opens have no directional context — top-to-bottom matches user expectation.
+3. **Velocity gate has recovery.** Scroll-idle fallback (`SCROLL_IDLE_SYNC_MS`) guarantees mounting resumes after scroll stops, even when velocity gate blocked both Step 3 and `budgetExhausted` reschedule.
+4. **Frame mount cap prevents cascade.** Recursive sync calls share `frameMountCount` — total mounts per top-level sync bounded by `GRID_ROW_BUDGET × columns`.
+5. **Jump carve-out is safe.** `|scrollDelta| > paneHeight` is impossible for multi-event scrollbar drags — each event moves less than a full viewport. Only single-frame teleportation (click-to-position) qualifies.
+
 ### 7. Group collapse
 
 **Toggle** (`toggleGroupCollapse`):
@@ -540,6 +677,10 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 | `SCROLL_THROTTLE_MS` | 100   | Scroll event throttle interval.                                |
 | `MOUNT_REMEASURE_MS` | 200   | Delay before running deferred passes on newly mounted cards.   |
 | `HIDDEN_BUFFER_MULTIPLIER` | 2 | Buffer multiplier for content-hidden tier (desktop grid only). |
+| `GRID_ROW_BUDGET`    | 2     | Max complete rows mounted per frame (Phase 1 committed-row lock). |
+| `DIRECTION_ACCUM_THRESHOLD` | 50 | Signed pixel threshold before scroll direction flips.       |
+| `HIGH_VELOCITY_THRESHOLD` | 4000 | Velocity (px/s) above which new row commits are suppressed. |
+| `SCROLL_IDLE_SYNC_MS` | 150  | Idle debounce (ms) for fallback sync after scroll stops.     |
 
 ### Property measurement constants (`src/shared/property-measure.ts`)
 
@@ -565,6 +706,8 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 12. **Height-locked mount prevents row reflow.** Cards mount with explicit `style.height` matching placeholder + `.dynamic-views-height-locked` class (overflow hidden). Released after deferred passes complete (`MOUNT_REMEASURE_MS`).
 13. **`rebuildGroupIndex()` maintains stable item ordering.** Called after collapse, expand, initial render, and batch append. Updates `item.index` for each item. No `reindexVirtualItems()` — indices cached on items, not shifted.
 14. **Content-hidden tier preserves grid row geometry.** `contain-intrinsic-height` is set from `item.height` (stretched row height from `recomputeYPositions`). All cards in a row share the same `item.height`, so the grid auto row height is unchanged when cards transition to content-hidden. Unmounted items in the hidden zone stay unmounted — mounting just to apply content-hidden would waste the mount cost. Non-WebKit only (`!Platform.isIosApp`).
+15. **Committed-row lock guarantees row atomicity.** Phase 1 locks to a row until all items mount before advancing. Prevents blank cells in CSS Grid rows during virtual scroll.
+16. **Frame mount cap prevents recursive cascade.** `frameMountCount` shared across recursive `syncVirtualScroll` calls bounds total mounts per top-level sync to `GRID_ROW_BUDGET × columns`.
 
 ## Bases v Datacore
 

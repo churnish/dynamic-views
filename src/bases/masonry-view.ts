@@ -265,6 +265,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private cachedGroupOffsets: Map<string | undefined, number> = new Map();
   private groupOffsetsDirty = true;
   private lastLayoutCardWidth: number = 0;
+  private lastLayoutColumnCount: number = 0;
   private lastLayoutGap: number = 0;
   private cardVerticalPadding: number | null = null;
   private newlyMountedEls: HTMLElement[] = [];
@@ -1664,6 +1665,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
         // Store for syncVirtualScroll's post-mount remeasure
         this.lastLayoutCardWidth = cardWidth;
+        this.lastLayoutColumnCount = columns;
         this.lastLayoutGap = gap;
 
         // Fast path: skip full remount when unmounted cards have prior heights.
@@ -2724,6 +2726,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.cachedGroupOffsets.clear();
     this.groupOffsetsDirty = true;
     this.hasUserScrolled = false;
+    this.lastLayoutColumnCount = 0;
   }
 
   private cacheCardVerticalPadding(el: HTMLElement): void {
@@ -2837,14 +2840,8 @@ export class DynamicViewsMasonryView extends BasesView {
     // Derive column count from stored layout values for mount budget.
     // Matches Grid parity: GRID_ROW_BUDGET × columns cards per frame.
     const mountBudget =
-      this.lastLayoutCardWidth > 0
-        ? Math.max(
-            1,
-            Math.floor(
-              (this.lastLayoutWidth + this.lastLayoutGap) /
-                (this.lastLayoutCardWidth + this.lastLayoutGap)
-            )
-          ) * GRID_ROW_BUDGET
+      this.lastLayoutColumnCount > 0
+        ? this.lastLayoutColumnCount * GRID_ROW_BUDGET
         : SCROLL_MOUNT_BUDGET;
     const hiddenZonePreMeasure: VirtualItem[] = [];
     const len = this.virtualItems.length;
@@ -4110,6 +4107,9 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.initialRemeasureTimeout !== null) {
       clearTimeout(this.initialRemeasureTimeout);
     }
+    this.containerEl
+      .closest('.workspace-leaf-content')
+      ?.classList.remove('dynamic-views-grouped');
     this.focusCleanup?.();
     this.stickyHeadings?.disconnect();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction

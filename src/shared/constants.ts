@@ -18,6 +18,12 @@ export const HIDDEN_BUFFER_MULTIPLIER = 2;
 /** Scroll event throttle in milliseconds */
 export const SCROLL_THROTTLE_MS = 100;
 
+/** Scroll-idle debounce for virtual scroll fallback sync (ms).
+ * Velocity gate suppresses budgetExhausted reschedule during fast scroll —
+ * this timeout guarantees a final sync after scroll stops. Must exceed
+ * SCROLL_THROTTLE_MS so the idle fires after the last throttled check. */
+export const SCROLL_IDLE_SYNC_MS = 150;
+
 /** Rows per column for batch size calculation */
 export const ROWS_PER_COLUMN = 10;
 

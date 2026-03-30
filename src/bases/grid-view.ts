@@ -58,6 +58,7 @@ import {
   DIRECTION_ACCUM_THRESHOLD,
   HIGH_VELOCITY_THRESHOLD,
   GRID_ROW_BUDGET,
+  SCROLL_IDLE_SYNC_MS,
 } from '../shared/constants';
 import {
   setupBasesSwipePrevention,
@@ -279,6 +280,7 @@ export class DynamicViewsGridView extends BasesView {
   private cardResizeDirty = false;
   private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private isMountRemeasuring = false;
+  private frameMountCount: number = 0;
   private newlyMountedEls: HTMLElement[] = [];
   private lastMeasuredCardWidth = 0;
   private cardVerticalPadding: number | null = null;
@@ -903,6 +905,7 @@ export class DynamicViewsGridView extends BasesView {
     this.hasUserScrolled = false;
     this.isLayoutBusy = false;
     this.cardResizeDirty = false;
+    this.frameMountCount = 0;
     this.newlyMountedEls = [];
     this.scrollMountLockedEls.clear();
     if (this.scrollIdleTimeout !== null) {
@@ -2374,7 +2377,7 @@ export class DynamicViewsGridView extends BasesView {
       this.scrollIdleSyncId = setTimeout(() => {
         this.scrollIdleSyncId = null;
         this.scheduleVirtualScrollSync();
-      }, 150);
+      }, SCROLL_IDLE_SYNC_MS);
 
       // Schedule height-lock release after scroll quiesces (iOS only).
       // Cards mounted during scroll are locked to placeholder height to
@@ -2660,6 +2663,10 @@ export class DynamicViewsGridView extends BasesView {
     if (!this.hasUserScrolled) return;
     if (this.isLayoutBusy) return;
 
+    const isTopLevel = !this.isMountRemeasuring;
+    if (isTopLevel) this.frameMountCount = 0;
+    const frameBudget = (this.lastColumnCount || 1) * GRID_ROW_BUDGET;
+
     const scrollTop = this.scrollEl.scrollTop;
     const paneHeight = this.scrollEl.clientHeight;
 
@@ -2733,6 +2740,7 @@ export class DynamicViewsGridView extends BasesView {
 
     for (let rowPass = 0; rowPass < GRID_ROW_BUDGET; rowPass++) {
       let rowMountedThisPass = false;
+      if (this.frameMountCount >= frameBudget) break;
 
       // Step 1: Validate committed row (still has unmounted items in mount zone?)
       if (this.committedRow) {
@@ -2785,6 +2793,7 @@ export class DynamicViewsGridView extends BasesView {
         );
         if (step2.mountedNew) mountedNew = true;
         if (step2.mounted > 0) rowMountedThisPass = true;
+        this.frameMountCount += step2.mounted;
       }
 
       // Step 3: If no committed row, find closest unmounted row.
@@ -2906,6 +2915,7 @@ export class DynamicViewsGridView extends BasesView {
           );
           if (step3.mountedNew) mountedNew = true;
           if (step3.mounted > 0) rowMountedThisPass = true;
+          this.frameMountCount += step3.mounted;
         }
       }
 
@@ -3458,6 +3468,9 @@ export class DynamicViewsGridView extends BasesView {
       clearTimeout(this.scrollIdleSyncId);
       this.scrollIdleSyncId = null;
     }
+    this.containerEl
+      .closest('.workspace-leaf-content')
+      ?.classList.remove('dynamic-views-grouped');
     this.touchAbort?.abort();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();
