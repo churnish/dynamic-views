@@ -1,7 +1,7 @@
 ---
 title: CLS elimination
 description: Post-resize scroll-idle CLS in masonry layout (#358) — problem definition, proven constraints, estimation model, industry survey, all tried approaches, remaining candidates, and key source files.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-25
 ---
 # CLS elimination (#358)
@@ -14,7 +14,7 @@ Post-resize CLS in masonry layout. After pane resize (column count change) and s
 
 After a pane resize that changes column count (e.g., 4→2), ~960 unmounted cards have estimated heights with 20-100px error per card. The estimation model (`estimateUnmountedHeight()`) splits card height into `scalableHeight` (covers — scales linearly with width) and `fixedHeight` (text, properties, header — scales as `sqrt(widthRatio)` with k=0.5). But text reflow is discrete — no continuous function predicts it exactly. Per-card estimation error: 20-100px. Aggregate scroll compensations up to -453px observed after column increase.
 
-The visible CLS during post-resize scroll has been attributed to various subsystems across 10 phases of investigation — all were ruled out or produced zero improvement. The source remains unidentified (see constraint #15 and [cls-source-isolation.md](cls-source-isolation.md)).
+The visible CLS during post-resize scroll has been attributed to various systems across 10 phases of investigation — all were ruled out or produced zero improvement. The source remains unidentified (see constraint #15 and [cls-source-isolation.md](cls-source-isolation.md)).
 
 ## Requirements
 
@@ -256,7 +256,7 @@ A transition guard (`transitionGuardActive` flag blocking `cardResizeObserver`, 
 
 ### Phase 9.2: CLS source isolation — INVALIDATED
 
-Systematic elimination of CLS source candidates. Four experiments disabled individual subsystems; CLS persisted through all. **All experiments were invalid** — diagnostic guards used `globalThis.__clsDiag` which esbuild does not map to `window`, making every guard a no-op. Key finding that remains valid: the Layout Shift API is unreliable for this problem (`hadRecentInput` filtering).
+Systematic elimination of CLS source candidates. Four experiments disabled individual systems; CLS persisted through all. **All experiments were invalid** — diagnostic guards used `globalThis.__clsDiag` which esbuild does not map to `window`, making every guard a no-op. Key finding that remains valid: the Layout Shift API is unreliable for this problem (`hadRecentInput` filtering).
 
 Session `f4ae5162` re-ran elimination experiments with working guards (`window.__clsDiag`). Results: `noAll` (all corrections disabled) **eliminates CLS**. `noScrollIdle` alone eliminates CLS. Source identified as `onScrollIdle` → `remeasureAndReposition` clearing explicit heights → text-wrap height growth → column reposition cascade.
 

@@ -1,16 +1,19 @@
 ---
 title: Plugin overview
-description: High-level overview of the Dynamic Views plugin — what it does, backends, data flow, and major subsystems.
-author: "\U0001F916 Generated with Claude Code"
+description: High-level overview of the Dynamic Views plugin — what it does, backends, data flow, and major systems.
+author: 🤖 Generated with Claude Code
 updated: 2026-03-14
 ---
 # Plugin overview
 
 ## What Dynamic Views does
 
-Dynamic Views renders card views (Grid, Masonry) for Obsidian's Bases and the Datacore plugin. Cards display images in multiple formats (cover, thumbnail, poster, backdrop), Markdown-stripped text previews, and configurable property rows. The plugin also provides a panzoom image viewer, multi-image slideshows, context menus, keyboard navigation, and virtual scrolling. See the [README](../README.md) for key features and the [wiki](../wiki/) for detailed documentation.
-
-The plugin entry point is [main.ts](../main.ts) — it registers Bases view types, commands, and the settings tab, and exposes a `createView()` API that Datacore code blocks call into. Core type definitions live in [types.ts](../src/types.ts) and default values in [constants.ts](../src/constants.ts).
+- Dynamic Views renders card views (Grid, Masonry) in Obsidian built-in [Bases](https://obsidian.md/help/bases) plugin, as well as in the [Datacore](https://github.com/blacksmithgu/datacore) plugin.
+- Cards can display images in multiple formats (cover, thumbnail, poster, backdrop), markup-stripped text previews, and configurable property rows.
+- The plugin also provides a panzoom image viewer, multi-image slideshows, keyboard navigation, and virtual scrolling.
+- See the [README](../README.md) for key features and the [wiki](../wiki/) for detailed documentation.
+- The plugin entry point is [main.ts](../main.ts) — it registers Bases view types, commands, and the settings tab, and exposes a `createView()` API that Datacore code blocks call into.
+- Core type definitions live in [types.ts](../src/types.ts) and default values in [constants.ts](../src/constants.ts).
 
 ## Two backends
 
@@ -64,9 +67,9 @@ The plugin entry point is [main.ts](../main.ts) — it registers Bases view type
 - **Grid**: CSS Grid with responsive column counts. All cards are mounted in the DOM; render cost is managed by [content-visibility.ts](../src/shared/content-visibility.ts) (IntersectionObserver-based gating). Infinite scroll appends cards in batches.
 - **Masonry**: Absolute positioning with a column-balancing algorithm ([masonry-layout.ts](../src/utils/masonry-layout.ts)). Only viewport-visible cards are mounted via [virtual-scroll.ts](../src/shared/virtual-scroll.ts), which handles mount/unmount as the user scrolls. Infinite scroll loads additional batches on demand.
 
-## Major subsystems
+## Major systems
 
-| Subsystem | Key files | Role |
+| System | Key files | Role |
 |---|---|---|
 | Card rendering | [card-renderer.tsx](../src/shared/card-renderer.tsx) | Defines `CardData`, builds card DOM/Preact elements, wires image viewer and slideshow triggers. |
 | Content loading | [content-loader.ts](../src/shared/content-loader.ts)<br>[image-loader.ts](../src/shared/image-loader.ts) | Async image/text loading with in-flight dedup and two-tier caching. |
@@ -82,14 +85,23 @@ The plugin entry point is [main.ts](../main.ts) — it registers Bases view type
 
 ## Styles
 
-SCSS source lives in [styles/](../styles/), compiled via `npm run css` (Dart Sass, no autoprefixer) to `styles.css`. Entry point is [main.scss](../styles/main.scss). Card-specific partials are in [styles/card/](../styles/card/), Datacore UI in [styles/datacore/](../styles/datacore/). The plugin integrates with Style Settings via a YAML comment block in [_style-settings.scss](../styles/_style-settings.scss). Derived CSS custom properties are defined in [_variables.scss](../styles/_variables.scss). See [patterns/css-variable-wrapping.md](patterns/css-variable-wrapping.md) and [patterns/style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) for conventions.
+- SCSS source lives in [styles/](../styles/), compiled via `npm run css` (Dart Sass, no autoprefixer) to `styles.css`.
+- Entry point: [main.scss](../styles/main.scss).
+- Card-specific partials: [styles/card/](../styles/card/).
+- Datacore UI: [styles/datacore/](../styles/datacore/).
+- Dynamic Vies integrates with the Style Settings plugin via a YAML comment block in [_style-settings.scss](../styles/_style-settings.scss).
+- Derived CSS custom properties are defined in [_variables.scss](../styles/_variables.scss).
+- See [patterns/css-variable-wrapping.md](patterns/css-variable-wrapping.md) and [patterns/style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) for conventions.
 
 ## Settings system
 
-Settings resolve through three layers: hardcoded defaults, an optional saved template (per view type), and per-view runtime config. Only non-default values are persisted (sparse storage), and stale keys from older plugin versions are cleaned up automatically. See [architecture/settings-resolution.md](architecture/settings-resolution.md) for the full resolution chain, type coercion rules, and invariants.
+- Settings resolve through three layers: hardcoded defaults, an optional saved template (per view type), and per-view runtime config.
+- Only non-default values are persisted (sparse storage). Stale keys from older plugin versions are cleaned up automatically.
+- See [architecture/settings-resolution.md](architecture/settings-resolution.md) for the full resolution chain, type coercion rules, and invariants.
 
 ## Testing
 
-Tests mirror `src/` in [tests/](../tests/), run via Vitest with jsdom (`npm test`). An Obsidian API mock lives at [tests/\_\_mocks\_\_/obsidian.ts](../tests/__mocks__/obsidian.ts).
-
-See [index.md](index.md) for the full doc index with "read before" guidance for each architecture and pattern doc.
+- Tests mirror `src/` in [tests/](../tests/).
+- Run via Vitest with jsdom (`npm test`).
+- An Obsidian API mock lives at [tests/\_\_mocks\_\_/obsidian.ts](../tests/__mocks__/obsidian.ts).
+- See [index.md](index.md) for the full doc index with "read before" guidance for each architecture and pattern doc.

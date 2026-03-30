@@ -1,8 +1,8 @@
 ---
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and Bases/Datacore differences.
-author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-25
+author: 🤖 Generated with Claude Code
+updated: 2026-03-29
 ---
 # Grid layout system
 
@@ -182,7 +182,7 @@ When `hasImageChanged(oldCard, newCard)` returns `true`, the card cannot be surg
 1. Clean up old card: `handle.cleanup()`, `abortCardRerenderControllers(cardEl)`, unobserve from ResizeObserver, remove element.
 2. Re-render card at correct DOM position, update VirtualItem element reference, observe with ResizeObserver.
 3. Insert new card at same DOM position with height-lock. Immediate passes: `syncResponsiveClasses`, `setHoverScaleForCards`
-4. Deferred passes via `scheduleMountRemeasure`: `initializeScrollGradientsForCards`, `initializeTitleTruncationForCards`, `initializeTextPreviewClampForCards`, then release height lock
+4. Deferred passes via `scheduleMountRemeasure`: `initializeScrollGradientsForCards`, `initializeTextPreviewClampForCards`, then release height lock
 
 When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlButton`) surgically.
 
@@ -289,7 +289,7 @@ Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped 
 
 - **Unmount** (`unmountVirtualItem`): Replace card element with a `<div class="dynamic-views-grid-placeholder">` preserving measured height. Cleanup card handle, abort in-flight renders, unobserve from ResizeObserver.
 - **Mount** (`mountVirtualItem`): Call `renderCard()` on connected DOM (appended to group container end), then `placeholder.replaceWith(card)`. Card mounts with height-lock: explicit `style.height` + `.dynamic-views-height-locked` class to prevent row reflow during deferred passes.
-- **Height-lock release** (`onMountRemeasure`): After `MOUNT_REMEASURE_MS` delay, runs deferred passes (scroll gradients, title truncation, text clamp) on newly mounted cards, then removes height lock. Updates stored heights if changed. Responsive classes and hover scale run immediately during mount (no height impact).
+- **Height-lock release** (`onMountRemeasure`): After `MOUNT_REMEASURE_MS` delay, runs deferred passes (scroll gradients, text clamp) on newly mounted cards, then removes height lock. Updates stored heights if changed. Responsive classes and hover scale run immediately during mount (no height impact).
 
 **Scroll sync**:
 
@@ -312,7 +312,7 @@ Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped 
 Grid uses a three-tier virtual scrolling system on non-WebKit platforms (gated by `!Platform.isIosApp`):
 
 1. **Mount zone** (viewport ± 1× paneHeight): Cards fully mounted and rendered.
-2. **Content-hidden zone** (between 1× and `HIDDEN_BUFFER_MULTIPLIER`× paneHeight): Mounted cards get `content-hidden` class + inline `contain-intrinsic-height` matching `item.height`. Rendering suppressed but DOM preserved — restoring visibility is a class removal, avoiding full `renderCard()` + 5 deferred measurement passes.
+2. **Content-hidden zone** (between 1× and `HIDDEN_BUFFER_MULTIPLIER`× paneHeight): Mounted cards get `content-hidden` class + inline `contain-intrinsic-height` matching `item.height`. Rendering suppressed but DOM preserved — restoring visibility is a class removal, avoiding full `renderCard()` + 4 deferred measurement passes.
 3. **Unmount zone** (beyond `HIDDEN_BUFFER_MULTIPLIER`× paneHeight): Full unmount to placeholder divs.
 
 **Zone geometry** — all boundaries proportional to `paneHeight` (P = scroll container's `clientHeight`):
@@ -348,7 +348,7 @@ Constants: `HIDDEN_BUFFER_MULTIPLIER = 2` (`src/shared/constants.ts`), `CONTENT_
 **CSS**:
 
 - Removed unconditional `content-visibility: visible` from `.dynamic-views-grid .card`.
-- Mobile-specific override: `body.is-mobile .dynamic-views-grid .card { content-visibility: visible; }` (specificity 0,3,1 — same as shared mobile rule; wins by cascade order, `_grid-view.scss` imported after `_grid-masonry-shared.scss`).
+- Mobile-specific override: `body.is-ios .dynamic-views-grid .card { content-visibility: visible; }` (specificity 0,3,1 — same as shared mobile rule; wins by cascade order, `_grid-view.scss` imported after `_grid-masonry-shared.scss`).
 - Shared desktop rule: `.dynamic-views .card.content-hidden { content-visibility: hidden; contain-intrinsic-height: auto 300px; }` — inline style overrides the fallback `300px`.
 
 WebKit skips the content-hidden tier entirely — it enters infinite reflow loops with IO-toggled `content-visibility: hidden`. WebKit uses the single-tier mount/unmount system. Android gets the full three-tier system.
@@ -387,29 +387,28 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 | --- | --------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | 1   | `syncResponsiveClasses(cards)`          | Batch compact-mode + thumbnail-stack class sync.                 | None — sets CSS classes that affect card dimensions for subsequent reads. |
 | 2   | `initializeScrollGradients(container)`  | Reads scroll dimensions of property rows, sets gradient classes. | Properties must be rendered.                                              |
-| 3   | `initializeTitleTruncation(container)`  | Canvas-based binary-search title truncation.                     | Subtitle and properties must be finalized (see invariant below).          |
-| 4   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
-| 5   | `setHoverScaleForCards(cards)`          | Sets CSS custom property for hover scale from card dimensions.   | Card dimensions must be stable.                                           |
+| 3   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
+| 4   | `setHoverScaleForCards(cards)`          | Sets CSS custom property for hover scale from card dimensions.   | Card dimensions must be stable.                                           |
 
-`*ForCards(cards)` variants exist for passes 2-4, scoping measurement to a specific card array instead of scanning the full container. Pass 5 (`setHoverScaleForCards`) is inherently card-scoped — no container variant exists. Used by batch append and `updateCardContent` to scope work to mounted cards only.
+Title truncation is CSS-only (`-webkit-line-clamp` for multi-line, `text-overflow: ellipsis` for single-line via `title-single-line` class) and requires no JS measurement pass.
+
+`*ForCards(cards)` variants exist for passes 2-3, scoping measurement to a specific card array instead of scanning the full container. Pass 4 (`setHoverScaleForCards`) is inherently card-scoped — no container variant exists. Used by batch append and `updateCardContent` to scope work to mounted cards only.
 
 ### Call sites
 
-| Call site                                | Passes used       | Variant                                                                                                          |
-| ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Initial render (full render path)        | All 5             | Container. Then: create VirtualItems, measure positions, setup card ResizeObserver.                              |
-| Batch append (`appendBatch`)             | All 5             | `*ForCards` — new cards only. Create VirtualItems, cull if scrolled.                                            |
-| Group expand (`expandGroup`)             | All 5             | Container — scoped to group. Create VirtualItems, cull if scrolled.                                             |
-| Resize (`updateColumns`)                 | 1, 2, 5           | Container (in RAF after column CSS variable update). Full remount-and-cull on column change. Deferred 2, 3, 4 via `scheduleMountRemeasure` for newly mounted cards. |
-| Property reorder (`updatePropertyOrder`) | 2 only            | Container — title, subtitle, and properties updated (order-derived `displayFirstAsTitle` may change title/subtitle). |
-| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4 | 2: container-level after loop. 3, 4: per-card via `updateCardContent`. Image-change replacement: immediate 1, 5 + deferred 2, 3, 4 via `scheduleMountRemeasure`. |
-| `onDataUpdated` CSS fast-path            | 4 only            | Container — re-measures clamps after CSS variable change.                                                        |
+| Call site                                | Passes used    | Variant                                                                                                          |
+| ---------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Initial render (full render path)        | All 4          | Container. Then: create VirtualItems, measure positions, setup card ResizeObserver.                              |
+| Batch append (`appendBatch`)             | All 4          | `*ForCards` — new cards only. Create VirtualItems, cull if scrolled.                                            |
+| Group expand (`expandGroup`)             | All 4          | Container — scoped to group. Create VirtualItems, cull if scrolled.                                             |
+| Resize (`updateColumns`)                 | 1, 2, 4       | Container (in RAF after column CSS variable update). Full remount-and-cull on column change. Deferred 2, 3 via `scheduleMountRemeasure` for newly mounted cards. |
+| Property reorder (`updatePropertyOrder`) | 2 only         | Container — title, subtitle, and properties updated (order-derived `displayFirstAsTitle` may change title/subtitle). |
+| Content update (`updateCardsInPlace`)    | 2 + per-card 3 | 2: container-level after loop. 3: per-card via `updateCardContent`. Image-change replacement: immediate 1, 4 + deferred 2, 3 via `scheduleMountRemeasure`. |
+| `onDataUpdated` CSS fast-path            | 3 only         | Container — re-measures clamps after CSS variable change.                                                        |
 
-### Truncation ordering invariant
+The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)):
 
-`initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)) enforces this:
-
-1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 6. `updateUrlButton`
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 5. `updateUrlButton`
 
 ## Render guard system
 
@@ -611,7 +610,6 @@ Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCard
 - **Subgrid groups** — `grid-column: 1 / -1` + `grid-template-columns: subgrid` for column alignment. Subgridded columns inherit `column-gap` from the parent grid — the parent's `gap` (or `column-gap`) must stay set, otherwise grouped cards lose column spacing. Note: when grouped, `.dynamic-views-grid` and `.bases-cards-container` are the same element (ungrouped views only have `.dynamic-views-grid`), so Obsidian's native `.bases-cards-container { gap }` also applies and must be explicitly overridden when a different value is needed.
 - **Responsive classes** — `syncResponsiveClasses()` runs after layout in both backends.
 - **Scroll gradients** — `initializeScrollGradients()` applied to property rows in both.
-- **Title truncation** — Binary-search truncation via `initializeTitleTruncation()` in both.
 
 ## Grid vs. masonry comparison
 

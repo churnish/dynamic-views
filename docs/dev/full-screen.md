@@ -1,7 +1,7 @@
 ---
 title: Full screen
 description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, the v84 inline-only animation architecture, and Android WebView WAAPI workaround for single-threaded compositor jank.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-27
 ---
 # Full screen
@@ -35,7 +35,9 @@ Hard UX constraints:
 - **Status bar bg**: Must hide with the header — native Obsidian full screen hides it. Content or a matching background must fill the safe area zone when bars are hidden.
 - **Momentum-safe**: During iOS momentum scroll, ONLY compositor-safe changes (transform, opacity) are allowed. `scrollTop` writes and layout-affecting style mutations (margin/padding changes via class toggles) both kill momentum by forcing WebKit compositor sync. All layout mutations must be deferred to a scroll-idle debounce — NOT `scrollend`, which fires at finger-lift before momentum begins.
 
-## Obsidian native full screen internals
+## Native implementation
+
+Extracted from Obsidian desktop v1.8.9 `obsidian.asar/app.js` (class `X6`, `mobileNavbar`) on 2026-03-28.
 
 ### Body classes
 
@@ -88,9 +90,81 @@ Full screen only activates when `auto-full-screen` is present.
 }
 ```
 
-### Scroll event
+### Decompiled scroll handler
 
-Native full screen is driven by internal `markdown-scroll` event (CodeMirror-level). Bases views don't fire this event. Plugin must implement own scroll detection.
+Native full screen is driven by internal `markdown-scroll` event (CodeMirror-level). Bases views don't fire this event — the plugin must implement its own scroll detection via passive `scroll` listener. Scroll values are LINE NUMBERS (fractional), not pixels — CM6 `getScroll()` returns line-based position from `scrollDOM.scrollTop` + `lineBlockAtHeight()`.
+
+```javascript
+e.prototype.onScroll = function (scrollElement, currentScroll) {
+  var previousScroll = this.scrollTops.get(scrollElement) ?? 0;
+  this.scrollTops.set(scrollElement, currentScroll);
+
+  if (Platform.isPhone && !Platform.mobileSoftKeyboardVisible
+      && this.app.vault.getConfig("autoFullScreen")) {
+    var delta = currentScroll - previousScroll;
+
+    // Guard 1: Both positions near top → skip
+    if (currentScroll < 0.1 && previousScroll < 0.1) return;
+
+    // Guard 2: Dead zone — less than 1/8 of a line (~2.6px) → skip
+    if (Math.abs(delta) < 0.125) return;
+
+    // Direction: positive delta = scrolling down → hide
+    if (delta > 0) {
+      this.hideNavigation();
+    } else {
+      this.restoreNavigation();
+    }
+  }
+};
+
+e.prototype.hideNavigation = function () {
+  Platform.isPhone && (
+    document.body.addClass("is-hidden-nav"),
+    StatusBar?.hide()
+  );
+};
+
+e.prototype.restoreNavigation = function (animate) {
+  if (animate === undefined) animate = true;
+  Platform.isPhone && document.body.hasClass("is-hidden-nav") && (
+    document.body.removeClass("is-hidden-nav"),
+    StatusBar?.show({ animation: animate ? Fade : None }),
+    animate || (
+      this.app.disableCssTransition(),
+      setTimeout(() => this.app.enableCssTransition(), 0)
+    )
+  );
+};
+```
+
+### Key differences from Dynamic Views
+
+| Aspect | Native | Dynamic Views |
+|---|---|---|
+| Dead zone | 0.125 lines (~2.6px) | 30px accumulated |
+| Accumulation | None — single-sample delta | Yes — builds over scroll events |
+| Short-view guard | None — `scrollPastEnd` padding guarantees range | `range >= 3 * totalShift` |
+| Cooldown | None | 300ms |
+| Sustain gate | None | 80ms (iOS) |
+| Scroll event | `markdown-scroll` (CM6-level) | Passive `scroll` listener |
+| Visual hide | CSS class (`is-hidden-nav`) | CSS class + inline styles + WAAPI |
+| Layout changes | Header + navbar transform only | Header + navbar + toolbar + search + gap fill |
+
+### Additional restore triggers
+
+Native Obsidian restores bars on:
+
+- `mousedown` on window (any tap restores bars)
+- `keyboardWillHide` event
+- `active-leaf-change` (tab switch)
+- `autoFullScreen` config changed to false
+
+### Short-view strategy
+
+Native relies on CM6's `scrollPastEnd` extension adding ~50% viewport height as `padding-bottom` on `.cm-content`. Even a 1-line file has enough scroll range. No explicit short-view guard exists — if a view truly can't scroll, scroll events never fire and bars stay visible implicitly.
+
+Dynamic Views card views use `margin-bottom: var(--view-bottom-spacing, 0px)` which only accounts for navbar + safe area (~84px), insufficient for full-screen scroll range on short views. The `range >= 3 * totalShift` guard prevents entering full screen when scroll range is too small.
 
 ### Undocumented APIs to track
 

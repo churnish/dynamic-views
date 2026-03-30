@@ -1,7 +1,7 @@
 ---
 title: Keyboard navigation
 description: Spatial arrow-key navigation across card views — activation modes, focus state flags, virtual rect navigation, popout rebinding, and Bases/Datacore differences.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-15
 ---
 # Keyboard navigation

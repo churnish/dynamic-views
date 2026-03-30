@@ -1,4 +1,10 @@
-# Masonry layout optimization roadmap
+---
+title: Masonry optimization roadmap
+description: Masonry performance optimization tracking — per-system optimizations, priority table from profiling, Datacore parity gaps, and status.
+author: 🤖 Generated with Claude Code
+updated: 2026-03-30
+---
+# Masonry optimization roadmap
 
 - Optimize Masonry layout for maximal parity with Media Companion.
 - No optimization is too small; even a 0.1% improvement is valuable.
@@ -35,7 +41,7 @@ Recalibrated from T1-T12 profiling battery. Ordered by expected impact x confide
 | — | Single-column reflow | Marginal with current coalescing | T2: 1 relayout/frame. O(n) where n=23 mounted, not 300 total. | Deprioritized |
 | — | Staggered mounting | No scenario requires it | T5: 23-42 mounted, no storms, change every ~7.5 frames. | Eliminated |
 
-Sections below are ordered by **subsystem/concern area**, not by priority or chronology. The priority table above (P0-P3) handles priority ordering.
+Sections below are ordered by **system/concern area**, not by priority or chronology. The priority table above (P0-P3) handles priority ordering.
 
 ## 1. Scroll smoothness
 

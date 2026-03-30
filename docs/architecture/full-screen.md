@@ -1,7 +1,7 @@
 ---
 title: Full screen architecture
 description: Bridge+settle system (iOS) and WAAPI-driven bridge-less path (Android) for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, short-view guard, WebView compositor limitation, and platform-specific branches.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-27
 ---
 # Full screen architecture

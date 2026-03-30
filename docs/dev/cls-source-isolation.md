@@ -1,7 +1,7 @@
 ---
 title: CLS source isolation
 description: CLS source identified in masonry layout (#358) — onScrollIdle → remeasureAndReposition. Diagnostic experiments, methodology, the globalThis bug that invalidated Phase 9.2, and the confirmed CLS mechanism.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-24
 ---
 # CLS source isolation (#358)

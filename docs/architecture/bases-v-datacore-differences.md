@@ -2,7 +2,7 @@
 title: Bases v Datacore differences
 description: Architectural differences between the Bases (imperative DOM) and Datacore (Preact JSX) backends — rendering, events, cleanup, state, and common pitfalls.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-25
+updated: 2026-03-29
 ---
 # Bases v Datacore differences
 
@@ -18,7 +18,7 @@ Architectural comparison of the Bases and Datacore backends. For masonry-specifi
 | **Mid-interaction**    | Safe — DOM won't mutate unless explicitly called                                                                                   | Unsafe — data signal changes can trigger re-render during hover, scroll, or drag                                                                                                                 |
 | **Surgical updates**   | `updateCardContent()` consolidates title, subtitle, properties, and text preview DOM surgery                                       | Preact diffs entire card component; no surgical subtree replacement                                                                                                                              |
 | **Container**          | Cards appended directly to view-managed container element                                                                          | `CardRenderer` returns a wrapping `div.dynamic-views-grid`/`.dynamic-views-masonry`                                                                                                              |
-| **Post-insert passes** | Explicit ordered sequence: responsive classes → scroll gradients → title truncation → text preview clamp → hover scale (grid only) | Not needed — Preact re-render handles layout. `syncResponsiveClasses`, `initializeScrollGradients`, and `initializeTitleTruncation` called as one-shot batch operations, not an ordered pipeline |
+| **Post-insert passes** | Explicit ordered sequence: responsive classes → scroll gradients → text preview clamp → hover scale (grid only) | Not needed — Preact re-render handles layout. `syncResponsiveClasses` and `initializeScrollGradients` called as one-shot batch operations, not an ordered pipeline |
 
 ## Event handling
 
@@ -61,7 +61,6 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | ------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | **Observer construction** | `getOwnerWindow(cardEl).ResizeObserver` / `.IntersectionObserver`                               | Same — `getOwnerWindow(containerRef.current).ResizeObserver`                                |
 | **rAF**                   | `getOwnerWindow(cardEl).requestAnimationFrame()`                                                | Same pattern                                                                                |
-| **Module-scope pitfall**  | `measureCanvas` uses `document.createElement('canvas')` — intentional (never inserted into DOM) | Same `measureCanvas` (Datacore calls `initializeTitleTruncation` from [shared-renderer.ts](../../src/bases/shared-renderer.ts)) |
 | **Shared utility**        | `getOwnerWindow()` from `utils/owner-window.ts` — both backends import it                       | Same                                                                                        |
 
 `PLUGIN_SETTINGS_CHANGE` is dispatched via `app.workspace.trigger()` in [persistence.ts](../../src/persistence.ts). Bases views ([grid-view.ts](../../src/bases/grid-view.ts)/[masonry-view.ts](../../src/bases/masonry-view.ts)) listen via `registerEvent((this.app.workspace as Events).on(PLUGIN_SETTINGS_CHANGE, ...))` for auto-cleanup on view unload. Datacore ([controller.tsx](../../src/datacore/controller.tsx)) listens via `(app.workspace as Events).on()` inside a `useEffect` with `offref` cleanup. The `as Events` cast is needed because `Workspace.on()` overloads don't accept custom event strings. `app.workspace` is a shared JS object across all Electron windows, so popout views receive the event correctly.
@@ -157,7 +156,6 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | Function (from `bases/shared-renderer.ts`) | Purpose                                         |
 | ------------------------------------------ | ----------------------------------------------- |
 | `syncResponsiveClasses()`                  | Batch compact-mode + thumbnail-stack class sync |
-| `initializeTitleTruncation()`              | Canvas-based batch title truncation             |
 
 ## Common pitfalls
 
@@ -216,4 +214,4 @@ Both backends must invalidate cached text previews when Style Settings toggles c
 
 ### Title link structure divergence
 
-Bases: `a.internal-link.card-title-text` (single element with both classes). Datacore: `a.internal-link` wrapping `span.card-title-text`. The inner span exists because `setupTitleTruncation` reads/writes `.card-title-text.textContent` and would destroy ext-suffix children if the link element carried the text class. CSS selectors must account for both structures.
+Bases: `a.internal-link.card-title-text` (single element with both classes). Datacore: `a.internal-link` wrapping `span.card-title-text`. The inner span exists for CSS targeting of the text content separately from the `.card-title-ext-suffix` sibling — without it, selectors like `-webkit-line-clamp` and `text-overflow` on `.card-title-text` would affect the extension suffix. CSS selectors must account for both structures.

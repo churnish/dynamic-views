@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-27
+updated: 2026-03-29
 ---
 > [!warning] Frozen
 > This doc is not being kept up to date due to extensive and frequent masonry work. Verify critical information against source code.
@@ -107,7 +107,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
    - **Phase 3**: Read all heights in single pass (`allCards.map(c => c.offsetHeight)`). Measure scalable heights.
    - **Phase 4**: `calculateMasonryLayout()` per group. Apply inline `left` and `top` per card. `updateVirtualItemPositions()` stores positions in VirtualItems. Store result in `groupLayoutResults` with `measuredAtCardWidth`.
    - **Finally**: Remove `masonry-resizing`/`masonry-measuring` classes. Refresh group offsets via `updateGroupOffsetsSynthetic()` with `updateCachedGroupOffsets()` fallback, then `syncVirtualScroll()` — skipped when `!hasUserScrolled` (both are no-ops before first scroll). `groupOffsetsDirty` flag set for lazy computation on first scroll or deferred remeasure.
-4. `initializeTextPreviewClamp` (synchronous — affects card heights in keep-newlines mode). `initializeScrollGradients` and `initializeTitleTruncation` deferred to RAF (cosmetic, no height impact).
+4. `initializeTextPreviewClamp` (synchronous — affects card heights in keep-newlines mode). `initializeScrollGradients` deferred to RAF (cosmetic, no height impact).
 5. Setup infinite scroll (scroll listener + ResizeObserver). `checkAndLoadMore` deferred to RAF.
 6. Post-insert measurement passes (see §Post-insert measurement passes).
 7. Schedule initial remeasure safety net (`INITIAL_REMEASURE_MS`, 500ms). See §Initial remeasure safety net.
@@ -172,7 +172,7 @@ When `hasImageChanged(oldCard, newCard)` returns `true`, the VirtualItem's card 
 5. Re-apply masonry positioning: `width`, `left`, `top`, `masonry-positioned` class, hover scale CSS vars
 6. Update `item.el` and `item.handle` references
 
-Post-insert: `syncResponsiveClasses`, `initializeTitleTruncation`, `initializeTextPreviewClamp` for replaced cards.
+Post-insert: `syncResponsiveClasses`, `initializeTextPreviewClamp` for replaced cards.
 
 When image is unchanged, `updateCardContent()` handles surgical DOM updates including `updateUrlButton`.
 
@@ -268,34 +268,33 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 | --- | --------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | 1   | `syncResponsiveClasses(cards)`          | Batch compact-mode + thumbnail-stack class sync.                 | None — sets CSS classes that affect card dimensions for subsequent reads. |
 | 2   | `initializeScrollGradients(container)`  | Reads scroll dimensions of property rows, sets gradient classes. | Properties must be rendered.                                              |
-| 3   | `initializeTitleTruncation(container)`  | Canvas-based binary-search title truncation.                     | Subtitle and properties must be finalized (see invariant below).          |
-| 4   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
+| 3   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
 
-`*ForCards(cards)` variants exist for passes 2-4, scoping measurement to a specific card array instead of scanning the full container. Batch append filters to visible (non-`content-hidden`) new cards to avoid measuring unmounted virtual scroll cards.
+Title truncation is CSS-only (`-webkit-line-clamp` for multi-line, `text-overflow: ellipsis` for single-line via `title-single-line` class) and requires no JS measurement pass.
+
+`*ForCards(cards)` variants exist for passes 2-3, scoping measurement to a specific card array instead of scanning the full container. Batch append filters to visible (non-`content-hidden`) new cards to avoid measuring unmounted virtual scroll cards.
 
 ### Call sites
 
 | Call site                                | Passes used                              | Variant                                                                    |
 | ---------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------- |
-| Initial render (`processDataUpdate`)     | 1 inside layout (Phase 1.5); 4 sync; 2-3 deferred RAF | 1: inside `updateLayoutRef` before height reads. 4: synchronous (affects heights). 2-3: deferred to RAF (cosmetic). |
-| Batch append (`appendBatch`)             | 1 before layout; 2-4 after              | 1: per-group before layout calc. 2-4: `*ForCards` — visible new cards only |
-| Group expand (`expandGroup`)             | 1 inside layout (Phase 1.5); 2-4 after  | 1: inside `updateLayoutRef`. 2-4: container — scoped to group element      |
+| Initial render (`processDataUpdate`)     | 1 inside layout (Phase 1.5); 3 sync; 2 deferred RAF | 1: inside `updateLayoutRef` before height reads. 3: synchronous (affects heights). 2: deferred to RAF (cosmetic). |
+| Batch append (`appendBatch`)             | 1 before layout; 2-3 after              | 1: per-group before layout calc. 2-3: `*ForCards` — visible new cards only |
+| Group expand (`expandGroup`)             | 1 inside layout (Phase 1.5); 2-3 after  | 1: inside `updateLayoutRef`. 2-3: container — scoped to group element      |
 | Property reorder (`updatePropertyOrder`) | 2 only                                   | Container — properties changed, title/subtitle/text unchanged              |
-| Content update (`updateCardsInPlace`)    | 2 + per-card 3, 4                        | 2: container-level after loop. 3, 4: per-card via `updateCardContent`      |
-| Property measured (`PROPERTY_MEASURED`)  | All 4                                    | Container — after property field width measurement settles                 |
-| `onDataUpdated` CSS fast-path            | 4 only                                   | Container — re-measures clamps after CSS variable change                   |
+| Content update (`updateCardsInPlace`)    | 2 + per-card 3                           | 2: container-level after loop. 3: per-card via `updateCardContent`         |
+| Property measured (`PROPERTY_MEASURED`)  | All 3                                    | Container — after property field width measurement settles                 |
+| `onDataUpdated` CSS fast-path            | 3 only                                   | Container — re-measures clamps after CSS variable change                   |
 
 **Phase 1.5 pattern**: For initial render and group expand, `syncResponsiveClasses` runs inside `updateLayoutRef.current` as Phase 1.5 — after Phase 1 sets widths but before Phase 2 reads heights. This ensures compact-mode classes are applied before height measurement, eliminating the need for a post-layout `compact-mode-sync` relayout. Batch append retains its pre-layout per-group pattern (same principle, different entry point).
 
-**Deferred cosmetic passes**: On initial render, `initializeScrollGradients` (pass 2) and `initializeTitleTruncation` (pass 3) are deferred to `requestAnimationFrame` — they don't affect card heights and deferring avoids a forced reflow after Phase 4 position writes. `initializeTextPreviewClamp` (pass 4) stays synchronous because it writes `-webkit-line-clamp` and `display: none` in keep-newlines mode, which changes card heights.
+**Deferred cosmetic passes**: On initial render, `initializeScrollGradients` (pass 2) is deferred to `requestAnimationFrame` — it doesn't affect card heights and deferring avoids a forced reflow after Phase 4 position writes. `initializeTextPreviewClamp` (pass 3) stays synchronous because it writes `-webkit-line-clamp` and `display: none` in keep-newlines mode, which changes card heights.
 
 After `updateCardsInPlace`, if any card heights changed, `remeasureAndReposition("content-update")` runs — this is a masonry relayout pass, not part of the measurement sequence.
 
-### Truncation ordering invariant
+The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)):
 
-`initializeTitleTruncation` **must** run after `rerenderSubtitle` and `rerenderProperties` complete. Measuring before those methods finalize the DOM produces stale layout — the truncation result is immediately invalidated by subsequent DOM changes. The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)) enforces this:
-
-1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `initializeTitleTruncationForCards` → 5. `updateTextPreviewDOM` + `applyPerParagraphClamp`
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `updateTextPreviewDOM` + `applyPerParagraphClamp`
 
 ## Layout update guard system
 
@@ -537,4 +536,3 @@ Both backends share the same pure layout math (`calculateMasonryLayout()`, `calc
 - **CSS classes** — `masonry-container`, `masonry-positioned`, `masonry-measuring` used by both.
 - **Responsive classes** — `syncResponsiveClasses()` runs after layout in both backends.
 - **Scroll gradients** — `initializeScrollGradients()` applied to property rows in both.
-- **Title truncation** — Binary-search truncation via `initializeTitleTruncation()` in both.

@@ -1,8 +1,8 @@
 ---
 title: Card DOM structure
 description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
-author: "\U0001F916 Generated with Claude Code"
-updated: 2026-03-27
+author: 🤖 Generated with Claude Code
+updated: 2026-03-29
 ---
 # Card DOM structure
 
@@ -146,4 +146,4 @@ These are the only structural divergences — all class names and nesting are ot
 | **Title link**         | `a.internal-link.card-title-text` (single element)       | `a.internal-link` wrapping `span.card-title-text` [1] |
 | **Thumbnail stacking** | ResizeObserver physically moves `.card-thumbnail` in DOM | CSS `order` only, no DOM movement                     |
 
-[1] Datacore wraps title text in an inner `span.card-title-text` because `setupTitleTruncation` reads/writes `.card-title-text.textContent` and would destroy ext-suffix children if flattened. Bases uses a single `a` element with both classes.
+[1] Datacore wraps title text in an inner `span.card-title-text` for CSS targeting of the text content separately from the `.card-title-ext-suffix` sibling — without it, selectors like `-webkit-line-clamp` and `text-overflow` on `.card-title-text` would affect the extension suffix. Bases uses a single `a` element with both classes.

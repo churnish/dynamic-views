@@ -1,7 +1,7 @@
 ---
 title: CLS reverse placement
 description: Deep dive into reverse masonry placement for CLS elimination (#358) — Phase 4 design, bugs, and failure analysis; Phase 8 directional flush stacking design, implementation, and bugs.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-22
 ---
 # CLS reverse placement

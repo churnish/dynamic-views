@@ -1,7 +1,7 @@
 ---
 title: Property layout system
 description: Property pairing, width measurement, scroll gradients, and vertical positioning inside cards for both backends.
-author: "\U0001F916 Generated with Claude Code"
+author: 🤖 Generated with Claude Code
 updated: 2026-03-16
 ---
 # Property layout system
