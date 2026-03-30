@@ -46,7 +46,7 @@ export const MOUNT_REMEASURE_MS = 200;
 /** Max cards to mount per syncVirtualScroll frame. Limits browser layout
  * cost from complex card DOM insertion into CSS Grid. Remaining items
  * mount in subsequent frames via rescheduled rAF. */
-export const SCROLL_MOUNT_BUDGET = 2;
+export const SCROLL_MOUNT_BUDGET = 3;
 
 /** Max WebKit momentum duration — height-lock releases and scrollTop writes
  *  are suppressed for this long after touchend to preserve compositor-driven

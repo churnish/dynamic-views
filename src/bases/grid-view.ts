@@ -49,7 +49,6 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
-  SCROLL_MOUNT_BUDGET,
   MOUNT_REMEASURE_MS,
   MOMENTUM_GUARD_MS,
   HIDDEN_BUFFER_MULTIPLIER,
@@ -2708,183 +2707,192 @@ export class DynamicViewsGridView extends BasesView {
       this.scrollDirectionAccum = 0;
     }
 
-    // Phase 1: Committed-row lock — finish one row before starting another.
-    // Step 1: Validate committed row (still has unmounted items in mount zone?)
-    if (this.committedRow) {
-      const groupItems = this.virtualItemsByGroup.get(
-        this.committedRow.groupKey
-      );
-      if (groupItems) {
+    // Phase 1: Committed-row lock — mount up to ROW_BUDGET complete rows per
+    // frame. Each loop iteration: validate committed row → mount it → or pick
+    // the next row. Rows complete atomically before the next one starts.
+    const ROW_BUDGET = 2;
+
+    for (let rowPass = 0; rowPass < ROW_BUDGET; rowPass++) {
+      let rowMountedThisPass = false;
+
+      // Step 1: Validate committed row (still has unmounted items in mount zone?)
+      if (this.committedRow) {
+        const groupItems = this.virtualItemsByGroup.get(
+          this.committedRow.groupKey
+        );
+        if (groupItems) {
+          const rowStart = this.committedRow.rowStart;
+          const rowEnd = Math.min(rowStart + columns, groupItems.length);
+          const off = this.cachedGroupOffsets.get(this.committedRow.groupKey);
+          let hasWork = false;
+          if (off !== undefined) {
+            for (let j = rowStart; j < rowEnd; j++) {
+              const it = groupItems[j];
+              if (!it.el && it.height > 0) {
+                const top = off + it.y;
+                if (top + it.height > visibleTop && top < visibleBottom) {
+                  hasWork = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (!hasWork) this.committedRow = null;
+        } else {
+          this.committedRow = null;
+        }
+      }
+
+      // Step 2: Mount from committed row
+      if (this.committedRow) {
+        const groupItems = this.virtualItemsByGroup.get(
+          this.committedRow.groupKey
+        )!;
         const rowStart = this.committedRow.rowStart;
         const rowEnd = Math.min(rowStart + columns, groupItems.length);
-        const off = this.cachedGroupOffsets.get(this.committedRow.groupKey);
-        let hasWork = false;
-        if (off !== undefined) {
-          for (let j = rowStart; j < rowEnd; j++) {
-            const it = groupItems[j];
-            if (!it.el && it.height > 0) {
-              const top = off + it.y;
-              if (top + it.height > visibleTop && top < visibleBottom) {
-                hasWork = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!hasWork) this.committedRow = null;
-      } else {
-        this.committedRow = null;
-      }
-    }
-
-    // Step 2: Mount from committed row
-    if (this.committedRow) {
-      const groupItems = this.virtualItemsByGroup.get(
-        this.committedRow.groupKey
-      )!;
-      const rowStart = this.committedRow.rowStart;
-      const rowEnd = Math.min(rowStart + columns, groupItems.length);
-      const off = this.cachedGroupOffsets.get(this.committedRow.groupKey)!;
-      const reverse = this.committedRow.reverse;
-
-      const step2 = this.mountRowRange(
-        groupItems,
-        rowStart,
-        rowEnd,
-        off,
-        reverse,
-        settings,
-        visibleTop,
-        visibleBottom,
-        SCROLL_MOUNT_BUDGET - mountCount
-      );
-      if (step2.mountedNew) mountedNew = true;
-      mountCount += step2.mounted;
-    }
-
-    // Step 3: If budget remains and no committed row, find closest unmounted row.
-    // Cold start (first open or jump): visible rows topmost-first, left-to-right.
-    // Continuous scroll: directional — topmost for scroll-down, bottommost for
-    // scroll-up. Suppressed during high velocity to avoid transient positions.
-    if (
-      mountCount < SCROLL_MOUNT_BUDGET &&
-      !this.committedRow &&
-      !highVelocity
-    ) {
-      // Cold start: first open (!hasCommittedAnyRow) or jump (jumpPending).
-      // jumpPending stays active until all visible rows are mounted — prevents
-      // premature switch to directional after the first cold start row commits.
-      const coldStart = this.jumpPending || !this.hasCommittedAnyRow;
-
-      let bestGroupKey: string | undefined;
-      let bestRowStart = -1;
-      let bestRowTop = Infinity;
-      let bestRowBottom = -Infinity;
-      let bestDist = Infinity;
-      let bestIsVisible = false;
-      let hasVisibleUnmounted = false;
-
-      for (const [groupKey, groupItems] of this.virtualItemsByGroup) {
-        const off = this.cachedGroupOffsets.get(groupKey);
-        if (off === undefined) continue;
-
-        for (let i = 0; i < groupItems.length; i += columns) {
-          const rowEnd = Math.min(i + columns, groupItems.length);
-          let hasUnmounted = false;
-          let rowTop = Infinity;
-          let rowBottom = -Infinity;
-
-          for (let j = i; j < rowEnd; j++) {
-            const it = groupItems[j];
-            if (it.height === 0) continue;
-            const top = off + it.y;
-            const bot = top + it.height;
-            if (top < rowTop) rowTop = top;
-            if (bot > rowBottom) rowBottom = bot;
-            if (!it.el) hasUnmounted = true;
-          }
-
-          if (!hasUnmounted) continue;
-          if (rowBottom <= visibleTop || rowTop >= visibleBottom) continue;
-
-          // Actual viewport (not mount zone) — prioritize rows the user can see
-          const isVisible =
-            rowTop < scrollTop + paneHeight && rowBottom > scrollTop;
-          if (isVisible) hasVisibleUnmounted = true;
-          const dist = Math.abs((rowTop + rowBottom) / 2 - paneCenter);
-
-          if (coldStart) {
-            // Cold start (first open or jump): visible rows topmost-first,
-            // then buffer by center proximity. Always top-to-bottom.
-            if (isVisible && !bestIsVisible) {
-              bestIsVisible = true;
-              bestRowTop = rowTop;
-              bestDist = dist;
-              bestGroupKey = groupKey;
-              bestRowStart = i;
-            } else if (isVisible && bestIsVisible && rowTop < bestRowTop) {
-              bestRowTop = rowTop;
-              bestGroupKey = groupKey;
-              bestRowStart = i;
-            } else if (!isVisible && !bestIsVisible && dist < bestDist) {
-              bestDist = dist;
-              bestGroupKey = groupKey;
-              bestRowStart = i;
-            }
-          } else {
-            // Continuous scroll: directional — topmost for scroll-down,
-            // bottommost for scroll-up.
-            if (this.lastScrollDown) {
-              if (rowTop < bestRowTop) {
-                bestRowTop = rowTop;
-                bestGroupKey = groupKey;
-                bestRowStart = i;
-              }
-            } else {
-              if (rowBottom > bestRowBottom) {
-                bestRowBottom = rowBottom;
-                bestGroupKey = groupKey;
-                bestRowStart = i;
-              }
-            }
-          }
-        }
-      }
-
-      // Clear jumpPending once all visible rows are mounted — transition
-      // from cold start (topmost-first) to directional for buffer rows.
-      if (this.jumpPending && !hasVisibleUnmounted) {
-        this.jumpPending = false;
-      }
-
-      if (bestRowStart >= 0) {
-        const groupItems = this.virtualItemsByGroup.get(bestGroupKey)!;
-        const rowEnd = Math.min(bestRowStart + columns, groupItems.length);
-        const off = this.cachedGroupOffsets.get(bestGroupKey)!;
-        const rowBtm =
-          off + groupItems[bestRowStart].y + groupItems[bestRowStart].height;
-        this.committedRow = {
-          groupKey: bestGroupKey,
-          rowStart: bestRowStart,
-          reverse: coldStart ? rowBtm <= scrollTop : !this.lastScrollDown,
-        };
-        this.hasCommittedAnyRow = true;
+        const off = this.cachedGroupOffsets.get(this.committedRow.groupKey)!;
         const reverse = this.committedRow.reverse;
 
-        const step3 = this.mountRowRange(
+        const step2 = this.mountRowRange(
           groupItems,
-          bestRowStart,
+          rowStart,
           rowEnd,
           off,
           reverse,
           settings,
           visibleTop,
           visibleBottom,
-          SCROLL_MOUNT_BUDGET - mountCount
+          columns
         );
-        if (step3.mountedNew) mountedNew = true;
-        mountCount += step3.mounted;
+        if (step2.mountedNew) mountedNew = true;
+        mountCount += step2.mounted;
+        if (step2.mounted > 0) rowMountedThisPass = true;
       }
+
+      // Step 3: If no committed row, find closest unmounted row.
+      // Cold start (first open or jump): visible rows topmost-first, left-to-right.
+      // Continuous scroll: directional — topmost for scroll-down, bottommost for
+      // scroll-up. Suppressed during high velocity to avoid transient positions —
+      // except jumps, which ARE the final position (single discrete event).
+      if (!this.committedRow && (!highVelocity || isJump)) {
+        // Cold start: first open (!hasCommittedAnyRow) or jump (jumpPending).
+        // jumpPending stays active until all visible rows are mounted — prevents
+        // premature switch to directional after the first cold start row commits.
+        const coldStart = this.jumpPending || !this.hasCommittedAnyRow;
+
+        let bestGroupKey: string | undefined;
+        let bestRowStart = -1;
+        let bestRowTop = Infinity;
+        let bestRowBottom = -Infinity;
+        let bestDist = Infinity;
+        let bestIsVisible = false;
+        let hasVisibleUnmounted = false;
+
+        for (const [groupKey, groupItems] of this.virtualItemsByGroup) {
+          const off = this.cachedGroupOffsets.get(groupKey);
+          if (off === undefined) continue;
+
+          for (let i = 0; i < groupItems.length; i += columns) {
+            const rowEnd = Math.min(i + columns, groupItems.length);
+            let hasUnmounted = false;
+            let rowTop = Infinity;
+            let rowBottom = -Infinity;
+
+            for (let j = i; j < rowEnd; j++) {
+              const it = groupItems[j];
+              if (it.height === 0) continue;
+              const top = off + it.y;
+              const bot = top + it.height;
+              if (top < rowTop) rowTop = top;
+              if (bot > rowBottom) rowBottom = bot;
+              if (!it.el) hasUnmounted = true;
+            }
+
+            if (!hasUnmounted) continue;
+            if (rowBottom <= visibleTop || rowTop >= visibleBottom) continue;
+
+            // Actual viewport (not mount zone) — prioritize rows the user can see
+            const isVisible =
+              rowTop < scrollTop + paneHeight && rowBottom > scrollTop;
+            if (isVisible) hasVisibleUnmounted = true;
+            const dist = Math.abs((rowTop + rowBottom) / 2 - paneCenter);
+
+            if (coldStart) {
+              // Cold start (first open or jump): visible rows topmost-first,
+              // then buffer by center proximity. Always top-to-bottom.
+              if (isVisible && !bestIsVisible) {
+                bestIsVisible = true;
+                bestRowTop = rowTop;
+                bestDist = dist;
+                bestGroupKey = groupKey;
+                bestRowStart = i;
+              } else if (isVisible && bestIsVisible && rowTop < bestRowTop) {
+                bestRowTop = rowTop;
+                bestGroupKey = groupKey;
+                bestRowStart = i;
+              } else if (!isVisible && !bestIsVisible && dist < bestDist) {
+                bestDist = dist;
+                bestGroupKey = groupKey;
+                bestRowStart = i;
+              }
+            } else {
+              // Continuous scroll: directional — topmost for scroll-down,
+              // bottommost for scroll-up.
+              if (this.lastScrollDown) {
+                if (rowTop < bestRowTop) {
+                  bestRowTop = rowTop;
+                  bestGroupKey = groupKey;
+                  bestRowStart = i;
+                }
+              } else {
+                if (rowBottom > bestRowBottom) {
+                  bestRowBottom = rowBottom;
+                  bestGroupKey = groupKey;
+                  bestRowStart = i;
+                }
+              }
+            }
+          }
+        }
+
+        // Clear jumpPending once all visible rows are mounted — transition
+        // from cold start (topmost-first) to directional for buffer rows.
+        if (this.jumpPending && !hasVisibleUnmounted) {
+          this.jumpPending = false;
+        }
+
+        if (bestRowStart >= 0) {
+          const groupItems = this.virtualItemsByGroup.get(bestGroupKey)!;
+          const rowEnd = Math.min(bestRowStart + columns, groupItems.length);
+          const off = this.cachedGroupOffsets.get(bestGroupKey)!;
+          const rowBtm =
+            off + groupItems[bestRowStart].y + groupItems[bestRowStart].height;
+          this.committedRow = {
+            groupKey: bestGroupKey,
+            rowStart: bestRowStart,
+            reverse: coldStart ? rowBtm <= scrollTop : !this.lastScrollDown,
+          };
+          this.hasCommittedAnyRow = true;
+          const reverse = this.committedRow.reverse;
+
+          const step3 = this.mountRowRange(
+            groupItems,
+            bestRowStart,
+            rowEnd,
+            off,
+            reverse,
+            settings,
+            visibleTop,
+            visibleBottom,
+            columns
+          );
+          if (step3.mountedNew) mountedNew = true;
+          mountCount += step3.mounted;
+          if (step3.mounted > 0) rowMountedThisPass = true;
+        }
+      }
+
+      if (!rowMountedThisPass) break;
     }
 
     // Phase 2: Content-hidden, unmount, restore, budgetExhausted detection.
@@ -2954,8 +2962,9 @@ export class DynamicViewsGridView extends BasesView {
 
     // Budget exceeded — schedule another sync frame to mount remaining cards.
     // Skip during high velocity: the scroll handler will re-trigger sync anyway,
-    // and rescheduling causes wasted O(N) loops with no mounting.
-    if (budgetExhausted && !highVelocity) {
+    // and rescheduling causes wasted O(N) loops with no mounting. Jumps are
+    // exempt — single discrete event with no follow-up scroll to re-trigger.
+    if (budgetExhausted && (!highVelocity || isJump)) {
       this.scheduleVirtualScrollSync();
     }
   }
