@@ -290,6 +290,14 @@ export class FullScreenController {
 
   /** Apply show-state CSS via inline styles (Android only) */
   private applyShowInlines(): void {
+    // ::before scrim + ::after scroll gradient: data attribute triggers CSS
+    // rules that expand the scrim and show the gradient. Attribute changes
+    // only recalc selectors containing [data-fs-show] (::before/::after
+    // pseudos) — no descendant invalidation. Custom properties on leafContent
+    // would inherit to every card, triggering subtree-wide style recalc that
+    // exceeds the single-threaded WebView compositor's frame budget.
+    this.leafContent.setAttribute('data-fs-show', '');
+
     // viewContent: restore margin-top (overrides full-screen-active's margin-top: 0)
     setStyle(
       this.viewContent,
@@ -327,25 +335,15 @@ export class FullScreenController {
       ]);
     }
 
-    // Header: pointer-events + z-index above ::before scrim.
-    // WAAPI handles transform + opacity — inline !important would block it.
+    // Header: pointer-events + z-index above ::before scrim (z-index 25 on
+    // grouped). z-index 30 ensures header WAAPI slides above the scrim without
+    // needing a --dynamic-views-scrim-z custom property (which would inherit to
+    // all descendants, adding style recalc overhead that exceeds the Android
+    // WebView compositor frame budget — see §7.1.38).
     if (this.viewHeaderEl) {
       setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
-      setStyle(this.viewHeaderEl, 'z-index', '20', 'important');
+      setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
     }
-
-    // ::before scrim: expand to full margin-top gap via CSS custom properties.
-    // The ::before rule reads --dynamic-views-scrim-height and --dynamic-views-scrim-bg, falling
-    // back to the standard gradient when absent.
-    // ::after scroll gradient: restore during show (hidden by default during
-    // full-screen-active). CSS reads --dynamic-views-after-display, falling
-    // back to 'none' when absent.
-    setStyles(this.leafContent, [
-      ['--dynamic-views-scrim-height', 'var(--view-top-spacing)'],
-      ['--dynamic-views-scrim-bg', 'var(--dynamic-views-background-primary)'],
-      ['--dynamic-views-scrim-z', '10'],
-      ['--dynamic-views-after-display', 'block'],
-    ]);
 
     this.restoreMaskImage();
   }
@@ -379,13 +377,8 @@ export class FullScreenController {
       this.viewHeaderEl.style.removeProperty('z-index');
     }
 
-    // ::before scrim + ::after scroll gradient: revert to defaults
-    clearStyles(this.leafContent, [
-      '--dynamic-views-scrim-height',
-      '--dynamic-views-scrim-bg',
-      '--dynamic-views-scrim-z',
-      '--dynamic-views-after-display',
-    ]);
+    // ::before scrim + ::after scroll gradient: revert to CSS defaults
+    this.leafContent.removeAttribute('data-fs-show');
   }
 
   /** Idempotent — no-op if already unmounted */
@@ -1068,8 +1061,12 @@ export class FullScreenController {
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
-    // Group collapse region: chevron + property + value trigger fold/unfold
-    if (target.closest('.bases-group-collapse-region')) return;
+    // Group collapse region + result count: fold/unfold, not bar reveal
+    if (
+      target.closest('.bases-group-collapse-region') ||
+      target.closest('.bases-group-count')
+    )
+      return;
 
     const isCard = target.closest('.card') != null;
     const isImage =
