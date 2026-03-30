@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises -- Obsidian Setting API expects sync callbacks but our handlers are async */
 import {
   App,
+  Platform,
   PluginSettingTab,
   Setting,
   SettingGroup,
@@ -19,8 +20,9 @@ const DEFAULT_CREATED_TIME_PROPERTY = 'created time';
 const DEFAULT_MODIFIED_TIME_PROPERTY = 'modified time';
 
 // Description containing proper nouns (not subject to sentence case)
-const OPEN_RANDOM_DESC =
-  'When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.';
+const OPEN_RANDOM_DESC = Platform.isPhone
+  ? 'When opening a random file, open it in a new tab instead of the same tab.'
+  : 'When opening a random file, open it in a new tab instead of the same tab. Hold Ctrl/Cmd to override.';
 const CONTEXT_MENU_DESC =
   'Show commands to create new Grid or Masonry base in folder context menus.';
 
@@ -310,7 +312,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
         s
           .setName('Disable sidebar swipe')
           .setDesc(
-            'Prevent sidebars from opening unintentionally when scrolling horizontally on mobile.'
+            'Prevent sidebars from opening unintentionally when scrolling horizontally.'
           )
           .addToggle((toggle) =>
             toggle
