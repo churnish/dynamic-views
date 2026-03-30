@@ -292,17 +292,17 @@ export class FullScreenController {
   private applyShowInlines(): void {
     // ::before scrim + ::after scroll gradient: data attribute triggers CSS
     // rules that expand the scrim and show the gradient. Attribute changes
-    // only recalc selectors containing [data-fs-show] (::before/::after
+    // only recalc selectors containing [data-dynamic-views-show] (::before/::after
     // pseudos) — no descendant invalidation. Custom properties on leafContent
     // would inherit to every card, triggering subtree-wide style recalc that
     // exceeds the single-threaded WebView compositor's frame budget.
-    this.leafContent.setAttribute('data-fs-show', '');
+    this.leafContent.setAttribute('data-dynamic-views-show', '');
 
     // viewContent: restore margin-top (overrides full-screen-active's margin-top: 0)
     setStyle(
       this.viewContent,
       'margin-top',
-      'var(--view-top-spacing)',
+      'var(--dynamic-views-view-top-spacing)',
       'important'
     );
     setStyle(this.viewContent, 'transition', 'none', 'important');
@@ -345,7 +345,11 @@ export class FullScreenController {
       setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
     }
 
-    this.restoreMaskImage();
+    // restoreMaskImage() deferred to idle pendingLayout — removing mask-image
+    // from .workspace-split.mod-root triggers a cross-subtree repaint that
+    // adds unnecessary work to the animation-critical rAF. The ::before scrim
+    // covers the mask-image area during the show animation, so the ~2s delay
+    // until idle cleanup is invisible.
   }
 
   /** Remove show-state inline styles (Android only) */
@@ -378,7 +382,7 @@ export class FullScreenController {
     }
 
     // ::before scrim + ::after scroll gradient: revert to CSS defaults
-    this.leafContent.removeAttribute('data-fs-show');
+    this.leafContent.removeAttribute('data-dynamic-views-show');
   }
 
   /** Idempotent — no-op if already unmounted */
@@ -871,9 +875,9 @@ export class FullScreenController {
         for (const a of oldAnims) a.cancel();
         this.clearHeaderInlines();
         // Restore z-index — clearHeaderInlines removes it but header must stay
-        // above ::before scrim (z-index: 10) during show animation.
+        // above ::before scrim (z-index 25 on grouped) during show animation.
         if (this.viewHeaderEl) {
-          setStyle(this.viewHeaderEl, 'z-index', '20', 'important');
+          setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
         }
 
         // Navbar WAAPI show — separate transform + opacity
@@ -934,6 +938,7 @@ export class FullScreenController {
 
         this.scrollEl.style.removeProperty('height');
         this.clearShowInlines();
+        this.restoreMaskImage();
         this.body.classList.remove('full-screen-active');
         this.isActiveHider = false;
         this.settled = false;
@@ -1061,12 +1066,8 @@ export class FullScreenController {
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
-    // Group collapse region + result count: fold/unfold, not bar reveal
-    if (
-      target.closest('.bases-group-collapse-region') ||
-      target.closest('.bases-group-count')
-    )
-      return;
+    // Group collapse region: chevron + property + value trigger fold/unfold
+    if (target.closest('.bases-group-collapse-region')) return;
 
     const isCard = target.closest('.card') != null;
     const isImage =

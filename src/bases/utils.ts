@@ -674,7 +674,7 @@ export function renderGroupHeader(
   const headerEl = containerEl.createDiv('bases-group-heading');
   if (collapsed) headerEl.addClass('collapsed');
 
-  // Clickable region: chevron + property label + group value (not count)
+  // Clickable region: chevron + property label + group value
   const collapseRegion = headerEl.createDiv('bases-group-collapse-region');
   collapseRegion.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
