@@ -286,6 +286,7 @@ export class DynamicViewsGridView extends BasesView {
   private measureLane: HTMLElement | null = null;
   private scrollMountLockedEls = new Set<HTMLElement>();
   private scrollIdleTimeout: ReturnType<typeof setTimeout> | null = null;
+  private scrollIdleSyncId: ReturnType<typeof setTimeout> | null = null;
   private touchActive = true;
   private lastTouchEndTime = 0;
   private touchAbort: AbortController | null = null;
@@ -907,6 +908,10 @@ export class DynamicViewsGridView extends BasesView {
     if (this.scrollIdleTimeout !== null) {
       clearTimeout(this.scrollIdleTimeout);
       this.scrollIdleTimeout = null;
+    }
+    if (this.scrollIdleSyncId !== null) {
+      clearTimeout(this.scrollIdleSyncId);
+      this.scrollIdleSyncId = null;
     }
     if (this.virtualScrollRafId !== null) {
       this.win.cancelAnimationFrame(this.virtualScrollRafId);
@@ -2362,6 +2367,15 @@ export class DynamicViewsGridView extends BasesView {
 
       this.scheduleVirtualScrollSync();
 
+      // Scroll-idle fallback: velocity gate suppresses budgetExhausted reschedule
+      // during fast scroll. When scroll stops, no more events fire — this timeout
+      // guarantees a final sync to mount remaining cards in the mount zone.
+      if (this.scrollIdleSyncId !== null) clearTimeout(this.scrollIdleSyncId);
+      this.scrollIdleSyncId = setTimeout(() => {
+        this.scrollIdleSyncId = null;
+        this.scheduleVirtualScrollSync();
+      }, 150);
+
       // Schedule height-lock release after scroll quiesces (iOS only).
       // Cards mounted during scroll are locked to placeholder height to
       // prevent CSS Grid row reflows. Release once scrolling stops.
@@ -3439,6 +3453,10 @@ export class DynamicViewsGridView extends BasesView {
     if (this.scrollIdleTimeout !== null) {
       clearTimeout(this.scrollIdleTimeout);
       this.scrollIdleTimeout = null;
+    }
+    if (this.scrollIdleSyncId !== null) {
+      clearTimeout(this.scrollIdleSyncId);
+      this.scrollIdleSyncId = null;
     }
     this.touchAbort?.abort();
     this.renderState.abortController?.abort();
