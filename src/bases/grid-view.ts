@@ -268,7 +268,7 @@ export class DynamicViewsGridView extends BasesView {
   private lastSyncTime = 0;
   private hasCommittedAnyRow = false;
   private jumpPending = false;
-  private lastScrollDown = true;
+  private scrollingDown = true;
   private scrollDirectionAccum = 0;
   private isLayoutBusy = false;
   private virtualScrollRafId: number | null = null;
@@ -893,7 +893,7 @@ export class DynamicViewsGridView extends BasesView {
     this.committedRow = null;
     this.hasCommittedAnyRow = false;
     this.jumpPending = false;
-    this.lastScrollDown = true;
+    this.scrollingDown = true;
     this.scrollDirectionAccum = 0;
     this.lastSyncScrollTop = 0;
     this.lastSyncTime = 0;
@@ -2686,10 +2686,10 @@ export class DynamicViewsGridView extends BasesView {
     }
     this.scrollDirectionAccum += scrollDelta;
     if (this.scrollDirectionAccum > DIRECTION_ACCUM_THRESHOLD) {
-      this.lastScrollDown = true;
+      this.scrollingDown = true;
       this.scrollDirectionAccum = DIRECTION_ACCUM_THRESHOLD;
     } else if (this.scrollDirectionAccum < -DIRECTION_ACCUM_THRESHOLD) {
-      this.lastScrollDown = false;
+      this.scrollingDown = false;
       this.scrollDirectionAccum = -DIRECTION_ACCUM_THRESHOLD;
     }
     this.lastSyncScrollTop = scrollTop;
@@ -2838,7 +2838,7 @@ export class DynamicViewsGridView extends BasesView {
             } else {
               // Continuous scroll: directional — topmost for scroll-down,
               // bottommost for scroll-up.
-              if (this.lastScrollDown) {
+              if (this.scrollingDown) {
                 if (rowTop < bestRowTop) {
                   bestRowTop = rowTop;
                   bestGroupKey = groupKey;
@@ -2870,7 +2870,7 @@ export class DynamicViewsGridView extends BasesView {
           this.committedRow = {
             groupKey: bestGroupKey,
             rowStart: bestRowStart,
-            reverse: coldStart ? rowBtm <= scrollTop : !this.lastScrollDown,
+            reverse: coldStart ? rowBtm <= scrollTop : !this.scrollingDown,
           };
           this.hasCommittedAnyRow = true;
           const reverse = this.committedRow.reverse;
