@@ -1,7 +1,6 @@
 # dynamic-views
 
 - **Error surfacing**: `new Notice()` ONLY for user-initiated action failures and confirmations. Internal and background failures MUST use `console.error`/`console.warn` — NEVER surface notices for operations the user did NOT trigger.
-- **Grid and Masonry performance is paramount**: Every optimization — no matter how minor — is valuable. Never dismiss a performance improvement as "not worth it".
 - **`--size-*` over `px`**: Use Obsidian's `--size-*` CSS variables (e.g., `var(--size-2-2)`) instead of hardcoded pixel values whenever a matching token exists.
 - **No `:has()` in card selectors**: NEVER use `:has()` on elements inside `.dynamic-views` that exist in quantity (cards, properties, covers, previews) or re-evaluate on interaction. `:has()` causes upward style invalidation — with N cards × M properties, a single class toggle triggers O(N×M) recalculation. Use render-time CSS classes instead (e.g., `.has-label`, `.has-poster`).
 
@@ -16,6 +15,7 @@
 - **Text preview**: When referring to the Markdown-stripped text shown on cards, ALWAYS use 'text preview' NOT 'preview'. Use 'previews' (plural) ONLY when referring to both text preview and thumbnail image format collectively.
 - **Properties**: In user-facing text, use 'properties' (NOT 'frontmatter', 'front-matter', or 'YAML') when referring to YAML metadata at the top of Markdown files. 'Frontmatter' and 'YAML' are acceptable in code, comments, docs, and tests.
 - **Markdown**: 'Markdown' is a proper noun and MUST be capitalized.
+- **Pane vs viewport**: Use 'pane' when referring to the scroll container's visible dimensions (`scrollEl.clientHeight`/`clientWidth`). Reserve 'viewport' for the full app window (`window.innerHeight`/`innerWidth`).
 - **WebKit over iOS/iPadOS**: In comments, identifiers, docs, and chat, use 'WebKit' when code targets both iOS and iPadOS (both use WKWebView). Use 'iOS' or 'iPadOS' ONLY when targeting one platform specifically. `Platform.isIosApp` and other external Obsidian API names are exemptions. NEVER use 'WebKit' in user-facing text (README, wiki, settings, notices) — use 'iOS' and 'iPadOS' instead.
 
 ## Datacore parity
@@ -33,10 +33,10 @@
 
 ## Navigation
 
-- Read **docs/overview.md** for a high-level understanding of the plugin architecture, backends, and subsystems.
-- Consult **@docs/project-structure.md** and **@docs/index.md** before reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files. When working on a complex system with no existing doc covering it, suggest creating an architectural doc. Proactively keep ALL docs up-to-date by running the `/document` skill.
-- Read **docs/release-guide.md** before running a release, bumping versions, or troubleshooting the release pipeline.
-- Consult **@wiki/wiki-structure.md** for user-facing, human-verified plugin wiki pages that document how features and settings are meant to function.
+- Read **@docs/overview.md** for a high-level understanding of the plugin architecture, backends, and systems.
+- Read **@docs/principles.md** for project values and trade-off priorities.
+- Consult **@docs/project-structure.md** and **@docs/index.md** before reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files.
+- Consult **@wiki/wiki-structure.md** for user-facing, human-verified plugin wiki pages that document how plugin features and settings function.
 
 ***
 
