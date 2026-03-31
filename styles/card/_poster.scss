@@ -392,7 +392,9 @@ body:is(
 }
 
 /* Grid fixed poster height: slider value (default — fires with or without Style Settings).
-   Scoped to .has-poster so imageless cards use natural content height — Grid row sizing takes max(all cards). */
+   Scoped to .has-poster so imageless cards use natural content height — Grid row sizing takes max(all cards).
+   --poster-aspect-override: JS sets to 'auto' on .poster-stretch cards to disable the ratio,
+   allowing min-height to stretch without width expansion. */
 body:not(
     .dynamic-views-fixed-poster-height-masonry,
     .dynamic-views-fixed-poster-height-none
@@ -400,7 +402,16 @@ body:not(
   .dynamic-views
   .dynamic-views-grid
   .card.image-format-poster.has-poster {
-  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+  aspect-ratio: var(
+    --poster-aspect-override,
+    1 / var(--dynamic-views-image-aspect-ratio, 1)
+  );
+}
+
+/* Mixed-row stretch: JS sets --poster-aspect-override: auto + --poster-row-min-height
+   when imageless cards in the same row are taller than poster cards. */
+.dynamic-views .dynamic-views-grid .card.image-format-poster.poster-stretch {
+  min-height: var(--poster-row-min-height);
 }
 
 /* Grid dynamic poster height: without equalization, each card sizes to its own image, causing uneven row heights */
@@ -411,11 +422,14 @@ body:is(
   .dynamic-views
   .dynamic-views-grid
   .card.image-format-poster.has-poster {
-  aspect-ratio: 1 /
-    var(
-      --row-poster-aspect-ratio,
-      var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
-    );
+  aspect-ratio: var(
+    --poster-aspect-override,
+    1 /
+      var(
+        --row-poster-aspect-ratio,
+        var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
+      )
+  );
 }
 
 /* Grid dynamic poster height + contain: cap at slider to collapse bars without exceeding slider */
@@ -426,14 +440,20 @@ body:is(
   .dynamic-views.image-fit-contain
   .dynamic-views-grid
   .card.image-format-poster.has-poster {
-  aspect-ratio: 1 /
-    min(
-      var(
-        --row-poster-aspect-ratio,
-        var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
-      ),
-      var(--dynamic-views-image-aspect-ratio, 1)
-    );
+  aspect-ratio: var(
+    --poster-aspect-override,
+    1 /
+      min(
+        var(
+          --row-poster-aspect-ratio,
+          var(
+            --actual-aspect-ratio,
+            var(--dynamic-views-image-aspect-ratio, 1)
+          )
+        ),
+        var(--dynamic-views-image-aspect-ratio, 1)
+      )
+  );
 }
 
 /* Masonry contain + fixed poster height: force slider value (bars visible) */

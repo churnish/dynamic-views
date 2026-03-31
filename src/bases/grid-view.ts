@@ -3268,39 +3268,36 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   /**
-   * When fixed cover height is OFF in Grid, equalize cover aspect ratios
-   * within each row so all covers match the tallest image.
-   * Batch reads then writes to avoid interleaved reflows.
+   * When fixed height is OFF in Grid, equalize aspect ratios within each row
+   * so all cards match the tallest image. Batch reads then writes to avoid
+   * interleaved reflows. Used by both cover and poster equalization.
    */
-  private equalizeRowCoverHeights(): void {
+  private equalizeRowHeights(config: {
+    expectedFormat: string;
+    matchCard: (el: HTMLElement) => boolean;
+    fixedMasonryClass: string;
+    fixedNoneClass: string;
+    cssVariable: string;
+  }): void {
     if (!this.containerEl?.isConnected) return;
+    if (this.lastRenderedSettings?.imageFormat !== config.expectedFormat)
+      return;
 
     const body = this.containerEl.ownerDocument.body;
     // Fixed height is OFF only when -masonry or -none is explicitly set.
     // Matches CSS :not(-masonry, -none) fallback — no class = fixed height on.
-    const isGridFixedHeight =
-      !body.classList.contains(FIXED_COVER_HEIGHT_MASONRY) &&
-      !body.classList.contains(FIXED_COVER_HEIGHT_NONE);
+    const isFixedHeightActive =
+      !body.classList.contains(config.fixedMasonryClass) &&
+      !body.classList.contains(config.fixedNoneClass);
 
-    // Collect all mounted cover cards
-    const coverCards: HTMLElement[] = [];
-    for (const [, groupItems] of this.virtualItemsByGroup) {
-      for (const item of groupItems) {
-        if (
-          item.el?.isConnected &&
-          (item.el.classList.contains('card-cover-top') ||
-            item.el.classList.contains('card-cover-bottom')) &&
-          item.el.classList.contains('image-format-cover')
-        ) {
-          coverCards.push(item.el);
-        }
-      }
-    }
-
-    if (isGridFixedHeight) {
+    if (isFixedHeightActive) {
       // Clear stale values when fixed height is active
-      for (const card of coverCards) {
-        card.style.removeProperty('--row-cover-aspect-ratio');
+      for (const [, groupItems] of this.virtualItemsByGroup) {
+        for (const item of groupItems) {
+          if (item.el?.isConnected && config.matchCard(item.el)) {
+            item.el.style.removeProperty(config.cssVariable);
+          }
+        }
       }
       return;
     }
@@ -3308,25 +3305,19 @@ export class DynamicViewsGridView extends BasesView {
     const columns = this.lastColumnCount;
     if (columns <= 0) return;
 
-    // Process each group's cards by row
+    // Single traversal: collect matching cards with indices, read ratios, equalize per row
     for (const [, groupItems] of this.virtualItemsByGroup) {
-      // Collect cover cards with their indices for row grouping
-      const indexedCovers: { index: number; el: HTMLElement }[] = [];
+      const indexedCards: { index: number; el: HTMLElement }[] = [];
       for (let i = 0; i < groupItems.length; i++) {
         const el = groupItems[i].el;
-        if (
-          el?.isConnected &&
-          (el.classList.contains('card-cover-top') ||
-            el.classList.contains('card-cover-bottom')) &&
-          el.classList.contains('image-format-cover')
-        ) {
-          indexedCovers.push({ index: i, el });
+        if (el?.isConnected && config.matchCard(el)) {
+          indexedCards.push({ index: i, el });
         }
       }
 
       // Read phase: batch all getComputedStyle reads
       const ratios: { index: number; el: HTMLElement; ratio: number }[] = [];
-      for (const { index, el } of indexedCovers) {
+      for (const { index, el } of indexedCards) {
         const raw = this.win
           .getComputedStyle(el)
           .getPropertyValue('--actual-aspect-ratio');
@@ -3342,96 +3333,119 @@ export class DynamicViewsGridView extends BasesView {
         if (ratio > current) rowMaxes.set(row, ratio);
       }
 
-      // Write phase: set --row-cover-aspect-ratio on each card.
-      // All cards in a row get the row max — imageless cards (ratio 0) match
-      // the tallest image. All-empty rows get 0 to collapse covers.
+      // Write phase: all cards in a row get the row max — imageless cards
+      // (ratio 0) match the tallest image. All-empty rows get 0.
       for (const { index, el } of ratios) {
         const row = Math.floor(index / columns);
         const maxRatio = rowMaxes.get(row) ?? 0;
-        el.style.setProperty('--row-cover-aspect-ratio', maxRatio.toString());
+        el.style.setProperty(config.cssVariable, maxRatio.toString());
       }
     }
   }
 
-  /**
-   * When fixed poster height is OFF in Grid, equalize poster aspect ratios
-   * within each row so all posters match the tallest image.
-   * Batch reads then writes to avoid interleaved reflows.
-   */
+  private equalizeRowCoverHeights(): void {
+    this.equalizeRowHeights({
+      expectedFormat: 'cover',
+      matchCard: (el) =>
+        (el.classList.contains('card-cover-top') ||
+          el.classList.contains('card-cover-bottom')) &&
+        el.classList.contains('image-format-cover'),
+      fixedMasonryClass: FIXED_COVER_HEIGHT_MASONRY,
+      fixedNoneClass: FIXED_COVER_HEIGHT_NONE,
+      cssVariable: '--row-cover-aspect-ratio',
+    });
+  }
+
   private equalizeRowPosterHeights(): void {
+    this.equalizeRowHeights({
+      expectedFormat: 'poster',
+      matchCard: (el) =>
+        el.classList.contains('image-format-poster') &&
+        el.classList.contains('has-poster'),
+      fixedMasonryClass: FIXED_POSTER_HEIGHT_MASONRY,
+      fixedNoneClass: FIXED_POSTER_HEIGHT_NONE,
+      cssVariable: '--row-poster-aspect-ratio',
+    });
+    this.stretchPosterCardsInMixedRows();
+  }
+
+  // In mixed rows (poster + imageless cards), poster cards stay at aspect-ratio
+  // height while imageless cards use natural content height. When imageless cards
+  // are taller, stretch poster cards to match via min-height. aspect-ratio must
+  // be cleared to prevent width expansion (aspect-ratio + min-height = wider card).
+  private stretchPosterCardsInMixedRows(): void {
     if (!this.containerEl?.isConnected) return;
-
-    const body = this.containerEl.ownerDocument.body;
-    // Fixed height is OFF only when -masonry or -none is explicitly set.
-    // Matches CSS :not(-masonry, -none) fallback — no class = fixed height on.
-    const isGridFixedHeight =
-      !body.classList.contains(FIXED_POSTER_HEIGHT_MASONRY) &&
-      !body.classList.contains(FIXED_POSTER_HEIGHT_NONE);
-
-    // Collect all mounted poster cards with images
-    const posterCards: HTMLElement[] = [];
-    for (const [, groupItems] of this.virtualItemsByGroup) {
-      for (const item of groupItems) {
-        if (
-          item.el?.isConnected &&
-          item.el.classList.contains('image-format-poster') &&
-          item.el.classList.contains('has-poster')
-        ) {
-          posterCards.push(item.el);
-        }
-      }
-    }
-
-    if (isGridFixedHeight) {
-      // Clear stale values when fixed height is active
-      for (const card of posterCards) {
-        card.style.removeProperty('--row-poster-aspect-ratio');
-      }
-      return;
-    }
+    if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
 
     const columns = this.lastColumnCount;
     if (columns <= 0) return;
 
-    // Process each group's cards by row
     for (const [, groupItems] of this.virtualItemsByGroup) {
-      // Collect poster cards with images and their indices for row grouping
-      const indexedPosters: { index: number; el: HTMLElement }[] = [];
-      for (let i = 0; i < groupItems.length; i++) {
-        const el = groupItems[i].el;
-        if (
-          el?.isConnected &&
-          el.classList.contains('image-format-poster') &&
-          el.classList.contains('has-poster')
-        ) {
-          indexedPosters.push({ index: i, el });
+      for (
+        let rowStart = 0;
+        rowStart < groupItems.length;
+        rowStart += columns
+      ) {
+        const rowEnd = Math.min(rowStart + columns, groupItems.length);
+        const posterEls: HTMLElement[] = [];
+        let maxImagelessHeight = 0;
+
+        for (let i = rowStart; i < rowEnd; i++) {
+          const el = groupItems[i].el;
+          if (!el?.isConnected) continue;
+          if (
+            el.classList.contains('image-format-poster') &&
+            el.classList.contains('has-poster')
+          ) {
+            posterEls.push(el);
+          } else {
+            const h = el.getBoundingClientRect().height;
+            if (h > maxImagelessHeight) maxImagelessHeight = h;
+          }
         }
-      }
 
-      // Read phase: batch all getComputedStyle reads
-      const ratios: { index: number; el: HTMLElement; ratio: number }[] = [];
-      for (const { index, el } of indexedPosters) {
-        const raw = this.win
-          .getComputedStyle(el)
-          .getPropertyValue('--actual-aspect-ratio');
-        const ratio = parseFloat(raw);
-        ratios.push({ index, el, ratio: isNaN(ratio) ? 0 : ratio });
-      }
+        // Skip all-poster or all-imageless rows
+        if (posterEls.length === 0 || maxImagelessHeight === 0) {
+          for (const el of posterEls) {
+            el.style.removeProperty('--poster-row-min-height');
+            el.classList.remove('poster-stretch');
+          }
+          continue;
+        }
 
-      // Group by row and find max per row
-      const rowMaxes = new Map<number, number>();
-      for (const { index, ratio } of ratios) {
-        const row = Math.floor(index / columns);
-        const current = rowMaxes.get(row) ?? 0;
-        if (ratio > current) rowMaxes.set(row, ratio);
-      }
+        // Early exit: if all poster cards already match this target, skip.
+        // Must check BEFORE reading posterHeight — stretched cards reflect
+        // min-height, not natural ratio height, causing oscillation.
+        const targetHeight = Math.round(maxImagelessHeight);
+        const value = targetHeight + 'px';
+        if (
+          posterEls.every(
+            (el) =>
+              el.style.getPropertyValue('--poster-row-min-height') === value
+          )
+        ) {
+          continue;
+        }
 
-      // Write phase: set --row-poster-aspect-ratio on each card.
-      // All poster cards in a row get the row max — all-empty rows get 0.
-      for (const { index, el } of ratios) {
-        const row = Math.floor(index / columns);
-        const maxRatio = rowMaxes.get(row) ?? 0;
-        el.style.setProperty('--row-poster-aspect-ratio', maxRatio.toString());
+        const posterHeight = posterEls[0].classList.contains('poster-stretch')
+          ? 0
+          : posterEls[0].getBoundingClientRect().height;
+        if (maxImagelessHeight > posterHeight) {
+          for (const el of posterEls) {
+            el.setCssProps({
+              '--poster-row-min-height': value,
+              '--poster-aspect-override': 'auto',
+            });
+            el.classList.add('poster-stretch');
+          }
+        } else {
+          for (const el of posterEls) {
+            if (!el.classList.contains('poster-stretch')) continue;
+            el.style.removeProperty('--poster-row-min-height');
+            el.style.removeProperty('--poster-aspect-override');
+            el.classList.remove('poster-stretch');
+          }
+        }
       }
     }
   }
