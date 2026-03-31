@@ -1771,9 +1771,82 @@ function Card({
   const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
   // Prevents cover-only padding reset from zeroing padding on title-only cards.
-  if (hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) {
+  const hasHeader =
+    hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue);
+  if (hasHeader) {
     cardClasses.push('has-header');
   }
+
+  // Header JSX extracted so poster can place it inside card-body (scrolls with content)
+  const headerJsx = hasHeader ? (
+    <div className="card-header">
+      {(hasTitle || hasSubtitle) && (
+        <div className="card-title-block">
+          {hasTitle && renderTitle()}
+          {renderSubtitle()}
+        </div>
+      )}
+      {card.hasValidUrl && card.urlValue && (
+        <a
+          className="card-title-url-icon text-icon-button svg-icon"
+          aria-label={card.urlValue}
+          href={card.urlValue}
+          target={/^https?:\/\//i.test(card.urlValue) ? '_blank' : undefined}
+          rel={
+            /^https?:\/\//i.test(card.urlValue)
+              ? 'noopener noreferrer'
+              : undefined
+          }
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation();
+            (e.currentTarget as HTMLElement)?.ownerDocument.body
+              .querySelector('.tooltip')
+              ?.remove();
+          }}
+          onContextMenu={(e: MouseEvent) => {
+            showExternalLinkContextMenu(
+              e,
+              ((e.currentTarget as HTMLElement).dataset.dvUrlValue ??
+                card.urlValue) as string
+            );
+          }}
+          ref={(el: HTMLElement | null) => {
+            if (!el) return;
+            if (!el.hasChildNodes()) {
+              setIcon(el, 'arrow-up-right');
+              // Hidden text for native link drag ghost — Chromium uses
+              // textContent to generate the 2-line ghost (title + URL).
+              // Without text, only the SVG icon appears as the ghost.
+              const dragText = el.ownerDocument.createElement('span');
+              dragText.className = 'dynamic-views-drag-text';
+              dragText.textContent = card.urlValue!;
+              el.appendChild(dragText);
+            } else {
+              // Preact recycles elements — refresh ghost text on re-render
+              const dragText = el.querySelector('.dynamic-views-drag-text');
+              if (dragText) dragText.textContent = card.urlValue!;
+            }
+            // Store fresh URL for drag handlers (Preact re-renders
+            // reuse the element but __dragBound skips re-binding)
+            el.dataset.dvUrlValue = card.urlValue!;
+            // Native listeners for drag — Preact's JSX event props
+            // interfere with Chromium's native drag initiation on <a>
+            // elements, causing intermittent failures. addEventListener
+            // works reliably (matches Bases pattern).
+            if ((el as HTMLElement & { __dragBound?: true }).__dragBound)
+              return;
+            (el as HTMLElement & { __dragBound?: true }).__dragBound = true;
+            const urlDrag = createUrlButtonDragHandlers(el, card.urlValue!);
+            el.addEventListener('dragstart', urlDrag.onDragStart);
+            el.addEventListener('dragend', urlDrag.onDragEnd);
+            el.addEventListener('touchstart', urlDrag.onTouchStart, {
+              passive: true,
+            });
+          }}
+        />
+      )}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -2158,84 +2231,8 @@ function Card({
 
       {/* Universal content wrapper: header + body */}
       <div className="card-content">
-        {/* Title, Subtitle, and URL button */}
-        {(hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) && (
-          <div className="card-header">
-            {(hasTitle || hasSubtitle) && (
-              <div className="card-title-block">
-                {hasTitle && renderTitle()}
-                {renderSubtitle()}
-              </div>
-            )}
-            {card.hasValidUrl && card.urlValue && (
-              <a
-                className="card-title-url-icon text-icon-button svg-icon"
-                aria-label={card.urlValue}
-                href={card.urlValue}
-                target={
-                  /^https?:\/\//i.test(card.urlValue) ? '_blank' : undefined
-                }
-                rel={
-                  /^https?:\/\//i.test(card.urlValue)
-                    ? 'noopener noreferrer'
-                    : undefined
-                }
-                onClick={(e: MouseEvent) => {
-                  e.stopPropagation();
-                  (e.currentTarget as HTMLElement)?.ownerDocument.body
-                    .querySelector('.tooltip')
-                    ?.remove();
-                }}
-                onContextMenu={(e: MouseEvent) => {
-                  showExternalLinkContextMenu(
-                    e,
-                    ((e.currentTarget as HTMLElement).dataset.dvUrlValue ??
-                      card.urlValue) as string
-                  );
-                }}
-                ref={(el: HTMLElement | null) => {
-                  if (!el) return;
-                  if (!el.hasChildNodes()) {
-                    setIcon(el, 'arrow-up-right');
-                    // Hidden text for native link drag ghost — Chromium uses
-                    // textContent to generate the 2-line ghost (title + URL).
-                    // Without text, only the SVG icon appears as the ghost.
-                    const dragText = el.ownerDocument.createElement('span');
-                    dragText.className = 'dynamic-views-drag-text';
-                    dragText.textContent = card.urlValue!;
-                    el.appendChild(dragText);
-                  } else {
-                    // Preact recycles elements — refresh ghost text on re-render
-                    const dragText = el.querySelector(
-                      '.dynamic-views-drag-text'
-                    );
-                    if (dragText) dragText.textContent = card.urlValue!;
-                  }
-                  // Store fresh URL for drag handlers (Preact re-renders
-                  // reuse the element but __dragBound skips re-binding)
-                  el.dataset.dvUrlValue = card.urlValue!;
-                  // Native listeners for drag — Preact's JSX event props
-                  // interfere with Chromium's native drag initiation on <a>
-                  // elements, causing intermittent failures. addEventListener
-                  // works reliably (matches Bases pattern).
-                  if ((el as HTMLElement & { __dragBound?: true }).__dragBound)
-                    return;
-                  (el as HTMLElement & { __dragBound?: true }).__dragBound =
-                    true;
-                  const urlDrag = createUrlButtonDragHandlers(
-                    el,
-                    card.urlValue!
-                  );
-                  el.addEventListener('dragstart', urlDrag.onDragStart);
-                  el.addEventListener('dragend', urlDrag.onDragEnd);
-                  el.addEventListener('touchstart', urlDrag.onTouchStart, {
-                    passive: true,
-                  });
-                }}
-              />
-            )}
-          </div>
-        )}
+        {/* Header: outside body for non-poster (fixed), inside body for poster (scrolls) */}
+        {format !== 'poster' && headerJsx}
 
         {/* Universal card-body: properties + previews */}
         <div
@@ -2243,7 +2240,11 @@ function Card({
           ref={(el: HTMLElement | null) => {
             if (!el) return;
             // has-body-content: drives card-body display:none when empty.
-            if (el.querySelector(VISIBLE_BODY_SELECTOR)) {
+            // Poster: header is inside body, so it counts as body content.
+            if (
+              el.querySelector(VISIBLE_BODY_SELECTOR) ||
+              (format === 'poster' && el.querySelector('.card-header'))
+            ) {
               el.classList.add('has-body-content');
             }
             if (format === 'poster') {
@@ -2251,6 +2252,7 @@ function Card({
             }
           }}
         >
+          {format === 'poster' && headerJsx}
           {/* Properties and previews in correct DOM order */}
           {(() => {
             const props = card.properties;

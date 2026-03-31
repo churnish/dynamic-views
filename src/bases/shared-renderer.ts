@@ -1290,8 +1290,10 @@ export class SharedCardRenderer {
     // Universal card-body: contains properties and previews
     const bodyEl = cardContent.createDiv('card-body');
 
-    // Poster: vertical scroll gradient on card-body
+    // Poster: header scrolls with content — move inside card-body
     if (format === 'poster') {
+      const headerEl = cardContent.querySelector<HTMLElement>('.card-header');
+      if (headerEl) bodyEl.prepend(headerEl);
       setupVerticalScrollGradient(bodyEl, signal);
     }
 
@@ -1386,7 +1388,11 @@ export class SharedCardRenderer {
     // Structural content classes (replace CSS :has() selectors).
     // has-body-content: body has visible properties or previews.
     // Drives card-body display:none when empty (prevents gap below subtitle).
-    if (bodyEl.querySelector(VISIBLE_BODY_SELECTOR)) {
+    // Poster: header is inside body, so it counts as body content.
+    if (
+      bodyEl.querySelector(VISIBLE_BODY_SELECTOR) ||
+      (format === 'poster' && bodyEl.querySelector('.card-header'))
+    ) {
       bodyEl.classList.add('has-body-content');
     }
     // has-card-content: card-level flag for cover padding and title divider CSS rules.

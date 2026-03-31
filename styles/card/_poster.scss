@@ -367,9 +367,9 @@ body:is(
   }
 }
 
-/* Grid: poster cards get height: auto (override height:100% to prevent width expansion).
-   aspect-ratio is set conditionally — see fixed/dynamic rules below. */
-/* Masonry: only cards with images get aspect-ratio */
+/* Grid: height: auto overrides Bases height: 100% to prevent aspect-ratio from
+   expanding card width when the row is taller than the aspect-ratio height. */
+/* Masonry: imageless poster cards excluded — without aspect-ratio they'd collapse to zero height */
 .dynamic-views {
   .dynamic-views-grid .card.image-format-poster {
     height: auto;
@@ -391,18 +391,19 @@ body:is(
   }
 }
 
-/* Grid fixed poster height: slider value (default — fires with or without Style Settings) */
+/* Grid fixed poster height: slider value (default — fires with or without Style Settings).
+   Scoped to .has-poster so imageless cards use natural content height — Grid row sizing takes max(all cards). */
 body:not(
     .dynamic-views-fixed-poster-height-masonry,
     .dynamic-views-fixed-poster-height-none
   )
   .dynamic-views
   .dynamic-views-grid
-  .card.image-format-poster {
+  .card.image-format-poster.has-poster {
   aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
 }
 
-/* Grid dynamic poster height: match tallest poster in row via JS-set variable */
+/* Grid dynamic poster height: without equalization, each card sizes to its own image, causing uneven row heights */
 body:is(
     .dynamic-views-fixed-poster-height-masonry,
     .dynamic-views-fixed-poster-height-none

@@ -2,7 +2,7 @@
 title: Card DOM structure
 description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-29
+updated: 2026-03-31
 ---
 # Card DOM structure
 
@@ -46,6 +46,7 @@ div.card                                    ← data-path="{path}"
 │
 ├─ div.card-content
 │   ├─ div.card-header                      ← present when title, subtitle, or URL button exist
+│   │                                         (poster format: nested inside .card-body instead — see note below)
 │   │   ├─ div.card-title-block
 │   │   │   ├─ div.card-title               ← tabIndex=-1
 │   │   │   │   ├─ span.card-title-icon     ← file-type icon (Icon mode)
@@ -76,6 +77,8 @@ div.card                                    ← data-path="{path}"
 │
 └─ div.card-cover-wrapper                   ← cover format, position=bottom|right (after .card-content)
 ```
+
+**Poster format note**: In poster format, `.card-header` is nested inside `.card-body` (as the first child) instead of being a direct child of `.card-content`. This makes the title scroll with the card's text content rather than staying fixed above the scroll region.
 
 ## Property rows
 
