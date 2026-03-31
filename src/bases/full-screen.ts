@@ -394,7 +394,6 @@ export class FullScreenController {
     this.scrollEl.removeEventListener('scroll', this.onScrollBound);
     this.scrollEl.removeEventListener('touchstart', this.onTouchStartBound);
     this.scrollEl.removeEventListener('touchend', this.onTouchEndBound);
-
     // Cancel pending rAFs
     if (this.pendingRafId != null) {
       cancelAnimationFrame(this.pendingRafId);
@@ -455,14 +454,9 @@ export class FullScreenController {
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
 
-    // Early reverse bridge removal — when scrolling near top with show
-    // bridge active, remove bridge + adjust scrollTop to eliminate false
-    // ceiling. The bridge offsets show layout shift but makes the first
-    // totalShift px inaccessible (container.margin-top = -totalShift).
-    // Removing bridge + adding totalShift to scrollTop is visually invisible
-    // (both shifts cancel). Runs before cooldown — coordinate correction,
-    // not a toggle. The idle pendingLayout still fires for full cleanup
-    // (remove full-screen-active, inlines, height lock).
+    // Show bridge removal — when scrolling near top with show bridge
+    // active, remove bridge + adjust scrollTop. Only applies when iOS
+    // show bridge is active (Android no longer uses a reverse bridge).
     if (this.showBridgeActive && currentTop <= this.totalShift) {
       this.container.style.removeProperty('margin-top');
       this.container.style.removeProperty('transition');
@@ -558,6 +552,10 @@ export class FullScreenController {
       this.accumulatedDelta = 0;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Deferred bridge removal (fling-safe)
+  // ---------------------------------------------------------------------------
 
   // ---------------------------------------------------------------------------
   // Measurement
@@ -812,15 +810,17 @@ export class FullScreenController {
     }
 
     if (this.isAndroid) {
-      // Android show: WAAPI header + navbar, ::before scrim, reverse bridge.
+      // Android show: WAAPI header + navbar, ::before scrim, direct scrollTop.
       //
-      // full-screen-showing restores margin-top: 99px + toolbar + search.
-      // An extended ::before (solid background, full 99px height) covers the
-      // gap while the header WAAPI slides in from above (matching iOS native
-      // animation). The reverse bridge offsets the layout shift. At idle,
-      // bridge removed + scrollTop compensated + classes removed.
+      // applyShowInlines restores margin-top + toolbar + search. The ::before
+      // scrim (solid background, full height) covers the gap while the header
+      // WAAPI slides in. scrollTop += totalShift compensates the layout shift
+      // directly — no reverse bridge needed. This kills any active compositor
+      // fling, but the reverse bridge approach also killed flings (via
+      // earlyBridgeRemoval's scrollTop write) AND created a false ceiling.
+      // Direct compensation trades potential show-time jank (~1 frame) for
+      // no false top at all.
       this.programmaticScroll = true;
-      this.showBridgeActive = true;
 
       // Read WAAPI "from" values BEFORE rAF — fill:forwards still active
       const navbarFrom =
@@ -837,12 +837,21 @@ export class FullScreenController {
         // full-height on Android during full-screen-active) covers the gap.
         this.applyShowInlines();
 
-        // Reverse bridge: offset the layout shift from margin-top + toolbar
-        // restoration. Content stays visually in place. Bridge removed at idle.
+        // Direct scrollTop compensation — shifts scroll position to match
+        // the layout shift from margin-top restoration. Kills the compositor
+        // fling but eliminates the false ceiling entirely.
         if (this.settled) {
-          setStyle(this.container, 'margin-top', `-${this.totalShift}px`);
-          setStyle(this.container, 'transition', 'none');
+          this.scrollEl.scrollTop += this.totalShift;
         }
+
+        // Unlock height lock — bars-hidden height is now stale.
+        this.scrollEl.style.removeProperty('height');
+
+        // Restore mask-image gradient on workspace split — safe in show rAF
+        // now that the reverse bridge is eliminated (no budget constraint).
+        // Previously deferred to idle, causing ~1s delay for the navbar
+        // gradient to appear.
+        this.restoreMaskImage();
 
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
@@ -918,27 +927,17 @@ export class FullScreenController {
         });
       });
 
-      // Idle: remove bridge + compensate scrollTop + remove inlines/classes
-      // + relock. Inline styles already restored all layout (margin, toolbar,
-      // search). Removal is a visual no-op — defaults match showing state.
-      // Bridge removal + scrollTop is the only geometric operation.
+      // Idle: remove inlines/classes + relock. Inline styles already restored
+      // all layout (margin, toolbar, search) and scrollTop was compensated
+      // in the show rAF. Removal is a visual no-op — defaults match showing
+      // state. No bridge to remove.
       this.pendingLayout = () => {
         this.programmaticScroll = true;
 
         this.cancelAnimations();
 
-        // Remove reverse bridge + compensate scrollTop (safe at idle —
-        // no scroll contention, WAAPI finished at 300ms < 500ms idle)
-        if (this.showBridgeActive) {
-          this.container.style.removeProperty('margin-top');
-          this.container.style.removeProperty('transition');
-          this.scrollEl.scrollTop += this.totalShift;
-          this.showBridgeActive = false;
-        }
-
         this.scrollEl.style.removeProperty('height');
         this.clearShowInlines();
-        this.restoreMaskImage();
         this.body.classList.remove('full-screen-active');
         this.isActiveHider = false;
         this.settled = false;
