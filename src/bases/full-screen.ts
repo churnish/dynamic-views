@@ -118,6 +118,7 @@ export class FullScreenController {
   private mounted = false;
   private barsHidden = false;
   private settled = false;
+  private showBridgeActive = false;
   private totalShift = 0;
   private originalMarginTop = 0;
   private prevScrollTop = 0;
@@ -426,6 +427,7 @@ export class FullScreenController {
     // Clean up bridge + locked height + padding class
     this.container.classList.remove('dynamic-views-full-screen-enabled');
     this.container.style.removeProperty('margin-top');
+    this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
     this.container.style.removeProperty('--dynamic-views-scroll-past-end');
     this.scrollEl.style.removeProperty('height');
@@ -441,6 +443,7 @@ export class FullScreenController {
     this.pendingLayout = null;
     this.barsHidden = false;
     this.settled = false;
+    this.showBridgeActive = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -593,6 +596,7 @@ export class FullScreenController {
     // Clear show-path inlines (rapid show→hide before idle)
     this.clearNavbarInlines();
     this.container.style.removeProperty('margin-top');
+    this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
     this.clearHeaderInlines();
 
@@ -650,11 +654,17 @@ export class FullScreenController {
       this.programmaticScroll = true;
       this.scrollEl.style.removeProperty('height');
       this.body.classList.add('full-screen-active');
-      // Clamp to 0 when near top — the skip guard (before >= totalShift)
-      // left scrollTop unchanged, making the first totalShift px of content
-      // inaccessible after hide. The auto-show delta<=0 check prevents the
-      // scrollTop=0 landing from triggering auto-show on the next event.
-      this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
+      // Skip scrollTop adjustment if show bridge was active — scrollTop was
+      // never increased by the show path, so no reversal needed. Bridge
+      // margin-top was already cleared by line 595 (container removeProperty).
+      if (!this.showBridgeActive) {
+        // Clamp to 0 when near top — the skip guard (before >= totalShift)
+        // left scrollTop unchanged, making the first totalShift px of content
+        // inaccessible after hide. The auto-show delta<=0 check prevents the
+        // scrollTop=0 landing from triggering auto-show on the next event.
+        this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
+      }
+      this.showBridgeActive = false;
       this.settled = true;
       // Height relock deferred to idle — offsetHeight forces layout that
       // janks mid-animation if done during the 300ms animation window.
@@ -810,16 +820,17 @@ export class FullScreenController {
     }
 
     if (this.isAndroid) {
-      // Android show: WAAPI header + navbar, ::before scrim, direct scrollTop.
+      // Android show: WAAPI header + navbar, ::before scrim, show bridge.
       //
       // applyShowInlines restores margin-top + toolbar + search. The ::before
       // scrim (solid background, full height) covers the gap while the header
-      // WAAPI slides in. scrollTop += totalShift compensates the layout shift
-      // directly — no reverse bridge needed. This kills any active compositor
-      // fling, but the previous reverse bridge approach also killed flings
-      // (via its scrollTop write near the top) AND created a false ceiling.
-      // Direct compensation trades potential show-time jank (~1 frame) for
-      // no false top at all.
+      // WAAPI slides in. Show bridge (margin-top: -totalShift on container)
+      // cancels the visual shift — no scrollTop write in the show rAF.
+      // Chrome/146 WebView tightened the single-threaded compositor frame
+      // budget: any scrollTop write triggers a scroll layer repaint that
+      // flashes .workspace background for one frame (§7.8.11). Bridge
+      // defers scrollTop to idle where the CSS background override on
+      // .workspace masks the flash (same color as content background).
       this.programmaticScroll = true;
 
       // Clear tap-shield inlines before reading "from" values — onfinish
@@ -846,21 +857,26 @@ export class FullScreenController {
         // full-height on Android during full-screen-active) covers the gap.
         this.applyShowInlines();
 
-        // Direct scrollTop compensation — shifts scroll position to match
-        // the layout shift from margin-top restoration. Kills the compositor
-        // fling but eliminates the false ceiling entirely.
+        // Show bridge: transform on container cancels the visual shift from
+        // applyShowInlines (viewContent margin-top + toolbar expansion).
+        // Transform is compositor-only — no layout, no raster invalidation,
+        // no tile re-rastering. margin-top bridge (layout change inside
+        // scroll container) and scrollTop both trigger raster invalidation
+        // that exceeds Chrome/146's single-threaded compositor frame budget.
+        // scrollTop + height unlock + restoreMaskImage deferred to idle
+        // behind the CSS background override on .workspace (§7.8.15).
         if (this.settled) {
-          this.scrollEl.scrollTop += this.totalShift;
+          setStyle(
+            this.container,
+            'transform',
+            `translateY(-${this.totalShift}px)`
+          );
+          this.showBridgeActive = true;
         }
 
-        // Unlock height lock — bars-hidden height is now stale.
-        this.scrollEl.style.removeProperty('height');
-
-        // Restore mask-image gradient on workspace split — safe in show rAF
-        // now that the reverse bridge is eliminated (no budget constraint).
-        // Previously deferred to idle, causing ~1s delay for the navbar
-        // gradient to appear.
-        this.restoreMaskImage();
+        // Height unlock and restoreMaskImage deferred to idle — both trigger
+        // layout/repaint inside the scroll layer that exceeds Chrome/146's
+        // single-threaded compositor frame budget.
 
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
@@ -936,14 +952,27 @@ export class FullScreenController {
         });
       });
 
-      // Idle: remove inlines/classes + relock. Inline styles already restored
-      // all layout (margin, toolbar, search) and scrollTop was compensated
-      // in the show rAF. Removal is a visual no-op — defaults match showing
-      // state. No bridge to remove.
+      // Idle: remove transform bridge + scrollTop + height unlock +
+      // restoreMaskImage (all behind background override), then remove
+      // inlines/classes + relock. The background override on .workspace
+      // (full-screen-active CSS) masks the Chrome/146 scroll layer repaint —
+      // flash color matches --dynamic-views-background-primary.
       this.pendingLayout = () => {
         this.programmaticScroll = true;
 
         this.cancelAnimations();
+
+        // Bridge removal + deferred layout ops BEFORE removing
+        // full-screen-active — CSS background override masks repaint.
+        if (this.showBridgeActive) {
+          this.container.style.removeProperty('transform');
+          this.scrollEl.scrollTop += this.totalShift;
+          this.showBridgeActive = false;
+        }
+        // Unlock height lock (deferred from show rAF).
+        this.scrollEl.style.removeProperty('height');
+        // Restore mask-image gradient (deferred from show rAF).
+        this.restoreMaskImage();
 
         this.clearShowInlines();
         this.body.classList.remove('full-screen-active');
