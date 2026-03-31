@@ -113,6 +113,7 @@ export class FullScreenController {
   private readonly toolbarEl: HTMLElement | null;
   private readonly searchRowEl: HTMLElement | null;
   private readonly workspaceSplitEl: HTMLElement | null;
+  private readonly cachedMaskImage: string;
 
   // State
   private mounted = false;
@@ -172,6 +173,17 @@ export class FullScreenController {
     this.workspaceSplitEl = this.body.querySelector<HTMLElement>(
       '.workspace-split.mod-root'
     );
+    // Cache Obsidian's mask-image gradient before any inline overrides.
+    // Used by gradient swap (hide sets opaque, show restores cached) to
+    // keep the render surface allocated — avoids cross-subtree rasterization
+    // from mask-image: none → gradient structural compositor change.
+    const cs = this.workspaceSplitEl
+      ? getComputedStyle(this.workspaceSplitEl)
+      : null;
+    this.cachedMaskImage =
+      cs?.getPropertyValue('-webkit-mask-image') ||
+      cs?.getPropertyValue('mask-image') ||
+      '';
 
     this.onScrollBound = (): void => this.onScroll();
     this.onTouchStartBound = (e: TouchEvent): void => this.onTouchStart(e);
@@ -266,8 +278,20 @@ export class FullScreenController {
     ]);
   }
 
-  /** Restore mask-image gradient on workspace split — remove inline override */
+  /** Restore cached mask-image gradient via inline swap (not property removal).
+   * Swapping gradient values keeps the compositor render surface allocated —
+   * the mask texture updates without cross-subtree tile re-rasterization.
+   * Removing the property (none → CSS gradient) destroys and recreates the
+   * render surface (~66MB), forcing full subtree rasterization that exceeds
+   * Chrome/146's single-threaded compositor frame budget. */
   private restoreMaskImage(): void {
+    if (!this.workspaceSplitEl || !this.cachedMaskImage) return;
+    setStyle(this.workspaceSplitEl, '-webkit-mask-image', this.cachedMaskImage, 'important');
+    setStyle(this.workspaceSplitEl, 'mask-image', this.cachedMaskImage, 'important');
+  }
+
+  /** Fully remove mask-image inline — only safe during unmount (not scroll-concurrent) */
+  private clearMaskImageInline(): void {
     if (!this.workspaceSplitEl) return;
     this.workspaceSplitEl.style.removeProperty('-webkit-mask-image');
     this.workspaceSplitEl.style.removeProperty('mask-image');
@@ -419,7 +443,7 @@ export class FullScreenController {
       } else {
         this.leafContent.classList.remove('full-screen-showing');
       }
-      this.restoreMaskImage();
+      this.clearMaskImageInline();
       this.body.classList.remove('full-screen-active');
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
@@ -607,17 +631,14 @@ export class FullScreenController {
 
     void capacitorStatusBar?.hide();
 
-    // Remove mask-image gradient on workspace split. Inline styles instead
-    // of CSS — :has() upward invalidation kills iOS momentum scroll.
-    // Show path removes inline → Obsidian's normal CSS takes over.
+    // Swap mask-image to fully-opaque gradient (no visual masking).
+    // Using an opaque gradient instead of 'none' keeps the compositor render
+    // surface allocated — show path swaps back to cached gradient without
+    // the expensive surface recreation + cross-subtree rasterization.
     if (this.workspaceSplitEl) {
-      setStyle(
-        this.workspaceSplitEl,
-        '-webkit-mask-image',
-        'none',
-        'important'
-      );
-      setStyle(this.workspaceSplitEl, 'mask-image', 'none', 'important');
+      const OPAQUE_MASK = 'linear-gradient(rgb(0,0,0),rgb(0,0,0))';
+      setStyle(this.workspaceSplitEl, '-webkit-mask-image', OPAQUE_MASK, 'important');
+      setStyle(this.workspaceSplitEl, 'mask-image', OPAQUE_MASK, 'important');
     }
 
     // Navbar: animated hide via inline transform + opacity
@@ -863,8 +884,8 @@ export class FullScreenController {
         // no tile re-rastering. margin-top bridge (layout change inside
         // scroll container) and scrollTop both trigger raster invalidation
         // that exceeds Chrome/146's single-threaded compositor frame budget.
-        // scrollTop + height unlock + restoreMaskImage deferred to idle
-        // behind the CSS background override on .workspace (§7.8.15).
+        // scrollTop + height unlock deferred to idle behind the CSS
+        // background override on .workspace (§7.8.15).
         if (this.settled) {
           setStyle(
             this.container,
@@ -874,9 +895,10 @@ export class FullScreenController {
           this.showBridgeActive = true;
         }
 
-        // Height unlock and restoreMaskImage deferred to idle — both trigger
-        // layout/repaint inside the scroll layer that exceeds Chrome/146's
-        // single-threaded compositor frame budget.
+        // Restore mask-image gradient — gradient swap (opaque → cached)
+        // keeps the compositor render surface allocated, so only the mask
+        // texture updates. No cross-subtree rasterization.
+        this.restoreMaskImage();
 
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
@@ -952,42 +974,40 @@ export class FullScreenController {
         });
       });
 
-      // Idle: remove transform bridge + scrollTop + height unlock +
-      // restoreMaskImage (all behind background override), then remove
-      // inlines/classes + relock. The background override on .workspace
-      // (full-screen-active CSS) masks the Chrome/146 scroll layer repaint —
-      // flash color matches --dynamic-views-background-primary.
+      // Idle: persistent bridge — DON'T remove transform, DON'T write
+      // scrollTop, DON'T clear show inlines, DON'T remove full-screen-active.
+      // Chrome/146's single-threaded compositor flashes on ANY scrollTop write
+      // (content disappears for one frame during tile re-rasterization).
+      // Bridge persists until the next hide, whose scrollTop adjustment is
+      // batched with the full-screen-active class change and doesn't flash.
       this.pendingLayout = () => {
         this.programmaticScroll = true;
 
         this.cancelAnimations();
 
-        // Bridge removal + deferred layout ops BEFORE removing
-        // full-screen-active — CSS background override masks repaint.
-        if (this.showBridgeActive) {
-          this.container.style.removeProperty('transform');
-          this.scrollEl.scrollTop += this.totalShift;
-          this.showBridgeActive = false;
-        }
-        // Unlock height lock (deferred from show rAF).
-        this.scrollEl.style.removeProperty('height');
-        // Restore mask-image gradient (deferred from show rAF).
-        this.restoreMaskImage();
+        // Remove scrim data attribute — collapses ::before to safe-area
+        // height (doesn't overlap toolbar). Without WAAPI compositor layers,
+        // the toolbar has no z-index and sits behind the opaque scrim.
+        this.leafContent.removeAttribute('data-dynamic-views-show');
 
-        this.clearShowInlines();
-        this.body.classList.remove('full-screen-active');
-        this.isActiveHider = false;
-        this.settled = false;
+        // Height lock stays at bars-hidden value — unlocking triggers scroll
+        // layer raster invalidation that flashes on Chrome/146. The extra
+        // totalShift px of scroll space is negligible on top of the ~50%
+        // scroll-past-end padding.
 
+        // Clear animation artifacts — WAAPI finished, clear to defaults.
+        // CSS full-screen-active + show inlines keep elements visible.
         this.clearNavbarInlines();
         this.clearHeaderInlines();
+
+        this.isActiveHider = false;
 
         this.pendingRafId = requestAnimationFrame(() => {
           this.programmaticScroll = false;
           this.prevScrollTop = this.scrollEl.scrollTop;
           this.accumulatedDelta = 0;
-          this.lockedScrollHeight = this.scrollEl.offsetHeight;
-          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+          // No height relock — kept at bars-hidden value (see above).
+          // mask-image already restored in show rAF (gradient swap).
         });
       };
       return;
@@ -1062,7 +1082,7 @@ export class FullScreenController {
       this.body.classList.remove('full-screen-active');
       this.isActiveHider = false;
 
-      this.restoreMaskImage();
+      this.clearMaskImageInline();
 
       // Navbar cleanup
       this.clearNavbarInlines();
