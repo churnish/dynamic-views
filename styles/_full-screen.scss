@@ -5,7 +5,26 @@
 
 // .is-phone is Obsidian's body class — leave flat per nesting conventions.
 
-// iOS: CSS controls header hide/show (transform + opacity + pointer-events)
+// Bases view-header is empty (Bases uses its own toolbar) — children
+// collapse to 0×0, so the header has no layout box. Explicit dimensions
+// make it an invisible tap shield over the status bar zone, matching
+// native Obsidian where the header absorbs taps during full-screen hide.
+// Bases view-header is empty (Bases uses its own toolbar) — children
+// collapse to 0×0, so the header has no layout box. min-height creates
+// the tap shield surface. margin-top: 0 is set via inline styles in
+// onfinish/idle-settle only — not in CSS, because it would misposition
+// the header during the show animation.
+.is-phone.full-screen-active [data-type='bases'] .view-header {
+  min-height: calc(
+    var(--dynamic-views-safe-area-inset-top) +
+      var(--dynamic-views-view-header-height)
+  ) !important;
+  top: 0 !important;
+}
+
+// iOS: CSS controls header hide/show (transform + opacity).
+// After idle settle (2s), JS snaps header back to natural position
+// (inline transform:translateY(0) + opacity:0) as the tap shield.
 .is-phone:not(.is-android).full-screen-active [data-type='bases'] .view-header {
   transform: translateY(
     calc(
@@ -17,15 +36,13 @@
     )
   ) !important;
   opacity: 0 !important;
-  pointer-events: none !important;
 }
 
 // Android: JS/WAAPI controls header transform+opacity — CSS only handles
-// pointer-events and transition suppression. WAAPI cannot override
+// transition suppression. WAAPI cannot override
 // !important CSS declarations (lower in the cascade), so transform/opacity
 // must not be in CSS on Android.
 .is-android.is-phone.full-screen-active [data-type='bases'] .view-header {
-  pointer-events: none !important;
   transition: none !important;
   will-change: transform, opacity;
 }

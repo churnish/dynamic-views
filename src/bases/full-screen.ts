@@ -135,6 +135,7 @@ export class FullScreenController {
   private readonly onScrollBound: () => void;
   private readonly onTouchStartBound: (e: TouchEvent) => void;
   private readonly onTouchEndBound: (e: TouchEvent) => void;
+  private readonly onHeaderTapBound: () => void;
 
   // WAAPI animation handles (Android) — cancel before starting new ones.
   // Array instead of named fields — per-property animations (transform vs
@@ -174,6 +175,7 @@ export class FullScreenController {
     this.onScrollBound = (): void => this.onScroll();
     this.onTouchStartBound = (e: TouchEvent): void => this.onTouchStart(e);
     this.onTouchEndBound = (e: TouchEvent): void => this.onTouchEnd(e);
+    this.onHeaderTapBound = (): void => this.onHeaderTap();
   }
 
   /** Idempotent — no-op if already mounted */
@@ -240,6 +242,11 @@ export class FullScreenController {
     this.scrollEl.addEventListener('touchend', this.onTouchEndBound, {
       passive: true,
     });
+    if (this.viewHeaderEl) {
+      this.viewHeaderEl.addEventListener('touchend', this.onHeaderTapBound, {
+        passive: true,
+      });
+    }
   }
 
   /** Cancel and discard all WAAPI animation handles (Android) */
@@ -274,6 +281,7 @@ export class FullScreenController {
       'pointer-events',
       'transition',
       'z-index',
+      'margin-top',
     ]);
   }
 
@@ -385,6 +393,9 @@ export class FullScreenController {
     this.scrollEl.removeEventListener('scroll', this.onScrollBound);
     this.scrollEl.removeEventListener('touchstart', this.onTouchStartBound);
     this.scrollEl.removeEventListener('touchend', this.onTouchEndBound);
+    if (this.viewHeaderEl) {
+      this.viewHeaderEl.removeEventListener('touchend', this.onHeaderTapBound);
+    }
     // Cancel pending rAFs
     if (this.pendingRafId != null) {
       cancelAnimationFrame(this.pendingRafId);
@@ -691,17 +702,28 @@ export class FullScreenController {
         // Header WAAPI hide — separate transform + opacity
         if (this.viewHeaderEl) {
           const hEl = this.viewHeaderEl;
+          const headerTransformAnim = hEl.animate(
+            [
+              { transform: 'translateY(0)' },
+              { transform: `translateY(-${headerShift}px)` },
+            ],
+            HEADER_SLIDE_OPTS
+          );
           this.barAnims.push(
-            hEl.animate(
-              [
-                { transform: 'translateY(0)' },
-                { transform: `translateY(-${headerShift}px)` },
-              ],
-              HEADER_SLIDE_OPTS
-            ),
+            headerTransformAnim,
             hEl.animate([{ opacity: 1 }, { opacity: 0 }], BAR_FADE_OPTS)
           );
-          setStyle(hEl, 'pointer-events', 'none', 'important');
+          headerTransformAnim.onfinish = () => {
+            // Snap header back to natural position — invisible tap shield
+            // matching native Obsidian full-screen. fill:forwards held the
+            // header off-screen; clearing transform returns it to the top
+            // ~90px zone where it absorbs taps without content interaction.
+            // margin-top:0 overrides Obsidian's safe-area-inset-top margin
+            // so the shield covers the full zone from y=0.
+            setStyle(hEl, 'transform', 'translateY(0)', 'important');
+            setStyle(hEl, 'opacity', '0', 'important');
+            setStyle(hEl, 'margin-top', '0', 'important');
+          };
         }
 
         // Toolbar + search WAAPI hide — opacity only. WAAPI fill:forwards
@@ -759,6 +781,17 @@ export class FullScreenController {
       this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
       this.settled = true;
 
+      // Snap header to tap-shield position — invisible but absorbing taps
+      // in the status bar zone. CSS transform animated it off-screen;
+      // inline override returns it to natural position after settle.
+      // margin-top:0 overrides Obsidian's safe-area-inset-top margin
+      // so the shield covers the full zone from y=0.
+      if (this.viewHeaderEl) {
+        setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
+        setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
+        setStyle(this.viewHeaderEl, 'margin-top', '0', 'important');
+      }
+
       this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
@@ -788,6 +821,15 @@ export class FullScreenController {
       // Direct compensation trades potential show-time jank (~1 frame) for
       // no false top at all.
       this.programmaticScroll = true;
+
+      // Clear tap-shield inlines before reading "from" values — onfinish
+      // sets transform:translateY(0) + opacity:0 + margin-top:0 which would
+      // be read as the animation start, producing a fade-only (no slide).
+      if (this.viewHeaderEl) {
+        this.viewHeaderEl.style.removeProperty('transform');
+        this.viewHeaderEl.style.removeProperty('opacity');
+        this.viewHeaderEl.style.removeProperty('margin-top');
+      }
 
       // Read WAAPI "from" values BEFORE rAF — fill:forwards still active
       const navbarFrom =
@@ -1060,8 +1102,17 @@ export class FullScreenController {
     // and tap was not on the title link itself
     if (!isCard || (isOpenOnTitle && !isTitleLink)) {
       this.barsHidden = false;
+      this.lastToggleTime = Date.now();
       this.showBarsUI();
     }
+  }
+
+  /** Tap on invisible view-header (status bar zone) — reveal bars */
+  private onHeaderTap(): void {
+    if (!this.barsHidden) return;
+    this.barsHidden = false;
+    this.lastToggleTime = Date.now();
+    this.showBarsUI();
   }
 
   // ---------------------------------------------------------------------------
