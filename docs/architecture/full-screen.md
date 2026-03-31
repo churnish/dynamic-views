@@ -23,8 +23,7 @@ Non-negotiable. Reject any implementation that violates these, regardless of tec
 2. **No false bottom**: Scrolling down must reach the true bottom. Last card and end indicator fully accessible.
 3. **Atomic bar transitions**: All bar elements (header, toolbar, search row, navbar, mask-image gradient) must appear and disappear together. No delayed individual elements.
 4. **No show jank**: Show transition must not produce visible jank — no white flash, no content jump, no dropped frames.
-5. **No hide momentum kill**: Hiding bars (downward scroll) must not interrupt scroll momentum on either platform.
-6. **Show may kill momentum**: Showing bars requires layout changes that kill the Chromium compositor fling. Acceptable — the alternative (reverse bridge) creates a false ceiling that violates requirement 1.
+5. **No momentum kill**: Hide and show transitions must not interrupt scroll momentum on either platform.
 
 ## Files
 
@@ -44,7 +43,7 @@ Where `leaf` is any Bases leaf from `app.workspace.iterateAllLeaves()`.
 
 ## System overview
 
-On mobile, Bases card views have a fixed header, a static toolbar (`.bases-header`), an optional search row, and a fixed navbar. Native Obsidian full screen works in Markdown views (driven by CodeMirror's internal `markdown-scroll` event) but not in Bases views — Bases doesn't fire that event. The plugin implements its own scroll-driven bar management.
+On phone, Bases card views have a fixed header, a static toolbar (`.bases-header`), an optional search row, and a fixed navbar. Native Obsidian full screen works in Markdown views (driven by CodeMirror's internal `markdown-scroll` event) but not in Bases views — Bases doesn't fire that event. The plugin implements its own scroll-driven bar management.
 
 ### Bases vs Markdown constraint
 
