@@ -59,6 +59,9 @@ const UI_FADE_OPTS: KeyframeAnimationOptions = {
   fill: 'forwards',
 };
 
+/** Fully-opaque mask gradient — keeps compositor render surface allocated during hide. */
+const OPAQUE_MASK = 'linear-gradient(rgb(0,0,0),rgb(0,0,0))';
+
 export interface FullScreenElements {
   scrollEl: HTMLElement; // .bases-view
   container: HTMLElement; // .dynamic-views-bases-container
@@ -285,9 +288,23 @@ export class FullScreenController {
    * render surface (~66MB), forcing full subtree rasterization that exceeds
    * Chrome/146's single-threaded compositor frame budget. */
   private restoreMaskImage(): void {
-    if (!this.workspaceSplitEl || !this.cachedMaskImage) return;
-    setStyle(this.workspaceSplitEl, '-webkit-mask-image', this.cachedMaskImage, 'important');
-    setStyle(this.workspaceSplitEl, 'mask-image', this.cachedMaskImage, 'important');
+    if (!this.workspaceSplitEl) return;
+    if (!this.cachedMaskImage) {
+      this.clearMaskImageInline();
+      return;
+    }
+    setStyle(
+      this.workspaceSplitEl,
+      '-webkit-mask-image',
+      this.cachedMaskImage,
+      'important'
+    );
+    setStyle(
+      this.workspaceSplitEl,
+      'mask-image',
+      this.cachedMaskImage,
+      'important'
+    );
   }
 
   /** Fully remove mask-image inline — only safe during unmount (not scroll-concurrent) */
@@ -369,7 +386,7 @@ export class FullScreenController {
     // grouped). z-index 30 ensures header WAAPI slides above the scrim without
     // needing a --dynamic-views-scrim-z custom property (which would inherit to
     // all descendants, adding style recalc overhead that exceeds the Android
-    // WebView compositor frame budget — see §7.1.38).
+    // WebView compositor frame budget.
     if (this.viewHeaderEl) {
       setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
       setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
@@ -402,7 +419,7 @@ export class FullScreenController {
     }
 
     if (this.viewHeaderEl) {
-      this.viewHeaderEl.style.removeProperty('z-index');
+      clearStyles(this.viewHeaderEl, ['z-index', 'pointer-events']);
     }
 
     // ::before scrim + ::after scroll gradient: revert to CSS defaults
@@ -636,8 +653,12 @@ export class FullScreenController {
     // surface allocated — show path swaps back to cached gradient without
     // the expensive surface recreation + cross-subtree rasterization.
     if (this.workspaceSplitEl) {
-      const OPAQUE_MASK = 'linear-gradient(rgb(0,0,0),rgb(0,0,0))';
-      setStyle(this.workspaceSplitEl, '-webkit-mask-image', OPAQUE_MASK, 'important');
+      setStyle(
+        this.workspaceSplitEl,
+        '-webkit-mask-image',
+        OPAQUE_MASK,
+        'important'
+      );
       setStyle(this.workspaceSplitEl, 'mask-image', OPAQUE_MASK, 'important');
     }
 
@@ -677,12 +698,11 @@ export class FullScreenController {
       this.body.classList.add('full-screen-active');
       // Skip scrollTop adjustment if show bridge was active — scrollTop was
       // never increased by the show path, so no reversal needed. Bridge
-      // margin-top was already cleared by line 595 (container removeProperty).
+      // transform was already cleared above (container removeProperty).
       if (!this.showBridgeActive) {
-        // Clamp to 0 when near top — the skip guard (before >= totalShift)
-        // left scrollTop unchanged, making the first totalShift px of content
-        // inaccessible after hide. The auto-show delta<=0 check prevents the
-        // scrollTop=0 landing from triggering auto-show on the next event.
+        // Clamp to 0 when near top — without clamping, before - totalShift
+        // goes negative. The auto-show delta<=0 check prevents the scrollTop=0
+        // landing from triggering auto-show on the next event.
         this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
       }
       this.showBridgeActive = false;
@@ -849,7 +869,7 @@ export class FullScreenController {
       // cancels the visual shift — no scrollTop write in the show rAF.
       // Chrome/146 WebView tightened the single-threaded compositor frame
       // budget: any scrollTop write triggers a scroll layer repaint that
-      // flashes .workspace background for one frame (§7.8.11). Bridge
+      // flashes .workspace background for one frame. Bridge
       // defers scrollTop to idle where the CSS background override on
       // .workspace masks the flash (same color as content background).
       this.programmaticScroll = true;
@@ -885,7 +905,7 @@ export class FullScreenController {
         // scroll container) and scrollTop both trigger raster invalidation
         // that exceeds Chrome/146's single-threaded compositor frame budget.
         // scrollTop + height unlock deferred to idle behind the CSS
-        // background override on .workspace (§7.8.15).
+        // background override on .workspace.
         if (this.settled) {
           setStyle(
             this.container,
@@ -1000,8 +1020,6 @@ export class FullScreenController {
         this.clearNavbarInlines();
         this.clearHeaderInlines();
 
-        this.isActiveHider = false;
-
         this.pendingRafId = requestAnimationFrame(() => {
           this.programmaticScroll = false;
           this.prevScrollTop = this.scrollEl.scrollTop;
@@ -1038,8 +1056,8 @@ export class FullScreenController {
     setStyle(this.navbarEl, 'opacity', '1', 'important');
     this.navbarEl.style.removeProperty('pointer-events');
 
-    // mask-image restore deferred to idle — removing the inline on
-    // .workspace-split.mod-root triggers subtree repaint that kills momentum.
+    // Restore mask-image gradient — gradient swap (opaque → cached) keeps the compositor render surface allocated (same as Android show rAF).
+    this.restoreMaskImage();
 
     // Toolbar + search WAAPI fade-in — deferred to rAF.
     // WAAPI is compositor-driven (no continuous main-thread work).
@@ -1079,6 +1097,7 @@ export class FullScreenController {
       // Cancel WAAPI before class removal — same reason as hide path
       this.cancelAnimations();
       this.leafContent.classList.remove('full-screen-showing');
+      this.clearHeaderInlines();
       this.body.classList.remove('full-screen-active');
       this.isActiveHider = false;
 

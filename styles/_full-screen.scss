@@ -6,10 +6,6 @@
 // .is-phone is Obsidian's body class — leave flat per nesting conventions.
 
 // Bases view-header is empty (Bases uses its own toolbar) — children
-// collapse to 0×0, so the header has no layout box. Explicit dimensions
-// make it an invisible tap shield over the status bar zone, matching
-// native Obsidian where the header absorbs taps during full-screen hide.
-// Bases view-header is empty (Bases uses its own toolbar) — children
 // collapse to 0×0, so the header has no layout box. min-height creates
 // the tap shield surface. margin-top: 0 is set via inline styles in
 // onfinish/idle-settle only — not in CSS, because it would misposition
@@ -157,12 +153,6 @@
   z-index: 25 !important;
   // Absorb taps — prevents propagation to cards and headings underneath.
   pointer-events: auto !important;
-}
-
-// Android grouped: solid background (overrides gradient above)
-.is-android.is-phone.full-screen-active
-  [data-type='bases'].dynamic-views-grouped::before {
-  background: var(--dynamic-views-background-primary) !important;
 }
 
 // Android show: expand scrim to cover full margin-top gap. Data attribute
