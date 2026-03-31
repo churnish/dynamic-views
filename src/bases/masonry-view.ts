@@ -1840,8 +1840,8 @@ export class DynamicViewsMasonryView extends BasesView {
         }
 
         // Phase 1: Set all widths + force content rendering for accurate measurement
-        // masonry-measuring overrides content-visibility (hidden on desktop, auto on mobile)
-        // so off-screen cards render their content for accurate offsetHeight reads
+        // masonry-measuring overrides content-visibility: hidden (desktop) so
+        // off-screen cards render their content for accurate offsetHeight reads
         this.masonryContainer.classList.add('masonry-measuring');
         for (const card of allCards) {
           if (!skipHiding) {
@@ -2245,8 +2245,8 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Force content rendering for accurate offsetHeight reads.
-    // Must be set BEFORE the drift check — without this, content-visibility: auto
-    // returns contain-intrinsic-height fallback for fresh elements, causing
+    // Must be set BEFORE the drift check — without this, content-visibility: hidden
+    // returns incorrect offsetHeight for off-screen elements, causing
     // false-positive drift detection.
     this.masonryContainer?.classList.add('masonry-measuring');
 

@@ -157,7 +157,7 @@
 }
 
 /* Force content rendering during masonry height measurement
-   (overrides both IO-based .content-hidden and CSS content-visibility: auto) */
+   (overrides IO-based .content-hidden on desktop) */
 .masonry-measuring .card {
   content-visibility: visible !important;
 }

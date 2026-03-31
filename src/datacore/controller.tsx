@@ -1263,7 +1263,7 @@ export function View({
           });
 
           // Force content rendering for accurate measurement
-          // (WebKit returns intrinsic fallback for content-visibility: auto)
+          // (content-visibility: hidden returns incorrect offsetHeight)
           container.classList.add('masonry-measuring');
           try {
             void newCards[0]?.offsetHeight;
@@ -1527,7 +1527,7 @@ export function View({
     dc,
   ]);
 
-  // Initialize scroll gradients and title truncation after cards render
+  // Initialize scroll gradients after cards render
   // Uses double-RAF to ensure layout calculations complete first
   // Note: masonry mode handles this inside its layout useEffect
   dc.useEffect(() => {

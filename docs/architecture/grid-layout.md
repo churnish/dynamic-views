@@ -356,11 +356,9 @@ Constants: `HIDDEN_BUFFER_MULTIPLIER = 2` (`src/shared/constants.ts`), `CONTENT_
 
 **CSS**:
 
-- Removed unconditional `content-visibility: visible` from `.dynamic-views-grid .card`.
-- Mobile-specific override: `body.is-ios .dynamic-views-grid .card { content-visibility: visible; }` (specificity 0,3,1 — same as shared mobile rule; wins by cascade order, `_grid-view.scss` imported after `_grid-masonry-shared.scss`).
 - Shared desktop rule: `.dynamic-views .card.content-hidden { content-visibility: hidden; contain-intrinsic-height: auto 300px; }` — inline style overrides the fallback `300px`.
 
-WebKit skips the content-hidden tier entirely — it enters infinite reflow loops with IO-toggled `content-visibility: hidden`. WebKit uses the single-tier mount/unmount system. Android gets the full three-tier system.
+WebKit skips the content-hidden tier entirely — it enters infinite reflow loops with IO-toggled `content-visibility: hidden` (see `ios-webkit-quirks.md`). WebKit uses the single-tier mount/unmount system, enforced by the `!Platform.isIosApp` guard in `syncVirtualScroll`. Android gets the full three-tier system.
 
 ### 6a. Mount ordering (committed-row lock)
 
@@ -698,7 +696,7 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 4. **`previousDisplayedCount` ensures incremental append correctness.** Batch append renders only cards from `previousDisplayedCount` to `displayedCount`, never re-rendering existing cards.
 5. **`collapsedGroups` is loaded once from persistence.** First render loads from `basesState`; thereafter the in-memory `Set` is authoritative. Reloading on every `onDataUpdated` would wipe state due to style-settings-triggered callbacks with stale persistence.
 6. **Container height is preserved during DOM wipe.** `--dynamic-views-preserve-height` sets `min-height` before clearing the container, preventing the scroll parent from resetting scroll position.
-7. **Virtual scrolling replaces content visibility.** Grid uses full virtual scrolling (mount/unmount) with a content-hidden intermediate tier on non-WebKit platforms. WebKit sets `content-visibility: visible` on all grid cards to override `content-visibility: auto`. WebKit compatibility is maintained because virtual scrolling doesn't trigger the reflow loop. The `content-hidden` class and `contain-intrinsic-height` inline style are removed from keyboard navigation targets before focusing.
+7. **Virtual scrolling replaces content visibility.** Grid uses full virtual scrolling (mount/unmount) with a content-hidden intermediate tier on non-WebKit platforms. WebKit skips the content-hidden tier entirely (IO-toggled `content-visibility: hidden` causes infinite reflow loops — see `ios-webkit-quirks.md`), relying on single-tier mount/unmount only, enforced by the `!Platform.isIosApp` guard in `syncVirtualScroll`. The `content-hidden` class and `contain-intrinsic-height` inline style are removed from keyboard navigation targets before focusing.
 8. **CSS-only settings bypass the render pipeline.** `applyCssOnlySettings()` runs before throttle and hash comparison, setting CSS variables and classes directly for instant feedback on `textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`, `posterDisplayMode`, and `imageFit` changes.
 9. **Viewport fill must be checked after any operation that changes content height.** Five call sites ensure `checkAndLoadMore` runs: scroll listener, post-batch chain (version-guarded — aborted batches must NOT chain), post-height-preservation removal, renderHash early-exit, and post-card-remeasure. Without these, a viewport that becomes underfilled (from settings change, batch chain killed by duplicate `onDataUpdated`, or CSS-only card shrinkage) stalls infinite scroll permanently.
 10. **`hasUserScrolled` gates virtual scroll activation.** Initial render mounts all cards for measurement. Virtual scrolling (unmounting far cards) activates only after first user scroll, matching the mount-all-then-cull pattern.

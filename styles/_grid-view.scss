@@ -31,13 +31,6 @@
   height: 100%;
 }
 
-/* Override iOS content-visibility: auto (body.is-ios .dynamic-views .card) —
-   virtual scrolling replaces browser-managed visibility in Grid.
-   Without this, cards collapse to header-only height in CSS Grid rows. */
-body.is-ios .dynamic-views-grid .card {
-  content-visibility: visible;
-}
-
 /* Lightweight placeholder for unmounted virtual scroll cards.
    Maintains CSS Grid flow while card is not in DOM. */
 .dynamic-views-grid .dynamic-views-grid-placeholder {

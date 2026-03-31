@@ -8,7 +8,7 @@
     cursor: pointer;
   }
 
-  /* Spacing between card-header and card-body */
+  /* Spacing between card-content children (card-header, card-body) */
   .card .card-content {
     gap: var(--size-2-3);
   }
