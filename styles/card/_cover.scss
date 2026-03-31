@@ -185,12 +185,36 @@
 }
 
 /* Masonry contain mode ON: use slider value (top/bottom bars visible) */
-body.dynamic-views-fixed-cover-height
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  )
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
   .card.card-cover-top.image-format-cover
   .card-cover,
-body.dynamic-views-fixed-cover-height
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  )
+  [data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.card-cover-bottom.image-format-cover
+  .card-cover {
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Backward compat: old class-toggle → masonry fixed cover height */
+body.dynamic-views-fixed-cover-height:not(
+    [class*='dynamic-views-fixed-cover-height-']
+  )
+  [data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.card-cover-top.image-format-cover
+  .card-cover,
+body.dynamic-views-fixed-cover-height:not(
+    [class*='dynamic-views-fixed-cover-height-']
+  )
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
   .card.card-cover-bottom.image-format-cover

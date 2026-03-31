@@ -49,24 +49,82 @@
     padding-bottom: var(--cover-inset-computed);
   }
 
-  .dynamic-views-grid .card.card-cover-bottom.image-format-cover .card-cover {
-    height: 0;
-    min-height: 0;
-    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-  }
-
-  .dynamic-views-grid
-    .card.card-cover-bottom.image-format-cover
-    .card-cover-placeholder {
-    height: 0;
-    min-height: 0;
-    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-  }
-
   /* All covers: border radius */
   .card.image-format-cover .card-cover {
     border-radius: var(--dynamic-views-cover-border-radius, 0);
   }
+}
+
+/* Grid fixed cover-bottom height: slider value (default — fires with or without Style Settings) */
+body:not(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover {
+  height: 0;
+  min-height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+body:not(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder {
+  height: 0;
+  min-height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Grid dynamic cover-bottom height: match tallest image in row via JS-set variable */
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover {
+  height: 0;
+  min-height: 0;
+  padding-top: calc(
+    var(
+        --row-cover-aspect-ratio,
+        var(
+          --actual-aspect-ratio,
+          var(--dynamic-views-image-aspect-ratio, 0.55)
+        )
+      ) *
+      100%
+  );
+}
+
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover
+  .card-cover-placeholder {
+  height: 0;
+  min-height: 0;
+  padding-top: calc(
+    var(
+        --row-cover-aspect-ratio,
+        var(
+          --actual-aspect-ratio,
+          var(--dynamic-views-image-aspect-ratio, 0.55)
+        )
+      ) *
+      100%
+  );
 }
 
 /* Circular cover: 50% makes any shape circular */
@@ -115,7 +173,7 @@ body.dynamic-views-cover-circular
     object-position: center center;
     border-radius: 0; /* Override theme styles; container handles border-radius */
     opacity: 0;
-    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
+    transition: opacity var(--dynamic-views-anim-duration-moderate) ease;
     -webkit-user-select: none;
     user-select: none;
   }

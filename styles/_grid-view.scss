@@ -140,14 +140,57 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
     .card-properties-bottom {
     margin-top: auto;
   }
+}
 
-  .dynamic-views-grid .card.card-cover-top.image-format-cover .card-cover,
+/* Grid fixed cover height: slider value (default — fires with or without Style Settings) */
+body:not(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
   .dynamic-views-grid
-    .card.card-cover-top.image-format-cover
-    .card-cover-placeholder {
-    height: 0;
-    padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
-  }
+  .card.card-cover-top.image-format-cover
+  .card-cover,
+body:not(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder {
+  height: 0;
+  padding-top: calc(var(--dynamic-views-image-aspect-ratio, 0.55) * 100%);
+}
+
+/* Grid dynamic cover height: match tallest image in row via JS-set variable */
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover,
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-top.image-format-cover
+  .card-cover-placeholder {
+  height: 0;
+  padding-top: calc(
+    var(
+        --row-cover-aspect-ratio,
+        var(
+          --actual-aspect-ratio,
+          var(--dynamic-views-image-aspect-ratio, 0.55)
+        )
+      ) *
+      100%
+  );
 }
 
 /* Measurement lane: offscreen container for iOS pre-mount height reads.

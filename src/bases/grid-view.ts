@@ -3336,15 +3336,13 @@ export class DynamicViewsGridView extends BasesView {
         if (ratio > current) rowMaxes.set(row, ratio);
       }
 
-      // Write phase: set --row-cover-aspect-ratio on each card
-      for (const { index, el, ratio } of ratios) {
+      // Write phase: set --row-cover-aspect-ratio on each card.
+      // All cards in a row get the row max — imageless cards (ratio 0) match
+      // the tallest image. All-empty rows get 0 to collapse covers.
+      for (const { index, el } of ratios) {
         const row = Math.floor(index / columns);
         const maxRatio = rowMaxes.get(row) ?? 0;
-        if (maxRatio > 0 && maxRatio !== ratio) {
-          el.style.setProperty('--row-cover-aspect-ratio', maxRatio.toString());
-        } else {
-          el.style.removeProperty('--row-cover-aspect-ratio');
-        }
+        el.style.setProperty('--row-cover-aspect-ratio', maxRatio.toString());
       }
     }
   }
