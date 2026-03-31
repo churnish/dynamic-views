@@ -1,8 +1,8 @@
 ---
 title: Full screen
-description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, the v84 inline-only animation architecture, and Android WebView WAAPI workaround for single-threaded compositor jank.
+description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, Chrome/146 Android show flash compositor findings, and Android WebView WAAPI workaround for single-threaded compositor jank.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-27
+updated: 2026-03-31
 ---
 # Full screen
 
@@ -159,6 +159,8 @@ Native Obsidian restores bars on:
 - `keyboardWillHide` event
 - `active-leaf-change` (tab switch)
 - `autoFullScreen` config changed to false
+
+Native Obsidian ignores status bar / view-header taps during active and momentum scroll — bar reveal only responds after scroll idle. The `mousedown` restore trigger appears to be suppressed while the scroll handler is actively processing scroll events.
 
 ### Short-view strategy
 
@@ -526,28 +528,28 @@ Sources: Chromium WebView threading docs, synchronous compositing design doc, Ch
 
 ### Android show flash investigation
 
-**Observed**: 2026-03-27, Pixel 8a (Android WebView). Sessions: `1c4af413`, `62137565`, `900ee1b7`.
+**Observed**: 2026-03-27, Pixel 8a (Android WebView).
 
 **Root cause**: When `full-screen-showing` restores `margin-top: 99px` on `.view-content`, it creates a gap above the scroll container. On Android WebView's single-threaded compositor, the header WAAPI animation (starting from opacity:0) may not cover this gap on the first rendered frame — a timing race causes intermittent white flash ("nearly every other reveal").
 
-**Diagnostic evidence** (session `900ee1b7`):
+**Diagnostic evidence**:
 
 - Magenta scrim (z-index 99999, position fixed) was NOT always visible during flash — 3 states observed: no flash, full-screen magenta, top-third red. Never both colors simultaneously.
 - Red diagnostic background (replacing theme color on body/app-container/workspace) confirmed flash IS our background showing through the 99px gap.
 - The intermittent pattern = timing race on single-threaded compositor.
 
-**Failed approaches** (with session IDs):
+**Failed approaches**:
 
-1. Idle delay 150→500ms (`1c4af413`) — fixed WAAPI cancel-before-complete, show flash persists
-2. `:not(.full-screen-showing)` scoping on mask-image/::after (`1c4af413`) — fixed bottom gradient, show flash persists
-3. Removed `onfinish` callbacks (`62137565`) — fixed cascade blocking, show flash persists
-4. Start-before-cancel WAAPI ordering (`62137565`) — eliminated cancel gap, show flash persists
-5. Background-color NOT scoped to `:not(.full-screen-showing)` (`1c4af413`) — prevents transparent intermediate, show flash persists
-6. Reverse bridge `margin-top: -totalShift` (`900ee1b7`) — eliminated forced scrollTop layout, show flash persists
-7. Batching class toggle + bridge + WAAPI into same rAF (`900ee1b7`) — eliminated inter-frame gap, show flash persists
-8. `visibility:hidden` → `opacity:0` + `will-change:opacity` on toolbar (`900ee1b7`) — kept compositor layer cached, show flash persists
-9. Deferred `capacitorStatusBar?.show()` to idle (`900ee1b7`) — moved system UI change, show flash persists
-10. Defer ALL layout to idle with Android CSS overrides (`900ee1b7`) — eliminated gap flash BUT toolbar/search pop in 500ms later. USER REJECTED.
+1. Idle delay 150→500ms — fixed WAAPI cancel-before-complete, show flash persists
+2. `:not(.full-screen-showing)` scoping on mask-image/::after — fixed bottom gradient, show flash persists
+3. Removed `onfinish` callbacks — fixed cascade blocking, show flash persists
+4. Start-before-cancel WAAPI ordering — eliminated cancel gap, show flash persists
+5. Background-color NOT scoped to `:not(.full-screen-showing)` — prevents transparent intermediate, show flash persists
+6. Reverse bridge `margin-top: -totalShift` — eliminated forced scrollTop layout, show flash persists
+7. Batching class toggle + bridge + WAAPI into same rAF — eliminated inter-frame gap, show flash persists
+8. `visibility:hidden` → `opacity:0` + `will-change:opacity` on toolbar — kept compositor layer cached, show flash persists
+9. Deferred `capacitorStatusBar?.show()` to idle — moved system UI change, show flash persists
+10. Defer ALL layout to idle with Android CSS overrides — eliminated gap flash BUT toolbar/search pop in 500ms later. User rejected.
 
 **Fix**: CSS-based instant header restore on Android. `full-screen-showing` sets `transform: translateY(0) !important` + `opacity: 1 !important` on the Android header (matching iOS behavior). The header covers the 99px gap instantly — no timing race with WAAPI first frame. WAAPI still used for navbar (bottom bar). Header hide WAAPI still works because `full-screen-showing` is removed before hide animations start.
 
@@ -648,6 +650,52 @@ v58's conclusion that `is-hidden-nav` is instant was wrong. v72 instrumentation 
 
 v84 correctly separates concerns: CSS class handles layout changes only, inline styles handle compositor animation (transform + opacity) via double-rAF pattern. No `translateY` in the initial animation frame — with ease-out, 86px of translation moves the element below the viewport in the first few frames. Show direction reverses the inline styles with matching transitions.
 
+## Chrome/146 Android show flash
+
+Empirical findings from investigating the Android WebView show flash on Pixel 8a, Vanadium WebView 146.0.7680.164 (first installed 2026-03-17). Web research confirmed no mask/compositor changes in the Chrome 146 release notes — the flash was always latent and surfaced from unrelated compositor timing changes.
+
+### Compositor render surface lifecycle (mask-image)
+
+- **`mask-image: none` destroys the compositor render surface** (~66MB GPU texture). Restoring the CSS gradient forces full subtree rasterization into a newly allocated surface.
+- **Swapping between two gradient values** keeps the surface allocated — only the mask texture updates.
+- **Applies regardless of timing** — show rAF, idle, nested rAF all flash when using `none`.
+- **Obsidian's gradient**: `linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgb(0,0,0) 36px)`.
+- **Fix**: `OPAQUE_MASK` constant (`linear-gradient(rgb(0,0,0),rgb(0,0,0))`) on hide, cached gradient on show.
+
+### scrollTop writes flash on Chrome/146
+
+- **ANY `scrollTop` write triggers scroll layer tile re-rasterization** on Chrome/146 WebView.
+- **No safe timing window** — synchronous, rAF, nested rAF, idle all flash.
+- **Symptom**: Content disappears for one frame during tile re-rasterization, exposing `.workspace` background.
+- **CSS background color override** masks the color but NOT the content blink.
+- **Fix**: Persistent `transform: translateY()` bridge defers all `scrollTop` writes to the next hide cycle, where they're batched with `full-screen-active` removal (no flash on hide).
+
+### Custom property inheritance cost
+
+- **Custom properties on an ancestor inherit to ALL descendants** — each property change marks every descendant for style recalc.
+- **With ~100 card elements**, even 3-4 custom properties exceed Chrome/146's frame budget during show.
+- **Fix**: `data-dynamic-views-show` attribute — attribute changes only trigger recalc for selectors containing `[data-dynamic-views-show]` (zero descendant invalidation).
+
+### Layout inside vs outside scroll container
+
+- **Layout changes OUTSIDE the scroll container** (viewContent margin-top, toolbar expansion) just reposition the container — no tile invalidation.
+- **Layout changes INSIDE** (margin-top on container, scrollTop, height unlock) force scroll layer tile re-rasterization.
+- **`transform` on scroll child is compositor-only** — tiles are reused and repositioned on GPU.
+- This distinction is key to understanding why the persistent transform bridge works.
+
+### classList vs inline style recalc
+
+- **`classList.add/remove`** triggers selector matching across ALL rules in ALL stylesheets.
+- **`style.setProperty()`** bypasses selector matching entirely — only triggers recalc for the target element.
+- On Android WebView's single-threaded compositor, the difference is between staying within and exceeding the frame budget.
+- **Fix**: `applyShowInlines()`/`clearShowInlines()` pattern.
+
+### WAAPI fill:forwards stacking
+
+- **During WAAPI `fill:forwards`**, elements are promoted to their own compositor layers. These layers paint above non-promoted elements regardless of z-index.
+- **When `cancelAnimations()` removes fill:forwards**, elements drop back to normal stacking. This can cause toolbar/search to suddenly appear behind an opaque scrim.
+- **Fix**: Remove scrim `data-dynamic-views-show` attribute at idle to collapse scrim height.
+
 ## Architecture evolution
 
 ### v59: single-phase (superseded)
@@ -663,27 +711,7 @@ Single-phase: all changes (compositor + layout) apply simultaneously via classLi
 | **Top fade** | Fixed overlay div inside `workspace-leaf-content`, opacity toggled (NOT mask-image on scroll container) |
 | **Direction detection** | Passive scroll listener with accumulated delta, 30px dead zone, 50px top zone auto-show |
 
-### v84: inline-only animation (current)
-
-v59's CSS class approach was superseded by v84's inline-only animation, which correctly separates CSS class (layout) from inline styles (compositor animation). CSS class handles layout mutations (margin, pointer-events). Inline `style.setProperty()` with double-rAF handles compositor animation (transform, opacity). This resolves the WebKit passive scroll listener optimization that collapsed v58's transitions.
-
-**Current state**: On iOS, bar animations use double-rAF inline styles. Space reclaim uses bridge + idle settle architecture: `margin-top: totalShift` bridge on scroll child at hide time (momentum-safe — adjusts `scrollHeight` in sync with visual displacement, no false scroll boundaries), then `scrollTop -= totalShift` + margin removal at scroll-idle (2s debounce). The 2s settle delay outlasts the iOS scroll indicator fade (~1.5s), making the settle invisible. On Android, WAAPI `element.animate()` replaces CSS transitions — WebView's single-threaded compositor makes CSS transitions during active scroll inherently janky (see "WebView single-threaded compositor" below). The hide path is bridge-less (class + `scrollTop` synchronous) with WAAPI for header and navbar hide animations. The show path uses CSS-based instant header restore: `full-screen-showing` sets `transform: translateY(0) !important` + `opacity: 1 !important` on the Android header, covering the 99px gap without WAAPI timing race (see "Android show flash investigation" below). WAAPI is only used for navbar show animation. `showBridgeActive` is repurposed as a scrollTop-not-compensated signal (no literal bridge). `capacitorStatusBar?.show()` deferred to idle on Android. Android-specific CSS overrides keep margin-top at 0 and toolbar/search hidden during the show state — these restore at idle when `full-screen-active` is removed. CSS rules split: iOS keeps `!important` transform/opacity, Android only sets pointer-events + transition suppression (WAAPI cannot override `!important`). Scroll container height is locked (`style.height`) to decouple `clientHeight` from flex layout changes — unlock-measure-relock at settle. A short-view guard (`scrollableRange >= 3 * totalShift`) prevents hide on views with insufficient scroll range. Minor intermittent content jumps on iOS from scroll viewport clipping artifact are accepted as the Pareto optimum (see "Pareto frontier" above).
-
 ## Direction detection
-
-### Temporal-spatial hybrid
-
-Direction detection uses a combined threshold: accumulated scroll delta (spatial) must exceed a dead zone AND the direction must be sustained for a minimum duration (temporal). Constants in `shared/constants.ts`:
-
-| Parameter | Value | Purpose |
-|---|---|---|
-| `FULL_SCREEN_HIDE_DEAD_ZONE` | 30px | Accumulated downward scroll to trigger hide |
-| `FULL_SCREEN_SHOW_DEAD_ZONE` | 20px | Accumulated upward scroll to trigger show |
-| `FULL_SCREEN_SHOW_SUSTAIN_MS` | 80ms | Minimum sustained direction before triggering |
-| `FULL_SCREEN_TOP_ZONE` | 50px | `scrollTop` threshold — always show bars near top |
-| `FULL_SCREEN_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
-
-On each scroll event: if the delta reverses direction, the accumulator resets to zero and `directionChangeTime` records the reversal timestamp. The sustain gate (`Date.now() - directionChangeTime >= 80ms`) prevents false triggers from deceleration bounce — short-lived delta reversals at the end of a fling.
 
 ### Why touch gate failed
 
@@ -698,47 +726,7 @@ The 80ms sustain gate applies to BOTH hide AND show. Deceleration bounce produce
 
 Without the sustain gate on hide, rapid hide→show cycling occurred during fast downward scrolls.
 
-### Cooldown accumulator reset
-
-During the 300ms cooldown after a toggle, scroll events still fire. The `full-screen-showing` CSS class restores `margin-top: ~99px` on `.view-content`, which causes WebKit to fire layout-induced scroll deltas (~250px compensation). Without resetting the accumulator during cooldown, these synthetic deltas leak past the cooldown and immediately trigger the opposite transition. Fix: `accumulatedDelta = 0` on every scroll event during cooldown.
-
-### Layout-induced scroll deltas
-
-The `full-screen-showing` class restores margin-top on `.view-content`. WebKit compensates by adjusting the scroll position, producing a large synthetic scroll delta (~250px, equal to `totalShift`). These deltas are not user-initiated but are indistinguishable from real scroll events. The cooldown accumulator reset (above) and the `programmaticScroll` guard during settle handle both sources.
-
 ## Settle architecture
-
-### Bridge + idle settle
-
-The settle resolves the gap between the immediate bridge (momentum-safe visual compensation) and the final layout state (correct scroll position without bridge). Sequence:
-
-1. **HIDE**: `margin-top: totalShift` on scroll child + `full-screen-active` class. Scroll container height locked.
-2. **IDLE (2s debounce)**: Unlock height → remove `margin-top` → `scrollTop -= totalShift` → re-measure → relock height.
-3. **SHOW**: `full-screen-showing` class override. If not settled (hide bridge still active), remove `margin-top` (bridge removal + bar restoration cancel geometrically). If settled, no bridge applied — content shifts down naturally as bars reappear.
-4. **SHOW IDLE (2s debounce)**: Remove `margin-top` → if settled, `scrollTop += totalShift` → remove classes → unlock → re-measure → relock.
-
-### 2s settle delay
-
-`FULL_SCREEN_SCROLL_IDLE_MS = 2000`. The settle involves a `scrollTop` write and height unlock-relock, both of which cause the iOS native scroll indicator to flash. The 2s delay outlasts the scroll indicator's fade-out (~1.5s after last scroll event), so the settle is invisible to the user.
-
-### Unlock-measure-relock
-
-Scroll container height is locked via inline `style.height` to prevent `clientHeight` from changing during `full-screen-active` (flex layout changes would resize the scroll container, causing scroll indicator teleport). At settle:
-
-1. Remove inline `height` (unlock)
-2. Remove bridge / adjust `scrollTop`
-3. Read `offsetHeight` (measure true flex-calculated height)
-4. Set inline `height` again (relock)
-
-Direct height calculation (`currentHeight + totalShift`) was rejected — it compounded rounding errors across rapid hide/show cycles. The unlock-measure-relock approach reads the browser's authoritative value each time.
-
-### `flex: 1` overrides inline `height`
-
-The locked `height` doesn't truly constrain the scroll container because `.bases-view` has `flex: 1` in Obsidian's layout. The inline `height` acts as a `flex-basis` hint that WebKit respects during the brief transition period. True locking would require `flex: 0 0 auto`, but this was rejected — it creates a visible gap strip at the bottom of the viewport when bars are hidden (the flex container no longer stretches to fill available space).
-
-### Scroll indicator jump
-
-The scroll indicator jumps when bars hide/show because the scroll container's effective height changes (margin-top removal adds ~99px + toolbar collapse adds ~52px). This matches Safari's native address bar behavior — the scroll indicator repositions when the viewport resizes. Accepted as inherent to the architecture.
 
 ### Pareto frontier confirmed
 
@@ -749,27 +737,6 @@ Three objectives cannot all be achieved simultaneously on iOS WebKit:
 3. **Preserved momentum** — iOS fling continues uninterrupted
 
 The bridge + idle settle architecture (v144) achieves immediate status bar + preserved momentum with minor intermittent jumps. See "Pareto frontier" section above for the full analysis and comparison table.
-
-## SCSS implementation
-
-### Toolbar collapse
-
-```scss
-// Hide state
-transform: translateY(-100%);
-margin-bottom: calc(var(--bases-header-height) * -1);
-opacity: 0;
-
-// Timing (matches native)
-transition: transform 0.3s ease-in-out, opacity 0.2s ease-in-out;
-```
-
-### Implementation checklist
-
-- Use `this.register(cleanup)` in constructor.
-- Place setup after `this.scrollEl` assignment.
-- Move thresholds to `shared/constants.ts`.
-- Raise touch timeout to 150ms.
 
 ## Diagnostic tools
 

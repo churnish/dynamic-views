@@ -1,19 +1,14 @@
 ---
 title: Full screen
-description: Bridge+settle system (iOS) and WAAPI-driven bridge-less path (Android) for hiding/showing bars during scroll, direction detection algorithm, height locking, settle sequence, short-view guard, WebView compositor limitation, and platform-specific branches.
+description: Bridge+settle system (iOS) and WAAPI-driven persistent show bridge (Android) for hiding/showing bars during scroll, gradient swap mask-image management, direction detection algorithm, height locking, tap shield, and platform-specific branches.
 author: 🤖 Generated with Claude Code
 updated: 2026-03-31
 ---
 # Full screen
 
-Hides Obsidian UI on downward scroll in Dynamic Views card views on phone. Bar animations match native Obsidian full screen.
+Hides Obsidian UI bars on downward scroll in Dynamic Views card views on phone. Bar animations match native Obsidian full screen. iOS uses a bridge architecture (`margin-top` on scroll child) to defer layout mutations to scroll-idle. Android uses WAAPI animations with a persistent `transform` show bridge that defers `scrollTop` writes to the next hide cycle.
 
-- **iOS**: Bridge+settle — `margin-top` on scroll child aligns coordinate space during momentum, real layout at scroll-idle.
-- **Android hide**: Bridge-less — class toggle + `scrollTop` adjustment synchronously (Chromium tolerates mid-scroll `scrollTop` writes). WAAPI bar animations.
-- **Android show**: `applyShowInlines()` + `data-dynamic-views-show` attribute (bypasses `classList` to avoid style invalidation). Direct `scrollTop += totalShift` compensation.
-- **Direction detection**: Temporal-spatial hybrid with dead zones, sustain gate, and cooldown.
-
-For empirical research, rejected approaches, and prototype history, see [dev/full-screen.md](../dev/full-screen.md).
+For empirical research, rejected approaches, and prototype history, see `dev/full-screen.md`.
 
 ## UX requirements
 
@@ -43,7 +38,7 @@ Where `leaf` is any Bases leaf from `app.workspace.iterateAllLeaves()`.
 
 ## System overview
 
-On phone, Bases card views have a fixed header, a static toolbar (`.bases-header`), an optional search row, and a fixed navbar. Native Obsidian full screen works in Markdown views (driven by CodeMirror's internal `markdown-scroll` event) but not in Bases views — Bases doesn't fire that event. The plugin implements its own scroll-driven bar management.
+On phone, Bases card views have a fixed header, a static toolbar (`.bases-header`), an optional search row, and a fixed navbar. Native Obsidian full screen works in Markdown views (driven by CodeMirror's internal `markdown-scroll` event) but not in Bases views — Bases does not fire that event. The plugin implements its own scroll-driven bar management.
 
 ### Bases vs Markdown constraint
 
@@ -52,7 +47,7 @@ Native `is-hidden-nav` handles header and navbar hide/show for both view types. 
 1. **Toolbar collapse** — `.bases-header` must be hidden (transform + margin collapse)
 2. **99px margin-top gap fill** — `.view-content` has ~99px `margin-top` compensating for the fixed header; removing it requires layout mutation
 
-These are layout changes (reflow) that conflict with iOS momentum scroll. Markdown views don't need them — content reflow is minimal (just header/navbar transform). The bridge+settle architecture exists specifically to defer these layout mutations to scroll-idle.
+These are layout changes (reflow) that conflict with iOS momentum scroll. Markdown views do not need them — content reflow is minimal (just header/navbar transform). The bridge+settle architecture exists specifically to defer these layout mutations to scroll-idle.
 
 ## DOM structure
 
@@ -80,6 +75,17 @@ Bases leaf hierarchy, top to bottom:
 
 "Bars" = header + toolbar + search row + navbar (all elements that hide/show).
 
+## Mask-image gradient swap
+
+Both platforms use a gradient swap on `.workspace-split.mod-root` to avoid destroying the compositor render surface during hide/show transitions.
+
+- **Constructor**: Caches Obsidian's mask-image gradient via `getComputedStyle` into `cachedMaskImage`.
+- **Hide**: Sets `OPAQUE_MASK` (`linear-gradient(rgb(0,0,0),rgb(0,0,0))`) — a fully-opaque gradient that produces no visual masking but keeps the render surface allocated.
+- **Show**: `restoreMaskImage()` swaps back to `cachedMaskImage`. This is a gradient-to-gradient swap — the compositor updates the mask texture without recreating the render surface. Safe during momentum scroll.
+- **Unmount / iOS idle**: `clearMaskImageInline()` fully removes the inline properties. This is a structural compositor change (property removal vs value swap) and is only safe when not scroll-concurrent.
+
+Without the gradient swap, removing mask-image (`none` to CSS gradient) destroys and recreates the ~66MB render surface, forcing full subtree rasterization that exceeds the single-threaded compositor frame budget.
+
 ## Bridge + settle architecture
 
 The bridge resolves the fundamental conflict on iOS: hiding bars requires layout mutations (margin, toolbar collapse), but layout mutations during iOS momentum scroll kill the momentum.
@@ -87,58 +93,72 @@ The bridge resolves the fundamental conflict on iOS: hiding bars requires layout
 - The bridge applies `margin-top` on the scroll child (`.dynamic-views-bases-container`) to visually compensate for the layout shift.
 - Unlike `translateY` (which displaces visually without changing `scrollHeight`), `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, eliminating false top/bottom at scroll boundaries.
 - Real layout changes swap in at scroll-idle.
-- **Android does NOT use a bridge on either path.** Hide: Chromium's compositor tolerates `scrollTop` writes during active scroll, so class toggle + `scrollTop` adjustment happen synchronously. Show: direct `scrollTop += totalShift` compensation in the show rAF.
-- Android bar animations use WAAPI (`element.animate()`) for better compositor scheduling on the single-threaded WebView compositor (see Platform branches).
-
-### Short-view guard
-
-Before hiding, the controller checks whether the view has enough scrollable range. The guard evaluates only when `accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE && !barsHidden` — not on every scroll event.
-
-- **Threshold**: `scrollableRange >= 3 * totalShift`. Pre-hide range must be at least 3x `totalShift` because hiding bars increases the viewport by `totalShift`, shrinking the scrollable range by the same amount. 3x ensures the post-hide range (2x `totalShift`) leaves meaningful scroll distance.
-- **Re-measurement**: The guard calls `measureTotalShift()` to get the authoritative value before evaluating (see `totalShift` measurement below).
+- **Android does NOT use a margin bridge on hide.** Hide: Chromium's compositor tolerates `scrollTop` writes during active scroll. Show: uses a `transform: translateY(-totalShift)` bridge on the container (compositor-only, no layout invalidation) that persists until the next hide.
 
 ### Hide sequence
 
 #### iOS (bridge + deferred settle)
 
-1. **Immediate (momentum-safe)**: Apply `full-screen-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `margin-top: totalShift` bridge on scroll child (`.dynamic-views-bases-container`) — increases `scrollHeight` to keep coordinate space aligned. Lock scroll container height via inline `style.height`. Animate header/navbar via inline styles (transform + opacity) using the double-rAF pattern.
-2. **Idle (debounced)**: Remove `margin-top` -> `scrollTop -= totalShift` -> re-measure height -> relock.
+1. **Immediate (momentum-safe)**: Apply `full-screen-active` CSS class (layout: `margin-top: 0`, toolbar `margin-bottom: -height`, pointer-events removal). Apply `margin-top: totalShift` bridge on scroll child (`.dynamic-views-bases-container`) — increases `scrollHeight` to keep coordinate space aligned. Set opaque mask-image gradient. Animate navbar via inline styles using the double-rAF pattern (transition + target in separate frames — WebKit's passive scroll listener optimization collapses them otherwise). Hide Capacitor status bar.
+2. **Idle (2000ms debounce)**: Remove `margin-top` bridge, `scrollTop -= totalShift`, set tap-shield inlines on header (`transform: translateY(0)`, `opacity: 0`, `margin-top: 0`), unlock-measure-relock height. `settled = true`.
 
 #### Android (WAAPI + bridge-less)
 
-1. **Immediate**: Unlock height -> apply `full-screen-active` CSS class (sets `pointer-events: none` and `transition: none` only — NO `!important` transform/opacity in CSS) -> pin header at current position via inline `transform` (prevents flash during class application) -> `scrollTop -= totalShift` in the same synchronous tick. Chromium's compositor-based scrolling survives `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately. `pendingLayout` deferred for height relock at idle.
-2. **rAF**: Clear `programmaticScroll`. Animate header and navbar hide via `element.animate()` (WAAPI) — transform + opacity to hidden state. `fill: 'forwards'` holds final frame. Cancel any existing animations before starting new ones (rapid cycling safety).
-3. **Idle**: Height relock deferred to idle (`requestIdleCallback` / `setTimeout` fallback). `offsetHeight` read moved out of the animation window to avoid forcing synchronous layout during the transition.
+1. **Immediate**: Cancel pending show rAF and WAAPI animations. Clear show-state inlines and show bridge transform. Pin header/toolbar/search at visible position via inline `!important` styles (prevents flash during class application). Remove height lock. Apply `full-screen-active` class. If `showBridgeActive` is false, `scrollTop -= totalShift` (clamped to 0). If `showBridgeActive` is true, skip scrollTop adjustment (scrollTop was never increased during show). Clear `showBridgeActive`. `settled = true` immediately. Set opaque mask-image gradient. Defer height relock to idle via `pendingLayout`. Hide Capacitor status bar.
+2. **rAF**: Clear `programmaticScroll`. Cancel any running show animations. Remove header/toolbar/search inline pins. Start WAAPI hide animations — separate transform + opacity for header and navbar (per-property timing matches native), opacity-only for toolbar and search. `fill: 'forwards'` holds final frame. Header WAAPI `onfinish` sets tap-shield inlines: `transform: translateY(0)`, `opacity: 0`, `margin-top: 0` (snaps header to natural position as invisible tap absorber). Set `pointer-events: none` on navbar.
+3. **Idle**: Height relock only — `offsetHeight` read deferred to `requestIdleCallback` (with `setTimeout` fallback) to avoid forcing synchronous layout during the animation window.
 
 ### Show sequence
 
 #### iOS (bridge + deferred settle)
 
-3. **Immediate**: Apply `full-screen-showing` CSS class override. If not settled (hide bridge still active), remove `margin-top` — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari's native address bar behavior); `scrollTop += totalShift` at idle compensates. Restore navbar via inline styles — the inline `transition` from hide persists on the element, producing an animated reveal (slide up + fade in). Header animates via Obsidian's native `.view-header` transition (the iOS CSS rule does not suppress it, unlike Android which sets `transition: none`).
-4. **Idle (debounced)**: Remove `margin-top` -> if settled, `scrollTop += totalShift` -> remove all full-screen classes -> unlock height -> re-measure -> relock.
+1. **Immediate**: Add `full-screen-showing` CSS class on `leafContent`. If not settled (hide bridge still active), remove `margin-top` bridge — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari address bar behavior). Restore navbar via inline styles — the inline `transition` from hide persists, producing an animated reveal. Restore mask-image gradient via `restoreMaskImage()` (gradient swap, safe during momentum). Show Capacitor status bar. Toolbar and search fade in via WAAPI in rAF.
+2. **Idle (2000ms debounce)**: Remove `margin-top` bridge. If settled, `scrollTop += totalShift`. Cancel WAAPI animations. Remove `full-screen-showing` class. Clear header inlines (tap-shield removal). Remove `full-screen-active` class. `isActiveHider = false`. Fully remove mask-image inline via `clearMaskImageInline()`. Clear navbar inlines. `settled = false`. Unlock-measure-relock height.
 
-#### Android (WAAPI + direct compensation)
+#### Android (persistent show bridge)
 
-3. **Immediate**: Set `programmaticScroll = true`. Read WAAPI "from" values from `fill:forwards` state before rAF.
-4. **rAF**:
-   - `applyShowInlines()` — restores `margin-top`, toolbar, search row, header pointer-events/z-index via inline `setProperty()` calls, bypassing `classList` to avoid style invalidation that exceeds the single-threaded WebView compositor's frame budget. Sets `data-dynamic-views-show` attribute on `leafContent` — triggers CSS rules for `::before` scrim and `::after` scroll gradient (attribute selectors only recalc matching pseudos, not descendants).
-   - If settled: `scrollTop += totalShift` — direct compensation for the layout shift from margin-top restoration. Kills any active compositor fling (acceptable — see UX requirement 6).
-   - Unlock stale height lock (must happen in this rAF — see invariant 14).
-   - `restoreMaskImage()` — restore mask-image gradient on workspace split.
-   - Clear `programmaticScroll`.
-   - Start show WAAPI animations BEFORE canceling old animations (later-created animations have higher composite priority per WAAPI section 4.6). Header and navbar: transform + opacity to visible state. Toolbar + search: opacity only. `fill: 'forwards'` holds final frame.
-   - Defer Capacitor status bar show to next rAF (separates window inset change from CSS layout reflow).
-5. **Idle (500ms)**: Cancel WAAPI animations (cleanup) -> remove height lock -> `clearShowInlines()` (remove all inline show-state styles) -> remove `full-screen-active` class -> clear navbar/header inlines -> re-measure height -> relock. Deferred via `pendingLayout`.
+1. **Immediate**: Set `programmaticScroll = true`. Clear tap-shield inlines on header (must happen before reading WAAPI "from" values — `onfinish` sets `transform: translateY(0)` which would be read as animation start). Read WAAPI "from" values from `fill: forwards` state before rAF.
+2. **rAF**: `applyShowInlines()` restores `margin-top`, toolbar, search row, header pointer-events/z-index via inline `setProperty()` calls (bypasses `classList` to avoid style invalidation). Sets `data-dynamic-views-show` attribute on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules. If settled, set `transform: translateY(-totalShift)` on container (compositor-only show bridge) and `showBridgeActive = true`. Restore mask-image gradient via `restoreMaskImage()`. Clear `programmaticScroll`. Start show WAAPI animations BEFORE canceling old animations (later-created animations have higher composite priority per WAAPI section 4.6). Header + navbar: transform + opacity. Toolbar + search: opacity only. Cancel old WAAPI animations after new ones start. Defer Capacitor status bar show to next rAF (separates window inset change from CSS layout reflow).
+3. **Idle (500ms)**: Cancel WAAPI animations. Remove `data-dynamic-views-show` attribute. Clear navbar and header inlines. Height lock is NOT unlocked (kept at bars-hidden value — unlocking triggers scroll layer raster invalidation on Chrome/146). `full-screen-active` is NOT removed. `isActiveHider` stays true. Show inlines and show bridge transform persist until the next hide.
+
+### Persistent show bridge (Android)
+
+The Android show path does NOT clean up at idle. Instead:
+
+- **Show rAF** sets `transform: translateY(-totalShift)` on the container — compositor-only, no layout/raster invalidation.
+- **Show idle** only cancels animations, removes `data-dynamic-views-show`, and clears navbar/header inlines. It does NOT remove the transform, does NOT write scrollTop, does NOT clear show inlines, does NOT remove `full-screen-active`, does NOT unlock height.
+- **Bridge persists until next hide**, whose `scrollTop -= totalShift` is batched with the `full-screen-active` class change. The hide path checks `showBridgeActive` — if true, skips `scrollTop` reversal (scrollTop was never increased during show).
+
+This architecture exists because Chrome/146 WebView's single-threaded compositor flashes content for one frame during any `scrollTop` write (tile re-rasterization). The persistent bridge eliminates all show-path `scrollTop` writes.
 
 ### `totalShift` measurement
 
 `totalShift` is initially measured at mount time: toggle `full-screen-active` class, read `getBoundingClientRect().top` before/after on the scroll container, then remove the class.
 
-**Mount-time measurement bug**: `getBoundingClientRect` returns 0 when `[data-type='bases']` CSS selectors don't match at construction time (the leaf hasn't received its `data-type` attribute yet). The `measureTotalShift()` method provides the authoritative re-measurement from live DOM: `getComputedStyle(viewContent).marginTop + toolbar.offsetHeight`. It is called both at guard evaluation time and inside `hideBarsUI()`, and is gated on `!body.classList.contains('full-screen-active')` (otherwise `marginTop` reads as 0 from the class rule).
+**Mount-time measurement bug**: `getBoundingClientRect` returns 0 when `[data-type='bases']` CSS selectors do not match at construction time (the leaf has not received its `data-type` attribute yet). The `measureTotalShift()` method provides the authoritative re-measurement from live DOM: `getComputedStyle(viewContent).marginTop + toolbar.offsetHeight + searchRow.offsetHeight`. It is called in the hide threshold check (before `hideBarsUI()`) and again inside `hideBarsUI()` itself, and is gated on `!body.classList.contains('full-screen-active')` (otherwise `marginTop` reads as 0 from the class rule).
 
 ### Why a bridge
 
-Direct `scrollTop` compensation is impossible — `scrollTop` writes kill scroll unconditionally (during momentum, active touch, and idle). See `knowledge/webkit-compositor-constraints.md` for details. The bridge uses `margin-top` on the scroll child to visually cancel the layout shift. Unlike the previous `translateY` approach, `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, so there are no false top/bottom at scroll boundaries. At idle when no scroll is active, the margin is removed and a real `scrollTop` adjustment takes its place.
+Direct `scrollTop` compensation is impossible on iOS — `scrollTop` writes kill scroll unconditionally (during momentum, active touch, and idle). See `webkit-compositor-constraints.md` for details. The bridge uses `margin-top` on the scroll child to visually cancel the layout shift. Unlike the previous `translateY` approach, `margin-top` adjusts `scrollHeight` in sync with visual displacement — the coordinate space stays aligned, so there are no false top/bottom at scroll boundaries. At idle when no scroll is active, the margin is removed and a real `scrollTop` adjustment takes its place.
+
+## Header tap intercept
+
+A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-header`. When bars are hidden, the header element is positioned as an invisible tap shield in the status bar zone (via inline `transform: translateY(0)`, `opacity: 0`, `margin-top: 0`). Tapping this zone reveals bars.
+
+- **Guard**: Fires only when `barsHidden` is true.
+- **Action**: Sets `lastToggleTime` before calling `showBarsUI()` — prevents cooldown from being bypassed.
+- **CSS support**: `.view-header` has a `min-height` covering `safe-area-inset-top + view-header-height` during `full-screen-active` to ensure the tap target covers the full status bar zone.
+
+### Tap shield setup
+
+Both platforms set identical tap-shield inlines on the header after hide completes:
+
+- **Android**: Set in the header WAAPI `onfinish` callback (after hide animation completes).
+- **iOS**: Set in the hide settle `pendingLayout` (after 2000ms idle).
+
+The inlines are `transform: translateY(0)` (returns header to natural position from off-screen), `opacity: 0` (invisible), and `margin-top: 0` (overrides Obsidian's `safe-area-inset-top` margin so shield covers from y=0). This matches native Obsidian full-screen behavior.
+
+Tap-shield inlines are cleared by `clearHeaderInlines()` during the show path — on iOS in the show idle `pendingLayout`, on Android via `clearHeaderInlines()` called after starting show WAAPI.
 
 ## Direction detection
 
@@ -164,21 +184,23 @@ All constants are in `src/shared/constants.ts`:
 | `FULL_SCREEN_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
 | `FULL_SCREEN_SCROLL_IDLE_MS` | 2000ms | iOS settle debounce — outlasts scroll indicator fade (~1.5s) |
 | `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS` | 500ms | Must exceed FULL_SCREEN_ANIM_MS (300ms) so WAAPI finishes before idle cancels |
+| `FULL_SCREEN_ANIM_MS` | 300ms | Header/navbar slide and toolbar/search fade duration |
+| `FULL_SCREEN_FADE_MS` | 200ms | Header/navbar opacity fade duration |
 
 ### Adaptive auto-show zone
 
 When the hide bridge is active (`!settled`) and the user is scrolling upward (`accumulatedDelta < 0`), the auto-show zone expands from `FULL_SCREEN_TOP_ZONE` (50px) to `totalShift` (~150px). This prevents the margin gap (empty space at the top of the scroll range created by the bridge) from becoming visible. Bridge removal and bar restoration cancel geometrically — the scroll child's `margin-top` removal shifts content up by `totalShift`, while `full-screen-showing` restoring `.view-content` margin shifts the scroll container down by `totalShift`. Net visual shift is zero.
 
-The expansion only activates during upward scroll to prevent hide→auto-show cycling: bars hide at ~80px (TOP_ZONE + HIDE_DEAD_ZONE), well below `totalShift`. During downward scroll (`accumulatedDelta >= 0`), the normal 50px zone applies. After settle, the bridge is removed and the normal zone applies in all directions.
+The expansion only activates during upward scroll to prevent hide-then-auto-show cycling: bars hide at ~80px (TOP_ZONE + HIDE_DEAD_ZONE), well below `totalShift`. During downward scroll (`accumulatedDelta >= 0`), the normal 50px zone applies. After settle, the bridge is removed and the normal zone applies in all directions.
 
 ### Sustain gate
 
-The sustain gate (`Date.now() - directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS`) prevents false triggers from deceleration bounce — short-lived delta reversals at the end of a fling. Applied to BOTH hide and show directions:
+The sustain gate (`Date.now() - directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS`) prevents false triggers from deceleration bounce — short-lived delta reversals at the end of a fling. Applied to BOTH hide and show on iOS:
 
-- **Scroll-down deceleration**: brief upward delta -> false show trigger
-- **Scroll-up deceleration**: brief downward delta -> false hide trigger
+- **Scroll-down deceleration**: Brief upward delta produces false show trigger.
+- **Scroll-up deceleration**: Brief downward delta produces false hide trigger.
 
-Without the sustain gate on hide, rapid hide/show cycling occurred during fast downward scrolls.
+Skipped on Android — Chromium fling decelerates monotonically (no bounce).
 
 ### Cooldown accumulator reset
 
@@ -209,7 +231,11 @@ Direct height calculation (`currentHeight + totalShift`) was rejected — it com
 
 ### `flex: 1` override behavior
 
-The locked `height` doesn't truly constrain the scroll container because `.bases-view` has `flex: 1` in Obsidian's layout. The inline `height` acts as a `flex-basis` hint that WebKit respects during the brief transition period. True locking with `flex: 0 0 auto` was rejected — it creates a visible gap strip at the bottom of the viewport when bars are hidden.
+The locked `height` does not truly constrain the scroll container because `.bases-view` has `flex: 1` in Obsidian's layout. The inline `height` acts as a `flex-basis` hint that WebKit respects during the brief transition period. True locking with `flex: 0 0 auto` was rejected — it creates a visible gap strip at the bottom of the viewport when bars are hidden.
+
+### Android height lock persistence
+
+On Android, the height lock is NOT unlocked during show idle. Unlocking triggers scroll layer raster invalidation that flashes on Chrome/146. The stale height lock (bars-hidden value) persists — the extra `totalShift` pixels of scroll space are negligible on top of the ~50% scroll-past-end padding. Height is only unlocked at unmount or the next hide cycle.
 
 ## Tap-to-reveal
 
@@ -224,6 +250,7 @@ Certain tap targets must NOT reveal bars — their tap has a dedicated function 
 | **Cover image** | `.card-cover` | Opens image viewer |
 | **Thumbnail** | `.card-thumbnail` | Opens image viewer |
 | **Poster card with image** | `.image-format-poster.has-poster` | Toggles `poster-revealed` |
+| **Group collapse region** | `.bases-group-collapse-region` | Triggers fold/unfold |
 
 Cover/thumbnail exemption has one exception: if image viewer is disabled (`dynamic-views-image-viewer-disabled`) AND open action is "press on title" (`dynamic-views-open-on-title`), the image tap is non-interactive, so bars reveal.
 
@@ -236,7 +263,7 @@ After exemptions, bars show when:
 1. **Tap outside a card** — `!target.closest('.card')`
 2. **Open-on-title mode, non-title tap** — card body is non-interactive, so tap reveals bars. Title link taps (`.card-title a`) are exempt (they open the file).
 
-In open-on-card mode, card body taps don't reveal bars — the card's click handler opens the file.
+In open-on-card mode, card body taps do not reveal bars — the card's click handler opens the file.
 
 ## Platform branches
 
@@ -244,27 +271,26 @@ In open-on-card mode, card body taps don't reveal bars — the card's click hand
 
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_MS = 2000ms`. Outlasts the native scroll indicator fade (~1.5s after last scroll event), making the settle's `scrollTop` write invisible.
 - **Sustain gate**: 80ms on both directions. Required because iOS momentum produces deceleration bounce (brief delta reversals).
-- **Double-rAF**: Required for bar hide animations. WebKit's passive scroll listener optimization collapses transition + target into one style recalc without it. See `knowledge/webkit-compositor-constraints.md`.
-- **Show path**: Synchronous class toggle — no two-frame split. Navbar animates via the inline `transition` persisting from hide. Header animates via Obsidian's native `.view-header` transition (not suppressed on iOS).
+- **Double-rAF**: Required for bar hide animations. WebKit's passive scroll listener optimization collapses transition + target into one style recalc without it. See `webkit-compositor-constraints.md`.
+- **Show path**: Synchronous class toggle — no two-frame split. Navbar animates via the inline `transition` persisting from hide. Header animates via Obsidian's native `.view-header` transition (not suppressed on iOS). Toolbar and search fade in via WAAPI in rAF.
+- **Mask-image**: `restoreMaskImage()` called synchronously in the show path (gradient swap is safe during momentum). `clearMaskImageInline()` called at show idle (structural removal only safe at rest).
+- **Show idle cleanup**: `clearHeaderInlines()` removes tap-shield inlines before removing `full-screen-active`. `isActiveHider` set to false. Full class and inline cleanup.
 - **Scroll indicator**: Jumps when bars hide/show because the scroll container's effective height changes. Matches Safari's native address bar behavior. Accepted.
 
 ### Android
 
-- **Bridge-less hide, direct compensation show**: Android hide path uses NO bridge — class toggle + `scrollTop` adjustment in the same synchronous tick. Chromium's compositor-based scrolling is resilient to `scrollTop` writes during active scroll (unlike iOS WebKit where they are unconditionally fatal). `settled = true` immediately, no deferred settle needed. Show path uses direct `scrollTop += totalShift` compensation in the show rAF. This kills any active compositor fling, but eliminates the false ceiling that the previous reverse bridge approach created.
-- **WAAPI animations**: Header and navbar hide/show use `element.animate()` (Web Animations API) instead of CSS transitions. WAAPI gets better compositor scheduling on Chromium WebView for transform+opacity animations during active scroll. `fill: 'forwards'` holds the final frame. Animations are cancelled before starting new ones (rapid cycling safety) and cancelled during idle cleanup and unmount.
-- **Split CSS rules**: iOS keeps `!important` transform/opacity in CSS class rules. Android CSS only sets `pointer-events` + `transition: none` — transform/opacity are controlled entirely via JS/WAAPI. This split exists because WAAPI animation effects are lower in the cascade than `!important` author declarations — WAAPI cannot override `!important` CSS.
-- **`will-change` pre-promotion**: Navbar gets true mount-time pre-promotion via inline `will-change: transform, opacity` (set in constructor). Header's `will-change` is in the `.full-screen-active` CSS rule — it activates when the class is applied (first hide), not at mount time. Both eliminate the first-transform layer promotion stall that otherwise causes a visible hitch.
-- **Height relock deferred to idle**: `offsetHeight` forced layout moved out of the animation window to `requestIdleCallback` (with `setTimeout` fallback). Prevents synchronous layout during the transition frame.
-- **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 500ms`. Used only for show path class cleanup (`pendingLayout`).
-- **Sustain gate**: Bypassed. Android Chromium produces less deceleration bounce than iOS and the gate is unnecessary.
-- **Single-rAF**: Bar hide uses a single `requestAnimationFrame` (not double-rAF). Chromium doesn't collapse transitions in passive listeners.
-- **Show path**:
-  - Uses `applyShowInlines()`/`clearShowInlines()` to restore bars via inline `setProperty()` calls, bypassing `classList` entirely to avoid style invalidation that exceeds the single-threaded WebView compositor's frame budget.
-  - Sets `data-dynamic-views-show` attribute on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules (attribute selectors only recalc matching pseudos, not descendants — custom properties on `leafContent` would inherit to every card, triggering subtree-wide style recalc).
-  - Direct class removal (`classList.remove('full-screen-active')`) causes a white flash — Chromium renders intermediate layout states within a single synchronous tick, so the 99px `margin-top` gap appears as a white strip before `scrollTop` compensation takes effect. `applyShowInlines()` restores bars visually first, then class removal is deferred to idle.
-  - Direct `scrollTop += totalShift` compensates the layout shift in the show rAF. `restoreMaskImage()` also runs in the show rAF (not deferred to idle).
-  - Inline cleanup + `data-dynamic-views-show` removal deferred to idle (500ms) via `pendingLayout`.
-- **`programmaticScroll` deadlock**: `programmaticScroll = true` blocks ALL scroll events in `onScroll`. If not cleared promptly (via rAF), the idle timer never fires and `pendingLayout` never runs — causing a deadlock where bars can only hide once. The rAF clear after `scrollTop` writes is load-bearing.
+- **Bridge-less hide**: Class toggle + `scrollTop` adjustment in the same synchronous tick. Chromium's compositor tolerates mid-scroll `scrollTop` writes (unlike iOS where they are unconditionally fatal). `settled = true` immediately. No deferred settle needed.
+- **Persistent show bridge**: Show rAF sets `transform: translateY(-totalShift)` on container (compositor-only). Bridge persists until the next hide — no `scrollTop` write, no class removal, no inline cleanup at show idle. Eliminates Chrome/146 flash from `scrollTop` tile re-rasterization.
+- **WAAPI animations**: Header and navbar hide/show use `element.animate()` (Web Animations API). WAAPI gets better compositor scheduling on the single-threaded WebView compositor. `fill: 'forwards'` holds the final frame. Animations are cancelled before starting new ones (rapid cycling safety).
+- **Show WAAPI ordering**: Show WAAPI animations are started BEFORE canceling old hide animations. Later-created animations have higher composite priority per WAAPI section 4.6 — canceling hide first would snap elements visible for one frame before show starts.
+- **Split CSS rules**: iOS keeps `!important` transform/opacity in CSS class rules. Android CSS only sets `pointer-events` + `transition: none` — transform/opacity are controlled entirely via JS/WAAPI. WAAPI animation effects are lower in the cascade than `!important` author declarations.
+- **`will-change` pre-promotion**: Navbar gets mount-time pre-promotion via inline `will-change: transform, opacity` (set in constructor). Header's `will-change` is in the `.full-screen-active` CSS rule. Both eliminate the first-transform layer promotion stall.
+- **Show inline bypass**: `applyShowInlines()`/`clearShowInlines()` restore bars via inline `setProperty()` calls, bypassing `classList` entirely to avoid style invalidation that exceeds the single-threaded WebView compositor's frame budget.
+- **`data-dynamic-views-show` attribute**: Set on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules. Attribute selectors only recalc matching pseudos, not descendants.
+- **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 500ms`. Used for show idle cleanup (animation cancel, attribute removal, navbar/header inline clear).
+- **Sustain gate**: Bypassed. Android Chromium fling decelerates monotonically (no bounce).
+- **Single-rAF**: Bar hide uses a single `requestAnimationFrame` (not double-rAF). Chromium does not collapse transitions in passive listeners.
+- **`programmaticScroll` deadlock**: `programmaticScroll = true` blocks ALL scroll events in `onScroll`. If not cleared promptly (via rAF), the idle timer never fires and `pendingLayout` never runs — bars can only hide once. The rAF clear after `scrollTop` writes is load-bearing.
 - **Scrollbar**: Never auto-fades. Scrollbar resize during settle is always visible — accepted as inherent to the platform.
 
 #### WebView compositor limitation
@@ -273,23 +299,21 @@ Android WebView uses a single-threaded (synchronous) compositor — the impl thr
 
 The practical impact: CSS transitions during active scroll compete with scroll processing for the same thread, causing 30-55ms frame gaps (2-3 dropped frames at 60fps). WAAPI gets better compositor scheduling than CSS transitions but does not fully eliminate contention — this is a WebView architectural limitation, not fixable at the application level.
 
-Source: Chromium WebView threading docs, synchronous compositing design doc.
-
 ## Invariants
 
 1. **Momentum safety (iOS)**: NEVER write `scrollTop` during momentum or active touch. `scrollTop` writes are only safe at true scroll-idle (detected via scroll debounce, NOT `scrollend` on WebKit).
-2. **Bridge math (iOS only)**: `margin-top: totalShift` on hide (positive margin increases `scrollHeight`). On show, the hide bridge is removed when unsettled (geometric cancellation); no bridge is applied when settled — bars reappear naturally. Bridge and `scrollTop` adjustment must use the same `totalShift` value. Android uses no bridge.
+2. **Bridge math (iOS only)**: `margin-top: totalShift` on hide (positive margin increases `scrollHeight`). On show, the hide bridge is removed when unsettled (geometric cancellation); no bridge is applied when settled — bars reappear naturally. Bridge and `scrollTop` adjustment must use the same `totalShift` value. Android uses `transform` bridge on show, `scrollTop` on hide.
 3. **No pre-promotion needed**: The `margin-top` bridge does not involve compositor layers, so no `transform: translateY(0)` pre-promotion is required at initialization.
 4. **Cooldown accumulator reset**: `accumulatedDelta` must be reset to 0 on every scroll event during cooldown. Layout-induced synthetic deltas (~250px) would otherwise trigger the opposite transition immediately.
-5. **Height lock lifecycle**: Lock at hide time, unlock-measure-relock at settle, unlock at full show cleanup. Never leave height locked after all full-screen classes are removed.
+5. **Height lock lifecycle**: Lock at hide time. iOS: unlock-measure-relock at settle, unlock at full show cleanup. Android: height lock persists through show — NOT unlocked at show idle. Only unlocked at the next hide or unmount.
 6. **Programmatic scroll guard**: `scrollTop` writes must set a `programmaticScroll` flag. The scroll handler must check this flag and skip processing. On Android, the flag MUST be cleared in the next rAF — blocking it longer prevents the idle timer from firing `pendingLayout`, causing a deadlock.
 7. **No `will-change: transform` on scroll containers**: Breaks scroll event detection on child containers. Use `transform: translateY(0)` for pre-promotion instead.
 8. **Instant layout only**: Layout mutations during scroll must use `transition: none`. Animated transitions (any duration > 0) cause continuous relayout that kills momentum.
-9. **`measureTotalShift()` before hide**: Mount-time `getBoundingClientRect` may return 0 if CSS selectors don't match at construction time. `measureTotalShift()` must be called before any hide to ensure the authoritative value. Only valid when `full-screen-active` is NOT on body.
-10. **Short-view guard**: Hide must be skipped when `scrollableRange < 3 * totalShift`. Post-hide range would be only `2 * totalShift`, leaving insufficient scroll distance.
-11. **Android: no direct class removal on show**: `classList.remove('full-screen-active')` without restoring bars first causes a white flash — Chromium renders the intermediate 99px margin gap. Always use `applyShowInlines()` + `data-dynamic-views-show` attribute to restore bars visually, then defer class removal and `clearShowInlines()` to idle.
+9. **`measureTotalShift()` before hide**: Mount-time `getBoundingClientRect` may return 0 if CSS selectors do not match at construction time. `measureTotalShift()` must be called before any hide to ensure the authoritative value. Only valid when `full-screen-active` is NOT on body.
+10. **Android: no direct class removal on show**: `classList.remove('full-screen-active')` without restoring bars first causes a white flash — Chromium renders the intermediate 99px margin gap. Always use `applyShowInlines()` + `data-dynamic-views-show` attribute to restore bars visually. Class removal does NOT happen at show idle — it stays until the next hide.
 12. **Android: no `!important` transform/opacity in CSS**: WAAPI animation effects are lower in the cascade than `!important` author declarations. Android header/navbar transform and opacity must NOT be in CSS `!important` rules — they are controlled entirely via WAAPI and inline styles.
 13. **WAAPI cancel before animate**: WAAPI animations must be cancelled before starting new ones. Rapid hide/show cycling without cancellation causes animation stacking and visual corruption.
-14. **Height lock unlocked in show rAF (Android)**: The stale height lock (bars-hidden height) must be unlocked in the show rAF, NOT deferred to idle.
-15. **`restoreMaskImage()` in show rAF (Android)**: `restoreMaskImage()` runs in the show rAF alongside `applyShowInlines()`. Deferring to idle violates UX requirement 3 (atomic bar transitions) — the navbar gradient appears ~1s late.
+14. **Android show bridge persistence**: Show bridge (`transform: translateY(-totalShift)`) and show inlines persist until the next hide. `scrollTop` is never increased during show — the bridge replaces the compensation. The next hide checks `showBridgeActive` and skips `scrollTop` reversal accordingly.
+15. **`restoreMaskImage()` in show path (both platforms)**: `restoreMaskImage()` runs in the show rAF (Android) or synchronously (iOS). Gradient swap keeps the render surface allocated. Deferring to idle violates UX requirement 3 (atomic bar transitions) — the navbar gradient appears late.
 16. **`data-dynamic-views-show` selectors must terminate on pseudos**: The `[data-dynamic-views-show]` attribute on `leafContent` triggers CSS rules for `::before`/`::after` pseudos only. Selectors using this attribute MUST terminate on a pseudo-element — if they match real descendants, the attribute change triggers subtree-wide style recalc that exceeds the Android WebView compositor frame budget.
+17. **Tap shield cleared before show WAAPI**: On Android, tap-shield inlines (`transform`, `opacity`, `margin-top`) on the header must be cleared before reading WAAPI "from" values. Otherwise `onfinish`'s `transform: translateY(0)` is read as the animation start, producing a fade-only transition with no slide.
