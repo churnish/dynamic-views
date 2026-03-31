@@ -1,9 +1,8 @@
 /**
  * Full screen mobile scrolling — hides navigation bars on scroll-down,
- * shows on scroll-up. Uses a bridge architecture (margin-top on container)
- * to prevent visual jumps during bar hide/show transitions. margin-top
- * adjusts scrollHeight in sync with visual displacement — no false
- * top/bottom at scroll boundaries.
+ * shows on scroll-up. iOS uses a bridge architecture (margin-top on
+ * scroll child) to defer layout mutations until scroll-idle. Android
+ * uses direct scrollTop compensation + WAAPI animations (no bridge).
  *
  * All bar animations (header, navbar slide/fade) match native Obsidian
  * full screen behavior in markdown views.
@@ -131,7 +130,6 @@ export class FullScreenController {
   private lastToggleTime = 0;
   private directionChangeTime = 0;
   private lockedScrollHeight = 0;
-  private showBridgeActive = false;
 
   // Bound handlers for add/removeEventListener
   private readonly onScrollBound: () => void;
@@ -222,7 +220,6 @@ export class FullScreenController {
     this.directionChangeTime = 0;
     this.lastToggleTime = 0;
     this.programmaticScroll = false;
-    this.showBridgeActive = false;
     this.pendingLayout = null;
     this.isActiveHider = false;
 
@@ -344,12 +341,6 @@ export class FullScreenController {
       setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
       setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
     }
-
-    // restoreMaskImage() deferred to idle pendingLayout — removing mask-image
-    // from .workspace-split.mod-root triggers a cross-subtree repaint that
-    // adds unnecessary work to the animation-critical rAF. The ::before scrim
-    // covers the mask-image area during the show animation, so the ~2s delay
-    // until idle cleanup is invisible.
   }
 
   /** Remove show-state inline styles (Android only) */
@@ -439,7 +430,6 @@ export class FullScreenController {
     this.pendingLayout = null;
     this.barsHidden = false;
     this.settled = false;
-    this.showBridgeActive = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -453,18 +443,6 @@ export class FullScreenController {
     const currentTop = this.scrollEl.scrollTop;
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
-
-    // Show bridge removal — when scrolling near top with show bridge
-    // active, remove bridge + adjust scrollTop. Only applies when iOS
-    // show bridge is active (Android no longer uses a reverse bridge).
-    if (this.showBridgeActive && currentTop <= this.totalShift) {
-      this.container.style.removeProperty('margin-top');
-      this.container.style.removeProperty('transition');
-      this.scrollEl.scrollTop = currentTop + this.totalShift;
-      this.prevScrollTop = this.scrollEl.scrollTop;
-      this.showBridgeActive = false;
-      return;
-    }
 
     // Idle settle for pending layout (hide settle or show class removal)
     if (this.scrollIdleTimer != null) clearTimeout(this.scrollIdleTimer);
@@ -552,10 +530,6 @@ export class FullScreenController {
       this.accumulatedDelta = 0;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Deferred bridge removal (fling-safe)
-  // ---------------------------------------------------------------------------
 
   // ---------------------------------------------------------------------------
   // Measurement
@@ -665,18 +639,11 @@ export class FullScreenController {
       this.programmaticScroll = true;
       this.scrollEl.style.removeProperty('height');
       this.body.classList.add('full-screen-active');
-      // Skip scrollTop adjustment when show bridge was active —
-      // scrollTop wasn't changed during show, so hide doesn't need
-      // to compensate. Bridge already cleared in the cleanup block above.
-      if (this.showBridgeActive) {
-        this.showBridgeActive = false;
-      } else {
-        // Clamp to 0 when near top — the skip guard (before >= totalShift)
-        // left scrollTop unchanged, making the first totalShift px of content
-        // inaccessible after hide. The auto-show delta<=0 check prevents the
-        // scrollTop=0 landing from triggering auto-show on the next event.
-        this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
-      }
+      // Clamp to 0 when near top — the skip guard (before >= totalShift)
+      // left scrollTop unchanged, making the first totalShift px of content
+      // inaccessible after hide. The auto-show delta<=0 check prevents the
+      // scrollTop=0 landing from triggering auto-show on the next event.
+      this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
       this.settled = true;
       // Height relock deferred to idle — offsetHeight forces layout that
       // janks mid-animation if done during the 300ms animation window.
@@ -816,8 +783,8 @@ export class FullScreenController {
       // scrim (solid background, full height) covers the gap while the header
       // WAAPI slides in. scrollTop += totalShift compensates the layout shift
       // directly — no reverse bridge needed. This kills any active compositor
-      // fling, but the reverse bridge approach also killed flings (via
-      // earlyBridgeRemoval's scrollTop write) AND created a false ceiling.
+      // fling, but the previous reverse bridge approach also killed flings
+      // (via its scrollTop write near the top) AND created a false ceiling.
       // Direct compensation trades potential show-time jank (~1 frame) for
       // no false top at all.
       this.programmaticScroll = true;
@@ -936,7 +903,6 @@ export class FullScreenController {
 
         this.cancelAnimations();
 
-        this.scrollEl.style.removeProperty('height');
         this.clearShowInlines();
         this.body.classList.remove('full-screen-active');
         this.isActiveHider = false;
