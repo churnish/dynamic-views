@@ -7,7 +7,7 @@
  *
  * Disabled on mobile: WebKit enters an infinite reflow loop when IO-toggled
  * content-visibility: hidden changes card geometry, re-triggering the observer.
- * Mobile falls back to CSS content-visibility: auto (browser-managed).
+ * Mobile relies on virtual scroll mount/unmount only (see ios-webkit-quirks.md).
  */
 
 import { Platform } from 'obsidian';
