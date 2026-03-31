@@ -93,7 +93,7 @@
 /* Mobile: scaleX(0.333) produces 1 device pixel on all mobile DPRs
    (2x: 0.666→1, 2.625x: 0.875→1, 3x: 1.0→1). Without it, the 1px
    pseudo-element rounds to 2 device pixels at unfavorable x-offsets. */
-.is-mobile .setting-sub-items::before {
+.is-phone .setting-sub-items::before {
   transform: scaleX(0.333);
   transform-origin: left center;
 }
