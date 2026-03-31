@@ -367,12 +367,12 @@ body:is(
   }
 }
 
-/* Grid: all poster cards get aspect-ratio (override height:100% to prevent width expansion) */
+/* Grid: poster cards get height: auto (override height:100% to prevent width expansion).
+   aspect-ratio is set conditionally — see fixed/dynamic rules below. */
 /* Masonry: only cards with images get aspect-ratio */
 .dynamic-views {
   .dynamic-views-grid .card.image-format-poster {
     height: auto;
-    aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
   }
 
   .dynamic-views-masonry .card.image-format-poster.has-poster {
@@ -391,8 +391,65 @@ body:is(
   }
 }
 
+/* Grid fixed poster height: slider value (default — fires with or without Style Settings) */
+body:not(
+    .dynamic-views-fixed-poster-height-masonry,
+    .dynamic-views-fixed-poster-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.image-format-poster {
+  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+}
+
+/* Grid dynamic poster height: match tallest poster in row via JS-set variable */
+body:is(
+    .dynamic-views-fixed-poster-height-masonry,
+    .dynamic-views-fixed-poster-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.image-format-poster.has-poster {
+  aspect-ratio: 1 /
+    var(
+      --row-poster-aspect-ratio,
+      var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
+    );
+}
+
+/* Grid dynamic poster height + contain: cap at slider to collapse bars without exceeding slider */
+body:is(
+    .dynamic-views-fixed-poster-height-masonry,
+    .dynamic-views-fixed-poster-height-none
+  )
+  .dynamic-views.image-fit-contain
+  .dynamic-views-grid
+  .card.image-format-poster.has-poster {
+  aspect-ratio: 1 /
+    min(
+      var(
+        --row-poster-aspect-ratio,
+        var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
+      ),
+      var(--dynamic-views-image-aspect-ratio, 1)
+    );
+}
+
 /* Masonry contain + fixed poster height: force slider value (bars visible) */
-body.dynamic-views-fixed-poster-height
+body:is(
+    .dynamic-views-fixed-poster-height-masonry,
+    .dynamic-views-fixed-poster-height-both
+  )
+  [data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card.image-format-poster.has-poster {
+  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+}
+
+/* Backward compat: old class-toggle → masonry fixed poster height */
+body.dynamic-views-fixed-poster-height:not(
+    [class*='dynamic-views-fixed-poster-height-']
+  )
   [data-view-type='dynamic-views-masonry']
   .dynamic-views.image-fit-contain
   .card.image-format-poster.has-poster {

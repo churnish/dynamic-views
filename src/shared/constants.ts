@@ -98,6 +98,17 @@ export const FIXED_COVER_HEIGHT_GRID = 'dynamic-views-fixed-cover-height-grid';
 export const FIXED_COVER_HEIGHT_MASONRY =
   'dynamic-views-fixed-cover-height-masonry';
 export const FIXED_COVER_HEIGHT_BOTH = 'dynamic-views-fixed-cover-height-both';
+export const FIXED_COVER_HEIGHT_NONE = 'dynamic-views-fixed-cover-height-none';
+
+// Fixed poster height body classes (Style Settings class-select options)
+export const FIXED_POSTER_HEIGHT_GRID =
+  'dynamic-views-fixed-poster-height-grid';
+export const FIXED_POSTER_HEIGHT_MASONRY =
+  'dynamic-views-fixed-poster-height-masonry';
+export const FIXED_POSTER_HEIGHT_BOTH =
+  'dynamic-views-fixed-poster-height-both';
+export const FIXED_POSTER_HEIGHT_NONE =
+  'dynamic-views-fixed-poster-height-none';
 
 /** Size-adaptive hover scale for a card — consistent gap consumption regardless of height.
     Returns empty string for invalid heights (removes property, falls back to CSS default). */

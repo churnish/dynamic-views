@@ -52,8 +52,10 @@ import {
   MOUNT_REMEASURE_MS,
   MOMENTUM_GUARD_MS,
   HIDDEN_BUFFER_MULTIPLIER,
-  FIXED_COVER_HEIGHT_GRID,
-  FIXED_COVER_HEIGHT_BOTH,
+  FIXED_COVER_HEIGHT_MASONRY,
+  FIXED_COVER_HEIGHT_NONE,
+  FIXED_POSTER_HEIGHT_MASONRY,
+  FIXED_POSTER_HEIGHT_NONE,
   computeHoverScale,
   DIRECTION_ACCUM_THRESHOLD,
   HIGH_VELOCITY_THRESHOLD,
@@ -3113,6 +3115,7 @@ export class DynamicViewsGridView extends BasesView {
         }
         this.remeasureMountedCards();
         this.equalizeRowCoverHeights();
+        this.equalizeRowPosterHeights();
       });
     });
   }
@@ -3147,6 +3150,7 @@ export class DynamicViewsGridView extends BasesView {
     this.cardResizeDirty = false;
     this.remeasureMountedCards();
     this.equalizeRowCoverHeights();
+    this.equalizeRowPosterHeights();
   }
 
   private remeasureMountedCards(): void {
@@ -3272,9 +3276,11 @@ export class DynamicViewsGridView extends BasesView {
     if (!this.containerEl?.isConnected) return;
 
     const body = this.containerEl.ownerDocument.body;
+    // Fixed height is OFF only when -masonry or -none is explicitly set.
+    // Matches CSS :not(-masonry, -none) fallback — no class = fixed height on.
     const isGridFixedHeight =
-      body.classList.contains(FIXED_COVER_HEIGHT_GRID) ||
-      body.classList.contains(FIXED_COVER_HEIGHT_BOTH);
+      !body.classList.contains(FIXED_COVER_HEIGHT_MASONRY) &&
+      !body.classList.contains(FIXED_COVER_HEIGHT_NONE);
 
     // Collect all mounted cover cards
     const coverCards: HTMLElement[] = [];
@@ -3347,6 +3353,89 @@ export class DynamicViewsGridView extends BasesView {
     }
   }
 
+  /**
+   * When fixed poster height is OFF in Grid, equalize poster aspect ratios
+   * within each row so all posters match the tallest image.
+   * Batch reads then writes to avoid interleaved reflows.
+   */
+  private equalizeRowPosterHeights(): void {
+    if (!this.containerEl?.isConnected) return;
+
+    const body = this.containerEl.ownerDocument.body;
+    // Fixed height is OFF only when -masonry or -none is explicitly set.
+    // Matches CSS :not(-masonry, -none) fallback — no class = fixed height on.
+    const isGridFixedHeight =
+      !body.classList.contains(FIXED_POSTER_HEIGHT_MASONRY) &&
+      !body.classList.contains(FIXED_POSTER_HEIGHT_NONE);
+
+    // Collect all mounted poster cards with images
+    const posterCards: HTMLElement[] = [];
+    for (const [, groupItems] of this.virtualItemsByGroup) {
+      for (const item of groupItems) {
+        if (
+          item.el?.isConnected &&
+          item.el.classList.contains('image-format-poster') &&
+          item.el.classList.contains('has-poster')
+        ) {
+          posterCards.push(item.el);
+        }
+      }
+    }
+
+    if (isGridFixedHeight) {
+      // Clear stale values when fixed height is active
+      for (const card of posterCards) {
+        card.style.removeProperty('--row-poster-aspect-ratio');
+      }
+      return;
+    }
+
+    const columns = this.lastColumnCount;
+    if (columns <= 0) return;
+
+    // Process each group's cards by row
+    for (const [, groupItems] of this.virtualItemsByGroup) {
+      // Collect poster cards with images and their indices for row grouping
+      const indexedPosters: { index: number; el: HTMLElement }[] = [];
+      for (let i = 0; i < groupItems.length; i++) {
+        const el = groupItems[i].el;
+        if (
+          el?.isConnected &&
+          el.classList.contains('image-format-poster') &&
+          el.classList.contains('has-poster')
+        ) {
+          indexedPosters.push({ index: i, el });
+        }
+      }
+
+      // Read phase: batch all getComputedStyle reads
+      const ratios: { index: number; el: HTMLElement; ratio: number }[] = [];
+      for (const { index, el } of indexedPosters) {
+        const raw = this.win
+          .getComputedStyle(el)
+          .getPropertyValue('--actual-aspect-ratio');
+        const ratio = parseFloat(raw);
+        ratios.push({ index, el, ratio: isNaN(ratio) ? 0 : ratio });
+      }
+
+      // Group by row and find max per row
+      const rowMaxes = new Map<number, number>();
+      for (const { index, ratio } of ratios) {
+        const row = Math.floor(index / columns);
+        const current = rowMaxes.get(row) ?? 0;
+        if (ratio > current) rowMaxes.set(row, ratio);
+      }
+
+      // Write phase: set --row-poster-aspect-ratio on each card.
+      // All poster cards in a row get the row max — all-empty rows get 0.
+      for (const { index, el } of ratios) {
+        const row = Math.floor(index / columns);
+        const maxRatio = rowMaxes.get(row) ?? 0;
+        el.style.setProperty('--row-poster-aspect-ratio', maxRatio.toString());
+      }
+    }
+  }
+
   private onMountRemeasure(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.lastMeasuredCardWidth <= 0) return;
@@ -3384,6 +3473,7 @@ export class DynamicViewsGridView extends BasesView {
 
     this.remeasureMountedCards();
     this.equalizeRowCoverHeights();
+    this.equalizeRowPosterHeights();
 
     // Defer clearing — ResizeObserver callbacks from lock release fire
     // between RAF and paint (same frame). Previously-mounted cards in
@@ -3396,6 +3486,7 @@ export class DynamicViewsGridView extends BasesView {
         this.cardResizeDirty = false;
         this.remeasureMountedCards();
         this.equalizeRowCoverHeights();
+        this.equalizeRowPosterHeights();
       }
     });
   }

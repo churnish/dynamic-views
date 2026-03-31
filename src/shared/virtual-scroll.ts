@@ -8,9 +8,9 @@ import type { CardData } from './card-renderer';
 import type { CardHandle } from '../bases/shared-renderer';
 import {
   UNMEASURED_CARD_HEIGHT,
-  FIXED_COVER_HEIGHT_GRID,
   FIXED_COVER_HEIGHT_MASONRY,
   FIXED_COVER_HEIGHT_BOTH,
+  FIXED_COVER_HEIGHT_NONE,
 } from './constants';
 
 /** Lightweight representation of a card's position and data when unmounted */
@@ -47,7 +47,10 @@ export interface VirtualItem {
   handle: CardHandle | null;
 }
 
-/** Check if fixed cover height is active for this card's view context. */
+/** Check if fixed cover height is active for this card's view context.
+ *  Masonry: explicit opt-in (-masonry or -both).
+ *  Grid: default on — off only when -masonry or -none is explicit.
+ *  Matches CSS :not(-masonry, -none) fallback (no class = fixed height on). */
 function isFixedCoverHeight(cardEl: HTMLElement): boolean {
   const body = cardEl.ownerDocument.body;
   const isMasonry = !!cardEl.closest('.dynamic-views-masonry');
@@ -57,9 +60,10 @@ function isFixedCoverHeight(cardEl: HTMLElement): boolean {
       body.classList.contains(FIXED_COVER_HEIGHT_BOTH)
     );
   }
+  // Grid: fixed height is OFF only when -masonry or -none is explicitly set
   return (
-    body.classList.contains(FIXED_COVER_HEIGHT_GRID) ||
-    body.classList.contains(FIXED_COVER_HEIGHT_BOTH)
+    !body.classList.contains(FIXED_COVER_HEIGHT_MASONRY) &&
+    !body.classList.contains(FIXED_COVER_HEIGHT_NONE)
   );
 }
 
