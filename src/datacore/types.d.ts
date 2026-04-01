@@ -36,6 +36,8 @@ declare module 'obsidian' {
       ): unknown;
       onDragStart(evt: DragEvent, dragData: unknown): void;
     };
+    /** Debug: slow mount toggle for mount ordering work (temporary) */
+    __slowMount?: (on?: boolean) => string;
   }
   interface MetadataCache {
     /** Get all known property types across the vault (undocumented API) */
@@ -71,6 +73,17 @@ declare global {
   interface Window {
     app: import('obsidian').App;
   }
+  /** Capacitor plugin bridge — present on iOS/Android only */
+  var Capacitor:
+    | {
+        Plugins?: {
+          StatusBar?: {
+            hide(): Promise<void>;
+            show(): Promise<void>;
+          };
+        };
+      }
+    | undefined;
 }
 
 /**

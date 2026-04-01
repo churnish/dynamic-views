@@ -71,10 +71,7 @@ export interface FullScreenElements {
 }
 
 // Capacitor StatusBar plugin — hides/shows iOS system status bar elements
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-const capacitorStatusBar = (globalThis as any).Capacitor?.Plugins?.StatusBar as
-  | { hide(): Promise<void>; show(): Promise<void> }
-  | undefined;
+const capacitorStatusBar = globalThis.Capacitor?.Plugins?.StatusBar;
 
 // ---------------------------------------------------------------------------
 // Inline style helpers — obsidianmd/no-static-styles-assignment only flags

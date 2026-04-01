@@ -41,6 +41,16 @@ import { installDropTextPatch } from './src/shared/drag';
 import { invalidateCacheForFile } from './src/shared/image-loader';
 import { getNotebookNavigatorAPI } from './src/utils/notebook-navigator';
 
+/** Undocumented Bases view shape — used only by __slowMount debug utility */
+interface DebugBasesView {
+  controller?: {
+    view?: {
+      virtualItems?: unknown[];
+      debugSlowMount?: boolean;
+    };
+  };
+}
+
 // Plugin/feature names (proper nouns, not subject to sentence case)
 const DATACORE = 'Datacore';
 const GRID = 'Grid';
@@ -116,15 +126,11 @@ export default class DynamicViews extends Plugin {
 
     // TEMP DEBUG — kept intentionally for ongoing mount ordering work.
     // Console: __slowMount() / __slowMount(false). Auditors: ignore.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    (this.app as any).__slowMount = (on = true) => {
+    this.app.__slowMount = (on = true) => {
       let count = 0;
       for (const leaf of this.app.workspace.getLeavesOfType('bases')) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        const view = (leaf as any).view?.controller?.view;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        if (view?.virtualItems?.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        const view = (leaf.view as unknown as DebugBasesView).controller?.view;
+        if (view && view.virtualItems && view.virtualItems.length > 0) {
           view.debugSlowMount = on;
           count++;
         }
@@ -377,6 +383,8 @@ export default class DynamicViews extends Plugin {
     // registerInterval auto-clears on plugin unload.
     this.app.workspace.onLayoutReady(() => {
       if (!this.registerNotebookNavigatorMenus()) {
+        // NN not installed — skip retry loop
+        if (!this.app.plugins?.plugins?.['notebook-navigator']) return;
         const deadline = Date.now() + 10_000;
         const id = this.registerInterval(
           window.setInterval(() => {
@@ -385,11 +393,6 @@ export default class DynamicViews extends Plugin {
               Date.now() >= deadline
             ) {
               window.clearInterval(id);
-              if (Date.now() >= deadline) {
-                console.warn(
-                  'Dynamic Views: Notebook Navigator API not available after 10 s'
-                );
-              }
             }
           }, 500)
         );
@@ -619,8 +622,7 @@ return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
   }
 
   onunload() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    delete (this.app as any).__slowMount;
+    delete this.app.__slowMount;
 
     // Remove body classes added during load
     const settings = this.persistenceManager.getPluginSettings();
