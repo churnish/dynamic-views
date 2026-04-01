@@ -6,6 +6,12 @@
     gap: var(--size-4-2);
   }
 
+  /* Clip URL icon's physical overflow (negative margins don't fully offset padding)
+     to prevent it from inflating card-body scroll height in poster mode */
+  .card.image-format-poster .card-header {
+    overflow: hidden;
+  }
+
   .card-title-block {
     display: flex;
     flex-direction: column;
