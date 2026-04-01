@@ -11,6 +11,16 @@
   transition: none !important;
 }
 
+/* Skip image fade-in on virtual scroll remount (card-level, set by JS).
+   Only force opacity — preserve transform/scale transitions for hover zoom. */
+.card.skip-image-fade.image-format-cover .card-cover img,
+.card.skip-image-fade .card-thumbnail img,
+.card.skip-image-fade:is(.image-format-backdrop, .image-format-poster)
+  :is(.card-backdrop, .card-poster)
+  img {
+  opacity: 1 !important;
+}
+
 /* Themes can dim images via img:not(:hover) — our img has pointer-events: none,
    so :hover never fires. Use hover-intent-active instead.
    [data-type] bumps specificity above theme selectors. */
