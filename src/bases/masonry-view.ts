@@ -60,6 +60,7 @@ import {
   ROWS_PER_COLUMN,
   MAX_BATCH_SIZE,
   SCROLL_THROTTLE_MS,
+  SCROLL_IDLE_SYNC_MS,
   MASONRY_CORRECTION_MS,
   SCROLL_CORRECTION_INTERVAL_MS,
   INITIAL_REMEASURE_MS,
@@ -283,6 +284,12 @@ export class DynamicViewsMasonryView extends BasesView {
   private collapsedGroups: Set<string> = new Set();
   private viewId: string | null = null;
   private fullScreen: FullScreenController | null = null;
+  // WebKit momentum guard — defer heavy work while compositor coasts
+  private touchActive = true;
+  private lastTouchEndTime = 0;
+  private momentumIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private touchAbort: AbortController | null = null;
+  private momentumFlushScheduled = false;
   // #endregion State & field declarations
   // #region Group collapse/expand
   /** Get the current file by resolving from the leaf's view state (cached).
@@ -545,6 +552,37 @@ export class DynamicViewsMasonryView extends BasesView {
     this.onDataUpdated();
   }
   // #endregion Group collapse/expand
+  // #region WebKit momentum guard
+  private isWebKitCoasting(): boolean {
+    return Platform.isIosApp && !this.touchActive;
+  }
+
+  private clearMomentumIdleTimer(): void {
+    if (this.momentumIdleTimer !== null) {
+      clearTimeout(this.momentumIdleTimer);
+      this.momentumIdleTimer = null;
+    }
+  }
+
+  private flushMomentumDeferred(): void {
+    if (this.momentumFlushScheduled) return;
+
+    // Flush pending image relayout
+    if (this.pendingImageRelayout) {
+      this.momentumFlushScheduled = true;
+      this.win.requestAnimationFrame(() => {
+        this.momentumFlushScheduled = false;
+        if (!this.pendingImageRelayout) return;
+        this.pendingImageRelayout = false;
+        if (this.postResizeScrollActive) return;
+        if (this.resizeCorrectionTimeout !== null) return;
+        if (this.inMountRemeasure) return;
+        if (this.batchLayoutPending) return;
+        this.remeasureAndReposition();
+      });
+    }
+  }
+  // #endregion WebKit momentum guard
   // #region Batch sizing
   /** Calculate batch size based on current column count */
   private getBatchSize(settings: BasesResolvedSettings): number {
@@ -1587,6 +1625,8 @@ export class DynamicViewsMasonryView extends BasesView {
       if (source === 'image-load') {
         if (!this.pendingImageRelayout) {
           this.pendingImageRelayout = true;
+          // During WebKit momentum, don't schedule rAF — flush at scroll idle
+          if (this.isWebKitCoasting()) return;
           this.win.requestAnimationFrame(() => {
             if (!this.pendingImageRelayout) return;
             this.pendingImageRelayout = false;
@@ -2819,9 +2859,9 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.cachedGroupOffsets.size === 0) return;
     const offsets = this.cachedGroupOffsets;
 
-    // Tier 1 (mount zone): viewport ± 1× paneHeight — fully rendered
+    // Tier 1 (mount zone): viewport ± 1× paneHeight
     const mountTop = scrollTop - paneHeight;
-    const mountBottom = scrollTop + paneHeight + paneHeight;
+    const mountBottom = scrollTop + paneHeight * 2;
 
     // Tier 2 (content-hidden zone): desktop only — viewport ± HIDDEN_BUFFER_MULTIPLIER × paneHeight.
     // Cards mounted + measured, then content-hidden. Mobile keeps 1×P mount zone:
@@ -3999,6 +4039,15 @@ export class DynamicViewsMasonryView extends BasesView {
       // Virtual scroll sync (RAF-debounced, runs on every scroll)
       this.scheduleVirtualScrollSync();
 
+      // During WebKit momentum, arm idle timer to flush deferred work
+      if (this.isWebKitCoasting()) {
+        this.clearMomentumIdleTimer();
+        this.momentumIdleTimer = setTimeout(() => {
+          this.momentumIdleTimer = null;
+          this.flushMomentumDeferred();
+        }, SCROLL_IDLE_SYNC_MS);
+      }
+
       // Throttled infinite scroll check
       if (this.scrollThrottle.timeoutId !== null) {
         return;
@@ -4018,6 +4067,43 @@ export class DynamicViewsMasonryView extends BasesView {
     scrollContainer.addEventListener('scroll', this.scrollThrottle.listener, {
       passive: true,
     });
+
+    // WebKit momentum guard — track touch state to defer heavy work during
+    // inertial deceleration (main-thread work kills compositor momentum)
+    if (Platform.isIosApp) {
+      this.touchAbort?.abort();
+      this.touchActive = true;
+      this.touchAbort = new AbortController();
+      const touchSignal = this.touchAbort.signal;
+
+      scrollContainer.addEventListener(
+        'touchstart',
+        () => {
+          this.touchActive = true;
+          this.clearMomentumIdleTimer();
+          this.flushMomentumDeferred();
+        },
+        { passive: true, signal: touchSignal }
+      );
+
+      scrollContainer.addEventListener(
+        'touchend',
+        () => {
+          this.touchActive = false;
+          this.lastTouchEndTime = performance.now();
+        },
+        { passive: true, signal: touchSignal }
+      );
+
+      scrollContainer.addEventListener(
+        'touchcancel',
+        () => {
+          this.touchActive = false;
+          this.lastTouchEndTime = performance.now();
+        },
+        { passive: true, signal: touchSignal }
+      );
+    }
 
     // Setup ResizeObserver on masonry container to detect layout changes
     if (this.displayedCount < totalEntries && this.masonryContainer) {
@@ -4087,6 +4173,9 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.postResizeIdleTimeout !== null) {
       clearTimeout(this.postResizeIdleTimeout);
     }
+    this.clearMomentumIdleTimer();
+    this.touchAbort?.abort();
+    this.touchAbort = null;
     this.teardownObservers();
     if (this.trailingUpdate.timeoutId !== null) {
       window.clearTimeout(this.trailingUpdate.timeoutId);
