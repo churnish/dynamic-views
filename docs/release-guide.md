@@ -1,14 +1,12 @@
 ---
 title: Release guide
 description: "End-to-end release workflow: npm version commands, preversion/version/postversion lifecycle, GitHub Action build, wiki publishing, and rollback procedures."
-author: 🤖 Generated with Claude Code
-updated: 2026-03-11
+author: "\U0001F916 Generated with Claude Code"
+last updated: 2026-03-09T00:00:00.000Z
 ---
 # Release guide
 
-> **Warning**
->
-> Source of truth: `plugins/knowledge/release-guide.md`. Copied to each plugin's `docs/` during `npm version` via `version-bump.mjs`. Edit the source, not the copy.
+> [!warning] Source of truth: `plugins/knowledge/release-guide.md`. Copied to each plugin's root during `npm version` via `version-bump.mjs`. Edit the source, not the copy.
 
 ## Commands
 
