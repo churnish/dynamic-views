@@ -47,7 +47,7 @@ Poster images decode at native resolution (e.g., 3000×2000 = 24MB RGBA). Max di
 
 ### 3. Clear `img.src` on unmount
 
-**Status**: Not started
+**Status**: Done
 
 When virtual scroll unmounts a card, the `<img>` element is removed from the DOM — but WKWebView may keep the decoded bitmap in its image cache. Setting `img.src = ''` before removal forces the browser to release the decoded bitmap.
 
@@ -101,13 +101,13 @@ body.is-ios .dynamic-views-masonry .card.image-format-poster.masonry-positioned 
 
 ### 7. Detach full-screen from body class
 
-**Status**: Not started (last resort)
+**Status**: Done
 
 `body.classList.add('full-screen-active')` triggers subtree-wide style invalidation across the entire document. Android's show path already avoids body-class invalidation by using inline styles (documented in `full-screen.ts`). iOS hide path still uses the body class.
 
-**Fix**: Target only specific elements (view-header, mobile-navbar, toolbar) via inline styles instead of body class.
+**Fix**: Move `full-screen-active` from body to leafContent (`[data-type='bases']`) on iOS. CSS selectors split into Android (body class) and iOS (leaf class) variants. Only background-color on body/app-container/workspace uses inline styles (unreachable from leaf).
 
-**Tradeoff**: The `full-screen-active` body class controls Obsidian's native CSS for hiding the view header, toolbar, etc. Replicating those styles via inline styles is more fragile. High effort, high risk.
+**Tradeoff**: CSS selectors are more verbose (dual Android/iOS variants for shared rules). Lower risk than full inline replacement — CSS rules remain the source of truth.
 
 ## Priority
 
@@ -119,7 +119,7 @@ body.is-ios .dynamic-views-masonry .card.image-format-poster.masonry-positioned 
 | 4 | Tighter mount zone for poster on iOS | Memory | Medium | Low | Low |
 | 5 | JS-computed visibility tiers | Compositing + Memory | Medium | Medium | Low |
 | 6 | `contain: strict` on iOS poster cards | Compositing | Medium | Low | Medium |
-| 7 | Detach full-screen from body class | Compositing | High | High | High |
+| 7 | Detach full-screen from body class | Compositing | High | Medium | Medium |
 
 ## Empirical context
 

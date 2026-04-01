@@ -2,6 +2,12 @@
 // when bars are hidden (full-screen-active). Restores when bars are
 // showing (full-screen-showing). Uses !important throughout to override
 // Obsidian's inline and !important styles on these elements.
+//
+// Class target: Android applies full-screen-active on body (subtree
+// invalidation is fine on Chromium's multi-threaded compositor). iOS
+// applies it on leafContent ([data-type='bases']) to scope style
+// invalidation to the leaf subtree — body-class invalidation on
+// WKWebView causes 60-96ms composite operations with poster cards.
 
 // .is-phone is Obsidian's body class — leave flat per nesting conventions.
 
@@ -10,7 +16,8 @@
 // the tap shield surface. margin-top: 0 is set via inline styles in
 // onfinish/idle-settle only — not in CSS, because it would misposition
 // the header during the show animation.
-.is-phone.full-screen-active [data-type='bases'] .view-header {
+.is-android.is-phone.full-screen-active [data-type='bases'] .view-header,
+.is-phone:not(.is-android) [data-type='bases'].full-screen-active .view-header {
   min-height: calc(
     var(--dynamic-views-safe-area-inset-top) +
       var(--dynamic-views-view-header-height)
@@ -21,7 +28,7 @@
 // iOS: CSS controls header hide/show (transform + opacity).
 // After idle settle (2s), JS snaps header back to natural position
 // (inline transform:translateY(0) + opacity:0) as the tap shield.
-.is-phone:not(.is-android).full-screen-active [data-type='bases'] .view-header {
+.is-phone:not(.is-android) [data-type='bases'].full-screen-active .view-header {
   transform: translateY(
     calc(
       (
@@ -50,7 +57,10 @@
 // within the frame budget, causing a one-frame white flash (the area behind
 // the toolbar). opacity:0 keeps the element painted and layer-cached, so
 // showing is a compositor-only opacity flip with no rasterization.
-.is-phone.full-screen-active [data-type='bases'] .bases-header {
+.is-android.is-phone.full-screen-active [data-type='bases'] .bases-header,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active
+  .bases-header {
   pointer-events: none !important;
   margin-bottom: calc(var(--dynamic-views-bases-header-height) * -1) !important;
   transition: none !important;
@@ -59,7 +69,10 @@
   opacity: 0;
 }
 
-.is-phone.full-screen-active [data-type='bases'] .bases-search-row {
+.is-android.is-phone.full-screen-active [data-type='bases'] .bases-search-row,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active
+  .bases-search-row {
   pointer-events: none !important;
   transition: none !important;
   // Collapse vertical space — toolbar uses negative margin-bottom with a
@@ -73,24 +86,30 @@
   opacity: 0;
 }
 
-.is-phone.full-screen-active [data-type='bases'] .view-content {
+.is-android.is-phone.full-screen-active [data-type='bases'] .view-content,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active
+  .view-content {
   margin-top: 0 !important;
   transition: none !important;
 }
 
-// Background stays active for both hide AND show — prevents white flash
-// from elements with transparent defaults (app-container, workspace).
-.is-phone.full-screen-active,
-.is-phone.full-screen-active .app-container,
-.is-phone.full-screen-active .workspace {
+// Background stays active for both hide AND show on Android — prevents
+// white flash from elements with transparent defaults (app-container,
+// workspace). iOS uses applyBackgroundInlines/clearBackgroundInlines
+// (inline styles on body/app-container/workspace) since the leaf-scoped
+// full-screen-active class can't reach these ancestor elements.
+.is-android.is-phone.full-screen-active,
+.is-android.is-phone.full-screen-active .app-container,
+.is-android.is-phone.full-screen-active .workspace {
   background-color: var(--dynamic-views-background-primary) !important;
 }
 
 // Cosmetic overrides: only while bars are hidden.
 
 // iOS: :not(.full-screen-showing) reverts the instant showBarsUI adds the class.
-.is-phone:not(.is-android).full-screen-active
-  [data-type='bases']:not(.full-screen-showing)::after {
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active:not(.full-screen-showing)::after {
   display: none !important;
 }
 
@@ -124,7 +143,8 @@
 //   30  header during show animation (full-screen.ts applyShowInlines + showBarsUI)
 //
 // Ungrouped: gradient scrim, passthrough taps, below sticky headers
-.is-phone.full-screen-active [data-type='bases']::before {
+.is-android.is-phone.full-screen-active [data-type='bases']::before,
+.is-phone:not(.is-android) [data-type='bases'].full-screen-active::before {
   content: '' !important;
   position: absolute !important;
   top: 0 !important;
@@ -144,7 +164,10 @@
 // Class toggled by grid-view/masonry-view on the leaf content — avoids :has()
 // which causes upward style invalidation that exceeds Android WebView's
 // single-threaded compositor frame budget (same root cause as 3e67321).
-.is-phone.full-screen-active [data-type='bases'].dynamic-views-grouped::before {
+.is-android.is-phone.full-screen-active
+  [data-type='bases'].dynamic-views-grouped::before,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active.dynamic-views-grouped::before {
   background: var(--dynamic-views-background-primary) !important;
   // Above sticky headings (z-index: 20) so scrolling headings disappear
   // beneath the scrim. Header WAAPI uses z-index: 30 to slide above.
@@ -178,8 +201,8 @@
 // Android WebView compositor's frame budget.
 
 // iOS: CSS restores header on show
-.is-phone:not(.is-android).full-screen-active
-  [data-type='bases'].full-screen-showing
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active.full-screen-showing
   .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
@@ -189,15 +212,21 @@
 // Android: header show state (pointer-events, z-index) is applied via
 // inline styles in applyShowInlines() — no CSS rule needed.
 
-.is-phone.full-screen-active
+.is-android.is-phone.full-screen-active
   [data-type='bases'].full-screen-showing
+  .bases-header,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active.full-screen-showing
   .bases-header {
   pointer-events: auto !important;
   margin-bottom: 0px !important;
 }
 
-.is-phone.full-screen-active
+.is-android.is-phone.full-screen-active
   [data-type='bases'].full-screen-showing
+  .bases-search-row,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active.full-screen-showing
   .bases-search-row {
   pointer-events: auto !important;
   height: auto !important;
@@ -206,8 +235,11 @@
   padding: unset !important;
 }
 
-.is-phone.full-screen-active
+.is-android.is-phone.full-screen-active
   [data-type='bases'].full-screen-showing
+  .view-content,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active.full-screen-showing
   .view-content {
   margin-top: var(--dynamic-views-view-top-spacing) !important;
   transition: none !important;
@@ -221,8 +253,14 @@
 // Reverts during show: iOS uses .full-screen-showing class, Android uses
 // data-dynamic-views-show attribute. Either disables the override so headings
 // revert to normal -12px top (grid-masonry-shared) when bars are visible.
-body.is-phone.full-screen-active
-  [data-type='bases']:not(.full-screen-showing):not([data-dynamic-views-show])
+body.is-android.is-phone.full-screen-active
+  [data-type='bases']:not([data-dynamic-views-show])
+  .dynamic-views.is-grouped
+  .bases-cards-container
+  .dynamic-views-group-section
+  > .bases-group-heading:not(.collapsed),
+body.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active:not(.full-screen-showing)
   .dynamic-views.is-grouped
   .bases-cards-container
   .dynamic-views-group-section
@@ -240,16 +278,20 @@ body.is-phone.full-screen-active
 // the sentinel exits the IO viewport at 0px (scroll container top) but the
 // heading sticks at safe-area-inset-top — creating a visible delay equal to
 // the safe area height before the border appears.
-body.is-phone.full-screen-active
-  [data-type='bases']:not(.full-screen-showing):not([data-dynamic-views-show])
+body.is-android.is-phone.full-screen-active
+  [data-type='bases']:not([data-dynamic-views-show])
+  .dynamic-views-group-section
+  > .dynamic-views-sticky-sentinel,
+body.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active:not(.full-screen-showing)
   .dynamic-views-group-section
   > .dynamic-views-sticky-sentinel {
   top: calc(-1 * (var(--dynamic-views-safe-area-inset-top) - 1px));
 }
 
 // iOS: remove ::before gradient on show — CSS header covers the status bar.
-.is-phone:not(.is-android).full-screen-active
-  [data-type='bases'].full-screen-showing::before {
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active.full-screen-showing::before {
   content: none !important;
 }
 

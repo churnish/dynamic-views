@@ -23,6 +23,7 @@ import {
   FULL_SCREEN_SHOW_SUSTAIN_MS,
   FULL_SCREEN_ANIM_MS,
   FULL_SCREEN_FADE_MS,
+  FULL_SCREEN_BRIDGE_RESOLVE_DELAY_MS,
 } from '../shared/constants';
 
 // WAAPI options matching native Obsidian bar transitions.
@@ -116,13 +117,15 @@ export class FullScreenController {
   private readonly toolbarEl: HTMLElement | null;
   private readonly searchRowEl: HTMLElement | null;
   private readonly workspaceSplitEl: HTMLElement | null;
+  private readonly appContainerEl: HTMLElement | null;
+  private readonly workspaceEl: HTMLElement | null;
   private readonly cachedMaskImage: string;
 
   // State
   private mounted = false;
   private barsHidden = false;
   private settled = false;
-  private showBridgeActive = false;
+  private bridgePhaseActive = false;
   private totalShift = 0;
   private originalMarginTop = 0;
   private prevScrollTop = 0;
@@ -131,6 +134,7 @@ export class FullScreenController {
   private pendingLayout: (() => void) | null = null;
   private scrollIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private bridgeResolveTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastBridgePx = -1;
   private isActiveHider = false;
   private pendingRafId: number | null = null;
   private lastToggleTime = 0;
@@ -177,6 +181,9 @@ export class FullScreenController {
     this.workspaceSplitEl = this.body.querySelector<HTMLElement>(
       '.workspace-split.mod-root'
     );
+    this.appContainerEl =
+      this.body.querySelector<HTMLElement>('.app-container');
+    this.workspaceEl = this.body.querySelector<HTMLElement>('.workspace');
     // Cache Obsidian's mask-image gradient before any inline overrides.
     // Used by gradient swap (hide sets opaque, show restores cached) to
     // keep the render surface allocated — avoids cross-subtree rasterization
@@ -211,9 +218,10 @@ export class FullScreenController {
 
     // Measure totalShift: toggle full-screen-active, read scrollEl rect delta
     const beforeTop = this.scrollEl.getBoundingClientRect().top;
-    this.body.classList.add('full-screen-active');
+    const classTarget = this.isAndroid ? this.body : this.leafContent;
+    classTarget.classList.add('full-screen-active');
     const afterTop = this.scrollEl.getBoundingClientRect().top;
-    this.body.classList.remove('full-screen-active');
+    classTarget.classList.remove('full-screen-active');
     this.totalShift = beforeTop - afterTop;
 
     // Lock scroll container height — decouples clientHeight from flex layout
@@ -328,6 +336,22 @@ export class FullScreenController {
     ]);
   }
 
+  /** Apply background-color inlines on body/app-container/workspace (iOS only). These elements are above the leaf — unreachable from the leaf-scoped full-screen-active class. Variable defined on body (_variables.scss). */
+  private applyBackgroundInlines(): void {
+    const bg = 'var(--dynamic-views-background-primary)';
+    setStyle(this.body, 'background-color', bg, 'important');
+    if (this.appContainerEl)
+      setStyle(this.appContainerEl, 'background-color', bg, 'important');
+    if (this.workspaceEl)
+      setStyle(this.workspaceEl, 'background-color', bg, 'important');
+  }
+
+  private clearBackgroundInlines(): void {
+    this.body.style.removeProperty('background-color');
+    this.appContainerEl?.style.removeProperty('background-color');
+    this.workspaceEl?.style.removeProperty('background-color');
+  }
+
   // ---------------------------------------------------------------------------
   // Android show-state inline styles — bypass classList to avoid style
   // invalidation that exceeds the single-threaded WebView compositor's
@@ -437,57 +461,44 @@ export class FullScreenController {
     this.scrollEl.style.removeProperty('height');
     this.body.classList.remove('full-screen-active');
     this.clearMaskImageInline();
-    this.showBridgeActive = false;
+    this.bridgePhaseActive = false;
     this.isActiveHider = false;
     this.settled = false;
+    this.barsHidden = false;
+    this.lastBridgePx = -1;
   }
 
-  /** Animate bridge transform to 0 over 200ms, then batch cleanup on
-   *  transitionend. At idle (no active scroll), the animation doesn't
-   *  need to match momentum — it just needs to look smooth. The batch
-   *  cleanup after animation produces zero visual change because show
-   *  inlines and full-screen-active cancel out geometrically. */
-  private animateBridgeResolve(): void {
+  /** Full bridge resolve: clear WAAPI/show-state artifacts, then
+   *  resolveBridgeAtTop for class removal + flag reset + height relock. */
+  private commitBridgeResolve(): void {
     this.programmaticScroll = true;
     this.cancelAnimations();
     this.leafContent.removeAttribute('data-dynamic-views-show');
     this.clearNavbarInlines();
     this.clearHeaderInlines();
-
-    setStyle(this.container, 'transition', 'transform 200ms ease-out');
-    setStyle(this.container, 'transform', 'translateY(0)');
-
-    this.container.addEventListener(
-      'transitionend',
-      () => {
-        // Guard: hideBarsUI may have interrupted the animation
-        if (!this.showBridgeActive) {
-          this.programmaticScroll = false;
-          return;
-        }
-        this.resolveBridgeAtTop();
-        this.pendingRafId = requestAnimationFrame(() => {
-          this.programmaticScroll = false;
-          this.prevScrollTop = this.scrollEl.scrollTop;
-          this.accumulatedDelta = 0;
-          this.lockedScrollHeight = this.scrollEl.offsetHeight;
-          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-        });
-      },
-      { once: true }
-    );
+    this.resolveBridgeAtTop();
+    this.pendingRafId = requestAnimationFrame(() => {
+      this.programmaticScroll = false;
+      this.prevScrollTop = this.scrollEl.scrollTop;
+      this.accumulatedDelta = 0;
+      this.lockedScrollHeight = this.scrollEl.offsetHeight;
+      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+    });
   }
 
   /** Scroll-linked bridge unwind — reduces bridge magnitude as scrollTop
-   *  approaches 0. Transform writes are compositor-only (no layout, no
-   *  tile invalidation). Smoothstep easing keeps the rate-of-change
-   *  gentle at boundaries. */
+   *  approaches 0. Zone scales with pane height so the non-1:1 motion
+   *  is spread across the full visible scroll distance (~1.18× on Pixel 8a).
+   *  Transform writes are compositor-only (no layout, no tile invalidation).
+   *  Smoothstep easing keeps the rate-of-change gentle at boundaries. */
   private unwindBridge(currentTop: number): void {
-    const zone = this.totalShift * 3;
+    if (this.totalShift <= 0) return;
+    const zone = this.lockedScrollHeight || this.totalShift * 3;
     const t = Math.min(1, currentTop / zone);
     const eased = t * t * (3 - 2 * t);
     const bridgePx = Math.round(this.totalShift * eased);
-
+    if (bridgePx === this.lastBridgePx) return;
+    this.lastBridgePx = bridgePx;
     setStyle(this.container, 'transform', `translateY(-${bridgePx}px)`);
   }
 
@@ -530,7 +541,12 @@ export class FullScreenController {
         this.leafContent.classList.remove('full-screen-showing');
       }
       this.clearMaskImageInline();
-      this.body.classList.remove('full-screen-active');
+      if (this.isAndroid) {
+        this.body.classList.remove('full-screen-active');
+      } else {
+        this.leafContent.classList.remove('full-screen-active');
+        this.clearBackgroundInlines();
+      }
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
@@ -553,7 +569,7 @@ export class FullScreenController {
     this.pendingLayout = null;
     this.barsHidden = false;
     this.settled = false;
-    this.showBridgeActive = false;
+    this.bridgePhaseActive = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -587,7 +603,7 @@ export class FullScreenController {
     // Scroll-linked bridge unwind — gradually reduce bridge magnitude
     // as scrollTop approaches 0. Transform is compositor-only (safe
     // during fling). At scrollTop=0, bridge is already 0.
-    if (this.isAndroid && this.showBridgeActive && !this.barsHidden) {
+    if (this.isAndroid && this.bridgePhaseActive && !this.barsHidden) {
       this.unwindBridge(currentTop);
 
       // Bridge fully unwound at top — schedule cleanup at idle (visual no-op
@@ -603,20 +619,8 @@ export class FullScreenController {
               clearTimeout(this.scrollIdleTimer);
               this.scrollIdleTimer = null;
             }
-            this.programmaticScroll = true;
-            this.cancelAnimations();
-            this.leafContent.removeAttribute('data-dynamic-views-show');
-            this.clearNavbarInlines();
-            this.clearHeaderInlines();
-            this.resolveBridgeAtTop();
-            this.pendingRafId = requestAnimationFrame(() => {
-              this.programmaticScroll = false;
-              this.prevScrollTop = this.scrollEl.scrollTop;
-              this.accumulatedDelta = 0;
-              this.lockedScrollHeight = this.scrollEl.offsetHeight;
-              setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-            });
-          }, 50);
+            this.commitBridgeResolve();
+          }, FULL_SCREEN_BRIDGE_RESOLVE_DELAY_MS);
         }
       } else if (this.bridgeResolveTimer != null) {
         clearTimeout(this.bridgeResolveTimer);
@@ -699,10 +703,10 @@ export class FullScreenController {
   // Measurement
   // ---------------------------------------------------------------------------
 
-  /** Re-measure totalShift from live DOM. Only valid when full-screen-active
-   *  is NOT on body (otherwise margin-top reads as 0 from the class rule). */
+  /** Re-measure totalShift from live DOM. Only valid when full-screen-active is NOT on the class target (body on Android, leafContent on iOS) — otherwise margin-top reads as 0 from the class rule. */
   private measureTotalShift(): void {
-    if (this.body.classList.contains('full-screen-active')) return;
+    const classTarget = this.isAndroid ? this.body : this.leafContent;
+    if (classTarget.classList.contains('full-screen-active')) return;
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
     this.totalShift =
@@ -756,7 +760,7 @@ export class FullScreenController {
     this.clearHeaderInlines();
 
     // Re-measure ONLY in clean state (no full screen classes).
-    // During rapid show→hide, full-screen-active is still on body —
+    // During rapid show→hide, full-screen-active is still on the class target —
     // getComputedStyle would read margin-top: 0 (class rule) instead of ~99px.
     this.measureTotalShift();
 
@@ -813,13 +817,13 @@ export class FullScreenController {
       // Skip scrollTop adjustment if show bridge was active — scrollTop was
       // never increased by the show path, so no reversal needed. Bridge
       // transform was already cleared above (container removeProperty).
-      if (!this.showBridgeActive) {
+      if (!this.bridgePhaseActive) {
         // Clamp to 0 when near top — without clamping, before - totalShift
         // goes negative. The auto-show delta<=0 check prevents the scrollTop=0
         // landing from triggering auto-show on the next event.
         this.scrollEl.scrollTop = Math.max(0, before - this.totalShift);
       }
-      this.showBridgeActive = false;
+      this.bridgePhaseActive = false;
       this.settled = true;
       // Height relock deferred to idle — offsetHeight forces layout that
       // janks mid-animation if done during the 300ms animation window.
@@ -919,7 +923,8 @@ export class FullScreenController {
     // iOS: bridge + deferred settle (scrollTop writes kill momentum)
     setStyle(this.container, 'margin-top', `${this.totalShift}px`);
     setStyle(this.container, 'transition', 'none');
-    this.body.classList.add('full-screen-active');
+    this.leafContent.classList.add('full-screen-active');
+    this.applyBackgroundInlines();
     this.settled = false;
 
     // WebKit needs double-rAF — passive scroll listener optimization
@@ -1026,7 +1031,8 @@ export class FullScreenController {
             'transform',
             `translateY(-${this.totalShift}px)`
           );
-          this.showBridgeActive = true;
+          this.bridgePhaseActive = true;
+          this.lastBridgePx = -1;
         }
 
         // Restore mask-image gradient — gradient swap (opaque → cached)
@@ -1108,20 +1114,11 @@ export class FullScreenController {
         });
       });
 
-      // Idle: persistent bridge — DON'T remove transform, DON'T write
-      // scrollTop, DON'T clear show inlines, DON'T remove full-screen-active.
-      // Chrome/146's single-threaded compositor flashes on ANY scrollTop write
-      // (content disappears for one frame during tile re-rasterization).
-      // Bridge persists until the next hide, whose scrollTop adjustment is
-      // batched with the full-screen-active class change and doesn't flash.
+      // Idle: bridge unwinds scroll-linked (see unwindBridge) when user
+      // approaches the top; persists at full magnitude otherwise. Show
+      // inlines and full-screen-active stay until the next hide or until
+      // the bridge unwinds to 0 at the top.
       this.pendingLayout = () => {
-        this.programmaticScroll = true;
-
-        this.cancelAnimations();
-        this.leafContent.removeAttribute('data-dynamic-views-show');
-        this.clearNavbarInlines();
-        this.clearHeaderInlines();
-
         // If bridge already unwound to 0 (scrollTop near top), do full
         // cleanup — visual no-op since transform is already 0.
         if (this.scrollEl.scrollTop <= 1) {
@@ -1129,16 +1126,15 @@ export class FullScreenController {
             clearTimeout(this.bridgeResolveTimer);
             this.bridgeResolveTimer = null;
           }
-          this.resolveBridgeAtTop();
-          this.pendingRafId = requestAnimationFrame(() => {
-            this.programmaticScroll = false;
-            this.prevScrollTop = this.scrollEl.scrollTop;
-            this.accumulatedDelta = 0;
-            this.lockedScrollHeight = this.scrollEl.offsetHeight;
-            setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-          });
+          this.commitBridgeResolve();
           return;
         }
+
+        this.programmaticScroll = true;
+        this.cancelAnimations();
+        this.leafContent.removeAttribute('data-dynamic-views-show');
+        this.clearNavbarInlines();
+        this.clearHeaderInlines();
 
         this.pendingRafId = requestAnimationFrame(() => {
           this.programmaticScroll = false;
@@ -1216,7 +1212,8 @@ export class FullScreenController {
       this.cancelAnimations();
       this.leafContent.classList.remove('full-screen-showing');
       this.clearHeaderInlines();
-      this.body.classList.remove('full-screen-active');
+      this.leafContent.classList.remove('full-screen-active');
+      this.clearBackgroundInlines();
       this.isActiveHider = false;
 
       this.clearMaskImageInline();
