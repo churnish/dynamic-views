@@ -3,8 +3,11 @@
 Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
 
 <img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
+
 <img src="https://github.com/user-attachments/assets/d367680e-9857-4d28-8a8a-ce7c279d02a2" />
+
 <img src="https://github.com/user-attachments/assets/5eda2513-c0dc-4d08-975d-931eb3afb99d" />
+
 <img src="https://github.com/user-attachments/assets/f811aec9-8885-4783-afa6-c937f3617b98" />
 
 ## Features
@@ -56,9 +59,9 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 > [!IMPORTANT]  
 > The plugin is in active development — things can break, or change drastically between releases.
 >
-> **Please ensure your files are regularly [backed up](https://help.obsidian.md/backup).**
+> Please ensure your files are regularly [backed up](https://help.obsidian.md/backup).
 
-Until _Dynamic Views_ is [made available](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, to install it:
+Until **Dynamic Views** is [made available](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, to install it:
 
 1. Download and enable the [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat) plugin.
 2. [Install via BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://brat?plugin=churnish/dynamic-views).
@@ -66,14 +69,14 @@ Until _Dynamic Views_ is [made available](https://github.com/obsidianmd/obsidian
 
 <details><summary>Install manually</summary>
 
-Note: To get updates for _Dynamic Views_, you will have to check for and install them manually.
+Note: To get updates for **Dynamic Views**, you will have to check for and install them manually.
 
 1. Download `dynamic-views.zip` in the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
 2. Open the vault folder in the system file manager.
 3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
 4. Unzip `dynamic-views.zip` and place it in the `plugins` folder.
 5. Reload plugins or app.
-6. Enable _Dynamic Views_ in Obsidian settings → Community plugins → Installed plugins.
+6. Enable **Dynamic Views** in Obsidian settings → Community plugins → Installed plugins.
 
 </details>
 
