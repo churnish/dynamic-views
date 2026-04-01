@@ -131,6 +131,22 @@ declare module 'obsidian' {
   }
 }
 
+/** Returns true if a deferred image relayout should proceed (no conflicting operations). */
+export function canFlushImageRelayout(state: {
+  pendingImageRelayout: boolean;
+  postResizeScrollActive: boolean;
+  resizeCorrectionActive: boolean;
+  inMountRemeasure: boolean;
+  batchLayoutPending: boolean;
+}): boolean {
+  if (!state.pendingImageRelayout) return false;
+  if (state.postResizeScrollActive) return false;
+  if (state.resizeCorrectionActive) return false;
+  if (state.inMountRemeasure) return false;
+  if (state.batchLayoutPending) return false;
+  return true;
+}
+
 export const MASONRY_VIEW_TYPE = 'dynamic-views-masonry';
 
 export class DynamicViewsMasonryView extends BasesView {
@@ -572,12 +588,17 @@ export class DynamicViewsMasonryView extends BasesView {
       this.momentumFlushScheduled = true;
       this.win.requestAnimationFrame(() => {
         this.momentumFlushScheduled = false;
-        if (!this.pendingImageRelayout) return;
+        if (
+          !canFlushImageRelayout({
+            pendingImageRelayout: this.pendingImageRelayout,
+            postResizeScrollActive: this.postResizeScrollActive,
+            resizeCorrectionActive: this.resizeCorrectionTimeout !== null,
+            inMountRemeasure: this.inMountRemeasure,
+            batchLayoutPending: this.batchLayoutPending,
+          })
+        )
+          return;
         this.pendingImageRelayout = false;
-        if (this.postResizeScrollActive) return;
-        if (this.resizeCorrectionTimeout !== null) return;
-        if (this.inMountRemeasure) return;
-        if (this.batchLayoutPending) return;
         this.remeasureAndReposition();
       });
     }
@@ -1628,12 +1649,17 @@ export class DynamicViewsMasonryView extends BasesView {
           // During WebKit momentum, don't schedule rAF — flush at scroll idle
           if (this.isWebKitCoasting()) return;
           this.win.requestAnimationFrame(() => {
-            if (!this.pendingImageRelayout) return;
+            if (
+              !canFlushImageRelayout({
+                pendingImageRelayout: this.pendingImageRelayout,
+                postResizeScrollActive: this.postResizeScrollActive,
+                resizeCorrectionActive: this.resizeCorrectionTimeout !== null,
+                inMountRemeasure: this.inMountRemeasure,
+                batchLayoutPending: this.batchLayoutPending,
+              })
+            )
+              return;
             this.pendingImageRelayout = false;
-            if (this.postResizeScrollActive) return;
-            if (this.resizeCorrectionTimeout !== null) return;
-            if (this.inMountRemeasure) return;
-            if (this.batchLayoutPending) return;
             this.remeasureAndReposition();
           });
         }

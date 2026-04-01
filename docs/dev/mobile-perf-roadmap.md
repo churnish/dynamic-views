@@ -109,6 +109,23 @@ body.is-ios .dynamic-views-masonry .card.image-format-poster.masonry-positioned 
 
 **Tradeoff**: CSS selectors are more verbose (dual Android/iOS variants for shared rules). Lower risk than full inline replacement — CSS rules remain the source of truth.
 
+### Rejected: gate `checkAndLoadMore` during momentum
+
+Gating `checkAndLoadMore()` during WebKit momentum coasting prevented infinite scroll from loading new batches. The user scrolls to the content boundary, hits a hard wall, can't load more until touching the screen. Worse UX than the original momentum kills. Only gate expensive operations (`remeasureAndReposition`), not content loading.
+
+## Verified results
+
+Post-fix Safari Timeline recording (approaches #1, #3, #7 all applied):
+
+| Metric | Pre-fix | Post-fix |
+|---|---|---|
+| Composite max | 96ms | 56ms |
+| Composites <4ms (healthy) | low | 79% (680/861) |
+| Style recalc max | 23ms | 5ms |
+| Decoded image memory | 119MB sustained | Transient 0–16MB |
+
+Remaining 21% composites >4ms may be A15 hardware-bound. iPad M3 and Pixel 8a unaffected.
+
 ## Priority
 
 | # | Approach | Target | Impact | Effort | Risk |
