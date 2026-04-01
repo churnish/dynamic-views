@@ -156,21 +156,36 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 }
 
 /* ============================================
-   POSTER MODE — FADE (::after overlay)
-   Fade requires spatial variation that img filters can't replicate,
-   so it keeps the ::after approach. backdrop-filter: none avoids
-   compositing-layer jaggedness.
+   POSTER MODE — FADE (gradient overlay)
+   Fade requires spatial variation that img filters can't replicate.
+   Uses a real DOM element (.poster-gradient) instead of ::after to avoid
+   WebKit compositor layer creation flash on virtual scroll remount — ::after
+   pseudo-elements force async layer creation on fresh DOM insertion, causing
+   1-3 frame blank flash on iOS. A real element in the initial render tree
+   avoids this. The -webkit-mask-image for corner AA is also removed (WebKit
+   doesn't need it; .card-poster already has overflow:hidden + border-radius).
    ============================================ */
 
-/* Fade: force composited clipping on poster element so ::after
-   corners are anti-aliased (overflow:hidden alone is jagged in Chromium) */
+/* Fade: composited clipping for corner anti-aliasing (Chromium only).
+   WebKit: handled by overflow:hidden + border-radius on .card-poster. */
 .dynamic-views.poster-mode-fade .card.image-format-poster .card-poster {
   -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
-/* Fade ::after setup */
-.dynamic-views.poster-mode-fade .card.image-format-poster .card-poster::after {
-  content: '';
+/* iOS: skip mask-image — it creates a compositor layer that causes
+   blank flash on virtual scroll remount. overflow:hidden handles corners. */
+body.is-ios
+  .dynamic-views.poster-mode-fade
+  .card.image-format-poster
+  .card-poster {
+  -webkit-mask-image: none;
+}
+
+/* Fade gradient overlay (real DOM element, replaces ::after) */
+.dynamic-views.poster-mode-fade
+  .card.image-format-poster
+  .card-poster
+  .poster-gradient {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -319,7 +334,7 @@ body:is(
 }
 
 /* ============================================
-   POSTER REVEAL — CONTENT + FADE ::after
+   POSTER REVEAL — CONTENT + FADE GRADIENT
    ============================================ */
 
 /* Poster: content hidden by default (only if card has image) */
@@ -334,8 +349,8 @@ body:is(
       transform var(--dynamic-views-anim-duration-moderate);
   }
 
-  /* Fade ::after hidden by default */
-  &.poster-mode-fade .card.image-format-poster .card-poster::after {
+  /* Fade gradient hidden by default */
+  &.poster-mode-fade .card.image-format-poster .card-poster .poster-gradient {
     opacity: 0;
   }
 
@@ -345,10 +360,11 @@ body:is(
     transform: translateY(0);
   }
 
-  /* Fade ::after shown on reveal */
+  /* Fade gradient shown on reveal */
   &.poster-mode-fade
     .card.image-format-poster.poster-revealed
-    .card-poster::after {
+    .card-poster
+    .poster-gradient {
     opacity: 1;
   }
 }
@@ -362,10 +378,11 @@ body:is(
       transform: translateY(0);
     }
 
-    /* Fade ::after on hover reveal */
+    /* Fade gradient on hover reveal */
     &.poster-mode-fade
       .card.image-format-poster.poster-hover-active
-      .card-poster::after {
+      .card-poster
+      .poster-gradient {
       opacity: 1;
     }
   }

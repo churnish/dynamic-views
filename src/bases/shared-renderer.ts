@@ -1270,6 +1270,11 @@ export class SharedCardRenderer {
       const img = bgWrapper.createEl('img', {
         attr: { src: imageUrls[0], alt: '' },
       });
+      // Real DOM gradient overlay (replaces ::after pseudo-element).
+      // ::after forces WebKit to create a separate compositor layer on fresh DOM
+      // insertion, causing 1-3 frame blank flash on virtual scroll remount.
+      // A real element in the initial render tree avoids async layer creation.
+      bgWrapper.createDiv('poster-gradient');
       setupBackdropImageLoader(
         img,
         cardEl,

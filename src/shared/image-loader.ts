@@ -157,21 +157,20 @@ export function handleImageLoad(
     (aspectRatio ?? DEFAULT_ASPECT_RATIO).toString()
   );
 
-  // Shuffle re-render: skip transition by adding image-ready immediately.
-  // Browser batches opacity:0 + image-ready opacity:1 into one paint → no visible fade.
-  if (cardEl.closest('.skip-cover-fade')) {
+  // Skip transition when fade is unnecessary: shuffle re-render (.skip-cover-fade)
+  // or cached image remount (imgEl.complete — browser loaded from cache synchronously).
+  // Without this, remounted poster cards show a 2-frame opacity:0 gap on WebKit.
+  if (cardEl.closest('.skip-cover-fade') || imgEl.complete) {
     cardEl.classList.add('image-ready');
     if (onLayoutUpdate) {
       onLayoutUpdate();
     }
   } else {
-    // Double rAF ensures browser paints initial state before triggering transitions
-    // Single rAF can be batched with initial render; double guarantees a paint cycle
+    // Double rAF for truly async loads — ensures browser paints initial opacity:0
+    // before triggering the transition to opacity:1
     getOwnerWindow(cardEl).requestAnimationFrame(() => {
-      // Guard against card unmounted during first rAF
       if (!cardEl.isConnected) return;
       getOwnerWindow(cardEl).requestAnimationFrame(() => {
-        // Guard against card unmounted during second rAF
         if (!cardEl.isConnected) return;
         cardEl.classList.add('image-ready');
         if (onLayoutUpdate) {
@@ -201,20 +200,16 @@ export function setupImageLoadHandler(
     applyCachedImageMetadata(imgEl.src, cardEl);
   }
 
-  // Handle already-loaded images (skip if already processed via cache)
-  // Force reflow to ensure initial opacity:0 is computed before triggering transition
+  // Handle already-loaded images (skip if already processed via cache).
+  // handleImageLoad detects imgEl.complete and skips double-rAF internally.
   if (
     imgEl.complete &&
     imgEl.naturalWidth > 0 &&
     imgEl.naturalHeight > 0 &&
     !cardEl.classList.contains('image-ready')
   ) {
-    // Force reflow only when fade is needed (skip during shuffle re-render)
-    if (!cardEl.closest('.skip-cover-fade')) {
-      void cardEl.offsetHeight;
-    }
     handleImageLoad(imgEl, cardEl, onLayoutUpdate);
-    return () => {}; // No cleanup needed
+    return () => {};
   }
 
   // Event handlers for cleanup
@@ -385,16 +380,14 @@ export function setupBackdropImageLoader(
   // Apply cached metadata immediately (prevents flash on re-render)
   applyCachedImageMetadata(imgEl.src, cardEl);
 
-  // Handle already-loaded images synchronously (enables skip-cover-fade during shuffle)
+  // Handle already-loaded images synchronously.
+  // handleImageLoad detects imgEl.complete and skips double-rAF internally.
   if (
     imgEl.complete &&
     imgEl.naturalWidth > 0 &&
     imgEl.naturalHeight > 0 &&
     !cardEl.classList.contains('image-ready')
   ) {
-    if (!cardEl.closest('.skip-cover-fade')) {
-      void cardEl.offsetHeight;
-    }
     handleImageLoad(imgEl, cardEl, onLayoutUpdate);
     return;
   }

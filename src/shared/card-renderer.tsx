@@ -2209,6 +2209,7 @@ function Card({
             onLoad={(e: Event) => handleJsxImageLoad(e, updateLayoutRef)}
             onError={(e: Event) => handleJsxImageError(e, updateLayoutRef)}
           />
+          <div className="poster-gradient" />
         </div>
       )}
 
