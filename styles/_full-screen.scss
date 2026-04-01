@@ -117,7 +117,8 @@
 // styles in JS (hideBarsUI sets none, show idle removes). Previously used a
 // CSS :has() selector here, but :has() upward invalidation kills iOS momentum
 // scroll — WebKit re-evaluates ancestor :has() during compositor scroll,
-// preventing UIScrollView from resuming.
+// preventing UIScrollView from resuming. Can't use CSS custom property because
+// the restore value (Obsidian's gradient) is unknown.
 
 // Android: full-screen-showing is never used (inline styles instead).
 // ::after hidden by default during full-screen-active; shown via
@@ -130,11 +131,6 @@
   [data-type='bases'][data-dynamic-views-show]::after {
   display: block !important;
 }
-
-// Android: mask-image managed entirely via inline styles in JS.
-// Hide sets mask-image: none on .workspace-split.mod-root; show removes
-// the inline so Obsidian's normal gradient CSS takes over. Can't use CSS
-// custom property because the restore value (Obsidian's gradient) is unknown.
 
 // Z-index stack (full-screen active):
 //   10  ungrouped ::before scrim (below headings)
@@ -212,9 +208,7 @@
 // Android: header show state (pointer-events, z-index) is applied via
 // inline styles in applyShowInlines() — no CSS rule needed.
 
-.is-android.is-phone.full-screen-active
-  [data-type='bases'].full-screen-showing
-  .bases-header,
+// full-screen-showing: iOS only — Android show state uses applyShowInlines()
 .is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.full-screen-showing
   .bases-header {
@@ -222,9 +216,6 @@
   margin-bottom: 0px !important;
 }
 
-.is-android.is-phone.full-screen-active
-  [data-type='bases'].full-screen-showing
-  .bases-search-row,
 .is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.full-screen-showing
   .bases-search-row {
@@ -235,9 +226,6 @@
   padding: unset !important;
 }
 
-.is-android.is-phone.full-screen-active
-  [data-type='bases'].full-screen-showing
-  .view-content,
 .is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.full-screen-showing
   .view-content {
@@ -253,13 +241,13 @@
 // Reverts during show: iOS uses .full-screen-showing class, Android uses
 // data-dynamic-views-show attribute. Either disables the override so headings
 // revert to normal -12px top (grid-masonry-shared) when bars are visible.
-body.is-android.is-phone.full-screen-active
+.is-android.is-phone.full-screen-active
   [data-type='bases']:not([data-dynamic-views-show])
   .dynamic-views.is-grouped
   .bases-cards-container
   .dynamic-views-group-section
   > .bases-group-heading:not(.collapsed),
-body.is-phone:not(.is-android)
+.is-phone:not(.is-android)
   [data-type='bases'].full-screen-active:not(.full-screen-showing)
   .dynamic-views.is-grouped
   .bases-cards-container
@@ -278,11 +266,11 @@ body.is-phone:not(.is-android)
 // the sentinel exits the IO viewport at 0px (scroll container top) but the
 // heading sticks at safe-area-inset-top — creating a visible delay equal to
 // the safe area height before the border appears.
-body.is-android.is-phone.full-screen-active
+.is-android.is-phone.full-screen-active
   [data-type='bases']:not([data-dynamic-views-show])
   .dynamic-views-group-section
   > .dynamic-views-sticky-sentinel,
-body.is-phone:not(.is-android)
+.is-phone:not(.is-android)
   [data-type='bases'].full-screen-active:not(.full-screen-showing)
   .dynamic-views-group-section
   > .dynamic-views-sticky-sentinel {

@@ -119,6 +119,7 @@ export class FullScreenController {
   private readonly workspaceSplitEl: HTMLElement | null;
   private readonly appContainerEl: HTMLElement | null;
   private readonly workspaceEl: HTMLElement | null;
+  private readonly classTarget: HTMLElement;
   private readonly cachedMaskImage: string;
 
   // State
@@ -131,6 +132,8 @@ export class FullScreenController {
   private prevScrollTop = 0;
   private accumulatedDelta = 0;
   private programmaticScroll = false;
+  private navbarHeight = 0;
+  private headerShift = 0;
   private pendingLayout: (() => void) | null = null;
   private scrollIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private bridgeResolveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -184,6 +187,7 @@ export class FullScreenController {
     this.appContainerEl =
       this.body.querySelector<HTMLElement>('.app-container');
     this.workspaceEl = this.body.querySelector<HTMLElement>('.workspace');
+    this.classTarget = this.isAndroid ? this.body : this.leafContent;
     // Cache Obsidian's mask-image gradient before any inline overrides.
     // Used by gradient swap (hide sets opaque, show restores cached) to
     // keep the render surface allocated — avoids cross-subtree rasterization
@@ -216,12 +220,21 @@ export class FullScreenController {
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
 
+    // Cache navbar/header heights — static for the session (safe area insets
+    // and bar heights don't change after app launch).
+    const bodyCS = getComputedStyle(this.body);
+    this.navbarHeight =
+      (parseFloat(bodyCS.getPropertyValue('--navbar-height')) || 52) +
+      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-bottom')) || 34);
+    this.headerShift =
+      (parseFloat(bodyCS.getPropertyValue('--view-header-height')) || 44) +
+      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-top')) || 47);
+
     // Measure totalShift: toggle full-screen-active, read scrollEl rect delta
     const beforeTop = this.scrollEl.getBoundingClientRect().top;
-    const classTarget = this.isAndroid ? this.body : this.leafContent;
-    classTarget.classList.add('full-screen-active');
+    this.classTarget.classList.add('full-screen-active');
     const afterTop = this.scrollEl.getBoundingClientRect().top;
-    classTarget.classList.remove('full-screen-active');
+    this.classTarget.classList.remove('full-screen-active');
     this.totalShift = beforeTop - afterTop;
 
     // Lock scroll container height — decouples clientHeight from flex layout
@@ -346,6 +359,7 @@ export class FullScreenController {
       setStyle(this.workspaceEl, 'background-color', bg, 'important');
   }
 
+  /** Remove background-color inlines from body/app-container/workspace (iOS only) */
   private clearBackgroundInlines(): void {
     this.body.style.removeProperty('background-color');
     this.appContainerEl?.style.removeProperty('background-color');
@@ -459,7 +473,7 @@ export class FullScreenController {
     this.container.style.removeProperty('transition');
     this.clearShowInlines();
     this.scrollEl.style.removeProperty('height');
-    this.body.classList.remove('full-screen-active');
+    this.classTarget.classList.remove('full-screen-active');
     this.clearMaskImageInline();
     this.bridgePhaseActive = false;
     this.isActiveHider = false;
@@ -541,12 +555,8 @@ export class FullScreenController {
         this.leafContent.classList.remove('full-screen-showing');
       }
       this.clearMaskImageInline();
-      if (this.isAndroid) {
-        this.body.classList.remove('full-screen-active');
-      } else {
-        this.leafContent.classList.remove('full-screen-active');
-        this.clearBackgroundInlines();
-      }
+      this.classTarget.classList.remove('full-screen-active');
+      if (!this.isAndroid) this.clearBackgroundInlines();
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
@@ -705,8 +715,7 @@ export class FullScreenController {
 
   /** Re-measure totalShift from live DOM. Only valid when full-screen-active is NOT on the class target (body on Android, leafContent on iOS) — otherwise margin-top reads as 0 from the class rule. */
   private measureTotalShift(): void {
-    const classTarget = this.isAndroid ? this.body : this.leafContent;
-    if (classTarget.classList.contains('full-screen-active')) return;
+    if (this.classTarget.classList.contains('full-screen-active')) return;
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
     this.totalShift =
@@ -781,7 +790,7 @@ export class FullScreenController {
     }
 
     // Navbar: animated hide via inline transform + opacity
-    const navbarHeight = this.getNavbarHeight();
+    const navbarHeight = this.navbarHeight;
     const applyNavbarHide = (): void => {
       setStyles(this.navbarEl, [
         ['transform', `translateY(${navbarHeight}px)`, 'important'],
@@ -837,7 +846,7 @@ export class FullScreenController {
       // transitions (main-thread style recalc every frame), WAAPI creates
       // compositor-side KeyframeModels that interpolate on the GPU thread,
       // freeing the main thread for scroll event processing.
-      const headerShift = this.getHeaderShift();
+      const headerShift = this.headerShift;
       this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
@@ -1005,10 +1014,10 @@ export class FullScreenController {
       // Read WAAPI "from" values BEFORE rAF — fill:forwards still active
       const navbarFrom =
         this.navbarEl.style.getPropertyValue('transform') ||
-        `translateY(${this.getNavbarHeight()}px)`;
+        `translateY(${this.navbarHeight}px)`;
       const headerFrom =
         this.viewHeaderEl?.style.getPropertyValue('transform') ||
-        `translateY(-${this.getHeaderShift()}px)`;
+        `translateY(-${this.headerShift}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
         // Inline styles restore margin/toolbar/search — bypasses classList
@@ -1296,26 +1305,5 @@ export class FullScreenController {
     this.barsHidden = false;
     this.lastToggleTime = Date.now();
     this.showBarsUI();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  private getNavbarHeight(): number {
-    const bodyCS = getComputedStyle(this.body);
-    return (
-      (parseFloat(bodyCS.getPropertyValue('--navbar-height')) || 52) +
-      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-bottom')) || 34)
-    );
-  }
-
-  /** Header + safe area height — used for Android header hide animation */
-  private getHeaderShift(): number {
-    const bodyCS = getComputedStyle(this.body);
-    return (
-      (parseFloat(bodyCS.getPropertyValue('--view-header-height')) || 44) +
-      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-top')) || 47)
-    );
   }
 }
