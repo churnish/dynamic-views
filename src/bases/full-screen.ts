@@ -130,6 +130,7 @@ export class FullScreenController {
   private programmaticScroll = false;
   private pendingLayout: (() => void) | null = null;
   private scrollIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private bridgeResolveTimer: ReturnType<typeof setTimeout> | null = null;
   private isActiveHider = false;
   private pendingRafId: number | null = null;
   private lastToggleTime = 0;
@@ -426,6 +427,70 @@ export class FullScreenController {
     this.leafContent.removeAttribute('data-dynamic-views-show');
   }
 
+  /** Resolve show bridge at scrollTop=0. All changes in one synchronous
+   *  block — classList.remove triggers a massive restyle that subsumes
+   *  the content position change. No scrollTop write needed. */
+  private resolveBridgeAtTop(): void {
+    this.container.style.removeProperty('transform');
+    this.container.style.removeProperty('transition');
+    this.clearShowInlines();
+    this.scrollEl.style.removeProperty('height');
+    this.body.classList.remove('full-screen-active');
+    this.clearMaskImageInline();
+    this.showBridgeActive = false;
+    this.isActiveHider = false;
+    this.settled = false;
+  }
+
+  /** Animate bridge transform to 0 over 200ms, then batch cleanup on
+   *  transitionend. At idle (no active scroll), the animation doesn't
+   *  need to match momentum — it just needs to look smooth. The batch
+   *  cleanup after animation produces zero visual change because show
+   *  inlines and full-screen-active cancel out geometrically. */
+  private animateBridgeResolve(): void {
+    this.programmaticScroll = true;
+    this.cancelAnimations();
+    this.leafContent.removeAttribute('data-dynamic-views-show');
+    this.clearNavbarInlines();
+    this.clearHeaderInlines();
+
+    setStyle(this.container, 'transition', 'transform 200ms ease-out');
+    setStyle(this.container, 'transform', 'translateY(0)');
+
+    this.container.addEventListener(
+      'transitionend',
+      () => {
+        // Guard: hideBarsUI may have interrupted the animation
+        if (!this.showBridgeActive) {
+          this.programmaticScroll = false;
+          return;
+        }
+        this.resolveBridgeAtTop();
+        this.pendingRafId = requestAnimationFrame(() => {
+          this.programmaticScroll = false;
+          this.prevScrollTop = this.scrollEl.scrollTop;
+          this.accumulatedDelta = 0;
+          this.lockedScrollHeight = this.scrollEl.offsetHeight;
+          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+        });
+      },
+      { once: true }
+    );
+  }
+
+  /** Scroll-linked bridge unwind — reduces bridge magnitude as scrollTop
+   *  approaches 0. Transform writes are compositor-only (no layout, no
+   *  tile invalidation). Smoothstep easing keeps the rate-of-change
+   *  gentle at boundaries. */
+  private unwindBridge(currentTop: number): void {
+    const zone = this.totalShift * 3;
+    const t = Math.min(1, currentTop / zone);
+    const eased = t * t * (3 - 2 * t);
+    const bridgePx = Math.round(this.totalShift * eased);
+
+    setStyle(this.container, 'transform', `translateY(-${bridgePx}px)`);
+  }
+
   /** Idempotent — no-op if already unmounted */
   unmount(): void {
     if (!this.mounted) return;
@@ -452,6 +517,10 @@ export class FullScreenController {
     if (this.scrollIdleTimer != null) {
       clearTimeout(this.scrollIdleTimer);
       this.scrollIdleTimer = null;
+    }
+    if (this.bridgeResolveTimer != null) {
+      clearTimeout(this.bridgeResolveTimer);
+      this.bridgeResolveTimer = null;
     }
     // Remove full screen state only if this instance set it
     if (this.isActiveHider) {
@@ -513,6 +582,46 @@ export class FullScreenController {
           ? FULL_SCREEN_SCROLL_IDLE_ANDROID_MS
           : FULL_SCREEN_SCROLL_IDLE_MS
       );
+    }
+
+    // Scroll-linked bridge unwind — gradually reduce bridge magnitude
+    // as scrollTop approaches 0. Transform is compositor-only (safe
+    // during fling). At scrollTop=0, bridge is already 0.
+    if (this.isAndroid && this.showBridgeActive && !this.barsHidden) {
+      this.unwindBridge(currentTop);
+
+      // Bridge fully unwound at top — schedule cleanup at idle (visual no-op
+      // since bridge is already at 0). resolveBridgeAtTop handles class
+      // removal, show inline cleanup, mask-image, and flag reset.
+      if (currentTop <= 1) {
+        if (this.bridgeResolveTimer == null) {
+          this.bridgeResolveTimer = setTimeout(() => {
+            this.bridgeResolveTimer = null;
+            if (this.scrollEl.scrollTop > 1) return;
+            this.pendingLayout = null;
+            if (this.scrollIdleTimer != null) {
+              clearTimeout(this.scrollIdleTimer);
+              this.scrollIdleTimer = null;
+            }
+            this.programmaticScroll = true;
+            this.cancelAnimations();
+            this.leafContent.removeAttribute('data-dynamic-views-show');
+            this.clearNavbarInlines();
+            this.clearHeaderInlines();
+            this.resolveBridgeAtTop();
+            this.pendingRafId = requestAnimationFrame(() => {
+              this.programmaticScroll = false;
+              this.prevScrollTop = this.scrollEl.scrollTop;
+              this.accumulatedDelta = 0;
+              this.lockedScrollHeight = this.scrollEl.offsetHeight;
+              setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+            });
+          }, 50);
+        }
+      } else if (this.bridgeResolveTimer != null) {
+        clearTimeout(this.bridgeResolveTimer);
+        this.bridgeResolveTimer = null;
+      }
     }
 
     // Cooldown prevents rapid cycling (deceleration bounce, layout-induced deltas).
@@ -609,6 +718,11 @@ export class FullScreenController {
   /** HIDE — immediate, momentum-safe */
   private hideBarsUI(): void {
     this.isActiveHider = true;
+
+    if (this.bridgeResolveTimer != null) {
+      clearTimeout(this.bridgeResolveTimer);
+      this.bridgeResolveTimer = null;
+    }
 
     // Cancel pending show rAF (rapid show→hide before rAF fires)
     if (this.pendingRafId != null) {
@@ -1004,28 +1118,32 @@ export class FullScreenController {
         this.programmaticScroll = true;
 
         this.cancelAnimations();
-
-        // Remove scrim data attribute — collapses ::before to safe-area
-        // height (doesn't overlap toolbar). Without WAAPI compositor layers,
-        // the toolbar has no z-index and sits behind the opaque scrim.
         this.leafContent.removeAttribute('data-dynamic-views-show');
-
-        // Height lock stays at bars-hidden value — unlocking triggers scroll
-        // layer raster invalidation that flashes on Chrome/146. The extra
-        // totalShift px of scroll space is negligible on top of the ~50%
-        // scroll-past-end padding.
-
-        // Clear animation artifacts — WAAPI finished, clear to defaults.
-        // CSS full-screen-active + show inlines keep elements visible.
         this.clearNavbarInlines();
         this.clearHeaderInlines();
+
+        // If bridge already unwound to 0 (scrollTop near top), do full
+        // cleanup — visual no-op since transform is already 0.
+        if (this.scrollEl.scrollTop <= 1) {
+          if (this.bridgeResolveTimer != null) {
+            clearTimeout(this.bridgeResolveTimer);
+            this.bridgeResolveTimer = null;
+          }
+          this.resolveBridgeAtTop();
+          this.pendingRafId = requestAnimationFrame(() => {
+            this.programmaticScroll = false;
+            this.prevScrollTop = this.scrollEl.scrollTop;
+            this.accumulatedDelta = 0;
+            this.lockedScrollHeight = this.scrollEl.offsetHeight;
+            setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+          });
+          return;
+        }
 
         this.pendingRafId = requestAnimationFrame(() => {
           this.programmaticScroll = false;
           this.prevScrollTop = this.scrollEl.scrollTop;
           this.accumulatedDelta = 0;
-          // No height relock — kept at bars-hidden value (see above).
-          // mask-image already restored in show rAF (gradient swap).
         });
       };
       return;
