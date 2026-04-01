@@ -103,26 +103,28 @@ body.dynamic-views-poster-disable-scroll
     filter var(--dynamic-views-anim-duration-moderate);
 }
 
-/* Poster reveal zoom (all platforms — hover and tap).
-   will-change promotes to GPU layer for smooth transform on WebKit. */
+/* Poster reveal zoom: add transform transition for zoom animation.
+   will-change deferred to active states below — pre-promoting every poster
+   image to its own GPU layer costs 60-96ms composite on iPhone 13. */
 body:not(.dynamic-views-poster-disable-reveal-zoom)
   .dynamic-views
   .card.image-format-poster
   .card-poster
   img {
-  will-change: transform;
   transition:
     transform var(--dynamic-views-anim-duration-fast) ease,
     opacity var(--dynamic-views-anim-duration-moderate) ease,
     filter var(--dynamic-views-anim-duration-moderate);
 }
 
-/* Poster: zoom on tap reveal (mobile) */
+/* Poster: zoom on tap reveal (mobile) — will-change promotes to GPU layer
+   only when actively revealed, not during normal scrolling. */
 body:not(.dynamic-views-poster-disable-reveal-zoom)
   .dynamic-views
   .card.image-format-poster.poster-revealed
   .card-poster
   img {
+  will-change: transform;
   transform: scale(1.05);
 }
 
@@ -136,6 +138,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
     .card.image-format-poster.poster-hover-active
     .card-poster
     img {
+    will-change: transform;
     transform: scale(1.05);
   }
 
@@ -147,6 +150,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
     .card.image-format-poster.poster-revealed
     .card-poster
     img {
+    will-change: transform;
     transform: scale(1.05);
   }
 }

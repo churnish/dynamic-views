@@ -2796,7 +2796,15 @@ export class DynamicViewsMasonryView extends BasesView {
     handle.el.style.left = `${item.x}px`;
     handle.el.style.top = `${item.y}px`;
     handle.el.classList.add('masonry-positioned');
-    handle.el.classList.add('card-fade-in');
+    // Remount (previously measured): skip all fade animations to prevent
+    // opacity:0→1 flash on cards re-entering the mount zone during scroll-back.
+    // First mount (never measured): normal fade-in + image load transition.
+    if (item.measuredAtWidth === 0) {
+      handle.el.classList.add('card-fade-in');
+    } else {
+      handle.el.classList.add('skip-image-fade');
+      handle.el.classList.add('image-ready');
+    }
     // Set explicit height to match stored layout height. Prevents height drift
     // in freshly rendered cards from triggering remeasureAndReposition during
     // scroll — small per-card differences cascade through columns, causing
@@ -2839,6 +2847,11 @@ export class DynamicViewsMasonryView extends BasesView {
       item.el!.style.removeProperty('contain-intrinsic-height');
     }
     item.el!.style.removeProperty('height');
+    // Hint WKWebView to release decoded image bitmaps sooner
+    for (const img of item.el!.querySelectorAll('img')) {
+      img.removeAttribute('src');
+      img.removeAttribute('srcset');
+    }
     this.cardResizeObserver?.unobserve(item.el!);
     item.el?.remove();
     item.el = null;

@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-04-01
 ---
 # Doc index
 
@@ -51,6 +51,7 @@ Empirical development artifacts — research logs, optimization tracking, and in
 | [grid-roadmap.md](dev/grid-roadmap.md) | Working on Grid performance — documents virtual scroll committed-row lock, CSS Grid style recalc bottleneck, forced reflow reduction, rejected approaches, and status tracking. |
 | [icon-alignment.md](dev/icon-alignment.md) | Working on icon vertical alignment with text — documents all failed approaches (CSS, canvas TextMetrics, offscreen DOM), Android text autosizing constraints, the offscreen measurement exemption, and the live DOM measurement solution. |
 | [masonry-roadmap.md](dev/masonry-roadmap.md) | Working on masonry performance — documents all optimizations by system (scroll, resize, image loading, rendering, virtual scroll, grouped masonry), priority table from T1-T12 profiling, Datacore parity gaps, and status tracking. |
+| [mobile-perf-roadmap.md](dev/mobile-perf-roadmap.md) | Working on iPhone 13 compositor or memory performance — documents empirical findings (Safari Timeline, memory audits), prioritized optimization approaches, and status tracking. |
 
 ## patterns/
 
