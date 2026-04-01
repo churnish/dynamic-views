@@ -93,6 +93,14 @@ export const HOVER_GROWTH_PX = 4;
 
 const MAX_HOVER_SCALE = 1.04;
 
+/** Selector for visible body children — used by card-renderer and shared-renderer. */
+export const VISIBLE_BODY_SELECTOR =
+  '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
+
+export const POSTER_STRETCH_CLASS = 'poster-stretch';
+export const POSTER_ROW_MIN_HEIGHT_VAR = '--poster-row-min-height';
+export const POSTER_ASPECT_OVERRIDE_VAR = '--poster-aspect-override';
+
 // Fixed cover height body classes (Style Settings class-select options)
 export const FIXED_COVER_HEIGHT_GRID = 'dynamic-views-fixed-cover-height-grid';
 export const FIXED_COVER_HEIGHT_MASONRY =
@@ -100,11 +108,14 @@ export const FIXED_COVER_HEIGHT_MASONRY =
 export const FIXED_COVER_HEIGHT_BOTH = 'dynamic-views-fixed-cover-height-both';
 export const FIXED_COVER_HEIGHT_NONE = 'dynamic-views-fixed-cover-height-none';
 
-// Fixed poster height body classes (Style Settings class-select options)
+// Fixed poster height body classes (Style Settings class-select options).
+// GRID and BOTH mean fixed height is ON — JS only checks the OFF variants (MASONRY, NONE).
+/** ON variants not checked in JS (default behavior) @public */
 export const FIXED_POSTER_HEIGHT_GRID =
   'dynamic-views-fixed-poster-height-grid';
 export const FIXED_POSTER_HEIGHT_MASONRY =
   'dynamic-views-fixed-poster-height-masonry';
+/** @public */
 export const FIXED_POSTER_HEIGHT_BOTH =
   'dynamic-views-fixed-poster-height-both';
 export const FIXED_POSTER_HEIGHT_NONE =
@@ -147,3 +158,7 @@ export const FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 500;
 export const FULL_SCREEN_ANIM_MS = 300;
 /** Bar opacity fade duration (ms) — matches native header/navbar opacity transition */
 export const FULL_SCREEN_FADE_MS = 200;
+
+/** Delay (ms) before resolving a fully-unwound bridge at scrollTop=0.
+ *  Short — just enough to confirm idle. Android has no elastic bounce. */
+export const FULL_SCREEN_BRIDGE_RESOLVE_DELAY_MS = 50;

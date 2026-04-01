@@ -56,6 +56,9 @@ import {
   FIXED_COVER_HEIGHT_NONE,
   FIXED_POSTER_HEIGHT_MASONRY,
   FIXED_POSTER_HEIGHT_NONE,
+  POSTER_STRETCH_CLASS,
+  POSTER_ROW_MIN_HEIGHT_VAR,
+  POSTER_ASPECT_OVERRIDE_VAR,
   computeHoverScale,
   DIRECTION_ACCUM_THRESHOLD,
   HIGH_VELOCITY_THRESHOLD,
@@ -3275,8 +3278,7 @@ export class DynamicViewsGridView extends BasesView {
   private equalizeRowHeights(config: {
     expectedFormat: string;
     matchCard: (el: HTMLElement) => boolean;
-    fixedMasonryClass: string;
-    fixedNoneClass: string;
+    gridFixedHeightOffClasses: [string, string];
     cssVariable: string;
   }): void {
     if (!this.containerEl?.isConnected) return;
@@ -3287,8 +3289,8 @@ export class DynamicViewsGridView extends BasesView {
     // Fixed height is OFF only when -masonry or -none is explicitly set.
     // Matches CSS :not(-masonry, -none) fallback — no class = fixed height on.
     const isFixedHeightActive =
-      !body.classList.contains(config.fixedMasonryClass) &&
-      !body.classList.contains(config.fixedNoneClass);
+      !body.classList.contains(config.gridFixedHeightOffClasses[0]) &&
+      !body.classList.contains(config.gridFixedHeightOffClasses[1]);
 
     if (isFixedHeightActive) {
       // Clear stale values when fixed height is active
@@ -3350,8 +3352,10 @@ export class DynamicViewsGridView extends BasesView {
         (el.classList.contains('card-cover-top') ||
           el.classList.contains('card-cover-bottom')) &&
         el.classList.contains('image-format-cover'),
-      fixedMasonryClass: FIXED_COVER_HEIGHT_MASONRY,
-      fixedNoneClass: FIXED_COVER_HEIGHT_NONE,
+      gridFixedHeightOffClasses: [
+        FIXED_COVER_HEIGHT_MASONRY,
+        FIXED_COVER_HEIGHT_NONE,
+      ],
       cssVariable: '--row-cover-aspect-ratio',
     });
   }
@@ -3362,8 +3366,10 @@ export class DynamicViewsGridView extends BasesView {
       matchCard: (el) =>
         el.classList.contains('image-format-poster') &&
         el.classList.contains('has-poster'),
-      fixedMasonryClass: FIXED_POSTER_HEIGHT_MASONRY,
-      fixedNoneClass: FIXED_POSTER_HEIGHT_NONE,
+      gridFixedHeightOffClasses: [
+        FIXED_POSTER_HEIGHT_MASONRY,
+        FIXED_POSTER_HEIGHT_NONE,
+      ],
       cssVariable: '--row-poster-aspect-ratio',
     });
     this.stretchPosterCardsInMixedRows();
@@ -3373,12 +3379,39 @@ export class DynamicViewsGridView extends BasesView {
   // height while imageless cards use natural content height. When imageless cards
   // are taller, stretch poster cards to match via min-height. aspect-ratio must
   // be cleared to prevent width expansion (aspect-ratio + min-height = wider card).
+  // Batched read-then-write to avoid forced reflow per row.
   private stretchPosterCardsInMixedRows(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
 
+    // Fixed height active = stretch is a CSS no-op. Clear stale state and exit.
+    const body = this.containerEl.ownerDocument.body;
+    if (
+      !body.classList.contains(FIXED_POSTER_HEIGHT_MASONRY) &&
+      !body.classList.contains(FIXED_POSTER_HEIGHT_NONE)
+    ) {
+      for (const [, groupItems] of this.virtualItemsByGroup) {
+        for (const item of groupItems) {
+          if (!item.el?.isConnected) continue;
+          if (item.el.classList.contains(POSTER_STRETCH_CLASS)) {
+            item.el.style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
+            item.el.style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
+            item.el.classList.remove(POSTER_STRETCH_CLASS);
+          }
+        }
+      }
+      return;
+    }
+
     const columns = this.lastColumnCount;
     if (columns <= 0) return;
+
+    // Read phase: collect all row measurements without writing styles
+    const rowActions: {
+      posterEls: HTMLElement[];
+      action: 'stretch' | 'unstretch' | 'skip';
+      value: string;
+    }[] = [];
 
     for (const [, groupItems] of this.virtualItemsByGroup) {
       for (
@@ -3404,16 +3437,13 @@ export class DynamicViewsGridView extends BasesView {
           }
         }
 
-        // Skip all-poster or all-imageless rows
+        // All-poster or all-imageless rows: clean up any stale stretch state
         if (posterEls.length === 0 || maxImagelessHeight === 0) {
-          for (const el of posterEls) {
-            el.style.removeProperty('--poster-row-min-height');
-            el.classList.remove('poster-stretch');
-          }
+          rowActions.push({ posterEls, action: 'unstretch', value: '' });
           continue;
         }
 
-        // Early exit: if all poster cards already match this target, skip.
+        // Oscillation guard: if all poster cards already match this target, skip.
         // Must check BEFORE reading posterHeight — stretched cards reflect
         // min-height, not natural ratio height, causing oscillation.
         const targetHeight = Math.round(maxImagelessHeight);
@@ -3421,30 +3451,47 @@ export class DynamicViewsGridView extends BasesView {
         if (
           posterEls.every(
             (el) =>
-              el.style.getPropertyValue('--poster-row-min-height') === value
+              el.style.getPropertyValue(POSTER_ROW_MIN_HEIGHT_VAR) === value
           )
         ) {
+          rowActions.push({ posterEls, action: 'skip', value });
           continue;
         }
 
-        const posterHeight = posterEls[0].classList.contains('poster-stretch')
+        // Already-stretched cards report their stretched height (= min-height),
+        // which would fail the > test and remove stretch — use 0 to force the
+        // apply branch and let the oscillation guard handle convergence.
+        const posterHeight = posterEls[0].classList.contains(
+          POSTER_STRETCH_CLASS
+        )
           ? 0
           : posterEls[0].getBoundingClientRect().height;
+
         if (maxImagelessHeight > posterHeight) {
-          for (const el of posterEls) {
-            el.setCssProps({
-              '--poster-row-min-height': value,
-              '--poster-aspect-override': 'auto',
-            });
-            el.classList.add('poster-stretch');
-          }
+          rowActions.push({ posterEls, action: 'stretch', value });
         } else {
-          for (const el of posterEls) {
-            if (!el.classList.contains('poster-stretch')) continue;
-            el.style.removeProperty('--poster-row-min-height');
-            el.style.removeProperty('--poster-aspect-override');
-            el.classList.remove('poster-stretch');
-          }
+          rowActions.push({ posterEls, action: 'unstretch', value: '' });
+        }
+      }
+    }
+
+    // Write phase: apply all style changes without interleaved reads
+    for (const { posterEls, action, value } of rowActions) {
+      if (action === 'skip') continue;
+      if (action === 'stretch') {
+        for (const el of posterEls) {
+          el.setCssProps({
+            [POSTER_ROW_MIN_HEIGHT_VAR]: value,
+            [POSTER_ASPECT_OVERRIDE_VAR]: 'auto',
+          });
+          el.classList.add(POSTER_STRETCH_CLASS);
+        }
+      } else {
+        for (const el of posterEls) {
+          if (!el.classList.contains(POSTER_STRETCH_CLASS)) continue;
+          el.style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
+          el.style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
+          el.classList.remove(POSTER_STRETCH_CLASS);
         }
       }
     }

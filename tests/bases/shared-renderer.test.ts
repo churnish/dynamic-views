@@ -79,6 +79,8 @@ vi.mock('../../src/shared/keyboard-nav', () => ({
 vi.mock('../../src/shared/constants', () => ({
   CHECKBOX_MARKER_PREFIX: 'checkbox:',
   THUMBNAIL_STACK_MULTIPLIER: 1,
+  VISIBLE_BODY_SELECTOR:
+    '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)',
 }));
 vi.mock('../../src/utils/notebook-navigator', () => ({
   shouldUseNotebookNavigator: vi.fn(),
@@ -104,6 +106,7 @@ vi.mock('../../src/utils/owner-window', () => ({
 }));
 
 import { SharedCardRenderer } from '../../src/bases/shared-renderer';
+import { VISIBLE_BODY_SELECTOR } from '../../src/shared/constants';
 
 describe('SharedCardRenderer.hasImageChanged', () => {
   /** Minimal CardData factory — only imageUrl matters */
@@ -222,9 +225,6 @@ describe('Structural content classes', () => {
     return card;
   }
 
-  const VISIBLE_BODY_SELECTOR =
-    '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
-
   describe('has-header', () => {
     it('added when card-header exists', () => {
       const card = buildCardDOM({ hasHeader: true });
@@ -307,6 +307,56 @@ describe('Structural content classes', () => {
         body.classList.add('has-body-content');
       }
       expect(body.classList.contains('has-body-content')).toBe(false);
+    });
+  });
+
+  describe('has-body-content poster format', () => {
+    /** Replicates the poster-header extension from card-renderer and shared-renderer */
+    function applyHasBodyContent(bodyEl: HTMLElement, format: string): void {
+      if (
+        bodyEl.querySelector(VISIBLE_BODY_SELECTOR) ||
+        (format === 'poster' && bodyEl.querySelector('.card-header'))
+      ) {
+        bodyEl.classList.add('has-body-content');
+      }
+    }
+
+    it('poster card with header only gets has-body-content', () => {
+      const card = buildCardDOM({ hasHeader: false });
+      const body = card.querySelector('.card-body')!;
+      const header = document.createElement('div');
+      header.classList.add('card-header');
+      body.appendChild(header);
+
+      applyHasBodyContent(body, 'poster');
+      expect(body.classList.contains('has-body-content')).toBe(true);
+    });
+
+    it('non-poster card with header only does not get has-body-content', () => {
+      const card = buildCardDOM({ hasHeader: false });
+      const body = card.querySelector('.card-body')!;
+      const header = document.createElement('div');
+      header.classList.add('card-header');
+      body.appendChild(header);
+
+      applyHasBodyContent(body, 'cover');
+      expect(body.classList.contains('has-body-content')).toBe(false);
+    });
+
+    it('poster card with no header and no visible content does not get has-body-content', () => {
+      const card = buildCardDOM();
+      const body = card.querySelector('.card-body')!;
+
+      applyHasBodyContent(body, 'poster');
+      expect(body.classList.contains('has-body-content')).toBe(false);
+    });
+
+    it('poster card with properties gets has-body-content regardless of header', () => {
+      const card = buildCardDOM({ hasPropertiesTop: true });
+      const body = card.querySelector('.card-body')!;
+
+      applyHasBodyContent(body, 'poster');
+      expect(body.classList.contains('has-body-content')).toBe(true);
     });
   });
 });

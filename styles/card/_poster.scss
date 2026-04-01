@@ -446,10 +446,7 @@ body:is(
       min(
         var(
           --row-poster-aspect-ratio,
-          var(
-            --actual-aspect-ratio,
-            var(--dynamic-views-image-aspect-ratio, 1)
-          )
+          var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
         ),
         var(--dynamic-views-image-aspect-ratio, 1)
       )

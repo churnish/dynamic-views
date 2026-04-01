@@ -125,6 +125,8 @@ dynamic-views/
 │   │   └── obsidian.ts
 │   ├── bases/
 │   │   ├── cleanup.test.ts
+│   │   ├── grid-equalize.test.ts
+│   │   ├── grid-poster-stretch.test.ts
 │   │   ├── grid-scroll.test.ts
 │   │   ├── shared-renderer.test.ts
 │   │   ├── sync-responsive-classes.test.ts

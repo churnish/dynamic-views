@@ -95,6 +95,7 @@ import {
 import {
   CHECKBOX_MARKER_PREFIX,
   THUMBNAIL_STACK_MULTIPLIER,
+  VISIBLE_BODY_SELECTOR,
 } from '../shared/constants';
 import {
   shouldUseNotebookNavigator,
@@ -118,10 +119,6 @@ import {
   invalidateCompactStackedCache,
 } from '../shared/property-helpers';
 import { getOwnerWindow } from '../utils/owner-window';
-
-/** Selector for visible body children — shared with card-renderer.tsx. */
-const VISIBLE_BODY_SELECTOR =
-  '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
 
 /** Per-card cleanup handle for individual card teardown (virtual scrolling) */
 export interface CardHandle {
@@ -1182,9 +1179,15 @@ export class SharedCardRenderer {
     // Universal content wrapper: header + body
     const cardContent = cardEl.createDiv('card-content');
 
-    // Title, Subtitle, and URL button — always wrapped in card-header
-    if (hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)) {
-      const headerEl = cardContent.createDiv('card-header');
+    // Title, Subtitle, and URL button — always wrapped in card-header.
+    // Poster creates header inside bodyEl (scrolls with content); all other
+    // formats create it directly in cardContent. Defined as a closure so the
+    // parent element can differ without duplicating the block.
+    const createHeader = (parent: HTMLElement): void => {
+      if (!(hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)))
+        return;
+
+      const headerEl = parent.createDiv('card-header');
 
       if (hasTitle || hasSubtitle) {
         const groupEl = headerEl.createDiv('card-title-block');
@@ -1248,6 +1251,11 @@ export class SharedCardRenderer {
           passive: true,
         });
       }
+    };
+
+    // Non-poster: header in card-content (before body)
+    if (format !== 'poster') {
+      createHeader(cardContent);
     }
 
     // Make card draggable when settings.openFileAction is 'card'
@@ -1290,10 +1298,9 @@ export class SharedCardRenderer {
     // Universal card-body: contains properties and previews
     const bodyEl = cardContent.createDiv('card-body');
 
-    // Poster: header scrolls with content — move inside card-body
+    // Poster: header inside card-body (scrolls with content)
     if (format === 'poster') {
-      const headerEl = cardContent.querySelector<HTMLElement>('.card-header');
-      if (headerEl) bodyEl.prepend(headerEl);
+      createHeader(bodyEl);
       setupVerticalScrollGradient(bodyEl, signal);
     }
 

@@ -69,6 +69,7 @@ import {
 import {
   CHECKBOX_MARKER_PREFIX,
   THUMBNAIL_STACK_MULTIPLIER,
+  VISIBLE_BODY_SELECTOR,
 } from './constants';
 import { setupHoverIntent } from './hover-intent';
 import { getTimestampIcon, isTimestampProperty } from './render-utils';
@@ -97,10 +98,6 @@ import {
 } from '../utils/notebook-navigator';
 import { measurePropertyFields } from './property-measure';
 import { getOwnerWindow } from '../utils/owner-window';
-
-/** Selector for visible body children — shared between card root and card-body refs. */
-const VISIBLE_BODY_SELECTOR =
-  '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
 
 /**
  * Extended container element with focus management properties
