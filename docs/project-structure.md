@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-06
+updated: 2026-04-02
 ---
 # Project structure
 
@@ -126,6 +126,7 @@ dynamic-views/
 │   ├── bases/
 │   │   ├── can-flush-image-relayout.test.ts
 │   │   ├── cleanup.test.ts
+│   │   ├── full-screen-factory.test.ts
 │   │   ├── grid-equalize.test.ts
 │   │   ├── grid-poster-stretch.test.ts
 │   │   ├── grid-scroll.test.ts

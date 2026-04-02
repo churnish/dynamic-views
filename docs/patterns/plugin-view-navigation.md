@@ -2,11 +2,13 @@
 title: Plugin view navigation
 description: Definitive reference for navigating Dynamic Views plugin views and elements across platforms — view identification, DOM hierarchy, correct selectors, full-screen elements, and platform-specific probing patterns.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-04-02
 ---
 # Plugin view navigation
 
 Reference for navigating Dynamic Views plugin views and DOM elements via CDP (Chrome DevTools Protocol), WebKit Inspector, or direct DOM queries. Covers both Bases and Datacore backends, correct selectors, and common pitfalls. All class names and paths verified empirically against live runtime.
+
+See [view-configuration.md](view-configuration.md) for setting keys, defaults, and programmatic configuration.
 
 For card internals (property rows, cover elements, header structure), see [`card-dom-structure.md`](../architecture/card-dom-structure.md). 
 
@@ -241,6 +243,17 @@ The `FullScreenController` (`src/bases/full-screen.ts`) targets these elements o
 
 Note: `toolbarEl` targets `.bases-header` (the full header), NOT `.bases-toolbar` (the toolbar inside it).
 
+### Full-screen CSS state classes
+
+These classes are applied by the `FullScreenController` during bar hide/show transitions on mobile:
+
+| Class | Element | When applied | Platform |
+|---|---|---|---|
+| `dynamic-views-tap-shield` | `.view-header` | After hide settle (both platforms) | Both |
+| `dynamic-views-navbar-animated` | `.mobile-navbar` | At mount, removed at unmount | Android only |
+| `dynamic-views-navbar-hidden` | `.mobile-navbar` | During hide rAF, removed by `clearNavbarInlines()` | Android only |
+| `dynamic-views-navbar-show` | `.mobile-navbar` | During show path, removed by `clearNavbarInlines()` | iOS only |
+
 ## Other structural elements
 
 | Element | Selector | Notes |
@@ -250,6 +263,41 @@ Note: `toolbarEl` targets `.bases-header` (the full header), NOT `.bases-toolbar
 | Group heading | `.bases-group-heading` | Only rendered when `groupBy` is set |
 | View header | `.view-header` | Obsidian native — sibling of `.view-content` inside `.workspace-leaf-content` |
 | Measure lane | `.dynamic-views-measure-lane` | Temporary element for column width measurement during re-render |
+
+## Programmatic view instance access
+
+The plugin's Grid/Masonry view instance is accessed through the Bases controller, NOT through Obsidian's `_children` array:
+
+```js
+// Get the DynamicViewsGridView or DynamicViewsMasonryView instance
+const leaf = app.workspace.getLeavesOfType('bases')[0];
+const view = leaf.view.controller.view;
+```
+
+The access path is `leaf.view.controller.view` where:
+- `leaf.view` — Obsidian's `BasesView` instance
+- `.controller` — the `QueryController` that manages the view lifecycle
+- `.view` — the `DynamicViewsGridView` or `DynamicViewsMasonryView` instance
+
+Useful properties on the view instance:
+
+| Property | Type | Description |
+|---|---|---|
+| `view.type` | `string` | `'dynamic-views-grid'` or `'dynamic-views-masonry'` |
+| `view.scrollEl` | `HTMLElement` | The `.bases-view` scroll container |
+| `view.virtualItems` | `VirtualItem[]` | Masonry only — all cards (mounted and unmounted) |
+| `view.isGrouped` | `boolean` | Whether groupBy is active |
+| `view.lastRenderedSettings` | `object` | Current resolved settings |
+| `view.cachedGroupOffsets` | `Map` | Masonry only — group Y offsets for absolute positioning |
+
+**Multiple leaves**: When multiple Bases leaves are open, filter for the active one or the one with the expected view type:
+
+```js
+const leaves = app.workspace.getLeavesOfType('bases');
+const masonryLeaf = leaves.find(l =>
+  l.view.controller?.view?.type === 'dynamic-views-masonry'
+);
+```
 
 ## Platform-specific probing
 

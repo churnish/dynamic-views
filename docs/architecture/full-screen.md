@@ -100,24 +100,24 @@ The bridge resolves the fundamental conflict on iOS: hiding bars requires layout
 #### iOS (bridge + deferred settle)
 
 1. **Immediate (momentum-safe)**: Apply `full-screen-active` class on leafContent (not body — scopes style invalidation to the leaf subtree instead of the full document). Apply inline background-color on body/app-container/workspace (unreachable from leaf class). Apply `margin-top: totalShift` bridge on scroll child (`.dynamic-views-bases-container`) — increases `scrollHeight` to keep coordinate space aligned. Set opaque mask-image gradient. Animate navbar via inline styles using the double-rAF pattern (transition + target in separate frames — WebKit's passive scroll listener optimization collapses them otherwise). Hide Capacitor status bar.
-2. **Idle (2000ms debounce)**: Remove `margin-top` bridge, `scrollTop -= totalShift`, set tap-shield inlines on header (`transform: translateY(0)`, `opacity: 0`, `margin-top: 0`), unlock-measure-relock height. `settled = true`.
+2. **Idle (2000ms debounce)**: Remove `margin-top` bridge, `scrollTop -= totalShift`, add `dynamic-views-tap-shield` class on header, unlock-measure-relock height. `settled = true`.
 
 #### Android (WAAPI + bridge-less)
 
 1. **Immediate**: Cancel pending show rAF and WAAPI animations. Clear show-state inlines and show bridge transform. Pin header/toolbar/search at visible position via inline `!important` styles (prevents flash during class application). Remove height lock. Apply `full-screen-active` class. If `bridgePhaseActive` is false, `scrollTop -= totalShift` (clamped to 0). If `bridgePhaseActive` is true, skip scrollTop adjustment (scrollTop was never increased during show). Clear `bridgePhaseActive`. `settled = true` immediately. Set opaque mask-image gradient. Defer height relock to idle via `pendingLayout`. Hide Capacitor status bar.
-2. **rAF**: Clear `programmaticScroll`. Cancel any running show animations. Remove header/toolbar/search inline pins. Start WAAPI hide animations — separate transform + opacity for header and navbar (per-property timing matches native), opacity-only for toolbar and search. `fill: 'forwards'` holds final frame. Header WAAPI `onfinish` sets tap-shield inlines: `transform: translateY(0)`, `opacity: 0`, `margin-top: 0` (snaps header to natural position as invisible tap absorber). Set `pointer-events: none` on navbar.
+2. **rAF**: Clear `programmaticScroll`. Cancel any running show animations. Remove header/toolbar/search inline pins. Start WAAPI hide animations — separate transform + opacity for header and navbar (per-property timing matches native), opacity-only for toolbar and search. `fill: 'forwards'` holds final frame. Header WAAPI `onfinish` adds `dynamic-views-tap-shield` class (snaps header to natural position as invisible tap absorber). Add `dynamic-views-navbar-hidden` class on navbar.
 3. **Idle**: Height relock only — `offsetHeight` read deferred to `requestIdleCallback` (with `setTimeout` fallback) to avoid forcing synchronous layout during the animation window.
 
 ### Show sequence
 
 #### iOS (bridge + deferred settle)
 
-1. **Immediate**: Add `full-screen-showing` CSS class on `leafContent`. If not settled (hide bridge still active), remove `margin-top` bridge — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari address bar behavior). Restore navbar via inline styles — the inline `transition` from hide persists, producing an animated reveal. Restore mask-image gradient via `restoreMaskImage()` (gradient swap, safe during momentum). Show Capacitor status bar. Toolbar and search fade in via WAAPI in rAF.
-2. **Idle (2000ms debounce)**: Remove `margin-top` bridge. If settled, `scrollTop += totalShift`. Cancel WAAPI animations. Remove `full-screen-showing` class. Clear header inlines (tap-shield removal). Remove `full-screen-active` class. `isActiveHider = false`. Fully remove mask-image inline via `clearMaskImageInline()`. Clear navbar inlines. `settled = false`. Unlock-measure-relock height.
+1. **Immediate**: Add `full-screen-showing` CSS class on `leafContent`. If not settled (hide bridge still active), remove `margin-top` bridge — bridge removal and bar restoration cancel geometrically (zero net visual shift). If settled, no bridge needed — content shifts down naturally as bars reappear (same as Safari address bar behavior). Clear blocking navbar inline styles, then add `dynamic-views-navbar-show` class — the inline `transition` from hide persists, producing an animated reveal. Restore mask-image gradient via `restoreMaskImage()` (gradient swap, safe during momentum). Show Capacitor status bar. Toolbar and search fade in via WAAPI in rAF.
+2. **Idle (2000ms debounce)**: Remove `margin-top` bridge. If settled and `scrollTop >= totalShift`, `scrollTop += totalShift` (skipped near top to avoid scrolling first cards off-screen). Cancel WAAPI animations. Remove `full-screen-showing` class. Clear header inlines (tap-shield class removal). Remove `full-screen-active` class. `isActiveHider = false`. Fully remove mask-image inline via `clearMaskImageInline()`. Clear navbar inlines. `settled = false`. Unlock-measure-relock height.
 
 #### Android (scroll-linked show bridge)
 
-1. **Immediate**: Set `programmaticScroll = true`. Clear tap-shield inlines on header (must happen before reading WAAPI "from" values — `onfinish` sets `transform: translateY(0)` which would be read as animation start). Read WAAPI "from" values from `fill: forwards` state before rAF.
+1. **Immediate**: Set `programmaticScroll = true`. Remove `dynamic-views-tap-shield` class from header (must happen before reading WAAPI "from" values — the class sets `transform: translateY(0)` which would be read as animation start). Read WAAPI "from" values from `fill: forwards` state before rAF.
 2. **rAF**: `applyShowInlines()` restores `margin-top`, toolbar, search row, header pointer-events/z-index via inline `setProperty()` calls (bypasses `classList` to avoid style invalidation). Sets `data-dynamic-views-show` attribute on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules. If settled, set `transform: translateY(-totalShift)` on container (compositor-only show bridge) and `bridgePhaseActive = true`. Restore mask-image gradient via `restoreMaskImage()`. Clear `programmaticScroll`. Start show WAAPI animations BEFORE canceling old animations (later-created animations have higher composite priority per WAAPI section 4.6). Header + navbar: transform + opacity. Toolbar + search: opacity only. Cancel old WAAPI animations after new ones start. Defer Capacitor status bar show to next rAF (separates window inset change from CSS layout reflow).
 3. **Scroll-linked unwind**: On each scroll event while `bridgePhaseActive && !barsHidden`, `unwindBridge(scrollTop)` reduces the bridge transform via smoothstep easing over a zone of `lockedScrollHeight` (pane height). Transform writes are compositor-only — safe during fling. A `lastBridgePx` field skips no-op writes when the rounded value hasn't changed.
 4. **Idle (500ms or 50ms at top)**: Cancel WAAPI animations. Remove `data-dynamic-views-show` attribute. Clear navbar and header inlines. If `scrollTop <= 1` (bridge already unwound to 0), `commitBridgeResolve()` does full cleanup: removes `full-screen-active`, clears show inlines, clears mask-image, resets flags, relocks height. Otherwise, show inlines and `full-screen-active` persist until the next hide.
@@ -145,7 +145,7 @@ Direct `scrollTop` compensation is impossible on iOS — `scrollTop` writes kill
 
 ## Header tap intercept
 
-A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-header`. When bars are hidden, the header element is positioned as an invisible tap shield in the status bar zone (via inline `transform: translateY(0)`, `opacity: 0`, `margin-top: 0`). Tapping this zone reveals bars.
+A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-header`. When bars are hidden, the header element is positioned as an invisible tap shield in the status bar zone (via the `dynamic-views-tap-shield` CSS class: `transform: translateY(0)`, `opacity: 0`, `margin-top: 0`). Tapping this zone reveals bars.
 
 - **Guard**: Fires only when `barsHidden` is true.
 - **Action**: Sets `lastToggleTime` before calling `showBarsUI()` — prevents cooldown from being bypassed.
@@ -153,14 +153,47 @@ A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-he
 
 ### Tap shield setup
 
-Both platforms set identical tap-shield inlines on the header after hide completes:
+Both platforms apply the `dynamic-views-tap-shield` CSS class on the header after hide completes:
 
-- **Android**: Set in the header WAAPI `onfinish` callback (after hide animation completes).
-- **iOS**: Set in the hide settle `pendingLayout` (after 2000ms idle).
+- **Android**: Added in the header WAAPI `onfinish` callback (after hide animation completes).
+- **iOS**: Added in the hide settle `pendingLayout` (after 2000ms idle).
 
-The inlines are `transform: translateY(0)` (returns header to natural position from off-screen), `opacity: 0` (invisible), and `margin-top: 0` (overrides Obsidian's `safe-area-inset-top` margin so shield covers from y=0). This matches native Obsidian full-screen behavior.
+The CSS class sets `transform: translateY(0) !important` (returns header to natural position from off-screen), `opacity: 0 !important` (invisible), and `margin-top: 0 !important` (overrides Obsidian's `safe-area-inset-top` margin so shield covers from y=0). This matches native Obsidian full-screen behavior.
 
-Tap-shield inlines are cleared by `clearHeaderInlines()` during the show path — on iOS in the show idle `pendingLayout`, on Android via `clearHeaderInlines()` called after starting show WAAPI.
+The `dynamic-views-tap-shield` selector MUST be scoped inside `full-screen-active` for specificity (0,6,0) to beat the existing hide rules at (0,5,0).
+
+The tap-shield class is removed by `clearHeaderInlines()` during the show path — on iOS in the show idle `pendingLayout`, on Android via `clearHeaderInlines()` called before starting show WAAPI.
+
+## Navbar state classes
+
+Three CSS classes on `.mobile-navbar` manage navbar state during full-screen transitions (replacing some inline style usage):
+
+| Class | Platform | When applied | When removed | Effect |
+|---|---|---|---|---|
+| `dynamic-views-navbar-animated` | Android only | At mount | At unmount | `will-change: transform, opacity` — compositor layer pre-promotion |
+| `dynamic-views-navbar-hidden` | Android only | During hide rAF | By `clearNavbarInlines()` | `pointer-events: none !important` |
+| `dynamic-views-navbar-show` | iOS only | During show path | By `clearNavbarInlines()` | `transform: translateY(0) !important; opacity: 1 !important` |
+
+**`dynamic-views-navbar-show` ordering constraint**: The show class requires clearing hide-path inline styles FIRST. Inline `!important` beats rule `!important` regardless of specificity — a leftover inline `transform` from the hide path would block the class rule. However, `clearNavbarInlines()` cannot be used directly because it also clears the `transition` inline which must persist for the animated reveal. The show path selectively clears only the blocking inlines before adding the class.
+
+## Inline `!important` vs CSS class `!important` cascade
+
+When transitioning between states, inline `!important` from the previous state blocks CSS class `!important` from the new state. This is the same cascade rule in two places:
+
+- **Header (tap-shield to full-screen-showing)**: The `dynamic-views-tap-shield` class sets `transform: translateY(0) !important` as a rule. If inline `transform` with `!important` from the hide path were still present, it would win. `clearHeaderInlines()` removes inline styles before adding the show class.
+- **Navbar (applyNavbarHide to navbar-show)**: The `dynamic-views-navbar-show` class sets `transform: translateY(0) !important` as a rule. Inline `transform: translateY(...)` with `!important` from the hide animation would win. Selective inline clearing is required before adding the show class.
+
+The cascade priority is: inline `!important` > rule `!important` (regardless of specificity) > inline normal > rule normal. Both header and navbar transitions must respect this by clearing old inline styles before applying new CSS classes.
+
+## Show settle `scrollTop` compensation
+
+At show settle (show idle `pendingLayout`), `scrollTop += totalShift` compensates for the geometry shift when `full-screen-active` is removed. Removing the class restores `margin-top` on `.view-content`, which pushes the scroll container down — without compensation, the viewport would appear to jump up by `totalShift` pixels.
+
+**Top-of-scroll guard**: The compensation is skipped when `scrollTop < totalShift`. At the top of the scroll range, applying the full compensation would scroll the first cards off-screen. The threshold uses `<` (strict less-than) — when `scrollTop` equals `totalShift` exactly, the compensation is safe.
+
+## Android `applyShowInlines` stays inline
+
+The Android show path uses `setStyle()` inline styles (not CSS classes) for `viewContent`, `toolbarEl`, `searchRowEl`, and `viewHeaderEl` during the show transition. This is a documented performance constraint — `classList.add` on `leafContent` triggers subtree-wide selector re-matching that exceeds the single-threaded Android WebView compositor's frame budget. The inline approach bypasses selector matching entirely.
 
 ## Direction detection
 
@@ -274,9 +307,9 @@ In open-on-card mode, card body taps do not reveal bars — the card's click han
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_MS = 2000ms`. Outlasts the native scroll indicator fade (~1.5s after last scroll event), making the settle's `scrollTop` write invisible.
 - **Sustain gate**: 80ms on both directions. Required because iOS momentum produces deceleration bounce (brief delta reversals).
 - **Double-rAF**: Required for bar hide animations. WebKit's passive scroll listener optimization collapses transition + target into one style recalc without it. See `webkit-compositor-constraints.md`.
-- **Show path**: Synchronous class toggle — no two-frame split. Navbar animates via the inline `transition` persisting from hide. Header animates via Obsidian's native `.view-header` transition (not suppressed on iOS). Toolbar and search fade in via WAAPI in rAF.
+- **Show path**: Synchronous class toggle — no two-frame split. Clear blocking navbar inline styles, then add `dynamic-views-navbar-show` class — the inline `transition` from hide persists, producing an animated reveal. Header animates via Obsidian's native `.view-header` transition (not suppressed on iOS). Toolbar and search fade in via WAAPI in rAF.
 - **Mask-image**: `restoreMaskImage()` called synchronously in the show path (gradient swap is safe during momentum). `clearMaskImageInline()` called at show idle (structural removal only safe at rest).
-- **Show idle cleanup**: `clearHeaderInlines()` removes tap-shield inlines before removing `full-screen-active`. `isActiveHider` set to false. Full class and inline cleanup.
+- **Show idle cleanup**: `clearHeaderInlines()` removes tap-shield class before removing `full-screen-active`. `scrollTop += totalShift` compensates for geometry shift (skipped when `scrollTop < totalShift` to avoid scrolling first cards off-screen). `isActiveHider` set to false. Full class and inline cleanup.
 - **Scroll indicator**: Jumps when bars hide/show because the scroll container's effective height changes. Matches Safari's native address bar behavior. Accepted.
 
 ### Android
@@ -287,7 +320,7 @@ In open-on-card mode, card body taps do not reveal bars — the card's click han
 - **WAAPI animations**: Header and navbar hide/show use `element.animate()` (Web Animations API). WAAPI gets better compositor scheduling on the single-threaded WebView compositor. `fill: 'forwards'` holds the final frame. Animations are cancelled before starting new ones (rapid cycling safety).
 - **Show WAAPI ordering**: Show WAAPI animations are started BEFORE canceling old hide animations. Later-created animations have higher composite priority per WAAPI section 4.6 — canceling hide first would snap elements visible for one frame before show starts.
 - **Split CSS rules**: iOS keeps `!important` transform/opacity in CSS class rules. Android CSS only sets `pointer-events` + `transition: none` — transform/opacity are controlled entirely via JS/WAAPI. WAAPI animation effects are lower in the cascade than `!important` author declarations.
-- **`will-change` pre-promotion**: Navbar gets mount-time pre-promotion via inline `will-change: transform, opacity` (set in constructor). Header's `will-change` is in the `.full-screen-active` CSS rule. Both eliminate the first-transform layer promotion stall.
+- **`will-change` pre-promotion**: Navbar gets mount-time pre-promotion via the `dynamic-views-navbar-animated` CSS class (`will-change: transform, opacity`, added at mount, removed at unmount). Header's `will-change` is in the `.full-screen-active` CSS rule. Both eliminate the first-transform layer promotion stall.
 - **Show inline bypass**: `applyShowInlines()`/`clearShowInlines()` restore bars via inline `setProperty()` calls, bypassing `classList` entirely to avoid style invalidation that exceeds the single-threaded WebView compositor's frame budget.
 - **`data-dynamic-views-show` attribute**: Set on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules. Attribute selectors only recalc matching pseudos, not descendants.
 - **Settle delay**: `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS = 500ms`. Used for show idle cleanup (animation cancel, attribute removal, navbar/header inline clear).
@@ -319,7 +352,7 @@ The practical impact: CSS transitions during active scroll compete with scroll p
 13. **Android bridge lifecycle**: Show bridge starts at `translateY(-totalShift)` and unwinds scroll-linked as the user approaches the top. `bridgePhaseActive` stays true until `commitBridgeResolve()` (at `scrollTop=0` idle) or `hideBarsUI()`. The hide path checks `bridgePhaseActive` to skip `scrollTop` reversal (scrollTop was never increased during show). `scrollTop` is never written during show.
 14. **`restoreMaskImage()` in show path (both platforms)**: `restoreMaskImage()` runs in the show rAF (Android) or synchronously (iOS). Gradient swap keeps the render surface allocated. Deferring to idle violates UX requirement 3 (atomic bar transitions) — the navbar gradient appears late.
 15. **`data-dynamic-views-show` selectors must terminate on pseudos**: The `[data-dynamic-views-show]` attribute on `leafContent` triggers CSS rules for `::before`/`::after` pseudos only. Selectors using this attribute MUST terminate on a pseudo-element — if they match real descendants, the attribute change triggers subtree-wide style recalc that exceeds the Android WebView compositor frame budget.
-16. **Tap shield cleared before show WAAPI**: On Android, tap-shield inlines (`transform`, `opacity`, `margin-top`) on the header must be cleared before reading WAAPI "from" values. Otherwise `onfinish`'s `transform: translateY(0)` is read as the animation start, producing a fade-only transition with no slide.
+16. **Tap shield cleared before show WAAPI**: On Android, the `dynamic-views-tap-shield` class on the header must be removed before reading WAAPI "from" values. Otherwise the class's `transform: translateY(0)` is read as the animation start, producing a fade-only transition with no slide.
 17. **Android: `scrollTop` kills flings**: ANY `scrollTop` write during an active Chromium compositor fling cancels the fling. `scrollTop` writes during active touch (finger on screen) are safe. The scroll-linked bridge unwind avoids all `scrollTop` writes during show.
 18. **Android: `unwindBridge` is compositor-only**: Per-scroll-event `transform` writes in `unwindBridge()` do not trigger layout or tile invalidation. A `lastBridgePx` change-detection field skips no-op writes when the rounded value hasn't changed (avoids redundant `setStyle` calls on the single-threaded compositor).
 19. **iOS: `full-screen-active` on leafContent, not body**: iOS applies the `full-screen-active` class to `leafContent` (`[data-type='bases']`) instead of body. This scopes style invalidation to the leaf subtree (~360 elements) instead of the entire document (~3000+). Body-class invalidation on WKWebView triggers 60-96ms compositor operations with poster cards. Three elements outside the leaf (body, `.app-container`, `.workspace`) receive inline `background-color` via `applyBackgroundInlines()`/`clearBackgroundInlines()`. Android keeps the body class — Chromium's multi-threaded compositor handles the invalidation without frame drops.

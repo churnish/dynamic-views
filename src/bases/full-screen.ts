@@ -296,7 +296,7 @@ export class FullScreenController {
     this.barAnims = [];
   }
 
-  /** Clear navbar inline styles set during hide/show */
+  /** Clear navbar state classes and inline styles set during hide/show */
   private clearNavbarInlines(): void {
     this.navbarEl.classList.remove(
       'dynamic-views-navbar-show',
@@ -343,7 +343,7 @@ export class FullScreenController {
     this.workspaceSplitEl.style.removeProperty('mask-image');
   }
 
-  /** Clear header inline styles set during hide/show */
+  /** Clear header state classes and inline styles set during hide/show */
   private clearHeaderInlines(): void {
     if (!this.viewHeaderEl) return;
     this.viewHeaderEl.classList.remove('dynamic-views-tap-shield');
@@ -1212,7 +1212,7 @@ export class FullScreenController {
         // top — bars appeared naturally, and adding totalShift scrolls the
         // first cards off-screen.
         const before = this.scrollEl.scrollTop;
-        if (before > this.totalShift) {
+        if (before >= this.totalShift) {
           this.scrollEl.scrollTop = before + this.totalShift;
         }
       }
