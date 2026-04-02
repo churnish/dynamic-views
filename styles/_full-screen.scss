@@ -22,7 +22,6 @@
       var(--dynamic-views-view-header-height)
   ) !important;
   top: 0 !important;
-  pointer-events: none !important;
 }
 
 // iOS: CSS controls header hide/show (transform + opacity).
@@ -48,20 +47,6 @@
 .is-android.is-phone [data-type='bases'].full-screen-active .view-header {
   transition: none !important;
   will-change: transform, opacity;
-}
-
-// Tap shield — invisible header at y=0 absorbing status bar taps.
-// Applied via classList after hide settle, removed before show.
-.is-android.is-phone
-  [data-type='bases'].full-screen-active
-  .view-header.dynamic-views-tap-shield,
-.is-phone:not(.is-android)
-  [data-type='bases'].full-screen-active
-  .view-header.dynamic-views-tap-shield {
-  transform: translateY(0) !important;
-  opacity: 0 !important;
-  margin-top: 0 !important;
-  pointer-events: auto !important;
 }
 
 // Toolbar + search row: opacity:0 instead of visibility:hidden.
@@ -207,7 +192,7 @@
   .view-header {
   transform: translateY(0) !important;
   opacity: 1 !important;
-  pointer-events: none !important;
+  pointer-events: auto !important;
 }
 
 // Android: header show state (z-index) is applied via

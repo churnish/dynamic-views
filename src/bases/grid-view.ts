@@ -1255,6 +1255,15 @@ export class DynamicViewsGridView extends BasesView {
         return;
       }
 
+      // Scroll to top when the card set changed (e.g., search narrowed/broadened
+      // results). pathsUnchanged is false when the file list differs — query
+      // changes that produce identical results are caught by the renderHash
+      // early-exit above.
+      if (!pathsUnchanged) {
+        this.scrollEl.scrollTop = 0;
+        this.scrollPreservation?.clearSavedPosition();
+      }
+
       // Reset to initial batch if settings changed AND infinite scroll has appended batches
       // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
       if (settingsChanged) {
@@ -1792,7 +1801,8 @@ export class DynamicViewsGridView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: BasesResolvedSettings
+    settings: BasesResolvedSettings,
+    skipImageFade = false
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
       container,
@@ -1814,7 +1824,8 @@ export class DynamicViewsGridView extends BasesView {
         },
         getVirtualRects: () => this.getVirtualRects(),
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
-      }
+      },
+      skipImageFade ? { skipImageFade } : undefined
     );
     // Caller is responsible for cardResizeObserver.observe() —
     // mountVirtualItem, appendBatch, expandGroup, and content update
@@ -2217,6 +2228,7 @@ export class DynamicViewsGridView extends BasesView {
             startIndex + newCardsRendered,
             settings
           );
+          handle.el.classList.add('card-fade-in');
           newCardEls.push(handle.el);
 
           const item = this.createVirtualItem(
@@ -2446,6 +2458,7 @@ export class DynamicViewsGridView extends BasesView {
       entry,
       groupKey,
       compactStacked: false,
+      hasBeenMounted: true,
       el: handle.el,
       handle,
     };
@@ -2572,8 +2585,12 @@ export class DynamicViewsGridView extends BasesView {
       item.cardData,
       item.entry,
       item.index,
-      settings
+      settings,
+      item.hasBeenMounted // skipImageFade on remount
     );
+
+    const isRemount = item.hasBeenMounted;
+    item.hasBeenMounted = true;
 
     if (this.measureLane) {
       // iOS: render into measurement lane, run ALL deferred passes, read height
@@ -2590,6 +2607,11 @@ export class DynamicViewsGridView extends BasesView {
       handle.el.style.height = `${item.height}px`;
       handle.el.classList.add('dynamic-views-height-locked');
       this.scrollMountLockedEls.add(handle.el);
+      handle.el.classList.add('card-fade-in');
+      if (isRemount) {
+        // skip-image-fade already set inside renderCard before image handlers ran
+        handle.el.classList.add('image-ready');
+      }
 
       placeholder.replaceWith(handle.el);
       this.placeholderEls.delete(item);
@@ -2610,6 +2632,10 @@ export class DynamicViewsGridView extends BasesView {
       handle.el.style.height = `${item.height}px`;
       handle.el.classList.add('dynamic-views-height-locked');
       handle.el.classList.add('card-fade-in');
+      if (isRemount) {
+        // skip-image-fade already set inside renderCard before image handlers ran
+        handle.el.classList.add('image-ready');
+      }
 
       item.el = handle.el;
       item.handle = handle;

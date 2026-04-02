@@ -67,6 +67,13 @@ const OPACITY_SHOW_FRAMES: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
 /** Fully-opaque mask gradient — keeps compositor render surface allocated during hide. */
 const OPAQUE_MASK = 'linear-gradient(rgb(0,0,0),rgb(0,0,0))';
 
+interface BridgeHeadingMetric {
+  el: HTMLElement;
+  stickStart: number;
+  stickEnd: number;
+  lastAppliedPx: number | null;
+}
+
 export interface FullScreenElements {
   scrollEl: HTMLElement; // .bases-view
   container: HTMLElement; // .dynamic-views-bases-container
@@ -155,6 +162,11 @@ export class FullScreenController {
   // opacity) double the handle count; an array simplifies lifecycle.
   private barAnims: Animation[] = [];
   private capacitorRafId: number | null = null;
+
+  // Geometry-driven bridge heading classifier — cached scroll-space thresholds per heading for counter-transform decisions during show bridge. IO `.stuck` class is kept only for border styling.
+  private bridgeHeadings: BridgeHeadingMetric[] = [];
+  // DIAGNOSTIC — remove after investigation
+  private syncCallCount = 0;
 
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
@@ -343,10 +355,9 @@ export class FullScreenController {
     this.workspaceSplitEl.style.removeProperty('mask-image');
   }
 
-  /** Clear header state classes and inline styles set during hide/show */
+  /** Clear header inline styles set during hide/show */
   private clearHeaderInlines(): void {
     if (!this.viewHeaderEl) return;
-    this.viewHeaderEl.classList.remove('dynamic-views-tap-shield');
     clearStyles(this.viewHeaderEl, [
       'transform',
       'opacity',
@@ -354,6 +365,7 @@ export class FullScreenController {
       'transition',
       'z-index',
       'margin-top',
+      'min-height',
     ]);
   }
 
@@ -429,9 +441,11 @@ export class FullScreenController {
       ]);
     }
 
-    // Header z-index above ::before scrim (z-index 25 on grouped) during show animation. pointer-events: none from CSS full-screen-active — taps pass through to toolbar.
+    // Header: pointer-events + z-index above ::before scrim (z-index 25 on grouped) during show animation.
     if (this.viewHeaderEl) {
+      setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
       setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
+      setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
     }
   }
 
@@ -461,7 +475,11 @@ export class FullScreenController {
     }
 
     if (this.viewHeaderEl) {
-      clearStyles(this.viewHeaderEl, ['z-index', 'pointer-events']);
+      clearStyles(this.viewHeaderEl, [
+        'z-index',
+        'pointer-events',
+        'min-height',
+      ]);
     }
 
     // ::before scrim + ::after scroll gradient: revert to CSS defaults
@@ -474,6 +492,7 @@ export class FullScreenController {
   private resolveBridgeAtTop(): void {
     this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
+    this.clearBridgeHeadings();
     this.clearShowInlines();
     this.scrollEl.style.removeProperty('height');
     this.classTarget.classList.remove('full-screen-active');
@@ -515,9 +534,113 @@ export class FullScreenController {
     const t = Math.min(1, currentTop / zone);
     const eased = t * t * (3 - 2 * t);
     const bridgePx = Math.round(this.totalShift * eased);
-    if (bridgePx === this.lastBridgePx) return;
-    this.lastBridgePx = bridgePx;
-    setStyle(this.container, 'transform', `translateY(-${bridgePx}px)`);
+    if (bridgePx !== this.lastBridgePx) {
+      this.lastBridgePx = bridgePx;
+      setStyle(this.container, 'transform', `translateY(-${bridgePx}px)`);
+    }
+    // Run every scroll event — heading sticky state can change even when
+    // rounded bridgePx is unchanged (scrollTop crosses a stickStart/End threshold).
+    this.syncBridgeHeadings(currentTop, bridgePx);
+  }
+
+  /** Walk offsetParent chain from el to this.container, summing offsetTop */
+  private getScrollSpaceTop(el: HTMLElement): number {
+    let top = 0;
+    let cur: HTMLElement | null = el;
+    while (cur && cur !== this.container) {
+      top += cur.offsetTop;
+      cur = cur.offsetParent as HTMLElement | null;
+    }
+    return top;
+  }
+
+  /** Cache heading scroll-space thresholds for geometry-driven sticky classification. Called once at bridge start — layout reads are acceptable alongside applyShowInlines() work in the same rAF. */
+  private captureBridgeHeadings(): void {
+    const win = this.scrollEl.ownerDocument.defaultView;
+    if (!win) return;
+    // DIAGNOSTIC — reset sync counter each capture
+    this.syncCallCount = 0;
+    this.bridgeHeadings = Array.from(
+      this.container.querySelectorAll<HTMLElement>(
+        '.bases-group-heading:not(.collapsed)'
+      )
+    ).map((el) => {
+      const section = el.closest<HTMLElement>('.dynamic-views-group-section');
+      const stickyTop = parseFloat(win.getComputedStyle(el).top) || 0;
+      // Heading offsetTop is unreliable when stuck — Chromium reports the displaced stuck position, not the natural flow position. Use section top (heading is the section's first child).
+      const headingNaturalTop = section
+        ? this.getScrollSpaceTop(section)
+        : this.getScrollSpaceTop(el);
+      const stickStart = headingNaturalTop - stickyTop;
+      const stickEnd = section
+        ? this.getScrollSpaceTop(section) +
+          section.offsetHeight -
+          el.offsetHeight -
+          stickyTop
+        : Number.POSITIVE_INFINITY;
+      // DIAGNOSTIC — log per heading
+      console.log(
+        `[BRIDGE-CAPTURE] "${(el.textContent || '').slice(0, 30)}"`,
+        `| el.offsetTop=${el.offsetTop}`,
+        `| section.offsetTop=${section?.offsetTop ?? 'N/A'}`,
+        `| getScrollSpaceTop(el)=${this.getScrollSpaceTop(el)}`,
+        `| getScrollSpaceTop(section)=${section ? this.getScrollSpaceTop(section) : 'N/A'}`,
+        `| stickyTop=${stickyTop}`,
+        `| headingNaturalTop=${headingNaturalTop}`,
+        `| stickStart=${stickStart}`,
+        `| stickEnd=${stickEnd}`,
+        `| scrollTop=${this.scrollEl.scrollTop}`,
+        `| totalShift=${this.totalShift}`,
+        `| container.transform="${this.container.style.transform}"`
+      );
+      return { el, stickStart, stickEnd, lastAppliedPx: null };
+    });
+    console.log(
+      `[BRIDGE-CAPTURE] Done. ${this.bridgeHeadings.length} headings captured.`
+    );
+  }
+
+  /** Counter-transform non-sticky headings to prevent overflow clipping. Sticky headings (positioned by the browser at their scrollport offset, unaffected by the container transform) need no compensation. Sticky state is computed from cached scroll-space thresholds — no IO dependency, no async lag. */
+  private syncBridgeHeadings(currentTop: number, bridgePx: number): void {
+    // DIAGNOSTIC — log first 5 calls per capture
+    const shouldLog = this.syncCallCount < 5;
+    if (shouldLog) {
+      this.syncCallCount++;
+      const summary = this.bridgeHeadings.map((h) => {
+        const isSticky = currentTop >= h.stickStart && currentTop < h.stickEnd;
+        const name = (h.el.textContent || '').slice(0, 30);
+        const action = isSticky
+          ? h.lastAppliedPx !== null
+            ? 'REMOVE-TRANSFORM'
+            : 'SKIP(sticky)'
+          : h.lastAppliedPx === bridgePx
+            ? 'SKIP(unchanged)'
+            : 'APPLY-TRANSFORM';
+        return `  "${name}" sticky=${isSticky} stickStart=${h.stickStart} stickEnd=${h.stickEnd} → ${action}`;
+      });
+      console.log(
+        `[BRIDGE-SYNC #${this.syncCallCount}] currentTop=${currentTop} bridgePx=${bridgePx}\n${summary.join('\n')}`
+      );
+    }
+    for (const h of this.bridgeHeadings) {
+      const isSticky = currentTop >= h.stickStart && currentTop < h.stickEnd;
+      if (isSticky) {
+        if (h.lastAppliedPx !== null) {
+          h.el.style.removeProperty('transform');
+          h.lastAppliedPx = null;
+        }
+        continue;
+      }
+      if (h.lastAppliedPx === bridgePx) continue;
+      setStyle(h.el, 'transform', `translateY(${bridgePx}px)`);
+      h.lastAppliedPx = bridgePx;
+    }
+  }
+
+  /** Remove counter-transform from bridge headings */
+  private clearBridgeHeadings(): void {
+    for (const h of this.bridgeHeadings) h.el.style.removeProperty('transform');
+    this.bridgeHeadings = [];
   }
 
   /** Idempotent — no-op if already unmounted */
@@ -567,9 +690,10 @@ export class FullScreenController {
     // Clean up bridge + locked height + padding class
     this.container.classList.remove('dynamic-views-full-screen-enabled');
     this.container.style.removeProperty('margin-top');
-    this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
     this.container.style.removeProperty('--dynamic-views-scroll-past-end');
+    this.container.style.removeProperty('transform');
+    this.clearBridgeHeadings();
     this.scrollEl.style.removeProperty('height');
 
     // Cancel WAAPI animations (Android)
@@ -689,9 +813,15 @@ export class FullScreenController {
       this.isAndroid ||
       now - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
 
+    // Suppress hide while search row is open — user is actively filtering.
+    // Reads inline style (O(1), no layout forced) set by Obsidian's toggle.
+    const searchOpen =
+      this.searchRowEl != null && this.searchRowEl.style.display !== 'none';
+
     if (
       this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
       !this.barsHidden &&
+      !searchOpen &&
       sustainMet
     ) {
       // Ensure totalShift is measured (mount-time getBoundingClientRect
@@ -772,6 +902,7 @@ export class FullScreenController {
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
+    this.clearBridgeHeadings();
     this.clearHeaderInlines();
 
     // Re-measure ONLY in clean state (no full screen classes).
@@ -905,7 +1036,9 @@ export class FullScreenController {
             // ~90px zone where it absorbs taps without content interaction.
             // margin-top:0 overrides Obsidian's safe-area-inset-top margin
             // so the shield covers the full zone from y=0.
-            hEl.classList.add('dynamic-views-tap-shield');
+            setStyle(hEl, 'transform', 'translateY(0)', 'important');
+            setStyle(hEl, 'opacity', '0', 'important');
+            setStyle(hEl, 'margin-top', '0', 'important');
           };
         }
 
@@ -961,11 +1094,13 @@ export class FullScreenController {
 
       // Snap header to tap-shield position — invisible but absorbing taps
       // in the status bar zone. CSS transform animated it off-screen;
-      // class override returns it to natural position after settle.
+      // inline override returns it to natural position after settle.
       // margin-top:0 overrides Obsidian's safe-area-inset-top margin
       // so the shield covers the full zone from y=0.
       if (this.viewHeaderEl) {
-        this.viewHeaderEl.classList.add('dynamic-views-tap-shield');
+        setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
+        setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
+        setStyle(this.viewHeaderEl, 'margin-top', '0', 'important');
       }
 
       this.pendingRafId = requestAnimationFrame(() => {
@@ -1023,20 +1158,15 @@ export class FullScreenController {
         // full-height on Android during full-screen-active) covers the gap.
         this.applyShowInlines();
 
-        // Show bridge: transform on container cancels the visual shift from
-        // applyShowInlines (viewContent margin-top + toolbar expansion).
-        // Transform is compositor-only — no layout, no raster invalidation,
-        // no tile re-rastering. margin-top bridge (layout change inside
-        // scroll container) and scrollTop both trigger raster invalidation
-        // that exceeds Chrome/146's single-threaded compositor frame budget.
-        // scrollTop + height unlock deferred to idle behind the CSS
-        // background override on .workspace.
+        // Show bridge: transform on container cancels the visual shift from applyShowInlines (viewContent margin-top + toolbar expansion). Transform is compositor-only — no layout, no raster invalidation, no tile re-rastering. Counter-transform on group headings prevents overflow clipping: the container transform shifts sticky headings above the scroll container's box boundary, and overflow: auto clips them. The heading counter-transform cancels the container transform, keeping headings within the clip.
         if (this.settled) {
           setStyle(
             this.container,
             'transform',
             `translateY(-${this.totalShift}px)`
           );
+          this.captureBridgeHeadings();
+          this.syncBridgeHeadings(this.scrollEl.scrollTop, this.totalShift);
           this.bridgePhaseActive = true;
           this.lastBridgePx = -1;
         }
@@ -1154,6 +1284,12 @@ export class FullScreenController {
     // CSS that restores the header. Must be synchronous with classList.add
     // so the browser sees only the final computed state.
     this.clearHeaderInlines();
+    // Collapse header during show — base rule sets min-height: ~91px for
+    // tap shield, but during show the inflated header overlaps the toolbar.
+    // Inline min-height: 0 shrinks the layout box so toolbar taps pass.
+    if (this.viewHeaderEl) {
+      setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
+    }
 
     // Synchronous layout — single compositor pause, UIScrollView resumes
     this.leafContent.classList.add('full-screen-showing');

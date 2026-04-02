@@ -118,7 +118,7 @@ The bridge resolves the fundamental conflict on iOS: hiding bars requires layout
 #### Android (scroll-linked show bridge)
 
 1. **Immediate**: Set `programmaticScroll = true`. Remove `dynamic-views-tap-shield` class from header (must happen before reading WAAPI "from" values — the class sets `transform: translateY(0)` which would be read as animation start). Read WAAPI "from" values from `fill: forwards` state before rAF.
-2. **rAF**: `applyShowInlines()` restores `margin-top`, toolbar, search row, header pointer-events/z-index via inline `setProperty()` calls (bypasses `classList` to avoid style invalidation). Sets `data-dynamic-views-show` attribute on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules. If settled, set `transform: translateY(-totalShift)` on container (compositor-only show bridge) and `bridgePhaseActive = true`. Restore mask-image gradient via `restoreMaskImage()`. Clear `programmaticScroll`. Start show WAAPI animations BEFORE canceling old animations (later-created animations have higher composite priority per WAAPI section 4.6). Header + navbar: transform + opacity. Toolbar + search: opacity only. Cancel old WAAPI animations after new ones start. Defer Capacitor status bar show to next rAF (separates window inset change from CSS layout reflow).
+2. **rAF**: `applyShowInlines()` restores `margin-top`, toolbar, search row, header pointer-events/z-index via inline `setProperty()` calls (bypasses `classList` to avoid style invalidation). Sets `data-dynamic-views-show` attribute on `leafContent` for `::before` scrim and `::after` scroll gradient CSS rules. If settled, set `transform: translateY(-totalShift)` on container (compositor-only show bridge) and `bridgePhaseActive = true`. Restore mask-image gradient via `restoreMaskImage()`. Clear `programmaticScroll`. Start show WAAPI animations BEFORE canceling old animations (later-created animations have higher composite priority per WAAPI section 4.6). Header + navbar: transform + opacity. Toolbar + search: opacity only. Cancel old WAAPI animations after new ones start. Defer Capacitor status bar show to next rAF (separates window inset change from CSS layout reflow). `scrollEl` gets inline `z-index: 26` (above the grouped `::before` scrim at 25) so the show bridge transform doesn't shift sticky headings behind the scrim.
 3. **Scroll-linked unwind**: On each scroll event while `bridgePhaseActive && !barsHidden`, `unwindBridge(scrollTop)` reduces the bridge transform via smoothstep easing over a zone of `lockedScrollHeight` (pane height). Transform writes are compositor-only — safe during fling. A `lastBridgePx` field skips no-op writes when the rounded value hasn't changed.
 4. **Idle (500ms or 50ms at top)**: Cancel WAAPI animations. Remove `data-dynamic-views-show` attribute. Clear navbar and header inlines. If `scrollTop <= 1` (bridge already unwound to 0), `commitBridgeResolve()` does full cleanup: removes `full-screen-active`, clears show inlines, clears mask-image, resets flags, relocks height. Otherwise, show inlines and `full-screen-active` persist until the next hide.
 
@@ -132,6 +132,14 @@ The Android show path does NOT keep the bridge at constant magnitude. Instead:
 - **`bridgePhaseActive` stays true** until `commitBridgeResolve()` or `hideBarsUI()`. The flag means "Android show state needs cleanup", not "bridge has non-zero transform". The hide path checks it to skip `scrollTop` reversal (scrollTop was never increased during show).
 
 This architecture exists because Chrome/146 WebView's single-threaded compositor flashes content for one frame during any `scrollTop` write (tile re-rasterization), and `scrollTop` writes also kill active Chromium flings. The scroll-linked unwind eliminates both the false top and all show-path `scrollTop` writes.
+
+### Heading bridge classifier (Android)
+
+During the show bridge, the container's `transform: translateY(-bridgePx)` shifts non-stuck headings above `.bases-view`'s box boundary, and `overflow: auto` clips them. Stuck headings are unaffected — Chromium resolves `position: sticky; top` independently of parent transforms.
+
+The bridge classifier uses cached scroll-space thresholds (`stickStart`/`stickEnd`) per heading, measured once at bridge start via `captureBridgeHeadings()`. On each scroll event, `syncBridgeHeadings(scrollTop, bridgePx)` computes sticky state from `scrollTop` math — no IntersectionObserver dependency, no async lag. Non-sticky headings get `transform: translateY(bridgePx)` to cancel the container's visual shift. Sticky headings get no compensation.
+
+The IO-based `.stuck` class (from `sticky-heading.ts`) remains for border styling only — it is not used for bridge compensation decisions.
 
 ### `totalShift` measurement
 
@@ -149,7 +157,9 @@ A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-he
 
 - **Guard**: Fires only when `barsHidden` is true.
 - **Action**: Sets `lastToggleTime` before calling `showBarsUI()` — prevents cooldown from being bypassed.
-- **CSS support**: `.view-header` has a `min-height` covering `safe-area-inset-top + view-header-height` during `full-screen-active` to ensure the tap target covers the full status bar zone.
+- **CSS support**: `.view-header` has `min-height: calc(safe-area-inset-top + view-header-height)` during `full-screen-active` (~90px on iPhone 13), matching the native Obsidian header's layout box. `pointer-events: none` on the base rule prevents the inflated header from intercepting toolbar taps during the show phase — only the `dynamic-views-tap-shield` class restores `pointer-events: auto`.
+- **Hit-testing**: Chromium and WebKit hit-test `position: fixed` elements against their pre-transform layout box, not the visual rect. The header's layout box covers y=0 through ~90px regardless of `transform: translateY(-90px)`. See `full-screen-dev.md` § "Native tap shield" for empirical verification.
+- **Z-index**: The tap-shield class sets `z-index: 30` to paint above the `::before` scrim (z-index 10 ungrouped, 25 grouped) and scroll content.
 
 ### Tap shield setup
 
@@ -158,7 +168,7 @@ Both platforms apply the `dynamic-views-tap-shield` CSS class on the header afte
 - **Android**: Added in the header WAAPI `onfinish` callback (after hide animation completes).
 - **iOS**: Added in the hide settle `pendingLayout` (after 2000ms idle).
 
-The CSS class sets `transform: translateY(0) !important` (returns header to natural position from off-screen), `opacity: 0 !important` (invisible), and `margin-top: 0 !important` (overrides Obsidian's `safe-area-inset-top` margin so shield covers from y=0). This matches native Obsidian full-screen behavior.
+The CSS class sets `transform: translateY(0) !important` (returns header to natural position from off-screen), `opacity: 0 !important` (invisible), `margin-top: 0 !important` (overrides Obsidian's `safe-area-inset-top` margin so shield covers from y=0), and `z-index: 30 !important` (above `::before` scrim and scroll content). This matches native Obsidian full-screen behavior — native relies on the same layout-box hit-testing mechanism with `pointer-events: auto` on the visually-hidden header.
 
 The `dynamic-views-tap-shield` selector MUST be scoped inside `full-screen-active` for specificity (0,6,0) to beat the existing hide rules at (0,5,0).
 

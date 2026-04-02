@@ -2,7 +2,7 @@
 title: Full screen
 description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, Chrome/146 Android show flash compositor findings, and Android WebView WAAPI workaround for single-threaded compositor jank.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-31
+updated: 2026-04-02
 ---
 # Full screen
 
@@ -151,6 +151,31 @@ e.prototype.restoreNavigation = function (animate) {
 | Visual hide | CSS class (`is-hidden-nav`) | CSS class + inline styles + WAAPI |
 | Layout changes | Header + navbar transform only | Header + navbar + toolbar + search + gap fill |
 
+### Native tap shield (empirically verified, Android Pixel 8a, 2026-04-02)
+
+Native Obsidian does NOT reposition the header or add special classes for tap interception. The header stays at its natural CSS layout position — `transform` and `opacity` only affect visual rendering, not hit-testing.
+
+**Bars-hidden header state** (no inline styles, no special classes):
+
+| Property | Value |
+|---|---|
+| `position` | `fixed` |
+| `top` | `0px` |
+| `margin-top` | `46.095px` (safe-area-inset-top) |
+| `height` | `44.38px` |
+| `transform` | `translateY(-90.095px)` (shifted fully off-screen) |
+| `opacity` | `0` |
+| `pointer-events` | `auto` (unchanged from bars-shown) |
+| `z-index` | `1` |
+| `min-height` | `0px` |
+| Visual rect | `top: -44, bottom: 0.4` (off-screen) |
+
+**Hit-testing**: Chromium hit-tests `position: fixed` elements against their pre-transform **layout box**, not the post-transform visual rect. Layout box: `top: 0` + `margin-top: 46px` + `height: 44px` = **y=0 through y=90**. `elementFromPoint` confirms: y=0–90 returns `.view-header`, y=91+ returns `.cm-line` (scroll content).
+
+**Mechanism**: The header's `touchend` / `mousedown` listener fires `restoreNavigation()`. No repositioning, no min-height inflation, no z-index changes. The invisible header at its natural layout position IS the tap shield.
+
+**Dynamic Views equivalent**: `min-height: calc(safe-area-inset-top + view-header-height)` on `.view-header` during `full-screen-active` matches this 90px zone. The `dynamic-views-tap-shield` class adds `margin-top: 0` (overrides Obsidian's safe-area margin so shield starts at y=0), `transform: translateY(0)` (returns to layout position), and `z-index: 30` (above `::before` scrim at z-index 10/25 and scroll content). `pointer-events: none` on the base `full-screen-active` rule prevents the inflated header from intercepting toolbar taps during the show phase — only the tap-shield class restores `pointer-events: auto`.
+
 ### Additional restore triggers
 
 Native Obsidian restores bars on:
@@ -235,7 +260,7 @@ requestAnimationFrame(() => {
 - Shipped Safari 26.2 (Dec 2025).
 - Intended as jank-free JS trigger — fires when scroll fully stops on desktop. See WebKit caveat below.
 - Safari 26.0-26.1 needs debounced scroll fallback.
-- **WebKit caveat**: fires at finger-lift, BEFORE momentum begins — NOT at true scroll-idle. Layout mutations at `scrollend` still kill momentum (v87).
+- **WebKit caveat (v87)**: fires at finger-lift, BEFORE momentum begins — NOT at true scroll-idle. Layout mutations at `scrollend` still kill momentum. **Re-test candidate**: MDN spec says `scrollend` fires "when scrolling definitively completes" including after momentum. If WebKit aligned with spec in 26.2+, this could replace the 150ms idle debounce for more precise settle timing. Worth re-testing empirically.
 
 ### IntersectionObserver behavior
 
@@ -277,7 +302,7 @@ Sources: Bram.us 2023, WebKit commit 256893@main, Chromium #1411864, Lighthouse 
 ### Direction detection: dead ends
 
 - **`animation-range`**: Tied to absolute scrollTop. Bars only reappear when scrollTop drops below range start. Incompatible with direction-based UX.
-- **`scroll-state()` container queries**: Chrome 133+ only. WebKit has NO implementation or timeline. Would solve direction detection cleanly. Monitor.
+- **`scroll-state()` container queries**: `scroll-state(stuck/snapped/scrollable)` shipped Chrome 133. `scroll-state(scrolled: top/bottom)` (direction detection) ships Chrome 144. WebKit standards-positions issue #261 open since Sept 2023 — zero WebKit engagement, no bugs filed, not in Interop 2026. Earliest plausible WebKit support: Interop 2027 cycle at best.
 - **Bramus direction hack**: Animates custom property `--scroll-direction`, reads via `@container style()`, uses `transition-delay: calc(infinity * 1s)`. But custom property animation forces main-thread resolution (per `var()` finding above).
 
 ### Safari Web Inspector debugging
@@ -416,6 +441,7 @@ Builds on v49/v97 finding:
 - **Animated `transition: transform`** on view-content parent: kills momentum (v115)
 - **Instant `translateY` per scroll event** (continuous, no transition): momentum-safe (v129, v130)
 - **Both instant parent transform + animated child transform**: individually momentum-safe (v118)
+- **`:has()` in full-screen CSS**: `:has()` selector on ancestor causes upward style invalidation when descendant class changes during momentum scroll. WebKit re-evaluates the `:has()` ancestor chain, which kills UIScrollView momentum. Inline styles (no selector matching) survive. Fix: use inline `setProperty()` or pre-set classes, never `:has()` on elements that change during scroll.
 
 ### Status bar requirements (v132b)
 
@@ -437,6 +463,8 @@ The best achievable architecture for full screen on iOS:
 4. **SHOW post-settle**: Reverse bridge `translateY(-totalShift)` + remove class. Idle: `scrollTop += totalShift`.
 
 The bridge produces zero visual jump MOST of the time but has **intermittent minor jumps from scroll viewport clipping artifact**. The scroll container resizes (grows taller from margin removal + toolbar collapse), and the bridge's `translateY` on the scroll child creates a visual discontinuity at viewport edges.
+
+**Root cause (confirmed via WebKit source)**: WebKit runs momentum scroll on a dedicated scrolling thread (UIScrollView), separate from the main thread. The scrolling thread and main thread synchronize via a commit handshake during display refresh. When the main thread changes scroll container geometry (margin removal, toolbar collapse), the scrolling thread continues decelerating with **stale bounds** until the next synchronization commit. WebKit Bug 218676 (changeset r269558, Simon Fraser) fixed this for **programmatic scrolls** by immediately committing geometry via `requestScrollPositionUpdate()`. But passive momentum deceleration has no equivalent path — no `requestScrollPositionUpdate()` is triggered. The stale-geometry window between main-thread layout and scrolling-tree commit is where the intermittent jump occurs. No CSS property (`contain`, `content-visibility`) prevents scrolling-tree geometry propagation. See `webkit-compositor-constraints.md` for the broader constraint catalog.
 
 ### Pareto frontier
 
@@ -474,7 +502,9 @@ v144 is Pareto optimal — no other solution is better in ALL three dimensions. 
 | scrollTop in same tick (v145) | Immediate | None | **Killed** |
 | Deferred margin (v120) | **Delayed** | None | Preserved |
 
-The `overflow-anchor` CSS property (Safari Technology Preview 238+, estimated production Safari 27, fall 2026) will resolve this by handling scroll position compensation at the compositor level. Feature-detect with `CSS.supports('overflow-anchor', 'auto')`.
+The `overflow-anchor` CSS property will resolve this by handling scroll position compensation at the compositor level. Feature-detect with `CSS.supports('overflow-anchor', 'auto')`.
+
+**`overflow-anchor` timeline (updated 2026-04-02)**: In WebKit trunk since Dec 2023 (`CSSScrollAnchoringEnabled`, commit `b19a8ec`). STP 239 (March 2026) still fixing shipping blockers — blank pages after dynamic content load (commit 308352) and negative scroll offsets (commit 308320). Not shipped in any Safari through 26.5. Rejected from both Interop 2025 and Interop 2026 (issues #826, #793). No external pressure accelerating release. Earliest plausible: Safari 27 (fall 2026), but could slip to a 27.x point release. **Tested iOS 26.4 (2026-04-02)**: intermittent jump unchanged — confirms Apple has not broadened the geometry commit path for passive momentum deceleration.
 
 ### Measurement ordering bug (v133–v137)
 
@@ -554,6 +584,8 @@ Sources: Chromium WebView threading docs, synchronous compositing design doc, Ch
 **Fix**: CSS-based instant header restore on Android. `full-screen-showing` sets `transform: translateY(0) !important` + `opacity: 1 !important` on the Android header (matching iOS behavior). The header covers the 99px gap instantly — no timing race with WAAPI first frame. WAAPI still used for navbar (bottom bar). Header hide WAAPI still works because `full-screen-showing` is removed before hide animations start.
 
 Android-specific CSS overrides also keep margin-top at 0 and toolbar/search hidden during the show state — these restore at idle when `full-screen-active` is removed. The `::before` gradient stays active during show on Android to cover the status bar area.
+
+**Misidentified element lesson**: The handoff described the issue as 'toolbar/search' but the actual broken element was the header (view-header/title bar). This led to an unnecessary fix cycle (full-screen-showing class, CSS platform split) targeting the wrong elements. Always verify which specific element is broken with the user before implementing a fix.
 
 ## Rejected approaches
 
@@ -652,7 +684,7 @@ v84 correctly separates concerns: CSS class handles layout changes only, inline 
 
 ## Chrome/146 Android show flash
 
-Empirical findings from investigating the Android WebView show flash on Pixel 8a, Vanadium WebView 146.0.7680.164 (first installed 2026-03-17). Web research confirmed no mask/compositor changes in the Chrome 146 release notes — the flash was always latent and surfaced from unrelated compositor timing changes.
+Empirical findings from investigating the Android WebView show flash on Pixel 8a, Vanadium WebView 146.0.7680.164 (first installed 2026-03-17). Web research confirmed no mask/compositor changes in the Chrome 146 release notes — the flash was always latent and surfaced from unrelated compositor timing changes. Confirmed empirically: the flash exists at commit 4362f15 (the commit that originally fixed it) with a full checkout — the same code that fit within the frame budget on the prior WebView version now exceeds it. Vanadium WebView 146.0.7680.164 was first installed 2026-03-17 on the test device.
 
 ### Compositor render surface lifecycle (mask-image)
 
@@ -668,6 +700,9 @@ Empirical findings from investigating the Android WebView show flash on Pixel 8a
 - **No safe timing window** — synchronous, rAF, nested rAF, idle all flash.
 - **Symptom**: Content disappears for one frame during tile re-rasterization, exposing `.workspace` background.
 - **CSS background color override** masks the color but NOT the content blink.
+- **Also kills Chromium flings**: Beyond the visual flash, ANY `scrollTop` write during an active Chromium compositor fling cancels the fling entirely, regardless of height lock state or whether other style invalidation is pending. The `scrollTop` write's forced layout is a separate, non-cancelable operation. This extends the iOS constraint (scrollTop kills momentum) to Android during flings.
+- **Two-frame show pipeline**: Moving `setAttribute('data-dynamic-views-show')` from inside the rAF to synchronous (before the rAF) lets the scrim paint in the frame between the scroll event and the rAF. All expensive work (margin-top, scrollTop, WAAPI, clearHeaderInlines) runs behind the already-painted opaque scrim.
+- **scrollTop confirmed as sole root cause**: Disabling the scrollTop write, height unlock, and `restoreMaskImage()` in the show rAF eliminates the flash entirely. The forced layout from `scrollTop` triggers a full scroll layer repaint — content disappears for one frame, exposing the `.workspace` background.
 - **Fix**: Persistent `transform: translateY()` bridge defers all `scrollTop` writes to the next hide cycle, where they're batched with `full-screen-active` removal (no flash on hide).
 
 ### Custom property inheritance cost
@@ -680,6 +715,7 @@ Empirical findings from investigating the Android WebView show flash on Pixel 8a
 
 - **Layout changes OUTSIDE the scroll container** (viewContent margin-top, toolbar expansion) just reposition the container — no tile invalidation.
 - **Layout changes INSIDE** (margin-top on container, scrollTop, height unlock) force scroll layer tile re-rasterization.
+- **Negative `margin-top` on container inside scroll also flashes**: `margin-top: -totalShift` on the container (inside `.bases-view`) triggers the same raster invalidation as `scrollTop` — confirmed empirically when the reverse bridge approach was tested inside the scroll container.
 - **`transform` on scroll child is compositor-only** — tiles are reused and repositioned on GPU.
 - This distinction is key to understanding why the persistent transform bridge works.
 
@@ -690,11 +726,19 @@ Empirical findings from investigating the Android WebView show flash on Pixel 8a
 - On Android WebView's single-threaded compositor, the difference is between staying within and exceeding the frame budget.
 - **Fix**: `applyShowInlines()`/`clearShowInlines()` pattern.
 
+### `:has()` upward invalidation
+
+`:has(.is-grouped)` on `[data-type='bases']::before` scrim rules triggered upward style invalidation during `applyShowInlines()` that exceeded Android WebView's single-threaded compositor frame budget — same root cause as classList invalidation. Even though `:has()` only checks a single ancestor, the evaluation during the show transition's style recalc adds enough overhead to render an intermediate frame. Fix: replaced with a JS-toggled `dynamic-views-grouped` class on the leaf content element, set alongside the existing `is-grouped` class on the container in `grid-view.ts` and `masonry-view.ts`.
+
 ### WAAPI fill:forwards stacking
 
 - **During WAAPI `fill:forwards`**, elements are promoted to their own compositor layers. These layers paint above non-promoted elements regardless of z-index.
 - **When `cancelAnimations()` removes fill:forwards**, elements drop back to normal stacking. This can cause toolbar/search to suddenly appear behind an opaque scrim.
 - **Fix**: Remove scrim `data-dynamic-views-show` attribute at idle to collapse scrim height.
+
+### Tap-shield fling interaction
+
+The `position: fixed` header with `pointer-events: auto` (tap shield) intercepts `touchstart` during momentum scroll, causing Chromium to cancel the compositor fling. A `pointer-events` toggle during scroll (set `none` on first scroll event, restore at idle) was attempted but regressed the show animation — the unconditional idle timer broke the `pendingLayout`-gated timing the show path depends on. Currently accepted as a known limitation.
 
 ## Architecture evolution
 
@@ -710,6 +754,20 @@ Single-phase: all changes (compositor + layout) apply simultaneously via classLi
 | **Navbar show** | Native CSS transition on `is-hidden-nav` removal |
 | **Top fade** | Fixed overlay div inside `workspace-leaf-content`, opacity toggled (NOT mask-image on scroll container) |
 | **Direction detection** | Passive scroll listener with accumulated delta, 30px dead zone, 50px top zone auto-show |
+
+## Multi-controller race on Android (v147)
+
+**Observed**: 2026-04-02, Pixel 8a, two Bases masonry leaves open simultaneously.
+
+**Root cause**: On Android, `classTarget` was `document.body` — shared between all `FullScreenController` instances. When Leaf 0's constructor ran while Leaf 1 had `full-screen-active` on body:
+1. `classList.add('full-screen-active')` — no-op (already present from Leaf 1)
+2. `getBoundingClientRect` before/after — identical — `totalShift = 0`
+3. `classList.remove('full-screen-active')` — clobbered Leaf 1's hidden state
+4. `measureTotalShift()` guard blocked by the foreign class on body — 0 persisted
+
+Diagnostic state snapshot: Leaf 0 `totalShift: 0, totalShiftMeasured: true`, Leaf 1 `totalShift: 150.095`, both `isActiveHider: true`.
+
+**Fix**: Unified `classTarget = leafContent` on both platforms (matching iOS). `applyBackgroundInlines()`/`clearBackgroundInlines()` now run on both platforms (leaf-scoped class cannot reach body/app-container/workspace). The "multi-threaded compositor" rationale for Android body-class was wrong — Android WebView uses a single-threaded compositor, so leafContent scoping actually reduces invalidation scope from ~3000 to ~360 elements.
 
 ## Direction detection
 
@@ -745,15 +803,27 @@ The bridge + idle settle architecture (v144) achieves immediate status bar + pre
 - **Cleanup convention**: Each diagnostic IIFE must call `window.__cleanupFullScreen()` at the top before initializing. Cleanup is part of the script, not a separate manual step.
 - **Listener leak** (v34 bug): anonymous scroll fallback never removed by cleanup. Always use named function references.
 - **A/B isolation test**: Animate ONE target inside scroll container with anonymous `scroll(nearest)`, no `timeline-scope`. If smooth, topology/timeline-scope is the culprit.
+- **Android WebView cache busting**: CDP reload (`Network.setCacheDisabled` + `Page.reload ignoreCache`) does NOT reliably bust Android WebView's stylesheet cache for CSS changes. Full restart (`am force-stop` + `am start`) + cache-busting reload is required for CSS bisects. Without this, A/B test results are unreliable.
 
 ## References
 
 - headroom.js iOS issue #100 — documents iOS momentum-scroll jank as unsolvable
+- WebKit Bug 218676 — programmatic scrolls need updated scrolling geometry (stale scrolling-tree root cause)
+- WebKit Bug 171099 — scroll anchoring implementation tracking (resolved dup of 307734)
 - WebKit Bug 303136 — scroll container compositor promotion
 - WebKit Bug 303465 — threaded scroll-driven animations flag stabilization
+- WebKit commit b19a8ec — `CSSScrollAnchoringEnabled` set to stable/default:true (Dec 2023)
+- WebKit changeset r269558 — geometry commit fix for programmatic scrolls (does not cover passive momentum)
+- WebKit standards-positions #261 — CSS Scroll State Container Queries (open, no WebKit signal)
+- Interop issues #826, #793 — `overflow-anchor` rejected from Interop 2025 and 2026
+- STP 239 — active `overflow-anchor` bug fixes (blank pages, negative offsets), March 2026
+- Safari 26.4 blog — threaded scroll-driven animations on compositor thread
 - Bram.us 2023 — `var()` in `@keyframes` compositor blocking
+- Bram.us 2024 — scroll-driven animations direction hack (custom property, main-thread)
+- Bram.us 2025 — `scroll-state(scrolled)` clean solution (Chrome 144 only)
 - Chromium #1411864 — `var()` compositor blocking
 - Lighthouse #14521 — `var()` compositor blocking
 - WebKit commit 256893@main — `var()` spec-level main-thread requirement
 - CSS Cascade Level 5 — animation/transition override semantics
 - STP 234 — eligible properties for compositor-promoted scroll-driven animations
+- Motion.dev 2025 — web animation performance tier list (CSS variable paint penalty, Safari Core Animation de-optimization)

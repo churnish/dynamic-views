@@ -2555,6 +2555,7 @@ export class DynamicViewsMasonryView extends BasesView {
       entry,
       groupKey,
       compactStacked: false,
+      hasBeenMounted: true,
       el: handle.el,
       handle,
     };
@@ -2824,18 +2825,16 @@ export class DynamicViewsMasonryView extends BasesView {
       item.entry,
       item.index,
       settings,
-      item.measuredAtWidth > 0 // skipImageFade on remount
+      item.hasBeenMounted // skipImageFade on remount
     );
     handle.el.style.width = `${item.width}px`;
     handle.el.style.left = `${item.x}px`;
     handle.el.style.top = `${item.y}px`;
     handle.el.classList.add('masonry-positioned');
-    // Remount (previously measured): skip all fade animations to prevent
-    // opacity:0→1 flash on cards re-entering the mount zone during scroll-back.
-    // First mount (never measured): normal fade-in + image load transition.
-    if (item.measuredAtWidth === 0) {
-      handle.el.classList.add('card-fade-in');
-    } else {
+    const isRemount = item.hasBeenMounted;
+    item.hasBeenMounted = true;
+    handle.el.classList.add('card-fade-in');
+    if (isRemount) {
       // skip-image-fade already set inside renderCard before image handlers ran
       handle.el.classList.add('image-ready');
     }
@@ -2873,6 +2872,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (item.compactStacked) {
       handle.el.classList.add('compact-stacked');
     }
+    item.hasBeenMounted = true;
     this.newlyMountedEls.push(handle.el);
   }
 
@@ -3322,8 +3322,8 @@ export class DynamicViewsMasonryView extends BasesView {
             el: v.el,
           })),
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
-        skipImageFade,
-      }
+      },
+      skipImageFade ? { skipImageFade } : undefined
     );
     this.cardResizeObserver?.observe(handle.el);
     return handle;
@@ -3714,6 +3714,7 @@ export class DynamicViewsMasonryView extends BasesView {
             startIndex + newCardsRendered,
             settings
           );
+          handle.el.classList.add('card-fade-in');
           newCardEls.push(handle.el);
           if (!newCardsPerGroup.has(currentGroupKey)) {
             newCardsPerGroup.set(currentGroupKey, []);
