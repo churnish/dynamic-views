@@ -242,7 +242,7 @@ body.dynamic-views-show-thumbnail-placeholder
     pointer-events: auto;
     border-radius: 0; /* Override theme styles; container handles border-radius */
     opacity: 0;
-    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
+    transition: opacity var(--dynamic-views-anim-duration-moderate) ease;
     -webkit-user-select: none;
     user-select: none;
   }

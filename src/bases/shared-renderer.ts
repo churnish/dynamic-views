@@ -604,6 +604,7 @@ export class SharedCardRenderer {
       onHoverEnd?: () => void;
       getVirtualRects?: () => readonly VirtualCardRect[];
       onMountItem?: (index: number) => HTMLElement | null;
+      skipImageFade?: boolean;
     }
   ): CardHandle {
     // Snapshot instance array lengths for per-card resource collection
@@ -612,6 +613,12 @@ export class SharedCardRenderer {
 
     // Create card element
     const cardEl = container.createDiv('card');
+
+    // Virtual scroll remount: set skip-image-fade before image handlers run
+    // synchronously, so handleImageLoad sees the class immediately.
+    if (keyboardNav?.skipImageFade) {
+      cardEl.classList.add('skip-image-fade');
+    }
 
     // Shared hover parent — new popovers on the same parent auto-dismiss the previous one
     const hoverParent: { hoverPopover: null } = { hoverPopover: null };

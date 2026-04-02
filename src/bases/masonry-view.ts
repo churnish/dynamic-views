@@ -1240,6 +1240,15 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
+      // Scroll to top when the card set changed (e.g., search narrowed/broadened
+      // results). pathsUnchanged is false when the file list differs — query
+      // changes that produce identical results are caught by the renderHash
+      // early-exit above.
+      if (!pathsUnchanged) {
+        this.scrollEl.scrollTop = 0;
+        this.scrollPreservation?.clearSavedPosition();
+      }
+
       // Clear caches on settings change; reset scroll only if batches were appended
       // (avoids lag with many cards; skips scroll-to-top when only initial batch shown)
       if (settingsChanged) {
@@ -2814,7 +2823,8 @@ export class DynamicViewsMasonryView extends BasesView {
       item.cardData,
       item.entry,
       item.index,
-      settings
+      settings,
+      item.measuredAtWidth > 0 // skipImageFade on remount
     );
     handle.el.style.width = `${item.width}px`;
     handle.el.style.left = `${item.x}px`;
@@ -2826,7 +2836,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (item.measuredAtWidth === 0) {
       handle.el.classList.add('card-fade-in');
     } else {
-      handle.el.classList.add('skip-image-fade');
+      // skip-image-fade already set inside renderCard before image handlers ran
       handle.el.classList.add('image-ready');
     }
     // Set explicit height to match stored layout height. Prevents height drift
@@ -3281,7 +3291,8 @@ export class DynamicViewsMasonryView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: BasesResolvedSettings
+    settings: BasesResolvedSettings,
+    skipImageFade = false
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
       container,
@@ -3311,6 +3322,7 @@ export class DynamicViewsMasonryView extends BasesView {
             el: v.el,
           })),
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
+        skipImageFade,
       }
     );
     this.cardResizeObserver?.observe(handle.el);

@@ -73,8 +73,23 @@ describe('image-loader', () => {
   });
 
   describe('handleImageLoad', () => {
-    it('adds image-ready synchronously when imgEl.complete is true', () => {
+    it('defers image-ready via rAF when imgEl.complete is true (fade for cached first-mount)', () => {
       const cardEl = document.createElement('div');
+      document.body.appendChild(cardEl);
+      const imgEl = document.createElement('img');
+      imgEl.src = 'test.jpg';
+      Object.defineProperty(imgEl, 'complete', { value: true });
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100 });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100 });
+
+      handleImageLoad(imgEl, cardEl);
+      expect(cardEl.classList.contains('image-ready')).toBe(false);
+      cardEl.remove();
+    });
+
+    it('adds image-ready synchronously when card has skip-image-fade (remount)', () => {
+      const cardEl = document.createElement('div');
+      cardEl.classList.add('skip-image-fade');
       document.body.appendChild(cardEl);
       const imgEl = document.createElement('img');
       imgEl.src = 'test.jpg';
@@ -118,8 +133,9 @@ describe('image-loader', () => {
       wrapper.remove();
     });
 
-    it('calls onLayoutUpdate when provided', () => {
+    it('calls onLayoutUpdate synchronously when skip-image-fade is set', () => {
       const cardEl = document.createElement('div');
+      cardEl.classList.add('skip-image-fade');
       document.body.appendChild(cardEl);
       const imgEl = document.createElement('img');
       imgEl.src = 'test.jpg';

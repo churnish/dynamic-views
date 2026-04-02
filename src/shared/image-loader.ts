@@ -170,9 +170,12 @@ export function handleImageLoad(
   );
 
   // Skip transition when fade is unnecessary: shuffle re-render (.skip-cover-fade)
-  // or cached image remount (imgEl.complete — browser loaded from cache synchronously).
-  // Without this, remounted poster cards show a 2-frame opacity:0 gap on WebKit.
-  if (cardEl.closest('.skip-cover-fade') || imgEl.complete) {
+  // or virtual scroll remount (.skip-image-fade — set inside renderCard before
+  // image handlers run, so it's always present by the time this executes).
+  if (
+    cardEl.closest('.skip-cover-fade') ||
+    cardEl.classList.contains('skip-image-fade')
+  ) {
     cardEl.classList.add('image-ready');
     if (onLayoutUpdate) {
       onLayoutUpdate();

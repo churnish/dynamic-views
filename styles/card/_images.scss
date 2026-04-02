@@ -43,10 +43,11 @@
   opacity: 1;
 }
 
-/* Backdrop + revealed poster: our overlays handle darkening, suppress theme dimming. */
+/* Backdrop + revealed poster: our overlays handle darkening, suppress theme dimming.
+   Gated on .image-ready so the initial opacity:0 → 1 fade-in transition is preserved. */
 .workspace-leaf-content[data-type]
   .dynamic-views
-  .card.image-format-backdrop
+  .card.image-format-backdrop.image-ready
   .card-backdrop
   img,
 .workspace-leaf-content[data-type]
