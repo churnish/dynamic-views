@@ -137,6 +137,36 @@ describe('createFullScreenController', () => {
     vi.restoreAllMocks();
   });
 
+  it('should toggle full-screen-active on leafContent, not body (Android)', () => {
+    document.body.classList.add('is-android', 'is-phone', 'auto-full-screen');
+
+    const { scrollEl, containerEl } = makeDOM();
+    const register = vi.fn();
+
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      getPropertyValue: () => '0',
+      marginTop: '0',
+    } as unknown as CSSStyleDeclaration);
+
+    const leafContent = scrollEl.closest('.view-content')!
+      .parentElement! as HTMLElement;
+    const bodySpy = vi.spyOn(document.body.classList, 'add');
+    const leafSpy = vi.spyOn(leafContent.classList, 'add');
+
+    createFullScreenController(
+      scrollEl,
+      containerEl,
+      makePlugin(true),
+      register
+    );
+
+    // mount() toggles full-screen-active for measurement then removes it
+    expect(leafSpy).toHaveBeenCalledWith('full-screen-active');
+    expect(bodySpy).not.toHaveBeenCalledWith('full-screen-active');
+
+    vi.restoreAllMocks();
+  });
+
   it('should register unmount as cleanup callback', () => {
     const { scrollEl, containerEl } = makeDOM();
     const register = vi.fn();
