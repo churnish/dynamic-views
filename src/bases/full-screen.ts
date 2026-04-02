@@ -60,6 +60,10 @@ const UI_FADE_OPTS: KeyframeAnimationOptions = {
   fill: 'forwards',
 };
 
+/** Static keyframe arrays — hoisted to module scope to avoid per-call allocation */
+const OPACITY_HIDE_FRAMES: Keyframe[] = [{ opacity: 1 }, { opacity: 0 }];
+const OPACITY_SHOW_FRAMES: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
+
 /** Fully-opaque mask gradient — keeps compositor render surface allocated during hide. */
 const OPAQUE_MASK = 'linear-gradient(rgb(0,0,0),rgb(0,0,0))';
 
@@ -108,7 +112,6 @@ export class FullScreenController {
   private readonly navbarEl: HTMLElement;
   private readonly viewHeaderEl: HTMLElement | null;
   private readonly leafContent: HTMLElement;
-  private readonly ownerDoc: Document;
   private readonly body: HTMLElement;
   private readonly isAndroid: boolean;
   private readonly toolbarEl: HTMLElement | null;
@@ -125,6 +128,7 @@ export class FullScreenController {
   private settled = false;
   private bridgePhaseActive = false;
   private totalShift = 0;
+  private totalShiftMeasured = false;
   private originalMarginTop = 0;
   private prevScrollTop = 0;
   private accumulatedDelta = 0;
@@ -171,8 +175,8 @@ export class FullScreenController {
     // bypass classList entirely to avoid style invalidation that exceeds
     // the single-threaded WebView compositor's frame budget.
     this.leafContent = elements.viewContent.parentElement!;
-    this.ownerDoc = this.scrollEl.ownerDocument;
-    this.body = this.ownerDoc.body;
+    const ownerDoc = this.scrollEl.ownerDocument;
+    this.body = ownerDoc.body;
     this.isAndroid = this.body.classList.contains('is-android');
     this.toolbarEl =
       this.leafContent.querySelector<HTMLElement>('.bases-header');
@@ -233,16 +237,19 @@ export class FullScreenController {
     const afterTop = this.scrollEl.getBoundingClientRect().top;
     this.classTarget.classList.remove('full-screen-active');
     this.totalShift = beforeTop - afterTop;
+    if (this.totalShift > 0) this.totalShiftMeasured = true;
 
     // Lock scroll container height — decouples clientHeight from flex layout
     // changes during full screen transitions (prevents scroll indicator teleport)
     this.lockedScrollHeight = this.scrollEl.offsetHeight;
+    // Batch clientHeight read with offsetHeight — both before any writes
+    const scrollPadding = Math.round(this.scrollEl.clientHeight * 0.5);
+
     setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
 
     // Scroll range padding — mirrors native CM6 scrollPastEnd (~50% pane).
     // Set as CSS variable so the margin-bottom calc in _container.scss adapts
     // to actual pane height instead of fixed ~200px.
-    const scrollPadding = Math.round(this.scrollEl.clientHeight * 0.5);
     setStyle(
       this.container,
       '--dynamic-views-scroll-past-end',
@@ -710,8 +717,9 @@ export class FullScreenController {
   // Measurement
   // ---------------------------------------------------------------------------
 
-  /** Re-measure totalShift from live DOM. Only valid when full-screen-active is NOT on the class target (body on Android, leafContent on iOS) — otherwise margin-top reads as 0 from the class rule. */
+  /** Re-measure totalShift from live DOM. Skips if already measured successfully (totalShift is stable after first valid measurement — the startup race where mount-time GBR returns 0 is the only scenario requiring remeasurement). Only valid when full-screen-active is NOT on the class target — otherwise margin-top reads as 0 from the class rule. */
   private measureTotalShift(): void {
+    if (this.totalShiftMeasured) return;
     if (this.classTarget.classList.contains('full-screen-active')) return;
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
@@ -719,6 +727,7 @@ export class FullScreenController {
       this.originalMarginTop +
       (this.toolbarEl?.offsetHeight ?? 0) +
       (this.searchRowEl?.offsetHeight ?? 0);
+    if (this.totalShift > 0) this.totalShiftMeasured = true;
   }
 
   // ---------------------------------------------------------------------------
@@ -870,7 +879,7 @@ export class FullScreenController {
             ],
             NAVBAR_SLIDE_OPTS
           ),
-          this.navbarEl.animate([{ opacity: 1 }, { opacity: 0 }], BAR_FADE_OPTS)
+          this.navbarEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
         );
         setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
 
@@ -886,7 +895,7 @@ export class FullScreenController {
           );
           this.barAnims.push(
             headerTransformAnim,
-            hEl.animate([{ opacity: 1 }, { opacity: 0 }], BAR_FADE_OPTS)
+            hEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
           );
           headerTransformAnim.onfinish = () => {
             // Snap header back to natural position — invisible tap shield
@@ -908,18 +917,12 @@ export class FullScreenController {
         // compositor collapses back to CSS after animation completes.
         if (this.toolbarEl) {
           this.barAnims.push(
-            this.toolbarEl.animate(
-              [{ opacity: 1 }, { opacity: 0 }],
-              UI_FADE_OPTS
-            )
+            this.toolbarEl.animate(OPACITY_HIDE_FRAMES, UI_FADE_OPTS)
           );
         }
         if (this.searchRowEl) {
           this.barAnims.push(
-            this.searchRowEl.animate(
-              [{ opacity: 1 }, { opacity: 0 }],
-              UI_FADE_OPTS
-            )
+            this.searchRowEl.animate(OPACITY_HIDE_FRAMES, UI_FADE_OPTS)
           );
         }
       });
@@ -1065,10 +1068,7 @@ export class FullScreenController {
               [{ transform: headerFrom }, { transform: 'translateY(0)' }],
               HEADER_SLIDE_OPTS
             ),
-            this.viewHeaderEl.animate(
-              [{ opacity: 0 }, { opacity: 1 }],
-              BAR_FADE_OPTS
-            )
+            this.viewHeaderEl.animate(OPACITY_SHOW_FRAMES, BAR_FADE_OPTS)
           );
         }
 
@@ -1088,7 +1088,7 @@ export class FullScreenController {
             [{ transform: navbarFrom }, { transform: 'translateY(0)' }],
             NAVBAR_SLIDE_OPTS
           ),
-          this.navbarEl.animate([{ opacity: 0 }, { opacity: 1 }], BAR_FADE_OPTS)
+          this.navbarEl.animate(OPACITY_SHOW_FRAMES, BAR_FADE_OPTS)
         );
         this.clearNavbarInlines();
 
@@ -1096,19 +1096,13 @@ export class FullScreenController {
         // CSS opacity (no !important on Android) is overridden by WAAPI.
         if (this.toolbarEl) {
           this.barAnims.push(
-            this.toolbarEl.animate(
-              [{ opacity: 0 }, { opacity: 1 }],
-              UI_FADE_OPTS
-            )
+            this.toolbarEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
           );
         }
 
         if (this.searchRowEl) {
           this.barAnims.push(
-            this.searchRowEl.animate(
-              [{ opacity: 0 }, { opacity: 1 }],
-              UI_FADE_OPTS
-            )
+            this.searchRowEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
           );
         }
 
@@ -1184,15 +1178,12 @@ export class FullScreenController {
     this.pendingRafId = requestAnimationFrame(() => {
       if (this.toolbarEl) {
         this.barAnims.push(
-          this.toolbarEl.animate([{ opacity: 0 }, { opacity: 1 }], UI_FADE_OPTS)
+          this.toolbarEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
         );
       }
       if (this.searchRowEl) {
         this.barAnims.push(
-          this.searchRowEl.animate(
-            [{ opacity: 0 }, { opacity: 1 }],
-            UI_FADE_OPTS
-          )
+          this.searchRowEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
         );
       }
     });
@@ -1207,7 +1198,14 @@ export class FullScreenController {
       this.container.style.removeProperty('transition');
 
       if (this.settled) {
-        this.scrollEl.scrollTop += this.totalShift;
+        // Compensate for geometry shift when inlines are cleared and classes
+        // removed (Obsidian margins push scroll container down). Skip near
+        // top — bars appeared naturally, and adding totalShift scrolls the
+        // first cards off-screen.
+        const before = this.scrollEl.scrollTop;
+        if (before > this.totalShift) {
+          this.scrollEl.scrollTop = before + this.totalShift;
+        }
       }
 
       // Unlock → remove classes → flex recalculates → measure → relock.
@@ -1266,17 +1264,25 @@ export class FullScreenController {
     if (target.closest('.bases-group-collapse-region')) return;
 
     const isCard = target.closest('.card') != null;
-    const isImage =
-      target.closest('.card-cover') != null ||
-      target.closest('.card-thumbnail') != null;
+
+    // Tapped outside a card — reveal bars immediately (skip further closest() traversals)
+    if (!isCard) {
+      this.barsHidden = false;
+      this.lastToggleTime = Date.now();
+      this.showBarsUI();
+      return;
+    }
+
     const isOpenOnTitle = this.body.classList.contains(
       'dynamic-views-open-on-title'
     );
-    const isTitleLink = target.closest('.card-title a') != null;
 
     // Don't reveal bars when tapping a card image — let image viewer handle it.
     // Exception: reveal if image viewer disabled via Style Settings AND
     // open file action is 'press on title' (image tap is non-interactive).
+    const isImage =
+      target.closest('.card-cover') != null ||
+      target.closest('.card-thumbnail') != null;
     if (isImage) {
       const viewerDisabled = this.body.classList.contains(
         'dynamic-views-image-viewer-disabled'
@@ -1287,9 +1293,8 @@ export class FullScreenController {
     // Poster cards with images: tap toggles poster-revealed — never reveal bars
     if (target.closest('.image-format-poster.has-poster')) return;
 
-    // Show bars if: tapped outside a card, OR card is in open-on-title mode
-    // and tap was not on the title link itself
-    if (!isCard || (isOpenOnTitle && !isTitleLink)) {
+    // Card in open-on-title mode: body tap reveals bars, title link opens file
+    if (isOpenOnTitle && !target.closest('.card-title a')) {
       this.barsHidden = false;
       this.lastToggleTime = Date.now();
       this.showBarsUI();
@@ -1303,4 +1308,33 @@ export class FullScreenController {
     this.lastToggleTime = Date.now();
     this.showBarsUI();
   }
+}
+
+/** Lazy-init full screen controller. Returns null if DOM elements are missing (Android: .mobile-navbar may not exist at construction time due to FUSE filesystem delays). */
+export function createFullScreenController(
+  scrollEl: HTMLElement,
+  containerEl: HTMLElement,
+  plugin: {
+    persistenceManager: {
+      getPluginSettings(): { fullScreen: boolean };
+    };
+  },
+  register: (cleanup: () => void) => void
+): FullScreenController | null {
+  const ownerDoc = scrollEl.ownerDocument;
+  const viewContent = scrollEl.closest<HTMLElement>('.view-content');
+  const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
+  if (!viewContent || !navbarEl) return null;
+
+  const controller = new FullScreenController({
+    scrollEl,
+    container: containerEl,
+    viewContent,
+    navbarEl,
+  });
+  if (plugin.persistenceManager.getPluginSettings().fullScreen) {
+    controller.mount();
+  }
+  register(() => controller.unmount());
+  return controller;
 }
