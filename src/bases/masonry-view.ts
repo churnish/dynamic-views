@@ -98,7 +98,10 @@ import {
   getLeafProps,
 } from '../shared/scroll-preservation';
 import { resetPersistentWidthCache } from '../shared/property-measure';
-import { preseedCompactStackedCache } from '../shared/property-helpers';
+import {
+  preseedCompactStackedCache,
+  invalidateCompactStackedCache,
+} from '../shared/property-helpers';
 import {
   buildDisplayToSyntaxMap,
   buildSyntaxToDisplayMap,
@@ -2869,6 +2872,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.focusState.hoveredEl = null;
     }
     item.compactStacked = item.el!.classList.contains('compact-stacked');
+    invalidateCompactStackedCache(item.el!);
     item.handle?.cleanup();
     this.cardRenderer.abortCardRerenderControllers(item.el!);
     if (item.el!.classList.contains(CONTENT_HIDDEN_CLASS)) {

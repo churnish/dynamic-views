@@ -519,24 +519,13 @@ export class DynamicViewsGridView extends BasesView {
         precedingCards + i,
         settings
       );
-      const item: VirtualItem = {
-        index: 0,
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        measuredHeight: 0,
-        measuredAtWidth: 0,
-        scalableHeight: 0,
-        fixedHeight: 0,
-        col: 0,
-        cardData: cards[i],
-        entry: entries[i],
+      const item = this.createVirtualItem(
+        0,
+        cards[i],
+        entries[i],
         groupKey,
-        compactStacked: false,
-        el: handle.el,
-        handle,
-      };
+        handle
+      );
       newItems.push(item);
       this.virtualItemByPath.set(cards[i].path, item);
       this.cardResizeObserver?.observe(handle.el);
@@ -1504,24 +1493,7 @@ export class DynamicViewsGridView extends BasesView {
             displayedSoFar + i,
             settings
           );
-          const item: VirtualItem = {
-            index: 0, // Unused by grid — array position is the identity
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-            measuredHeight: 0,
-            measuredAtWidth: 0,
-            scalableHeight: 0,
-            fixedHeight: 0,
-            col: 0,
-            cardData: card,
-            entry,
-            groupKey,
-            compactStacked: false,
-            el: handle.el,
-            handle,
-          };
+          const item = this.createVirtualItem(0, card, entry, groupKey, handle);
           this.virtualItems.push(item);
           this.virtualItemByPath.set(card.path, item);
         }
@@ -2247,24 +2219,13 @@ export class DynamicViewsGridView extends BasesView {
           );
           newCardEls.push(handle.el);
 
-          const item: VirtualItem = {
-            index: 0,
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-            measuredHeight: 0,
-            measuredAtWidth: 0,
-            scalableHeight: 0,
-            fixedHeight: 0,
-            col: 0,
-            cardData: card,
+          const item = this.createVirtualItem(
+            0,
+            card,
             entry,
-            groupKey: currentGroupKey,
-            compactStacked: false,
-            el: handle.el,
-            handle,
-          };
+            currentGroupKey,
+            handle
+          );
           this.virtualItems.push(item);
           this.virtualItemByPath.set(card.path, item);
           this.cardResizeObserver?.observe(handle.el);
@@ -2462,6 +2423,33 @@ export class DynamicViewsGridView extends BasesView {
   // ---------------------------------------------------------------------------
   // Virtual scroll infrastructure
   // ---------------------------------------------------------------------------
+
+  private createVirtualItem(
+    index: number,
+    cardData: CardData,
+    entry: BasesEntry,
+    groupKey: string | undefined,
+    handle: CardHandle
+  ): VirtualItem {
+    return {
+      index,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      measuredHeight: 0,
+      measuredAtWidth: 0,
+      scalableHeight: 0,
+      fixedHeight: 0,
+      col: 0,
+      cardData,
+      entry,
+      groupKey,
+      compactStacked: false,
+      el: handle.el,
+      handle,
+    };
+  }
 
   private rebuildGroupIndex(): void {
     this.virtualItemsByGroup.clear();

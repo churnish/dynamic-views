@@ -82,8 +82,10 @@ export function getBasesViewOptions(
     | Record<string, { widget?: string }>
     | undefined;
 
-  /** Count properties that render as property rows (excludes text preview, URL, and position-derived title/subtitle — none of these render as property rows). */
+  /** Count properties that render as property rows (excludes text preview, URL, and position-derived title/subtitle — none of these render as property rows). Memoized per getBasesViewOptions invocation. */
+  let _displayableCountCache: number | null = null;
   function getDisplayablePropertyCount(): number {
+    if (_displayableCountCache !== null) return _displayableCountCache;
     if (!config) return 0;
     const order = config.getOrder();
     const configStr = (key: string, fallback: string): string => {
@@ -99,13 +101,16 @@ export function getBasesViewOptions(
     for (const prop of getPositionTitleProps()) {
       excluded.add(prop);
     }
-    return excluded.size
+    _displayableCountCache = excluded.size
       ? order.filter((id) => !excluded.has(String(id))).length
       : order.length;
+    return _displayableCountCache;
   }
 
-  /** Properties currently displayed as title/subtitle (position-based). */
+  /** Properties currently displayed as title/subtitle (position-based). Memoized per getBasesViewOptions invocation. */
+  let _positionTitlePropsCache: Set<string> | null = null;
   function getPositionTitleProps(): Set<string> {
+    if (_positionTitlePropsCache) return _positionTitlePropsCache;
     if (!config) return new Set();
     const rawFirst = config.get('displayFirstAsTitle');
     const displayFirst =
@@ -138,6 +143,7 @@ export function getBasesViewOptions(
         result.add(String(candidates[1]));
       }
     }
+    _positionTitlePropsCache = result;
     return result;
   }
 
@@ -169,8 +175,8 @@ export function getBasesViewOptions(
           max: 5,
           step: 1,
           default: d.titleLines,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
+          shouldHide: () =>
+            (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
             false,
         },
         {
@@ -178,8 +184,8 @@ export function getBasesViewOptions(
           displayName: 'Display second property as subtitle',
           key: 'displaySecondAsSubtitle',
           default: d.displaySecondAsSubtitle,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
+          shouldHide: () =>
+            (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
             false,
         },
       ],
@@ -214,9 +220,9 @@ export function getBasesViewOptions(
           max: 10,
           step: 1,
           default: d.textPreviewLines,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get('textPreviewProperty') ?? d.textPreviewProperty) &&
-            (config.get('fallbackToContent') ?? d.fallbackToContent) === false,
+          shouldHide: () =>
+            !(config?.get('textPreviewProperty') ?? d.textPreviewProperty) &&
+            (config?.get('fallbackToContent') ?? d.fallbackToContent) === false,
         },
       ],
     },
@@ -260,9 +266,9 @@ export function getBasesViewOptions(
             backdrop: 'Backdrop',
           },
           default: d.imageFormat,
-          shouldHide: (config: BasesConfig) =>
-            !(config.get('imageProperty') || d.imageProperty) &&
-            (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) === 'never',
+          shouldHide: () =>
+            !(config?.get('imageProperty') || d.imageProperty) &&
+            (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) === 'never',
         },
         {
           type: 'dropdown',
@@ -273,10 +279,10 @@ export function getBasesViewOptions(
             overlay: 'Overlay',
           },
           default: d.posterDisplayMode,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('imageFormat') ?? d.imageFormat) !== 'poster' ||
-            (!(config.get('imageProperty') || d.imageProperty) &&
-              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+          shouldHide: () =>
+            (config?.get('imageFormat') ?? d.imageFormat) !== 'poster' ||
+            (!(config?.get('imageProperty') || d.imageProperty) &&
+              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
                 'never'),
         },
         {
@@ -287,10 +293,10 @@ export function getBasesViewOptions(
           max: 128,
           step: 1,
           default: d.thumbnailSize,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('imageFormat') ?? d.imageFormat) !== 'thumbnail' ||
-            (!(config.get('imageProperty') || d.imageProperty) &&
-              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+          shouldHide: () =>
+            (config?.get('imageFormat') ?? d.imageFormat) !== 'thumbnail' ||
+            (!(config?.get('imageProperty') || d.imageProperty) &&
+              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
                 'never'),
         },
         {
@@ -304,11 +310,11 @@ export function getBasesViewOptions(
             bottom: 'Bottom',
           },
           default: d.imagePosition,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('imageFormat') ?? d.imageFormat) === 'poster' ||
-            (config.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
-            (!(config.get('imageProperty') || d.imageProperty) &&
-              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+          shouldHide: () =>
+            (config?.get('imageFormat') ?? d.imageFormat) === 'poster' ||
+            (config?.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
+            (!(config?.get('imageProperty') || d.imageProperty) &&
+              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
                 'never'),
         },
         {
@@ -320,10 +326,10 @@ export function getBasesViewOptions(
             contain: 'Contain',
           },
           default: d.imageFit,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
-            (!(config.get('imageProperty') || d.imageProperty) &&
-              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+          shouldHide: () =>
+            (config?.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
+            (!(config?.get('imageProperty') || d.imageProperty) &&
+              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
                 'never'),
         },
         {
@@ -334,10 +340,10 @@ export function getBasesViewOptions(
           max: 2.5,
           step: 0.05,
           default: d.imageRatio,
-          shouldHide: (config: BasesConfig) =>
-            (config.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
-            (!(config.get('imageProperty') || d.imageProperty) &&
-              (config.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+          shouldHide: () =>
+            (config?.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
+            (!(config?.get('imageProperty') || d.imageProperty) &&
+              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
                 'never'),
         },
       ],

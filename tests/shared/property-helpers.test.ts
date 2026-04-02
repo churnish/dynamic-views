@@ -308,6 +308,16 @@ describe('property-helpers', () => {
       return (await import('../../src/shared/property-helpers')) as typeof import('../../src/shared/property-helpers');
     }
 
+    it('preseedCompactStackedCache prevents queueCompactStackedCheck from scheduling a rAF at the same width', async () => {
+      const mod = await freshModule();
+      const card = createCompactCard();
+
+      mod.preseedCompactStackedCache(card, 300);
+      mod.queueCompactStackedCheck(card, 300);
+
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+    });
+
     it('cache hit skips duplicate RAF scheduling', async () => {
       const mod = await freshModule();
       const card = createCompactCard();
