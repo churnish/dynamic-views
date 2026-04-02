@@ -1774,7 +1774,7 @@ function Card({
     cardClasses.push('has-header');
   }
 
-  // Header JSX extracted so poster can place it inside card-body (scrolls with content)
+  // Header JSX — always placed in card-content (before card-body)
   const headerJsx = hasHeader ? (
     <div className="card-header">
       {(hasTitle || hasSubtitle) && (
@@ -2228,9 +2228,16 @@ function Card({
       )}
 
       {/* Universal content wrapper: header + body */}
-      <div className="card-content">
-        {/* Header: outside body for non-poster (fixed), inside body for poster (scrolls) */}
-        {format !== 'poster' && headerJsx}
+      <div
+        className="card-content"
+        ref={(el: HTMLElement | null) => {
+          if (!el) return;
+          if (format === 'poster') {
+            setupVerticalScrollGradient(el, scrollController.signal);
+          }
+        }}
+      >
+        {headerJsx}
 
         {/* Universal card-body: properties + previews */}
         <div
@@ -2238,19 +2245,11 @@ function Card({
           ref={(el: HTMLElement | null) => {
             if (!el) return;
             // has-body-content: drives card-body display:none when empty.
-            // Poster: header is inside body, so it counts as body content.
-            if (
-              el.querySelector(VISIBLE_BODY_SELECTOR) ||
-              (format === 'poster' && el.querySelector('.card-header'))
-            ) {
+            if (el.querySelector(VISIBLE_BODY_SELECTOR)) {
               el.classList.add('has-body-content');
-            }
-            if (format === 'poster') {
-              setupVerticalScrollGradient(el, scrollController.signal);
             }
           }}
         >
-          {format === 'poster' && headerJsx}
           {/* Properties and previews in correct DOM order */}
           {(() => {
             const props = card.properties;

@@ -4,7 +4,7 @@
   :is(
       body.dynamic-views-open-on-title,
       body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
-    ):is(
+    ):not(.dynamic-views-title-hover-color-no-change):is(
       [class*='dynamic-views-title-color-'],
       [class*='dynamic-views-title-hover-color-']
     )

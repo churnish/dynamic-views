@@ -311,51 +311,34 @@ describe('Structural content classes', () => {
   });
 
   describe('has-body-content poster format', () => {
-    /** Replicates the poster-header extension from card-renderer and shared-renderer */
-    function applyHasBodyContent(bodyEl: HTMLElement, format: string): void {
-      if (
-        bodyEl.querySelector(VISIBLE_BODY_SELECTOR) ||
-        (format === 'poster' && bodyEl.querySelector('.card-header'))
-      ) {
+    /** Header is now always in card-content, never in card-body — format is irrelevant */
+    function applyHasBodyContent(bodyEl: HTMLElement): void {
+      if (bodyEl.querySelector(VISIBLE_BODY_SELECTOR)) {
         bodyEl.classList.add('has-body-content');
       }
     }
 
-    it('poster card with header only gets has-body-content', () => {
+    it('poster card with header only does not get has-body-content (header is in card-content)', () => {
       const card = buildCardDOM({ hasHeader: false });
       const body = card.querySelector('.card-body')!;
-      const header = document.createElement('div');
-      header.classList.add('card-header');
-      body.appendChild(header);
 
-      applyHasBodyContent(body, 'poster');
-      expect(body.classList.contains('has-body-content')).toBe(true);
-    });
-
-    it('non-poster card with header only does not get has-body-content', () => {
-      const card = buildCardDOM({ hasHeader: false });
-      const body = card.querySelector('.card-body')!;
-      const header = document.createElement('div');
-      header.classList.add('card-header');
-      body.appendChild(header);
-
-      applyHasBodyContent(body, 'cover');
+      applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(false);
     });
 
-    it('poster card with no header and no visible content does not get has-body-content', () => {
+    it('poster card with no visible content does not get has-body-content', () => {
       const card = buildCardDOM();
       const body = card.querySelector('.card-body')!;
 
-      applyHasBodyContent(body, 'poster');
+      applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(false);
     });
 
-    it('poster card with properties gets has-body-content regardless of header', () => {
+    it('poster card with properties gets has-body-content', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
       const body = card.querySelector('.card-body')!;
 
-      applyHasBodyContent(body, 'poster');
+      applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(true);
     });
   });

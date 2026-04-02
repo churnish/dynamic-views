@@ -228,7 +228,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .card-title
     a:hover {
     text-decoration: underline;
-    color: var(--dynamic-views-text-normal);
+    color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
   }
 
   /* Suffix underline on hover — suppressed in Flair (badge replaces suffix) */

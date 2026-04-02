@@ -44,9 +44,8 @@ div.card                                    ← data-path="{path}"
 ├─ div.card-poster → img                    ← poster format (absolute, fills card)
 ├─ div.card-backdrop → img                  ← backdrop format (absolute, fills card)
 │
-├─ div.card-content
+├─ div.card-content                          ← poster format: scroll container (overflow-y: auto)
 │   ├─ div.card-header                      ← present when title, subtitle, or URL button exist
-│   │                                         (poster format: nested inside .card-body instead — see note below)
 │   │   ├─ div.card-title-block
 │   │   │   ├─ div.card-title               ← tabIndex=-1
 │   │   │   │   ├─ span.card-title-icon     ← file-type icon (Icon mode)
@@ -78,7 +77,7 @@ div.card                                    ← data-path="{path}"
 └─ div.card-cover-wrapper                   ← cover format, position=bottom|right (after .card-content)
 ```
 
-**Poster format note**: In poster format, `.card-header` is nested inside `.card-body` (as the first child) instead of being a direct child of `.card-content`. This makes the title scroll with the card's text content rather than staying fixed above the scroll region.
+**Poster format note**: In poster format, `.card-content` is the scroll container (not `.card-body`). Both `.card-header` and `.card-body` are direct children of `.card-content` and scroll together when content overflows.
 
 ## Property rows
 

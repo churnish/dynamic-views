@@ -1,4 +1,4 @@
-/* Poster setup: position, overflow, card-body scroll, poster element */
+/* Poster setup: position, overflow, card-content scroll, poster element */
 .dynamic-views {
   .card.image-format-poster {
     position: relative;
@@ -6,28 +6,18 @@
     --poster-inset: var(--card-border-thickness-fixed);
 
     .card-content {
-      overflow: clip;
-      overflow-clip-margin: 4px;
-    }
-
-    /* Constrain height so .card-body can scroll.
-       overflow: clip (not hidden) + clip-margin accommodates URL button's negative margin
-       without clipping its border-radius. */
-    .card-body {
       position: relative;
       z-index: 1;
-      flex: 1;
-      min-height: 0;
       overflow-y: auto;
       scrollbar-width: none;
 
-      /* Prevent flex children from shrinking to fit — maintain natural size so overflow-y triggers */
-      > * {
-        flex-shrink: 0;
-      }
-
       &::-webkit-scrollbar {
         display: none;
+      }
+
+      /* Prevent flex children from shrinking — maintain natural size so overflow-y triggers */
+      > * {
+        flex-shrink: 0;
       }
     }
 
@@ -54,18 +44,18 @@
 /* Desktop: scroll gated by hover intent to prevent capturing view scroll */
 @media (hover: hover) {
   body:not(.dynamic-views-poster-reveal-press) .dynamic-views {
-    .card.image-format-poster .card-body {
+    .card.image-format-poster .card-content {
       overflow-y: hidden;
     }
 
-    .card.image-format-poster.poster-hover-active .card-body {
+    .card.image-format-poster.poster-hover-active .card-content {
       overflow-y: auto;
     }
   }
 
   /* Press mode: gate scroll behind poster-revealed instead */
   body.dynamic-views-poster-reveal-press .dynamic-views {
-    .card.image-format-poster.poster-revealed .card-body {
+    .card.image-format-poster.poster-revealed .card-content {
       overflow-y: auto;
     }
   }
@@ -74,11 +64,11 @@
 body.dynamic-views-poster-disable-scroll
   .dynamic-views
   .card.image-format-poster
-  .card-body,
+  .card-content,
 body.dynamic-views-poster-disable-scroll
   .dynamic-views
   .card.image-format-poster.poster-revealed
-  .card-body {
+  .card-content {
   overflow-y: hidden;
 }
 
@@ -86,7 +76,7 @@ body.dynamic-views-poster-disable-scroll
 body.dynamic-views-poster-disable-scroll
   .dynamic-views
   .card.image-format-poster
-  .card-body:is(
+  .card-content:is(
     .scroll-gradient-top,
     .scroll-gradient-bottom,
     .scroll-gradient-vertical-both
