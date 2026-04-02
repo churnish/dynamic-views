@@ -50,6 +50,19 @@
   will-change: transform, opacity;
 }
 
+// Tap shield — invisible header at y=0 absorbing status bar taps.
+// Applied via classList after hide settle, removed before show.
+.is-android.is-phone.full-screen-active
+  [data-type='bases']
+  .view-header.dynamic-views-tap-shield,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active
+  .view-header.dynamic-views-tap-shield {
+  transform: translateY(0) !important;
+  opacity: 0 !important;
+  margin-top: 0 !important;
+}
+
 // Toolbar + search row: opacity:0 instead of visibility:hidden.
 // visibility:hidden removes the element from the compositor's paint list
 // entirely — re-showing requires rasterization from scratch. On Chromium
@@ -286,3 +299,19 @@
 // Android: ::before showing variant removed — scrim is always full-height
 // during full-screen-active (rule above base ::before). Inline styles in
 // applyShowInlines() handle the show state instead of classList.
+
+// Navbar layer promotion — pre-promote to compositor layer at mount (Android).
+.mobile-navbar.dynamic-views-navbar-animated {
+  will-change: transform, opacity;
+}
+
+// Navbar hidden — disable interaction during hide (Android rAF).
+.mobile-navbar.dynamic-views-navbar-hidden {
+  pointer-events: none !important;
+}
+
+// Navbar show restore — visible position (iOS show path).
+.mobile-navbar.dynamic-views-navbar-show {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+}

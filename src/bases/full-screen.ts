@@ -78,9 +78,8 @@ export interface FullScreenElements {
 const capacitorStatusBar = globalThis.Capacitor?.Plugins?.StatusBar;
 
 // ---------------------------------------------------------------------------
-// Inline style helpers — obsidianmd/no-static-styles-assignment only flags
-// literal assignments and direct setProperty calls. These wrappers avoid
-// triggering the rule while remaining functionally identical.
+// Inline style helpers for dynamic values (computed heights, transforms,
+// CSS variables). Static values use CSS classes instead.
 // ---------------------------------------------------------------------------
 
 /** Set an inline style property with optional !important priority */
@@ -271,7 +270,7 @@ export class FullScreenController {
     // Eliminates first-transform layer promotion stall during animation.
     // Header is promoted via CSS (will-change on .full-screen-active rule).
     if (this.isAndroid) {
-      setStyle(this.navbarEl, 'will-change', 'transform, opacity');
+      this.navbarEl.classList.add('dynamic-views-navbar-animated');
     }
 
     // Attach listeners
@@ -299,6 +298,10 @@ export class FullScreenController {
 
   /** Clear navbar inline styles set during hide/show */
   private clearNavbarInlines(): void {
+    this.navbarEl.classList.remove(
+      'dynamic-views-navbar-show',
+      'dynamic-views-navbar-hidden'
+    );
     clearStyles(this.navbarEl, [
       'transform',
       'opacity',
@@ -343,6 +346,7 @@ export class FullScreenController {
   /** Clear header inline styles set during hide/show */
   private clearHeaderInlines(): void {
     if (!this.viewHeaderEl) return;
+    this.viewHeaderEl.classList.remove('dynamic-views-tap-shield');
     clearStyles(this.viewHeaderEl, [
       'transform',
       'opacity',
@@ -577,7 +581,7 @@ export class FullScreenController {
 
     // Restore navbar + header
     this.clearNavbarInlines();
-    this.navbarEl.style.removeProperty('will-change');
+    this.navbarEl.classList.remove('dynamic-views-navbar-animated');
     this.clearHeaderInlines();
 
     this.pendingLayout = null;
@@ -881,7 +885,7 @@ export class FullScreenController {
           ),
           this.navbarEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
         );
-        setStyle(this.navbarEl, 'pointer-events', 'none', 'important');
+        this.navbarEl.classList.add('dynamic-views-navbar-hidden');
 
         // Header WAAPI hide — separate transform + opacity
         if (this.viewHeaderEl) {
@@ -904,9 +908,7 @@ export class FullScreenController {
             // ~90px zone where it absorbs taps without content interaction.
             // margin-top:0 overrides Obsidian's safe-area-inset-top margin
             // so the shield covers the full zone from y=0.
-            setStyle(hEl, 'transform', 'translateY(0)', 'important');
-            setStyle(hEl, 'opacity', '0', 'important');
-            setStyle(hEl, 'margin-top', '0', 'important');
+            hEl.classList.add('dynamic-views-tap-shield');
           };
         }
 
@@ -962,13 +964,11 @@ export class FullScreenController {
 
       // Snap header to tap-shield position — invisible but absorbing taps
       // in the status bar zone. CSS transform animated it off-screen;
-      // inline override returns it to natural position after settle.
+      // class override returns it to natural position after settle.
       // margin-top:0 overrides Obsidian's safe-area-inset-top margin
       // so the shield covers the full zone from y=0.
       if (this.viewHeaderEl) {
-        setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
-        setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
-        setStyle(this.viewHeaderEl, 'margin-top', '0', 'important');
+        this.viewHeaderEl.classList.add('dynamic-views-tap-shield');
       }
 
       this.pendingRafId = requestAnimationFrame(() => {
@@ -1171,11 +1171,13 @@ export class FullScreenController {
     // Settled: no reverse bridge — content shifts down naturally as bars
     // appear (same as Safari address bar). Settle adjusts scrollTop at idle.
 
-    // Navbar restore — transition from hide persists on the element,
-    // producing an animated reveal (slide up + fade in)
-    setStyle(this.navbarEl, 'transform', 'translateY(0)', 'important');
-    setStyle(this.navbarEl, 'opacity', '1', 'important');
+    // Navbar restore — clear hide-path inlines that block the CSS class
+    // (inline !important beats rule !important). Keep transition — it
+    // persists from hide, producing an animated reveal (slide up + fade in).
+    this.navbarEl.style.removeProperty('transform');
+    this.navbarEl.style.removeProperty('opacity');
     this.navbarEl.style.removeProperty('pointer-events');
+    this.navbarEl.classList.add('dynamic-views-navbar-show');
 
     // Restore mask-image gradient — gradient swap (opaque → cached) keeps the compositor render surface allocated (same as Android show rAF).
     this.restoreMaskImage();
