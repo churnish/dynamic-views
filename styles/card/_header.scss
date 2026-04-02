@@ -231,19 +231,9 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
   }
 
-  /* Suffix underline on hover — suppressed in Flair (badge replaces suffix) */
-  body:not(.dynamic-views-file-type-flair)
-    .dynamic-views
-    .card.hover-intent-active
-    .card-title
-    a:hover
-    .card-title-ext-suffix {
-    text-decoration: underline;
-    text-decoration-color: var(
-      --dynamic-views-title-color,
-      var(--dynamic-views-text-normal)
-    );
-  }
+  /* Suffix underline: no explicit rule needed — the parent link's
+     text-decoration: underline propagates through inline descendants
+     using the link's currentColor, which tracks the hover title color. */
 }
 
 .dynamic-views {
