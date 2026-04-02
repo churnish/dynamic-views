@@ -18,7 +18,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Cover slideshow
 - Wrap long titles to new line
 - Scroll long properties horizontally
-- Fullscreen image viewer
+- Full screen image viewer
 - Immersive full screen scrolling on mobile
 
 ### Extras
@@ -44,7 +44,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 - Extensive [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support
 - Show YouTube thumbnails
-- Show [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) cover images
+- Show [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) images
 - Reveal files, folders and tags in [Notebook Navigator](https://obsidian.md/plugins?id=notebook-navigator)
 
 ## Perfect for
