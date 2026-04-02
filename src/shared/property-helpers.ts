@@ -127,6 +127,14 @@ export function queueCompactStackedCheck(
   }
 }
 
+/** Pre-seed width cache for a card element. Prevents queueCompactStackedCheck from scheduling a batch when the RO fires on a remounted card at the same width. */
+export function preseedCompactStackedCache(
+  cardEl: HTMLElement,
+  cardWidth: number
+): void {
+  compactWidthCache.set(cardEl, cardWidth);
+}
+
 /** Cancel pending check + remove compact-stacked state + clear cache. */
 export function cancelCompactStackedCheck(cardEl: HTMLElement): void {
   pendingCardsByDoc.get(cardEl.ownerDocument)?.delete(cardEl);

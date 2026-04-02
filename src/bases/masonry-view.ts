@@ -32,7 +32,10 @@ import {
   ORDER_DERIVED_SETTINGS_KEYS,
   PLUGIN_SETTINGS_CHANGE,
 } from '../constants';
-import { FullScreenController } from './full-screen';
+import {
+  FullScreenController,
+  createFullScreenController,
+} from './full-screen';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -95,6 +98,7 @@ import {
   getLeafProps,
 } from '../shared/scroll-preservation';
 import { resetPersistentWidthCache } from '../shared/property-measure';
+import { preseedCompactStackedCache } from '../shared/property-helpers';
 import {
   buildDisplayToSyntaxMap,
   buildSyntaxToDisplayMap,
@@ -795,22 +799,12 @@ export class DynamicViewsMasonryView extends BasesView {
    *  construction time (FUSE filesystem delays DOM assembly). */
   private initFullScreen(): void {
     if (this.fullScreen) return;
-    const ownerDoc = this.scrollEl.ownerDocument;
-    const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
-    const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
-    if (!viewContent || !navbarEl) return;
-
-    this.fullScreen = new FullScreenController({
-      scrollEl: this.scrollEl,
-      container: this.containerEl,
-      viewContent,
-      navbarEl,
-    });
-    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
-    if (pluginSettings.fullScreen) {
-      this.fullScreen.mount();
-    }
-    this.register(() => this.fullScreen?.unmount());
+    this.fullScreen = createFullScreenController(
+      this.scrollEl,
+      this.containerEl,
+      this.plugin,
+      (c) => this.register(c)
+    );
   }
 
   /** Cancel pending RAFs and timeouts, disconnect observers, and clear window reference.
@@ -2548,6 +2542,7 @@ export class DynamicViewsMasonryView extends BasesView {
       cardData,
       entry,
       groupKey,
+      compactStacked: false,
       el: handle.el,
       handle,
     };
@@ -2858,6 +2853,10 @@ export class DynamicViewsMasonryView extends BasesView {
     ) {
       handle.el.classList.add('compact-mode');
     }
+    if (item.compactStacked) {
+      handle.el.classList.add('compact-stacked');
+      preseedCompactStackedCache(handle.el, item.width);
+    }
     this.newlyMountedEls.push(handle.el);
   }
 
@@ -2866,6 +2865,7 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.focusState.hoveredEl === item.el) {
       this.focusState.hoveredEl = null;
     }
+    item.compactStacked = item.el!.classList.contains('compact-stacked');
     item.handle?.cleanup();
     this.cardRenderer.abortCardRerenderControllers(item.el!);
     if (item.el!.classList.contains(CONTENT_HIDDEN_CLASS)) {

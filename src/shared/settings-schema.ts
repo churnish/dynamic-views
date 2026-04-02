@@ -82,6 +82,28 @@ export function getBasesViewOptions(
     | Record<string, { widget?: string }>
     | undefined;
 
+  /** Count properties that render as property rows (excludes text preview, URL, and position-derived title/subtitle — none of these render as property rows). */
+  function getDisplayablePropertyCount(): number {
+    if (!config) return 0;
+    const order = config.getOrder();
+    const configStr = (key: string, fallback: string): string => {
+      const v = config.get(key);
+      return typeof v === 'string' ? v : fallback;
+    };
+    const excluded = new Set(
+      [
+        configStr('textPreviewProperty', d.textPreviewProperty),
+        configStr('urlProperty', d.urlProperty),
+      ].filter(Boolean)
+    );
+    for (const prop of getPositionTitleProps()) {
+      excluded.add(prop);
+    }
+    return excluded.size
+      ? order.filter((id) => !excluded.has(String(id))).length
+      : order.length;
+  }
+
   /** Properties currently displayed as title/subtitle (position-based). */
   function getPositionTitleProps(): Set<string> {
     if (!config) return new Set();
@@ -334,7 +356,6 @@ export function getBasesViewOptions(
             hide: 'Hide',
           },
           default: d.propertyLabels,
-          shouldHide: (config: BasesConfig) => config.getOrder().length === 0,
         },
         {
           type: 'property',
@@ -353,7 +374,7 @@ export function getBasesViewOptions(
           displayName: 'Pair properties',
           key: 'pairProperties',
           default: d.pairProperties,
-          shouldHide: (config: BasesConfig) => config.getOrder().length <= 1,
+          shouldHide: () => getDisplayablePropertyCount() <= 1,
         },
         {
           type: 'dropdown',
@@ -365,9 +386,9 @@ export function getBasesViewOptions(
             right: 'Right',
           },
           default: d.rightPropertyPosition,
-          shouldHide: (config: BasesConfig) =>
-            config.getOrder().length <= 1 ||
-            (config.get('pairProperties') ?? d.pairProperties) === false,
+          shouldHide: () =>
+            getDisplayablePropertyCount() <= 1 ||
+            (config?.get('pairProperties') ?? d.pairProperties) === false,
         },
         {
           type: 'text',
@@ -375,7 +396,7 @@ export function getBasesViewOptions(
           key: 'invertPropertyPairing',
           placeholder: 'Comma-separated if multiple',
           default: d.invertPropertyPairing,
-          shouldHide: (config: BasesConfig) => config.getOrder().length <= 1,
+          shouldHide: () => getDisplayablePropertyCount() <= 1,
         },
       ],
     },

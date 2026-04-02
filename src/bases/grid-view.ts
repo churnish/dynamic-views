@@ -31,7 +31,10 @@ import {
   ORDER_DERIVED_SETTINGS_KEYS,
   PLUGIN_SETTINGS_CHANGE,
 } from '../constants';
-import { FullScreenController } from './full-screen';
+import {
+  FullScreenController,
+  createFullScreenController,
+} from './full-screen';
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
@@ -530,6 +533,7 @@ export class DynamicViewsGridView extends BasesView {
         cardData: cards[i],
         entry: entries[i],
         groupKey,
+        compactStacked: false,
         el: handle.el,
         handle,
       };
@@ -782,22 +786,12 @@ export class DynamicViewsGridView extends BasesView {
    *  construction time (FUSE filesystem delays DOM assembly). */
   private initFullScreen(): void {
     if (this.fullScreen) return;
-    const ownerDoc = this.scrollEl.ownerDocument;
-    const viewContent = this.scrollEl.closest<HTMLElement>('.view-content');
-    const navbarEl = ownerDoc.querySelector<HTMLElement>('.mobile-navbar');
-    if (!viewContent || !navbarEl) return;
-
-    this.fullScreen = new FullScreenController({
-      scrollEl: this.scrollEl,
-      container: this.containerEl,
-      viewContent,
-      navbarEl,
-    });
-    const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
-    if (pluginSettings.fullScreen) {
-      this.fullScreen.mount();
-    }
-    this.register(() => this.fullScreen?.unmount());
+    this.fullScreen = createFullScreenController(
+      this.scrollEl,
+      this.containerEl,
+      this.plugin,
+      (c) => this.register(c)
+    );
   }
 
   /** Cancel pending RAFs and timeouts, disconnect observers, and clear window reference.
@@ -1524,6 +1518,7 @@ export class DynamicViewsGridView extends BasesView {
             cardData: card,
             entry,
             groupKey,
+            compactStacked: false,
             el: handle.el,
             handle,
           };
@@ -2266,6 +2261,7 @@ export class DynamicViewsGridView extends BasesView {
             cardData: card,
             entry,
             groupKey: currentGroupKey,
+            compactStacked: false,
             el: handle.el,
             handle,
           };
@@ -3384,7 +3380,7 @@ export class DynamicViewsGridView extends BasesView {
     if (!this.containerEl?.isConnected) return;
     if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
 
-    // Fixed height active = stretch is a CSS no-op. Clear stale state and exit.
+    // Fixed height active — clear stale stretch state to avoid fighting the fixed aspect-ratio CSS.
     const body = this.containerEl.ownerDocument.body;
     if (
       !body.classList.contains(FIXED_POSTER_HEIGHT_MASONRY) &&

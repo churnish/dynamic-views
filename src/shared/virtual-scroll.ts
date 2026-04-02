@@ -41,6 +41,8 @@ export interface VirtualItem {
   col: number;
   /** Group key (undefined for ungrouped) */
   groupKey: string | undefined;
+  /** Cached compact-stacked state — persists across virtual scroll mount/unmount to avoid forced layout from wrapping detection during momentum scroll */
+  compactStacked: boolean;
   /** DOM element when mounted, null when unmounted */
   el: HTMLElement | null;
   /** Cleanup handle when mounted, null when unmounted */
@@ -74,7 +76,10 @@ function isFixedCoverHeight(cardEl: HTMLElement): boolean {
  * are fully scalable (CSS aspect-ratio determines entire height).
  */
 export function measureScalableHeight(cardEl: HTMLElement): number {
-  // Poster cards with images: entire height is scalable (CSS aspect-ratio)
+  // Poster cards with images: entire height is scalable (CSS aspect-ratio).
+  // No isFixedPosterHeight check needed — unlike covers (which use height:0 + padding-top
+  // that doesn't scale), poster cards use aspect-ratio in both fixed and dynamic modes,
+  // so height always scales linearly with card width.
   if (
     cardEl.classList.contains('image-format-poster') &&
     cardEl.querySelector('.card-poster')
