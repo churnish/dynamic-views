@@ -2,13 +2,13 @@
 title: Full screen
 description: Bridge+settle system (iOS) and scroll-linked bridge unwind (Android) for hiding/showing bars during scroll, gradient swap mask-image management, direction detection algorithm, height locking, tap shield, and platform-specific branches.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-01
+updated: 2026-04-02
 ---
 # Full screen
 
 Hides Obsidian UI bars on downward scroll in Dynamic Views card views on phone. Bar animations match native Obsidian full screen. iOS uses a bridge architecture (`margin-top` on scroll child) to defer layout mutations to scroll-idle. Android uses WAAPI animations with a scroll-linked `transform` show bridge that unwinds as the user approaches the top.
 
-For empirical research, rejected approaches, and prototype history, see `dev/full-screen.md`.
+For empirical research, rejected approaches, and prototype history, see `dev/full-screen-dev.md`.
 
 ## UX requirements
 
@@ -24,7 +24,7 @@ Non-negotiable. Reject any implementation that violates these, regardless of tec
 
 | File | Role |
 |---|---|
-| `src/bases/full-screen.ts` | Full screen controller — scroll listener, direction detection, hide/show/settle logic |
+| `src/bases/full-screen.ts` | `FullScreenController` class + `createFullScreenController()` factory (shared init logic used by both grid-view and masonry-view) |
 | `src/shared/constants.ts` | Tuning constants (`FULL_SCREEN_*`) |
 | `styles/_full-screen.scss` | `full-screen-active`, `full-screen-showing` (iOS only), and `data-dynamic-views-show` (Android only) rules |
 
@@ -137,7 +137,7 @@ This architecture exists because Chrome/146 WebView's single-threaded compositor
 
 `totalShift` is initially measured at mount time: toggle `full-screen-active` class, read `getBoundingClientRect().top` before/after on the scroll container, then remove the class.
 
-**Mount-time measurement bug**: `getBoundingClientRect` returns 0 when `[data-type='bases']` CSS selectors do not match at construction time (the leaf has not received its `data-type` attribute yet). The `measureTotalShift()` method provides the authoritative re-measurement from live DOM: `getComputedStyle(viewContent).marginTop + toolbar.offsetHeight + searchRow.offsetHeight`. It is called in the hide threshold check (before `hideBarsUI()`) and again inside `hideBarsUI()` itself, and is gated on `!body.classList.contains('full-screen-active')` (otherwise `marginTop` reads as 0 from the class rule).
+**Mount-time measurement bug**: `getBoundingClientRect` returns 0 when `[data-type='bases']` CSS selectors do not match at construction time (the leaf has not received its `data-type` attribute yet). The `measureTotalShift()` method provides the authoritative re-measurement from live DOM: `getComputedStyle(viewContent).marginTop + toolbar.offsetHeight + searchRow.offsetHeight`. It is called in the hide threshold check (before `hideBarsUI()`) and again inside `hideBarsUI()` itself. Guards: `totalShiftMeasured` flag short-circuits after the first successful measurement (totalShift is stable after initial layout), and `classTarget.classList.contains('full-screen-active')` prevents reading margin-top as 0 from the class rule.
 
 ### Why a bridge
 
@@ -312,10 +312,10 @@ The practical impact: CSS transitions during active scroll compete with scroll p
 6. **Programmatic scroll guard**: `scrollTop` writes must set a `programmaticScroll` flag. The scroll handler must check this flag and skip processing. On Android, the flag MUST be cleared in the next rAF — blocking it longer prevents the idle timer from firing `pendingLayout`, causing a deadlock.
 7. **No `will-change: transform` on scroll containers**: Breaks scroll event detection on child containers. Use `transform: translateY(0)` for pre-promotion instead.
 8. **Instant layout only**: Layout mutations during scroll must use `transition: none`. Animated transitions (any duration > 0) cause continuous relayout that kills momentum.
-9. **`measureTotalShift()` before hide**: Mount-time `getBoundingClientRect` may return 0 if CSS selectors do not match at construction time. `measureTotalShift()` must be called before any hide to ensure the authoritative value. Only valid when `full-screen-active` is NOT on the class target (body on Android, leafContent on iOS).
+9. **`measureTotalShift()` before hide**: Mount-time `getBoundingClientRect` may return 0 if CSS selectors do not match at construction time. `measureTotalShift()` must be called before any hide to ensure the authoritative value. Short-circuits via `totalShiftMeasured` flag after the first successful measurement (totalShift is stable after initial layout). Only valid when `full-screen-active` is NOT on the class target (body on Android, leafContent on iOS).
 10. **Android: no direct class removal on show**: `classList.remove('full-screen-active')` without restoring bars first causes a white flash — Chromium renders the intermediate 99px margin gap. Always use `applyShowInlines()` + `data-dynamic-views-show` attribute to restore bars visually. Class removal does NOT happen at show idle — it stays until the next hide.
 11. **Android: no `!important` transform/opacity in CSS**: WAAPI animation effects are lower in the cascade than `!important` author declarations. Android header/navbar transform and opacity must NOT be in CSS `!important` rules — they are controlled entirely via WAAPI and inline styles.
-12. **WAAPI cancel before animate**: WAAPI animations must be cancelled before starting new ones. Rapid hide/show cycling without cancellation causes animation stacking and visual corruption.
+12. **WAAPI cancel before animate**: WAAPI animations must be cancelled before starting new ones. Rapid hide/show cycling without cancellation causes animation stacking and visual corruption. Exception: the Android show path starts new animations BEFORE cancelling old ones — later-created animations have higher composite priority (WAAPI §4.6), so cancelling hide first would snap elements visible for one frame before show starts. See [Show WAAPI ordering](#android-scroll-linked-show-bridge).
 13. **Android bridge lifecycle**: Show bridge starts at `translateY(-totalShift)` and unwinds scroll-linked as the user approaches the top. `bridgePhaseActive` stays true until `commitBridgeResolve()` (at `scrollTop=0` idle) or `hideBarsUI()`. The hide path checks `bridgePhaseActive` to skip `scrollTop` reversal (scrollTop was never increased during show). `scrollTop` is never written during show.
 14. **`restoreMaskImage()` in show path (both platforms)**: `restoreMaskImage()` runs in the show rAF (Android) or synchronously (iOS). Gradient swap keeps the render surface allocated. Deferring to idle violates UX requirement 3 (atomic bar transitions) — the navbar gradient appears late.
 15. **`data-dynamic-views-show` selectors must terminate on pseudos**: The `[data-dynamic-views-show]` attribute on `leafContent` triggers CSS rules for `::before`/`::after` pseudos only. Selectors using this attribute MUST terminate on a pseudo-element — if they match real descendants, the attribute change triggers subtree-wide style recalc that exceeds the Android WebView compositor frame budget.
