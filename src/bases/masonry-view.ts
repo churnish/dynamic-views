@@ -2852,10 +2852,13 @@ export class DynamicViewsMasonryView extends BasesView {
       item.width < compactBreakpoint
     ) {
       handle.el.classList.add('compact-mode');
+      // Pre-seed width cache for ALL compact remounts — prevents the per-card
+      // RO from scheduling processCompactStackedBatch (getBoundingClientRect
+      // per pair) during WebKit momentum scroll.
+      preseedCompactStackedCache(handle.el, item.width);
     }
     if (item.compactStacked) {
       handle.el.classList.add('compact-stacked');
-      preseedCompactStackedCache(handle.el, item.width);
     }
     this.newlyMountedEls.push(handle.el);
   }
