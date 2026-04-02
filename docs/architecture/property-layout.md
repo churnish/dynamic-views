@@ -2,7 +2,7 @@
 title: Property layout system
 description: Property pairing, width measurement, scroll gradients, and vertical positioning inside cards for both backends.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-16
+updated: 2026-04-02
 ---
 # Property layout system
 
@@ -397,3 +397,5 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 12. **In-place updates invalidate persistent cache.** When `measureCardPairsSynchronous` detects fresh DOM (unmeasured sets) on a reused card element (`cardWidthCache` hit), it deletes the persistent cache entry for that file path before re-measuring. This prevents stale cached widths from being applied after property value changes.
 13. **`compact-stacked` requires `compact-mode`.** `cancelCompactStackedCheck` always runs on compact exit (via `syncResponsiveClasses`). Batched detection guards on `.compact-mode` presence — non-compact cards are filtered out before measurement.
 14. **Batch state requires no explicit cleanup.** Module-level `pendingCardsByDoc`, `batchRafIds`, and `compactWidthCache` are self-managing. `isConnected` + `compact-mode` guards handle stale entries. WeakMap allows GC of removed card elements. Per-document `Set` entries are cleared after each batch.
+15. **Masonry remount must pre-seed `compactWidthCache`.** When masonry virtual scroll remounts a card, the per-card RO fires → `queueCompactStackedCheck` → if no cache entry, schedules `processCompactStackedBatch` → `getBoundingClientRect()` per pair. On iOS, this forced layout during momentum scroll causes a compositor-to-main-thread sync that kills UIScrollView inertia. Fix: `mountVirtualItem` calls `preseedCompactStackedCache(el, width)` for ALL compact remounts, and caches the `compact-stacked` class state on `VirtualItem.compactStacked` across unmount/remount. The cache hit in `queueCompactStackedCheck` prevents the batch rAF entirely.
+16. **`unmountVirtualItem` must call `invalidateCompactStackedCache`.** Removes the old element from `pendingCardsByDoc` (prevents processing a disconnected element) and clears the `compactWidthCache` entry (prevents stale references from delaying GC).
