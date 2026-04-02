@@ -523,25 +523,26 @@ body.dynamic-views-poster-theme-match.theme-light
   --dynamic-views-text-faint: color-mix(in srgb, #333333 60%, transparent);
 }
 
-/* Poster background variants */
+/* Poster background variants — gated on .has-poster so imageless cards
+   (where image failed to load) show --card-bg instead of poster placeholder */
 body:is(
     .dynamic-views-poster-bg-dimmed,
     :not([class*='dynamic-views-poster-bg-'])
   )
   .dynamic-views
-  .card.image-format-poster
+  .card.image-format-poster.has-poster
   .card-poster {
   background-color: var(--dynamic-views-image-background-dimmed);
 }
 body.dynamic-views-poster-bg-transparent
   .dynamic-views
-  .card.image-format-poster
+  .card.image-format-poster.has-poster
   .card-poster {
   background-color: transparent;
 }
 body.dynamic-views-poster-bg-custom
   .dynamic-views
-  .card.image-format-poster
+  .card.image-format-poster.has-poster
   .card-poster {
   background-color: var(
     --dynamic-views-poster-background-color-custom,
