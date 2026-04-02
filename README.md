@@ -19,7 +19,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Wrap long titles to new line
 - Scroll long properties horizontally
 - Full screen image viewer
-- Immersive full screen scrolling on mobile
+- Immersive full screen scrolling on phone
 
 ### Extras
 
