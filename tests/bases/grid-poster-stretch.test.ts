@@ -76,10 +76,10 @@ function stretchPosterCardsInMixedRows(ctx: {
   if (ctx.imageFormat !== 'poster') return;
 
   // Fixed height active = stretch is a CSS no-op. Clear stale state and exit.
-  if (
+  const isFixedHeightActive =
     !ctx.bodyClasses.has(FIXED_POSTER_HEIGHT_MASONRY) &&
-    !ctx.bodyClasses.has(FIXED_POSTER_HEIGHT_NONE)
-  ) {
+    !ctx.bodyClasses.has(FIXED_POSTER_HEIGHT_NONE);
+  if (isFixedHeightActive) {
     for (const [, groupItems] of ctx.virtualItemsByGroup) {
       for (const item of groupItems) {
         if (!item.el?.isConnected) continue;
@@ -95,6 +95,23 @@ function stretchPosterCardsInMixedRows(ctx: {
 
   const columns = ctx.columns;
   if (columns <= 0) return;
+
+  // Pre-collect ALL card heights in one pass — forces a single reflow total.
+  const heightMap = new Map<MockElement, number>();
+  for (const [, groupItems] of ctx.virtualItemsByGroup) {
+    for (const item of groupItems) {
+      const el = item.el;
+      if (!el?.isConnected) continue;
+      const isPoster =
+        el.classList.contains('image-format-poster') &&
+        el.classList.contains('has-poster');
+      if (isPoster && el.classList.contains(POSTER_STRETCH_CLASS)) {
+        heightMap.set(el, 0);
+      } else {
+        heightMap.set(el, el.getBoundingClientRect().height);
+      }
+    }
+  }
 
   // Read phase
   const rowActions: {
@@ -118,7 +135,7 @@ function stretchPosterCardsInMixedRows(ctx: {
         ) {
           posterEls.push(el);
         } else {
-          const h = el.getBoundingClientRect().height;
+          const h = heightMap.get(el) ?? 0;
           if (h > maxImagelessHeight) maxImagelessHeight = h;
         }
       }
@@ -139,9 +156,7 @@ function stretchPosterCardsInMixedRows(ctx: {
         continue;
       }
 
-      const posterHeight = posterEls[0].classList.contains(POSTER_STRETCH_CLASS)
-        ? 0
-        : posterEls[0].getBoundingClientRect().height;
+      const posterHeight = heightMap.get(posterEls[0]) ?? 0;
 
       if (maxImagelessHeight > posterHeight) {
         rowActions.push({ posterEls, action: 'stretch', value });
@@ -300,6 +315,102 @@ describe('stretchPosterCardsInMixedRows', () => {
 
     // Props unchanged — skip action
     expect(poster._cssProps).toEqual(propsBefore);
+  });
+
+  it('multi-row: mixed row 0 stretched, all-poster row 1 unstretched', () => {
+    // 4 cards, 2 columns
+    // Row 0: poster (shorter) + imageless (taller) → stretch
+    // Row 1: poster + poster → unstretch
+    const poster0 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+    const imageless0 = mockElement({ height: 300 });
+    const poster1 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 250,
+    });
+    const poster2 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 250,
+    });
+
+    const ctx = makeCtx({
+      columns: 2,
+      virtualItemsByGroup: new Map([
+        [
+          'default',
+          [
+            { el: poster0 },
+            { el: imageless0 },
+            { el: poster1 },
+            { el: poster2 },
+          ],
+        ],
+      ]),
+    });
+
+    stretchPosterCardsInMixedRows(ctx);
+
+    // Row 0: poster stretched to imageless height
+    expect(poster0._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
+    expect(poster0._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('300px');
+    expect(poster0._cssProps.get(POSTER_ASPECT_OVERRIDE_VAR)).toBe('auto');
+
+    // Row 1: all-poster → unstretch
+    expect(poster1._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+    expect(poster2._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+  });
+
+  it('partial row: fewer cards than columns processed without error', () => {
+    // 5 cards, 3 columns
+    // Row 0: poster + imageless + poster → stretch
+    // Row 1: poster + poster (partial) → unstretch
+    const poster0 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 150,
+    });
+    const imageless0 = mockElement({ height: 280 });
+    const poster1 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 150,
+    });
+    const poster2 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+    const poster3 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+
+    const ctx = makeCtx({
+      columns: 3,
+      virtualItemsByGroup: new Map([
+        [
+          'default',
+          [
+            { el: poster0 },
+            { el: imageless0 },
+            { el: poster1 },
+            { el: poster2 },
+            { el: poster3 },
+          ],
+        ],
+      ]),
+    });
+
+    stretchPosterCardsInMixedRows(ctx);
+
+    // Row 0: both posters stretched to imageless height
+    expect(poster0._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
+    expect(poster0._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('280px');
+    expect(poster1._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
+    expect(poster1._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('280px');
+
+    // Row 1: all-poster partial row → unstretch
+    expect(poster2._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+    expect(poster3._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
   });
 
   it('fixed height active: early exit, stale stretch cleaned', () => {

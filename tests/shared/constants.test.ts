@@ -1,4 +1,8 @@
-import { computeHoverScale, HOVER_GROWTH_PX } from '../../src/shared/constants';
+import {
+  computeHoverScale,
+  HOVER_GROWTH_PX,
+  MAX_HOVER_SCALE,
+} from '../../src/shared/constants';
 
 describe('constants', () => {
   describe('computeHoverScale', () => {
@@ -11,15 +15,15 @@ describe('constants', () => {
       expect(computeHoverScale(-100)).toBe('');
     });
 
-    it('caps at MAX_HOVER_SCALE (1.04) for small heights', () => {
-      // For very small heights, the formula exceeds 1.04
-      expect(computeHoverScale(1)).toBe('1.04');
-      expect(computeHoverScale(10)).toBe('1.04');
+    it('caps at MAX_HOVER_SCALE for small heights', () => {
+      // For very small heights, the formula exceeds MAX_HOVER_SCALE
+      expect(computeHoverScale(1)).toBe(String(MAX_HOVER_SCALE));
+      expect(computeHoverScale(10)).toBe(String(MAX_HOVER_SCALE));
     });
 
     it('returns expected value for typical card height (200px)', () => {
-      // 1 + (4 * 2) / 200 = 1 + 8/200 = 1.04
-      expect(computeHoverScale(200)).toBe('1.04');
+      // 1 + (4 * 2) / 200 = 1 + 8/200 = 1.04 (coincides with MAX_HOVER_SCALE)
+      expect(computeHoverScale(200)).toBe(String(MAX_HOVER_SCALE));
     });
 
     it('returns expected value for tall card (400px)', () => {

@@ -59,8 +59,7 @@ interface VirtualItem {
 interface EqualizeConfig {
   expectedFormat: string;
   matchCard: (el: MockElement) => boolean;
-  fixedMasonryClass: string;
-  fixedNoneClass: string;
+  fixedHeightOffClasses: { masonry: string; none: string };
   cssVariable: string;
 }
 
@@ -84,9 +83,9 @@ function equalizeRowHeights(
   if (!ctx.containerConnected) return;
   if (ctx.imageFormat !== config.expectedFormat) return;
 
+  const { masonry, none } = config.fixedHeightOffClasses;
   const isFixedHeightActive =
-    !ctx.bodyClasses.has(config.fixedMasonryClass) &&
-    !ctx.bodyClasses.has(config.fixedNoneClass);
+    !ctx.bodyClasses.has(masonry) && !ctx.bodyClasses.has(none);
 
   if (isFixedHeightActive) {
     for (const [, groupItems] of ctx.virtualItemsByGroup) {
@@ -149,8 +148,10 @@ describe('equalizeRowHeights', () => {
     matchCard: (el) =>
       el.classList.contains('image-format-poster') &&
       el.classList.contains('has-poster'),
-    fixedMasonryClass: FIXED_POSTER_HEIGHT_MASONRY,
-    fixedNoneClass: FIXED_POSTER_HEIGHT_NONE,
+    fixedHeightOffClasses: {
+      masonry: FIXED_POSTER_HEIGHT_MASONRY,
+      none: FIXED_POSTER_HEIGHT_NONE,
+    },
     cssVariable: '--row-poster-aspect-ratio',
   };
 
@@ -288,5 +289,38 @@ describe('equalizeRowHeights', () => {
     expect(cards[3]._cssProps.get(posterConfig.cssVariable)).toBe('2');
     expect(cards[4]._cssProps.get(posterConfig.cssVariable)).toBe('2');
     expect(cards[5]._cssProps.get(posterConfig.cssVariable)).toBe('2');
+  });
+
+  it('mixed content: imageless cards ignored, poster cards equalized', () => {
+    // 3 columns, 3 cards in one row
+    // Card 0: imageless (no has-poster — does not pass matchCard)
+    // Cards 1-2: poster cards with different aspect ratios
+    const imageless = mockElement({
+      computedProps: { '--actual-aspect-ratio': '0.5' },
+    });
+    const poster1 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      computedProps: { '--actual-aspect-ratio': '0.8' },
+    });
+    const poster2 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      computedProps: { '--actual-aspect-ratio': '1.4' },
+    });
+
+    const ctx = makeCtx({
+      columns: 3,
+      virtualItemsByGroup: new Map([
+        ['default', [{ el: imageless }, { el: poster1 }, { el: poster2 }]],
+      ]),
+    });
+
+    equalizeRowHeights(ctx, posterConfig);
+
+    // Imageless card not matched — no CSS variable set
+    expect(imageless._cssProps.has(posterConfig.cssVariable)).toBe(false);
+
+    // Both poster cards get the max ratio (1.4), correctly identified as row 0
+    expect(poster1._cssProps.get(posterConfig.cssVariable)).toBe('1.4');
+    expect(poster2._cssProps.get(posterConfig.cssVariable)).toBe('1.4');
   });
 });

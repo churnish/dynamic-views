@@ -48,6 +48,18 @@ export function handleAllImagesFailed(cardEl: HTMLElement): void {
       ph.className = 'card-cover-placeholder';
       wrapper.appendChild(ph);
     }
+    return;
+  }
+
+  // Poster/backdrop: remove reveal-gating class so content is visible
+  const posterEl = cardEl.querySelector('.card-poster');
+  if (posterEl) {
+    cardEl.classList.remove('has-poster');
+    return;
+  }
+  const backdropEl = cardEl.querySelector('.card-backdrop');
+  if (backdropEl) {
+    cardEl.classList.remove('has-backdrop');
   }
 }
 
@@ -426,6 +438,7 @@ export function setupBackdropImageLoader(
             return;
           imgEl.addClass('dynamic-views-hidden');
           cardEl.classList.add('image-ready');
+          handleAllImagesFailed(cardEl);
           onLayoutUpdate?.();
         });
       });
@@ -446,6 +459,7 @@ export function setupBackdropImageLoader(
               return;
             imgEl.addClass('dynamic-views-hidden');
             cardEl.classList.add('image-ready');
+            handleAllImagesFailed(cardEl);
             onLayoutUpdate?.();
           });
         });

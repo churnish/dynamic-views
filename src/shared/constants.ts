@@ -91,12 +91,13 @@ export const DROPDOWN_OPENED_EVENT = 'dynamic-views:dropdown-opened';
 /** Fixed hover growth per side in px. Scale = 1 + (2 * HOVER_GROWTH_PX) / height. */
 export const HOVER_GROWTH_PX = 4;
 
-const MAX_HOVER_SCALE = 1.04;
+export const MAX_HOVER_SCALE = 1.04;
 
 /** Selector for visible body children — used by card-renderer and shared-renderer. */
 export const VISIBLE_BODY_SELECTOR =
   '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
 
+// Poster stretch trio — the class signals stretch state and the two CSS variables carry computed values. All three must be set/cleared together; clearing only the class leaks stale CSS variable state. Consumed by `_poster.scss`.
 export const POSTER_STRETCH_CLASS = 'poster-stretch';
 export const POSTER_ROW_MIN_HEIGHT_VAR = '--poster-row-min-height';
 export const POSTER_ASPECT_OVERRIDE_VAR = '--poster-aspect-override';

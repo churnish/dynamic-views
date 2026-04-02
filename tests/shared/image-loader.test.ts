@@ -1,7 +1,13 @@
-import { invalidateCacheForFile } from '../../src/shared/image-loader';
+import {
+  invalidateCacheForFile,
+  handleImageLoad,
+} from '../../src/shared/image-loader';
 
-// Access the private imageMetadataCache for testing
-// We need to import the module and test through exported functions
+// Mock slideshow module to prevent fetch calls during tests
+vi.mock('../../src/shared/slideshow', () => ({
+  cacheExternalImage: vi.fn(),
+}));
+
 describe('image-loader', () => {
   describe('invalidateCacheForFile', () => {
     // Note: invalidateCacheForFile operates on an internal cache that we can't directly access
@@ -63,6 +69,68 @@ describe('image-loader', () => {
       expect(() =>
         invalidateCacheForFile('folder/image_name.png')
       ).not.toThrow();
+    });
+  });
+
+  describe('handleImageLoad', () => {
+    it('adds image-ready synchronously when imgEl.complete is true', () => {
+      const cardEl = document.createElement('div');
+      document.body.appendChild(cardEl);
+      const imgEl = document.createElement('img');
+      imgEl.src = 'test.jpg';
+      Object.defineProperty(imgEl, 'complete', { value: true });
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100 });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100 });
+
+      handleImageLoad(imgEl, cardEl);
+      expect(cardEl.classList.contains('image-ready')).toBe(true);
+      cardEl.remove();
+    });
+
+    it('defers image-ready via rAF when imgEl.complete is false', () => {
+      const cardEl = document.createElement('div');
+      document.body.appendChild(cardEl);
+      const imgEl = document.createElement('img');
+      imgEl.src = 'test.jpg';
+      Object.defineProperty(imgEl, 'complete', { value: false });
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100 });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100 });
+
+      handleImageLoad(imgEl, cardEl);
+      expect(cardEl.classList.contains('image-ready')).toBe(false);
+      cardEl.remove();
+    });
+
+    it('adds image-ready synchronously when ancestor has skip-cover-fade', () => {
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('skip-cover-fade');
+      const cardEl = document.createElement('div');
+      wrapper.appendChild(cardEl);
+      document.body.appendChild(wrapper);
+      const imgEl = document.createElement('img');
+      imgEl.src = 'test.jpg';
+      Object.defineProperty(imgEl, 'complete', { value: false });
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100 });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100 });
+
+      handleImageLoad(imgEl, cardEl);
+      expect(cardEl.classList.contains('image-ready')).toBe(true);
+      wrapper.remove();
+    });
+
+    it('calls onLayoutUpdate when provided', () => {
+      const cardEl = document.createElement('div');
+      document.body.appendChild(cardEl);
+      const imgEl = document.createElement('img');
+      imgEl.src = 'test.jpg';
+      Object.defineProperty(imgEl, 'complete', { value: true });
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100 });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100 });
+      const onLayout = vi.fn();
+
+      handleImageLoad(imgEl, cardEl, onLayout);
+      expect(onLayout).toHaveBeenCalledOnce();
+      cardEl.remove();
     });
   });
 });
