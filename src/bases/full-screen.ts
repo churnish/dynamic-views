@@ -187,7 +187,7 @@ export class FullScreenController {
     this.appContainerEl =
       this.body.querySelector<HTMLElement>('.app-container');
     this.workspaceEl = this.body.querySelector<HTMLElement>('.workspace');
-    this.classTarget = this.isAndroid ? this.body : this.leafContent;
+    this.classTarget = this.leafContent;
     // Cache Obsidian's mask-image gradient before any inline overrides.
     // Used by gradient swap (hide sets opaque, show restores cached) to
     // keep the render surface allocated — avoids cross-subtree rasterization
@@ -357,7 +357,7 @@ export class FullScreenController {
     ]);
   }
 
-  /** Apply background-color inlines on body/app-container/workspace (iOS only). These elements are above the leaf — unreachable from the leaf-scoped full-screen-active class. Variable defined on body (_variables.scss). */
+  /** Apply background-color inlines on body/app-container/workspace. These elements are above the leaf — unreachable from the leaf-scoped full-screen-active class. Variable defined on body (_variables.scss). */
   private applyBackgroundInlines(): void {
     const bg = 'var(--dynamic-views-background-primary)';
     setStyle(this.body, 'background-color', bg, 'important');
@@ -367,7 +367,7 @@ export class FullScreenController {
       setStyle(this.workspaceEl, 'background-color', bg, 'important');
   }
 
-  /** Remove background-color inlines from body/app-container/workspace (iOS only) */
+  /** Remove background-color inlines from body/app-container/workspace */
   private clearBackgroundInlines(): void {
     this.body.style.removeProperty('background-color');
     this.appContainerEl?.style.removeProperty('background-color');
@@ -429,13 +429,8 @@ export class FullScreenController {
       ]);
     }
 
-    // Header: pointer-events + z-index above ::before scrim (z-index 25 on
-    // grouped). z-index 30 ensures header WAAPI slides above the scrim without
-    // needing a --dynamic-views-scrim-z custom property (which would inherit to
-    // all descendants, adding style recalc overhead that exceeds the Android
-    // WebView compositor frame budget.
+    // Header z-index above ::before scrim (z-index 25 on grouped) during show animation. pointer-events: none from CSS full-screen-active — taps pass through to toolbar.
     if (this.viewHeaderEl) {
-      setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
       setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
     }
   }
@@ -482,6 +477,7 @@ export class FullScreenController {
     this.clearShowInlines();
     this.scrollEl.style.removeProperty('height');
     this.classTarget.classList.remove('full-screen-active');
+    this.clearBackgroundInlines();
     this.clearMaskImageInline();
     this.bridgePhaseActive = false;
     this.isActiveHider = false;
@@ -564,7 +560,7 @@ export class FullScreenController {
       }
       this.clearMaskImageInline();
       this.classTarget.classList.remove('full-screen-active');
-      if (!this.isAndroid) this.clearBackgroundInlines();
+      this.clearBackgroundInlines();
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
@@ -832,7 +828,8 @@ export class FullScreenController {
       const before = this.scrollEl.scrollTop;
       this.programmaticScroll = true;
       this.scrollEl.style.removeProperty('height');
-      this.body.classList.add('full-screen-active');
+      this.classTarget.classList.add('full-screen-active');
+      this.applyBackgroundInlines();
       // Skip scrollTop adjustment if show bridge was active — scrollTop was
       // never increased by the show path, so no reversal needed. Bridge
       // transform was already cleared above (container removeProperty).
