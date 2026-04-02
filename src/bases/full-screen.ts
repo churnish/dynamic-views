@@ -1151,6 +1151,13 @@ export class FullScreenController {
     // The hide path follows the same pattern: synchronous layout, rAF animation.
     void capacitorStatusBar?.show();
 
+    // Clear tap-shield inlines BEFORE adding class — inline !important
+    // overrides rule !important in the cascade, so the hide-settle inlines
+    // (opacity:0, transform, margin-top) would block the full-screen-showing
+    // CSS that restores the header. Must be synchronous with classList.add
+    // so the browser sees only the final computed state.
+    this.clearHeaderInlines();
+
     // Synchronous layout — single compositor pause, UIScrollView resumes
     this.leafContent.classList.add('full-screen-showing');
 
