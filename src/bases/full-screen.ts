@@ -76,6 +76,11 @@ type BridgeOverlaySection = {
   height: number;
 };
 
+type BridgeOverlaySnapshot = {
+  anchorTop: number;
+  sections: BridgeOverlaySection[];
+};
+
 export interface FullScreenElements {
   scrollEl: HTMLElement; // .bases-view
   container: HTMLElement; // .dynamic-views-bases-container
@@ -546,27 +551,37 @@ export class FullScreenController {
     this.syncBridgeOverlay(currentTop, bridgePx);
   }
 
-  /** Capture section geometry and create fixed overlay host on document.body.
-   *  anchorTop: heading screen Y captured BEFORE applyShowInlines shifts
-   *  the scrollport. Constant through the entire bridge lifecycle. */
-  private captureBridgeOverlay(anchorTop: number): void {
-    this.clearBridgeOverlay();
-    this.bridgeAnchorTop = anchorTop;
-
-    const containerRect = this.container.getBoundingClientRect();
-    const scrollTop = this.scrollEl.scrollTop;
-
-    this.bridgeOverlaySections = Array.from(
+  /** Build overlay data from the pre-show layout snapshot. */
+  private snapshotBridgeOverlay(): BridgeOverlaySnapshot | null {
+    const headings = Array.from(
       this.container.querySelectorAll<HTMLElement>(
         '.dynamic-views-group-section > .bases-group-heading:not(.collapsed)'
       )
-    ).map((heading) => {
+    );
+    if (headings.length === 0) return null;
+
+    const win = this.scrollEl.ownerDocument.defaultView;
+    if (!win) return null;
+
+    // Anchor = bars-SHOWING stuck position: scroll container top - viewPadding.
+    // Matches where the heading naturally sticks after bridge resolution
+    // (position: sticky; top: -viewPadding — _grid-masonry-shared.scss:28).
+    const scrollCS = win.getComputedStyle(this.scrollEl);
+    const viewPadding = parseFloat(
+      scrollCS.getPropertyValue('--dynamic-views-bases-view-padding')
+    );
+    if (!Number.isFinite(viewPadding)) return null;
+    const anchorTop = this.totalShift - viewPadding;
+
+    const containerRect = this.container.getBoundingClientRect();
+    const sections = headings.map((heading) => {
       const section = heading.closest<HTMLElement>(
         '.dynamic-views-group-section'
       )!;
       const rect = section.getBoundingClientRect();
-      // Scroll-space position: BCR relative to container + scrollTop
-      const top = rect.top - containerRect.top + scrollTop;
+      // Layout offset within container — BCR difference cancels both
+      // scrollTop and the container's bridge transform automatically.
+      const top = rect.top - containerRect.top;
       return {
         heading,
         top,
@@ -575,7 +590,18 @@ export class FullScreenController {
       };
     });
 
-    if (this.bridgeOverlaySections.length === 0) return;
+    return { anchorTop, sections };
+  }
+
+  /** Capture section geometry and create fixed overlay host on leafContent.
+   *  anchorTop: heading screen Y captured before applyShowInlines shifts
+   *  the scrollport. Constant through the entire bridge lifecycle. */
+  private captureBridgeOverlay(snapshot: BridgeOverlaySnapshot): boolean {
+    this.clearBridgeOverlay();
+    this.bridgeAnchorTop = snapshot.anchorTop;
+    this.bridgeOverlaySections = snapshot.sections;
+
+    if (this.bridgeOverlaySections.length === 0) return false;
 
     const doc = this.scrollEl.ownerDocument;
     this.bridgeOverlayHost = doc.createElement('div');
@@ -588,7 +614,8 @@ export class FullScreenController {
     // stacking context for z-index 26 to work against the scrim (25).
     this.leafContent.appendChild(this.bridgeOverlayHost);
 
-    this.syncBridgeOverlay(scrollTop, this.totalShift);
+    this.syncBridgeOverlay(this.scrollEl.scrollTop, this.totalShift);
+    return true;
   }
 
   /** Position the overlay heading. Runs per scroll event during bridge.
@@ -639,6 +666,26 @@ export class FullScreenController {
       }
       const clone = active.heading.cloneNode(true) as HTMLElement;
       clone.classList.add('stuck');
+      // Delegate clicks to matching element in original heading via
+      // child-index path traversal (handles collapse, folder, tag clicks).
+      clone.addEventListener('click', (e) => {
+        if (!this.bridgeOverlaySource) return;
+        const target = e.target as HTMLElement;
+        const path: number[] = [];
+        let el: HTMLElement | null = target;
+        while (el && el !== clone) {
+          const parent = el.parentElement;
+          if (!parent) return;
+          path.unshift(Array.from(parent.children).indexOf(el));
+          el = parent;
+        }
+        let orig: Element = this.bridgeOverlaySource;
+        for (const idx of path) {
+          if (idx < orig.children.length) orig = orig.children[idx];
+          else return;
+        }
+        (orig as HTMLElement).click();
+      });
       this.bridgeOverlayLane.replaceChildren(clone);
       this.bridgeOverlaySource = active.heading;
       // Hide original
@@ -667,6 +714,7 @@ export class FullScreenController {
     this.bridgeOverlayHost?.remove();
     this.bridgeOverlayHost = null;
     this.bridgeOverlayLane = null;
+    this.bridgeAnchorTop = 0;
     this.bridgeOverlaySections = [];
   }
 
@@ -1199,15 +1247,10 @@ export class FullScreenController {
         `translateY(-${this.headerShift}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
-        // Capture bars-hidden CSS top BEFORE applyShowInlines changes it. All grouped headings share the same CSS rule. Single getComputedStyle read.
-        const win = this.scrollEl.ownerDocument.defaultView;
-        const firstHeading = this.container.querySelector<HTMLElement>(
-          '.bases-group-heading:not(.collapsed)'
-        );
-        const barsHiddenTop =
-          win && firstHeading
-            ? parseFloat(win.getComputedStyle(firstHeading).top) || 0
-            : 0;
+        // Snapshot the active grouped heading geometry before applyShowInlines
+        // changes the scrollport. Using scrollEl CSS variables for the anchor
+        // avoids relying on getComputedStyle(heading).top being non-auto.
+        const overlaySnapshot = this.snapshotBridgeOverlay();
 
         // Inline styles restore margin/toolbar/search — bypasses classList
         // to avoid style invalidation that drops frames on the
@@ -1218,7 +1261,7 @@ export class FullScreenController {
         // Show bridge: transform on container cancels the visual shift from
         // applyShowInlines (viewContent margin-top + toolbar expansion).
         // Compositor-only — no layout, no raster invalidation. Fixed overlay
-        // on document.body renders the active stuck heading outside the
+        // on leafContent renders the active stuck heading outside the
         // scroll container's overflow clip and transform context.
         if (this.settled) {
           setStyle(
@@ -1226,7 +1269,12 @@ export class FullScreenController {
             'transform',
             `translateY(-${this.totalShift}px)`
           );
-          this.captureBridgeOverlay(barsHiddenTop);
+          if (overlaySnapshot) {
+            this.captureBridgeOverlay(overlaySnapshot);
+          }
+          // Bridge is active regardless of overlay success — the transform
+          // compensates for applyShowInlines layout shift. Overlay is cosmetic
+          // (heading visibility), not structural (content positioning).
           this.bridgePhaseActive = true;
           this.lastBridgePx = -1;
         }

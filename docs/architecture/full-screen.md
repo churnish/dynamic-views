@@ -135,13 +135,13 @@ This architecture exists because Chrome/146 WebView's single-threaded compositor
 
 ### Heading fixed overlay (Android)
 
-During the show bridge, the container's `transform: translateY(-bridgePx)` displaces sticky headings because overflow clipping occurs in layout space before transforms are applied. The fixed overlay renders the active heading on `document.body` with `position: fixed`, entirely outside the scroll container's clip boundary and all ancestor transform contexts.
+During the show bridge, the container's `transform: translateY(-bridgePx)` displaces sticky headings because overflow clipping occurs in layout space before transforms are applied. The fixed overlay renders the active heading on `leafContent` with `position: fixed`, entirely outside the scroll container's clip boundary. `leafContent` is used instead of `document.body` because body children may paint behind `.app-container`'s stacking context.
 
-At bridge start, `captureBridgeOverlay(anchorTop)` captures section geometry in scroll-space and creates a fixed host element on `document.body`. `anchorTop` is the heading's screen Y before `applyShowInlines()` shifts the scrollport — a constant through the entire bridge.
+At bridge start, `snapshotBridgeOverlay()` captures section geometry and heading data BEFORE `applyShowInlines()` shifts the scrollport. The anchor is `totalShift - viewPadding` — the bars-SHOWING stuck position, matching where the heading naturally sticks after bridge resolution (`position: sticky; top: -viewPadding`). This places the overlay below the toolbar, not in the status bar area.
 
-On each scroll event, `syncBridgeOverlay(scrollTop, bridgePx)` determines the active heading via `stickLine = scrollTop + anchorTop` (scroll-space only, no `bridgePx` dependency). The overlay heading is positioned at the constant `anchorTop`, pushed up only when the next section approaches (`nextScreenY - headingHeight`). The original heading is hidden via `opacity: 0`.
+`captureBridgeOverlay(snapshot)` consumes the snapshot and creates the fixed host on `leafContent`. On each scroll event, `syncBridgeOverlay(scrollTop, bridgePx)` determines the active heading via `stickLine = scrollTop + anchorTop` (scroll-space only, no `bridgePx` dependency). The overlay heading is positioned at the constant `anchorTop`, pushed up only when the next section approaches (`nextScreenY - headingHeight`). The original heading is hidden via `opacity: 0`.
 
-`clearBridgeOverlay()` removes the host from `document.body` and unhides the original heading.
+`clearBridgeOverlay()` removes the host from `leafContent` and unhides the original heading.
 
 ### `totalShift` measurement
 

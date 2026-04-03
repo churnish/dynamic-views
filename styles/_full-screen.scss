@@ -364,4 +364,42 @@
     align-items: center;
     gap: var(--size-2-2);
   }
+
+  // Chevron — matches .dynamic-views .bases-group-collapse-btn
+  .bases-group-collapse-btn {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--dynamic-views-text-muted);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  // Property label — matches .dynamic-views .bases-group-property
+  .bases-group-property {
+    color: var(--dynamic-views-text-muted);
+    font-size: var(--dynamic-views-font-ui-small);
+  }
+
+  // Value containers — matches .dynamic-views .bases-group-value
+  .bases-group-value .value-list-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--size-2-2);
+  }
+
+  .bases-group-value .value-list-element {
+    display: inline-flex;
+  }
+
+  // Result count — matches .dynamic-views .bases-group-count
+  .bases-group-count {
+    color: var(--dynamic-views-text-muted);
+    font-size: var(--dynamic-views-font-ui-smaller);
+    padding-left: var(--size-2-3);
+  }
 }
