@@ -213,7 +213,7 @@ After applying CSS vars, the set gets `property-measured` class. CSS switches fr
 
 ### Remeasurement
 
-`remeasurePropertyFields(container)` clears all `.property-measured` states and CSS vars, then re-measures all sets synchronously. Called when property label mode changes — low frequency, bounded card count due to virtual scrolling.
+`remeasurePropertyFields(container)` clears all `.property-measured` states and CSS vars, then re-measures all sets synchronously. Called when property name mode changes — low frequency, bounded card count due to virtual scrolling.
 
 ## CSS state machine
 

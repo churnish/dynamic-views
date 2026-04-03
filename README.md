@@ -26,7 +26,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) 
 - Load cards while scrolling rather than all at once
 - Position card images on top, bottom, left or right of text
 - Hover across thumbnail to preview other images
-- Position property labels above, inline, or hide them
+- Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
 - Interactive checkbox properties
 - Select and copy card text

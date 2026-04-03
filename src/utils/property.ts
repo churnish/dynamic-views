@@ -199,7 +199,7 @@ const PROPERTY_SETTINGS_KEYS = [
 
 /**
  * Normalize all property name fields in settings using the reverse display-name map
- * Also attaches the forward display name map for property label rendering
+ * Also attaches the forward display name map for property name rendering
  * Call once at the top of the render cycle; downstream code uses the pre-normalized values
  */
 export function normalizeSettingsPropertyNames(
