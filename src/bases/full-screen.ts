@@ -180,6 +180,10 @@ export class FullScreenController {
   // Cached scroll container rect — stable during bridge phase, avoids per-scroll-frame BCR read in syncBridgeOverlay.
   private bridgeScrollLeft = 0;
   private bridgeScrollWidth = 0;
+  // In-flow spacer inside scrollEl — replaces transform bridge on Android.
+  // Height changes absorbed by overflow-anchor (container is the anchor target).
+  private spacerEl: HTMLElement | null = null;
+  private spacerActive = false;
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
@@ -511,6 +515,8 @@ export class FullScreenController {
     this.classTarget.classList.remove('full-screen-active');
     this.clearBackgroundInlines();
     this.clearMaskImageInline();
+    this.clearSpacerChrome();
+    this.spacerActive = false;
     this.bridgePhaseActive = false;
     this.isActiveHider = false;
     this.settled = false;
@@ -737,6 +743,205 @@ export class FullScreenController {
     this.bridgeOverlaySections = [];
   }
 
+  // ---------------------------------------------------------------------------
+  // Android spacer bridge — in-flow element inside scrollEl whose height
+  // changes are absorbed by overflow-anchor. Replaces the transform bridge.
+  // ---------------------------------------------------------------------------
+
+  private ensureSpacerChrome(): void {
+    if (this.spacerEl) return;
+    const doc = this.scrollEl.ownerDocument;
+    this.spacerEl = doc.createElement('div');
+    this.spacerEl.className = 'dynamic-views-spacer';
+    setStyle(this.spacerEl, 'height', '0');
+    this.scrollEl.insertBefore(this.spacerEl, this.container);
+  }
+
+  private clearSpacerChrome(): void {
+    this.spacerEl?.remove();
+    this.spacerEl = null;
+    this.spacerActive = false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Android spacer overlay helpers — toolbar/search as absolute overlays
+  // on leafContent. Replaces applyShowInlines() for the spacer path
+  // (does NOT restore margin-top or toolbar layout — keeps full-screen-active CSS).
+  // ---------------------------------------------------------------------------
+
+  private applyShowOverlays(): void {
+    this.leafContent.setAttribute('data-dynamic-views-show', '');
+    setStyle(this.leafContent, 'position', 'relative');
+
+    if (this.toolbarEl) {
+      setStyle(this.toolbarEl, 'opacity', '1');
+      setStyles(this.toolbarEl, [
+        ['position', 'absolute', 'important'],
+        ['top', `${this.originalMarginTop}px`, 'important'],
+        ['left', '0', 'important'],
+        ['right', '0', 'important'],
+        ['z-index', '29', 'important'],
+        ['pointer-events', 'auto', 'important'],
+        ['margin-bottom', '0px', 'important'],
+        ['transition', 'none', 'important'],
+        ['background', 'var(--dynamic-views-background-primary)', 'important'],
+      ]);
+    }
+
+    if (this.searchRowEl) {
+      setStyle(this.searchRowEl, 'opacity', '1');
+      setStyles(this.searchRowEl, [
+        ['position', 'absolute', 'important'],
+        [
+          'top',
+          `${this.originalMarginTop + (this.toolbarEl?.offsetHeight ?? 0)}px`,
+          'important',
+        ],
+        ['left', '0', 'important'],
+        ['right', '0', 'important'],
+        ['z-index', '29', 'important'],
+        ['pointer-events', 'auto', 'important'],
+        ['transition', 'none', 'important'],
+        ['height', 'auto', 'important'],
+        ['overflow', 'visible', 'important'],
+        ['margin', '0', 'important'],
+        ['padding', 'unset', 'important'],
+        ['background', 'var(--dynamic-views-background-primary)', 'important'],
+      ]);
+    }
+
+    if (this.viewHeaderEl) {
+      setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
+      setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
+      setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
+    }
+  }
+
+  private clearShowOverlays(): void {
+    if (this.toolbarEl) {
+      clearStyles(this.toolbarEl, [
+        'opacity',
+        'position',
+        'top',
+        'left',
+        'right',
+        'z-index',
+        'pointer-events',
+        'margin-bottom',
+        'transition',
+        'background',
+      ]);
+    }
+    if (this.searchRowEl) {
+      clearStyles(this.searchRowEl, [
+        'opacity',
+        'position',
+        'top',
+        'left',
+        'right',
+        'z-index',
+        'pointer-events',
+        'transition',
+        'height',
+        'overflow',
+        'margin',
+        'padding',
+        'background',
+      ]);
+    }
+    if (this.viewHeaderEl) {
+      clearStyles(this.viewHeaderEl, [
+        'z-index',
+        'pointer-events',
+        'min-height',
+      ]);
+    }
+    this.leafContent.removeAttribute('data-dynamic-views-show');
+    this.leafContent.style.removeProperty('position');
+    this.clearSpacerHeadingTops();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Heading top inline styles for spacer show state — inline styles instead
+  // of CSS rules to avoid violating the [data-dynamic-views-show] descendant
+  // combinator invariant (_full-screen.scss:179-181).
+  // ---------------------------------------------------------------------------
+
+  private applySpacerHeadingTops(): void {
+    const scrollCS = getComputedStyle(this.scrollEl);
+    const viewPadding =
+      parseFloat(
+        scrollCS.getPropertyValue('--dynamic-views-bases-view-padding')
+      ) || 12;
+    const headingTop = this.totalShift - viewPadding;
+    const sentinelTop = -headingTop;
+
+    const headings = this.container.querySelectorAll<HTMLElement>(
+      '.dynamic-views-group-section > .bases-group-heading:not(.collapsed)'
+    );
+    for (const h of headings) {
+      setStyle(h, 'top', `${headingTop}px`, 'important');
+    }
+    const sentinels = this.container.querySelectorAll<HTMLElement>(
+      '.dynamic-views-group-section > .dynamic-views-sticky-sentinel'
+    );
+    for (const s of sentinels) {
+      setStyle(s, 'top', `${sentinelTop}px`, 'important');
+    }
+  }
+
+  private clearSpacerHeadingTops(): void {
+    const headings = this.container.querySelectorAll<HTMLElement>(
+      '.dynamic-views-group-section > .bases-group-heading'
+    );
+    for (const h of headings) h.style.removeProperty('top');
+    const sentinels = this.container.querySelectorAll<HTMLElement>(
+      '.dynamic-views-group-section > .dynamic-views-sticky-sentinel'
+    );
+    for (const s of sentinels) s.style.removeProperty('top');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Android spacer resolve — collapses spacer + removes class in one
+  // synchronous block. Spacer removal (content moves up) is canceled by
+  // class removal (margin+toolbar restore, scrollEl moves down). Net zero.
+  // ---------------------------------------------------------------------------
+
+  private commitSpacerResolve(): void {
+    if (this.bridgeResolveTimer != null) {
+      clearTimeout(this.bridgeResolveTimer);
+      this.bridgeResolveTimer = null;
+    }
+    this.programmaticScroll = true;
+    this.cancelAnimations();
+    this.clearShowOverlays();
+    this.clearNavbarInlines();
+    this.clearHeaderInlines();
+
+    // Synchronous: collapse spacer + remove class.
+    // Spacer (totalShift) removed = content moves up by totalShift.
+    // Class removal restores margin+toolbar = scrollEl moves down by totalShift.
+    // Net visual effect: zero.
+    if (this.spacerEl) setStyle(this.spacerEl, 'height', '0');
+    this.scrollEl.style.removeProperty('height');
+    this.classTarget.classList.remove('full-screen-active');
+    this.clearBackgroundInlines();
+    this.clearMaskImageInline();
+    this.clearSpacerChrome();
+    this.spacerActive = false;
+    this.isActiveHider = false;
+    this.settled = false;
+    this.barsHidden = false;
+
+    this.pendingRafId = requestAnimationFrame(() => {
+      this.programmaticScroll = false;
+      this.prevScrollTop = this.scrollEl.scrollTop;
+      this.accumulatedDelta = 0;
+      this.lockedScrollHeight = this.scrollEl.offsetHeight;
+      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+    });
+  }
+
   /** Idempotent — no-op if already unmounted */
   unmount(): void {
     if (!this.mounted) return;
@@ -775,7 +980,11 @@ export class FullScreenController {
     // Remove full screen state only if this instance set it
     if (this.isActiveHider) {
       if (this.isAndroid) {
-        this.clearShowInlines();
+        if (this.spacerActive) {
+          this.clearShowOverlays();
+        } else {
+          this.clearShowInlines();
+        }
       } else {
         this.leafContent.classList.remove('full-screen-showing');
       }
@@ -785,13 +994,14 @@ export class FullScreenController {
       void capacitorStatusBar?.show();
       this.isActiveHider = false;
     }
-    // Clean up bridge + locked height + padding class
+    // Clean up bridge + spacer + locked height + padding class
     this.container.classList.remove('dynamic-views-full-screen-enabled');
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transition');
     this.container.style.removeProperty('--dynamic-views-scroll-past-end');
     this.container.style.removeProperty('transform');
     this.clearBridgeOverlay();
+    this.clearSpacerChrome();
     this.scrollEl.style.removeProperty('height');
 
     // Cancel WAAPI animations (Android)
@@ -846,15 +1056,8 @@ export class FullScreenController {
       );
     }
 
-    // Scroll-linked bridge unwind — gradually reduce bridge magnitude
-    // as scrollTop approaches 0. Transform is compositor-only (safe
-    // during fling). At scrollTop=0, bridge is already 0.
-    if (this.isAndroid && this.bridgePhaseActive && !this.barsHidden) {
-      this.unwindBridge(currentTop);
-
-      // Bridge fully unwound at top — schedule cleanup at idle (visual no-op
-      // since bridge is already at 0). resolveBridgeAtTop handles class
-      // removal, show inline cleanup, mask-image, and flag reset.
+    // Spacer resolve: no unwind needed (no transform), just resolve at top
+    if (this.isAndroid && this.spacerActive && !this.barsHidden) {
       if (currentTop <= 1) {
         if (this.bridgeResolveTimer == null) {
           this.bridgeResolveTimer = setTimeout(() => {
@@ -865,7 +1068,7 @@ export class FullScreenController {
               clearTimeout(this.scrollIdleTimer);
               this.scrollIdleTimer = null;
             }
-            this.commitBridgeResolve();
+            this.commitSpacerResolve();
           }, FULL_SCREEN_BRIDGE_RESOLVE_DELAY_MS);
         }
       } else if (this.bridgeResolveTimer != null) {
@@ -987,9 +1190,24 @@ export class FullScreenController {
       this.pendingRafId = null;
     }
 
+    // Capture BEFORE clearing — needed for scrollTop guard below
+    const wasSpacerActive = this.spacerActive;
+
+    // Collapse spacer before scrollTop read — overflow-anchor adjusts
+    // scrollTop synchronously during layout, so `before` reflects
+    // the post-collapse position.
+    if (wasSpacerActive && this.spacerEl) {
+      setStyle(this.spacerEl, 'height', '0');
+      this.spacerActive = false;
+    }
+
     // Remove show-state if rapid show→hide before idle
     if (this.isAndroid) {
-      this.clearShowInlines();
+      if (wasSpacerActive) {
+        this.clearShowOverlays();
+      } else {
+        this.clearShowInlines();
+      }
     } else {
       this.leafContent.classList.remove('full-screen-showing');
     }
@@ -1069,10 +1287,10 @@ export class FullScreenController {
       this.scrollEl.style.removeProperty('height');
       this.classTarget.classList.add('full-screen-active');
       this.applyBackgroundInlines();
-      // Skip scrollTop adjustment if show bridge was active — scrollTop was
-      // never increased by the show path, so no reversal needed. Bridge
-      // transform was already cleared above (container removeProperty).
-      if (!this.bridgePhaseActive) {
+      // Skip scrollTop adjustment if show bridge or spacer was active —
+      // scrollTop was never increased by the show path, so no reversal
+      // needed. Bridge transform / spacer already cleared above.
+      if (!this.bridgePhaseActive && !wasSpacerActive) {
         // Clamp to 0 when near top — without clamping, before - totalShift
         // goes negative. The auto-show delta<=0 check prevents the scrollTop=0
         // landing from triggering auto-show on the next event.
@@ -1266,39 +1484,23 @@ export class FullScreenController {
         `translateY(-${this.headerShift}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
-        // Snapshot the active grouped heading geometry before applyShowInlines
-        // changes the scrollport. Using scrollEl CSS variables for the anchor
-        // avoids relying on getComputedStyle(heading).top being non-auto.
-        const overlaySnapshot = this.snapshotBridgeOverlay();
-
-        // Inline styles restore margin/toolbar/search — bypasses classList
-        // to avoid style invalidation that drops frames on the
-        // single-threaded Android WebView compositor. ::before scrim (always
-        // full-height on Android during full-screen-active) covers the gap.
-        this.applyShowInlines();
-
-        // Show bridge: transform on container cancels the visual shift from
-        // applyShowInlines (viewContent margin-top + toolbar expansion).
-        // Compositor-only — no layout, no raster invalidation. Fixed overlay
-        // on leafContent renders the active stuck heading outside the
-        // scroll container's overflow clip and transform context.
-        if (this.settled) {
-          setStyle(
-            this.container,
-            'transform',
-            `translateY(-${this.totalShift}px)`
-          );
-          if (overlaySnapshot) {
-            this.captureBridgeOverlay(overlaySnapshot);
-          }
-          // Bridge is active regardless of overlay success — the transform
-          // compensates for applyShowInlines layout shift. Overlay is cosmetic
-          // (heading visibility), not structural (content positioning).
-          this.bridgePhaseActive = true;
-          this.lastBridgePx = -1;
+        // 1. Spacer + scroll anchoring — in-flow element before container
+        // whose height change is absorbed by overflow-anchor. Container
+        // (cards) is the anchor target; spacer is excluded (overflow-anchor: none).
+        this.ensureSpacerChrome();
+        if (this.spacerEl) {
+          setStyle(this.spacerEl, 'height', `${this.totalShift}px`);
         }
+        this.spacerActive = true;
 
-        // Restore mask-image gradient — gradient swap (opaque → cached)
+        // 2. Toolbar/search as absolute overlays (no applyShowInlines,
+        // no margin-top restore — keeps full-screen-active CSS).
+        this.applyShowOverlays();
+
+        // 3. Heading sticky top (inline styles, not CSS — invariant)
+        this.applySpacerHeadingTops();
+
+        // 4. Restore mask-image gradient — gradient swap (opaque → cached)
         // keeps the compositor render surface allocated, so only the mask
         // texture updates. No cross-subtree rasterization.
         this.restoreMaskImage();
@@ -1306,16 +1508,10 @@ export class FullScreenController {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
 
-        // Start show WAAPI BEFORE canceling old animations — later-created
-        // animations have higher composite priority (WAAPI §4.6) and
-        // override fill:forwards on the hide animation immediately.
-        // Canceling hide FIRST would snap the header to CSS default
-        // (visible, white bg) for one frame before show WAAPI starts.
+        // 5. WAAPI header/navbar/toolbar — same composite priority ordering
         const oldAnims = [...this.barAnims];
         this.barAnims = [];
 
-        // Header WAAPI show — slides in from above (::before scrim covers gap).
-        // Separate transform + opacity to match native per-property timing.
         if (this.viewHeaderEl) {
           this.barAnims.push(
             this.viewHeaderEl.animate(
@@ -1326,17 +1522,17 @@ export class FullScreenController {
           );
         }
 
-        // Cancel old AFTER starting new (composite priority — later-created
-        // animations override fill:forwards on older animations)
         for (const a of oldAnims) a.cancel();
         this.clearHeaderInlines();
-        // Restore z-index — clearHeaderInlines removes it but header must stay
-        // above ::before scrim (z-index 25 on grouped) during show animation.
+        // Re-set header show state cleared by clearHeaderInlines —
+        // min-height:0 collapses the tap shield so it doesn't cover
+        // the toolbar overlay (z-index 30 > 29, 90px overlap).
         if (this.viewHeaderEl) {
           setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
+          setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
+          setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
         }
 
-        // Navbar WAAPI show — separate transform + opacity
         this.barAnims.push(
           this.navbarEl.animate(
             [{ transform: navbarFrom }, { transform: 'translateY(0)' }],
@@ -1346,55 +1542,31 @@ export class FullScreenController {
         );
         this.clearNavbarInlines();
 
-        // Toolbar + search WAAPI show — opacity only.
-        // CSS opacity (no !important on Android) is overridden by WAAPI.
-        if (this.toolbarEl) {
-          this.barAnims.push(
-            this.toolbarEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
-          );
-        }
+        // No toolbar/search WAAPI — overlays snap to opaque instantly
+        // (applyShowOverlays sets inline opacity:1). Unlike the bridge path
+        // where toolbar fades match the layout restoration, the spacer path
+        // positions them as fixed overlays — no transition needed.
 
-        if (this.searchRowEl) {
-          this.barAnims.push(
-            this.searchRowEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
-          );
-        }
-
-        // Defer native status bar to next frame — separates window inset
-        // change from CSS layout reflow on the single-threaded compositor.
         this.capacitorRafId = requestAnimationFrame(() => {
           this.capacitorRafId = null;
           void capacitorStatusBar?.show();
         });
       });
 
-      // Idle: bridge unwinds scroll-linked (see unwindBridge) when user
-      // approaches the top; persists at full magnitude otherwise. Show
-      // inlines and full-screen-active stay until the next hide or until
-      // the bridge unwinds to 0 at the top.
+      // Idle: spacer persists until next hide or until user scrolls to top.
+      // No unwind needed (no transform) — just resolve at top.
       this.pendingLayout = () => {
-        // If bridge already unwound to 0 (scrollTop near top), do full
-        // cleanup — visual no-op since transform is already 0.
         if (this.scrollEl.scrollTop <= 1) {
           if (this.bridgeResolveTimer != null) {
             clearTimeout(this.bridgeResolveTimer);
             this.bridgeResolveTimer = null;
           }
-          this.commitBridgeResolve();
+          this.commitSpacerResolve();
           return;
         }
-
-        this.programmaticScroll = true;
+        // Cancel WAAPI fill:forwards — holds final frame indefinitely and
+        // blocks CSS transitions on those elements until cancelled.
         this.cancelAnimations();
-        this.leafContent.removeAttribute('data-dynamic-views-show');
-        this.clearNavbarInlines();
-        this.clearHeaderInlines();
-
-        this.pendingRafId = requestAnimationFrame(() => {
-          this.programmaticScroll = false;
-          this.prevScrollTop = this.scrollEl.scrollTop;
-          this.accumulatedDelta = 0;
-        });
       };
       return;
     }

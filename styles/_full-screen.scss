@@ -407,3 +407,12 @@
     padding-left: var(--size-2-3);
   }
 }
+
+// Spacer: in-flow element inside scrollEl that replaces the transform bridge
+// on Android. Height changes absorbed by overflow-anchor. Must be excluded
+// from anchor selection so the container (cards) is the anchor target.
+.dynamic-views-spacer {
+  overflow-anchor: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
