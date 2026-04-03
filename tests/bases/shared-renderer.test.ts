@@ -318,7 +318,7 @@ describe('Structural content classes', () => {
       }
     }
 
-    it('poster card with header only does not get has-body-content (header is in card-content)', () => {
+    it('poster card with empty body does not get has-body-content (header is in card-content)', () => {
       const card = buildCardDOM({ hasHeader: false });
       const body = card.querySelector('.card-body')!;
 

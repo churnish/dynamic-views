@@ -7,7 +7,7 @@
   }
 
   /* Clip URL icon's physical overflow (negative margins don't fully offset padding)
-     to prevent it from inflating card-body scroll height in poster mode */
+     to prevent it from inflating card-content scroll height in poster mode */
   .card.image-format-poster .card-header {
     overflow: hidden;
   }
@@ -219,10 +219,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 
 @media (hover: hover) {
   /* Underline title on hover when open action is "Press on title" */
-  :is(
-      body.dynamic-views-open-on-title,
-      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
-    )
+  body.dynamic-views-open-on-title
     .dynamic-views
     .card.hover-intent-active
     .card-title

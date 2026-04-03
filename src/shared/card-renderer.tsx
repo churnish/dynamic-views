@@ -17,7 +17,6 @@ import {
   isSlideshowIndicatorEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
-  hasBodyClass,
 } from '../utils/style-settings';
 import {
   getPropertyDisplayName,
@@ -1539,7 +1538,8 @@ function Card({
   const isPosterClickReveal =
     format === 'poster' &&
     card.imageUrl &&
-    (app.isMobile || hasBodyClass('dynamic-views-poster-reveal-press'));
+    settings.posterInteractToReveal &&
+    app.isMobile;
 
   if (settings.openFileAction === 'card' && !isPosterClickReveal) {
     cardClasses.push('clickable-card');
@@ -2047,7 +2047,8 @@ function Card({
           !(
             format === 'poster' &&
             card.imageUrl &&
-            (app.isMobile || hasBodyClass('dynamic-views-poster-reveal-press'))
+            settings.posterInteractToReveal &&
+            app.isMobile
           )
         ) {
           const target = e.target as HTMLElement;
@@ -2138,20 +2139,14 @@ function Card({
         }
       }}
       onMouseLeave={(e: MouseEvent) => {
-        if (
-          format === 'poster' &&
-          !hasBodyClass('dynamic-views-poster-reveal-press')
-        ) {
+        if (format === 'poster' && settings.posterInteractToReveal) {
           (e.currentTarget as HTMLElement).classList.remove(
             'poster-hover-active'
           );
         }
       }}
       onMouseMove={(e: MouseEvent) => {
-        if (
-          format === 'poster' &&
-          !hasBodyClass('dynamic-views-poster-reveal-press')
-        ) {
+        if (format === 'poster' && settings.posterInteractToReveal) {
           const cardEl = e.currentTarget as HTMLElement;
           if (!cardEl.classList.contains('poster-hover-active')) {
             cardEl
@@ -2234,6 +2229,7 @@ function Card({
         className="card-content"
         ref={(el: HTMLElement | null) => {
           if (!el) return;
+          // Poster: scroll gradient on card-content (header + body scroll together)
           if (format === 'poster') {
             setupVerticalScrollGradient(el, scrollController.signal);
           }

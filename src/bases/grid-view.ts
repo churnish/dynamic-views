@@ -3395,25 +3395,6 @@ export class DynamicViewsGridView extends BasesView {
     if (!this.containerEl?.isConnected) return;
     if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
 
-    // Fixed height active — clear stale stretch state to avoid fighting the fixed aspect-ratio CSS.
-    const body = this.containerEl.ownerDocument.body;
-    const isFixedHeightActive =
-      !body.classList.contains(FIXED_POSTER_HEIGHT_MASONRY) &&
-      !body.classList.contains(FIXED_POSTER_HEIGHT_NONE);
-    if (isFixedHeightActive) {
-      for (const [, groupItems] of this.virtualItemsByGroup) {
-        for (const item of groupItems) {
-          if (!item.el?.isConnected) continue;
-          if (item.el.classList.contains(POSTER_STRETCH_CLASS)) {
-            item.el.style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
-            item.el.style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
-            item.el.classList.remove(POSTER_STRETCH_CLASS);
-          }
-        }
-      }
-      return;
-    }
-
     const columns = this.lastColumnCount;
     if (columns <= 0) return;
 

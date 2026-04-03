@@ -10,8 +10,6 @@ import {
   POSTER_STRETCH_CLASS,
   POSTER_ROW_MIN_HEIGHT_VAR,
   POSTER_ASPECT_OVERRIDE_VAR,
-  FIXED_POSTER_HEIGHT_MASONRY,
-  FIXED_POSTER_HEIGHT_NONE,
 } from '../../src/shared/constants';
 
 // ---------------------------------------------------------------------------
@@ -68,30 +66,11 @@ interface VirtualItem {
 function stretchPosterCardsInMixedRows(ctx: {
   containerConnected: boolean;
   imageFormat: string | undefined;
-  bodyClasses: Set<string>;
   virtualItemsByGroup: Map<string, VirtualItem[]>;
   columns: number;
 }): void {
   if (!ctx.containerConnected) return;
   if (ctx.imageFormat !== 'poster') return;
-
-  // Fixed height active = stretch is a CSS no-op. Clear stale state and exit.
-  const isFixedHeightActive =
-    !ctx.bodyClasses.has(FIXED_POSTER_HEIGHT_MASONRY) &&
-    !ctx.bodyClasses.has(FIXED_POSTER_HEIGHT_NONE);
-  if (isFixedHeightActive) {
-    for (const [, groupItems] of ctx.virtualItemsByGroup) {
-      for (const item of groupItems) {
-        if (!item.el?.isConnected) continue;
-        if (item.el.classList.contains(POSTER_STRETCH_CLASS)) {
-          item.el.style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
-          item.el.style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
-          item.el.classList.remove(POSTER_STRETCH_CLASS);
-        }
-      }
-    }
-    return;
-  }
 
   const columns = ctx.columns;
   if (columns <= 0) return;
@@ -193,14 +172,13 @@ function stretchPosterCardsInMixedRows(ctx: {
 // ---------------------------------------------------------------------------
 
 describe('stretchPosterCardsInMixedRows', () => {
-  /** Default context factory — fixed height OFF (masonry class present) */
+  /** Default context factory */
   function makeCtx(
     overrides: Partial<Parameters<typeof stretchPosterCardsInMixedRows>[0]> = {}
   ) {
     return {
       containerConnected: true,
       imageFormat: 'poster' as string | undefined,
-      bodyClasses: new Set([FIXED_POSTER_HEIGHT_MASONRY]),
       virtualItemsByGroup: new Map<string, VirtualItem[]>(),
       columns: 3,
       ...overrides,
@@ -413,20 +391,14 @@ describe('stretchPosterCardsInMixedRows', () => {
     expect(poster3._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
   });
 
-  it('fixed height active: early exit, stale stretch cleaned', () => {
+  it('mixed row: poster shorter than imageless → stretch applied', () => {
     const poster = mockElement({
-      classes: ['image-format-poster', 'has-poster', POSTER_STRETCH_CLASS],
+      classes: ['image-format-poster', 'has-poster'],
       height: 200,
-      cssProps: {
-        [POSTER_ROW_MIN_HEIGHT_VAR]: '300px',
-        [POSTER_ASPECT_OVERRIDE_VAR]: 'auto',
-      },
     });
     const imageless = mockElement({ height: 300 });
 
-    // No MASONRY or NONE class → fixed height is active
     const ctx = makeCtx({
-      bodyClasses: new Set<string>(),
       columns: 2,
       virtualItemsByGroup: new Map([
         ['default', [{ el: poster }, { el: imageless }]],
@@ -435,9 +407,8 @@ describe('stretchPosterCardsInMixedRows', () => {
 
     stretchPosterCardsInMixedRows(ctx);
 
-    // Stale stretch cleaned on poster
-    expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
-    expect(poster._cssProps.has(POSTER_ROW_MIN_HEIGHT_VAR)).toBe(false);
-    expect(poster._cssProps.has(POSTER_ASPECT_OVERRIDE_VAR)).toBe(false);
+    expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
+    expect(poster._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('300px');
+    expect(poster._cssProps.get(POSTER_ASPECT_OVERRIDE_VAR)).toBe('auto');
   });
 });

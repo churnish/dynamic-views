@@ -62,8 +62,8 @@
     );
   }
 
-  /* Vertical gradient masks for poster card body scroll */
-  .card.image-format-poster .card-body.scroll-gradient-top {
+  /* Vertical gradient masks for poster card-content scroll */
+  .card.image-format-poster .card-content.scroll-gradient-top {
     mask-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0) 0,
@@ -80,7 +80,7 @@
     );
   }
 
-  .card.image-format-poster .card-body.scroll-gradient-bottom {
+  .card.image-format-poster .card-content.scroll-gradient-bottom {
     mask-image: linear-gradient(
       to bottom,
       black 0,
@@ -97,7 +97,7 @@
     );
   }
 
-  .card.image-format-poster .card-body.scroll-gradient-vertical-both {
+  .card.image-format-poster .card-content.scroll-gradient-vertical-both {
     mask-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0) 0,
@@ -150,15 +150,15 @@ body.dynamic-views-no-fade-truncated-text
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .card.image-format-poster
-  .card-body.scroll-gradient-top,
+  .card-content.scroll-gradient-top,
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .card.image-format-poster
-  .card-body.scroll-gradient-bottom,
+  .card-content.scroll-gradient-bottom,
 body.dynamic-views-no-fade-truncated-text
   .dynamic-views
   .card.image-format-poster
-  .card-body.scroll-gradient-vertical-both {
+  .card-content.scroll-gradient-vertical-both {
   mask-image: none;
   -webkit-mask-image: none;
 }

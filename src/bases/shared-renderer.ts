@@ -61,7 +61,6 @@ import {
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
   getCompactBreakpoint,
-  hasBodyClass,
 } from '../utils/style-settings';
 import {
   getPropertyDisplayName,
@@ -172,6 +171,7 @@ export function applyViewContainerStyles(
   // Poster display mode — container class
   container.classList.remove('poster-mode-fade', 'poster-mode-overlay');
   container.classList.add(`poster-mode-${settings.posterDisplayMode}`);
+  container.classList.toggle('poster-static', !settings.posterInteractToReveal);
 
   // Image fit — container class
   container.classList.remove('image-fit-crop', 'image-fit-contain');
@@ -226,6 +226,10 @@ export function applyCssOnlySettings(
       ? rawPosterMode
       : 'fade';
   containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
+  containerEl.classList.toggle(
+    'poster-static',
+    config.get('posterInteractToReveal') === false
+  );
 
   // Image fit — container class
   containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
@@ -662,7 +666,8 @@ export class SharedCardRenderer {
       isPoster &&
       hasImageSource &&
       card.imageUrl &&
-      (this.app.isMobile || hasBodyClass('dynamic-views-poster-reveal-press'));
+      settings.posterInteractToReveal &&
+      this.app.isMobile;
 
     const isCardClickable =
       settings.openFileAction === 'card' && !isPosterClickReveal;
@@ -846,8 +851,8 @@ export class SharedCardRenderer {
           !(
             isPoster &&
             card.imageUrl &&
-            (this.app.isMobile ||
-              hasBodyClass('dynamic-views-poster-reveal-press'))
+            settings.posterInteractToReveal &&
+            this.app.isMobile
           )
         ) {
           const target = e.target as HTMLElement;
@@ -905,8 +910,8 @@ export class SharedCardRenderer {
     // Gates content reveal (via CSS) and scroll access on desktop.
     if (
       isPoster &&
-      getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches &&
-      !hasBodyClass('dynamic-views-poster-reveal-press')
+      settings.posterInteractToReveal &&
+      getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches
     ) {
       setupHoverIntent(
         cardEl,
@@ -1190,9 +1195,8 @@ export class SharedCardRenderer {
     const cardContent = cardEl.createDiv('card-content');
 
     // Title, Subtitle, and URL button — always wrapped in card-header.
-    // Poster creates header inside bodyEl (scrolls with content); all other
-    // formats create it directly in cardContent. Defined as a closure so the
-    // parent element can differ without duplicating the block.
+    // Header always placed in card-content — poster header scrolls with
+    // content since card-content is the scroll container.
     const createHeader = (parent: HTMLElement): void => {
       if (!(hasTitle || hasSubtitle || (card.hasValidUrl && card.urlValue)))
         return;
