@@ -286,6 +286,17 @@ export function getBasesViewOptions(
                 'never'),
         },
         {
+          type: 'toggle',
+          displayName: 'Interact to show details',
+          key: 'posterInteractToReveal',
+          default: d.posterInteractToReveal,
+          shouldHide: () =>
+            (config?.get('imageFormat') ?? d.imageFormat) !== 'poster' ||
+            (!(config?.get('imageProperty') || d.imageProperty) &&
+              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
+                'never'),
+        },
+        {
           type: 'slider',
           displayName: 'Size',
           key: 'thumbnailSize',
@@ -594,6 +605,10 @@ export function readBasesSettings(
       'posterDisplayMode',
       defaults.posterDisplayMode
     ),
+    posterInteractToReveal: getBool(
+      'posterInteractToReveal',
+      defaults.posterInteractToReveal
+    ),
     imageRatio: getNumber('imageRatio', defaults.imageRatio),
     propertyNames: getValidEnum(
       config,
@@ -697,6 +712,10 @@ export function extractBasesTemplate(
       config,
       'posterDisplayMode',
       mergedDefaults.posterDisplayMode
+    ),
+    posterInteractToReveal: getBool(
+      'posterInteractToReveal',
+      mergedDefaults.posterInteractToReveal
     ),
     imageRatio: getNumber('imageRatio', mergedDefaults.imageRatio),
     propertyNames: getValidEnum(

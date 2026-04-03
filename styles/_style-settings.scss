@@ -720,11 +720,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-poster-reveal-press
-        title: Press to reveal
-        description: Show poster details on press instead of hover.
-        type: class-toggle
-    -
         id: dynamic-views-poster-disable-reveal-zoom
         title: Disable image zoom
         description: Do not enlarge images when revealing poster details.
@@ -1838,9 +1833,6 @@ body.is-mobile
 body.is-mobile
   .style-settings-container
   .setting-item[data-id='dynamic-views-cover-disable-hover-zoom'],
-body.is-mobile
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-poster-reveal-press'],
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],

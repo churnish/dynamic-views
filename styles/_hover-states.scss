@@ -1,10 +1,9 @@
 @media (hover: hover) {
-  /* Title hover: open-on-title (or poster-reveal-press + open-on-card) → hover title link.
+  /* Title hover: open-on-title → hover title link.
      Fallback chain: explicit title-hover-color → derived from title-color preset. */
-  :is(
-      body.dynamic-views-open-on-title,
-      body.dynamic-views-poster-reveal-press.dynamic-views-open-on-card
-    ):not(.dynamic-views-title-hover-color-no-change):is(
+  body.dynamic-views-open-on-title:not(
+      .dynamic-views-title-hover-color-no-change
+    ):is(
       [class*='dynamic-views-title-color-'],
       [class*='dynamic-views-title-hover-color-']
     )
@@ -18,24 +17,13 @@
     );
   }
 
-  /* Title hover: open-on-card (no poster-reveal) → hover card changes title.
+  /* Title hover: open-on-card → hover card changes title.
      Explicit title-hover-color only — does NOT derive from title-color. */
   body.dynamic-views-open-on-card:not(
-      .dynamic-views-poster-reveal-press,
       .dynamic-views-title-hover-color-no-change
     )[class*='dynamic-views-title-hover-color-']
     .dynamic-views
     .card.hover-intent-active:hover
-    .card-title {
-    color: var(--dynamic-views-title-hover-color-value);
-  }
-
-  /* Title hover: open-on-card + poster-reveal → hover non-poster card changes title */
-  body.dynamic-views-open-on-card.dynamic-views-poster-reveal-press:not(
-      .dynamic-views-title-hover-color-no-change
-    )[class*='dynamic-views-title-hover-color-']
-    .dynamic-views
-    .card:not(.image-format-poster).hover-intent-active:hover
     .card-title {
     color: var(--dynamic-views-title-hover-color-value);
   }
@@ -87,7 +75,6 @@
      mouseenter alone — the gap causes a flash of normal color.
      All presets resolve to --dynamic-views-title-hover-color-value (see _variables.scss). */
   body.dynamic-views-open-on-card:not(
-      .dynamic-views-poster-reveal-press,
       .dynamic-views-title-hover-color-no-change
     )[class*='dynamic-views-title-hover-color-']
     .dynamic-views
@@ -98,7 +85,6 @@
     transition: color var(--dynamic-views-anim-duration-moderate);
   }
   body.dynamic-views-open-on-card:not(
-      .dynamic-views-poster-reveal-press,
       .dynamic-views-title-hover-color-no-change
     )[class*='dynamic-views-title-hover-color-']
     .dynamic-views
@@ -202,12 +188,6 @@
 
   /* Poster cards: higher specificity needed (default rule uses body class selector) */
   body.dynamic-views-open-on-card
-    .dynamic-views
-    .card:not(.hover-intent-active).image-format-poster.has-poster {
-    cursor: default;
-  }
-
-  body.dynamic-views-poster-reveal-press
     .dynamic-views
     .card:not(.hover-intent-active).image-format-poster.has-poster {
     cursor: default;

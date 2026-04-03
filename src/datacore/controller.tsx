@@ -2179,7 +2179,7 @@ export function View({
   return (
     <div
       ref={explorerRef}
-      className={`dynamic-views poster-mode-${settings.posterDisplayMode} image-fit-${settings.imageFit}${sorted.length === 0 ? ' dynamic-views-empty' : ''}`}
+      className={`dynamic-views poster-mode-${settings.posterDisplayMode}${settings.posterInteractToReveal ? '' : ' poster-static'} image-fit-${settings.imageFit}${sorted.length === 0 ? ' dynamic-views-empty' : ''}`}
       // Block editor context menu in live preview — view sits inside cm-content
       onContextMenu={(e: MouseEvent) => e.preventDefault()}
     >

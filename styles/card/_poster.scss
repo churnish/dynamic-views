@@ -43,19 +43,12 @@
 
 /* Desktop: scroll gated by hover intent to prevent capturing view scroll */
 @media (hover: hover) {
-  body:not(.dynamic-views-poster-reveal-press) .dynamic-views {
+  .dynamic-views:not(.poster-static) {
     .card.image-format-poster .card-content {
       overflow-y: hidden;
     }
 
     .card.image-format-poster.poster-hover-active .card-content {
-      overflow-y: auto;
-    }
-  }
-
-  /* Press mode: gate scroll behind poster-revealed instead */
-  body.dynamic-views-poster-reveal-press .dynamic-views {
-    .card.image-format-poster.poster-revealed .card-content {
       overflow-y: auto;
     }
   }
@@ -110,7 +103,7 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
 /* Poster: zoom on tap reveal (mobile) — will-change promotes to GPU layer
    only when actively revealed, not during normal scrolling. */
 body:not(.dynamic-views-poster-disable-reveal-zoom)
-  .dynamic-views
+  .dynamic-views:not(.poster-static)
   .card.image-format-poster.poster-revealed
   .card-poster
   img {
@@ -118,26 +111,11 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
   transform: scale(1.05);
 }
 
-/* Poster hover zoom (desktop) */
+/* Poster: zoom on hover intent (desktop) */
 @media (hover: hover) {
-  /* Poster: zoom on poster hover intent (hover mode only, not press mode) */
-  body:not(.dynamic-views-poster-disable-reveal-zoom):not(
-      .dynamic-views-poster-reveal-press
-    )
-    .dynamic-views
+  body:not(.dynamic-views-poster-disable-reveal-zoom)
+    .dynamic-views:not(.poster-static)
     .card.image-format-poster.poster-hover-active
-    .card-poster
-    img {
-    will-change: transform;
-    transform: scale(1.05);
-  }
-
-  /* Poster: zoom on press reveal (press mode, desktop) */
-  body:not(
-      .dynamic-views-poster-disable-reveal-zoom
-    ).dynamic-views-poster-reveal-press
-    .dynamic-views
-    .card.image-format-poster.poster-revealed
     .card-poster
     img {
     will-change: transform;
@@ -265,6 +243,25 @@ body:is(
     blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
+/* Dark overlay static (always dimmed for readability) */
+body:is(
+    .dynamic-views-poster-theme-dark,
+    .dynamic-views-poster-theme-match.theme-dark,
+    :not(
+      .dynamic-views-poster-theme-light,
+      .dynamic-views-poster-theme-dark
+    ).theme-dark
+  )
+  .dynamic-views.poster-mode-overlay.poster-static
+  .card.image-format-poster
+  .card-poster
+  img {
+  filter: brightness(
+      calc(1 - var(--dynamic-views-poster-overlay-dark, 70) * 0.01)
+    )
+    blur(var(--dynamic-views-poster-overlay-blur, 0px));
+}
+
 /* Light overlay revealed (tap/press) */
 body:is(
     .dynamic-views-poster-theme-light,
@@ -283,7 +280,25 @@ body:is(
     invert(1) blur(var(--dynamic-views-poster-overlay-blur, 0px));
 }
 
-/* Overlay revealed on hover intent (desktop, hover mode) */
+/* Light overlay static (always dimmed for readability) */
+body:is(
+    .dynamic-views-poster-theme-light,
+    .dynamic-views-poster-theme-match.theme-light,
+    :not(
+      .dynamic-views-poster-theme-light,
+      .dynamic-views-poster-theme-dark
+    ).theme-light
+  )
+  .dynamic-views.poster-mode-overlay.poster-static
+  .card.image-format-poster
+  .card-poster
+  img {
+  filter: invert(1)
+    brightness(calc(1 - var(--dynamic-views-poster-overlay-light, 70) * 0.01))
+    invert(1) blur(var(--dynamic-views-poster-overlay-blur, 0px));
+}
+
+/* Overlay revealed on hover intent (desktop) */
 @media (hover: hover) {
   /* Dark hover reveal */
   body:is(
@@ -293,8 +308,8 @@ body:is(
         .dynamic-views-poster-theme-light,
         .dynamic-views-poster-theme-dark
       ).theme-dark
-    ):not(.dynamic-views-poster-reveal-press)
-    .dynamic-views.poster-mode-overlay
+    )
+    .dynamic-views.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
     .card-poster
     img {
@@ -312,8 +327,8 @@ body:is(
         .dynamic-views-poster-theme-light,
         .dynamic-views-poster-theme-dark
       ).theme-light
-    ):not(.dynamic-views-poster-reveal-press)
-    .dynamic-views.poster-mode-overlay
+    )
+    .dynamic-views.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
     .card-poster
     img {
@@ -359,9 +374,9 @@ body:is(
   }
 }
 
-/* Poster: reveal content on hover intent (desktop only, hover mode) */
+/* Poster: reveal content on hover intent (desktop only) */
 @media (hover: hover) {
-  body:not(.dynamic-views-poster-reveal-press) .dynamic-views {
+  .dynamic-views:not(.poster-static) {
     .card.image-format-poster.poster-hover-active.has-poster .card-content {
       opacity: 1;
       pointer-events: auto;
@@ -375,6 +390,20 @@ body:is(
       .poster-gradient {
       opacity: 1;
     }
+  }
+}
+
+/* Poster static: content always visible, no reveal interaction */
+.dynamic-views.poster-static {
+  .card.image-format-poster.has-poster .card-content {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  /* Fade gradient always visible for readability */
+  &.poster-mode-fade .card.image-format-poster .card-poster .poster-gradient {
+    opacity: 1;
   }
 }
 
@@ -487,13 +516,6 @@ body.dynamic-views-fixed-poster-height:not(
 
 /* Card mode: poster cards with images have pointer cursor */
 body.dynamic-views-open-on-card
-  .dynamic-views
-  .card.image-format-poster.has-poster {
-  cursor: pointer;
-}
-
-/* Press mode: pointer on poster cards regardless of open action (press toggles reveal) */
-body.dynamic-views-poster-reveal-press
   .dynamic-views
   .card.image-format-poster.has-poster {
   cursor: pointer;

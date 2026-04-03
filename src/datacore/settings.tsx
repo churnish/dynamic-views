@@ -77,6 +77,7 @@ export function Settings({
         fallbackToEmbeds: settings.fallbackToEmbeds,
         imageFormat: settings.imageFormat,
         posterDisplayMode: settings.posterDisplayMode,
+        posterInteractToReveal: settings.posterInteractToReveal,
         thumbnailSize: settings.thumbnailSize,
         imagePosition: settings.imagePosition,
         imageFit: settings.imageFit,
@@ -380,6 +381,11 @@ export function Settings({
                   </select>
                 </div>
               )}
+              {settings.imageFormat === 'poster' &&
+                renderToggle(
+                  'Interact to show details',
+                  'posterInteractToReveal'
+                )}
               {settings.imageFormat === 'thumbnail' && (
                 <div className="setting-item">
                   <div className="setting-item-info">

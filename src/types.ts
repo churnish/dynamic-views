@@ -40,6 +40,7 @@ export interface ViewDefaults {
   fallbackToEmbeds: 'always' | 'if-unavailable' | 'never';
   imageFormat: 'thumbnail' | 'cover' | 'poster' | 'backdrop';
   posterDisplayMode: 'fade' | 'overlay';
+  posterInteractToReveal: boolean;
   thumbnailSize: number;
   imagePosition: 'left' | 'right' | 'top' | 'bottom';
   imageFit: 'crop' | 'contain';

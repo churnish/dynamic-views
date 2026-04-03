@@ -40,6 +40,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   fallbackToEmbeds: 'always',
   imageFormat: 'thumbnail',
   posterDisplayMode: 'fade',
+  posterInteractToReveal: false,
   thumbnailSize: 80,
   imagePosition: 'right',
   imageFit: 'crop',

@@ -337,8 +337,6 @@ export function getStyleSettingsHash(): string {
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
-    // Poster reveal mode (affects JS click handlers, not CSS-only)
-    hasBodyClass('dynamic-views-poster-reveal-press'),
     // Text preview content options (affect stripped text output)
     shouldKeepPreviewHeadings(),
     shouldKeepPreviewNewlines(),
@@ -406,18 +404,6 @@ export function setupStyleSettingsObserver(
             }
           }
         });
-
-        // Clean up stale imperative classes when press mode toggled OFF
-        if (
-          mutation.oldValue?.includes('dynamic-views-poster-reveal-press') &&
-          !doc.body.classList.contains('dynamic-views-poster-reveal-press')
-        ) {
-          doc
-            .querySelectorAll('.dynamic-views .card.poster-revealed')
-            .forEach((el) => {
-              el.classList.remove('poster-revealed', 'hover-intent-active');
-            });
-        }
 
         // Only fire if JS-relevant settings actually changed
         clearStyleSettingsCache(); // Must clear before re-hashing
