@@ -2,7 +2,7 @@
 title: Full screen
 description: Empirical research for full screen mobile scrolling (GitHub #132) — WebKit compositor constraints, CSS scroll-driven animation findings, rejected approaches, the space reclaim constraint, Chrome/146 Android show flash compositor findings, and Android WebView WAAPI workaround for single-threaded compositor jank.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-02
+updated: 2026-04-03
 ---
 # Full screen
 
@@ -176,16 +176,46 @@ Native Obsidian does NOT reposition the header or add special classes for tap in
 
 **Dynamic Views equivalent**: `min-height: calc(safe-area-inset-top + view-header-height)` on `.view-header` during `full-screen-active` matches this 90px zone. The `dynamic-views-tap-shield` class adds `margin-top: 0` (overrides Obsidian's safe-area margin so shield starts at y=0), `transform: translateY(0)` (returns to layout position), and `z-index: 30` (above `::before` scrim at z-index 10/25 and scroll content). `pointer-events: none` on the base `full-screen-active` rule prevents the inflated header from intercepting toolbar taps during the show phase — only the tap-shield class restores `pointer-events: auto`.
 
-### Additional restore triggers
+### Restore triggers
 
 Native Obsidian restores bars on:
 
-- `mousedown` on window (any tap restores bars)
+- `mousedown` on `window` — unconditional, no velocity check (see below)
 - `keyboardWillHide` event
 - `active-leaf-change` (tab switch)
 - `autoFullScreen` config changed to false
 
-Native Obsidian ignores status bar / view-header taps during active and momentum scroll — bar reveal only responds after scroll idle. The `mousedown` restore trigger appears to be suppressed while the scroll handler is actively processing scroll events.
+### Decompiled `mousedown` handler (v1.12.7, `app.js` line 169154)
+
+```javascript
+window.addEventListener("mousedown", function () {
+  return t.restoreNavigation(!0);
+});
+```
+
+Unconditionally calls `restoreNavigation(true)` on ANY `mousedown` anywhere in the window. No velocity check, no scroll state check, no guard of any kind.
+
+### Emergent velocity discrimination
+
+Native appears to "ignore" status bar taps during fast scroll and "respond" during slow scroll. This is emergent, not explicit — no velocity-aware code exists.
+
+**Fast momentum**: `mousedown` → `restoreNavigation()` → `is-hidden-nav` removed (bars appear). But the next `onScroll` event fires within one frame (~16ms) with a positive delta above the 0.125 dead zone → `hideNavigation()` → `is-hidden-nav` re-added. The re-hide happens before the CSS transition renders a visible frame. The flash is invisible.
+
+**Slow/dying momentum**: `mousedown` → `restoreNavigation()` → bars appear. The next scroll event has a delta below 0.125 lines (dead zone) → no action. Bars stay visible.
+
+**Stationary**: `mousedown` → bars appear. No scroll events → bars stay.
+
+The 0.125 line-unit dead zone IS the velocity discriminator. At default theme line height (24px on Android, similar on iOS): `0.125 × 24 = 3px`. Scroll events with per-event delta below 3px are considered dying momentum and do not trigger re-hide.
+
+### Why Dynamic Views cannot copy this 1:1
+
+Native's emergent approach relies on each scroll event independently deciding hide/show with no cooldown, no accumulator, and no sustain gate. Dynamic Views' scroll handler requires these guards because:
+
+- **Accumulator + 30px dead zone**: Prevents toggling on tiny jitter deltas. Native's 0.125-line dead zone is sufficient because CM6 scroll events are smoother than raw passive `scroll` listener events.
+- **300ms cooldown**: Prevents rapid hide/show cycling during deceleration. Native doesn't need this because its CSS-only transitions (class toggle) are cheap. Dynamic Views has WAAPI animations, bridge architecture, and inline style management that make rapid cycling expensive and visually jarring.
+- **80ms sustain gate (iOS)**: Filters iOS deceleration bounce (reverse-direction noise at momentum end). Native doesn't fire `markdown-scroll` during bounce, so it's not exposed to this.
+
+Stripping these guards to match native would reintroduce rapid cycling and bounce bugs. The deferred-timer approach on `onHeaderTap` achieves the same user-visible behavior without touching the scroll handler (see `architecture/full-screen.md` § "Header tap intercept").
 
 ### Short-view strategy
 

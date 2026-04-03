@@ -146,6 +146,15 @@ export const FULL_SCREEN_SHOW_SUSTAIN_MS = 80;
 export const FULL_SCREEN_TOP_ZONE = 50;
 /** Minimum ms between hide/show transitions */
 export const FULL_SCREEN_TOGGLE_COOLDOWN_MS = 300;
+/** Deferred reveal delay (ms) for header-tap during scroll. If downward
+ *  scroll events exceed REVEAL_CANCEL_DELTA within this window, the
+ *  reveal is cancelled. Matches native emergent behavior: fast momentum
+ *  suppresses reveal, slow/dying momentum allows it. */
+export const FULL_SCREEN_REVEAL_DEFER_MS = 100;
+/** Minimum positive scroll delta (px) per event to cancel a pending
+ *  header-tap reveal. Below this threshold, momentum is considered
+ *  dying and the reveal proceeds. */
+export const FULL_SCREEN_REVEAL_CANCEL_DELTA = 3;
 /** Scroll-idle debounce for bridge settle.
  *  2s outlasts the iOS native scroll indicator fade (~1.5s),
  *  so the settle's scrollTop adjustment is invisible. */

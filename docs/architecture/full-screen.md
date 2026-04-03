@@ -2,7 +2,7 @@
 title: Full screen
 description: Bridge+settle system (iOS) and scroll-linked bridge unwind (Android) for hiding/showing bars during scroll, gradient swap mask-image management, direction detection algorithm, height locking, tap shield, and platform-specific branches.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-02
+updated: 2026-04-03
 ---
 # Full screen
 
@@ -133,13 +133,15 @@ The Android show path does NOT keep the bridge at constant magnitude. Instead:
 
 This architecture exists because Chrome/146 WebView's single-threaded compositor flashes content for one frame during any `scrollTop` write (tile re-rasterization), and `scrollTop` writes also kill active Chromium flings. The scroll-linked unwind eliminates both the false top and all show-path `scrollTop` writes.
 
-### Heading bridge classifier (Android)
+### Heading fixed overlay (Android)
 
-During the show bridge, the container's `transform: translateY(-bridgePx)` shifts non-stuck headings above `.bases-view`'s box boundary, and `overflow: auto` clips them. Stuck headings are unaffected — Chromium resolves `position: sticky; top` independently of parent transforms.
+During the show bridge, the container's `transform: translateY(-bridgePx)` displaces sticky headings because overflow clipping occurs in layout space before transforms are applied. The fixed overlay renders the active heading on `document.body` with `position: fixed`, entirely outside the scroll container's clip boundary and all ancestor transform contexts.
 
-The bridge classifier uses cached scroll-space thresholds (`stickStart`/`stickEnd`) per heading, measured once at bridge start via `captureBridgeHeadings()`. On each scroll event, `syncBridgeHeadings(scrollTop, bridgePx)` computes sticky state from `scrollTop` math — no IntersectionObserver dependency, no async lag. Non-sticky headings get `transform: translateY(bridgePx)` to cancel the container's visual shift. Sticky headings get no compensation.
+At bridge start, `captureBridgeOverlay(anchorTop)` captures section geometry in scroll-space and creates a fixed host element on `document.body`. `anchorTop` is the heading's screen Y before `applyShowInlines()` shifts the scrollport — a constant through the entire bridge.
 
-The IO-based `.stuck` class (from `sticky-heading.ts`) remains for border styling only — it is not used for bridge compensation decisions.
+On each scroll event, `syncBridgeOverlay(scrollTop, bridgePx)` determines the active heading via `stickLine = scrollTop + anchorTop` (scroll-space only, no `bridgePx` dependency). The overlay heading is positioned at the constant `anchorTop`, pushed up only when the next section approaches (`nextScreenY - headingHeight`). The original heading is hidden via `opacity: 0`.
+
+`clearBridgeOverlay()` removes the host from `document.body` and unhides the original heading.
 
 ### `totalShift` measurement
 
@@ -153,10 +155,13 @@ Direct `scrollTop` compensation is impossible on iOS — `scrollTop` writes kill
 
 ## Header tap intercept
 
-A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-header`. When bars are hidden, the header element is positioned as an invisible tap shield in the status bar zone (via the `dynamic-views-tap-shield` CSS class: `transform: translateY(0)`, `opacity: 0`, `margin-top: 0`). Tapping this zone reveals bars.
+A separate `onHeaderTap()` handler listens for `touchend` (passive) on `.view-header`. When bars are hidden, the header element is positioned as an invisible tap shield in the status bar zone (via the `dynamic-views-tap-shield` CSS class: `transform: translateY(0)`, `opacity: 0`, `margin-top: 0`). Tapping this zone reveals bars via a deferred reveal mechanism that matches native Obsidian's emergent velocity discrimination.
 
 - **Guard**: Fires only when `barsHidden` is true.
-- **Action**: Sets `lastToggleTime` before calling `showBarsUI()` — prevents cooldown from being bypassed.
+- **Deferred reveal**: `onHeaderTap` does not call `showBarsUI()` immediately. It starts a `FULL_SCREEN_REVEAL_DEFER_MS` (100ms) timer. If `onScroll` receives a scroll event with positive delta above `FULL_SCREEN_REVEAL_CANCEL_DELTA` (3px) during that window, it cancels the timer — bars stay hidden. If no significant scroll arrives within 100ms (stationary or dying momentum), the timer fires and bars appear.
+- **Velocity discrimination**: The 3px cancel threshold derives from native Obsidian's 0.125 line-unit dead zone: `0.125 × 24px line height = 3px` (measured on default Obsidian theme, Android). Scroll events with per-event delta above 3px indicate active momentum; below 3px indicates dying momentum.
+- **Scope**: Only `onHeaderTap` uses the deferred pattern. `onTouchEnd` on scrollEl fires after the user physically touches the scroll area, which stops iOS momentum — no flash possible, so immediate reveal is safe.
+- **Why not native 1:1**: Native uses unconditional `mousedown` → `restoreNavigation()` with no timer. The re-hide during fast scroll is invisible because native's scroll handler has no cooldown/accumulator — each event independently hides within one frame. Our scroll handler's 300ms cooldown and 30px accumulator delay the re-hide, making the flash visible. See `dev/full-screen.md` § "Why Dynamic Views cannot copy this 1:1".
 - **CSS support**: `.view-header` has `min-height: calc(safe-area-inset-top + view-header-height)` during `full-screen-active` (~90px on iPhone 13), matching the native Obsidian header's layout box. `pointer-events: none` on the base rule prevents the inflated header from intercepting toolbar taps during the show phase — only the `dynamic-views-tap-shield` class restores `pointer-events: auto`.
 - **Hit-testing**: Chromium and WebKit hit-test `position: fixed` elements against their pre-transform layout box, not the visual rect. The header's layout box covers y=0 through ~90px regardless of `transform: translateY(-90px)`. See `full-screen-dev.md` § "Native tap shield" for empirical verification.
 - **Z-index**: The tap-shield class sets `z-index: 30` to paint above the `::before` scrim (z-index 10 ungrouped, 25 grouped) and scroll content.
@@ -227,6 +232,8 @@ All constants are in `src/shared/constants.ts`:
 | `FULL_SCREEN_SHOW_SUSTAIN_MS` | 80ms | Minimum sustained direction before triggering |
 | `FULL_SCREEN_TOP_ZONE` | 50px | Baseline `scrollTop` threshold for auto-show near top. Expands to `totalShift` when bridge is active and scroll direction is upward (see Adaptive auto-show zone) |
 | `FULL_SCREEN_TOGGLE_COOLDOWN_MS` | 300ms | Minimum interval between hide/show transitions |
+| `FULL_SCREEN_REVEAL_DEFER_MS` | 100ms | Header-tap deferred reveal window — cancelled by active scroll |
+| `FULL_SCREEN_REVEAL_CANCEL_DELTA` | 3px | Per-event scroll delta to cancel pending header-tap reveal (matches native 0.125 lines × 24px) |
 | `FULL_SCREEN_SCROLL_IDLE_MS` | 2000ms | iOS settle debounce — outlasts scroll indicator fade (~1.5s) |
 | `FULL_SCREEN_SCROLL_IDLE_ANDROID_MS` | 500ms | Must exceed FULL_SCREEN_ANIM_MS (300ms) so WAAPI finishes before idle cancels |
 | `FULL_SCREEN_ANIM_MS` | 300ms | Header/navbar slide and toolbar/search fade duration |

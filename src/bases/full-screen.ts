@@ -24,6 +24,8 @@ import {
   FULL_SCREEN_ANIM_MS,
   FULL_SCREEN_FADE_MS,
   FULL_SCREEN_BRIDGE_RESOLVE_DELAY_MS,
+  FULL_SCREEN_REVEAL_DEFER_MS,
+  FULL_SCREEN_REVEAL_CANCEL_DELTA,
 } from '../shared/constants';
 
 // WAAPI options matching native Obsidian bar transitions.
@@ -67,12 +69,12 @@ const OPACITY_SHOW_FRAMES: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
 /** Fully-opaque mask gradient — keeps compositor render surface allocated during hide. */
 const OPAQUE_MASK = 'linear-gradient(rgb(0,0,0),rgb(0,0,0))';
 
-interface BridgeHeadingMetric {
-  el: HTMLElement;
-  stickStart: number;
-  stickEnd: number;
-  lastAppliedPx: number | null;
-}
+type BridgeOverlaySection = {
+  heading: HTMLElement;
+  top: number;
+  bottom: number;
+  height: number;
+};
 
 export interface FullScreenElements {
   scrollEl: HTMLElement; // .bases-view
@@ -163,14 +165,17 @@ export class FullScreenController {
   private barAnims: Animation[] = [];
   private capacitorRafId: number | null = null;
 
-  // Geometry-driven bridge heading classifier — cached scroll-space thresholds per heading for counter-transform decisions during show bridge. IO `.stuck` class is kept only for border styling.
-  private bridgeHeadings: BridgeHeadingMetric[] = [];
-  // DIAGNOSTIC — remove after investigation
-  private syncCallCount = 0;
-
+  // Fixed viewport overlay — single cloned heading on document.body during
+  // Android show bridge. Constant anchor position, scroll-space classification.
+  private bridgeAnchorTop = 0;
+  private bridgeOverlaySections: BridgeOverlaySection[] = [];
+  private bridgeOverlayHost: HTMLElement | null = null;
+  private bridgeOverlayLane: HTMLElement | null = null;
+  private bridgeOverlaySource: HTMLElement | null = null;
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
+  private pendingRevealTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(elements: FullScreenElements) {
     this.scrollEl = elements.scrollEl;
@@ -492,7 +497,7 @@ export class FullScreenController {
   private resolveBridgeAtTop(): void {
     this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
-    this.clearBridgeHeadings();
+    this.clearBridgeOverlay();
     this.clearShowInlines();
     this.scrollEl.style.removeProperty('height');
     this.classTarget.classList.remove('full-screen-active');
@@ -538,109 +543,131 @@ export class FullScreenController {
       this.lastBridgePx = bridgePx;
       setStyle(this.container, 'transform', `translateY(-${bridgePx}px)`);
     }
-    // Run every scroll event — heading sticky state can change even when
-    // rounded bridgePx is unchanged (scrollTop crosses a stickStart/End threshold).
-    this.syncBridgeHeadings(currentTop, bridgePx);
+    this.syncBridgeOverlay(currentTop, bridgePx);
   }
 
-  /** Walk offsetParent chain from el to this.container, summing offsetTop */
-  private getScrollSpaceTop(el: HTMLElement): number {
-    let top = 0;
-    let cur: HTMLElement | null = el;
-    while (cur && cur !== this.container) {
-      top += cur.offsetTop;
-      cur = cur.offsetParent as HTMLElement | null;
-    }
-    return top;
-  }
+  /** Capture section geometry and create fixed overlay host on document.body.
+   *  anchorTop: heading screen Y captured BEFORE applyShowInlines shifts
+   *  the scrollport. Constant through the entire bridge lifecycle. */
+  private captureBridgeOverlay(anchorTop: number): void {
+    this.clearBridgeOverlay();
+    this.bridgeAnchorTop = anchorTop;
 
-  /** Cache heading scroll-space thresholds for geometry-driven sticky classification. Called once at bridge start — layout reads are acceptable alongside applyShowInlines() work in the same rAF. */
-  private captureBridgeHeadings(): void {
-    const win = this.scrollEl.ownerDocument.defaultView;
-    if (!win) return;
-    // DIAGNOSTIC — reset sync counter each capture
-    this.syncCallCount = 0;
-    this.bridgeHeadings = Array.from(
+    const containerRect = this.container.getBoundingClientRect();
+    const scrollTop = this.scrollEl.scrollTop;
+
+    this.bridgeOverlaySections = Array.from(
       this.container.querySelectorAll<HTMLElement>(
-        '.bases-group-heading:not(.collapsed)'
+        '.dynamic-views-group-section > .bases-group-heading:not(.collapsed)'
       )
-    ).map((el) => {
-      const section = el.closest<HTMLElement>('.dynamic-views-group-section');
-      const stickyTop = parseFloat(win.getComputedStyle(el).top) || 0;
-      // Heading offsetTop is unreliable when stuck — Chromium reports the displaced stuck position, not the natural flow position. Use section top (heading is the section's first child).
-      const headingNaturalTop = section
-        ? this.getScrollSpaceTop(section)
-        : this.getScrollSpaceTop(el);
-      const stickStart = headingNaturalTop - stickyTop;
-      const stickEnd = section
-        ? this.getScrollSpaceTop(section) +
-          section.offsetHeight -
-          el.offsetHeight -
-          stickyTop
-        : Number.POSITIVE_INFINITY;
-      // DIAGNOSTIC — log per heading
-      console.log(
-        `[BRIDGE-CAPTURE] "${(el.textContent || '').slice(0, 30)}"`,
-        `| el.offsetTop=${el.offsetTop}`,
-        `| section.offsetTop=${section?.offsetTop ?? 'N/A'}`,
-        `| getScrollSpaceTop(el)=${this.getScrollSpaceTop(el)}`,
-        `| getScrollSpaceTop(section)=${section ? this.getScrollSpaceTop(section) : 'N/A'}`,
-        `| stickyTop=${stickyTop}`,
-        `| headingNaturalTop=${headingNaturalTop}`,
-        `| stickStart=${stickStart}`,
-        `| stickEnd=${stickEnd}`,
-        `| scrollTop=${this.scrollEl.scrollTop}`,
-        `| totalShift=${this.totalShift}`,
-        `| container.transform="${this.container.style.transform}"`
-      );
-      return { el, stickStart, stickEnd, lastAppliedPx: null };
+    ).map((heading) => {
+      const section = heading.closest<HTMLElement>(
+        '.dynamic-views-group-section'
+      )!;
+      const rect = section.getBoundingClientRect();
+      // Scroll-space position: BCR relative to container + scrollTop
+      const top = rect.top - containerRect.top + scrollTop;
+      return {
+        heading,
+        top,
+        bottom: top + section.offsetHeight,
+        height: heading.getBoundingClientRect().height,
+      };
     });
-    console.log(
-      `[BRIDGE-CAPTURE] Done. ${this.bridgeHeadings.length} headings captured.`
-    );
+
+    if (this.bridgeOverlaySections.length === 0) return;
+
+    const doc = this.scrollEl.ownerDocument;
+    this.bridgeOverlayHost = doc.createElement('div');
+    this.bridgeOverlayHost.className = 'dynamic-views-bridge-heading-host';
+    this.bridgeOverlayLane = doc.createElement('div');
+    this.bridgeOverlayLane.className = 'dynamic-views-bridge-heading-lane';
+    this.bridgeOverlayHost.appendChild(this.bridgeOverlayLane);
+    // Append to leafContent (not body) — body children may paint behind
+    // .app-container's stacking context. leafContent is in the correct
+    // stacking context for z-index 26 to work against the scrim (25).
+    this.leafContent.appendChild(this.bridgeOverlayHost);
+
+    this.syncBridgeOverlay(scrollTop, this.totalShift);
   }
 
-  /** Counter-transform non-sticky headings to prevent overflow clipping. Sticky headings (positioned by the browser at their scrollport offset, unaffected by the container transform) need no compensation. Sticky state is computed from cached scroll-space thresholds — no IO dependency, no async lag. */
-  private syncBridgeHeadings(currentTop: number, bridgePx: number): void {
-    // DIAGNOSTIC — log first 5 calls per capture
-    const shouldLog = this.syncCallCount < 5;
-    if (shouldLog) {
-      this.syncCallCount++;
-      const summary = this.bridgeHeadings.map((h) => {
-        const isSticky = currentTop >= h.stickStart && currentTop < h.stickEnd;
-        const name = (h.el.textContent || '').slice(0, 30);
-        const action = isSticky
-          ? h.lastAppliedPx !== null
-            ? 'REMOVE-TRANSFORM'
-            : 'SKIP(sticky)'
-          : h.lastAppliedPx === bridgePx
-            ? 'SKIP(unchanged)'
-            : 'APPLY-TRANSFORM';
-        return `  "${name}" sticky=${isSticky} stickStart=${h.stickStart} stickEnd=${h.stickEnd} → ${action}`;
-      });
-      console.log(
-        `[BRIDGE-SYNC #${this.syncCallCount}] currentTop=${currentTop} bridgePx=${bridgePx}\n${summary.join('\n')}`
-      );
-    }
-    for (const h of this.bridgeHeadings) {
-      const isSticky = currentTop >= h.stickStart && currentTop < h.stickEnd;
-      if (isSticky) {
-        if (h.lastAppliedPx !== null) {
-          h.el.style.removeProperty('transform');
-          h.lastAppliedPx = null;
-        }
-        continue;
+  /** Position the overlay heading. Runs per scroll event during bridge.
+   *  stickLine determines which heading is active (scroll-space only —
+   *  no bridgePx dependency). Overlay Y is the constant anchor, pushed
+   *  up only when the next section approaches. */
+  private syncBridgeOverlay(currentTop: number, bridgePx: number): void {
+    if (!this.bridgeOverlayHost || !this.bridgeOverlayLane) return;
+
+    // stickLine: the scroll-space Y where the anchor sits. A heading
+    // whose section spans this line is the active (stuck) heading.
+    const stickLine = currentTop + this.bridgeAnchorTop;
+    let activeIndex = -1;
+    for (let i = 0; i < this.bridgeOverlaySections.length; i++) {
+      const s = this.bridgeOverlaySections[i];
+      if (stickLine >= s.top && stickLine < s.bottom) {
+        activeIndex = i;
+        break;
       }
-      if (h.lastAppliedPx === bridgePx) continue;
-      setStyle(h.el, 'transform', `translateY(${bridgePx}px)`);
-      h.lastAppliedPx = bridgePx;
     }
+
+    if (activeIndex === -1) {
+      setStyle(this.bridgeOverlayHost, 'display', 'none');
+      if (this.bridgeOverlaySource) {
+        this.bridgeOverlaySource.style.removeProperty('opacity');
+        this.bridgeOverlaySource.style.removeProperty('pointer-events');
+        this.bridgeOverlaySource = null;
+      }
+      return;
+    }
+
+    this.bridgeOverlayHost.style.removeProperty('display');
+
+    const active = this.bridgeOverlaySections[activeIndex];
+    const scrollRect = this.scrollEl.getBoundingClientRect();
+
+    // Match overlay width to scroll container
+    const hostS = this.bridgeOverlayHost.style;
+    hostS.left = `${Math.round(scrollRect.left)}px`;
+    hostS.width = `${Math.round(scrollRect.width)}px`;
+
+    // Clone heading into lane when active heading changes
+    if (this.bridgeOverlaySource !== active.heading) {
+      // Unhide previous source
+      if (this.bridgeOverlaySource) {
+        this.bridgeOverlaySource.style.removeProperty('opacity');
+        this.bridgeOverlaySource.style.removeProperty('pointer-events');
+      }
+      const clone = active.heading.cloneNode(true) as HTMLElement;
+      clone.classList.add('stuck');
+      this.bridgeOverlayLane.replaceChildren(clone);
+      this.bridgeOverlaySource = active.heading;
+      // Hide original
+      setStyle(active.heading, 'opacity', '0', 'important');
+      setStyle(active.heading, 'pointer-events', 'none', 'important');
+    }
+
+    // Y position: constant anchor, pushed up by next section approaching
+    let y = this.bridgeAnchorTop;
+    const next = this.bridgeOverlaySections[activeIndex + 1];
+    if (next) {
+      // Next heading's visual screen Y during bridge
+      const nextScreenY = this.totalShift + next.top - currentTop - bridgePx;
+      y = Math.min(y, Math.round(nextScreenY - active.height));
+    }
+    setStyle(this.bridgeOverlayLane, 'transform', `translateY(${y}px)`);
   }
 
-  /** Remove counter-transform from bridge headings */
-  private clearBridgeHeadings(): void {
-    for (const h of this.bridgeHeadings) h.el.style.removeProperty('transform');
-    this.bridgeHeadings = [];
+  /** Remove overlay and unhide original heading. */
+  private clearBridgeOverlay(): void {
+    if (this.bridgeOverlaySource) {
+      this.bridgeOverlaySource.style.removeProperty('opacity');
+      this.bridgeOverlaySource.style.removeProperty('pointer-events');
+      this.bridgeOverlaySource = null;
+    }
+    this.bridgeOverlayHost?.remove();
+    this.bridgeOverlayHost = null;
+    this.bridgeOverlayLane = null;
+    this.bridgeOverlaySections = [];
   }
 
   /** Idempotent — no-op if already unmounted */
@@ -674,6 +701,10 @@ export class FullScreenController {
       clearTimeout(this.bridgeResolveTimer);
       this.bridgeResolveTimer = null;
     }
+    if (this.pendingRevealTimer != null) {
+      clearTimeout(this.pendingRevealTimer);
+      this.pendingRevealTimer = null;
+    }
     // Remove full screen state only if this instance set it
     if (this.isActiveHider) {
       if (this.isAndroid) {
@@ -693,7 +724,7 @@ export class FullScreenController {
     this.container.style.removeProperty('transition');
     this.container.style.removeProperty('--dynamic-views-scroll-past-end');
     this.container.style.removeProperty('transform');
-    this.clearBridgeHeadings();
+    this.clearBridgeOverlay();
     this.scrollEl.style.removeProperty('height');
 
     // Cancel WAAPI animations (Android)
@@ -721,6 +752,16 @@ export class FullScreenController {
     const currentTop = this.scrollEl.scrollTop;
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
+
+    // Cancel pending header-tap reveal during active downward scroll.
+    // Fast momentum (delta > threshold) cancels; dying momentum allows reveal.
+    if (
+      this.pendingRevealTimer != null &&
+      delta > FULL_SCREEN_REVEAL_CANCEL_DELTA
+    ) {
+      clearTimeout(this.pendingRevealTimer);
+      this.pendingRevealTimer = null;
+    }
 
     // Idle settle for pending layout (hide settle or show class removal)
     if (this.scrollIdleTimer != null) clearTimeout(this.scrollIdleTimer);
@@ -902,7 +943,7 @@ export class FullScreenController {
     this.container.style.removeProperty('margin-top');
     this.container.style.removeProperty('transform');
     this.container.style.removeProperty('transition');
-    this.clearBridgeHeadings();
+    this.clearBridgeOverlay();
     this.clearHeaderInlines();
 
     // Re-measure ONLY in clean state (no full screen classes).
@@ -1036,9 +1077,12 @@ export class FullScreenController {
             // ~90px zone where it absorbs taps without content interaction.
             // margin-top:0 overrides Obsidian's safe-area-inset-top margin
             // so the shield covers the full zone from y=0.
+            // z-index:30 above grouped ::before scrim (25) and sticky
+            // headings (20) so taps reach the header in grouped views.
             setStyle(hEl, 'transform', 'translateY(0)', 'important');
             setStyle(hEl, 'opacity', '0', 'important');
             setStyle(hEl, 'margin-top', '0', 'important');
+            setStyle(hEl, 'z-index', '30', 'important');
           };
         }
 
@@ -1097,10 +1141,13 @@ export class FullScreenController {
       // inline override returns it to natural position after settle.
       // margin-top:0 overrides Obsidian's safe-area-inset-top margin
       // so the shield covers the full zone from y=0.
+      // z-index:30 above grouped ::before scrim (25) and sticky
+      // headings (20) so taps reach the header in grouped views.
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
         setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
         setStyle(this.viewHeaderEl, 'margin-top', '0', 'important');
+        setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
       }
 
       this.pendingRafId = requestAnimationFrame(() => {
@@ -1152,21 +1199,34 @@ export class FullScreenController {
         `translateY(-${this.headerShift}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
+        // Capture bars-hidden CSS top BEFORE applyShowInlines changes it. All grouped headings share the same CSS rule. Single getComputedStyle read.
+        const win = this.scrollEl.ownerDocument.defaultView;
+        const firstHeading = this.container.querySelector<HTMLElement>(
+          '.bases-group-heading:not(.collapsed)'
+        );
+        const barsHiddenTop =
+          win && firstHeading
+            ? parseFloat(win.getComputedStyle(firstHeading).top) || 0
+            : 0;
+
         // Inline styles restore margin/toolbar/search — bypasses classList
         // to avoid style invalidation that drops frames on the
         // single-threaded Android WebView compositor. ::before scrim (always
         // full-height on Android during full-screen-active) covers the gap.
         this.applyShowInlines();
 
-        // Show bridge: transform on container cancels the visual shift from applyShowInlines (viewContent margin-top + toolbar expansion). Transform is compositor-only — no layout, no raster invalidation, no tile re-rastering. Counter-transform on group headings prevents overflow clipping: the container transform shifts sticky headings above the scroll container's box boundary, and overflow: auto clips them. The heading counter-transform cancels the container transform, keeping headings within the clip.
+        // Show bridge: transform on container cancels the visual shift from
+        // applyShowInlines (viewContent margin-top + toolbar expansion).
+        // Compositor-only — no layout, no raster invalidation. Fixed overlay
+        // on document.body renders the active stuck heading outside the
+        // scroll container's overflow clip and transform context.
         if (this.settled) {
           setStyle(
             this.container,
             'transform',
             `translateY(-${this.totalShift}px)`
           );
-          this.captureBridgeHeadings();
-          this.syncBridgeHeadings(this.scrollEl.scrollTop, this.totalShift);
+          this.captureBridgeOverlay(barsHiddenTop);
           this.bridgePhaseActive = true;
           this.lastBridgePx = -1;
         }
@@ -1281,14 +1341,19 @@ export class FullScreenController {
     // Clear tap-shield inlines BEFORE adding class — inline !important
     // overrides rule !important in the cascade, so the hide-settle inlines
     // (opacity:0, transform, margin-top) would block the full-screen-showing
-    // CSS that restores the header. Must be synchronous with classList.add
-    // so the browser sees only the final computed state.
+    // CSS that restores the header.
     this.clearHeaderInlines();
     // Collapse header during show — base rule sets min-height: ~91px for
     // tap shield, but during show the inflated header overlaps the toolbar.
     // Inline min-height: 0 shrinks the layout box so toolbar taps pass.
     if (this.viewHeaderEl) {
       setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
+      // Force style recalc — commit the intermediate state (CSS
+      // full-screen-active: translateY(-91px), opacity:0) before the
+      // showing class applies (translateY(0), opacity:1). Without this,
+      // the browser batches both changes and sees transform 0→0 (from
+      // tap-shield inline to showing class), producing no transition.
+      void this.viewHeaderEl.offsetHeight;
     }
 
     // Synchronous layout — single compositor pause, UIScrollView resumes
@@ -1443,12 +1508,33 @@ export class FullScreenController {
     }
   }
 
-  /** Tap on invisible view-header (status bar zone) — reveal bars */
+  /** Tap on invisible view-header (status bar zone) — deferred reveal.
+   *  Queues a 100ms timer. If downward scroll events continue (fast
+   *  momentum), onScroll cancels the timer. If scroll stops or slows
+   *  below REVEAL_CANCEL_DELTA, the timer fires and bars appear.
+   *  Matches native Obsidian's emergent behavior where fast momentum
+   *  suppresses reveal but slow/dying momentum allows it. */
   private onHeaderTap(): void {
     if (!this.barsHidden) return;
-    this.barsHidden = false;
-    this.lastToggleTime = Date.now();
-    this.showBarsUI();
+    if (this.pendingRevealTimer != null) clearTimeout(this.pendingRevealTimer);
+    this.pendingRevealTimer = setTimeout(() => {
+      this.pendingRevealTimer = null;
+      if (!this.barsHidden) return;
+      // Eat the synthesized click from the touch that triggered this
+      // reveal — without this, the click lands on an invisible header
+      // child (e.g., triple-dot button) and opens it concurrently.
+      this.viewHeaderEl?.addEventListener(
+        'click',
+        (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        },
+        { capture: true, once: true }
+      );
+      this.barsHidden = false;
+      this.lastToggleTime = Date.now();
+      this.showBarsUI();
+    }, FULL_SCREEN_REVEAL_DEFER_MS);
   }
 }
 
