@@ -38,7 +38,7 @@ body {
   /* Animation */
   --dynamic-views-anim-duration-superfast: var(--anim-duration-superfast, 70ms);
   --dynamic-views-anim-duration-fast: var(--anim-duration-fast, 140ms);
-  --dynamic-views-anim-duration-moderate: var(--anim-duration-moderate, 300ms);
+  --dynamic-views-anim-duration-moderate: 5s;
 
   /* Shadows */
   --dynamic-views-shadow-xs: var(
@@ -166,25 +166,25 @@ body {
   /* Custom colors from HSL components — hover variants shift hue slightly
      cooler (-3°), minimal saturation boost (×1.02), noticeable lightness
      increase (×1.15). When undefined, CSS ignores the declaration. */
-  --dynamic-views-property-color-with-labels-custom: hsl(
-    var(--dynamic-views-property-color-with-labels-custom-h),
-    var(--dynamic-views-property-color-with-labels-custom-s),
-    var(--dynamic-views-property-color-with-labels-custom-l)
+  --dynamic-views-property-color-with-names-custom: hsl(
+    var(--dynamic-views-property-color-with-names-custom-h),
+    var(--dynamic-views-property-color-with-names-custom-s),
+    var(--dynamic-views-property-color-with-names-custom-l)
   );
-  --dynamic-views-property-color-with-labels-custom-hover: hsl(
-    calc(var(--dynamic-views-property-color-with-labels-custom-h) - 3),
-    calc(var(--dynamic-views-property-color-with-labels-custom-s) * 1.02),
-    calc(var(--dynamic-views-property-color-with-labels-custom-l) * 1.15)
+  --dynamic-views-property-color-with-names-custom-hover: hsl(
+    calc(var(--dynamic-views-property-color-with-names-custom-h) - 3),
+    calc(var(--dynamic-views-property-color-with-names-custom-s) * 1.02),
+    calc(var(--dynamic-views-property-color-with-names-custom-l) * 1.15)
   );
-  --dynamic-views-property-color-without-labels-custom: hsl(
-    var(--dynamic-views-property-color-without-labels-custom-h),
-    var(--dynamic-views-property-color-without-labels-custom-s),
-    var(--dynamic-views-property-color-without-labels-custom-l)
+  --dynamic-views-property-color-without-names-custom: hsl(
+    var(--dynamic-views-property-color-without-names-custom-h),
+    var(--dynamic-views-property-color-without-names-custom-s),
+    var(--dynamic-views-property-color-without-names-custom-l)
   );
-  --dynamic-views-property-color-without-labels-custom-hover: hsl(
-    calc(var(--dynamic-views-property-color-without-labels-custom-h) - 3),
-    calc(var(--dynamic-views-property-color-without-labels-custom-s) * 1.02),
-    calc(var(--dynamic-views-property-color-without-labels-custom-l) * 1.15)
+  --dynamic-views-property-color-without-names-custom-hover: hsl(
+    calc(var(--dynamic-views-property-color-without-names-custom-h) - 3),
+    calc(var(--dynamic-views-property-color-without-names-custom-s) * 1.02),
+    calc(var(--dynamic-views-property-color-without-names-custom-l) * 1.15)
   );
   --dynamic-views-tag-color-custom: hsl(
     var(--dynamic-views-tag-color-custom-h),

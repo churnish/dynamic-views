@@ -52,9 +52,9 @@ body.dynamic-views-open-on-title .dynamic-views .card-subtitle {
   cursor: auto;
 }
 
-/* Property labels: selectable when title acts as link */
-body.dynamic-views-open-on-title .dynamic-views .property-label,
-body.dynamic-views-open-on-title .dynamic-views .property-label-inline {
+/* Property names: selectable when title acts as link */
+body.dynamic-views-open-on-title .dynamic-views .property-name,
+body.dynamic-views-open-on-title .dynamic-views .property-name-inline {
   -webkit-user-select: text;
   user-select: text;
   cursor: auto;
@@ -63,8 +63,8 @@ body.dynamic-views-open-on-title .dynamic-views .property-label-inline {
 /* Shrink text wrappers to content width so empty space inherits card's
    pointer cursor. */
 body.dynamic-views-open-on-title .dynamic-views .card-subtitle,
-body.dynamic-views-open-on-title .dynamic-views .property-label,
-body.dynamic-views-open-on-title .dynamic-views .property-label-inline {
+body.dynamic-views-open-on-title .dynamic-views .property-name,
+body.dynamic-views-open-on-title .dynamic-views .property-name-inline {
   width: fit-content;
   max-width: 100%;
 }

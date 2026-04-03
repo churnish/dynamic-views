@@ -125,7 +125,7 @@ export function showTagHashPrefix(): boolean {
 /**
  * Empty properties display mode from dropdown setting
  */
-export type HideEmptyMode = 'show' | 'labels-hidden' | 'all';
+export type HideEmptyMode = 'show' | 'names-hidden' | 'all';
 
 /**
  * Get empty properties display mode from Style Settings dropdown
@@ -133,7 +133,7 @@ export type HideEmptyMode = 'show' | 'labels-hidden' | 'all';
 export function getHideEmptyMode(): HideEmptyMode {
   if (hasBodyClass('dynamic-views-empty-properties-show')) return 'show';
   if (hasBodyClass('dynamic-views-empty-properties-hide')) return 'all';
-  return 'labels-hidden'; // default
+  return 'names-hidden'; // default
 }
 
 /**

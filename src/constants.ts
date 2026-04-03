@@ -45,7 +45,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   imageFit: 'crop',
   imageRatio: 1.0,
   // Properties
-  propertyLabels: 'hide',
+  propertyNames: 'hide',
   pairProperties: false,
   rightPropertyPosition: 'column',
   invertPropertyPairing: '',
@@ -70,7 +70,7 @@ export const DATACORE_DEFAULTS: DatacoreDefaults = {
 export const BASES_DEFAULTS: BasesDefaults = {
   displayFirstAsTitle: true,
   displaySecondAsSubtitle: false,
-  propertyLabels: 'inline',
+  propertyNames: 'inline',
 };
 
 /**

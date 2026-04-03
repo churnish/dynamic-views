@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-03-31
 ---
 # Style Settings fallback selectors
 
@@ -67,6 +67,24 @@ This eliminates the need for a body class on the default mode entirely. The plug
 This pattern also avoids the `initClasses` race: Style Settings' `initClasses` adds the `@settings` `default:` class to body, then applies the stored value without removing the default. Both classes coexist. By not depending on a body class for the default mode, the race is structurally impossible.
 
 Prefer `:not()` exclusion over `:is()` + `:not([class*="..."])` when the default mode needs CSS overrides and all non-default modes are known. Use the `:is()` pattern when the default has a named class that Style Settings explicitly manages.
+
+### JS must mirror the CSS exclusion logic
+
+When JS code checks whether a `:not()` exclusion default is active, it MUST use the same inverted check — NOT a positive match on the default class:
+
+```typescript
+// ✅ Correct — mirrors CSS :not(-masonry, -none) exclusion
+const isFixedHeightActive =
+  !body.classList.contains(FIXED_COVER_HEIGHT_MASONRY) &&
+  !body.classList.contains(FIXED_COVER_HEIGHT_NONE);
+
+// ❌ Wrong — positive check fails when no body class is present
+const isFixedHeightActive =
+  body.classList.contains(FIXED_COVER_HEIGHT_GRID) ||
+  body.classList.contains(FIXED_COVER_HEIGHT_BOTH);
+```
+
+The positive check returns `false` when Style Settings is absent (no body class), causing JS to take the "off" path while CSS takes the "on" path — a silent disagreement. The inverted check returns `true` for the same state, matching CSS.
 
 ## `class-select` — `allowEmpty` gotcha
 
@@ -215,7 +233,7 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Card shadow color         | Default        | No CSS fallback needed — Default passes theme shadow vars through unchanged |
 | File type indicator      | None           | [_header.scss](../../styles/card/_header.scss) — suffix visible by default, only Flair hides it  |
 | Fixed cover height       | Grid (slider)  | [_grid-view.scss](../../styles/_grid-view.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
-| Fixed poster height      | Masonry        | [_poster.scss](../../styles/card/_poster.scss) — backward compat via `:not([class*=...])` for old unsuffixed class |
+| Fixed poster height      | Grid (slider)  | [_poster.scss](../../styles/card/_poster.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
@@ -227,8 +245,8 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 | Title color (hover, open-on-title) | `[class*='dynamic-views-title-color-']`, `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-color-hover-color`, `--dynamic-views-title-hover-color-value` | [_hover-states.scss](../../styles/_hover-states.scss) |
 | Title color (hover, open-on-card) | `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-hover-color-value` | [_hover-states.scss](../../styles/_hover-states.scss) |
 | Subtitle color (hover) | `[class*='dynamic-views-subtitle-color-']` | `--dynamic-views-subtitle-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
-| Property color with labels (hover) | `[class*='dynamic-views-property-color-with-labels-']` | `--dynamic-views-property-with-label-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
-| Property color without labels (hover) | `[class*='dynamic-views-property-color-without-labels-']` | `--dynamic-views-property-no-label-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Property color with names (hover) | `[class*='dynamic-views-property-color-with-names-']` | `--dynamic-views-property-with-name-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Property color without names (hover) | `[class*='dynamic-views-property-color-without-names-']` | `--dynamic-views-property-no-name-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
 
 ### `class-toggle` — inverted (CSS)
 

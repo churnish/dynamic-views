@@ -45,7 +45,7 @@ vi.mock('../../src/utils/style-settings', () => ({
   hasBodyClass: vi.fn(),
 }));
 vi.mock('../../src/utils/property', () => ({
-  getPropertyLabel: vi.fn(),
+  getPropertyDisplayName: vi.fn(),
   parsePropertyList: vi.fn(),
   stripNotePrefix: vi.fn(),
 }));

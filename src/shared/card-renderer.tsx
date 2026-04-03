@@ -20,7 +20,7 @@ import {
   hasBodyClass,
 } from '../utils/style-settings';
 import {
-  getPropertyLabel,
+  getPropertyDisplayName,
   normalizePropertyName,
   parsePropertyList,
   stripNotePrefix,
@@ -560,13 +560,13 @@ export interface CardRendererProps {
 function shouldCollapseFieldDatacore(
   propertyName: string | undefined,
   resolvedValue: unknown,
-  propertyLabels: 'hide' | 'inline' | 'above',
-  hideEmptyMode: 'show' | 'labels-hidden' | 'all',
+  propertyNames: 'hide' | 'inline' | 'above',
+  hideEmptyMode: 'show' | 'names-hidden' | 'all',
   hideMissing: boolean
 ): boolean {
-  // No property configured - collapse if labels hidden (for layout)
+  // No property configured - collapse if names hidden (for layout)
   if (!propertyName) {
-    return propertyLabels === 'hide';
+    return propertyNames === 'hide';
   }
   // Convert unknown to string | null for shared function
   const stringValue = typeof resolvedValue === 'string' ? resolvedValue : null;
@@ -575,7 +575,7 @@ function shouldCollapseFieldDatacore(
     propertyName,
     hideMissing,
     hideEmptyMode,
-    propertyLabels
+    propertyNames
   );
 }
 
@@ -861,23 +861,23 @@ function renderProperty(
   const hideEmptyMode = getHideEmptyMode();
   if (isEmpty) {
     if (hideEmptyMode === 'all') return null;
-    if (hideEmptyMode === 'labels-hidden' && settings.propertyLabels === 'hide')
+    if (hideEmptyMode === 'names-hidden' && settings.propertyNames === 'hide')
       return null;
   }
 
   // Render label above if enabled
 
   const labelAbove =
-    settings.propertyLabels === 'above' ? (
-      <div className="property-label">{getPropertyLabel(propertyName)}</div>
+    settings.propertyNames === 'above' ? (
+      <div className="property-name">{getPropertyDisplayName(propertyName)}</div>
     ) : null;
 
   // Render inline label if enabled (as sibling, before property-content)
 
   const labelInline =
-    settings.propertyLabels === 'inline' ? (
-      <span className="property-label-inline">
-        {getPropertyLabel(propertyName)}{' '}
+    settings.propertyNames === 'inline' ? (
+      <span className="property-name-inline">
+        {getPropertyDisplayName(propertyName)}{' '}
       </span>
     ) : null;
 
@@ -1008,12 +1008,12 @@ function renderProperty(
           <div className="property-content">
             <span
               className={
-                settings.propertyLabels === 'hide'
+                settings.propertyNames === 'hide'
                   ? 'has-timestamp-icon'
                   : undefined
               }
             >
-              {settings.propertyLabels === 'hide' && (
+              {settings.propertyNames === 'hide' && (
                 <svg
                   className="timestamp-icon"
                   xmlns="http://www.w3.org/2000/svg"
@@ -1689,7 +1689,7 @@ function Card({
           settings.subtitleProperty,
           null,
           card.subtitle,
-          { ...settings, propertyLabels: 'hide' },
+          { ...settings, propertyNames: 'hide' },
           card,
           app,
           timeIcon
@@ -2016,7 +2016,7 @@ function Card({
             const isTextTarget =
               settings.openFileAction === 'title' &&
               target.closest(
-                '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-label, .property-label-inline, .property-content'
+                '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-name, .property-name-inline, .property-content'
               );
 
             if (!cardEl.classList.contains('poster-revealed')) {
@@ -2255,12 +2255,12 @@ function Card({
             const props = card.properties;
             const hideEmptyMode = getHideEmptyMode();
             const hideMissing = shouldHideMissingProperties();
-            const { propertyLabels } = settings;
+            const { propertyNames } = settings;
             const labelClass =
-              propertyLabels === 'above'
-                ? ' has-label'
-                : propertyLabels === 'inline'
-                  ? ' has-label-inline'
+              propertyNames === 'above'
+                ? ' has-name'
+                : propertyNames === 'inline'
+                  ? ' has-name-inline'
                   : '';
 
             // Parse override lists for O(1) lookup
@@ -2300,7 +2300,7 @@ function Card({
                   shouldCollapseFieldDatacore(
                     prop.name || undefined,
                     prop.value,
-                    propertyLabels,
+                    propertyNames,
                     hideEmptyMode,
                     hideMissing
                   )
@@ -2349,7 +2349,7 @@ function Card({
 
               sets.forEach((set, setIdx) => {
                 const showConfiguredProps =
-                  propertyLabels !== 'hide' || !hideMissing;
+                  propertyNames !== 'hide' || !hideMissing;
                 const hasContent = set.items.some((p) =>
                   showConfiguredProps
                     ? p.name !== ''

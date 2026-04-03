@@ -177,8 +177,8 @@ When a field's `.property-content` has zero `scrollWidth`:
 
 ### Label measurement
 
-- **Inline labels** (`.property-label-inline`): `width = content.scrollWidth + inlineLabel.scrollWidth + cachedLabelGap`.
-- **Above labels** (`.property-label`): `width = max(content.scrollWidth, aboveLabel.scrollWidth)`.
+- **Inline names** (`.property-name-inline`): `width = content.scrollWidth + inlineLabel.scrollWidth + cachedLabelGap`.
+- **Above names** (`.property-name`): `width = max(content.scrollWidth, aboveLabel.scrollWidth)`.
 
 Gap values are read once from CSS and cached (with fallbacks for unparseable values):
 
@@ -246,7 +246,7 @@ Class: `dynamic-views-paired-property-right`. This class is always applied by `a
 
 - **`.pair-right` content**: Right-aligned via `justify-content: flex-end` on `.property-content` and `min-width: 100%`.
 - **`.pair-right` wrapper**: `justify-content: flex-end` when not scrollable; flips to `flex-start` when `.is-scrollable` (scroll position starts at left edge).
-- **Inline label order**: Label after content (`order: 2` on `.property-label-inline`).
+- **Inline name order**: Label after content (`order: 2` on `.property-name-inline`).
 - **Above label alignment**: `text-align: right`.
 
 ### Left
@@ -350,7 +350,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 **CSS rules for stacked mode** (`_properties.scss`):
 
 - `.card.compact-stacked .property-pair`: `flex-direction: column; flex-wrap: nowrap; gap: var(--size-2-2)`.
-- Order resets: `.pair-right .property-label-inline` and `.property-content` reset to `order: 0` (label-then-value natural reading order).
+- Order resets: `.pair-right .property-name-inline` and `.property-content` reset to `order: 0` (label-then-value natural reading order).
 - Alignment resets: `.pair-right .property-content` and `.property-content-wrapper` reset to `justify-content: flex-start`; labels reset to `text-align: left`.
 - Timestamp icon: edge-mode reset flips pair-right icon to left (`order: 0`); right-mode override keeps icon right (`order: 2`, specificity 0,7,1); center-mode override keeps icon right (`order: 2`, specificity 0,7,1).
 
@@ -364,7 +364,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 | Key                      | Type                            | Default                                            | Description                                        | Consumed by                                                                                                                |
 | ------------------------ | ------------------------------- | -------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `propertyLabels`         | `'hide' \| 'inline' \| 'above'` | `'hide'` (ViewDefaults) / `'inline'` (Bases)       | Label display mode.                                | Both renderers, measurement (label width), CSS.                                                                            |
+| `propertyNames`          | `'hide' \| 'inline' \| 'above'` | `'hide'` (ViewDefaults) / `'inline'` (Bases)       | Name display mode.                                 | Both renderers, measurement (label width), CSS.                                                                            |
 | `pairProperties`         | `boolean`                       | `false` (ViewDefaults + Bases) / `true` (Datacore) | Whether properties pair by default.                | Both renderers (pairing algorithm).                                                                                        |
 | `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'column'`                                         | Right-side field alignment mode. Bases-only.       | `applyViewContainerStyles()` (Bases), [_properties.scss](../../styles/_properties.scss), measurement skip in `measurePropertyFields()`/`measureCardPairsSynchronous()`. |
 | `invertPropertyPairing`  | `string`                        | `''`                                               | Comma-separated names to invert pairing behavior.  | Both renderers via `parsePropertyList()`.                                                                                  |
@@ -377,9 +377,9 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 | ------------------------------------------- | ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `dynamic-views-compact-breakpoint`          | `variable-number` | `390px`  | Card width threshold for compact mode.                                                                                            |
 | `dynamic-views-full-row-property-alignment` | `class-select`    | `left`   | Full-row property value alignment (left/right).                                                                                   |
-| `dynamic-views-property-label-case`         | `class-select`    | preserve | Label text-transform (preserve/lowercase/uppercase). Options: `dynamic-views-property-label-case-{preserve,lowercase,uppercase}`. |
-| `dynamic-views-property-label-bold`         | `class-toggle`    | off      | Bold labels.                                                                                                                      |
-| `dynamic-views-property-label-small-caps`   | `class-toggle`    | off      | Small caps labels.                                                                                                                |
+| `dynamic-views-property-name-case`          | `class-select`    | preserve | Name text-transform (preserve/lowercase/uppercase). Options: `dynamic-views-property-name-case-{preserve,lowercase,uppercase}`. |
+| `dynamic-views-property-name-bold`          | `class-toggle`    | off      | Bold names.                                                                                                                      |
+| `dynamic-views-property-name-small-caps`    | `class-toggle`    | off      | Small caps names.                                                                                                                |
 
 ## Invariants
 

@@ -110,7 +110,7 @@ export function buildDisplayToSyntaxMap(
 
 /**
  * Build forward lookup map: syntaxName → displayName
- * Used by getPropertyLabel to show user-facing display names on cards
+ * Used by getPropertyDisplayName to show user-facing display names on cards
  */
 export function buildSyntaxToDisplayMap(
   config: BasesViewConfig,
@@ -546,11 +546,11 @@ export function toSyntaxName(property: string): string {
 }
 
 /**
- * Convert property name to readable label
+ * Convert property name to readable display name
  * When displayNameMap is provided (Bases path), uses custom display names from .base YAML
  * Falls back to PROPERTY_LABEL_MAP for built-in properties, then prefix stripping
  */
-export function getPropertyLabel(
+export function getPropertyDisplayName(
   propertyName: string,
   displayNameMap?: Record<string, string>
 ): string {

@@ -83,8 +83,8 @@ body.dynamic-views-hide-group-count .dynamic-views .bases-group-count {
   display: none;
 }
 
-/* Hide group property labels when toggle enabled */
-body.dynamic-views-hide-group-property-labels
+/* Hide group property names when toggle enabled */
+body.dynamic-views-hide-group-property-names
   .dynamic-views
   .bases-group-property {
   display: none;
@@ -173,13 +173,13 @@ body.dynamic-views-hide-group-property-labels
     display: none !important;
   }
 
-  /* Group header property label */
+  /* Group header property name */
   .bases-group-property {
     color: var(--dynamic-views-text-muted);
     font-size: var(--dynamic-views-font-ui-small);
   }
 
-  /* Group header result count - match property label style */
+  /* Group header result count - match property name style */
   .bases-group-count {
     color: var(--dynamic-views-text-muted);
     font-size: var(--dynamic-views-font-ui-smaller);

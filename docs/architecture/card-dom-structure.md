@@ -88,8 +88,8 @@ Inside `.card-properties-top` or `.card-properties-bottom`:
 ```
 [Unpaired]:
 div.property.property-{N}
-  ├─ div.property-label                     ← above mode
-  ├─ span.property-label-inline             ← inline mode
+  ├─ div.property-name                      ← above mode
+  ├─ span.property-name-inline              ← inline mode
   └─ div.property-content-wrapper           ← scrollable; tabIndex=-1
       └─ div.property-content
           ├─ span.empty-value-marker

@@ -354,14 +354,14 @@ export function getBasesViewOptions(
       items: [
         {
           type: 'dropdown',
-          displayName: 'Property labels',
-          key: 'propertyLabels',
+          displayName: 'Property names',
+          key: 'propertyNames',
           options: {
             above: 'Above',
             inline: 'Inline',
             hide: 'Hide',
           },
-          default: d.propertyLabels,
+          default: d.propertyNames,
         },
         {
           type: 'property',
@@ -559,7 +559,7 @@ export function readBasesSettings(
   if (urlProperty && !orderSet.has(urlProperty)) urlProperty = '';
 
   // Read ViewDefaults from Bases config
-  // Note: propertyLabels and imageFormat use previousSettings for stale config fallback
+  // Note: propertyNames and imageFormat use previousSettings for stale config fallback
   const viewSettings: ViewDefaults = {
     cardSize: getNumber('cardSize', defaults.cardSize),
     titleProperty,
@@ -595,11 +595,11 @@ export function readBasesSettings(
       defaults.posterDisplayMode
     ),
     imageRatio: getNumber('imageRatio', defaults.imageRatio),
-    propertyLabels: getValidEnum(
+    propertyNames: getValidEnum(
       config,
-      'propertyLabels',
-      defaults.propertyLabels,
-      previousSettings?.propertyLabels
+      'propertyNames',
+      defaults.propertyNames,
+      previousSettings?.propertyNames
     ),
     pairProperties: getBool('pairProperties', defaults.pairProperties),
     rightPropertyPosition: getValidEnum(
@@ -699,10 +699,10 @@ export function extractBasesTemplate(
       mergedDefaults.posterDisplayMode
     ),
     imageRatio: getNumber('imageRatio', mergedDefaults.imageRatio),
-    propertyLabels: getValidEnum(
+    propertyNames: getValidEnum(
       config,
-      'propertyLabels',
-      mergedDefaults.propertyLabels
+      'propertyNames',
+      mergedDefaults.propertyNames
     ),
     pairProperties: getBool('pairProperties', mergedDefaults.pairProperties),
     rightPropertyPosition: getValidEnum(

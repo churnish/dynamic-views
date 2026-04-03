@@ -354,8 +354,8 @@ describe('style-settings', () => {
   });
 
   describe('getHideEmptyMode', () => {
-    it('should return labels-hidden by default', () => {
-      expect(getHideEmptyMode()).toBe('labels-hidden');
+    it('should return names-hidden by default', () => {
+      expect(getHideEmptyMode()).toBe('names-hidden');
     });
 
     it('should return show when show class is present', () => {

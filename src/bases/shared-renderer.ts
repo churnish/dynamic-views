@@ -64,7 +64,7 @@ import {
   hasBodyClass,
 } from '../utils/style-settings';
 import {
-  getPropertyLabel,
+  getPropertyDisplayName,
   parsePropertyList,
   stripNotePrefix,
 } from '../utils/property';
@@ -589,6 +589,7 @@ export class SharedCardRenderer {
    * @param entry - Bases entry
    * @param settings - View settings
    * @param keyboardNav - Optional keyboard navigation config
+   * @param renderOptions - Optional render-time behavior overrides
    */
   renderCard(
     container: HTMLElement,
@@ -604,6 +605,8 @@ export class SharedCardRenderer {
       onHoverEnd?: () => void;
       getVirtualRects?: () => readonly VirtualCardRect[];
       onMountItem?: (index: number) => HTMLElement | null;
+    },
+    renderOptions?: {
       skipImageFade?: boolean;
     }
   ): CardHandle {
@@ -616,7 +619,7 @@ export class SharedCardRenderer {
 
     // Virtual scroll remount: set skip-image-fade before image handlers run
     // synchronously, so handleImageLoad sees the class immediately.
-    if (keyboardNav?.skipImageFade) {
+    if (renderOptions?.skipImageFade) {
       cardEl.classList.add('skip-image-fade');
     }
 
@@ -815,7 +818,7 @@ export class SharedCardRenderer {
           const isTextTarget =
             settings.openFileAction === 'title' &&
             target.closest(
-              '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-label, .property-label-inline, .property-content'
+              '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-name, .property-name-inline, .property-content'
             );
 
           if (!cardEl.classList.contains('poster-revealed')) {
@@ -1115,7 +1118,7 @@ export class SharedCardRenderer {
         card.subtitle,
         card,
         entry,
-        { ...settings, propertyLabels: 'hide' },
+        { ...settings, propertyNames: 'hide' },
         shouldHideMissingProperties(),
         getHideEmptyMode(),
         signal
@@ -2190,7 +2193,7 @@ export class SharedCardRenderer {
       card.subtitle,
       card,
       entry,
-      { ...settings, propertyLabels: 'hide' },
+      { ...settings, propertyNames: 'hide' },
       shouldHideMissingProperties(),
       getHideEmptyMode(),
       propAbort.signal
@@ -2263,7 +2266,7 @@ export class SharedCardRenderer {
           prop.name,
           hideMissing,
           hideEmptyMode,
-          settings.propertyLabels
+          settings.propertyNames
         )
       ) {
         continue;
@@ -2364,7 +2367,7 @@ export class SharedCardRenderer {
             propName,
             hideMissing,
             hideEmptyMode,
-            settings.propertyLabels
+            settings.propertyNames
           )
         ) {
           fieldEl.addClass('property-collapsed');
@@ -2377,7 +2380,7 @@ export class SharedCardRenderer {
             placeholderContent.createSpan('empty-value-marker');
           markerSpan.textContent = getEmptyValueMarker();
         }
-      } else if (settings.propertyLabels === 'hide') {
+      } else if (settings.propertyNames === 'hide') {
         fieldEl.addClass('property-collapsed');
         fieldEl.closest('.property-pair')?.classList.add('pair-has-collapsed');
       }
@@ -2546,28 +2549,28 @@ export class SharedCardRenderer {
     if (isEmpty) {
       if (hideEmptyMode === 'all') return;
       if (
-        hideEmptyMode === 'labels-hidden' &&
-        settings.propertyLabels === 'hide'
+        hideEmptyMode === 'names-hidden' &&
+        settings.propertyNames === 'hide'
       )
         return;
     }
 
-    // Render label if property labels are enabled
-    if (settings.propertyLabels === 'above') {
-      const labelEl = container.createDiv('property-label');
-      labelEl.textContent = getPropertyLabel(
+    // Render property name if property names are enabled
+    if (settings.propertyNames === 'above') {
+      const labelEl = container.createDiv('property-name');
+      labelEl.textContent = getPropertyDisplayName(
         propertyName,
         settings._displayNameMap
       );
-      container.addClass('has-label');
+      container.addClass('has-name');
     }
 
-    // Add inline label if enabled (as sibling, before property-content)
-    if (settings.propertyLabels === 'inline') {
-      const labelSpan = container.createSpan('property-label-inline');
+    // Add inline name if enabled (as sibling, before property-content)
+    if (settings.propertyNames === 'inline') {
+      const labelSpan = container.createSpan('property-name-inline');
       labelSpan.textContent =
-        getPropertyLabel(propertyName, settings._displayNameMap) + ' ';
-      container.addClass('has-label-inline');
+        getPropertyDisplayName(propertyName, settings._displayNameMap) + ' ';
+      container.addClass('has-name-inline');
     }
 
     // Wrapper for scrolling content (gradients applied here)
@@ -2672,7 +2675,7 @@ export class SharedCardRenderer {
     if (isTimestampProperty(propertyName, settings)) {
       // stringValue is already formatted by data-transform
       const timestampWrapper = propertyContent.createSpan();
-      if (settings.propertyLabels === 'hide') {
+      if (settings.propertyNames === 'hide') {
         const iconName = getTimestampIcon(propertyName, settings);
         const iconEl = timestampWrapper.createSpan('timestamp-icon');
         setIcon(iconEl, iconName);
@@ -2682,7 +2685,7 @@ export class SharedCardRenderer {
 
       // One-shot: measure icon alignment from first real timestamp
       // Deferred to rAF so the browser has laid out the new elements
-      if (settings.propertyLabels === 'hide' && !this.iconAlignmentMeasured) {
+      if (settings.propertyNames === 'hide' && !this.iconAlignmentMeasured) {
         const containerEl =
           timestampWrapper.closest<HTMLElement>('.dynamic-views');
         if (containerEl) {

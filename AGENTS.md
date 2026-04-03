@@ -2,7 +2,7 @@
 
 - **Error surfacing**: `new Notice()` ONLY for user-initiated action failures and confirmations. Internal and background failures MUST use `console.error`/`console.warn` — NEVER surface notices for operations the user did NOT trigger.
 - **`--size-*` over `px`**: Use Obsidian's `--size-*` CSS variables (e.g., `var(--size-2-2)`) instead of hardcoded pixel values whenever a matching token exists.
-- **No `:has()` in card selectors**: NEVER use `:has()` on elements inside `.dynamic-views` that exist in quantity (cards, properties, covers, previews) or re-evaluate on interaction. `:has()` causes upward style invalidation — with N cards × M properties, a single class toggle triggers O(N×M) recalculation. Use render-time CSS classes instead (e.g., `.has-label`, `.has-poster`).
+- **No `:has()` in card selectors**: NEVER use `:has()` on elements inside `.dynamic-views` that exist in quantity (cards, properties, covers, previews) or re-evaluate on interaction. `:has()` causes upward style invalidation — with N cards × M properties, a single class toggle triggers O(N×M) recalculation. Use render-time CSS classes instead (e.g., `.has-name`, `.has-poster`).
 
 ## Terminology
 
@@ -39,5 +39,6 @@
 | **@docs/principles.md** | Making trade-off decisions — what the plugin prioritizes and why. |
 | **@docs/project-structure.md**, **@docs/index.md** | Reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files. |
 | **@docs/patterns/plugin-view-navigation.md** | Probing, querying, or targeting Dynamic Views elements via CDP, WebKit Inspector, or DOM queries — correct selectors, DOM hierarchy, and platform-specific probing patterns. |
+| **@docs/patterns/view-configuration.md** | Configuring per-view settings for Bases or Datacore — setting keys, defaults, ranges, state properties, DQL query syntax, search filtering, templates, and per-backend workflows. |
 | **@wiki/wiki-structure.md** | Working with user-facing plugin wiki pages that document how features and settings function. |
 | **@obsidian-guidelines/main.md**, **@obsidian-guidelines/additional.md** | Working on plugin code, submissions, or review compliance. |

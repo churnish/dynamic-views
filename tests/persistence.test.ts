@@ -41,7 +41,7 @@ vi.mock('../src/constants', () => ({
     imagePosition: 'right',
     imageFit: 'crop',
     imageRatio: 1.0,
-    propertyLabels: 'hide',
+    propertyNames: 'hide',
     pairProperties: false,
     rightPropertyPosition: 'column',
     invertPropertyPairing: '',
@@ -61,7 +61,7 @@ vi.mock('../src/constants', () => ({
   BASES_DEFAULTS: {
     displayFirstAsTitle: true,
     displaySecondAsSubtitle: false,
-    propertyLabels: 'inline',
+    propertyNames: 'inline',
   },
   DEFAULT_BASES_STATE: {
     collapsedGroups: [],

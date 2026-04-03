@@ -667,9 +667,9 @@ settings:
         description: Hide result count in group headings.
         type: class-toggle
     -
-        id: dynamic-views-hide-group-property-labels
-        title: Hide property labels
-        description: Hide property labels in group headings.
+        id: dynamic-views-hide-group-property-names
+        title: Hide property names
+        description: Hide property names in group headings.
         type: class-toggle
     -
         id: dynamic-views-disable-sticky-group-header
@@ -858,109 +858,109 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-property-color-with-labels
-        title: Color (labels shown)
-        description: Theme color preset for property text when property labels shown.
+        id: dynamic-views-property-color-with-names
+        title: Color (names shown)
+        description: Theme color preset for property text when property names shown.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-property-color-with-labels-muted
+        default: dynamic-views-property-color-with-names-muted
         options:
             -
                 label: Faint
-                value: dynamic-views-property-color-with-labels-faint
+                value: dynamic-views-property-color-with-names-faint
             -
                 label: Muted
-                value: dynamic-views-property-color-with-labels-muted
+                value: dynamic-views-property-color-with-names-muted
             -
                 label: Normal
-                value: dynamic-views-property-color-with-labels-normal
+                value: dynamic-views-property-color-with-names-normal
             -
                 label: Accent
-                value: dynamic-views-property-color-with-labels-accent
+                value: dynamic-views-property-color-with-names-accent
             -
                 label: Red
-                value: dynamic-views-property-color-with-labels-red
+                value: dynamic-views-property-color-with-names-red
             -
                 label: Orange
-                value: dynamic-views-property-color-with-labels-orange
+                value: dynamic-views-property-color-with-names-orange
             -
                 label: Yellow
-                value: dynamic-views-property-color-with-labels-yellow
+                value: dynamic-views-property-color-with-names-yellow
             -
                 label: Green
-                value: dynamic-views-property-color-with-labels-green
+                value: dynamic-views-property-color-with-names-green
             -
                 label: Cyan
-                value: dynamic-views-property-color-with-labels-cyan
+                value: dynamic-views-property-color-with-names-cyan
             -
                 label: Blue
-                value: dynamic-views-property-color-with-labels-blue
+                value: dynamic-views-property-color-with-names-blue
             -
                 label: Purple
-                value: dynamic-views-property-color-with-labels-purple
+                value: dynamic-views-property-color-with-names-purple
             -
                 label: Pink
-                value: dynamic-views-property-color-with-labels-pink
+                value: dynamic-views-property-color-with-names-pink
             -
                 label: Custom
-                value: dynamic-views-property-color-with-labels-custom
+                value: dynamic-views-property-color-with-names-custom
     -
-        id: dynamic-views-property-color-with-labels-custom
-        title: Custom color (labels shown)
-        description: Custom color for properties with labels.
+        id: dynamic-views-property-color-with-names-custom
+        title: Custom color (names shown)
+        description: Custom color for properties with names.
         type: variable-themed-color
         format: hsl-split
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-property-color-without-labels
-        title: Color (labels hidden)
-        description: Theme color preset for property text when property labels hidden.
+        id: dynamic-views-property-color-without-names
+        title: Color (names hidden)
+        description: Theme color preset for property text when property names hidden.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-property-color-without-labels-faint
+        default: dynamic-views-property-color-without-names-faint
         options:
             -
                 label: Faint
-                value: dynamic-views-property-color-without-labels-faint
+                value: dynamic-views-property-color-without-names-faint
             -
                 label: Muted
-                value: dynamic-views-property-color-without-labels-muted
+                value: dynamic-views-property-color-without-names-muted
             -
                 label: Normal
-                value: dynamic-views-property-color-without-labels-normal
+                value: dynamic-views-property-color-without-names-normal
             -
                 label: Accent
-                value: dynamic-views-property-color-without-labels-accent
+                value: dynamic-views-property-color-without-names-accent
             -
                 label: Red
-                value: dynamic-views-property-color-without-labels-red
+                value: dynamic-views-property-color-without-names-red
             -
                 label: Orange
-                value: dynamic-views-property-color-without-labels-orange
+                value: dynamic-views-property-color-without-names-orange
             -
                 label: Yellow
-                value: dynamic-views-property-color-without-labels-yellow
+                value: dynamic-views-property-color-without-names-yellow
             -
                 label: Green
-                value: dynamic-views-property-color-without-labels-green
+                value: dynamic-views-property-color-without-names-green
             -
                 label: Cyan
-                value: dynamic-views-property-color-without-labels-cyan
+                value: dynamic-views-property-color-without-names-cyan
             -
                 label: Blue
-                value: dynamic-views-property-color-without-labels-blue
+                value: dynamic-views-property-color-without-names-blue
             -
                 label: Purple
-                value: dynamic-views-property-color-without-labels-purple
+                value: dynamic-views-property-color-without-names-purple
             -
                 label: Pink
-                value: dynamic-views-property-color-without-labels-pink
+                value: dynamic-views-property-color-without-names-pink
             -
                 label: Custom
-                value: dynamic-views-property-color-without-labels-custom
+                value: dynamic-views-property-color-without-names-custom
     -
-        id: dynamic-views-property-color-without-labels-custom
+        id: dynamic-views-property-color-without-names-custom
         title: Custom color (labels hidden)
         description: Set custom color.
         type: variable-themed-color
@@ -979,21 +979,21 @@ settings:
         description: How to display properties with empty values.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-empty-properties-hide-with-labels
+        default: dynamic-views-empty-properties-hide-with-names
         options:
             -
                 label: Show
                 value: dynamic-views-empty-properties-show
             -
-                label: Hide if labels hidden
-                value: dynamic-views-empty-properties-hide-with-labels
+                label: Hide if names hidden
+                value: dynamic-views-empty-properties-hide-with-names
             -
                 label: Hide
                 value: dynamic-views-empty-properties-hide
     -
         id: dynamic-views-full-row-property-alignment
         title: Full-row property alignment
-        description: How to align values with inline property labels when not shown side-by-side.
+        description: How to align values with inline property names when not shown side-by-side.
         type: class-select
         allowEmpty: false
         default: dynamic-views-full-row-align-left
@@ -1012,72 +1012,72 @@ settings:
         default: 390
         format: px
     -
-        id: property-labels-heading
-        title: Property labels
+        id: property-names-heading
+        title: Property names
         type: heading
         level: 2
         collapsed: true
     -
-        id: dynamic-views-property-label-font
+        id: dynamic-views-property-name-font
         title: Font
         description: Font name as it appears on your system.
         type: variable-text
         default: ''
     -
-        id: dynamic-views-property-label-font-size
+        id: dynamic-views-property-name-font-size
         title: Size
-        description: Font size for property labels (e.g., 0.8em, 13px, 0.8125rem).
+        description: Font size for property names (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
     -
-        id: dynamic-views-property-label-color
+        id: dynamic-views-property-name-color
         title: Color
-        description: Theme color preset for property labels.
+        description: Theme color preset for property names.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-property-label-color-faint
+        default: dynamic-views-property-name-color-faint
         options:
             -
                 label: Faint
-                value: dynamic-views-property-label-color-faint
+                value: dynamic-views-property-name-color-faint
             -
                 label: Muted
-                value: dynamic-views-property-label-color-muted
+                value: dynamic-views-property-name-color-muted
             -
                 label: Normal
-                value: dynamic-views-property-label-color-normal
+                value: dynamic-views-property-name-color-normal
             -
                 label: Accent
-                value: dynamic-views-property-label-color-accent
+                value: dynamic-views-property-name-color-accent
             -
                 label: Red
-                value: dynamic-views-property-label-color-red
+                value: dynamic-views-property-name-color-red
             -
                 label: Orange
-                value: dynamic-views-property-label-color-orange
+                value: dynamic-views-property-name-color-orange
             -
                 label: Yellow
-                value: dynamic-views-property-label-color-yellow
+                value: dynamic-views-property-name-color-yellow
             -
                 label: Green
-                value: dynamic-views-property-label-color-green
+                value: dynamic-views-property-name-color-green
             -
                 label: Cyan
-                value: dynamic-views-property-label-color-cyan
+                value: dynamic-views-property-name-color-cyan
             -
                 label: Blue
-                value: dynamic-views-property-label-color-blue
+                value: dynamic-views-property-name-color-blue
             -
                 label: Purple
-                value: dynamic-views-property-label-color-purple
+                value: dynamic-views-property-name-color-purple
             -
                 label: Pink
-                value: dynamic-views-property-label-color-pink
+                value: dynamic-views-property-name-color-pink
             -
                 label: Custom
-                value: dynamic-views-property-label-color-custom
+                value: dynamic-views-property-name-color-custom
     -
-        id: dynamic-views-property-label-color-custom
+        id: dynamic-views-property-name-color-custom
         title: Custom text color
         description: Set custom color.
         type: variable-themed-color
@@ -1085,32 +1085,32 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-property-label-case
+        id: dynamic-views-property-name-case
         title: Case
-        description: Text case transformation for property labels.
+        description: Text case transformation for property names.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-property-label-case-preserve
+        default: dynamic-views-property-name-case-preserve
         options:
             -
                 label: Preserve
-                value: dynamic-views-property-label-case-preserve
+                value: dynamic-views-property-name-case-preserve
             -
                 label: Lowercase
-                value: dynamic-views-property-label-case-lowercase
+                value: dynamic-views-property-name-case-lowercase
             -
                 label: Uppercase
-                value: dynamic-views-property-label-case-uppercase
+                value: dynamic-views-property-name-case-uppercase
     -
-        id: dynamic-views-property-label-bold
+        id: dynamic-views-property-name-bold
         title: Bold
-        description: Make property labels bold.
+        description: Make property names bold.
         type: class-toggle
         default: false
     -
-        id: dynamic-views-property-label-small-caps
+        id: dynamic-views-property-name-small-caps
         title: Small caps
-        description: Use small caps for property labels.
+        description: Use small caps for property names.
         type: class-toggle
         default: false
     -
@@ -1789,15 +1789,15 @@ body.dynamic-views-image-viewer-disabled
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-disabled']
   ~ .setting-item,
-body:not(.dynamic-views-property-color-with-labels-custom)
+body:not(.dynamic-views-property-color-with-names-custom)
   .style-settings-container
-  .setting-item[data-id='dynamic-views-property-color-with-labels-custom'],
-body:not(.dynamic-views-property-color-without-labels-custom)
+  .setting-item[data-id='dynamic-views-property-color-with-names-custom'],
+body:not(.dynamic-views-property-color-without-names-custom)
   .style-settings-container
-  .setting-item[data-id='dynamic-views-property-color-without-labels-custom'],
-body:not(.dynamic-views-property-label-color-custom)
+  .setting-item[data-id='dynamic-views-property-color-without-names-custom'],
+body:not(.dynamic-views-property-name-color-custom)
   .style-settings-container
-  .setting-item[data-id='dynamic-views-property-label-color-custom'],
+  .setting-item[data-id='dynamic-views-property-name-color-custom'],
 body.dynamic-views-slideshow-arrows-show
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-slideshow-indicator'],

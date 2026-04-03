@@ -39,7 +39,7 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 
 | Setting                     | Description                                                                            | Default                                   |
 | --------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Property labels             | How to display property names                                                          | Inline |
+| Property names              | How to display property names                                                          | Inline |
 | URL property                | Visible property to display as an 'Open URL' button (↗)                                        | None                                      |
 | Pair properties             | Display properties side-by-side                                                        | Off                                       |
 | Right property position     | Placement of the second property in a pair                                             | Right                                     |

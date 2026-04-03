@@ -64,18 +64,18 @@
 }
 
 @include color-setting(
-  'property-label-color',
-  $selector: ':is(.property-label, .property-label-inline)'
+  'property-name-color',
+  $selector: ':is(.property-name, .property-name-inline)'
 );
 @include color-setting(
-  'property-color-with-labels',
-  $var-stem: 'property-with-label-color',
-  $selector: '.property:is(.has-label, .has-label-inline)'
+  'property-color-with-names',
+  $var-stem: 'property-with-name-color',
+  $selector: '.property:is(.has-name, .has-name-inline)'
 );
 @include color-setting(
-  'property-color-without-labels',
-  $var-stem: 'property-no-label-color',
-  $selector: '.property:not(.has-label, .has-label-inline)'
+  'property-color-without-names',
+  $var-stem: 'property-no-name-color',
+  $selector: '.property:not(.has-name, .has-name-inline)'
 );
 @include color-setting('subtitle-color', $selector: '.card-subtitle');
 @include color-setting(
@@ -162,13 +162,13 @@
 @include hover-color-vars('title-color', 'title-color');
 @include hover-color-vars('subtitle-color', 'subtitle-color');
 @include hover-color-vars(
-  'property-color-with-labels',
-  'property-with-label-color',
-  $custom-hover-var: '--dynamic-views-property-color-with-labels-custom-hover'
+  'property-color-with-names',
+  'property-with-name-color',
+  $custom-hover-var: '--dynamic-views-property-color-with-names-custom-hover'
 );
 @include hover-color-vars(
-  'property-color-without-labels',
-  'property-no-label-color',
+  'property-color-without-names',
+  'property-no-name-color',
   $custom-hover-var:
-    '--dynamic-views-property-color-without-labels-custom-hover'
+    '--dynamic-views-property-color-without-names-custom-hover'
 );

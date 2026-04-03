@@ -74,15 +74,15 @@ describe('property-helpers', () => {
       );
     });
 
-    it("collapses empty string with hideEmptyMode='labels-hidden' when labels hidden", () => {
+    it("collapses empty string with hideEmptyMode='names-hidden' when names hidden", () => {
       expect(
-        shouldCollapseField('', 'title', false, 'labels-hidden', 'hide')
+        shouldCollapseField('', 'title', false, 'names-hidden', 'hide')
       ).toBe(true);
     });
 
-    it("does not collapse empty string with hideEmptyMode='labels-hidden' when labels visible", () => {
+    it("does not collapse empty string with hideEmptyMode='names-hidden' when names visible", () => {
       expect(
-        shouldCollapseField('', 'title', false, 'labels-hidden', 'inline')
+        shouldCollapseField('', 'title', false, 'names-hidden', 'inline')
       ).toBe(false);
     });
 

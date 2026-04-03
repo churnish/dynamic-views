@@ -24,7 +24,7 @@ vi.mock('../../src/constants', () => ({
     imagePosition: 'right',
     imageFit: 'crop',
     imageRatio: 1.0,
-    propertyLabels: 'hide',
+    propertyNames: 'hide',
     pairProperties: false,
     rightPropertyPosition: 'right',
     invertPropertyPairing: '',
@@ -37,7 +37,7 @@ vi.mock('../../src/constants', () => ({
   BASES_DEFAULTS: {
     displayFirstAsTitle: true,
     displaySecondAsSubtitle: false,
-    propertyLabels: 'inline',
+    propertyNames: 'inline',
   },
   DATACORE_DEFAULTS: {},
 }));
@@ -68,7 +68,7 @@ const MOCK_VIEW_DEFAULTS: any = {
   imagePosition: 'right',
   imageFit: 'crop',
   imageRatio: 1.0,
-  propertyLabels: 'hide',
+  propertyNames: 'hide',
   pairProperties: false,
   rightPropertyPosition: 'right',
   invertPropertyPairing: '',
@@ -242,16 +242,16 @@ describe('readBasesSettings — templateOverrides', () => {
       MOCK_PLUGIN_SETTINGS,
       'grid',
       undefined,
-      { propertyLabels: 'above' }
+      { propertyNames: 'above' }
     );
-    expect(result.propertyLabels).toBe('above');
+    expect(result.propertyNames).toBe('above');
   });
 });
 
 describe('extractBasesTemplate', () => {
-  // VIEW_DEFAULTS from mock: cardSize=300, displayFirstAsTitle=false, propertyLabels="hide"
-  // BASES_DEFAULTS from mock: displayFirstAsTitle=true, propertyLabels="inline"
-  // mergedDefaults: cardSize=300, displayFirstAsTitle=true, propertyLabels="inline"
+  // VIEW_DEFAULTS from mock: cardSize=300, displayFirstAsTitle=false, propertyNames="hide"
+  // BASES_DEFAULTS from mock: displayFirstAsTitle=true, propertyNames="inline"
+  // mergedDefaults: cardSize=300, displayFirstAsTitle=true, propertyNames="inline"
 
   it('should return only non-default values (sparse)', () => {
     const config = createMockConfig({ cardSize: 400 }, []);
@@ -326,12 +326,12 @@ describe('readBasesSettings — getValidEnum branches', () => {
     expect(result.imageFormat).toBe('backdrop');
   });
 
-  it('should return previousValue for propertyLabels with invalid config', () => {
-    const config = createMockConfig({ propertyLabels: 'bogus' }, []);
+  it('should return previousValue for propertyNames with invalid config', () => {
+    const config = createMockConfig({ propertyNames: 'bogus' }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS, 'grid', {
-      propertyLabels: 'above',
+      propertyNames: 'above',
     });
-    expect(result.propertyLabels).toBe('above');
+    expect(result.propertyNames).toBe('above');
   });
 
   it('should return default for enum field without previousValue path', () => {

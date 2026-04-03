@@ -53,32 +53,32 @@
     color: var(--dynamic-views-subtitle-color-hover-color);
   }
 
-  /* Property hover — with labels */
-  body[class*='dynamic-views-property-color-with-labels-']
+  /* Property hover — with names */
+  body[class*='dynamic-views-property-color-with-names-']
     .dynamic-views
     .card.hover-intent-active
-    .property:is(.has-label, .has-label-inline)
+    .property:is(.has-name, .has-name-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--dynamic-views-property-with-label-color-hover-color);
+    color: var(--dynamic-views-property-with-name-color-hover-color);
   }
 
-  /* Property hover — without labels */
-  body[class*='dynamic-views-property-color-without-labels-']
+  /* Property hover — without names */
+  body[class*='dynamic-views-property-color-without-names-']
     .dynamic-views
     .card.hover-intent-active
-    .property:not(.has-label, .has-label-inline)
+    .property:not(.has-name, .has-name-inline)
     .property-content
     :is(
       a:not(.tag):not(.internal-link):not(.external-link),
       .folder-segment,
       .filename-segment
     ):hover {
-    color: var(--dynamic-views-property-no-label-color-hover-color);
+    color: var(--dynamic-views-property-no-name-color-hover-color);
   }
 
   /* Poster hover mode: apply title hover color on :hover (not hover-intent) so

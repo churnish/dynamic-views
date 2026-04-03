@@ -246,18 +246,18 @@ export function measureSideBySideSet(
 
       // Measure inline labels if present
       const inlineLabel1 = field1.querySelector(
-        '.property-label-inline'
+        '.property-name-inline'
       ) as HTMLElement;
       const inlineLabel2 = field2.querySelector(
-        '.property-label-inline'
+        '.property-name-inline'
       ) as HTMLElement;
 
       // Measure above labels if present (need max of label vs content width)
       const aboveLabel1 = field1.querySelector(
-        '.property-label'
+        '.property-name'
       ) as HTMLElement;
       const aboveLabel2 = field2.querySelector(
-        '.property-label'
+        '.property-name'
       ) as HTMLElement;
 
       // Total width = content width + inline label width + gap (if inline label exists)
@@ -343,7 +343,7 @@ export function measureSideBySideSet(
 
 /**
  * Resets measurement state and re-measures all side-by-side sets in a container.
- * Called when property label mode changes — low frequency, bounded card count
+ * Called when property name mode changes — low frequency, bounded card count
  * due to virtual scrolling.
  */
 export function remeasurePropertyFields(container: HTMLElement): void {

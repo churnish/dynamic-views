@@ -6,7 +6,7 @@ import {
   getFirstDatacoreDatePropertyValue,
   getAllBasesImagePropertyValues,
   getAllDatacoreImagePropertyValues,
-  getPropertyLabel,
+  getPropertyDisplayName,
   getAllVaultProperties,
   stripNotePrefix,
   isSameProperty,
@@ -443,50 +443,50 @@ describe('property', () => {
     });
   });
 
-  describe('getPropertyLabel', () => {
+  describe('getPropertyDisplayName', () => {
     it('should return empty string for empty input', () => {
-      expect(getPropertyLabel('')).toBe('');
+      expect(getPropertyDisplayName('')).toBe('');
     });
 
     it('should map file.path to "file path"', () => {
-      expect(getPropertyLabel('file.path')).toBe('file path');
-      expect(getPropertyLabel('path')).toBe('file path');
+      expect(getPropertyDisplayName('file.path')).toBe('file path');
+      expect(getPropertyDisplayName('path')).toBe('file path');
     });
 
     it('should map file.tags to "file tags"', () => {
-      expect(getPropertyLabel('file.tags')).toBe('file tags');
+      expect(getPropertyDisplayName('file.tags')).toBe('file tags');
     });
 
     it('should map ctime/mtime to human-readable names', () => {
-      expect(getPropertyLabel('file.ctime')).toBe('created time');
-      expect(getPropertyLabel('file.mtime')).toBe('modified time');
+      expect(getPropertyDisplayName('file.ctime')).toBe('created time');
+      expect(getPropertyDisplayName('file.mtime')).toBe('modified time');
     });
 
     it('should handle case-insensitive mapping', () => {
-      expect(getPropertyLabel('FILE.PATH')).toBe('file path');
-      expect(getPropertyLabel('File.Tags')).toBe('file tags');
+      expect(getPropertyDisplayName('FILE.PATH')).toBe('file path');
+      expect(getPropertyDisplayName('File.Tags')).toBe('file tags');
     });
 
     it('should strip note. prefix', () => {
-      expect(getPropertyLabel('note.customProp')).toBe('customProp');
-      expect(getPropertyLabel('note.title')).toBe('title');
+      expect(getPropertyDisplayName('note.customProp')).toBe('customProp');
+      expect(getPropertyDisplayName('note.title')).toBe('title');
     });
 
     it('should strip formula. prefix', () => {
-      expect(getPropertyLabel('formula.myCalc')).toBe('myCalc');
+      expect(getPropertyDisplayName('formula.myCalc')).toBe('myCalc');
     });
 
     it('should preserve custom property names as-is', () => {
-      expect(getPropertyLabel('MyCustomProperty')).toBe('MyCustomProperty');
-      expect(getPropertyLabel('some_property')).toBe('some_property');
+      expect(getPropertyDisplayName('MyCustomProperty')).toBe('MyCustomProperty');
+      expect(getPropertyDisplayName('some_property')).toBe('some_property');
     });
 
     it('should map all file properties correctly', () => {
-      expect(getPropertyLabel('file.name')).toBe('file name');
-      expect(getPropertyLabel('file.basename')).toBe('file base name');
-      expect(getPropertyLabel('file.extension')).toBe('file extension');
-      expect(getPropertyLabel('file.size')).toBe('file size');
-      expect(getPropertyLabel('folder')).toBe('folder');
+      expect(getPropertyDisplayName('file.name')).toBe('file name');
+      expect(getPropertyDisplayName('file.basename')).toBe('file base name');
+      expect(getPropertyDisplayName('file.extension')).toBe('file extension');
+      expect(getPropertyDisplayName('file.size')).toBe('file size');
+      expect(getPropertyDisplayName('folder')).toBe('folder');
     });
 
     it('should use displayNameMap when provided', () => {
@@ -495,11 +495,11 @@ describe('property', () => {
         'file.name': 'filename123',
         'note.prop123': 'display-name',
       };
-      expect(getPropertyLabel('formula.Untitled', displayNameMap)).toBe(
+      expect(getPropertyDisplayName('formula.Untitled', displayNameMap)).toBe(
         'smile more'
       );
-      expect(getPropertyLabel('file.name', displayNameMap)).toBe('filename123');
-      expect(getPropertyLabel('note.prop123', displayNameMap)).toBe(
+      expect(getPropertyDisplayName('file.name', displayNameMap)).toBe('filename123');
+      expect(getPropertyDisplayName('note.prop123', displayNameMap)).toBe(
         'display-name'
       );
     });
@@ -507,14 +507,14 @@ describe('property', () => {
     it('should fall back to default behavior when property not in displayNameMap', () => {
       const displayNameMap = { 'formula.Untitled': 'smile more' };
       // file.path not in map → falls back to PROPERTY_LABEL_MAP
-      expect(getPropertyLabel('file.path', displayNameMap)).toBe('file path');
+      expect(getPropertyDisplayName('file.path', displayNameMap)).toBe('file path');
       // note.title not in map → falls back to prefix stripping
-      expect(getPropertyLabel('note.title', displayNameMap)).toBe('title');
+      expect(getPropertyDisplayName('note.title', displayNameMap)).toBe('title');
     });
 
     it('should fall back to default behavior when displayNameMap is undefined', () => {
-      expect(getPropertyLabel('formula.Untitled', undefined)).toBe('Untitled');
-      expect(getPropertyLabel('file.name', undefined)).toBe('file name');
+      expect(getPropertyDisplayName('formula.Untitled', undefined)).toBe('Untitled');
+      expect(getPropertyDisplayName('file.name', undefined)).toBe('file name');
     });
   });
 

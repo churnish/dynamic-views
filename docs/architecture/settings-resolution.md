@@ -54,7 +54,7 @@ Per-view visual settings shared across both backends. 26 fields covering card si
 | `subtitleProperty`        | `string`                        | `'file.folder'` | Overridden by `DATACORE_DEFAULTS` (`''`) and position-based derivation (Bases)      |
 | `displayFirstAsTitle`     | `boolean`                       | `false`         | Overridden by `BASES_DEFAULTS` (`true`). No-op for Datacore                         |
 | `displaySecondAsSubtitle` | `boolean`                       | `false`         | Overridden by `BASES_DEFAULTS` (`false`). No-op for Datacore                        |
-| `propertyLabels`          | `'hide' \| 'inline' \| 'above'` | `'hide'`        | Overridden by `BASES_DEFAULTS` (`'inline'`). Has stale config guard                 |
+| `propertyNames`           | `'hide' \| 'inline' \| 'above'` | `'hide'`        | Overridden by `BASES_DEFAULTS` (`'inline'`). Has stale config guard                 |
 | `minimumColumns`          | `1 \| 2`                        | `1`             | Masonry default is `2` (view-type-specific, not in `BASES_DEFAULTS`)                |
 | `imageFormat`             | enum                            | `'thumbnail'`   | Has stale config guard                                                              |
 
@@ -78,7 +78,7 @@ Bases-only overrides that shadow `ViewDefaults` fields.
 | ------------------------- | ------------------------------- | ---------- | -------------------------------------- |
 | `displayFirstAsTitle`     | `boolean`                       | `true`     | `ViewDefaults.displayFirstAsTitle`     |
 | `displaySecondAsSubtitle` | `boolean`                       | `false`    | `ViewDefaults.displaySecondAsSubtitle` |
-| `propertyLabels`          | `'hide' \| 'inline' \| 'above'` | `'inline'` | `ViewDefaults.propertyLabels`          |
+| `propertyNames`           | `'hide' \| 'inline' \| 'above'` | `'inline'` | `ViewDefaults.propertyNames`           |
 
 ### Resolved types
 
@@ -212,7 +212,7 @@ Obsidian fires duplicate `onDataUpdated()` callbacks ~150-200ms after the correc
 | Field            | Guard behavior                                                                                                                                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `imageFormat`    | Validate against `'thumbnail' \| 'cover' \| 'poster' \| 'backdrop'`. If invalid: fall back to `previousSettings.imageFormat`, then to `defaults.imageFormat`. |
-| `propertyLabels` | Validate against `'hide' \| 'inline' \| 'above'`. If invalid: fall back to `previousSettings.propertyLabels`, then to `defaults.propertyLabels`.              |
+| `propertyNames`  | Validate against `'hide' \| 'inline' \| 'above'`. If invalid: fall back to `previousSettings.propertyNames`, then to `defaults.propertyNames`.                 |
 
 The `previousSettings` parameter is passed from the view class — it stores the last successfully resolved settings. Without these guards, stale config would revert user settings to defaults on every duplicate callback.
 
@@ -298,7 +298,7 @@ Invalid enum values are reset to the first valid value from `VALID_VIEW_VALUES`.
 4. **`DATACORE_DEFAULTS` overrides `VIEW_DEFAULTS`** for `titleProperty` (`'$name'` over `'file.name'`), `subtitleProperty` (`''` over `'file.folder'`), and `pairProperties` (`true` over `false`) via spread order in `resolveSettings()`.
 5. **`BASES_DEFAULTS.displayFirstAsTitle = true`** overrides `VIEW_DEFAULTS.displayFirstAsTitle = false`. This is the primary behavioral difference between backends — Bases derives title from property order by default.
 6. **Per-query Datacore state is isolated by `QUERY_ID`.** Each code block instance has its own persisted settings and UI state.
-7. **Stale config guards prevent reverts from duplicate callbacks.** `imageFormat` and `propertyLabels` fall back to `previousSettings` when config returns invalid values.
+7. **Stale config guards prevent reverts from duplicate callbacks.** `imageFormat` and `propertyNames` fall back to `previousSettings` when config returns invalid values.
 8. **`minimumColumns` requires coercion at every boundary.** Bases YAML stores `"one"`/`"two"` strings; internal types use `1 | 2` numbers. Masonry defaults to `2`, Grid to `1`. All sites use `getMinimumColumnsDefault(viewType)` as single source of truth.
 9. **Sparse storage ensures new defaults propagate.** Only non-default values are persisted, so adding a new default or changing an existing one automatically applies to all users who haven't overridden it.
 10. **Template cleanup runs on every plugin load.** Stale keys, wrong types, and invalid enum values are removed from templates before use.

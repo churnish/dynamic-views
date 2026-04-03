@@ -839,7 +839,7 @@ export function View({
       imageProperty: settings.imageProperty,
       subtitleProperty: settings.subtitleProperty,
       urlProperty: settings.urlProperty,
-      propertyLabels: settings.propertyLabels,
+      propertyNames: settings.propertyNames,
       imageFormat: settings.imageFormat,
       posterDisplayMode: settings.posterDisplayMode,
       imagePosition: settings.imagePosition,
@@ -856,7 +856,7 @@ export function View({
         imageProperty: settings.imageProperty,
         subtitleProperty: settings.subtitleProperty,
         urlProperty: settings.urlProperty,
-        propertyLabels: settings.propertyLabels,
+        propertyNames: settings.propertyNames,
         imageFormat: settings.imageFormat,
         posterDisplayMode: settings.posterDisplayMode,
         imagePosition: settings.imagePosition,
@@ -2098,7 +2098,7 @@ export function View({
         remeasurePropertyFields(container);
       });
     });
-  }, [settings.propertyLabels, viewMode, settings.cardSize]);
+  }, [settings.propertyNames, viewMode, settings.cardSize]);
 
   // Copy menu item for Toolbar
 

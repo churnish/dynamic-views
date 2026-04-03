@@ -72,7 +72,7 @@ export function Settings({
         imageProperty: settings.imageProperty,
         urlProperty: settings.urlProperty,
         subtitleProperty: settings.subtitleProperty,
-        propertyLabels: settings.propertyLabels,
+        propertyNames: settings.propertyNames,
         fallbackToContent: settings.fallbackToContent,
         fallbackToEmbeds: settings.fallbackToEmbeds,
         imageFormat: settings.imageFormat,
@@ -505,14 +505,14 @@ export function Settings({
         >
           <div className="setting-item setting-item-dropdown">
             <div className="setting-item-info">
-              <label>Property labels</label>
+              <label>Property names</label>
             </div>
             <select
-              value={settings.propertyLabels}
+              value={settings.propertyNames}
               onChange={(e: unknown) => {
                 const evt = e as Event & { target: HTMLSelectElement };
                 onSettingsChange({
-                  propertyLabels: evt.target.value as
+                  propertyNames: evt.target.value as
                     | 'hide'
                     | 'inline'
                     | 'above',

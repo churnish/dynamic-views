@@ -15,7 +15,7 @@ export const VALID_VIEW_VALUES: Partial<
   posterDisplayMode: ['fade', 'overlay'],
   imagePosition: ['left', 'right', 'top', 'bottom'],
   imageFit: ['crop', 'contain'],
-  propertyLabels: ['hide', 'inline', 'above'],
+  propertyNames: ['hide', 'inline', 'above'],
   rightPropertyPosition: ['left', 'column', 'right'],
   minimumColumns: ['one', 'two'],
 };

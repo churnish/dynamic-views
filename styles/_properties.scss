@@ -78,7 +78,7 @@
   }
 
   /* Compact: reset right-mode alignment for left/column modes — right mode keeps
-     right-alignment at all widths. Order reversal (value-then-label) is kept
+     right-alignment at all widths. Order reversal (value-then-name) is kept
      for side-by-side pairs but reset in compact-stacked below. */
   &:not(.dynamic-views-paired-property-right)
     .card.compact-mode
@@ -97,7 +97,7 @@
     .card.compact-mode
     .property-pair
     .pair-right
-    .property-label {
+    .property-name {
     text-align: left;
   }
 
@@ -109,9 +109,9 @@
     gap: var(--size-2-2);
   }
 
-  /* Stacked: reset right-mode order reversal — in vertical stack, label-then-value
+  /* Stacked: reset right-mode order reversal — in vertical stack, name-then-value
      is the natural reading order (order reversal only makes sense side-by-side). */
-  .card.compact-stacked .property-pair .pair-right .property-label-inline {
+  .card.compact-stacked .property-pair .pair-right .property-name-inline {
     order: 0;
   }
 
@@ -126,8 +126,8 @@
     justify-content: flex-start;
   }
 
-  .card.compact-stacked .property-pair .pair-right .property-label,
-  .card.compact-stacked .property-pair .pair-right .property-label-inline {
+  .card.compact-stacked .property-pair .pair-right .property-name,
+  .card.compact-stacked .property-pair .pair-right .property-name-inline {
     text-align: left;
   }
 
@@ -150,20 +150,20 @@
     display: none;
   }
 
-  /* Gap between inline property label and content */
-  .property.has-label-inline {
+  /* Gap between inline property name and content */
+  .property.has-name-inline {
     gap: var(--size-2-2);
   }
 
-  /* Vertical layout when property labels are on top */
-  .property.has-label {
+  /* Vertical layout when property names are on top */
+  .property.has-name {
     flex-direction: column;
     align-items: stretch;
-    overflow-x: visible; /* Override overflow - labels should not scroll */
+    overflow-x: visible; /* Override overflow - names should not scroll */
   }
 
-  /* Property labels should never scroll */
-  .property.has-label .property-label {
+  /* Property names should never scroll */
+  .property.has-name .property-name {
     flex-shrink: 0;
     overflow: visible;
   }
@@ -181,15 +181,15 @@
     display: none;
   }
 
-  /* For inline labels: wrapper takes remaining space after label */
-  .property.has-label-inline .property-content-wrapper {
+  /* For inline names: wrapper takes remaining space after name */
+  .property.has-name-inline .property-content-wrapper {
     flex: 1 1 0;
     min-width: 0;
   }
 
-  /* For property labels above or no property labels: wrapper takes full width */
-  .property.has-label .property-content-wrapper,
-  .property:not(.has-label):not(.has-label-inline) .property-content-wrapper {
+  /* For property names above or no property names: wrapper takes full width */
+  .property.has-name .property-content-wrapper,
+  .property:not(.has-name):not(.has-name-inline) .property-content-wrapper {
     width: 100%;
   }
 
@@ -198,7 +198,7 @@
     width: auto !important;
     max-width: none !important;
     overflow-x: visible !important;
-    flex: 0 1 auto !important; /* Override flex: 1 1 0 from inline label mode to allow natural sizing */
+    flex: 0 1 auto !important; /* Override flex: 1 1 0 from inline name mode to allow natural sizing */
   }
 
   /* During measurement: fields shouldn't constrain content */
@@ -278,26 +278,26 @@
     min-width: 0;
   }
 
-  /* Property label (above mode) */
-  .property-label {
+  /* Property name (above mode) */
+  .property-name {
     font-size: var(
-      --dynamic-views-property-label-font-size,
+      --dynamic-views-property-name-font-size,
       var(--dynamic-views-font-ui-smaller)
     );
-    font-family: var(--dynamic-views-property-label-font, inherit);
+    font-family: var(--dynamic-views-property-name-font, inherit);
     color: var(--dynamic-views-text-faint);
     margin-bottom: var(--size-2-1);
     white-space: nowrap;
     text-overflow: ellipsis;
   }
 
-  /* Property label inline - as sibling of property-content */
-  .property-label-inline {
+  /* Property name inline - as sibling of property-content */
+  .property-name-inline {
     font-size: var(
-      --dynamic-views-property-label-font-size,
+      --dynamic-views-property-name-font-size,
       var(--dynamic-views-font-ui-smaller)
     );
-    font-family: var(--dynamic-views-property-label-font, inherit);
+    font-family: var(--dynamic-views-property-name-font, inherit);
     color: var(--dynamic-views-text-faint);
     white-space: nowrap;
     flex-shrink: 0;
@@ -308,26 +308,26 @@
     align-items: center;
   }
 
-  /* Property label color application */
-  :is(.property-label, .property-label-inline) {
+  /* Property name color application */
+  :is(.property-name, .property-name-inline) {
     color: var(
-      --dynamic-views-property-label-color-value,
+      --dynamic-views-property-name-color-value,
       var(--dynamic-views-text-faint)
     );
   }
 
-  /* Property text color application - with labels */
-  .property:is(.has-label, .has-label-inline) {
+  /* Property text color application - with names */
+  .property:is(.has-name, .has-name-inline) {
     color: var(
-      --dynamic-views-property-with-label-color-value,
+      --dynamic-views-property-with-name-color-value,
       var(--dynamic-views-text-muted)
     );
   }
 
-  /* Property text color application - without labels */
-  .property:not(.has-label, .has-label-inline) {
+  /* Property text color application - without names */
+  .property:not(.has-name, .has-name-inline) {
     color: var(
-      --dynamic-views-property-no-label-color-value,
+      --dynamic-views-property-no-name-color-value,
       var(--dynamic-views-text-faint)
     );
   }
@@ -385,42 +385,42 @@
   }
 }
 
-/* Right alignment for full-row properties with inline labels - value only */
+/* Right alignment for full-row properties with inline names - value only */
 body.dynamic-views-full-row-align-right
   .dynamic-views
   .card-properties
-  > .property.has-label-inline
+  > .property.has-name-inline
   .property-content-wrapper {
   flex: 0 1 auto;
   margin-left: auto;
 }
 
-/* Property label case transformations */
-body.dynamic-views-property-label-case-lowercase .dynamic-views .property-label,
-body.dynamic-views-property-label-case-lowercase
+/* Property name case transformations */
+body.dynamic-views-property-name-case-lowercase .dynamic-views .property-name,
+body.dynamic-views-property-name-case-lowercase
   .dynamic-views
-  .property-label-inline {
+  .property-name-inline {
   text-transform: lowercase;
 }
 
-body.dynamic-views-property-label-case-uppercase .dynamic-views .property-label,
-body.dynamic-views-property-label-case-uppercase
+body.dynamic-views-property-name-case-uppercase .dynamic-views .property-name,
+body.dynamic-views-property-name-case-uppercase
   .dynamic-views
-  .property-label-inline {
+  .property-name-inline {
   text-transform: uppercase;
 }
 
-/* Property label bold */
-body.dynamic-views-property-label-bold .dynamic-views .property-label,
-body.dynamic-views-property-label-bold .dynamic-views .property-label-inline {
+/* Property name bold */
+body.dynamic-views-property-name-bold .dynamic-views .property-name,
+body.dynamic-views-property-name-bold .dynamic-views .property-name-inline {
   font-weight: var(--dynamic-views-font-semibold);
 }
 
-/* Property label small caps */
-body.dynamic-views-property-label-small-caps .dynamic-views .property-label,
-body.dynamic-views-property-label-small-caps
+/* Property name small caps */
+body.dynamic-views-property-name-small-caps .dynamic-views .property-name,
+body.dynamic-views-property-name-small-caps
   .dynamic-views
-  .property-label-inline {
+  .property-name-inline {
   font-variant: small-caps;
 }
 
@@ -551,23 +551,23 @@ body.dynamic-views-property-label-small-caps
 
 /* Paired property layout */
 .dynamic-views {
-  /* Even fields (right side) - label after content */
-  .property-pair .pair-right .property-label-inline {
+  /* Even fields (right side) - name after content */
+  .property-pair .pair-right .property-name-inline {
     order: 2;
   }
 
-  /* Even fields (right side) - content before label */
+  /* Even fields (right side) - content before name */
   .property-pair .pair-right .property-content {
     order: 1;
   }
 
-  /* Odd fields (left side) - left-aligned labels */
-  .property-pair .pair-left .property-label {
+  /* Odd fields (left side) - left-aligned names */
+  .property-pair .pair-left .property-name {
     text-align: left;
   }
 
-  /* Even fields (right side) - right-aligned labels */
-  .property-pair .pair-right .property-label {
+  /* Even fields (right side) - right-aligned names */
+  .property-pair .pair-right .property-name {
     text-align: right;
   }
 
@@ -670,18 +670,18 @@ body.dynamic-views-property-label-small-caps
     )
     .property-pair
     .pair-right
-    .property-label {
+    .property-name {
     text-align: left;
   }
 
-  /* Reset inline property label order to place label before content */
+  /* Reset inline property name order to place name before content */
   &:is(
       .dynamic-views-paired-property-left,
       .dynamic-views-paired-property-column
     )
     .property-pair
     .pair-right
-    .property-label-inline {
+    .property-name-inline {
     order: 0;
   }
 
