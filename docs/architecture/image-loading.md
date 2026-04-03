@@ -2,7 +2,7 @@
 title: Image loading and caching pipeline
 description: Image URL resolution, two-tier dedup cache, broken URL tracking, aspect ratio caching, and load handler wiring for both backends.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-06
+updated: 2026-04-03
 ---
 # Image loading and caching pipeline
 
@@ -226,7 +226,7 @@ Called when all card images fail to load at runtime. First unconditionally adds 
 8. Embed paths deduplicated -- no image loaded twice even if referenced multiple ways
 9. `image-ready` class is the single source of truth for "image processing complete" -- both success and error paths set it
 10. Broken URL set is session-scoped and never persisted -- avoids stale entries across restarts
-11. `skip-image-fade` (card-level, persistent on remount) MUST NOT use `transition: none` -- it kills hover zoom `transform` transitions. `opacity: 1 !important` alone is sufficient because `skip-image-fade` + `image-ready` are always added in the same JS frame (no 0→1 change to animate). `skip-cover-fade` (container-level, transient during shuffle) MAY use `transition: none` because it's removed before hover interaction occurs
+11. `skip-image-fade` (card-level, set inside `renderCard` before image handlers run) makes `handleImageLoad` add `image-ready` synchronously instead of deferring via double-rAF -- prevents re-fade on virtual scroll remount. `skip-cover-fade` (container-level, transient during shuffle) uses `transition: none !important` + `opacity: 1 !important` to suppress ALL image transitions during rearrange
 
 ## Reactive image updates (Bases)
 

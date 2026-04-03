@@ -1,8 +1,8 @@
 ---
 title: Electron CSS quirks
-description: Blink/Electron CSS rendering quirks affecting selectors, text truncation, overflow clipping, and container queries.
+description: Blink/Electron CSS rendering quirks affecting selectors, text truncation, overflow clipping, container queries, and GPU compositing.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-12
+updated: 2026-04-03
 ---
 # Electron CSS quirks
 
@@ -167,6 +167,50 @@ JS `IntersectionObserver` + zero-height sentinel approach. A sentinel div at eac
 ### Files
 
 - [src/bases/sticky-heading.ts](../../src/bases/sticky-heading.ts) — Sentinel IO observer
+
+## `opacity` transitions trigger GPU compositing → grayscale antialiasing
+
+**Discovered**: 2026-04-02.
+
+When an element has an active `opacity` transition (even a brief 70ms one), the browser promotes it to a GPU compositing layer. Compositing layers use grayscale antialiasing instead of subpixel, making text appear blurred for the transition duration. This is most visible on the first paint of text-heavy elements.
+
+The problem compounds when many invisible elements stack at the same position. Even with `opacity: 0` (no visible output), the browser still *paints* each element into its compositing layer. With 170+ masonry cards stacked at `(0,0)` before positioning, the compositor overhead from painting transparent layers affected text rendering of nearby visible elements.
+
+### Fix
+
+1. **Remove `opacity` from `transition` shorthand** — use CSS `@keyframes` animation for intentional fades instead. Animations override transitions in the cascade, so a `card-fade-in` animation plays correctly even without opacity in the transition list.
+2. **Add `visibility: hidden` to invisible elements** — unlike `opacity: 0` (paints but transparent), `visibility: hidden` prevents painting entirely. Safe for measurement — `offsetHeight` works correctly, unlike `display: none`.
+
+```scss
+// Wrong: opacity transition triggers GPU compositing on every state change
+.card.positioned {
+  transition: opacity 70ms ease, top 200ms ease, left 200ms ease;
+}
+
+// Right: no opacity in transition, use animation for intentional fade
+.card.positioned {
+  transition: top 200ms ease, left 200ms ease;
+}
+.card.card-fade-in {
+  animation: cardFadeIn 300ms ease-out;
+}
+
+// Wrong: invisible cards still painted into compositor layers
+.card:not(.positioned) {
+  opacity: 0;
+}
+
+// Right: prevents painting entirely
+.card:not(.positioned) {
+  opacity: 0;
+  visibility: hidden;
+}
+```
+
+### Affected files
+
+- [styles/_masonry-view.scss](../../styles/_masonry-view.scss) — `.card.masonry-positioned` transition, `.card:not(.masonry-positioned)` visibility
+- [styles/card/_core.scss](../../styles/card/_core.scss) — `.card.card-fade-in` animation
 - [styles/_grid-masonry-shared.scss](../../styles/_grid-masonry-shared.scss) — `.stuck` z-index rule, sentinel CSS, `@container` border rule
 
 ## `-webkit-line-clamp` ignores block margins
