@@ -38,7 +38,7 @@ body {
   /* Animation */
   --dynamic-views-anim-duration-superfast: var(--anim-duration-superfast, 70ms);
   --dynamic-views-anim-duration-fast: var(--anim-duration-fast, 140ms);
-  --dynamic-views-anim-duration-moderate: 5s;
+  --dynamic-views-anim-duration-moderate: var(--anim-duration-moderate, 300ms);
 
   /* Shadows */
   --dynamic-views-shadow-xs: var(

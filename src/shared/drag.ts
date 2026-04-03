@@ -80,6 +80,7 @@ export function createUrlButtonDragHandlers(
   onTouchStart: () => void;
 } {
   let cleanedUp = false;
+  let pointerEventsSet = false;
   const cleanup = () => {
     if (cleanedUp) return;
     cleanedUp = true;
@@ -153,8 +154,6 @@ export function createUrlButtonDragHandlers(
     );
   });
 
-  let pointerEventsSet = false;
-
   return {
     onDragStart: (e) => {
       cleanedUp = false;
@@ -170,7 +169,7 @@ export function createUrlButtonDragHandlers(
       card?.classList.remove('hover-intent-active');
       // Defer poster-hover-active removal and icon pointer-events —
       // synchronous removal sets pointer-events: none on .card-content,
-      // aborting the drag. Deferred runs after drag subsystem takes over.
+      // aborting the drag. Deferred runs after drag system takes over.
       setTimeout(() => {
         card?.classList.remove('poster-hover-active');
         iconEl.setCssStyles({ pointerEvents: 'none' });

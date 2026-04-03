@@ -869,7 +869,9 @@ function renderProperty(
 
   const labelAbove =
     settings.propertyNames === 'above' ? (
-      <div className="property-name">{getPropertyDisplayName(propertyName)}</div>
+      <div className="property-name">
+        {getPropertyDisplayName(propertyName)}
+      </div>
     ) : null;
 
   // Render inline label if enabled (as sibling, before property-content)

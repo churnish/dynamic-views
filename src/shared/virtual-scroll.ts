@@ -43,6 +43,8 @@ export interface VirtualItem {
   groupKey: string | undefined;
   /** Cached compact-stacked state — persists across virtual scroll mount/unmount to avoid forced layout from wrapping detection during momentum scroll */
   compactStacked: boolean;
+  /** True after the card has been mounted at least once (distinguishes remount from first mount) */
+  hasBeenMounted: boolean;
   /** DOM element when mounted, null when unmounted */
   el: HTMLElement | null;
   /** Cleanup handle when mounted, null when unmounted */

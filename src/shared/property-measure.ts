@@ -253,12 +253,8 @@ export function measureSideBySideSet(
       ) as HTMLElement;
 
       // Measure above labels if present (need max of label vs content width)
-      const aboveLabel1 = field1.querySelector(
-        '.property-name'
-      ) as HTMLElement;
-      const aboveLabel2 = field2.querySelector(
-        '.property-name'
-      ) as HTMLElement;
+      const aboveLabel1 = field1.querySelector('.property-name') as HTMLElement;
+      const aboveLabel2 = field2.querySelector('.property-name') as HTMLElement;
 
       // Total width = content width + inline label width + gap (if inline label exists)
       let width1 = content1.scrollWidth;

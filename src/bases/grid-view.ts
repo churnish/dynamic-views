@@ -1802,7 +1802,7 @@ export class DynamicViewsGridView extends BasesView {
     entry: BasesEntry,
     index: number,
     settings: BasesResolvedSettings,
-    skipImageFade = false
+    renderOptions?: { skipImageFade?: boolean }
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
       container,
@@ -1825,7 +1825,7 @@ export class DynamicViewsGridView extends BasesView {
         getVirtualRects: () => this.getVirtualRects(),
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
       },
-      skipImageFade ? { skipImageFade } : undefined
+      renderOptions
     );
     // Caller is responsible for cardResizeObserver.observe() —
     // mountVirtualItem, appendBatch, expandGroup, and content update
@@ -2586,7 +2586,7 @@ export class DynamicViewsGridView extends BasesView {
       item.entry,
       item.index,
       settings,
-      item.hasBeenMounted // skipImageFade on remount
+      item.hasBeenMounted ? { skipImageFade: true } : undefined
     );
 
     const isRemount = item.hasBeenMounted;

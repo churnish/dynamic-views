@@ -162,7 +162,7 @@ export class FullScreenController {
   private readonly onScrollBound: () => void;
   private readonly onTouchStartBound: (e: TouchEvent) => void;
   private readonly onTouchEndBound: (e: TouchEvent) => void;
-  private readonly onHeaderTapBound: () => void;
+  private readonly onHeaderTapBound: (e: TouchEvent) => void;
 
   // WAAPI animation handles (Android) — cancel before starting new ones.
   // Array instead of named fields — per-property animations (transform vs
@@ -177,6 +177,9 @@ export class FullScreenController {
   private bridgeOverlayHost: HTMLElement | null = null;
   private bridgeOverlayLane: HTMLElement | null = null;
   private bridgeOverlaySource: HTMLElement | null = null;
+  // Cached scroll container rect — stable during bridge phase, avoids per-scroll-frame BCR read in syncBridgeOverlay.
+  private bridgeScrollLeft = 0;
+  private bridgeScrollWidth = 0;
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
@@ -225,7 +228,7 @@ export class FullScreenController {
     this.onScrollBound = (): void => this.onScroll();
     this.onTouchStartBound = (e: TouchEvent): void => this.onTouchStart(e);
     this.onTouchEndBound = (e: TouchEvent): void => this.onTouchEnd(e);
-    this.onHeaderTapBound = (): void => this.onHeaderTap();
+    this.onHeaderTapBound = (e: TouchEvent): void => this.onHeaderTap(e);
   }
 
   /** Idempotent — no-op if already mounted */
@@ -597,11 +600,17 @@ export class FullScreenController {
    *  anchorTop: heading screen Y captured before applyShowInlines shifts
    *  the scrollport. Constant through the entire bridge lifecycle. */
   private captureBridgeOverlay(snapshot: BridgeOverlaySnapshot): boolean {
+    // Safety reset: re-entry possible if a new show cycle starts while a prior bridge overlay is still active. Ensures no stale hidden headings carry over.
     this.clearBridgeOverlay();
     this.bridgeAnchorTop = snapshot.anchorTop;
     this.bridgeOverlaySections = snapshot.sections;
 
     if (this.bridgeOverlaySections.length === 0) return false;
+
+    // Cache scroll container rect — stable during bridge phase
+    const scrollRect = this.scrollEl.getBoundingClientRect();
+    this.bridgeScrollLeft = Math.round(scrollRect.left);
+    this.bridgeScrollWidth = Math.round(scrollRect.width);
 
     const doc = this.scrollEl.ownerDocument;
     this.bridgeOverlayHost = doc.createElement('div');
@@ -637,6 +646,13 @@ export class FullScreenController {
       }
     }
 
+    // Counter-transform ALL headings: cancel container's translateY(-bridgePx).
+    // visual = layoutPos - bridgePx (container) + bridgePx (counter) = layoutPos.
+    // Compositor-only — transform changes don't trigger layout.
+    for (const sec of this.bridgeOverlaySections) {
+      setStyle(sec.heading, 'transform', `translateY(${bridgePx}px)`);
+    }
+
     if (activeIndex === -1) {
       setStyle(this.bridgeOverlayHost, 'display', 'none');
       if (this.bridgeOverlaySource) {
@@ -650,16 +666,15 @@ export class FullScreenController {
     this.bridgeOverlayHost.style.removeProperty('display');
 
     const active = this.bridgeOverlaySections[activeIndex];
-    const scrollRect = this.scrollEl.getBoundingClientRect();
 
-    // Match overlay width to scroll container
+    // Match overlay width to scroll container (cached in captureBridgeOverlay)
     const hostS = this.bridgeOverlayHost.style;
-    hostS.left = `${Math.round(scrollRect.left)}px`;
-    hostS.width = `${Math.round(scrollRect.width)}px`;
+    hostS.left = `${this.bridgeScrollLeft}px`;
+    hostS.width = `${this.bridgeScrollWidth}px`;
 
     // Clone heading into lane when active heading changes
     if (this.bridgeOverlaySource !== active.heading) {
-      // Unhide previous source
+      // Restore previous source — counter-transform keeps it at correct position
       if (this.bridgeOverlaySource) {
         this.bridgeOverlaySource.style.removeProperty('opacity');
         this.bridgeOverlaySource.style.removeProperty('pointer-events');
@@ -688,7 +703,7 @@ export class FullScreenController {
       });
       this.bridgeOverlayLane.replaceChildren(clone);
       this.bridgeOverlaySource = active.heading;
-      // Hide original
+      // Hide active original — overlay clone renders it
       setStyle(active.heading, 'opacity', '0', 'important');
       setStyle(active.heading, 'pointer-events', 'none', 'important');
     }
@@ -704,12 +719,16 @@ export class FullScreenController {
     setStyle(this.bridgeOverlayLane, 'transform', `translateY(${y}px)`);
   }
 
-  /** Remove overlay and unhide original heading. */
+  /** Remove overlay, restore active heading, clear counter-transforms. */
   private clearBridgeOverlay(): void {
     if (this.bridgeOverlaySource) {
       this.bridgeOverlaySource.style.removeProperty('opacity');
       this.bridgeOverlaySource.style.removeProperty('pointer-events');
       this.bridgeOverlaySource = null;
+    }
+    // Clear counter-transforms from all headings
+    for (const sec of this.bridgeOverlaySections) {
+      sec.heading.style.removeProperty('transform');
     }
     this.bridgeOverlayHost?.remove();
     this.bridgeOverlayHost = null;
@@ -1562,8 +1581,24 @@ export class FullScreenController {
    *  below REVEAL_CANCEL_DELTA, the timer fires and bars appear.
    *  Matches native Obsidian's emergent behavior where fast momentum
    *  suppresses reveal but slow/dying momentum allows it. */
-  private onHeaderTap(): void {
+  private onHeaderTap(e: TouchEvent): void {
     if (!this.barsHidden) return;
+
+    // The view-header acts as a tap shield when bars are hidden — it covers the status bar zone with pointer-events active to intercept reveals. Stuck group headings straddle this zone, so their collapse/tag/folder taps are swallowed. Temporarily lower pointer-events, hit-test the real target, and forward the click before the deferred reveal timer fires.
+    const touch = e.changedTouches[0];
+    if (touch && this.viewHeaderEl) {
+      setStyle(this.viewHeaderEl, 'pointer-events', 'none');
+      const target = this.scrollEl.ownerDocument.elementFromPoint(
+        touch.clientX,
+        touch.clientY
+      );
+      this.viewHeaderEl.style.removeProperty('pointer-events');
+      if (target && target.closest('.bases-group-heading')) {
+        (target as HTMLElement).click();
+        return;
+      }
+    }
+
     if (this.pendingRevealTimer != null) clearTimeout(this.pendingRevealTimer);
     this.pendingRevealTimer = setTimeout(() => {
       this.pendingRevealTimer = null;

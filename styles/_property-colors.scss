@@ -169,6 +169,5 @@
 @include hover-color-vars(
   'property-color-without-names',
   'property-no-name-color',
-  $custom-hover-var:
-    '--dynamic-views-property-color-without-names-custom-hover'
+  $custom-hover-var: '--dynamic-views-property-color-without-names-custom-hover'
 );

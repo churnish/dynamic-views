@@ -113,6 +113,7 @@
   .masonry-container .card:not(.masonry-positioned) {
     position: absolute;
     opacity: 0;
+    visibility: hidden;
     height: auto;
     contain: layout style paint;
   }
@@ -121,12 +122,16 @@
   // shared/constants.ts — transitions must finish before next reposition tick
   --masonry-reposition-duration: 200ms;
 
-  /* Masonry positioned cards */
+  /* Masonry positioned cards.
+     No opacity transition — the 0→1 fade triggers GPU compositing which
+     switches text to grayscale antialiasing (visible blur on all platforms).
+     Batch append/mount fade uses card-fade-in animation instead (animations
+     override transitions). Resize fade-out has its own transition in
+     .masonry-resizing. */
   .card.masonry-positioned {
     position: absolute;
     contain: layout style paint;
     transition:
-      opacity var(--dynamic-views-anim-duration-superfast) ease,
       top var(--masonry-reposition-duration) ease,
       left var(--masonry-reposition-duration) ease,
       box-shadow var(--dynamic-views-anim-duration-fast) ease-in-out,
@@ -146,7 +151,6 @@
   // Width is NOT transitioned — left positions assume target width instantly.
   .masonry-resize-active .card.masonry-positioned {
     transition:
-      opacity var(--dynamic-views-anim-duration-superfast) ease,
       top var(--masonry-reposition-duration) ease,
       left var(--masonry-reposition-duration) ease,
       box-shadow var(--dynamic-views-anim-duration-fast) ease-in-out,

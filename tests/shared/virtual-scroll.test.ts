@@ -2,7 +2,13 @@ import {
   measureScalableHeight,
   estimateUnmountedHeight,
 } from '../../src/shared/virtual-scroll';
-import { UNMEASURED_CARD_HEIGHT } from '../../src/shared/constants';
+import {
+  UNMEASURED_CARD_HEIGHT,
+  FIXED_COVER_HEIGHT_GRID,
+  FIXED_COVER_HEIGHT_MASONRY,
+  FIXED_COVER_HEIGHT_BOTH,
+  FIXED_COVER_HEIGHT_NONE,
+} from '../../src/shared/constants';
 
 function createCard(
   classes: string[],
@@ -72,25 +78,25 @@ describe('measureScalableHeight', () => {
   });
 
   it('returns 0 for masonry card with fixed-cover-height-masonry', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height-masonry');
+    document.body.classList.add(FIXED_COVER_HEIGHT_MASONRY);
     const card = createCard(['card-cover-top'], 200, 'dynamic-views-masonry');
     expect(measureScalableHeight(card)).toBe(0);
   });
 
   it('returns 0 for masonry card with fixed-cover-height-both', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height-both');
+    document.body.classList.add(FIXED_COVER_HEIGHT_BOTH);
     const card = createCard(['card-cover-top'], 200, 'dynamic-views-masonry');
     expect(measureScalableHeight(card)).toBe(0);
   });
 
   it('returns 0 for grid card with fixed-cover-height-grid', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height-grid');
+    document.body.classList.add(FIXED_COVER_HEIGHT_GRID);
     const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
     expect(measureScalableHeight(card)).toBe(0);
   });
 
   it('returns 0 for grid card with fixed-cover-height-both', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height-both');
+    document.body.classList.add(FIXED_COVER_HEIGHT_BOTH);
     const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
     expect(measureScalableHeight(card)).toBe(0);
   });
@@ -100,14 +106,20 @@ describe('measureScalableHeight', () => {
     expect(measureScalableHeight(card)).toBe(0);
   });
 
+  it('returns wrapper height for grid card with fixed-cover-height-none', () => {
+    document.body.classList.add(FIXED_COVER_HEIGHT_NONE);
+    const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
+    expect(measureScalableHeight(card)).toBe(200);
+  });
+
   it('returns wrapper height for grid card with fixed-cover-height-masonry', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height-masonry');
+    document.body.classList.add(FIXED_COVER_HEIGHT_MASONRY);
     const card = createCard(['card-cover-top'], 200, 'dynamic-views-grid');
     expect(measureScalableHeight(card)).toBe(200);
   });
 
   it('returns wrapper height for masonry card with fixed-cover-height-grid', () => {
-    document.body.classList.add('dynamic-views-fixed-cover-height-grid');
+    document.body.classList.add(FIXED_COVER_HEIGHT_GRID);
     const card = createCard(['card-cover-top'], 200, 'dynamic-views-masonry');
     expect(measureScalableHeight(card)).toBe(200);
   });
@@ -118,6 +130,22 @@ describe('measureScalableHeight', () => {
   });
 
   it('returns full height for poster cards with images', () => {
+    const card = document.createElement('div');
+    card.classList.add('image-format-poster');
+    const poster = document.createElement('div');
+    poster.classList.add('card-poster');
+    card.appendChild(poster);
+    Object.defineProperty(card, 'offsetHeight', {
+      configurable: true,
+      value: 300,
+    });
+    expect(measureScalableHeight(card)).toBe(300);
+  });
+
+  it('returns full height for poster cards regardless of fixed-poster-height class', () => {
+    // Poster aspect-ratio scales with width in both fixed and dynamic modes,
+    // so the full height is always scalable (unlike covers which use padding-top)
+    document.body.classList.add('dynamic-views-fixed-poster-height-grid');
     const card = document.createElement('div');
     card.classList.add('image-format-poster');
     const poster = document.createElement('div');

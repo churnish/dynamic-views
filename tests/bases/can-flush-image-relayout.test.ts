@@ -15,9 +15,9 @@ describe('canFlushImageRelayout', () => {
   });
 
   it('returns false when no pending relayout', () => {
-    expect(canFlushImageRelayout({ ...idle, pendingImageRelayout: false })).toBe(
-      false,
-    );
+    expect(
+      canFlushImageRelayout({ ...idle, pendingImageRelayout: false })
+    ).toBe(false);
   });
 
   it.each([
@@ -35,7 +35,7 @@ describe('canFlushImageRelayout', () => {
         ...idle,
         postResizeScrollActive: true,
         batchLayoutPending: true,
-      }),
+      })
     ).toBe(false);
   });
 });

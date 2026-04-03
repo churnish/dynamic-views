@@ -10,6 +10,7 @@ updated: 2026-03-30
 - No optimization is too small; even a 0.1% improvement is valuable.
 - Measure, optimize, repeat until near MC parity.
 - **Profiling reference**: session `ce81d2e3`. 300-card fixture, 10 groups, vault-local images, 5 columns at 340px. Single-run data — directional signal is clear but exact values need replication (3 runs with median).
+- Shared card view optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
 
 ## Status key
 
@@ -32,10 +33,7 @@ Recalibrated from T1-T12 profiling battery. Ordered by expected impact x confide
 | # | Task | Expected impact | Evidence | Status |
 |---|---|---|---|---|
 | P0 | Resize frame cost investigation | 93ms→43ms avg (54% reduction) | T6: Style recalc dominated (41-189ms). Deferred `syncResponsiveClasses` + scroll gradients to post-resize. ~42ms architectural floor remains (Blink style recalc). | Done |
-| P1 | `updateCachedGroupOffsets` algorithm | 39ms→0ms on scroll frames | T1: 39ms for 2 groups. Fixed: `groupOffsetsDirty` flag skips DOM reads on scroll-only frames. | Done |
 | P1 | Cold-start forced reflow reduction | 325ms → ~56ms | T1: 3 reflow paths. Batched reads/writes + synthetic group offsets + deferred checkAndLoadMore. | Done |
-| P2 | Reduce `renderCard()` DOM | Compounds across all layout operations | T1: 2,657 elements, 4,485 style recalc. T12: 37 mutations/card. | Evaluate |
-| P2 | CardHandle cleanup cost | 27ms/card → <5ms/card | T10: 508ms for 19 cards. Linear scaling. | Planned |
 | P1 | Transform-based positioning | Eliminates ~42ms/frame architectural floor | T6 confirmed: style recalc from `top/left/width/height` writes is the remaining cost. `translate3d` is compositor-only. | **Done** |
 | — | Pre-cached image dimensions | Marginal for vault-local images | T2: 2ms load span. T3: deferred remeasure catches drift at 95ms. | Deprioritized |
 | — | Single-column reflow | Marginal with current coalescing | T2: 1 relayout/frame. O(n) where n=23 mounted, not 300 total. | Deprioritized |
@@ -93,14 +91,8 @@ Sections below are ordered by **system/concern area**, not by priority or chrono
 | `for` loops replacing `forEach` | Done | In `calculateMasonryLayout` and `calculateIncrementalMasonryLayout`. Eliminates closure allocation per card. Exception: `applyMasonryLayout()` (Datacore-only path) still uses `forEach`. | | |
 | `contain: layout style paint` | Done | On `.masonry-positioned` cards. Limits paint boundaries without full layer promotion. | | |
 | Batch `offsetHeight` reads + writes | Done | `remeasureAndReposition` split into read-all → calculate+write-all phases. `updateGroupOffsetsSynthetic` replaces `getBoundingClientRect` after position writes (cumulative height delta, atomic commit, zero DOM reads). `computeSyntheticGroupOffsets` extracted as pure function with unit tests. | | |
-| `content-visibility: hidden` for off-screen cards | Done | IntersectionObserver-based visibility management for virtual scroll. | | |
-| CardHandle per-card cleanup | Done | `renderCard()` returns `{ el, cleanup }`. Cleanup aborts AbortController, disconnects ResizeObservers, stops slideshows. Enables individual card teardown for virtual scrolling. **T10: 27ms/card cleanup cost.** Dominated by `ResizeObserver.unobserve` + `virtualItems` splice + `rebuildGroupIndex`. See CardHandle cleanup optimization below. | | |
-| Reduce `renderCard()` DOM element count | Evaluate | DV creates ~15-30 DOM elements per card (varies by features) vs MC's ~3-5. **T1: 2,657 total DOM elements, 4,485 style recalc elements for 40 cards. T12: 37 DOM mutations/card for property reorder (846 total).** DOM complexity is a background tax on every layout operation — style recalc, forced reflow, mutation handling all scale with element count. | 4 | 4 |
 | Transform-based positioning | Planned | `transform: translate3d(x, y, 0)` is compositor-only (skips layout+paint). Current `top`/`left` triggers layout recalc. **T6 confirmed: ~42ms/frame architectural floor is Blink style recalc from inline `top/left/width/height` writes.** Transforms would eliminate position-change recalc (compositor-only). Trade-off: significant per-card VRAM cost from compositor layer promotion at high DPR. `contain: layout style paint` already limits scope but does NOT prevent style recalc. | 5 | 2 |
 | Cold-start forced reflow reduction | Done | **325ms → ~56ms total.** Batched reads/writes in `remeasureAndReposition` (78ms saved), `updateGroupOffsetsSynthetic` replaces `getBoundingClientRect` after writes (135ms saved), deferred `checkAndLoadMore` to RAF (56ms saved). Also fixed pre-existing grouped masonry blank-on-resize: proportional resize branch never updated `cachedGroupOffsets` before `syncVirtualScroll`. Remaining: image-coalesced fast path still has per-group interleaved reads/writes (triaged — fires infrequently). | | |
-| CardHandle cleanup optimization | Evaluate | **T10: 27ms/card cleanup, 508ms for 19-card group collapse.** Per-card: `AbortController.abort()`, `ResizeObserver.unobserve()`, slideshow stop, `virtualItems` splice + `rebuildGroupIndex`. The array mutation + index rebuild repeats per card — batching cleanup (splice once, rebuild once) could dramatically reduce cost. | 3 | 2 |
-| Synchronous property measurement | Done | Replaced async RAF queue with synchronous paired property measurement — eliminates 2-3 frame mount flicker. CSS `visibility: hidden` fallback gate. Removed ~150 lines of queue infrastructure. | | |
-| Batched compact-stacked wrapping detection | Done | RAF-batched read/write: collapse N forced reflows per resize into 1 per document. Moved `compactWidthCache` + detection from both backends to shared `property-helpers.ts`. Grid row-level sync with 1px tolerance. | | |
 
 ## 5. Virtual scroll refinements
 
@@ -113,9 +105,7 @@ Sections below are ordered by **system/concern area**, not by priority or chrono
 | Keyboard navigation across unmounted cards | Done | `VirtualCardRect[]` from stored positions. Navigates spatially, mounts target on demand. | | |
 | Direction-aware remeasurement suppression | Done (superseded) | Debounced scroll remeasure (200ms) eliminates the feedback loop entirely — remeasure only fires when scroll is idle. | | |
 | Scroll anchoring during reflow | Done | `scrollTop` compensation after remeasure anchors first visible card. Fires only when scroll idle (debounced). | | |
-| `updateCachedGroupOffsets` algorithm | Done | **T1 (before): 39ms for 2 groups (linear scaling).** Fixed: `groupOffsetsDirty` flag — scroll-only frames skip DOM reads entirely (39ms→0ms). Flag set true by resize, mount/unmount, and remeasure paths. | 5 | 2 |
 | Staggered mounting across frames | Eliminated | **T5: No mount storms observed.** Virtual scroll keeps 23-42 cards mounted with smooth cycling (change every ~7.5 frames). Same-column-count resize mounts 0-3 cards at edges. Column-count changes cause larger mount bursts but infrequent. Initial batch render uses `masonry-resizing` class to hide cards during layout. No scenario in current implementation produces the 50-70 card mount storms this was designed to address. | 0 | — |
-| Persistent paired property width cache | Done | `Map<filePath, {containerWidth, pairs[]}>` stores measured CSS vars. On virtual scroll re-mount, applies cached widths directly — zero forced reflows. Invalidated on settings change (`resetPersistentWidthCache`), per-card on fresh DOM from in-place update, and on container width change. | 2 | 1 |
 
 ## 6. Grouped masonry
 

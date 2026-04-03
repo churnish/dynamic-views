@@ -18,6 +18,8 @@ export function showExternalLinkContextMenu(
   e.stopPropagation();
   e.preventDefault();
 
+  const win = ((e.target as HTMLElement)?.ownerDocument?.defaultView ??
+    window) as typeof globalThis;
   const menu = new Menu();
 
   menu.addItem((item) =>
@@ -25,7 +27,7 @@ export function showExternalLinkContextMenu(
       .setTitle('Open link in default browser')
       .setIcon('lucide-globe-2')
       .onClick(() => {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        win.open(url, '_blank', 'noopener,noreferrer');
       })
   );
 
@@ -37,9 +39,13 @@ export function showExternalLinkContextMenu(
       .setTitle('Copy')
       .setIcon('lucide-copy')
       .onClick(async () => {
-        await navigator.clipboard.writeText(
-          displayText ? `[${displayText}](${url})` : url
-        );
+        try {
+          await win.navigator.clipboard.writeText(
+            displayText ? `[${displayText}](${url})` : url
+          );
+        } catch {
+          new Notice('Failed to copy to clipboard');
+        }
       })
   );
 
@@ -50,8 +56,13 @@ export function showExternalLinkContextMenu(
       .setTitle('Copy URL')
       .setIcon('lucide-link')
       .onClick(async () => {
-        await navigator.clipboard.writeText(url);
-        new Notice('URL copied to your clipboard');
+        try {
+          await win.navigator.clipboard.writeText(url);
+          // Notice on success — "Copy" is silent to match native behavior
+          new Notice('URL copied to your clipboard');
+        } catch {
+          new Notice('Failed to copy to clipboard');
+        }
       })
   );
 

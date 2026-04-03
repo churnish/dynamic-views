@@ -326,6 +326,10 @@
 .dynamic-views-bridge-heading-lane {
   will-change: transform;
   pointer-events: auto;
+  // Opaque lane background — the z-index: -1 pseudo below paints behind
+  // Chromium compositor layers, letting the real heading show through.
+  // Lane-level background ensures the clone covers the real heading.
+  background: var(--dynamic-views-background-primary);
 
   // Heading background — matches sticky heading pseudo from _grid-masonry-shared.scss
   // but without the ancestor selector chain (clone is outside original DOM context).

@@ -2548,10 +2548,7 @@ export class SharedCardRenderer {
     const isEmpty = !stringValue;
     if (isEmpty) {
       if (hideEmptyMode === 'all') return;
-      if (
-        hideEmptyMode === 'names-hidden' &&
-        settings.propertyNames === 'hide'
-      )
+      if (hideEmptyMode === 'names-hidden' && settings.propertyNames === 'hide')
         return;
     }
 

@@ -9,6 +9,7 @@ assets/
 plans/
 profiling/
 temp/
+media/
 
 *.map
 *.zip

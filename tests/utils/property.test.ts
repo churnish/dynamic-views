@@ -477,7 +477,9 @@ describe('property', () => {
     });
 
     it('should preserve custom property names as-is', () => {
-      expect(getPropertyDisplayName('MyCustomProperty')).toBe('MyCustomProperty');
+      expect(getPropertyDisplayName('MyCustomProperty')).toBe(
+        'MyCustomProperty'
+      );
       expect(getPropertyDisplayName('some_property')).toBe('some_property');
     });
 
@@ -498,7 +500,9 @@ describe('property', () => {
       expect(getPropertyDisplayName('formula.Untitled', displayNameMap)).toBe(
         'smile more'
       );
-      expect(getPropertyDisplayName('file.name', displayNameMap)).toBe('filename123');
+      expect(getPropertyDisplayName('file.name', displayNameMap)).toBe(
+        'filename123'
+      );
       expect(getPropertyDisplayName('note.prop123', displayNameMap)).toBe(
         'display-name'
       );
@@ -507,13 +511,19 @@ describe('property', () => {
     it('should fall back to default behavior when property not in displayNameMap', () => {
       const displayNameMap = { 'formula.Untitled': 'smile more' };
       // file.path not in map → falls back to PROPERTY_LABEL_MAP
-      expect(getPropertyDisplayName('file.path', displayNameMap)).toBe('file path');
+      expect(getPropertyDisplayName('file.path', displayNameMap)).toBe(
+        'file path'
+      );
       // note.title not in map → falls back to prefix stripping
-      expect(getPropertyDisplayName('note.title', displayNameMap)).toBe('title');
+      expect(getPropertyDisplayName('note.title', displayNameMap)).toBe(
+        'title'
+      );
     });
 
     it('should fall back to default behavior when displayNameMap is undefined', () => {
-      expect(getPropertyDisplayName('formula.Untitled', undefined)).toBe('Untitled');
+      expect(getPropertyDisplayName('formula.Untitled', undefined)).toBe(
+        'Untitled'
+      );
       expect(getPropertyDisplayName('file.name', undefined)).toBe('file name');
     });
   });

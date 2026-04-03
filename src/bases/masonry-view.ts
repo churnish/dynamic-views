@@ -2825,7 +2825,7 @@ export class DynamicViewsMasonryView extends BasesView {
       item.entry,
       item.index,
       settings,
-      item.hasBeenMounted // skipImageFade on remount
+      item.hasBeenMounted ? { skipImageFade: true } : undefined
     );
     handle.el.style.width = `${item.width}px`;
     handle.el.style.left = `${item.x}px`;
@@ -2872,7 +2872,6 @@ export class DynamicViewsMasonryView extends BasesView {
     if (item.compactStacked) {
       handle.el.classList.add('compact-stacked');
     }
-    item.hasBeenMounted = true;
     this.newlyMountedEls.push(handle.el);
   }
 
@@ -3292,7 +3291,7 @@ export class DynamicViewsMasonryView extends BasesView {
     entry: BasesEntry,
     index: number,
     settings: BasesResolvedSettings,
-    skipImageFade = false
+    renderOptions?: { skipImageFade?: boolean }
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
       container,
@@ -3323,7 +3322,7 @@ export class DynamicViewsMasonryView extends BasesView {
           })),
         onMountItem: (idx: number) => this.mountVirtualItemByIndex(idx),
       },
-      skipImageFade ? { skipImageFade } : undefined
+      renderOptions
     );
     this.cardResizeObserver?.observe(handle.el);
     return handle;

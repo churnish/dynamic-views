@@ -2,7 +2,7 @@
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, committed-row lock mount ordering, and Bases/Datacore differences.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-04-01
 ---
 # Grid layout system
 
@@ -314,7 +314,7 @@ Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped 
 - After mount window completes, processes dirty flag with guaranteed remeasure.
 - Outside mount window: RAF-debounced `remeasureMountedCards()` updates stored heights and placeholder heights, recomputes y positions.
 
-**Content-visibility overridden for grid on WebKit**: `body.is-ios` sets `content-visibility: visible` on all grid cards (`body.is-ios .dynamic-views-grid .card`) — virtual scrolling handles performance instead. The override prevents WebKit infinite reflow loops with IO-toggled content-visibility. Non-WebKit platforms use `content-visibility: hidden` in the content-hidden tier (see below).
+**No content-visibility on WebKit**: WebKit skips the content-hidden tier entirely — IO-toggled `content-visibility: hidden` causes infinite reflow loops (see `ios-webkit-quirks.md`). WebKit relies on single-tier mount/unmount only, enforced by the `!Platform.isIosApp` guard in `syncVirtualScroll`. Non-WebKit platforms use `content-visibility: hidden` in the content-hidden tier (see below).
 
 ### Content-hidden tier (non-WebKit)
 
