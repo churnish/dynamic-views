@@ -147,7 +147,8 @@
   height: var(--dynamic-views-safe-area-inset-top) !important;
   background: linear-gradient(
     to bottom,
-    var(--dynamic-views-background-primary) 0px,
+    var(--dynamic-views-view-bg-color, var(--dynamic-views-background-primary))
+      0px,
     transparent var(--dynamic-views-safe-area-inset-top)
   ) !important;
   z-index: 10 !important;
@@ -164,7 +165,10 @@ body:not(.dynamic-views-disable-sticky-group-header).is-android.is-phone
   [data-type='bases'].full-screen-active.dynamic-views-grouped::before,
 body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.dynamic-views-grouped::before {
-  background: var(--dynamic-views-background-primary) !important;
+  background: var(
+    --dynamic-views-view-bg-color,
+    var(--dynamic-views-background-primary)
+  ) !important;
   // Above sticky headings (z-index: 20) so scrolling headings disappear
   // beneath the scrim. Header WAAPI uses z-index: 30 to slide above.
   // Fixed value — a custom property would inherit to all descendants,
@@ -196,6 +200,8 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
 body:not(.dynamic-views-disable-sticky-group-header).is-android.is-phone
   [data-type='bases'].full-screen-active[data-dynamic-views-show].dynamic-views-grouped::before {
   pointer-events: auto !important;
+  // Override grouped hide scrim's view-bg-color — show scrim matches app chrome.
+  background: var(--dynamic-views-background-primary) !important;
 }
 
 body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
@@ -421,4 +427,23 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   overflow-anchor: none;
   pointer-events: none;
   flex-shrink: 0;
+  height: 0;
+}
+
+// Android show: containing block for absolute toolbar/search overlays.
+// No descendant combinator — only targets leafContent itself.
+[data-dynamic-views-show] {
+  position: relative;
+}
+
+// Opaque backing behind toolbar/search during WAAPI opacity 0→1 fade.
+// z-index 28 sits below toolbar (29) and header (30). JS sets dynamic
+// top + height; static layout props live here.
+.dynamic-views-toolbar-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 28;
+  pointer-events: none;
+  background: var(--dynamic-views-background-primary);
 }

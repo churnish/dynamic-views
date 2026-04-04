@@ -413,7 +413,6 @@ export class FullScreenController {
     const doc = this.scrollEl.ownerDocument;
     this.spacerEl = doc.createElement('div');
     this.spacerEl.className = 'dynamic-views-spacer';
-    setStyle(this.spacerEl, 'height', '0');
     this.scrollEl.insertBefore(this.spacerEl, this.container);
   }
 
@@ -431,7 +430,6 @@ export class FullScreenController {
 
   private applyShowOverlays(): void {
     this.leafContent.setAttribute('data-dynamic-views-show', '');
-    setStyle(this.leafContent, 'position', 'relative');
 
     // Read heights BEFORE writing styles — avoids forced layout between
     // write and read on Android's single-threaded compositor.
@@ -480,19 +478,10 @@ export class FullScreenController {
     if (!this.toolbarBgEl) {
       const doc = this.scrollEl.ownerDocument;
       this.toolbarBgEl = doc.createElement('div');
+      this.toolbarBgEl.className = 'dynamic-views-toolbar-bg';
       setStyles(this.toolbarBgEl, [
-        ['position', 'absolute', 'important'],
-        ['top', `${this.originalMarginTop}px`, 'important'],
-        ['left', '0', 'important'],
-        ['right', '0', 'important'],
-        [
-          'height',
-          `${this.totalShift - this.originalMarginTop}px`,
-          'important',
-        ],
-        ['z-index', '28', 'important'],
-        ['pointer-events', 'none', 'important'],
-        ['background', 'var(--dynamic-views-background-primary)', 'important'],
+        ['top', `${this.originalMarginTop}px`],
+        ['height', `${this.totalShift - this.originalMarginTop}px`],
       ]);
       this.leafContent.appendChild(this.toolbarBgEl);
     }
@@ -546,7 +535,6 @@ export class FullScreenController {
     this.toolbarBgEl?.remove();
     this.toolbarBgEl = null;
     this.leafContent.removeAttribute('data-dynamic-views-show');
-    this.leafContent.style.removeProperty('position');
     // Heading tops are applied in applySpacerHeadingTops (show path) and
     // must be rolled back atomically with the overlay cleanup.
     this.clearSpacerHeadingTops();
@@ -1191,8 +1179,7 @@ export class FullScreenController {
           setStyle(
             this.toolbarBgEl,
             'height',
-            `${effectiveShift - this.originalMarginTop}px`,
-            'important'
+            `${effectiveShift - this.originalMarginTop}px`
           );
         }
 
