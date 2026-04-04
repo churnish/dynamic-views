@@ -2,7 +2,7 @@
 title: View configuration
 description: Centralized reference for configuring Dynamic Views per-view settings — setting keys, state properties, per-backend workflows, DQL query syntax, and search filtering.
 author: Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-04-04
 ---
 # View configuration
 
@@ -155,6 +155,23 @@ Shared `ViewDefaults` — applies to both backends unless noted. Set via `pm.set
 These only affect CSS custom properties — changing them does NOT trigger a card re-render:
 
 `textPreviewLines`, `imageRatio`, `thumbnailSize`, `posterDisplayMode`, `imageFit`
+
+## Per-view CSS variable overrides via `cssclasses`
+
+The `cssclasses` setting adds classes to the `.dynamic-views` container (Bases) or `.dynamic-views-grid`/`.dynamic-views-masonry` element (Datacore). A CSS snippet can define helper classes that set CSS custom properties on these elements, enabling per-view overrides of Style Settings values.
+
+**Card spacing example** — a `gap-16` class in a CSS snippet:
+
+```css
+.gap-16 {
+  --dynamic-views-card-spacing-desktop: 16px;
+  --dynamic-views-card-spacing-mobile: 16px;
+}
+```
+
+**How it works**: `getCardSpacing()` in `style-settings.ts` reads the CSS variable from `getComputedStyle(containerEl)` first, then falls back to `document.body`. CSS variables inherit through the DOM tree, so the override is visible regardless of which ancestor it's set on. Results are cached per container per render cycle (`Map<HTMLElement, number>`, cleared in `clearStyleSettingsCache()`).
+
+**Limitations**: Only `variable-number-slider` Style Settings options work with this pattern — they use CSS variables that inherit through the DOM. `class-toggle` and `class-select` options use body classes read via `document.body.classList`, which cannot be overridden per-container.
 
 ## Resolution order
 

@@ -10,6 +10,9 @@
  */
 const cssTextCache = new Map<string, string>();
 
+/** Per-container cache for getCardSpacing results. Cleared alongside cssTextCache. */
+const containerSpacingCache = new Map<HTMLElement, number>();
+
 /** Matches `dynamic-views-` prefixed class names on body */
 const DYNAMIC_VIEWS_CLASS_PATTERN = /\bdynamic-views-\S+/g;
 
@@ -19,6 +22,7 @@ const DYNAMIC_VIEWS_CLASS_PATTERN = /\bdynamic-views-\S+/g;
  */
 export function clearStyleSettingsCache(): void {
   cssTextCache.clear();
+  containerSpacingCache.clear();
 }
 
 /**
@@ -138,13 +142,20 @@ export function getHideEmptyMode(): HideEmptyMode {
 
 /**
  * Get card spacing from CSS variable.
- * Reads from containerEl first (picks up cssclasses overrides), then falls back to body.
+ * Reads from containerEl first (picks up per-view cssclasses overrides), then falls back to body.
  * For embeds, returns Obsidian's default spacing.
+ * Any element inside the view container works — CSS variables inherit through the DOM tree.
  */
 export function getCardSpacing(containerEl?: HTMLElement): number {
+  if (containerEl) {
+    const cached = containerSpacingCache.get(containerEl);
+    if (cached !== undefined) return cached;
+  }
   // Bases embed: use Obsidian's default spacing (Style Settings doesn't apply)
   if (containerEl?.closest('.internal-embed')) {
-    return getCSSVariableAsNumber('--size-4-2', 8);
+    const result = getCSSVariableAsNumber('--size-4-2', 8);
+    containerSpacingCache.set(containerEl, result);
+    return result;
   }
   const isMobile = document.body.classList.contains('is-mobile');
   const varName = isMobile
@@ -158,10 +169,15 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
       .trim();
     if (value !== '') {
       const parsed = parseFloat(value);
-      if (!isNaN(parsed)) return parsed;
+      if (!isNaN(parsed)) {
+        containerSpacingCache.set(containerEl, parsed);
+        return parsed;
+      }
     }
   }
-  return getCSSVariableAsNumber(varName, defaultVal);
+  const result = getCSSVariableAsNumber(varName, defaultVal);
+  if (containerEl) containerSpacingCache.set(containerEl, result);
+  return result;
 }
 
 /**

@@ -225,6 +225,25 @@ describe('style-settings', () => {
 
       expect(getCardSpacing(mockContainer)).toBe(20);
     });
+
+    it('should fall through to body when container has no CSS variable', () => {
+      const mockContainer = document.createElement('div');
+      mockContainer.closest = vi.fn().mockReturnValue(null);
+
+      mockGetComputedStyle.mockImplementation(
+        (el: Element) =>
+          ({
+            getPropertyValue: (name: string) => {
+              if (name === '--dynamic-views-card-spacing-desktop') {
+                return el === mockContainer ? '' : '16';
+              }
+              return '';
+            },
+          }) as CSSStyleDeclaration
+      );
+
+      expect(getCardSpacing(mockContainer)).toBe(16);
+    });
   });
 
   describe('shouldShowRecentTimeOnly', () => {

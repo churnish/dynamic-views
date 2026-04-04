@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-01
+updated: 2026-04-04
 ---
 # Doc index
 
@@ -67,4 +67,4 @@ Reusable conventions and recipes — coding patterns, CSS quirks, and configurat
 | [plugin-view-navigation.md](patterns/plugin-view-navigation.md) | Probing, querying, or targeting Dynamic Views elements via CDP, WebKit Inspector, or DOM queries — documents the full view hierarchy, correct selectors, and platform-specific probing patterns. |
 | [scss-nesting-conventions.md](patterns/scss-nesting-conventions.md) | Adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat. |
 | [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding, modifying, or debugging Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`), or consolidating per-variant body-class rules into CSS variable consumption with `[class*=...]` gates — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |
-| [view-configuration.md](patterns/view-configuration.md) | Configuring per-view settings for Bases or Datacore — setting keys, defaults, ranges, state properties, DQL query syntax, search filtering, templates, and per-backend workflows. |
+| [view-configuration.md](patterns/view-configuration.md) | Configuring per-view settings for Bases or Datacore — setting keys, defaults, ranges, state properties, DQL query syntax, search filtering, templates, per-backend workflows, and per-view CSS variable overrides via `cssclasses`. |
