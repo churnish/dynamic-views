@@ -84,7 +84,7 @@ import {
   setupImagePreload,
   setupSwipeGestures,
 } from '../shared/slideshow';
-import { setupHoverIntent } from '../shared/hover-intent';
+import { canHover, setupHoverIntent } from '../shared/hover-intent';
 import {
   handleArrowNavigation,
   isArrowKey,
@@ -891,7 +891,7 @@ export class SharedCardRenderer {
     );
 
     // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
-    if (getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches) {
+    if (canHover(cardEl)) {
       setupHoverIntent(
         cardEl,
         () => {
@@ -912,11 +912,7 @@ export class SharedCardRenderer {
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
     // Gates content reveal (via CSS) and scroll access on desktop.
-    if (
-      isPoster &&
-      settings.posterInteractToReveal &&
-      getOwnerWindow(cardEl).matchMedia('(hover: hover)').matches
-    ) {
+    if (isPoster && settings.posterInteractToReveal && canHover(cardEl)) {
       setupHoverIntent(
         cardEl,
         () => {

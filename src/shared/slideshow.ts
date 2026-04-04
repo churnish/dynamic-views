@@ -11,7 +11,7 @@ import {
 } from './constants';
 import { isExternalUrl } from '../utils/image';
 import { isSlideshowLoopingDisabled } from '../utils/style-settings';
-import { setupHoverIntent } from './hover-intent';
+import { canHover, setupHoverIntent } from './hover-intent';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -635,8 +635,7 @@ export function setupSwipeGestures(
   // Prevents false slide changes when cards scroll under a stationary cursor.
   // Touch-primary devices (hover: none) skip the guard — hover intent is never set up
   // there, and the false-trigger problem doesn't apply (no persistent cursor).
-  const ownerWin = getOwnerWindow(coverEl);
-  const requiresHoverIntent = ownerWin.matchMedia('(hover: hover)').matches;
+  const requiresHoverIntent = canHover(coverEl);
 
   // Wheel events capture trackpad swipes
   coverEl.addEventListener(

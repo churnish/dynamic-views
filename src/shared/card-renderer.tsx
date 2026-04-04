@@ -70,7 +70,7 @@ import {
   THUMBNAIL_STACK_MULTIPLIER,
   VISIBLE_BODY_SELECTOR,
 } from './constants';
-import { setupHoverIntent } from './hover-intent';
+import { canHover, setupHoverIntent } from './hover-intent';
 import { getTimestampIcon, isTimestampProperty } from './render-utils';
 import {
   createCardDragHandler,
@@ -1499,7 +1499,7 @@ function Card({
   );
   // Enable scrubbing only on desktop with multiple images and setting enabled
   const enableScrubbing =
-    !app.isMobile && isArray && imageArray.length > 1 && !scrubbingDisabled;
+    canHover() && isArray && imageArray.length > 1 && !scrubbingDisabled;
 
   const hasImageSource =
     !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== 'never';
@@ -1987,7 +1987,7 @@ function Card({
         cardResponsiveObservers.set(card.path, responsiveObserver);
 
         // Card-level hover intent: gates cursor, link hover effects, and keyboard nav
-        if (cardWin.matchMedia('(hover: hover)').matches) {
+        if (canHover(cardEl)) {
           const existing = cardHoverIntentActive.get(cardEl);
           if (!existing || existing.signal.aborted) {
             existing?.abort();
@@ -2459,18 +2459,18 @@ function Card({
                       (imageArray.length > 0 ? (
                         <div
                           className={`card-thumbnail ${enableScrubbing ? 'multi-image' : ''}`}
-                          onMouseEnter={
+                          onPointerEnter={
                             enableScrubbing
-                              ? (e: MouseEvent) => {
+                              ? (e: PointerEvent) => {
                                   (
                                     e.currentTarget as HTMLElement
                                   ).classList.add('scrub-hover');
                                 }
                               : undefined
                           }
-                          onMouseMove={
+                          onPointerMove={
                             enableScrubbing
-                              ? (e: MouseEvent) => {
+                              ? (e: PointerEvent) => {
                                   if (imageArray.length === 0) return;
                                   const thumbEl =
                                     e.currentTarget as HTMLElement;
@@ -2514,9 +2514,9 @@ function Card({
                                 }
                               : undefined
                           }
-                          onMouseLeave={
+                          onPointerLeave={
                             enableScrubbing
-                              ? (e: MouseEvent) => {
+                              ? (e: PointerEvent) => {
                                   // Don't reset while image viewer is open (overlay triggers mouseleave)
                                   const thumbEl =
                                     e.currentTarget as HTMLElement;

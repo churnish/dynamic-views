@@ -1,7 +1,15 @@
 /**
- * Hover intent detection — requires mousemove after mouseenter to activate.
+ * Hover intent detection — requires pointermove after pointerenter to activate.
  * Prevents false activation when elements scroll under a stationary cursor.
  */
+
+import { getOwnerWindow } from '../utils/owner-window';
+
+/** Whether the device's primary pointer supports hover. Popout-safe when element provided. */
+export function canHover(el?: Element | null): boolean {
+  const win = el ? getOwnerWindow(el) : window;
+  return win.matchMedia('(hover: hover)').matches;
+}
 
 export function setupHoverIntent(
   el: HTMLElement,
@@ -12,7 +20,7 @@ export function setupHoverIntent(
   let hasMoved = false;
 
   el.addEventListener(
-    'mouseenter',
+    'pointerenter',
     () => {
       hasMoved = false;
     },
@@ -20,7 +28,7 @@ export function setupHoverIntent(
   );
 
   el.addEventListener(
-    'mousemove',
+    'pointermove',
     () => {
       if (!hasMoved) {
         hasMoved = true;
@@ -32,7 +40,7 @@ export function setupHoverIntent(
 
   if (onDeactivate) {
     el.addEventListener(
-      'mouseleave',
+      'pointerleave',
       () => {
         hasMoved = false;
         onDeactivate();

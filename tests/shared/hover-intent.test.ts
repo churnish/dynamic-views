@@ -1,12 +1,14 @@
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { setupHoverIntent } from '../../src/shared/hover-intent';
+import { canHover, setupHoverIntent } from '../../src/shared/hover-intent';
 
 /**
- * Dispatches a MouseEvent of the given type on the element.
+ * Dispatches a PointerEvent of the given type on the element.
  */
-function fire(el: HTMLElement, type: string): void {
-  el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
+function fire(el: HTMLElement, type: string, init?: PointerEventInit): void {
+  el.dispatchEvent(
+    new PointerEvent(type, { bubbles: true, cancelable: true, ...init })
+  );
 }
 
 describe('setupHoverIntent', () => {
@@ -22,58 +24,58 @@ describe('setupHoverIntent', () => {
     controller = new AbortController();
   });
 
-  it('✓ mousemove after mouseenter activates', () => {
+  it('✓ pointermove after pointerenter activates', () => {
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
 
     expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
-  it('✓ mouseenter alone does NOT trigger onActivate', () => {
+  it('✓ pointerenter alone does NOT trigger onActivate', () => {
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
-    fire(el, 'mouseenter');
+    fire(el, 'pointerenter');
 
     expect(onActivate).not.toHaveBeenCalled();
   });
 
-  it('✓ mousemove without a preceding mouseenter triggers onActivate (first move)', () => {
-    // No mouseenter fired — the element starts with hasMoved = false,
-    // so the very first mousemove should activate.
+  it('✓ pointermove without a preceding pointerenter triggers onActivate (first move)', () => {
+    // No pointerenter fired — the element starts with hasMoved = false,
+    // so the very first pointermove should activate.
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
-    fire(el, 'mousemove');
+    fire(el, 'pointermove');
 
     expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
-  it('✓ multiple mousemove events only trigger onActivate once', () => {
+  it('✓ multiple pointermove events only trigger onActivate once', () => {
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
-    fire(el, 'mousemove');
-    fire(el, 'mousemove');
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
+    fire(el, 'pointermove');
+    fire(el, 'pointermove');
 
     expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
-  it('✓ mouseleave triggers onDeactivate and resets state so next enter+move re-activates', () => {
+  it('✓ pointerleave triggers onDeactivate and resets state so next enter+move re-activates', () => {
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
     // First hover cycle
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
     expect(onActivate).toHaveBeenCalledTimes(1);
 
-    fire(el, 'mouseleave');
+    fire(el, 'pointerleave');
     expect(onDeactivate).toHaveBeenCalledTimes(1);
 
-    // Second hover cycle — state must have been reset by mouseleave
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
+    // Second hover cycle — state must have been reset by pointerleave
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
     expect(onActivate).toHaveBeenCalledTimes(2);
   });
 
@@ -82,15 +84,15 @@ describe('setupHoverIntent', () => {
 
     controller.abort();
 
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
-    fire(el, 'mouseleave');
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
+    fire(el, 'pointerleave');
 
     expect(onActivate).not.toHaveBeenCalled();
     expect(onDeactivate).not.toHaveBeenCalled();
   });
 
-  it('✓ omitting onDeactivate adds no mouseleave listener', () => {
+  it('✓ omitting onDeactivate adds no pointerleave listener', () => {
     setupHoverIntent(el, onActivate, undefined, controller.signal);
 
     const addEventSpy = vi.spyOn(el, 'addEventListener');
@@ -100,25 +102,47 @@ describe('setupHoverIntent', () => {
     setupHoverIntent(el, onActivate, undefined, innerController.signal);
 
     const registeredTypes = addEventSpy.mock.calls.map((call) => call[0]);
-    expect(registeredTypes).not.toContain('mouseleave');
+    expect(registeredTypes).not.toContain('pointerleave');
 
-    // Firing mouseleave must not throw and must not invoke any callback
-    expect(() => fire(el, 'mouseleave')).not.toThrow();
+    // Firing pointerleave must not throw and must not invoke any callback
+    expect(() => fire(el, 'pointerleave')).not.toThrow();
   });
 
   it('✓ re-entry after leave activates twice total', () => {
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
     // First full cycle
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
-    fire(el, 'mouseleave');
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
+    fire(el, 'pointerleave');
 
     // Second full cycle
-    fire(el, 'mouseenter');
-    fire(el, 'mousemove');
+    fire(el, 'pointerenter');
+    fire(el, 'pointermove');
 
     expect(onActivate).toHaveBeenCalledTimes(2);
     expect(onDeactivate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('canHover', () => {
+  it('returns true when (hover: hover) matches', () => {
+    window.matchMedia = vi.fn(() => ({ matches: true })) as any;
+    expect(canHover()).toBe(true);
+  });
+
+  it('returns false when (hover: hover) does not match', () => {
+    window.matchMedia = vi.fn(() => ({ matches: false })) as any;
+    expect(canHover()).toBe(false);
+  });
+
+  it('uses element owner window when provided', () => {
+    const el = document.createElement('div');
+    const mockWin = { matchMedia: vi.fn(() => ({ matches: true })) };
+    vi.spyOn(el, 'ownerDocument', 'get').mockReturnValue({
+      defaultView: mockWin,
+    } as any);
+    expect(canHover(el)).toBe(true);
+    expect(mockWin.matchMedia).toHaveBeenCalledWith('(hover: hover)');
   });
 });

@@ -62,3 +62,16 @@ document.createElement = vi.fn((tagName: string) => {
     (global as any).__lastImage = this;
   }
 };
+
+// Polyfill PointerEvent for jsdom (extends MouseEvent with pointer-specific fields)
+if (typeof globalThis.PointerEvent === 'undefined') {
+  (globalThis as any).PointerEvent = class PointerEvent extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+    constructor(type: string, init?: PointerEventInit) {
+      super(type, init);
+      this.pointerId = init?.pointerId ?? 0;
+      this.pointerType = init?.pointerType ?? '';
+    }
+  };
+}
