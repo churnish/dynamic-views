@@ -154,9 +154,11 @@
 // Class toggled by grid-view/masonry-view on the leaf content — avoids :has()
 // which causes upward style invalidation that exceeds Android WebView's
 // single-threaded compositor frame budget (same root cause as 3e67321).
-.is-android.is-phone
+// Gated on sticky enabled — when "disable sticky group header" Style Settings
+// is ON, headings scroll normally and the ungrouped gradient scrim applies.
+body:not(.dynamic-views-disable-sticky-group-header).is-android.is-phone
   [data-type='bases'].full-screen-active.dynamic-views-grouped::before,
-.is-phone:not(.is-android)
+body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.dynamic-views-grouped::before {
   background: var(--dynamic-views-background-primary) !important;
   // Above sticky headings (z-index: 20) so scrolling headings disappear
@@ -186,13 +188,13 @@
 }
 
 // Restore scrim tap absorption during show — prevents card/heading
-// interaction behind the animating scrim.
-.is-android.is-phone
+// interaction behind the animating scrim. Same sticky gate as above.
+body:not(.dynamic-views-disable-sticky-group-header).is-android.is-phone
   [data-type='bases'].full-screen-active[data-dynamic-views-show].dynamic-views-grouped::before {
   pointer-events: auto !important;
 }
 
-.is-phone:not(.is-android)
+body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.full-screen-showing.dynamic-views-grouped::before {
   pointer-events: auto !important;
 }

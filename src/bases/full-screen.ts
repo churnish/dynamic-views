@@ -184,6 +184,9 @@ export class FullScreenController {
   // Height changes absorbed by overflow-anchor (container is the anchor target).
   private spacerEl: HTMLElement | null = null;
   private spacerActive = false;
+  // Opaque background behind toolbar/search during spacer show — prevents
+  // content showing through during the WAAPI opacity fade-in.
+  private toolbarBgEl: HTMLElement | null = null;
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
@@ -774,6 +777,9 @@ export class FullScreenController {
     setStyle(this.leafContent, 'position', 'relative');
 
     if (this.toolbarEl) {
+      // Inline opacity:1 provides the post-WAAPI fallback. During the 300ms
+      // fade, WAAPI (higher cascade priority) overrides this with 0→1.
+      // After idle cancelAnimations(), WAAPI is removed and inline takes over.
       setStyle(this.toolbarEl, 'opacity', '1');
       setStyles(this.toolbarEl, [
         ['position', 'absolute', 'important'],
@@ -788,15 +794,13 @@ export class FullScreenController {
       ]);
     }
 
+    const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
+
     if (this.searchRowEl) {
       setStyle(this.searchRowEl, 'opacity', '1');
       setStyles(this.searchRowEl, [
         ['position', 'absolute', 'important'],
-        [
-          'top',
-          `${this.originalMarginTop + (this.toolbarEl?.offsetHeight ?? 0)}px`,
-          'important',
-        ],
+        ['top', `${this.originalMarginTop + toolbarH}px`, 'important'],
         ['left', '0', 'important'],
         ['right', '0', 'important'],
         ['z-index', '29', 'important'],
@@ -808,6 +812,26 @@ export class FullScreenController {
         ['padding', 'unset', 'important'],
         ['background', 'var(--dynamic-views-background-primary)', 'important'],
       ]);
+    }
+
+    // Opaque background behind toolbar/search — prevents content showing
+    // through during the WAAPI opacity 0→1 fade. z-index 28 sits below
+    // the toolbar (29) and header (30).
+    if (!this.toolbarBgEl) {
+      const doc = this.scrollEl.ownerDocument;
+      this.toolbarBgEl = doc.createElement('div');
+      const searchH = this.searchRowEl?.offsetHeight ?? 0;
+      setStyles(this.toolbarBgEl, [
+        ['position', 'absolute', 'important'],
+        ['top', `${this.originalMarginTop}px`, 'important'],
+        ['left', '0', 'important'],
+        ['right', '0', 'important'],
+        ['height', `${toolbarH + searchH}px`, 'important'],
+        ['z-index', '28', 'important'],
+        ['pointer-events', 'none'],
+        ['background', 'var(--dynamic-views-background-primary)', 'important'],
+      ]);
+      this.leafContent.appendChild(this.toolbarBgEl);
     }
 
     if (this.viewHeaderEl) {
@@ -856,6 +880,8 @@ export class FullScreenController {
         'min-height',
       ]);
     }
+    this.toolbarBgEl?.remove();
+    this.toolbarBgEl = null;
     this.leafContent.removeAttribute('data-dynamic-views-show');
     this.leafContent.style.removeProperty('position');
     this.clearSpacerHeadingTops();
@@ -1542,10 +1568,20 @@ export class FullScreenController {
         );
         this.clearNavbarInlines();
 
-        // No toolbar/search WAAPI — overlays snap to opaque instantly
-        // (applyShowOverlays sets inline opacity:1). Unlike the bridge path
-        // where toolbar fades match the layout restoration, the spacer path
-        // positions them as fixed overlays — no transition needed.
+        // Toolbar/search WAAPI fade — 300ms ease-in-out. CSS
+        // full-screen-active sets opacity:0 (no !important), WAAPI overrides
+        // it. Opaque toolbarBgEl (z-index 28) behind them prevents content
+        // showing through during the fade.
+        if (this.toolbarEl) {
+          this.barAnims.push(
+            this.toolbarEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
+          );
+        }
+        if (this.searchRowEl) {
+          this.barAnims.push(
+            this.searchRowEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
+          );
+        }
 
         this.capacitorRafId = requestAnimationFrame(() => {
           this.capacitorRafId = null;
