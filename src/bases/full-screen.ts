@@ -136,7 +136,8 @@ export class FullScreenController {
   private navbarHeight = 0;
   private headerShift = 0;
   // Cached --dynamic-views-bases-view-padding (stable post-mount, default 12px).
-  // Avoids getComputedStyle per show in applySpacerHeadingTops.
+  // Chromium applies sticky top AFTER scroll container padding-top, so heading
+  // position must subtract viewPadding to land at the correct viewport offset.
   private viewPadding = 12;
   private pendingLayout: (() => void) | null = null;
   private scrollIdleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -435,7 +436,6 @@ export class FullScreenController {
     // Read heights BEFORE writing styles — avoids forced layout between
     // write and read on Android's single-threaded compositor.
     const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
-    const searchH = this.searchRowEl?.offsetHeight ?? 0;
 
     if (this.toolbarEl) {
       // Inline opacity:1 provides the post-WAAPI fallback. During the 300ms
@@ -485,7 +485,11 @@ export class FullScreenController {
         ['top', `${this.originalMarginTop}px`, 'important'],
         ['left', '0', 'important'],
         ['right', '0', 'important'],
-        ['height', `${toolbarH + searchH}px`, 'important'],
+        [
+          'height',
+          `${this.totalShift - this.originalMarginTop}px`,
+          'important',
+        ],
         ['z-index', '28', 'important'],
         ['pointer-events', 'none', 'important'],
         ['background', 'var(--dynamic-views-background-primary)', 'important'],
@@ -554,8 +558,8 @@ export class FullScreenController {
   // combinator invariant (_full-screen.scss:179-181).
   // ---------------------------------------------------------------------------
 
-  private applySpacerHeadingTops(): void {
-    const headingTop = this.totalShift - this.viewPadding;
+  private applySpacerHeadingTops(effectiveShift?: number): void {
+    const headingTop = (effectiveShift ?? this.totalShift) - this.viewPadding;
     const sentinelTop = -headingTop;
 
     const headings = this.container.querySelectorAll<HTMLElement>(
@@ -1160,21 +1164,40 @@ export class FullScreenController {
         `translateY(-${this.headerShift}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
-        // 1. Spacer + scroll anchoring — in-flow element before container
-        // whose height change is absorbed by overflow-anchor. Container
-        // (cards) is the anchor target; spacer is excluded (overflow-anchor: none).
+        // 1. Toolbar/search as absolute overlays first — makes search row
+        // measurable (inline height:auto overrides CSS height:0).
+        this.applyShowOverlays();
+
+        // 2. Compute effective bars height — totalShift may exclude search
+        // row height if search was opened after measureTotalShift(). One
+        // forced layout read (offsetHeight) flushes applyShowOverlays
+        // inlines; acceptable in show rAF (single paint at frame end).
+        const liveSearchH = this.searchRowEl?.offsetHeight ?? 0;
+        const effectiveShift =
+          this.originalMarginTop +
+          (this.toolbarEl?.offsetHeight ?? 0) +
+          liveSearchH;
+
+        // 3. Spacer + scroll anchoring — uses effective shift so spacer
+        // accounts for live search row height.
         this.ensureSpacerChrome();
         if (this.spacerEl) {
-          setStyle(this.spacerEl, 'height', `${this.totalShift}px`);
+          setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
         }
         this.spacerActive = true;
 
-        // 2. Toolbar/search as absolute overlays (no margin-top restore —
-        // keeps full-screen-active CSS).
-        this.applyShowOverlays();
+        // Update toolbarBgEl to cover full bars area (toolbar + search)
+        if (this.toolbarBgEl) {
+          setStyle(
+            this.toolbarBgEl,
+            'height',
+            `${effectiveShift - this.originalMarginTop}px`,
+            'important'
+          );
+        }
 
-        // 3. Heading sticky top (inline styles, not CSS — invariant)
-        this.applySpacerHeadingTops();
+        // 4. Heading sticky top (inline styles, not CSS — invariant)
+        this.applySpacerHeadingTops(effectiveShift);
 
         // 4. Restore mask-image gradient — gradient swap (opaque → cached)
         // keeps the compositor render surface allocated, so only the mask
