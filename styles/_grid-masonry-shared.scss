@@ -8,12 +8,76 @@
   container-type: inline-size;
 }
 
-/* View background - Bases files only (not embeds) */
-.workspace-leaf-content[data-type='bases']
-  .bases-view[data-view-type='dynamic-views-grid'],
-.workspace-leaf-content[data-type='bases']
-  .bases-view[data-view-type='dynamic-views-masonry'] {
-  background-color: var(--dynamic-views-view-background);
+/* View background theme presets — standalone Bases files only (not embeds, not Datacore).
+   Body-class-gated: each theme sets --dynamic-views-view-bg-color on body,
+   consumed by a single [class*=] rule. "Default" = no background (transparent). */
+body.dynamic-views-view-background-flexoki {
+  --dynamic-views-view-bg-color: #fffcf0;
+}
+body.dynamic-views-view-background-ayu {
+  --dynamic-views-view-bg-color: #fcfcfc;
+}
+body.dynamic-views-view-background-catppuccin {
+  --dynamic-views-view-bg-color: #eff1f5;
+}
+body.dynamic-views-view-background-everforest {
+  --dynamic-views-view-bg-color: #fdf6e3;
+}
+body.dynamic-views-view-background-gruvbox {
+  --dynamic-views-view-bg-color: #fbf1c7;
+}
+body.dynamic-views-view-background-nord {
+  --dynamic-views-view-bg-color: #eceff4;
+}
+body.dynamic-views-view-background-rose-pine {
+  --dynamic-views-view-bg-color: #fffaf3;
+}
+body.dynamic-views-view-background-solarized {
+  --dynamic-views-view-bg-color: #fdf6e3;
+}
+body.dynamic-views-view-background-custom {
+  --dynamic-views-view-bg-color: var(
+    --dynamic-views-view-background-custom,
+    transparent
+  );
+}
+
+/* Dark mode overrides */
+body.theme-dark.dynamic-views-view-background-flexoki {
+  --dynamic-views-view-bg-color: #100f0f;
+}
+body.theme-dark.dynamic-views-view-background-ayu {
+  --dynamic-views-view-bg-color: #1f2430;
+}
+body.theme-dark.dynamic-views-view-background-catppuccin {
+  --dynamic-views-view-bg-color: #242634;
+}
+body.theme-dark.dynamic-views-view-background-everforest {
+  --dynamic-views-view-bg-color: #2d353b;
+}
+body.theme-dark.dynamic-views-view-background-gruvbox {
+  --dynamic-views-view-bg-color: #282828;
+}
+body.theme-dark.dynamic-views-view-background-nord {
+  --dynamic-views-view-bg-color: #3b4252;
+}
+body.theme-dark.dynamic-views-view-background-rose-pine {
+  --dynamic-views-view-bg-color: #191724;
+}
+body.theme-dark.dynamic-views-view-background-solarized {
+  --dynamic-views-view-bg-color: #002b36;
+}
+
+/* Single consumption rule — only fires when a non-default preset is active */
+body[class*='dynamic-views-view-background-']:not(
+    .dynamic-views-view-background-default
+  )
+  .workspace-leaf-content[data-type='bases']
+  .bases-view:is(
+    [data-view-type='dynamic-views-grid'],
+    [data-view-type='dynamic-views-masonry']
+  ) {
+  background-color: var(--dynamic-views-view-bg-color);
 }
 
 /* Sticky group headers (default: on) — collapsed headers should not stick.
@@ -39,7 +103,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
     left: calc(-1 * var(--dynamic-views-bases-view-padding));
     right: calc(-1 * var(--dynamic-views-bases-view-padding));
     background: var(
-      --dynamic-views-view-background,
+      --dynamic-views-view-bg-color,
       var(--dynamic-views-background-primary)
     );
     z-index: -1;

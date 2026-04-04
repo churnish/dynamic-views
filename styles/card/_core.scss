@@ -169,11 +169,8 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
 }
 
 /* Card background options — override --card-bg so placeholder derives from it */
-body.dynamic-views-card-background-transparent .dynamic-views .card {
-  --card-bg: var(
-    --dynamic-views-view-background,
-    var(--dynamic-views-background-primary)
-  );
+body.dynamic-views-card-background-primary .dynamic-views .card {
+  --card-bg: var(--dynamic-views-background-primary);
 }
 
 body.dynamic-views-card-background-custom .dynamic-views .card {

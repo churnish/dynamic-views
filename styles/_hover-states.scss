@@ -94,14 +94,11 @@
   }
 
   /* Card background on hover options */
-  /* Transparent (default) */
+  /* Primary (default) */
   body:not([class*='dynamic-views-card-background-hover-'])
     .dynamic-views
     .card.hover-intent-active:hover {
-    background-color: var(
-      --dynamic-views-view-background,
-      var(--dynamic-views-background-primary)
-    );
+    background-color: var(--dynamic-views-background-primary);
   }
 
   body.dynamic-views-card-background-hover-tinted
@@ -110,13 +107,10 @@
     background-color: var(--dynamic-views-background-primary-alt);
   }
 
-  body.dynamic-views-card-background-hover-transparent
+  body.dynamic-views-card-background-hover-primary
     .dynamic-views
     .card.hover-intent-active:hover {
-    background-color: var(
-      --dynamic-views-view-background,
-      var(--dynamic-views-background-primary)
-    );
+    background-color: var(--dynamic-views-background-primary);
   }
 
   body.dynamic-views-card-background-hover-custom
@@ -129,13 +123,14 @@
   }
 
   /* Card hover effects — individual transform properties compose when both enabled.
-     Enlarge scoped to Bases files only (embed overflow: hidden clips scaled card). */
+     Enlarge scoped to Bases files only (embed overflow: hidden clips scaled card).
+     z-index 21: above sticky group headings (20) so lifted/enlarged cards paint over them. */
   body.dynamic-views-card-hover-enlarge
     .workspace-leaf-content[data-type='bases']
     .dynamic-views
     .card.hover-intent-active:hover {
     scale: var(--hover-scale-x, 1.02) var(--hover-scale-y, 1.02);
-    z-index: 11;
+    z-index: 21;
   }
 
   body:not(.dynamic-views-card-hover-disable-elevate)
@@ -143,10 +138,10 @@
     .dynamic-views
     .card.hover-intent-active:hover {
     translate: 0 -2px;
-    z-index: 11;
+    z-index: 21;
   }
 
-  /* Lift masonry container above sticky group headers when a card is hovered —
+  /* Lift masonry container above sticky group headings when a card is hovered —
      contain: layout on .masonry-container traps card z-index */
   body:is(
       .dynamic-views-card-hover-enlarge,
@@ -155,7 +150,7 @@
     .workspace-leaf-content[data-type='bases']
     .dynamic-views-masonry
     .masonry-container.has-hover-card {
-    z-index: 11;
+    z-index: 21;
   }
 
   /* Gate pointer cursor behind hover intent on desktop */

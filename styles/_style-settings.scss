@@ -82,46 +82,6 @@ settings:
         description: Enlarge images on hover.
         type: class-toggle
     -
-        id: layout-heading
-        title: Card layout
-        type: heading
-        level: 2
-        collapsed: true
-    -
-        id: dynamic-views-card-spacing-desktop
-        title: Gap
-        description: Spacing between cards on desktop.
-        type: variable-number-slider
-        default: 8
-        min: 0
-        max: 32
-        step: 1
-        format: px
-    -
-        id: dynamic-views-card-spacing-mobile
-        title: Gap
-        description: Spacing between cards on mobile.
-        type: variable-number-slider
-        default: 6
-        min: 0
-        max: 32
-        step: 1
-        format: px
-    -
-        id: dynamic-views-view-background
-        title: View background
-        description: Background color for card views. Does not apply in embedded views.
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
-    -
-        id: dynamic-views-hide-end-indicator
-        title: Hide end of view line
-        description: Do not show horizontal rule at view bottom.
-        type: class-toggle
-        default: false
-    -
         id: cards-heading
         title: Cards
         type: heading
@@ -289,8 +249,8 @@ settings:
                 label: Tinted
                 value: dynamic-views-card-background-tinted
             -
-                label: Transparent
-                value: dynamic-views-card-background-transparent
+                label: Primary
+                value: dynamic-views-card-background-primary
             -
                 label: Custom
                 value: dynamic-views-card-background-custom
@@ -308,7 +268,7 @@ settings:
         description: Card background color on hover.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-card-background-hover-transparent
+        default: dynamic-views-card-background-hover-primary
         options:
             -
                 label: No change
@@ -317,8 +277,8 @@ settings:
                 label: Tinted
                 value: dynamic-views-card-background-hover-tinted
             -
-                label: Transparent
-                value: dynamic-views-card-background-hover-transparent
+                label: Primary
+                value: dynamic-views-card-background-hover-primary
             -
                 label: Custom
                 value: dynamic-views-card-background-hover-custom
@@ -1755,6 +1715,84 @@ settings:
         title: Hyphenate
         description: Break words at syllable boundaries when wrapping.
         type: class-toggle
+    -
+        id: layout-heading
+        title: View
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: dynamic-views-card-spacing-desktop
+        title: Gap
+        description: Spacing between cards on desktop.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-card-spacing-mobile
+        title: Gap
+        description: Spacing between cards on mobile.
+        type: variable-number-slider
+        default: 6
+        min: 0
+        max: 32
+        step: 1
+        format: px
+    -
+        id: dynamic-views-view-background
+        title: Background
+        description: Background color for card views. Does not apply in embedded views.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-view-background-default
+        options:
+            -
+                label: Default
+                value: dynamic-views-view-background-default
+            -
+                label: Flexoki
+                value: dynamic-views-view-background-flexoki
+            -
+                label: Ayu
+                value: dynamic-views-view-background-ayu
+            -
+                label: Catppuccin
+                value: dynamic-views-view-background-catppuccin
+            -
+                label: Everforest
+                value: dynamic-views-view-background-everforest
+            -
+                label: Gruvbox
+                value: dynamic-views-view-background-gruvbox
+            -
+                label: Nord
+                value: dynamic-views-view-background-nord
+            -
+                label: "Rosé Pine"
+                value: dynamic-views-view-background-rose-pine
+            -
+                label: Solarized
+                value: dynamic-views-view-background-solarized
+            -
+                label: Custom
+                value: dynamic-views-view-background-custom
+    -
+        id: dynamic-views-view-background-custom
+        title: Background (custom)
+        description: Custom background color for card views.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-hide-end-indicator
+        title: Hide end of view line
+        description: Do not show horizontal rule at view bottom.
+        type: class-toggle
+        default: false
 
 */
 
@@ -1851,6 +1889,9 @@ body:not(.dynamic-views-title-hover-color-custom)
 body.dynamic-views-poster-theme-dark
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-overlay-light'],
+body:not(.dynamic-views-view-background-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-view-background-custom'],
 body.dynamic-views-poster-theme-light
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-overlay-dark'] {
