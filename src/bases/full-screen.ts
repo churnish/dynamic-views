@@ -295,9 +295,9 @@ export class FullScreenController {
       passive: true,
     });
     if (this.viewHeaderEl) {
-      this.viewHeaderEl.addEventListener('touchend', this.onHeaderTapBound, {
-        passive: true,
-      });
+      // Non-passive — onHeaderTap calls preventDefault() to suppress click
+      // synthesis on header children (title, triple-dot button).
+      this.viewHeaderEl.addEventListener('touchend', this.onHeaderTapBound);
     }
   }
 
@@ -1048,6 +1048,8 @@ export class FullScreenController {
             setStyle(hEl, 'opacity', '0', 'important');
             setStyle(hEl, 'margin-top', '0', 'important');
             setStyle(hEl, 'z-index', '30', 'important');
+            // Override CSS pointer-events:none so tap shield receives touches
+            setStyle(hEl, 'pointer-events', 'auto', 'important');
           };
         }
 
@@ -1440,15 +1442,23 @@ export class FullScreenController {
   private onHeaderTap(e: TouchEvent): void {
     if (!this.barsHidden) return;
 
+    // Suppress click synthesis — without this, the browser fires a click
+    // ~300ms after touchend on the header child (title, triple-dot button).
+    // The heading-forward path returns early without the click-eater timeout,
+    // so preventDefault is the only reliable way to block it on all paths.
+    e.preventDefault();
+
     // The view-header acts as a tap shield when bars are hidden — it covers the status bar zone with pointer-events active to intercept reveals. Stuck group headings straddle this zone, so their collapse/tag/folder taps are swallowed. Temporarily lower pointer-events, hit-test the real target, and forward the click before the deferred reveal timer fires.
     const touch = e.changedTouches[0];
     if (touch && this.viewHeaderEl) {
-      setStyle(this.viewHeaderEl, 'pointer-events', 'none');
+      // Temporarily disable pointer-events to hit-test behind the header.
+      // !important needed to override settle inline (also !important).
+      setStyle(this.viewHeaderEl, 'pointer-events', 'none', 'important');
       const target = this.scrollEl.ownerDocument.elementFromPoint(
         touch.clientX,
         touch.clientY
       );
-      this.viewHeaderEl.style.removeProperty('pointer-events');
+      setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
       if (target && target.closest('.bases-group-heading')) {
         (target as HTMLElement).click();
         return;

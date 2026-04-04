@@ -51,6 +51,10 @@
 .is-android.is-phone [data-type='bases'].full-screen-active .view-header {
   transition: none !important;
   will-change: transform, opacity;
+  // Header is invisible (WAAPI opacity:0) during hide — disable interaction
+  // so taps don't reach children (title, triple-dot). Show path and
+  // tap-shield settle override with inline pointer-events: auto.
+  pointer-events: none !important;
 }
 
 // Toolbar + search row: opacity:0 instead of visibility:hidden.
