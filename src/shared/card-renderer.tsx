@@ -82,7 +82,6 @@ import { applyPerParagraphClamp } from './text-preview-dom';
 import {
   clipPosterStaticOverflow,
   handlePosterTapReveal,
-  resetPosterClipping,
   resetPosterScroll,
 } from './poster';
 
@@ -1942,6 +1941,8 @@ function Card({
           format === 'thumbnail' &&
           (position === 'left' || position === 'right');
 
+        let lastClipWidth = 0;
+        let lastClipHeight = 0;
         const responsiveObserver = new cardWin.ResizeObserver((entries) => {
           for (const entry of entries) {
             // Use offsetWidth (border-box) to match syncResponsiveClasses — see shared-renderer.ts
@@ -1973,8 +1974,12 @@ function Card({
 
             // Re-clip poster content on resize (card dimensions changed)
             if (format === 'poster' && cardEl.closest('.poster-static')) {
-              resetPosterClipping(cardEl);
-              clipPosterStaticOverflow(cardEl);
+              const h = cardEl.offsetHeight;
+              if (cardWidth !== lastClipWidth || h !== lastClipHeight) {
+                lastClipWidth = cardWidth;
+                lastClipHeight = h;
+                clipPosterStaticOverflow(cardEl);
+              }
             }
           }
         });
@@ -2007,7 +2012,7 @@ function Card({
               hoverAbort.signal
             );
 
-            // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
+            // Poster hover intent (shares card-level abort signal — both cancel on unmount)
             if (format === 'poster' && settings.posterInteractToReveal) {
               setupHoverIntent(
                 cardEl,

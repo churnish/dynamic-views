@@ -203,7 +203,6 @@ export function applyCssOnlySettings(
       for (const card of containerEl.querySelectorAll<HTMLElement>(
         '.card.image-format-poster.has-poster'
       )) {
-        resetPosterClipping(card);
         clipPosterStaticOverflow(card);
       }
     }
@@ -237,7 +236,9 @@ export function applyCssOnlySettings(
   // Poster display mode — container class
   const prevMode = containerEl.classList.contains('poster-mode-overlay')
     ? 'overlay'
-    : 'fade';
+    : containerEl.classList.contains('poster-mode-fade')
+      ? 'fade'
+      : null;
   containerEl.classList.remove('poster-mode-fade', 'poster-mode-overlay');
   const rawPosterMode = config.get('posterDisplayMode') as string;
   const posterDisplayMode =
@@ -258,18 +259,18 @@ export function applyCssOnlySettings(
     const posterCards = containerEl.querySelectorAll<HTMLElement>(
       '.card.image-format-poster.has-poster'
     );
-    for (const card of posterCards) resetPosterClipping(card);
     if (isStatic) {
       for (const card of posterCards) clipPosterStaticOverflow(card);
+    } else {
+      for (const card of posterCards) resetPosterClipping(card);
     }
-  } else if (isStatic && posterDisplayMode !== prevMode) {
+  } else if (isStatic && prevMode !== null && posterDisplayMode !== prevMode) {
     // Display mode changed while static — content area size differs (fade has max-height: 70%)
     const win = getOwnerWindow(containerEl);
     win.requestAnimationFrame(() => {
       const posterCards = containerEl.querySelectorAll<HTMLElement>(
         '.card.image-format-poster.has-poster'
       );
-      for (const card of posterCards) resetPosterClipping(card);
       for (const card of posterCards) clipPosterStaticOverflow(card);
     });
   }
@@ -1525,7 +1526,6 @@ export class SharedCardRenderer {
           if (cardWidth !== lastClipWidth || h !== lastClipHeight) {
             lastClipWidth = cardWidth;
             lastClipHeight = h;
-            resetPosterClipping(cardEl);
             clipPosterStaticOverflow(cardEl);
           }
         }

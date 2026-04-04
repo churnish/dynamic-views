@@ -104,9 +104,20 @@ vi.mock('../../src/shared/property-helpers', () => ({
 vi.mock('../../src/utils/owner-window', () => ({
   getOwnerWindow: vi.fn(),
 }));
+vi.mock('../../src/shared/poster', () => ({
+  clipPosterStaticOverflow: vi.fn(),
+  handlePosterTapReveal: vi.fn(),
+  resetPosterClipping: vi.fn(),
+  resetPosterScroll: vi.fn(),
+}));
 
-import { SharedCardRenderer } from '../../src/bases/shared-renderer';
+import {
+  SharedCardRenderer,
+  applyCssOnlySettings,
+} from '../../src/bases/shared-renderer';
 import { VISIBLE_BODY_SELECTOR } from '../../src/shared/constants';
+import { getOwnerWindow } from '../../src/utils/owner-window';
+import type { BasesViewConfig } from 'obsidian';
 
 describe('SharedCardRenderer.hasImageChanged', () => {
   /** Minimal CardData factory — only imageUrl matters */
@@ -341,5 +352,121 @@ describe('Structural content classes', () => {
       applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(true);
     });
+  });
+});
+
+describe('applyCssOnlySettings — poster display mode re-clip', () => {
+  function mockConfig(overrides: Record<string, unknown>) {
+    return {
+      get: (key: string) => overrides[key],
+    } as unknown as BasesViewConfig;
+  }
+
+  function makeContainer(...classes: string[]): HTMLElement {
+    const container = document.createElement('div');
+    container.classList.add(...classes);
+    const card = document.createElement('div');
+    card.className = 'card image-format-poster has-poster';
+    container.appendChild(card);
+    document.body.appendChild(container);
+    return container;
+  }
+
+  beforeEach(() => {
+    vi.mocked(getOwnerWindow).mockReturnValue(
+      window as unknown as Window & typeof globalThis
+    );
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  it('defers re-clip via rAF on fade→overlay switch while static', () => {
+    const rAF = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+    const container = makeContainer('poster-mode-fade', 'poster-static');
+
+    applyCssOnlySettings(
+      mockConfig({
+        posterDisplayMode: 'overlay',
+        posterInteractToReveal: false,
+      }),
+      container
+    );
+
+    expect(rAF).toHaveBeenCalledTimes(1);
+    expect(container.classList.contains('poster-mode-overlay')).toBe(true);
+    rAF.mockRestore();
+  });
+
+  it('defers re-clip via rAF on overlay→fade switch while static', () => {
+    const rAF = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+    const container = makeContainer('poster-mode-overlay', 'poster-static');
+
+    applyCssOnlySettings(
+      mockConfig({ posterDisplayMode: 'fade', posterInteractToReveal: false }),
+      container
+    );
+
+    expect(rAF).toHaveBeenCalledTimes(1);
+    expect(container.classList.contains('poster-mode-fade')).toBe(true);
+    rAF.mockRestore();
+  });
+
+  it('does NOT re-clip on first call (prevMode is null)', () => {
+    const rAF = vi.spyOn(window, 'requestAnimationFrame');
+    const container = makeContainer('poster-static');
+
+    applyCssOnlySettings(
+      mockConfig({
+        posterDisplayMode: 'overlay',
+        posterInteractToReveal: false,
+      }),
+      container
+    );
+
+    expect(rAF).not.toHaveBeenCalled();
+    rAF.mockRestore();
+  });
+
+  it('does NOT re-clip when mode unchanged', () => {
+    const rAF = vi.spyOn(window, 'requestAnimationFrame');
+    const container = makeContainer('poster-mode-fade', 'poster-static');
+
+    applyCssOnlySettings(
+      mockConfig({ posterDisplayMode: 'fade', posterInteractToReveal: false }),
+      container
+    );
+
+    expect(rAF).not.toHaveBeenCalled();
+    rAF.mockRestore();
+  });
+
+  it('does NOT re-clip when not in static mode', () => {
+    const rAF = vi.spyOn(window, 'requestAnimationFrame');
+    const container = makeContainer('poster-mode-fade');
+
+    applyCssOnlySettings(
+      mockConfig({
+        posterDisplayMode: 'overlay',
+        posterInteractToReveal: true,
+      }),
+      container
+    );
+
+    expect(rAF).not.toHaveBeenCalled();
+    rAF.mockRestore();
   });
 });

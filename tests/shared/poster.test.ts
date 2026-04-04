@@ -21,9 +21,7 @@ import {
 // ---------------------------------------------------------------------------
 
 beforeAll(() => {
-  HTMLElement.prototype.setCssProps = function (
-    props: Record<string, string>
-  ) {
+  HTMLElement.prototype.setCssProps = function (props: Record<string, string>) {
     for (const [key, value] of Object.entries(props)) {
       this.style.setProperty(key, value);
     }
@@ -293,18 +291,13 @@ describe('resetPosterClipping', () => {
     const card = document.createElement('div');
     const textPreview = document.createElement('div');
     textPreview.className = 'card-text-preview';
-    textPreview.style.setProperty(
-      '--dynamic-views-text-preview-lines',
-      '3'
-    );
+    textPreview.style.setProperty('--dynamic-views-text-preview-lines', '3');
     card.appendChild(textPreview);
 
     resetPosterClipping(card);
 
     expect(
-      textPreview.style.getPropertyValue(
-        '--dynamic-views-text-preview-lines'
-      )
+      textPreview.style.getPropertyValue('--dynamic-views-text-preview-lines')
     ).toBe('');
   });
 
@@ -339,9 +332,9 @@ describe('resetPosterClipping', () => {
 
     resetPosterClipping(card);
 
-    expect(
-      title.style.getPropertyValue('--dynamic-views-title-lines')
-    ).toBe('');
+    expect(title.style.getPropertyValue('--dynamic-views-title-lines')).toBe(
+      ''
+    );
   });
 
   it('resets subtitle CSS variable + removes poster-clip-clamped class', () => {
@@ -488,9 +481,7 @@ describe('clipPosterStaticOverflow', () => {
 
     // 50px available / 20px line height = 2 lines
     expect(
-      textPreview.style.getPropertyValue(
-        '--dynamic-views-text-preview-lines'
-      )
+      textPreview.style.getPropertyValue('--dynamic-views-text-preview-lines')
     ).toBe('2');
     // Should NOT be hidden
     expect(textWrapper.classList.contains('poster-clip-hidden')).toBe(false);
@@ -538,6 +529,74 @@ describe('clipPosterStaticOverflow', () => {
     expect(subtitle.classList.contains('poster-clip-hidden')).toBe(false);
   });
 
+  it('clears previous clip state before re-clipping', () => {
+    const card = document.createElement('div');
+    card.classList.add('has-poster');
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    Object.defineProperty(content, 'scrollHeight', {
+      value: 500,
+      configurable: true,
+    });
+    Object.defineProperty(content, 'clientHeight', {
+      value: 200,
+      configurable: true,
+    });
+    mockRect(content, { top: 0, bottom: 200, height: 200 });
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.style.setProperty('--dynamic-views-title-lines', '1');
+    mockRect(title, { top: 0, bottom: 40 });
+    header.appendChild(title);
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'card-subtitle';
+    subtitle.classList.add('poster-clip-clamped');
+    subtitle.style.setProperty('--dynamic-views-subtitle-lines', '1');
+    mockRect(subtitle, { top: 40, bottom: 60 });
+    header.appendChild(subtitle);
+    content.appendChild(header);
+
+    const textWrapper = document.createElement('div');
+    textWrapper.className = 'card-text-preview-wrapper';
+    mockRect(textWrapper, { top: 60, bottom: 120 });
+    const textPreview = document.createElement('div');
+    textPreview.className = 'card-text-preview';
+    textPreview.style.setProperty('--dynamic-views-text-preview-lines', '2');
+    textWrapper.appendChild(textPreview);
+    content.appendChild(textWrapper);
+
+    // Stale hidden element from a previous clamp
+    const staleHidden = document.createElement('div');
+    staleHidden.classList.add('poster-clip-hidden');
+    content.appendChild(staleHidden);
+
+    card.appendChild(content);
+
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      lineHeight: '20px',
+      transitionDuration: '0.3s',
+    } as unknown as CSSStyleDeclaration);
+
+    clipPosterStaticOverflow(card);
+
+    // Stale state should be cleared
+    expect(staleHidden.classList.contains('poster-clip-hidden')).toBe(false);
+    expect(title.style.getPropertyValue('--dynamic-views-title-lines')).toBe(
+      ''
+    );
+    expect(subtitle.classList.contains('poster-clip-clamped')).toBe(false);
+    expect(
+      subtitle.style.getPropertyValue('--dynamic-views-subtitle-lines')
+    ).toBe('');
+    expect(
+      textPreview.style.getPropertyValue('--dynamic-views-text-preview-lines')
+    ).toBe('');
+  });
+
   it('clamps overflowing title via CSS variable', () => {
     const card = document.createElement('div');
     card.classList.add('has-poster');
@@ -570,9 +629,9 @@ describe('clipPosterStaticOverflow', () => {
     clipPosterStaticOverflow(card);
 
     // 100px available / 24px = 4 lines
-    expect(
-      title.style.getPropertyValue('--dynamic-views-title-lines')
-    ).toBe('4');
+    expect(title.style.getPropertyValue('--dynamic-views-title-lines')).toBe(
+      '4'
+    );
   });
 });
 
@@ -724,7 +783,6 @@ describe('resetPosterScroll', () => {
 
     resetPosterScroll(card);
 
-    // NaN * 1000 || 300 -> 300 + 50 = 350ms
     vi.advanceTimersByTime(349);
     expect(content.scrollTop).toBe(100);
 

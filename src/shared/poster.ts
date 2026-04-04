@@ -41,6 +41,7 @@ export function handlePosterTapReveal(
 
   const target = e.target as HTMLElement;
   const isInteractive = target.closest(INTERACTIVE_SELECTOR);
+  // ownerDocument.defaultView per AGENTS.md safe exception for text selection
   const win = cardEl.ownerDocument.defaultView ?? window;
   const hasTextSelection = (win.getSelection()?.toString().length ?? 0) > 0;
   const isTextTarget =
@@ -75,17 +76,22 @@ export function handlePosterTapReveal(
  * For partially-visible text elements, reduces line clamp instead of hiding.
  */
 export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
+  // Clear previous clip state upfront (reset is part of re-clip — avoids redundant queries)
+  for (const el of cardEl.querySelectorAll<HTMLElement>(
+    `.${CLIP_HIDDEN_CLASS}`
+  )) {
+    el.classList.remove(CLIP_HIDDEN_CLASS);
+  }
+
   const contentEl = cardEl.querySelector<HTMLElement>('.card-content');
   if (!contentEl) return;
   if (!cardEl.classList.contains('has-poster')) return;
-  if (contentEl.scrollHeight <= contentEl.clientHeight) return;
 
   const win = getOwnerWindow(cardEl);
-  const clipBottom =
-    contentEl.getBoundingClientRect().top + contentEl.clientHeight;
 
   // Title is always visible but can be line-clamped to fit
   const titleEl = contentEl.querySelector<HTMLElement>('.card-title');
+  if (titleEl) titleEl.style.removeProperty(TITLE_LINES_VAR);
 
   // Collect clippable elements in DOM order (title handled separately)
   const clippable: HTMLElement[] = [];
@@ -94,7 +100,11 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
   const header = contentEl.querySelector('.card-header');
   if (header) {
     subtitleEl = header.querySelector<HTMLElement>('.card-subtitle');
-    if (subtitleEl) clippable.push(subtitleEl);
+    if (subtitleEl) {
+      subtitleEl.classList.remove(CLIP_CLAMPED_CLASS);
+      subtitleEl.style.removeProperty(SUBTITLE_LINES_VAR);
+      clippable.push(subtitleEl);
+    }
     const urlIcon = header.querySelector<HTMLElement>('.card-title-url-icon');
     if (urlIcon) clippable.push(urlIcon);
   }
@@ -123,6 +133,17 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
   const textPreviewEl =
     textPreviewWrapper?.querySelector<HTMLElement>('.card-text-preview') ??
     null;
+  if (textPreviewEl) {
+    textPreviewEl.style.removeProperty(TEXT_PREVIEW_LINES_VAR);
+    if (textPreviewEl.classList.contains(HAS_PARAGRAPHS_CLASS)) {
+      applyPerParagraphClamp(textPreviewEl);
+    }
+  }
+
+  if (contentEl.scrollHeight <= contentEl.clientHeight) return;
+
+  const clipBottom =
+    contentEl.getBoundingClientRect().top + contentEl.clientHeight;
 
   // Batch-read all rects (one forced reflow)
   const rects = clippable.map((el) => el.getBoundingClientRect());
