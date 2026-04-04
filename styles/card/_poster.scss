@@ -521,10 +521,10 @@ body.dynamic-views-open-on-card
   cursor: pointer;
 }
 
-/* Mobile: always pointer cursor for reveal toggle, even in title mode */
+/* Mobile: pointer cursor for reveal toggle, even in title mode */
 @media (hover: none) {
   body.dynamic-views-open-on-title
-    .dynamic-views
+    .dynamic-views:not(.poster-static)
     .card.image-format-poster.has-poster {
     cursor: pointer;
   }

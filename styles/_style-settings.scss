@@ -110,7 +110,7 @@ settings:
     -
         id: dynamic-views-view-background
         title: View background
-        description: Background color for card views.
+        description: Background color for card views. Does not apply in embedded views.
         type: variable-themed-color
         format: hex
         default-light: '#'

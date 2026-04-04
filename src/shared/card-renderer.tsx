@@ -2042,15 +2042,7 @@ function Card({
         }
 
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
-        if (
-          settings.openFileAction === 'card' &&
-          !(
-            format === 'poster' &&
-            card.imageUrl &&
-            settings.posterInteractToReveal &&
-            app.isMobile
-          )
-        ) {
+        if (settings.openFileAction === 'card' && !isPosterClickReveal) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === 'A' || target.closest('a');

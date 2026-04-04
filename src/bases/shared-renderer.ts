@@ -228,7 +228,7 @@ export function applyCssOnlySettings(
   containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
   containerEl.classList.toggle(
     'poster-static',
-    config.get('posterInteractToReveal') === false
+    config.get('posterInteractToReveal') !== true
   );
 
   // Image fit — container class
@@ -846,15 +846,7 @@ export class SharedCardRenderer {
         }
 
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
-        if (
-          settings.openFileAction === 'card' &&
-          !(
-            isPoster &&
-            card.imageUrl &&
-            settings.posterInteractToReveal &&
-            this.app.isMobile
-          )
-        ) {
+        if (settings.openFileAction === 'card' && !isPosterClickReveal) {
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === 'A' || target.closest('a');

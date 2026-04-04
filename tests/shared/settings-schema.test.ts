@@ -20,6 +20,7 @@ vi.mock('../../src/constants', () => ({
     fallbackToEmbeds: 'always',
     imageFormat: 'thumbnail',
     posterDisplayMode: 'fade',
+    posterInteractToReveal: false,
     thumbnailSize: 80,
     imagePosition: 'right',
     imageFit: 'crop',
@@ -64,6 +65,7 @@ const MOCK_VIEW_DEFAULTS: any = {
   fallbackToEmbeds: 'always',
   imageFormat: 'thumbnail',
   posterDisplayMode: 'fade',
+  posterInteractToReveal: false,
   thumbnailSize: 80,
   imagePosition: 'right',
   imageFit: 'crop',
@@ -210,6 +212,20 @@ describe('readBasesSettings — posterDisplayMode', () => {
   });
 });
 
+describe('readBasesSettings — posterInteractToReveal', () => {
+  it('should read posterInteractToReveal from config', () => {
+    const config = createMockConfig({ posterInteractToReveal: true }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.posterInteractToReveal).toBe(true);
+  });
+
+  it('should default posterInteractToReveal to false', () => {
+    const config = createMockConfig({}, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.posterInteractToReveal).toBe(false);
+  });
+});
+
 describe('readBasesSettings — templateOverrides', () => {
   it('should use templateOverrides when config has no value', () => {
     const config = createMockConfig({}, []);
@@ -282,6 +298,18 @@ describe('extractBasesTemplate', () => {
     const config = createMockConfig({ posterDisplayMode: 'fade' }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.posterDisplayMode).toBeUndefined();
+  });
+
+  it('should include non-default posterInteractToReveal', () => {
+    const config = createMockConfig({ posterInteractToReveal: true }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
+    expect(result.posterInteractToReveal).toBe(true);
+  });
+
+  it('should omit default posterInteractToReveal', () => {
+    const config = createMockConfig({ posterInteractToReveal: false }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
+    expect(result.posterInteractToReveal).toBeUndefined();
   });
 
   it('should coerce minimumColumns string to number', () => {

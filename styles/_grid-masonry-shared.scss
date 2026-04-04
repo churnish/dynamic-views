@@ -38,7 +38,10 @@ body:not(.dynamic-views-disable-sticky-group-header)
     bottom: 0;
     left: calc(-1 * var(--dynamic-views-bases-view-padding));
     right: calc(-1 * var(--dynamic-views-bases-view-padding));
-    background: var(--dynamic-views-background-primary);
+    background: var(
+      --dynamic-views-view-background,
+      var(--dynamic-views-background-primary)
+    );
     z-index: -1;
     pointer-events: none; /* Background only — don't expand collapse-region's click target */
   }
