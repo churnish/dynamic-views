@@ -468,7 +468,7 @@ export class FullScreenController {
         ['height', 'auto', 'important'],
         ['overflow', 'visible', 'important'],
         ['margin', '0', 'important'],
-        ['padding', 'unset', 'important'],
+        ['padding', '4px 8px', 'important'],
         ['background', 'var(--dynamic-views-background-primary)', 'important'],
       ]);
     }
