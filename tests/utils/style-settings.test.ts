@@ -181,10 +181,11 @@ describe('style-settings', () => {
       expect(getCardSpacing()).toBe(0);
     });
 
-    it('should return Obsidian spacing for embeds (not in bases leaf)', () => {
-      // Create a mock container element that's NOT inside a bases workspace leaf
+    it('should return Obsidian spacing for embeds', () => {
       const mockContainer = document.createElement('div');
-      mockContainer.closest = vi.fn().mockReturnValue(null);
+      mockContainer.closest = vi.fn((selector: string) =>
+        selector === '.internal-embed' ? document.createElement('div') : null
+      );
 
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) => (name === '--size-4-2' ? '8' : ''),
@@ -193,11 +194,9 @@ describe('style-settings', () => {
       expect(getCardSpacing(mockContainer)).toBe(8);
     });
 
-    it('should return custom spacing when inside bases leaf', () => {
-      // Create a mock container element that IS inside a bases workspace leaf
+    it('should return custom spacing when container has CSS variable', () => {
       const mockContainer = document.createElement('div');
-      const mockBasesLeaf = document.createElement('div');
-      mockContainer.closest = vi.fn().mockReturnValue(mockBasesLeaf);
+      mockContainer.closest = vi.fn().mockReturnValue(null);
 
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
@@ -205,6 +204,26 @@ describe('style-settings', () => {
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing(mockContainer)).toBe(12);
+    });
+
+    it('should prefer container-local CSS variable over body', () => {
+      const mockContainer = document.createElement('div');
+      mockContainer.closest = vi.fn().mockReturnValue(null);
+
+      // Mock getComputedStyle to return different values for body vs container
+      mockGetComputedStyle.mockImplementation(
+        (el: Element) =>
+          ({
+            getPropertyValue: (name: string) => {
+              if (name === '--dynamic-views-card-spacing-desktop') {
+                return el === mockContainer ? '20' : '8';
+              }
+              return '';
+            },
+          }) as CSSStyleDeclaration
+      );
+
+      expect(getCardSpacing(mockContainer)).toBe(20);
     });
   });
 

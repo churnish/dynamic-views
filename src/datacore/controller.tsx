@@ -1226,7 +1226,7 @@ export function View({
 
         const cardSize = settings.cardSize;
         const minColumns = settings.minimumColumns;
-        const gap = getCardSpacing();
+        const gap = getCardSpacing(container);
 
         // Set CSS variables (same for both incremental and full paths)
         container.style.setProperty(
@@ -1488,7 +1488,7 @@ export function View({
       // Card size represents minimum width; actual width may be larger to fill space
       const cardSize = settings.cardSize;
       const minColumns = settings.minimumColumns;
-      const gap = getCardSpacing();
+      const gap = getCardSpacing(container);
       const cols = Math.max(
         minColumns,
         Math.floor((containerWidth + gap) / (cardSize + gap))

@@ -137,16 +137,13 @@ export function getHideEmptyMode(): HideEmptyMode {
 }
 
 /**
- * Get card spacing from CSS variable
- * For Bases files, returns user-configured value (desktop/mobile); for embeds, returns Obsidian default
+ * Get card spacing from CSS variable.
+ * Reads from containerEl first (picks up cssclasses overrides), then falls back to body.
+ * For embeds, returns Obsidian's default spacing.
  */
 export function getCardSpacing(containerEl?: HTMLElement): number {
-  // Check if we're in a Bases file (not embed)
-  if (
-    containerEl &&
-    !containerEl.closest('.workspace-leaf-content[data-type="bases"]')
-  ) {
-    // Embed: use Obsidian's spacing scale
+  // Bases embed: use Obsidian's default spacing (Style Settings doesn't apply)
+  if (containerEl?.closest('.internal-embed')) {
     return getCSSVariableAsNumber('--size-4-2', 8);
   }
   const isMobile = document.body.classList.contains('is-mobile');
@@ -154,6 +151,16 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
     ? '--dynamic-views-card-spacing-mobile'
     : '--dynamic-views-card-spacing-desktop';
   const defaultVal = isMobile ? 6 : 8;
+  // Container-local override (cssclasses helper classes set the variable on .dynamic-views or .dynamic-views-grid/.dynamic-views-masonry)
+  if (containerEl) {
+    const value = getComputedStyle(containerEl)
+      .getPropertyValue(varName)
+      .trim();
+    if (value !== '') {
+      const parsed = parseFloat(value);
+      if (!isNaN(parsed)) return parsed;
+    }
+  }
   return getCSSVariableAsNumber(varName, defaultVal);
 }
 
