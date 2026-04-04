@@ -1897,3 +1897,73 @@ body.dynamic-views-poster-theme-light
   .setting-item[data-id='dynamic-views-poster-overlay-dark'] {
   display: none !important;
 }
+
+// Style Settings UI layout refinements
+.style-settings-container .style-settings-container .setting-item {
+  align-items: center;
+  padding: 16px;
+
+  &:not(.setting-item-heading) {
+    flex-direction: row;
+  }
+
+  .setting-item-control {
+    padding-top: 0;
+  }
+}
+.style-settings-heading:not(.is-collapsed) {
+  border-bottom: none;
+}
+.style-settings-heading,
+.style-settings-container {
+  margin-block: 0 !important;
+  padding-left: 32px;
+}
+.style-settings-heading {
+  border-radius: 0;
+  padding: 16px !important;
+}
+.style-settings-heading .setting-item-name {
+  color: var(--text-normal) !important;
+}
+
+.style-settings-container .setting-item {
+  margin-bottom: 0;
+  border-radius: 0;
+  gap: 4px !important;
+}
+.style-settings-container
+  .setting-item:not(.setting-item-heading)
+  + .setting-item:not(.setting-item-heading),
+.style-settings-container
+  .pcr-app
+  + .setting-item:not(.setting-item-heading) {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 16px;
+    border-block-start: 1px solid var(--background-modifier-border);
+  }
+}
+.style-settings-container .setting-item-description > div:last-child {
+  display: none;
+}
+.style-settings-container
+  .setting-item:not(.style-settings-heading)
+  > .setting-item-control {
+  min-height: var(--input-height);
+}
+.style-settings-container
+  .setting-item:nth-child(1 of .setting-item:not(.setting-item-heading)) {
+  border-top-right-radius: var(--setting-items-radius);
+  border-top-left-radius: var(--setting-items-radius);
+}
+.style-settings-container
+  .setting-item:nth-last-child(1 of .setting-item:not(.setting-item-heading)) {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
+}
