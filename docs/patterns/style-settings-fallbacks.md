@@ -187,9 +187,8 @@ When multiple `class-select` presets all resolve to a single CSS variable consum
 
 ```scss
 /* Gate: rule only fires when a title-color preset is active */
-body:is(
-    .dynamic-views-open-on-title,
-    .dynamic-views-poster-reveal-press.dynamic-views-open-on-card
+body.dynamic-views-open-on-title:not(
+    .dynamic-views-title-hover-color-no-change
   ):is(
     [class*='dynamic-views-title-color-'],
     [class*='dynamic-views-title-hover-color-']

@@ -112,7 +112,6 @@ export const CSS_ONLY_SETTINGS_KEYS = new Set([
   'imageRatio',
   'thumbnailSize',
   'posterDisplayMode',
-  'posterInteractToReveal',
   'imageFit',
 ]);
 

@@ -687,7 +687,7 @@ settings:
     -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
-        description: Do not vertically scroll card content when it does not fit.
+        description: Do not vertically scroll card content when it does not fit. Only applies when 'Interact to show details' is enabled.
         type: class-toggle
     -
         id: dynamic-views-poster-background

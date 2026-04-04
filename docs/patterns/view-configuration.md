@@ -119,6 +119,7 @@ Shared `ViewDefaults` — applies to both backends unless noted. Set via `pm.set
 | `fallbackToEmbeds` | `string` | `'always'` | `'always'`, `'if-unavailable'`, `'never'` | |
 | `imageFormat` | `string` | `'thumbnail'` | `'thumbnail'`, `'cover'`, `'poster'`, `'backdrop'` | |
 | `posterDisplayMode` | `string` | `'fade'` | `'fade'`, `'overlay'` | Only when `imageFormat` is `'poster'` |
+| `posterInteractToReveal` | `boolean` | `false` | — | When ON: content hidden, revealed on hover (desktop) / press (mobile) |
 | `thumbnailSize` | `number` | `80` | 64–128 | CSS-only |
 | `imagePosition` | `string` | `'right'` | `'left'`, `'right'`, `'top'`, `'bottom'` | Thumbnail/cover position relative to content |
 | `imageFit` | `string` | `'crop'` | `'crop'`, `'contain'` | CSS-only |

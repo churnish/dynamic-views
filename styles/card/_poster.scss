@@ -192,14 +192,12 @@ body.is-ios
    identity filter with matching function list for smooth CSS transitions.
    ============================================ */
 
-/* Dark overlay defaults (unrevealed — identity filter with matching function list) */
+/* Dark overlay defaults (unrevealed — identity filter with matching function list).
+   Dark is the SS default — :not([class*=]) fallback fires without SS installed. */
 body:is(
     .dynamic-views-poster-theme-dark,
     .dynamic-views-poster-theme-match.theme-dark,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark
-    ).theme-dark
+    :not([class*='dynamic-views-poster-theme-'])
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster
@@ -208,14 +206,11 @@ body:is(
   filter: brightness(1) blur(0px);
 }
 
-/* Light overlay defaults (unrevealed — double invert = identity) */
+/* Light overlay defaults (unrevealed — double invert = identity).
+   No fallback arm — only fires when explicitly set to light. */
 body:is(
     .dynamic-views-poster-theme-light,
-    .dynamic-views-poster-theme-match.theme-light,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark
-    ).theme-light
+    .dynamic-views-poster-theme-match.theme-light
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster
@@ -228,10 +223,7 @@ body:is(
 body:is(
     .dynamic-views-poster-theme-dark,
     .dynamic-views-poster-theme-match.theme-dark,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark
-    ).theme-dark
+    :not([class*='dynamic-views-poster-theme-'])
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.poster-revealed
@@ -247,10 +239,7 @@ body:is(
 body:is(
     .dynamic-views-poster-theme-dark,
     .dynamic-views-poster-theme-match.theme-dark,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark
-    ).theme-dark
+    :not([class*='dynamic-views-poster-theme-'])
   )
   .dynamic-views.poster-mode-overlay.poster-static
   .card.image-format-poster
@@ -265,11 +254,7 @@ body:is(
 /* Light overlay revealed (tap/press) */
 body:is(
     .dynamic-views-poster-theme-light,
-    .dynamic-views-poster-theme-match.theme-light,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark
-    ).theme-light
+    .dynamic-views-poster-theme-match.theme-light
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.poster-revealed
@@ -283,11 +268,7 @@ body:is(
 /* Light overlay static (always dimmed for readability) */
 body:is(
     .dynamic-views-poster-theme-light,
-    .dynamic-views-poster-theme-match.theme-light,
-    :not(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-dark
-    ).theme-light
+    .dynamic-views-poster-theme-match.theme-light
   )
   .dynamic-views.poster-mode-overlay.poster-static
   .card.image-format-poster
@@ -304,10 +285,7 @@ body:is(
   body:is(
       .dynamic-views-poster-theme-dark,
       .dynamic-views-poster-theme-match.theme-dark,
-      :not(
-        .dynamic-views-poster-theme-light,
-        .dynamic-views-poster-theme-dark
-      ).theme-dark
+      :not([class*='dynamic-views-poster-theme-'])
     )
     .dynamic-views.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
@@ -322,11 +300,7 @@ body:is(
   /* Light hover reveal */
   body:is(
       .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-match.theme-light,
-      :not(
-        .dynamic-views-poster-theme-light,
-        .dynamic-views-poster-theme-dark
-      ).theme-light
+      .dynamic-views-poster-theme-match.theme-light
     )
     .dynamic-views.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
@@ -405,6 +379,36 @@ body:is(
   &.poster-mode-fade .card.image-format-poster .card-poster .poster-gradient {
     opacity: 1;
   }
+
+  /* Clip overflow instead of scrolling — JS hides partially-visible elements */
+  .card.image-format-poster .card-content {
+    overflow-y: hidden;
+  }
+
+  /* No scroll = no scroll gradient */
+  .card.image-format-poster
+    .card-content:is(
+      .scroll-gradient-top,
+      .scroll-gradient-bottom,
+      .scroll-gradient-vertical-both
+    ) {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+}
+
+/* Smart clip: hide elements that don't fully fit within poster card-content */
+.dynamic-views .poster-clip-hidden {
+  display: none !important;
+}
+
+/* Smart clip: subtitle line clamp (poster-clip.ts sets --dynamic-views-subtitle-lines
+   and adds this class when subtitle partially overflows in poster-static mode) */
+.dynamic-views .poster-clip-clamped {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--dynamic-views-subtitle-lines);
+  max-height: calc(var(--dynamic-views-subtitle-lines) * 1lh);
 }
 
 /* Grid: height: auto overrides Bases height: 100% to prevent aspect-ratio from

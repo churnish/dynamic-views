@@ -79,6 +79,7 @@ import {
   createUrlButtonDragHandlers,
 } from './drag';
 import { applyPerParagraphClamp } from './text-preview-dom';
+import { clipPosterStaticOverflow, resetPosterScroll } from './poster';
 
 import {
   isTagProperty,
@@ -2025,10 +2026,13 @@ function Card({
               e.preventDefault();
               e.stopPropagation();
               // Dismiss any other revealed card in the same view
-              cardEl
+              const prevRevealed = cardEl
                 .closest('.dynamic-views')
-                ?.querySelector('.card.poster-revealed')
-                ?.classList.remove('poster-revealed');
+                ?.querySelector('.card.poster-revealed');
+              if (prevRevealed) {
+                prevRevealed.classList.remove('poster-revealed');
+                resetPosterScroll(prevRevealed as HTMLElement);
+              }
               cardEl.classList.add('poster-revealed');
               // Press acts as hover intent — ungate pointer cursors
               cardEl.classList.add('hover-intent-active');
@@ -2036,6 +2040,7 @@ function Card({
             } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
               e.stopPropagation();
               cardEl.classList.remove('poster-revealed');
+              resetPosterScroll(cardEl);
               return;
             }
           }
@@ -2132,9 +2137,9 @@ function Card({
       }}
       onMouseLeave={(e: MouseEvent) => {
         if (format === 'poster' && settings.posterInteractToReveal) {
-          (e.currentTarget as HTMLElement).classList.remove(
-            'poster-hover-active'
-          );
+          const el = e.currentTarget as HTMLElement;
+          el.classList.remove('poster-hover-active');
+          resetPosterScroll(el);
         }
       }}
       onMouseMove={(e: MouseEvent) => {
@@ -2224,6 +2229,18 @@ function Card({
           // Poster: scroll gradient on card-content (header + body scroll together)
           if (format === 'poster') {
             setupVerticalScrollGradient(el, scrollController.signal);
+
+            // Poster-static: clip overflowing content at clean boundaries
+            if (!settings.posterInteractToReveal) {
+              // Defer to next frame — Preact hasn't flushed all children yet
+              const win = getOwnerWindow(el);
+              win.requestAnimationFrame(() => {
+                if (el.isConnected) {
+                  const card = el.closest('.card');
+                  if (card) clipPosterStaticOverflow(card as HTMLElement);
+                }
+              });
+            }
           }
         }}
       >

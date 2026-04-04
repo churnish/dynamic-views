@@ -47,6 +47,7 @@ dynamic-views/
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Panzoom image viewer
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
+│   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
 │   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes; compact wrapping detection
 │   │   ├── property-measure.ts       # Measures property field widths + scroll gradients
 │   │   ├── render-utils.ts           # Date/timestamp/property rendering functions

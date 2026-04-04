@@ -118,6 +118,11 @@ import {
   invalidateCompactStackedCache,
 } from '../shared/property-helpers';
 import { getOwnerWindow } from '../utils/owner-window';
+import {
+  clipPosterStaticOverflow,
+  resetPosterClipping,
+  resetPosterScroll,
+} from '../shared/poster';
 
 /** Per-card cleanup handle for individual card teardown (virtual scrolling) */
 export interface CardHandle {
@@ -191,6 +196,16 @@ export function applyCssOnlySettings(
       '--dynamic-views-text-preview-lines',
       String(textPreviewLines)
     );
+
+    // Re-clip poster cards when text preview line count changes
+    if (containerEl.classList.contains('poster-static')) {
+      for (const card of containerEl.querySelectorAll<HTMLElement>(
+        '.card.image-format-poster.has-poster'
+      )) {
+        resetPosterClipping(card);
+        clipPosterStaticOverflow(card);
+      }
+    }
   }
 
   const titleLines = config.get('titleLines');
@@ -226,10 +241,29 @@ export function applyCssOnlySettings(
       ? rawPosterMode
       : 'fade';
   containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
+
+  // Poster static mode — bidirectional: reset clipping on transition, re-clip if entering static
+  const wasStatic = containerEl.classList.contains('poster-static');
   containerEl.classList.toggle(
     'poster-static',
     config.get('posterInteractToReveal') !== true
   );
+  const isStatic = containerEl.classList.contains('poster-static');
+
+  if (wasStatic !== isStatic) {
+    for (const card of containerEl.querySelectorAll<HTMLElement>(
+      '.card.image-format-poster.has-poster'
+    )) {
+      resetPosterClipping(card);
+    }
+    if (isStatic) {
+      for (const card of containerEl.querySelectorAll<HTMLElement>(
+        '.card.image-format-poster.has-poster'
+      )) {
+        clipPosterStaticOverflow(card);
+      }
+    }
+  }
 
   // Image fit — container class
   containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
@@ -830,10 +864,13 @@ export class SharedCardRenderer {
             e.preventDefault();
             e.stopPropagation();
             // Dismiss any other revealed card in the same view
-            cardEl
+            const prevRevealed = cardEl
               .closest('.dynamic-views')
-              ?.querySelector('.card.poster-revealed')
-              ?.classList.remove('poster-revealed');
+              ?.querySelector('.card.poster-revealed');
+            if (prevRevealed) {
+              prevRevealed.classList.remove('poster-revealed');
+              resetPosterScroll(prevRevealed as HTMLElement);
+            }
             cardEl.classList.add('poster-revealed');
             // Press acts as hover intent — ungate pointer cursors
             cardEl.classList.add('hover-intent-active');
@@ -841,6 +878,7 @@ export class SharedCardRenderer {
           } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
             e.stopPropagation();
             cardEl.classList.remove('poster-revealed');
+            resetPosterScroll(cardEl);
             return;
           }
         }
@@ -914,7 +952,10 @@ export class SharedCardRenderer {
             ?.classList.remove('poster-hover-active');
           cardEl.classList.add('poster-hover-active');
         },
-        () => cardEl.classList.remove('poster-hover-active'),
+        () => {
+          cardEl.classList.remove('poster-hover-active');
+          resetPosterScroll(cardEl);
+        },
         signal
       );
     }
@@ -1418,6 +1459,16 @@ export class SharedCardRenderer {
       cardEl.classList.add('has-header');
     }
 
+    // Masonry cards don't have final dimensions at render time (width/height set later
+    // by masonry positioning) — the per-card ResizeObserver handles clipping for masonry.
+    if (
+      format === 'poster' &&
+      !settings.posterInteractToReveal &&
+      cardEl.closest('.dynamic-views-grid')
+    ) {
+      clipPosterStaticOverflow(cardEl);
+    }
+
     // Card-level responsive behaviors (single ResizeObserver)
     // Use cached breakpoint to avoid getComputedStyle per card
     const breakpoint = getCompactBreakpoint();
@@ -1491,6 +1542,12 @@ export class SharedCardRenderer {
           }
 
           cardEl.classList.toggle('thumbnail-stack', shouldStack);
+        }
+
+        // Re-clip poster content on resize (card dimensions changed)
+        if (format === 'poster' && cardEl.closest('.poster-static')) {
+          resetPosterClipping(cardEl);
+          clipPosterStaticOverflow(cardEl);
         }
       }
     });
