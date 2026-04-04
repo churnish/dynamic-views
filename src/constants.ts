@@ -107,6 +107,7 @@ export const DEFAULT_DATACORE_STATE = {
   settings: undefined,
 };
 
+// posterInteractToReveal excluded — toggling requires re-render to wire hover intent + tap handlers
 export const CSS_ONLY_SETTINGS_KEYS = new Set([
   'textPreviewLines',
   'imageRatio',

@@ -143,6 +143,7 @@ dynamic-views/
 │   │   ├── data-transform.test.ts
 │   │   ├── hover-intent.test.ts
 │   │   ├── image-loader.test.ts
+│   │   ├── poster.test.ts
 │   │   ├── property-helpers.test.ts
 │   │   ├── render-utils.test.ts
 │   │   ├── scroll-gradient.test.ts

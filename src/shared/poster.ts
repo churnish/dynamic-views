@@ -9,6 +9,10 @@ const HAS_PARAGRAPHS_CLASS = 'has-paragraphs';
 const TEXT_PREVIEW_LINES_VAR = '--dynamic-views-text-preview-lines';
 const TITLE_LINES_VAR = '--dynamic-views-title-lines';
 const SUBTITLE_LINES_VAR = '--dynamic-views-subtitle-lines';
+const INTERACTIVE_SELECTOR =
+  'a, button, input, select, textarea, .tag, .path-segment, .path-separator, .clickable-icon, .multi-select-pill, .checkbox-container';
+const TEXT_TARGET_SELECTOR =
+  '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-name, .property-name-inline, .property-content';
 
 /**
  * Calculates how many full lines fit in the available height and applies
@@ -17,15 +21,53 @@ const SUBTITLE_LINES_VAR = '--dynamic-views-subtitle-lines';
 function clampToFit(
   el: HTMLElement,
   availableHeight: number,
-  win: Window,
+  lineHeight: number,
   cssVar: string
 ): boolean {
-  const lineHeight = parseFloat(win.getComputedStyle(el).lineHeight);
   if (!lineHeight || lineHeight <= 0) return false;
   const maxLines = Math.floor(availableHeight / lineHeight);
   if (maxLines < 1) return false;
   el.setCssProps({ [cssVar]: String(maxLines) });
   return true;
+}
+
+/** Handles poster tap-to-reveal toggle. Returns true if the event was consumed. */
+export function handlePosterTapReveal(
+  e: MouseEvent,
+  cardEl: HTMLElement,
+  openFileAction: string
+): boolean {
+  if (!cardEl.querySelector('.card-poster')) return false;
+
+  const target = e.target as HTMLElement;
+  const isInteractive = target.closest(INTERACTIVE_SELECTOR);
+  const win = cardEl.ownerDocument.defaultView ?? window;
+  const hasTextSelection = (win.getSelection()?.toString().length ?? 0) > 0;
+  const isTextTarget =
+    openFileAction === 'title' && target.closest(TEXT_TARGET_SELECTOR);
+
+  if (!cardEl.classList.contains('poster-revealed')) {
+    e.preventDefault();
+    e.stopPropagation();
+    const prevRevealed = cardEl
+      .closest('.dynamic-views')
+      ?.querySelector('.card.poster-revealed');
+    if (prevRevealed) {
+      prevRevealed.classList.remove('poster-revealed', 'hover-intent-active');
+      resetPosterScroll(prevRevealed as HTMLElement);
+    }
+    cardEl.classList.add('poster-revealed', 'hover-intent-active');
+    return true;
+  }
+
+  if (!isInteractive && !isTextTarget && !hasTextSelection) {
+    e.stopPropagation();
+    cardEl.classList.remove('poster-revealed', 'hover-intent-active');
+    resetPosterScroll(cardEl);
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -48,10 +90,11 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
   // Collect clippable elements in DOM order (title handled separately)
   const clippable: HTMLElement[] = [];
 
+  let subtitleEl: HTMLElement | null = null;
   const header = contentEl.querySelector('.card-header');
   if (header) {
-    const subtitle = header.querySelector<HTMLElement>('.card-subtitle');
-    if (subtitle) clippable.push(subtitle);
+    subtitleEl = header.querySelector<HTMLElement>('.card-subtitle');
+    if (subtitleEl) clippable.push(subtitleEl);
     const urlIcon = header.querySelector<HTMLElement>('.card-title-url-icon');
     if (urlIcon) clippable.push(urlIcon);
   }
@@ -77,9 +120,24 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
 
   if (clippable.length === 0 && !titleEl) return;
 
+  const textPreviewEl =
+    textPreviewWrapper?.querySelector<HTMLElement>('.card-text-preview') ??
+    null;
+
   // Batch-read all rects (one forced reflow)
   const rects = clippable.map((el) => el.getBoundingClientRect());
   const titleRect = titleEl?.getBoundingClientRect();
+
+  // Batch-read lineHeights for clampable text elements (avoids forced recalc in write loop)
+  const textPreviewLineHeight = textPreviewEl
+    ? parseFloat(win.getComputedStyle(textPreviewEl).lineHeight)
+    : 0;
+  const subtitleLineHeight = subtitleEl
+    ? parseFloat(win.getComputedStyle(subtitleEl).lineHeight)
+    : 0;
+  const titleLineHeight = titleEl
+    ? parseFloat(win.getComputedStyle(titleEl).lineHeight)
+    : 0;
 
   // Iterate reverse: hide elements whose bottom exceeds the clip boundary
   for (let i = clippable.length - 1; i >= 0; i--) {
@@ -93,14 +151,12 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
       const availableHeight = clipBottom - rect.top;
 
       if (el === textPreviewWrapper) {
-        const textPreviewEl =
-          el.querySelector<HTMLElement>('.card-text-preview');
         if (
           textPreviewEl &&
           clampToFit(
             textPreviewEl,
             availableHeight,
-            win,
+            textPreviewLineHeight,
             TEXT_PREVIEW_LINES_VAR
           )
         ) {
@@ -111,8 +167,15 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
         }
       }
 
-      if (el.classList.contains('card-subtitle')) {
-        if (clampToFit(el, availableHeight, win, SUBTITLE_LINES_VAR)) {
+      if (el === subtitleEl) {
+        if (
+          clampToFit(
+            el,
+            availableHeight,
+            subtitleLineHeight,
+            SUBTITLE_LINES_VAR
+          )
+        ) {
           el.classList.add(CLIP_CLAMPED_CLASS);
           continue;
         }
@@ -126,7 +189,7 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
   if (titleEl && titleRect && titleRect.bottom > clipBottom) {
     const availableHeight = clipBottom - titleRect.top;
     if (availableHeight > 0) {
-      clampToFit(titleEl, availableHeight, win, TITLE_LINES_VAR);
+      clampToFit(titleEl, availableHeight, titleLineHeight, TITLE_LINES_VAR);
     }
   }
 }
@@ -169,14 +232,19 @@ export function resetPosterScroll(cardEl: HTMLElement): void {
 
   const reset = () => {
     contentEl.scrollTop = 0;
-    for (const wrapper of cardEl.querySelectorAll('.property-content-wrapper')) {
+    for (const wrapper of cardEl.querySelectorAll(
+      '.property-content-wrapper'
+    )) {
       wrapper.scrollLeft = 0;
     }
   };
 
   // Defer until the exit transition (opacity + transform) completes.
   // Timeout fallback in case transitionend doesn't fire (element removed, display: none, etc.)
-  const duration = parseFloat(getComputedStyle(contentEl).transitionDuration) * 1000 || 300;
+  const win = getOwnerWindow(contentEl);
+  const duration =
+    parseFloat(win.getComputedStyle(contentEl).transitionDuration) * 1000 ||
+    300;
   let settled = false;
   const fallback = setTimeout(() => {
     if (!settled) {
@@ -185,15 +253,13 @@ export function resetPosterScroll(cardEl: HTMLElement): void {
     }
   }, duration + 50);
 
-  contentEl.addEventListener(
-    'transitionend',
-    (e) => {
-      if (e.target !== contentEl) return;
-      if (settled) return;
-      settled = true;
-      clearTimeout(fallback);
-      reset();
-    },
-    { once: true }
-  );
+  const onEnd = (e: TransitionEvent) => {
+    if (e.target !== contentEl) return;
+    if (settled) return;
+    settled = true;
+    clearTimeout(fallback);
+    contentEl.removeEventListener('transitionend', onEnd);
+    reset();
+  };
+  contentEl.addEventListener('transitionend', onEnd);
 }

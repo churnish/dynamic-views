@@ -402,8 +402,8 @@ body:is(
   display: none !important;
 }
 
-/* Smart clip: subtitle line clamp (poster-clip.ts sets --dynamic-views-subtitle-lines
-   and adds this class when subtitle partially overflows in poster-static mode) */
+/* Smart clip: subtitle line clamp — subtitle can partially overflow while remaining
+   readable, so it gets a line-count reduction instead of display:none (poster.ts) */
 .dynamic-views .poster-clip-clamped {
   display: -webkit-box !important;
   -webkit-box-orient: vertical;

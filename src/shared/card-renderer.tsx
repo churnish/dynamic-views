@@ -79,7 +79,12 @@ import {
   createUrlButtonDragHandlers,
 } from './drag';
 import { applyPerParagraphClamp } from './text-preview-dom';
-import { clipPosterStaticOverflow, resetPosterScroll } from './poster';
+import {
+  clipPosterStaticOverflow,
+  handlePosterTapReveal,
+  resetPosterClipping,
+  resetPosterScroll,
+} from './poster';
 
 import {
   isTagProperty,
@@ -1965,6 +1970,12 @@ function Card({
                 cardEl.classList.toggle('thumbnail-stack', isStacked);
               }
             }
+
+            // Re-clip poster content on resize (card dimensions changed)
+            if (format === 'poster' && cardEl.closest('.poster-static')) {
+              resetPosterClipping(cardEl);
+              clipPosterStaticOverflow(cardEl);
+            }
           }
         });
         responsiveObserver.observe(cardEl);
@@ -1995,54 +2006,35 @@ function Card({
               },
               hoverAbort.signal
             );
+
+            // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
+            if (format === 'poster' && settings.posterInteractToReveal) {
+              setupHoverIntent(
+                cardEl,
+                () => {
+                  cardEl
+                    .closest('.dynamic-views')
+                    ?.querySelector('.card.poster-hover-active')
+                    ?.classList.remove('poster-hover-active');
+                  cardEl.classList.add('poster-hover-active');
+                },
+                () => {
+                  cardEl.classList.remove('poster-hover-active');
+                  resetPosterScroll(cardEl);
+                },
+                hoverAbort.signal
+              );
+            }
           }
         }
       }}
       draggable={settings.openFileAction === 'card' || undefined}
       tabIndex={index === focusableCardIndex ? 0 : -1}
       onClick={(e: MouseEvent) => {
-        // Poster tap toggle: mobile or desktop press mode
         if (isPosterClickReveal) {
           const cardEl = e.currentTarget as HTMLElement;
-          if (cardEl.querySelector('.card-poster')) {
-            const target = e.target as HTMLElement;
-            const isInteractive = target.closest(
-              'a, button, input, select, textarea, .tag, .path-segment, .path-separator, .clickable-icon, .multi-select-pill, .checkbox-container'
-            );
-            // Don't dismiss if user has selected text (drag-select or double-click)
-            const hasTextSelection =
-              ((cardEl.ownerDocument.defaultView ?? window)
-                .getSelection()
-                ?.toString().length ?? 0) > 0;
-            // Don't dismiss if click landed on text-selectable content —
-            // prevents double-click word selection from being swallowed by dismiss
-            const isTextTarget =
-              settings.openFileAction === 'title' &&
-              target.closest(
-                '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-name, .property-name-inline, .property-content'
-              );
-
-            if (!cardEl.classList.contains('poster-revealed')) {
-              e.preventDefault();
-              e.stopPropagation();
-              // Dismiss any other revealed card in the same view
-              const prevRevealed = cardEl
-                .closest('.dynamic-views')
-                ?.querySelector('.card.poster-revealed');
-              if (prevRevealed) {
-                prevRevealed.classList.remove('poster-revealed');
-                resetPosterScroll(prevRevealed as HTMLElement);
-              }
-              cardEl.classList.add('poster-revealed');
-              // Press acts as hover intent — ungate pointer cursors
-              cardEl.classList.add('hover-intent-active');
-              return;
-            } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
-              e.stopPropagation();
-              cardEl.classList.remove('poster-revealed');
-              resetPosterScroll(cardEl);
-              return;
-            }
+          if (handlePosterTapReveal(e, cardEl, settings.openFileAction)) {
+            return;
           }
         }
 
@@ -2133,25 +2125,6 @@ function Card({
         const firstImage = imageArray[0];
         if (imgEl && firstImage) {
           (imgEl as HTMLImageElement).src = firstImage;
-        }
-      }}
-      onMouseLeave={(e: MouseEvent) => {
-        if (format === 'poster' && settings.posterInteractToReveal) {
-          const el = e.currentTarget as HTMLElement;
-          el.classList.remove('poster-hover-active');
-          resetPosterScroll(el);
-        }
-      }}
-      onMouseMove={(e: MouseEvent) => {
-        if (format === 'poster' && settings.posterInteractToReveal) {
-          const cardEl = e.currentTarget as HTMLElement;
-          if (!cardEl.classList.contains('poster-hover-active')) {
-            cardEl
-              .closest('.dynamic-views')
-              ?.querySelector('.card.poster-hover-active')
-              ?.classList.remove('poster-hover-active');
-            cardEl.classList.add('poster-hover-active');
-          }
         }
       }}
       onContextMenu={(e: MouseEvent) => {

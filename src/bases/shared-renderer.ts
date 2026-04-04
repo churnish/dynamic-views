@@ -120,6 +120,7 @@ import {
 import { getOwnerWindow } from '../utils/owner-window';
 import {
   clipPosterStaticOverflow,
+  handlePosterTapReveal,
   resetPosterClipping,
   resetPosterScroll,
 } from '../shared/poster';
@@ -251,17 +252,12 @@ export function applyCssOnlySettings(
   const isStatic = containerEl.classList.contains('poster-static');
 
   if (wasStatic !== isStatic) {
-    for (const card of containerEl.querySelectorAll<HTMLElement>(
+    const posterCards = containerEl.querySelectorAll<HTMLElement>(
       '.card.image-format-poster.has-poster'
-    )) {
-      resetPosterClipping(card);
-    }
+    );
+    for (const card of posterCards) resetPosterClipping(card);
     if (isStatic) {
-      for (const card of containerEl.querySelectorAll<HTMLElement>(
-        '.card.image-format-poster.has-poster'
-      )) {
-        clipPosterStaticOverflow(card);
-      }
+      for (const card of posterCards) clipPosterStaticOverflow(card);
     }
   }
 
@@ -840,47 +836,11 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       'click',
       (e) => {
-        // Poster tap toggle: mobile or desktop press mode
-        // Uses outer isPosterClickReveal + DOM guard (poster element may be removed after render)
-        if (isPosterClickReveal && cardEl.querySelector('.card-poster')) {
-          const target = e.target as HTMLElement;
-          const isInteractive = target.closest(
-            'a, button, input, select, textarea, .tag, .path-segment, .path-separator, .clickable-icon, .multi-select-pill, .checkbox-container'
-          );
-          // Don't dismiss if user has selected text (drag-select or double-click)
-          const hasTextSelection =
-            ((cardEl.ownerDocument.defaultView ?? window)
-              .getSelection()
-              ?.toString().length ?? 0) > 0;
-          // Don't dismiss if click landed on text-selectable content —
-          // prevents double-click word selection from being swallowed by dismiss
-          const isTextTarget =
-            settings.openFileAction === 'title' &&
-            target.closest(
-              '.card-subtitle, .card-text-preview-text, .card-text-preview p, .property-name, .property-name-inline, .property-content'
-            );
-
-          if (!cardEl.classList.contains('poster-revealed')) {
-            e.preventDefault();
-            e.stopPropagation();
-            // Dismiss any other revealed card in the same view
-            const prevRevealed = cardEl
-              .closest('.dynamic-views')
-              ?.querySelector('.card.poster-revealed');
-            if (prevRevealed) {
-              prevRevealed.classList.remove('poster-revealed');
-              resetPosterScroll(prevRevealed as HTMLElement);
-            }
-            cardEl.classList.add('poster-revealed');
-            // Press acts as hover intent — ungate pointer cursors
-            cardEl.classList.add('hover-intent-active');
-            return;
-          } else if (!isInteractive && !isTextTarget && !hasTextSelection) {
-            e.stopPropagation();
-            cardEl.classList.remove('poster-revealed');
-            resetPosterScroll(cardEl);
-            return;
-          }
+        if (
+          isPosterClickReveal &&
+          handlePosterTapReveal(e, cardEl, settings.openFileAction)
+        ) {
+          return;
         }
 
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
@@ -1489,6 +1449,8 @@ export class SharedCardRenderer {
     // Thumbnail starts inside previews; stacking moves it to a sibling of previews in card-body
     let isStacked = canMoveThumbnail && thumbnailEl?.parentElement === bodyEl;
 
+    let lastClipWidth = 0;
+    let lastClipHeight = 0;
     const RO = getOwnerWindow(cardEl).ResizeObserver;
     const cardObserver = new RO((entries) => {
       // Guard against race with cleanup or element removal
@@ -1546,8 +1508,13 @@ export class SharedCardRenderer {
 
         // Re-clip poster content on resize (card dimensions changed)
         if (format === 'poster' && cardEl.closest('.poster-static')) {
-          resetPosterClipping(cardEl);
-          clipPosterStaticOverflow(cardEl);
+          const h = cardEl.offsetHeight;
+          if (cardWidth !== lastClipWidth || h !== lastClipHeight) {
+            lastClipWidth = cardWidth;
+            lastClipHeight = h;
+            resetPosterClipping(cardEl);
+            clipPosterStaticOverflow(cardEl);
+          }
         }
       }
     });
