@@ -1891,6 +1891,7 @@ body.dynamic-views-poster-theme-light
 
 // Border-radius fixes for items that become visually first/last when a neighbor is hidden.
 // :nth-child(... of S) counts DOM position, not visibility — hidden items steal radius from visible neighbors.
+// When adding a new display:none rule for a setting that can be first or last in its group, add a compensating border-radius rule here.
 
 // View: card-spacing-desktop hidden on phone → card-spacing-phone becomes visually first
 body.is-phone
@@ -1904,7 +1905,7 @@ body.is-phone
   }
 }
 
-// Image viewer: zoom-sensitivity hidden on phone → disable-dismiss-on-press becomes visually last
+// Image viewer: constrain-to-pane and zoom-sensitivity hidden on phone → disable-dismiss-on-press becomes visually last
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-disable-dismiss-on-press'] {

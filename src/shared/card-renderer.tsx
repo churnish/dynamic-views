@@ -437,6 +437,9 @@ const cardTouchPressActive = new WeakMap<HTMLElement, AbortController>();
 /** Per-element touch scrub state (survives Preact re-renders) */
 const thumbnailTouchBound = new WeakMap<HTMLElement, AbortController>();
 
+/** Cached bounding rect for hover scrubbing (avoids getBoundingClientRect on every pointermove) */
+const thumbnailScrubRect = new WeakMap<HTMLElement, DOMRect>();
+
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
 
@@ -2497,9 +2500,13 @@ function Card({
                             enableScrubbing
                               ? (e: PointerEvent) => {
                                   if (!isHoverPointer(e)) return;
-                                  (
-                                    e.currentTarget as HTMLElement
-                                  ).classList.add('scrub-hover');
+                                  const el = e.currentTarget as HTMLElement;
+                                  // Cache rect to avoid getBoundingClientRect on every pointermove
+                                  thumbnailScrubRect.set(
+                                    el,
+                                    el.getBoundingClientRect()
+                                  );
+                                  el.classList.add('scrub-hover');
                                 }
                               : undefined
                           }
@@ -2510,7 +2517,9 @@ function Card({
                                   if (imageArray.length === 0) return;
                                   const thumbEl =
                                     e.currentTarget as HTMLElement;
-                                  const rect = thumbEl.getBoundingClientRect();
+                                  const rect =
+                                    thumbnailScrubRect.get(thumbEl) ??
+                                    thumbEl.getBoundingClientRect();
                                   const x = e.clientX - rect.left;
                                   const section = Math.floor(
                                     (x / rect.width) * imageArray.length
@@ -2564,6 +2573,8 @@ function Card({
                                   if (embedEl && viewerClones.has(embedEl))
                                     return;
                                   thumbEl.classList.remove('scrub-hover');
+                                  // Invalidate cached rect for next hover (handles resize)
+                                  thumbnailScrubRect.delete(thumbEl);
                                   const firstUrl = imageArray[0];
                                   if (!firstUrl) return;
                                   const imgEl = thumbEl.querySelector('img');
@@ -2621,10 +2632,7 @@ function Card({
                                     ) as HTMLElement;
                                     if (cardEl && thumbEl) {
                                       const preloadGuard = { done: false };
-                                      setupImagePreload(
-                                        cardEl,
-                                        imageArray,
-                                        controller.signal,
+                                      const brokenHandler =
                                         createPreloadBrokenHandler(
                                           imageArray,
                                           cardEl,
@@ -2633,7 +2641,12 @@ function Card({
                                               'multi-image'
                                             );
                                           }
-                                        ),
+                                        );
+                                      setupImagePreload(
+                                        cardEl,
+                                        imageArray,
+                                        controller.signal,
+                                        brokenHandler,
                                         preloadGuard
                                       );
 
@@ -2664,19 +2677,14 @@ function Card({
                                             preloadImageBatch(
                                               imageArray,
                                               controller.signal,
-                                              createPreloadBrokenHandler(
-                                                imageArray,
-                                                cardEl,
-                                                () => {
-                                                  thumbEl.classList.remove(
-                                                    'multi-image'
-                                                  );
-                                                }
-                                              )
+                                              brokenHandler
                                             );
                                           }
                                         },
-                                        { signal: touchAbort.signal }
+                                        {
+                                          signal: touchAbort.signal,
+                                          passive: true,
+                                        }
                                       );
 
                                       thumbEl.addEventListener(
@@ -2752,7 +2760,13 @@ function Card({
                                             thumbEl.classList.remove(
                                               'scrub-hover'
                                             );
-                                            cardEl.addEventListener(
+                                            // Re-resolve cardEl from DOM — Preact re-renders can replace the node
+                                            const liveCardEl = (
+                                              e.target as HTMLElement
+                                            ).closest('.card') as HTMLElement;
+                                            (
+                                              liveCardEl ?? cardEl
+                                            ).addEventListener(
                                               'click',
                                               (ev) => {
                                                 ev.stopPropagation();
@@ -2764,7 +2778,10 @@ function Card({
                                           touchScrubbing = false;
                                           touchRect = null;
                                         },
-                                        { signal: touchAbort.signal }
+                                        {
+                                          signal: touchAbort.signal,
+                                          passive: true,
+                                        }
                                       );
 
                                       thumbEl.addEventListener(
@@ -2777,33 +2794,33 @@ function Card({
                                           touchScrubbing = false;
                                           touchRect = null;
                                         },
-                                        { signal: touchAbort.signal }
+                                        {
+                                          signal: touchAbort.signal,
+                                          passive: true,
+                                        }
                                       );
 
                                       // Reset to first image when thumbnail scrolls out of pane
                                       let thumbWasHidden = false;
                                       const thumbVisObserver =
-                                        new (getOwnerWindow(thumbEl).IntersectionObserver)(
+                                        new (getOwnerWindow(
+                                          thumbEl
+                                        ).IntersectionObserver)(
                                           (entries) => {
-                                            if (
-                                              !entries[0]?.isIntersecting
-                                            ) {
+                                            if (!entries[0]?.isIntersecting) {
                                               thumbWasHidden = true;
                                             } else if (thumbWasHidden) {
                                               thumbWasHidden = false;
                                               imgEl.removeClass(
                                                 'scrub-loading'
                                               );
-                                              const firstUrl =
-                                                imageArray[0];
+                                              const firstUrl = imageArray[0];
                                               if (firstUrl) {
                                                 imgEl.removeClass(
                                                   'dynamic-views-hidden'
                                                 );
                                                 imgEl.src =
-                                                  getCachedBlobUrl(
-                                                    firstUrl
-                                                  );
+                                                  getCachedBlobUrl(firstUrl);
                                               }
                                               delete thumbEl.dataset
                                                 .scrubbedSrc;
@@ -2814,8 +2831,13 @@ function Card({
                                       thumbVisObserver.observe(thumbEl);
                                       touchAbort.signal.addEventListener(
                                         'abort',
-                                        () =>
-                                          thumbVisObserver.disconnect(),
+                                        () => thumbVisObserver.disconnect(),
+                                        { once: true }
+                                      );
+                                      // Also disconnect on Preact re-render (errorController abort)
+                                      controller.signal.addEventListener(
+                                        'abort',
+                                        () => thumbVisObserver.disconnect(),
                                         { once: true }
                                       );
                                     }

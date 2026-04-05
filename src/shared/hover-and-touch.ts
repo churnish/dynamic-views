@@ -96,7 +96,7 @@ export function setupTouchPress(
       activatedAt = Date.now();
       onActivate();
     },
-    { signal }
+    { signal, passive: true }
   );
 
   const deactivate = () => {
@@ -113,8 +113,8 @@ export function setupTouchPress(
     }
   };
 
-  el.addEventListener('pointerup', deactivate, { signal });
-  el.addEventListener('pointercancel', deactivate, { signal });
+  el.addEventListener('pointerup', deactivate, { signal, passive: true });
+  el.addEventListener('pointercancel', deactivate, { signal, passive: true });
   signal.addEventListener('abort', () => {
     if (timer) clearTimeout(timer);
   });

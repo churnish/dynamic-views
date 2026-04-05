@@ -2010,7 +2010,7 @@ export class SharedCardRenderer {
             }
           }
         },
-        { signal }
+        { signal, passive: true }
       );
 
       imageEl.addEventListener(
@@ -2052,7 +2052,7 @@ export class SharedCardRenderer {
             );
           }
         },
-        { signal }
+        { signal, passive: true }
       );
 
       imageEl.addEventListener(
@@ -2116,7 +2116,7 @@ export class SharedCardRenderer {
           touchScrubbing = false;
           touchRect = null;
         },
-        { signal }
+        { signal, passive: true }
       );
 
       imageEl.addEventListener(
@@ -2127,12 +2127,14 @@ export class SharedCardRenderer {
           touchScrubbing = false;
           touchRect = null;
         },
-        { signal }
+        { signal, passive: true }
       );
 
       // Reset to first image when thumbnail scrolls out of pane (same as slideshow reset)
       let thumbWasHidden = false;
-      const thumbVisObserver = new (getOwnerWindow(imageEl).IntersectionObserver)(
+      const thumbVisObserver = new (getOwnerWindow(
+        imageEl
+      ).IntersectionObserver)(
         (entries) => {
           if (!entries[0]?.isIntersecting) {
             thumbWasHidden = true;
