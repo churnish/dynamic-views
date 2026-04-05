@@ -282,6 +282,22 @@ export class DynamicViewsMasonryView extends BasesView {
   private postResizeIdleTimeout: ReturnType<typeof setTimeout> | null = null;
   private expectedIncrementalHeight: number | null = null;
   private totalEntries: number = 0;
+
+  /** Recalculate totalEntries excluding collapsed groups. Called on
+   *  collapse/expand and during processDataUpdate to keep the end
+   *  indicator and infinite scroll in sync with visible card count. */
+  private recalculateTotalEntries(): void {
+    if (!this.data) return;
+    const isGrouped = hasGroupBy(this.config);
+    let total = 0;
+    for (const group of this.data.groupedData) {
+      const gk = group.hasKey() ? serializeGroupKey(group.key) : undefined;
+      if (!isGrouped || !this.collapsedGroups.has(this.getCollapseKey(gk))) {
+        total += group.entries.length;
+      }
+    }
+    this.totalEntries = total;
+  }
   /** Latest container width from ResizeObserver. Never reset — deferred resize
    *  at scroll-idle reads the most recent value, which is always the correct
    *  target width regardless of when the deferral was scheduled. */
@@ -393,6 +409,9 @@ export class DynamicViewsMasonryView extends BasesView {
           (v) => v.groupKey !== collapseGroupKey
         );
         this.rebuildGroupIndex();
+        this.recalculateTotalEntries();
+        this.displayedCount = this.virtualItems.length;
+        this.previousDisplayedCount = this.displayedCount;
         this.groupLayoutResults.delete(collapseGroupKey);
         this.cachedGroupOffsets.delete(collapseGroupKey);
         this.groupOffsetsDirty = true;
@@ -520,6 +539,9 @@ export class DynamicViewsMasonryView extends BasesView {
       );
     }
     this.rebuildGroupIndex();
+    this.recalculateTotalEntries();
+    this.displayedCount = this.virtualItems.length;
+    this.previousDisplayedCount = this.displayedCount;
 
     // Masonry layout calculation + post-render hooks
     // Phase 1.5 inside updateLayoutRef handles syncResponsiveClasses for all
@@ -654,12 +676,9 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Check if more content needed after layout completes, and load if so */
-  private checkAndLoadMore(
-    totalEntries: number,
-    settings: BasesResolvedSettings
-  ): void {
+  private checkAndLoadMore(settings: BasesResolvedSettings): void {
     // Skip if already loading or all items displayed
-    if (this.isLoading || this.displayedCount >= totalEntries) return;
+    if (this.isLoading || this.displayedCount >= this.totalEntries) return;
 
     const scrollContainer = this.scrollEl;
     if (!scrollContainer?.isConnected) return;
@@ -675,9 +694,9 @@ export class DynamicViewsMasonryView extends BasesView {
       const batchSize = this.getBatchSize(settings);
       this.displayedCount = Math.min(
         this.displayedCount + batchSize,
-        totalEntries
+        this.totalEntries
       );
-      void this.appendBatch(totalEntries, settings);
+      void this.appendBatch(settings);
     }
   }
   // #endregion Batch sizing
@@ -971,8 +990,8 @@ export class DynamicViewsMasonryView extends BasesView {
       const groupedData = this.data.groupedData;
       const allEntries = this.data.data;
 
-      // Track total entries for end indicator
-      this.totalEntries = allEntries.length;
+      // Track total entries for end indicator (excludes collapsed groups)
+      this.recalculateTotalEntries();
 
       // Template overrides only for genuinely new views (not existing views on app restart).
       // Existing views have their settings saved in YAML — template should not override them.
@@ -1172,10 +1191,9 @@ export class DynamicViewsMasonryView extends BasesView {
         // read after write forces a synchronous reflow.
         if (this.lastRenderedSettings) {
           const settingsForCheck = this.lastRenderedSettings;
-          const totalForCheck = this.totalEntries;
           this.win.requestAnimationFrame(() => {
             if (!this.containerEl?.isConnected || !settingsForCheck) return;
-            this.checkAndLoadMore(totalForCheck, settingsForCheck);
+            this.checkAndLoadMore(settingsForCheck);
           });
         }
         return;
@@ -1543,22 +1561,11 @@ export class DynamicViewsMasonryView extends BasesView {
         this.remeasureAndReposition();
       }, INITIAL_REMEASURE_MS);
 
-      // Compute effective total (exclude collapsed groups)
-      let effectiveTotal = 0;
-      for (const pg of processedGroups) {
-        const gk = pg.group.hasKey()
-          ? serializeGroupKey(pg.group.key)
-          : undefined;
-        if (!isGrouped || !this.collapsedGroups.has(this.getCollapseKey(gk))) {
-          effectiveTotal += pg.entries.length;
-        }
-      }
-
-      // Update total entries for end indicator (excluding collapsed groups)
-      this.totalEntries = effectiveTotal;
+      // Update total entries for end indicator (excludes collapsed groups)
+      this.recalculateTotalEntries();
 
       // Setup infinite scroll outside setTimeout (c59fe2d pattern)
-      this.setupInfiniteScroll(effectiveTotal, settings);
+      this.setupInfiniteScroll(settings);
 
       // Restore scroll position after render
       this.scrollPreservation?.restoreAfterRender();
@@ -3055,7 +3062,10 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Phase 2: Content-hidden, unmount, restore, budgetExhausted detection.
+    // Hidden-zone mounts budget-limited (same cap as Phase 1) — prevents
+    // frame drops from unbounded DOM insertion after fast scrolls.
     let budgetExhausted = false;
+    let hiddenMountCount = 0;
 
     for (let i = 0; i < len; i++) {
       const item = this.virtualItems[i];
@@ -3077,9 +3087,14 @@ export class DynamicViewsMasonryView extends BasesView {
       } else if (itemBottom > hiddenTop && itemTop < hiddenBottom) {
         // Content-hidden zone: mount for measurement, then hide
         if (!item.el) {
+          if (hiddenMountCount >= mountBudget) {
+            budgetExhausted = true;
+            continue;
+          }
           const container = this.groupContainers.get(item.groupKey);
           if (container) {
             this.mountVirtualItem(item, container, settings);
+            hiddenMountCount++;
             if (item.measuredAtWidth === 0) {
               mountedNeverMeasured = true;
             } else if (
@@ -3514,10 +3529,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
   // #endregion Card rendering
   // #region Infinite scroll
-  private async appendBatch(
-    totalEntries: number,
-    settings: BasesResolvedSettings
-  ): Promise<void> {
+  private async appendBatch(settings: BasesResolvedSettings): Promise<void> {
     // Guard: return early if data not initialized or no masonry container
     if (!this.data || !this.masonryContainer) {
       this.isLoading = false;
@@ -3951,7 +3963,7 @@ export class DynamicViewsMasonryView extends BasesView {
           initializeTextPreviewClampForCards(visibleNewCards);
 
           if (this.renderState.version === currentVersion) {
-            this.checkAndLoadMore(totalEntries, settings);
+            this.checkAndLoadMore(settings);
             if (
               this.virtualItems.length >= this.totalEntries &&
               this.totalEntries > 0
@@ -4047,6 +4059,11 @@ export class DynamicViewsMasonryView extends BasesView {
             });
           }
         }
+      } else if (
+        this.virtualItems.length >= this.totalEntries &&
+        this.totalEntries > 0
+      ) {
+        this.showEndIndicator();
       }
     } finally {
       // Clear loading flag for synchronous paths (no-op).
@@ -4057,10 +4074,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
-  private setupInfiniteScroll(
-    totalEntries: number,
-    settings: BasesResolvedSettings
-  ): void {
+  private setupInfiniteScroll(settings: BasesResolvedSettings): void {
     const scrollContainer = this.scrollEl;
 
     // Clean up existing listeners and timeouts (don't use this.register() since this method is called multiple times)
@@ -4111,13 +4125,13 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
-      this.checkAndLoadMore(totalEntries, settings);
+      this.checkAndLoadMore(settings);
 
       // Start throttle cooldown with trailing call
       this.scrollThrottle.timeoutId = window.setTimeout(() => {
         this.scrollThrottle.timeoutId = null;
         // Trailing call catches scroll position changes during throttle
-        this.checkAndLoadMore(totalEntries, settings);
+        this.checkAndLoadMore(settings);
       }, SCROLL_THROTTLE_MS);
     };
 
@@ -4164,7 +4178,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Setup ResizeObserver on masonry container to detect layout changes
-    if (this.displayedCount < totalEntries && this.masonryContainer) {
+    if (this.displayedCount < this.totalEntries && this.masonryContainer) {
       let prevHeight = this.masonryContainer.offsetHeight;
       const RO = getOwnerWindow(this.masonryContainer).ResizeObserver;
       this.scrollResizeObserver = new RO((entries) => {
@@ -4188,7 +4202,7 @@ export class DynamicViewsMasonryView extends BasesView {
         // Only trigger loading when height INCREASES (new content added)
         // Skip when height decreases (e.g., properties hidden)
         if (newHeight > prevHeight) {
-          this.checkAndLoadMore(totalEntries, settings);
+          this.checkAndLoadMore(settings);
         }
         prevHeight = newHeight;
       });
@@ -4205,7 +4219,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // (browser has already painted layout from updateLayoutRef)
     this.win.requestAnimationFrame(() => {
       if (!this.containerEl?.isConnected) return;
-      this.checkAndLoadMore(totalEntries, settings);
+      this.checkAndLoadMore(settings);
     });
   }
 

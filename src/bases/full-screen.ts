@@ -167,6 +167,9 @@ export class FullScreenController {
   // Opaque background behind toolbar/search during spacer show — prevents
   // content showing through during the WAAPI opacity fade-in.
   private toolbarBgEl: HTMLElement | null = null;
+  // Observes search row size changes — when search opens/closes during
+  // active show mode, spacer/heading/toolbarBg need re-syncing.
+  private searchRowRO: ResizeObserver | null = null;
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
@@ -300,6 +303,18 @@ export class FullScreenController {
       // synthesis on header children (title, triple-dot button).
       this.viewHeaderEl.addEventListener('touchend', this.onHeaderTapBound);
     }
+
+    // Observe search row size — when user opens/closes search during show
+    // mode, heading tops and spacer need re-syncing to clear the search bar.
+    if (this.searchRowEl && !this.searchRowRO) {
+      const win = this.scrollEl.ownerDocument.defaultView;
+      if (win) {
+        this.searchRowRO = new win.ResizeObserver(() => {
+          this.syncShowLayoutForSearch();
+        });
+        this.searchRowRO.observe(this.searchRowEl);
+      }
+    }
   }
 
   /** Cancel and discard all WAAPI animation handles (Android) */
@@ -358,6 +373,10 @@ export class FullScreenController {
   /** Clear header inline styles set during hide/show */
   private clearHeaderInlines(): void {
     if (!this.viewHeaderEl) return;
+    this.viewHeaderEl.classList.remove(
+      'dynamic-views-tap-shield',
+      'dynamic-views-header-show'
+    );
     clearStyles(this.viewHeaderEl, [
       'transform',
       'opacity',
@@ -486,11 +505,7 @@ export class FullScreenController {
       this.leafContent.appendChild(this.toolbarBgEl);
     }
 
-    if (this.viewHeaderEl) {
-      setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
-      setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
-      setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
-    }
+    this.viewHeaderEl?.classList.add('dynamic-views-header-show');
   }
 
   private clearShowOverlays(): void {
@@ -525,13 +540,7 @@ export class FullScreenController {
         'background',
       ]);
     }
-    if (this.viewHeaderEl) {
-      clearStyles(this.viewHeaderEl, [
-        'z-index',
-        'pointer-events',
-        'min-height',
-      ]);
-    }
+    this.viewHeaderEl?.classList.remove('dynamic-views-header-show');
     this.toolbarBgEl?.remove();
     this.toolbarBgEl = null;
     this.leafContent.removeAttribute('data-dynamic-views-show');
@@ -562,6 +571,40 @@ export class FullScreenController {
     for (const s of sentinels) {
       setStyle(s, 'top', `${sentinelTop}px`, 'important');
     }
+  }
+
+  /** Re-sync spacer, heading tops, and toolbar background when search row visibility changes during active show mode. Called by the searchRowRO ResizeObserver. */
+  private syncShowLayoutForSearch(): void {
+    if (!this.spacerActive) return;
+
+    // Suppress scroll handler — spacer resize triggers overflow-anchor
+    // scrollTop adjustment that the scroll handler would misread as
+    // downward user scroll and trigger hide.
+    this.programmaticScroll = true;
+
+    const liveSearchH = this.searchRowEl?.offsetHeight ?? 0;
+    const effectiveShift =
+      this.originalMarginTop +
+      (this.toolbarEl?.offsetHeight ?? 0) +
+      liveSearchH;
+    if (this.spacerEl) {
+      setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
+    }
+    if (this.toolbarBgEl) {
+      setStyle(
+        this.toolbarBgEl,
+        'height',
+        `${effectiveShift - this.originalMarginTop}px`
+      );
+    }
+    this.applySpacerHeadingTops(effectiveShift);
+
+    // Re-enable after overflow-anchor settles — rAF ensures the scrollTop
+    // adjustment is processed before we resume tracking user scroll.
+    requestAnimationFrame(() => {
+      this.prevScrollTop = this.scrollEl.scrollTop;
+      this.programmaticScroll = false;
+    });
   }
 
   private clearSpacerHeadingTops(): void {
@@ -672,6 +715,12 @@ export class FullScreenController {
     this.container.style.removeProperty('transform');
     this.clearSpacerChrome();
     this.scrollEl.style.removeProperty('height');
+
+    // Disconnect search row observer
+    if (this.searchRowRO) {
+      this.searchRowRO.disconnect();
+      this.searchRowRO = null;
+    }
 
     // Cancel WAAPI animations (Android)
     this.cancelAnimations();
@@ -791,10 +840,6 @@ export class FullScreenController {
     const sustainMet =
       this.isAndroid ||
       now - this.directionChangeTime >= FULL_SCREEN_SHOW_SUSTAIN_MS;
-
-    // TEMP: search-open guard disabled for testing full-screen with search visible
-    // const searchOpen =
-    //   this.searchRowEl != null && this.searchRowEl.style.display !== 'none';
 
     if (
       this.accumulatedDelta > FULL_SCREEN_HIDE_DEAD_ZONE &&
@@ -1029,19 +1074,9 @@ export class FullScreenController {
           );
           headerTransformAnim.onfinish = () => {
             // Snap header back to natural position — invisible tap shield
-            // matching native Obsidian full-screen. fill:forwards held the
-            // header off-screen; clearing transform returns it to the top
-            // ~90px zone where it absorbs taps without content interaction.
-            // margin-top:0 overrides Obsidian's safe-area-inset-top margin
-            // so the shield covers the full zone from y=0.
-            // z-index:30 above grouped ::before scrim (25) and sticky
-            // headings (20) so taps reach the header in grouped views.
-            setStyle(hEl, 'transform', 'translateY(0)', 'important');
-            setStyle(hEl, 'opacity', '0', 'important');
-            setStyle(hEl, 'margin-top', '0', 'important');
-            setStyle(hEl, 'z-index', '30', 'important');
-            // Override CSS pointer-events:none so tap shield receives touches
-            setStyle(hEl, 'pointer-events', 'auto', 'important');
+            // matching native Obsidian full-screen. CSS class sets transform,
+            // opacity, margin-top, z-index, and pointer-events.
+            hEl.classList.add('dynamic-views-tap-shield');
           };
         }
 
@@ -1096,18 +1131,9 @@ export class FullScreenController {
       this.settled = true;
 
       // Snap header to tap-shield position — invisible but absorbing taps
-      // in the status bar zone. CSS transform animated it off-screen;
-      // inline override returns it to natural position after settle.
-      // margin-top:0 overrides Obsidian's safe-area-inset-top margin
-      // so the shield covers the full zone from y=0.
-      // z-index:30 above grouped ::before scrim (25) and sticky
-      // headings (20) so taps reach the header in grouped views.
-      if (this.viewHeaderEl) {
-        setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
-        setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
-        setStyle(this.viewHeaderEl, 'margin-top', '0', 'important');
-        setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
-      }
+      // in the status bar zone. CSS class sets transform, opacity,
+      // margin-top, z-index, and pointer-events.
+      this.viewHeaderEl?.classList.add('dynamic-views-tap-shield');
 
       this.pendingRafId = requestAnimationFrame(() => {
         this.programmaticScroll = false;
@@ -1134,14 +1160,10 @@ export class FullScreenController {
       // (triggers scroll layer repaint that flashes .workspace background).
       this.programmaticScroll = true;
 
-      // Clear tap-shield inlines before reading "from" values — onfinish
-      // sets transform:translateY(0) + opacity:0 + margin-top:0 which would
-      // be read as the animation start, producing a fade-only (no slide).
-      if (this.viewHeaderEl) {
-        this.viewHeaderEl.style.removeProperty('transform');
-        this.viewHeaderEl.style.removeProperty('opacity');
-        this.viewHeaderEl.style.removeProperty('margin-top');
-      }
+      // Clear tap-shield class before reading "from" values — the class
+      // sets transform:translateY(0) + opacity:0 which would be read as the
+      // animation start, producing a fade-only (no slide).
+      this.viewHeaderEl?.classList.remove('dynamic-views-tap-shield');
 
       // Read WAAPI "from" values BEFORE rAF — fill:forwards still active
       const navbarFrom =
@@ -1213,11 +1235,7 @@ export class FullScreenController {
         // Re-set header show state cleared by clearHeaderInlines —
         // min-height:0 collapses the tap shield so it doesn't cover
         // the toolbar overlay (z-index 30 > 29, 90px overlap).
-        if (this.viewHeaderEl) {
-          setStyle(this.viewHeaderEl, 'z-index', '30', 'important');
-          setStyle(this.viewHeaderEl, 'pointer-events', 'auto', 'important');
-          setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
-        }
+        this.viewHeaderEl?.classList.add('dynamic-views-header-show');
 
         this.barAnims.push(
           this.navbarEl.animate(
@@ -1273,21 +1291,20 @@ export class FullScreenController {
     // The hide path follows the same pattern: synchronous layout, rAF animation.
     void capacitorStatusBar?.show();
 
-    // Clear tap-shield inlines BEFORE adding class — inline !important
-    // overrides rule !important in the cascade, so the hide-settle inlines
-    // (opacity:0, transform, margin-top) would block the full-screen-showing
+    // Clear tap-shield class + inlines BEFORE adding show class — the
+    // tap-shield CSS (opacity:0, transform) would block the full-screen-showing
     // CSS that restores the header.
     this.clearHeaderInlines();
     // Collapse header during show — base rule sets min-height: ~91px for
     // tap shield, but during show the inflated header overlaps the toolbar.
-    // Inline min-height: 0 shrinks the layout box so toolbar taps pass.
+    // CSS class sets min-height:0, z-index:30, pointer-events:auto.
     if (this.viewHeaderEl) {
-      setStyle(this.viewHeaderEl, 'min-height', '0', 'important');
+      this.viewHeaderEl.classList.add('dynamic-views-header-show');
       // Force style recalc — commit the intermediate state (CSS
       // full-screen-active: translateY(-91px), opacity:0) before the
       // showing class applies (translateY(0), opacity:1). Without this,
       // the browser batches both changes and sees transform 0→0 (from
-      // tap-shield inline to showing class), producing no transition.
+      // tap-shield class to showing class), producing no transition.
       void this.viewHeaderEl.offsetHeight;
     }
 

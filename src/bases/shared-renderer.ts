@@ -901,13 +901,15 @@ export class SharedCardRenderer {
         cardEl,
         () => {
           cardEl.classList.add('hover-intent-active');
-          cardEl.closest('.masonry-container')?.classList.add('has-hover-card');
+          cardEl
+            .closest('.masonry-container, .bases-cards-group')
+            ?.classList.add('has-hover-card');
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
           cardEl.classList.remove('hover-intent-active');
           cardEl
-            .closest('.masonry-container')
+            .closest('.masonry-container, .bases-cards-group')
             ?.classList.remove('has-hover-card');
           keyboardNav?.onHoverEnd?.();
         },
@@ -917,7 +919,11 @@ export class SharedCardRenderer {
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
     // Gates content reveal (via CSS) and scroll access on desktop.
-    if (isPoster && settings.posterInteractToReveal && canPrimaryHover(cardEl)) {
+    if (
+      isPoster &&
+      settings.posterInteractToReveal &&
+      canPrimaryHover(cardEl)
+    ) {
       setupHoverIntent(
         cardEl,
         () => {

@@ -44,6 +44,8 @@ declare module 'obsidian' {
     getAllPropertyInfos():
       | Record<string, { type?: string; widget?: string }>
       | undefined;
+    /** Get incoming links to a file (undocumented API) */
+    getBacklinksForFile(file: TFile): { data: Map<string, LinkCache[]> } | null;
   }
   interface DataAdapter {
     /** Get absolute filesystem path (undocumented API) */

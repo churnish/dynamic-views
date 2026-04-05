@@ -12,9 +12,9 @@
 
 // Bases view-header is empty (Bases uses its own toolbar) — children
 // collapse to 0×0, so the header has no layout box. min-height creates
-// the tap shield surface. margin-top: 0 is set via inline styles in
-// onfinish/idle-settle only — not in CSS, because it would misposition
-// the header during the show animation.
+// the tap shield surface. margin-top: 0 is set via .dynamic-views-tap-shield
+// class (applied by WAAPI onfinish / idle-settle) — not in the base rule,
+// because it would misposition the header during the show animation.
 .is-android.is-phone [data-type='bases'].full-screen-active .view-header,
 .is-phone:not(.is-android) [data-type='bases'].full-screen-active .view-header {
   min-height: calc(
@@ -55,6 +55,36 @@
   // so taps don't reach children (title, triple-dot). Show path and
   // tap-shield settle override with inline pointer-events: auto.
   pointer-events: none !important;
+}
+
+// Tap shield — invisible header at natural position absorbs status bar taps.
+// Applied by WAAPI onfinish (Android) / idle settle (iOS).
+// Must beat full-screen-active hide rules (specificity 0,5,0) — adding
+// .dynamic-views-tap-shield raises to 0,6,0.
+.is-android.is-phone
+  [data-type='bases'].full-screen-active
+  .view-header.dynamic-views-tap-shield,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active
+  .view-header.dynamic-views-tap-shield {
+  transform: translateY(0) !important;
+  opacity: 0 !important;
+  margin-top: 0 !important;
+  z-index: 30 !important;
+  pointer-events: auto !important;
+}
+
+// Header show state — collapses tap shield min-height, restores interaction.
+// Applied during show rAF (Android) and show path (iOS via applyShowOverlays).
+.is-android.is-phone
+  [data-type='bases'].full-screen-active
+  .view-header.dynamic-views-header-show,
+.is-phone:not(.is-android)
+  [data-type='bases'].full-screen-active
+  .view-header.dynamic-views-header-show {
+  z-index: 30 !important;
+  pointer-events: auto !important;
+  min-height: 0 !important;
 }
 
 // Toolbar + search row: opacity:0 instead of visibility:hidden.
@@ -133,6 +163,7 @@
 // Z-index stack (full-screen active):
 //   10  ungrouped ::before scrim (below headings)
 //   20  sticky group headings (_grid-masonry-shared.scss)
+//   21  hovered card enlarge/elevate + masonry has-hover-card (_hover-states.scss)
 //   25  grouped ::before scrim (above headings, absorbs taps)
 //   30  header during show animation (full-screen.ts applyShowInlines + showBarsUI)
 //

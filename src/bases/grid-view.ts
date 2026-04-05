@@ -283,6 +283,22 @@ export class DynamicViewsGridView extends BasesView {
   private isLayoutBusy = false;
   private virtualScrollRafId: number | null = null;
   private totalEntries = 0;
+
+  /** Recalculate totalEntries excluding collapsed groups. Called on
+   *  collapse/expand and during onDataUpdated to keep the end
+   *  indicator and infinite scroll in sync with visible card count. */
+  private recalculateTotalEntries(): void {
+    if (!this.data) return;
+    const isGrouped = hasGroupBy(this.config);
+    let total = 0;
+    for (const group of this.data.groupedData) {
+      const gk = group.hasKey() ? serializeGroupKey(group.key) : undefined;
+      if (!isGrouped || !this.collapsedGroups.has(this.getCollapseKey(gk))) {
+        total += group.entries.length;
+      }
+    }
+    this.totalEntries = total;
+  }
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
   private cardResizeDirty = false;
@@ -398,6 +414,9 @@ export class DynamicViewsGridView extends BasesView {
         this.rebuildVirtualItemsOrder();
         this.groupContainers.delete(matchingGroupKey);
         this.rebuildGroupIndex();
+        this.recalculateTotalEntries();
+        this.displayedCount = this.virtualItems.length;
+        this.previousDisplayedCount = this.displayedCount;
 
         // Refresh offsets — later groups moved up
         this.refreshGroupOffsets();
@@ -535,6 +554,9 @@ export class DynamicViewsGridView extends BasesView {
     this.virtualItemsByGroup.set(groupKey, newItems);
     this.rebuildVirtualItemsOrder(); // Splice in DOM order
     this.rebuildGroupIndex(); // Refresh cached item.index values
+    this.recalculateTotalEntries();
+    this.displayedCount = this.virtualItems.length;
+    this.previousDisplayedCount = this.displayedCount;
 
     // Post-render hooks scoped to this group
     const groupCards = Array.from(
@@ -1199,7 +1221,7 @@ export class DynamicViewsGridView extends BasesView {
 
         // Viewport may be underfilled after CSS-only setting change or
         // duplicate onDataUpdated killing the batch chain mid-append
-        this.checkAndLoadMore(this.totalEntries);
+        this.checkAndLoadMore();
         return;
       }
 
@@ -1546,24 +1568,14 @@ export class DynamicViewsGridView extends BasesView {
         .querySelectorAll<HTMLElement>('.bases-group-heading:not(.collapsed)')
         .forEach((h) => this.stickyHeadings!.observe(h));
 
-      // Compute effective total (exclude collapsed groups)
-      let effectiveTotal = 0;
-      for (const pg of processedGroups) {
-        const gk = pg.group.hasKey()
-          ? serializeGroupKey(pg.group.key)
-          : undefined;
-        if (!isGrouped || !this.collapsedGroups.has(this.getCollapseKey(gk))) {
-          effectiveTotal += pg.entries.length;
-        }
-      }
-
-      this.totalEntries = effectiveTotal;
+      // Update total entries for end indicator (excludes collapsed groups)
+      this.recalculateTotalEntries();
 
       // Setup infinite scroll
-      this.setupInfiniteScroll(effectiveTotal);
+      this.setupInfiniteScroll();
 
       // Show end indicator if all items fit in initial render (skip if 0 results)
-      if (displayedSoFar >= effectiveTotal && effectiveTotal > 0) {
+      if (displayedSoFar >= this.totalEntries && this.totalEntries > 0) {
         this.showEndIndicator();
       }
 
@@ -1778,7 +1790,7 @@ export class DynamicViewsGridView extends BasesView {
 
       // Re-check viewport fill — preserved height inflates scrollHeight,
       // masking underfill from the initial checkAndLoadMore in setupInfiniteScroll
-      this.checkAndLoadMore(this.totalEntries);
+      this.checkAndLoadMore();
 
       // Clear skip-cover-fade after cached image load events have fired.
       // Double-rAF lets the browser process queued load events for cached images
@@ -2002,10 +2014,10 @@ export class DynamicViewsGridView extends BasesView {
   // #endregion Card rendering
   // #region Infinite scroll
   /** Check if more content needed after layout completes, and load if so */
-  private checkAndLoadMore(totalEntries: number): void {
+  private checkAndLoadMore(): void {
     const settings = this.lastRenderedSettings;
     if (!settings) return;
-    if (this.isLoading || this.displayedCount >= totalEntries) return;
+    if (this.isLoading || this.displayedCount >= this.totalEntries) return;
 
     const scrollContainer = this.scrollEl;
     if (!scrollContainer?.isConnected) return;
@@ -2020,13 +2032,13 @@ export class DynamicViewsGridView extends BasesView {
       const batchSize = this.getBatchSize(settings);
       this.displayedCount = Math.min(
         this.displayedCount + batchSize,
-        totalEntries
+        this.totalEntries
       );
-      void this.appendBatch(totalEntries);
+      void this.appendBatch();
     }
   }
 
-  private async appendBatch(totalEntries: number): Promise<void> {
+  private async appendBatch(): Promise<void> {
     // Guard: return early if data not initialized or no feed container
     if (
       !this.data ||
@@ -2292,7 +2304,7 @@ export class DynamicViewsGridView extends BasesView {
       this.hasBatchAppended = true;
 
       // Show end indicator if all items displayed (skip if 0 results)
-      if (this.displayedCount >= totalEntries && totalEntries > 0) {
+      if (this.displayedCount >= this.totalEntries && this.totalEntries > 0) {
         this.showEndIndicator();
       }
     } finally {
@@ -2300,11 +2312,11 @@ export class DynamicViewsGridView extends BasesView {
     }
     // Only chain if this batch wasn't aborted by a new render
     if (this.renderState.version === currentVersion) {
-      this.checkAndLoadMore(totalEntries);
+      this.checkAndLoadMore();
     }
   }
 
-  private setupInfiniteScroll(totalEntries: number): void {
+  private setupInfiniteScroll(): void {
     const scrollContainer = this.scrollEl;
 
     // Clean up existing listener (don't use this.register() since this method is called multiple times)
@@ -2323,7 +2335,7 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     // Show end indicator only after batch append completed all items (skip if 0 results)
-    if (this.displayedCount >= totalEntries && totalEntries > 0) {
+    if (this.displayedCount >= this.totalEntries && this.totalEntries > 0) {
       if (this.hasBatchAppended) {
         this.showEndIndicator();
       }
@@ -2368,10 +2380,10 @@ export class DynamicViewsGridView extends BasesView {
 
       // Infinite scroll check (no-op when all loaded)
       if (this.scrollThrottle.timeoutId !== null) return;
-      this.checkAndLoadMore(totalEntries);
+      this.checkAndLoadMore();
       this.scrollThrottle.timeoutId = window.setTimeout(() => {
         this.scrollThrottle.timeoutId = null;
-        this.checkAndLoadMore(totalEntries);
+        this.checkAndLoadMore();
       }, SCROLL_THROTTLE_MS);
     };
 
@@ -2428,7 +2440,7 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     // Trigger initial check in case viewport already needs more content
-    this.checkAndLoadMore(totalEntries);
+    this.checkAndLoadMore();
   }
   // #endregion Infinite scroll
   // #region Virtual scroll
@@ -3256,7 +3268,7 @@ export class DynamicViewsGridView extends BasesView {
     this.syncVirtualScroll();
 
     // Viewport may be underfilled after cards shrank (e.g., CSS-only setting change)
-    this.checkAndLoadMore(this.totalEntries);
+    this.checkAndLoadMore();
   }
 
   private recomputeYPositions(): void {

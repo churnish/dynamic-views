@@ -48,6 +48,30 @@ function resolveFileLinksProperty(
 }
 
 /**
+ * Resolve file.backlinks property from metadataCache.
+ * getBacklinksForFile returns { data: Map<sourcePath, LinkCache[]> } —
+ * keys are paths of files that link TO this file.
+ */
+function resolveFileBacklinksProperty(
+  app: App,
+  filePath: string
+): string | null {
+  const file = app.vault.getAbstractFileByPath(filePath);
+  if (!(file instanceof TFile)) return null;
+
+  const backlinks = app.metadataCache.getBacklinksForFile(file);
+  if (!backlinks?.data) return null;
+
+  const items: string[] = [];
+  for (const sourcePath of backlinks.data.keys()) {
+    const name = sourcePath.replace(/\.md$/, '');
+    items.push(`[[${name}]]`);
+  }
+
+  return items.length === 0 ? null : JSON.stringify({ type: 'array', items });
+}
+
+/**
  * Strip leading hash (#) from tag strings
  * @param tags Array of tag strings
  * @returns Array with hashes removed
@@ -684,6 +708,10 @@ function resolveFileProperty(
 
   if (propertyName === 'file.embeds' || propertyName === 'file embeds') {
     return resolveFileLinksProperty(app, cardData.path, 'embeds');
+  }
+
+  if (propertyName === 'file.backlinks' || propertyName === 'file backlinks') {
+    return resolveFileBacklinksProperty(app, cardData.path);
   }
 
   const timestamp = resolveTimestampProperty(propertyName, ctime, mtime, true);

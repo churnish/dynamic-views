@@ -1911,23 +1911,12 @@ body.dynamic-views-poster-theme-light
     padding-top: 0;
   }
 }
-.style-settings-heading:not(.is-collapsed) {
-  border-bottom: none;
-}
-.style-settings-heading,
 .style-settings-container {
   margin-block: 0 !important;
   padding-left: 32px;
 }
-.style-settings-heading {
-  border-radius: 0;
-  padding: 16px !important;
-}
-.style-settings-heading .setting-item-name {
-  color: var(--text-normal) !important;
-}
 
-.style-settings-container .setting-item {
+.style-settings-container .setting-item:not(.setting-item-heading) {
   margin-bottom: 0;
   border-radius: 0;
   gap: 4px !important;
@@ -1935,9 +1924,7 @@ body.dynamic-views-poster-theme-light
 .style-settings-container
   .setting-item:not(.setting-item-heading)
   + .setting-item:not(.setting-item-heading),
-.style-settings-container
-  .pcr-app
-  + .setting-item:not(.setting-item-heading) {
+.style-settings-container .pcr-app + .setting-item:not(.setting-item-heading) {
   position: relative;
 
   &::before {

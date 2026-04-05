@@ -1470,6 +1470,129 @@ describe('data-transform', () => {
       });
     });
 
+    describe('file.backlinks property', () => {
+      it('should return array of wikilinks from backlink source paths', () => {
+        const mockFile = Object.assign(new TFile(), { path: 'test.md' });
+        mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue(mockFile);
+        mockApp.metadataCache.getBacklinksForFile = vi.fn().mockReturnValue({
+          data: new Map([
+            ['Notes/Page One.md', [{ link: 'test' }]],
+            ['Notes/Page Two.md', [{ link: 'test' }]],
+          ]),
+        });
+
+        const mockPage: any = { value: vi.fn() };
+        const mockCardData: any = {
+          path: 'test.md',
+          folderPath: '',
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          'file.backlinks',
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC
+        );
+
+        expect(result).toBe(
+          '{"type":"array","items":["[[Notes/Page One]]","[[Notes/Page Two]]"]}'
+        );
+      });
+
+      it('should return null for empty backlinks', () => {
+        const mockFile = Object.assign(new TFile(), { path: 'test.md' });
+        mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue(mockFile);
+        mockApp.metadataCache.getBacklinksForFile = vi.fn().mockReturnValue({
+          data: new Map(),
+        });
+
+        const mockPage: any = { value: vi.fn() };
+        const mockCardData: any = {
+          path: 'test.md',
+          folderPath: '',
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          'file.backlinks',
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it('should return null when file not found', () => {
+        mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue(null);
+
+        const mockPage: any = { value: vi.fn() };
+        const mockCardData: any = {
+          path: 'nonexistent.md',
+          folderPath: '',
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          'file.backlinks',
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it("should support space variant 'file backlinks'", () => {
+        const mockFile = Object.assign(new TFile(), { path: 'test.md' });
+        mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue(mockFile);
+        mockApp.metadataCache.getBacklinksForFile = vi.fn().mockReturnValue({
+          data: new Map([['Refs/Source.md', [{ link: 'test' }]]]),
+        });
+
+        const mockPage: any = { value: vi.fn() };
+        const mockCardData: any = {
+          path: 'test.md',
+          folderPath: '',
+          tags: [],
+          yamlTags: [],
+          ctime: 1000000,
+          mtime: 2000000,
+        };
+        const mockDC: any = { coerce: { string: (val: any) => String(val) } };
+
+        const result = resolveDatacoreProperty(
+          mockApp,
+          'file backlinks',
+          mockPage,
+          mockCardData,
+          mockSettings,
+          mockDC
+        );
+
+        expect(result).toBe('{"type":"array","items":["[[Refs/Source]]"]}');
+      });
+    });
+
     describe('checkbox property handling', () => {
       it('should create checkbox marker for boolean true', async () => {
         // Mock getFirstDatacorePropertyValue to return boolean true

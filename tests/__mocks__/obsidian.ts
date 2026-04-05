@@ -85,6 +85,10 @@ export class MetadataCache {
   getFirstLinkpathDest(linkpath: string, sourcePath: string): TFile | null {
     return null;
   }
+
+  getBacklinksForFile(file: TFile): { data: Map<string, any[]> } | null {
+    return { data: new Map() };
+  }
 }
 
 export class FileManager {

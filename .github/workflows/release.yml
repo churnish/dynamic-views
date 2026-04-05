@@ -54,21 +54,30 @@ jobs:
             --json number,title,author \
             --jq '.[] | "- \(.title) #\(.number) by @\(.author.login)"')
 
-          ISSUES=$(gh issue list --state closed --limit 200 \
-            --json number,title,closedAt,stateReason \
-            --jq "[.[] | select(.stateReason == \"COMPLETED\" and .closedAt >= \"${SINCE}\")] | .[] | \"- \(.title) #\(.number)\"")
+          ISSUES_JSON=$(gh issue list --state closed --limit 200 \
+            --json number,title,closedAt,stateReason,labels \
+            --jq "[.[] | select(.stateReason == \"COMPLETED\" and .closedAt >= \"${SINCE}\")]")
+
+          FEATURES=$(echo "$ISSUES_JSON" | jq -r \
+            '[.[] | select((.labels | map(.name)) as $n | ($n | index("Feature request")) and ($n | index("Bug report") | not))] | .[] | "- \(.title) #\(.number)"')
+
+          BUGS=$(echo "$ISSUES_JSON" | jq -r \
+            '[.[] | select((.labels | map(.name)) as $n | ($n | index("Bug report")) and ($n | index("Feature request") | not))] | .[] | "- \(.title) #\(.number)"')
 
           BODY=""
-          if [ -n "$PRS" ]; then
-            printf -v BODY '### Merged PRs\n\n%s' "$PRS"
-          fi
-          if [ -n "$ISSUES" ]; then
-            if [ -n "$BODY" ]; then
-              printf -v BODY '%s\n\n### Closed issues\n\n%s' "$BODY" "$ISSUES"
-            else
-              printf -v BODY '### Closed issues\n\n%s' "$ISSUES"
+          append_section() {
+            local heading="$1" content="$2"
+            if [ -n "$content" ]; then
+              if [ -n "$BODY" ]; then
+                printf -v BODY '%s\n\n### %s\n\n%s' "$BODY" "$heading" "$content"
+              else
+                printf -v BODY '### %s\n\n%s' "$heading" "$content"
+              fi
             fi
-          fi
+          }
+          append_section "Merged PRs" "$PRS"
+          append_section "Enhancements" "$FEATURES"
+          append_section "Fixes" "$BUGS"
 
           {
             echo 'BODY<<EOF'

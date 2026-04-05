@@ -93,7 +93,7 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | **Hover state restore after closing image viewer**                                 | Re-adds `.hover-intent-active` on dismiss         | Same                                                 |
 | **Drag hover cleanup** — strips hover classes on drag start                        | Reactive cleanup (not a gate)                     | Same                                                 |
 | **Keyboard nav activation** — hover-to-start                                       | `setupHoverIntent` via `canHover`                 | Same                                                 |
-| **Masonry z-index stacking** — `.has-hover-card`                                   | `setupHoverIntent` (Bases only)                   | Same                                                 |
+| **Card container z-index stacking** — `.has-hover-card`                            | `setupHoverIntent` (Bases only)                   | Same                                                 |
 | **Non-card UI hovers** (Datacore toolbar/editor/settings, plugin settings)         | CSS bare `:hover` in `@media (any-hover: hover)`  | CSS `:hover` fires for pen proximity                 |
 
 

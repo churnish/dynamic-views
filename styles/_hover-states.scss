@@ -141,15 +141,16 @@
     z-index: 21;
   }
 
-  /* Lift masonry container above sticky group headings when a card is hovered —
-     contain: layout on .masonry-container traps card z-index */
+  /* Lift card container above sticky group headings when a card is hovered.
+     Masonry: contain: layout on .masonry-container traps card z-index.
+     Grid: defensive — prevents overlap clipping with small card spacing. */
   body:is(
       .dynamic-views-card-hover-enlarge,
       :not(.dynamic-views-card-hover-disable-elevate)
     )
     .workspace-leaf-content[data-type='bases']
-    .dynamic-views-masonry
-    .masonry-container.has-hover-card {
+    :is(.dynamic-views-masonry, .dynamic-views-grid)
+    :is(.masonry-container, .bases-cards-group).has-hover-card {
     z-index: 21;
   }
 

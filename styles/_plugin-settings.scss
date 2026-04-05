@@ -34,8 +34,8 @@
   @media (any-hover: hover) {
     &:hover {
       color: var(--dynamic-views-text-muted) !important;
+      opacity: 0.7;
       text-decoration: none !important;
-      transform: translateY(-1px);
     }
   }
 }

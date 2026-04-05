@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { createInterface } from 'readline';
-import { dirname, join } from 'path';
+import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const isPreflight = process.argv.includes('--preflight');
@@ -152,3 +152,11 @@ if (lastMinVersion !== manifest.minAppVersion) {
 }
 
 console.log(`Updated manifest.json to version ${targetVersion}`);
+
+const pluginName = basename(__dirname);
+const deepwikiPlugins = ['dynamic-views', 'first-line-is-title'];
+if (deepwikiPlugins.includes(pluginName)) {
+  console.log(
+    `\n🔄 After release, refresh the wiki: https://deepwiki.com/churnish/${pluginName}\n`
+  );
+}
