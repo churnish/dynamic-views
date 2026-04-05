@@ -109,16 +109,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
 
     createHeaderLink(
       linksContainer,
-      'https://github.com/churnish/dynamic-views/wiki',
-      'book-open',
-      'Wiki'
-    );
-    linksContainer.createSpan({
-      text: ' • ',
-      cls: 'dynamic-views-header-separator',
-    });
-    createHeaderLink(
-      linksContainer,
       'https://github.com/churnish/dynamic-views/issues',
       'bug',
       'Report bug'

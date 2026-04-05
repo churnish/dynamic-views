@@ -14,7 +14,7 @@ updated: 2026-04-05
 | [overview.md](overview.md) | First time working on this codebase, or need a high-level understanding of the plugin's architecture and major systems. |
 | [principles.md](principles.md) | Making trade-off decisions — what the plugin prioritizes and why. |
 | [project-structure.md](project-structure.md) | Navigating the codebase, finding files, or understanding module responsibilities — documents the full directory tree with file descriptions. |
-| [release-guide.md](release-guide.md) | Running a release, bumping versions, or troubleshooting the release pipeline — documents the full npm version lifecycle, GitHub Action build, wiki publishing, and rollback procedures. |
+| [release-guide.md](release-guide.md) | Running a release, bumping versions, or troubleshooting the release pipeline — documents the full npm version lifecycle, GitHub Action build, and rollback procedures. |
 
 
 ## architecture/

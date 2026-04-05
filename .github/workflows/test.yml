@@ -12,7 +12,6 @@ on:
       - 'docs/**'
       - 'knowledge/**'
       - 'version-bump.mjs'
-      - 'wiki/**'
   pull_request:
     branches: ['**']
     paths-ignore:
@@ -24,7 +23,6 @@ on:
       - 'docs/**'
       - 'knowledge/**'
       - 'version-bump.mjs'
-      - 'wiki/**'
 
 jobs:
   test:

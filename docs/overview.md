@@ -11,7 +11,7 @@ updated: 2026-04-05
 - Dynamic Views renders card views (Grid, Masonry) in Obsidian's built-in [Bases](https://obsidian.md/help/bases) plugin.
 - Cards can display images in multiple formats (cover, thumbnail, poster, backdrop), markup-stripped text previews, and configurable property rows.
 - The plugin also provides a panzoom image viewer, multi-image slideshows, keyboard navigation, and virtual scrolling.
-- See the [README](../README.md) for key features and the [wiki](../wiki/) for detailed documentation.
+- See the [README](../README.md) for key features and documentation.
 - The plugin entry point is [main.ts](../main.ts) — it registers Bases view types, commands, and the settings tab.
 - Core type definitions live in [types.ts](../src/types.ts) and default values in [constants.ts](../src/constants.ts).
 
