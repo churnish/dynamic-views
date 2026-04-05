@@ -105,7 +105,8 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | **Poster content display reveal**                                          | CSS `.poster-hover-active` via `canPrimaryHover`  | No (tap-to-reveal)                                   | --                                   |
 | **Slideshow nav arrow reveal**                                             | CSS `.interact` scoped (hover-only)               | Same                                                 | --                                   |
 | **Theme image dim suppression** -- opacity to 1                            | CSS `.interact` class (no media query)            | Same                                                 | `.interact`                          |
-| **Thumbnail scrubbing**                                                    | `onPointerMove` + `isHoverPointer` via `canHover` | Same                                                 | --                                   |
+| **Thumbnail scrubbing** (hover)                                            | `onPointerMove` + `isHoverPointer`                | Same                                                 | --                                   |
+| **Thumbnail scrubbing** (touch)                                            | --                                                 | --                                                    | `.scrub-hover` (horizontal swipe > 10px) |
 | **Slideshow wheel gesture guard**                                          | `requiresHoverIntent` flag via `canHover`         | Same                                                 | --                                   |
 | **Image preload on hover** (slideshow + scrubbing images)                  | `setupHoverIntent` (no `canHover` gate)           | Same                                                 | --                                   |
 | **Hover state restore after closing image viewer**                         | Re-adds `.interact` on dismiss                    | Same                                                 | --                                   |
@@ -123,12 +124,14 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | `shared-renderer.ts` | Card hover intent (Bases)               | `canHover(cardEl)`                       |
 | `shared-renderer.ts` | Card touch press (Bases)                | Always (pointer events filter internally)|
 | `shared-renderer.ts` | Poster hover intent (Bases)             | `canHover(cardEl)`                       |
-| `shared-renderer.ts` | Thumbnail scrubbing gate (Bases)        | `canHover(cardEl)`                       |
-| `shared-renderer.ts` | Thumbnail scrubbing handlers (Bases)    | `isHoverPointer(e)`                      |
-| `card-renderer.tsx`  | Thumbnail scrubbing gate (Datacore)     | `canHover()` (no element -- device-level)|
+| `shared-renderer.ts` | Thumbnail scrubbing gate (Bases)        | No gate (multi-image + setting)          |
+| `shared-renderer.ts` | Thumbnail hover scrub handlers (Bases)  | `isHoverPointer(e)`                      |
+| `shared-renderer.ts` | Thumbnail touch scrub handlers (Bases)  | `isTouchPointer(e)`                      |
+| `card-renderer.tsx`  | Thumbnail scrubbing gate (Datacore)     | No gate (multi-image + setting)          |
 | `card-renderer.tsx`  | Card + poster hover intent (Datacore)   | `canHover(cardEl)`                       |
 | `card-renderer.tsx`  | Card touch press (Datacore)             | Always (pointer events filter internally)|
-| `card-renderer.tsx`  | Thumbnail scrubbing handlers (Datacore) | `isHoverPointer(e)`                      |
+| `card-renderer.tsx`  | Thumbnail hover scrub handlers (Datacore) | `isHoverPointer(e)`                    |
+| `card-renderer.tsx`  | Thumbnail touch scrub handlers (Datacore) | `isTouchPointer(e)`                    |
 | `slideshow.ts`       | Wheel gesture hover guard               | `canHover(coverEl)`                      |
 | `slideshow.ts`       | Image preload on hover                  | No gate (benign on touch)                |
 
@@ -149,7 +152,7 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | `card/_backdrop.scss`         | Backdrop hover zoom transition (trigger unwrapped)               |
 | `card/_poster.scss`           | Content scroll, overlay reveal, content display, will-change     |
 | `card/_slideshow.scss`        | Nav arrows, boundary dimming, icon hide                          |
-| `card/_previews.scss`         | Thumbnail scrub indicator                                        |
+
 | `datacore/_toolbar.scss`      | Toolbar button/dropdown hovers                                   |
 | `datacore/_query-editor.scss` | Query editor button hovers                                       |
 | `datacore/_settings.scss`     | Settings panel hover states                                      |

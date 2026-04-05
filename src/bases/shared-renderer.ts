@@ -80,6 +80,7 @@ import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
   getCachedBlobUrl,
+  preloadImageBatch,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -88,6 +89,7 @@ import {
   canHover,
   canPrimaryHover,
   isHoverPointer,
+  isTouchPointer,
   setupHoverIntent,
   setupTouchPress,
 } from '../shared/hover-and-touch';
@@ -1400,11 +1402,7 @@ export class SharedCardRenderer {
           );
 
           // Multi-image indicator for scrubbable thumbnails
-          if (
-            imageUrls.length > 1 &&
-            !this.app.isMobile &&
-            !isThumbnailScrubbingDisabled()
-          ) {
+          if (imageUrls.length > 1 && !isThumbnailScrubbingDisabled()) {
             const indicator = imageEl.createDiv('thumbnail-indicator');
             setIcon(indicator, 'lucide-copy');
           }
@@ -1877,7 +1875,6 @@ export class SharedCardRenderer {
     const scrubbableUrls =
       format === 'thumbnail' &&
       imageUrls.length > 1 &&
-      canHover(cardEl) &&
       !isThumbnailScrubbingDisabled()
         ? imageUrls.slice(0, 10)
         : null;
@@ -1939,9 +1936,17 @@ export class SharedCardRenderer {
       );
     }
 
-    // Thumbnail scrubbing (desktop only, max 10 images)
+    // Thumbnail scrubbing (hover + touch, max 10 images)
     if (scrubbableUrls) {
       imageEl.classList.add('multi-image');
+
+      // Touch + hover preload dedup
+      const preloadGuard = { done: false };
+
+      // Touch scrubbing state
+      let touchStartX = 0;
+      let touchScrubbing = false;
+      let touchRect: DOMRect | null = null;
 
       // Preload on hover — splice broken URLs from scrubbable array immediately
       if (signal) {
@@ -1951,7 +1956,8 @@ export class SharedCardRenderer {
           signal,
           createPreloadBrokenHandler(scrubbableUrls, cardEl, () => {
             imageEl.classList.remove('multi-image');
-          })
+          }),
+          preloadGuard
         );
       }
 
@@ -2025,6 +2031,127 @@ export class SharedCardRenderer {
         },
         { signal }
       );
+
+      // Touch scrubbing: horizontal swipe across multi-image thumbnail
+      imageEl.addEventListener(
+        'pointerdown',
+        (e: PointerEvent) => {
+          if (!isTouchPointer(e)) return;
+          touchStartX = e.clientX;
+          touchScrubbing = false;
+          touchRect = imageEl.getBoundingClientRect();
+          // Preload images on first touch
+          if (!preloadGuard.done) {
+            preloadGuard.done = true;
+            preloadImageBatch(
+              scrubbableUrls,
+              signal!,
+              createPreloadBrokenHandler(scrubbableUrls, cardEl, () => {
+                imageEl.classList.remove('multi-image');
+              })
+            );
+          }
+        },
+        { signal }
+      );
+
+      imageEl.addEventListener(
+        'pointermove',
+        (e: PointerEvent) => {
+          if (!isTouchPointer(e) || !touchRect) return;
+          const deltaX = Math.abs(e.clientX - touchStartX);
+          if (!touchScrubbing && deltaX > 10) {
+            touchScrubbing = true;
+            imageEl.classList.add('scrub-hover');
+          }
+          if (!touchScrubbing) return;
+
+          const x = e.clientX - touchRect.left;
+          const index = Math.max(
+            0,
+            Math.min(
+              Math.floor((x / touchRect.width) * scrubbableUrls.length),
+              scrubbableUrls.length - 1
+            )
+          );
+          const rawUrl = scrubbableUrls[index];
+          const resolvedUrl = getCachedBlobUrl(rawUrl);
+          if (resolvedUrl === rawUrl && rawUrl.startsWith('http')) {
+            if (imgEl.src !== resolvedUrl) {
+              imgEl.addClass('scrub-loading');
+              imgEl.src = resolvedUrl;
+              imgEl.addEventListener(
+                'load',
+                () => imgEl.removeClass('scrub-loading'),
+                { once: true }
+              );
+            }
+          } else {
+            imgEl.removeClass('scrub-loading');
+            imgEl.removeClass('dynamic-views-hidden');
+            if (imgEl.src !== resolvedUrl) {
+              imgEl.src = resolvedUrl;
+            }
+          }
+        },
+        { signal, passive: true }
+      );
+
+      imageEl.addEventListener(
+        'pointerup',
+        (e: PointerEvent) => {
+          if (!isTouchPointer(e)) return;
+          if (touchScrubbing) {
+            imageEl.classList.remove('scrub-hover');
+            // Suppress next click (card open / image viewer)
+            cardEl.addEventListener(
+              'click',
+              (ev) => {
+                ev.stopPropagation();
+                ev.preventDefault();
+              },
+              { once: true, capture: true }
+            );
+          }
+          touchScrubbing = false;
+          touchRect = null;
+        },
+        { signal }
+      );
+
+      imageEl.addEventListener(
+        'pointercancel',
+        (e: PointerEvent) => {
+          if (!isTouchPointer(e)) return;
+          imageEl.classList.remove('scrub-hover');
+          touchScrubbing = false;
+          touchRect = null;
+        },
+        { signal }
+      );
+
+      // Reset to first image when thumbnail scrolls out of pane (same as slideshow reset)
+      let thumbWasHidden = false;
+      const thumbVisObserver = new (getOwnerWindow(imageEl).IntersectionObserver)(
+        (entries) => {
+          if (!entries[0]?.isIntersecting) {
+            thumbWasHidden = true;
+          } else if (thumbWasHidden) {
+            thumbWasHidden = false;
+            imgEl.removeClass('scrub-loading');
+            const firstUrl = scrubbableUrls[0];
+            if (firstUrl) {
+              imgEl.removeClass('dynamic-views-hidden');
+              imgEl.src = getCachedBlobUrl(firstUrl);
+            }
+          }
+        },
+        { threshold: 0 }
+      );
+      thumbVisObserver.observe(imageEl);
+      signal?.addEventListener('abort', () => thumbVisObserver.disconnect(), {
+        once: true,
+      });
     }
   }
 

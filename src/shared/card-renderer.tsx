@@ -46,6 +46,7 @@ import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
   getCachedBlobUrl,
+  preloadImageBatch,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -74,6 +75,7 @@ import {
   canHover,
   canPrimaryHover,
   isHoverPointer,
+  isTouchPointer,
   setupHoverIntent,
   setupTouchPress,
 } from './hover-and-touch';
@@ -431,6 +433,9 @@ const cardHoverIntentActive = new WeakMap<HTMLElement, AbortController>();
 
 /** Per-element touch press state (survives Preact re-renders) */
 const cardTouchPressActive = new WeakMap<HTMLElement, AbortController>();
+
+/** Per-element touch scrub state (survives Preact re-renders) */
+const thumbnailTouchBound = new WeakMap<HTMLElement, AbortController>();
 
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
@@ -1508,7 +1513,7 @@ function Card({
   );
   // Enable scrubbing only on desktop with multiple images and setting enabled
   const enableScrubbing =
-    canHover() && isArray && imageArray.length > 1 && !scrubbingDisabled;
+    isArray && imageArray.length > 1 && !scrubbingDisabled;
 
   const hasImageSource =
     !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== 'never';
@@ -2606,12 +2611,16 @@ function Card({
                                     imgEl as ImgWithController
                                   )._errorController = controller;
 
-                                  // Preload scrubbable images on hover intent
+                                  // Preload + touch scrub for multi-image thumbnails
                                   if (enableScrubbing) {
                                     const cardEl = imgEl.closest(
                                       '.card'
                                     ) as HTMLElement;
-                                    if (cardEl) {
+                                    const thumbEl = imgEl.closest(
+                                      '.card-thumbnail'
+                                    ) as HTMLElement;
+                                    if (cardEl && thumbEl) {
+                                      const preloadGuard = { done: false };
                                       setupImagePreload(
                                         cardEl,
                                         imageArray,
@@ -2620,11 +2629,194 @@ function Card({
                                           imageArray,
                                           cardEl,
                                           () => {
-                                            imgEl
-                                              .closest('.card-thumbnail')
-                                              ?.classList.remove('multi-image');
+                                            thumbEl.classList.remove(
+                                              'multi-image'
+                                            );
                                           }
-                                        )
+                                        ),
+                                        preloadGuard
+                                      );
+
+                                      // Touch scrubbing: horizontal swipe across multi-image thumbnail
+                                      const existingTouch =
+                                        thumbnailTouchBound.get(thumbEl);
+                                      if (existingTouch) existingTouch.abort();
+                                      const touchAbort = new AbortController();
+                                      thumbnailTouchBound.set(
+                                        thumbEl,
+                                        touchAbort
+                                      );
+
+                                      let touchStartX = 0;
+                                      let touchScrubbing = false;
+                                      let touchRect: DOMRect | null = null;
+
+                                      thumbEl.addEventListener(
+                                        'pointerdown',
+                                        (e: PointerEvent) => {
+                                          if (!isTouchPointer(e)) return;
+                                          touchStartX = e.clientX;
+                                          touchScrubbing = false;
+                                          touchRect =
+                                            thumbEl.getBoundingClientRect();
+                                          if (!preloadGuard.done) {
+                                            preloadGuard.done = true;
+                                            preloadImageBatch(
+                                              imageArray,
+                                              controller.signal,
+                                              createPreloadBrokenHandler(
+                                                imageArray,
+                                                cardEl,
+                                                () => {
+                                                  thumbEl.classList.remove(
+                                                    'multi-image'
+                                                  );
+                                                }
+                                              )
+                                            );
+                                          }
+                                        },
+                                        { signal: touchAbort.signal }
+                                      );
+
+                                      thumbEl.addEventListener(
+                                        'pointermove',
+                                        (e: PointerEvent) => {
+                                          if (!isTouchPointer(e) || !touchRect)
+                                            return;
+                                          const deltaX = Math.abs(
+                                            e.clientX - touchStartX
+                                          );
+                                          if (!touchScrubbing && deltaX > 10) {
+                                            touchScrubbing = true;
+                                            thumbEl.classList.add(
+                                              'scrub-hover'
+                                            );
+                                          }
+                                          if (!touchScrubbing) return;
+
+                                          const x = e.clientX - touchRect.left;
+                                          const newIndex = Math.max(
+                                            0,
+                                            Math.min(
+                                              Math.floor(
+                                                (x / touchRect.width) *
+                                                  imageArray.length
+                                              ),
+                                              imageArray.length - 1
+                                            )
+                                          );
+                                          const rawUrl = imageArray[newIndex];
+                                          const resolvedUrl =
+                                            getCachedBlobUrl(rawUrl);
+                                          if (
+                                            resolvedUrl === rawUrl &&
+                                            rawUrl.startsWith('http')
+                                          ) {
+                                            if (imgEl.src !== resolvedUrl) {
+                                              imgEl.addClass('scrub-loading');
+                                              imgEl.src = resolvedUrl;
+                                              imgEl.addEventListener(
+                                                'load',
+                                                () =>
+                                                  imgEl.removeClass(
+                                                    'scrub-loading'
+                                                  ),
+                                                { once: true }
+                                              );
+                                            }
+                                          } else {
+                                            imgEl.removeClass('scrub-loading');
+                                            imgEl.removeClass(
+                                              'dynamic-views-hidden'
+                                            );
+                                            if (imgEl.src !== resolvedUrl) {
+                                              imgEl.src = resolvedUrl;
+                                            }
+                                          }
+                                          // Store for viewer dismiss restoration
+                                          thumbEl.dataset.scrubbedSrc =
+                                            resolvedUrl;
+                                        },
+                                        {
+                                          signal: touchAbort.signal,
+                                          passive: true,
+                                        }
+                                      );
+
+                                      thumbEl.addEventListener(
+                                        'pointerup',
+                                        (e: PointerEvent) => {
+                                          if (!isTouchPointer(e)) return;
+                                          if (touchScrubbing) {
+                                            thumbEl.classList.remove(
+                                              'scrub-hover'
+                                            );
+                                            cardEl.addEventListener(
+                                              'click',
+                                              (ev) => {
+                                                ev.stopPropagation();
+                                                ev.preventDefault();
+                                              },
+                                              { once: true, capture: true }
+                                            );
+                                          }
+                                          touchScrubbing = false;
+                                          touchRect = null;
+                                        },
+                                        { signal: touchAbort.signal }
+                                      );
+
+                                      thumbEl.addEventListener(
+                                        'pointercancel',
+                                        (e: PointerEvent) => {
+                                          if (!isTouchPointer(e)) return;
+                                          thumbEl.classList.remove(
+                                            'scrub-hover'
+                                          );
+                                          touchScrubbing = false;
+                                          touchRect = null;
+                                        },
+                                        { signal: touchAbort.signal }
+                                      );
+
+                                      // Reset to first image when thumbnail scrolls out of pane
+                                      let thumbWasHidden = false;
+                                      const thumbVisObserver =
+                                        new (getOwnerWindow(thumbEl).IntersectionObserver)(
+                                          (entries) => {
+                                            if (
+                                              !entries[0]?.isIntersecting
+                                            ) {
+                                              thumbWasHidden = true;
+                                            } else if (thumbWasHidden) {
+                                              thumbWasHidden = false;
+                                              imgEl.removeClass(
+                                                'scrub-loading'
+                                              );
+                                              const firstUrl =
+                                                imageArray[0];
+                                              if (firstUrl) {
+                                                imgEl.removeClass(
+                                                  'dynamic-views-hidden'
+                                                );
+                                                imgEl.src =
+                                                  getCachedBlobUrl(
+                                                    firstUrl
+                                                  );
+                                              }
+                                              delete thumbEl.dataset
+                                                .scrubbedSrc;
+                                            }
+                                          },
+                                          { threshold: 0 }
+                                        );
+                                      thumbVisObserver.observe(thumbEl);
+                                      touchAbort.signal.addEventListener(
+                                        'abort',
+                                        () =>
+                                          thumbVisObserver.disconnect(),
+                                        { once: true }
                                       );
                                     }
                                   }

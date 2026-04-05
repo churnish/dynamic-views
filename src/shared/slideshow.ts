@@ -395,23 +395,7 @@ export function createSlideshowNavigator(
     const guard = callbacks?.preloadGuard;
     if (guard && !guard.done) {
       guard.done = true;
-      imageUrls.slice(1).forEach((url) => {
-        if (isExternalUrl(url)) {
-          void getExternalBlobUrl(url).then((result) => {
-            if (result === null) {
-              markImageBroken(url);
-              if (!signal.aborted) callbacks?.onBroken?.(url);
-            }
-          });
-        } else {
-          const img = new Image();
-          img.onerror = () => {
-            markImageBroken(url);
-            if (!signal.aborted) callbacks?.onBroken?.(url);
-          };
-          img.src = url;
-        }
-      });
+      preloadImageBatch(imageUrls, signal, callbacks?.onBroken);
     }
 
     // Notify about slide change
@@ -808,6 +792,34 @@ export function setupSwipeGestures(
 }
 
 /**
+ * Preload and validate images at indices 1+ immediately.
+ * For hover-triggered preloading, use setupImagePreload instead.
+ */
+export function preloadImageBatch(
+  imageUrls: string[],
+  signal: AbortSignal,
+  onBroken?: (url: string) => void
+): void {
+  imageUrls.slice(1).forEach((url) => {
+    if (isExternalUrl(url)) {
+      void getExternalBlobUrl(url).then((result) => {
+        if (result === null) {
+          markImageBroken(url);
+          if (!signal.aborted) onBroken?.(url);
+        }
+      });
+    } else {
+      const img = new Image();
+      img.onerror = () => {
+        markImageBroken(url);
+        if (!signal.aborted) onBroken?.(url);
+      };
+      img.src = url;
+    }
+  });
+}
+
+/**
  * Preload and validate images at indices 1+ on hover intent.
  * External images: cached as blob URLs via requestUrl
  * Internal images: browser preload via Image()
@@ -826,23 +838,7 @@ export function setupImagePreload(
         if (preloadGuard.done) return;
         preloadGuard.done = true;
       }
-      imageUrls.slice(1).forEach((url) => {
-        if (isExternalUrl(url)) {
-          void getExternalBlobUrl(url).then((result) => {
-            if (result === null) {
-              markImageBroken(url);
-              if (!signal.aborted) onBroken?.(url);
-            }
-          });
-        } else {
-          const img = new Image();
-          img.onerror = () => {
-            markImageBroken(url);
-            if (!signal.aborted) onBroken?.(url);
-          };
-          img.src = url;
-        }
-      });
+      preloadImageBatch(imageUrls, signal, onBroken);
     },
     undefined,
     signal

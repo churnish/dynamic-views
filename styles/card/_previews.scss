@@ -178,11 +178,9 @@ body.dynamic-views-text-preview-keep-newlines
   }
 }
 
-/* Hide scrubbing indicator on hover intent */
-@media (any-hover: hover) {
-  .dynamic-views .card-thumbnail.scrub-hover .thumbnail-indicator {
-    opacity: 0;
-  }
+/* Hide scrubbing indicator during scrub */
+.dynamic-views .card-thumbnail.scrub-hover .thumbnail-indicator {
+  opacity: 0;
 }
 
 /* Hide scrubbing indicator when toggle is on */
@@ -212,15 +210,13 @@ body.dynamic-views-show-thumbnail-placeholder
 .dynamic-views {
   .card-thumbnail.multi-image {
     overflow: visible; /* Allow drop-shadow to extend outside */
+    touch-action: pan-y;
+    pointer-events: auto; /* Override base pointer-events: none for scrub gestures */
   }
 
   .card-thumbnail.multi-image img {
     border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
   }
-}
-
-.is-mobile .dynamic-views .card-thumbnail.multi-image {
-  pointer-events: none;
 }
 
 /* Thumbnail contain mode */

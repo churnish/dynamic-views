@@ -42,10 +42,8 @@
 }
 
 /* Style Settings: disable fade gradient */
-body.dynamic-views-disable-fade-gradient
-  .dynamic-views
-  .results-container::after,
-body.dynamic-views-disable-fade-gradient .dynamic-views-bases-container::after {
+body.dynamic-views-hide-fade-gradient .dynamic-views .results-container::after,
+body.dynamic-views-hide-fade-gradient .dynamic-views-bases-container::after {
   display: none;
 }
 

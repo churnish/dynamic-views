@@ -382,7 +382,7 @@ settings:
     -
         id: dynamic-views-card-hover-enlarge
         title: Enlarge
-        description: Make cards slightly larger on hover. Does not apply in embedded views.
+        description: Make cards slightly bigger on hover. Does not apply in embedded views.
         type: class-toggle
     -
         id: dynamic-views-card-hover-disable-elevate
@@ -446,7 +446,7 @@ settings:
     -
         id: dynamic-views-fixed-cover-height
         title: Fixed height
-        description: Show background bars above and below contained images that don't fit.
+        description: Show background bars above and below contained images that do not fit.
         type: class-select
         allowEmpty: false
         default: dynamic-views-fixed-cover-height-grid
@@ -572,13 +572,13 @@ settings:
         description: Hide toolbar button to expand query.
         type: class-toggle
     -
-        id: dynamic-views-disable-toolbar-shadow
-        title: Disable toolbar shadow
+        id: dynamic-views-hide-toolbar-shadow
+        title: Hide toolbar shadow
         description: Hide shadow below toolbar when results are scrolled (when View height > 0).
         type: class-toggle
     -
-        id: dynamic-views-disable-fade-gradient
-        title: Disable fade gradient at query bottom
+        id: dynamic-views-hide-fade-gradient
+        title: Hide fade gradient at query bottom
         description: Hide fade-out gradient at bottom of scrollable results (when View height > 0).
         type: class-toggle
     -
@@ -651,10 +651,10 @@ settings:
     -
         id: dynamic-views-zoom-disabled
         title: Disable pan & zoom
-        description: Disable pinch-to-zoom and pan gestures.
+        description: Disable pan and pinch-to-zoom gestures.
         type: class-toggle
     -
-        id: dynamic-views-image-viewer-disable-dismiss-on-click
+        id: dynamic-views-image-viewer-disable-dismiss-on-press
         title: Do not dismiss on press
         description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
@@ -925,7 +925,7 @@ settings:
     -
         id: dynamic-views-hide-missing-properties
         title: Hide missing properties
-        description: Hide properties that do not exist in note properties.
+        description: Hide properties that note does not have.
         type: class-toggle
         default: false
     -
@@ -962,7 +962,7 @@ settings:
     -
         id: dynamic-views-compact-breakpoint
         title: Compact breakpoint
-        description: Card width in pixels at which side-by-side properties stack vertically. Set to 0 to disable.
+        description: Card width in pixels at which paired properties stack vertically. Set to 0 to disable.
         type: variable-number
         default: 390
         format: px
@@ -1131,7 +1131,7 @@ settings:
     -
         id: dynamic-views-subtitle-font-size
         title: Size
-        description: Font size for subtitles (e.g., 0.9em, 14px).
+        description: Subtitle font size (e.g., 0.9em, 14px).
         type: variable-text
         default: ''
     -
@@ -1155,7 +1155,7 @@ settings:
     -
         id: dynamic-views-subtitle-color
         title: Color
-        description: Theme color preset for subtitles.
+        description: Theme color preset for subtitle.
         type: class-select
         allowEmpty: false
         default: dynamic-views-subtitle-color-faint
@@ -1224,7 +1224,7 @@ settings:
     -
         id: dynamic-views-subtitle-alignment
         title: Alignment
-        description: Horizontal alignment of subtitles.
+        description: Horizontal subtitle alignment.
         type: class-select
         allowEmpty: false
         default: dynamic-views-subtitle-align-left
@@ -1359,13 +1359,13 @@ settings:
     -
         id: dynamic-views-text-preview-font-size
         title: Size
-        description: Font size for text previews (e.g., 0.9em, 14px, 0.875rem).
+        description: Font size for text preview (e.g., 0.9em, 14px, 0.875rem).
         type: variable-text
         default: ''
     -
         id: dynamic-views-text-preview-color
         title: Color
-        description: Theme color preset for text previews.
+        description: Theme color preset for text preview.
         type: class-select
         allowEmpty: false
         default: dynamic-views-text-preview-color-muted
@@ -1420,12 +1420,12 @@ settings:
     -
         id: dynamic-views-text-preview-italic
         title: Italic
-        description: Italicize text previews.
+        description: Italicize text preview.
         type: class-toggle
     -
         id: dynamic-views-text-preview-alignment
         title: Alignment
-        description: Horizontal alignment of text previews.
+        description: Horizontal alignment of text preview.
         type: class-select
         allowEmpty: false
         default: dynamic-views-text-preview-align-left
@@ -1467,7 +1467,7 @@ settings:
     -
         id: dynamic-views-text-preview-keep-headings
         title: Preserve heading text
-        description: Show heading text in text previews rather than omit it.
+        description: Show heading text in text preview rather than omit it.
         type: class-toggle
     -
         id: dynamic-views-text-preview-keep-newlines
@@ -1483,7 +1483,7 @@ settings:
     -
         id: dynamic-views-thumbnail-border-radius
         title: Border radius
-        description: Corner roundness of thumbnails.
+        description: Thumbnails corner roundness.
         type: variable-number-slider
         default: 4
         min: 0
@@ -1522,7 +1522,7 @@ settings:
     -
         id: dynamic-views-hide-scrubbing-icon
         title: Hide scrubbing icon
-        description: Do not show scrubbing icon on thumbnails with multiple images.
+        description: Do not show icon on thumbnails with multiple images.
         type: class-toggle
         default: false
     -
@@ -1551,7 +1551,7 @@ settings:
     -
         id: dynamic-views-title-divider
         title: Divider line
-        description: Show horizontal rule below card title.
+        description: Show horizontal rule below title.
         type: class-toggle
         default: false
     -
@@ -1563,7 +1563,7 @@ settings:
     -
         id: dynamic-views-title-font-size
         title: Size
-        description: Font size for card title (e.g., 1em, 16px, 1.2rem).
+        description: Font size for title (e.g., 1em, 16px, 1.2rem).
         type: variable-text
         default: ''
     -
@@ -1682,7 +1682,7 @@ settings:
     -
         id: dynamic-views-title-alignment
         title: Alignment
-        description: Horizontal alignment of card title.
+        description: Horizontal title alignment.
         type: class-select
         allowEmpty: false
         default: dynamic-views-title-align-left
@@ -1889,7 +1889,38 @@ body.dynamic-views-poster-theme-light
   display: none !important;
 }
 
-// Style Settings UI layout refinements
+// Border-radius fixes for items that become visually first/last when a neighbor is hidden.
+// :nth-child(... of S) counts DOM position, not visibility — hidden items steal radius from visible neighbors.
+
+// View: card-spacing-desktop hidden on phone → card-spacing-phone becomes visually first
+body.is-phone
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-card-spacing-phone'] {
+  border-top-right-radius: var(--setting-items-radius);
+  border-top-left-radius: var(--setting-items-radius);
+
+  &::before {
+    display: none;
+  }
+}
+
+// Image viewer: zoom-sensitivity hidden on phone → disable-dismiss-on-press becomes visually last
+body.is-phone
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-image-viewer-disable-dismiss-on-press'] {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
+}
+
+// Thumbnail: hide-scrubbing-icon hidden when scrubbing disabled → disable-thumbnail-scrubbing becomes visually last
+body.dynamic-views-disable-thumbnail-scrubbing
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-disable-thumbnail-scrubbing'] {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
+}
+
+/* Align Style Settings UI with Obsidian settings */
 .style-settings-container .style-settings-container .setting-item {
   align-items: center;
   padding: 16px;

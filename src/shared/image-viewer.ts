@@ -865,7 +865,7 @@ function openImageViewer(
 
     // Check dismiss setting once, applies regardless of panzoom state
     const isDismissDisabled = viewerDoc.body.classList.contains(
-      'dynamic-views-image-viewer-disable-dismiss-on-click'
+      'dynamic-views-image-viewer-disable-dismiss-on-press'
     );
     // Track gesture controls for Alt+drag coordination (set when Panzoom active)
     let gestureControls: ViewerGestureControls | null = null;
