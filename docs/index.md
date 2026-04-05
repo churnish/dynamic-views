@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-04
+updated: 2026-04-05
 ---
 # Doc index
 
@@ -32,6 +32,7 @@ Stable reference docs for system internals — data structures, render pipelines
 | [image-viewer.md](architecture/image-viewer.md) | Working on image viewer gestures, keyboard handlers, constrained vs fullscreen modes, Panzoom integration, mobile touch handling, or viewer cleanup — documents the dual-mode gesture system, keyboard handler map, leaf guard pattern, cleanup lifecycle, and invariants. |
 | [keyboard-nav.md](architecture/keyboard-nav.md) | Working on keyboard focus management, arrow-key navigation, hover-to-start or tab-to-start activation, roving tabindex, or focus state flags — documents the spatial navigation algorithm, activation flows, container state interfaces, popout rebinding, and invariants. |
 | [masonry-layout.md](architecture/masonry-layout.md) | **Frozen** — not kept up to date due to extensive masonry work. Verify against source code. |
+| [poster-clipping.md](architecture/poster-clipping.md) | Working on poster static clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, or the `posterInteractToReveal` setting boundary — documents the clipping pipeline, reset lifecycle, interaction handlers, and invariants. |
 | [property-layout.md](architecture/property-layout.md) | Working on property pairing, width measurement, scroll gradients, compact mode, or property position settings — documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and invariants. |
 | [settings-resolution.md](architecture/settings-resolution.md) | Working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants. |
 | [slideshow.md](architecture/slideshow.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
@@ -64,6 +65,7 @@ Reusable conventions and recipes — coding patterns, CSS quirks, and configurat
 | [debug-commands.md](patterns/debug-commands.md) | Using runtime diagnostic commands (card width badges) — documents console invocations, toggle semantics, and teardown. |
 | [electron-css-quirks.md](patterns/electron-css-quirks.md) | Writing nested `:has()` selectors, working around `-webkit-line-clamp` truncation, or using `opacity` transitions on text-heavy elements — documents Blink/Electron CSS rendering quirks including GPU compositing antialiasing. |
 | [eslint-config.md](patterns/eslint-config.md) | Modifying [eslint.config.js](../eslint.config.js), adding eslint overrides, or troubleshooting lint errors. |
+| [hover-interactions.md](patterns/hover-interactions.md) | Adding, modifying, or debugging hover behavior — complete inventory of all hover interactions, pointer type support (mouse/pen/touch), gating mechanisms (`canHover`, `isHoverPointer`, `@media (any-hover: hover)`), and device behavior matrix. |
 | [plugin-view-navigation.md](patterns/plugin-view-navigation.md) | Probing, querying, or targeting Dynamic Views elements via CDP, WebKit Inspector, or DOM queries — documents the full view hierarchy, correct selectors, and platform-specific probing patterns. |
 | [scss-nesting-conventions.md](patterns/scss-nesting-conventions.md) | Adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat. |
 | [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding, modifying, or debugging Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`), or consolidating per-variant body-class rules into CSS variable consumption with `[class*=...]` gates — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |

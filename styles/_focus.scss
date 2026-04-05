@@ -42,7 +42,7 @@ body .dynamic-views .card:focus-visible::after {
   inset: 0;
   border-radius: inherit;
   box-shadow: inset 0 0 0 2px
-    var(--dynamic-views-background-modifier-border-focus);
+    var(--dynamic-views-interactive-accent);
   pointer-events: none;
   z-index: 10;
 }

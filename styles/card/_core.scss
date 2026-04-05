@@ -82,7 +82,7 @@ body.dynamic-views-card-border-color-custom .dynamic-views .card {
 }
 
 /* Card border color on hover presets */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views .card.hover-intent-active:hover {
     /* Visual-only: changes ::after box-shadow without reflowing cover/poster/backdrop insets */
     --card-border-thickness-rendered: var(
@@ -201,7 +201,7 @@ body.dynamic-views-card-shadow-dramatic
 }
 
 /* Card shadow on hover presets */
-@media (hover: hover) {
+@media (any-hover: hover) {
   /* Subtle (default) */
   body:is(
       .dynamic-views-card-shadow-hover-subtle,

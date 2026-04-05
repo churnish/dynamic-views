@@ -179,7 +179,7 @@ body.dynamic-views-text-preview-keep-newlines
 }
 
 /* Hide scrubbing indicator on hover intent */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views .card-thumbnail.scrub-hover .thumbnail-indicator {
     opacity: 0;
   }

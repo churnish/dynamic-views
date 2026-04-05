@@ -42,7 +42,7 @@
 }
 
 /* Desktop: scroll gated by hover intent to prevent capturing view scroll */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views:not(.poster-static) {
     .card.image-format-poster .card-content {
       overflow-y: hidden;
@@ -111,11 +111,12 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
   transform: scale(1.05);
 }
 
-/* Poster: zoom on hover intent (desktop) */
-@media (hover: hover) {
+/* Poster: zoom on hover intent (desktop) — activates regardless of
+   posterInteractToReveal toggle (hover-intent-active, not poster-hover-active) */
+@media (any-hover: hover) {
   body:not(.dynamic-views-poster-disable-reveal-zoom)
-    .dynamic-views:not(.poster-static)
-    .card.image-format-poster.poster-hover-active
+    .dynamic-views
+    .card.image-format-poster.hover-intent-active
     .card-poster
     img {
     will-change: transform;
@@ -280,7 +281,7 @@ body:is(
 }
 
 /* Overlay revealed on hover intent (desktop) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   /* Dark hover reveal */
   body:is(
       .dynamic-views-poster-theme-dark,
@@ -349,7 +350,7 @@ body:is(
 }
 
 /* Poster: reveal content on hover intent (desktop only) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views:not(.poster-static) {
     .card.image-format-poster.poster-hover-active.has-poster .card-content {
       opacity: 1;
@@ -526,7 +527,7 @@ body.dynamic-views-open-on-card
 }
 
 /* Mobile: pointer cursor for reveal toggle, even in title mode */
-@media (hover: none) {
+@media (any-hover: none) {
   body.dynamic-views-open-on-title
     .dynamic-views:not(.poster-static)
     .card.image-format-poster.has-poster {

@@ -41,7 +41,7 @@
   color: var(--dynamic-views-link-color);
   text-decoration: none;
 
-  @media (hover: hover) {
+  @media (any-hover: hover) {
     &:hover {
       color: var(--dynamic-views-link-color-hover);
     }

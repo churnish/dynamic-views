@@ -1,13 +1,23 @@
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { canHover, setupHoverIntent } from '../../src/shared/hover-intent';
+import {
+  canHover,
+  canPrimaryHover,
+  isHoverPointer,
+  setupHoverIntent,
+} from '../../src/shared/hover';
 
 /**
  * Dispatches a PointerEvent of the given type on the element.
  */
 function fire(el: HTMLElement, type: string, init?: PointerEventInit): void {
   el.dispatchEvent(
-    new PointerEvent(type, { bubbles: true, cancelable: true, ...init })
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      pointerType: 'mouse',
+      ...init,
+    })
   );
 }
 
@@ -108,6 +118,47 @@ describe('setupHoverIntent', () => {
     expect(() => fire(el, 'pointerleave')).not.toThrow();
   });
 
+  it('ignores touch pointer events', () => {
+    setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerenter', { bubbles: true, pointerType: 'touch' })
+    );
+    el.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, pointerType: 'touch' })
+    );
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('ignores pen contact (pressure > 0)', () => {
+    setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerenter', { bubbles: true, pointerType: 'pen' })
+    );
+    el.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        pointerType: 'pen',
+        pressure: 0.5,
+      })
+    );
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('activates for pen hover (pressure 0)', () => {
+    setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerenter', { bubbles: true, pointerType: 'pen' })
+    );
+    el.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        pointerType: 'pen',
+        pressure: 0,
+      })
+    );
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
   it('✓ re-entry after leave activates twice total', () => {
     setupHoverIntent(el, onActivate, onDeactivate, controller.signal);
 
@@ -122,6 +173,34 @@ describe('setupHoverIntent', () => {
 
     expect(onActivate).toHaveBeenCalledTimes(2);
     expect(onDeactivate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('isHoverPointer', () => {
+  it('accepts mouse pointer', () => {
+    const e = new PointerEvent('pointermove', { pointerType: 'mouse' });
+    expect(isHoverPointer(e)).toBe(true);
+  });
+
+  it('accepts pen hover (pressure 0)', () => {
+    const e = new PointerEvent('pointermove', {
+      pointerType: 'pen',
+      pressure: 0,
+    });
+    expect(isHoverPointer(e)).toBe(true);
+  });
+
+  it('rejects pen contact (pressure > 0)', () => {
+    const e = new PointerEvent('pointermove', {
+      pointerType: 'pen',
+      pressure: 0.5,
+    });
+    expect(isHoverPointer(e)).toBe(false);
+  });
+
+  it('rejects touch', () => {
+    const e = new PointerEvent('pointermove', { pointerType: 'touch' });
+    expect(isHoverPointer(e)).toBe(false);
   });
 });
 
@@ -143,6 +222,28 @@ describe('canHover', () => {
       defaultView: mockWin,
     } as any);
     expect(canHover(el)).toBe(true);
+    expect(mockWin.matchMedia).toHaveBeenCalledWith('(any-hover: hover)');
+  });
+});
+
+describe('canPrimaryHover', () => {
+  it('returns true when primary pointer supports hover', () => {
+    window.matchMedia = vi.fn(() => ({ matches: true })) as any;
+    expect(canPrimaryHover()).toBe(true);
+  });
+
+  it('returns false when primary pointer is touch', () => {
+    window.matchMedia = vi.fn(() => ({ matches: false })) as any;
+    expect(canPrimaryHover()).toBe(false);
+  });
+
+  it('checks (hover: hover) not (any-hover: hover)', () => {
+    const el = document.createElement('div');
+    const mockWin = { matchMedia: vi.fn(() => ({ matches: true })) };
+    vi.spyOn(el, 'ownerDocument', 'get').mockReturnValue({
+      defaultView: mockWin,
+    } as any);
+    canPrimaryHover(el);
     expect(mockWin.matchMedia).toHaveBeenCalledWith('(hover: hover)');
   });
 });

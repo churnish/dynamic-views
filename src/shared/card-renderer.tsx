@@ -70,7 +70,12 @@ import {
   THUMBNAIL_STACK_MULTIPLIER,
   VISIBLE_BODY_SELECTOR,
 } from './constants';
-import { canHover, setupHoverIntent } from './hover-intent';
+import {
+  canHover,
+  canPrimaryHover,
+  isHoverPointer,
+  setupHoverIntent,
+} from './hover';
 import { getTimestampIcon, isTimestampProperty } from './render-utils';
 import {
   createCardDragHandler,
@@ -2013,7 +2018,11 @@ function Card({
             );
 
             // Poster hover intent (shares card-level abort signal — both cancel on unmount)
-            if (format === 'poster' && settings.posterInteractToReveal) {
+            if (
+              format === 'poster' &&
+              settings.posterInteractToReveal &&
+              canPrimaryHover(cardEl)
+            ) {
               setupHoverIntent(
                 cardEl,
                 () => {
@@ -2462,6 +2471,7 @@ function Card({
                           onPointerEnter={
                             enableScrubbing
                               ? (e: PointerEvent) => {
+                                  if (!isHoverPointer(e)) return;
                                   (
                                     e.currentTarget as HTMLElement
                                   ).classList.add('scrub-hover');
@@ -2471,6 +2481,7 @@ function Card({
                           onPointerMove={
                             enableScrubbing
                               ? (e: PointerEvent) => {
+                                  if (!isHoverPointer(e)) return;
                                   if (imageArray.length === 0) return;
                                   const thumbEl =
                                     e.currentTarget as HTMLElement;
@@ -2517,7 +2528,8 @@ function Card({
                           onPointerLeave={
                             enableScrubbing
                               ? (e: PointerEvent) => {
-                                  // Don't reset while image viewer is open (overlay triggers mouseleave)
+                                  if (!isHoverPointer(e)) return;
+                                  // Don't reset while image viewer is open (overlay triggers pointerleave)
                                   const thumbEl =
                                     e.currentTarget as HTMLElement;
                                   const embedEl =

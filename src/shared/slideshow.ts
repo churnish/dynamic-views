@@ -11,7 +11,7 @@ import {
 } from './constants';
 import { isExternalUrl } from '../utils/image';
 import { isSlideshowLoopingDisabled } from '../utils/style-settings';
-import { canHover, setupHoverIntent } from './hover-intent';
+import { canHover, setupHoverIntent } from './hover';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getOwnerWindow } from '../utils/owner-window';
 

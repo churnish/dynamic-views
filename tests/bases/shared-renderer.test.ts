@@ -68,7 +68,7 @@ vi.mock('../../src/shared/slideshow', () => ({
   setupImagePreload: vi.fn(),
   setupSwipeGestures: vi.fn(),
 }));
-vi.mock('../../src/shared/hover-intent', () => ({
+vi.mock('../../src/shared/hover', () => ({
   setupHoverIntent: vi.fn(),
 }));
 vi.mock('../../src/shared/keyboard-nav', () => ({

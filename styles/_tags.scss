@@ -13,7 +13,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 }
 
 /* Tag outline hover: card (hover intent) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
     .dynamic-views
     .card.hover-intent-active
@@ -24,7 +24,7 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 }
 
 /* Tag outline hover: list (immediate) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
     .dynamic-views
     .list-properties
@@ -44,7 +44,7 @@ body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
 }
 
 /* Tag fill hover: card (hover intent) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body.dynamic-views-tag-style-fill
     .dynamic-views
     .card.hover-intent-active
@@ -59,7 +59,7 @@ body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
 }
 
 /* Tag fill hover: list (immediate) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
     background-color: color-mix(
       in srgb,
@@ -83,7 +83,7 @@ body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
 }
 
 /* Tag plaintext hover: card (hover intent) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body.dynamic-views-tag-style-plaintext
     .dynamic-views
     .card.hover-intent-active
@@ -94,7 +94,7 @@ body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
 }
 
 /* Tag plaintext hover: list (immediate) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body.dynamic-views-tag-style-plaintext
     .dynamic-views
     .list-properties

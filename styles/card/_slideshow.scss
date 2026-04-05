@@ -122,7 +122,7 @@
 }
 
 /* Show arrows on hover (desktop only - mobile uses swipe gestures) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views {
     .card.hover-intent-active .card-cover-slideshow .slideshow-nav-left,
     .card.hover-intent-active .card-cover-slideshow .slideshow-nav-right {
@@ -195,7 +195,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 }
 
 /* Dim boundary arrows when looping disabled */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body.dynamic-views-slideshow-disable-looping
     .dynamic-views
     .card.hover-intent-active
@@ -232,7 +232,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 }
 
 /* Hide indicator when nav buttons appear on hover */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views
     .card.hover-intent-active
     .card-cover-slideshow

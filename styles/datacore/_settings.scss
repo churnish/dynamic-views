@@ -122,7 +122,7 @@
       border-radius: 5px;
     }
 
-    @media (hover: hover) {
+    @media (any-hover: hover) {
       &:hover {
         background-color: var(--dynamic-views-background-modifier-hover);
       }
@@ -235,7 +235,7 @@ label.toggle-switch input[type='checkbox']:checked + span.toggle-slider {
   background-color: var(--dynamic-views-interactive-accent) !important;
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .toggle-switch:hover .toggle-slider {
     opacity: 0.9;
   }

@@ -1,4 +1,4 @@
-@media (hover: hover) {
+@media (any-hover: hover) {
   /* Title hover: open-on-title → hover title link.
      Fallback chain: explicit title-hover-color → derived from title-color preset. */
   body.dynamic-views-open-on-title:not(

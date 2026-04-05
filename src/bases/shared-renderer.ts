@@ -84,7 +84,12 @@ import {
   setupImagePreload,
   setupSwipeGestures,
 } from '../shared/slideshow';
-import { canHover, setupHoverIntent } from '../shared/hover-intent';
+import {
+  canHover,
+  canPrimaryHover,
+  isHoverPointer,
+  setupHoverIntent,
+} from '../shared/hover';
 import {
   handleArrowNavigation,
   isArrowKey,
@@ -912,7 +917,7 @@ export class SharedCardRenderer {
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
     // Gates content reveal (via CSS) and scroll access on desktop.
-    if (isPoster && settings.posterInteractToReveal && canHover(cardEl)) {
+    if (isPoster && settings.posterInteractToReveal && canPrimaryHover(cardEl)) {
       setupHoverIntent(
         cardEl,
         () => {
@@ -1848,7 +1853,7 @@ export class SharedCardRenderer {
     const scrubbableUrls =
       format === 'thumbnail' &&
       imageUrls.length > 1 &&
-      !this.app.isMobile &&
+      canHover(cardEl) &&
       !isThumbnailScrubbingDisabled()
         ? imageUrls.slice(0, 10)
         : null;
@@ -1926,12 +1931,13 @@ export class SharedCardRenderer {
         );
       }
 
-      // Cache bounding rect on mouseenter to avoid layout thrashing on every mousemove
+      // Cache bounding rect on pointerenter to avoid layout thrashing on every pointermove
       // Closure and DOMRect freed when event listeners are removed via { signal }
       let cachedRect: DOMRect | null = null;
       imageEl.addEventListener(
-        'mouseenter',
-        () => {
+        'pointerenter',
+        (e: PointerEvent) => {
+          if (!isHoverPointer(e)) return;
           cachedRect = imageEl.getBoundingClientRect();
           imageEl.classList.add('scrub-hover');
         },
@@ -1939,8 +1945,9 @@ export class SharedCardRenderer {
       );
 
       imageEl.addEventListener(
-        'mousemove',
-        (e) => {
+        'pointermove',
+        (e: PointerEvent) => {
+          if (!isHoverPointer(e)) return;
           if (signal?.aborted || scrubbableUrls.length === 0) return;
           // Use cached rect, or cache on first mousemove if mouseenter didn't fire
           const rect = (cachedRect ??= imageEl.getBoundingClientRect());
@@ -1977,9 +1984,10 @@ export class SharedCardRenderer {
       );
 
       imageEl.addEventListener(
-        'mouseleave',
-        () => {
-          // Don't reset while image viewer is open (overlay triggers mouseleave)
+        'pointerleave',
+        (e: PointerEvent) => {
+          if (!isHoverPointer(e)) return;
+          // Don't reset while image viewer is open (overlay triggers pointerleave)
           if (this.viewerClones.has(imageEmbedContainer)) return;
           imageEl.classList.remove('scrub-hover');
           // Invalidate cached rect for next hover (handles resize)

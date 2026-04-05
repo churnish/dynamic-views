@@ -70,7 +70,7 @@
     border-color var(--dynamic-views-anim-duration-fast);
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .query-btn:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
   }
@@ -82,7 +82,7 @@
   border-color: var(--dynamic-views-interactive-accent);
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views .query-apply-btn:hover {
     background-color: var(--dynamic-views-interactive-accent-hover);
   }
@@ -94,7 +94,7 @@
   border-color: var(--dynamic-views-background-modifier-border);
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views .query-clear-btn:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
     color: var(--dynamic-views-text-normal);

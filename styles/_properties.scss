@@ -366,7 +366,7 @@
 }
 
 /* Property link hover: card (hover intent) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views .card.hover-intent-active .property a.internal-link:hover {
     color: var(--dynamic-views-link-color-hover);
   }
@@ -376,7 +376,7 @@
 }
 
 /* Property link hover: list (immediate) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views .list-properties .property a.internal-link:hover {
     color: var(--dynamic-views-link-color-hover);
   }
@@ -532,7 +532,7 @@ body.dynamic-views-property-name-small-caps
 }
 
 /* Segment underline hover: card (hover intent) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views
     .card.hover-intent-active
     :is(.folder-segment, .filename-segment):hover {
@@ -541,7 +541,7 @@ body.dynamic-views-property-name-small-caps
 }
 
 /* Segment underline hover: list + group headings (immediate) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   .dynamic-views
     :is(.list-item, .list-properties, .bases-group-heading)
     :is(.folder-segment, .filename-segment):hover {

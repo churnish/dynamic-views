@@ -185,7 +185,7 @@ body.dynamic-views-cover-circular
 
 /* Hover zoom for cover images (desktop only).
    Transitions are always declared; the scale/transform change only fires via .hover-intent-active (card-level JS hover intent). */
-@media (hover: hover) {
+@media (any-hover: hover) {
   /* Default transition for single-image covers */
   .dynamic-views
     .card.image-format-cover

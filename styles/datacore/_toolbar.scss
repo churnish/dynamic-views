@@ -111,7 +111,7 @@ body.dynamic-views-disable-toolbar-shadow
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .view-dropdown-btn:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
     border-color: var(--dynamic-views-text-faint);
@@ -143,7 +143,7 @@ body.dynamic-views-disable-toolbar-shadow
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .view-option:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
   }
@@ -188,7 +188,7 @@ body.dynamic-views-disable-toolbar-shadow
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .sort-dropdown-btn:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
     border-color: var(--dynamic-views-text-faint);
@@ -220,7 +220,7 @@ body.dynamic-views-disable-toolbar-shadow
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .sort-option:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
   }
@@ -278,7 +278,7 @@ body.dynamic-views-disable-toolbar-shadow
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   :is(.results-count-wrapper, .results-count-wrapper-compact):hover {
     background-color: var(--dynamic-views-background-modifier-hover);
     opacity: var(--dynamic-views-icon-opacity-hover);
@@ -371,7 +371,7 @@ body.dynamic-views-disable-toolbar-shadow
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .limit-reset-button:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
   }
@@ -400,7 +400,7 @@ body.dynamic-views-disable-toolbar-shadow
     font-size: 0.9em;
   }
 
-  @media (hover: hover) {
+  @media (any-hover: hover) {
     .limit-dropdown-menu .bases-toolbar-menu-item:hover {
       background-color: var(--dynamic-views-background-modifier-hover);
     }
@@ -462,7 +462,7 @@ body.dynamic-views-disable-toolbar-shadow
     color: var(--dynamic-views-icon-color);
   }
 
-  @media (hover: hover) {
+  @media (any-hover: hover) {
     :is(
       .create-note-button,
       .create-note-button-compact,
@@ -627,14 +627,14 @@ body.dynamic-views-hide-expand-width .dynamic-views .width-toggle-btn {
   display: block;
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .search-input-clear-button:hover {
     opacity: 1;
     color: var(--dynamic-views-text-normal);
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   .desktop-search:hover {
     border-color: var(--dynamic-views-text-muted);
   }

@@ -24,7 +24,7 @@
 }
 
 /* Backdrop hover zoom (desktop) */
-@media (hover: hover) {
+@media (any-hover: hover) {
   body.dynamic-views-backdrop-hover-zoom
     .dynamic-views
     .card.image-format-backdrop

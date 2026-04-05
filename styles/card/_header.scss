@@ -94,7 +94,7 @@
   stroke-width: 1.5;
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   body:not(.dynamic-views-dragging)
     .dynamic-views
     .card:not(.hover-intent-active)
@@ -217,7 +217,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   }
 }
 
-@media (hover: hover) {
+@media (any-hover: hover) {
   /* Underline title on hover when open action is "Press on title" */
   body.dynamic-views-open-on-title
     .dynamic-views
