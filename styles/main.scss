@@ -9,11 +9,6 @@
 @use 'focus';
 @use 'container';
 
-// Datacore UI
-@use 'datacore/toolbar';
-@use 'datacore/query-editor';
-@use 'datacore/settings';
-
 // View layout
 @use 'grid-masonry-shared';
 @use 'full-screen';
@@ -47,7 +42,6 @@
 
 // View types
 @use 'masonry-view';
-@use 'datacore/list-view';
 
 // Overrides
 @use 'compact';

@@ -6,7 +6,7 @@ updated: 2026-04-04
 ---
 # Poster clipping and interaction
 
-The poster image format positions a full-bleed background image behind card content. Two interaction modes control how content is presented: **static** (always visible, JS-clipped to fit) and **interactive** (hidden by default, revealed on hover/tap). The core logic lives in `src/shared/poster.ts` with wiring in `src/bases/shared-renderer.ts` (Bases) and `src/shared/card-renderer.tsx` (Datacore).
+The poster image format positions a full-bleed background image behind card content. Two interaction modes control how content is presented: **static** (always visible, JS-clipped to fit) and **interactive** (hidden by default, revealed on hover/tap). The core logic lives in `src/shared/poster.ts` with wiring in `src/bases/shared-renderer.ts`.
 
 ## Display modes
 
@@ -85,9 +85,7 @@ Subtitle additionally gets the `poster-clip-clamped` class, which provides `disp
 | Context | Caller | Notes |
 |---|---|---|
 | Grid initial render | `shared-renderer.ts` | Clip only (no prior state) |
-| Datacore initial mount | `card-renderer.tsx` ref callback | Deferred via `requestAnimationFrame` (Preact VDOM flush) |
-| Bases ResizeObserver | `shared-renderer.ts` | Size-guarded (`lastClipWidth`/`lastClipHeight`) |
-| Datacore ResizeObserver | `card-renderer.tsx` | Size-guarded (`lastClipWidth`/`lastClipHeight`) |
+| ResizeObserver | `shared-renderer.ts` | Size-guarded (`lastClipWidth`/`lastClipHeight`) |
 | `textPreviewLines` change | `applyCssOnlySettings` | Immediate re-clip |
 | Static mode toggled ON | `applyCssOnlySettings` | Immediate |
 | Display mode changed | `applyCssOnlySettings` | Deferred via `requestAnimationFrame` (CSS needs one frame to recalculate layout after class swap) |
@@ -104,8 +102,6 @@ When `posterDisplayMode` changes while in static mode, content area size differs
 
 Re-clip only fires when `prevMode !== null && posterDisplayMode !== prevMode && isStatic`. The `null` guard prevents a spurious rAF re-clip on initial render.
 
-This is **Bases-only** — Datacore re-renders fully on settings changes (the className template literal rebuilds container classes, and the ref callback fires `clipPosterStaticOverflow` on mount).
-
 ## Scroll reset
 
 `resetPosterScroll(cardEl)` resets vertical and horizontal scroll positions after the exit transition finishes (poster content fading out).
@@ -118,7 +114,7 @@ Called on: unhover (desktop), untap (mobile), dismiss-other (revealing card B di
 
 ## Tap-to-reveal
 
-`handlePosterTapReveal(e, cardEl, openFileAction)` is a shared helper used by both Bases and Datacore. Returns `true` if the event was consumed.
+`handlePosterTapReveal(e, cardEl, openFileAction)` handles tap reveal/dismiss. Returns `true` if the event was consumed.
 
 ### Reveal (card not yet revealed)
 
@@ -143,7 +139,7 @@ Called on: unhover (desktop), untap (mobile), dismiss-other (revealing card B di
 
 Desktop poster hover uses `setupHoverIntent` — requires `mousemove` after `mouseenter` before activating. This prevents scroll-triggered false activations (mouse stationary, viewport scrolls card under cursor).
 
-Both backends register two `setupHoverIntent` calls on the same card element:
+Two `setupHoverIntent` calls are registered on the same card element:
 1. **Card-level** — gates cursor styles, link hover effects, keyboard nav
 2. **Poster-level** — adds/removes `poster-hover-active` class, calls `resetPosterScroll` on deactivate
 

@@ -2,23 +2,22 @@
 title: Settings resolution pipeline
 description: Three-layer merge of defaults, templates, and per-view config into resolved settings. Covers sparse storage, type coercion, stale guards, and migration.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-12
+updated: 2026-04-05
 ---
 # Settings resolution pipeline
 
-The settings resolution pipeline merges static defaults, template overrides, and per-view config into fully resolved settings objects for both Bases and Datacore backends. Covers the three-layer resolution chain, sparse storage pattern, position-based title/subtitle derivation, stale config guards, type coercion, template system, and migration.
+The settings resolution pipeline merges static defaults, template overrides, and per-view config into fully resolved settings objects for Bases. Covers the three-layer resolution chain, sparse storage pattern, position-based title/subtitle derivation, stale config guards, type coercion, template system, and migration.
 
 ## Files
 
 | File                            | Role                                                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `src/constants.ts`              | Static defaults (`VIEW_DEFAULTS`, `BASES_DEFAULTS`, `DATACORE_DEFAULTS`, `PLUGIN_SETTINGS`), `resolveSettings()`   |
-| `src/types.ts`                  | `ViewDefaults`, `PluginSettings`, `ResolvedSettings`, `BasesResolvedSettings`, `DatacoreDefaults`, `BasesDefaults` |
+| `src/constants.ts`              | Static defaults (`VIEW_DEFAULTS`, `BASES_DEFAULTS`, `PLUGIN_SETTINGS`)                                             |
+| `src/types.ts`                  | `ViewDefaults`, `PluginSettings`, `BasesResolvedSettings`, `BasesDefaults`                                         |
 | `src/persistence.ts`            | `PersistenceManager` — sparse storage, sanitization, template CRUD, migration                                      |
 | `src/shared/settings-schema.ts` | `readBasesSettings()`, `extractBasesTemplate()`, `getBasesViewOptions()` schema builder                            |
 | `src/shared/view-validation.ts` | `VALID_VIEW_VALUES`, `VIEW_DEFAULTS_TYPES` — shared validation constants                                           |
 | `src/bases/utils.ts`            | `cleanUpBaseFile()` — YAML cleanup, template injection, ID management                                              |
-| `src/datacore/controller.tsx`   | `getPersistedSettings()` — Datacore resolution via `resolveSettings()`                                             |
 
 ## Core data structures
 
@@ -45,30 +44,18 @@ Plugin-level settings from the settings tab. Not per-view.
 
 ### ViewDefaults (`src/types.ts`)
 
-Per-view visual settings shared across both backends. 26 fields covering card size, title, text preview, image, properties, and layout.
+Per-view visual settings. 26 fields covering card size, title, text preview, image, properties, and layout.
 
 | Field                     | Type                            | Default         | Notes                                                                               |
 | ------------------------- | ------------------------------- | --------------- | ----------------------------------------------------------------------------------- |
 | `cardSize`                | `number`                        | `300`           | Card width in pixels                                                                |
-| `titleProperty`           | `string`                        | `'file.name'`   | Overridden by `DATACORE_DEFAULTS` (`'$name'`) and position-based derivation (Bases) |
-| `subtitleProperty`        | `string`                        | `'file.folder'` | Overridden by `DATACORE_DEFAULTS` (`''`) and position-based derivation (Bases)      |
-| `displayFirstAsTitle`     | `boolean`                       | `false`         | Overridden by `BASES_DEFAULTS` (`true`). No-op for Datacore                         |
-| `displaySecondAsSubtitle` | `boolean`                       | `false`         | Overridden by `BASES_DEFAULTS` (`false`). No-op for Datacore                        |
+| `titleProperty`           | `string`                        | `'file.name'`   | Position-based derivation when `displayFirstAsTitle` is ON                          |
+| `subtitleProperty`        | `string`                        | `'file.folder'` | Position-based derivation when `displaySecondAsSubtitle` is ON                      |
+| `displayFirstAsTitle`     | `boolean`                       | `false`         | Overridden by `BASES_DEFAULTS` (`true`)                                             |
+| `displaySecondAsSubtitle` | `boolean`                       | `false`         | Overridden by `BASES_DEFAULTS` (`false`)                                            |
 | `propertyNames`           | `'hide' \| 'inline' \| 'above'` | `'hide'`        | Overridden by `BASES_DEFAULTS` (`'inline'`). Has stale config guard                 |
 | `minimumColumns`          | `1 \| 2`                        | `1`             | Masonry default is `2` (view-type-specific, not in `BASES_DEFAULTS`)                |
 | `imageFormat`             | enum                            | `'thumbnail'`   | Has stale config guard                                                              |
-
-### DatacoreDefaults (`src/types.ts`)
-
-Datacore-only overrides that shadow `ViewDefaults` fields via spread order.
-
-| Field              | Type      | Default    | Shadows                         |
-| ------------------ | --------- | ---------- | ------------------------------- |
-| `titleProperty`    | `string`  | `'$name'`  | `ViewDefaults.titleProperty`    |
-| `subtitleProperty` | `string`  | `''`       | `ViewDefaults.subtitleProperty` |
-| `pairProperties`   | `boolean` | `true`     | `ViewDefaults.pairProperties`   |
-| `listMarker`       | `string`  | `'bullet'` | Datacore-only (list view)       |
-| `queryHeight`      | `number`  | `0`        | Datacore-only (query editor)    |
 
 ### BasesDefaults (`src/types.ts`)
 
@@ -84,19 +71,17 @@ Bases-only overrides that shadow `ViewDefaults` fields.
 
 | Type                    | Definition                                                                       | Used by                     |
 | ----------------------- | -------------------------------------------------------------------------------- | --------------------------- |
-| `ResolvedSettings`      | `PluginSettings & ViewDefaults & DatacoreDefaults` + `_displayNameMap?`          | Datacore rendering pipeline |
 | `BasesResolvedSettings` | `PluginSettings & ViewDefaults` + `_displayNameMap?` + `_skipLeadingProperties?` | Bases rendering pipeline    |
 
 ### PluginData (`src/types.ts`)
 
 Top-level persisted structure.
 
-| Field            | Type                                                                   | Purpose                                      |
-| ---------------- | ---------------------------------------------------------------------- | -------------------------------------------- |
-| `pluginSettings` | `Partial<PluginSettings>`                                              | Sparse plugin-level settings                 |
-| `templates`      | `Partial<Record<'grid' \| 'masonry' \| 'datacore', SettingsTemplate>>` | Settings snapshots for new views             |
-| `basesStates`    | `Record<string, BasesUIState>`                                         | Per-view collapsed groups (keyed by view ID) |
-| `datacoreStates` | `Record<string, DatacoreState>`                                        | Per-query UI + settings (keyed by query ID)  |
+| Field            | Type                                                          | Purpose                                      |
+| ---------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| `pluginSettings` | `Partial<PluginSettings>`                                     | Sparse plugin-level settings                 |
+| `templates`      | `Partial<Record<'grid' \| 'masonry', SettingsTemplate>>`      | Settings snapshots for new views             |
+| `basesStates`    | `Record<string, BasesUIState>`                                | Per-view collapsed groups (keyed by view ID) |
 
 ## Resolution chains
 
@@ -116,28 +101,6 @@ Top-level persisted structure.
 Precedence (highest wins): `config.get()` -> `templateOverrides` -> `BASES_DEFAULTS` -> `VIEW_DEFAULTS`. Plugin-level fields come from `pluginSettings` without overlap (different key sets).
 
 Return type: `BasesResolvedSettings` (includes computed `_skipLeadingProperties`).
-
-### Datacore path
-
-`getPersistedSettings()` in [controller.tsx](../../src/datacore/controller.tsx). Called via `dc.useCallback`.
-
-```
-1. pluginSettings                   (plugin-level)
-2. VIEW_DEFAULTS                    (per-view visual defaults)
-3. DATACORE_DEFAULTS                (shadows titleProperty, subtitleProperty, pairProperties)
-4. { ...template, ...datacoreState.settings }   (template + per-query overrides)
-   ─── passed to resolveSettings() ───
-```
-
-`resolveSettings()` merges via object spread:
-
-```ts
-{ ...pluginSettings, ...viewDefaults, ...datacoreDefaults, ...overrides }
-```
-
-Precedence (highest wins): `overrides` -> `datacoreDefaults` -> `viewDefaults` -> `pluginSettings`.
-
-Return type: `ResolvedSettings`.
 
 ### Schema defaults path
 
@@ -160,7 +123,6 @@ Only non-default values are persisted. This keeps `data.json` minimal and ensure
 | Location                 | What it filters        | Comparison target                            | Special handling                                                                                               |
 | ------------------------ | ---------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `setPluginSettings()`    | Plugin settings        | `PLUGIN_SETTINGS`                            | Shallow sanitize before compare; dispatches `PLUGIN_SETTINGS_CHANGE` event on `document.body` after saving     |
-| `setDatacoreState()`     | Datacore UI + settings | `DEFAULT_DATACORE_STATE`                     | `searchQuery` truncated to 500 chars; nested `settings` object sanitized separately; empty state -> delete key |
 | `setBasesState()`        | Collapsed groups       | Empty array                                  | Empty -> delete key                                                                                            |
 | `extractBasesTemplate()` | Template values        | `VIEW_DEFAULTS` merged with `BASES_DEFAULTS` | Only non-default pairs retained                                                                                |
 | `save()`                 | Top-level keys         | Empty object check                           | Skips empty sub-objects entirely                                                                               |
@@ -169,7 +131,7 @@ Only non-default values are persisted. This keeps `data.json` minimal and ensure
 
 `PersistenceManager.load()` runs `cleanupTemplateSettings()` on each stored template to remove:
 
-1. Keys not in `VIEW_DEFAULTS` (or `DATACORE_DEFAULTS` for Datacore templates)
+1. Keys not in `VIEW_DEFAULTS`
 2. Values whose type doesn't match the expected defaults type
 3. Stale enum values (reset to first valid value)
 4. Values matching `VIEW_DEFAULTS` (for Bases: skips keys where `BASES_DEFAULTS` overrides `VIEW_DEFAULTS`)
@@ -234,9 +196,9 @@ Bases YAML stores dropdown values as strings (`"one"`, `"two"`), but `ViewDefaul
 
 ### Saving a template
 
-1. User toggles `isTemplate` ON in Bases view settings (or Datacore settings panel).
-2. For Bases: `extractBasesTemplate()` reads all config values with same coercion as `readBasesSettings()`, compares against merged defaults (`{...VIEW_DEFAULTS, ...BASES_DEFAULTS}`), returns only non-default pairs.
-3. For Bases: `BASES_DEFAULTS` values serve as the comparison target for those keys — no keys are skipped from the sparse filter.
+1. User toggles `isTemplate` ON in Bases view settings.
+2. `extractBasesTemplate()` reads all config values with same coercion as `readBasesSettings()`, compares against merged defaults (`{...VIEW_DEFAULTS, ...BASES_DEFAULTS}`), returns only non-default pairs.
+3. `BASES_DEFAULTS` values serve as the comparison target for those keys — no keys are skipped from the sparse filter.
 4. `PersistenceManager.setSettingsTemplate()` stores the sparse template keyed by view type.
 
 ### Applying a template to new views
@@ -281,7 +243,7 @@ delete this.data.basesStates[oldId];
 
 Two separate cleanup mechanisms:
 
-1. **ALLOWED_VIEW_KEYS filter**: Removes keys not in the allowed set. Covers `DatacoreDefaults` keys that leaked into Bases YAML and any other stale keys from previous versions.
+1. **ALLOWED_VIEW_KEYS filter**: Removes keys not in the allowed set. Covers stale keys from previous versions.
 2. **Explicit per-key deletion**: `titleProperty`/`subtitleProperty` are deleted by a dedicated deletion block — they ARE in `ALLOWED_VIEW_KEYS` (as `ViewDefaults` keys) but are no longer valid in Bases YAML (now position-derived via `displayFirstAsTitle`/`displaySecondAsSubtitle`).
 
 Invalid enum values are reset to the first valid value from `VALID_VIEW_VALUES`.
@@ -295,12 +257,10 @@ Invalid enum values are reset to the first valid value from `VALID_VIEW_VALUES`.
 1. **Template is read-only until explicitly toggled.** The `isTemplate` toggle is the only way to snapshot current settings as a template. Templates are never auto-updated.
 2. **New view detection uses three functionally equivalent signals.** Schema defaults: `!config || config.get('id') == null`. YAML injection: `cleanUpBaseFile()` checks raw `viewObj.id` presence and name match, returns `isNew` flag. Config fallbacks: caller passes `templateOverrides` conditionally based on `isNew` from `cleanUpBaseFile()`.
 3. **`_skipLeadingProperties` is computed, never persisted.** Recalculated on every `readBasesSettings()` call from the current property order.
-4. **`DATACORE_DEFAULTS` overrides `VIEW_DEFAULTS`** for `titleProperty` (`'$name'` over `'file.name'`), `subtitleProperty` (`''` over `'file.folder'`), and `pairProperties` (`true` over `false`) via spread order in `resolveSettings()`.
-5. **`BASES_DEFAULTS.displayFirstAsTitle = true`** overrides `VIEW_DEFAULTS.displayFirstAsTitle = false`. This is the primary behavioral difference between backends — Bases derives title from property order by default.
-6. **Per-query Datacore state is isolated by `QUERY_ID`.** Each code block instance has its own persisted settings and UI state.
-7. **Stale config guards prevent reverts from duplicate callbacks.** `imageFormat` and `propertyNames` fall back to `previousSettings` when config returns invalid values.
-8. **`minimumColumns` requires coercion at every boundary.** Bases YAML stores `"one"`/`"two"` strings; internal types use `1 | 2` numbers. Masonry defaults to `2`, Grid to `1`. All sites use `getMinimumColumnsDefault(viewType)` as single source of truth.
-9. **Sparse storage ensures new defaults propagate.** Only non-default values are persisted, so adding a new default or changing an existing one automatically applies to all users who haven't overridden it.
-10. **Template cleanup runs on every plugin load.** Stale keys, wrong types, and invalid enum values are removed from templates before use.
-11. **Obsidian pre-populates schema defaults into new `.base` YAML.** `cleanUpBaseFile()` runs AFTER this, so template injection must unconditionally overwrite — not guard with `if (!(key in viewObj))`.
-12. **`getBasesViewOptions()` is NOT called on view creation.** Only called when the settings panel is opened. Template injection for new views happens in `cleanUpBaseFile()`, not via schema defaults.
+4. **`BASES_DEFAULTS.displayFirstAsTitle = true`** overrides `VIEW_DEFAULTS.displayFirstAsTitle = false` — title is derived from property order by default.
+5. **Stale config guards prevent reverts from duplicate callbacks.** `imageFormat` and `propertyNames` fall back to `previousSettings` when config returns invalid values.
+6. **`minimumColumns` requires coercion at every boundary.** Bases YAML stores `"one"`/`"two"` strings; internal types use `1 | 2` numbers. Masonry defaults to `2`, Grid to `1`. All sites use `getMinimumColumnsDefault(viewType)` as single source of truth.
+7. **Sparse storage ensures new defaults propagate.** Only non-default values are persisted, so adding a new default or changing an existing one automatically applies to all users who haven't overridden it.
+8. **Template cleanup runs on every plugin load.** Stale keys, wrong types, and invalid enum values are removed from templates before use.
+9. **Obsidian pre-populates schema defaults into new `.base` YAML.** `cleanUpBaseFile()` runs AFTER this, so template injection must unconditionally overwrite — not guard with `if (!(key in viewObj))`.
+10. **`getBasesViewOptions()` is NOT called on view creation.** Only called when the settings panel is opened. Template injection for new views happens in `cleanUpBaseFile()`, not via schema defaults.

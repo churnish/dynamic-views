@@ -1,10 +1,4 @@
-import type {
-  PluginSettings,
-  ViewDefaults,
-  DatacoreDefaults,
-  BasesDefaults,
-  ResolvedSettings,
-} from './types';
+import type { PluginSettings, ViewDefaults, BasesDefaults } from './types';
 
 export const PLUGIN_SETTINGS: PluginSettings = {
   randomizeAction: 'shuffle',
@@ -28,7 +22,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   titleProperty: 'file.name',
   titleLines: 2,
   subtitleProperty: 'file.folder',
-  // Position-based title/subtitle (Bases only; false = no-op for Datacore)
+  // Position-based title/subtitle
   displayFirstAsTitle: false,
   displaySecondAsSubtitle: false,
   // Text preview
@@ -58,53 +52,15 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   cssclasses: '',
 };
 
-export const DATACORE_DEFAULTS: DatacoreDefaults = {
-  titleProperty: '$name',
-  subtitleProperty: '',
-  listMarker: 'bullet',
-  queryHeight: 0,
-  // PLACEHOLDER: pairProperties forces side-by-side for hard-coded tags+mtime
-  // Will be revisited during Bases-style property rework
-  pairProperties: true,
-};
-
 export const BASES_DEFAULTS: BasesDefaults = {
   displayFirstAsTitle: true,
   displaySecondAsSubtitle: false,
   propertyNames: 'inline',
 };
 
-/**
- * Merge defaults + overrides into a fully resolved settings object.
- * Used at resolution boundaries (Bases view init, Datacore view init).
- */
-export function resolveSettings(
-  pluginSettings: PluginSettings,
-  viewDefaults: ViewDefaults = VIEW_DEFAULTS,
-  datacoreDefaults: DatacoreDefaults = DATACORE_DEFAULTS,
-  overrides?: Partial<ViewDefaults & DatacoreDefaults>
-): ResolvedSettings {
-  return {
-    ...pluginSettings,
-    ...viewDefaults,
-    ...datacoreDefaults,
-    ...overrides,
-  };
-}
-
 /** Default Bases UI state (collapsedGroups only) */
 export const DEFAULT_BASES_STATE = {
   collapsedGroups: [] as string[],
-};
-
-/** Default Datacore state (UI + settings) */
-export const DEFAULT_DATACORE_STATE = {
-  sortMethod: 'mtime-desc',
-  viewMode: 'grid',
-  searchQuery: '',
-  resultLimit: '',
-  widthMode: 'normal',
-  settings: undefined,
 };
 
 // posterInteractToReveal excluded — toggling requires re-render to wire hover intent + tap handlers

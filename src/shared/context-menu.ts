@@ -1,6 +1,5 @@
 /**
  * Shared context menu handler for file cards
- * Used by both Bases and Datacore views
  */
 
 import { App, Menu, Notice, Platform, TFile, setIcon } from 'obsidian';

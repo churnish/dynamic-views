@@ -1,6 +1,6 @@
 /**
  * Drag handler factories
- * Reusable drag event handlers used by both Bases (DOM) and Datacore (JSX) views
+ * Reusable drag event handlers used by Bases (DOM) views
  */
 
 import type { App } from 'obsidian';
@@ -18,7 +18,7 @@ function clearCardHoverState(el: Element | null | undefined): void {
   if (el) el.classList.remove(...HOVER_CLASSES);
 }
 
-/** Factory for tag drag handlers — used by both Bases and Datacore tag rendering. */
+/** Factory for tag drag handlers — used by Bases tag rendering. */
 export function createTagDragHandler(
   app: App,
   tag: string

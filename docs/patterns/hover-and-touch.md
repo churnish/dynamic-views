@@ -113,7 +113,7 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | **Drag hover cleanup** -- strips hover classes on drag start               | Reactive cleanup (not a gate)                     | Same                                                 | --                                   |
 | **Keyboard nav activation** -- hover-to-start                              | `setupHoverIntent` via `canHover`                 | Same                                                 | --                                   |
 | **Card container z-index stacking** -- `.has-hover-card`                   | `setupHoverIntent` (Bases only)                   | Same                                                 | `setupTouchPress` (Bases only)       |
-| **Non-card UI hovers** (Datacore toolbar/editor/settings, plugin settings) | CSS bare `:hover` in `@media (any-hover: hover)`  | CSS `:hover` fires for pen proximity                 | system `:active`                     |
+| **Non-card UI hovers** (plugin settings)                                   | CSS bare `:hover` in `@media (any-hover: hover)`  | CSS `:hover` fires for pen proximity                 | system `:active`                     |
 
 
 ## JS call sites
@@ -126,12 +126,8 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | `shared-renderer.ts` | Poster hover intent (Bases)             | `canHover(cardEl)`                       |
 | `shared-renderer.ts` | Thumbnail scrubbing gate (Bases)        | No gate (multi-image + setting)          |
 | `shared-renderer.ts` | Thumbnail hover scrub handlers (Bases)  | `isHoverPointer(e)`                      |
-| `shared-renderer.ts` | Thumbnail touch scrub handlers (Bases)  | `isTouchPointer(e)`                      |
-| `card-renderer.tsx`  | Thumbnail scrubbing gate (Datacore)     | No gate (multi-image + setting)          |
-| `card-renderer.tsx`  | Card + poster hover intent (Datacore)   | `canHover(cardEl)`                       |
-| `card-renderer.tsx`  | Card touch press (Datacore)             | Always (pointer events filter internally)|
-| `card-renderer.tsx`  | Thumbnail hover scrub handlers (Datacore) | `isHoverPointer(e)`                    |
-| `card-renderer.tsx`  | Thumbnail touch scrub handlers (Datacore) | `isTouchPointer(e)`                    |
+| `thumbnail-scrub.ts` | Thumbnail touch scrub handlers (shared) | `isTouchPointer(e)`                      |
+| `thumbnail-scrub.ts` | Thumbnail visibility reset IO (shared)  | Shared per-window IO via `getOwnerWindow`|
 | `slideshow.ts`       | Wheel gesture hover guard               | `canHover(coverEl)`                      |
 | `slideshow.ts`       | Image preload on hover                  | No gate (benign on touch)                |
 
@@ -145,7 +141,7 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | `_tags.scss`                  | List tag hover (card tag hover unwrapped)                        |
 | `_properties.scss`            | List/heading segment hover (card hover unwrapped)                |
 | `_plugin-settings.scss`       | Plugin settings tab hover                                        |
-| `_utilities.scss`             | Datacore embed block hover (suppresses box-shadow + edit button) |
+| `_utilities.scss`             | Embed block hover (suppresses box-shadow + edit button) |
 | `card/_core.scss`             | (Card border/shadow hover unwrapped)                             |
 | `card/_header.scss`           | URL icon pointer-events gating, drag suppression                 |
 | `card/_cover-elements.scss`   | Cover hover zoom transition (trigger unwrapped)                  |
@@ -153,10 +149,6 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | `card/_poster.scss`           | Content scroll, overlay reveal, content display, will-change     |
 | `card/_slideshow.scss`        | Nav arrows, boundary dimming, icon hide                          |
 
-| `datacore/_toolbar.scss`      | Toolbar button/dropdown hovers                                   |
-| `datacore/_query-editor.scss` | Query editor button hovers                                       |
-| `datacore/_settings.scss`     | Settings panel hover states                                      |
-| `datacore/_list-view.scss`    | List view link hover                                             |
 
 
 ## Adding a new hover/touch interaction

@@ -2,33 +2,30 @@
 title: Plugin view navigation
 description: Definitive reference for navigating Dynamic Views plugin views and elements across platforms — view identification, DOM hierarchy, correct selectors, full-screen elements, and platform-specific probing patterns.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-02
+updated: 2026-04-05
 ---
 # Plugin view navigation
 
-Reference for navigating Dynamic Views plugin views and DOM elements via CDP (Chrome DevTools Protocol), WebKit Inspector, or direct DOM queries. Covers both Bases and Datacore backends, correct selectors, and common pitfalls. All class names and paths verified empirically against live runtime.
+Reference for navigating Dynamic Views plugin views and DOM elements via CDP (Chrome DevTools Protocol), WebKit Inspector, or direct DOM queries. Covers correct selectors and common pitfalls. All class names and paths verified empirically against live runtime.
 
 See [view-configuration.md](view-configuration.md) for setting keys, defaults, and programmatic configuration.
 
-For card internals (property rows, cover elements, header structure), see [`card-dom-structure.md`](../architecture/card-dom-structure.md). 
-
-For backend rendering model differences, see [`bases-v-datacore-differences.md`](../architecture/bases-v-datacore-differences.md).
+For card internals (property rows, cover elements, header structure), see [`card-dom-structure.md`](../architecture/card-dom-structure.md).
 
 ## View identification
 
 Dynamic Views extends native Obsidian view types — it does NOT register custom leaf types.
 
-| Backend | Leaf type | Filter expression |
-|---|---|---|
-| Bases | `bases` | `getLeavesOfType('bases').filter(l => l.view.containerEl.querySelector('.dynamic-views'))` |
-| Datacore | `markdown` | `getLeavesOfType('markdown').filter(l => l.view.containerEl.querySelector('.dynamic-views'))` |
+| Leaf type | Filter expression |
+|---|---|
+| `bases` | `getLeavesOfType('bases').filter(l => l.view.containerEl.querySelector('.dynamic-views'))` |
 
 **View mode** is determined by the container class on the layout element inside `.dynamic-views`:
 
-| Mode | Class | Present on |
-|---|---|---|
-| Grid | `.dynamic-views-grid` | Both backends |
-| Masonry | `.dynamic-views-masonry` | Both backends |
+| Mode | Class |
+|---|---|
+| Grid | `.dynamic-views-grid` |
+| Masonry | `.dynamic-views-masonry` |
 
 ## DOM hierarchy
 
@@ -104,58 +101,6 @@ leaf.view.containerEl
 
 When grouped, `.masonry-container` moves from `.dynamic-views-masonry` to each `.dynamic-views-group` (each group is its own masonry container).
 
-### Datacore (Live Preview)
-
-```
-leaf.view.containerEl
-└── div.view-content
-    └── div.markdown-source-view
-        └── div.cm-editor
-            └── div.cm-scroller                     ← scrollEl
-                └── div.cm-sizer
-                    └── div.cm-contentContainer
-                        └── div.cm-content
-                            └── div.cm-preview-code-block.cm-embed-block.cm-lang-datacorejsx
-                                └── div.block-language-datacorejsx
-                                    └── div.dynamic-views  ← container (no -bases-container)
-                                        ├── div.controls-wrapper
-                                        │   ├── div.bottom-controls
-                                        │   └── div.search-controls-compact
-                                        ├── div.results-container
-                                        │   └── div.dynamic-views-grid
-                                        │       ├── div.card
-                                        │       └── ...
-                                        └── div (load-more sentinel)
-```
-
-### Datacore (Reading view)
-
-```
-leaf.view.containerEl
-└── div.view-content
-    └── div.markdown-reading-view
-        └── div.markdown-preview-view.markdown-rendered
-            └── div.markdown-preview-sizer.markdown-preview-section
-                └── div.el-pre
-                    └── div.block-language-datacorejsx
-                        └── div.dynamic-views       ← container (no -bases-container)
-                            ├── div.controls-wrapper
-                            ├── div.results-container
-                            │   └── div.dynamic-views-grid
-                            │       ├── div.card
-                            │       └── ...
-                            └── div (load-more sentinel)
-```
-
-Both views coexist as siblings under `.view-content` — Obsidian keeps the inactive view in the DOM.
-
-Key differences from Bases:
-- `.dynamic-views` does NOT have the `dynamic-views-bases-container` class
-- `.results-container` sits between `.dynamic-views` and the grid/masonry layout element
-- No `.bases-view` — the scroll element is `.cm-scroller` (Live Preview) or `.markdown-preview-view` (Reading view)
-- No group sections — cards are direct children of `.dynamic-views-grid`
-- Toolbar is `.controls-wrapper` (with `.bottom-controls` + `.search-controls-compact`), NOT `.bases-toolbar`
-
 ## Card selectors
 
 The card class is `.card`.
@@ -182,7 +127,7 @@ leaf.view.containerEl.querySelectorAll('.dynamic-views .card').length
 | `has-properties-bottom` | Properties rendered below content |
 | `has-header` | Card has a header (title/subtitle) |
 | `compact-mode` | Compact card layout |
-| `compact-stacked` | Compact with stacked layout (Datacore) |
+| `compact-stacked` | Compact with stacked layout |
 | `content-hidden` | Card content hidden (content-visibility) |
 | `card-fade-in` | Fade-in animation class |
 | `image-ready` | Cover/thumbnail image loaded |
@@ -192,18 +137,16 @@ leaf.view.containerEl.querySelectorAll('.dynamic-views .card').length
 
 | Class | Meaning |
 |---|---|
-| `dynamic-views-bases-container` | Bases backend container (absent on Datacore) |
+| `dynamic-views-bases-container` | Bases backend container |
 | `dynamic-views-paired-property-column` | Paired property column layout active |
 | `poster-mode-fade` | Poster fade display mode |
 | `image-fit-crop` | Image fit mode: crop |
 | `image-fit-contain` | Image fit mode: contain |
 | `is-grouped` | View has groupBy enabled |
-| `dynamic-views-empty` | Zero results (Datacore) |
-| `dynamic-views-hidden` | Container hidden (Datacore, when code block is not visible) |
 
 ## Toolbar structure
 
-### Bases (Obsidian-owned)
+Obsidian-owned elements:
 
 ```
 div.bases-header
@@ -218,14 +161,6 @@ div.bases-header
 ```
 
 The search row is a sibling: `div.bases-search-row`.
-
-### Datacore (plugin-created)
-
-```
-div.controls-wrapper
-├── div.bottom-controls      (view/sort/limit controls)
-└── div.search-controls-compact  (search input)
-```
 
 ## Full-screen controller elements
 
@@ -326,9 +261,7 @@ Manual console access only — no programmatic CDP connection. Queries run in Sa
 ## Common pitfalls
 
 1. **`.bases-card` does not exist** — the card class is `.card`. The name `.bases-card` is a hallucination derived from the parent `.bases-cards-group`. Every "0 cards found" conclusion from using `.bases-card` is wrong.
-2. **Dynamic Views does not register custom leaf types** — it piggybacks on `bases` (for Bases backend) and `markdown` (for Datacore backend). Searching for DV-specific leaf types will find nothing.
+2. **Dynamic Views does not register custom leaf types** — it piggybacks on `bases`. Searching for DV-specific leaf types will find nothing.
 3. **Cards may be empty right after app restart** — Bases queries use Obsidian's `metadataCache`, which updates continuously but needs an initial indexing pass on startup. If a CDP query runs before `app.metadataCache.resolved === true`, results may be incomplete.
 4. **Android vault path is not fixed** — the path varies by device and sync method. Always discover via `app.vault.adapter.basePath`, never hardcode.
-5. **Datacore `.dynamic-views` has no `.dynamic-views-bases-container`** — Bases views add `dynamic-views-bases-container` to the `.dynamic-views` element; Datacore views do not. Do not use `.dynamic-views-bases-container` as a universal selector for all Dynamic Views containers.
-6. **Ungrouped masonry is flat, grouped masonry has group wrappers** — ungrouped Masonry cards are direct children of `.dynamic-views-masonry.masonry-container`. When grouped, Masonry gets the same `.dynamic-views-group-section` → `.dynamic-views-group` structure as Grid, and `.masonry-container` moves from `.dynamic-views-masonry` to each `.dynamic-views-group`.
-7. **Toolbar class differs by backend** — Bases uses `.bases-header` > `.bases-toolbar` (Obsidian-owned elements the plugin cannot modify). Datacore uses `.controls-wrapper` > `.bottom-controls` (plugin-created elements). There is no shared toolbar selector.
+5. **Ungrouped masonry is flat, grouped masonry has group wrappers** — ungrouped Masonry cards are direct children of `.dynamic-views-masonry.masonry-container`. When grouped, Masonry gets the same `.dynamic-views-group-section` → `.dynamic-views-group` structure as Grid, and `.masonry-container` moves from `.dynamic-views-masonry` to each `.dynamic-views-group`.

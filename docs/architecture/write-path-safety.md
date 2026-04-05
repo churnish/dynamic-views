@@ -56,28 +56,21 @@ Not required by Obsidian guidelines, but enforced in this plugin for safety:
 - **Guards**: `instanceof TFile` check before write
 - **Mitigation**: `.catch()` logs errors to console, preventing silent UI/data desync
 
-### 3. Datacore query sync — `vault.process()` + string replacement
-
-- **Location**: [src/datacore/controller.tsx](../../src/datacore/controller.tsx), [src/datacore/query-sync.ts](../../src/datacore/query-sync.ts)
-- **Trigger**: User edits a DQL query in the toolbar
-- **Scope**: Replaces query text between DQL START/END markers in the code block
-- **Guards**: Returns original content if markers not found; `isSyncing`/`pendingSync` serializes concurrent writes
-
-### 4. Plugin data — `Plugin.saveData()`
+### 3. Plugin data — `Plugin.saveData()`
 
 - **Location**: [src/persistence.ts](../../src/persistence.ts), `PersistenceManager.save()`
 - **Trigger**: Any settings/state change
 - **Scope**: Writes sparse plugin config to `data.json`
 - **Guards**: Input sanitization via `sanitizeObject`; `searchQuery` truncated to 500 chars
 
-### 5. New file creation — `vault.create()`
+### 4. New file creation — `vault.create()`
 
-- **Location**: [main.ts](../../main.ts) (commands), [src/datacore/controller.tsx](../../src/datacore/controller.tsx) (toolbar)
+- **Location**: [main.ts](../../main.ts) (commands)
 - **Trigger**: User invokes create command
 - **Scope**: Creates new `.md` or `.base` files with template content
 - **Guards**: `getAvailablePath` / `getAvailableBasePath` prevents name collisions; `try/catch` with Notice
 
-### 6. Bases config — `config.set()`
+### 5. Bases config — `config.set()`
 
 - **Location**: [src/bases/utils.ts](../../src/bases/utils.ts)
 - **Trigger**: Template toggle reset on render, user toggle

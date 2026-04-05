@@ -1,8 +1,6 @@
 import {
   Plugin,
   Notice,
-  Editor,
-  MarkdownView,
   QueryController,
   TFile,
   TFolder,
@@ -10,10 +8,7 @@ import {
   type MenuItem,
 } from 'obsidian';
 import { PersistenceManager } from './src/persistence';
-import { View } from './src/datacore/controller';
-import { setDatacorePreact } from './src/jsx-runtime';
-import { getAvailablePath, getAvailableBasePath } from './src/utils/file';
-import './src/jsx-runtime'; // Ensure h and Fragment are globally available
+import { getAvailableBasePath } from './src/utils/file';
 import {
   DynamicViewsGridView,
   GRID_VIEW_TYPE,
@@ -25,7 +20,6 @@ import {
   masonryViewOptions,
 } from './src/bases/masonry-view';
 import { DynamicViewsSettingTab } from './src/plugin-settings';
-import type { DatacoreAPI } from './src/datacore/types';
 import {
   initExternalBlobCache,
   cleanupExternalBlobCache,
@@ -52,7 +46,6 @@ interface DebugBasesView {
 }
 
 // Plugin/feature names (proper nouns, not subject to sentence case)
-const DATACORE = 'Datacore';
 const GRID = 'Grid';
 const MASONRY = 'Masonry';
 const NEW_GRID_BASE = 'New Grid base';
@@ -62,30 +55,6 @@ export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
   /** Tracks which NN API instance we registered menus with */
   private nnRegisteredApi: unknown = null;
-
-  // Helper function for datacorejsx blocks
-  createView(dc: DatacoreAPI, userQuery?: string, queryId?: string) {
-    // Initialize jsxRuntime with Datacore's Preact BEFORE returning component
-    // This allows all compiled JSX in our components to use Datacore's h function
-    setDatacorePreact(dc.preact);
-
-    // Return arrow function component for Datacore to render (preserves 'this' context)
-    return (): JSX.Element => {
-      // View and all child components now use our h() proxy which delegates to dc.preact.h
-      return View({
-        plugin: this,
-        app: this.app,
-        dc,
-        USER_QUERY: userQuery || '@page',
-        QUERY_ID: queryId,
-      });
-    };
-  }
-
-  /** Generate a 6-char alphanumeric query ID */
-  private generateQueryId(): string {
-    return Math.random().toString(36).substring(2, 8);
-  }
 
   async onload() {
     initExternalBlobCache();
@@ -139,40 +108,6 @@ export default class DynamicViews extends Plugin {
         ? `${on ? 'ON' : 'OFF'} for ${count} view(s)`
         : 'No views found';
     };
-
-    this.addCommand({
-      id: 'create-datacore-note',
-      name: `Create new note with ${DATACORE} query`,
-      icon: 'lucide-file-code-corner',
-      callback: async () => {
-        await this.createExplorerFile();
-      },
-    });
-
-    this.addCommand({
-      id: 'insert-datacore-query',
-      name: `Insert ${DATACORE} query`,
-      icon: 'lucide-list-plus',
-      editorCheckCallback: (
-        checking: boolean,
-        editor: Editor,
-        view: MarkdownView
-      ) => {
-        const cursor = editor.getCursor();
-        const lineContent = editor.getLine(cursor.line);
-        const isEmptyLine = lineContent.trim().length === 0;
-
-        if (isEmptyLine) {
-          if (!checking) {
-            const template = this.getQueryTemplate();
-            editor.replaceRange(template, cursor);
-          }
-          return true;
-        }
-
-        return false;
-      },
-    });
 
     // Add ribbon icons
     this.addRibbonIcon(
@@ -398,41 +333,6 @@ export default class DynamicViews extends Plugin {
         );
       }
     });
-  }
-
-  getQueryTemplate(): string {
-    const queryId = this.generateQueryId();
-    return `
-\`\`\`datacorejsx
-const QUERY = \`
-// –––– DQL QUERY START ––––
-
-// ––––– DQL QUERY END –––––
-\`;
-return app.plugins.plugins['dynamic-views'].createView(dc, QUERY, '${queryId}');
-\`\`\`\n`;
-  }
-
-  async createExplorerFile() {
-    try {
-      const activeFile = this.app.workspace.getActiveFile();
-      const folderPath = this.app.fileManager.getNewFileParent(
-        activeFile?.path ?? ''
-      ).path;
-      const filePath = getAvailablePath(this.app, folderPath, 'Untitled');
-      const template = this.getQueryTemplate();
-
-      await this.app.vault.create(filePath, template);
-
-      const file = this.app.vault.getFileByPath(filePath);
-      if (file) {
-        const leaf = this.app.workspace.getLeaf('tab');
-        await leaf.openFile(file, { eState: { rename: 'all' } });
-      }
-    } catch (error) {
-      new Notice(`Failed to create note.`);
-      console.error('File creation failed:', error);
-    }
   }
 
   async createBaseFile(

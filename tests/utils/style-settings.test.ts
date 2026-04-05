@@ -1,8 +1,6 @@
 import { vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 import {
-  getMinMasonryColumns,
-  getMinGridColumns,
   getTagStyle,
   getCardSpacing,
   shouldShowRecentTimeOnly,
@@ -47,72 +45,6 @@ describe('style-settings', () => {
   afterEach(() => {
     mockGetComputedStyle.mockRestore();
     mockClassList.clear();
-  });
-
-  describe('getMinMasonryColumns', () => {
-    it('should return default value of 2', () => {
-      expect(getMinMasonryColumns()).toBe(2);
-    });
-
-    it('should return custom value from CSS variable', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-min-masonry-columns' ? '3' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getMinMasonryColumns()).toBe(3);
-    });
-
-    it('should parse value with px unit', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-min-masonry-columns' ? '4px' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getMinMasonryColumns()).toBe(4);
-    });
-
-    it('should return default for invalid value', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-min-masonry-columns' ? 'invalid' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getMinMasonryColumns()).toBe(2);
-    });
-
-    it('should handle whitespace in CSS variable', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-min-masonry-columns' ? '  5  ' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getMinMasonryColumns()).toBe(5);
-    });
-  });
-
-  describe('getMinGridColumns', () => {
-    it('should return default value of 1', () => {
-      expect(getMinGridColumns()).toBe(1);
-    });
-
-    it('should return custom value from CSS variable', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-min-grid-columns' ? '2' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getMinGridColumns()).toBe(2);
-    });
-
-    it('should handle decimal values', () => {
-      mockGetComputedStyle.mockReturnValue({
-        getPropertyValue: (name: string) =>
-          name === '--dynamic-views-min-grid-columns' ? '1.5' : '',
-      } as CSSStyleDeclaration);
-
-      expect(getMinGridColumns()).toBe(1.5);
-    });
   });
 
   describe('getTagStyle', () => {

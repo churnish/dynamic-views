@@ -12,7 +12,7 @@ import {
   QueryController,
   TFile,
 } from 'obsidian';
-import { CardData } from '../shared/card-renderer';
+import { CardData } from '../shared/card-data';
 import {
   basesEntryToCardData,
   transformBasesEntries,
@@ -100,7 +100,7 @@ import {
 } from '../utils/property';
 import type DynamicViews from '../../main';
 import type {
-  BasesResolvedSettings,
+  ResolvedSettings,
   ContentCache,
   RenderState,
   LastGroupState,
@@ -184,7 +184,7 @@ export class DynamicViewsGridView extends BasesView {
     lastMtimes: new Map(),
   };
   // Track last rendered settings to detect stale config (see readBasesSettings)
-  private lastRenderedSettings: BasesResolvedSettings | null = null;
+  private lastRenderedSettings: ResolvedSettings | null = null;
   // Per-card data for surgical property reorder (avoids full re-render)
   private cardDataByPath = new Map<
     string,
@@ -635,7 +635,7 @@ export class DynamicViewsGridView extends BasesView {
   // #endregion Group collapse/expand
   // #region Batch sizing
   /** Calculate batch size based on current column count */
-  private getBatchSize(settings: BasesResolvedSettings): number {
+  private getBatchSize(settings: ResolvedSettings): number {
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
     const containerWidth = Math.floor(
       this.containerEl.getBoundingClientRect().width
@@ -658,7 +658,7 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: BasesResolvedSettings): number {
+  private calculateInitialCount(settings: ResolvedSettings): number {
     return this.getBatchSize(settings);
   }
 
@@ -1813,7 +1813,7 @@ export class DynamicViewsGridView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     renderOptions?: { skipImageFade?: boolean }
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
@@ -1848,7 +1848,7 @@ export class DynamicViewsGridView extends BasesView {
   /** Surgical property reorder: rebuild CardData + update title/subtitle/property DOM */
   private updatePropertyOrder(
     visibleProperties: string[],
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     sortMethod: string
   ): void {
     for (const item of this.virtualItems) {
@@ -1899,7 +1899,7 @@ export class DynamicViewsGridView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     sortMethod: string,
     visibleProperties: string[]
   ): Promise<void> {
@@ -2585,7 +2585,7 @@ export class DynamicViewsGridView extends BasesView {
 
   private mountVirtualItem(
     item: VirtualItem,
-    settings: BasesResolvedSettings
+    settings: ResolvedSettings
   ): void {
     const placeholder = this.placeholderEls.get(item);
     if (!placeholder?.isConnected) return;
@@ -3039,7 +3039,7 @@ export class DynamicViewsGridView extends BasesView {
     rowEnd: number,
     off: number,
     reverse: boolean,
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     visibleTop: number,
     visibleBottom: number,
     maxMounts: number

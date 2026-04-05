@@ -159,7 +159,7 @@ Post-resize cards entering the content-hidden zone get measured and their baseli
 
 ### Phase 3: Transform-based positioning — REVERTED
 
-All masonry card position writes used `transform: translate3d(x, y, 0)` instead of inline `top`/`left`. Compositor-only update — skips layout invalidation and paint for position-only changes (e.g., proportional resize). Applied to both Bases (`masonry-view.ts`, 8 sites) and Datacore (`masonry-layout.ts`, 1 site) backends. `width` and `height` remained as inline styles (layout-affecting, needed for text wrapping and scroll stabilization).
+All masonry card position writes used `transform: translate3d(x, y, 0)` instead of inline `top`/`left`. Compositor-only update — skips layout invalidation and paint for position-only changes (e.g., proportional resize). Applied to `masonry-view.ts` (8 sites). `width` and `height` remained as inline styles (layout-affecting, needed for text wrapping and scroll stabilization).
 
 **CLS impact: none.** The visible scroll-idle jump after resize was unchanged. The style recalculation cascade persists because `width`/`height` inline style writes still trigger layout invalidation, and `updateCachedGroupOffsets()` still forces reflow via `getBoundingClientRect()`. The `top`/`left` writes were only part of the cascade source — removing them alone is insufficient. The transform change is a valid performance optimization for position-only updates but does not address the CLS problem.
 

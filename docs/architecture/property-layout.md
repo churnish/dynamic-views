@@ -8,7 +8,7 @@ updated: 2026-04-02
 
 ## Overview
 
-The property layout system controls how property rows are arranged inside cards in Grid and Masonry views. It decides which properties are paired side-by-side, measures their widths to allocate space optimally, applies scroll gradients when content overflows, and splits properties into top/bottom containers around the text preview. The system spans six files: `src/shared/property-measure.ts` (width measurement pipeline), `src/shared/scroll-gradient.ts` (overflow gradient indicators), `src/shared/property-helpers.ts` (`computeInvertPairs` algorithm and collapse logic), `src/shared/card-renderer.tsx` (Datacore property rendering and pairing), `src/bases/shared-renderer.ts` (Bases property rendering and container classes), and `styles/_properties.scss` (CSS layout rules and state classes).
+The property layout system controls how property rows are arranged inside cards in Grid and Masonry views. It decides which properties are paired side-by-side, measures their widths to allocate space optimally, applies scroll gradients when content overflows, and splits properties into top/bottom containers around the text preview. The system spans five files: `src/shared/property-measure.ts` (width measurement pipeline), `src/shared/scroll-gradient.ts` (overflow gradient indicators), `src/shared/property-helpers.ts` (`computeInvertPairs` algorithm and collapse logic), `src/bases/shared-renderer.ts` (property rendering and container classes), and `styles/_properties.scss` (CSS layout rules and state classes).
 
 ## Files
 
@@ -17,8 +17,7 @@ The property layout system controls how property rows are arranged inside cards 
 | `src/shared/property-measure.ts` | Width measurement pipeline, synchronous measurement, ResizeObserver.   |
 | `src/shared/scroll-gradient.ts`  | Horizontal/vertical gradient indicators for overflowing content.       |
 | `src/shared/property-helpers.ts` | `computeInvertPairs()`, `shouldCollapseField()`, property type checks, batched compact-stacked detection. |
-| `src/shared/card-renderer.tsx`   | Datacore property rendering, `PropertySet` grouping, top/bottom split. |
-| `src/bases/shared-renderer.ts`   | Bases property rendering, container class application, measurement.    |
+| `src/bases/shared-renderer.ts`   | Property rendering, container class application, measurement.          |
 | `src/utils/property.ts`          | `parsePropertyList()` — comma-separated string to `Set<string>`.       |
 | `styles/_properties.scss`        | All property CSS: pairs, measurement states, alignment, compact mode.  |
 
@@ -28,8 +27,8 @@ Properties can be displayed as unpaired full-width rows or as side-by-side pairs
 
 ### Two modes
 
-- **`pairProperties=true`** (Datacore default): All consecutive properties are paired by default. The `invertPropertyPairing` string lists property names to **unpair** — any property named in the set stays full-width.
-- **`pairProperties=false`** (ViewDefaults + Bases default): All properties are unpaired by default. The `invertPropertyPairing` string lists property names to **pair** — named properties are paired with their neighbor.
+- **`pairProperties=true`**: All consecutive properties are paired by default. The `invertPropertyPairing` string lists property names to **unpair** — any property named in the set stays full-width.
+- **`pairProperties=false`** (default): All properties are unpaired by default. The `invertPropertyPairing` string lists property names to **pair** — named properties are paired with their neighbor.
 
 ### Parsing `invertPropertyPairing`
 
@@ -54,17 +53,9 @@ For each unclaimed property `i` whose name is in `invertPairingSet`:
 
 ### PropertySet data structure
 
-Both renderers group visible properties into sets before rendering:
+The renderer groups visible properties into sets before rendering:
 
 ```ts
-// Datacore (card-renderer.tsx)
-interface PropertySet {
-  items: Array<{ name: string; value: unknown; fieldIndex: number }>;
-  paired: boolean;
-}
-
-// Bases (shared-renderer.ts) — same `items` field
-// but includes `originalIndex` for the top/bottom split.
 interface PropertySet {
   items: Array<{
     name: string;
@@ -85,12 +76,7 @@ The pairing decision walks visible properties sequentially. When `pairProperties
 
 Properties are split into `.card-properties-top` (above text preview/thumbnail) and `.card-properties-bottom` (below).
 
-**Bases**: Uses `textPreviewIndex` — properties whose `originalIndex < textPreviewIndex` go to top, the rest go to bottom. When no text preview property is set, all properties go to bottom.
-
-**Datacore**: Uses `showPropertiesAbove` (boolean) + `invertPropertyPosition` (comma-separated property names). For each property set:
-
-1. Check if any property in the set is named in `invertPositionSet`.
-2. If `showPropertiesAbove=true`: properties go to top unless inverted. If `showPropertiesAbove=false`: properties go to bottom unless inverted.
+Uses `textPreviewIndex` — properties whose `originalIndex < textPreviewIndex` go to top, the rest go to bottom. When no text preview property is set, all properties go to bottom.
 
 ```ts
 const isAbove = settings.showPropertiesAbove
@@ -238,7 +224,7 @@ After applying CSS vars, the set gets `property-measured` class. CSS switches fr
 
 ## Alignment modes
 
-Controlled by the `rightPropertyPosition` view setting, which adds a class to the view container. **Bases-only**: `applyViewContainerStyles()` is called exclusively from Bases views. Datacore does not consume `rightPropertyPosition` — this is a known parity gap.
+Controlled by the `rightPropertyPosition` view setting, which adds a class to the view container via `applyViewContainerStyles()`.
 
 ### Right
 
@@ -329,7 +315,7 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 **`hasWrappedPairs()` detection** (`property-helpers.ts`): Queries all `.property-pair` elements on the card, compares `getBoundingClientRect().top` of `.pair-left` vs `.pair-right` with +1px tolerance. Returns `true` if any right child is below its left sibling.
 
-**RAF-batched detection**: Detection is batched via `queueCompactStackedCheck()` in `property-helpers.ts`. Per-card `ResizeObserver` callbacks queue cards; a single `requestAnimationFrame` per document processes each document's batch independently (1 forced reflow per document per frame, not N). Cards are partitioned by `ownerDocument` into `pendingCardsByDoc` (`Map<Document, Set<HTMLElement>>`) with separate RAF IDs per document (`batchRafIds`). This prevents cross-window interference: forced reflow only flushes one document's layout, and row sync comparisons are meaningless across different viewports. The `compactWidthCache` (`WeakMap<HTMLElement, number>`) is shared module-level state in `property-helpers.ts` — both Bases (`shared-renderer.ts`) and Datacore (`card-renderer.tsx`) import the same functions.
+**RAF-batched detection**: Detection is batched via `queueCompactStackedCheck()` in `property-helpers.ts`. Per-card `ResizeObserver` callbacks queue cards; a single `requestAnimationFrame` per document processes each document's batch independently (1 forced reflow per document per frame, not N). Cards are partitioned by `ownerDocument` into `pendingCardsByDoc` (`Map<Document, Set<HTMLElement>>`) with separate RAF IDs per document (`batchRafIds`). This prevents cross-window interference: forced reflow only flushes one document's layout, and row sync comparisons are meaningless across different viewports. The `compactWidthCache` (`WeakMap<HTMLElement, number>`) is shared module-level state in `property-helpers.ts`.
 
 **Three-phase batch pattern**:
 
@@ -360,16 +346,14 @@ Style Settings slider `dynamic-views-compact-breakpoint`, default `390px`. Set t
 
 > For the full settings resolution pipeline (three-layer merge, sparse storage, template system), see [settings-resolution.md](settings-resolution.md).
 
-### View settings (Bases config / Datacore settings)
+### View settings
 
-| Key                      | Type                            | Default                                            | Description                                        | Consumed by                                                                                                                |
-| ------------------------ | ------------------------------- | -------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `propertyNames`          | `'hide' \| 'inline' \| 'above'` | `'hide'` (ViewDefaults) / `'inline'` (Bases)       | Name display mode.                                 | Both renderers, measurement (label width), CSS.                                                                            |
-| `pairProperties`         | `boolean`                       | `false` (ViewDefaults + Bases) / `true` (Datacore) | Whether properties pair by default.                | Both renderers (pairing algorithm).                                                                                        |
-| `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'column'`                                         | Right-side field alignment mode. Bases-only.       | `applyViewContainerStyles()` (Bases), [_properties.scss](../../styles/_properties.scss), measurement skip in `measurePropertyFields()`/`measureCardPairsSynchronous()`. |
-| `invertPropertyPairing`  | `string`                        | `''`                                               | Comma-separated names to invert pairing behavior.  | Both renderers via `parsePropertyList()`.                                                                                  |
-| `showPropertiesAbove`    | `boolean`                       | `false`                                            | Default vertical position for properties.          | Datacore renderer (top/bottom split).                                                                                      |
-| `invertPropertyPosition` | `string`                        | `''`                                               | Comma-separated names to invert vertical position. | Datacore renderer (top/bottom split).                                                                                      |
+| Key                      | Type                            | Default                                      | Description                                        | Consumed by                                                                                                                |
+| ------------------------ | ------------------------------- | -------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `propertyNames`          | `'hide' \| 'inline' \| 'above'` | `'inline'` (Bases)                            | Name display mode.                                 | Renderer, measurement (label width), CSS.                                                                                  |
+| `pairProperties`         | `boolean`                       | `false`                                      | Whether properties pair by default.                | Renderer (pairing algorithm).                                                                                              |
+| `rightPropertyPosition`  | `'left' \| 'column' \| 'right'` | `'column'`                                   | Right-side field alignment mode.                   | `applyViewContainerStyles()`, [_properties.scss](../../styles/_properties.scss), measurement skip in `measurePropertyFields()`/`measureCardPairsSynchronous()`. |
+| `invertPropertyPairing`  | `string`                        | `''`                                         | Comma-separated names to invert pairing behavior.  | Renderer via `parsePropertyList()`.                                                                                        |
 
 ### Style Settings (CSS / body classes)
 

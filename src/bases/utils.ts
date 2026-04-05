@@ -28,11 +28,7 @@ import {
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
 } from '../utils/notebook-navigator';
-import type {
-  PluginSettings,
-  BasesResolvedSettings,
-  ViewDefaults,
-} from '../types';
+import type { PluginSettings, ResolvedSettings, ViewDefaults } from '../types';
 import { BASES_DEFAULTS, VIEW_DEFAULTS } from '../constants';
 import {
   VALID_VIEW_VALUES,
@@ -50,7 +46,7 @@ interface BasesConfigInit {
 
 /**
  * Keys allowed in Dynamic Views .base view entries.
- * Intentional allowlist — strips leaked DatacoreDefaults and other stale keys.
+ * Intentional allowlist — strips stale keys from older plugin versions.
  * Forward-compatibility risk accepted: if Obsidian adds new Bases-native view
  * keys, they must be added here or they'll be silently removed on first render.
  */
@@ -75,7 +71,7 @@ const ALLOWED_VIEW_KEYS = new Set<string>([
 
 /**
  * Clean ALL Dynamic Views view entries in a .base file at once.
- * Removes stale keys (e.g. DatacoreDefaults that leaked) and resets invalid enum values.
+ * Removes stale keys and resets invalid enum values.
  * Called when any view in the file renders — handles all views, returns viewName → viewId map.
  * Also migrates basesState when a view is renamed (not duplicated).
  */
@@ -739,7 +735,7 @@ export function getSortMethod(config: BasesConfigWithSort): string {
  */
 export async function loadContentForEntries(
   entries: BasesEntry[],
-  settings: BasesResolvedSettings,
+  settings: ResolvedSettings,
   app: App,
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
@@ -792,7 +788,7 @@ export async function loadContentForEntries(
           }
         }
 
-        // Get title for first line comparison (similar to Datacore path)
+        // Get title for first line comparison
         let titleString: string | undefined;
         if (settings.titleProperty) {
           const titleProps = settings.titleProperty

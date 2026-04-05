@@ -1,7 +1,7 @@
 {
   "name": "dynamic-views",
   "version": "0.14.0",
-  "description": "Elegant grid and masonry card views for Bases and Datacore.",
+  "description": "Elegant grid and masonry card views for Bases.",
   "main": "main.js",
   "type": "module",
   "scripts": {

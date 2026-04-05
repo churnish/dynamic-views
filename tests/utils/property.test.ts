@@ -1,11 +1,8 @@
 import { vi } from 'vitest';
 import {
   getFirstBasesPropertyValue,
-  getFirstDatacorePropertyValue,
   getFirstBasesDatePropertyValue,
-  getFirstDatacoreDatePropertyValue,
   getAllBasesImagePropertyValues,
-  getAllDatacoreImagePropertyValues,
   getPropertyDisplayName,
   getAllVaultProperties,
   stripNotePrefix,
@@ -94,66 +91,6 @@ describe('property', () => {
     });
   });
 
-  describe('getFirstDatacorePropertyValue', () => {
-    let mockPage: any;
-
-    beforeEach(() => {
-      mockPage = {
-        value: vi.fn(),
-        field: vi.fn((...args: unknown[]) => ({
-          value: mockPage.value(...args),
-        })),
-      };
-    });
-
-    it('should return null for empty property string', () => {
-      expect(getFirstDatacorePropertyValue(mockPage, '')).toBeNull();
-      expect(getFirstDatacorePropertyValue(mockPage, '   ')).toBeNull();
-    });
-
-    it('should return first property with valid value', () => {
-      mockPage.value = vi
-        .fn()
-        .mockReturnValueOnce(null)
-        .mockReturnValueOnce('test value');
-
-      const result = getFirstDatacorePropertyValue(mockPage, 'prop1, prop2');
-      expect(result).toBe('test value');
-    });
-
-    it('should skip null/undefined values', () => {
-      mockPage.value = vi
-        .fn()
-        .mockReturnValueOnce(null)
-        .mockReturnValueOnce(undefined)
-        .mockReturnValueOnce('valid value');
-
-      const result = getFirstDatacorePropertyValue(mockPage, 'a, b, c');
-      expect(result).toBe('valid value');
-    });
-
-    it('should return null when field() returns undefined (Canvas objects)', () => {
-      mockPage.field = vi.fn().mockReturnValue(undefined);
-
-      const result = getFirstDatacorePropertyValue(mockPage, 'prop1, prop2');
-      expect(result).toBeNull();
-    });
-
-    it('should return null when no properties exist', () => {
-      mockPage.value = vi.fn().mockReturnValue(null);
-
-      const result = getFirstDatacorePropertyValue(mockPage, 'prop1, prop2');
-      expect(result).toBeNull();
-    });
-
-    it('should handle different value types', () => {
-      mockPage.value = vi.fn().mockReturnValue(42);
-
-      const result = getFirstDatacorePropertyValue(mockPage, 'numProp');
-      expect(result).toBe(42);
-    });
-  });
-
   describe('getFirstBasesDatePropertyValue', () => {
     let mockApp: App;
     let mockEntry: any;
@@ -205,65 +142,6 @@ describe('property', () => {
       );
       expect(mockEntry.getValue).toHaveBeenCalledWith('dateProp');
       expect(mockEntry.getValue).not.toHaveBeenCalledWith('formula.dateProp');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('getFirstDatacoreDatePropertyValue', () => {
-    let mockPage: any;
-
-    beforeEach(() => {
-      mockPage = {
-        value: vi.fn(),
-        field: vi.fn((...args: unknown[]) => ({
-          value: mockPage.value(...args),
-        })),
-      };
-    });
-
-    it('should return null for empty property string', () => {
-      expect(getFirstDatacoreDatePropertyValue(mockPage, '')).toBeNull();
-    });
-
-    it('should return null when field() returns undefined (Canvas objects)', () => {
-      mockPage.field = vi.fn().mockReturnValue(undefined);
-
-      const result = getFirstDatacoreDatePropertyValue(
-        mockPage,
-        'prop1, prop2'
-      );
-      expect(result).toBeNull();
-    });
-
-    it('should return DateTime objects with toMillis method', () => {
-      const mockDateTime = { toMillis: () => 1234567890 };
-      mockPage.value = vi
-        .fn()
-        .mockReturnValueOnce(null)
-        .mockReturnValueOnce(mockDateTime);
-
-      const result = getFirstDatacoreDatePropertyValue(
-        mockPage,
-        'prop1, prop2'
-      );
-      expect(result).toBe(mockDateTime);
-    });
-
-    it('should skip non-DateTime objects', () => {
-      mockPage.value = vi
-        .fn()
-        .mockReturnValueOnce('string')
-        .mockReturnValueOnce(123)
-        .mockReturnValueOnce({ toMillis: () => 999 });
-
-      const result = getFirstDatacoreDatePropertyValue(mockPage, 'a, b, c');
-      expect(result).toHaveProperty('toMillis');
-    });
-
-    it('should return null when no DateTime found', () => {
-      mockPage.value = vi.fn().mockReturnValue('not a date');
-
-      const result = getFirstDatacoreDatePropertyValue(mockPage, 'prop');
       expect(result).toBeNull();
     });
   });
@@ -361,85 +239,6 @@ describe('property', () => {
       expect(mockEntry.getValue).toHaveBeenCalledWith('img');
       expect(mockEntry.getValue).not.toHaveBeenCalledWith('formula.img');
       expect(result).toEqual([]);
-    });
-  });
-
-  describe('getAllDatacoreImagePropertyValues', () => {
-    let mockPage: any;
-
-    beforeEach(() => {
-      mockPage = {
-        value: vi.fn(),
-        field: vi.fn((...args: unknown[]) => ({
-          value: mockPage.value(...args),
-        })),
-      };
-    });
-
-    it('should return empty array when field() returns undefined (Canvas objects)', () => {
-      mockPage.field = vi.fn().mockReturnValue(undefined);
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'img');
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array for empty property string', () => {
-      expect(getAllDatacoreImagePropertyValues(mockPage, '')).toEqual([]);
-    });
-
-    it('should collect string values', () => {
-      mockPage.value = vi.fn().mockReturnValue('image.png');
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'img');
-      expect(result).toEqual(['image.png']);
-    });
-
-    it('should collect array values', () => {
-      mockPage.value = vi.fn().mockReturnValue(['img1.png', 'img2.jpg']);
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'images');
-      expect(result).toEqual(['img1.png', 'img2.jpg']);
-    });
-
-    it('should handle Link objects with path property', () => {
-      mockPage.value = vi.fn().mockReturnValue({ path: 'linked-image.png' });
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'link');
-      expect(result).toEqual(['linked-image.png']);
-    });
-
-    it('should handle arrays of Link objects', () => {
-      mockPage.value = vi
-        .fn()
-        .mockReturnValue([{ path: 'img1.png' }, { path: 'img2.png' }]);
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'links');
-      expect(result).toEqual(['img1.png', 'img2.png']);
-    });
-
-    it('should skip null/undefined', () => {
-      mockPage.value = vi
-        .fn()
-        .mockReturnValueOnce(null)
-        .mockReturnValueOnce(undefined)
-        .mockReturnValueOnce('valid.png');
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'a, b, c');
-      expect(result).toEqual(['valid.png']);
-    });
-
-    it('should convert numbers to strings', () => {
-      mockPage.value = vi.fn().mockReturnValue(42);
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'num');
-      expect(result).toEqual(['42']);
-    });
-
-    it('should trim whitespace', () => {
-      mockPage.value = vi.fn().mockReturnValue('  img.png  ');
-
-      const result = getAllDatacoreImagePropertyValues(mockPage, 'img');
-      expect(result).toEqual(['img.png']);
     });
   });
 
@@ -739,7 +538,7 @@ describe('property', () => {
       expect(normalizePropertyName(mockApp, 'note.title')).toBe('note.title');
     });
 
-    it('should use hardcoded fallback when no reverseMap (Datacore path)', () => {
+    it('should use hardcoded fallback when no reverseMap', () => {
       expect(normalizePropertyName(mockApp, 'file name')).toBe('file.name');
       expect(normalizePropertyName(mockApp, 'created time')).toBe('file.ctime');
       expect(normalizePropertyName(mockApp, 'modified time')).toBe(

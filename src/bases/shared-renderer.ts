@@ -17,7 +17,7 @@ import {
   Keymap,
 } from 'obsidian';
 import type { BasesViewConfig } from 'obsidian';
-import { CardData } from '../shared/card-renderer';
+import { CardData } from '../shared/card-data';
 import {
   setPreviewContent,
   updateTextPreviewDOM,
@@ -75,12 +75,11 @@ import {
 import { applyIconOpticalOffset } from '../shared/icon-alignment';
 import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
 import type DynamicViews from '../../main';
-import type { BasesResolvedSettings, LayoutSource } from '../types';
+import type { ResolvedSettings, LayoutSource } from '../types';
 import {
   createPreloadBrokenHandler,
   createSlideshowNavigator,
   getCachedBlobUrl,
-  preloadImageBatch,
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
@@ -89,10 +88,16 @@ import {
   canHover,
   canPrimaryHover,
   isHoverPointer,
-  isTouchPointer,
   setupHoverIntent,
   setupTouchPress,
 } from '../shared/hover-and-touch';
+import {
+  setupTouchScrubbing,
+  observeThumbnailReset,
+  unobserveThumbnailReset,
+  computeScrubIndex,
+  applyScrubImage,
+} from '../shared/thumbnail-scrub';
 import {
   handleArrowNavigation,
   isArrowKey,
@@ -151,7 +156,7 @@ const PAIRED_PROPERTY_CLASSES = [
  */
 export function applyViewContainerStyles(
   container: HTMLElement,
-  settings: BasesResolvedSettings
+  settings: ResolvedSettings
 ): void {
   // Paired property layout
   container.classList.remove(...PAIRED_PROPERTY_CLASSES);
@@ -288,8 +293,6 @@ export function applyCssOnlySettings(
   const imageFit = (config.get('imageFit') as string) ?? 'crop';
   containerEl.classList.add(`image-fit-${imageFit}`);
 }
-
-// dragManager type declared in datacore/types.d.ts
 
 /**
  * Batch-sync responsive classes (compact-mode, thumbnail-stack) for cards.
@@ -651,7 +654,7 @@ export class SharedCardRenderer {
     container: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     keyboardNav?: {
       index: number;
       focusableCardIndex: number;
@@ -1584,7 +1587,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     hasImage: boolean,
     position: 'left' | 'right' | 'top' | 'bottom',
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     card: CardData,
     signal: AbortSignal
   ): void {
@@ -1645,7 +1648,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     format: 'thumbnail' | 'cover',
     position: 'left' | 'right' | 'top' | 'bottom',
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     cardPath: string
   ): void {
     // Create AbortController for cleanup
@@ -1830,7 +1833,7 @@ export class SharedCardRenderer {
     imageUrls: string[],
     format: 'thumbnail' | 'cover',
     position: 'left' | 'right' | 'top' | 'bottom',
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     cardEl: HTMLElement,
     signal?: AbortSignal
   ): void {
@@ -1939,11 +1942,6 @@ export class SharedCardRenderer {
       // Touch + hover preload dedup
       const preloadGuard = { done: false };
 
-      // Touch scrubbing state
-      let touchStartX = 0;
-      let touchScrubbing = false;
-      let touchRect: DOMRect | null = null;
-
       // Preload on hover — splice broken URLs from scrubbable array immediately
       if (signal) {
         setupImagePreload(
@@ -1978,33 +1976,8 @@ export class SharedCardRenderer {
           // Use cached rect, or cache on first mousemove if mouseenter didn't fire
           const rect = (cachedRect ??= imageEl.getBoundingClientRect());
           const x = e.clientX - rect.left;
-          const index = Math.max(
-            0,
-            Math.min(
-              Math.floor((x / rect.width) * scrubbableUrls.length),
-              scrubbableUrls.length - 1
-            )
-          );
-          const rawUrl = scrubbableUrls[index];
-          const resolvedUrl = getCachedBlobUrl(rawUrl);
-          if (resolvedUrl === rawUrl && rawUrl.startsWith('http')) {
-            // Uncached external — hide img so placeholder background shows
-            if (imgEl.src !== resolvedUrl) {
-              imgEl.addClass('scrub-loading');
-              imgEl.src = resolvedUrl;
-              imgEl.addEventListener(
-                'load',
-                () => imgEl.removeClass('scrub-loading'),
-                { once: true }
-              );
-            }
-          } else {
-            imgEl.removeClass('scrub-loading');
-            imgEl.removeClass('dynamic-views-hidden');
-            if (imgEl.src !== resolvedUrl) {
-              imgEl.src = resolvedUrl;
-            }
-          }
+          const index = computeScrubIndex(x, rect.width, scrubbableUrls.length);
+          applyScrubImage(imgEl, scrubbableUrls[index]);
         },
         { signal, passive: true }
       );
@@ -2029,127 +2002,28 @@ export class SharedCardRenderer {
       );
 
       // Touch scrubbing: horizontal swipe across multi-image thumbnail
-      imageEl.addEventListener(
-        'pointerdown',
-        (e: PointerEvent) => {
-          if (!isTouchPointer(e)) return;
-          touchStartX = e.clientX;
-          touchScrubbing = false;
-          touchRect = imageEl.getBoundingClientRect();
-          // Preload images on first touch
-          if (!preloadGuard.done) {
-            preloadGuard.done = true;
-            preloadImageBatch(
-              scrubbableUrls,
-              signal!,
-              createPreloadBrokenHandler(scrubbableUrls, cardEl, () => {
-                imageEl.classList.remove('multi-image');
-              })
-            );
+      const resetSwipeIndex = setupTouchScrubbing({
+        thumbEl: imageEl,
+        imgEl,
+        cardEl,
+        imageUrls: scrubbableUrls,
+        signal: signal!,
+        preloadSignal: signal!,
+        preloadGuard,
+        brokenHandler: createPreloadBrokenHandler(
+          scrubbableUrls,
+          cardEl,
+          () => {
+            imageEl.classList.remove('multi-image');
           }
-        },
-        { signal, passive: true }
-      );
-
-      imageEl.addEventListener(
-        'pointermove',
-        (e: PointerEvent) => {
-          if (!isTouchPointer(e) || !touchRect) return;
-          const deltaX = Math.abs(e.clientX - touchStartX);
-          if (!touchScrubbing && deltaX > 10) {
-            touchScrubbing = true;
-            imageEl.classList.add('scrub-hover');
-          }
-          if (!touchScrubbing) return;
-
-          const x = e.clientX - touchRect.left;
-          const index = Math.max(
-            0,
-            Math.min(
-              Math.floor((x / touchRect.width) * scrubbableUrls.length),
-              scrubbableUrls.length - 1
-            )
-          );
-          const rawUrl = scrubbableUrls[index];
-          const resolvedUrl = getCachedBlobUrl(rawUrl);
-          if (resolvedUrl === rawUrl && rawUrl.startsWith('http')) {
-            if (imgEl.src !== resolvedUrl) {
-              imgEl.addClass('scrub-loading');
-              imgEl.src = resolvedUrl;
-              imgEl.addEventListener(
-                'load',
-                () => imgEl.removeClass('scrub-loading'),
-                { once: true }
-              );
-            }
-          } else {
-            imgEl.removeClass('scrub-loading');
-            imgEl.removeClass('dynamic-views-hidden');
-            if (imgEl.src !== resolvedUrl) {
-              imgEl.src = resolvedUrl;
-            }
-          }
-        },
-        { signal, passive: true }
-      );
-
-      imageEl.addEventListener(
-        'pointerup',
-        (e: PointerEvent) => {
-          if (!isTouchPointer(e)) return;
-          if (touchScrubbing) {
-            imageEl.classList.remove('scrub-hover');
-            // Suppress next click (card open / image viewer)
-            cardEl.addEventListener(
-              'click',
-              (ev) => {
-                ev.stopPropagation();
-                ev.preventDefault();
-              },
-              { once: true, capture: true }
-            );
-          }
-          touchScrubbing = false;
-          touchRect = null;
-        },
-        { signal, passive: true }
-      );
-
-      imageEl.addEventListener(
-        'pointercancel',
-        (e: PointerEvent) => {
-          if (!isTouchPointer(e)) return;
-          imageEl.classList.remove('scrub-hover');
-          touchScrubbing = false;
-          touchRect = null;
-        },
-        { signal, passive: true }
-      );
-
-      // Reset to first image when thumbnail scrolls out of pane (same as slideshow reset)
-      let thumbWasHidden = false;
-      const thumbVisObserver = new (getOwnerWindow(
-        imageEl
-      ).IntersectionObserver)(
-        (entries) => {
-          if (!entries[0]?.isIntersecting) {
-            thumbWasHidden = true;
-          } else if (thumbWasHidden) {
-            thumbWasHidden = false;
-            imgEl.removeClass('scrub-loading');
-            const firstUrl = scrubbableUrls[0];
-            if (firstUrl) {
-              imgEl.removeClass('dynamic-views-hidden');
-              imgEl.src = getCachedBlobUrl(firstUrl);
-            }
-          }
-        },
-        { threshold: 0 }
-      );
-      thumbVisObserver.observe(imageEl);
-      signal?.addEventListener('abort', () => thumbVisObserver.disconnect(), {
-        once: true,
+        ),
       });
+      observeThumbnailReset(imageEl, imgEl, scrubbableUrls, resetSwipeIndex);
+      signal?.addEventListener(
+        'abort',
+        () => unobserveThumbnailReset(imageEl),
+        { once: true }
+      );
     }
   }
 
@@ -2158,7 +2032,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings
+    settings: ResolvedSettings
   ): void {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
@@ -2194,7 +2068,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings
+    settings: ResolvedSettings
   ): void {
     this.updateTitleText(cardEl, card, entry, settings);
     this.rerenderSubtitle(cardEl, card, entry, settings);
@@ -2302,7 +2176,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings
+    settings: ResolvedSettings
   ): void {
     const bodyEl = cardEl.querySelector<HTMLElement>('.card-body');
     if (!bodyEl) return;
@@ -2340,7 +2214,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings
+    settings: ResolvedSettings
   ): void {
     const subtitleEl = cardEl.querySelector<HTMLElement>('.card-subtitle');
     const hasSubtitle = !!(settings.subtitleProperty && card.subtitle);
@@ -2406,7 +2280,7 @@ export class SharedCardRenderer {
     cardEl: HTMLElement,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     signal: AbortSignal
   ): void {
     const props = card.properties;
@@ -2704,7 +2578,7 @@ export class SharedCardRenderer {
     resolvedValue: unknown,
     card: CardData,
     entry: BasesEntry,
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     hideMissing: boolean,
     hideEmptyMode: HideEmptyMode,
     signal: AbortSignal

@@ -53,11 +53,6 @@ vi.mock('../src/constants', () => ({
     displayFirstAsTitle: false,
     displaySecondAsSubtitle: false,
   },
-  DATACORE_DEFAULTS: {
-    listMarker: 'bullet',
-    queryHeight: 0,
-    pairProperties: true,
-  },
   BASES_DEFAULTS: {
     displayFirstAsTitle: true,
     displaySecondAsSubtitle: false,
@@ -65,14 +60,6 @@ vi.mock('../src/constants', () => ({
   },
   DEFAULT_BASES_STATE: {
     collapsedGroups: [],
-  },
-  DEFAULT_DATACORE_STATE: {
-    sortMethod: 'mtime-desc',
-    viewMode: 'grid',
-    searchQuery: '',
-    resultLimit: '',
-    widthMode: 'normal',
-    settings: undefined,
   },
 }));
 
@@ -105,7 +92,6 @@ describe('PersistenceManager', () => {
         pluginSettings: { smartTimestamp: false },
         templates: {},
         basesStates: {},
-        datacoreStates: {},
       };
 
       mockPlugin.loadData = vi.fn().mockResolvedValue(mockData);
@@ -323,93 +309,6 @@ describe('PersistenceManager', () => {
     });
   });
 
-  describe('getDatacoreState', () => {
-    it('should return default state when no queryId', () => {
-      const state = manager.getDatacoreState();
-      expect(state.sortMethod).toBe('mtime-desc');
-      expect(state.viewMode).toBe('grid');
-    });
-
-    it('should return default state for unknown queryId', () => {
-      const state = manager.getDatacoreState('unknown-query');
-      expect(state).toEqual({
-        sortMethod: 'mtime-desc',
-        viewMode: 'grid',
-        searchQuery: '',
-        resultLimit: '',
-        widthMode: 'normal',
-        settings: undefined,
-      });
-    });
-
-    it('should merge stored state with defaults', async () => {
-      await manager.setDatacoreState('query-1', {
-        sortMethod: 'alphabetical' as any,
-      });
-
-      const state = manager.getDatacoreState('query-1');
-      expect(state.sortMethod).toBe('alphabetical');
-      expect(state.viewMode).toBe('grid'); // Default preserved
-    });
-  });
-
-  describe('setDatacoreState', () => {
-    it('should store non-default values', async () => {
-      await manager.setDatacoreState('query-1', {
-        searchQuery: 'test query',
-      });
-
-      const state = manager.getDatacoreState('query-1');
-      expect(state.searchQuery).toBe('test query');
-    });
-
-    it('should truncate searchQuery to 500 chars', async () => {
-      const longQuery = 'a'.repeat(600);
-      await manager.setDatacoreState('query-1', { searchQuery: longQuery });
-
-      const state = manager.getDatacoreState('query-1');
-      expect(state.searchQuery.length).toBe(500);
-    });
-
-    it('should delete entry when all values are defaults', async () => {
-      await manager.setDatacoreState('query-1', {
-        searchQuery: 'test',
-      });
-      // Reset to default
-      await manager.setDatacoreState('query-1', {
-        searchQuery: '',
-      });
-
-      // After clearing to defaults, state should be default
-      const state = manager.getDatacoreState('query-1');
-      expect(state.searchQuery).toBe('');
-    });
-
-    it('should not store when no queryId', async () => {
-      await manager.setDatacoreState(undefined, { searchQuery: 'test' });
-
-      expect(mockPlugin.saveData).not.toHaveBeenCalled();
-    });
-
-    it('should sanitize string values', async () => {
-      const { sanitizeString } = (await import('../src/utils/sanitize')) as any;
-
-      await manager.setDatacoreState('query-1', { searchQuery: 'test' });
-
-      expect(sanitizeString).toHaveBeenCalled();
-    });
-
-    it('should sanitize settings object', async () => {
-      const { sanitizeObject } = (await import('../src/utils/sanitize')) as any;
-
-      await manager.setDatacoreState('query-1', {
-        settings: { cardSize: 300 } as any,
-      });
-
-      expect(sanitizeObject).toHaveBeenCalled();
-    });
-  });
-
   describe('getSettingsTemplate', () => {
     it('should return undefined for non-existent template', () => {
       const template = manager.getSettingsTemplate('grid');
@@ -441,22 +340,9 @@ describe('PersistenceManager', () => {
     });
 
     it('should save after updating', async () => {
-      await manager.setSettingsTemplate('datacore', { cardSize: 300 });
+      await manager.setSettingsTemplate('grid', { cardSize: 300 });
 
       expect(mockPlugin.saveData).toHaveBeenCalled();
-    });
-  });
-
-  describe('queryId-based isolation', () => {
-    it('should keep separate states for different queryIds', async () => {
-      await manager.setDatacoreState('query-1', { searchQuery: 'alpha' });
-      await manager.setDatacoreState('query-2', { searchQuery: 'beta' });
-
-      const state1 = manager.getDatacoreState('query-1');
-      const state2 = manager.getDatacoreState('query-2');
-
-      expect(state1.searchQuery).toBe('alpha');
-      expect(state2.searchQuery).toBe('beta');
     });
   });
 
@@ -474,7 +360,7 @@ describe('PersistenceManager', () => {
   });
 
   describe('cleanupTemplateSettings (via load)', () => {
-    it('should remove stale keys not in ViewDefaults or DatacoreDefaults', async () => {
+    it('should remove stale keys not in ViewDefaults', async () => {
       mockPlugin.loadData = vi.fn().mockResolvedValue({
         templates: { grid: { cardSize: 400, deletedSetting: 'stale' } },
       });
@@ -597,47 +483,6 @@ describe('PersistenceManager', () => {
       expect(template).toBeUndefined();
     });
 
-    it('should allow DatacoreDefaults keys in datacore templates', async () => {
-      mockPlugin.loadData = vi.fn().mockResolvedValue({
-        templates: { datacore: { listMarker: 'checkbox' } },
-      });
-      await manager.load();
-
-      const template = manager.getSettingsTemplate('datacore');
-      expect(template?.listMarker).toBe('checkbox');
-    });
-
-    it('should type-check DatacoreDefaults values in datacore templates', async () => {
-      mockPlugin.loadData = vi.fn().mockResolvedValue({
-        templates: {
-          datacore: {
-            queryHeight: 'tall', // string instead of number
-            pairProperties: 'yes', // string instead of boolean
-            listMarker: 'checkbox', // correct type (string)
-            cardSize: 400,
-          },
-        },
-      });
-      await manager.load();
-
-      const template = manager.getSettingsTemplate('datacore');
-      expect(template).not.toHaveProperty('queryHeight');
-      expect(template).not.toHaveProperty('pairProperties');
-      expect(template?.listMarker).toBe('checkbox');
-      expect(template?.cardSize).toBe(400);
-    });
-
-    it('should reject DatacoreDefaults keys in grid templates', async () => {
-      mockPlugin.loadData = vi.fn().mockResolvedValue({
-        templates: { grid: { listMarker: 'checkbox', cardSize: 400 } },
-      });
-      await manager.load();
-
-      const template = manager.getSettingsTemplate('grid');
-      expect(template).not.toHaveProperty('listMarker');
-      expect(template?.cardSize).toBe(400);
-    });
-
     it('should skip sparse cleanup for BASES_DEFAULTS keys in grid/masonry', async () => {
       // displayFirstAsTitle in BASES_DEFAULTS defaults to true, VIEW_DEFAULTS to false.
       // For Bases (grid/masonry), false matching VIEW_DEFAULTS should NOT be removed
@@ -651,18 +496,6 @@ describe('PersistenceManager', () => {
       // false matches VIEW_DEFAULTS but displayFirstAsTitle is in BASES_DEFAULTS,
       // so sparse cleanup skips it — value preserved
       expect(template?.displayFirstAsTitle).toBe(false);
-    });
-
-    it('should not skip sparse cleanup for BASES_DEFAULTS keys in datacore', async () => {
-      mockPlugin.loadData = vi.fn().mockResolvedValue({
-        templates: { datacore: { displayFirstAsTitle: false } },
-      });
-      await manager.load();
-
-      const template = manager.getSettingsTemplate('datacore');
-      // Datacore is not Bases, so displayFirstAsTitle=false matches VIEW_DEFAULTS
-      // and gets cleaned as sparse default
-      expect(template).toBeUndefined();
     });
 
     it('should not trigger save when no cleanup needed', async () => {

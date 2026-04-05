@@ -9,8 +9,6 @@ import type {
   BasesViewConfig,
   BasesPropertyId,
 } from 'obsidian';
-import type { DatacoreFile, DatacoreDate } from '../datacore/types';
-
 /**
  * Strip "note." prefix from property name to get frontmatter key
  * Bases prefixes frontmatter properties with "note." in its syntax
@@ -71,7 +69,6 @@ export function isCheckboxProperty(app: App, propertyName: string): boolean {
 
 /**
  * Hardcoded fallback map: display name → syntax name
- * Used when Bases API is unavailable (Datacore path)
  */
 const DEFAULT_DISPLAY_TO_SYNTAX: Record<string, string> = {
   'file name': 'file.name',
@@ -160,7 +157,7 @@ export function normalizePropertyName(
     }
     // Don't fall back to hardcoded defaults when reverse map is available
   } else {
-    // 3. Hardcoded fallback (Datacore path)
+    // 3. Hardcoded fallback
     if (trimmed in DEFAULT_DISPLAY_TO_SYNTAX) {
       return DEFAULT_DISPLAY_TO_SYNTAX[trimmed];
     }
@@ -289,45 +286,6 @@ export function getFirstBasesPropertyValue(
   return null;
 }
 
-/** Derive file name from $path when $name is unavailable (_Canvas, _GenericFile) */
-export function datacoreFileName(file: DatacoreFile): string {
-  return (
-    file.$name ||
-    file.$path
-      ?.split('/')
-      .pop()
-      ?.replace(/\.[^.]+$/, '') ||
-    ''
-  );
-}
-
-/**
- * Get first non-empty property value from comma-separated list (Datacore)
- * Accepts any property type (text, number, checkbox, date, datetime, list)
- */
-export function getFirstDatacorePropertyValue(
-  page: DatacoreFile,
-  propertyString: string
-): unknown {
-  if (!propertyString || !propertyString.trim()) return null;
-
-  const properties = propertyString
-    .split(',')
-    .map((p) => p.trim())
-    .filter((p) => p);
-
-  for (const prop of properties) {
-    const value: unknown = page.field(prop)?.value;
-
-    // Check if property exists (not null/undefined)
-    if (value !== null && value !== undefined) {
-      return value;
-    }
-  }
-
-  return null;
-}
-
 /**
  * Get first valid date/datetime property value from comma-separated list (Bases)
  * Only accepts date and datetime property types
@@ -356,34 +314,6 @@ export function getFirstBasesDatePropertyValue(
     ) {
       return value;
     }
-  }
-
-  return null;
-}
-
-/**
- * Get first valid date/datetime property value from comma-separated list (Datacore)
- * Only accepts DateTime objects with toMillis() method
- */
-export function getFirstDatacoreDatePropertyValue(
-  page: DatacoreFile,
-  propertyString: string
-): DatacoreDate | null {
-  if (!propertyString || !propertyString.trim()) return null;
-
-  const properties = propertyString
-    .split(',')
-    .map((p) => p.trim())
-    .filter((p) => p);
-
-  for (const prop of properties) {
-    const value: unknown = page.field(prop)?.value;
-
-    // Only accept DateTime objects (have toMillis method)
-    if (value && typeof value === 'object' && 'toMillis' in value) {
-      return value as DatacoreDate;
-    }
-    // Skip properties with wrong type
   }
 
   return null;
@@ -426,63 +356,6 @@ export function getAllBasesImagePropertyValues(
     } else if (typeof data === 'string' || typeof data === 'number') {
       const str = String(data);
       if (str.trim()) allImages.push(str);
-    }
-  }
-
-  return allImages;
-}
-
-/**
- * Get ALL image values from ALL comma-separated properties (Datacore)
- * Only accepts text and list property types containing image paths/URLs
- * Returns array of all image paths/URLs found across all properties
- */
-export function getAllDatacoreImagePropertyValues(
-  page: DatacoreFile,
-  propertyString: string
-): string[] {
-  if (!propertyString || !propertyString.trim()) return [];
-
-  const properties = propertyString
-    .split(',')
-    .map((p) => p.trim())
-    .filter((p) => p);
-  const allImages: string[] = [];
-
-  for (const prop of properties) {
-    const value: unknown = page.field(prop)?.value;
-
-    // Skip if property doesn't exist
-    if (value === null || value === undefined) continue;
-
-    if (Array.isArray(value)) {
-      // List property - collect all values
-      for (const item of value) {
-        // Handle Link objects with path property
-        if (typeof item === 'object' && item !== null && 'path' in item) {
-          const pathValue = (item as { path: unknown }).path;
-          if (typeof pathValue === 'string' || typeof pathValue === 'number') {
-            const str = String(pathValue).trim();
-            if (str) allImages.push(str);
-          }
-        } else if (typeof item === 'string' || typeof item === 'number') {
-          const str = String(item).trim();
-          if (str) allImages.push(str);
-        }
-      }
-    } else {
-      // Single value
-      // Handle Link objects with path property
-      if (typeof value === 'object' && value !== null && 'path' in value) {
-        const pathValue = (value as { path: unknown }).path;
-        if (typeof pathValue === 'string' || typeof pathValue === 'number') {
-          const str = String(pathValue).trim();
-          if (str) allImages.push(str);
-        }
-      } else if (typeof value === 'string' || typeof value === 'number') {
-        const str = String(value).trim();
-        if (str) allImages.push(str);
-      }
     }
   }
 

@@ -31,11 +31,6 @@ vi.mock('../../src/constants', () => ({
     displayFirstAsTitle: false,
     displaySecondAsSubtitle: false,
   },
-  DATACORE_DEFAULTS: {
-    listMarker: 'bullet',
-    queryHeight: 0,
-    pairProperties: true,
-  },
   BASES_DEFAULTS: {
     displayFirstAsTitle: true,
     displaySecondAsSubtitle: false,
@@ -132,7 +127,7 @@ describe('cleanUpBaseFile', () => {
           id: 'abc123-My View',
           cardSize: 400,
           deletedSetting: 'stale',
-          listMarker: 'bullet', // DatacoreDefaults key — not allowed in Bases
+          listMarker: 'bullet', // Not in allowed keys
         },
       ],
     });

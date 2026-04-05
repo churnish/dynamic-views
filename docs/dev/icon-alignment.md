@@ -110,7 +110,7 @@ From Chromium source code analysis (`text_autosizer.cc`, `computed_style.cc`, `s
 ### Measurement
 
 - Find first `.has-timestamp-icon` wrapper via `querySelector`
-- Measure icon center (`getBoundingClientRect`) vs text center (`Range.getBoundingClientRect` for Bases text nodes, `getBoundingClientRect` for Datacore span elements)
+- Measure icon center (`getBoundingClientRect`) vs text center (`Range.getBoundingClientRect` for text nodes)
 - Store delta as px value in `--dynamic-views-icon-optical-offset` on the container
 - CSS: `transform: translateY(var(--dynamic-views-icon-optical-offset, 0px))`
 
@@ -124,13 +124,11 @@ On Android (`Platform.isAndroidApp`), scale delta by `boostRatio²`:
 
 ### Timing
 
-- **Bases**: One-shot via `requestAnimationFrame` after first timestamp renders in `SharedCardRenderer.renderPropertyRow`. `iconAlignmentMeasured` flag prevents re-measurement; reset in `cleanup()`.
-- **Datacore**: Container ref callback with `WeakSet` guard. Only marks as measured when `applyIconOpticalOffset` returns true (found timestamps). Retries on subsequent re-renders until timestamps exist.
+One-shot via `requestAnimationFrame` after first timestamp renders in `SharedCardRenderer.renderPropertyRow`. `iconAlignmentMeasured` flag prevents re-measurement; reset in `cleanup()`.
 
-### Backend differences
+### Text node measurement
 
-- **Bases**: Timestamp text is a bare text node (`nodeType === 3`). `Range.getBoundingClientRect` returns the content area (asymmetric within line box) → non-zero delta (~0.45px on desktop).
-- **Datacore**: Timestamp text is a `<span>` element (`nodeType === 1`, checked via `nodeType` not `instanceof` for cross-window safety). `getBoundingClientRect` returns the line-height box (symmetric) → delta = 0, no correction needed.
+Timestamp text is a bare text node (`nodeType === 3`). `Range.getBoundingClientRect` returns the content area (asymmetric within line box) → non-zero delta (~0.45px on desktop).
 
 ### Rejected alternative: `text-size-adjust: none` on timestamp wrapper
 

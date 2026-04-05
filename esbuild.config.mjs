@@ -39,9 +39,6 @@ const context = await esbuild.context({
   treeShaking: true,
   minify: prod,
   outfile: 'main.js',
-  jsx: 'transform',
-  jsxFactory: 'h',
-  jsxFragment: 'Fragment',
 });
 
 if (prod) {

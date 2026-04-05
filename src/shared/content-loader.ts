@@ -228,8 +228,8 @@ export async function loadImagesForEntries(
  * @param fallbackToContent - Whether to fall back to file content if no text preview
  * @param omitFirstLine - When to omit first line from text preview
  * @param textPreviewCache - Cache object to store loaded text previews
- * @param fileName - Optional file name for title comparison (Datacore only)
- * @param titleString - Optional title string for first line comparison (Datacore only)
+ * @param fileName - Optional file name for title comparison
+ * @param titleString - Optional title string for first line comparison
  */
 export async function loadTextPreviewForEntry(
   path: string,

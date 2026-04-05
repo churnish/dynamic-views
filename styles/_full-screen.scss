@@ -354,103 +354,6 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   opacity: 1 !important;
 }
 
-// Fixed viewport overlay for the active stuck heading during Android show
-// bridge. Host on document.body with position: fixed escapes all ancestor
-// overflow clips and transform contexts. Lane holds a single cloned heading.
-.dynamic-views-bridge-heading-host {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  z-index: 26; // Above grouped scrim (25), below header (30)
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.dynamic-views-bridge-heading-lane {
-  will-change: transform;
-  pointer-events: auto;
-  // Opaque lane background — the z-index: -1 pseudo below paints behind
-  // Chromium compositor layers, letting the real heading show through.
-  // Lane-level background ensures the clone covers the real heading.
-  background: var(--dynamic-views-background-primary);
-
-  // Heading background — matches sticky heading pseudo from _grid-masonry-shared.scss
-  // but without the ancestor selector chain (clone is outside original DOM context).
-  > .bases-group-heading > .bases-group-collapse-region::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--dynamic-views-background-primary);
-    z-index: -1;
-    pointer-events: none;
-  }
-
-  // Stuck border — matches .stuck variant from _grid-masonry-shared.scss
-  > .bases-group-heading.stuck > .bases-group-collapse-region::before {
-    border-bottom: var(--border-width, 0.5px) solid
-      var(--dynamic-views-bases-table-border-color);
-  }
-
-  // Heading layout — matches .dynamic-views .bases-group-heading
-  > .bases-group-heading {
-    display: flex;
-    align-items: center;
-    gap: var(--size-2-2);
-    overflow: visible;
-    padding: var(--dynamic-views-bases-view-padding);
-    padding-bottom: calc(var(--size-2-2) + 1px);
-    z-index: 20;
-  }
-
-  // Collapse region — matches .dynamic-views .bases-group-collapse-region
-  > .bases-group-heading > .bases-group-collapse-region {
-    display: flex;
-    align-items: center;
-    gap: var(--size-2-2);
-  }
-
-  // Chevron — matches .dynamic-views .bases-group-collapse-btn
-  .bases-group-collapse-btn {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    color: var(--dynamic-views-text-muted);
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  // Property name — matches .dynamic-views .bases-group-property
-  .bases-group-property {
-    color: var(--dynamic-views-text-muted);
-    font-size: var(--dynamic-views-font-ui-small);
-  }
-
-  // Value containers — matches .dynamic-views .bases-group-value
-  .bases-group-value .value-list-container {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--size-2-2);
-  }
-
-  .bases-group-value .value-list-element {
-    display: inline-flex;
-  }
-
-  // Result count — matches .dynamic-views .bases-group-count
-  .bases-group-count {
-    color: var(--dynamic-views-text-muted);
-    font-size: var(--dynamic-views-font-ui-smaller);
-    padding-left: var(--size-2-3);
-  }
-}
-
 // Spacer: in-flow element inside scrollEl that replaces the transform bridge
 // on Android. Height changes absorbed by overflow-anchor. Must be excluded
 // from anchor selection so the container (cards) is the anchor target.
@@ -463,8 +366,7 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
 
 // Android show: containing block for absolute toolbar/search overlays.
 // No descendant combinator — only targets leafContent itself.
-[data-dynamic-views-show],
-[data-dynamic-views-hide-spacer] {
+[data-dynamic-views-show] {
   position: relative;
 }
 

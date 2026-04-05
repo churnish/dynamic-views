@@ -1,20 +1,20 @@
 ---
 title: Card DOM structure
-description: Card DOM hierarchy, class names, property rows, and backend divergences for Grid and Masonry views.
+description: Card DOM hierarchy, class names, and property rows for Grid and Masonry views.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-31
+updated: 2026-04-05
 ---
 # Card DOM structure
 
-Internal DOM hierarchy of cards in Grid and Masonry views, for both Bases and Datacore backends.
+Internal DOM hierarchy of cards in Grid and Masonry views.
 
 ## Rendering model
 
-|               | Bases ([shared-renderer.ts](../../src/bases/shared-renderer.ts))                      | Datacore ([card-renderer.tsx](../../src/shared/card-renderer.tsx))                                                      |
-| ------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Method**    | Imperative DOM (`createDiv`, `createEl`)          | Declarative JSX (Preact)                                                            |
-| **Container** | Cards appended directly to view-managed container | `CardRenderer` returns wrapping `div.dynamic-views-grid` / `.dynamic-views-masonry` |
-| **Cleanup**   | `AbortController` per card + class-level arrays   | Module-level WeakMaps keyed by card path                                            |
+| Aspect | Implementation |
+| --- | --- |
+| **Method** | Imperative DOM (`createDiv`, `createEl`) via [shared-renderer.ts](../../src/bases/shared-renderer.ts) |
+| **Container** | Cards appended directly to view-managed container |
+| **Cleanup** | `AbortController` per card + class-level arrays |
 
 ## Card hierarchy
 
@@ -51,8 +51,7 @@ div.card                                    ← data-path="{path}"
 │   │   │   │   ├─ span.card-title-icon     ← file-type icon (Icon mode)
 │   │   │   │   ├─ span.card-title-ext      ← format badge (Flair mode); data-ext="{ext}"
 │   │   │   │   ├─ [openFileAction=title]:
-│   │   │   │   │   └─ a.internal-link [1] ← clickable link; tabIndex=-1
-│   │   │   │   │       ├─ span.card-title-text (Datacore only) [1]
+│   │   │   │   │   └─ a.internal-link.card-title-text ← clickable link; tabIndex=-1
 │   │   │   │   │       ├─ (text: title)
 │   │   │   │   │       └─ span.card-title-ext-suffix   ← ".ext" (Extension mode)
 │   │   │   │   └─ [openFileAction=card]:
@@ -120,9 +119,9 @@ Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). 
 
 | Class | Element | Selector | Set from | CSS effect |
 |---|---|---|---|---|
-| `has-header` | `.card` | `.card-header` exists (Bases) / computed booleans (Datacore) | Bases: card root querySelector. Datacore: `cardClasses` array from `hasTitle \|\| hasSubtitle \|\| hasValidUrl` | Prevents cover-only padding reset from zeroing padding on title-only cards |
-| `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Bases: inline querySelector. Datacore: card root ref querySelector | Drives title divider border and cover-only padding resets |
-| `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Both: card-body ref querySelector | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
+| `has-header` | `.card` | `.card-header` exists | Card root querySelector | Prevents cover-only padding reset from zeroing padding on title-only cards |
+| `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Inline querySelector | Drives title divider border and cover-only padding resets |
+| `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Card-body ref querySelector | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
 
 Both exclude `.card-previews.thumbnail-placeholder-only` — a previews container with only a thumbnail placeholder, hidden by CSS when the "Show thumbnail placeholder" style setting is off. The CSS rule scoping (`body:not(.dynamic-views-show-thumbnail-placeholder)`) ensures `card-body` is never hidden when placeholders are visible.
 
@@ -139,13 +138,3 @@ Key behaviors:
 - **`display: none` children**: Gap automatically skips them — no compensation rules needed for hidden placeholders.
 - **No owl selectors**: The previous `> * + *:not(:empty)` approach required 7+ scattered padding/margin compensation rules across [_grid-view.scss](../../styles/_grid-view.scss), [_masonry-view.scss](../../styles/_masonry-view.scss), and [_cover-elements.scss](../../styles/card/_cover-elements.scss). Gap eliminated all of them.
 
-## Backend differences
-
-These are the only structural divergences — all class names and nesting are otherwise identical.
-
-| Element                | Bases                                                    | Datacore                                              |
-| ---------------------- | -------------------------------------------------------- | ----------------------------------------------------- |
-| **Title link**         | `a.internal-link.card-title-text` (single element)       | `a.internal-link` wrapping `span.card-title-text` [1] |
-| **Thumbnail stacking** | ResizeObserver physically moves `.card-thumbnail` in DOM | CSS `order` only, no DOM movement                     |
-
-[1] Datacore wraps title text in an inner `span.card-title-text` for CSS targeting of the text content separately from the `.card-title-ext-suffix` sibling — without it, selectors like `-webkit-line-clamp` and `text-overflow` on `.card-title-text` would affect the extension suffix. Bases uses a single `a` element with both classes.

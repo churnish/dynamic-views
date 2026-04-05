@@ -1,5 +1,5 @@
 /**
- * Shared masonry layout logic for both Bases and Datacore
+ * Masonry layout logic
  * Pure positioning calculations - no DOM manipulation
  */
 
@@ -150,7 +150,6 @@ export function calculateMasonryLayout(
 
 /**
  * Apply masonry layout directly to DOM elements via inline styles
- * Main Datacore positioning path — applies positions via direct inline styles
  */
 export function applyMasonryLayout(
   container: HTMLElement,

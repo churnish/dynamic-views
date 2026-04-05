@@ -4,7 +4,7 @@
  */
 
 import type { BasesEntry } from 'obsidian';
-import type { CardData } from './card-renderer';
+import type { CardData } from './card-data';
 import type { CardHandle } from '../bases/shared-renderer';
 import {
   UNMEASURED_CARD_HEIGHT,

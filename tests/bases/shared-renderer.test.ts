@@ -1,8 +1,7 @@
 import { vi, describe, it, expect } from 'vitest';
-import type { CardData } from '../../src/shared/card-renderer';
+import type { CardData } from '../../src/shared/card-data';
 
 // Mock all transitive dependencies of shared-renderer.ts
-vi.mock('../../src/shared/card-renderer', () => ({}));
 vi.mock('../../src/shared/text-preview-dom', () => ({
   setPreviewContent: vi.fn(),
   updateTextPreviewDOM: vi.fn(),

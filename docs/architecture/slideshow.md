@@ -8,7 +8,7 @@ updated: 2026-03-26
 
 ## Overview
 
-The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-and-touch.ts` (hover and touch interaction utilities). Both renderers (`src/shared/card-renderer.tsx` for Datacore, `src/bases/shared-renderer.ts` for Bases) wire up the shared slideshow functions and own the visibility reset IntersectionObserver.
+The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.
 
 ## Files
 
@@ -240,13 +240,13 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 ## Visibility reset
 
-The IntersectionObserver that watches the slideshow container lives in the renderers ([src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts) and [src/shared/card-renderer.tsx](../../src/shared/card-renderer.tsx)), NOT in [slideshow.ts](../../src/shared/slideshow.ts):
+The IntersectionObserver that watches the slideshow container lives in the renderer ([src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts)), NOT in [slideshow.ts](../../src/shared/slideshow.ts):
 
 1. Track `wasHidden` flag (initially `false`)
 2. On not intersecting: set `wasHidden = true`
 3. On intersecting AND `wasHidden`: set `wasHidden = false`, call `reset()`
 
-Both renderers use `getOwnerWindow(slideshowEl).IntersectionObserver` to construct the observer from the correct window context (popout window support).
+The renderer uses `getOwnerWindow(slideshowEl).IntersectionObserver` to construct the observer from the correct window context (popout window support).
 
 ### `reset()` behavior
 
@@ -278,11 +278,9 @@ Cache eviction at `BLOB_CACHE_LIMIT` (150): iterates entries, revokes first blob
 
 ### Per-slideshow (AbortController)
 
-**Datacore** ([card-renderer.tsx](../../src/shared/card-renderer.tsx)): `AbortController` stored on `element._slideshowController`. On re-render: abort previous controller before creating new one.
+Abort closure `() => controller.abort()` pushed to `slideshowCleanups[]` array (`(() => void)[]`) on the `SharedCardRenderer` instance. On batch cleanup or per-card teardown: iterate and call each cleanup function.
 
-**Bases** ([shared-renderer.ts](../../src/bases/shared-renderer.ts)): Abort closure `() => controller.abort()` pushed to `slideshowCleanups[]` array (`(() => void)[]`) on the `SharedCardRenderer` instance. On batch cleanup or per-card teardown: iterate and call each cleanup function.
-
-Both backends share the same abort behavior:
+Abort behavior:
 
 - On abort signal: `finishAnimation()`, clear all `pendingTimeouts`, disconnect visibility observer
 - All event listeners use `{ signal }` option for automatic removal
@@ -326,5 +324,5 @@ Both backends share the same abort behavior:
 8. **Blob URLs revoked and caches cleared on unload.** `isCleanedUp` flag prevents orphaned blob URLs from completing fetches after cleanup.
 9. **Touch direction mapping inverted vs trackpad.** Swipe right = previous (natural scrolling), positive deltaX = next (trackpad convention).
 10. **Visibility reset only on hidden-to-visible transition.** `wasHidden` flag prevents reset on initial intersection or repeated visible states.
-11. **Wheel gesture guard matches hover intent gate.** Both renderers gate `setupHoverIntent` behind `matchMedia('(hover: hover)')`. The wheel guard in `setupSwipeGestures` uses the same media query — if one is skipped, both are.
+11. **Wheel gesture guard matches hover intent gate.** The renderer gates `setupHoverIntent` behind `matchMedia('(hover: hover)')`. The wheel guard in `setupSwipeGestures` uses the same media query — if one is skipped, both are.
 12. **Gesture state reset on hover intent guard.** When the wheel handler's hover intent guard blocks an event, `accumulatedDeltaX`, `navigatedThisGesture`, `lastDeltaX`, `gestureResetTimeout`, and decay state are all reset. Without this, stale state from blocked events would leak into the next accepted gesture.

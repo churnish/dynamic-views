@@ -238,7 +238,7 @@
 
   /* Collapsed pair partner: expand visible property to full width.
      Safety net for Bases imperative-DOM path where handleEmptyField applies
-     property-collapsed after async rendering. Datacore pre-filters instead. */
+     property-collapsed after async rendering. */
   .property-pair.pair-has-collapsed > .property:not(.property-collapsed) {
     max-width: 100%;
     flex: 1 1 auto;

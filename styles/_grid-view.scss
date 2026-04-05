@@ -22,9 +22,7 @@
   container-type: inline-size;
 }
 
-/* height: 100% fills subgrid row → equal-height cards + margin-top: auto alignment.
-   Datacore grids have no constrained row height, so 100% would resolve to the
-   entire grid height and create a feedback loop. */
+/* height: 100% fills subgrid row → equal-height cards + margin-top: auto alignment. */
 :is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views-grid
   .card {

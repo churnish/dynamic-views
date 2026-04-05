@@ -1,39 +1,39 @@
 ---
 title: Plugin overview
-description: High-level overview of the Dynamic Views plugin — what it does, backends, data flow, and major systems.
+description: High-level overview of the Dynamic Views plugin — what it does, architecture, data flow, and major systems.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-14
+updated: 2026-04-05
 ---
 # Plugin overview
 
 ## What Dynamic Views does
 
-- Dynamic Views renders card views (Grid, Masonry) in Obsidian built-in [Bases](https://obsidian.md/help/bases) plugin, as well as in the [Datacore](https://github.com/blacksmithgu/datacore) plugin.
+- Dynamic Views renders card views (Grid, Masonry) in Obsidian's built-in [Bases](https://obsidian.md/help/bases) plugin.
 - Cards can display images in multiple formats (cover, thumbnail, poster, backdrop), markup-stripped text previews, and configurable property rows.
 - The plugin also provides a panzoom image viewer, multi-image slideshows, keyboard navigation, and virtual scrolling.
 - See the [README](../README.md) for key features and the [wiki](../wiki/) for detailed documentation.
-- The plugin entry point is [main.ts](../main.ts) — it registers Bases view types, commands, and the settings tab, and exposes a `createView()` API that Datacore code blocks call into.
+- The plugin entry point is [main.ts](../main.ts) — it registers Bases view types, commands, and the settings tab.
 - Core type definitions live in [types.ts](../src/types.ts) and default values in [constants.ts](../src/constants.ts).
 
-## Two backends
+## Architecture
 
 ```
-        ┌───────────────────┐         ┌───────────────────┐
-        │       Bases       │         │     Datacore      │
-        │     (DOM API)     │         │   (Preact JSX)    │
-        │                   │         │                   │
-        │  grid-view.ts     │         │  controller.tsx   │
-        │  masonry-view.ts  │         │  card-view.tsx    │
-        │  shared-renderer  │         │  masonry-view.tsx │
-        └─────────┬─────────┘         └─────────┬─────────┘
-                  │                             │
-                  │      data-transform.ts      │
-                  └──────────► CardData ◄───────┘
+        ┌───────────────────┐
+        │       Bases       │
+        │     (DOM API)     │
+        │                   │
+        │  grid-view.ts     │
+        │  masonry-view.ts  │
+        │  shared-renderer  │
+        └─────────┬─────────┘
+                  │
+                  │      data-transform.ts
+                  └──────────► CardData
                                   │
                     ┌─────────────┴─────────────┐
                     │          shared/          │
                     │                           │
-                    │  card-renderer            │
+                    │  card-data                │
                     │  content-loader           │
                     │  image-viewer             │
                     │  ...                      │
@@ -41,13 +41,12 @@ updated: 2026-03-14
 ```
 
 - **Bases**: Uses the Obsidian native API with direct DOM manipulation. Each view extends `BasesView`. Entry points are [grid-view.ts](../src/bases/grid-view.ts) and [masonry-view.ts](../src/bases/masonry-view.ts), with shared card rendering logic deduplicated in [shared-renderer.ts](../src/bases/shared-renderer.ts).
-- **Datacore**: Uses a Preact JSX component tree rendered by the Datacore plugin. Entry point is [controller.tsx](../src/datacore/controller.tsx), which manages state and query processing. Card rendering lives in [card-view.tsx](../src/datacore/card-view.tsx).
-- **Shared layer**: Both backends normalize their query results into the `CardData` type (defined in [card-renderer.tsx](../src/shared/card-renderer.tsx), normalized by [data-transform.ts](../src/shared/data-transform.ts)). Most rendering logic, content loading, layout engines, and interactive features live in `shared/` and operate on this normalized type.
+- **Shared layer**: Bases query results are normalized into the `CardData` type (defined in [card-data.ts](../src/shared/card-data.ts), normalized by [data-transform.ts](../src/shared/data-transform.ts)). Most rendering logic, content loading, layout engines, and interactive features live in `shared/` and operate on this normalized type.
 
 ## Data flow
 
 ```
-  Query result (Bases config / Datacore query)
+  Query result (Bases config)
           │
           ▼
   data-transform.ts ─── normalize to CardData[]
@@ -56,7 +55,7 @@ updated: 2026-03-14
   content-loader.ts ─── async image + text loading (dedup, caching)
           │
           ▼
-  card-renderer.tsx ─── build card DOM / Preact elements
+  shared-renderer.ts ── build card DOM
           │
           ▼
   Layout engine ─────── Grid (CSS Grid) or Masonry (absolute positioning)
@@ -71,14 +70,14 @@ updated: 2026-03-14
 
 | System | Key files | Role |
 |---|---|---|
-| Card rendering | [card-renderer.tsx](../src/shared/card-renderer.tsx) | Defines `CardData`, builds card DOM/Preact elements, wires image viewer and slideshow triggers. |
+| Card rendering | [card-data.ts](../src/shared/card-data.ts), [shared-renderer.ts](../src/bases/shared-renderer.ts) | Defines `CardData`, builds card DOM, wires image viewer and slideshow triggers. |
 | Content loading | [content-loader.ts](../src/shared/content-loader.ts)<br>[image-loader.ts](../src/shared/image-loader.ts) | Async image/text loading with in-flight dedup and two-tier caching. |
 | Virtual scroll | [virtual-scroll.ts](../src/shared/virtual-scroll.ts) | Masonry-only card mount/unmount by viewport position. |
 | Content visibility | [content-visibility.ts](../src/shared/content-visibility.ts) | IntersectionObserver-based render gating for Grid. |
 | Image viewer | [image-viewer.ts](../src/shared/image-viewer.ts) | Panzoom zoom/pan in constrained and fullscreen modes. |
 | Slideshow | [slideshow.ts](../src/shared/slideshow.ts) | Multi-image card navigation, gesture detection, external blob cache. |
 | Property layout | [property-measure.ts](../src/shared/property-measure.ts)<br>[scroll-gradient.ts](../src/shared/scroll-gradient.ts) | Property field width measurement, paired layout, horizontal scroll gradients. |
-| Context menus | [context-menu.ts](../src/shared/context-menu.ts) | Right-click menus for cards and links, used by both backends. |
+| Context menus | [context-menu.ts](../src/shared/context-menu.ts) | Right-click menus for cards and links. |
 | Settings resolution | [persistence.ts](../src/persistence.ts)<br>[settings-schema.ts](../src/shared/settings-schema.ts) | Three-layer merge: defaults, template, per-view runtime config. |
 | Text previews | [text-preview-dom.ts](../src/shared/text-preview-dom.ts)<br>[text-preview.ts](../src/utils/text-preview.ts) | Markdown stripping and DOM mutation for card text. |
 | Keyboard navigation | [keyboard-nav.ts](../src/shared/keyboard-nav.ts) | Arrow key focus management across card grid. See [architecture/keyboard-nav.md](architecture/keyboard-nav.md). |
@@ -88,8 +87,7 @@ updated: 2026-03-14
 - SCSS source lives in [styles/](../styles/), compiled via `npm run css` (Dart Sass, no autoprefixer) to `styles.css`.
 - Entry point: [main.scss](../styles/main.scss).
 - Card-specific partials: [styles/card/](../styles/card/).
-- Datacore UI: [styles/datacore/](../styles/datacore/).
-- Dynamic Vies integrates with the Style Settings plugin via a YAML comment block in [_style-settings.scss](../styles/_style-settings.scss).
+- Dynamic Views integrates with the Style Settings plugin via a YAML comment block in [_style-settings.scss](../styles/_style-settings.scss).
 - Derived CSS custom properties are defined in [_variables.scss](../styles/_variables.scss).
 - See [patterns/css-variable-wrapping.md](patterns/css-variable-wrapping.md) and [patterns/style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) for conventions.
 

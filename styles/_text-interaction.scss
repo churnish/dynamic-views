@@ -9,18 +9,16 @@ body.dynamic-views-open-on-title .dynamic-views .card-text-preview p {
 }
 
 /* Bases needs user-select: text on the container for mobile WebKit —
-   Datacore inherits it from CodeMirror's cm-content, but Bases sits
-   directly under view-content (user-select: none) */
+   Bases sits directly under view-content (user-select: none) */
 body.dynamic-views-open-on-title .dynamic-views-bases-container {
   -webkit-user-select: text;
   user-select: text;
 }
 
-/* Block selection and I-beam cursor on entire view — covers cards, toolbar,
-   settings, query editor. Datacore inherits user-select: text and cursor: text
-   from cm-content; Bases gets user-select: text from the container rule above
-   in open-on-title mode. Element-level overrides in open-on-title selectively
-   re-enable on card text. */
+/* Block selection and I-beam cursor on entire view — covers cards and toolbar.
+   Bases gets user-select: text from the container rule above in open-on-title
+   mode. Element-level overrides in open-on-title selectively re-enable on
+   card text. */
 .dynamic-views {
   -webkit-user-select: none;
   user-select: none;

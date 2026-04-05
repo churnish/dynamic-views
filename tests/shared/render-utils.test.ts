@@ -4,11 +4,10 @@ import {
   formatTimestamp,
   getTimestampIcon,
   isTimestampProperty,
-  isDateValue,
+  isBasesDateValue,
   extractTimestamp,
 } from '../../src/shared/render-utils';
-import type { Settings } from '../../src/types';
-import type { BasesResolvedSettings } from '../../src/types';
+import type { Settings, ResolvedSettings } from '../../src/types';
 
 // Mock style-settings module
 vi.mock('../../src/utils/style-settings', () => ({
@@ -213,14 +212,14 @@ describe('render-utils', () => {
 
   describe('isTimestampProperty', () => {
     const makeSettings = (
-      overrides: Partial<BasesResolvedSettings> = {}
-    ): BasesResolvedSettings =>
+      overrides: Partial<ResolvedSettings> = {}
+    ): ResolvedSettings =>
       ({
         smartTimestamp: false,
         createdTimeProperty: 'created time',
         modifiedTimeProperty: 'modified time',
         ...overrides,
-      }) as BasesResolvedSettings;
+      }) as ResolvedSettings;
 
     it('should return true for hardcoded names regardless of smartTimestamp', () => {
       const settings = makeSettings({ smartTimestamp: false });
@@ -282,34 +281,34 @@ describe('render-utils', () => {
     });
   });
 
-  describe('isDateValue', () => {
+  describe('isBasesDateValue', () => {
     it('should return true for valid DateValue with time:true', () => {
       const value = { date: new Date(), time: true };
-      expect(isDateValue(value)).toBe(true);
+      expect(isBasesDateValue(value)).toBe(true);
     });
 
     it('should return true for valid DateValue with time:false', () => {
       const value = { date: new Date(), time: false };
-      expect(isDateValue(value)).toBe(true);
+      expect(isBasesDateValue(value)).toBe(true);
     });
 
     it('should return false for object missing time property', () => {
       const value = { date: new Date() };
-      expect(isDateValue(value)).toBe(false);
+      expect(isBasesDateValue(value)).toBe(false);
     });
 
     it('should return false for null/undefined/primitives', () => {
-      expect(isDateValue(null)).toBe(false);
-      expect(isDateValue(undefined)).toBe(false);
-      expect(isDateValue('2024-01-01')).toBe(false);
-      expect(isDateValue(1704067200000)).toBe(false);
-      expect(isDateValue({})).toBe(false);
+      expect(isBasesDateValue(null)).toBe(false);
+      expect(isBasesDateValue(undefined)).toBe(false);
+      expect(isBasesDateValue('2024-01-01')).toBe(false);
+      expect(isBasesDateValue(1704067200000)).toBe(false);
+      expect(isBasesDateValue({})).toBe(false);
     });
 
     it('should return false for invalid Date objects', () => {
       const invalidDate = new Date(NaN);
       const value = { date: invalidDate, time: true };
-      expect(isDateValue(value)).toBe(false);
+      expect(isBasesDateValue(value)).toBe(false);
     });
   });
 

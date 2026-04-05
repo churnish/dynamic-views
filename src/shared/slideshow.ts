@@ -1,6 +1,5 @@
 /**
  * Shared slideshow utilities
- * Extracts common logic between card-renderer.tsx and shared-renderer.ts
  */
 
 import { requestUrl } from 'obsidian';

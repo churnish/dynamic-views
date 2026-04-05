@@ -20,25 +20,20 @@
 
 ## Popout window safety
 
-- **Derive from DOM**: In `src/shared/`, `src/bases/`, and `src/datacore/`, NEVER use bare `document`, `window`, `new ResizeObserver`, `new IntersectionObserver`, `getComputedStyle`, `matchMedia`, `navigator`, or `document.createElement`. ALWAYS derive from the nearest DOM element via `getOwnerWindow(el)` (`src/utils/owner-window.ts`) or `el.ownerDocument`. `ResizeObserver` from the wrong window silently fails on popout elements.
+- **Derive from DOM**: In `src/shared/` and `src/bases/`, NEVER use bare `document`, `window`, `new ResizeObserver`, `new IntersectionObserver`, `getComputedStyle`, `matchMedia`, `navigator`, or `document.createElement`. ALWAYS derive from the nearest DOM element via `getOwnerWindow(el)` (`src/utils/owner-window.ts`) or `el.ownerDocument`. `ResizeObserver` from the wrong window silently fails on popout elements.
 - **Module-level code**: When module-level code needs all open documents (no DOM element in scope), use the `setDocumentProvider` pattern — a module-level setter registered from `main.ts` onload via `getAllPopoutDocuments()`.
 - **Safe exceptions**: `document.body.classList` reads for config classes (Style Settings syncs to all documents), `setTimeout`/`setInterval`/`requestIdleCallback` (process-level), `new Image()` for network validation (never inserted into DOM), offscreen `document.createElement('canvas')` for measurement.
 - **Reference**: See `knowledge/electron-popout-quirks.md` for the full list of cross-window pitfalls, safe patterns, and mitigations.
-
-## Datacore parity
-
-- **Current state**: Datacore card views display ONLY hardcoded properties (`file.tags`, `file.mtime`). Custom user-defined properties are NOT yet supported.
-- **Future work**: Datacore will gain full property display parity with Bases — configurable property lists, custom timestamp properties, labels, icons, and ALL rendering features. Shared helpers in `render-utils.ts` (`isTimestampProperty`, `getTimestampIcon`) already accept both `BasesResolvedSettings` and `ResolvedSettings`.
-- **Lay the foundation**: When working on shared infrastructure (helpers, types, rendering logic), ALWAYS design it to work with both backends. Wire up Datacore call sites even when the feature is NOT yet observable there.
 
 ## Navigation
 
 | Doc | Read before |
 |---|---|
-| **@docs/overview.md** | First time working on this codebase, or need a high-level understanding of the plugin architecture, backends, and systems. |
+| **@docs/overview.md** | First time working on this codebase, or need a high-level understanding of the plugin architecture and systems. |
 | **@docs/principles.md** | Making trade-off decisions — what the plugin prioritizes and why. |
 | **@docs/project-structure.md**, **@docs/index.md** | Reading or editing any file in the codebase. ALWAYS update both when adding, removing, or renaming source, test, or doc files. |
 | **@docs/patterns/plugin-view-navigation.md** | Probing, querying, or targeting Dynamic Views elements via CDP, WebKit Inspector, or DOM queries — correct selectors, DOM hierarchy, and platform-specific probing patterns. |
-| **@docs/patterns/view-configuration.md** | Configuring per-view settings for Bases or Datacore — setting keys, defaults, ranges, state properties, DQL query syntax, search filtering, templates, and per-backend workflows. |
+| **@docs/patterns/view-configuration.md** | Configuring per-view settings for Bases — setting keys, defaults, ranges, templates, and workflows. |
 | **@wiki/wiki-structure.md** | Working with user-facing plugin wiki pages that document how features and settings function. |
 | **@obsidian-guidelines/main.md**, **@obsidian-guidelines/additional.md** | Working on plugin code, submissions, or review compliance. |
+

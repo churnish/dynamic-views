@@ -8,7 +8,7 @@
   container-type: inline-size;
 }
 
-/* View background theme presets — standalone Bases files only (not embeds, not Datacore).
+/* View background theme presets — standalone Bases files only (not embeds).
    Body-class-gated: each theme sets --dynamic-views-view-bg-color on body,
    consumed by a single [class*=] rule. "Default" = no background (transparent). */
 body.dynamic-views-view-background-flexoki {

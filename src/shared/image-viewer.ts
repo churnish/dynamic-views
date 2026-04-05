@@ -11,8 +11,6 @@ import { getVaultPathFromResourceUrl, isExternalUrl } from '../utils/image';
 import { getCachedBlobUrl } from './slideshow';
 import { getOwnerWindow } from '../utils/owner-window';
 
-// dragManager type declared in datacore/types.d.ts
-
 /** Wheel event listener options (stored for proper cleanup) */
 const WHEEL_OPTIONS: AddEventListenerOptions = { passive: false };
 

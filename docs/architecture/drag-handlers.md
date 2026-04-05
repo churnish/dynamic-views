@@ -6,7 +6,7 @@ updated: 2026-03-16
 ---
 # Drag handlers
 
-The plugin supports four drag types, all implemented as factory functions in [`drag.ts`](../../src/shared/drag.ts). Each factory returns an event handler (or handler set) that both Bases and Datacore backends wire up at their respective call sites. A `DataTransfer.prototype.getData` patch (`installDropTextPatch`) suppresses Chromium's platform-level `text/uri-list` for plugin-initiated drags.
+The plugin supports four drag types, all implemented as factory functions in [`drag.ts`](../../src/shared/drag.ts). Each factory returns an event handler (or handler set) wired up by the renderer. A `DataTransfer.prototype.getData` patch (`installDropTextPatch`) suppresses Chromium's platform-level `text/uri-list` for plugin-initiated drags.
 
 ## Factory functions
 
@@ -49,13 +49,9 @@ WebKit native touch drags bypass the HTML5 DnD API entirely — `dragstart` and 
 
 **Deferred tooltip interception**: Obsidian creates a `.tooltip` element from the icon's `aria-label` ~1-2s after native drag ends — well after `drop` fires. The `cleanup` function installs a MutationObserver on `document.body` that watches for tooltip creation, scoped to `urlValue` text match to avoid removing unrelated tooltips. The observer disconnects after 3 seconds.
 
-**Click handler tooltip removal**: All three call sites (Bases shared-renderer, Datacore card-renderer) also remove `.tooltip` synchronously in the URL button `click` handler. This covers the iPad scenario where pressing the button opens Safari, and the tooltip persists when switching back to Obsidian.
+**Click handler tooltip removal**: The `click` handler also removes `.tooltip` synchronously. This covers the iPad scenario where pressing the button opens Safari, and the tooltip persists when switching back to Obsidian.
 
 ## Platform quirks
-
-### Chromium `draggable` attribute states
-
-HTML `draggable` has three states: `"true"`, `"false"` (actively suppresses drag on children), and absent/auto (doesn't suppress). `draggable="false"` on a parent `<div>` prevents native drag initiation on child `<a href>` elements. Preact can't produce the absent state — `undefined` coerces to `false` via the DOM property. Fix: `removeAttribute('draggable')` in the ref callback (runs after Preact's prop application).
 
 ### Chromium drag source resolution
 
@@ -73,10 +69,6 @@ Chromium keeps `:hover` on the drag source element throughout the drag operation
 
 macOS calls `sourceOperationMaskForDraggingContext:` BEFORE Chromium dispatches the JS `dragstart` event. `effectAllowed: "uninitialized"` maps to `NSDragOperationEvery`, showing the `+` (copy) badge. ALL JS-level fixes exhausted: `effectAllowed` variations (`copyLink`, `link`, capture-phase `move`), `stopPropagation` removal, `-webkit-user-drag: none` (breaks drag entirely). VS Code has the same limitation.
 
-### Preact JSX event props interfere with drag
-
-Preact's JSX event props (`onDragStart`, etc.) interfere with Chromium's drag lifecycle — `<a href>` fails intermittently, `<div draggable>` aborts immediately. `el.textContent` mutation during `dragstart` also disrupts drag on Preact-managed elements. Fix: native `addEventListener` in ref callbacks (card-level drag also uses `stopImmediatePropagation()` to prevent Preact's synthetic handler from interfering). See [`datacore-ref-callback-patterns.md`](../patterns/datacore-ref-callback-patterns.md) for the `__dragBound` guard pattern.
-
 ## Drag ghost
 
-URL button uses the native `<a href>` ghost (Chromium renders a 2-line ghost: title + URL). A hidden `<span class="dynamic-views-drag-text">` provides `textContent` for the ghost. Uses sr-only pattern (`clip: rect(0,0,0,0)`, `position: absolute`, 1×1px) — NOT `display:none`/`visibility:hidden` which exclude from ghost capture. The ghost text is refreshed on re-render via `dragText.textContent = card.urlValue` (both Bases and DC use direct DOM mutation in their ref callbacks).
+URL button uses the native `<a href>` ghost (Chromium renders a 2-line ghost: title + URL). A hidden `<span class="dynamic-views-drag-text">` provides `textContent` for the ghost. Uses sr-only pattern (`clip: rect(0,0,0,0)`, `position: absolute`, 1×1px) — NOT `display:none`/`visibility:hidden` which exclude from ghost capture. The ghost text is refreshed on re-render via `dragText.textContent = card.urlValue`.

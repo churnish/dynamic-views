@@ -260,7 +260,7 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 
 | Setting          | Toggle class                     | Fallback file   |
 | ---------------- | -------------------------------- | --------------- |
-| Hide pin toolbar | `dynamic-views-hide-pin-toolbar` | [_toolbar.scss](../../styles/datacore/_toolbar.scss) |
+| Hide pin toolbar | `dynamic-views-hide-pin-toolbar` | *(removed)* |
 
 ### `variable-number-slider` (CSS)
 

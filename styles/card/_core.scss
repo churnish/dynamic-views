@@ -1,7 +1,7 @@
 .dynamic-views {
   /* Fade-in animation for newly rendered cards (batch append + scroll mount) */
   .card.card-fade-in {
-    animation: cardFadeIn var(--dynamic-views-anim-duration-moderate) ease-out;
+    animation: cardFadeIn var(--dynamic-views-anim-duration-fast) ease-out;
   }
 
   .card.clickable-card {

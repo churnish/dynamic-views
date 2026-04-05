@@ -1,6 +1,5 @@
 /**
  * File format utilities
- * Shared between card-renderer.tsx (Datacore) and shared-renderer.ts (Bases)
  */
 
 import { VALID_IMAGE_EXTENSIONS } from './image';

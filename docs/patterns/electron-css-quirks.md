@@ -81,7 +81,7 @@ A binary-search approach was prototyped and confirmed working:
 
 - ~10 forced layout reflows per card (setting `textContent` then reading `scrollHeight` in a loop)
 - Reimplements browser truncation in JS — fights the platform instead of using it
-- In Datacore (Preact), mutates DOM that the framework owns
+- Mutates DOM outside the normal render pipeline
 - Doesn't survive container resize without re-render
 
 ### Affected file

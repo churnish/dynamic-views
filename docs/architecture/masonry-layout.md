@@ -1,6 +1,6 @@
 ---
 title: Masonry layout system
-description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, resize scaling, and Bases/Datacore differences.
+description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, and resize scaling.
 author: 🤖 Generated with Claude Code
 updated: 2026-03-29
 ---
@@ -9,7 +9,7 @@ updated: 2026-03-29
 
 # Masonry layout system
 
-The masonry layout system renders cards in a Pinterest-style variable-height column layout. Both backends share the same pure layout math ([masonry-layout.ts](../../src/utils/masonry-layout.ts)). Bases uses imperative DOM manipulation with virtual scrolling and proportional resize scaling; Datacore uses declarative Preact/JSX rendering without virtual scrolling. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
+The masonry layout system renders cards in a Pinterest-style variable-height column layout using imperative DOM manipulation with virtual scrolling and proportional resize scaling. Pure layout math lives in [masonry-layout.ts](../../src/utils/masonry-layout.ts).
 
 ## Files
 
@@ -31,14 +31,6 @@ The masonry layout system renders cards in a Pinterest-style variable-height col
 | `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.       |
 | `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                           |
-
-### Datacore
-
-| File                            | Role                                                             |
-| ------------------------------- | ---------------------------------------------------------------- |
-| `src/datacore/view.tsx`         | Main controller — state, query, layout effects, infinite scroll. |
-| `src/datacore/masonry-view.tsx` | Thin wrapper — sets `viewMode="masonry"` on `CardView`.          |
-| `src/datacore/card-view.tsx`    | Card component — delegates to `CardRenderer` with view mode.     |
 
 ## Core data structures
 
@@ -475,64 +467,12 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 10. **Mount remeasure is synchronous**: Never-measured cards (`measuredAtWidth === 0`) trigger `onMountRemeasure` synchronously in the same frame they mount. Post-resize cards (`measuredAtWidth > 0` at different width) skip synchronous remeasure via the `postResizeScrollActive` guard, deferring correction to the scroll-concurrent throttled path.
 11. **`remeasureAndReposition` uses read-all/write-all batching.** The per-group loop is split into two passes: (1) read phase measures `offsetHeight` and `measureScalableHeight` for all groups into `groupHeightsMap`, then (2) calculate+write phase runs layout math and applies positions with zero DOM reads. This eliminates O(N) forced reflows from per-group read→write interleaving. `measureScalableHeight` reads child `offsetHeight` — must remain in the read phase. After the write phase, `updateGroupOffsetsSynthetic` computes new offsets from container height deltas; a `groupOffsetsDirty` fallback to `updateCachedGroupOffsets` handles group structure changes.
 
-## Bases v Datacore
+## Pure utility functions (`src/utils/masonry-layout.ts`)
 
-For broader architectural differences (rendering model, events, cleanup, state), see [bases-v-datacore-differences.md](bases-v-datacore-differences.md). This section covers masonry-specific divergences.
-
-Both backends share the same pure layout math (`calculateMasonryLayout()`, `calculateIncrementalMasonryLayout()`, `repositionWithStableColumns()`) and the same greedy shortest-column algorithm. They diverge in rendering model, state management, and performance strategy.
-
-### Architecture comparison
-
-| Aspect                  | Bases                                                     | Datacore                                                          |
-| ----------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Rendering model**     | Imperative DOM manipulation via `renderCard()`.           | Declarative Preact/JSX components via `CardRenderer`.             |
-| **State management**    | Instance fields + `{ current }` ref boxes on view class.  | Preact hooks (`dc.useState`, `dc.useRef`, `dc.useEffect`).        |
-| **Card positioning**    | Direct inline styles (`style.left`, `style.top`).         | Direct inline styles (`style.left`, `style.top`).                 |
-| **Virtual scrolling**   | Full `VirtualItem[]` tracking with mount/unmount.         | Not implemented — all displayed cards rendered in DOM.            |
-| **Resize strategy**     | 3-tier: proportional fast path → correction → fallback.   | Full recalculation via double-RAF throttle. No proportional path. |
-| **Resize cost**         | ~3-5ms/frame (proportional), ~6-9ms (correction).         | Full `calculateMasonryLayout()` per frame.                        |
-| **Layout guard system** | 5 sequential guards with source-dependent behavior.       | No guard system — layout runs via `useEffect` dependencies.       |
-| **Image coalescing**    | Single RAF debounce via `pendingImageRelayout` flag.      | Handled by Preact re-render batching.                             |
-| **Group collapse**      | Surgical expand/collapse with scroll position adjustment. | State-driven re-render.                                           |
-| **Content loading**     | `ContentCache` class with abort controllers.              | `useRef` Map with effect ID race prevention.                      |
-| **Cleanup**             | Manual per-card `CardHandle.cleanup()` + abort.           | Preact handles unmount cleanup.                                   |
-| **Width modes**         | Standalone view — fills pane.                             | Embedded in Live Preview/Reading View with normal/wide/max modes. |
-
-### What Bases has that Datacore lacks
-
-- **Virtual scrolling** — Bases mounts only viewport-adjacent cards, handling thousands efficiently. Datacore renders all cards up to `displayedCount` in the DOM. With 1000+ visible cards, Datacore may degrade.
-- **Proportional resize scaling** — Zero-DOM-read resize at ~60fps. Scales `measuredHeight × (newWidth / measuredAtWidth)` without touching the DOM. Datacore does a full recalculation each frame.
-- **Post-resize correction** — 200ms debounced DOM re-measure to fix proportional height drift and establish a fresh baseline.
-- **Layout guard system** — Source-tagged layout requests with 5 guards preventing corruption (batch pending, reentrant, coalescing). Datacore relies on Preact's effect scheduling.
-- **Group offset caching** — `cachedGroupOffsets` eliminates `getBoundingClientRect` from the scroll/resize hot path.
-- **Property reorder fast path** — Detects property-order-only changes and updates card content without relayout.
-- **Post-mount remeasure** — After virtual scroll mounts new cards, `remeasureAndReposition()` corrects proportional height drift. Debounced during scroll (200ms) to avoid flicker from image-load height oscillation.
-
-### What Datacore has that Bases lacks
-
-- **Declarative rendering** — Data changes flow through Preact's render cycle. No manual DOM bookkeeping.
-- **Width modes** — `normal` (match `--file-line-width`), `wide` (1.75×), `max` (full pane). Bases views fill their pane natively.
-- **Reactive query** — `dc.query()` re-executes on Datacore index updates (500ms debounced). Bases uses Obsidian's `onDataUpdated()` callback.
-- **DOM shuffle** — Fisher-Yates shuffle directly reorders DOM children + triggers relayout. Bases rebuilds via data sort.
-
-### Pure utility functions (`src/utils/masonry-layout.ts`)
-
-| Function                              | Shared?  | Purpose                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `calculateMasonryLayout()`            | Both     | Full greedy shortest-column layout from scratch.                                                                                                                                                                                                                                                                                                                       |
-| `calculateMasonryDimensions()`        | Both     | Column count and card width without measuring heights.                                                                                                                                                                                                                                                                                                                 |
-| `calculateIncrementalMasonryLayout()` | Both     | Continues greedy placement from previous `columnHeights`.                                                                                                                                                                                                                                                                                                              |
-| `repositionWithStableColumns()`       | Both     | Reposition with heights changed but column assignments preserved.                                                                                                                                                                                                                                                                                                      |
-| `computeGreedyColumnHeights()`        | Bases    | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 8`. |
-| `applyMasonryLayout()`                | Datacore | Applies a `MasonryLayoutResult` to DOM elements via direct inline styles.                                                                                                                                                                                                                                                                                              |
-
-### Shared behavior
-
-- **Layout algorithm** — Greedy shortest-column placement via `calculateMasonryLayout()`.
-- **Incremental append** — `calculateIncrementalMasonryLayout()` continues from previous `columnHeights` when container width is stable.
-- **Batch height reads** — Single forced reflow per layout pass (read all `offsetHeight` values before writing positions).
-- **Infinite scroll** — `displayedCount` incremented by `columns × ROWS_PER_COLUMN` (capped at `MAX_BATCH_SIZE`) when within `PANE_MULTIPLIER × viewport height` from bottom. Leading + trailing throttle.
-- **Card rendering** — Both backends produce `CardData` and render through shared [card-renderer.tsx](../../src/shared/card-renderer.tsx) logic (title, subtitle, properties, image, text preview).
-- **CSS classes** — `masonry-container`, `masonry-positioned`, `masonry-measuring` used by both.
-- **Responsive classes** — `syncResponsiveClasses()` runs after layout in both backends.
-- **Scroll gradients** — `initializeScrollGradients()` applied to property rows in both.
+| Function                              | Purpose                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `calculateMasonryLayout()`            | Full greedy shortest-column layout from scratch.                                                                                                                                                                                                                                                                                                                       |
+| `calculateMasonryDimensions()`        | Column count and card width without measuring heights.                                                                                                                                                                                                                                                                                                                 |
+| `calculateIncrementalMasonryLayout()` | Continues greedy placement from previous `columnHeights`.                                                                                                                                                                                                                                                                                                              |
+| `repositionWithStableColumns()`       | Reposition with heights changed but column assignments preserved.                                                                                                                                                                                                                                                                                                      |
+| `computeGreedyColumnHeights()`        | Computes greedy shortest-column heights without allocating positions. Used by `remeasureAndReposition` to check whether `repositionWithStableColumns` introduced excessive column imbalance in grouped mode — triggers fallback to full `calculateMasonryLayout` when stable-column range exceeds 1.5× the greedy range and the absolute difference exceeds `gap × 8`. |

@@ -6,7 +6,7 @@ updated: 2026-04-03
 ---
 # Image loading and caching pipeline
 
-The image loading pipeline resolves property values and in-note embeds into renderable URLs, deduplicates concurrent loads via a two-tier cache, tracks broken URLs to skip on re-render, caches aspect ratios to prevent layout flash, and orchestrates fade-in transitions via a double-rAF pattern. Bases and Datacore share the same core logic but diverge in handler wiring (imperative listeners vs JSX ref callbacks).
+The image loading pipeline resolves property values and in-note embeds into renderable URLs, deduplicates concurrent loads via a two-tier cache, tracks broken URLs to skip on re-render, caches aspect ratios to prevent layout flash, and orchestrates fade-in transitions via a double-rAF pattern.
 
 ## Files
 
@@ -15,8 +15,7 @@ The image loading pipeline resolves property values and in-note embeds into rend
 | `src/shared/content-loader.ts` | Async image/text loading with two-tier dedup (in-flight + per-caller).                       |
 | `src/shared/image-loader.ts`   | Image load/error handlers, aspect ratio caching, broken URL tracking, placeholder injection. |
 | `src/utils/image.ts`           | Image path processing, embed extraction, YouTube thumbnail validation.                       |
-| `src/shared/card-renderer.tsx` | JSX image ref callbacks and error/load handlers (Datacore path).                             |
-| `src/bases/shared-renderer.ts` | Imperative image load handler setup (Bases path).                                            |
+| `src/bases/shared-renderer.ts` | Imperative image load handler setup.                                                         |
 
 ## Two-tier deduplication
 
@@ -139,7 +138,7 @@ Parses file content to find image references not declared in properties.
 
 ## Image load event handlers
 
-### Bases path (`setupImageLoadHandler()`)
+### `setupImageLoadHandler()`
 
 > For slideshow-specific image navigation, preloading, and failed image recovery, see [slideshow.md](slideshow.md).
 
@@ -149,17 +148,9 @@ Parses file content to find image references not declared in properties.
 4. Otherwise: register `load`/`error` listeners with `{ once: true }`
 5. Return cleanup function for listener removal
 
-### Datacore path (JSX ref callbacks)
+### `handleImageLoad()`
 
-| Function                | Role                                                                                                                                                                                                                    |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handleJsxImageRef()`   | Ref callback: applies cached metadata, handles already-loaded, adds fallback load listener. Edge case: `complete && naturalWidth === 0` falls through silently (neither immediate handling nor fallback listener fires) |
-| `handleJsxImageLoad()`  | `onLoad`: idempotency guard via `image-ready` class, calls shared `handleImageLoad()`                                                                                                                                   |
-| `handleJsxImageError()` | `onError`: hides broken img, marks URL broken via `markImageBroken()`, sets default aspect ratio, calls `handleAllImagesFailed()`                                                                                       |
-
-### Shared core (`handleImageLoad()`)
-
-Executed by both backends after successful image load.
+Executed after successful image load.
 
 1. Cache external image as blob URL (for slideshow navigation)
 2. Validate natural dimensions (>= 1px)
@@ -209,7 +200,7 @@ Called when all card images fail to load at runtime. First unconditionally adds 
 | Per-caller cache hit      | Re-loading already-resolved path within a batch      | `loadImageForEntry()`                                 |
 | In-flight dedup           | Concurrent same-config loads across views            | `loadImageForEntry()`                                 |
 | `isConnected` check       | DOM access on unmounted cards during rAF             | `handleImageLoad()`, error handlers                   |
-| `image-ready` class guard | Double-processing in JSX (ref + onLoad race)         | `handleJsxImageLoad/Ref()`, `setupImageLoadHandler()` |
+| `image-ready` class guard | Double-processing prevention                         | `setupImageLoadHandler()`                              |
 | `AbortSignal` check       | Orphaned operations after teardown                   | `setupBackdropImageLoader()`                          |
 | URL match on error        | Stale error handler after slideshow src swap         | `setupImageLoadHandler()` error                       |
 | Dimension validation      | Bad aspect ratios from corrupt/broken images (< 1px) | `handleImageLoad()`                                   |

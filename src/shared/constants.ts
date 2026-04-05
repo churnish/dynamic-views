@@ -70,9 +70,6 @@ export const INITIAL_REMEASURE_MS = 500;
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 
-/** Wide mode multiplier for expanded width */
-export const WIDE_MODE_MULTIPLIER = 1.75;
-
 /** Minimum movement in pixels to determine swipe direction */
 export const SWIPE_DETECT_THRESHOLD = 16;
 
@@ -84,9 +81,6 @@ export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
 
 /** Thumbnail stacking threshold multiplier (card stacks when width < thumbnail * this) */
 export const THUMBNAIL_STACK_MULTIPLIER = 3;
-
-/** Custom event dispatched when a Datacore dropdown opens (closes dropdowns in other queries) */
-export const DROPDOWN_OPENED_EVENT = 'dynamic-views:dropdown-opened';
 
 /** Fixed hover growth per side in px. Scale = 1 + (2 * HOVER_GROWTH_PX) / height. */
 export const HOVER_GROWTH_PX = 4;
@@ -171,4 +165,4 @@ export const FULL_SCREEN_FADE_MS = 200;
 
 /** Delay (ms) before resolving a fully-unwound bridge at scrollTop=0.
  *  Short — just enough to confirm idle. Android has no elastic bounce. */
-export const FULL_SCREEN_BRIDGE_RESOLVE_DELAY_MS = 50;
+export const FULL_SCREEN_SPACER_RESOLVE_DELAY_MS = 50;

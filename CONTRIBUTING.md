@@ -35,7 +35,7 @@ npx prettier --write . && npx eslint . && npm run css && npx tsc --noEmit && nod
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/churnish/dynamic-views)
 
-Dynamic Views has two rendering backends — Bases (direct DOM) and Datacore (Preact JSX) — that share a common card rendering layer.
+Dynamic Views renders card views in Obsidian's Bases plugin using direct DOM manipulation.
 
 Start here:
 
@@ -48,7 +48,7 @@ Start here:
 
 Styles live in `styles/` as SCSS partials, compiled with Dart Sass (no autoprefixer). Entry point is [styles/main.scss](styles/main.scss), which loads all partials in dependency order.
 
-Card-specific styles are in `styles/card/`, Datacore UI in `styles/datacore/`. The plugin integrates with the [Style Settings](https://github.com/mgalloy/obsidian-style-settings) plugin via a YAML comment block in `styles/_style-settings.scss`.
+Card-specific styles are in `styles/card/`. The plugin integrates with the [Style Settings](https://github.com/mgalloy/obsidian-style-settings) plugin via a YAML comment block in `styles/_style-settings.scss`.
 
 ## Testing
 

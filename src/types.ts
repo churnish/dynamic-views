@@ -1,5 +1,5 @@
 // ============================================================================
-// Settings Architecture: PluginSettings + ViewDefaults + DatacoreDefaults
+// Settings Architecture: PluginSettings + ViewDefaults
 // Rendering receives ResolvedSettings (the fully merged type).
 // Storage types are used only at persistence and resolution boundaries.
 // ============================================================================
@@ -20,7 +20,7 @@ export interface PluginSettings {
   fullScreen: boolean;
 }
 
-/** Per-view visual defaults (shared across Bases and Datacore) */
+/** Per-view visual defaults */
 export interface ViewDefaults {
   // Card size
   cardSize: number;
@@ -28,7 +28,7 @@ export interface ViewDefaults {
   titleProperty: string;
   titleLines: number;
   subtitleProperty: string;
-  // Position-based title/subtitle (Bases only; false = no-op for Datacore)
+  // Position-based title/subtitle
   displayFirstAsTitle: boolean;
   displaySecondAsSubtitle: boolean;
   // Text preview
@@ -58,16 +58,6 @@ export interface ViewDefaults {
   cssclasses: string;
 }
 
-/** Datacore-only defaults (titleProperty/subtitleProperty shadow ViewDefaults via spread order in resolveSettings) */
-export interface DatacoreDefaults {
-  titleProperty: string;
-  subtitleProperty: string;
-  listMarker: string;
-  queryHeight: number;
-  /** PLACEHOLDER: Forces pairing for hard-coded tags+mtime until rework */
-  pairProperties: boolean;
-}
-
 /** Bases-only defaults (overrides VIEW_DEFAULTS for Bases views) */
 export interface BasesDefaults {
   displayFirstAsTitle: boolean;
@@ -75,17 +65,10 @@ export interface BasesDefaults {
   propertyNames: 'hide' | 'inline' | 'above';
 }
 
-/** Fully resolved settings — the merge of PluginSettings + ViewDefaults + DatacoreDefaults */
+/** Fully resolved settings — the merge of PluginSettings + ViewDefaults */
 export type ResolvedSettings = PluginSettings &
-  ViewDefaults &
-  DatacoreDefaults & {
-    /** syntaxName → displayName map from Bases config (set at normalization point, not persisted) */
-    _displayNameMap?: Record<string, string>;
-  };
-
-/** Bases-only resolved settings — no Datacore fields */
-export type BasesResolvedSettings = PluginSettings &
   ViewDefaults & {
+    /** syntaxName → displayName map from Bases config (set at normalization point, not persisted) */
     _displayNameMap?: Record<string, string>;
     /** Count of leading getOrder() properties rendered as title/subtitle (0–2) */
     _skipLeadingProperties?: number;
@@ -96,30 +79,14 @@ export interface BasesUIState {
   collapsedGroups: string[];
 }
 
-/** Datacore-only state: UI + view settings (persisted per query by queryId) */
-export interface DatacoreState {
-  // UI state
-  sortMethod: string;
-  viewMode: string;
-  searchQuery: string;
-  resultLimit: string;
-  widthMode: string;
-  // View settings (previously in viewSettings)
-  settings?: Partial<ViewDefaults & DatacoreDefaults>;
-}
-
 /** Saved settings snapshot applied as defaults to new views of the same type */
-export type SettingsTemplate = Partial<ViewDefaults & DatacoreDefaults>;
+export type SettingsTemplate = Partial<ViewDefaults>;
 
 export interface PluginData {
   pluginSettings: Partial<PluginSettings>;
-  templates: Partial<Record<'grid' | 'masonry' | 'datacore', SettingsTemplate>>;
-  basesStates: Record<string, BasesUIState>; // Bases only: { collapsedGroups }
-  datacoreStates: Record<string, DatacoreState>; // Datacore only: UI + settings
+  templates: Partial<Record<'grid' | 'masonry', SettingsTemplate>>;
+  basesStates: Record<string, BasesUIState>;
 }
-
-export type ViewMode = 'grid' | 'masonry' | 'list';
-export type WidthMode = 'normal' | 'wide' | 'max';
 
 export type LayoutSource =
   | 'initial-render'

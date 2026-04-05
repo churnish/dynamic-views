@@ -1,6 +1,5 @@
 /**
  * Shared keyboard navigation utilities for card/Masonry views
- * Used by both Datacore and Bases implementations
  *
  * Focus terminology:
  * - "DOM focus": The browser's native focus (document.activeElement)

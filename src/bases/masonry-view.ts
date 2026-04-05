@@ -12,7 +12,7 @@ import {
   QueryController,
   TFile,
 } from 'obsidian';
-import { CardData } from '../shared/card-renderer';
+import { CardData } from '../shared/card-data';
 import {
   basesEntryToCardData,
   transformBasesEntries,
@@ -109,7 +109,7 @@ import {
 } from '../utils/property';
 import type DynamicViews from '../../main';
 import type {
-  BasesResolvedSettings,
+  ResolvedSettings,
   ContentCache,
   LayoutSource,
   RenderState,
@@ -192,7 +192,7 @@ export class DynamicViewsMasonryView extends BasesView {
     lastMtimes: new Map(),
   };
   // Track last rendered settings to detect stale config (see readBasesSettings)
-  private lastRenderedSettings: BasesResolvedSettings | null = null;
+  private lastRenderedSettings: ResolvedSettings | null = null;
   private lastGroup: LastGroupState = { key: undefined, container: null };
   private scrollThrottle: ScrollThrottleState = {
     listener: null,
@@ -635,7 +635,7 @@ export class DynamicViewsMasonryView extends BasesView {
   // #endregion WebKit momentum guard
   // #region Batch sizing
   /** Calculate batch size based on current column count */
-  private getBatchSize(settings: BasesResolvedSettings): number {
+  private getBatchSize(settings: ResolvedSettings): number {
     if (!this.masonryContainer) return MAX_BATCH_SIZE;
     const minColumns = settings.minimumColumns;
     // Use getBoundingClientRect for actual rendered width (clientWidth rounds fractional pixels)
@@ -653,7 +653,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Calculate initial card count based on container dimensions */
-  private calculateInitialCount(settings: BasesResolvedSettings): number {
+  private calculateInitialCount(settings: ResolvedSettings): number {
     // Use cached width from previous layout — avoids forced reflow on
     // the old DOM before containerEl.empty() clears it.
     // On first render lastLayoutWidth is 0 → hits the zero-width fallback below.
@@ -676,7 +676,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Check if more content needed after layout completes, and load if so */
-  private checkAndLoadMore(settings: BasesResolvedSettings): void {
+  private checkAndLoadMore(settings: ResolvedSettings): void {
     // Skip if already loading or all items displayed
     if (this.isLoading || this.displayedCount >= this.totalEntries) return;
 
@@ -1587,7 +1587,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
   // #endregion Data processing
   // #region Layout engine
-  private setupMasonryLayout(settings: BasesResolvedSettings): void {
+  private setupMasonryLayout(settings: ResolvedSettings): void {
     if (!this.masonryContainer) return;
     this.cardVerticalPadding = null;
 
@@ -2824,7 +2824,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private mountVirtualItem(
     item: VirtualItem,
     container: HTMLElement,
-    settings: BasesResolvedSettings
+    settings: ResolvedSettings
   ): void {
     const handle = this.renderCard(
       container,
@@ -3305,7 +3305,7 @@ export class DynamicViewsMasonryView extends BasesView {
     card: CardData,
     entry: BasesEntry,
     index: number,
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     renderOptions?: { skipImageFade?: boolean }
   ): CardHandle {
     const handle = this.cardRenderer.renderCard(
@@ -3346,7 +3346,7 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Surgical property reorder: rebuild CardData + update title/subtitle/property DOM */
   private updatePropertyOrder(
     visibleProperties: string[],
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     sortMethod: string
   ): void {
     for (const item of this.virtualItems) {
@@ -3385,7 +3385,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private async updateCardsInPlace(
     changedPaths: Set<string>,
     allEntries: BasesEntry[],
-    settings: BasesResolvedSettings,
+    settings: ResolvedSettings,
     sortMethod: string,
     visibleProperties: string[]
   ): Promise<void> {
@@ -3529,7 +3529,7 @@ export class DynamicViewsMasonryView extends BasesView {
   }
   // #endregion Card rendering
   // #region Infinite scroll
-  private async appendBatch(settings: BasesResolvedSettings): Promise<void> {
+  private async appendBatch(settings: ResolvedSettings): Promise<void> {
     // Guard: return early if data not initialized or no masonry container
     if (!this.data || !this.masonryContainer) {
       this.isLoading = false;
@@ -4074,7 +4074,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
   }
 
-  private setupInfiniteScroll(settings: BasesResolvedSettings): void {
+  private setupInfiniteScroll(settings: ResolvedSettings): void {
     const scrollContainer = this.scrollEl;
 
     // Clean up existing listeners and timeouts (don't use this.register() since this method is called multiple times)

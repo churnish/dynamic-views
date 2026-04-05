@@ -1,12 +1,12 @@
 ---
 title: Grid layout system
-description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, committed-row lock mount ordering, and Bases/Datacore differences.
+description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and committed-row lock mount ordering.
 author: 🤖 Generated with Claude Code
 updated: 2026-04-01
 ---
 # Grid layout system
 
-The grid layout system renders cards in a CSS Grid-based equal-height column layout. Both backends share the same card rendering pipeline ([card-renderer.tsx](../../src/shared/card-renderer.tsx)) and settings schema. Bases uses imperative DOM manipulation with virtual scrolling (mount/unmount with placeholder divs); Datacore uses declarative Preact/JSX rendering. The pipeline, guard system, and invariant sections below document the Bases implementation — see "Bases v Datacore" at the end for architectural differences.
+The grid layout system renders cards in a CSS Grid-based equal-height column layout using imperative DOM manipulation with virtual scrolling (mount/unmount with placeholder divs).
 
 ## Files
 
@@ -20,7 +20,7 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | `src/shared/scroll-gradient.ts`  | Horizontal scroll gradients for property rows.                                                               |
 | `src/shared/property-measure.ts` | Side-by-side property field width measurement + synchronous processing.                                     |
 | `src/shared/virtual-scroll.ts`   | `VirtualItem` interface, `measureScalableHeight()`, `estimateUnmountedHeight()`, `syncVisibleItems()`.       |
-| `src/shared/data-transform.ts` | Normalizes Bases/Datacore entries → `CardData` (`basesEntryToCardData`, `transformBasesEntries`).             |
+| `src/shared/data-transform.ts` | Normalizes Bases entries → `CardData` (`basesEntryToCardData`, `transformBasesEntries`).                      |
 | `src/shared/settings-schema.ts`| Reads and resolves Bases view settings (`readBasesSettings`, `getBasesViewOptions`).                         |
 | `src/shared/scroll-preservation.ts` | Scroll position save/restore across re-renders.                                                         |
 | `src/shared/text-preview-dom.ts` | DOM updates for card text previews + per-paragraph clamping.                                               |
@@ -37,13 +37,6 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration. |
 | `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                     |
 | `src/bases/utils.ts`           | Sort, group processing, content loading, context menus, Style Settings observer. |
-
-### Datacore
-
-| File                         | Role                                                             |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `src/datacore/controller.tsx` | Main controller — state, query, layout effects, infinite scroll. |
-| `src/datacore/card-view.tsx` | Card component — delegates to `CardRenderer` with view mode.     |
 
 ## Core data structures
 
@@ -706,51 +699,6 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 14. **Content-hidden tier preserves grid row geometry.** `contain-intrinsic-height` is set from `item.height` (stretched row height from `recomputeYPositions`). All cards in a row share the same `item.height`, so the grid auto row height is unchanged when cards transition to content-hidden. Unmounted items in the hidden zone stay unmounted — mounting just to apply content-hidden would waste the mount cost. Non-WebKit only (`!Platform.isIosApp`).
 15. **Committed-row lock guarantees row atomicity.** Phase 1 locks to a row until all items mount before advancing. Prevents blank cells in CSS Grid rows during virtual scroll.
 16. **Frame mount cap prevents recursive cascade.** `frameMountCount` shared across recursive `syncVirtualScroll` calls bounds total mounts per top-level sync to `GRID_ROW_BUDGET × columns`.
-
-## Bases v Datacore
-
-For broader architectural differences (rendering model, events, cleanup, state), see [bases-v-datacore-differences.md](bases-v-datacore-differences.md). This section covers grid-specific divergences.
-
-Both backends share the same card rendering pipeline (`CardRenderer`/`SharedCardRenderer`) and settings schema. They diverge in rendering model, state management, and layout strategy.
-
-### Architecture comparison
-
-| Aspect                 | Bases                                                       | Datacore                                                          |
-| ---------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Rendering model**    | Imperative DOM manipulation via `renderCard()`.             | Declarative Preact/JSX components via `CardRenderer`.             |
-| **State management**   | Instance fields + `{ current }` ref boxes on view class.    | Preact hooks (`dc.useState`, `dc.useRef`, `dc.useEffect`).        |
-| **Layout engine**      | CSS Grid with JS-controlled `--dynamic-views-grid-columns`. | CSS Grid with JS-controlled `--dynamic-views-grid-columns`.       |
-| **Content visibility** | Full virtual scrolling — unmounted cards replaced with placeholder divs. | Not implemented — all displayed cards rendered normally.          |
-| **Resize strategy**    | Double-RAF debounce → update CSS variable only.             | Double-RAF debounce → update CSS variable only.                   |
-| **Group collapse**     | Surgical expand/collapse with scroll position adjustment.   | State-driven re-render.                                           |
-| **Content loading**    | `ContentCache` objects with abort controllers.              | `useRef` Map with effect ID race prevention.                      |
-| **Cleanup**            | Manual per-card `CardHandle.cleanup()` + abort.             | Preact handles unmount cleanup.                                   |
-| **Width modes**        | Standalone view — fills pane.                               | Embedded in Live Preview/Reading View with normal/wide/max modes. |
-
-### What Bases has that Datacore lacks
-
-- **Virtual scrolling** — Full mount/unmount virtual scrolling with placeholder divs. Unmounted cards become lightweight `<div>` placeholders preserving CSS Grid flow. Datacore renders all displayed cards normally.
-- **Surgical group expand** — Expanding a collapsed group renders only that group's cards without full re-render. Datacore does a full state-driven re-render.
-- **Property reorder fast path** — Detects property-order-only changes and updates card content without re-rendering.
-- **Content update fast path** — Detects content-only changes (mtime differs, paths unchanged) and updates all card content in-place (title, subtitle, properties, text preview) without full re-render.
-
-### What Datacore has that Bases lacks
-
-- **Declarative rendering** — Data changes flow through Preact's render cycle. No manual DOM bookkeeping.
-- **Width modes** — `normal` (match `--file-line-width`), `wide` (1.75×), `max` (full pane). Bases views fill their pane natively.
-- **Reactive query** — `dc.query()` re-executes on Datacore index updates (500ms debounced). Bases uses Obsidian's `onDataUpdated()` callback.
-- **DOM shuffle (masonry only)** — Fisher-Yates shuffle directly reorders DOM children in masonry mode. Grid and list use state-driven re-render. Bases has shuffle via data sort in `processGroups()` and full re-render, not DOM-level reordering.
-
-### Shared behavior
-
-- **Layout engine** — Both use CSS Grid with `repeat(var(--dynamic-views-grid-columns), 1fr)`.
-- **Column calculation** — `max(minColumns, floor((width + gap) / (cardSize + gap)))`.
-- **Infinite scroll** — `displayedCount` incremented by `columns × ROWS_PER_COLUMN` (capped at `MAX_BATCH_SIZE`) when within `PANE_MULTIPLIER × viewport height` from bottom. Leading + trailing throttle.
-- **Card rendering** — Both backends produce `CardData` and render through shared [card-renderer.tsx](../../src/shared/card-renderer.tsx) logic (title, subtitle, properties, image, text preview).
-- **Group headers** — Sticky with `scroll-state(stuck: top)` container query for bottom border (progressive enhancement — WebKit doesn't support scroll-state queries).
-- **Subgrid groups** — `grid-column: 1 / -1` + `grid-template-columns: subgrid` for column alignment. Subgridded columns inherit `column-gap` from the parent grid — the parent's `gap` (or `column-gap`) must stay set, otherwise grouped cards lose column spacing. Note: when grouped, `.dynamic-views-grid` and `.bases-cards-container` are the same element (ungrouped views only have `.dynamic-views-grid`), so Obsidian's native `.bases-cards-container { gap }` also applies and must be explicitly overridden when a different value is needed.
-- **Responsive classes** — `syncResponsiveClasses()` runs after layout in both backends.
-- **Scroll gradients** — `initializeScrollGradients()` applied to property rows in both.
 
 ## Grid vs. masonry comparison
 

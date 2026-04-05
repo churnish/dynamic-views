@@ -87,22 +87,6 @@ export function hasBodyClass(className: string): boolean {
 }
 
 /**
- * Get minimum masonry columns from CSS variable
- * @deprecated Used by Datacore only — Bases reads from per-view settings
- */
-export function getMinMasonryColumns(): number {
-  return getCSSVariableAsNumber('--dynamic-views-min-masonry-columns', 2);
-}
-
-/**
- * Get minimum grid columns from CSS variable
- * @deprecated Used by Datacore only — Bases reads from per-view settings
- */
-export function getMinGridColumns(): number {
-  return getCSSVariableAsNumber('--dynamic-views-min-grid-columns', 1);
-}
-
-/**
  * Get compact mode breakpoint from CSS variable
  * Cards narrower than this value enter compact mode
  */

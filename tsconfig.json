@@ -11,12 +11,9 @@
     "importHelpers": true,
     "isolatedModules": true,
     "strictNullChecks": true,
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "skipLibCheck": true
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules", "tests", "archive"]
 }

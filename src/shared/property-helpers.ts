@@ -1,6 +1,5 @@
 /**
  * Shared property type helpers
- * Used by both Bases (shared-renderer.ts) and Datacore (card-renderer.tsx) renderers
  */
 
 import { CONTENT_HIDDEN_CLASS } from './content-visibility';
@@ -38,7 +37,7 @@ export function isFormulaProperty(propertyName: string | undefined): boolean {
 
 /**
  * Determine if a property field should be collapsed (hidden from layout).
- * Unified logic for both Bases and Datacore renderers.
+ * Unified logic for property field collapse.
  *
  * @param value - The resolved property value (string or null if missing)
  * @param propertyName - The property name

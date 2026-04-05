@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-02
+updated: 2026-04-05
 ---
 # Project structure
 
@@ -23,24 +23,13 @@ dynamic-views/
 │   │   ├── sticky-heading.ts         # Sentinel IO for sticky group heading stuck state
 │   │   └── utils.ts                  # Context menus, toolbar, property management
 │   │
-│   ├── datacore/                     # Datacore backend (Preact/JSX)
-│   │   ├── card-view.tsx             # Card component (grid + masonry modes)
-│   │   ├── controller.tsx            # Main controller — state, query processing, rendering
-│   │   ├── list-view.tsx             # List view component
-│   │   ├── masonry-view.tsx          # Masonry wrapper over CardView
-│   │   ├── query-sync.ts             # Query processing + code block sync
-│   │   ├── settings.tsx              # View settings panel component
-│   │   ├── toolbar.tsx               # Toolbar with dropdowns + controls
-│   │   ├── toolbar-compact.ts       # Toolbar compact observer (--file-line-width threshold)
-│   │   └── types.d.ts                # Datacore API + Preact type defs
-│   │
-│   ├── shared/                       # Cross-backend shared logic
-│   │   ├── card-renderer.tsx         # Pure card rendering (normalized CardData)
+│   ├── shared/                       # Shared logic
+│   │   ├── card-data.ts              # CardData normalized type definition
 │   │   ├── constants.ts              # Infinite scroll, throttling, batch size constants
 │   │   ├── content-loader.ts         # Async image/text loading with dedup
 │   │   ├── content-visibility.ts     # IntersectionObserver-based visibility management
 │   │   ├── context-menu.ts           # Right-click menus for cards/links
-│   │   ├── data-transform.ts         # Normalizes Datacore/Bases data -> CardData
+│   │   ├── data-transform.ts         # Normalizes Bases data -> CardData
 │   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL icon)
 │   │   ├── hover-and-touch.ts         # Shared hover and touch interaction utilities
 │   │   ├── icon-alignment.ts         # Timestamp icon optical vertical alignment (live DOM measurement + boost ratio)
@@ -55,6 +44,7 @@ dynamic-views/
 │   │   ├── scroll-preservation.ts    # Scroll position save/restore
 │   │   ├── settings-schema.ts        # Universal settings schema parser
 │   │   ├── slideshow.ts              # Card image slideshow (animation + swipe)
+│   │   ├── thumbnail-scrub.ts        # Touch scrubbing + shared visibility reset IO for multi-image thumbnails
 │   │   ├── text-preview-dom.ts       # DOM updates for card text previews
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
 │   │   └── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
@@ -68,16 +58,15 @@ dynamic-views/
 │   │   ├── masonry-layout.ts         # Pure masonry positioning calculations
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── owner-window.ts           # Popout-safe window reference from DOM element
-│   │   ├── property.ts               # Property extraction for Datacore/Bases
+│   │   ├── property.ts               # Property extraction for Bases
 │   │   ├── randomize.ts              # Randomization + pane type from modifier keys
 │   │   ├── sanitize.ts               # Control character removal (localStorage safety)
 │   │   ├── storage.ts                # Storage key generation
 │   │   ├── style-settings.ts         # CSS variable reading with cache
 │   │   └── text-preview.ts           # Markdown stripping for card previews
 │   │
-│   ├── constants.ts                  # Default settings, view defaults, Datacore defaults
-│   ├── jsx-runtime.ts                # JSX runtime proxy -> Datacore's bundled Preact
-│   ├── jsx.d.ts                      # JSX type declarations
+│   ├── constants.ts                  # Default settings, view defaults
+│   ├── obsidian-augments.d.ts        # Obsidian module augmentations for undocumented APIs
 │   ├── persistence.ts                # Plugin data persistence and settings resolution
 │   ├── plugin-settings.ts            # Plugin settings tab UI
 │   └── types.ts                      # Core interfaces: settings, view defaults, resolved settings
@@ -95,12 +84,6 @@ dynamic-views/
 │   │   ├── _poster.scss              # Poster image format
 │   │   ├── _previews.scss            # Thumbnail sizing, text preview, position layouts
 │   │   └── _slideshow.scss           # Slideshow animations
-│   │
-│   ├── datacore/                     # Datacore backend UI
-│   │   ├── _list-view.scss           # List view styles
-│   │   ├── _query-editor.scss        # Query dropdown and editor
-│   │   ├── _settings.scss            # View settings panel
-│   │   └── _toolbar.scss             # Toolbar, dropdowns, buttons
 │   │
 │   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar
 │   ├── _container.scss               # Container queries, width system, scroll fade
@@ -134,8 +117,6 @@ dynamic-views/
 │   │   ├── shared-renderer.test.ts
 │   │   ├── sync-responsive-classes.test.ts
 │   │   └── utils.test.ts
-│   ├── datacore/
-│   │   └── toolbar-compact.test.ts
 │   ├── shared/
 │   │   ├── constants.test.ts
 │   │   ├── content-loader.test.ts
@@ -149,6 +130,7 @@ dynamic-views/
 │   │   ├── scroll-gradient.test.ts
 │   │   ├── settings-schema.test.ts
 │   │   ├── text-preview-dom.test.ts
+│   │   ├── thumbnail-scrub.test.ts
 │   │   └── virtual-scroll.test.ts
 │   ├── utils/
 │   │   ├── dropdown-position.test.ts
@@ -158,7 +140,6 @@ dynamic-views/
 │   │   ├── link-parser.test.ts
 │   │   ├── masonry-layout.test.ts
 │   │   ├── property.test.ts
-│   │   ├── query-sync.test.ts
 │   │   ├── randomize.test.ts
 │   │   ├── sanitize.test.ts
 │   │   ├── storage.test.ts

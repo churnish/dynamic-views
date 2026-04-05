@@ -1,6 +1,6 @@
 /**
- * Universal settings schema
- * Defines settings structure for both Bases and Datacore views
+ * Settings schema
+ * Defines settings structure for Bases views
  */
 
 import type {
@@ -8,11 +8,7 @@ import type {
   BasesViewConfig,
   BasesAllOptions,
 } from 'obsidian';
-import type {
-  PluginSettings,
-  ViewDefaults,
-  BasesResolvedSettings,
-} from '../types';
+import type { PluginSettings, ViewDefaults, ResolvedSettings } from '../types';
 import { VIEW_DEFAULTS, BASES_DEFAULTS } from '../constants';
 import { VALID_VIEW_VALUES } from './view-validation';
 import { stripNotePrefix } from '../utils/property';
@@ -501,7 +497,7 @@ function getValidEnum<T extends string>(
 
 /**
  * Read settings from Bases config
- * Maps Bases config values to BasesResolvedSettings by merging:
+ * Maps Bases config values to ResolvedSettings by merging:
  *   VIEW_DEFAULTS (overridden by config) + pluginSettings
  *
  * @param previousSettings - Optional previous settings to use as fallback when
@@ -512,9 +508,9 @@ export function readBasesSettings(
   config: BasesConfig,
   pluginSettings: PluginSettings,
   viewType?: 'grid' | 'masonry',
-  previousSettings?: Partial<BasesResolvedSettings>,
+  previousSettings?: Partial<ResolvedSettings>,
   templateOverrides?: Partial<ViewDefaults>
-): BasesResolvedSettings {
+): ResolvedSettings {
   // Template overrides serve as fallbacks for new views whose config isn't populated yet.
   // View-type-specific defaults applied before template so template can override them.
   const defaults = {
@@ -649,7 +645,7 @@ export function readBasesSettings(
 
 /**
  * Extract view-specific settings from Bases config for template storage
- * Only extracts ViewDefaults keys (no Datacore-specific fields)
+ * Only extracts ViewDefaults keys
  * Returns sparse object — only includes values that differ from defaults
  */
 export function extractBasesTemplate(

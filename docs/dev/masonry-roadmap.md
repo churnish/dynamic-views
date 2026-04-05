@@ -1,6 +1,6 @@
 ---
 title: Masonry optimization roadmap
-description: Masonry performance optimization tracking — per-system optimizations, priority table from profiling, Datacore parity gaps, and status.
+description: Masonry performance optimization tracking — per-system optimizations, priority table from profiling, and status.
 author: 🤖 Generated with Claude Code
 updated: 2026-03-30
 ---
@@ -88,7 +88,7 @@ Sections below are ordered by **system/concern area**, not by priority or chrono
 | Inline styles replacing CSS custom properties | Done | Direct `style.left`/`style.top`/`style.width`/`style.height` instead of `--masonry-left`/`--masonry-top` etc. Eliminates CSS variable resolution overhead. Container `--masonry-height` stays as custom property (one-per-container). | | |
 | Scoped `container-type` to grid-only | Done | Moved `container-type: inline-size` from `.dynamic-views .card` (all cards) to `.dynamic-views-grid .card`. No `@container` queries target masonry card-level containment — was creating unused layout work. | | |
 | `virtualItemsByGroup` pre-index | Done | `Map<string \| undefined, VirtualItem[]>` with `rebuildGroupIndex()`. Eliminates repeated O(n) filter scans (3-5 per layout call) with O(1) map lookup. | | |
-| `for` loops replacing `forEach` | Done | In `calculateMasonryLayout` and `calculateIncrementalMasonryLayout`. Eliminates closure allocation per card. Exception: `applyMasonryLayout()` (Datacore-only path) still uses `forEach`. | | |
+| `for` loops replacing `forEach` | Done | In `calculateMasonryLayout` and `calculateIncrementalMasonryLayout`. Eliminates closure allocation per card. | | |
 | `contain: layout style paint` | Done | On `.masonry-positioned` cards. Limits paint boundaries without full layer promotion. | | |
 | Batch `offsetHeight` reads + writes | Done | `remeasureAndReposition` split into read-all → calculate+write-all phases. `updateGroupOffsetsSynthetic` replaces `getBoundingClientRect` after position writes (cumulative height delta, atomic commit, zero DOM reads). `computeSyntheticGroupOffsets` extracted as pure function with unit tests. | | |
 | Transform-based positioning | Planned | `transform: translate3d(x, y, 0)` is compositor-only (skips layout+paint). Current `top`/`left` triggers layout recalc. **T6 confirmed: ~42ms/frame architectural floor is Blink style recalc from inline `top/left/width/height` writes.** Transforms would eliminate position-change recalc (compositor-only). Trade-off: significant per-card VRAM cost from compositor layer promotion at high DPR. `contain: layout style paint` already limits scope but does NOT prevent style recalc. | 5 | 2 |
@@ -116,20 +116,3 @@ Sections below are ordered by **system/concern area**, not by priority or chrono
 | Per-group virtual scroll | Done | Each group has its own container with `cachedGroupOffsets`. **T4: 7 scroll iterations to load all 300 cards across 11 groups.** |
 | Per-group proportional resize | Done | Iterates `virtualItemsByGroup` per group in proportional path. **T7: 18 width transitions, column boundary crossing at frame 35.** |
 
-## 7. Datacore parity gaps
-
-Bases is the main backend. Datacore will be worked on after all Bases optimizations are complete. See architecture comparison in [masonry-layout.md](masonry-layout.md) → "Bases v Datacore".
-
-**Dependencies**: Gaps 2 (proportional resize) and 3 (post-resize correction) depend on Gap 1 (virtual scrolling) — proportional scaling requires `VirtualItem` tracking for `scalableHeight`/`fixedHeight`/`measuredAtWidth`. Gap 5 (stable columns) is independent — `columnAssignments` already stored in `lastLayoutResultRef`. Gap 8 (group offset caching) depends on grouped masonry support, not virtual scrolling.
-
-| Gap | Status | Notes | Value | Effort |
-|---|---|---|---|---|
-| Virtual scrolling | Planned | Biggest gap. Datacore renders all cards up to `displayedCount` in DOM. With 1000+ cards, performance degrades. Bases mounts only viewport-adjacent cards via `VirtualItem[]` tracking. | 5 | 5 |
-| Proportional resize scaling | Planned | Datacore does full `calculateMasonryLayout()` per resize frame. Bases does zero-DOM-read `height * (newWidth / oldWidth)` at ~60fps via `proportionalResizeLayout`. | 4 | 4 |
-| Post-resize correction | Planned | Follows from proportional resize. 200ms debounced DOM re-measure fixes proportional height drift. | 3 | 2 |
-| Stable column assignment during remeasure | Planned | `repositionWithStableColumns()` is shared code — Datacore just needs to call it instead of greedy recalculation in its relayout paths. | 3 | 1 |
-| IO-based `content-visibility` on desktop | Evaluate | Bases Grid uses scroll-position-based `CONTENT_HIDDEN_CLASS` toggling (not IO-based — `setupContentVisibility` is dead code). Bases Masonry relies purely on virtual scroll mount/unmount. Datacore has no JS-level content-visibility management — relies only on global CSS `content-visibility: auto` from the stylesheet (applies to mobile via `body.is-mobile` selector). Without virtual scrolling, this is the primary mechanism for off-screen rendering reduction. | 2 | 3 |
-| Layout guard system | Evaluate | Bases has 5 sequential guards preventing corruption (batch pending, reentrant, coalescing). Datacore has 2 explicit JS guards (`isUpdatingLayout` reentrancy + `pendingLayoutUpdate` queued coalescing) but lacks batch pending, image coalescing, and deferred resize suppression. | 2 | 3 |
-| Group offset caching | Planned | Eliminates `getBoundingClientRect` from scroll/resize hot path. Datacore currently has no equivalent cache. Datacore doesn't support grouped masonry yet — grouped masonry support is the actual prerequisite, not virtual scrolling. `getBoundingClientRect` in resize paths matters independent of virtual scrolling. | 2 | 2 |
-| Card height change detection | Evaluate | Bases has a single `cardResizeObserver` (RAF-debounced) watching all mounted cards — catches CSS-only height changes (cover ratio, text preview lines, title lines) that don't trigger explicit relayout. Datacore has no equivalent; relies on `useEffect` dependency chain. Would catch edge cases where CSS changes affect card height without triggering a Preact re-render. | 2 | 2 |
-| Image-load coalescing | Evaluate | Bases uses explicit RAF debounce via `pendingImageRelayout`. Datacore image loads call `updateLayout()` imperatively (bypasses Preact entirely) — no explicit coalescing. The `isUpdatingLayout` reentrancy guard provides de facto coalescing (concurrent calls queued as one pending update), but each image load still fires its own `updateLayout()` call. | 2 | 1 |

@@ -1,10 +1,10 @@
 /**
  * Shared rendering utilities
- * Pure functions used by both Bases (DOM) and Datacore (JSX) views
+ * Pure functions used by Bases (DOM) views
  */
 
 import { moment } from 'obsidian';
-import type { BasesResolvedSettings } from '../types';
+import type { ResolvedSettings } from '../types';
 import { isSameProperty } from '../utils/property';
 import {
   shouldShowRecentTimeOnly,
@@ -15,8 +15,8 @@ import {
 } from '../utils/style-settings';
 
 /**
- * Interface for date values from Datacore/Bases
- * These external APIs return objects with a date property
+ * Interface for Bases date values
+ * Bases API returns objects with a date property
  */
 interface DateValue {
   date: Date;
@@ -81,7 +81,7 @@ export function formatTimestamp(
  */
 export function getTimestampIcon(
   propertyName: string,
-  settings: BasesResolvedSettings
+  settings: ResolvedSettings
 ): 'calendar' | 'clock' {
   if (
     propertyName === 'file.ctime' ||
@@ -102,7 +102,7 @@ export function getTimestampIcon(
  */
 export function isTimestampProperty(
   propertyName: string,
-  settings: BasesResolvedSettings
+  settings: ResolvedSettings
 ): boolean {
   if (
     propertyName === 'file.mtime' ||
@@ -135,64 +135,15 @@ export function isBasesDateValue(value: unknown): value is DateValue {
 }
 
 /**
- * Luxon DateTime interface (subset used by Datacore)
- * @see https://moment.github.io/luxon/api-docs/index.html#datetime
- */
-interface LuxonDateTime {
-  toMillis(): number;
-  hour: number;
-  minute: number;
-  second: number;
-  millisecond: number;
-}
-
-/**
- * Check if a value is a Luxon DateTime (Datacore format)
- */
-export function isLuxonDateTime(value: unknown): value is LuxonDateTime {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    'toMillis' in value &&
-    typeof (value as LuxonDateTime).toMillis === 'function' &&
-    'hour' in value &&
-    typeof (value as LuxonDateTime).hour === 'number'
-  );
-}
-
-/**
- * Check if a value is a valid date value (works for both Bases and Datacore)
- * @deprecated Use isBasesDateValue or isLuxonDateTime directly
- */
-export function isDateValue(value: unknown): value is DateValue {
-  return isBasesDateValue(value);
-}
-
-/**
- * Extract timestamp from date value (works for both Bases and Datacore)
+ * Extract timestamp from Bases date value
  */
 export function extractTimestamp(
   value: unknown
 ): { timestamp: number; isDateOnly: boolean } | null {
-  // Bases format: {date: Date, time: boolean}
   if (isBasesDateValue(value)) {
     return {
       timestamp: value.date.getTime(),
       isDateOnly: value.time === false,
-    };
-  }
-
-  // Datacore format: Luxon DateTime
-  // @see https://moment.github.io/luxon/api-docs/index.html#datetime
-  if (isLuxonDateTime(value)) {
-    const isDateOnly =
-      value.hour === 0 &&
-      value.minute === 0 &&
-      value.second === 0 &&
-      value.millisecond === 0;
-    return {
-      timestamp: value.toMillis(),
-      isDateOnly,
     };
   }
 
