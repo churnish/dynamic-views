@@ -68,9 +68,19 @@ body.theme-dark.dynamic-views-view-background-solarized {
   --dynamic-views-view-bg-color: #002b36;
 }
 
-/* Single consumption rule — only fires when a non-default preset is active */
-body[class*='dynamic-views-view-background-']:not(
-    .dynamic-views-view-background-default
+/* Single consumption rule — :is() enumeration instead of [class*=] to avoid
+   substring invalidation on every body class change. :not(.default) skips the
+   "Default" option which means transparent (no background override). */
+body:is(
+    .dynamic-views-view-background-flexoki,
+    .dynamic-views-view-background-ayu,
+    .dynamic-views-view-background-catppuccin,
+    .dynamic-views-view-background-everforest,
+    .dynamic-views-view-background-gruvbox,
+    .dynamic-views-view-background-nord,
+    .dynamic-views-view-background-rose-pine,
+    .dynamic-views-view-background-solarized,
+    .dynamic-views-view-background-custom
   )
   .workspace-leaf-content[data-type='bases']
   .bases-view:is(
@@ -78,6 +88,12 @@ body[class*='dynamic-views-view-background-']:not(
     [data-view-type='dynamic-views-masonry']
   ) {
   background-color: var(--dynamic-views-view-bg-color);
+}
+
+/* Reset preset variable on non-standalone containers so group heading ::before
+   falls back to --dynamic-views-background-primary in embedded views. */
+.workspace-leaf-content:not([data-type='bases']) .dynamic-views {
+  --dynamic-views-view-bg-color: initial;
 }
 
 /* Sticky group headers (default: on) — collapsed headers should not stick.

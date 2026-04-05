@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-31
+updated: 2026-04-05
 ---
 # Style Settings fallback selectors
 
@@ -210,6 +210,30 @@ The body-level variable assignments (`hover-color-vars` mixin in [_property-colo
 
 **When to use**: Color preset consolidation where N body-class variants all set the same CSS variable, consumed by one rule. NOT needed when the consumption rule's other selectors already require a Style Settings class (no JS-managed classes in the chain).
 
+### Prefer `:is()` enumeration over `[class*=]`
+
+`[class*='dynamic-views-{prefix}-']` is a substring attribute selector — when *any* class on the element changes, the browser must re-evaluate every rule using `[class*=]` on that element. On `body`, where Obsidian, themes, and Style Settings frequently toggle classes, this triggers unnecessary style invalidation.
+
+When all preset classes are known at authorship time (they usually are), replace the `[class*=]` gate with an explicit `:is()` enumeration:
+
+```scss
+/* ❌ Substring — invalidates on every body class change */
+body[class*='dynamic-views-view-background-']:not(
+    .dynamic-views-view-background-default
+  ) ...
+
+/* ✅ Enumeration — invalidates only when a listed class changes */
+body:is(
+    .dynamic-views-view-background-flexoki,
+    .dynamic-views-view-background-ayu,
+    ...
+  ) ...
+```
+
+`:is()` with class selectors builds a proper invalidation set — the browser only re-evaluates when one of the listed classes specifically changes. The trade-off is that adding a new preset requires updating both the definition rules and the consumption `:is()` list.
+
+The `[class*=]` gate remains appropriate when presets are open-ended (user-extensible) or when the consumption rule is on a non-`body` element with infrequent class mutations.
+
 ## Avoid re-renders from Style Settings changes
 
 Re-renders from Style Settings changes are disruptive — they reset scroll position. Only add settings to `getStyleSettingsHash()` when they genuinely affect rendered card content (text, icons, layout). Do NOT add settings that only affect:
@@ -234,6 +258,7 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Fixed cover height       | Grid (slider)  | [_grid-view.scss](../../styles/_grid-view.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
 | Fixed poster height      | Grid (slider)  | [_poster.scss](../../styles/card/_poster.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
+| View background           | Default        | No CSS fallback needed — natural baseline (transparent, no rule fires) |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
 

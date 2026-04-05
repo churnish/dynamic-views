@@ -10,43 +10,6 @@
   --bases-embed-padding: var(--size-4-2);
 }
 
-/* Scroll fade gradient at bottom of scrollable results */
-.dynamic-views .results-container,
-.dynamic-views-bases-container {
-  position: relative;
-}
-
-.dynamic-views .results-container::after,
-.dynamic-views-bases-container::after {
-  content: '';
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  display: block;
-  /* Fade height — tall enough to span ~3 card rows of scroll proximity */
-  height: 80px;
-  margin-top: -80px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    var(--dynamic-views-background-primary)
-  );
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--dynamic-views-anim-duration-fast);
-}
-
-.dynamic-views .results-container.with-fade::after,
-.dynamic-views-bases-container.with-fade::after {
-  opacity: 1;
-}
-
-/* Style Settings: disable fade gradient */
-body.dynamic-views-hide-fade-gradient .dynamic-views .results-container::after,
-body.dynamic-views-hide-fade-gradient .dynamic-views-bases-container::after {
-  display: none;
-}
-
 /* Width system: JS applies inline styles per-query for wide/max modes */
 
 .dynamic-views {
