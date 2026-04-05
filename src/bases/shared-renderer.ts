@@ -740,14 +740,10 @@ export class SharedCardRenderer {
       cardEl.tabIndex =
         keyboardNav.index === keyboardNav.focusableCardIndex ? 0 : -1;
 
-      // Create scope for Cmd/Ctrl+Enter and Cmd/Ctrl+Space handling
+      // Create scope for Cmd/Ctrl+Enter handling
       // Pass app.scope as parent so unhandled keys bubble up to Obsidian
       cardScope = new Scope(this.app.scope);
       cardScope.register(['Mod'], 'Enter', () => {
-        void this.app.workspace.openLinkText(card.path, '', 'tab');
-        return false;
-      });
-      cardScope.register(['Mod'], ' ', () => {
         void this.app.workspace.openLinkText(card.path, '', 'tab');
         return false;
       });
