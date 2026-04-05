@@ -1,6 +1,6 @@
 # Dynamic Views
 
-Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases) and [Datacore](https://obsidian.md/plugins?id=datacore).
+Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
 <img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
 
