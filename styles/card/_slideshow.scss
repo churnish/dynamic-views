@@ -124,8 +124,8 @@
 /* Show arrows on hover (desktop only - mobile uses swipe gestures) */
 @media (any-hover: hover) {
   .dynamic-views {
-    .card.hover-intent-active .card-cover-slideshow .slideshow-nav-left,
-    .card.hover-intent-active .card-cover-slideshow .slideshow-nav-right {
+    .card.interact .card-cover-slideshow .slideshow-nav-left,
+    .card.interact .card-cover-slideshow .slideshow-nav-right {
       opacity: 1;
     }
 
@@ -168,14 +168,14 @@
   display: none;
 }
 
-/* Navigation arrows: Show — always visible, indicator hidden */
+/* Navigation arrows: Show — always visible, icon hidden */
 body.dynamic-views-slideshow-arrows-show .dynamic-views {
   .slideshow-nav-left,
   .slideshow-nav-right {
     opacity: 1;
   }
 
-  .slideshow-indicator {
+  .slideshow-icon {
     display: none;
   }
 }
@@ -198,7 +198,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 @media (any-hover: hover) {
   body.dynamic-views-slideshow-disable-looping
     .dynamic-views
-    .card.hover-intent-active
+    .card.interact
     .card-cover-slideshow {
     &.slideshow-at-first .slideshow-nav-left,
     &.slideshow-at-last .slideshow-nav-right {
@@ -209,8 +209,8 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 }
 
 .dynamic-views {
-  /* Slideshow indicator */
-  .slideshow-indicator {
+  /* Slideshow icon */
+  .slideshow-icon {
     position: absolute;
     left: max(calc(var(--dynamic-views-card-padding, 8px) - 2px), 4px);
     top: max(calc(var(--dynamic-views-card-padding, 8px) - 1px), 4px);
@@ -231,34 +231,29 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
   }
 }
 
-/* Hide indicator when nav buttons appear on hover */
+/* Hide icon when nav buttons appear on hover */
 @media (any-hover: hover) {
-  .dynamic-views
-    .card.hover-intent-active
-    .card-cover-slideshow
-    .slideshow-indicator {
+  .dynamic-views .card.interact .card-cover-slideshow .slideshow-icon {
     opacity: 0;
   }
 }
 
-/* Hide slideshow indicator when toggle is on */
-body.dynamic-views-hide-slideshow-indicator
-  .dynamic-views
-  .slideshow-indicator {
+/* Hide slideshow icon when toggle is on */
+body.dynamic-views-hide-slideshow-icon .dynamic-views .slideshow-icon {
   display: none;
 }
 
-.theme-light .dynamic-views .slideshow-indicator svg {
+.theme-light .dynamic-views .slideshow-icon svg {
   color: white;
 }
 
-.theme-dark .dynamic-views .slideshow-indicator svg {
+.theme-dark .dynamic-views .slideshow-icon svg {
   color: var(--dynamic-views-color-base-100);
 }
 
 /* Hide slideshow controls when only one valid image remains (broken images discovered at runtime) */
 .dynamic-views .slideshow-single {
-  .slideshow-indicator,
+  .slideshow-icon,
   .slideshow-nav-left,
   .slideshow-nav-right {
     display: none;

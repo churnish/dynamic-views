@@ -157,11 +157,11 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
     containerSpacingCache.set(containerEl, result);
     return result;
   }
-  const isMobile = document.body.classList.contains('is-mobile');
-  const varName = isMobile
-    ? '--dynamic-views-card-spacing-mobile'
+  const isPhone = document.body.classList.contains('is-phone');
+  const varName = isPhone
+    ? '--dynamic-views-card-spacing-phone'
     : '--dynamic-views-card-spacing-desktop';
-  const defaultVal = isMobile ? 6 : 8;
+  const defaultVal = isPhone ? 6 : 8;
   // Container-local override (cssclasses helper classes set the variable on .dynamic-views or .dynamic-views-grid/.dynamic-views-masonry)
   if (containerEl) {
     const value = getComputedStyle(containerEl)
@@ -279,11 +279,11 @@ export function isSlideshowLoopingDisabled(): boolean {
 }
 
 /**
- * Check if slideshow indicator should be shown (default behavior)
- * Returns false when user enables "Hide slideshow indicator"
+ * Check if slideshow icon should be shown (default behavior)
+ * Returns false when user enables "Hide slideshow icon"
  */
-export function isSlideshowIndicatorEnabled(): boolean {
-  return !hasBodyClass('dynamic-views-hide-slideshow-indicator');
+export function isSlideshowIconEnabled(): boolean {
+  return !hasBodyClass('dynamic-views-hide-slideshow-icon');
 }
 
 /**

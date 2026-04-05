@@ -152,10 +152,10 @@ body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   cursor: default !important;
 }
 
-/* Image viewer cursor — requires hover intent (.hover-intent-active) */
+/* Image viewer cursor — requires hover intent (.interact) */
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.hover-intent-active
+  .card.interact
   .card-thumbnail
   img {
   cursor: zoom-in;
@@ -163,7 +163,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.hover-intent-active
+  .card.interact
   .card-thumbnail
   .dynamic-views-image-embed {
   cursor: zoom-in;
@@ -171,7 +171,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-format-cover.hover-intent-active
+  .card.image-format-cover.interact
   .card-cover
   .dynamic-views-image-embed {
   cursor: zoom-in;
@@ -192,32 +192,32 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.hover-intent-active
+  .card.interact
   .dynamic-views-image-embed
   img {
   cursor: zoom-in;
 }
 
 /* Reset zoom cursor when all card images are broken — must match
-   specificity of hover-intent-active zoom-in rules above */
+   specificity of interact zoom-in rules above */
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.no-valid-images.hover-intent-active
+  .card.no-valid-images.interact
   .card-thumbnail
   img,
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.no-valid-images.hover-intent-active
+  .card.no-valid-images.interact
   .card-thumbnail
   .dynamic-views-image-embed,
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.image-format-cover.no-valid-images.hover-intent-active
+  .card.image-format-cover.no-valid-images.interact
   .card-cover
   .dynamic-views-image-embed,
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
-  .card.no-valid-images.hover-intent-active
+  .card.no-valid-images.interact
   .dynamic-views-image-embed
   img,
 body:not(.dynamic-views-image-viewer-disabled)

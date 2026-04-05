@@ -109,7 +109,7 @@ Used by: `imageViewerKeyHandler`, `onSpacebar`, `onEscape`, `onCopy`, `onEnter`,
 
 `closeImageViewer()` handles two post-close restorations:
 
-- **Hover intent**: Restores `.hover-intent-active` on the original card to work around an Electron hit-testing issue where `:hover` and `mouseenter` are unreliable after clone overlay removal. The `restoreHoverIntent` parameter (default `true`) is `false` when a new viewer pre-empts the current one.
+- **Hover intent**: Restores `.interact` on the original card to work around an Electron hit-testing issue where `:hover` and `mouseenter` are unreliable after clone overlay removal. The `restoreHoverIntent` parameter (default `true`) is `false` when a new viewer pre-empts the current one.
 - **Thumbnail scrub resume**: Tracks cursor position via `dataset.viewerX/viewerY` (set by a `mousemove` listener on the overlay during open). On close, dispatches synthetic `mousemove` to resume slideshow scrubbing if cursor is still over a multi-image thumbnail. Uses `requestAnimationFrame` to handle Preact re-render race conditions. Dispatches `mouseleave` if cursor is out of bounds.
 
 ## Key types

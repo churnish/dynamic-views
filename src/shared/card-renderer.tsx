@@ -14,7 +14,7 @@ import {
   shouldHideMissingProperties,
   getListSeparator,
   isSlideshowEnabled,
-  isSlideshowIndicatorEnabled,
+  isSlideshowIconEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
 } from '../utils/style-settings';
@@ -75,7 +75,8 @@ import {
   canPrimaryHover,
   isHoverPointer,
   setupHoverIntent,
-} from './hover';
+  setupTouchPress,
+} from './hover-and-touch';
 import { getTimestampIcon, isTimestampProperty } from './render-utils';
 import {
   createCardDragHandler,
@@ -427,6 +428,9 @@ const cardScrollAbortControllers = new Map<string, AbortController>();
 
 /** Per-element card hover intent state (survives Preact re-renders) */
 const cardHoverIntentActive = new WeakMap<HTMLElement, AbortController>();
+
+/** Per-element touch press state (survives Preact re-renders) */
+const cardTouchPressActive = new WeakMap<HTMLElement, AbortController>();
 
 // Module-level WeakMap to track container cleanup functions (avoids stale closure per render)
 const containerCleanupMap = new WeakMap<HTMLElement, () => void>();
@@ -812,9 +816,9 @@ function CoverSlideshow({
         />
         <img className="slideshow-img slideshow-img-next" src="" alt="" />
       </div>
-      {isSlideshowIndicatorEnabled() && (
+      {isSlideshowIconEnabled() && (
         <div
-          className="slideshow-indicator"
+          className="slideshow-icon"
           ref={(el: HTMLElement | null) => {
             if (el) setIcon(el, 'lucide-copy');
           }}
@@ -2001,14 +2005,14 @@ function Card({
             setupHoverIntent(
               cardEl,
               () => {
-                cardEl.classList.add('hover-intent-active');
+                cardEl.classList.add('interact');
                 if (hoveredCardRef) {
                   (hoveredCardRef as { current: HTMLElement | null }).current =
                     cardEl;
                 }
               },
               () => {
-                cardEl.classList.remove('hover-intent-active');
+                cardEl.classList.remove('interact');
                 if (hoveredCardRef) {
                   (hoveredCardRef as { current: HTMLElement | null }).current =
                     null;
@@ -2040,6 +2044,22 @@ function Card({
               );
             }
           }
+        }
+
+        // Touch press feedback — unconditional (not gated by canHover)
+        if (!cardTouchPressActive.has(cardEl)) {
+          const touchAbort = new AbortController();
+          cardTouchPressActive.set(cardEl, touchAbort);
+          setupTouchPress(
+            cardEl,
+            () => {
+              cardEl.classList.add('interact');
+            },
+            () => {
+              cardEl.classList.remove('interact');
+            },
+            touchAbort.signal
+          );
         }
       }}
       draggable={settings.openFileAction === 'card' || undefined}

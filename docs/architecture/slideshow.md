@@ -8,15 +8,15 @@ updated: 2026-03-26
 
 ## Overview
 
-The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-intent.ts` (mousemove-after-mouseenter activation utility). Both renderers (`src/shared/card-renderer.tsx` for Datacore, `src/bases/shared-renderer.ts` for Bases) wire up the shared slideshow functions and own the visibility reset IntersectionObserver.
+The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-and-touch.ts` (hover and touch interaction utilities). Both renderers (`src/shared/card-renderer.tsx` for Datacore, `src/bases/shared-renderer.ts` for Bases) wire up the shared slideshow functions and own the visibility reset IntersectionObserver.
 
 ## Files
 
 | File                             | Role                                                                  |
 | -------------------------------- | --------------------------------------------------------------------- |
 | `src/shared/slideshow.ts`        | Navigator, gesture detection, animation, preload, external blob cache |
-| `src/shared/hover-intent.ts`     | Hover intent utility (mousemove-after-mouseenter activation)          |
-| `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, indicator, boundary dimming          |
+| `src/shared/hover-and-touch.ts`  | Hover and touch interaction utilities                                 |
+| `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, icon, boundary dimming               |
 
 ## Navigator state
 
@@ -66,7 +66,7 @@ Dual stacked images with z-index layering:
   </div>
   <div class="slideshow-nav-left">...</div>
   <div class="slideshow-nav-right">...</div>
-  <div class="slideshow-indicator">...</div>
+  <div class="slideshow-icon">...</div>
 </div>
 ```
 
@@ -163,7 +163,7 @@ Secondary: JS direction detection as fallback guard (see table below).
 
 Touch events use `capture: true` and call `stopPropagation()` + `stopImmediatePropagation()` on `touchstart` (blocks sidebar swipe detection) and `preventDefault()` + `stopPropagation()` + `stopImmediatePropagation()` on horizontal `touchmove`.
 
-Mobile indicator is hidden during horizontal swipe (`.dynamic-views-indicator-hidden`) and shown again on vertical scroll of the view container (throttled to `SCROLL_THROTTLE_MS`).
+Mobile icon is hidden during horizontal swipe (`.dynamic-views-icon-hidden`) and shown again on vertical scroll of the view container (throttled to `SCROLL_THROTTLE_MS`).
 
 ## Undo window (First-to-Last-to-First)
 
@@ -206,7 +206,7 @@ User rapidly navigates backward past the first image (First-to-Last wrap), then 
 
 ### `slideshow-single` class
 
-When broken images are detected and only 1 valid image remains, `.slideshow-single` is added to the slideshow wrapper. CSS hides indicator and both nav arrows.
+When broken images are detected and only 1 valid image remains, `.slideshow-single` is added to the slideshow wrapper. CSS hides the slideshow icon and both nav arrows.
 
 ## Preload guard
 
@@ -231,10 +231,10 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 ## Hover intent integration
 
-`setupHoverIntent()` in [hover-intent.ts](../../src/shared/hover-intent.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
+`setupHoverIntent()` in [hover-and-touch.ts](../../src/shared/hover-and-touch.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
 
-- **Wheel gesture guard**: On hover-capable devices (`(hover: hover)`), wheel events in `setupSwipeGestures` require `hover-intent-active` on the card before processing. Touch-primary devices bypass the guard (hover intent is never set up there). When the guard blocks an event, all gesture state is reset to prevent stale accumulation.
-- **Arrow visibility**: Gated by `.hover-intent-active` class on the card (set by the shared hover intent system in both renderers)
+- **Wheel gesture guard**: On hover-capable devices (`(hover: hover)`), wheel events in `setupSwipeGestures` require `.interact` on the card before processing. Touch-primary devices bypass the guard (hover intent is never set up there). When the guard blocks an event, all gesture state is reset to prevent stale accumulation.
+- **Arrow visibility**: Gated by `.interact` class on the card (set by the shared hover intent system in both renderers)
 - **Image preload**: Fires on hover intent activation (deduped with `preloadGuard`)
 - **Hover zoom eligibility**: `.hover-zoom-eligible` set on `mouseenter` to the current image, cleared from all images on `mouseleave`, cleared from old image (now `.slideshow-img-next`) after animation completes via the callback returned by `setupHoverZoomEligibility()`
 
@@ -312,7 +312,7 @@ Both backends share the same abort behavior:
 | `WHEEL_RESUME_RATIO`     | 3     | Acceleration ratio for new gesture detection      |
 | `WHEEL_RESUME_DELTA`     | 15    | Absolute acceleration threshold                   |
 | `BLOB_CACHE_LIMIT`       | 150   | Max external blob URL cache entries               |
-| `SCROLL_THROTTLE_MS`     | 100   | Scroll event throttle for indicator restore (ms)  |
+| `SCROLL_THROTTLE_MS`     | 100   | Scroll event throttle for icon restore (ms)       |
 
 ## Invariants
 

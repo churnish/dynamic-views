@@ -38,7 +38,7 @@ vi.mock('../../src/utils/style-settings', () => ({
   shouldHideMissingProperties: vi.fn(),
   getListSeparator: vi.fn(),
   isSlideshowEnabled: vi.fn(),
-  isSlideshowIndicatorEnabled: vi.fn(),
+  isSlideshowIconEnabled: vi.fn(),
   isThumbnailScrubbingDisabled: vi.fn(),
   getSlideshowMaxImages: vi.fn(),
   getCompactBreakpoint: vi.fn(),

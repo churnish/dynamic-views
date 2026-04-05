@@ -23,7 +23,8 @@
   }
 }
 
-/* Backdrop hover zoom (desktop) */
+/* Backdrop hover zoom — transition on desktop only (avoid compositor
+   layer promotion on touch), scale trigger fires for both hover and touch. */
 @media (any-hover: hover) {
   body.dynamic-views-backdrop-hover-zoom
     .dynamic-views
@@ -34,15 +35,15 @@
       transform var(--dynamic-views-anim-duration-fast) ease,
       opacity var(--dynamic-views-anim-duration-fast) ease;
   }
+}
 
-  /* Backdrop: zoom on card hover intent */
-  body.dynamic-views-backdrop-hover-zoom
-    .dynamic-views
-    .card.image-format-backdrop.hover-intent-active
-    .card-backdrop
-    img {
-    transform: scale(1.05);
-  }
+/* Backdrop: zoom on card hover intent */
+body.dynamic-views-backdrop-hover-zoom
+  .dynamic-views
+  .card.image-format-backdrop.interact
+  .card-backdrop
+  img {
+  transform: scale(1.05);
 }
 
 /* Overlay via img filter — eliminates ::after compositing layer that caused

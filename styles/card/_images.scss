@@ -22,11 +22,11 @@
 }
 
 /* Themes can dim images via img:not(:hover) — our img has pointer-events: none,
-   so :hover never fires. Use hover-intent-active instead.
+   so :hover never fires. Use interact instead.
    [data-type] bumps specificity above theme selectors. */
 .workspace-leaf-content[data-type]
   .dynamic-views
-  .card.hover-intent-active:not(.image-format-backdrop, .image-format-poster)
+  .card.interact:not(.image-format-backdrop, .image-format-poster)
   img {
   opacity: 1;
   transition:
@@ -38,7 +38,7 @@
 /* Poster: theme dimming suppressed on hover (poster.scss owns transition timing) */
 .workspace-leaf-content[data-type]
   .dynamic-views
-  .card.image-format-poster.hover-intent-active
+  .card.image-format-poster.interact
   img {
   opacity: 1;
 }

@@ -125,7 +125,7 @@ Both backends must handle Electron popout windows. Full details in `electron-pop
 | [context-menu.ts](../../src/shared/context-menu.ts)       | Right-click menus for cards/links                                                                 |
 | [scroll-gradient.ts](../../src/shared/scroll-gradient.ts)    | Horizontal/vertical gradient masks for scrollable content                                         |
 | [keyboard-nav.ts](../../src/shared/keyboard-nav.ts)       | Arrow key focus management — see [keyboard-nav.md](keyboard-nav.md) for Bases/Datacore divergences (Scope integration, listener counts, popout rebinding) |
-| [hover-intent.ts](../../src/shared/hover-intent.ts)       | Mousemove-after-mouseenter hover intent utility                                                   |
+| [hover-and-touch.ts](../../src/shared/hover-and-touch.ts)       | Hover and touch interaction utilities                                                   |
 | [property-measure.ts](../../src/shared/property-measure.ts)   | Property field width measurement + scroll gradients                                               |
 | [property-helpers.ts](../../src/shared/property-helpers.ts)   | Tag/file/formula type checks, pair computation                                                    |
 | [render-utils.ts](../../src/shared/render-utils.ts)       | Date/timestamp rendering — accepts both settings types                                            |

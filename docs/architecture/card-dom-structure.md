@@ -27,7 +27,7 @@ div.card                                    ← data-path="{path}"
 │ [structural: has-card-content, has-header, has-properties-bottom, has-poster, has-backdrop,
 │              has-cover, has-cover-placeholder, has-cover-wrapper-placeholder]
 │ [state: clickable-card, compact-mode, thumbnail-stack]
-│ [transient: hover-intent-active, poster-hover-active, poster-revealed]
+│ [transient: interact, poster-hover-active, poster-revealed]
 │
 ├─ div.card-cover-wrapper                   ← cover format, position=top|left (before .card-content)
 │   ├─ div.card-cover                       ← single image
@@ -36,7 +36,7 @@ div.card                                    ← data-path="{path}"
 │   │   ├─ div.dynamic-views-image-embed
 │   │   │   ├─ img.slideshow-img.slideshow-img-current
 │   │   │   └─ img.slideshow-img.slideshow-img-next
-│   │   ├─ div.slideshow-indicator          ← Lucide icon
+│   │   ├─ div.slideshow-icon               ← Lucide icon
 │   │   ├─ div.slideshow-nav-left           ← setIcon('lucide-chevron-left')
 │   │   └─ div.slideshow-nav-right          ← setIcon('lucide-chevron-right')
 │   └─ div.card-cover-placeholder           ← no image fallback

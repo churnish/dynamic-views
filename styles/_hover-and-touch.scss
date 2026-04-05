@@ -1,0 +1,201 @@
+/* Title hover: open-on-title → hover title link.
+   Fallback chain: explicit title-hover-color → derived from title-color preset. */
+body.dynamic-views-open-on-title:not(
+    .dynamic-views-title-hover-color-no-change
+  ):is(
+    [class*='dynamic-views-title-color-'],
+    [class*='dynamic-views-title-hover-color-']
+  )
+  .dynamic-views
+  .card.interact
+  .card-title
+  a:is(:hover, :active) {
+  color: var(
+    --dynamic-views-title-hover-color-value,
+    var(--dynamic-views-title-color-hover-color)
+  );
+}
+
+/* Title hover: open-on-card → hover card changes title.
+   Explicit title-hover-color only — does NOT derive from title-color. */
+body.dynamic-views-open-on-card:not(
+    .dynamic-views-title-hover-color-no-change
+  )[class*='dynamic-views-title-hover-color-']
+  .dynamic-views
+  .card.interact
+  .card-title {
+  color: var(--dynamic-views-title-hover-color-value);
+}
+
+/* Subtitle hover — exclude real links which keep default hover */
+body[class*='dynamic-views-subtitle-color-']
+  .dynamic-views
+  .card.interact
+  .card-subtitle
+  :is(
+    a:not(.internal-link, .external-link),
+    .folder-segment,
+    .filename-segment
+  ):is(:hover, :active) {
+  color: var(--dynamic-views-subtitle-color-hover-color);
+}
+
+/* Property hover — with names */
+body[class*='dynamic-views-property-color-with-names-']
+  .dynamic-views
+  .card.interact
+  .property:is(.has-name, .has-name-inline)
+  .property-content
+  :is(
+    a:not(.tag):not(.internal-link):not(.external-link),
+    .folder-segment,
+    .filename-segment
+  ):is(:hover, :active) {
+  color: var(--dynamic-views-property-with-name-color-hover-color);
+}
+
+/* Property hover — without names */
+body[class*='dynamic-views-property-color-without-names-']
+  .dynamic-views
+  .card.interact
+  .property:not(.has-name, .has-name-inline)
+  .property-content
+  :is(
+    a:not(.tag):not(.internal-link):not(.external-link),
+    .folder-segment,
+    .filename-segment
+  ):is(:hover, :active) {
+  color: var(--dynamic-views-property-no-name-color-hover-color);
+}
+
+/* Poster hover mode: apply title hover color on :hover (not hover-intent) so
+   the color is correct from the start of the 300ms content fade-in.
+   hover-intent requires mouseenter + mousemove, but CSS :hover fires on
+   mouseenter alone — the gap causes a flash of normal color.
+   All presets resolve to --dynamic-views-title-hover-color-value (see _variables.scss). */
+body.dynamic-views-open-on-card:not(
+    .dynamic-views-title-hover-color-no-change
+  )[class*='dynamic-views-title-hover-color-']
+  .dynamic-views
+  .card.image-format-poster.has-poster
+  .card-title {
+  /* Sync color transition with content opacity fade (300ms) so the
+     hover→normal color shift is masked by the fade-out on mouse-leave */
+  transition: color var(--dynamic-views-anim-duration-moderate);
+}
+body.dynamic-views-open-on-card:not(
+    .dynamic-views-title-hover-color-no-change
+  )[class*='dynamic-views-title-hover-color-']
+  .dynamic-views
+  .card.image-format-poster.has-poster:is(:hover, .interact)
+  .card-title {
+  color: var(--dynamic-views-title-hover-color-value);
+}
+
+/* Card background on hover options */
+/* Primary (default) */
+body:not([class*='dynamic-views-card-background-hover-'])
+  .dynamic-views
+  .card.interact {
+  background-color: var(--dynamic-views-background-primary);
+}
+
+body.dynamic-views-card-background-hover-tinted .dynamic-views .card.interact {
+  background-color: var(--dynamic-views-background-primary-alt);
+}
+
+body.dynamic-views-card-background-hover-primary .dynamic-views .card.interact {
+  background-color: var(--dynamic-views-background-primary);
+}
+
+body.dynamic-views-card-background-hover-custom .dynamic-views .card.interact {
+  background-color: var(
+    --dynamic-views-card-background-color-hover-custom,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+
+/* Card hover effects — individual transform properties compose when both enabled.
+   Enlarge scoped to Bases files only (embed overflow: hidden clips scaled card).
+   z-index 21: above sticky group headings (20) so lifted/enlarged cards paint over them. */
+body.dynamic-views-card-hover-enlarge
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card.interact {
+  scale: var(--hover-scale-x, 1.02) var(--hover-scale-y, 1.02);
+  z-index: 21;
+}
+
+body:not(.dynamic-views-card-hover-disable-elevate)
+  .workspace-leaf-content[data-type='bases']
+  .dynamic-views
+  .card.interact {
+  translate: 0 -2px;
+  z-index: 21;
+}
+
+/* Lift card container above sticky group headings when a card is hovered.
+   Masonry: contain: layout on .masonry-container traps card z-index.
+   Grid: defensive — prevents overlap clipping with small card spacing. */
+body:is(
+    .dynamic-views-card-hover-enlarge,
+    :not(.dynamic-views-card-hover-disable-elevate)
+  )
+  .workspace-leaf-content[data-type='bases']
+  :is(.dynamic-views-masonry, .dynamic-views-grid)
+  :is(.masonry-container, .bases-cards-group).has-hover-card {
+  z-index: 21;
+}
+
+/* Gate pointer cursor behind hover intent on desktop */
+@media (any-hover: hover) {
+  .dynamic-views .card:not(.interact) {
+    &.clickable-card {
+      cursor: default;
+    }
+
+    .card-title a {
+      cursor: default;
+    }
+
+    .property a {
+      cursor: default;
+    }
+
+    .folder-segment,
+    .filename-segment {
+      cursor: default;
+    }
+  }
+
+  /* Tags: higher specificity needed (default rule uses body:not() selectors) */
+  .dynamic-views
+    .card:not(.interact)
+    :is(.card-properties, .card-subtitle)
+    .tag {
+    cursor: default;
+  }
+
+  /* Poster cards: higher specificity needed (default rule uses body class selector) */
+  body.dynamic-views-open-on-card
+    .dynamic-views
+    .card:not(.interact).image-format-poster.has-poster {
+    cursor: default;
+  }
+
+  /* Text cursor: higher specificity needed (default rule uses body.dynamic-views-open-on-title) */
+  body.dynamic-views-open-on-title .dynamic-views .card:not(.interact) {
+    .card-text-preview,
+    .card-title,
+    .card-subtitle {
+      cursor: default;
+    }
+  }
+}
+
+.dynamic-views {
+  /* Hide empty fields */
+  .property:empty {
+    display: none;
+  }
+}

@@ -123,13 +123,13 @@ Called on: unhover (desktop), untap (mobile), dismiss-other (revealing card B di
 ### Reveal (card not yet revealed)
 
 1. `preventDefault()` + `stopPropagation()`
-2. Dismiss any previously revealed card in the same `.dynamic-views` container (remove `poster-revealed` + `hover-intent-active`, call `resetPosterScroll`)
-3. Add `poster-revealed` + `hover-intent-active` to the clicked card
+2. Dismiss any previously revealed card in the same `.dynamic-views` container (remove `poster-revealed` + `interact`, call `resetPosterScroll`)
+3. Add `poster-revealed` + `interact` to the clicked card
 
 ### Dismiss (card already revealed, non-interactive area clicked)
 
 1. `stopPropagation()` (no `preventDefault`)
-2. Remove `poster-revealed` + `hover-intent-active`
+2. Remove `poster-revealed` + `interact`
 3. Call `resetPosterScroll`
 
 ### Passthrough (returns `false`)
@@ -149,7 +149,7 @@ Both backends register two `setupHoverIntent` calls on the same card element:
 
 Both share the same `AbortController` signal — they cancel together on card unmount. Each has an independent `hasMoved` closure variable.
 
-## `hover-intent-active` class lifecycle
+## `.interact` class lifecycle
 
 This class gates ~60 CSS rules (hover colors, cursors, zoom, slideshow nav). It must be managed on ALL poster state transitions:
 
@@ -159,6 +159,7 @@ This class gates ~60 CSS rules (hover colors, cursors, zoom, slideshow nav). It 
 | Tap dismiss | Remove from dismissed card |
 | Dismiss-other (reveal card B) | Remove from card A |
 | Hover activate | *(managed by card-level setupHoverIntent, not poster-specific)* |
+| Touch press | *(managed by setupTouchPress, not poster-specific)* |
 
 Leaking it on dismissed cards causes stale hover effects, particularly visible on iPad with pointer input.
 
@@ -168,6 +169,6 @@ Leaking it on dismissed cards causes stale hover effects, particularly visible o
 2. `posterInteractToReveal` is excluded from `CSS_ONLY_SETTINGS_KEYS` — toggling triggers a full re-render.
 3. `posterDisplayMode` IS in `CSS_ONLY_SETTINGS_KEYS` — changes are instant CSS class swaps with deferred re-clip.
 4. `transitionend` listeners in `resetPosterScroll` use manual removal, not `{ once: true }`.
-5. `hover-intent-active` must be removed on ALL dismiss paths.
+5. `.interact` must be removed on ALL dismiss paths.
 6. Batch reads (rects + lineHeights) happen before the write loop — no read-write interleaving within a single card.
 7. Display mode re-clip uses a `null`-guarded tri-state to skip the first call.

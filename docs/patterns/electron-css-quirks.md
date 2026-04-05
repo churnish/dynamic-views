@@ -98,7 +98,7 @@ This is a longstanding Chromium behavior, not Electron-specific.
 
 ### Mitigation
 
-Gate visible hover effects behind a JS-managed class rather than pure `:hover`. Dynamic Views uses `hover-intent-active` (set by [hover-intent.ts](../../src/shared/hover-intent.ts) on mousemove-after-mouseenter, removed on mouseleave/dragend). CSS hover styles are scoped to `.hover-intent-active:hover`, so the stuck `:hover` has no visual effect because the class is removed in `dragend`.
+Gate visible hover effects behind a JS-managed class rather than pure `:hover`. Dynamic Views uses `.interact` (set by [hover-and-touch.ts](../../src/shared/hover-and-touch.ts) on mousemove-after-mouseenter, removed on mouseleave/dragend). Card-level CSS hover styles use `.interact` alone (class is the gate), so the stuck `:hover` has no visual effect because the class is removed in `dragend`.
 
 ```scss
 // Wrong: visible artifact from stuck :hover
@@ -107,15 +107,15 @@ Gate visible hover effects behind a JS-managed class rather than pure `:hover`. 
 }
 
 // Right: class is removed in dragend, so stuck :hover is invisible
-.card.hover-intent-active:hover {
+.card.interact {
   background: var(--hover-bg);
 }
 ```
 
 ### Files
 
-- [src/shared/hover-intent.ts](../../src/shared/hover-intent.ts) — `hover-intent-active` class management
-- [styles/_hover-states.scss](../../styles/_hover-states.scss) — All card hover styles gated by `.hover-intent-active:hover`
+- [src/shared/hover-and-touch.ts](../../src/shared/hover-and-touch.ts) — `.interact` class management
+- [styles/_hover-and-touch.scss](../../styles/_hover-and-touch.scss) — Card hover/touch effects + cursor gating
 
 ## `overflow-clip-margin` ignored with per-axis `overflow-y: clip`
 

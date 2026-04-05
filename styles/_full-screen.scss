@@ -163,7 +163,7 @@
 // Z-index stack (full-screen active):
 //   10  ungrouped ::before scrim (below headings)
 //   20  sticky group headings (_grid-masonry-shared.scss)
-//   21  hovered card enlarge/elevate + masonry has-hover-card (_hover-states.scss)
+//   21  hovered card enlarge/elevate + masonry has-hover-card (_hover-and-touch.scss)
 //   25  grouped ::before scrim (above headings, absorbs taps)
 //   30  header during show animation (full-screen.ts applyShowInlines + showBarsUI)
 //

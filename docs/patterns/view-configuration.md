@@ -166,7 +166,7 @@ The `cssclasses` setting adds classes to the `.dynamic-views` container (Bases) 
 ```css
 .gap-16 {
   --dynamic-views-card-spacing-desktop: 16px;
-  --dynamic-views-card-spacing-mobile: 16px;
+  --dynamic-views-card-spacing-phone: 16px;
 }
 ```
 

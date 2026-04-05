@@ -4,8 +4,10 @@ import {
   canHover,
   canPrimaryHover,
   isHoverPointer,
+  isTouchPointer,
   setupHoverIntent,
-} from '../../src/shared/hover';
+  setupTouchPress,
+} from '../../src/shared/hover-and-touch';
 
 /**
  * Dispatches a PointerEvent of the given type on the element.
@@ -245,5 +247,121 @@ describe('canPrimaryHover', () => {
     } as any);
     canPrimaryHover(el);
     expect(mockWin.matchMedia).toHaveBeenCalledWith('(hover: hover)');
+  });
+});
+
+describe('isTouchPointer', () => {
+  it('should return true for touch', () => {
+    expect(
+      isTouchPointer(new PointerEvent('pointerdown', { pointerType: 'touch' }))
+    ).toBe(true);
+  });
+
+  it('should return true for pen contact (pressure > 0)', () => {
+    const e = new PointerEvent('pointerdown', { pointerType: 'pen' });
+    Object.defineProperty(e, 'pressure', { value: 0.5 });
+    expect(isTouchPointer(e)).toBe(true);
+  });
+
+  it('should return false for pen hover (pressure 0)', () => {
+    expect(
+      isTouchPointer(new PointerEvent('pointerdown', { pointerType: 'pen' }))
+    ).toBe(false);
+  });
+
+  it('should return false for mouse', () => {
+    expect(
+      isTouchPointer(new PointerEvent('pointerdown', { pointerType: 'mouse' }))
+    ).toBe(false);
+  });
+});
+
+describe('setupTouchPress', () => {
+  let el: HTMLElement;
+  let onActivate: ReturnType<typeof vi.fn>;
+  let onDeactivate: ReturnType<typeof vi.fn>;
+  let controller: AbortController;
+
+  beforeEach(() => {
+    el = document.createElement('div');
+    onActivate = vi.fn();
+    onDeactivate = vi.fn();
+    controller = new AbortController();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    controller.abort();
+    vi.useRealTimers();
+  });
+
+  it('should activate on touch pointerdown', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    );
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  it('should not activate on mouse pointerdown', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' })
+    );
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('should activate on pen contact pointerdown', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    const e = new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerType: 'pen',
+    });
+    Object.defineProperty(e, 'pressure', { value: 0.5 });
+    el.dispatchEvent(e);
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  it('should deactivate on pointerup', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    );
+    vi.advanceTimersByTime(200);
+    el.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' })
+    );
+    expect(onDeactivate).toHaveBeenCalledOnce();
+  });
+
+  it('should deactivate on pointercancel', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    );
+    vi.advanceTimersByTime(200);
+    el.dispatchEvent(
+      new PointerEvent('pointercancel', {
+        bubbles: true,
+        pointerType: 'touch',
+      })
+    );
+    expect(onDeactivate).toHaveBeenCalledOnce();
+  });
+
+  it('should enforce minimum 100ms visible duration', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    el.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    );
+    // Immediate pointerup
+    el.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' })
+    );
+    // Not yet deactivated
+    expect(onDeactivate).not.toHaveBeenCalled();
+    // After 100ms
+    vi.advanceTimersByTime(100);
+    expect(onDeactivate).toHaveBeenCalledOnce();
   });
 });

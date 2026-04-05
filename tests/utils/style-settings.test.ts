@@ -148,8 +148,8 @@ describe('style-settings', () => {
       expect(getCardSpacing()).toBe(8);
     });
 
-    it('should return default value of 6 on mobile', () => {
-      mockClassList.add('is-mobile');
+    it('should return default value of 6 on phone', () => {
+      mockClassList.add('is-phone');
       expect(getCardSpacing()).toBe(6);
     });
 
@@ -162,11 +162,11 @@ describe('style-settings', () => {
       expect(getCardSpacing()).toBe(16);
     });
 
-    it('should return custom mobile value from CSS variable', () => {
-      mockClassList.add('is-mobile');
+    it('should return custom phone value from CSS variable', () => {
+      mockClassList.add('is-phone');
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
-          name === '--dynamic-views-card-spacing-mobile' ? '10px' : '',
+          name === '--dynamic-views-card-spacing-phone' ? '10px' : '',
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing()).toBe(10);

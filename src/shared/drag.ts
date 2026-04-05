@@ -5,7 +5,7 @@
 
 import type { App } from 'obsidian';
 
-const HOVER_CLASSES = ['hover-intent-active', 'poster-hover-active'] as const;
+const HOVER_CLASSES = ['interact', 'poster-hover-active'] as const;
 
 /**
  * Marker MIME type set on DataTransfer during plugin-initiated drags.
@@ -166,7 +166,7 @@ export function createUrlButtonDragHandlers(
       body.addClass('dynamic-views-dragging');
       const card = iconEl.closest('.card');
       // Remove non-poster hover classes synchronously
-      card?.classList.remove('hover-intent-active');
+      card?.classList.remove('interact');
       // Defer poster-hover-active removal and icon pointer-events —
       // synchronous removal sets pointer-events: none on .card-content,
       // aborting the drag. Deferred runs after drag system takes over.

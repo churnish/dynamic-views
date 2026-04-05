@@ -42,7 +42,7 @@ dynamic-views/
 │   │   ├── context-menu.ts           # Right-click menus for cards/links
 │   │   ├── data-transform.ts         # Normalizes Datacore/Bases data -> CardData
 │   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL icon)
-│   │   ├── hover-intent.ts           # Shared hover intent (mousemove-after-mouseenter) utility
+│   │   ├── hover-and-touch.ts         # Shared hover and touch interaction utilities
 │   │   ├── icon-alignment.ts         # Timestamp icon optical vertical alignment (live DOM measurement + boost ratio)
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Panzoom image viewer
@@ -107,7 +107,7 @@ dynamic-views/
 │   ├── _focus.scss                   # Focus rings, focus-visible
 │   ├── _grid-masonry-shared.scss     # Shared card view layout: groups, sticky headers, card foundation, content-visibility
 │   ├── _grid-view.scss               # Grid: CSS Grid columns, subgrid, grid spacing
-│   ├── _hover-states.scss            # Hover color presets, cursor gating
+│   ├── _hover-and-touch.scss          # Hover and touch visual feedback, cursor gating
 │   ├── _image-viewer.scss            # Image viewer overlay, panzoom, cursor rules
 │   ├── _masonry-view.scss            # Masonry: absolute positioning, container rules, transitions
 │   ├── _plugin-settings.scss         # Plugin settings tab styling
@@ -141,7 +141,7 @@ dynamic-views/
 │   │   ├── content-loader.test.ts
 │   │   ├── content-visibility.test.ts
 │   │   ├── data-transform.test.ts
-│   │   ├── hover-intent.test.ts
+│   │   ├── hover-and-touch.test.ts
 │   │   ├── image-loader.test.ts
 │   │   ├── poster.test.ts
 │   │   ├── property-helpers.test.ts

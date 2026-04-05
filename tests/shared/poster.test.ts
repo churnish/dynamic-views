@@ -98,14 +98,14 @@ afterEach(() => {
 
 describe('handlePosterTapReveal', () => {
   describe('reveal', () => {
-    it('adds poster-revealed + hover-intent-active', () => {
+    it('adds poster-revealed + interact', () => {
       const card = makeCardWithPoster(false);
       const e = makeMouseEvent(card);
 
       handlePosterTapReveal(e, card, 'default');
 
       expect(card.classList.contains('poster-revealed')).toBe(true);
-      expect(card.classList.contains('hover-intent-active')).toBe(true);
+      expect(card.classList.contains('interact')).toBe(true);
     });
 
     it('calls preventDefault + stopPropagation', () => {
@@ -120,7 +120,7 @@ describe('handlePosterTapReveal', () => {
 
     it('dismisses previously revealed card in same view', () => {
       const card1 = makeCardWithPoster(true);
-      card1.classList.add('hover-intent-active');
+      card1.classList.add('interact');
       const container = card1.parentElement!;
 
       // Second card in the same container
@@ -136,7 +136,7 @@ describe('handlePosterTapReveal', () => {
 
       // card1 should be dismissed
       expect(card1.classList.contains('poster-revealed')).toBe(false);
-      expect(card1.classList.contains('hover-intent-active')).toBe(false);
+      expect(card1.classList.contains('interact')).toBe(false);
       // card2 should be revealed
       expect(card2.classList.contains('poster-revealed')).toBe(true);
     });
@@ -150,9 +150,9 @@ describe('handlePosterTapReveal', () => {
   });
 
   describe('dismiss', () => {
-    it('removes poster-revealed + hover-intent-active when clicking non-interactive area', () => {
+    it('removes poster-revealed + interact when clicking non-interactive area', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const e = makeMouseEvent(card);
       vi.spyOn(window, 'getSelection').mockReturnValue({
         toString: () => '',
@@ -161,12 +161,12 @@ describe('handlePosterTapReveal', () => {
       handlePosterTapReveal(e, card, 'default');
 
       expect(card.classList.contains('poster-revealed')).toBe(false);
-      expect(card.classList.contains('hover-intent-active')).toBe(false);
+      expect(card.classList.contains('interact')).toBe(false);
     });
 
     it('calls stopPropagation but not preventDefault', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const e = makeMouseEvent(card);
       vi.spyOn(window, 'getSelection').mockReturnValue({
         toString: () => '',
@@ -180,7 +180,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns true', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const e = makeMouseEvent(card);
       vi.spyOn(window, 'getSelection').mockReturnValue({
         toString: () => '',
@@ -200,7 +200,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns false when clicking interactive element (a)', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const link = document.createElement('a');
       card.appendChild(link);
       const e = makeMouseEvent(link);
@@ -210,7 +210,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns false when clicking interactive element (button)', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const button = document.createElement('button');
       card.appendChild(button);
       const e = makeMouseEvent(button);
@@ -220,7 +220,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns false when clicking .tag element', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const tag = document.createElement('span');
       tag.className = 'tag';
       card.appendChild(tag);
@@ -231,7 +231,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns false when clicking .clickable-icon element', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const icon = document.createElement('span');
       icon.className = 'clickable-icon';
       card.appendChild(icon);
@@ -242,7 +242,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns false when text is selected', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const e = makeMouseEvent(card);
       vi.spyOn(window, 'getSelection').mockReturnValue({
         toString: () => 'selected text',
@@ -253,7 +253,7 @@ describe('handlePosterTapReveal', () => {
 
     it('returns false on text-target with openFileAction title', () => {
       const card = makeCardWithPoster(true);
-      card.classList.add('hover-intent-active');
+      card.classList.add('interact');
       const subtitle = document.createElement('div');
       subtitle.className = 'card-subtitle';
       card.appendChild(subtitle);

@@ -11,7 +11,7 @@ import {
 } from './constants';
 import { isExternalUrl } from '../utils/image';
 import { isSlideshowLoopingDisabled } from '../utils/style-settings';
-import { canHover, setupHoverIntent } from './hover';
+import { canHover, setupHoverIntent } from './hover-and-touch';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -641,10 +641,7 @@ export function setupSwipeGestures(
   coverEl.addEventListener(
     'wheel',
     (e) => {
-      if (
-        requiresHoverIntent &&
-        !cardEl.classList.contains('hover-intent-active')
-      ) {
+      if (requiresHoverIntent && !cardEl.classList.contains('interact')) {
         // Reset gesture state so the next accepted event starts clean
         accumulatedDeltaX = 0;
         navigatedThisGesture = false;
@@ -739,10 +736,8 @@ export function setupSwipeGestures(
   let touchNavigated = false;
   let isHorizontalSwipe = false;
 
-  // Get indicator element for hiding during swipe (mobile only)
-  const indicator = coverEl.querySelector(
-    '.slideshow-indicator'
-  ) as HTMLElement;
+  // Get icon element for hiding during swipe (mobile only)
+  const icon = coverEl.querySelector('.slideshow-icon') as HTMLElement;
   const isMobile = coverEl.ownerDocument.body.classList.contains('is-mobile');
 
   coverEl.addEventListener(
@@ -776,13 +771,9 @@ export function setupSwipeGestures(
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        // Hide indicator on horizontal swipe (mobile only)
-        if (
-          isMobile &&
-          indicator &&
-          !indicator.hasClass('dynamic-views-indicator-hidden')
-        ) {
-          indicator.addClass('dynamic-views-indicator-hidden');
+        // Hide icon on horizontal swipe (mobile only)
+        if (isMobile && icon && !icon.hasClass('dynamic-views-icon-hidden')) {
+          icon.addClass('dynamic-views-icon-hidden');
         }
 
         // Navigate once threshold is hit
@@ -796,7 +787,7 @@ export function setupSwipeGestures(
     { signal, capture: true }
   );
 
-  // Show indicator again when view is scrolled vertically (mobile only)
+  // Show icon again when view is scrolled vertically (mobile only)
   // Throttle to prevent battery drain from high-frequency scroll events
   if (isMobile) {
     const viewContainer = coverEl.closest('.dynamic-views');
@@ -808,8 +799,7 @@ export function setupSwipeGestures(
           const now = Date.now();
           if (now - lastScrollTime < SCROLL_THROTTLE_MS) return;
           lastScrollTime = now;
-          if (indicator)
-            indicator.removeClass('dynamic-views-indicator-hidden');
+          if (icon) icon.removeClass('dynamic-views-icon-hidden');
         },
         { signal, passive: true }
       );

@@ -1102,9 +1102,9 @@ settings:
                 label: Hide
                 value: dynamic-views-slideshow-arrows-hide
     -
-        id: dynamic-views-hide-slideshow-indicator
+        id: dynamic-views-hide-slideshow-icon
         title: Hide icon
-        description: Hide indicator icon when card has multiple images.
+        description: Hide slideshow icon when card has multiple images.
         type: class-toggle
     -
         id: dynamic-views-slideshow-max-images
@@ -1520,9 +1520,9 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-hide-scrubbing-indicator
+        id: dynamic-views-hide-scrubbing-icon
         title: Hide scrubbing icon
-        description: Do not show indicator icon on thumbnails with multiple images.
+        description: Do not show scrubbing icon on thumbnails with multiple images.
         type: class-toggle
         default: false
     -
@@ -1534,7 +1534,7 @@ settings:
     -
         id: dynamic-views-file-type-indicator
         title: File type indicator
-        description: How file types are indicated on cards.
+        description: How file type is shown next to title.
         type: class-select
         allowEmpty: false
         default: dynamic-views-file-type-none
@@ -1563,13 +1563,13 @@ settings:
     -
         id: dynamic-views-title-font-size
         title: Size
-        description: Font size for card titles (e.g., 1em, 16px, 1.2rem).
+        description: Font size for card title (e.g., 1em, 16px, 1.2rem).
         type: variable-text
         default: ''
     -
         id: dynamic-views-title-color
         title: Color
-        description: Theme color preset for titles.
+        description: Theme color preset for title.
         type: class-select
         allowEmpty: false
         default: dynamic-views-title-color-normal
@@ -1624,7 +1624,7 @@ settings:
     -
         id: dynamic-views-title-hover-color
         title: Color (hover)
-        description: Theme color preset for titles on hover.
+        description: Theme color preset for title on hover.
         type: class-select
         allowEmpty: false
         default: dynamic-views-title-hover-color-no-change
@@ -1682,7 +1682,7 @@ settings:
     -
         id: dynamic-views-title-alignment
         title: Alignment
-        description: Horizontal alignment of card titles.
+        description: Horizontal alignment of card title.
         type: class-select
         allowEmpty: false
         default: dynamic-views-title-align-left
@@ -1724,7 +1724,7 @@ settings:
     -
         id: dynamic-views-card-spacing-desktop
         title: Gap
-        description: Spacing between cards on desktop.
+        description: Spacing between cards on desktop and tablet.
         type: variable-number-slider
         default: 8
         min: 0
@@ -1732,9 +1732,9 @@ settings:
         step: 1
         format: px
     -
-        id: dynamic-views-card-spacing-mobile
+        id: dynamic-views-card-spacing-phone
         title: Gap
-        description: Spacing between cards on mobile.
+        description: Spacing between cards on phone.
         type: variable-number-slider
         default: 6
         min: 0
@@ -1833,7 +1833,7 @@ body:not(.dynamic-views-property-name-color-custom)
   .setting-item[data-id='dynamic-views-property-name-color-custom'],
 body.dynamic-views-slideshow-arrows-show
   .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-slideshow-indicator'],
+  .setting-item[data-id='dynamic-views-hide-slideshow-icon'],
 body.dynamic-views-slideshow-disabled
   .style-settings-container
   .setting-item[data-id='dynamic-views-slideshow-disabled']
@@ -1856,30 +1856,21 @@ body:not(.dynamic-views-text-preview-color-custom)
 body.dynamic-views-cover-circular
   .style-settings-container
   .setting-item[data-id='dynamic-views-cover-border-radius'],
-body.is-mobile
+body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-card-spacing-desktop'],
-body:not(.is-mobile)
+body:not(.is-phone)
   .style-settings-container
-  .setting-item[data-id='dynamic-views-card-spacing-mobile'],
+  .setting-item[data-id='dynamic-views-card-spacing-phone'],
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
-body.is-mobile
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-backdrop-hover-zoom'],
-body.is-mobile
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-cover-disable-hover-zoom'],
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
-body.is-mobile
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],
 body.dynamic-views-disable-thumbnail-scrubbing
   .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-scrubbing-indicator'],
+  .setting-item[data-id='dynamic-views-hide-scrubbing-icon'],
 body:not(.dynamic-views-title-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-title-color-custom'],
@@ -1913,7 +1904,6 @@ body.dynamic-views-poster-theme-light
 }
 .style-settings-container {
   margin-block: 0 !important;
-  padding-left: 32px;
 }
 
 .style-settings-container .setting-item:not(.setting-item-heading) {

@@ -54,16 +54,16 @@ export function handlePosterTapReveal(
       .closest('.dynamic-views')
       ?.querySelector('.card.poster-revealed');
     if (prevRevealed) {
-      prevRevealed.classList.remove('poster-revealed', 'hover-intent-active');
+      prevRevealed.classList.remove('poster-revealed', 'interact');
       resetPosterScroll(prevRevealed as HTMLElement);
     }
-    cardEl.classList.add('poster-revealed', 'hover-intent-active');
+    cardEl.classList.add('poster-revealed', 'interact');
     return true;
   }
 
   if (!isInteractive && !isTextTarget && !hasTextSelection) {
     e.stopPropagation();
-    cardEl.classList.remove('poster-revealed', 'hover-intent-active');
+    cardEl.classList.remove('poster-revealed', 'interact');
     resetPosterScroll(cardEl);
     return true;
   }

@@ -73,7 +73,7 @@
     flex-shrink: 0;
     /* Compensate for wrapper padding: (26px wrapper - 18px icon) / 2 = 4px */
     margin: -4px;
-    /* Extra -1px aligns URL icon top with slideshow indicator edge distance */
+    /* Extra -1px aligns URL icon top with slideshow icon edge distance */
     margin-top: -5px;
   }
 
@@ -97,7 +97,7 @@
 @media (any-hover: hover) {
   body:not(.dynamic-views-dragging)
     .dynamic-views
-    .card:not(.hover-intent-active)
+    .card:not(.interact)
     .card-title-url-icon {
     pointer-events: none;
   }
@@ -107,14 +107,14 @@
   body.dynamic-views-dragging .card-title-url-icon {
     background-color: transparent !important;
   }
+}
 
-  /* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
-  .dynamic-views
-    .card.image-format-poster.hover-intent-active
-    .card-title-url-icon:hover {
-    background-color: color-mix(in srgb, currentColor 20%, transparent);
-    border-radius: var(--dynamic-views-radius-s);
-  }
+/* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
+.dynamic-views
+  .card.image-format-poster.interact
+  .card-title-url-icon:is(:hover, :active) {
+  background-color: color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: var(--dynamic-views-radius-s);
 }
 
 .dynamic-views {
@@ -217,21 +217,19 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   }
 }
 
-@media (any-hover: hover) {
-  /* Underline title on hover when open action is "Press on title" */
-  body.dynamic-views-open-on-title
-    .dynamic-views
-    .card.hover-intent-active
-    .card-title
-    a:hover {
-    text-decoration: underline;
-    color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
-  }
-
-  /* Suffix underline: no explicit rule needed — the parent link's
-     text-decoration: underline propagates through inline descendants
-     using the link's currentColor, which tracks the hover title color. */
+/* Underline title on hover/press when open action is "Press on title" */
+body.dynamic-views-open-on-title
+  .dynamic-views
+  .card.interact
+  .card-title
+  a:is(:hover, :active) {
+  text-decoration: underline;
+  color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
 }
+
+/* Suffix underline: no explicit rule needed — the parent link's
+   text-decoration: underline propagates through inline descendants
+   using the link's currentColor, which tracks the hover title color. */
 
 .dynamic-views {
   .card-subtitle {

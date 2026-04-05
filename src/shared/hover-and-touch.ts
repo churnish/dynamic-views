@@ -1,9 +1,11 @@
 /**
- * Hover capability detection and intent activation.
+ * Hover and touch interaction detection and activation.
  * - canHover(): device-level hover capability check (any-hover — includes pen)
  * - canPrimaryHover(): primary pointer hover check (hover — mouse/trackpad only)
  * - isHoverPointer(): per-event pointer type filter (mouse/pen hover only)
+ * - isTouchPointer(): per-event touch/pen-contact filter (inverse of isHoverPointer)
  * - setupHoverIntent(): requires pointermove after pointerenter to activate
+ * - setupTouchPress(): activates on pointerdown, deactivates on pointerup with min duration
  */
 
 import { getOwnerWindow } from '../utils/owner-window';
@@ -26,6 +28,13 @@ export function isHoverPointer(e: PointerEvent): boolean {
   // Pen with pressure > 0 means contact (drawing/tapping), not hover
   if (e.pointerType === 'pen' && e.pressure > 0) return false;
   return true;
+}
+
+/** Whether a pointer event comes from a touch input (finger or pen contact — not hover). */
+export function isTouchPointer(e: PointerEvent): boolean {
+  if (e.pointerType === 'touch') return true;
+  if (e.pointerType === 'pen' && e.pressure > 0) return true;
+  return false;
 }
 
 export function setupHoverIntent(
@@ -68,4 +77,45 @@ export function setupHoverIntent(
       { signal }
     );
   }
+}
+
+/** Touch press feedback: activates on pointerdown (touch/pen contact), deactivates on pointerup/cancel with minimum 100ms visible duration. */
+export function setupTouchPress(
+  el: HTMLElement,
+  onActivate: () => void,
+  onDeactivate: () => void,
+  signal: AbortSignal
+): void {
+  let activatedAt = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  el.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (!isTouchPointer(e)) return;
+      activatedAt = Date.now();
+      onActivate();
+    },
+    { signal }
+  );
+
+  const deactivate = () => {
+    if (!activatedAt) return;
+    const remaining = Math.max(0, 100 - (Date.now() - activatedAt));
+    if (remaining > 0) {
+      timer = setTimeout(() => {
+        onDeactivate();
+        activatedAt = 0;
+      }, remaining);
+    } else {
+      onDeactivate();
+      activatedAt = 0;
+    }
+  };
+
+  el.addEventListener('pointerup', deactivate, { signal });
+  el.addEventListener('pointercancel', deactivate, { signal });
+  signal.addEventListener('abort', () => {
+    if (timer) clearTimeout(timer);
+  });
 }

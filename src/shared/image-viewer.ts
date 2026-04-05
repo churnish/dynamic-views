@@ -87,7 +87,7 @@ function closeImageViewer(
     if (restoreHoverIntent) {
       const cardEl = original.closest<HTMLElement>('.card');
       if (cardEl) {
-        cardEl.classList.add('hover-intent-active');
+        cardEl.classList.add('interact');
       }
 
       // Resume thumbnail scrubbing at last cursor position, or reset if cursor

@@ -111,17 +111,25 @@ body:not(.dynamic-views-poster-disable-reveal-zoom)
   transform: scale(1.05);
 }
 
-/* Poster: zoom on hover intent (desktop) — activates regardless of
-   posterInteractToReveal toggle (hover-intent-active, not poster-hover-active) */
+/* Poster: will-change on desktop only (avoid compositor layer promotion on touch) */
 @media (any-hover: hover) {
   body:not(.dynamic-views-poster-disable-reveal-zoom)
     .dynamic-views
-    .card.image-format-poster.hover-intent-active
+    .card.image-format-poster.interact
     .card-poster
     img {
     will-change: transform;
-    transform: scale(1.05);
   }
+}
+
+/* Poster: zoom on hover/touch intent — activates regardless of
+   posterInteractToReveal toggle (interact, not poster-hover-active) */
+body:not(.dynamic-views-poster-disable-reveal-zoom)
+  .dynamic-views
+  .card.image-format-poster.interact
+  .card-poster
+  img {
+  transform: scale(1.05);
 }
 
 /* ============================================

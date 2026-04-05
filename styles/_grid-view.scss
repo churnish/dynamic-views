@@ -5,11 +5,11 @@
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
 }
 
-.is-mobile
+.is-phone
   :is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views
   .dynamic-views-grid {
-  gap: var(--dynamic-views-card-spacing-mobile, 6px);
+  gap: var(--dynamic-views-card-spacing-phone, 6px);
 }
 
 /* Grid: remove margins (gap handles spacing) and set flexbox layout */
@@ -87,12 +87,12 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
 }
 
-.is-mobile
+.is-phone
   :is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views-grid
   .dynamic-views-group-section
   > .dynamic-views-group {
-  gap: var(--dynamic-views-card-spacing-mobile, 6px);
+  gap: var(--dynamic-views-card-spacing-phone, 6px);
 }
 
 .dynamic-views {

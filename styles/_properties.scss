@@ -365,14 +365,12 @@
   }
 }
 
-/* Property link hover: card (hover intent) */
-@media (any-hover: hover) {
-  .dynamic-views .card.hover-intent-active .property a.internal-link:hover {
-    color: var(--dynamic-views-link-color-hover);
-  }
-  .dynamic-views .card.hover-intent-active .property a.external-link:hover {
-    color: var(--dynamic-views-link-external-color-hover);
-  }
+/* Property link hover: card (hover/touch intent) */
+.dynamic-views .card.interact .property a.internal-link:is(:hover, :active) {
+  color: var(--dynamic-views-link-color-hover);
+}
+.dynamic-views .card.interact .property a.external-link:is(:hover, :active) {
+  color: var(--dynamic-views-link-external-color-hover);
 }
 
 /* Property link hover: list (immediate) */
@@ -531,13 +529,11 @@ body.dynamic-views-property-name-small-caps
   }
 }
 
-/* Segment underline hover: card (hover intent) */
-@media (any-hover: hover) {
-  .dynamic-views
-    .card.hover-intent-active
-    :is(.folder-segment, .filename-segment):hover {
-    text-decoration: underline;
-  }
+/* Segment underline hover: card (hover/touch intent) */
+.dynamic-views
+  .card.interact
+  :is(.folder-segment, .filename-segment):is(:hover, :active) {
+  text-decoration: underline;
 }
 
 /* Segment underline hover: list + group headings (immediate) */

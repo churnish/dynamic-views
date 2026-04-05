@@ -31,7 +31,7 @@ For settings where the default means "no CSS override needed" (e.g., hover backg
 ```scss
 body:not([class*='dynamic-views-card-background-hover-'])
   .dynamic-views
-  .card.hover-intent-active:hover {
+  .card.interact {
   background-color: transparent;
 }
 ```
@@ -194,9 +194,9 @@ body.dynamic-views-open-on-title:not(
     [class*='dynamic-views-title-hover-color-']
   )
   .dynamic-views
-  .card.hover-intent-active
+  .card.interact
   .card-title
-  a:hover {
+  a:is(:hover, :active) {
   color: var(
     --dynamic-views-title-hover-color-value,
     var(--dynamic-views-title-color-hover-color)
@@ -204,7 +204,7 @@ body.dynamic-views-open-on-title:not(
 }
 ```
 
-The body-level variable assignments (`hover-color-vars` mixin in [_property-colors.scss](../../styles/_property-colors.scss)) have zero hover-path cost — they only re-evaluate when body classes change (rare Style Settings events). The consumption rules in [_hover-states.scss](../../styles/_hover-states.scss) are the only card-level rules evaluated during hover recalculations.
+The body-level variable assignments (`hover-color-vars` mixin in [_property-colors.scss](../../styles/_property-colors.scss)) have zero hover-path cost — they only re-evaluate when body classes change (rare Style Settings events). The consumption rules in [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) are the only card-level rules evaluated during hover recalculations.
 
 **Specificity**: `[class*='...']` has the same specificity as a class selector (0,1,0), so the gate adds specificity equivalent to the per-variant body class it replaces.
 
@@ -228,7 +228,7 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Poster background         | dimmed         | [_poster.scss](../../styles/card/_poster.scss)                                                   |
 | Show cover placeholder    | Grid           | [_cover-side.scss](../../styles/card/_cover-side.scss), [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss)                   |
 | Card border color (hover) | muted          | [_core.scss](../../styles/card/_core.scss)                                                     |
-| Card background (hover)   | transparent    | [_hover-states.scss](../../styles/_hover-states.scss)                                             |
+| Card background (hover)   | transparent    | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss)                                             |
 | Card shadow color         | Default        | No CSS fallback needed — Default passes theme shadow vars through unchanged |
 | File type indicator      | None           | [_header.scss](../../styles/card/_header.scss) — suffix visible by default, only Flair hides it  |
 | Fixed cover height       | Grid (slider)  | [_grid-view.scss](../../styles/_grid-view.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
@@ -241,17 +241,17 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 
 | Setting group | Gate selector | Variable | Consumption file |
 | --- | --- | --- | --- |
-| Title color (hover, open-on-title) | `[class*='dynamic-views-title-color-']`, `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-color-hover-color`, `--dynamic-views-title-hover-color-value` | [_hover-states.scss](../../styles/_hover-states.scss) |
-| Title color (hover, open-on-card) | `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-hover-color-value` | [_hover-states.scss](../../styles/_hover-states.scss) |
-| Subtitle color (hover) | `[class*='dynamic-views-subtitle-color-']` | `--dynamic-views-subtitle-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
-| Property color with names (hover) | `[class*='dynamic-views-property-color-with-names-']` | `--dynamic-views-property-with-name-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
-| Property color without names (hover) | `[class*='dynamic-views-property-color-without-names-']` | `--dynamic-views-property-no-name-color-hover-color` | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Title color (hover, open-on-title) | `[class*='dynamic-views-title-color-']`, `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-color-hover-color`, `--dynamic-views-title-hover-color-value` | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
+| Title color (hover, open-on-card) | `[class*='dynamic-views-title-hover-color-']` | `--dynamic-views-title-hover-color-value` | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
+| Subtitle color (hover) | `[class*='dynamic-views-subtitle-color-']` | `--dynamic-views-subtitle-color-hover-color` | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
+| Property color with names (hover) | `[class*='dynamic-views-property-color-with-names-']` | `--dynamic-views-property-with-name-color-hover-color` | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
+| Property color without names (hover) | `[class*='dynamic-views-property-color-without-names-']` | `--dynamic-views-property-no-name-color-hover-color` | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
 
 ### `class-toggle` — inverted (CSS)
 
 | Setting                  | Toggle class                                    | Fallback file        |
 | ------------------------ | ----------------------------------------------- | -------------------- |
-| Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-states.scss](../../styles/_hover-states.scss) |
+| Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
 | Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | [_poster.scss](../../styles/card/_poster.scss)       |
 | Image viewer fullscreen  | `dynamic-views-image-viewer-constrain-to-pane` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
 | Cover hover zoom         | `dynamic-views-cover-disable-hover-zoom`        | [_cover-elements.scss](../../styles/card/_cover-elements.scss) |

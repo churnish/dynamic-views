@@ -12,15 +12,13 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
   cursor: pointer;
 }
 
-/* Tag outline hover: card (hover intent) */
-@media (any-hover: hover) {
-  body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
-    .dynamic-views
-    .card.hover-intent-active
-    :is(.card-properties, .card-subtitle)
-    .tag:hover {
-    color: color-mix(in hsl, var(--tag-text-color), white 15%);
-  }
+/* Tag outline hover: card (hover/touch intent) */
+body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
+  .dynamic-views
+  .card.interact
+  :is(.card-properties, .card-subtitle)
+  .tag:is(:hover, :active) {
+  color: color-mix(in hsl, var(--tag-text-color), white 15%);
 }
 
 /* Tag outline hover: list (immediate) */
@@ -43,19 +41,13 @@ body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
   color: var(--tag-text-color);
 }
 
-/* Tag fill hover: card (hover intent) */
-@media (any-hover: hover) {
-  body.dynamic-views-tag-style-fill
-    .dynamic-views
-    .card.hover-intent-active
-    :is(.card-properties, .card-subtitle)
-    .tag:hover {
-    background-color: color-mix(
-      in srgb,
-      var(--tag-text-color) 20%,
-      transparent
-    );
-  }
+/* Tag fill hover: card (hover/touch intent) */
+body.dynamic-views-tag-style-fill
+  .dynamic-views
+  .card.interact
+  :is(.card-properties, .card-subtitle)
+  .tag:is(:hover, :active) {
+  background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
 }
 
 /* Tag fill hover: list (immediate) */
@@ -82,15 +74,13 @@ body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
   font-size: inherit;
 }
 
-/* Tag plaintext hover: card (hover intent) */
-@media (any-hover: hover) {
-  body.dynamic-views-tag-style-plaintext
-    .dynamic-views
-    .card.hover-intent-active
-    :is(.card-properties, .card-subtitle)
-    .tag:hover {
-    text-decoration: underline;
-  }
+/* Tag plaintext hover: card (hover/touch intent) */
+body.dynamic-views-tag-style-plaintext
+  .dynamic-views
+  .card.interact
+  :is(.card-properties, .card-subtitle)
+  .tag:is(:hover, :active) {
+  text-decoration: underline;
 }
 
 /* Tag plaintext hover: list (immediate) */

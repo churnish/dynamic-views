@@ -57,7 +57,7 @@ import {
   shouldHideMissingProperties,
   getListSeparator,
   isSlideshowEnabled,
-  isSlideshowIndicatorEnabled,
+  isSlideshowIconEnabled,
   isThumbnailScrubbingDisabled,
   getSlideshowMaxImages,
   getCompactBreakpoint,
@@ -89,7 +89,8 @@ import {
   canPrimaryHover,
   isHoverPointer,
   setupHoverIntent,
-} from '../shared/hover';
+  setupTouchPress,
+} from '../shared/hover-and-touch';
 import {
   handleArrowNavigation,
   isArrowKey,
@@ -900,14 +901,14 @@ export class SharedCardRenderer {
       setupHoverIntent(
         cardEl,
         () => {
-          cardEl.classList.add('hover-intent-active');
+          cardEl.classList.add('interact');
           cardEl
             .closest('.masonry-container, .bases-cards-group')
             ?.classList.add('has-hover-card');
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
-          cardEl.classList.remove('hover-intent-active');
+          cardEl.classList.remove('interact');
           cardEl
             .closest('.masonry-container, .bases-cards-group')
             ?.classList.remove('has-hover-card');
@@ -916,6 +917,23 @@ export class SharedCardRenderer {
         signal
       );
     }
+
+    setupTouchPress(
+      cardEl,
+      () => {
+        cardEl.classList.add('interact');
+        cardEl
+          .closest('.masonry-container, .bases-cards-group')
+          ?.classList.add('has-hover-card');
+      },
+      () => {
+        cardEl.classList.remove('interact');
+        cardEl
+          .closest('.masonry-container, .bases-cards-group')
+          ?.classList.remove('has-hover-card');
+      },
+      signal
+    );
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)
     // Gates content reveal (via CSS) and scroll access on desktop.
@@ -1775,10 +1793,10 @@ export class SharedCardRenderer {
       { once: true, signal }
     );
 
-    // Multi-image indicator
-    if (isSlideshowIndicatorEnabled()) {
-      const indicator = slideshowEl.createDiv('slideshow-indicator');
-      setIcon(indicator, 'lucide-copy');
+    // Multi-image icon
+    if (isSlideshowIconEnabled()) {
+      const iconEl = slideshowEl.createDiv('slideshow-icon');
+      setIcon(iconEl, 'lucide-copy');
     }
 
     // Navigation arrows

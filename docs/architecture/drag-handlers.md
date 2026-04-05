@@ -33,11 +33,11 @@ The `getData` patch returns `''` for `text/uri-list` when `DRAG_MARKER` is prese
 
 ## Hover suppression on dragstart
 
-Two JS-toggled classes control hover effects: `hover-intent-active`, `poster-hover-active`. Both are removed on dragstart, but with constraints:
+Two JS-toggled classes control hover effects: `interact`, `poster-hover-active`. Both are removed on dragstart, but with constraints:
 
 **Card-level handlers** (`createCardDragHandler`, Bases `handleDrag`): remove both synchronously via `clearCardHoverState()`.
 
-**URL button handlers** (`createUrlButtonDragHandlers`): remove `hover-intent-active` synchronously, but **defer** `poster-hover-active` removal via `setTimeout(0)`. This is because `poster-hover-active` controls `pointer-events: auto` on `.card-content` — synchronous removal sets `pointer-events: none`, aborting the drag before the drag system takes over. The deferred removal runs after dragstart completes.
+**URL button handlers** (`createUrlButtonDragHandlers`): remove `interact` synchronously, but **defer** `poster-hover-active` removal via `setTimeout(0)`. This is because `poster-hover-active` controls `pointer-events: auto` on `.card-content` — synchronous removal sets `pointer-events: none`, aborting the drag before the drag system takes over. The deferred removal runs after dragstart completes.
 
 The deferred `setTimeout(0)` also sets `pointer-events: none` on the icon itself, clearing the stuck `:hover` pseudo-class (Chromium keeps `:hover` on the drag source throughout the drag operation — see platform quirks).
 
