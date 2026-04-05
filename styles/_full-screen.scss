@@ -310,6 +310,10 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
       ) -
       1px
   );
+  // Above card hover/interact elevation (z-index 21 on .has-hover-card
+  // container) so headings stay visible during touch press. Below the
+  // ::before scrim (z-index 25) so headings scroll under the status bar.
+  z-index: 24;
 }
 
 // Sticky sentinel offset: match heading's stuck position so IO-based .stuck

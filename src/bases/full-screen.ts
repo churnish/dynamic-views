@@ -603,8 +603,11 @@ export class FullScreenController {
     const sentinels = this.container.querySelectorAll<HTMLElement>(
       '.dynamic-views-group-section > .dynamic-views-sticky-sentinel'
     );
-    for (const h of headings)
+    for (const h of headings) {
       setStyle(h, 'top', `${headingTop}px`, 'important');
+      // Above card hover/interact elevation (z-index 21 on .has-hover-card)
+      setStyle(h, 'z-index', '24', 'important');
+    }
     for (const s of sentinels)
       setStyle(s, 'top', `${sentinelTop}px`, 'important');
   }
@@ -650,7 +653,10 @@ export class FullScreenController {
     const sentinels = this.container.querySelectorAll<HTMLElement>(
       '.dynamic-views-group-section > .dynamic-views-sticky-sentinel'
     );
-    for (const h of headings) h.style.removeProperty('top');
+    for (const h of headings) {
+      h.style.removeProperty('top');
+      h.style.removeProperty('z-index');
+    }
     for (const s of sentinels) s.style.removeProperty('top');
   }
 
