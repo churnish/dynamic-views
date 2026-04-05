@@ -549,6 +549,85 @@ export class FullScreenController {
     this.clearSpacerHeadingTops();
   }
 
+  /** Clear temporary overlay bar positioning (toolbar/search absolute + header-show class). Does NOT touch the persistent spacer cover chrome (toolbarBgEl, data attributes, heading tops). */
+  private clearOverlayBars(): void {
+    if (this.toolbarEl) {
+      clearStyles(this.toolbarEl, [
+        'opacity',
+        'position',
+        'top',
+        'left',
+        'right',
+        'z-index',
+        'pointer-events',
+        'margin-bottom',
+        'transition',
+        'background',
+      ]);
+    }
+    if (this.searchRowEl) {
+      clearStyles(this.searchRowEl, [
+        'opacity',
+        'position',
+        'top',
+        'left',
+        'right',
+        'z-index',
+        'pointer-events',
+        'transition',
+        'height',
+        'overflow',
+        'margin',
+        'padding',
+        'background',
+      ]);
+    }
+    this.viewHeaderEl?.classList.remove('dynamic-views-header-show');
+  }
+
+  /** Apply persistent opaque cover over spacer area during hidden state. The spacer gets a background color so content below isn't visible through it. The scrim ::before (on leafContent, outside the scroll container) paints above the spacer naturally. No toolbarBgEl needed — its z-index 28 would paint above the scrim (z-index 10/25), hiding the gradient. */
+  private applyHideSpacerCover(_effectiveShift: number): void {
+    this.leafContent.removeAttribute('data-dynamic-views-show');
+    // Remove toolbarBgEl — it would paint above the scrim
+    this.toolbarBgEl?.remove();
+    this.toolbarBgEl = null;
+
+    if (this.spacerEl) {
+      setStyle(
+        this.spacerEl,
+        'background',
+        'var(--dynamic-views-background-primary)'
+      );
+    }
+  }
+
+  /** Remove the persistent hide-spacer cover chrome. Called by show path and resolve/unmount. */
+  private clearHideSpacerCover(): void {
+    this.leafContent.removeAttribute('data-dynamic-views-hide-spacer');
+    if (this.spacerEl) {
+      this.spacerEl.style.removeProperty('background');
+    }
+    this.clearSpacerHeadingTops();
+  }
+
+  /** Settle the Android spacer-preserved hide: cancel animations, drop temporary overlays, apply persistent hidden state (top cover + navbar inlines + tap shield). */
+  private settleAndroidSpacerHide(effectiveShift: number): void {
+    this.cancelAnimations();
+    this.clearOverlayBars();
+    this.applyHideSpacerCover(effectiveShift);
+
+    // Persist navbar hidden state via inlines (WAAPI cancelled above)
+    setStyles(this.navbarEl, [
+      ['transform', `translateY(${this.navbarHeight}px)`, 'important'],
+      ['opacity', '0', 'important'],
+      ['pointer-events', 'none', 'important'],
+    ]);
+    this.navbarEl.classList.add('dynamic-views-navbar-hidden');
+
+    this.clearHeaderInlines();
+    this.viewHeaderEl?.classList.add('dynamic-views-tap-shield');
+  }
+
   // ---------------------------------------------------------------------------
   // Heading top inline styles for spacer show state — inline styles instead
   // of CSS rules to avoid violating the [data-dynamic-views-show] descendant
@@ -632,6 +711,7 @@ export class FullScreenController {
     this.programmaticScroll = true;
     this.cancelAnimations();
     this.clearShowOverlays();
+    this.clearHideSpacerCover();
     this.clearNavbarInlines();
     this.clearHeaderInlines();
 
@@ -698,6 +778,7 @@ export class FullScreenController {
     if (this.isActiveHider) {
       if (this.isAndroid) {
         this.clearShowOverlays();
+        this.clearHideSpacerCover();
       } else {
         this.leafContent.classList.remove('full-screen-showing');
       }
@@ -1027,33 +1108,22 @@ export class FullScreenController {
           );
           this.navbarEl.classList.add('dynamic-views-navbar-hidden');
 
-          // WAAPI hide toolbar + search — opacity only
-          if (this.toolbarEl) {
-            this.barAnims.push(
-              this.toolbarEl.animate(OPACITY_HIDE_FRAMES, UI_FADE_OPTS)
-            );
-          }
-          if (this.searchRowEl) {
-            this.barAnims.push(
-              this.searchRowEl.animate(OPACITY_HIDE_FRAMES, UI_FADE_OPTS)
-            );
-          }
-
           // Cancel old show animations AFTER hide WAAPI started —
           // hide fill:forwards is already holding, so cancel is safe.
           for (const a of oldAnims) a.cancel();
+
+          // Instantly clear toolbar/search overlays and switch to spacer
+          // background cover. No WAAPI fade on toolbar/search — they
+          // vanish immediately, scrim becomes visible.
+          const shift = this.spacerEl?.offsetHeight ?? this.totalShift;
+          this.clearOverlayBars();
+          this.applyHideSpacerCover(shift);
         });
 
         this.settled = true;
-        // Idle: clean up overlays, cancel animations, relock height.
-        // Overlay cleanup MUST be here, NOT in WAAPI onfinish —
-        // cancelAnimations() during rapid cycling prevents onfinish.
         this.pendingLayout = () => {
-          this.cancelAnimations();
-          this.clearShowOverlays();
-          this.clearNavbarInlines();
-          this.clearHeaderInlines();
-          this.viewHeaderEl?.classList.add('dynamic-views-tap-shield');
+          const idleShift = this.spacerEl?.offsetHeight ?? this.totalShift;
+          this.settleAndroidSpacerHide(idleShift);
           this.lockedScrollHeight = this.scrollEl.offsetHeight;
           setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
           this.pendingLayout = null;
@@ -1163,9 +1233,6 @@ export class FullScreenController {
             headerTransformAnim,
             hEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
           );
-          headerTransformAnim.onfinish = () => {
-            hEl.classList.add('dynamic-views-tap-shield');
-          };
         }
 
         // Navbar WAAPI hide
@@ -1181,33 +1248,21 @@ export class FullScreenController {
         );
         this.navbarEl.classList.add('dynamic-views-navbar-hidden');
 
-        // Toolbar + search WAAPI hide (overlay opacity fade)
-        if (this.toolbarEl) {
-          this.barAnims.push(
-            this.toolbarEl.animate(OPACITY_HIDE_FRAMES, UI_FADE_OPTS)
-          );
-        }
-        if (this.searchRowEl) {
-          this.barAnims.push(
-            this.searchRowEl.animate(OPACITY_HIDE_FRAMES, UI_FADE_OPTS)
-          );
-        }
-
         // Cancel old anims AFTER hide WAAPI started
         for (const a of oldAnims) a.cancel();
-      });
 
-      // Idle: clean up overlays, cancel animations, relock height.
-      this.pendingLayout = () => {
-        this.cancelAnimations();
-        this.clearShowOverlays();
-        this.clearNavbarInlines();
-        this.clearHeaderInlines();
-        this.viewHeaderEl?.classList.add('dynamic-views-tap-shield');
-        this.lockedScrollHeight = this.scrollEl.offsetHeight;
-        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-        this.pendingLayout = null;
-      };
+        // Instantly clear toolbar/search overlays and switch to spacer
+        // background cover. No WAAPI fade — they vanish immediately.
+        this.clearOverlayBars();
+        this.applyHideSpacerCover(effectiveShift);
+
+        this.pendingLayout = () => {
+          this.settleAndroidSpacerHide(effectiveShift);
+          this.lockedScrollHeight = this.scrollEl.offsetHeight;
+          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+          this.pendingLayout = null;
+        };
+      });
       return;
     }
 
@@ -1300,6 +1355,9 @@ export class FullScreenController {
         `translateY(-${this.headerShift}px)`;
 
       this.pendingRafId = requestAnimationFrame(() => {
+        // 0. Clear persistent hide-spacer cover before applying show overlays
+        this.clearHideSpacerCover();
+
         // 1. Toolbar/search as absolute overlays first — makes search row
         // measurable (inline height:auto overrides CSS height:0).
         this.applyShowOverlays();
