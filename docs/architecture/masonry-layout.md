@@ -30,7 +30,7 @@ The masonry layout system renders cards in a Pinterest-style variable-height col
 | `src/bases/masonry-view.ts`    | View class — orchestrates rendering, layout, virtual scroll, resize, infinite scroll. |
 | `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.       |
-| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                           |
+| `src/bases/sticky-header.ts`   | Sentinel IO for sticky group header stuck state detection.                            |
 
 ## Core data structures
 

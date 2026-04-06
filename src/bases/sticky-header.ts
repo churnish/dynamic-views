@@ -1,5 +1,5 @@
 /**
- * Detects sticky group heading stuck state via sentinel + IntersectionObserver.
+ * Detects sticky group header stuck state via sentinel + IntersectionObserver.
  *
  * CSS @container scroll-state(stuck) can only style descendants, not the container
  * itself. This module inserts zero-height sentinels at each group section's top and
@@ -13,11 +13,11 @@ const STUCK_CLASS = 'stuck';
 /** Maps sentinel elements back to their heading — avoids expando properties */
 const sentinelToHeading = new WeakMap<Element, HTMLElement>();
 
-export function setupStickyHeadingObserver(scrollContainer: HTMLElement): {
+export function setupStickyHeaderObserver(scrollContainer: HTMLElement): {
   observe: (heading: HTMLElement) => void;
   disconnect: () => void;
 } {
-  // WebKit: IO-based sticky heading detection causes reflow loop (same as content-visibility)
+  // WebKit: IO-based sticky header detection causes reflow loop (same as content-visibility)
   if (Platform.isIosApp) return { observe: () => {}, disconnect: () => {} };
 
   const sentinels = new Map<HTMLElement, HTMLElement>();

@@ -194,7 +194,7 @@ These classes are applied by the `FullScreenController` during bar hide/show tra
 | Element | Selector | Notes |
 |---|---|---|
 | End indicator | `.dynamic-views-end-indicator` | Appended to container when all cards are loaded |
-| Sticky sentinel | `.dynamic-views-sticky-sentinel` | Created by `setupStickyHeadingObserver` for grouped views |
+| Sticky sentinel | `.dynamic-views-sticky-sentinel` | Created by `setupStickyHeaderObserver` for grouped views |
 | Group heading | `.bases-group-heading` | Only rendered when `groupBy` is set |
 | View header | `.view-header` | Obsidian native — sibling of `.view-content` inside `.workspace-leaf-content` |
 | Measure lane | `.dynamic-views-measure-lane` | Temporary element for column width measurement during re-render |

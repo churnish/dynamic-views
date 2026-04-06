@@ -602,19 +602,19 @@ settings:
         type: class-toggle
     -
         id: groups-heading
-        title: Grouping
+        title: Group header
         type: heading
         level: 2
         collapsed: true
     -
         id: dynamic-views-hide-group-count
         title: Hide result count
-        description: Hide result count in group headers.
+        description: Hide number of results for group.
         type: class-toggle
     -
         id: dynamic-views-hide-group-property-names
         title: Hide property names
-        description: Hide property names in group headers.
+        description: Hide names of properties.
         type: class-toggle
     -
         id: dynamic-views-disable-sticky-group-header

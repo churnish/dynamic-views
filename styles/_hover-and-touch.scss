@@ -117,7 +117,7 @@ body.dynamic-views-card-background-hover-custom .dynamic-views .card.interact {
 
 /* Card hover effects — individual transform properties compose when both enabled.
    Enlarge scoped to Bases files only (embed overflow: hidden clips scaled card).
-   z-index 21: above sticky group headings (20) so lifted/enlarged cards paint over them. */
+   z-index 21: above sticky group headers (20) so lifted/enlarged cards paint over them. */
 body.dynamic-views-card-hover-enlarge
   .workspace-leaf-content[data-type='bases']
   .dynamic-views
@@ -134,7 +134,7 @@ body:not(.dynamic-views-card-hover-disable-elevate)
   z-index: 21;
 }
 
-/* Lift card container above sticky group headings when a card is hovered.
+/* Lift card container above sticky group headers when a card is hovered.
    Masonry: contain: layout on .masonry-container traps card z-index.
    Grid: defensive — prevents overlap clipping with small card spacing. */
 body:is(

@@ -338,54 +338,6 @@ export function measureSideBySideSet(
 }
 
 /**
- * Resets measurement state and re-measures all side-by-side sets in a container.
- * Called when property name mode changes — low frequency, bounded card count
- * due to virtual scrolling.
- */
-export function remeasurePropertyFields(container: HTMLElement): void {
-  const viewContainer = container.closest('.dynamic-views') ?? container;
-  if (
-    viewContainer.classList.contains('dynamic-views-paired-property-column')
-  ) {
-    return;
-  }
-
-  const sets = Array.from(
-    container.querySelectorAll<HTMLElement>('.property-pair')
-  );
-  if (sets.length === 0) return;
-
-  // Invalidate persistent cache for affected cards (label mode changed)
-  container
-    .querySelectorAll<HTMLElement>('.card[data-path]')
-    .forEach((card) => {
-      const path = card.getAttribute('data-path');
-      if (path) persistentWidthCache.delete(path);
-    });
-
-  // Clear measured state for all sets first (batch DOM writes)
-  sets.forEach((set) => {
-    set.classList.remove('property-measured');
-    set.style.removeProperty('--field1-width');
-    set.style.removeProperty('--field2-width');
-  });
-
-  // Re-measure synchronously
-  const gradientTargets: HTMLElement[] = [];
-  sets.forEach((set) => {
-    if (
-      set.isConnected &&
-      !set.closest('.card')?.classList.contains('compact-mode')
-    ) {
-      measureSideBySideSet(set, gradientTargets);
-    }
-  });
-
-  gradientTargets.forEach((field) => updateScrollGradient(field));
-  container.ownerDocument.dispatchEvent(new CustomEvent(PROPERTY_MEASURED));
-}
-
-/**
  * Measures all side-by-side property sets in a card element.
  * Performs synchronous initial measurement, then sets up a ResizeObserver
  * for resize-triggered remeasurement. Returns observers for cleanup.

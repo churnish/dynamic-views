@@ -20,7 +20,7 @@ dynamic-views/
 │   │   ├── full-screen.ts              # Full screen mobile scrolling + createFullScreenController() factory
 │   │   ├── masonry-view.ts           # Masonry layout view
 │   │   ├── shared-renderer.ts        # Shared card rendering (deduplicates grid/masonry)
-│   │   ├── sticky-heading.ts         # Sentinel IO for sticky group heading stuck state
+│   │   ├── sticky-header.ts           # Sentinel IO for sticky group header stuck state
 │   │   └── utils.ts                  # Context menus, toolbar, property management
 │   │
 │   ├── shared/                       # Shared logic

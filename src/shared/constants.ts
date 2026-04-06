@@ -2,9 +2,6 @@
  * Shared constants used across Grid and Masonry views
  */
 
-/** Default batch size for infinite scroll */
-export const BATCH_SIZE = 50;
-
 /** Scroll position tolerance in pixels */
 export const SCROLL_TOLERANCE = 1;
 
@@ -29,9 +26,6 @@ export const ROWS_PER_COLUMN = 10;
 
 /** Maximum batch size cap */
 export const MAX_BATCH_SIZE = 70;
-
-/** Throttle interval for resize layout updates in milliseconds */
-export const RESIZE_THROTTLE_MS = 100;
 
 /** Fallback height for virtual items that have never been DOM-measured.
  *  Used to prevent 0-height compression in layout calculations.

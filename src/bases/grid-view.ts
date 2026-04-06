@@ -113,7 +113,7 @@ import {
   measureScalableHeight,
   estimateUnmountedHeight,
 } from '../shared/virtual-scroll';
-import { setupStickyHeadingObserver } from './sticky-heading';
+import { setupStickyHeaderObserver } from './sticky-header';
 import {
   initializeTextPreviewClamp,
   initializeTextPreviewClampForCards,
@@ -243,7 +243,7 @@ export class DynamicViewsGridView extends BasesView {
   private lastColumnCount: number = 0;
   private resizeRafId: number | null = null;
   private lastObservedWidth: number = 0;
-  private stickyHeadings: ReturnType<typeof setupStickyHeadingObserver> | null =
+  private stickyHeaders: ReturnType<typeof setupStickyHeaderObserver> | null =
     null;
   private hasBatchAppended: boolean = false;
   private collapsedGroups: Set<string> = new Set();
@@ -592,7 +592,7 @@ export class DynamicViewsGridView extends BasesView {
     const newHeading = groupEl
       .closest('.dynamic-views-group-section')
       ?.querySelector<HTMLElement>('.bases-group-heading:not(.collapsed)');
-    if (newHeading) this.stickyHeadings?.observe(newHeading);
+    if (newHeading) this.stickyHeaders?.observe(newHeading);
 
     // Invalidate render hash so next onDataUpdated() doesn't skip
     this.renderState.lastRenderHash = '';
@@ -1561,12 +1561,12 @@ export class DynamicViewsGridView extends BasesView {
         if (item.el) this.cardResizeObserver!.observe(item.el);
       }
 
-      // Rebuild sticky heading observer for all non-collapsed group headings
-      this.stickyHeadings?.disconnect();
-      this.stickyHeadings = setupStickyHeadingObserver(this.scrollEl);
+      // Rebuild sticky header observer for all non-collapsed group headings
+      this.stickyHeaders?.disconnect();
+      this.stickyHeaders = setupStickyHeaderObserver(this.scrollEl);
       feedEl
         .querySelectorAll<HTMLElement>('.bases-group-heading:not(.collapsed)')
-        .forEach((h) => this.stickyHeadings!.observe(h));
+        .forEach((h) => this.stickyHeaders!.observe(h));
 
       // Update total entries for end indicator (excludes collapsed groups)
       this.recalculateTotalEntries();
@@ -2209,7 +2209,7 @@ export class DynamicViewsGridView extends BasesView {
 
           // Observe new heading for sticky stuck detection (after group
           // container so sentinel doesn't break heading + group adjacency)
-          if (headerEl) this.stickyHeadings?.observe(headerEl);
+          if (headerEl) this.stickyHeaders?.observe(headerEl);
 
           // Update last group tracking
           this.lastGroup.key = currentGroupKey;
@@ -3627,7 +3627,7 @@ export class DynamicViewsGridView extends BasesView {
     if (this.scrollThrottle.timeoutId !== null) {
       window.clearTimeout(this.scrollThrottle.timeoutId);
     }
-    this.stickyHeadings?.disconnect();
+    this.stickyHeaders?.disconnect();
     this.measureLane?.remove();
     this.measureLane = null;
     this.scrollMountLockedEls.clear();

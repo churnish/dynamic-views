@@ -166,7 +166,7 @@ JS `IntersectionObserver` + zero-height sentinel approach. A sentinel div at eac
 
 ### Files
 
-- [src/bases/sticky-heading.ts](../../src/bases/sticky-heading.ts) — Sentinel IO observer
+- [src/bases/sticky-header.ts](../../src/bases/sticky-header.ts) — Sentinel IO observer
 
 ## `opacity` transitions trigger GPU compositing → grayscale antialiasing
 

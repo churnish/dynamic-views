@@ -35,7 +35,7 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | ------------------------------ | ------------------------------------------------------------------------------- |
 | `src/bases/grid-view.ts`       | View class — orchestrates rendering, resize, infinite scroll, group collapse.   |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration. |
-| `src/bases/sticky-heading.ts`  | Sentinel IO for sticky group heading stuck state detection.                     |
+| `src/bases/sticky-header.ts`   | Sentinel IO for sticky group header stuck state detection.                      |
 | `src/bases/utils.ts`           | Sort, group processing, content loading, context menus, Style Settings observer. |
 
 ## Core data structures
@@ -115,7 +115,7 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 | `resizeObserver`         | `ResizeObserver \| null`                  | Container ResizeObserver for column recalculation.                                                            |
 | `observerWindow`         | `(Window & typeof globalThis) \| null`    | Window reference for popout-safe observer construction.                                                       |
 | `feedContainerRef`       | `{ current: HTMLElement \| null }`        | Ref box for the feed/grid container element.                                                                  |
-| `stickyHeadings`         | `ReturnType<typeof setupStickyHeadingObserver> \| null` | Sticky heading observer cleanup handle.                                                     |
+| `stickyHeaders`          | `ReturnType<typeof setupStickyHeaderObserver> \| null`  | Sticky header observer cleanup handle.                                                      |
 | `viewId`                 | `string \| null`                          | Persistence key for per-view state (collapsed groups).                                                        |
 | `scrollPreservation`     | `ScrollPreservation \| null`              | Scroll position save/restore manager.                                                                         |
 | `currentDoc`             | `Document`                                | Current document reference for popout-safe DOM operations.                                                    |

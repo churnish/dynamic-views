@@ -858,6 +858,12 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       'click',
       (e) => {
+        // Suppress click after context menu or long touch (> 200ms).
+        // Long touches that miss Android's 500ms contextmenu threshold
+        // would otherwise open the file on lift.
+        if (Date.now() - lastContextMenuTime < 500) return;
+        if (touchDownTime && Date.now() - touchDownTime > 200) return;
+
         if (
           isPosterClickReveal &&
           handlePosterTapReveal(e, cardEl, settings.openFileAction)
@@ -976,8 +982,27 @@ export class SharedCardRenderer {
       );
     }
 
-    // Context menu handler for file
+    // Touch press timing — suppresses file-open for presses that exceed
+    // the tap threshold (200ms) but fall short of Android's native
+    // contextmenu threshold (500ms). Without this, users attempting a
+    // long-press get an accidental file-open on lift. Desktop clicks
+    // (pointerType !== 'touch') bypass the check entirely.
+    let touchDownTime = 0;
+    if (this.app.isMobile) {
+      cardEl.addEventListener(
+        'pointerdown',
+        (e) => {
+          touchDownTime = e.pointerType === 'touch' ? Date.now() : 0;
+        },
+        { signal, passive: true }
+      );
+    }
+
+    // Context menu handler for file. Tracks open time so click handlers
+    // can suppress the synthesized click on platforms that fire one.
+    let lastContextMenuTime = 0;
     const handleContextMenu = (e: MouseEvent) => {
+      lastContextMenuTime = Date.now();
       showFileContextMenu(e, this.app, entry.file, card.path);
     };
 
@@ -1044,6 +1069,8 @@ export class SharedCardRenderer {
           (e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (Date.now() - lastContextMenuTime < 500) return;
+            if (touchDownTime && Date.now() - touchDownTime > 200) return;
             const paneType = Keymap.isModEvent(e);
             void this.app.workspace.openLinkText(
               card.path,
@@ -1086,6 +1113,8 @@ export class SharedCardRenderer {
           titleEl.addEventListener(
             'click',
             (e) => {
+              if (Date.now() - lastContextMenuTime < 500) return;
+              if (touchDownTime && Date.now() - touchDownTime > 200) return;
               if (!link.contains(e.target as Node)) {
                 e.stopPropagation();
                 const paneType = Keymap.isModEvent(e);
@@ -2431,13 +2460,18 @@ export class SharedCardRenderer {
     if (topSets.length === 0 && bottomSets.length === 0) return;
 
     // Create containers as needed
+    const namesAbove = settings.propertyNames === 'above';
     const topPropertiesEl =
       topSets.length > 0
-        ? cardEl.createDiv('card-properties card-properties-top')
+        ? cardEl.createDiv(
+            `card-properties card-properties-top${namesAbove ? ' names-above' : ''}`
+          )
         : null;
     const bottomPropertiesEl =
       bottomSets.length > 0
-        ? cardEl.createDiv('card-properties card-properties-bottom')
+        ? cardEl.createDiv(
+            `card-properties card-properties-bottom${namesAbove ? ' names-above' : ''}`
+          )
         : null;
 
     // Helper to check if element has rendered content

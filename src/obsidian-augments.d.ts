@@ -2,7 +2,14 @@
  * Obsidian module augmentations for undocumented APIs used by this plugin.
  */
 
-import { TFile, Plugin, LinkCache } from 'obsidian';
+import { App, TFile, Plugin, LinkCache } from 'obsidian';
+
+declare global {
+  interface Window {
+    /** Global Obsidian App instance (available at runtime in all Obsidian contexts) */
+    app?: App;
+  }
+}
 
 declare module 'obsidian' {
   interface FileManager {

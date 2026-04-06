@@ -151,11 +151,10 @@ body:not(.dynamic-views-disable-sticky-group-header)
   }
 }
 
-/* Phone stuck: above card interact elevation (.has-hover-card z-index 21) so
-   headings stay visible during touch press. Only when stuck — in normal flow,
-   top-row cards should grow/elevate over the heading. Desktop keeps z-index 20
-   (hover elevation to 21 is intentional UX). */
-body.is-phone:not(.dynamic-views-disable-sticky-group-header)
+/* Stuck: above card interact elevation (.has-hover-card z-index 21) so headings
+   stay visible during hover grow/elevate. Only when stuck — in normal flow,
+   top-row cards should grow/elevate over the heading. */
+body:not(.dynamic-views-disable-sticky-group-header)
   .dynamic-views.is-grouped
   .bases-cards-container
   .dynamic-views-group-section
@@ -168,7 +167,7 @@ body.is-phone:not(.dynamic-views-disable-sticky-group-header)
   position: relative;
 }
 
-/* Zero-height sentinel for sticky heading IO detection */
+/* Zero-height sentinel for sticky header IO detection */
 .dynamic-views-sticky-sentinel {
   position: absolute;
   top: 0;
