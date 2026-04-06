@@ -1,10 +1,10 @@
 ---
-title: Slideshow system
+title: Image navigation
 description: Card cover image slideshow — navigation, gesture detection, animation, preloading, failed image recovery, and visibility reset.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-26
+updated: 2026-04-06
 ---
-# Slideshow system
+# Image navigation
 
 ## Overview
 
@@ -51,6 +51,8 @@ The slideshow system enables multi-image navigation on card covers in Grid and M
 | `gestureResetTimeout`  | `ReturnType<typeof setTimeout> \| null` | Quiet period timeout for gesture end           |
 | `requiresHoverIntent`  | `boolean`                               | `true` on hover-capable devices (`(hover: hover)` media query) |
 | `cardEl`               | `HTMLElement`                           | Card ancestor for hover intent class check (parameter) |
+
+See [hover-and-touch.md](../patterns/hover-and-touch.md) for the `canHover()` gating architecture this flag participates in.
 
 ## DOM structure
 

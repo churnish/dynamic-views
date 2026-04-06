@@ -32,7 +32,7 @@ div.card                                    ← data-path="{path}"
 ├─ div.card-cover-wrapper                   ← cover format, position=top|left (before .card-content)
 │   ├─ div.card-cover                       ← single image
 │   │   └─ div.dynamic-views-image-embed → img
-│   ├─ div.card-cover.card-cover-slideshow  ← slideshow (≥2 images, top/bottom only; see `slideshow.md`)
+│   ├─ div.card-cover.card-cover-slideshow  ← slideshow (≥2 images, top/bottom only; see `image-navigation.md`)
 │   │   ├─ div.dynamic-views-image-embed
 │   │   │   ├─ img.slideshow-img.slideshow-img-current
 │   │   │   └─ img.slideshow-img.slideshow-img-next
@@ -124,6 +124,8 @@ Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). 
 | `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Card-body ref querySelector | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
 
 Both exclude `.card-previews.thumbnail-placeholder-only` — a previews container with only a thumbnail placeholder, hidden by CSS when the "Show thumbnail placeholder" style setting is off. The CSS rule scoping (`body:not(.dynamic-views-show-thumbnail-placeholder)`) ensures `card-body` is never hidden when placeholders are visible.
+
+For the full interaction gating architecture (pointer type filtering, `canHover`, touch press feedback), see [hover-and-touch.md](../patterns/hover-and-touch.md).
 
 ## Spacing
 

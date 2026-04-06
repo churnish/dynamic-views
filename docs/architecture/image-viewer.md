@@ -2,7 +2,7 @@
 title: Image viewer
 description: Dual-mode image viewer architecture — gesture systems (Panzoom desktop, native mobile touch), keyboard handler map, constrained vs fullscreen modes, cleanup lifecycle, and invariants.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-14
+updated: 2026-04-06
 ---
 # Image viewer
 
@@ -34,7 +34,7 @@ Library: `@panzoom/panzoom`. Provides scroll-wheel zoom, mouse drag pan, cursor 
 - **Maximize** (Space): Toggles `.is-maximized` class. Custom `setTransform` callback (`desktopSetTransform`) clamps pan so image edges stay at container boundaries. Min-scale set to fill the container.
 - **Reset** (R / ArrowDown): Exits maximized mode, resets to scale 1, centered.
 - **Right-click reset**: When maximized, re-centers at contain scale (stays maximized). When not maximized, resets to scale 1.
-- **Popout quirk**: Panzoom binds pointer events to module-scope `document`. In popout windows, pointer events must be rebound to the popout's document (`gestureDoc`), otherwise drag/release fails.
+- **Popout quirk**: Panzoom binds pointer events to module-scope `document`. In popout windows, pointer events must be rebound to the popout's document (`gestureDoc`), otherwise drag/release fails. See [popout-window-safety.md](../patterns/popout-window-safety.md) for the canonical `getOwnerWindow()` pattern.
 - **Alt+drag**: `setAltDragMode(true)` excludes the image from Panzoom and sets `imgEl.draggable = true` to allow native drag via `app.dragManager`.
 
 ### Mobile: native touch handler

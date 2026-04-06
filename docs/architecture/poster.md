@@ -2,7 +2,7 @@
 title: Poster image format
 description: Poster image format architecture — static content clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, and the CSS-only vs full-render setting boundary.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-04
+updated: 2026-04-06
 ---
 # Poster image format
 
@@ -28,7 +28,7 @@ The `posterInteractToReveal` setting controls the interaction model:
 | `false` (default) | `poster-static` | Content always visible, JS clips overflow |
 | `true` | *(none)* | Content hidden, revealed on hover (desktop) or tap (mobile) |
 
-**This setting is NOT CSS-only** — toggling it requires a full re-render because interactive mode depends on render-time event handler setup (`setupHoverIntent` for desktop hover, `isPosterClickReveal` for mobile tap). The container-level `poster-static` class toggle alone is insufficient.
+**This setting is NOT CSS-only** — toggling it requires a full re-render because interactive mode depends on render-time event handler setup (`setupHoverIntent` for desktop hover, `isPosterClickReveal` for mobile tap). The container-level `poster-static` class toggle alone is insufficient. See [hover-and-touch.md](../patterns/hover-and-touch.md) for the pointer type filtering and hover intent gating architecture.
 
 ## Static clipping pipeline
 

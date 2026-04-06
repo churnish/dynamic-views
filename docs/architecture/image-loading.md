@@ -121,7 +121,7 @@ Parses file content to find image references not declared in properties.
 
 - `markImageBroken(url)`: Called on any load error
 - `filterBrokenUrls(urls)`: Removes known-broken before render (early exit if Set empty)
-- Cleared on plugin load and unload via `initExternalBlobCache()` / `cleanupExternalBlobCache()` in [slideshow.ts](../../src/shared/slideshow.ts) (see [slideshow.md](slideshow.md) for the external blob cache lifecycle)
+- Cleared on plugin load and unload via `initExternalBlobCache()` / `cleanupExternalBlobCache()` in [slideshow.ts](../../src/shared/slideshow.ts) (see [image-navigation.md](image-navigation.md) for the external blob cache lifecycle)
 
 ## Aspect ratio caching
 
@@ -140,7 +140,7 @@ Parses file content to find image references not declared in properties.
 
 ### `setupImageLoadHandler()`
 
-> For slideshow-specific image navigation, preloading, and failed image recovery, see [slideshow.md](slideshow.md).
+> For slideshow-specific image navigation, preloading, and failed image recovery, see [image-navigation.md](image-navigation.md).
 
 1. Apply cached metadata upfront (`applyCachedImageMetadata`)
 2. Check already-loaded state (`complete && naturalWidth > 0 && naturalHeight > 0 && !image-ready`)

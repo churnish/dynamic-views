@@ -6,7 +6,7 @@ updated: 2026-04-06
 ---
 # Settings resolution pipeline
 
-The settings resolution pipeline merges static defaults, template overrides, and per-view config into fully resolved settings objects for Bases. Covers the three-layer resolution chain, sparse storage pattern, position-based title/subtitle derivation, stale config guards, type coercion, template system, and migration.
+The settings resolution pipeline merges static defaults, template overrides, and per-view config into fully resolved settings objects for Bases. Covers the three-layer resolution chain, sparse storage pattern, position-based title/subtitle derivation, stale config guards, type coercion, template system, and migration. For the user-facing setting keys, defaults, ranges, and programmatic API, see [view-configuration.md](../patterns/view-configuration.md).
 
 ## Files
 

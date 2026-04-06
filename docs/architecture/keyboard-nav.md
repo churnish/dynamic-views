@@ -2,7 +2,7 @@
 title: Keyboard navigation
 description: Spatial arrow-key navigation across card views — activation modes, focus state flags, virtual rect navigation, and popout rebinding.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-04-06
 ---
 # Keyboard navigation
 
@@ -104,6 +104,7 @@ The capture-phase keydown listener binds to `ownerDocument` (not global `documen
 - `reattach()` re-binds to the new document
 - Called from `handleDocumentChange()` in grid-view.ts and masonry-view.ts
 - See `electron-popout-quirks.md` for why binding to the correct window matters
+- See [popout-window-safety.md](../patterns/popout-window-safety.md) for the full popout-safe derivation pattern and common pitfalls
 
 ## Image viewer blocking
 
