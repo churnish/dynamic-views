@@ -6,6 +6,11 @@ vi.mock('../../src/shared/slideshow', () => ({
   preloadImageBatch: vi.fn(),
 }));
 
+// Mock image-loader
+vi.mock('../../src/shared/image-loader', () => ({
+  markImageBroken: vi.fn(),
+}));
+
 import {
   computeScrubIndex,
   applyScrubImage,
@@ -40,6 +45,36 @@ function firePointer(
       ...init,
     })
   );
+}
+
+/** Create a dual-image thumbnail DOM matching shared-renderer output. */
+function createDualImageThumb(): {
+  thumbEl: HTMLElement;
+  currImg: HTMLImageElement;
+  nextImg: HTMLImageElement;
+  cardEl: HTMLElement;
+} {
+  const thumbEl = document.createElement('div');
+  const embedContainer = document.createElement('div');
+  embedContainer.classList.add('dynamic-views-image-embed');
+  thumbEl.appendChild(embedContainer);
+
+  const currImg = document.createElement('img');
+  currImg.classList.add('slideshow-img', 'slideshow-img-current');
+  patchObsidianMethods(currImg);
+  embedContainer.appendChild(currImg);
+
+  const nextImg = document.createElement('img');
+  nextImg.classList.add('slideshow-img', 'slideshow-img-next');
+  patchObsidianMethods(nextImg);
+  embedContainer.appendChild(nextImg);
+
+  const cardEl = document.createElement('div');
+  cardEl.classList.add('card');
+  cardEl.appendChild(thumbEl);
+  document.body.appendChild(cardEl);
+
+  return { thumbEl, currImg, nextImg, cardEl };
 }
 
 // ── computeScrubIndex ─────────────────────────────────────────────────────
@@ -124,7 +159,8 @@ describe('applyScrubImage', () => {
 
 describe('setupTouchScrubbing', () => {
   let thumbEl: HTMLElement;
-  let imgEl: HTMLImageElement;
+  let currImg: HTMLImageElement;
+  let nextImg: HTMLImageElement;
   let cardEl: HTMLElement;
   let imageUrls: string[];
   let controller: AbortController;
@@ -132,14 +168,8 @@ describe('setupTouchScrubbing', () => {
   let brokenHandler: Mock;
 
   beforeEach(() => {
-    thumbEl = document.createElement('div');
-    imgEl = document.createElement('img');
-    patchObsidianMethods(imgEl);
-    thumbEl.appendChild(imgEl);
-    cardEl = document.createElement('div');
-    cardEl.classList.add('card');
-    cardEl.appendChild(thumbEl);
-    document.body.appendChild(cardEl);
+    vi.useFakeTimers();
+    ({ thumbEl, currImg, nextImg, cardEl } = createDualImageThumb());
 
     imageUrls = ['/img/a.jpg', '/img/b.jpg', '/img/c.jpg'];
     controller = new AbortController();
@@ -164,6 +194,7 @@ describe('setupTouchScrubbing', () => {
 
   afterEach(() => {
     controller.abort();
+    vi.useRealTimers();
     while (document.body.firstChild) {
       document.body.removeChild(document.body.firstChild);
     }
@@ -172,7 +203,6 @@ describe('setupTouchScrubbing', () => {
   it('triggers preload on first touch pointerdown', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -198,7 +228,6 @@ describe('setupTouchScrubbing', () => {
     preloadGuard.done = true;
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -218,7 +247,6 @@ describe('setupTouchScrubbing', () => {
   it('enters scrub mode on pointermove > 10px delta', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -231,9 +259,10 @@ describe('setupTouchScrubbing', () => {
       pointerType: 'touch',
       clientX: 50,
     });
+    // Negative delta (left swipe) — advances to next image (natural scrolling)
     firePointer(thumbEl, 'pointermove', {
       pointerType: 'touch',
-      clientX: 62,
+      clientX: 38,
     });
 
     expect(thumbEl.classList.contains('scrub-hover')).toBe(true);
@@ -242,7 +271,6 @@ describe('setupTouchScrubbing', () => {
   it('does NOT enter scrub mode on pointermove < 10px delta', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -263,10 +291,130 @@ describe('setupTouchScrubbing', () => {
     expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
   });
 
+  it('applies animation classes on swipe (left swipe → exit-left + enter-left = next)', () => {
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    // Left swipe (negative delta) → next image (natural scrolling)
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    expect(currImg.classList.contains('slideshow-exit-left')).toBe(true);
+    expect(nextImg.classList.contains('slideshow-enter-left')).toBe(true);
+    expect(nextImg.src).toContain('/img/b.jpg');
+  });
+
+  it('applies correct direction for right swipe (exit-right + enter-right = previous)', () => {
+    // Advance to index 1 first via left swipe
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Left swipe to advance to index 1
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+    firePointer(thumbEl, 'pointerup', { pointerType: 'touch' });
+
+    // Finish animation to swap roles
+    vi.runAllTimers();
+
+    // Right swipe to go back — re-query after role swap
+    const newCurr = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-current'
+    )!;
+    const newNext = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-next'
+    )!;
+
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    // Positive delta → previous image
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 62,
+    });
+
+    expect(newCurr.classList.contains('slideshow-exit-right')).toBe(true);
+    expect(newNext.classList.contains('slideshow-enter-right')).toBe(true);
+  });
+
+  it('cancel-and-restart: finishes previous animation before starting new one', () => {
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // First swipe (left — advance)
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+    firePointer(thumbEl, 'pointerup', { pointerType: 'touch' });
+
+    // Animation is in progress — exit-left on currImg
+    expect(currImg.classList.contains('slideshow-exit-left')).toBe(true);
+
+    // Second swipe (left again) — should cancel first and start new
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    // After cancel-and-restart, roles should have swapped (finishThumbnailAnimation ran)
+    // The new current img should now have the exit class
+    const newCurr = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-current'
+    )!;
+    const newNext = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-next'
+    )!;
+    expect(newCurr.classList.contains('slideshow-exit-left')).toBe(true);
+    expect(newNext.classList.contains('slideshow-enter-left')).toBe(true);
+  });
+
   it('suppresses click after scrub on pointerup', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -299,7 +447,6 @@ describe('setupTouchScrubbing', () => {
   it('does NOT suppress click when no scrub occurred', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -329,7 +476,6 @@ describe('setupTouchScrubbing', () => {
   it('cleans up on pointercancel', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -352,46 +498,9 @@ describe('setupTouchScrubbing', () => {
     expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
   });
 
-  it('re-resolves cardEl from DOM when reResolveCard is true', () => {
-    setupTouchScrubbing({
-      thumbEl,
-      imgEl,
-      cardEl,
-      imageUrls,
-      signal: controller.signal,
-      preloadSignal: controller.signal,
-      preloadGuard,
-      brokenHandler,
-      reResolveCard: true,
-    });
-
-    firePointer(thumbEl, 'pointerdown', {
-      pointerType: 'touch',
-      clientX: 50,
-    });
-    firePointer(thumbEl, 'pointermove', {
-      pointerType: 'touch',
-      clientX: 62,
-    });
-    // pointerup target is imgEl — closest('.card') should resolve to cardEl
-    firePointer(imgEl, 'pointerup', {
-      pointerType: 'touch',
-      clientX: 62,
-    });
-
-    // Click should be suppressed on the resolved cardEl
-    const clickHandler = vi.fn();
-    cardEl.addEventListener('click', clickHandler);
-    cardEl.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, cancelable: true })
-    );
-    expect(clickHandler).not.toHaveBeenCalled();
-  });
-
   it('ignores mouse pointer events', () => {
     setupTouchScrubbing({
       thumbEl,
-      imgEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -412,23 +521,208 @@ describe('setupTouchScrubbing', () => {
     expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
     expect(preloadImageBatch).not.toHaveBeenCalled();
   });
+
+  it('reset function cancels animation, resets index, and restores images', () => {
+    const reset = setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Swipe to advance
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 62,
+    });
+
+    // Animation is in progress
+    thumbEl.dataset.scrubbedSrc = '/img/b.jpg';
+
+    // Call reset
+    reset();
+
+    // After reset: current img shows first URL, scrubbedSrc cleared
+    const curr = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-current'
+    )!;
+    expect(curr.src).toContain('/img/a.jpg');
+    expect(thumbEl.dataset.scrubbedSrc).toBeUndefined();
+    // Animation classes removed
+    expect(curr.classList.contains('slideshow-exit-right')).toBe(false);
+    expect(curr.classList.contains('slideshow-exit-left')).toBe(false);
+  });
+
+  it('wraps from last to first on left swipe at end (looping default)', () => {
+    imageUrls = ['/img/a.jpg', '/img/b.jpg'];
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Left swipe → advance to index 1
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+    firePointer(thumbEl, 'pointerup', { pointerType: 'touch' });
+    vi.runAllTimers();
+
+    // Now at index 1 (last). Left swipe again — should wrap to 0
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    // Animation should fire (wrapping to first image)
+    const curr = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-current'
+    )!;
+    expect(curr.classList.contains('slideshow-exit-left')).toBe(true);
+  });
+
+  it('clamps at last image when looping disabled', () => {
+    // Add body class to disable looping
+    document.body.classList.add('dynamic-views-thumbnail-disable-looping');
+
+    imageUrls = ['/img/a.jpg', '/img/b.jpg'];
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Left swipe → advance to index 1
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+    firePointer(thumbEl, 'pointerup', { pointerType: 'touch' });
+    vi.runAllTimers();
+
+    // Now at index 1 (last). Left swipe again — should stay at 1
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    // No animation — index unchanged
+    const curr = thumbEl.querySelector<HTMLImageElement>(
+      '.slideshow-img-current'
+    )!;
+    expect(curr.classList.contains('slideshow-exit-left')).toBe(false);
+    expect(curr.classList.contains('slideshow-exit-right')).toBe(false);
+
+    document.body.classList.remove('dynamic-views-thumbnail-disable-looping');
+  });
+
+  it('sets dataset.scrubbedSrc after animation completes', () => {
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    // scrubbedSrc not set during animation
+    expect(thumbEl.dataset.scrubbedSrc).toBeUndefined();
+
+    vi.runAllTimers();
+
+    // Set after animation finishes
+    expect(thumbEl.dataset.scrubbedSrc).toBe('/img/b.jpg');
+  });
+
+  it('swaps roles and clears src on timeout completion', () => {
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Left swipe to advance
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    // Before timeout: currImg is still "current"
+    expect(currImg.classList.contains('slideshow-img-current')).toBe(true);
+    expect(nextImg.classList.contains('slideshow-img-next')).toBe(true);
+
+    // After timeout: roles swapped
+    vi.runAllTimers();
+
+    expect(currImg.classList.contains('slideshow-img-next')).toBe(true);
+    expect(nextImg.classList.contains('slideshow-img-current')).toBe(true);
+    // Animation classes removed
+    expect(currImg.classList.contains('slideshow-exit-left')).toBe(false);
+    expect(nextImg.classList.contains('slideshow-enter-left')).toBe(false);
+  });
 });
 
 // ── observeThumbnailReset / unobserveThumbnailReset ───────────────────────
 
 describe('observeThumbnailReset / unobserveThumbnailReset', () => {
   let thumbEl: HTMLElement;
-  let imgEl: HTMLImageElement;
-  let imageUrls: string[];
   let mockObserve: Mock;
   let mockUnobserve: Mock;
   let ioCallback: IntersectionObserverCallback;
 
   beforeEach(() => {
     thumbEl = document.createElement('div');
-    imgEl = document.createElement('img');
-    patchObsidianMethods(imgEl);
-    imageUrls = ['/img/first.jpg', '/img/second.jpg'];
     vi.mocked(getCachedBlobUrl).mockImplementation((url) => url);
 
     mockObserve = vi.fn();
@@ -452,14 +746,35 @@ describe('observeThumbnailReset / unobserveThumbnailReset', () => {
     vi.unstubAllGlobals();
   });
 
+  it('calls onReset when re-entering after being hidden', () => {
+    const onReset = vi.fn();
+    observeThumbnailReset(thumbEl, onReset);
+
+    // Go out of view
+    ioCallback([{ target: thumbEl, isIntersecting: false } as any], {} as any);
+
+    // Come back into view
+    ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onReset on first intersection (was never hidden)', () => {
+    const onReset = vi.fn();
+    observeThumbnailReset(thumbEl, onReset);
+
+    ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
+
+    expect(onReset).not.toHaveBeenCalled();
+  });
+
   it('processes ALL entries in batch (not just first)', () => {
     const thumbEl2 = document.createElement('div');
-    const imgEl2 = document.createElement('img');
-    patchObsidianMethods(imgEl2);
-    const urls2 = ['/img/x.jpg', '/img/y.jpg'];
+    const onReset1 = vi.fn();
+    const onReset2 = vi.fn();
 
-    observeThumbnailReset(thumbEl, imgEl, imageUrls);
-    observeThumbnailReset(thumbEl2, imgEl2, urls2);
+    observeThumbnailReset(thumbEl, onReset1);
+    observeThumbnailReset(thumbEl2, onReset2);
 
     // Simulate both going out of view
     ioCallback(
@@ -479,51 +794,19 @@ describe('observeThumbnailReset / unobserveThumbnailReset', () => {
       {} as any
     );
 
-    expect(imgEl.src).toContain('/img/first.jpg');
-    expect(imgEl2.src).toContain('/img/x.jpg');
-  });
-
-  it('resets image on re-entry after being hidden', () => {
-    observeThumbnailReset(thumbEl, imgEl, imageUrls);
-
-    // Go out of view
-    ioCallback([{ target: thumbEl, isIntersecting: false } as any], {} as any);
-
-    // Come back into view
-    ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
-
-    expect(imgEl.src).toContain('/img/first.jpg');
-    expect(imgEl.classList.contains('scrub-loading')).toBe(false);
-  });
-
-  it('does not reset on first intersection (was never hidden)', () => {
-    observeThumbnailReset(thumbEl, imgEl, imageUrls);
-
-    ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
-
-    // src should still be empty — no reset triggered
-    expect(imgEl.src).toBe('');
-  });
-
-  it('clears dataset.scrubbedSrc on reset', () => {
-    thumbEl.dataset.scrubbedSrc = '/img/second.jpg';
-    observeThumbnailReset(thumbEl, imgEl, imageUrls);
-
-    ioCallback([{ target: thumbEl, isIntersecting: false } as any], {} as any);
-    ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
-
-    expect(thumbEl.dataset.scrubbedSrc).toBeUndefined();
+    expect(onReset1).toHaveBeenCalledTimes(1);
+    expect(onReset2).toHaveBeenCalledTimes(1);
   });
 
   it('unobserveThumbnailReset removes state so IO callback is a no-op', () => {
-    observeThumbnailReset(thumbEl, imgEl, imageUrls);
+    const onReset = vi.fn();
+    observeThumbnailReset(thumbEl, onReset);
     unobserveThumbnailReset(thumbEl);
 
     // IO callback for unobserved element should be a no-op since state was deleted
     ioCallback([{ target: thumbEl, isIntersecting: false } as any], {} as any);
     ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
 
-    // imgEl.src should remain empty since state was deleted
-    expect(imgEl.src).toBe('');
+    expect(onReset).not.toHaveBeenCalled();
   });
 });

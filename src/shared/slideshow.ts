@@ -773,7 +773,7 @@ export function setupSwipeGestures(
   // Show icon again when view is scrolled vertically (mobile only)
   // Throttle to prevent battery drain from high-frequency scroll events
   if (isMobile) {
-    const viewContainer = coverEl.closest('.dynamic-views');
+    const viewContainer = coverEl.closest('.bases-view');
     if (viewContainer) {
       let lastScrollTime = 0;
       viewContainer.addEventListener(

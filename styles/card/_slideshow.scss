@@ -22,6 +22,15 @@
     z-index: 1;
   }
 
+  /* Thumbnail slideshow z-index (analogous to cover rules above) */
+  .card-thumbnail.multi-image .slideshow-img-current {
+    z-index: 2;
+  }
+
+  .card-thumbnail.multi-image .slideshow-img-next {
+    z-index: 1;
+  }
+
   /* Hide next image when not animating (empty src shows broken icon) */
   .slideshow-img-next:not(.slideshow-enter-left):not(.slideshow-enter-right) {
     visibility: hidden;
@@ -239,7 +248,7 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
 }
 
 /* Hide slideshow icon when toggle is on */
-body.dynamic-views-hide-slideshow-icon .dynamic-views .slideshow-icon {
+body.dynamic-views-hide-cover-icon .dynamic-views .slideshow-icon {
   display: none;
 }
 

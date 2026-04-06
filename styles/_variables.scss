@@ -93,6 +93,7 @@ body {
     #fafafa
   );
   --dynamic-views-background-secondary: var(--background-secondary, #f6f6f6);
+  --dynamic-views-border-width: var(--border-width, 0.5px);
   --dynamic-views-background-modifier-border: var(
     --background-modifier-border,
     #e0e0e0

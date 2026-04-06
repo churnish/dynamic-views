@@ -87,6 +87,7 @@ import {
 import {
   canHover,
   canPrimaryHover,
+  deferContainerHoverDrop,
   isHoverPointer,
   setupHoverIntent,
   setupTouchPress,
@@ -910,9 +911,7 @@ export class SharedCardRenderer {
         },
         () => {
           cardEl.classList.remove('interact');
-          cardEl
-            .closest('.masonry-container, .bases-cards-group')
-            ?.classList.remove('has-hover-card');
+          deferContainerHoverDrop(cardEl);
           keyboardNav?.onHoverEnd?.();
         },
         signal
@@ -929,9 +928,7 @@ export class SharedCardRenderer {
       },
       () => {
         cardEl.classList.remove('interact');
-        cardEl
-          .closest('.masonry-container, .bases-cards-group')
-          ?.classList.remove('has-hover-card');
+        deferContainerHoverDrop(cardEl);
       },
       signal
     );
@@ -1938,6 +1935,25 @@ export class SharedCardRenderer {
     // Thumbnail scrubbing (hover + touch, max 10 images)
     if (scrubbableUrls) {
       imageEl.classList.add('multi-image');
+      imgEl.classList.add('slideshow-img', 'slideshow-img-current');
+
+      // Second image element for swipe animation (touch only)
+      const nextImg = imageEmbedContainer.createEl('img', {
+        cls: ['slideshow-img', 'slideshow-img-next'],
+        attr: { src: '', alt: '' },
+      });
+      nextImg.addEventListener(
+        'error',
+        () => {
+          if (!nextImg.src || nextImg.src === window.location.href) return;
+          markImageBroken(nextImg.src);
+          const idx = scrubbableUrls.indexOf(nextImg.src);
+          if (idx !== -1) scrubbableUrls.splice(idx, 1);
+          if (scrubbableUrls.length <= 1)
+            imageEl.classList.remove('multi-image');
+        },
+        signal ? { signal } : undefined
+      );
 
       // Touch + hover preload dedup
       const preloadGuard = { done: false };
@@ -1954,6 +1970,9 @@ export class SharedCardRenderer {
           preloadGuard
         );
       }
+
+      // Touch scrub reset — declared before hover handlers so closures can call it
+      let resetTouchScrub: (() => void) | null = null;
 
       // Cache bounding rect on pointerenter to avoid layout thrashing on every pointermove
       // Closure and DOMRect freed when event listeners are removed via { signal }
@@ -1977,7 +1996,11 @@ export class SharedCardRenderer {
           const rect = (cachedRect ??= imageEl.getBoundingClientRect());
           const x = e.clientX - rect.left;
           const index = computeScrubIndex(x, rect.width, scrubbableUrls.length);
-          applyScrubImage(imgEl, scrubbableUrls[index]);
+          const curr = imageEmbedContainer.querySelector<HTMLImageElement>(
+            '.slideshow-img-current'
+          );
+          if (!curr) return;
+          applyScrubImage(curr, scrubbableUrls[index]);
         },
         { signal, passive: true }
       );
@@ -1991,20 +2014,25 @@ export class SharedCardRenderer {
           imageEl.classList.remove('scrub-hover');
           // Invalidate cached rect for next hover (handles resize)
           cachedRect = null;
-          imgEl.removeClass('scrub-loading');
+          const curr = imageEmbedContainer.querySelector<HTMLImageElement>(
+            '.slideshow-img-current'
+          );
+          if (!curr) return;
+          curr.removeClass('scrub-loading');
           const firstUrl = scrubbableUrls[0];
           if (!firstUrl) return;
           // First image is pre-validated, always show it
-          imgEl.removeClass('dynamic-views-hidden');
-          imgEl.src = getCachedBlobUrl(firstUrl);
+          curr.removeClass('dynamic-views-hidden');
+          curr.src = getCachedBlobUrl(firstUrl);
+          // Sync touch state back to index 0
+          resetTouchScrub?.();
         },
         { signal }
       );
 
       // Touch scrubbing: horizontal swipe across multi-image thumbnail
-      const resetSwipeIndex = setupTouchScrubbing({
+      resetTouchScrub = setupTouchScrubbing({
         thumbEl: imageEl,
-        imgEl,
         cardEl,
         imageUrls: scrubbableUrls,
         signal: signal!,
@@ -2018,10 +2046,13 @@ export class SharedCardRenderer {
           }
         ),
       });
-      observeThumbnailReset(imageEl, imgEl, scrubbableUrls, resetSwipeIndex);
+      observeThumbnailReset(imageEl, resetTouchScrub);
       signal?.addEventListener(
         'abort',
-        () => unobserveThumbnailReset(imageEl),
+        () => {
+          resetTouchScrub?.();
+          unobserveThumbnailReset(imageEl);
+        },
         { once: true }
       );
     }

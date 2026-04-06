@@ -164,7 +164,7 @@ body.dynamic-views-text-preview-keep-newlines
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    z-index: 1;
+    z-index: 3; /* Above .slideshow-img-current (z-index 2) */
     opacity: 1;
     transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 
@@ -178,13 +178,14 @@ body.dynamic-views-text-preview-keep-newlines
   }
 }
 
-/* Hide scrubbing indicator during scrub */
+/* Hide indicator during scrub hover + after swipe (restored on vertical scroll) */
+.dynamic-views .card-thumbnail .thumbnail-indicator.dynamic-views-icon-hidden,
 .dynamic-views .card-thumbnail.scrub-hover .thumbnail-indicator {
   opacity: 0;
 }
 
 /* Hide scrubbing indicator when toggle is on */
-body.dynamic-views-hide-scrubbing-icon
+body.dynamic-views-hide-thumbnail-icon
   .dynamic-views
   .card-thumbnail
   .thumbnail-indicator {
@@ -212,6 +213,13 @@ body.dynamic-views-show-thumbnail-placeholder
     overflow: visible; /* Allow drop-shadow to extend outside */
     touch-action: pan-y;
     pointer-events: auto; /* Override base pointer-events: none for scrub gestures */
+  }
+
+  /* Anchor absolute-positioned slideshow images and clip sliding animation.
+     Parent .card-thumbnail.multi-image stays overflow: visible for drop-shadow. */
+  .card-thumbnail.multi-image .dynamic-views-image-embed {
+    position: relative;
+    overflow: hidden;
   }
 
   .card-thumbnail.multi-image img {

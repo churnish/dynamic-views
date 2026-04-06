@@ -252,9 +252,9 @@ export function isFixedHeightForMasonry(
   );
 }
 
-/** Returns false when "Disable slideshow" is enabled. */
+/** Returns false when "Disable navigation" is enabled for covers. */
 export function isSlideshowEnabled(): boolean {
-  return !hasBodyClass('dynamic-views-slideshow-disabled');
+  return !hasBodyClass('dynamic-views-cover-disable-navigation');
 }
 
 /** Returns true when user enables "Disable looping" */
@@ -267,15 +267,20 @@ export function isSlideshowLoopingDisabled(): boolean {
  * Returns false when user enables "Hide slideshow icon"
  */
 export function isSlideshowIconEnabled(): boolean {
-  return !hasBodyClass('dynamic-views-hide-slideshow-icon');
+  return !hasBodyClass('dynamic-views-hide-cover-icon');
 }
 
 /**
- * Check if thumbnail scrubbing is disabled
- * Returns true when user enables "Disable thumbnail scrubbing"
+ * Check if thumbnail navigation is disabled
+ * Returns true when user enables "Disable navigation" for thumbnails
  */
 export function isThumbnailScrubbingDisabled(): boolean {
-  return hasBodyClass('dynamic-views-disable-thumbnail-scrubbing');
+  return hasBodyClass('dynamic-views-thumbnail-disable-navigation');
+}
+
+/** Returns true when user enables "Do not loop" for thumbnails. */
+export function isThumbnailLoopingDisabled(): boolean {
+  return hasBodyClass('dynamic-views-thumbnail-disable-looping');
 }
 
 /**

@@ -403,7 +403,7 @@ settings:
     -
         id: dynamic-views-cover-crop
         title: Crop alignment
-        description: How to crop images to fit.
+        description: How to crop cover images to fit.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-crop-center
@@ -420,7 +420,7 @@ settings:
     -
         id: dynamic-views-cover-background
         title: Background
-        description: Background color for contained images and placeholders.
+        description: Background color for contained covers and placeholders.
         type: class-select
         allowEmpty: false
         default: dynamic-views-cover-bg-dimmed
@@ -466,7 +466,7 @@ settings:
     -
         id: dynamic-views-show-cover-placeholder
         title: Show placeholders
-        description: Show empty covers for files with no image.
+        description: Show blank covers in cards without images.
         type: class-select
         allowEmpty: false
         default: dynamic-views-show-cover-placeholder-grid
@@ -525,6 +525,48 @@ settings:
         description: Show border between cover and card content.
         type: class-toggle
     -
+        id: dynamic-views-cover-disable-navigation
+        title: Disable navigation
+        description: Do not cycle through cover images.
+        type: class-toggle
+    -
+        id: dynamic-views-slideshow-disable-looping
+        title: Do not loop
+        description: Stop at last image instead of wrapping back to first.
+        type: class-toggle
+    -
+        id: dynamic-views-slideshow-arrows
+        title: Navigation arrows
+        description: Visibility of left/right arrows on slideshow covers.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-slideshow-arrows-hover
+        options:
+            -
+                label: Show
+                value: dynamic-views-slideshow-arrows-show
+            -
+                label: Show on hover
+                value: dynamic-views-slideshow-arrows-hover
+            -
+                label: Hide
+                value: dynamic-views-slideshow-arrows-hide
+    -
+        id: dynamic-views-hide-cover-icon
+        title: Hide icon
+        description: Do not show icon on covers with multiple images.
+        type: class-toggle
+    -
+        id: dynamic-views-slideshow-max-images
+        title: Image count
+        description: Limit number of images in cover slideshows.
+        type: variable-number-slider
+        default: 10
+        min: 2
+        max: 24
+        step: 1
+        format: ''
+    -
         id: dates-heading
         title: Dates
         type: heading
@@ -567,12 +609,12 @@ settings:
     -
         id: dynamic-views-hide-group-count
         title: Hide result count
-        description: Hide result count in group headings.
+        description: Hide result count in group headers.
         type: class-toggle
     -
         id: dynamic-views-hide-group-property-names
         title: Hide property names
-        description: Hide property names in group headings.
+        description: Hide property names in group headers.
         type: class-toggle
     -
         id: dynamic-views-disable-sticky-group-header
@@ -589,7 +631,7 @@ settings:
     -
         id: dynamic-views-image-viewer-disabled
         title: Disable image viewer
-        description: Do not enlarge image when pressing on thumbnails or covers.
+        description: Do not enlarge image when pressing on thumbnail or cover.
         type: class-toggle
     -
         id: dynamic-views-zoom-disabled
@@ -1012,54 +1054,6 @@ settings:
         type: class-toggle
         default: false
     -
-        id: slideshow
-        title: Slideshow
-        type: heading
-        level: 2
-        collapsed: true
-    -
-        id: dynamic-views-slideshow-disabled
-        title: Disable slideshow
-        description: Do not cycle through cover images on cards with multiple images.
-        type: class-toggle
-    -
-        id: dynamic-views-slideshow-disable-looping
-        title: Do not loop
-        description: Stop at last image instead of wrapping back to first.
-        type: class-toggle
-    -
-        id: dynamic-views-slideshow-arrows
-        title: Navigation arrows
-        description: Visibility of left/right arrows on slideshow covers.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-slideshow-arrows-hover
-        options:
-            -
-                label: Show
-                value: dynamic-views-slideshow-arrows-show
-            -
-                label: Show on hover
-                value: dynamic-views-slideshow-arrows-hover
-            -
-                label: Hide
-                value: dynamic-views-slideshow-arrows-hide
-    -
-        id: dynamic-views-hide-slideshow-icon
-        title: Hide icon
-        description: Hide slideshow icon when card has multiple images.
-        type: class-toggle
-    -
-        id: dynamic-views-slideshow-max-images
-        title: Image count
-        description: Limit number of images in cover slideshows.
-        type: variable-number-slider
-        default: 10
-        min: 2
-        max: 24
-        step: 1
-        format: ''
-    -
         id: subtitle
         title: Subtitle
         type: heading
@@ -1436,7 +1430,7 @@ settings:
     -
         id: dynamic-views-thumbnail-crop
         title: Crop alignment
-        description: How to crop thumbnail images when aspect ratios do not match.
+        description: How to crop thumbnail images to fit.
         type: class-select
         allowEmpty: false
         default: dynamic-views-thumbnail-crop-center
@@ -1452,19 +1446,25 @@ settings:
                 value: dynamic-views-thumbnail-crop-bottom
     -
         id: dynamic-views-show-thumbnail-placeholder
-        title: Show placeholder
-        description: Show empty thumbnail placeholder for files without images.
+        title: Show placeholders
+        description: Show blank thumbnails in cards without images.
         type: class-toggle
         default: false
     -
-        id: dynamic-views-disable-thumbnail-scrubbing
-        title: Disable scrubbing
-        description: Do not show other images on hover over thumbnail.
+        id: dynamic-views-thumbnail-disable-navigation
+        title: Disable navigation
+        description: Do not cycle through thumbnail images.
         type: class-toggle
         default: false
     -
-        id: dynamic-views-hide-scrubbing-icon
-        title: Hide scrubbing icon
+        id: dynamic-views-thumbnail-disable-looping
+        title: Do not loop
+        description: Stop at last image instead of wrapping back to first.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-hide-thumbnail-icon
+        title: Hide icon
         description: Do not show icon on thumbnails with multiple images.
         type: class-toggle
         default: false
@@ -1776,10 +1776,10 @@ body:not(.dynamic-views-property-name-color-custom)
   .setting-item[data-id='dynamic-views-property-name-color-custom'],
 body.dynamic-views-slideshow-arrows-show
   .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-slideshow-icon'],
-body.dynamic-views-slideshow-disabled
+  .setting-item[data-id='dynamic-views-hide-cover-icon'],
+body.dynamic-views-cover-disable-navigation
   .style-settings-container
-  .setting-item[data-id='dynamic-views-slideshow-disabled']
+  .setting-item[data-id='dynamic-views-cover-disable-navigation']
   ~ .setting-item,
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
@@ -1811,9 +1811,12 @@ body.is-phone
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
-body.dynamic-views-disable-thumbnail-scrubbing
+body.dynamic-views-thumbnail-disable-navigation
   .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-scrubbing-icon'],
+  .setting-item[data-id='dynamic-views-thumbnail-disable-looping'],
+body.dynamic-views-thumbnail-disable-navigation
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-hide-thumbnail-icon'],
 body:not(.dynamic-views-title-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-title-color-custom'],
@@ -1856,10 +1859,10 @@ body.is-phone
   border-bottom-left-radius: var(--setting-items-radius);
 }
 
-// Thumbnail: hide-scrubbing-icon hidden when scrubbing disabled → disable-thumbnail-scrubbing becomes visually last
-body.dynamic-views-disable-thumbnail-scrubbing
+// Thumbnail: hide-thumbnail-icon hidden when navigation disabled → thumbnail-disable-navigation becomes visually last
+body.dynamic-views-thumbnail-disable-navigation
   .style-settings-container
-  .setting-item[data-id='dynamic-views-disable-thumbnail-scrubbing'] {
+  .setting-item[data-id='dynamic-views-thumbnail-disable-navigation'] {
   border-bottom-right-radius: var(--setting-items-radius);
   border-bottom-left-radius: var(--setting-items-radius);
 }
@@ -1899,6 +1902,10 @@ body.dynamic-views-disable-thumbnail-scrubbing
     left: 16px;
     right: 16px;
     border-block-start: 1px solid var(--background-modifier-border);
+
+    .is-mobile & {
+      border-block-start-width: var(--dynamic-views-border-width);
+    }
   }
 }
 .style-settings-container .setting-item-description > div:last-child {

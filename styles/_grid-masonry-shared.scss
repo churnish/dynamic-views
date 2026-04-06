@@ -136,9 +136,21 @@ body:not(.dynamic-views-disable-sticky-group-header)
      already spans full pane width via negative offsets. Masonry's overflow: clip
      + overflow-clip-margin: bases-view-padding accommodates the extension. */
   &.stuck > .bases-group-collapse-region::before {
-    border-bottom: var(--border-width, 0.5px) solid
+    border-bottom: var(--dynamic-views-border-width) solid
       var(--dynamic-views-bases-table-border-color);
   }
+}
+
+/* Phone stuck: above card interact elevation (.has-hover-card z-index 21) so
+   headings stay visible during touch press. Only when stuck — in normal flow,
+   top-row cards should grow/elevate over the heading. Desktop keeps z-index 20
+   (hover elevation to 21 is intentional UX). */
+body.is-phone:not(.dynamic-views-disable-sticky-group-header)
+  .dynamic-views.is-grouped
+  .bases-cards-container
+  .dynamic-views-group-section
+  > .bases-group-heading.stuck {
+  z-index: 24;
 }
 
 /* Section wrapper: positioning context for sticky sentinel */

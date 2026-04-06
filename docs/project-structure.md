@@ -44,7 +44,7 @@ dynamic-views/
 │   │   ├── scroll-preservation.ts    # Scroll position save/restore
 │   │   ├── settings-schema.ts        # Universal settings schema parser
 │   │   ├── slideshow.ts              # Card image slideshow (animation + swipe)
-│   │   ├── thumbnail-scrub.ts        # Touch scrubbing + shared visibility reset IO for multi-image thumbnails
+│   │   ├── thumbnail-scrub.ts        # Touch scrubbing with slide animation + shared visibility reset IO for multi-image thumbnails
 │   │   ├── text-preview-dom.ts       # DOM updates for card text previews
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
 │   │   └── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems

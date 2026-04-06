@@ -5,7 +5,6 @@ import {
   PluginSettingTab,
   Setting,
   SettingGroup,
-  setIcon,
 } from 'obsidian';
 import type DynamicViews from '../main';
 
@@ -83,56 +82,6 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       smartTimestampSubSettingsEl.toggleClass('dynamic-views-hidden', !enabled);
       conditionalText.toggleClass('dynamic-views-hidden', !enabled);
     };
-
-    // Header
-    const headerEl = containerEl.createDiv('dynamic-views-settings-header');
-
-    const linksContainer = headerEl.createDiv(
-      'dynamic-views-settings-header-links'
-    );
-
-    const createHeaderLink = (
-      parent: HTMLElement,
-      href: string,
-      icon: string,
-      text: string
-    ) => {
-      const link = parent.createEl('a', {
-        href,
-        cls: 'dynamic-views-header-link',
-      });
-      link.setAttribute('target', '_blank');
-      const iconEl = link.createSpan({ cls: 'dynamic-views-link-icon' });
-      setIcon(iconEl, icon);
-      link.createSpan({ text });
-    };
-
-    createHeaderLink(
-      linksContainer,
-      'https://github.com/churnish/dynamic-views/issues',
-      'bug',
-      'Report bug'
-    );
-    linksContainer.createSpan({
-      text: ' • ',
-      cls: 'dynamic-views-header-separator',
-    });
-    createHeaderLink(
-      linksContainer,
-      'https://github.com/churnish/dynamic-views/issues',
-      'lightbulb',
-      'Request feature'
-    );
-    linksContainer.createSpan({
-      text: ' • ',
-      cls: 'dynamic-views-header-separator',
-    });
-    createHeaderLink(
-      linksContainer,
-      'https://github.com/churnish/dynamic-views/discussions/categories/q-a',
-      'lucide-message-circle-question',
-      'Ask question'
-    );
 
     // Appearance section - description text only, no settings
     new SettingGroup(containerEl).addClass('dynamic-views-appearance-group');
