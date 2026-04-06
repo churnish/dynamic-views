@@ -1,10 +1,10 @@
 ---
-title: Poster clipping and interaction
+title: Poster image format
 description: Poster image format architecture — static content clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, and the CSS-only vs full-render setting boundary.
 author: 🤖 Generated with Claude Code
 updated: 2026-04-04
 ---
-# Poster clipping and interaction
+# Poster image format
 
 The poster image format positions a full-bleed background image behind card content. Two interaction modes control how content is presented: **static** (always visible, JS-clipped to fit) and **interactive** (hidden by default, revealed on hover/tap). The core logic lives in `src/shared/poster.ts` with wiring in `src/bases/shared-renderer.ts`.
 
