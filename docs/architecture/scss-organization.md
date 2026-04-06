@@ -89,7 +89,7 @@ Final rules that override or specialize earlier declarations. `_compact` applies
 
 ### CSS custom properties (cascade dependency)
 
-`_variables.scss` is the source of all `--dynamic-views-*` wrapper variables. 26 of 29 partials reference at least one wrapper variable — making `_variables` the most depended-on file. The three exceptions are `_text-interaction` (uses only Obsidian-owned body classes), `_compact` (uses container queries, not variables directly), and `_scroll-gradient` (uses only bare Obsidian variables).
+`_variables.scss` is the source of all `--dynamic-views-*` wrapper variables. 26 of 29 partials reference at least one wrapper variable — making `_variables` the most depended-on file. The three exceptions are `_text-interaction` (uses only body classes, not CSS variables), `_compact` (uses container queries, not variables directly), and `_scroll-gradient` (uses only hardcoded values and body classes).
 
 ### Style Settings body classes (runtime dependency)
 
