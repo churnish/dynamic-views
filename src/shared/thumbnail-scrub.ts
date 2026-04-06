@@ -110,7 +110,10 @@ export interface TouchScrubOptions {
  * Returns a comprehensive reset function for IO scroll-out reset and cleanup. */
 export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
   let touchStartX = 0;
+  let touchStartY = 0;
   let touchScrubbing = false;
+  /** Once gesture direction is decided (horizontal or vertical), lock it for the touch. */
+  let directionLocked = false;
   /** Persistent index across swipes — reset by IO scroll-out observer. */
   let currentIndex = 0;
 
@@ -142,7 +145,9 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
     (e: PointerEvent) => {
       if (!isTouchPointer(e)) return;
       touchStartX = e.clientX;
+      touchStartY = e.clientY;
       touchScrubbing = false;
+      directionLocked = false;
       // Preload images on first touch
       if (!opts.preloadGuard.done) {
         opts.preloadGuard.done = true;
@@ -155,13 +160,22 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
   thumbEl.addEventListener(
     'pointermove',
     (e: PointerEvent) => {
-      if (!isTouchPointer(e) || touchScrubbing) return;
+      if (!isTouchPointer(e) || directionLocked) return;
       const deltaX = e.clientX - touchStartX;
-      if (Math.abs(deltaX) <= 10) return;
+      const deltaY = e.clientY - touchStartY;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      if (absX <= 10 && absY <= 10) return;
+      // First axis to cross 10px wins — vertical locks out scrub entirely
+      directionLocked = true;
+      if (absY >= absX) return;
 
       // One swipe = one image change, then lock until pointerup
       // Swipe left (negative deltaX) = next, swipe right = previous (natural scrolling)
       touchScrubbing = true;
+      // Freeze scroll container to prevent vertical drift during horizontal swipe
+      if (scrollContainer)
+        (scrollContainer as HTMLElement).style.overflowY = 'hidden';
       thumbEl.classList.add('scrub-hover');
       // Hide multi-image indicator during swipe (lazy query — indicator created after setup)
       indicator ??= thumbEl.querySelector<HTMLElement>('.thumbnail-indicator');
@@ -249,17 +263,29 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       if (!isTouchPointer(e)) return;
       if (touchScrubbing) {
         thumbEl.classList.remove('scrub-hover');
-        // Suppress next click (card open / image viewer)
-        opts.cardEl.addEventListener(
-          'click',
-          (ev) => {
-            ev.stopPropagation();
-            ev.preventDefault();
-          },
-          { once: true, capture: true }
+        if (scrollContainer)
+          (scrollContainer as HTMLElement).style.overflowY = '';
+        // Suppress the click synthesized from this touch (card open / image viewer).
+        // Auto-remove after 300ms — swipes don't always generate a click on iOS,
+        // so a stale handler would eat the user's next deliberate tap.
+        const suppress = (ev: MouseEvent) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+        };
+        opts.cardEl.addEventListener('click', suppress, {
+          once: true,
+          capture: true,
+        });
+        setTimeout(
+          () =>
+            opts.cardEl.removeEventListener('click', suppress, {
+              capture: true,
+            }),
+          300
         );
       }
       touchScrubbing = false;
+      directionLocked = false;
     },
     { signal, passive: true }
   );
@@ -269,9 +295,21 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
     (e: PointerEvent) => {
       if (!isTouchPointer(e)) return;
       thumbEl.classList.remove('scrub-hover');
+      if (scrollContainer)
+        (scrollContainer as HTMLElement).style.overflowY = '';
       touchScrubbing = false;
+      directionLocked = false;
     },
     { signal, passive: true }
+  );
+
+  // Block vertical scroll during active horizontal scrub (direction lock prevents false positives)
+  thumbEl.addEventListener(
+    'touchmove',
+    (e: TouchEvent) => {
+      if (touchScrubbing) e.preventDefault();
+    },
+    { signal, passive: false }
   );
 
   // Restore indicator icon on next vertical scroll

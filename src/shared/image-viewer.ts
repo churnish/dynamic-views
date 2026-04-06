@@ -63,6 +63,15 @@ function closeImageViewer(
   viewerClones: Map<HTMLElement, HTMLElement>,
   restoreHoverIntent = true
 ): void {
+  // Mark the source card to suppress touch-press interact from the dismiss tap
+  const sourceCard = (
+    cloneEl as CloneElement
+  ).__originalEmbed?.closest<HTMLElement>('.card');
+  if (sourceCard) {
+    sourceCard.dataset.viewerDismissing = '1';
+    setTimeout(() => delete sourceCard.dataset.viewerDismissing, 300);
+  }
+
   cloneEl.remove();
 
   // Remove body zoom class when no viewers remain
@@ -82,7 +91,7 @@ function closeImageViewer(
     // removal, Electron doesn't re-hit-test so :hover and pointerenter are
     // unreliable — restore class directly using last tracked cursor position.
     // Skipped when a new viewer pre-empts this one (mouse is on a different card).
-    if (restoreHoverIntent) {
+    if (restoreHoverIntent && !Platform.isMobile) {
       const cardEl = original.closest<HTMLElement>('.card');
       if (cardEl && original.dataset.viewerX) {
         const cx = Number(original.dataset.viewerX);

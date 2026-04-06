@@ -106,6 +106,11 @@ export function setupTouchPress(
     'pointerdown',
     (e) => {
       if (!isTouchPointer(e)) return;
+      // Multi-image thumbnails use touch for scrub gestures, not card interaction
+      if ((e.target as HTMLElement)?.closest?.('.card-thumbnail.multi-image'))
+        return;
+      // Suppress interact from image viewer dismiss tap (cooldown set by closeImageViewer)
+      if (el.dataset.viewerDismissing) return;
       activatedAt = Date.now();
       onActivate();
     },
