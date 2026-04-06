@@ -1,11 +1,8 @@
-**Thanks for your interest in contributing!**
+**Thank you for your interest in contributing!**
+
+To get started, see [good first issues](https://github.com/churnish/dynamic-views/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22Help%20wanted%22) or [most valuable issues](https://github.com/churnish/dynamic-views/issues?q=is%3Aissue%20state%3Aopen%20(label%3A%22%F0%9F%9F%A0%20High%20priority%22%20OR%20label%3A%22%F0%9F%9F%A1%20Medium%20priority%22)).
 
 Reach out if you'd like to co-maintain the plugin — we could really use the help.
-
-## Getting started
-
-- [Most valuable issues](https://github.com/churnish/dynamic-views/issues?q=is%3Aissue%20state%3Aopen%20(label%3A%22%F0%9F%9F%A0%20High%20priority%22%20OR%20label%3A%22%F0%9F%9F%A1%20Medium%20priority%22))
-- [Good first issues](https://github.com/churnish/dynamic-views/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22Help%20wanted%22)
 
 ## Setup
 

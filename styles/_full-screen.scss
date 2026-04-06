@@ -1,4 +1,4 @@
-// Full screen mobile — hides view header, bases toolbar, and search row
+// Phone full screen — hides view header, bases toolbar, and search row
 // when bars are hidden (full-screen-active). Restores when bars are
 // showing (full-screen-showing). Uses !important throughout to override
 // Obsidian's inline and !important styles on these elements.
@@ -310,10 +310,6 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
       ) -
       1px
   );
-  // Above card hover/interact elevation (z-index 21 on .has-hover-card
-  // container) so headings stay visible during touch press. Below the
-  // ::before scrim (z-index 25) so headings scroll under the status bar.
-  z-index: 24;
 }
 
 // Sticky sentinel offset: match heading's stuck position so IO-based .stuck

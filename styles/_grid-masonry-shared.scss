@@ -8,6 +8,16 @@
   container-type: inline-size;
 }
 
+/* Android: contain paint invalidation from CSS Grid relayout propagating
+   up to leafContent's ::before scrim. Without this, Grid child layout
+   changes during scroll invalidate ancestor pseudo paint, causing the
+   scrim to miss its compositor paint slot on WebView's single-threaded
+   compositor. Masonry is immune (absolute positioning + explicit contain
+   on cards). Safe on .bases-view because overflow:auto already clips. */
+.is-android .bases-view[data-view-type='dynamic-views-grid'] {
+  contain: paint;
+}
+
 /* View background theme presets — standalone Bases files only (not embeds).
    Body-class-gated: each theme sets --dynamic-views-view-bg-color on body,
    consumed by a single [class*=] rule. "Default" = no background (transparent). */

@@ -147,6 +147,16 @@ body:is(
   z-index: 21;
 }
 
+/* Suppress transitions when restoring hover state after image viewer close.
+   Prevents card re-animating elevation/shadow/background when cursor is still over it. */
+.card.interact-restore {
+  transition: none;
+
+  &::after {
+    transition: none;
+  }
+}
+
 /* Gate pointer cursor behind hover intent on desktop */
 @media (any-hover: hover) {
   .dynamic-views .card:not(.interact) {

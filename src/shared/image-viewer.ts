@@ -78,14 +78,32 @@ function closeImageViewer(
     delete cloneEl.__originalEmbed;
 
     // Restore hover intent so cursor stays zoom-in/pointer after dismiss.
-    // Clone overlay causes mouseleave → hover intent deactivates. After
-    // removal, Electron doesn't re-hit-test so :hover and mouseenter are
-    // unreliable — add class directly instead.
+    // Clone overlay causes pointerleave → hover intent deactivates. After
+    // removal, Electron doesn't re-hit-test so :hover and pointerenter are
+    // unreliable — restore class directly using last tracked cursor position.
     // Skipped when a new viewer pre-empts this one (mouse is on a different card).
     if (restoreHoverIntent) {
       const cardEl = original.closest<HTMLElement>('.card');
-      if (cardEl) {
-        cardEl.classList.add('interact');
+      if (cardEl && original.dataset.viewerX) {
+        const cx = Number(original.dataset.viewerX);
+        const cy = Number(original.dataset.viewerY);
+        const cardRect = cardEl.getBoundingClientRect();
+        if (
+          cx >= cardRect.left &&
+          cx <= cardRect.right &&
+          cy >= cardRect.top &&
+          cy <= cardRect.bottom
+        ) {
+          // Cursor is over the card — restore without re-triggering transitions
+          cardEl.classList.add('interact-restore');
+          cardEl.classList.add('interact');
+          cardEl
+            .closest('.masonry-container, .bases-cards-group')
+            ?.classList.add('has-hover-card');
+          void cardEl.offsetHeight;
+          cardEl.classList.remove('interact-restore');
+        }
+        // Cursor outside card — don't restore (prevents stuck hover state)
       }
 
       // Resume thumbnail scrubbing at last cursor position, or reset if cursor
@@ -116,7 +134,10 @@ function closeImageViewer(
           // Preact finishes.
           if (thumbnailEl.dataset.scrubbedSrc) {
             getOwnerWindow(thumbnailEl).requestAnimationFrame(() => {
-              const img = thumbnailEl.querySelector('img');
+              const img =
+                thumbnailEl.querySelector<HTMLImageElement>(
+                  '.slideshow-img-current'
+                ) ?? thumbnailEl.querySelector<HTMLImageElement>('img');
               if (img?.isConnected && thumbnailEl.dataset.scrubbedSrc) {
                 img.src = thumbnailEl.dataset.scrubbedSrc;
               }

@@ -6,44 +6,42 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
 - Show text previews from first few lines of notes
 - Show note images
-- Display images as covers, thumbnails, posters, or card backdrops
-- Cover slideshow
+- Display images as covers, thumbnails, posters, or backdrops
+- Full screen image viewer
 - Wrap long titles to new line
 - Scroll long properties horizontally
-- Fullscreen image viewer
-- Immersive full screen scrolling on mobile
+- Immersive full screen view on mobile
 
 ### Extras
 
-- Load cards while scrolling rather than all at once
-- Position card images on top, bottom, left or right of text
-- Hover across thumbnail to preview other images
-- Position property names above, inline, or hide them
+- Position card images on top, bottom, left, or right of text
+- Slide or hover to preview other images
+- Position property names inline, above, or hide them
 - Display properties stacked or side-by-side
 - Interactive checkbox properties
-- Select and copy card text
-- Configure default view settings
-- *Open URL* card button (↗)
-- *Shuffle view* button
-- *Open random file* button
 - Fold sections when grouping by property
+- Select card text
+- Configure default view settings
 - Full keyboard navigation
 - Apply CSS snippets to individual views
+- **Open URL** card button
+- **Shuffle view** button
+- **Open random file** button
 
 And numerous other quality‑of‑life improvements over the default Bases card view.
 
 ### Integrations
 
-- Extensive [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) support
+- Extensive [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) customization options
 - Show YouTube thumbnails
-- Show [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) cover images
+- Show [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) images
 - Reveal files, folders and tags in [Notebook Navigator](https://obsidian.md/plugins?id=notebook-navigator)
 
 ## Perfect for
 
-- Image galleries
-- Mood boards
 - Media libraries
+- Mood boards
+- Image galleries
 - Everyday notes
 - [Web Clipper](https://obsidian.md/clipper)
 
@@ -56,7 +54,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 Until **Dynamic Views** is [made available](https://github.com/obsidianmd/obsidian-releases/pull/8400) in the plugin directory, to install it:
 
-1. Install and enable the [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat) plugin.
+1. Download and enable [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat).
 2. [Install via BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://brat?plugin=churnish/dynamic-views).
 3. Select **Add plugin**.
 
@@ -145,9 +143,9 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 
 Image viewer
 
-Press on a card's cover or thumbnail to open the image viewer — a fullscreen overlay with pan and zoom.
+Press on a card's cover or thumbnail to open the image viewer — a fulls creen overlay with pan and zoom.
 
-The image viewer can be fully disabled in Style Settings, along with individual features like zoom or press-to-dismiss.
+The image viewer can be disabled in Style Settings, along with individual features like zoom or press-to-dismiss.
 
 ### Desktop
 
@@ -208,8 +206,9 @@ Start by hovering a card and pressing an arrow key, or pressing Tab to focus the
 
 ## Support
 
-- Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
-- Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
+Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
+
+Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
 
 ## Credits
 

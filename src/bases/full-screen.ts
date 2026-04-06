@@ -77,7 +77,15 @@ export interface FullScreenElements {
 }
 
 // Capacitor StatusBar plugin — hides/shows iOS system status bar elements
-const capacitorStatusBar = globalThis.Capacitor?.Plugins?.StatusBar;
+const capacitorStatusBar = (
+  globalThis as {
+    Capacitor?: {
+      Plugins?: {
+        StatusBar?: { show(): Promise<void>; hide(): Promise<void> };
+      };
+    };
+  }
+).Capacitor?.Plugins?.StatusBar;
 
 // ---------------------------------------------------------------------------
 // Inline style helpers for dynamic values (computed heights, transforms,
@@ -1312,9 +1320,16 @@ export class FullScreenController {
       // (triggers scroll layer repaint that flashes .workspace background).
       this.programmaticScroll = true;
 
-      // Clear tap-shield class before reading "from" values — the class
-      // sets transform:translateY(0) + opacity:0 which would be read as the
-      // animation start, producing a fade-only (no slide).
+      // Replace tap-shield class with inline equivalents that maintain the hidden visual state. Without this, removing the class after settle (WAAPI cancelled, no fill:forwards) exposes the header at opacity:1 for one frame before the show rAF starts WAAPI. Inline transform uses the hide position (not tap-shield's translateY(0)) so WAAPI reads the correct "from" value for the slide-in.
+      if (this.viewHeaderEl) {
+        setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
+        setStyle(
+          this.viewHeaderEl,
+          'transform',
+          `translateY(-${this.headerShift}px)`,
+          'important'
+        );
+      }
       this.viewHeaderEl?.classList.remove('dynamic-views-tap-shield');
 
       // Read WAAPI "from" values BEFORE rAF — fill:forwards still active
