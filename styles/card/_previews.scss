@@ -12,7 +12,8 @@
     flex-direction: column;
   }
 
-  .card.card-thumbnail-top .card-previews .card-thumbnail {
+  .card.card-thumbnail-top .card-previews .card-thumbnail,
+  .card.card-thumbnail-top .card-previews .card-thumbnail-placeholder {
     order: -1;
   }
 
@@ -143,6 +144,7 @@ body.dynamic-views-text-preview-keep-newlines
     overflow: hidden;
     border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
     background-color: var(--dynamic-views-image-background-dimmed);
+    transition: background-color var(--dynamic-views-anim-duration-fast) ease;
     pointer-events: none;
   }
 
@@ -205,6 +207,7 @@ body.dynamic-views-show-thumbnail-placeholder
   );
   border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
   background-color: var(--dynamic-views-image-background-dimmed);
+  transition: background-color var(--dynamic-views-anim-duration-fast) ease;
 }
 
 /* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */

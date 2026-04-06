@@ -4,6 +4,7 @@
     display: none;
     border-radius: var(--dynamic-views-cover-border-radius, 0);
     background-color: var(--dynamic-views-image-background-dimmed);
+    transition: background-color var(--dynamic-views-anim-duration-fast) ease;
   }
 }
 

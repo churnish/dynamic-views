@@ -252,6 +252,33 @@ settings:
                 label: Primary
                 value: dynamic-views-card-background-primary
             -
+                label: Accent
+                value: dynamic-views-card-background-accent
+            -
+                label: Red
+                value: dynamic-views-card-background-red
+            -
+                label: Orange
+                value: dynamic-views-card-background-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-background-yellow
+            -
+                label: Green
+                value: dynamic-views-card-background-green
+            -
+                label: Cyan
+                value: dynamic-views-card-background-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-background-blue
+            -
+                label: Purple
+                value: dynamic-views-card-background-purple
+            -
+                label: Pink
+                value: dynamic-views-card-background-pink
+            -
                 label: Custom
                 value: dynamic-views-card-background-custom
     -
@@ -279,6 +306,9 @@ settings:
             -
                 label: Primary
                 value: dynamic-views-card-background-hover-primary
+            -
+                label: Dimmed
+                value: dynamic-views-card-background-hover-dimmed
             -
                 label: Custom
                 value: dynamic-views-card-background-hover-custom

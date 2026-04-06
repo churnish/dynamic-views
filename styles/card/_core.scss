@@ -157,6 +157,137 @@ body.dynamic-views-card-background-primary .dynamic-views .card {
   --card-bg: var(--dynamic-views-background-primary);
 }
 
+body.dynamic-views-card-background-accent .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-accent) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-red .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-red) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-orange .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-orange) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-yellow .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-yellow) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-green .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-green) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-cyan .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-cyan) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-blue .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-blue) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-purple .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-purple) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+body.dynamic-views-card-background-pink .dynamic-views .card {
+  --card-bg: color-mix(
+    in srgb,
+    var(--dynamic-views-color-pink) 5%,
+    var(--dynamic-views-background-primary-alt)
+  );
+}
+
+/* Dark mode: higher tint percentage — dark backgrounds absorb color */
+body.theme-dark {
+  &.dynamic-views-card-background-accent .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-accent) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-red .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-red) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-orange .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-orange) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-yellow .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-yellow) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-green .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-green) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-cyan .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-cyan) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-blue .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-blue) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-purple .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-purple) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+  &.dynamic-views-card-background-pink .dynamic-views .card {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-pink) 7%,
+      var(--dynamic-views-background-primary-alt)
+    );
+  }
+}
+
 body.dynamic-views-card-background-custom .dynamic-views .card {
   --card-bg: var(
     --dynamic-views-card-background-color-custom,

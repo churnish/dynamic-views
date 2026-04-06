@@ -283,6 +283,7 @@ body.dynamic-views-cover-crop-bottom
   /* Cover backgrounds (all modes) */
   .card.image-format-cover .card-cover {
     background-color: var(--dynamic-views-image-background-dimmed);
+    transition: background-color var(--dynamic-views-anim-duration-fast) ease;
   }
 }
 

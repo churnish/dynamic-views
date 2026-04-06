@@ -92,24 +92,47 @@ body.dynamic-views-open-on-card:not(
   color: var(--dynamic-views-title-hover-color-value);
 }
 
-/* Card background on hover options */
+/* Card background on hover options — override --card-bg so placeholder color derives from it */
 /* Primary (default) */
 body:not([class*='dynamic-views-card-background-hover-'])
   .dynamic-views
   .card.interact {
-  background-color: var(--dynamic-views-background-primary);
+  --card-bg: var(--dynamic-views-background-primary);
 }
 
 body.dynamic-views-card-background-hover-tinted .dynamic-views .card.interact {
-  background-color: var(--dynamic-views-background-primary-alt);
+  --card-bg: var(--dynamic-views-background-primary-alt);
 }
 
 body.dynamic-views-card-background-hover-primary .dynamic-views .card.interact {
-  background-color: var(--dynamic-views-background-primary);
+  --card-bg: var(--dynamic-views-background-primary);
+}
+
+/* Dimmed: darken current --card-bg without overriding it (self-reference would cycle).
+   Set background-color and placeholder var directly from the unchanged --card-bg. */
+body.dynamic-views-card-background-hover-dimmed
+  .dynamic-views
+  .card.interact {
+  background-color: rgb(
+    from var(--card-bg) calc(r - 8) calc(g - 8) calc(b - 8)
+  );
+  --dynamic-views-image-background-dimmed: rgb(
+    from var(--card-bg) calc(r - 23) calc(g - 23) calc(b - 23)
+  );
+}
+body.theme-dark.dynamic-views-card-background-hover-dimmed
+  .dynamic-views
+  .card.interact {
+  background-color: rgb(
+    from var(--card-bg) calc(r - 5) calc(g - 5) calc(b - 5)
+  );
+  --dynamic-views-image-background-dimmed: rgb(
+    from var(--card-bg) calc(r - 15) calc(g - 15) calc(b - 15)
+  );
 }
 
 body.dynamic-views-card-background-hover-custom .dynamic-views .card.interact {
-  background-color: var(
+  --card-bg: var(
     --dynamic-views-card-background-color-hover-custom,
     var(--dynamic-views-background-primary-alt)
   );
