@@ -206,6 +206,9 @@ body.dynamic-views-hide-group-property-names
 }
 
 .dynamic-views {
+  /* Default card background — inherited by .card, overridden by background presets on body */
+  --card-bg: var(--dynamic-views-background-primary-alt);
+
   /* Universal content wrapper: contains header + body */
   .card .card-content {
     display: flex;
@@ -311,8 +314,6 @@ body.dynamic-views-hide-group-property-names
     isolation: isolate; /* Contain internal z-indexes so hover effect z-index stacks above neighbors */
     padding: var(--dynamic-views-card-padding, 8px);
     margin: 0;
-    /* Resolved card background — overridden by transparent/custom modes */
-    --card-bg: var(--dynamic-views-background-primary-alt);
     background-color: var(--card-bg);
     /* Placeholder bg */
     --dynamic-views-image-background-dimmed: rgb(

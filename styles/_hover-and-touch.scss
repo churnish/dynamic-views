@@ -92,7 +92,7 @@ body.dynamic-views-open-on-card:not(
   color: var(--dynamic-views-title-hover-color-value);
 }
 
-/* Card background on hover options — override --card-bg so placeholder color derives from it */
+/* Card background on hover options — override --card-bg so placeholder color derives from it. Exception: Dimmed sets background-color directly to avoid a CSS self-reference cycle. */
 /* Primary (default) */
 body:not([class*='dynamic-views-card-background-hover-'])
   .dynamic-views
@@ -108,8 +108,7 @@ body.dynamic-views-card-background-hover-primary .dynamic-views .card.interact {
   --card-bg: var(--dynamic-views-background-primary);
 }
 
-/* Dimmed: darken current --card-bg without overriding it (self-reference would cycle).
-   Set background-color and placeholder var directly from the unchanged --card-bg. */
+/* Dimmed: darken current --card-bg without overriding it (self-reference would cycle). Set background-color and placeholder var directly from the unchanged --card-bg. Offsets = base placeholder depth + hover card step. Light: card -8, placeholder -23 (-15 base + -8 hover). Dark: card -5, placeholder -15 (-10 base + -5 hover). Coupled to --dynamic-views-image-background-dimmed offsets in _grid-masonry-shared.scss — update together. */
 body.dynamic-views-card-background-hover-dimmed
   .dynamic-views
   .card.interact {
