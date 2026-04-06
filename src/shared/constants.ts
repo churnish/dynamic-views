@@ -70,6 +70,12 @@ export const SWIPE_DETECT_THRESHOLD = 16;
 /** Delay in ms after gesture ends before allowing click events */
 export const GESTURE_TIMEOUT_MS = 50;
 
+/** Touch tap threshold (ms) — presses longer than this suppress file-open on lift. */
+export const TOUCH_TAP_THRESHOLD_MS = 200;
+
+/** Context menu click suppression window (ms) — clicks within this window after a context menu event are dropped. */
+export const CONTEXT_MENU_SUPPRESS_MS = 500;
+
 /** JSON prefix for checkbox property markers */
 export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
 

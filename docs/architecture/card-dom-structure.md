@@ -2,7 +2,7 @@
 title: Card DOM structure
 description: Card DOM hierarchy, class names, and property rows for Grid and Masonry views.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-04-06
 ---
 # Card DOM structure
 
@@ -61,7 +61,7 @@ div.card                                    ← data-path="{path}"
 │   │   └─ a.card-title-url-icon            ← .text-icon-button.svg-icon; URL button; href, aria-label
 │   │
 │   └─ div.card-body
-│       ├─ div.card-properties.card-properties-top
+│       ├─ div.card-properties.card-properties-top [.names-above]
 │       │   └─ (property rows — see below)
 │       ├─ div.card-previews
 │       │   ├─ div.card-text-preview-wrapper
@@ -71,7 +71,7 @@ div.card                                    ← data-path="{path}"
 │       │   └─ div.card-thumbnail [.multi-image]
 │       │       └─ div.dynamic-views-image-embed → img
 │       │       OR div.card-thumbnail-placeholder
-│       └─ div.card-properties.card-properties-bottom
+│       └─ div.card-properties.card-properties-bottom [.names-above]
 │
 └─ div.card-cover-wrapper                   ← cover format, position=bottom|right (after .card-content)
 ```
@@ -130,7 +130,8 @@ Both exclude `.card-previews.thumbnail-placeholder-only` — a previews containe
 `.card-content` and `.card-body` use separate gaps declared in [styles/card/_core.scss](../../styles/card/_core.scss):
 
 - `.card-content` (header↔body): `gap: var(--size-2-3)`
-- `.card-body` (propsTop↔previews↔propsBottom): `gap: var(--size-2-3)`
+- `.card-body` (propsTop↔previews↔propsBottom): `gap: var(--size-4-2)`
+- `.card-properties` (between property rows): `gap: var(--size-4-2)`, or `var(--size-4-3)` when `.names-above` is present
 
 Key behaviors:
 

@@ -352,6 +352,33 @@ describe('Structural content classes', () => {
       expect(body.classList.contains('has-body-content')).toBe(true);
     });
   });
+
+  describe('names-above', () => {
+    function applyNamesAbove(el: HTMLElement, propertyNames: string): void {
+      if (propertyNames === 'above') el.classList.add('names-above');
+    }
+
+    it('added to card-properties when propertyNames is above', () => {
+      const card = buildCardDOM({ hasPropertiesTop: true });
+      const propsTop = card.querySelector('.card-properties-top')!;
+      applyNamesAbove(propsTop, 'above');
+      expect(propsTop.classList.contains('names-above')).toBe(true);
+    });
+
+    it('not added when propertyNames is inline', () => {
+      const card = buildCardDOM({ hasPropertiesTop: true });
+      const propsTop = card.querySelector('.card-properties-top')!;
+      applyNamesAbove(propsTop, 'inline');
+      expect(propsTop.classList.contains('names-above')).toBe(false);
+    });
+
+    it('not added when propertyNames is hide', () => {
+      const card = buildCardDOM({ hasPropertiesTop: true });
+      const propsTop = card.querySelector('.card-properties-top')!;
+      applyNamesAbove(propsTop, 'hide');
+      expect(propsTop.classList.contains('names-above')).toBe(false);
+    });
+  });
 });
 
 describe('applyCssOnlySettings — poster display mode re-clip', () => {

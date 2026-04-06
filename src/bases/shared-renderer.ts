@@ -107,7 +107,9 @@ import {
 } from '../shared/keyboard-nav';
 import {
   CHECKBOX_MARKER_PREFIX,
+  CONTEXT_MENU_SUPPRESS_MS,
   THUMBNAIL_STACK_MULTIPLIER,
+  TOUCH_TAP_THRESHOLD_MS,
   VISIBLE_BODY_SELECTOR,
 } from '../shared/constants';
 import {
@@ -858,11 +860,15 @@ export class SharedCardRenderer {
     cardEl.addEventListener(
       'click',
       (e) => {
-        // Suppress click after context menu or long touch (> 200ms).
-        // Long touches that miss Android's 500ms contextmenu threshold
+        // Suppress click after context menu or long touch.
+        // Long touches that miss Android's contextmenu threshold
         // would otherwise open the file on lift.
-        if (Date.now() - lastContextMenuTime < 500) return;
-        if (touchDownTime && Date.now() - touchDownTime > 200) return;
+        if (Date.now() - lastContextMenuTime < CONTEXT_MENU_SUPPRESS_MS) return;
+        if (
+          touchDownTime &&
+          Date.now() - touchDownTime > TOUCH_TAP_THRESHOLD_MS
+        )
+          return;
 
         if (
           isPosterClickReveal &&
@@ -983,8 +989,8 @@ export class SharedCardRenderer {
     }
 
     // Touch press timing — suppresses file-open for presses that exceed
-    // the tap threshold (200ms) but fall short of Android's native
-    // contextmenu threshold (500ms). Without this, users attempting a
+    // TOUCH_TAP_THRESHOLD_MS but fall short of Android's native
+    // CONTEXT_MENU_SUPPRESS_MS. Without this, users attempting a
     // long-press get an accidental file-open on lift. Desktop clicks
     // (pointerType !== 'touch') bypass the check entirely.
     let touchDownTime = 0;
@@ -1069,8 +1075,14 @@ export class SharedCardRenderer {
           (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (Date.now() - lastContextMenuTime < 500) return;
-            if (touchDownTime && Date.now() - touchDownTime > 200) return;
+            // Suppress context-menu / long-touch click — see touchDownTime setup
+            if (Date.now() - lastContextMenuTime < CONTEXT_MENU_SUPPRESS_MS)
+              return;
+            if (
+              touchDownTime &&
+              Date.now() - touchDownTime > TOUCH_TAP_THRESHOLD_MS
+            )
+              return;
             const paneType = Keymap.isModEvent(e);
             void this.app.workspace.openLinkText(
               card.path,
@@ -1113,8 +1125,14 @@ export class SharedCardRenderer {
           titleEl.addEventListener(
             'click',
             (e) => {
-              if (Date.now() - lastContextMenuTime < 500) return;
-              if (touchDownTime && Date.now() - touchDownTime > 200) return;
+              // Suppress context-menu / long-touch click — see touchDownTime setup
+              if (Date.now() - lastContextMenuTime < CONTEXT_MENU_SUPPRESS_MS)
+                return;
+              if (
+                touchDownTime &&
+                Date.now() - touchDownTime > TOUCH_TAP_THRESHOLD_MS
+              )
+                return;
               if (!link.contains(e.target as Node)) {
                 e.stopPropagation();
                 const paneType = Keymap.isModEvent(e);
