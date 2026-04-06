@@ -14,7 +14,7 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 
 | File                               | Role                                                                    |
 | ---------------------------------- | ----------------------------------------------------------------------- |
-| `src/shared/card-renderer.tsx`   | Pure card rendering (normalized `CardData`), used by both backends.                                          |
+| `src/bases/shared-renderer.ts`   | Shared card rendering (normalized `CardData`), used by both backends.                                        |
 | `src/shared/constants.ts`        | Tuning constants (`MAX_BATCH_SIZE`, `PANE_MULTIPLIER`, `ROWS_PER_COLUMN`, throttle intervals).               |
 | `src/shared/keyboard-nav.ts`     | DOM-based arrow navigation and hover-to-keyboard focus transfer.                                             |
 | `src/shared/scroll-gradient.ts`  | Horizontal scroll gradients for property rows.                                                               |

@@ -1108,8 +1108,11 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       this.renderState.lastStyleSettingsHash = styleSettingsHash;
 
-      // Include mtime and sortMethod in hash so content/sort changes trigger updates
+      // Include mtime, sortMethod, and group order in hash so content/sort/group changes trigger updates
       const collapsedHash = Array.from(this.collapsedGroups).sort().join('\0');
+      const groupOrderHash = groupedData
+        .map((g) => (g.hasKey() ? (serializeGroupKey(g.key) ?? '') : ''))
+        .join('\0');
       const renderHash =
         allEntries
           .map((e: BasesEntry) => `${e.file.path}:${e.file.stat.mtime}`)
@@ -1120,6 +1123,8 @@ export class DynamicViewsMasonryView extends BasesView {
         (groupByProperty ?? '') +
         '\0\0' +
         sortMethod +
+        '\0\0' +
+        groupOrderHash +
         '\0\0' +
         styleSettingsHash +
         '\0\0' +

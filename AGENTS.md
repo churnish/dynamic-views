@@ -20,10 +20,7 @@
 
 ## Popout window safety
 
-- **Derive from DOM**: In `src/shared/` and `src/bases/`, NEVER use bare `document`, `window`, `new ResizeObserver`, `new IntersectionObserver`, `getComputedStyle`, `matchMedia`, `navigator`, or `document.createElement`. ALWAYS derive from the nearest DOM element via `getOwnerWindow(el)` (`src/utils/owner-window.ts`) or `el.ownerDocument`. `ResizeObserver` from the wrong window silently fails on popout elements.
-- **Module-level code**: When module-level code needs all open documents (no DOM element in scope), use the `setDocumentProvider` pattern — a module-level setter registered from `main.ts` onload via `getAllPopoutDocuments()`.
-- **Safe exceptions**: `document.body.classList` reads for config classes (Style Settings syncs to all documents), `setTimeout`/`setInterval`/`requestIdleCallback` (process-level), `new Image()` for network validation (never inserted into DOM), offscreen `document.createElement('canvas')` for measurement.
-- **Reference**: See `knowledge/electron-popout-quirks.md` for the full list of cross-window pitfalls, safe patterns, and mitigations.
+See [docs/patterns/popout-window-safety.md](docs/patterns/popout-window-safety.md) for the full rules (prohibited bare globals, `getOwnerWindow(el)` / `el.ownerDocument` derivation, `setDocumentProvider` pattern, safe exceptions). See `knowledge/electron-popout-quirks.md` for the underlying Electron quirks.
 
 ## Navigation
 

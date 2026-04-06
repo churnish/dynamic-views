@@ -1,12 +1,12 @@
 ---
 title: CSS variable wrapping
-description: Plugin-namespaced CSS variable wrappers, resolution semantics, and the local override gotcha.
+description: Plugin-namespaced CSS variable wrappers, variable catalog, JS-set variables, and resolution semantics.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-14
+updated: 2026-04-06
 ---
 # CSS variable wrapping
 
-All external Obsidian CSS variables are read through plugin-namespaced wrappers defined in [_variables.scss](../../styles/_variables.scss). ~65 wrappers follow the pattern:
+All external Obsidian CSS variables are read through plugin-namespaced wrappers defined in [_variables.scss](../../styles/_variables.scss). ~78 wrappers follow the pattern:
 
 ```scss
 body {
@@ -19,6 +19,57 @@ Obsidian defines all CSS variables on `body` (`.theme-dark`/`.theme-light`), not
 - **Consistent fallbacks**: Each external var has a single fallback value (Obsidian default light theme), declared once.
 - **Namespace isolation**: Grepping `--dynamic-views-` shows all plugin-owned references. Bare external vars only appear in [_variables.scss](../../styles/_variables.scss) wrappers.
 
+## Variable catalog
+
+[_variables.scss](../../styles/_variables.scss) is the canonical catalog of all CSS custom properties the plugin defines on `body`. Variables fall into three categories.
+
+### 1. Wrapped Obsidian variables
+
+These mirror an Obsidian variable with a plugin-namespaced name and a hardcoded fallback (default light theme value). The fallback ensures the plugin works correctly if a custom theme removes the variable.
+
+```scss
+--dynamic-views-text-normal: var(--text-normal, #222222);
+--dynamic-views-anim-duration-fast: var(--anim-duration-fast, 140ms);
+--dynamic-views-radius-s: var(--radius-s, 4px);
+```
+
+Organized into groups: Typography, Border radius, Icons, Animation, Shadows, Layout, Colors, Backgrounds, Text, Links, Interactive.
+
+### 2. Derived/computed variables
+
+These do not wrap an Obsidian variable. They compute a value from other `--dynamic-views-*` variables using `calc()`, `clamp()`, `color-mix()`, or `hsl()`.
+
+```scss
+// Clamped from the JS-set image aspect ratio
+--dynamic-views-thumbnail-aspect-ratio: clamp(0.5, var(--dynamic-views-image-aspect-ratio, 1), 2);
+
+// Composed from HSL components set by Style Settings (hsl-split format)
+--dynamic-views-tag-color-custom: hsl(
+  var(--dynamic-views-tag-color-custom-h),
+  var(--dynamic-views-tag-color-custom-s),
+  var(--dynamic-views-tag-color-custom-l)
+);
+// Hover variant with slight hue shift, saturation boost, and lightness increase
+--dynamic-views-tag-color-custom-hover: hsl(
+  calc(var(--dynamic-views-tag-color-custom-h) - 3),
+  calc(var(--dynamic-views-tag-color-custom-s) * 1.02),
+  calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
+);
+```
+
+The title hover color resolver at the bottom of `_variables.scss` also falls into this category — it maps body class presets to a single `--dynamic-views-title-hover-color-value` variable.
+
+### 3. Plugin-owned variables (SCSS string values)
+
+These define string tokens consumed via CSS `content:` or `counter-style` patterns. They have no Obsidian counterpart.
+
+```scss
+--dynamic-views-list-separator: ', ';
+--dynamic-views-empty-value-marker: '—';
+```
+
+These are also overridable via Style Settings `variable-text` options with `quotes: true`.
+
 ## Exempt variables
 
 Plugin-internal variables are NOT wrapped — they're defined by the plugin itself:
@@ -28,6 +79,57 @@ Plugin-internal variables are NOT wrapped — they're defined by the plugin itse
 - Structure: `--card-border-*`, `--poster-inset`, `--backdrop-inset`, `--tag-text-color`
 
 `--size-*` variables (Obsidian spacing tokens) are also exempt per [AGENTS.md](../../AGENTS.md) — they're used without fallbacks or wrappers.
+
+## JS-set CSS variables
+
+Some `--dynamic-views-*` variables are set at runtime from JavaScript rather than SCSS. These interact with SCSS-defined variables in two ways: container-scoped inline styles from view settings, and body-level reads for layout computation.
+
+### `applyCssOnlySettings()` (per-view container)
+
+Defined in `shared-renderer.ts`. Called on every `onDataUpdated()` callback, outside the render throttle, for instant slider feedback. Sets inline `style` properties on the `.dynamic-views-bases-container` element:
+
+| Variable | Source | Notes |
+|---|---|---|
+| `--dynamic-views-text-preview-lines` | `config.get('textPreviewLines')` | Consumed by `-webkit-line-clamp` |
+| `--dynamic-views-title-lines` | `config.get('titleLines')` | Also toggles `title-single-line` class |
+| `--dynamic-views-image-aspect-ratio` | `config.get('imageRatio')` | Fed into `--dynamic-views-thumbnail-aspect-ratio` via `clamp()` in `_variables.scss` |
+| `--dynamic-views-thumbnail-size` | `config.get('thumbnailSize')` | Set with `px` unit |
+
+These are per-view — each Bases leaf's container gets its own values. `textPreviewLines`, `imageRatio`, and `thumbnailSize` are in `CSS_ONLY_SETTINGS_KEYS` (excluded from the render hash — CSS-only changes skip full DOM rebuild). `titleLines` is NOT in that set — it also triggers a full re-render because it toggles the `title-single-line` class which affects card layout. The function also toggles classes for `posterDisplayMode` (`poster-mode-fade`/`poster-mode-overlay`) and `imageFit` (`image-fit-crop`/`image-fit-contain`), which are in `CSS_ONLY_SETTINGS_KEYS` despite being class toggles rather than CSS variables.
+
+### `style-settings.ts` (body-level reads)
+
+Functions in `style-settings.ts` read `--dynamic-views-*` variables from `document.body` via `getComputedStyle()` for use in JS layout calculations:
+
+- `getCardSpacing()` — reads `--dynamic-views-card-spacing-desktop` or `--dynamic-views-card-spacing-phone`. First checks the container element (for per-view `cssclasses` overrides), then falls back to `body`.
+- `getCompactBreakpoint()` — reads `--dynamic-views-compact-breakpoint`.
+- `getZoomSensitivityDesktop()` — reads `--dynamic-views-zoom-sensitivity`.
+- `getSlideshowMaxImages()` — reads `--dynamic-views-slideshow-max-images`.
+- `getDatetimeFormat()`, `getDateFormat()`, `getTimeFormat()` — read `variable-text` format strings.
+- `getListSeparator()`, `getEmptyValueMarker()` — read `variable-text` string tokens.
+
+All reads go through a per-render-cycle cache (`cssTextCache` / `containerSpacingCache`) cleared by `clearStyleSettingsCache()` to avoid layout thrashing from repeated `getComputedStyle()` calls.
+
+### Other JS-set variables (element-scoped)
+
+A few variables are set on individual elements rather than the container:
+
+- `--hover-scale-x`, `--hover-scale-y` — set per-card in `grid-view.ts` and `masonry-view.ts` for hover enlarge transforms.
+- `--field1-width`, `--field2-width` — set per property-set in `property-measure.ts` for paired property column widths.
+- `--overlay-opacity` — set on the image viewer clone in `image-viewer.ts`.
+
+These are exempt from the wrapping convention because they are scoped to individual DOM elements, not inherited from `body`.
+
+## When to wrap, use directly, or create new
+
+| Scenario | Action |
+|---|---|
+| **Using an Obsidian theme variable** (e.g., `--text-muted`, `--color-red`) | Wrap it in `_variables.scss` with a `--dynamic-views-` prefix and fallback. Reference the wrapper in SCSS. |
+| **Using `--size-*` spacing tokens** | Use directly — exempt from wrapping per AGENTS.md. |
+| **Need a computed value from existing variables** | Add a derived variable in `_variables.scss` using `calc()`, `clamp()`, or `hsl()`. |
+| **Adding a Style Settings slider or text option** | The Style Settings plugin injects `--dynamic-views-*` variables into a `<style>` element. If JS also needs the value, add a reader function in `style-settings.ts`. |
+| **Adding a per-element layout value from JS** | Use a short, unprefixed name (e.g., `--field1-width`) set via `el.style.setProperty()`. No wrapper needed. |
+| **Adding a string token** (separator, marker) | Define in `_variables.scss` as a plugin-owned variable. Optionally expose via Style Settings `variable-text`. |
 
 ## Resolution gotcha: local overrides don't propagate
 
@@ -68,7 +170,7 @@ body.dynamic-views-backdrop-theme-dark .dynamic-views .card.image-format-backdro
 
 Six sites currently redefine both bare and wrapped variables:
 
-- [_poster.scss](../../styles/card/_poster.scss) — gradient overlay (dark text), gradient overlay (light text), full overlay (dark text)
+- [_poster.scss](../../styles/card/_poster.scss) — fade mode (light text), overlay light-theme (dark text), overlay dark-theme (light text)
 - [_backdrop.scss](../../styles/card/_backdrop.scss) — dark overlay (light text), light overlay (dark text)
 - [_grid-masonry-shared.scss](../../styles/_grid-masonry-shared.scss) — `--bases-view-padding` on plugin view types (Obsidian sets this on `.workspace-leaf-content`, not `body`, so the `body`-level wrapper resolves to the fallback; the redefinition on `.bases-view[data-view-type]` provides the correct inherited value)
 

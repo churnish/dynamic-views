@@ -2,7 +2,7 @@
 title: Doc index
 description: Index of all project docs — when and why to read each one.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-04-06
 ---
 # Doc index
 
@@ -24,6 +24,7 @@ Stable reference docs for system internals — data structures, render pipelines
 | Doc | Read before |
 |---|---|
 | [card-dom-structure.md](architecture/card-dom-structure.md) | Working on card internals, card CSS selectors, or property rows — documents the full card hierarchy, class names, and property row structure. |
+| [config-reactivity.md](architecture/config-reactivity.md) | Working on config-change propagation, render hash, dirty-checking, `onDataUpdated`, stale config guards, CSS fast-path, Style Settings reactivity, or incremental update paths — documents the full pipeline from config change to re-render decision. |
 | [drag-handlers.md](architecture/drag-handlers.md) | Working on drag handlers, DataTransfer, drop behavior, hover suppression during drag, or WebKit touch handling — documents the factory system, platform quirks, dataset freshness pattern, and drag ghost implementation. |
 | [full-screen.md](architecture/full-screen.md) | Working on full screen bar hide/show, gradient swap mask-image, persistent show bridge (Android), bridge+settle (iOS), direction detection, height locking, tap shield, or platform-specific branches — documents the complete architecture, settle sequence, and invariants. |
 | [grid-layout.md](architecture/grid-layout.md) | Working on grid layout, CSS Grid columns, content visibility, or grid-specific resize/infinite scroll — documents the full architecture, data structures, render pipeline, guard system, and invariants. |
@@ -33,6 +34,7 @@ Stable reference docs for system internals — data structures, render pipelines
 | [masonry-layout.md](architecture/masonry-layout.md) | **Frozen** — not kept up to date due to extensive masonry work. Verify against source code. |
 | [poster-clipping.md](architecture/poster-clipping.md) | Working on poster static clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, or the `posterInteractToReveal` setting boundary — documents the clipping pipeline, reset lifecycle, interaction handlers, and invariants. |
 | [property-layout.md](architecture/property-layout.md) | Working on property pairing, width measurement, scroll gradients, compact mode, or property position settings — documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and invariants. |
+| [scss-organization.md](architecture/scss-organization.md) | Working on SCSS partials, import order, adding new partials, or understanding stylesheet dependencies — documents the file categories, loading order rationale, and dependency relationships. |
 | [settings-resolution.md](architecture/settings-resolution.md) | Working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants. |
 | [slideshow.md](architecture/slideshow.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
 | [write-path-safety.md](architecture/write-path-safety.md) | Adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption. |
@@ -65,6 +67,7 @@ Reusable conventions and recipes — coding patterns, CSS quirks, and configurat
 | [eslint-config.md](patterns/eslint-config.md) | Modifying [eslint.config.js](../eslint.config.js), adding eslint overrides, or troubleshooting lint errors. |
 | [hover-and-touch.md](patterns/hover-and-touch.md) | Adding, modifying, or debugging hover or touch press behavior — complete inventory of all hover and touch interactions, pointer type support (mouse/pen/touch), gating mechanisms (`canHover`, `isHoverPointer`, `isTouchPointer`, `@media (any-hover: hover)`), device behavior matrix, and touch press feedback architecture. |
 | [plugin-view-navigation.md](patterns/plugin-view-navigation.md) | Probing, querying, or targeting Dynamic Views elements via CDP, WebKit Inspector, or DOM queries — documents the full view hierarchy, correct selectors, and platform-specific probing patterns. |
+| [popout-window-safety.md](patterns/popout-window-safety.md) | Using `getOwnerWindow(el)`, `el.ownerDocument`, or `setDocumentProvider` in code that may run in popout windows — documents the DOM-derived pattern, safe exceptions, and common mistakes. |
 | [scss-nesting-conventions.md](patterns/scss-nesting-conventions.md) | Adding or restructuring `.dynamic-views` selectors in SCSS partials — covers what to nest and what to leave flat. |
 | [style-settings-fallbacks.md](patterns/style-settings-fallbacks.md) | Adding, modifying, or debugging Style Settings options (`class-select`, `class-toggle`, `variable-number-slider`), or consolidating per-variant body-class rules into CSS variable consumption with `[class*=...]` gates — documents fallback patterns for CSS defaults that must work without the Style Settings plugin installed. |
 | [view-configuration.md](patterns/view-configuration.md) | Configuring per-view settings for Bases — setting keys, defaults, ranges, templates, workflows, and per-view CSS variable overrides via `cssclasses`. |

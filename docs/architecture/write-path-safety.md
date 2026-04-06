@@ -50,7 +50,7 @@ Not required by Obsidian guidelines, but enforced in this plugin for safety:
 
 ### 2. Markdown checkbox toggle — `processFrontMatter()`
 
-- **Location**: [src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts), [src/shared/card-renderer.tsx](../../src/shared/card-renderer.tsx)
+- **Location**: [src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts)
 - **Trigger**: User clicks a checkbox property on a card
 - **Scope**: Sets a single boolean in the note's YAML frontmatter
 - **Guards**: `instanceof TFile` check before write

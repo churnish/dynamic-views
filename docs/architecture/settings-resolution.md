@@ -2,7 +2,7 @@
 title: Settings resolution pipeline
 description: Three-layer merge of defaults, templates, and per-view config into resolved settings. Covers sparse storage, type coercion, stale guards, and migration.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-04-06
 ---
 # Settings resolution pipeline
 
@@ -13,10 +13,10 @@ The settings resolution pipeline merges static defaults, template overrides, and
 | File                            | Role                                                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `src/constants.ts`              | Static defaults (`VIEW_DEFAULTS`, `BASES_DEFAULTS`, `PLUGIN_SETTINGS`)                                             |
-| `src/types.ts`                  | `ViewDefaults`, `PluginSettings`, `BasesResolvedSettings`, `BasesDefaults`                                         |
+| `src/types.ts`                  | `ViewDefaults`, `PluginSettings`, `ResolvedSettings`, `BasesDefaults`                                         |
 | `src/persistence.ts`            | `PersistenceManager` — sparse storage, sanitization, template CRUD, migration                                      |
 | `src/shared/settings-schema.ts` | `readBasesSettings()`, `extractBasesTemplate()`, `getBasesViewOptions()` schema builder                            |
-| `src/shared/view-validation.ts` | `VALID_VIEW_VALUES`, `VIEW_DEFAULTS_TYPES` — shared validation constants                                           |
+| `src/shared/view-validation.ts` | `VALID_VIEW_VALUES`, `VIEW_DEFAULTS_TYPES` — shared validation constants for YAML cleanup, template cleanup, and runtime enum validation |
 | `src/bases/utils.ts`            | `cleanUpBaseFile()` — YAML cleanup, template injection, ID management                                              |
 
 ## Core data structures
@@ -44,7 +44,7 @@ Plugin-level settings from the settings tab. Not per-view.
 
 ### ViewDefaults (`src/types.ts`)
 
-Per-view visual settings. 26 fields covering card size, title, text preview, image, properties, and layout.
+Per-view visual settings. 27 fields covering card size, title, text preview, image, properties, and layout.
 
 | Field                     | Type                            | Default         | Notes                                                                               |
 | ------------------------- | ------------------------------- | --------------- | ----------------------------------------------------------------------------------- |
@@ -71,7 +71,7 @@ Bases-only overrides that shadow `ViewDefaults` fields.
 
 | Type                    | Definition                                                                       | Used by                     |
 | ----------------------- | -------------------------------------------------------------------------------- | --------------------------- |
-| `BasesResolvedSettings` | `PluginSettings & ViewDefaults` + `_displayNameMap?` + `_skipLeadingProperties?` | Bases rendering pipeline    |
+| `ResolvedSettings` | `PluginSettings & ViewDefaults` + `_displayNameMap?` + `_skipLeadingProperties?` | Bases rendering pipeline    |
 
 ### PluginData (`src/types.ts`)
 
@@ -100,7 +100,7 @@ Top-level persisted structure.
 
 Precedence (highest wins): `config.get()` -> `templateOverrides` -> `BASES_DEFAULTS` -> `VIEW_DEFAULTS`. Plugin-level fields come from `pluginSettings` without overlap (different key sets).
 
-Return type: `BasesResolvedSettings` (includes computed `_skipLeadingProperties`).
+Return type: `ResolvedSettings` (includes computed `_skipLeadingProperties`).
 
 ### Schema defaults path
 
@@ -114,6 +114,112 @@ Return type: `BasesResolvedSettings` (includes computed `_skipLeadingProperties`
 
 New view detection: `!config || config.get('id') == null`. The `id` field is assigned by `cleanUpBaseFile()` on first render — absence means never rendered.
 
+## Resolution algorithm
+
+`readBasesSettings()` is the single entry point for resolving per-view settings. It runs on every `onDataUpdated()` call (see [config-reactivity.md](config-reactivity.md) for the full trigger pipeline).
+
+### Merge sequence
+
+```
+ ┌─────────────────────────────────────────────────────────────┐
+ │  1. Build defaults object                                   │
+ │     { ...VIEW_DEFAULTS,                                     │
+ │       ...BASES_DEFAULTS,                                    │
+ │       minimumColumns: getMinimumColumnsDefault(viewType),   │
+ │       ...templateOverrides }                                │
+ │                                                             │
+ │  2. For each ViewDefaults key:                              │
+ │     value = config.get(key) ?? defaults[key]                │
+ │     (type-checked: getString, getBool, getNumber,           │
+ │      or getValidEnum with stale config fallback)            │
+ │                                                             │
+ │  3. Derive position-based title/subtitle from getOrder()    │
+ │     (overrides titleProperty / subtitleProperty)            │
+ │                                                             │
+ │  4. Filter hidden properties against getOrder()             │
+ │     (textPreviewProperty / urlProperty cleared if not in    │
+ │      the visible order set)                                 │
+ │                                                             │
+ │  5. Hardcoded fields bypass config entirely:                │
+ │     showPropertiesAbove = defaults.showPropertiesAbove      │
+ │     invertPropertyPosition = defaults.invertPropertyPosition│
+ │                                                             │
+ │  6. Merge: { ...pluginSettings, ...viewSettings,            │
+ │              _skipLeadingProperties }                        │
+ │     → returns ResolvedSettings                              │
+ └─────────────────────────────────────────────────────────────┘
+```
+
+### Type-safe config getters
+
+`createConfigGetters(config)` returns three functions that read from `config.get()` with type validation and fallback to defaults:
+
+| Getter | Accepts | Fallback rule |
+|---|---|---|
+| `getString(key, fallback)` | `string` (including `""`) | Non-string or `undefined`/`null` → fallback |
+| `getBool(key, fallback)` | `boolean` | Non-boolean → fallback |
+| `getNumber(key, fallback)` | `number` (finite only) | Non-number or `NaN`/`Infinity` → fallback |
+
+Enum fields (`imageFormat`, `propertyNames`, `fallbackToEmbeds`, etc.) use `getValidEnum()` instead. It validates against `VALID_VIEW_VALUES` and optionally falls back to `previousSettings` before the default — this is the stale config guard mechanism.
+
+### When each layer is consulted
+
+| Layer | First render | Subsequent renders | New view | Existing view |
+|---|---|---|---|---|
+| `VIEW_DEFAULTS` | Always | Always | Always | Always |
+| `BASES_DEFAULTS` | Always (overrides `VIEW_DEFAULTS`) | Always | Always | Always |
+| `templateOverrides` | Only if `isNewView` | Never | Merged into defaults | Skipped |
+| `config.get()` | Always (may return pre-populated schema defaults) | Always (authoritative) | Reads schema defaults (pre-populated by Obsidian) | Reads user-set values |
+| `pluginSettings` | Always (separate key namespace) | Always | Always | Always |
+| `previousSettings` | Not available (no prior render) | Stale enum fallback only | Not available | Passed from `lastRenderedSettings` |
+
+On first render of a **new view**, Obsidian pre-populates the `.base` YAML with schema defaults from `getBasesViewOptions()`. Then `cleanUpBaseFile()` overwrites those with template values. So `config.get()` returns template-injected values, and `templateOverrides` in `readBasesSettings()` serves as a belt-and-suspenders fallback for any keys that `cleanUpBaseFile()` missed.
+
+On first render of an **existing view** (app restart), `config.get()` returns the user's saved YAML values directly. No template overrides are applied — `isNewView` is `false` because the view already has an `id`.
+
+## Cleanup lifecycle
+
+`cleanUpBaseFile()` in [utils.ts](../../src/bases/utils.ts) is the YAML maintenance function. It processes ALL Dynamic Views view entries in a `.base` file at once.
+
+### When it runs
+
+Called from `processDataUpdate()` (inside `onDataUpdated()`) only when:
+- **First render**: `this.viewId` is not set yet.
+- **View rename**: `this.viewId` doesn't end with the current view name.
+
+It is intentionally skipped on subsequent renders to avoid `vault.process()` racing with Obsidian's debounced `config.set()` file writes.
+
+### What it does (in order)
+
+1. **Caller guard**: Aborts (returns `null`) if the calling view's name isn't in the on-disk YAML yet (Obsidian may not have flushed a newly created view).
+2. **ID pre-scan**: Counts ID occurrences across all view entries to detect duplicates. Used in step 3 to distinguish renames from duplicates.
+3. **ID management**: For each Dynamic Views view entry:
+   - If `id` is missing or the name portion doesn't match the current view name, generates a new `id` (`{hash}-{viewName}`).
+   - **Rename detection**: If an existing unique ID's name portion changed, it's a rename (not a new view). The old `basesState` is migrated to the new ID via `migrateBasesState()`.
+   - **New view detection**: If a new ID is needed and it's NOT a rename, it's a new view. Template values are injected into the YAML (see [Template application](#template-system)).
+4. **Stale key removal**: Deletes any key not in `ALLOWED_VIEW_KEYS` (a union of Bases-native keys, `ViewDefaults` keys, `isTemplate`, and `id`).
+5. **Type validation**: Deletes values whose type doesn't match `VIEW_DEFAULTS_TYPES` (skipping `minimumColumns` — YAML stores strings, defaults store numbers).
+6. **Enum validation**: Resets invalid enum values to the first entry in `VALID_VIEW_VALUES`.
+7. **Legacy key deletion**: Explicitly deletes `titleProperty` and `subtitleProperty` — they are valid `ViewDefaults` keys but stale in Bases YAML (now position-derived).
+8. **Sparse cleanup**: Deletes YAML keys whose value matches `VIEW_DEFAULTS`, with two exceptions:
+   - Keys in `BASES_DEFAULTS` are preserved (the `VIEW_DEFAULTS` value is a meaningful non-default choice in Bases context).
+   - Keys present in the active template are preserved (the `VIEW_DEFAULTS` value is an explicit user choice that differs from the template-modified effective default).
+
+### Return value
+
+Returns `Promise<Map<string, { id: string; isNew: boolean }> | null>`. Returns `null` on early abort (no file, not a `.base` file, caller view not found in YAML). Callers use optional chaining (`viewIds?.get(viewName)`) and check `isNew` to decide whether to pass `templateOverrides` to `readBasesSettings()`.
+
+## Role of view-validation.ts
+
+[view-validation.ts](../../src/shared/view-validation.ts) exports two shared validation constants consumed by both `cleanupTemplateSettings()` (persistence) and `cleanUpBaseFile()` (YAML cleanup):
+
+| Export | Type | Purpose |
+|---|---|---|
+| `VALID_VIEW_VALUES` | `Partial<Record<keyof ViewDefaults, readonly string[]>>` | Valid enum values for string-enum fields. Used by `getValidEnum()` in settings reading, `cleanUpBaseFile()` for YAML enum reset, and `cleanupTemplateSettings()` for template enum reset. |
+| `VIEW_DEFAULTS_TYPES` | `Record<string, string>` | Expected `typeof` for each `VIEW_DEFAULTS` key (computed at module load from `VIEW_DEFAULTS`). Used by `cleanUpBaseFile()` and `cleanupTemplateSettings()` to delete wrong-typed values. |
+
+These constants are extracted into a shared module to ensure that YAML cleanup, template cleanup, and runtime config reading all validate against the same set of valid values and types. Without this, adding a new enum option would require updating multiple files.
+
 ## Sparse storage pattern
 
 Only non-default values are persisted. This keeps `data.json` minimal and ensures new defaults propagate to existing installations.
@@ -122,12 +228,12 @@ Only non-default values are persisted. This keeps `data.json` minimal and ensure
 
 | Location                 | What it filters        | Comparison target                            | Special handling                                                                                               |
 | ------------------------ | ---------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `setPluginSettings()`    | Plugin settings        | `PLUGIN_SETTINGS`                            | Shallow sanitize before compare; dispatches `PLUGIN_SETTINGS_CHANGE` event on `document.body` after saving     |
+| `setPluginSettings()`    | Plugin settings        | `PLUGIN_SETTINGS`                            | Shallow sanitize before compare; dispatches `PLUGIN_SETTINGS_CHANGE` via `app.workspace.trigger()` after saving     |
 | `setBasesState()`        | Collapsed groups       | Empty array                                  | Empty -> delete key                                                                                            |
 | `extractBasesTemplate()` | Template values        | `VIEW_DEFAULTS` merged with `BASES_DEFAULTS` | Only non-default pairs retained                                                                                |
 | `save()`                 | Top-level keys         | Empty object check                           | Skips empty sub-objects entirely                                                                               |
 
-### Template cleanup on load
+### Stored template cleanup
 
 `PersistenceManager.load()` runs `cleanupTemplateSettings()` on each stored template to remove:
 
@@ -224,6 +330,22 @@ Unconditional override is required because Obsidian pre-populates ALL schema def
 
 **Config fallbacks** (`readBasesSettings()`): `templateOverrides` are spread into `defaults` so config reads fall back to template values before static defaults.
 
+### Template cleanup on load
+
+`PersistenceManager.load()` runs `cleanupTemplateSettings()` on each stored template. This removes stale keys from older plugin versions before any view renders. See [Stored template cleanup](#stored-template-cleanup) under sparse storage for the full cleanup steps.
+
+### Template interaction with the resolution chain
+
+Templates participate in the resolution chain at three points, each serving a different purpose:
+
+| Point | Function | Purpose |
+|---|---|---|
+| Schema defaults | `getBasesViewOptions()` | Populates the settings GUI with template values for new views |
+| YAML injection | `cleanUpBaseFile()` | Writes template values directly into the `.base` file YAML |
+| Config fallback | `readBasesSettings()` | Ensures `config.get()` falls back to template values before static defaults |
+
+All three use the same new-view detection (`id` field absence) and the same template source (`persistenceManager.getSettingsTemplate()`). The redundancy is intentional — YAML injection is the primary mechanism, but config fallbacks cover any keys that `cleanUpBaseFile()` didn't write (e.g., if `vault.process()` failed silently).
+
 ### New view detection
 
 `!config || config.get('id') == null` — the `id` field is assigned by `cleanUpBaseFile()` on first render. Absence of `id` means the view has never been rendered. The `!config` guard handles the case where Obsidian doesn't pass config.
@@ -264,3 +386,6 @@ Invalid enum values are reset to the first valid value from `VALID_VIEW_VALUES`.
 8. **Template cleanup runs on every plugin load.** Stale keys, wrong types, and invalid enum values are removed from templates before use.
 9. **Obsidian pre-populates schema defaults into new `.base` YAML.** `cleanUpBaseFile()` runs AFTER this, so template injection must unconditionally overwrite — not guard with `if (!(key in viewObj))`.
 10. **`getBasesViewOptions()` is NOT called on view creation.** Only called when the settings panel is opened. Template injection for new views happens in `cleanUpBaseFile()`, not via schema defaults.
+11. **`cleanUpBaseFile()` runs only on first render or rename.** Subsequent renders skip it to avoid `vault.process()` racing with Obsidian's debounced config writes. The caller checks `!this.viewId || name mismatch`.
+12. **`VALID_VIEW_VALUES` and `VIEW_DEFAULTS_TYPES` are the single source of truth for validation.** `VALID_VIEW_VALUES` is shared by `cleanUpBaseFile()`, `cleanupTemplateSettings()`, and `getValidEnum()`. `VIEW_DEFAULTS_TYPES` is shared by `cleanUpBaseFile()` and `cleanupTemplateSettings()` (not used by `getValidEnum()`). Adding a new enum option or field type requires updating only `view-validation.ts` and `constants.ts`.
+13. **Templates participate at three resolution points.** Schema defaults (GUI), YAML injection (`cleanUpBaseFile`), and config fallbacks (`readBasesSettings`). All three use the same new-view detection and template source. The redundancy is a safety net — YAML injection is primary.
