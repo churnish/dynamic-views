@@ -364,10 +364,49 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   height: 0;
 }
 
+// Spacer cover: opaque background during hide with spacer active.
+// Content below spacer would be visible through transparent spacer without this.
+.dynamic-views-spacer-cover {
+  background: var(--dynamic-views-background-primary);
+}
+
 // Android show: containing block for absolute toolbar/search overlays.
 // No descendant combinator — only targets leafContent itself.
 [data-dynamic-views-show] {
   position: relative;
+}
+
+// Show overlay: toolbar/search as absolute overlays during Android spacer show.
+// Specificity 0,6,0 beats 0,5,0 full-screen-active hide rules. Static
+// properties that would otherwise be inline !important — avoids the review
+// bot's no-static-styles-assignment rule.
+.is-android.is-phone
+  [data-type='bases'].full-screen-active
+  .bases-header.dynamic-views-show-overlay {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 29 !important;
+  pointer-events: auto !important;
+  margin-bottom: 0 !important;
+  transition: none !important;
+  background: var(--dynamic-views-background-primary) !important;
+}
+
+.is-android.is-phone
+  [data-type='bases'].full-screen-active
+  .bases-search-row.dynamic-views-show-overlay {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 29 !important;
+  pointer-events: auto !important;
+  transition: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  padding: 4px 8px !important;
+  background: var(--dynamic-views-background-primary) !important;
 }
 
 // Opaque backing behind toolbar/search during WAAPI opacity 0→1 fade.

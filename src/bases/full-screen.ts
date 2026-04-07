@@ -163,7 +163,8 @@ export class FullScreenController {
   private lastToggleTime = 0;
   private directionChangeTime = 0;
   private lockedScrollHeight = 0;
-  private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private resizeVerifyTimer: ReturnType<typeof setTimeout> | null = null;
   // True during orientation change debounce — suppresses show/hide decisions
   // in the scroll handler to prevent transitions with stale CSS var values.
   private safeAreaSettling = false;
@@ -361,7 +362,9 @@ export class FullScreenController {
    *  for spacer height and heading top calculations only. */
   private onResize(): void {
     if (!this.mounted) return;
-    if (this.resizeTimer != null) clearTimeout(this.resizeTimer);
+    if (this.resizeDebounceTimer != null)
+      clearTimeout(this.resizeDebounceTimer);
+    if (this.resizeVerifyTimer != null) clearTimeout(this.resizeVerifyTimer);
     this.safeAreaSettling = true;
 
     // Cancel pending settle — stale totalShift/originalMarginTop would
@@ -383,15 +386,16 @@ export class FullScreenController {
     // Single write after all reads
     setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
 
-    this.resizeTimer = setTimeout(() => {
+    this.resizeDebounceTimer = setTimeout(() => {
+      this.resizeDebounceTimer = null;
       this.safeAreaSettling = false;
       if (!this.mounted) return;
       this.remeasureAfterResize();
 
       // Verification pass: CSS safe area variables can oscillate back after
       // initial settling (0→28 at ~800ms). Re-measure at 2.5s total.
-      this.resizeTimer = setTimeout(() => {
-        this.resizeTimer = null;
+      this.resizeVerifyTimer = setTimeout(() => {
+        this.resizeVerifyTimer = null;
         if (!this.mounted) return;
         this.remeasureAfterResize();
       }, 2000);
@@ -410,7 +414,13 @@ export class FullScreenController {
     // properties contribute. overflow-anchor is async — synchronous class
     // toggle won't trigger it.
     const hadClass = this.classTarget.classList.contains('full-screen-active');
-    if (hadClass) this.classTarget.classList.remove('full-screen-active');
+    if (hadClass) {
+      // visibility:hidden holds the hidden visual state while the class is off,
+      // preventing a one-frame flash when WAAPI is cancelled but settle hasn't
+      // applied. GBR reads layout geometry regardless of visibility.
+      setStyle(this.classTarget, 'visibility', 'hidden');
+      this.classTarget.classList.remove('full-screen-active');
+    }
 
     this.headerShift = this.viewHeaderEl?.offsetHeight || 91;
     this.originalMarginTop =
@@ -418,6 +428,8 @@ export class FullScreenController {
     const beforeTop = this.scrollEl.getBoundingClientRect().top;
 
     this.classTarget.classList.add('full-screen-active');
+    if (hadClass) this.classTarget.style.removeProperty('visibility');
+
     const afterTop = this.scrollEl.getBoundingClientRect().top;
 
     // Restore original class state
@@ -601,36 +613,15 @@ export class FullScreenController {
       // Inline opacity:1 provides the post-WAAPI fallback. During the 300ms
       // fade, WAAPI (higher cascade priority) overrides this with 0→1.
       // After idle cancelAnimations(), WAAPI is removed and inline takes over.
+      this.toolbarEl.classList.add('dynamic-views-show-overlay');
       setStyle(this.toolbarEl, 'opacity', '1');
-      setStyles(this.toolbarEl, [
-        ['position', 'absolute', 'important'],
-        ['top', toolbarTopCalc, 'important'],
-        ['left', '0', 'important'],
-        ['right', '0', 'important'],
-        ['z-index', '29', 'important'],
-        ['pointer-events', 'auto', 'important'],
-        ['margin-bottom', '0px', 'important'],
-        ['transition', 'none', 'important'],
-        ['background', 'var(--dynamic-views-background-primary)', 'important'],
-      ]);
+      setStyle(this.toolbarEl, 'top', toolbarTopCalc, 'important');
     }
 
     if (this.searchRowEl) {
+      this.searchRowEl.classList.add('dynamic-views-show-overlay');
       setStyle(this.searchRowEl, 'opacity', '1');
-      setStyles(this.searchRowEl, [
-        ['position', 'absolute', 'important'],
-        ['top', searchTopCalc, 'important'],
-        ['left', '0', 'important'],
-        ['right', '0', 'important'],
-        ['z-index', '29', 'important'],
-        ['pointer-events', 'auto', 'important'],
-        ['transition', 'none', 'important'],
-        ['height', 'auto', 'important'],
-        ['overflow', 'visible', 'important'],
-        ['margin', '0', 'important'],
-        ['padding', '4px 8px', 'important'],
-        ['background', 'var(--dynamic-views-background-primary)', 'important'],
-      ]);
+      setStyle(this.searchRowEl, 'top', searchTopCalc, 'important');
     }
 
     // Opaque background behind toolbar/search — prevents content showing
@@ -654,35 +645,12 @@ export class FullScreenController {
   /** Clear toolbar/search inline positioning and header-show class. Shared by clearShowOverlays() and clearOverlayBars(). */
   private clearBarInlines(): void {
     if (this.toolbarEl) {
-      clearStyles(this.toolbarEl, [
-        'opacity',
-        'position',
-        'top',
-        'left',
-        'right',
-        'z-index',
-        'pointer-events',
-        'margin-bottom',
-        'transition',
-        'background',
-      ]);
+      this.toolbarEl.classList.remove('dynamic-views-show-overlay');
+      clearStyles(this.toolbarEl, ['opacity', 'top']);
     }
     if (this.searchRowEl) {
-      clearStyles(this.searchRowEl, [
-        'opacity',
-        'position',
-        'top',
-        'left',
-        'right',
-        'z-index',
-        'pointer-events',
-        'transition',
-        'height',
-        'overflow',
-        'margin',
-        'padding',
-        'background',
-      ]);
+      this.searchRowEl.classList.remove('dynamic-views-show-overlay');
+      clearStyles(this.searchRowEl, ['opacity', 'top']);
     }
     this.viewHeaderEl?.classList.remove('dynamic-views-header-show');
   }
@@ -710,18 +678,14 @@ export class FullScreenController {
     this.toolbarBgEl = null;
 
     if (this.spacerEl) {
-      setStyle(
-        this.spacerEl,
-        'background',
-        'var(--dynamic-views-background-primary)'
-      );
+      this.spacerEl.classList.add('dynamic-views-spacer-cover');
     }
   }
 
   /** Remove the persistent hide-spacer cover chrome. Called by show path and resolve/unmount. */
   private clearHideSpacerCover(): void {
     if (this.spacerEl) {
-      this.spacerEl.style.removeProperty('background');
+      this.spacerEl.classList.remove('dynamic-views-spacer-cover');
     }
     this.clearSpacerHeadingTops();
   }
@@ -892,9 +856,13 @@ export class FullScreenController {
       clearTimeout(this.pendingRevealTimer);
       this.pendingRevealTimer = null;
     }
-    if (this.resizeTimer != null) {
-      clearTimeout(this.resizeTimer);
-      this.resizeTimer = null;
+    if (this.resizeDebounceTimer != null) {
+      clearTimeout(this.resizeDebounceTimer);
+      this.resizeDebounceTimer = null;
+    }
+    if (this.resizeVerifyTimer != null) {
+      clearTimeout(this.resizeVerifyTimer);
+      this.resizeVerifyTimer = null;
     }
     // Remove full screen state only if this instance set it
     if (this.isActiveHider) {
@@ -1125,6 +1093,11 @@ export class FullScreenController {
 
   /** HIDE — immediate, momentum-safe */
   private hideBarsUI(): void {
+    // Capture live bar heights before blur — Obsidian auto-collapses
+    // the search row when the search input loses focus, making
+    // offsetHeight 0 by the time the iOS bridge reads it.
+    const { shift: preBlurShift } = this.computeEffectiveShift();
+
     this.isActiveHider = true;
 
     if (this.spacerResolveTimer != null) {
@@ -1422,6 +1395,11 @@ export class FullScreenController {
       setStyle(this.workspaceSplitEl, 'mask-image', OPAQUE_MASK, 'important');
     }
 
+    // Use pre-blur shift — search row may have been visible before blur
+    // dismissed it. Android handles this via computeEffectiveShift() in
+    // show overlays; iOS uses totalShift for bridge + settle compensation.
+    if (preBlurShift > 0) this.totalShift = preBlurShift;
+
     // iOS: bridge + deferred settle (scrollTop writes kill momentum)
     setStyle(this.container, 'margin-top', `${this.totalShift}px`);
     setStyle(this.container, 'transition', 'none');
@@ -1695,6 +1673,11 @@ export class FullScreenController {
       this.container.style.removeProperty('transition');
 
       if (this.settled) {
+        // Re-measure totalShift — full-screen-showing restores search row
+        // height, so computeEffectiveShift() returns the live value.
+        const { shift: liveShift } = this.computeEffectiveShift();
+        if (liveShift > 0) this.totalShift = liveShift;
+
         // Compensate for geometry shift when inlines are cleared and classes
         // removed (Obsidian margins push scroll container down). Skip near
         // top — bars appeared naturally, and adding totalShift scrolls the
