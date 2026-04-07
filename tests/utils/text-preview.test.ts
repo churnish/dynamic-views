@@ -255,6 +255,23 @@ More content`;
       expect(result).toBe('Cancelled');
     });
 
+    it('should strip checklist items with no trailing text', () => {
+      expect(sanitizeForPreview('- [ ]')).toBe('');
+      expect(sanitizeForPreview('- [x]')).toBe('');
+      expect(sanitizeForPreview('- [-]')).toBe('');
+      expect(sanitizeForPreview('1. [ ]')).toBe('1.');
+      expect(sanitizeForPreview('2) [x]')).toBe('2)');
+      expect(sanitizeForPreview('[ ]')).toBe('');
+      expect(sanitizeForPreview('[x]')).toBe('');
+    });
+
+    it('should strip checklist items with no text followed by other content', () => {
+      const input = `- [ ]
+Some other content`;
+      const result = sanitizeForPreview(input);
+      expect(result).toBe('Some other content');
+    });
+
     it('should treat [x](url) as link, not checkbox', () => {
       const input = 'Click [x](https://example.org) here';
       const result = sanitizeForPreview(input);

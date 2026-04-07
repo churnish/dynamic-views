@@ -38,9 +38,9 @@ const markdownPatterns = [
   /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g, // Wikilinks with alias → keep alias
   /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, // Wikilinks → keep link text
   /(^|\s)#[a-zA-Z0-9_\-/]+/g, // Tags (require whitespace/line-start before #)
-  /^\s*[-*+]\s*\[[^\]]\]\s+/gm, // Task list markers (bullet-style) - before bare checkbox
-  /^\s*(\d+[.)]\s*)\[[^\]]\]\s+/gm, // Task list markers (numbered) - preserves number
-  /\[[^\]]\]\s+/g, // Bare task checkboxes (after task markers)
+  /^\s*[-*+]\s*\[[^\]]\]\s*/gm, // Task list markers (bullet-style) - before bare checkbox
+  /^\s*(\d+[.)]\s*)\[[^\]]\]\s*/gm, // Task list markers (numbered) - preserves number
+  /\[[^\]]\]\s*/g, // Bare task checkboxes (after task markers)
   /^\s*[-*+]\s+/gm, // Bullet list markers (after task markers)
   headingPattern, // Heading lines (full removal, [ \t] prevents cross-newline matching)
   /^\s*(?:[-_*])\s*(?:[-_*])\s*(?:[-_*])[\s\-_*]*$/gm, // Horizontal rules
