@@ -1997,15 +1997,20 @@ export class SharedCardRenderer {
       // Touch + hover preload dedup
       const preloadGuard = { done: false };
 
+      // Shared broken handler for both hover preload and touch scrub
+      const scrubBrokenHandler = createPreloadBrokenHandler(
+        scrubbableUrls,
+        cardEl,
+        () => imageEl.classList.remove('multi-image')
+      );
+
       // Preload on hover — splice broken URLs from scrubbable array immediately
       if (signal) {
         setupImagePreload(
           cardEl,
           scrubbableUrls,
           signal,
-          createPreloadBrokenHandler(scrubbableUrls, cardEl, () => {
-            imageEl.classList.remove('multi-image');
-          }),
+          scrubBrokenHandler,
           preloadGuard
         );
       }
@@ -2084,13 +2089,7 @@ export class SharedCardRenderer {
         preloadSignal: signal!,
         preloadGuard,
         animationDuration: scrubAnimDuration,
-        brokenHandler: createPreloadBrokenHandler(
-          scrubbableUrls,
-          cardEl,
-          () => {
-            imageEl.classList.remove('multi-image');
-          }
-        ),
+        brokenHandler: scrubBrokenHandler,
       });
       observeThumbnailReset(imageEl, resetTouchScrub);
       signal?.addEventListener(

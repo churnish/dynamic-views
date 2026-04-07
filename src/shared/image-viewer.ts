@@ -64,9 +64,7 @@ function closeImageViewer(
   restoreHoverIntent = true
 ): void {
   // Mark the source card to suppress touch-press interact from the dismiss tap
-  const sourceCard = (
-    cloneEl as CloneElement
-  ).__originalEmbed?.closest<HTMLElement>('.card');
+  const sourceCard = cloneEl.__originalEmbed?.closest<HTMLElement>('.card');
   if (sourceCard) {
     sourceCard.dataset.viewerDismissing = '1';
     setTimeout(() => delete sourceCard.dataset.viewerDismissing, 300);

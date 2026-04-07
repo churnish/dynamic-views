@@ -268,6 +268,49 @@ describe('setupTouchScrubbing', () => {
     expect(thumbEl.classList.contains('scrub-hover')).toBe(true);
   });
 
+  it('does NOT enter scrub mode when vertical movement dominates', () => {
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+      clientY: 10,
+    });
+    // deltaX=5, deltaY=15 — vertical dominates → direction locked to vertical
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 55,
+      clientY: 25,
+    });
+
+    expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
+    // No animation classes on children
+    const imgs = thumbEl.querySelectorAll('.slideshow-img');
+    for (const img of imgs) {
+      expect(img.classList.contains('slideshow-exit-left')).toBe(false);
+      expect(img.classList.contains('slideshow-exit-right')).toBe(false);
+      expect(img.classList.contains('slideshow-enter-left')).toBe(false);
+      expect(img.classList.contains('slideshow-enter-right')).toBe(false);
+    }
+
+    // Subsequent horizontal move past threshold — STILL no scrub (locked to vertical)
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 70,
+      clientY: 30,
+    });
+
+    expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
+  });
+
   it('does NOT enter scrub mode on pointermove < 10px delta', () => {
     setupTouchScrubbing({
       thumbEl,
@@ -473,6 +516,43 @@ describe('setupTouchScrubbing', () => {
     expect(clickHandler).toHaveBeenCalledTimes(1);
   });
 
+  it('click suppressor expires after 300ms (does not eat next deliberate tap)', () => {
+    setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Horizontal swipe to enter scrub mode
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 62,
+    });
+    firePointer(thumbEl, 'pointerup', {
+      pointerType: 'touch',
+      clientX: 62,
+    });
+
+    // Wait for click suppressor to expire
+    vi.advanceTimersByTime(301);
+
+    // Next click should NOT be suppressed
+    const clickHandler = vi.fn();
+    cardEl.addEventListener('click', clickHandler);
+    cardEl.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true })
+    );
+    expect(clickHandler).toHaveBeenCalledTimes(1);
+  });
+
   it('cleans up on pointercancel', () => {
     setupTouchScrubbing({
       thumbEl,
@@ -558,6 +638,47 @@ describe('setupTouchScrubbing', () => {
     // Animation classes removed
     expect(curr.classList.contains('slideshow-exit-right')).toBe(false);
     expect(curr.classList.contains('slideshow-exit-left')).toBe(false);
+  });
+
+  it('signal abort mid-scrub restores scroll-locked and removes scrub-hover', () => {
+    // Create a .bases-view parent element and append thumbEl inside it
+    const basesView = document.createElement('div');
+    basesView.classList.add('bases-view');
+    basesView.appendChild(cardEl); // cardEl already contains thumbEl
+    document.body.appendChild(basesView);
+
+    const reset = setupTouchScrubbing({
+      thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    // Enter scrub mode via horizontal swipe
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    expect(thumbEl.classList.contains('scrub-hover')).toBe(true);
+    expect(basesView.classList.contains('dynamic-views-scroll-locked')).toBe(
+      true
+    );
+
+    // Call reset mid-scrub
+    reset();
+
+    expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
+    expect(basesView.classList.contains('dynamic-views-scroll-locked')).toBe(
+      false
+    );
   });
 
   it('wraps from last to first on left swipe at end (looping default)', () => {

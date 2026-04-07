@@ -3,6 +3,7 @@ import type { Mock } from 'vitest';
 import {
   canHover,
   canPrimaryHover,
+  deferContainerHoverDrop,
   isHoverPointer,
   isTouchPointer,
   setupHoverIntent,
@@ -363,5 +364,48 @@ describe('setupTouchPress', () => {
     // After 100ms
     vi.advanceTimersByTime(100);
     expect(onDeactivate).toHaveBeenCalledOnce();
+  });
+});
+
+describe('deferContainerHoverDrop', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('removes has-hover-card after 150ms when no card is interacting', () => {
+    const container = document.createElement('div');
+    container.classList.add('bases-cards-group');
+    const card = document.createElement('div');
+    card.classList.add('card');
+    container.appendChild(card);
+    container.classList.add('has-hover-card');
+
+    deferContainerHoverDrop(card);
+
+    expect(container.classList.contains('has-hover-card')).toBe(true);
+    vi.advanceTimersByTime(150);
+    expect(container.classList.contains('has-hover-card')).toBe(false);
+  });
+
+  it('does NOT remove has-hover-card when another card has interact', () => {
+    const container = document.createElement('div');
+    container.classList.add('bases-cards-group');
+    const card1 = document.createElement('div');
+    card1.classList.add('card');
+    const card2 = document.createElement('div');
+    card2.classList.add('card', 'interact');
+    container.appendChild(card1);
+    container.appendChild(card2);
+    container.classList.add('has-hover-card');
+
+    deferContainerHoverDrop(card1);
+    vi.advanceTimersByTime(150);
+
+    expect(container.classList.contains('has-hover-card')).toBe(true);
+  });
+
+  it('is a no-op when card has no matching container ancestor', () => {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    expect(() => deferContainerHoverDrop(card)).not.toThrow();
   });
 });

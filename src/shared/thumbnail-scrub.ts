@@ -6,7 +6,11 @@ import { getCachedBlobUrl, preloadImageBatch } from './slideshow';
 import { isTouchPointer } from './hover-and-touch';
 import { getOwnerWindow } from '../utils/owner-window';
 import { markImageBroken } from './image-loader';
-import { SCROLL_THROTTLE_MS, SLIDESHOW_ANIMATION_MS } from './constants';
+import {
+  SCRUB_DIRECTION_THRESHOLD,
+  SCROLL_THROTTLE_MS,
+  SLIDESHOW_ANIMATION_MS,
+} from './constants';
 import { isThumbnailLoopingDisabled } from '../utils/style-settings';
 
 // ── Pure helpers ──────────────────────────────────────────────────────────
@@ -103,6 +107,8 @@ export interface TouchScrubOptions {
   preloadSignal: AbortSignal;
   preloadGuard: { done: boolean };
   brokenHandler: (url: string) => void;
+  /** Pre-read animation duration (ms). Avoids per-card getComputedStyle. */
+  animationDuration?: number;
 }
 
 /** Wire up pointerdown/move/up/cancel for touch swipe-to-advance on a thumbnail.
@@ -121,17 +127,9 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
 
   // Lazy-cached indicator — created after setupTouchScrubbing returns
   let indicator: HTMLElement | null = null;
-  const scrollContainer = thumbEl.closest('.bases-view');
+  const scrollContainer = thumbEl.closest<HTMLElement>('.bases-view');
 
-  // Read animation duration from CSS variable once at setup
-  let animationDuration = SLIDESHOW_ANIMATION_MS;
-  const cssValue = getOwnerWindow(thumbEl)
-    .getComputedStyle(thumbEl)
-    .getPropertyValue('--anim-duration-moderate');
-  const parsed = parseInt(cssValue);
-  if (!isNaN(parsed) && parsed > 0) {
-    animationDuration = parsed;
-  }
+  const animationDuration = opts.animationDuration ?? SLIDESHOW_ANIMATION_MS;
 
   const animState: ThumbnailAnimState = {
     isAnimating: false,
@@ -165,8 +163,12 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       const deltaY = e.clientY - touchStartY;
       const absX = Math.abs(deltaX);
       const absY = Math.abs(deltaY);
-      if (absX <= 10 && absY <= 10) return;
-      // First axis to cross 10px wins — vertical locks out scrub entirely
+      if (
+        absX <= SCRUB_DIRECTION_THRESHOLD &&
+        absY <= SCRUB_DIRECTION_THRESHOLD
+      )
+        return;
+      // First axis to cross threshold wins — vertical locks out scrub entirely
       directionLocked = true;
       if (absY >= absX) return;
 
@@ -175,7 +177,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       touchScrubbing = true;
       // Freeze scroll container to prevent vertical drift during horizontal swipe
       if (scrollContainer)
-        (scrollContainer as HTMLElement).style.overflowY = 'hidden';
+        scrollContainer.classList.add('dynamic-views-scroll-locked');
       thumbEl.classList.add('scrub-hover');
       // Hide multi-image indicator during swipe (lazy query — indicator created after setup)
       indicator ??= thumbEl.querySelector<HTMLElement>('.thumbnail-indicator');
@@ -264,7 +266,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       if (touchScrubbing) {
         thumbEl.classList.remove('scrub-hover');
         if (scrollContainer)
-          (scrollContainer as HTMLElement).style.overflowY = '';
+          scrollContainer.classList.remove('dynamic-views-scroll-locked');
         // Suppress the click synthesized from this touch (card open / image viewer).
         // Auto-remove after 300ms — swipes don't always generate a click on iOS,
         // so a stale handler would eat the user's next deliberate tap.
@@ -296,7 +298,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       if (!isTouchPointer(e)) return;
       thumbEl.classList.remove('scrub-hover');
       if (scrollContainer)
-        (scrollContainer as HTMLElement).style.overflowY = '';
+        scrollContainer.classList.remove('dynamic-views-scroll-locked');
       touchScrubbing = false;
       directionLocked = false;
     },
@@ -314,24 +316,23 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
 
   // Restore indicator icon on next vertical scroll
   if (scrollContainer) {
-    let lastScrollTime = 0;
-    scrollContainer.addEventListener(
-      'scroll',
-      () => {
-        const now = Date.now();
-        if (now - lastScrollTime < SCROLL_THROTTLE_MS) return;
-        lastScrollTime = now;
-        indicator?.classList.remove('dynamic-views-icon-hidden');
-      },
-      { signal, passive: true }
+    addScrollIndicatorRestore(
+      scrollContainer,
+      () => indicator?.classList.remove('dynamic-views-icon-hidden'),
+      signal
     );
   }
 
-  // Comprehensive reset: cancel animation, reset index, restore images
+  // Comprehensive reset: cancel animation, reset index, restore images and scroll state
   return () => {
     if (animState.isAnimating) {
       finishThumbnailAnimation(animState, thumbEl);
     }
+    thumbEl.classList.remove('scrub-hover');
+    if (scrollContainer)
+      scrollContainer.classList.remove('dynamic-views-scroll-locked');
+    touchScrubbing = false;
+    directionLocked = false;
     currentIndex = 0;
     const currImg = thumbEl.querySelector<HTMLImageElement>(
       '.slideshow-img-current'
@@ -404,4 +405,37 @@ export function unobserveThumbnailReset(thumbEl: HTMLElement): void {
   const observer = resetObservers.get(win);
   if (observer) observer.unobserve(thumbEl);
   resetState.delete(thumbEl);
+}
+
+// ── Shared scroll listener for indicator icon restore ───────────────────
+
+const scrollIndicatorCallbacks = new WeakMap<Element, Set<() => void>>();
+const scrollThrottleState = new WeakMap<Element, number>();
+
+function addScrollIndicatorRestore(
+  scrollContainer: Element,
+  callback: () => void,
+  signal: AbortSignal
+): void {
+  let callbacks = scrollIndicatorCallbacks.get(scrollContainer);
+  if (!callbacks) {
+    callbacks = new Set();
+    scrollIndicatorCallbacks.set(scrollContainer, callbacks);
+    scrollContainer.addEventListener(
+      'scroll',
+      () => {
+        const now = Date.now();
+        const last = scrollThrottleState.get(scrollContainer) ?? 0;
+        if (now - last < SCROLL_THROTTLE_MS) return;
+        scrollThrottleState.set(scrollContainer, now);
+        const cbs = scrollIndicatorCallbacks.get(scrollContainer);
+        if (cbs) for (const cb of cbs) cb();
+      },
+      { passive: true }
+    );
+  }
+  callbacks.add(callback);
+  signal.addEventListener('abort', () => callbacks.delete(callback), {
+    once: true,
+  });
 }
