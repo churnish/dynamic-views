@@ -259,10 +259,18 @@ More content`;
       expect(sanitizeForPreview('- [ ]')).toBe('');
       expect(sanitizeForPreview('- [x]')).toBe('');
       expect(sanitizeForPreview('- [-]')).toBe('');
+      expect(sanitizeForPreview('  - [ ]')).toBe('');
       expect(sanitizeForPreview('1. [ ]')).toBe('1.');
       expect(sanitizeForPreview('2) [x]')).toBe('2)');
       expect(sanitizeForPreview('[ ]')).toBe('');
       expect(sanitizeForPreview('[x]')).toBe('');
+    });
+
+    it('should not strip single-char bracket expressions in prose', () => {
+      expect(sanitizeForPreview('press [a]b to continue')).toBe(
+        'press [a]b to continue'
+      );
+      expect(sanitizeForPreview('option [B].')).toBe('option [B].');
     });
 
     it('should strip checklist items with no text followed by other content', () => {
