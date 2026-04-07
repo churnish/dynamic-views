@@ -48,6 +48,14 @@ describe('image', () => {
       expect(isExternalUrl('ftp://example.com/file.png')).toBe(false);
       expect(isExternalUrl('file:///path/to/file.png')).toBe(false);
     });
+
+    it('should return false for Android Capacitor local file URLs', () => {
+      expect(
+        isExternalUrl(
+          'http://localhost/_capacitor_file_/storage/emulated/0/Obsidian/Dev/img.jpg'
+        )
+      ).toBe(false);
+    });
   });
 
   describe('stripWikilinkSyntax', () => {

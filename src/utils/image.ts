@@ -26,7 +26,11 @@ export const VALID_IMAGE_EXTENSIONS: string[] = [
  * @returns true if URL starts with http:// or https://
  */
 export function isExternalUrl(url: string): boolean {
-  return /^https?:\/\//i.test(url);
+  return (
+    /^https?:\/\//i.test(url) &&
+    // Android Capacitor serves local files via http://localhost/_capacitor_file_/
+    !url.includes('/_capacitor_file_/')
+  );
 }
 
 /**

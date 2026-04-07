@@ -1920,8 +1920,11 @@ export class SharedCardRenderer {
       let currentUrlIndex = 0;
       const tryNextImage = () => {
         if (signal?.aborted) return;
-        imgEl.removeClass('scrub-loading');
         const failedSrc = imgEl.src;
+        // Ignore spurious errors from src='' during slideshow role swap
+        if (!failedSrc || failedSrc === getOwnerWindow(imgEl).location.href)
+          return;
+        imgEl.removeClass('scrub-loading');
         markImageBroken(failedSrc);
         if (scrubbableUrls) {
           const idx = scrubbableUrls.indexOf(failedSrc);

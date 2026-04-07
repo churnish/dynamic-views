@@ -94,6 +94,18 @@ function finishThumbnailAnimation(
   state.isAnimating = false;
 }
 
+// ── Indicator exclusivity ────────────────────────────────────────────────
+
+/** Tracks the most recently hidden indicator so a new swipe restores the previous one. */
+let activeIndicator: HTMLElement | null = null;
+
+function claimIndicator(indicator: HTMLElement): void {
+  if (activeIndicator && activeIndicator !== indicator) {
+    activeIndicator.classList.remove('dynamic-views-icon-hidden');
+  }
+  activeIndicator = indicator;
+}
+
 // ── Touch scrubbing lifecycle ─────────────────────────────────────────────
 
 export interface TouchScrubOptions {
@@ -179,9 +191,13 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       if (scrollContainer)
         scrollContainer.classList.add('dynamic-views-scroll-locked');
       thumbEl.classList.add('scrub-hover');
-      // Hide multi-image indicator during swipe (lazy query — indicator created after setup)
+      // Hide multi-image indicator during swipe (lazy query — indicator created after setup).
+      // claimIndicator restores the previous thumbnail's indicator (exclusivity).
       indicator ??= thumbEl.querySelector<HTMLElement>('.thumbnail-indicator');
-      if (indicator) indicator.classList.add('dynamic-views-icon-hidden');
+      if (indicator) {
+        claimIndicator(indicator);
+        indicator.classList.add('dynamic-views-icon-hidden');
+      }
       const len = imageUrls.length;
       let newIndex: number;
       if (isThumbnailLoopingDisabled()) {
@@ -318,7 +334,10 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
   if (scrollContainer) {
     addScrollIndicatorRestore(
       scrollContainer,
-      () => indicator?.classList.remove('dynamic-views-icon-hidden'),
+      () => {
+        indicator?.classList.remove('dynamic-views-icon-hidden');
+        if (activeIndicator === indicator) activeIndicator = null;
+      },
       signal
     );
   }
