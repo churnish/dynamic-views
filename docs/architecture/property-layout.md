@@ -6,6 +6,8 @@ updated: 2026-04-02
 ---
 # Property layout system
 
+See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md)
+
 ## Overview
 
 The property layout system controls how property rows are arranged inside cards in Grid and Masonry views. It decides which properties are paired side-by-side, measures their widths to allocate space optimally, applies scroll gradients when content overflows, and splits properties into top/bottom containers around the text preview. The system spans five files: `src/shared/property-measure.ts` (width measurement pipeline), `src/shared/scroll-gradient.ts` (overflow gradient indicators), `src/shared/property-helpers.ts` (`computeInvertPairs` algorithm and collapse logic), `src/bases/shared-renderer.ts` (property rendering and container classes), and `styles/_properties.scss` (CSS layout rules and state classes).

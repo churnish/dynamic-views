@@ -6,6 +6,8 @@ updated: 2026-04-03
 ---
 # Image loading and caching pipeline
 
+See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md), [`odkb/android-chromium-quirks.md`](https://github.com/churnish/odkb/blob/main/android-chromium-quirks.md)
+
 The image loading pipeline resolves property values and in-note embeds into renderable URLs, deduplicates concurrent loads via a two-tier cache, tracks broken URLs to skip on re-render, caches aspect ratios to prevent layout flash, and orchestrates fade-in transitions via a double-rAF pattern.
 
 ## Files

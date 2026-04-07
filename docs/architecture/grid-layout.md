@@ -6,6 +6,8 @@ updated: 2026-04-01
 ---
 # Grid layout system
 
+See also: [`odkb/ios-webkit-quirks.md`](https://github.com/churnish/odkb/blob/main/ios-webkit-quirks.md)
+
 The grid layout system renders cards in a CSS Grid-based equal-height column layout using imperative DOM manipulation with virtual scrolling (mount/unmount with placeholder divs).
 
 ## Files

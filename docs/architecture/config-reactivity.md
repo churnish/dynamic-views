@@ -6,6 +6,8 @@ updated: 2026-04-06
 ---
 # Config reactivity
 
+See also: [`odkb/electron-popout-quirks.md`](https://github.com/churnish/odkb/blob/main/electron-popout-quirks.md)
+
 The plugin's reactivity pipeline decides what to re-render when a config value, file content, or Style Settings option changes. It separates instant CSS updates from expensive DOM rebuilds and uses a composite render hash to skip redundant work. Both Grid and Masonry views share the same pipeline structure — file paths below reference `grid-view.ts` but the Masonry equivalents are structurally identical.
 
 ## Pipeline overview

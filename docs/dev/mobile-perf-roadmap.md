@@ -6,6 +6,8 @@ updated: 2026-04-01
 ---
 # Mobile performance roadmap
 
+See also: [`odkb/ios-webkit-quirks.md`](https://github.com/churnish/odkb/blob/main/ios-webkit-quirks.md), [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md)
+
 Optimization options for Masonry views with poster images on low-end iOS devices (iPhone 13 — 4GB RAM, A15 GPU). Findings are from empirical Safari Timeline profiling and on-device memory audits. iPad M3 and Pixel 8a are unaffected due to 8GB RAM and faster GPUs.
 
 ## Problem summary

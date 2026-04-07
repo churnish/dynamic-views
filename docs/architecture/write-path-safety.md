@@ -6,6 +6,8 @@ updated: 2026-03-09
 ---
 # Write path safety
 
+See also: [`odkb/obsidian-api-quirks.md`](https://github.com/churnish/odkb/blob/main/obsidian-api-quirks.md)
+
 All file write operations in Dynamic Views, the APIs they use, and the invariants that prevent data corruption. Consult before adding new write paths or modifying existing ones.
 
 ## Allowed write APIs

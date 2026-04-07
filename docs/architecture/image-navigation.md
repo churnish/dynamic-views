@@ -6,6 +6,8 @@ updated: 2026-04-06
 ---
 # Image navigation
 
+See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md)
+
 ## Overview
 
 The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.

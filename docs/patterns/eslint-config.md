@@ -6,6 +6,8 @@ updated: 2026-03-11
 ---
 # ESLint configuration
 
+See also: [`odkb/obsidian-review-bot.md`](https://github.com/churnish/odkb/blob/main/obsidian-review-bot.md)
+
 This project uses `eslint-plugin-obsidianmd`'s `recommended` config, which bundles JS recommended, TypeScript type-checked, and Obsidian-specific rules.
 
 ## Config structure

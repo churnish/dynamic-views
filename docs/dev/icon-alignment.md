@@ -6,6 +6,8 @@ updated: 2026-03-26
 ---
 # Icon optical vertical alignment
 
+See also: [`odkb/android-chromium-quirks.md`](https://github.com/churnish/odkb/blob/main/android-chromium-quirks.md)
+
 Timestamp icons (calendar/clock SVGs) and file type icons in card views need to be optically vertically centered with adjacent text. Flex `align-items: center` aligns geometric centers, but text glyphs (especially digits without descenders) concentrate visual weight above the geometric center, making icons appear ~0.3-0.5px too low.
 
 ## Two icon contexts

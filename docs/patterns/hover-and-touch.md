@@ -7,6 +7,8 @@ updated: 2026-04-05
 
 # Hover and touch interactions
 
+See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md)
+
 Complete inventory of all hover and touch interactions in Dynamic Views — what each does, which pointer types trigger it, and where the gating lives. Use this when adding new hover/touch behavior, debugging interaction on a specific device, or planning pointer support changes.
 
 ## Gating architecture
