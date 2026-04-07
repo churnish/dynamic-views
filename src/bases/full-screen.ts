@@ -190,9 +190,11 @@ export class FullScreenController {
   // Opaque background behind toolbar/search during spacer show — prevents
   // content showing through during the WAAPI opacity fade-in.
   private toolbarBgEl: HTMLElement | null = null;
-  // Observes search row size changes — when search opens/closes during
-  // active show mode, spacer/heading/toolbarBg need re-syncing.
+  // Observes search row size changes — prevSearchRowHeight tracks previous
+  // height for iOS scrollTop compensation; syncShowLayoutForSearch re-syncs
+  // spacer/heading/toolbarBg during Android show mode.
   private searchRowRO: ResizeObserver | null = null;
+  private prevSearchRowHeight = 0;
   // Touch tracking for tap-to-reveal
   private touchStartY = 0;
   private touchStartTime = 0;
@@ -347,7 +349,11 @@ export class FullScreenController {
     if (this.searchRowEl && !this.searchRowRO) {
       const win = this.scrollEl.ownerDocument.defaultView;
       if (win) {
-        this.searchRowRO = new win.ResizeObserver(() => {
+        this.prevSearchRowHeight = this.searchRowEl.offsetHeight;
+        this.searchRowRO = new win.ResizeObserver((entries) => {
+          // compensate must run first — syncShowLayout sets
+          // programmaticScroll=true, which would suppress compensation.
+          this.compensateSearchRowResize(entries);
           this.syncShowLayoutForSearch();
         });
         this.searchRowRO.observe(this.searchRowEl);
@@ -731,6 +737,44 @@ export class FullScreenController {
         setStyle(el, 'z-index', '24', 'important');
       }
     }
+  }
+
+  /** Compensate scrollTop when search row resizes during iOS idle or show state. Prevents content shift from flex reflow. Called by searchRowRO — ResizeObserver delivers after layout, before paint. */
+  private compensateSearchRowResize(entries: ResizeObserverEntry[]): void {
+    if (!this.searchRowEl) return;
+
+    const currentHeight = entries[0].borderBoxSize[0].blockSize;
+    const delta = currentHeight - this.prevSearchRowHeight;
+    this.prevSearchRowHeight = currentHeight;
+
+    if (delta === 0) return;
+
+    // RO fires at two moments during a hide/show cycle: when full-screen-active
+    // is added (CSS collapses search to 0 — suppressed by barsHidden guard) and
+    // removed (show-settle restores height — suppressed by programmaticScroll,
+    // which settle sets true before class removal).
+    if (
+      this.isAndroid ||
+      !this.mounted ||
+      this.barsHidden ||
+      this.programmaticScroll
+    )
+      return;
+    // Block during hide state (search collapsed to height:0 by CSS). During
+    // show state (full-screen-active + full-screen-showing), CSS restores
+    // search row to normal flow — compensation is needed.
+    if (
+      this.classTarget.classList.contains('full-screen-active') &&
+      !this.leafContent.classList.contains('full-screen-showing')
+    )
+      return;
+
+    // Search row grew → content pushed down → add delta.
+    // Search row shrank → content pulled up → subtract delta.
+    this.programmaticScroll = true;
+    this.scrollEl.scrollTop = Math.max(0, this.scrollEl.scrollTop + delta);
+    this.prevScrollTop = this.scrollEl.scrollTop;
+    this.programmaticScroll = false;
   }
 
   /** Re-sync spacer, heading tops, and toolbar background when search row visibility changes during active show mode. Called by the searchRowRO ResizeObserver. Coalesced via rAF — programmaticScroll set synchronously for immediate scroll suppression. */
@@ -1130,7 +1174,7 @@ export class FullScreenController {
       this.capacitorRafId = null;
     }
 
-    // Case A (Android re-hide from spacer show) skips shared cleanup —
+    // Android re-hide (spacer already active) skips shared cleanup —
     // overlay/WAAPI state is still live and torn down in rAF + idle.
     if (!this.isAndroid || !wasSpacerActive) {
       // Cancel WAAPI animations — must be AFTER clearShowOverlays so
@@ -1153,8 +1197,230 @@ export class FullScreenController {
 
     void capacitorStatusBar?.hide();
 
-    // Navbar: animated hide via inline transform + opacity (iOS only)
     const navbarHeight = this.navbarHeight;
+
+    if (this.isAndroid) {
+      if (wasSpacerActive) return this.hideAndroidAgain(navbarHeight);
+      return this.hideAndroidFirst(navbarHeight);
+    }
+    this.hideIos(preBlurShift, navbarHeight);
+  }
+
+  /** Android subsequent hide — spacer already active. */
+  private hideAndroidAgain(navbarHeight: number): void {
+    // Re-hide from show mode. Spacer and full-screen-active already in
+    // place — no layout change needed. WAAPI-fade bars out, clean up
+    // overlays at idle.
+
+    // Swap mask-image to opaque immediately — show gradient stays
+    // visible as white strip if deferred to idle.
+    // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
+    if (this.workspaceSplitEl) {
+      setStyle(
+        this.workspaceSplitEl,
+        '-webkit-mask-image',
+        OPAQUE_MASK,
+        'important'
+      );
+      setStyle(this.workspaceSplitEl, 'mask-image', OPAQUE_MASK, 'important');
+    }
+
+    this.programmaticScroll = true;
+
+    // Read WAAPI "from" values — overlays still visible
+    const headerFrom =
+      this.viewHeaderEl?.style.getPropertyValue('transform') || 'translateY(0)';
+
+    this.pendingRafId = requestAnimationFrame(() => {
+      this.programmaticScroll = false;
+      this.prevScrollTop = this.scrollEl.scrollTop;
+
+      // Don't cancelAnimations() — hide WAAPI wins over show WAAPI
+      // by composite ordering (newer wins, WAAPI §4.6). Cancelling
+      // show WAAPI first removes fill:forwards, flashing navbar/header
+      // to CSS base state for one frame before hide WAAPI starts.
+      const oldAnims = [...this.barAnims];
+      this.barAnims = [];
+
+      // WAAPI hide header — transform + opacity
+      if (this.viewHeaderEl) {
+        const hEl = this.viewHeaderEl;
+        this.barAnims.push(
+          hEl.animate(
+            [
+              { transform: headerFrom },
+              { transform: `translateY(-${this.headerShift}px)` },
+            ],
+            HEADER_SLIDE_OPTS
+          ),
+          hEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
+        );
+      }
+
+      // WAAPI hide navbar
+      // Inline opacity: navbar-hidden class is added during WAAPI — !important CSS would override animation (invariant #10).
+      this.barAnims.push(
+        this.navbarEl.animate(
+          [
+            { transform: 'translateY(0)' },
+            { transform: `translateY(${navbarHeight}px)` },
+          ],
+          NAVBAR_SLIDE_OPTS
+        ),
+        this.navbarEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
+      );
+      this.navbarEl.classList.add('dynamic-views-navbar-hidden');
+
+      // Cancel old show animations AFTER hide WAAPI started —
+      // hide fill:forwards is already holding, so cancel is safe.
+      for (const a of oldAnims) a.cancel();
+
+      // Instantly clear toolbar/search overlays and switch to spacer
+      // background cover. No WAAPI fade on toolbar/search — they
+      // vanish immediately, scrim becomes visible.
+      this.clearOverlayBars();
+      this.applyHideSpacerCover();
+      this.clearSpacerHeadingTops();
+    });
+
+    this.settled = true;
+    this.pendingLayout = () => {
+      this.settleAndroidSpacerHide();
+      this.lockedScrollHeight = this.scrollEl.offsetHeight;
+      setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+      this.pendingLayout = null;
+    };
+  }
+
+  /** Android initial hide — no spacer yet. Two-frame spacer expansion. */
+  private hideAndroidFirst(navbarHeight: number): void {
+    // First hide (no spacer). Two-frame approach:
+    // Frame 1 (now): expand spacer. Overflow-anchor fires between frames.
+    // Frame 2 (rAF): class + collapse spacer (net zero) + WAAPI hide.
+
+    // Pin header + toolbar + search at visible position via inline styles
+    // BEFORE class change.
+    // Inline: transient pin — cleared in next rAF by clearHeaderInlines().
+    if (this.viewHeaderEl) {
+      setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
+      setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
+    }
+    if (this.toolbarEl) {
+      setStyle(this.toolbarEl, 'opacity', '1', 'important');
+    }
+    if (this.searchRowEl) {
+      setStyle(this.searchRowEl, 'opacity', '1', 'important');
+    }
+
+    // Frame 1: insert spacer and expand — anchor fires between frames
+    this.ensureSpacerChrome();
+    this.programmaticScroll = true;
+    this.scrollEl.style.removeProperty('height');
+    if (this.spacerEl) {
+      setStyle(this.spacerEl, 'height', `${this.totalShift}px`);
+    }
+
+    // Frame 2: anchor has inflated scrollTop. Add class + collapse spacer
+    // (net zero), then WAAPI-fade bars out.
+    const headerShift = this.headerShift;
+    this.pendingRafId = requestAnimationFrame(() => {
+      // Add full-screen-active. External margin collapses (~totalShift),
+      // but spacer (totalShift) inside scrollEl replaces it. Anchor
+      // already inflated scrollTop between frames. Net visual: zero.
+      // Spacer persists during hidden state (same end state as re-hide).
+      this.classTarget.classList.add('full-screen-active');
+      this.spacerActive = true;
+
+      // Position toolbar/search as absolute overlays covering the spacer
+      // area. They WAAPI-fade out, covering the spacer so no white strip
+      // appears during the transition. Same overlay setup as show path.
+      this.applyShowOverlays();
+
+      // Compute effective shift for heading tops + toolbarBg
+      const {
+        shift: effectiveShift,
+        toolbarH,
+        searchH,
+      } = this.computeEffectiveShift();
+      if (this.spacerEl) {
+        setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
+      }
+      this.syncToolbarBgHeight(toolbarH, searchH);
+      this.applyBackgroundInlines();
+
+      // Mask-image swap
+      // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
+      if (this.workspaceSplitEl) {
+        setStyle(
+          this.workspaceSplitEl,
+          '-webkit-mask-image',
+          OPAQUE_MASK,
+          'important'
+        );
+        setStyle(this.workspaceSplitEl, 'mask-image', OPAQUE_MASK, 'important');
+      }
+
+      this.programmaticScroll = false;
+      this.prevScrollTop = this.scrollEl.scrollTop;
+      this.settled = true;
+
+      // Start hide WAAPI BEFORE cancelling old anims. Hide wins by
+      // composite ordering (newer wins, WAAPI sec 4.6). Cancelling first
+      // removes fill:forwards, flashing to CSS base state.
+      const oldAnims = [...this.barAnims];
+      this.barAnims = [];
+
+      this.clearHeaderInlines();
+
+      // Header WAAPI hide
+      if (this.viewHeaderEl) {
+        const hEl = this.viewHeaderEl;
+        const headerTransformAnim = hEl.animate(
+          [
+            { transform: 'translateY(0)' },
+            { transform: `translateY(-${headerShift}px)` },
+          ],
+          HEADER_SLIDE_OPTS
+        );
+        this.barAnims.push(
+          headerTransformAnim,
+          hEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
+        );
+      }
+
+      // Navbar WAAPI hide
+      this.barAnims.push(
+        this.navbarEl.animate(
+          [
+            { transform: 'translateY(0)' },
+            { transform: `translateY(${navbarHeight}px)` },
+          ],
+          NAVBAR_SLIDE_OPTS
+        ),
+        this.navbarEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
+      );
+      this.navbarEl.classList.add('dynamic-views-navbar-hidden');
+
+      // Cancel old anims AFTER hide WAAPI started
+      for (const a of oldAnims) a.cancel();
+
+      // Instantly clear toolbar/search overlays and switch to spacer
+      // background cover. No WAAPI fade — they vanish immediately.
+      this.clearOverlayBars();
+      this.applyHideSpacerCover();
+      this.clearSpacerHeadingTops();
+
+      this.pendingLayout = () => {
+        this.settleAndroidSpacerHide();
+        this.lockedScrollHeight = this.scrollEl.offsetHeight;
+        setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+        this.pendingLayout = null;
+      };
+    });
+  }
+
+  /** iOS hide — margin bridge + deferred settle. */
+  private hideIos(preBlurShift: number, navbarHeight: number): void {
     const applyNavbarHide = (): void => {
       setStyles(this.navbarEl, [
         ['transform', `translateY(${navbarHeight}px)`, 'important'],
@@ -1162,230 +1428,6 @@ export class FullScreenController {
         ['pointer-events', 'none', 'important'],
       ]);
     };
-
-    if (this.isAndroid) {
-      if (wasSpacerActive) {
-        // Case A: re-hide from show mode. Spacer and full-screen-active
-        // already in place — no layout change needed. WAAPI-fade bars out,
-        // clean up overlays at idle.
-
-        // Swap mask-image to opaque immediately — show gradient stays
-        // visible as white strip if deferred to idle.
-        // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
-        if (this.workspaceSplitEl) {
-          setStyle(
-            this.workspaceSplitEl,
-            '-webkit-mask-image',
-            OPAQUE_MASK,
-            'important'
-          );
-          setStyle(
-            this.workspaceSplitEl,
-            'mask-image',
-            OPAQUE_MASK,
-            'important'
-          );
-        }
-
-        this.programmaticScroll = true;
-
-        // Read WAAPI "from" values — overlays still visible
-        const headerFrom =
-          this.viewHeaderEl?.style.getPropertyValue('transform') ||
-          'translateY(0)';
-
-        this.pendingRafId = requestAnimationFrame(() => {
-          this.programmaticScroll = false;
-          this.prevScrollTop = this.scrollEl.scrollTop;
-
-          // Don't cancelAnimations() — hide WAAPI wins over show WAAPI
-          // by composite ordering (newer wins, WAAPI §4.6). Cancelling
-          // show WAAPI first removes fill:forwards, flashing navbar/header
-          // to CSS base state for one frame before hide WAAPI starts.
-          const oldAnims = [...this.barAnims];
-          this.barAnims = [];
-
-          // WAAPI hide header — transform + opacity
-          if (this.viewHeaderEl) {
-            const hEl = this.viewHeaderEl;
-            this.barAnims.push(
-              hEl.animate(
-                [
-                  { transform: headerFrom },
-                  { transform: `translateY(-${this.headerShift}px)` },
-                ],
-                HEADER_SLIDE_OPTS
-              ),
-              hEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
-            );
-          }
-
-          // WAAPI hide navbar
-          // Inline opacity: navbar-hidden class is added during WAAPI — !important CSS would override animation (invariant #10).
-          this.barAnims.push(
-            this.navbarEl.animate(
-              [
-                { transform: 'translateY(0)' },
-                { transform: `translateY(${navbarHeight}px)` },
-              ],
-              NAVBAR_SLIDE_OPTS
-            ),
-            this.navbarEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
-          );
-          this.navbarEl.classList.add('dynamic-views-navbar-hidden');
-
-          // Cancel old show animations AFTER hide WAAPI started —
-          // hide fill:forwards is already holding, so cancel is safe.
-          for (const a of oldAnims) a.cancel();
-
-          // Instantly clear toolbar/search overlays and switch to spacer
-          // background cover. No WAAPI fade on toolbar/search — they
-          // vanish immediately, scrim becomes visible.
-          this.clearOverlayBars();
-          this.applyHideSpacerCover();
-          this.clearSpacerHeadingTops();
-        });
-
-        this.settled = true;
-        this.pendingLayout = () => {
-          this.settleAndroidSpacerHide();
-          this.lockedScrollHeight = this.scrollEl.offsetHeight;
-          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-          this.pendingLayout = null;
-        };
-        return;
-      }
-
-      // Case B: first hide (no spacer). Two-frame approach:
-      // Frame 1 (now): expand spacer. Overflow-anchor fires between frames.
-      // Frame 2 (rAF): class + collapse spacer (net zero) + WAAPI hide.
-
-      // Pin header + toolbar + search at visible position via inline styles
-      // BEFORE class change.
-      // Inline: transient pin — cleared in next rAF by clearHeaderInlines().
-      if (this.viewHeaderEl) {
-        setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
-        setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
-      }
-      if (this.toolbarEl) {
-        setStyle(this.toolbarEl, 'opacity', '1', 'important');
-      }
-      if (this.searchRowEl) {
-        setStyle(this.searchRowEl, 'opacity', '1', 'important');
-      }
-
-      // Frame 1: insert spacer and expand — anchor fires between frames
-      this.ensureSpacerChrome();
-      this.programmaticScroll = true;
-      this.scrollEl.style.removeProperty('height');
-      if (this.spacerEl) {
-        setStyle(this.spacerEl, 'height', `${this.totalShift}px`);
-      }
-
-      // Frame 2: anchor has inflated scrollTop. Add class + collapse spacer
-      // (net zero), then WAAPI-fade bars out.
-      const headerShift = this.headerShift;
-      this.pendingRafId = requestAnimationFrame(() => {
-        // Add full-screen-active. External margin collapses (~totalShift),
-        // but spacer (totalShift) inside scrollEl replaces it. Anchor
-        // already inflated scrollTop between frames. Net visual: zero.
-        // Spacer persists during hidden state (same end state as Case A).
-        this.classTarget.classList.add('full-screen-active');
-        this.spacerActive = true;
-
-        // Position toolbar/search as absolute overlays covering the spacer
-        // area. They WAAPI-fade out, covering the spacer so no white strip
-        // appears during the transition. Same overlay setup as show path.
-        this.applyShowOverlays();
-
-        // Compute effective shift for heading tops + toolbarBg
-        const {
-          shift: effectiveShift,
-          toolbarH,
-          searchH,
-        } = this.computeEffectiveShift();
-        if (this.spacerEl) {
-          setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
-        }
-        this.syncToolbarBgHeight(toolbarH, searchH);
-        this.applyBackgroundInlines();
-
-        // Mask-image swap
-        // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
-        if (this.workspaceSplitEl) {
-          setStyle(
-            this.workspaceSplitEl,
-            '-webkit-mask-image',
-            OPAQUE_MASK,
-            'important'
-          );
-          setStyle(
-            this.workspaceSplitEl,
-            'mask-image',
-            OPAQUE_MASK,
-            'important'
-          );
-        }
-
-        this.programmaticScroll = false;
-        this.prevScrollTop = this.scrollEl.scrollTop;
-        this.settled = true;
-
-        // Start hide WAAPI BEFORE cancelling old anims. Hide wins by
-        // composite ordering (newer wins, WAAPI sec 4.6). Cancelling first
-        // removes fill:forwards, flashing to CSS base state.
-        const oldAnims = [...this.barAnims];
-        this.barAnims = [];
-
-        this.clearHeaderInlines();
-
-        // Header WAAPI hide
-        if (this.viewHeaderEl) {
-          const hEl = this.viewHeaderEl;
-          const headerTransformAnim = hEl.animate(
-            [
-              { transform: 'translateY(0)' },
-              { transform: `translateY(-${headerShift}px)` },
-            ],
-            HEADER_SLIDE_OPTS
-          );
-          this.barAnims.push(
-            headerTransformAnim,
-            hEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
-          );
-        }
-
-        // Navbar WAAPI hide
-        this.barAnims.push(
-          this.navbarEl.animate(
-            [
-              { transform: 'translateY(0)' },
-              { transform: `translateY(${navbarHeight}px)` },
-            ],
-            NAVBAR_SLIDE_OPTS
-          ),
-          this.navbarEl.animate(OPACITY_HIDE_FRAMES, BAR_FADE_OPTS)
-        );
-        this.navbarEl.classList.add('dynamic-views-navbar-hidden');
-
-        // Cancel old anims AFTER hide WAAPI started
-        for (const a of oldAnims) a.cancel();
-
-        // Instantly clear toolbar/search overlays and switch to spacer
-        // background cover. No WAAPI fade — they vanish immediately.
-        this.clearOverlayBars();
-        this.applyHideSpacerCover();
-        this.clearSpacerHeadingTops();
-
-        this.pendingLayout = () => {
-          this.settleAndroidSpacerHide();
-          this.lockedScrollHeight = this.scrollEl.offsetHeight;
-          setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
-          this.pendingLayout = null;
-        };
-      });
-      return;
-    }
 
     // Swap mask-image to fully-opaque gradient (no visual masking).
     // Using an opaque gradient instead of 'none' keeps the compositor render
@@ -1627,12 +1669,11 @@ export class FullScreenController {
     // CSS class sets min-height:0, z-index:30, pointer-events:auto.
     if (this.viewHeaderEl) {
       this.viewHeaderEl.classList.add('dynamic-views-header-show');
-      // Force style recalc — commit the intermediate state (CSS
-      // full-screen-active: translateY(-91px), opacity:0) before the
-      // showing class applies (translateY(0), opacity:1). Without this,
-      // the browser batches both changes and sees transform 0→0 (from
-      // tap-shield class to showing class), producing no transition.
-      void this.viewHeaderEl.offsetHeight;
+      // No forced recalc — batching header-show + full-screen-showing into
+      // a single style recalc eliminates the intermediate paint frame that
+      // caused a white flash on WebKit (children not composited for 1 frame).
+      // Trade-off: header entrance transition may not animate (browser sees
+      // start=end state), but the header is behind the toolbar anyway.
     }
 
     // Synchronous layout — single compositor pause, UIScrollView resumes
