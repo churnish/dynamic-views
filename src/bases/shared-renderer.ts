@@ -3,8 +3,8 @@
  * Consolidates duplicate card rendering logic from Grid and Masonry
  */
 
-/** Per-card hover parent — new popovers on the same parent auto-dismiss the previous one. */
-const cardHoverParents = new WeakMap<HTMLElement, { hoverPopover: null }>();
+/** Hover parent type — Obsidian stores the active HoverPopover here and auto-dismisses on replacement. */
+type HoverParent = { hoverPopover: null };
 
 import {
   App,
@@ -399,6 +399,8 @@ export class SharedCardRenderer {
   private urlButtonRerenderController = new Map<HTMLElement, AbortController>();
   private activeScope: Scope | null = null;
   private iconAlignmentMeasured = false;
+  // Shared across all cards so Obsidian auto-dismisses the previous popover (including edit mode) when a new hover-link fires on the same parent, matching native Bases behavior.
+  private hoverParent: HoverParent = { hoverPopover: null };
 
   constructor(
     protected app: App,
@@ -563,16 +565,10 @@ export class SharedCardRenderer {
       el.addEventListener(
         'mouseenter',
         (e) => {
-          const card = el.closest('.card');
-          const hp =
-            card instanceof HTMLElement
-              ? cardHoverParents.get(card)
-              : undefined;
-          if (!hp) return;
           this.app.workspace.trigger('hover-link', {
             event: e,
             source: 'bases',
-            hoverParent: hp,
+            hoverParent: this.hoverParent,
             targetEl: el,
             linktext: link.url,
             sourcePath,
@@ -684,10 +680,6 @@ export class SharedCardRenderer {
     if (renderOptions?.skipImageFade) {
       cardEl.classList.add('skip-image-fade');
     }
-
-    // Shared hover parent — new popovers on the same parent auto-dismiss the previous one
-    const hoverParent: { hoverPopover: null } = { hoverPopover: null };
-    cardHoverParents.set(cardEl, hoverParent);
 
     const format = settings.imageFormat;
     const position = settings.imagePosition;
@@ -978,7 +970,7 @@ export class SharedCardRenderer {
           this.app.workspace.trigger('hover-link', {
             event: e,
             source: 'bases',
-            hoverParent,
+            hoverParent: this.hoverParent,
             targetEl: cardEl,
             linktext: card.path,
             sourcePath: card.path,
@@ -1102,7 +1094,7 @@ export class SharedCardRenderer {
               this.app.workspace.trigger('hover-link', {
                 event: e,
                 source: 'bases',
-                hoverParent,
+                hoverParent: this.hoverParent,
                 targetEl: link,
                 linktext: card.path,
                 sourcePath: card.path,
