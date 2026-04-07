@@ -435,7 +435,7 @@ export class FullScreenController {
 
     // Re-sync spacer + overlays if bars are shown with spacer active
     if (this.spacerActive && !this.barsHidden) {
-      const effectiveShift = this.computeEffectiveShift();
+      const { shift: effectiveShift } = this.computeEffectiveShift();
       if (this.spacerEl) {
         setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
       }
@@ -445,6 +445,21 @@ export class FullScreenController {
       this.clearBarInlines();
       this.applyShowOverlays();
       this.applySpacerHeadingTops(effectiveShift);
+    }
+
+    // Re-queue cancelled settle if bars are hidden but not yet settled.
+    // onResize clears pendingLayout to prevent stale-value settle; now that
+    // totalShift/originalMarginTop are fresh, re-queue so the settle
+    // completes with correct values on next scroll idle. Android only —
+    // iOS settle closure captures state that must be re-created by the
+    // scroll handler's hide path; it self-heals on next scroll event.
+    if (
+      this.isAndroid &&
+      this.barsHidden &&
+      !this.settled &&
+      !this.pendingLayout
+    ) {
+      this.pendingLayout = (): void => this.settleAndroidSpacerHide();
     }
   }
 
@@ -767,11 +782,15 @@ export class FullScreenController {
       this.searchSyncRafId = null;
       if (!this.mounted || !this.spacerActive || this.barsHidden) return;
 
-      const effectiveShift = this.computeEffectiveShift();
+      const {
+        shift: effectiveShift,
+        toolbarH,
+        searchH,
+      } = this.computeEffectiveShift();
       if (this.spacerEl) {
         setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
       }
-      this.syncToolbarBgHeight();
+      this.syncToolbarBgHeight(toolbarH, searchH);
       this.applySpacerHeadingTops(effectiveShift);
 
       this.prevScrollTop = this.scrollEl.scrollTop;
@@ -1079,21 +1098,25 @@ export class FullScreenController {
     if (this.totalShift > 0) this.totalShiftMeasured = true;
   }
 
-  /** Compute live effective shift from current toolbar + search row heights. Forces one layout read. */
-  private computeEffectiveShift(): number {
-    return (
-      this.originalMarginTop +
-      (this.toolbarEl?.offsetHeight ?? 0) +
-      (this.searchRowEl?.offsetHeight ?? 0)
-    );
+  /** Compute live effective shift from current toolbar + search row heights. Forces one layout read. Returns component heights so callers can reuse them without a second forced layout. */
+  private computeEffectiveShift(): {
+    shift: number;
+    toolbarH: number;
+    searchH: number;
+  } {
+    const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
+    const searchH = this.searchRowEl?.offsetHeight ?? 0;
+    return {
+      shift: this.originalMarginTop + toolbarH + searchH,
+      toolbarH,
+      searchH,
+    };
   }
 
-  /** Sync toolbarBgEl height to current toolbar + search row. */
-  private syncToolbarBgHeight(): void {
+  /** Sync toolbarBgEl height to pre-read toolbar + search row heights. */
+  private syncToolbarBgHeight(toolbarH: number, searchH: number): void {
     if (!this.toolbarBgEl) return;
-    const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
-    const searchRowH = this.searchRowEl?.offsetHeight ?? 0;
-    setStyle(this.toolbarBgEl, 'height', `${toolbarH + searchRowH}px`);
+    setStyle(this.toolbarBgEl, 'height', `${toolbarH + searchH}px`);
   }
 
   // ---------------------------------------------------------------------------
@@ -1298,11 +1321,15 @@ export class FullScreenController {
         this.applyShowOverlays();
 
         // Compute effective shift for heading tops + toolbarBg
-        const effectiveShift = this.computeEffectiveShift();
+        const {
+          shift: effectiveShift,
+          toolbarH,
+          searchH,
+        } = this.computeEffectiveShift();
         if (this.spacerEl) {
           setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
         }
-        this.syncToolbarBgHeight();
+        this.syncToolbarBgHeight(toolbarH, searchH);
         this.applyBackgroundInlines();
 
         // Mask-image swap
@@ -1488,7 +1515,11 @@ export class FullScreenController {
         // row height if search was opened after measureTotalShift(). One
         // forced layout read (offsetHeight) flushes applyShowOverlays
         // inlines; acceptable in show rAF (single paint at frame end).
-        const effectiveShift = this.computeEffectiveShift();
+        const {
+          shift: effectiveShift,
+          toolbarH,
+          searchH,
+        } = this.computeEffectiveShift();
 
         // 3. Spacer + scroll anchoring — uses effective shift so spacer
         // accounts for live search row height.
@@ -1499,8 +1530,7 @@ export class FullScreenController {
         this.spacerActive = true;
 
         // Update toolbarBgEl to cover full bars area (toolbar + search).
-        // Height = toolbarH + searchRowH (stable, no safe-area dependency).
-        this.syncToolbarBgHeight();
+        this.syncToolbarBgHeight(toolbarH, searchH);
 
         // 4. Heading sticky top (inline styles, not CSS — invariant)
         this.applySpacerHeadingTops(effectiveShift);
@@ -1770,6 +1800,7 @@ export class FullScreenController {
       this.lastToggleTime = Date.now();
       this.showBarsUI();
     }
+    // Default mode (tap card to open): no reveal — navigation handles it
   }
 
   /** Tap on invisible view-header (status bar zone) — deferred reveal.
