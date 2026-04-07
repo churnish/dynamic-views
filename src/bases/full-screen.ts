@@ -428,7 +428,7 @@ export class FullScreenController {
     const beforeTop = this.scrollEl.getBoundingClientRect().top;
 
     this.classTarget.classList.add('full-screen-active');
-    if (hadClass) this.classTarget.style.removeProperty('visibility');
+    if (hadClass) clearStyles(this.classTarget, ['visibility']);
 
     const afterTop = this.scrollEl.getBoundingClientRect().top;
 
@@ -697,7 +697,8 @@ export class FullScreenController {
     this.applyHideSpacerCover();
     this.clearSpacerHeadingTops();
 
-    // Persist navbar hidden state via inlines (WAAPI cancelled above)
+    // Persist navbar hidden state via inlines (WAAPI cancelled above).
+    // Inline opacity: navbar-hidden class is added during WAAPI — !important CSS would override animation (invariant #10).
     setStyles(this.navbarEl, [
       ['transform', `translateY(${this.navbarHeight}px)`, 'important'],
       ['opacity', '0', 'important'],
@@ -726,6 +727,7 @@ export class FullScreenController {
       } else {
         setStyle(el, 'top', `${headingTop}px`, 'important');
         // Must match .bases-group-heading.stuck z-index in _grid-masonry-shared.scss
+        // Inline: already iterating for dynamic top — class change per heading triggers selector matching.
         setStyle(el, 'z-index', '24', 'important');
       }
     }
@@ -1169,6 +1171,7 @@ export class FullScreenController {
 
         // Swap mask-image to opaque immediately — show gradient stays
         // visible as white strip if deferred to idle.
+        // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
         if (this.workspaceSplitEl) {
           setStyle(
             this.workspaceSplitEl,
@@ -1218,6 +1221,7 @@ export class FullScreenController {
           }
 
           // WAAPI hide navbar
+          // Inline opacity: navbar-hidden class is added during WAAPI — !important CSS would override animation (invariant #10).
           this.barAnims.push(
             this.navbarEl.animate(
               [
@@ -1258,6 +1262,7 @@ export class FullScreenController {
 
       // Pin header + toolbar + search at visible position via inline styles
       // BEFORE class change.
+      // Inline: transient pin — cleared in next rAF by clearHeaderInlines().
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'transform', 'translateY(0)', 'important');
         setStyle(this.viewHeaderEl, 'opacity', '1', 'important');
@@ -1306,6 +1311,7 @@ export class FullScreenController {
         this.applyBackgroundInlines();
 
         // Mask-image swap
+        // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
         if (this.workspaceSplitEl) {
           setStyle(
             this.workspaceSplitEl,
@@ -1385,6 +1391,7 @@ export class FullScreenController {
     // Using an opaque gradient instead of 'none' keeps the compositor render
     // surface allocated — show path swaps back to cached gradient without
     // the expensive surface recreation + cross-subtree rasterization.
+    // Inline: class change on .workspace-split.mod-root triggers broader style recalc than targeted property set.
     if (this.workspaceSplitEl) {
       setStyle(
         this.workspaceSplitEl,
@@ -1402,6 +1409,7 @@ export class FullScreenController {
 
     // iOS: bridge + deferred settle (scrollTop writes kill momentum)
     setStyle(this.container, 'margin-top', `${this.totalShift}px`);
+    // Inline: paired with dynamic margin-top above, applied/removed together.
     setStyle(this.container, 'transition', 'none');
     this.leafContent.classList.add('full-screen-active');
     this.applyBackgroundInlines();
@@ -1411,6 +1419,7 @@ export class FullScreenController {
     // collapses transition+target into one style recalc if set in same frame.
     const iosNavTransition = `transform ${FULL_SCREEN_ANIM_MS}ms ease-out, opacity ${FULL_SCREEN_FADE_MS}ms ease-in-out`;
     this.pendingRafId = requestAnimationFrame(() => {
+      // Inline: iOS double-rAF timing — transient, cleared by clearNavbarInlines().
       setStyle(this.navbarEl, 'transition', iosNavTransition, 'important');
       this.pendingRafId = requestAnimationFrame(applyNavbarHide);
     });
@@ -1462,6 +1471,7 @@ export class FullScreenController {
       this.programmaticScroll = true;
 
       // Replace tap-shield class with inline equivalents that maintain the hidden visual state. Without this, removing the class after settle (WAAPI cancelled, no fill:forwards) exposes the header at opacity:1 for one frame before the show rAF starts WAAPI. Inline transform uses the hide position (not tap-shield's translateY(0)) so WAAPI reads the correct "from" value for the slide-in.
+      // Inline: transient — one-frame bridge until WAAPI starts.
       if (this.viewHeaderEl) {
         setStyle(this.viewHeaderEl, 'opacity', '0', 'important');
         setStyle(
@@ -1544,6 +1554,7 @@ export class FullScreenController {
         // Opaque header bg during show slide — prevents content visible
         // through the transparent header area. Set AFTER clearHeaderInlines
         // (which clears background). Removed at idle by clearHeaderInlines.
+        // Inline: Android-only — adding to shared header-show CSS class would affect iOS.
         if (this.viewHeaderEl) {
           setStyle(
             this.viewHeaderEl,
@@ -1806,6 +1817,7 @@ export class FullScreenController {
     if (touch && this.viewHeaderEl) {
       // Temporarily disable pointer-events to hit-test behind the header.
       // !important needed to override settle inline (also !important).
+      // Inline: transient hit-test — set and restored in 2 lines.
       setStyle(this.viewHeaderEl, 'pointer-events', 'none', 'important');
       const target = this.scrollEl.ownerDocument.elementFromPoint(
         touch.clientX,
