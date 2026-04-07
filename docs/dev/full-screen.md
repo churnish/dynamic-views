@@ -1002,7 +1002,7 @@ Descendant combinator selectors after this attribute are prohibited (`_full-scre
 
 ### Static inline styles and Obsidian review
 
-The `setStyle()`/`setStyles()` wrappers bypass the eslint rule syntactically (arguments are variables, not literals), but values are still static — `'auto'`, `'0'`, `'none'`, `'4px 8px'`. The justification for keeping them inline is cascade necessity (inline `!important` overriding CSS `!important`), not that they're "dynamic." The `[data-dynamic-views-show]` descendant combinator invariant prevents the CSS alternative for most of them. (§7.22)
+A dedicated audit categorized all 64 `setStyle()`/`setStyles()` calls into dynamic (32), cascade-required (13), and movable (19). The 19 movable static properties were migrated to two CSS classes: `.dynamic-views-show-overlay` (18 props for toolbar/search absolute overlay at specificity 0,6,0, beating the 0,5,0 `full-screen-active` hide rules) and `.dynamic-views-spacer-cover` (spacer background). The `[data-dynamic-views-show]` descendant combinator invariant was NOT a blocker — the class is added directly to the element (`.bases-header.dynamic-views-show-overlay`), not via descendant selectors. Remaining cascade-required inlines stay because: ancestor elements are unreachable by leaf-scoped CSS (background inlines on body/app-container/workspace), WAAPI invariant #10 blocks opacity in navbar classes, transient flash-prevention pins need inline priority, and heading z-index during mandatory iteration is cheaper inline than via class toggle. (§7.22)
 
 ### Dead code: `data-dynamic-views-hide-spacer`
 

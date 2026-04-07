@@ -222,34 +222,22 @@ Two-frame approach — spacer expands in frame 1, `overflow-anchor` fires betwee
 
 ```
 Frame 1 (synchronous):
-  ├── Pin header/toolbar/search at visible position (inline styles)
-  ├── ensureSpacerChrome() — insert .dynamic-views-spacer before container
-  ├── programmaticScroll = true
-  ├── Unlock scroll height (remove inline height)
-  └── Set spacer height = totalShift
+  ├── Pin bars at visible position (inline styles)
+  ├── Insert spacer at totalShift, unlock scroll height
+  └── programmaticScroll = true
                         │
         overflow-anchor fires between frames
         (browser adjusts scrollTop to keep container anchored)
                         │
 Frame 2 (rAF):
-  ├── Add full-screen-active on leafContent
-  ├── spacerActive = true
-  ├── applyShowOverlays() — toolbar/search as absolute overlays
-  ├── computeEffectiveShift() — resize spacer to effectiveShift
-  ├── syncToolbarBgHeight(toolbarH, searchH) — opaque backing
-  ├── applyBackgroundInlines() — body/app-container/workspace
-  ├── Set opaque mask-image
-  ├── programmaticScroll = false
-  ├── settled = true
-  ├── clearHeaderInlines()
-  ├── Start hide WAAPI (header + navbar + navbar-hidden class)
-  ├── Cancel old show WAAPI (after new hide WAAPI started)
-  ├── clearOverlayBars() — remove absolute positioning
-  ├── applyHideSpacerCover() — background color on spacer
-  └── clearSpacerHeadingTops()
-                        │
+  ├── Apply full-screen-active + spacer state
+  ├── Position overlays (applyShowOverlays, effectiveShift, toolbarBg)
+  ├── Background + mask-image inlines
+  ├── Hide WAAPI (header + navbar), cancel old show
+  └── Clean up overlays + heading tops, apply spacer cover
+
 Idle (500ms):
-  └── settleAndroidSpacerHide() — cancel WAAPI, persist navbar inlines, apply tap shield, relock height
+  └── settleAndroidSpacerHide() — cancel WAAPI, persist inlines, tap shield, relock
 ```
 
 #### Case A: re-hide from show mode (spacer already active)
@@ -258,44 +246,31 @@ Spacer and `full-screen-active` already in place — no layout change needed. WA
 
 ```
 Synchronous:
-  ├── Swap mask-image to opaque
-  ├── programmaticScroll = true
-  └── Read WAAPI "from" values from current header position
+  └── Swap mask-image, programmaticScroll, read WAAPI "from" values
 
 rAF:
-  ├── Start hide WAAPI (header + navbar + navbar-hidden class)
-  ├── Cancel old show WAAPI (after new hide started)
-  ├── clearOverlayBars()
-  ├── applyHideSpacerCover()
-  └── clearSpacerHeadingTops()
-
-settled = true (synchronous, after rAF queued)
+  ├── Hide WAAPI (header + navbar), cancel old show
+  └── Clean up overlays + heading tops, apply spacer cover
 
 Idle (500ms):
-  └── settleAndroidSpacerHide() — cancel WAAPI, persist navbar inlines, apply tap shield, relock height
+  └── settleAndroidSpacerHide()
 ```
 
 ### iOS — margin bridge + deferred settle
 
 ```
 Synchronous (momentum-safe):
-  ├── Set opaque mask-image
-  ├── Set margin-top: totalShift + transition: none on container (bridge)
-  ├── Add full-screen-active on leafContent
-  ├── applyBackgroundInlines()
+  ├── Mask-image → opaque
+  ├── Bridge: margin-top: totalShift + transition: none on container
+  ├── Add full-screen-active, background inlines
   └── settled = false
 
 Double-rAF:
-  ├── rAF 1: Set navbar transition
-  └── rAF 2: Apply navbar transform + opacity (hide)
+  └── Navbar hide (transition + transform + opacity)
 
 Idle (2000ms):
-  ├── programmaticScroll = true
-  ├── Unlock scroll height
-  ├── Remove margin-top bridge
-  ├── scrollTop -= totalShift (clamped to 0)
-  ├── settled = true
-  ├── Add tap-shield class on header
+  ├── Remove bridge, scrollTop -= totalShift (clamped to 0)
+  ├── settled = true, tap shield on header
   └── rAF: measure → relock height
 ```
 
@@ -306,25 +281,14 @@ Idle (2000ms):
 ```
 Synchronous:
   ├── programmaticScroll = true
-  ├── Replace tap-shield class with inline opacity:0 + transform (preserve hidden state)
-  ├── Remove tap-shield class
+  ├── Replace tap-shield with inline hidden state (opacity:0 + transform)
   └── Read WAAPI "from" values (fill:forwards still active)
 
 rAF:
-  ├── clearHideSpacerCover()
-  ├── applyShowOverlays() — toolbar/search as absolute overlays
-  ├── computeEffectiveShift() — live toolbar + search heights
-  ├── ensureSpacerChrome() + set spacer height = effectiveShift
-  ├── spacerActive = true
-  ├── syncToolbarBgHeight() — opaque backing behind toolbar/search
-  ├── applySpacerHeadingTops() — adjust sticky heading positions
-  ├── restoreMaskImage() — gradient swap
-  ├── Start header show WAAPI (transform + opacity)
-  ├── Cancel old hide WAAPI (after new show started)
-  ├── clearHeaderInlines() + re-add header-show class + opaque header bg
-  ├── Start navbar show WAAPI (transform + opacity)
-  ├── clearNavbarInlines()
-  ├── Start toolbar + search fade WAAPI
+  ├── Clear hide state (spacer cover, heading tops)
+  ├── Position overlays (applyShowOverlays, effectiveShift, toolbarBg, heading tops)
+  ├── Restore mask-image gradient
+  ├── Show WAAPI: header → cancel old hide → header-show class → navbar → toolbar/search fade
   └── Deferred: Capacitor status bar show (next rAF)
 
 Idle (500ms):
@@ -337,31 +301,20 @@ Idle (500ms):
 ```
 Synchronous:
   ├── Capacitor status bar show
-  ├── clearHeaderInlines() — remove tap-shield
-  ├── Add header-show class + force style recalc
-  ├── Add full-screen-showing on leafContent
-  ├── If !settled: remove margin-top bridge (geometric cancellation)
-  ├── Navbar: clear blocking inlines, add navbar-show class
-  └── restoreMaskImage()
+  ├── Remove tap-shield, add header-show + full-screen-showing
+  ├── If !settled: remove bridge (geometric cancellation)
+  ├── Navbar: clear inlines, add navbar-show class
+  └── Restore mask-image gradient
 
 rAF:
   └── WAAPI fade-in on toolbar + search
 
 Idle (2000ms):
-  ├── programmaticScroll = true
-  ├── Remove margin-top bridge
-  ├── If settled && scrollTop ≥ totalShift: scrollTop += totalShift
-  ├── Unlock height
-  ├── cancelAnimations()
-  ├── Remove full-screen-showing
-  ├── clearHeaderInlines()
-  ├── Remove full-screen-active
-  ├── clearBackgroundInlines()
-  ├── isActiveHider = false
-  ├── clearMaskImageInline()
-  ├── clearNavbarInlines()
-  ├── settled = false
-  └── rAF: programmaticScroll = false, reset accumulatedDelta, relock height
+  ├── Remove bridge, scrollTop += totalShift (if settled)
+  ├── Unlock height, cancel animations
+  ├── Remove full-screen-showing + full-screen-active, clear all inlines
+  ├── Reset flags (isActiveHider, settled)
+  └── rAF: relock height, reset scroll state
 ```
 
 ## Spacer system (Android)
@@ -384,12 +337,12 @@ The spacer is an in-flow `<div>` inserted inside `scrollEl` before the container
 
 During show mode, toolbar and search row are positioned as `position: absolute` overlays on `leafContent` (which gets `position: relative` via `[data-dynamic-views-show]`). They cover the spacer area while fading in via WAAPI.
 
-- **`applyShowOverlays()`**: Sets toolbar/search to absolute positioning with CSS `calc()` expressions for `top` that use live CSS variables (`--safe-area-inset-top`, `--view-header-height`, `headerToContentGap`). Creates `toolbarBgEl` — an opaque backing div (z-index 28) behind toolbar/search to prevent content showing through during the WAAPI opacity fade.
+- **`applyShowOverlays()`**: Adds the `.dynamic-views-show-overlay` CSS class to toolbar/search, which handles static properties (absolute positioning, z-index, pointer-events, padding, etc.) at specificity 0,6,0. Dynamic values — the `top` calc expression using live CSS variables (`--safe-area-inset-top`, `--view-header-height`, `headerToContentGap`) and WAAPI `opacity` fallback — remain inline. Creates `toolbarBgEl` — an opaque backing div (z-index 28) behind toolbar/search to prevent content showing through during the WAAPI opacity fade.
 - **`clearShowOverlays()`**: Removes absolute positioning, toolbarBgEl, `data-dynamic-views-show` attribute, and heading top inlines.
 
 ### Hide spacer cover
 
-During hide with spacer active, `applyHideSpacerCover()` gives the spacer a background color so content below isn't visible through it. The `::before` scrim (on `leafContent`, outside the scroll container) paints above the spacer naturally. `clearHideSpacerCover()` removes the background and calls `clearSpacerHeadingTops()` to remove stale heading inlines from the hide state.
+During hide with spacer active, `applyHideSpacerCover()` adds the `.dynamic-views-spacer-cover` CSS class to the spacer, giving it a background color so content below isn't visible through it. The `::before` scrim (on `leafContent`, outside the scroll container) paints above the spacer naturally. `clearHideSpacerCover()` removes the class and calls `clearSpacerHeadingTops()` to remove stale heading inlines from the hide state.
 
 ### Spacer resolve
 
@@ -493,6 +446,18 @@ Without the gradient swap, removing mask-image (`none` → CSS gradient) destroy
 | `dynamic-views-navbar-animated` | Android | Mount | Unmount | `will-change: transform, opacity` (layer pre-promotion) |
 | `dynamic-views-navbar-hidden` | Android | Hide rAF | `clearNavbarInlines()` | `pointer-events: none` |
 | `dynamic-views-navbar-show` | iOS | Show path | `clearNavbarInlines()` | `transform: translateY(0); opacity: 1` |
+
+### On `.bases-header` and `.bases-search-row`
+
+| Class | Platform | When applied | When removed | Effect |
+|---|---|---|---|---|
+| `dynamic-views-show-overlay` | Android | `applyShowOverlays()` | `clearBarInlines()` | Static overlay properties: absolute positioning, z-index 29, pointer-events, padding, border reset (specificity 0,6,0) |
+
+### On `.dynamic-views-spacer`
+
+| Class | When applied | When removed | Effect |
+|---|---|---|---|
+| `dynamic-views-spacer-cover` | `applyHideSpacerCover()` | `clearHideSpacerCover()` | Opaque background to prevent content showing through spacer during hide |
 
 ### On `.dynamic-views-bases-container`
 
@@ -644,7 +609,7 @@ Three elements above the leaf (`body`, `.app-container`, `.workspace`) receive i
 
 - **Spacer-based hide/show**: `overflow-anchor` absorbs height changes. No `scrollTop` write in the show path.
 - **WAAPI animations**: `element.animate()` gets better compositor scheduling on the single-threaded WebView compositor than CSS transitions.
-- **Show inline bypass**: `applyShowOverlays()` / `clearShowOverlays()` use inline `setProperty()` instead of `classList` — avoids style invalidation that exceeds the single-threaded compositor frame budget.
+- **Show overlay class**: `applyShowOverlays()` adds `.dynamic-views-show-overlay` (static properties) and sets inline `top` calc expressions (dynamic values). The class uses specificity 0,6,0 to beat `full-screen-active` hide rules at 0,5,0 without `!important`.
 - **`data-dynamic-views-show` attribute**: Set on `leafContent` for `::before`/`::after` pseudo CSS rules. Attribute selectors only recalc matching pseudos, not descendants.
 - **Settle delay**: 500ms. Must exceed `FULL_SCREEN_ANIM_MS` (300ms) so WAAPI finishes before idle fires.
 - **Sustain gate**: Skipped. Chromium fling decelerates monotonically.
