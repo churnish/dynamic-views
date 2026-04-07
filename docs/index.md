@@ -9,6 +9,8 @@ updated: 2026-04-06
 > [!important]
 > While an effort is made to keep these docs continuously up to date, all content is generated with Claude Code and may contain inaccuracies — verify important information against source code.
 
+Cross-plugin knowledge docs (platform quirks, Obsidian API gotchas, Electron/CSS rendering issues) live in a [shared repository](https://github.com/churnish/obsidian-dev-knowledge-base).
+
 | Doc | Read before |
 |---|---|
 | [overview.md](overview.md) | First time working on this codebase, or need a high-level understanding of the plugin's architecture and major systems. |
