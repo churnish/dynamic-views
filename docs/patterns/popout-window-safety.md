@@ -8,7 +8,7 @@ updated: 2026-04-06
 
 Obsidian's "Open in new window" creates an Electron `BrowserWindow` with a separate `document` and `window` object (but sharing the same V8 isolate and JS heap). Plugin JS runs in the main window's context, but operates on DOM elements that may live in a popout's document. Bare `window`/`document` references always resolve to the main window — using them on popout elements causes silent failures: observers that never fire, `getComputedStyle` that reads the wrong stylesheet, `requestAnimationFrame` IDs that can't be cancelled.
 
-For the full list of cross-window pitfalls (silent observer failures, stale hit-testing, `instanceof` failures, RAF ID scoping, `defaultView` null after close), see `knowledge/electron-popout-quirks.md`.
+For the full list of cross-window pitfalls (silent observer failures, stale hit-testing, `instanceof` failures, RAF ID scoping, `defaultView` null after close), see `odkb/electron-popout-quirks.md`.
 
 ## Core rule: derive from DOM
 
@@ -134,4 +134,4 @@ These bare global usages are safe and do not need the DOM-derived pattern:
 - **`window.requestAnimationFrame(cb)` then `window.cancelAnimationFrame(id)`** — if the element is in a popout, the RAF runs in the main window's frame loop (wrong timing) and cancellation may target the wrong ID pool. Use `getOwnerWindow(el).requestAnimationFrame(cb)`.
 - **`getComputedStyle(el)` without qualifying the window** — reads from the main window's style context, which may return different values if the popout has different viewport dimensions. Use `getOwnerWindow(el).getComputedStyle(el)`.
 - **`document.createElement('div')` for visible DOM** — creates the element in the main window's document. Appending it to a popout element works but can cause `instanceof` failures and style resolution issues. Use `el.ownerDocument.createElement('div')`.
-- **Cancelling RAF after nullifying the window reference** — the `?? window` fallback targets the main window, making the cancel a no-op. Always cancel before clearing the reference. See `knowledge/electron-popout-quirks.md` for details.
+- **Cancelling RAF after nullifying the window reference** — the `?? window` fallback targets the main window, making the cancel a no-op. Always cancel before clearing the reference. See `odkb/electron-popout-quirks.md` for details.

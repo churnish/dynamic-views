@@ -25,7 +25,7 @@ Native `<a href>` drag auto-populates `text/uri-list`, `text/html`, and `text/pl
 2. `setData(DRAG_MARKER, '')` marks the drag as plugin-initiated
 3. `setData('text/plain', url)` sets the drop text
 
-The `getData` patch returns `''` for `text/uri-list` when `DRAG_MARKER` is present, causing Obsidian to skip wrapping and let CodeMirror's native handler insert `text/plain` directly. The patch must be applied per-window (each Electron `BrowserWindow` has its own `DataTransfer.prototype`). See [`electron-popout-quirks.md`](../../../knowledge/electron-popout-quirks.md).
+The `getData` patch returns `''` for `text/uri-list` when `DRAG_MARKER` is present, causing Obsidian to skip wrapping and let CodeMirror's native handler insert `text/plain` directly. The patch must be applied per-window (each Electron `BrowserWindow` has its own `DataTransfer.prototype`). See [`electron-popout-quirks.md`](../../../odkb/electron-popout-quirks.md).
 
 ### `effectAllowed`
 

@@ -20,7 +20,7 @@
 
 ## Popout window safety
 
-See [docs/patterns/popout-window-safety.md](docs/patterns/popout-window-safety.md) for the full rules (prohibited bare globals, `getOwnerWindow(el)` / `el.ownerDocument` derivation, `setDocumentProvider` pattern, safe exceptions). See `knowledge/electron-popout-quirks.md` for the underlying Electron quirks.
+See [docs/patterns/popout-window-safety.md](docs/patterns/popout-window-safety.md) for the full rules (prohibited bare globals, `getOwnerWindow(el)` / `el.ownerDocument` derivation, `setDocumentProvider` pattern, safe exceptions). See `odkb/electron-popout-quirks.md` for the underlying Electron quirks.
 
 ## Navigation
 
