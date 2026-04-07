@@ -2070,6 +2070,12 @@ export class SharedCardRenderer {
       );
 
       // Touch scrubbing: horizontal swipe across multi-image thumbnail
+      const scrubAnimDuration = (() => {
+        const v = parseInt(
+          getComputedStyle(imageEl).getPropertyValue('--anim-duration-moderate')
+        );
+        return !isNaN(v) && v > 0 ? v : undefined;
+      })();
       resetTouchScrub = setupTouchScrubbing({
         thumbEl: imageEl,
         cardEl,
@@ -2077,6 +2083,7 @@ export class SharedCardRenderer {
         signal: signal!,
         preloadSignal: signal!,
         preloadGuard,
+        animationDuration: scrubAnimDuration,
         brokenHandler: createPreloadBrokenHandler(
           scrubbableUrls,
           cardEl,

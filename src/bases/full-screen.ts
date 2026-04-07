@@ -143,6 +143,13 @@ export class FullScreenController {
   private programmaticScroll = false;
   private navbarHeight = 0;
   private headerShift = 0;
+  // Constant offset: originalMarginTop - headerShift - safeAreaInsetTop.
+  // Empirically 8px on Android (gap between header bottom and viewContent
+  // start). Invariant across orientations — origMT tracks safeArea linearly.
+  // Used in CSS calc() expression for toolbar positioning during show mode,
+  // so the toolbar tracks CSS variable changes at paint time instead of
+  // depending on stale JS-measured pixel values.
+  private marginTopOffset = 0;
   // Cached --dynamic-views-bases-view-padding (stable post-mount, default 12px).
   // Chromium applies sticky top AFTER scroll container padding-top, so heading
   // position must subtract viewPadding to land at the correct viewport offset.
@@ -156,12 +163,17 @@ export class FullScreenController {
   private lastToggleTime = 0;
   private directionChangeTime = 0;
   private lockedScrollHeight = 0;
+  private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  // True during orientation change debounce — suppresses show/hide decisions
+  // in the scroll handler to prevent transitions with stale CSS var values.
+  private resizing = false;
 
   // Bound handlers for add/removeEventListener
   private readonly onScrollBound: () => void;
   private readonly onTouchStartBound: (e: TouchEvent) => void;
   private readonly onTouchEndBound: (e: TouchEvent) => void;
   private readonly onHeaderTapBound: (e: TouchEvent) => void;
+  private readonly onResizeBound: () => void;
 
   // WAAPI animation handles (Android) — cancel before starting new ones.
   // Array instead of named fields — per-property animations (transform vs
@@ -228,6 +240,7 @@ export class FullScreenController {
     this.onTouchStartBound = (e: TouchEvent): void => this.onTouchStart(e);
     this.onTouchEndBound = (e: TouchEvent): void => this.onTouchEnd(e);
     this.onHeaderTapBound = (e: TouchEvent): void => this.onHeaderTap(e);
+    this.onResizeBound = (): void => this.onResize();
   }
 
   /** Idempotent — no-op if already mounted */
@@ -244,15 +257,20 @@ export class FullScreenController {
     this.originalMarginTop =
       parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
 
-    // Cache navbar/header heights — static for the session (safe area insets
-    // and bar heights don't change after app launch).
-    const bodyCS = getComputedStyle(this.body);
-    this.navbarHeight =
-      (parseFloat(bodyCS.getPropertyValue('--navbar-height')) || 52) +
-      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-bottom')) || 34);
-    this.headerShift =
-      (parseFloat(bodyCS.getPropertyValue('--view-header-height')) || 44) +
-      (parseFloat(bodyCS.getPropertyValue('--safe-area-inset-top')) || 47);
+    // Cache navbar/header heights — initial values, re-measured on resize.
+    // DOM measurement avoids CSS safe area variable oscillation during
+    // Android rotation and the falsy-zero bug (parseFloat('0px') || N = N).
+    this.navbarHeight = this.navbarEl.offsetHeight || 86;
+    this.headerShift = this.viewHeaderEl?.offsetHeight || 91;
+
+    // Compute constant offset: origMT = headerH + safeArea + offset.
+    // Invariant across orientations (verified: 8.0 for portrait/landscape/transient).
+    const safeAreaAtMount =
+      parseFloat(
+        getComputedStyle(this.body).getPropertyValue('--safe-area-inset-top')
+      ) || 0;
+    this.marginTopOffset =
+      this.originalMarginTop - this.headerShift - safeAreaAtMount;
 
     // Measure totalShift: toggle full-screen-active, read scrollEl rect delta
     const beforeTop = this.scrollEl.getBoundingClientRect().top;
@@ -289,6 +307,7 @@ export class FullScreenController {
     this.programmaticScroll = false;
     this.pendingLayout = null;
     this.isActiveHider = false;
+    this.resizing = false;
 
     // Pre-promote navbar to compositor layer (Android only).
     // Eliminates first-transform layer promotion stall during animation.
@@ -301,6 +320,7 @@ export class FullScreenController {
     this.scrollEl.addEventListener('scroll', this.onScrollBound, {
       passive: true,
     });
+    addEventListener('resize', this.onResizeBound);
     this.scrollEl.addEventListener('touchstart', this.onTouchStartBound, {
       passive: true,
     });
@@ -311,6 +331,12 @@ export class FullScreenController {
       // Non-passive — onHeaderTap calls preventDefault() to suppress click
       // synthesis on header children (title, triple-dot button).
       this.viewHeaderEl.addEventListener('touchend', this.onHeaderTapBound);
+      // Block drop events on the tap shield header — pointer-events: auto
+      // makes it a valid drop target, and Obsidian's workspace handleDrop
+      // opens the file when drop target is inside headerEl.
+      this.viewHeaderEl.addEventListener('drop', (e) => {
+        if (this.barsHidden) e.preventDefault();
+      });
     }
 
     // Observe search row size — when user opens/closes search during show
@@ -323,6 +349,91 @@ export class FullScreenController {
         });
         this.searchRowRO.observe(this.searchRowEl);
       }
+    }
+  }
+
+  /** Resize handler — deferred remeasure for spacer/heading recalculation.
+   *  Toolbar positioning uses CSS calc() with live CSS variables (set in
+   *  applyShowOverlays), so it needs no JS remeasure during rotation.
+   *  The debounced remeasure updates originalMarginTop and totalShift
+   *  for spacer height and heading top calculations only. */
+  private onResize(): void {
+    if (!this.mounted) return;
+    if (this.resizeTimer != null) clearTimeout(this.resizeTimer);
+    this.resizing = true;
+    // Immediately re-lock scroll height (prevents scroll indicator teleport)
+    this.lockedScrollHeight = this.scrollEl.offsetHeight;
+    setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+
+    // Update headerShift + navbarHeight immediately — these settle instantly
+    // (headerH=44 across all landscape readings, navbarH=52 constant).
+    // Do NOT update originalMarginTop or totalShift here — CSS safe area
+    // variables transiently overshoot to 0px, producing wrong values.
+    this.headerShift = this.viewHeaderEl?.offsetHeight || 91;
+    this.navbarHeight = this.navbarEl.offsetHeight || 86;
+
+    this.resizeTimer = setTimeout(() => {
+      this.resizing = false;
+      if (!this.mounted) return;
+      this.remeasureAfterResize();
+
+      // Verification pass: CSS safe area variables can oscillate back after
+      // initial settling (0→28 at ~800ms). Re-measure at 2.5s total.
+      this.resizeTimer = setTimeout(() => {
+        this.resizeTimer = null;
+        if (!this.mounted) return;
+        this.remeasureAfterResize();
+      }, 2000);
+    }, 500);
+  }
+
+  /** Re-measure orientation-dependent cached values. Uses the same GBR
+   *  (getBoundingClientRect) technique as mount for totalShift — more
+   *  reliable than component-based computation during CSS transitions. */
+  private remeasureAfterResize(): void {
+    // Navbar is outside the view hierarchy — unaffected by full-screen-active
+    this.navbarHeight = this.navbarEl.offsetHeight || 86;
+
+    // GBR approach (same as mount): measure scrollEl top delta when toggling
+    // full-screen-active. Directly captures the shift regardless of which CSS
+    // properties contribute. overflow-anchor is async — synchronous class
+    // toggle won't trigger it.
+    const hadClass = this.classTarget.classList.contains('full-screen-active');
+    if (hadClass) this.classTarget.classList.remove('full-screen-active');
+
+    this.headerShift = this.viewHeaderEl?.offsetHeight || 91;
+    this.originalMarginTop =
+      parseFloat(getComputedStyle(this.viewContent).marginTop) || 0;
+    const beforeTop = this.scrollEl.getBoundingClientRect().top;
+
+    this.classTarget.classList.add('full-screen-active');
+    const afterTop = this.scrollEl.getBoundingClientRect().top;
+
+    // Restore original class state
+    if (!hadClass) this.classTarget.classList.remove('full-screen-active');
+
+    const newTotalShift = beforeTop - afterTop;
+    if (newTotalShift > 0) {
+      this.totalShift = newTotalShift;
+      this.totalShiftMeasured = true;
+    }
+
+    // Re-lock scroll height (may have changed since immediate lock)
+    this.lockedScrollHeight = this.scrollEl.offsetHeight;
+    setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
+
+    // Re-sync spacer + overlays if bars are shown with spacer active
+    if (this.spacerActive && !this.barsHidden) {
+      const effectiveShift = this.computeEffectiveShift();
+      if (this.spacerEl) {
+        setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
+      }
+      // Remove stale toolbarBgEl — its position is baked from pre-rotation
+      this.toolbarBgEl?.remove();
+      this.toolbarBgEl = null;
+      this.clearBarInlines();
+      this.applyShowOverlays();
+      this.applySpacerHeadingTops(effectiveShift);
     }
   }
 
@@ -394,6 +505,7 @@ export class FullScreenController {
       'z-index',
       'margin-top',
       'min-height',
+      'background',
     ]);
   }
 
@@ -446,6 +558,21 @@ export class FullScreenController {
     // write and read on Android's single-threaded compositor.
     const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
 
+    // CSS calc expression for toolbar top — resolves at paint time using
+    // live CSS variable values. Eliminates the JS/CSS mismatch during
+    // Android orientation changes where env(safe-area-inset-top) oscillates:
+    // the scrim ::before (CSS-driven) and toolbar (inline-driven) now use
+    // the same variable, oscillating in lockstep with zero visual gap.
+    // marginTopOffset is the constant gap between header bottom and
+    // viewContent start (empirically 8px, computed once at mount).
+    const safeAreaExpr =
+      'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))';
+    const headerHExpr = 'var(--view-header-height, 44px)';
+    const toolbarTopCalc =
+      `calc(${safeAreaExpr} + ${headerHExpr} + ${this.marginTopOffset}px)`;
+    const searchTopCalc =
+      `calc(${safeAreaExpr} + ${headerHExpr} + ${this.marginTopOffset + toolbarH}px)`;
+
     if (this.toolbarEl) {
       // Inline opacity:1 provides the post-WAAPI fallback. During the 300ms
       // fade, WAAPI (higher cascade priority) overrides this with 0→1.
@@ -453,7 +580,7 @@ export class FullScreenController {
       setStyle(this.toolbarEl, 'opacity', '1');
       setStyles(this.toolbarEl, [
         ['position', 'absolute', 'important'],
-        ['top', `${this.originalMarginTop}px`, 'important'],
+        ['top', toolbarTopCalc, 'important'],
         ['left', '0', 'important'],
         ['right', '0', 'important'],
         ['z-index', '29', 'important'],
@@ -468,7 +595,7 @@ export class FullScreenController {
       setStyle(this.searchRowEl, 'opacity', '1');
       setStyles(this.searchRowEl, [
         ['position', 'absolute', 'important'],
-        ['top', `${this.originalMarginTop + toolbarH}px`, 'important'],
+        ['top', searchTopCalc, 'important'],
         ['left', '0', 'important'],
         ['right', '0', 'important'],
         ['z-index', '29', 'important'],
@@ -491,8 +618,8 @@ export class FullScreenController {
       this.toolbarBgEl = doc.createElement('div');
       this.toolbarBgEl.className = 'dynamic-views-toolbar-bg';
       setStyles(this.toolbarBgEl, [
-        ['top', `${this.originalMarginTop}px`],
-        ['height', `${this.totalShift - this.originalMarginTop}px`],
+        ['top', toolbarTopCalc],
+        ['height', `${toolbarH}px`],
       ]);
       this.leafContent.appendChild(this.toolbarBgEl);
     }
@@ -640,11 +767,9 @@ export class FullScreenController {
         setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
       }
       if (this.toolbarBgEl) {
-        setStyle(
-          this.toolbarBgEl,
-          'height',
-          `${effectiveShift - this.originalMarginTop}px`
-        );
+        const _tH = this.toolbarEl?.offsetHeight ?? 0;
+        const _sH = this.searchRowEl?.offsetHeight ?? 0;
+        setStyle(this.toolbarBgEl, 'height', `${_tH + _sH}px`);
       }
       this.applySpacerHeadingTops(effectiveShift);
 
@@ -719,6 +844,7 @@ export class FullScreenController {
     this.scrollEl.removeEventListener('scroll', this.onScrollBound);
     this.scrollEl.removeEventListener('touchstart', this.onTouchStartBound);
     this.scrollEl.removeEventListener('touchend', this.onTouchEndBound);
+    removeEventListener('resize', this.onResizeBound);
     if (this.viewHeaderEl) {
       this.viewHeaderEl.removeEventListener('touchend', this.onHeaderTapBound);
     }
@@ -748,6 +874,10 @@ export class FullScreenController {
     if (this.pendingRevealTimer != null) {
       clearTimeout(this.pendingRevealTimer);
       this.pendingRevealTimer = null;
+    }
+    if (this.resizeTimer != null) {
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = null;
     }
     // Remove full screen state only if this instance set it
     if (this.isActiveHider) {
@@ -789,6 +919,7 @@ export class FullScreenController {
     this.pendingLayout = null;
     this.barsHidden = false;
     this.settled = false;
+    this.resizing = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -802,6 +933,11 @@ export class FullScreenController {
     const currentTop = this.scrollEl.scrollTop;
     const delta = currentTop - this.prevScrollTop;
     this.prevScrollTop = currentTop;
+
+    // During orientation change, CSS safe area variables are transitioning —
+    // suppress show/hide decisions to prevent transitions with stale values.
+    // prevScrollTop still tracks position to avoid false delta on resume.
+    if (this.resizing) return;
 
     // Cancel pending header-tap reveal during active downward scroll.
     // Fast momentum (delta > threshold) cancels; dying momentum allows reveal.
@@ -1161,11 +1297,9 @@ export class FullScreenController {
           setStyle(this.spacerEl, 'height', `${effectiveShift}px`);
         }
         if (this.toolbarBgEl) {
-          setStyle(
-            this.toolbarBgEl,
-            'height',
-            `${effectiveShift - this.originalMarginTop}px`
-          );
+          const _tH = this.toolbarEl?.offsetHeight ?? 0;
+          const _sH = this.searchRowEl?.offsetHeight ?? 0;
+          setStyle(this.toolbarBgEl, 'height', `${_tH + _sH}px`);
         }
         this.applyBackgroundInlines();
 
@@ -1362,13 +1496,12 @@ export class FullScreenController {
         }
         this.spacerActive = true;
 
-        // Update toolbarBgEl to cover full bars area (toolbar + search)
+        // Update toolbarBgEl to cover full bars area (toolbar + search).
+        // Height = toolbarH + searchRowH (stable, no safe-area dependency).
         if (this.toolbarBgEl) {
-          setStyle(
-            this.toolbarBgEl,
-            'height',
-            `${effectiveShift - this.originalMarginTop}px`
-          );
+          const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
+          const searchRowH = this.searchRowEl?.offsetHeight ?? 0;
+          setStyle(this.toolbarBgEl, 'height', `${toolbarH + searchRowH}px`);
         }
 
         // 4. Heading sticky top (inline styles, not CSS — invariant)
@@ -1402,6 +1535,17 @@ export class FullScreenController {
         // min-height:0 collapses the tap shield so it doesn't cover
         // the toolbar overlay (z-index 30 > 29, 90px overlap).
         this.viewHeaderEl?.classList.add('dynamic-views-header-show');
+        // Opaque header bg during show slide — prevents content visible
+        // through the transparent header area. Set AFTER clearHeaderInlines
+        // (which clears background). Removed at idle by clearHeaderInlines.
+        if (this.viewHeaderEl) {
+          setStyle(
+            this.viewHeaderEl,
+            'background',
+            'var(--dynamic-views-background-primary)',
+            'important'
+          );
+        }
 
         this.barAnims.push(
           this.navbarEl.animate(
