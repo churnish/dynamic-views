@@ -58,7 +58,7 @@
 }
 
 // Tap shield — invisible header at natural position absorbs status bar taps.
-// Applied by WAAPI onfinish (Android) / idle settle (iOS).
+// Applied by scroll idle timer (Android 500ms / iOS 2000ms).
 // Must beat full-screen-active hide rules (specificity 0,5,0) — adding
 // .dynamic-views-tap-shield raises to 0,6,0.
 .is-android.is-phone
