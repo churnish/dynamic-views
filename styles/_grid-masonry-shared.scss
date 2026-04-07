@@ -13,7 +13,9 @@
    changes during scroll invalidate ancestor pseudo paint, causing the
    scrim to miss its compositor paint slot on WebView's single-threaded
    compositor. Masonry is immune (absolute positioning + explicit contain
-   on cards). Safe on .bases-view because overflow:auto already clips. */
+   on cards). Safe on .bases-view because overflow:auto already clips.
+   Note: contain:paint establishes a new containing block — fixed-position
+   children inside this element offset relative to .bases-view, not viewport. */
 .is-android .bases-view[data-view-type='dynamic-views-grid'] {
   contain: paint;
 }

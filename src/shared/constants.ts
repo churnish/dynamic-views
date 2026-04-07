@@ -67,6 +67,9 @@ export const SLIDESHOW_ANIMATION_MS = 300;
 /** Minimum movement in pixels to determine swipe direction */
 export const SWIPE_DETECT_THRESHOLD = 16;
 
+/** Minimum movement in pixels to lock touch scrub gesture direction (tighter than SWIPE_DETECT_THRESHOLD for snappier response) */
+export const SCRUB_DIRECTION_THRESHOLD = 10;
+
 /** Delay in ms after gesture ends before allowing click events */
 export const GESTURE_TIMEOUT_MS = 50;
 
@@ -166,3 +169,8 @@ export const FULL_SCREEN_FADE_MS = 200;
 /** Delay (ms) before resolving a fully-unwound bridge at scrollTop=0.
  *  Short — just enough to confirm idle. Android has no elastic bounce. */
 export const FULL_SCREEN_SPACER_RESOLVE_DELAY_MS = 50;
+
+/** Max vertical movement (px) for a touch to count as a tap on the header. */
+export const FULL_SCREEN_TAP_MAX_DISTANCE = 10;
+/** Max duration (ms) for a touch to count as a tap on the header. */
+export const FULL_SCREEN_TAP_MAX_DURATION_MS = 300;

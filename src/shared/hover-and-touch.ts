@@ -79,8 +79,7 @@ export function setupHoverIntent(
   }
 }
 
-/** Touch press feedback: activates on pointerdown (touch/pen contact), deactivates on pointerup/cancel with minimum 100ms visible duration. */
-/** Remove .has-hover-card from a card's container after the card's scale/translate out-transition completes (140ms). Checks that no other card in the container is still interacting before removing. */
+/** Remove .has-hover-card from a card's container after the card's scale/translate out-transition completes. 150ms = 140ms transition (--dynamic-views-anim-duration-fast) + 10ms buffer. Checks that no other card in the container is still interacting before removing. */
 export function deferContainerHoverDrop(cardEl: HTMLElement): void {
   const container = cardEl.closest<HTMLElement>(
     '.masonry-container, .bases-cards-group'
@@ -93,6 +92,7 @@ export function deferContainerHoverDrop(cardEl: HTMLElement): void {
   }, 150);
 }
 
+/** Touch press feedback: activates on pointerdown (touch/pen contact), deactivates on pointerup/cancel with minimum 100ms visible duration. */
 export function setupTouchPress(
   el: HTMLElement,
   onActivate: () => void,
