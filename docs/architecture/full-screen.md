@@ -201,7 +201,7 @@ createFullScreenController(scrollEl, containerEl, plugin, register)
 ### Unmount
 
 1. **Remove listeners**: All event listeners and ResizeObserver.
-2. **Cancel timers**: `scrollIdleTimer`, `spacerResolveTimer`, `pendingRevealTimer`, `resizeTimer`, pending rAFs.
+2. **Cancel timers**: `scrollIdleTimer`, `spacerResolveTimer`, `pendingRevealTimer`, `resizeDebounceTimer`, `resizeVerifyTimer`, pending rAFs.
 3. **Restore state**: If `isActiveHider`, remove `full-screen-active`/`full-screen-showing`, clear overlays, restore mask-image, show Capacitor status bar.
 4. **Clean up DOM**: Remove spacer, unlock height, clear inline styles on container/navbar/header, remove padding class.
 5. **Cancel WAAPI**: Cancel all running animations.
@@ -400,7 +400,7 @@ onResize()
   ├── setTimeout 500ms:
   │   ├── safeAreaSettling = false
   │   └── remeasureAfterResize()
-  │       ├── Re-measure totalShift via GBR technique
+  │       ├── Re-measure totalShift via GBR technique (visibility:hidden guard)
   │       ├── Re-sync spacer + overlays if active
   │       └── Re-queue cancelled settle (Android)
   │
