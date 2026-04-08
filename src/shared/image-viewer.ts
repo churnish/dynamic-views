@@ -9,6 +9,7 @@ import { GESTURE_TIMEOUT_MS } from './constants';
 import { getZoomSensitivityDesktop } from '../utils/style-settings';
 import { getVaultPathFromResourceUrl, isExternalUrl } from '../utils/image';
 import { getCachedBlobUrl } from './slideshow';
+import { deferContainerHoverDrop } from './hover-and-touch';
 import { getOwnerWindow } from '../utils/owner-window';
 
 /** Wheel event listener options (stored for proper cleanup) */
@@ -68,6 +69,7 @@ function closeImageViewer(
   if (sourceCard) {
     sourceCard.dataset.viewerDismissing = '1';
     setTimeout(() => delete sourceCard.dataset.viewerDismissing, 300);
+    sourceCard.classList.remove('viewer-active');
   }
 
   cloneEl.remove();
@@ -109,8 +111,13 @@ function closeImageViewer(
             ?.classList.add('has-hover-card');
           void cardEl.offsetHeight;
           cardEl.classList.remove('interact-restore');
+        } else {
+          // Cursor outside card — remove hover state that was preserved
+          // during viewer open (pointerleave was suppressed by viewer-active)
+          cardEl.classList.remove('interact');
+          cardEl.classList.remove('poster-hover-active');
+          deferContainerHoverDrop(cardEl);
         }
-        // Cursor outside card — don't restore (prevents stuck hover state)
       }
 
       // Resume thumbnail scrubbing at last cursor position, or reset if cursor
@@ -223,6 +230,9 @@ export function handleImageViewerTrigger(
     // Store click coordinates for scrub resume on viewer close
     embedEl.dataset.viewerX = String(e.clientX);
     embedEl.dataset.viewerY = String(e.clientY);
+    // Suppress hover deactivation while viewer is open — the overlay's
+    // pointer-events: auto triggers pointerleave on the card
+    cardEl?.classList.add('viewer-active');
     openImageViewer(embedEl, app, viewerCleanupFns, viewerClones);
   }
 }

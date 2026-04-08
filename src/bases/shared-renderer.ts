@@ -914,6 +914,8 @@ export class SharedCardRenderer {
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
+          // Image viewer overlay triggers pointerleave — keep hover state
+          if (cardEl.classList.contains('viewer-active')) return;
           cardEl.classList.remove('interact');
           deferContainerHoverDrop(cardEl);
           keyboardNav?.onHoverEnd?.();
@@ -954,6 +956,7 @@ export class SharedCardRenderer {
           cardEl.classList.add('poster-hover-active');
         },
         () => {
+          if (cardEl.classList.contains('viewer-active')) return;
           cardEl.classList.remove('poster-hover-active');
           resetPosterScroll(cardEl);
         },
