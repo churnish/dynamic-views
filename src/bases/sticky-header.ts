@@ -6,8 +6,6 @@
  * observes them — when a sentinel exits the scroll viewport, its heading is stuck.
  */
 
-import { Platform } from 'obsidian';
-
 const STUCK_CLASS = 'stuck';
 
 /** Maps sentinel elements back to their heading — avoids expando properties */
@@ -17,8 +15,9 @@ export function setupStickyHeaderObserver(scrollContainer: HTMLElement): {
   observe: (heading: HTMLElement) => void;
   disconnect: () => void;
 } {
-  // WebKit: IO-based sticky header detection causes reflow loop (same as content-visibility)
-  if (Platform.isIosApp) return { observe: () => {}, disconnect: () => {} };
+  // WebKit: content-visibility IO is disabled on iOS (reflow loop from geometry
+  // collapse). Sticky header IO is safe — .stuck only changes z-index and border,
+  // no geometry changes that would re-trigger the observer.
 
   const sentinels = new Map<HTMLElement, HTMLElement>();
 

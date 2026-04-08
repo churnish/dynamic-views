@@ -44,6 +44,14 @@
   overflow: hidden;
 }
 
+/* WebKit: overflow:clip constrains sticky header stacking context so its z-index
+   doesn't paint above the native overlay scrollbar. Masonry has this on
+   .dynamic-views-masonry; Grid needs it scoped to iOS where the issue manifests. */
+body.is-ios .dynamic-views .dynamic-views-grid {
+  overflow: clip;
+  overflow-clip-margin: var(--dynamic-views-bases-view-padding);
+}
+
 /* WebKit: contain:size prevents CSS Grid intrinsic sizing on placeholders
    and height-locked cards. Desktop excluded — contain:size breaks
    align-items:stretch causing height oscillation on lock release. */
