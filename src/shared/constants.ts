@@ -32,6 +32,9 @@ export const MAX_BATCH_SIZE = 70;
  *  Conservative estimate — corrected when the item mounts and gets measured. */
 export const UNMEASURED_CARD_HEIGHT = 200;
 
+/** Card count above which ephemeral scroll restore uses deferred mount (creates unmounted VirtualItems + pane-only mount via syncVirtualScroll). */
+export const DEFERRED_MOUNT_THRESHOLD = 200;
+
 /** Masonry correction delay and transition duration in ms (must match CSS masonry-correcting) */
 export const MASONRY_CORRECTION_MS = 200;
 
@@ -49,7 +52,7 @@ export const SCROLL_MOUNT_BUDGET = 3;
 
 /** Mount budget multiplier: GRID_ROW_BUDGET × columns cards per frame. Grid
  * mounts complete rows; Masonry mounts the equivalent card count for parity.
- * Two row-equivalents balance viewport fill speed against per-frame layout. */
+ * Two row-equivalents balance pane fill speed against per-frame layout. */
 export const GRID_ROW_BUDGET = 2;
 
 /** Max WebKit momentum duration — height-lock releases and scrollTop writes
@@ -152,8 +155,10 @@ export const FULL_SCREEN_REVEAL_DEFER_MS = 100;
  *  header-tap reveal. Below this threshold, momentum is considered
  *  dying and the reveal proceeds. */
 export const FULL_SCREEN_REVEAL_CANCEL_DELTA = 3;
+/** Recency window (ms) for pre-tap momentum detection. If the last fast scroll event (delta > REVEAL_CANCEL_DELTA) occurred within this window when onHeaderTap fires, the reveal is suppressed. Needed because mobile browsers kill fling momentum on touch contact, so the deferred timer's scroll-delta check sees ~0 delta and can't detect the fling. */
+export const FULL_SCREEN_REVEAL_RECENCY_MS = 200;
 /** Scroll-idle debounce for bridge settle.
- *  2s outlasts the iOS native scroll indicator fade (~1.5s),
+ *  2s outlasts the WebKit native scroll indicator fade (~1.5s),
  *  so the settle's scrollTop adjustment is invisible. */
 export const FULL_SCREEN_SCROLL_IDLE_MS = 2000;
 /** Android settle debounce — must exceed FULL_SCREEN_ANIM_MS (300ms) so

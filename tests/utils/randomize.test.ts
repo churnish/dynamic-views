@@ -157,7 +157,7 @@ describe('randomize', () => {
       expect(result).toBeNull();
     });
 
-    it('should return dynamic-views grid view data', () => {
+    it('should return Dynamic Views Grid view data', () => {
       const mockData = {
         data: [{ file: { path: 'test.md' } }],
       };
@@ -183,7 +183,7 @@ describe('randomize', () => {
       expect(result?.type).toBe('dynamic-views-grid');
     });
 
-    it('should return dynamic-views masonry view data', () => {
+    it('should return Dynamic Views Masonry view data', () => {
       const mockView = {
         type: 'dynamic-views-masonry',
         data: { data: [] },
@@ -280,7 +280,7 @@ describe('randomize', () => {
       expect(result).toBeNull();
     });
 
-    it('should return dynamic-views grid view', () => {
+    it('should return Dynamic Views Grid view', () => {
       const mockView = {
         type: 'dynamic-views-grid',
         data: { data: [] },
@@ -298,7 +298,7 @@ describe('randomize', () => {
       expect(result).toBe(mockView);
     });
 
-    it('should return dynamic-views masonry view', () => {
+    it('should return Dynamic Views Masonry view', () => {
       const mockView = {
         type: 'dynamic-views-masonry',
         data: { data: [] },
@@ -439,7 +439,7 @@ describe('randomize', () => {
       // Notice shown (tested via mock)
     });
 
-    it('should toggle shuffle on dynamic-views grid view', () => {
+    it('should toggle shuffle on Dynamic Views Grid view', () => {
       const mockOnDataUpdated = vi.fn();
       const mockEntries = [
         { file: { path: 'a.md' } },

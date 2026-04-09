@@ -28,7 +28,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 - **Shuffle view** button
 - **Open random file** button
 
-And numerous other quality‑of‑life improvements over the default Bases card view.
+And numerous other quality‑of‑life improvements over the default Bases card layout.
 
 ### Integrations
 

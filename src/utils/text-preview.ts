@@ -55,7 +55,7 @@ const markdownPatterns = [
 /**
  * Replace escaped characters with placeholders to protect from Markdown processing
  * Returns the text with placeholders and a map to restore them later
- * Using § character to avoid conflicts with markdown syntax patterns
+ * Using § character to avoid conflicts with Markdown syntax patterns
  */
 function protectEscapedChars(text: string): {
   text: string;
@@ -203,7 +203,7 @@ export function stripMarkdownSyntax(
 }
 
 /**
- * Sanitize markdown content for text preview display
+ * Sanitize Markdown content for text preview display
  * @param content - Raw Markdown content
  * @param omitFirstLine - When to omit first line: "always", "ifMatchesTitle", or "never"
  * @param filename - Optional filename to compare against first line

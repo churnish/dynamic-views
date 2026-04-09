@@ -3,7 +3,7 @@
  *
  * CSS @container scroll-state(stuck) can only style descendants, not the container
  * itself. This module inserts zero-height sentinels at each group section's top and
- * observes them — when a sentinel exits the scroll viewport, its heading is stuck.
+ * observes them — when a sentinel exits the scroll pane, its heading is stuck.
  */
 
 const STUCK_CLASS = 'stuck';
@@ -15,7 +15,7 @@ export function setupStickyHeaderObserver(scrollContainer: HTMLElement): {
   observe: (heading: HTMLElement) => void;
   disconnect: () => void;
 } {
-  // WebKit: content-visibility IO is disabled on iOS (reflow loop from geometry
+  // WebKit: content-visibility IO is disabled on WebKit (reflow loop from geometry
   // collapse). Sticky header IO is safe — .stuck only changes z-index and border,
   // no geometry changes that would re-trigger the observer.
 

@@ -215,7 +215,7 @@ body.dynamic-views-show-thumbnail-placeholder
   .card-thumbnail.multi-image {
     overflow: visible; /* Allow drop-shadow to extend outside */
     touch-action: pan-y;
-    pointer-events: auto; /* Override base pointer-events: none for scrub gestures */
+    pointer-events: auto; /* Override default pointer-events: none for scrub gestures */
   }
 
   /* Anchor absolute-positioned slideshow images and clip sliding animation.

@@ -10,7 +10,7 @@ updated: 2026-03-30
 - No optimization is too small; even a 0.1% improvement is valuable.
 - Measure, optimize, repeat until near MC parity.
 - **Profiling reference**: session `ce81d2e3`. 300-card fixture, 10 groups, vault-local images, 5 columns at 340px. Single-run data — directional signal is clear but exact values need replication (3 runs with median).
-- Shared card view optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
+- Shared card views optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
 
 ## Status key
 
@@ -78,8 +78,8 @@ Sections below are ordered by **system/concern area**, not by priority or chrono
 | Optimization | Status | Notes | Value | Effort |
 |---|---|---|---|---|
 | Image-load coalescing | Done | Single RAF debounce via `pendingImageRelayout` flag. ~60 concurrent loads → 1 layout/frame. **T2: 23 images in 2ms span.** Vault-local images complete within a single frame — coalescing works but benefit masked by local I/O speed. | | |
-| Single-column reflow on image load | Deprioritized | MC's `reflowColumn()` shifts only same-column items by delta — O(n/cols). DV uses `remeasureAndReposition` with stable columns (O(n) but preserves column assignments). **Deprioritized**: T2 showed image-load coalescing limits to 1 relayout/frame, and virtual scroll means n=23 mounted cards not 300 total. O(23) vs O(23/5) is negligible. Revisit at 500+ mounted cards with external images. | 1 | 3 |
-| Pre-cached image dimensions | Deprioritized | MC uses sidecar metadata for math-based height: `(colWidth / imgWidth) * imgHeight`. DV uses DOM `offsetHeight`. DV already caches aspect ratios in `imageMetadataCache`. **Deprioritized**: T3 showed deferred remeasure catches drift reliably at ~95ms, cancelling safety net as designed. T2 showed vault-local images load in 2ms. Correction mechanism works — eliminating corrections at the source has marginal benefit. Revisit for external/slow images. | 1 | 3 |
+| Single-column reflow on image load | Deprioritized | MC's `reflowColumn()` shifts only same-column items by delta — O(n/cols). Dynamic Views uses `remeasureAndReposition` with stable columns (O(n) but preserves column assignments). **Deprioritized**: T2 showed image-load coalescing limits to 1 relayout/frame, and virtual scroll means n=23 mounted cards not 300 total. O(23) vs O(23/5) is negligible. Revisit at 500+ mounted cards with external images. | 1 | 3 |
+| Pre-cached image dimensions | Deprioritized | MC uses sidecar metadata for math-based height: `(colWidth / imgWidth) * imgHeight`. Dynamic Views uses DOM `offsetHeight`. Dynamic Views already caches aspect ratios in `imageMetadataCache`. **Deprioritized**: T3 showed deferred remeasure catches drift reliably at ~95ms, cancelling safety net as designed. T2 showed vault-local images load in 2ms. Correction mechanism works — eliminating corrections at the source has marginal benefit. Revisit for external/slow images. | 1 | 3 |
 
 ## 4. Rendering performance
 

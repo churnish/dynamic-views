@@ -110,7 +110,7 @@ Content here`;
       expect(result).toBe('This has highlighted text');
     });
 
-    it('should strip markdown links', () => {
+    it('should strip Markdown links', () => {
       const input = 'Visit [Google](https://google.com) for search';
       const result = sanitizeForPreview(input);
       expect(result).toBe('Visit Google for search');
@@ -152,19 +152,19 @@ Content here`;
       expect(result).toBe('See Display for details');
     });
 
-    it('should strip markdown images', () => {
+    it('should strip Markdown images', () => {
       const input = 'Image: ![alt text](https://example.org/img.png) shown';
       const result = sanitizeForPreview(input);
       expect(result).toBe('Image: shown');
     });
 
-    it('should strip markdown images without alt text', () => {
+    it('should strip Markdown images without alt text', () => {
       const input = 'Image: ![](https://example.org/img.png) shown';
       const result = sanitizeForPreview(input);
       expect(result).toBe('Image: shown');
     });
 
-    it('should strip empty markdown links', () => {
+    it('should strip empty Markdown links', () => {
       const input = 'Link: [](https://example.org) here';
       const result = sanitizeForPreview(input);
       expect(result).toBe('Link: here');
@@ -526,7 +526,7 @@ Content here`;
       expect(sanitizeForPreview('   ')).toBe('');
     });
 
-    it('should handle complex mixed markdown', () => {
+    it('should handle complex mixed Markdown', () => {
       const input = `---
 title: Test
 ---
@@ -557,7 +557,7 @@ More text with #tag and ==highlight==.`;
       expect(result).not.toContain('const x = 1');
     });
 
-    it('should handle nested markdown syntax', () => {
+    it('should handle nested Markdown syntax', () => {
       const input = '**This has *nested* formatting**';
       const result = sanitizeForPreview(input);
       expect(result).toBe('This has nested formatting');
@@ -573,7 +573,7 @@ After`;
       expect(result).toBe('Text After');
     });
 
-    it('should handle malformed/unclosed markdown links', () => {
+    it('should handle malformed/unclosed Markdown links', () => {
       const input = 'Text with [unclosed link and more text';
       const result = sanitizeForPreview(input);
       expect(result).toBe('Text with [unclosed link and more text');
@@ -591,7 +591,7 @@ After`;
       expect(result2).toBe('Some text here');
     });
 
-    it('should handle deeply nested markdown syntax', () => {
+    it('should handle deeply nested Markdown syntax', () => {
       const input = '***___~~==deeply nested==~~___***';
       const result = sanitizeForPreview(input);
       expect(result).toBe('deeply nested');
@@ -748,7 +748,7 @@ Content`);
       expect(result).toBe('Content');
     });
 
-    it('should sanitize markdown when falling back to content', async () => {
+    it('should sanitize Markdown when falling back to content', async () => {
       mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`---
 title: Test
 ---

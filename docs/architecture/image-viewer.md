@@ -41,7 +41,7 @@ Library: `@panzoom/panzoom`. Provides scroll-wheel zoom, mouse drag pan, cursor 
 
 ### Mobile: native touch handler
 
-No Panzoom. Direct `touchstart`/`touchmove`/`touchend` listeners on the container. Ported from Obsidian's native `mobile-image-viewer` (deobfuscated source in `archive/obsidian-native-image-viewer.js`).
+No Panzoom. Direct `touchstart`/`touchmove`/`touchend` listeners on the container. Behavior modeled after Obsidian's native `mobile-image-viewer`.
 
 - **Pinch zoom**: Two-finger gesture with focal-point tracking (midpoint between fingers, relative to `container.getBoundingClientRect()` — works in both fullscreen and constrained modes).
 - **Pan**: One-finger drag. Clamped: `maxPan = imgDim * (scale-1) / scale / 2` — prevents showing empty space.

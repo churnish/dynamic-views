@@ -67,6 +67,7 @@ import {
   HIGH_VELOCITY_THRESHOLD,
   GRID_ROW_BUDGET,
   SCROLL_IDLE_SYNC_MS,
+  DEFERRED_MOUNT_THRESHOLD,
 } from '../shared/constants';
 import {
   setupBasesSwipePrevention,
@@ -107,11 +108,17 @@ import type {
   ScrollThrottleState,
   SortState,
   FocusState,
+  AnchorScrollState,
+  LegacyScrollState,
+  ScrollRestoreState,
 } from '../types';
 import {
   VirtualItem,
   measureScalableHeight,
   estimateUnmountedHeight,
+  getScrollAnchor,
+  getAnchorTop,
+  type ScrollAnchor,
 } from '../shared/virtual-scroll';
 import { setupStickyHeaderObserver } from './sticky-header';
 import {
@@ -162,6 +169,12 @@ export class DynamicViewsGridView extends BasesView {
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
   private scrollPreservation: ScrollPreservation | null = null;
+  private scrollRestoreState: ScrollRestoreState = null;
+  /** Separate copy of ephemeral scroll state for deferred mount decisions.
+   *  `scrollRestoreState` is consumed by `restoreEphemeralScroll`, making it
+   *  unavailable to subsequent processDataUpdate calls during initialization.
+   *  This field persists until deferred mount burst completes. */
+  private deferredMountState: ScrollRestoreState = null;
   private cardRenderer: SharedCardRenderer;
   private _previousCustomClasses: string[] = [];
   private currentDoc: Document = document;
@@ -228,7 +241,7 @@ export class DynamicViewsGridView extends BasesView {
 
   // Grid-specific state
   private updateLayoutRef: { current: (() => void) | null } = { current: null };
-  private displayedCount: number = 50;
+  private virtualItemCount: number = 50;
   private isLoading: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
   private observerWindow: (Window & typeof globalThis) | null = null;
@@ -238,7 +251,7 @@ export class DynamicViewsGridView extends BasesView {
   private currentCardSize: number = 400;
   private currentMinColumns: number = 1;
   private feedContainerRef: { current: HTMLElement | null } = { current: null };
-  private previousDisplayedCount: number = 0;
+  private previousVirtualItemCount: number = 0;
   private isUpdatingColumns: boolean = false;
   private lastColumnCount: number = 0;
   private resizeRafId: number | null = null;
@@ -308,8 +321,10 @@ export class DynamicViewsGridView extends BasesView {
   private newlyMountedEls: HTMLElement[] = [];
   private lastMeasuredCardWidth = 0;
   private cardVerticalPadding: number | null = null;
-  // iOS momentum mitigation state (all gated on this.measureLane)
+  // WebKit momentum mitigation state (all gated on this.measureLane)
   private measureLane: HTMLElement | null = null;
+  /** Estimated card height from ephemeral scroll state — used for deferred mount layout */
+  private ephemeralEstimatedHeight: number | null = null;
   private scrollMountLockedEls = new Set<HTMLElement>();
   private scrollIdleTimeout: ReturnType<typeof setTimeout> | null = null;
   private scrollIdleSyncId: ReturnType<typeof setTimeout> | null = null;
@@ -374,7 +389,7 @@ export class DynamicViewsGridView extends BasesView {
         void this.expandGroup(collapseKey, groupEl);
       }
     } else {
-      // Collapsing: destroy cards, then scroll header to viewport top — all
+      // Collapsing: destroy cards, then scroll header to pane top — all
       // synchronous so no paint occurs between removing sticky and adjusting
       // scroll (prevents flicker). Empty first so the measurement reflects
       // the final layout (group content removed).
@@ -415,8 +430,8 @@ export class DynamicViewsGridView extends BasesView {
         this.groupContainers.delete(matchingGroupKey);
         this.rebuildGroupIndex();
         this.recalculateTotalEntries();
-        this.displayedCount = this.virtualItems.length;
-        this.previousDisplayedCount = this.displayedCount;
+        this.virtualItemCount = this.virtualItems.length;
+        this.previousVirtualItemCount = this.virtualItemCount;
 
         // Refresh offsets — later groups moved up
         this.refreshGroupOffsets();
@@ -425,7 +440,7 @@ export class DynamicViewsGridView extends BasesView {
       this.renderState.lastRenderHash = '';
       const headerTop = headerEl.getBoundingClientRect().top;
       const scrollTop = this.scrollEl.getBoundingClientRect().top;
-      // Only scroll when the header was stuck (now above the viewport)
+      // Only scroll when the header was stuck (now above the pane)
       if (headerTop < scrollTop) {
         this.scrollEl.scrollTop += headerTop - scrollTop;
       }
@@ -555,8 +570,8 @@ export class DynamicViewsGridView extends BasesView {
     this.rebuildVirtualItemsOrder(); // Splice in DOM order
     this.rebuildGroupIndex(); // Refresh cached item.index values
     this.recalculateTotalEntries();
-    this.displayedCount = this.virtualItems.length;
-    this.previousDisplayedCount = this.displayedCount;
+    this.virtualItemCount = this.virtualItems.length;
+    this.previousVirtualItemCount = this.virtualItemCount;
 
     // Post-render hooks scoped to this group
     const groupCards = Array.from(
@@ -724,7 +739,7 @@ export class DynamicViewsGridView extends BasesView {
     const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
 
     // Placeholder - calculated dynamically on first render
-    this.displayedCount = 0;
+    this.virtualItemCount = 0;
 
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
@@ -912,6 +927,7 @@ export class DynamicViewsGridView extends BasesView {
     this.lastSyncScrollTop = 0;
     this.lastSyncTime = 0;
     this.cardVerticalPadding = null;
+    this.ephemeralEstimatedHeight = null;
     this.hasUserScrolled = false;
     this.isLayoutBusy = false;
     this.cardResizeDirty = false;
@@ -1222,7 +1238,9 @@ export class DynamicViewsGridView extends BasesView {
             targetGridColumns
           );
         }
-        this.scrollPreservation?.restoreAfterRender();
+        if (!this.restoreEphemeralScroll()) {
+          this.scrollPreservation?.restoreAfterRender();
+        }
 
         // Viewport may be underfilled after CSS-only setting change or
         // duplicate onDataUpdated killing the batch chain mid-append
@@ -1282,6 +1300,19 @@ export class DynamicViewsGridView extends BasesView {
         return;
       }
 
+      // Save scroll anchor before rebuild (config change restore)
+      let configChangeAnchor: ScrollAnchor | null = null;
+      let configChangeColumns = this.lastColumnCount;
+      if (this.virtualItems.length > 0 && pathsUnchanged) {
+        this.updateCachedGroupOffsets(true);
+        configChangeAnchor = getScrollAnchor(
+          this.virtualItems,
+          this.cachedGroupOffsets,
+          this.scrollEl.scrollTop,
+          this.scrollEl.clientHeight
+        );
+      }
+
       // Scroll to top when the card set changed (e.g., search narrowed/broadened
       // results). pathsUnchanged is false when the file list differs — query
       // changes that produce identical results are caught by the renderHash
@@ -1298,8 +1329,8 @@ export class DynamicViewsGridView extends BasesView {
         this.contentCache.images = {};
         this.contentCache.hasImageAvailable = {};
         // Only scroll to top + reset if batches were appended
-        if (this.displayedCount > initialCount) {
-          this.displayedCount = 0;
+        if (this.virtualItemCount > initialCount) {
+          this.virtualItemCount = 0;
           this.scrollEl.scrollTop = 0;
           this.scrollPreservation?.clearSavedPosition();
         }
@@ -1310,15 +1341,87 @@ export class DynamicViewsGridView extends BasesView {
       this.renderState.lastSettingsHashExcludingOrder =
         settingsHashExcludingOrder;
 
-      // Set displayedCount when starting fresh (first render or after reset)
-      if (this.displayedCount === 0) {
-        this.displayedCount = initialCount;
+      // Recompute anchor index against current entry set (order may have changed)
+      if (configChangeAnchor) {
+        const currentIndex = allEntries.findIndex(
+          (e: BasesEntry) => e.file.path === configChangeAnchor!.path
+        );
+        if (currentIndex >= 0) {
+          configChangeAnchor = { ...configChangeAnchor, index: currentIndex };
+        } else {
+          configChangeAnchor = null;
+        }
       }
+
+      // Set virtualItemCount when starting fresh (first render or after reset).
+      // Ephemeral scroll (back/forward nav) loads only enough cards to cover
+      // the saved scrollTop + one pane height — not the full saved count.
+      if (this.virtualItemCount === 0) {
+        if (this.scrollRestoreState) {
+          const s = this.scrollRestoreState;
+          const paneHeight = this.scrollEl.clientHeight || 1000;
+          if ('anchorIndex' in s) {
+            const paneItems = Math.ceil(
+              (s.count * paneHeight) / (s.height || 1)
+            );
+            this.virtualItemCount = Math.min(
+              s.count,
+              s.anchorIndex + 2 * paneItems
+            );
+          } else {
+            const neededFraction = Math.min(
+              (s.top + paneHeight) / (s.height || 1),
+              1
+            );
+            this.virtualItemCount = Math.ceil(s.count * neededFraction * 1.2);
+          }
+          const total = this.totalEntries || this.scrollRestoreState.count;
+          this.virtualItemCount = Math.max(
+            initialCount,
+            Math.min(this.virtualItemCount, total)
+          );
+        } else {
+          this.virtualItemCount = initialCount;
+        }
+      }
+
+      // Expand virtualItemCount to include anchor card for config change restore
+      if (
+        configChangeAnchor &&
+        this.virtualItemCount < configChangeAnchor.index + 1
+      ) {
+        const paneHeight = this.scrollEl.clientHeight || 1000;
+        const totalItems = Math.max(
+          1,
+          this.virtualItems.length || configChangeAnchor.index
+        );
+        const scrollHeight = this.scrollEl.scrollHeight || 1;
+        const paneItems = Math.ceil(paneHeight / (scrollHeight / totalItems));
+        this.virtualItemCount = Math.min(
+          allEntries.length,
+          configChangeAnchor.index + 2 * paneItems
+        );
+      }
+
+      // Use deferredMountState (persists across render cycles) instead of
+      // scrollRestoreState (consumed by restoreEphemeralScroll mid-render)
+      const useDeferredMount =
+        !!this.deferredMountState &&
+        this.virtualItemCount > DEFERRED_MOUNT_THRESHOLD;
 
       // Update card size and min columns before calculating columns
       this.currentCardSize = settings.cardSize;
       this.currentMinColumns = settings.minimumColumns;
       const cols = this.calculateColumnCount();
+
+      if (useDeferredMount) {
+        // Estimate per-card height from saved scroll state, accounting for
+        // Grid columns — each row contains `cols` entries, so divide total
+        // scroll height by number of rows, not total entry count.
+        const estimatedRows = Math.ceil(this.deferredMountState!.count / cols);
+        this.ephemeralEstimatedHeight =
+          this.deferredMountState!.height / estimatedRows;
+      }
 
       // Set CSS variables for grid layout
       this.lastColumnCount = cols;
@@ -1353,9 +1456,9 @@ export class DynamicViewsGridView extends BasesView {
       // Determine grouping state early — collapse state only applies when grouped
       const isGrouped = !!groupByProperty;
 
-      // Collect visible entries across all groups (up to displayedCount), skipping collapsed
+      // Collect visible entries across all groups (up to virtualItemCount), skipping collapsed
       const visibleEntries: BasesEntry[] = [];
-      let remainingCount = this.displayedCount;
+      let remainingCount = this.virtualItemCount;
 
       for (const processedGroup of processedGroups) {
         if (remainingCount <= 0) break;
@@ -1375,7 +1478,8 @@ export class DynamicViewsGridView extends BasesView {
         remainingCount -= entriesToTake;
       }
 
-      // Load text previews and images ONLY for displayed entries
+      // Load text previews and images for all displayed entries.
+      // Instance cache makes back-nav loads near-instant (all cache hits).
       await loadContentForEntries(
         visibleEntries,
         settings,
@@ -1400,8 +1504,11 @@ export class DynamicViewsGridView extends BasesView {
       });
       this.containerEl.addClass('dynamic-views-height-preserved');
 
-      // Reset virtual scroll state
+      // Reset virtual scroll state — preserve ephemeralEstimatedHeight computed
+      // above (resetVirtualState nulls it, but it's needed in the card loop below)
+      const savedEstimatedHeight = this.ephemeralEstimatedHeight;
       this.resetVirtualState();
+      this.ephemeralEstimatedHeight = savedEstimatedHeight;
 
       // Clear and re-render
       this.containerEl.empty();
@@ -1425,7 +1532,7 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       // Reset batch append state for full re-render
-      this.previousDisplayedCount = 0;
+      this.previousVirtualItemCount = 0;
       this.lastGroup.key = undefined;
       this.lastGroup.container = null;
       this.hasBatchAppended = false;
@@ -1446,6 +1553,13 @@ export class DynamicViewsGridView extends BasesView {
         `dynamic-views-grid${isGrouped ? ' bases-cards-container' : ''}`
       );
       this.feedContainerRef.current = feedEl;
+
+      // Set min-height to match saved scroll height so scrollTop isn't clamped.
+      // Grid has no explicit container height (unlike Masonry's --masonry-height).
+      // Placeholder auto-rows may underestimate, causing scrollTop to clamp low.
+      if (useDeferredMount) {
+        feedEl.style.minHeight = `${this.deferredMountState!.height}px`;
+      }
 
       // Initialize focus management on container (cleanup previous first)
       this.focusCleanup?.();
@@ -1469,7 +1583,7 @@ export class DynamicViewsGridView extends BasesView {
 
         // Budget check: stop rendering cards once limit reached,
         // but always render collapsed group headers (they cost 0 cards)
-        if (displayedSoFar >= this.displayedCount && !isCollapsed) break;
+        if (displayedSoFar >= this.virtualItemCount && !isCollapsed) break;
 
         // Wrap header + group in a section so sticky scopes to the group's content
         const sectionEl = feedEl.createDiv('dynamic-views-group-section');
@@ -1499,7 +1613,7 @@ export class DynamicViewsGridView extends BasesView {
 
         const entriesToDisplay = Math.min(
           processedGroup.entries.length,
-          this.displayedCount - displayedSoFar
+          this.virtualItemCount - displayedSoFar
         );
         if (entriesToDisplay === 0) continue;
 
@@ -1522,16 +1636,52 @@ export class DynamicViewsGridView extends BasesView {
           const card = cards[i];
           const entry = groupEntries[i];
           this.cardDataByPath.set(card.path, { cardData: card, entry });
-          const handle = this.renderCard(
-            groupEl,
-            card,
-            entry,
-            displayedSoFar + i,
-            settings
-          );
-          const item = this.createVirtualItem(0, card, entry, groupKey, handle);
-          this.virtualItems.push(item);
-          this.virtualItemByPath.set(card.path, item);
+
+          if (useDeferredMount) {
+            const placeholder = groupEl.ownerDocument.createElement('div');
+            placeholder.className = 'dynamic-views-grid-placeholder';
+            placeholder.style.height = `${this.ephemeralEstimatedHeight}px`;
+            placeholder.style.minHeight = `${this.ephemeralEstimatedHeight}px`;
+            groupEl.appendChild(placeholder);
+            const item: VirtualItem = {
+              index: displayedSoFar + i,
+              x: 0,
+              y: 0,
+              width: 0,
+              height: 0,
+              measuredHeight: 0,
+              measuredAtWidth: 0,
+              scalableHeight: 0,
+              fixedHeight: 0,
+              col: 0,
+              cardData: card,
+              entry,
+              groupKey,
+              compactStacked: false,
+              hasBeenMounted: false,
+              el: placeholder, // temporary — for position measurement
+              handle: null,
+            };
+            this.virtualItems.push(item);
+            this.virtualItemByPath.set(card.path, item);
+          } else {
+            const handle = this.renderCard(
+              groupEl,
+              card,
+              entry,
+              displayedSoFar + i,
+              settings
+            );
+            const item = this.createVirtualItem(
+              0,
+              card,
+              entry,
+              groupKey,
+              handle
+            );
+            this.virtualItems.push(item);
+            this.virtualItemByPath.set(card.path, item);
+          }
         }
 
         displayedSoFar += entriesToDisplay;
@@ -1542,28 +1692,56 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       // Track state for batch append
-      this.previousDisplayedCount = displayedSoFar;
+      this.previousVirtualItemCount = displayedSoFar;
 
-      // Batch-initialize scroll gradients after all cards rendered
-      // Sync responsive classes before gradient init (ResizeObservers are async)
-      syncResponsiveClasses(
-        Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
-      );
-      initializeScrollGradients(feedEl);
-      initializeTextPreviewClamp(feedEl);
-      setHoverScaleForCards(
-        Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
-      );
+      if (!useDeferredMount) {
+        syncResponsiveClasses(
+          Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
+        );
+        initializeScrollGradients(feedEl);
+        initializeTextPreviewClamp(feedEl);
+        setHoverScaleForCards(
+          Array.from(feedEl.querySelectorAll<HTMLElement>('.card'))
+        );
+      }
 
-      // Measure card positions and build group index for virtual scrolling
       this.rebuildGroupIndex();
-      this.measureAllCardPositions();
+
+      if (useDeferredMount) {
+        // Read positions from placeholder DOM — skip cacheCardVerticalPadding
+        // and measureScalableHeight which read card internals.
+        // Leave measuredAtWidth at 0 so estimateUnmountedHeight uses the
+        // fallback (item.height) instead of scalable/fixed math that yields 0.
+        for (const item of this.virtualItems) {
+          if (!item.el || item.handle) continue;
+          const groupContainer = this.groupContainers.get(item.groupKey);
+          item.y = item.el.offsetTop - (groupContainer?.offsetTop ?? 0);
+          item.x = item.el.offsetLeft - (groupContainer?.offsetLeft ?? 0);
+          item.height = item.el.offsetHeight;
+          item.width = item.el.offsetWidth;
+          item.measuredHeight = item.height;
+          // measuredAtWidth stays 0 — prevents estimateUnmountedHeight from
+          // computing 0 via scalableHeight(0) * ratio + fixedHeight(0)
+        }
+        this.lastMeasuredCardWidth = this.virtualItems[0]?.width ?? 0;
+
+        // Convert to unmounted state — matches unmountVirtualItem convention
+        for (const item of this.virtualItems) {
+          if (!item.el || item.handle) continue;
+          this.placeholderEls.set(item, item.el);
+          item.el = null;
+        }
+      } else {
+        this.measureAllCardPositions();
+      }
+
       this.refreshGroupOffsets();
 
-      // Setup cardResizeObserver and observe all initial cards
       this.setupCardResizeObserver();
-      for (const item of this.virtualItems) {
-        if (item.el) this.cardResizeObserver!.observe(item.el);
+      if (!useDeferredMount) {
+        for (const item of this.virtualItems) {
+          if (item.el) this.cardResizeObserver!.observe(item.el);
+        }
       }
 
       // Rebuild sticky header observer for all non-collapsed group headings
@@ -1608,7 +1786,7 @@ export class DynamicViewsGridView extends BasesView {
             try {
               const cols = this.calculateColumnCount();
 
-              // Sync measurement lane width (iOS only)
+              // Sync measurement lane width (WebKit only)
               if (this.measureLane) {
                 const gap = getCardSpacing(this.containerEl);
                 const containerWidth = Math.floor(
@@ -1622,6 +1800,13 @@ export class DynamicViewsGridView extends BasesView {
               if (cols !== this.lastColumnCount) {
                 // Save scroll before CSS change, restore after (prevents reflow reset)
                 const scrollBefore = this.scrollEl.scrollTop;
+                this.updateCachedGroupOffsets(true);
+                const resizeAnchor = getScrollAnchor(
+                  this.virtualItems,
+                  this.cachedGroupOffsets,
+                  this.scrollEl.scrollTop,
+                  this.scrollEl.clientHeight
+                );
                 this.lastColumnCount = cols;
                 this.committedRow = null;
                 this.containerEl.style.setProperty(
@@ -1661,7 +1846,7 @@ export class DynamicViewsGridView extends BasesView {
                   const visibleTop = rvScrollTop - paneHeight;
                   const visibleBottom = rvScrollTop + paneHeight + paneHeight;
 
-                  // Phase 1: Mount all items in viewport + buffer
+                  // Phase 1: Mount all items in pane + buffer
                   for (const item of this.virtualItems) {
                     if (!item.el && item.height > 0) {
                       const containerOffsetY = this.cachedGroupOffsets.get(
@@ -1713,7 +1898,19 @@ export class DynamicViewsGridView extends BasesView {
 
                   this.refreshGroupOffsets();
 
-                  // Phase 3: Cull — unmount items now outside viewport
+                  // Anchor-based scroll restore after column change
+                  if (resizeAnchor) {
+                    const anchorTop = getAnchorTop(
+                      resizeAnchor.path,
+                      this.virtualItems,
+                      this.cachedGroupOffsets
+                    );
+                    if (anchorTop !== null) {
+                      this.scrollEl.scrollTop = anchorTop;
+                    }
+                  }
+
+                  // Phase 3: Cull — unmount items now outside pane
                   for (const item of this.virtualItems) {
                     if (!item.el) continue;
                     const containerOffsetY = this.cachedGroupOffsets.get(
@@ -1788,12 +1985,38 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       // Restore scroll position after render
-      this.scrollPreservation?.restoreAfterRender();
+      if (!this.restoreEphemeralScroll()) {
+        if (configChangeAnchor) {
+          const anchorTop = getAnchorTop(
+            configChangeAnchor.path,
+            this.virtualItems,
+            this.cachedGroupOffsets
+          );
+          if (anchorTop !== null) {
+            if (this.lastColumnCount === configChangeColumns) {
+              this.scrollEl.scrollTop = anchorTop + configChangeAnchor.offset;
+            } else {
+              this.scrollEl.scrollTop = anchorTop;
+            }
+          }
+        } else {
+          this.scrollPreservation?.restoreAfterRender();
+        }
+      }
+
+      if (useDeferredMount) {
+        this.hasUserScrolled = true;
+        this.refreshGroupOffsets();
+        this.mountDeferredCards();
+        this.deferredMountState = null;
+        // Remove scaffolding min-height — real rows now drive container height
+        this.feedContainerRef.current?.style.removeProperty('min-height');
+      }
 
       // Remove height preservation now that scroll is restored
       this.containerEl.removeClass('dynamic-views-height-preserved');
 
-      // Re-check viewport fill — preserved height inflates scrollHeight,
+      // Re-check pane fill — preserved height inflates scrollHeight,
       // masking underfill from the initial checkAndLoadMore in setupInfiniteScroll
       this.checkAndLoadMore();
 
@@ -1897,7 +2120,9 @@ export class DynamicViewsGridView extends BasesView {
 
     const feedEl = this.feedContainerRef.current;
     if (feedEl) initializeScrollGradients(feedEl);
-    this.scrollPreservation?.restoreAfterRender();
+    if (!this.restoreEphemeralScroll()) {
+      this.scrollPreservation?.restoreAfterRender();
+    }
   }
 
   /** Update only changed cards in-place without full re-render */
@@ -2022,7 +2247,7 @@ export class DynamicViewsGridView extends BasesView {
   private checkAndLoadMore(): void {
     const settings = this.lastRenderedSettings;
     if (!settings) return;
-    if (this.isLoading || this.displayedCount >= this.totalEntries) return;
+    if (this.isLoading || this.virtualItemCount >= this.totalEntries) return;
 
     const scrollContainer = this.scrollEl;
     if (!scrollContainer?.isConnected) return;
@@ -2035,8 +2260,8 @@ export class DynamicViewsGridView extends BasesView {
     if (distanceFromBottom < threshold) {
       this.isLoading = true;
       const batchSize = this.getBatchSize(settings);
-      this.displayedCount = Math.min(
-        this.displayedCount + batchSize,
+      this.virtualItemCount = Math.min(
+        this.virtualItemCount + batchSize,
         this.totalEntries
       );
       void this.appendBatch();
@@ -2077,8 +2302,8 @@ export class DynamicViewsGridView extends BasesView {
       );
 
       // Capture state at start - these may change during async operations
-      const prevCount = this.previousDisplayedCount;
-      const currCount = this.displayedCount;
+      const prevCount = this.previousVirtualItemCount;
+      const currCount = this.virtualItemCount;
 
       // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
       const newEntries: BasesEntry[] = [];
@@ -2269,8 +2494,8 @@ export class DynamicViewsGridView extends BasesView {
       }
 
       // Update state for next append - use currCount (captured at start)
-      // to ensure consistency even if this.displayedCount changed during async
-      this.previousDisplayedCount = currCount;
+      // to ensure consistency even if this.virtualItemCount changed during async
+      this.previousVirtualItemCount = currCount;
 
       // Batch-initialize scroll gradients for newly rendered cards only
       if (newCardEls.length > 0) {
@@ -2309,7 +2534,7 @@ export class DynamicViewsGridView extends BasesView {
       this.hasBatchAppended = true;
 
       // Show end indicator if all items displayed (skip if 0 results)
-      if (this.displayedCount >= this.totalEntries && this.totalEntries > 0) {
+      if (this.virtualItemCount >= this.totalEntries && this.totalEntries > 0) {
         this.showEndIndicator();
       }
     } finally {
@@ -2340,7 +2565,7 @@ export class DynamicViewsGridView extends BasesView {
     }
 
     // Show end indicator only after batch append completed all items (skip if 0 results)
-    if (this.displayedCount >= this.totalEntries && this.totalEntries > 0) {
+    if (this.virtualItemCount >= this.totalEntries && this.totalEntries > 0) {
       if (this.hasBatchAppended) {
         this.showEndIndicator();
       }
@@ -2370,7 +2595,7 @@ export class DynamicViewsGridView extends BasesView {
         this.scheduleVirtualScrollSync();
       }, SCROLL_IDLE_SYNC_MS);
 
-      // Schedule height-lock release after scroll quiesces (iOS only).
+      // Schedule height-lock release after scroll quiesces (WebKit only).
       // Cards mounted during scroll are locked to placeholder height to
       // prevent CSS Grid row reflows. Release once scrolling stops.
       if (this.measureLane) {
@@ -2444,7 +2669,7 @@ export class DynamicViewsGridView extends BasesView {
       );
     }
 
-    // Trigger initial check in case viewport already needs more content
+    // Trigger initial check in case pane already needs more content
     this.checkAndLoadMore();
   }
   // #endregion Infinite scroll
@@ -2595,6 +2820,20 @@ export class DynamicViewsGridView extends BasesView {
     const placeholder = this.placeholderEls.get(item);
     if (!placeholder?.isConnected) return;
 
+    // Deferred mount creates CardData before background content loads.
+    // Re-read from the now-warm instance cache so mounted cards have content.
+    if (!item.hasBeenMounted) {
+      const path = item.cardData.path;
+      const preview = this.contentCache.textPreviews[path];
+      if (preview && !item.cardData.textPreview) {
+        item.cardData.textPreview = preview;
+      }
+      const img = this.contentCache.images[path];
+      if (img && !item.cardData.imageUrl) {
+        item.cardData.imageUrl = img;
+      }
+    }
+
     const renderTarget = this.measureLane ?? placeholder.parentElement!;
 
     const handle = this.renderCard(
@@ -2610,7 +2849,7 @@ export class DynamicViewsGridView extends BasesView {
     item.hasBeenMounted = true;
 
     if (this.measureLane) {
-      // iOS: render into measurement lane, run ALL deferred passes, read height
+      // WebKit: render into measurement lane, run ALL deferred passes, read height
       syncResponsiveClasses([handle.el]);
       setHoverScaleForCards([handle.el]);
       initializeScrollGradientsForCards([handle.el]);
@@ -2702,7 +2941,7 @@ export class DynamicViewsGridView extends BasesView {
     const scrollTop = this.scrollEl.scrollTop;
     const paneHeight = this.scrollEl.clientHeight;
 
-    // Tier 1 (mount zone): viewport ± 1× paneHeight
+    // Tier 1 (mount zone): pane ± 1× paneHeight
     const visibleTop = scrollTop - paneHeight;
     const visibleBottom = scrollTop + paneHeight + paneHeight;
 
@@ -2712,7 +2951,7 @@ export class DynamicViewsGridView extends BasesView {
     const unmountTop = scrollTop - paneHeight * 1.25;
     const unmountBottom = scrollTop + paneHeight * 2.25;
 
-    // Tier 2 (content-hidden zone): viewport ± HIDDEN_BUFFER_MULTIPLIER × paneHeight
+    // Tier 2 (content-hidden zone): pane ± HIDDEN_BUFFER_MULTIPLIER × paneHeight
     // WebKit reflow loop with content-visibility toggling — skip on WebKit
     const useContentHidden = !Platform.isIosApp;
     const hiddenTop = scrollTop - paneHeight * HIDDEN_BUFFER_MULTIPLIER;
@@ -2870,7 +3109,7 @@ export class DynamicViewsGridView extends BasesView {
             if (!hasUnmounted) continue;
             if (rowBottom <= visibleTop || rowTop >= visibleBottom) continue;
 
-            // Actual viewport (not mount zone) — prioritize rows the user can see
+            // Actual pane (not mount zone) — prioritize rows the user can see
             const isVisible =
               rowTop < scrollTop + paneHeight && rowBottom > scrollTop;
             if (isVisible) hasVisibleUnmounted = true;
@@ -3150,7 +3389,7 @@ export class DynamicViewsGridView extends BasesView {
     });
   }
 
-  /** Release height locks from scroll mounts (iOS only).
+  /** Release height locks from scroll mounts (WebKit only).
    *  Deferred during WebKit momentum — row reflow from lock release causes
    *  visible content shifts during compositor deceleration. */
   private releaseScrollMountLocks(): void {
@@ -3577,6 +3816,39 @@ export class DynamicViewsGridView extends BasesView {
       }
     });
   }
+  /** One-time unbounded mount for deferred-mount restore.
+   *  Mounts all items in pane ± 1 paneHeight, then runs post-mount processing. */
+  private mountDeferredCards(): void {
+    if (!this.virtualItems.length || !this.lastRenderedSettings) return;
+    const scrollTop = this.scrollEl.scrollTop;
+    const paneHeight = this.scrollEl.clientHeight;
+    const settings = this.lastRenderedSettings;
+
+    const mountTop = scrollTop - paneHeight;
+    const mountBottom = scrollTop + paneHeight * 2;
+
+    for (const item of this.virtualItems) {
+      if (item.el) continue;
+      if (item.height === 0) continue;
+      const offset = this.cachedGroupOffsets.get(item.groupKey);
+      if (offset === undefined) continue;
+      const itemTop = offset + item.y;
+      const itemBottom = itemTop + item.height;
+      if (itemBottom > mountTop && itemTop < mountBottom) {
+        this.mountVirtualItem(item, settings);
+      }
+    }
+
+    // Cache card vertical padding from first real card (placeholders have no padding)
+    const firstMounted = this.virtualItems.find((it) => it.el);
+    if (firstMounted?.el) this.cacheCardVerticalPadding(firstMounted.el);
+
+    // Post-mount processing via existing pipeline
+    if (this.newlyMountedEls.length > 0) {
+      this.onMountRemeasure();
+    }
+  }
+
   // #endregion Virtual scroll
   // #region Keyboard navigation
   private getVirtualRects(): VirtualCardRect[] {
@@ -3657,6 +3929,87 @@ export class DynamicViewsGridView extends BasesView {
     this.containerEl.focus({ preventScroll: true });
   }
   // #endregion Cleanup
+
+  getEphemeralState(): Record<string, unknown> {
+    if (!this.scrollEl?.isConnected || this.scrollEl.scrollHeight <= 0)
+      return {};
+    this.updateCachedGroupOffsets(true);
+    const anchor = getScrollAnchor(
+      this.virtualItems,
+      this.cachedGroupOffsets,
+      this.scrollEl.scrollTop,
+      this.scrollEl.clientHeight
+    );
+    if (!anchor) return {};
+    return {
+      scroll: {
+        anchorPath: anchor.path,
+        anchorOffset: anchor.offset,
+        anchorIndex: anchor.index,
+        columns: this.lastColumnCount,
+        count: this.virtualItemCount,
+        height: this.scrollEl.scrollHeight,
+      } satisfies AnchorScrollState,
+    };
+  }
+
+  setEphemeralState(state: Record<string, unknown>): void {
+    if (!state || typeof state !== 'object' || !('scroll' in state)) return;
+    const s = state.scroll as Record<string, unknown>;
+    if (!s || typeof s !== 'object') return;
+    if ('anchorPath' in s && typeof s.anchorPath === 'string') {
+      if (
+        typeof s.anchorOffset !== 'number' ||
+        typeof s.anchorIndex !== 'number' ||
+        typeof s.columns !== 'number' ||
+        typeof s.count !== 'number' ||
+        typeof s.height !== 'number'
+      )
+        return;
+      const scrollState = s as unknown as AnchorScrollState;
+      this.scrollRestoreState = { ...scrollState };
+      this.deferredMountState = { ...scrollState };
+      return;
+    }
+    if (
+      typeof s.top === 'number' &&
+      typeof s.count === 'number' &&
+      typeof s.height === 'number'
+    ) {
+      const legacy = s as unknown as LegacyScrollState;
+      this.scrollRestoreState = { ...legacy };
+      this.deferredMountState = { ...legacy };
+    }
+  }
+
+  /** Consume pending ephemeral scroll (back/forward nav). Returns true if consumed. */
+  private restoreEphemeralScroll(): boolean {
+    if (!this.scrollRestoreState) return false;
+    const state = this.scrollRestoreState;
+    this.scrollRestoreState = null;
+    if (!this.scrollEl.isConnected || this.scrollEl.scrollHeight <= 0)
+      return false;
+
+    if ('anchorPath' in state) {
+      this.updateCachedGroupOffsets(true);
+      const anchorTop = getAnchorTop(
+        state.anchorPath,
+        this.virtualItems,
+        this.cachedGroupOffsets
+      );
+      if (anchorTop === null) {
+        this.scrollEl.scrollTop = 0;
+      } else if (this.lastColumnCount === state.columns) {
+        this.scrollEl.scrollTop = anchorTop + state.anchorOffset;
+      } else {
+        this.scrollEl.scrollTop = anchorTop;
+      }
+    } else {
+      this.scrollEl.scrollTop = state.top;
+    }
+    this.scrollPreservation?.clearSavedPosition();
+    return true;
+  }
 }
 
 /** Export options for registration — type assertion needed because Obsidian's

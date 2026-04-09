@@ -69,8 +69,8 @@ function stripTrailingPunctuation(url: string): [string, string] {
  * Capture groups:
  * 1-2: embedded wikilink (path, alias)
  * 3-4: wikilink (path, alias)
- * 5-7: embedded markdown (caption, angle path, regular path)
- * 8-10: markdown link (caption, angle path, regular path)
+ * 5-7: embedded Markdown (caption, angle path, regular path)
+ * 8-10: Markdown link (caption, angle path, regular path)
  * 11: angle bracket URL
  * 12: plain URL
  */
@@ -123,7 +123,7 @@ export function findLinksInText(text: string): TextSegment[] {
       match[6] !== undefined ||
       match[7] !== undefined
     ) {
-      // Group 5-7: Embedded markdown ![caption](<path>) or ![caption](path)
+      // Group 5-7: Embedded Markdown ![caption](<path>) or ![caption](path)
       const caption = match[5] || '';
       const path = normalizePath(match[6] || match[7]);
       const external = hasUriScheme(path);

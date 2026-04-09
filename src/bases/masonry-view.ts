@@ -70,6 +70,7 @@ import {
   HIDDEN_BUFFER_MULTIPLIER,
   SCROLL_MOUNT_BUDGET,
   GRID_ROW_BUDGET,
+  DEFERRED_MOUNT_THRESHOLD,
   computeHoverScale,
 } from '../shared/constants';
 import {
@@ -117,6 +118,9 @@ import type {
   ScrollThrottleState,
   SortState,
   FocusState,
+  AnchorScrollState,
+  LegacyScrollState,
+  ScrollRestoreState,
 } from '../types';
 import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
 import { setupStickyHeaderObserver } from './sticky-header';
@@ -128,6 +132,9 @@ import {
   type VirtualItem,
   measureScalableHeight,
   estimateUnmountedHeight,
+  getScrollAnchor,
+  getAnchorTop,
+  type ScrollAnchor,
 } from '../shared/virtual-scroll';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -169,6 +176,9 @@ export class DynamicViewsMasonryView extends BasesView {
     return this.app.plugins.plugins['dynamic-views'] as DynamicViews;
   }
   private scrollPreservation: ScrollPreservation | null = null;
+  private scrollRestoreState: ScrollRestoreState = null;
+  /** Persists across render cycles for deferred mount (see Grid's docstring) */
+  private deferredMountState: ScrollRestoreState = null;
   private cardRenderer: SharedCardRenderer;
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
@@ -242,7 +252,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private lastLayoutWidth: number = 0;
 
   private masonryContainer: HTMLElement | null = null;
-  private displayedCount: number = 50;
+  private virtualItemCount: number = 50;
   private isLoading: boolean = false;
   private batchLayoutPending: boolean = false;
   private pendingImageRelayout: boolean = false;
@@ -255,7 +265,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private scrollResizeObserver: ResizeObserver | null = null;
   private containerRef: { current: HTMLElement | null } = { current: null };
-  private previousDisplayedCount: number = 0;
+  private previousVirtualItemCount: number = 0;
   private layoutResizeObserver: ResizeObserver | null = null;
   private cardResizeObserver: ResizeObserver | null = null;
   private observerWindow: (Window & typeof globalThis) | null = null;
@@ -281,6 +291,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private lastScrollCorrectionTime = 0;
   private postResizeIdleTimeout: ReturnType<typeof setTimeout> | null = null;
   private expectedIncrementalHeight: number | null = null;
+  /** Estimated card height from ephemeral scroll state — used for deferred mount layout */
+  private ephemeralEstimatedHeight: number | null = null;
   private totalEntries: number = 0;
 
   /** Recalculate totalEntries excluding collapsed groups. Called on
@@ -385,7 +397,7 @@ export class DynamicViewsMasonryView extends BasesView {
         void this.expandGroup(collapseKey, groupEl);
       }
     } else {
-      // Collapsing: destroy cards, then scroll header to viewport top — all
+      // Collapsing: destroy cards, then scroll header to pane top — all
       // synchronous so no paint occurs between removing sticky and adjusting
       // scroll (prevents flicker). Empty first so the measurement reflects
       // the final layout (group content removed).
@@ -410,8 +422,8 @@ export class DynamicViewsMasonryView extends BasesView {
         );
         this.rebuildGroupIndex();
         this.recalculateTotalEntries();
-        this.displayedCount = this.virtualItems.length;
-        this.previousDisplayedCount = this.displayedCount;
+        this.virtualItemCount = this.virtualItems.length;
+        this.previousVirtualItemCount = this.virtualItemCount;
         this.groupLayoutResults.delete(collapseGroupKey);
         this.cachedGroupOffsets.delete(collapseGroupKey);
         this.groupOffsetsDirty = true;
@@ -420,7 +432,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.renderState.lastRenderHash = '';
       const headerTop = headerEl.getBoundingClientRect().top;
       const scrollTop = this.scrollEl.getBoundingClientRect().top;
-      // Only scroll when the header was stuck (now above the viewport)
+      // Only scroll when the header was stuck (now above the pane)
       if (headerTop < scrollTop) {
         this.scrollEl.scrollTop += headerTop - scrollTop;
       }
@@ -540,8 +552,8 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     this.rebuildGroupIndex();
     this.recalculateTotalEntries();
-    this.displayedCount = this.virtualItems.length;
-    this.previousDisplayedCount = this.displayedCount;
+    this.virtualItemCount = this.virtualItems.length;
+    this.previousVirtualItemCount = this.virtualItemCount;
 
     // Masonry layout calculation + post-render hooks
     // Phase 1.5 inside updateLayoutRef handles syncResponsiveClasses for all
@@ -678,7 +690,7 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Check if more content needed after layout completes, and load if so */
   private checkAndLoadMore(settings: ResolvedSettings): void {
     // Skip if already loading or all items displayed
-    if (this.isLoading || this.displayedCount >= this.totalEntries) return;
+    if (this.isLoading || this.virtualItemCount >= this.totalEntries) return;
 
     const scrollContainer = this.scrollEl;
     if (!scrollContainer?.isConnected) return;
@@ -692,8 +704,8 @@ export class DynamicViewsMasonryView extends BasesView {
     if (distanceFromBottom < threshold) {
       this.isLoading = true;
       const batchSize = this.getBatchSize(settings);
-      this.displayedCount = Math.min(
-        this.displayedCount + batchSize,
+      this.virtualItemCount = Math.min(
+        this.virtualItemCount + batchSize,
         this.totalEntries
       );
       void this.appendBatch(settings);
@@ -747,7 +759,7 @@ export class DynamicViewsMasonryView extends BasesView {
     const pluginSettings = this.plugin.persistenceManager.getPluginSettings();
 
     // Placeholder - calculated dynamically on first render
-    this.displayedCount = 0;
+    this.virtualItemCount = 0;
 
     // Setup swipe prevention on mobile if enabled
     setupBasesSwipePrevention(this.containerEl, this.app, pluginSettings);
@@ -1187,7 +1199,9 @@ export class DynamicViewsMasonryView extends BasesView {
             }
           }, delay);
         }
-        this.scrollPreservation?.restoreAfterRender();
+        if (!this.restoreEphemeralScroll()) {
+          this.scrollPreservation?.restoreAfterRender();
+        }
 
         // Viewport may be underfilled after CSS-only setting change or
         // duplicate onDataUpdated killing the batch chain mid-append.
@@ -1263,6 +1277,19 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
+      // Save scroll anchor before rebuild (config change restore)
+      let configChangeAnchor: ScrollAnchor | null = null;
+      let configChangeColumns = this.lastLayoutColumnCount;
+      if (this.virtualItems.length > 0 && pathsUnchanged) {
+        this.updateCachedGroupOffsets(true);
+        configChangeAnchor = getScrollAnchor(
+          this.virtualItems,
+          this.cachedGroupOffsets,
+          this.scrollEl.scrollTop,
+          this.scrollEl.clientHeight
+        );
+      }
+
       // Scroll to top when the card set changed (e.g., search narrowed/broadened
       // results). pathsUnchanged is false when the file list differs — query
       // changes that produce identical results are caught by the renderHash
@@ -1279,8 +1306,8 @@ export class DynamicViewsMasonryView extends BasesView {
         this.contentCache.images = {};
         this.contentCache.hasImageAvailable = {};
         // Only scroll to top + reset if batches were appended
-        if (this.displayedCount > initialCount) {
-          this.displayedCount = 0;
+        if (this.virtualItemCount > initialCount) {
+          this.virtualItemCount = 0;
           this.scrollEl.scrollTop = 0;
           this.scrollPreservation?.clearSavedPosition();
         }
@@ -1293,9 +1320,74 @@ export class DynamicViewsMasonryView extends BasesView {
       this.lastTitleProperty = settings.titleProperty;
       this.lastSubtitleProperty = settings.subtitleProperty;
 
-      // Set displayedCount when starting fresh (first render or after reset)
-      if (this.displayedCount === 0) {
-        this.displayedCount = initialCount;
+      // Recompute anchor index against current entry set (order may have changed)
+      if (configChangeAnchor) {
+        const currentIndex = allEntries.findIndex(
+          (e: BasesEntry) => e.file.path === configChangeAnchor!.path
+        );
+        if (currentIndex >= 0) {
+          configChangeAnchor = { ...configChangeAnchor, index: currentIndex };
+        } else {
+          configChangeAnchor = null;
+        }
+      }
+
+      // Set virtualItemCount when starting fresh (first render or after reset).
+      // Ephemeral scroll (back/forward nav) loads only enough cards to cover
+      // the saved scrollTop + one pane height — not the full saved count.
+      if (this.virtualItemCount === 0) {
+        if (this.scrollRestoreState) {
+          const s = this.scrollRestoreState;
+          const paneHeight = this.scrollEl.clientHeight || 1000;
+          if ('anchorIndex' in s) {
+            const paneItems = Math.ceil(
+              (s.count * paneHeight) / (s.height || 1)
+            );
+            this.virtualItemCount = Math.min(
+              s.count,
+              s.anchorIndex + 2 * paneItems
+            );
+          } else {
+            const neededFraction = Math.min(
+              (s.top + paneHeight) / (s.height || 1),
+              1
+            );
+            this.virtualItemCount = Math.ceil(s.count * neededFraction * 1.2);
+          }
+          const total = this.totalEntries || this.scrollRestoreState.count;
+          this.virtualItemCount = Math.max(
+            initialCount,
+            Math.min(this.virtualItemCount, total)
+          );
+        } else {
+          this.virtualItemCount = initialCount;
+        }
+      }
+
+      // Expand virtualItemCount to include anchor card for config change restore
+      if (
+        configChangeAnchor &&
+        this.virtualItemCount < configChangeAnchor.index + 1
+      ) {
+        const paneHeight = this.scrollEl.clientHeight || 1000;
+        const totalItems = Math.max(
+          1,
+          this.virtualItems.length || configChangeAnchor.index
+        );
+        const scrollHeight = this.scrollEl.scrollHeight || 1;
+        const paneItems = Math.ceil(paneHeight / (scrollHeight / totalItems));
+        this.virtualItemCount = Math.min(
+          allEntries.length,
+          configChangeAnchor.index + 2 * paneItems
+        );
+      }
+
+      const useDeferredMount =
+        !!this.deferredMountState &&
+        this.virtualItemCount > DEFERRED_MOUNT_THRESHOLD;
+      if (useDeferredMount) {
+        this.ephemeralEstimatedHeight =
+          this.deferredMountState!.height / this.deferredMountState!.count;
       }
 
       // Set CSS variable for image aspect ratio
@@ -1326,9 +1418,9 @@ export class DynamicViewsMasonryView extends BasesView {
       // Determine grouping state early — collapse state only applies when grouped
       const isGrouped = !!groupByProperty;
 
-      // Collect visible entries across all groups (up to displayedCount), skipping collapsed
+      // Collect visible entries across all groups (up to virtualItemCount), skipping collapsed
       const visibleEntries: BasesEntry[] = [];
-      let remainingCount = this.displayedCount;
+      let remainingCount = this.virtualItemCount;
 
       for (const processedGroup of processedGroups) {
         if (remainingCount <= 0) break;
@@ -1348,7 +1440,8 @@ export class DynamicViewsMasonryView extends BasesView {
         remainingCount -= entriesToTake;
       }
 
-      // Load text previews and images ONLY for displayed entries
+      // Load text previews and images for all displayed entries.
+      // Instance cache makes back-nav loads near-instant (all cache hits).
       await loadContentForEntries(
         visibleEntries,
         settings,
@@ -1376,8 +1469,11 @@ export class DynamicViewsMasonryView extends BasesView {
       // Clear and re-render
       this.containerEl.empty();
 
-      // Reset batch append state for full re-render
+      // Reset batch append state for full re-render — preserve
+      // ephemeralEstimatedHeight (set above, needed in the card loop below)
+      const savedEstimatedHeight = this.ephemeralEstimatedHeight;
       this.resetVirtualState();
+      this.ephemeralEstimatedHeight = savedEstimatedHeight;
 
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
@@ -1425,7 +1521,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
           // Budget check: stop rendering cards once limit reached,
           // but always render collapsed group headers (they cost 0 cards)
-          if (displayedSoFar >= this.displayedCount && !isCollapsed) break;
+          if (displayedSoFar >= this.virtualItemCount && !isCollapsed) break;
 
           // Wrap header + group in a section so sticky scopes to the group's content
           const sectionEl = this.masonryContainer.createDiv(
@@ -1456,7 +1552,7 @@ export class DynamicViewsMasonryView extends BasesView {
           if (isCollapsed) continue;
         } else {
           // Ungrouped: no collapse, budget check applies normally
-          if (displayedSoFar >= this.displayedCount) break;
+          if (displayedSoFar >= this.virtualItemCount) break;
           // Render directly to masonry container
           cardContainer = this.masonryContainer;
           groupKey = undefined;
@@ -1465,7 +1561,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
         const entriesToDisplay = Math.min(
           processedGroup.entries.length,
-          this.displayedCount - displayedSoFar
+          this.virtualItemCount - displayedSoFar
         );
         if (entriesToDisplay === 0) continue;
 
@@ -1487,22 +1583,44 @@ export class DynamicViewsMasonryView extends BasesView {
         for (let i = 0; i < cards.length; i++) {
           const card = cards[i];
           const entry = groupEntries[i];
-          const handle = this.renderCard(
-            cardContainer,
-            card,
-            entry,
-            displayedSoFar + i,
-            settings
-          );
-          this.virtualItems.push(
-            this.createVirtualItem(
-              displayedSoFar + i,
-              card,
+          if (useDeferredMount) {
+            this.virtualItems.push({
+              index: displayedSoFar + i,
+              x: 0,
+              y: 0,
+              width: 0,
+              height: this.ephemeralEstimatedHeight!,
+              measuredHeight: 0,
+              measuredAtWidth: 0,
+              scalableHeight: 0,
+              fixedHeight: 0,
+              col: 0,
+              cardData: card,
               entry,
               groupKey,
-              handle
-            )
-          );
+              compactStacked: false,
+              hasBeenMounted: false,
+              el: null,
+              handle: null,
+            });
+          } else {
+            const handle = this.renderCard(
+              cardContainer,
+              card,
+              entry,
+              displayedSoFar + i,
+              settings
+            );
+            this.virtualItems.push(
+              this.createVirtualItem(
+                displayedSoFar + i,
+                card,
+                entry,
+                groupKey,
+                handle
+              )
+            );
+          }
         }
 
         displayedSoFar += entriesToDisplay;
@@ -1513,28 +1631,32 @@ export class DynamicViewsMasonryView extends BasesView {
       }
 
       // Track state for batch append and end indicator
-      this.previousDisplayedCount = displayedSoFar;
+      this.previousVirtualItemCount = displayedSoFar;
       this.rebuildGroupIndex();
 
-      // Initial layout calculation (sets inline width on cards)
-      if (this.updateLayoutRef.current) {
+      // Initial layout — deferred mount uses DOM-free layout with estimated heights
+      if (useDeferredMount) {
+        this.runDeferredLayout(settings);
+      } else if (this.updateLayoutRef.current) {
         this.updateLayoutRef.current('initial-render');
       }
 
       // Responsive classes handled inside updateLayoutRef Phase 1.5
       if (this.masonryContainer) {
-        // initializeTextPreviewClamp must stay synchronous — writes
-        // -webkit-line-clamp / display:none in keep-newlines mode,
-        // which changes card heights. No-op when keep-newlines is OFF.
-        initializeTextPreviewClamp(this.masonryContainer);
+        if (!useDeferredMount) {
+          // initializeTextPreviewClamp must stay synchronous — writes
+          // -webkit-line-clamp / display:none in keep-newlines mode,
+          // which changes card heights. No-op when keep-newlines is OFF.
+          initializeTextPreviewClamp(this.masonryContainer);
 
-        // Defer cosmetic reads to RAF — avoids forcing a reflow after
-        // Phase 4 position writes. One-frame delay is invisible.
-        const mc = this.masonryContainer;
-        this.win.requestAnimationFrame(() => {
-          if (!mc?.isConnected) return;
-          initializeScrollGradients(mc);
-        });
+          // Defer cosmetic reads to RAF — avoids forcing a reflow after
+          // Phase 4 position writes. One-frame delay is invisible.
+          const mc = this.masonryContainer;
+          this.win.requestAnimationFrame(() => {
+            if (!mc?.isConnected) return;
+            initializeScrollGradients(mc);
+          });
+        }
 
         // Rebuild sticky header observer for all non-collapsed group headings
         this.stickyHeaders?.disconnect();
@@ -1551,20 +1673,22 @@ export class DynamicViewsMasonryView extends BasesView {
         }
       }
 
-      // Safety net: delayed remeasure catches slow async height changes
-      // (uncached images, text layout) that the double-rAF deferred remeasure misses.
-      // Cancelled if remeasureAndReposition runs from RO or image-load before this fires.
-      if (this.initialRemeasureTimeout !== null) {
-        clearTimeout(this.initialRemeasureTimeout);
+      if (!useDeferredMount) {
+        // Safety net: delayed remeasure catches slow async height changes
+        // (uncached images, text layout) that the double-rAF deferred remeasure misses.
+        // Cancelled if remeasureAndReposition runs from RO or image-load before this fires.
+        if (this.initialRemeasureTimeout !== null) {
+          clearTimeout(this.initialRemeasureTimeout);
+        }
+        this.initialRemeasureTimeout = setTimeout(() => {
+          this.initialRemeasureTimeout = null;
+          if (!this.containerEl?.isConnected) return;
+          if (this.batchLayoutPending) return;
+          if (this.resizeCorrectionTimeout !== null) return;
+          if (this.postResizeScrollActive) return;
+          this.remeasureAndReposition();
+        }, INITIAL_REMEASURE_MS);
       }
-      this.initialRemeasureTimeout = setTimeout(() => {
-        this.initialRemeasureTimeout = null;
-        if (!this.containerEl?.isConnected) return;
-        if (this.batchLayoutPending) return;
-        if (this.resizeCorrectionTimeout !== null) return;
-        if (this.postResizeScrollActive) return;
-        this.remeasureAndReposition();
-      }, INITIAL_REMEASURE_MS);
 
       // Update total entries for end indicator (excludes collapsed groups)
       this.recalculateTotalEntries();
@@ -1573,7 +1697,33 @@ export class DynamicViewsMasonryView extends BasesView {
       this.setupInfiniteScroll(settings);
 
       // Restore scroll position after render
-      this.scrollPreservation?.restoreAfterRender();
+      if (!this.restoreEphemeralScroll()) {
+        if (configChangeAnchor) {
+          this.updateCachedGroupOffsets(true);
+          const anchorTop = getAnchorTop(
+            configChangeAnchor.path,
+            this.virtualItems,
+            this.cachedGroupOffsets
+          );
+          if (anchorTop !== null) {
+            if (this.lastLayoutColumnCount === configChangeColumns) {
+              this.scrollEl.scrollTop = anchorTop + configChangeAnchor.offset;
+            } else {
+              this.scrollEl.scrollTop = anchorTop;
+            }
+          }
+        } else {
+          this.scrollPreservation?.restoreAfterRender();
+        }
+      }
+
+      if (useDeferredMount) {
+        // Deferred mount: enable virtual scroll and mount pane cards
+        this.hasUserScrolled = true;
+        this.updateCachedGroupOffsets(true);
+        this.mountDeferredCards();
+        this.deferredMountState = null;
+      }
 
       // Remove height preservation now that scroll is restored
       this.containerEl.removeClass('dynamic-views-height-preserved');
@@ -1747,6 +1897,16 @@ export class DynamicViewsMasonryView extends BasesView {
         const columns = dims.columns;
         cardWidth = dims.cardWidth;
 
+        // Anchor save for scroll restoration after layout change
+        this.updateCachedGroupOffsets(true);
+        const resizeAnchor = getScrollAnchor(
+          this.virtualItems,
+          this.cachedGroupOffsets,
+          this.scrollEl.scrollTop,
+          this.scrollEl.clientHeight
+        );
+        const savedColumns = this.lastLayoutColumnCount;
+
         // Store for syncVirtualScroll's post-mount remeasure
         this.lastLayoutCardWidth = cardWidth;
         this.lastLayoutColumnCount = columns;
@@ -1784,7 +1944,7 @@ export class DynamicViewsMasonryView extends BasesView {
               // Pre-read scroll metrics before style writes to avoid forced reflow
               // in syncVirtualScroll (scrollTop + clientHeight trigger reflow
               // after inline style changes to child elements)
-              const scrollTop = this.scrollEl.scrollTop;
+              let scrollTop = this.scrollEl.scrollTop;
               const paneHeight = this.scrollEl.clientHeight;
               for (const groupKey of this.virtualItemsByGroup.keys()) {
                 const groupItems = this.virtualItemsByGroup.get(groupKey)!;
@@ -1828,8 +1988,24 @@ export class DynamicViewsMasonryView extends BasesView {
               this.lastLayoutWidth = containerWidth;
               // Group container heights changed — update offsets before sync.
               // Without this, syncVirtualScroll uses stale offsets and mounts
-              // cards in wrong groups (blank viewport on grouped masonry resize).
+              // cards in wrong groups (blank pane on grouped masonry resize).
               this.refreshGroupOffsets(oldContainerHeightsFastPath);
+              if (resizeAnchor) {
+                const anchorTop = getAnchorTop(
+                  resizeAnchor.path,
+                  this.virtualItems,
+                  this.cachedGroupOffsets
+                );
+                if (anchorTop !== null) {
+                  if (this.lastLayoutColumnCount === savedColumns) {
+                    this.scrollEl.scrollTop = anchorTop + resizeAnchor.offset;
+                    scrollTop = anchorTop + resizeAnchor.offset;
+                  } else {
+                    this.scrollEl.scrollTop = anchorTop;
+                    scrollTop = anchorTop;
+                  }
+                }
+              }
               this.syncVirtualScroll({ scrollTop, paneHeight });
               fastPathHandledSync = true;
               return;
@@ -1914,7 +2090,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
             // DOM measurement branch handles its own sync — set flag so `finally` skips it.
             // Must sync after correction: re-measured heights shift positions, potentially
-            // moving items in/out of viewport range.
+            // moving items in/out of pane range.
             this.refreshGroupOffsets(oldContainerHeightsFastPath);
             this.syncVirtualScroll();
             fastPathHandledSync = true;
@@ -2376,7 +2552,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // each column so we can pick the weighted-median compensation after
     // relayout — minimizes total visible displacement across all columns
     const scrollTop = this.scrollEl.scrollTop;
-    const viewportBottom = scrollTop + this.scrollEl.clientHeight;
+    const paneBottom = scrollTop + this.scrollEl.clientHeight;
 
     interface ColumnAnchor {
       item: VirtualItem;
@@ -2394,9 +2570,9 @@ export class DynamicViewsMasonryView extends BasesView {
       if (cardBottom > scrollTop) {
         seenCols.add(item.col);
         const visibleTop = Math.max(absY, scrollTop);
-        const visibleBottom = Math.min(cardBottom, viewportBottom);
+        const visibleBottom = Math.min(cardBottom, paneBottom);
         const visiblePx = Math.max(0, visibleBottom - visibleTop);
-        // Skip mounted cards beyond viewport (in buffer zone)
+        // Skip mounted cards beyond pane (in buffer zone)
         if (visiblePx > 0) {
           columnAnchors.push({ item, absY, visiblePx });
         }
@@ -2528,6 +2704,85 @@ export class DynamicViewsMasonryView extends BasesView {
       }, MASONRY_CORRECTION_MS);
     }
     return true;
+  }
+
+  /** Run layout with estimated heights — no DOM reads. Used by deferred mount to compute positions before any cards are mounted. */
+  private runDeferredLayout(settings: ResolvedSettings): void {
+    if (!this.masonryContainer) return;
+
+    const containerWidth = Math.floor(
+      this.masonryContainer.getBoundingClientRect().width
+    );
+    if (containerWidth === 0) return;
+
+    const gap = getCardSpacing(this.containerEl);
+    const minColumns = settings.minimumColumns;
+    const dims = calculateMasonryDimensions({
+      containerWidth,
+      cardSize: settings.cardSize,
+      minColumns,
+      gap,
+    });
+    const { columns, cardWidth } = dims;
+
+    this.lastLayoutCardWidth = cardWidth;
+    this.lastLayoutColumnCount = columns;
+    this.lastLayoutGap = gap;
+    this.lastLayoutWidth = containerWidth;
+
+    const isGrouped = this.containerEl.classList.contains('is-grouped');
+
+    if (isGrouped) {
+      const groups = Array.from(
+        this.masonryContainer.querySelectorAll<HTMLElement>(
+          '.bases-cards-group'
+        )
+      );
+      for (const groupEl of groups) {
+        const groupKey = getGroupKeyDataset(groupEl);
+        const groupItems = this.virtualItemsByGroup.get(groupKey) ?? [];
+        if (groupItems.length === 0) continue;
+
+        const groupHeights = groupItems.map((item) => item.height);
+        const result = calculateMasonryLayout({
+          cards: Array.from<HTMLElement>({ length: groupItems.length }),
+          containerWidth,
+          cardSize: settings.cardSize,
+          minColumns,
+          gap,
+          heights: groupHeights,
+        });
+
+        groupEl.classList.add('masonry-container');
+        groupEl.style.setProperty(
+          '--masonry-height',
+          `${result.containerHeight}px`
+        );
+
+        result.measuredAtCardWidth = cardWidth;
+        this.groupLayoutResults.set(groupKey, result);
+        this.updateVirtualItemPositions(groupKey, result);
+      }
+    } else {
+      const heights = this.virtualItems.map((item) => item.height);
+      const result = calculateMasonryLayout({
+        cards: Array.from<HTMLElement>({ length: this.virtualItems.length }),
+        containerWidth,
+        cardSize: settings.cardSize,
+        minColumns,
+        gap,
+        heights,
+      });
+
+      this.masonryContainer.style.setProperty(
+        '--masonry-height',
+        `${result.containerHeight}px`
+      );
+
+      result.measuredAtCardWidth = cardWidth;
+      this.groupLayoutResults.set(undefined, result);
+      this.updateVirtualItemPositions(undefined, result);
+    }
   }
   // #endregion Layout engine
   // #region Layout helpers
@@ -2788,7 +3043,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   /** Clear all virtual scroll state for a full re-render. */
   private resetVirtualState(): void {
-    this.previousDisplayedCount = 0;
+    this.previousVirtualItemCount = 0;
     this.lastGroup.key = undefined;
     this.lastGroup.container = null;
     this.groupLayoutResults.clear();
@@ -2813,6 +3068,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.groupOffsetsDirty = true;
     this.hasUserScrolled = false;
     this.lastLayoutColumnCount = 0;
+    this.ephemeralEstimatedHeight = null;
   }
 
   private cacheCardVerticalPadding(el: HTMLElement): void {
@@ -2831,6 +3087,20 @@ export class DynamicViewsMasonryView extends BasesView {
     container: HTMLElement,
     settings: ResolvedSettings
   ): void {
+    // Deferred mount creates CardData before background content loads.
+    // Re-read from the now-warm instance cache so mounted cards have content.
+    if (!item.hasBeenMounted) {
+      const path = item.cardData.path;
+      const preview = this.contentCache.textPreviews[path];
+      if (preview && !item.cardData.textPreview) {
+        item.cardData.textPreview = preview;
+      }
+      const img = this.contentCache.images[path];
+      if (img && !item.cardData.imageUrl) {
+        item.cardData.imageUrl = img;
+      }
+    }
+
     const handle = this.renderCard(
       container,
       item.cardData,
@@ -2926,11 +3196,11 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.cachedGroupOffsets.size === 0) return;
     const offsets = this.cachedGroupOffsets;
 
-    // Tier 1 (mount zone): viewport ± 1× paneHeight
+    // Tier 1 (mount zone): pane ± 1× paneHeight
     const mountTop = scrollTop - paneHeight;
     const mountBottom = scrollTop + paneHeight * 2;
 
-    // Tier 2 (content-hidden zone): desktop only — viewport ± HIDDEN_BUFFER_MULTIPLIER × paneHeight.
+    // Tier 2 (content-hidden zone): desktop only — pane ± HIDDEN_BUFFER_MULTIPLIER × paneHeight.
     // Cards mounted + measured, then content-hidden. Mobile keeps 1×P mount zone:
     // masonry lacks a momentum mount cap — 2×P mounts during flick scroll drop frames on mobile.
     const useHiddenBuffer = !Platform.isMobile;
@@ -3290,6 +3560,52 @@ export class DynamicViewsMasonryView extends BasesView {
     });
   }
 
+  /** One-time unbounded mount for deferred-mount restore. Mounts all items in pane +/- 1 paneHeight, then runs post-mount processing (responsive classes, scroll gradients, text clamp). No budget limit. */
+  private mountDeferredCards(): void {
+    if (!this.virtualItems.length || !this.lastRenderedSettings) return;
+    const scrollTop = this.scrollEl.scrollTop;
+    const paneHeight = this.scrollEl.clientHeight;
+    const settings = this.lastRenderedSettings;
+    const offsets = this.cachedGroupOffsets;
+    if (offsets.size === 0) return;
+
+    const mountTop = scrollTop - paneHeight;
+    const mountBottom = scrollTop + paneHeight * 2;
+
+    for (const item of this.virtualItems) {
+      if (item.el || item.height === 0) continue;
+      const containerOffsetY = offsets.get(item.groupKey);
+      if (containerOffsetY === undefined) continue;
+      const itemTop = containerOffsetY + item.y;
+      const itemBottom = itemTop + item.height;
+      if (itemBottom > mountTop && itemTop < mountBottom) {
+        const container = this.groupContainers.get(item.groupKey);
+        if (container) {
+          this.mountVirtualItem(item, container, settings);
+        }
+      }
+    }
+
+    // Post-mount processing — mirrors onMountRemeasure for newly mounted cards
+    if (this.newlyMountedEls.length > 0) {
+      const newEls = this.newlyMountedEls.filter((el) => el.isConnected);
+      this.newlyMountedEls.length = 0;
+      syncResponsiveClasses(newEls);
+      initializeScrollGradientsForCards(newEls);
+      initializeTextPreviewClampForCards(newEls);
+    }
+
+    // Deferred remeasure corrects estimated heights after mount
+    if (this.initialRemeasureTimeout !== null) {
+      clearTimeout(this.initialRemeasureTimeout);
+    }
+    this.initialRemeasureTimeout = setTimeout(() => {
+      this.initialRemeasureTimeout = null;
+      if (!this.containerEl?.isConnected) return;
+      this.remeasureAndReposition();
+    }, INITIAL_REMEASURE_MS);
+  }
+
   /** Mount a specific virtual item by index (for keyboard nav to unmounted cards) */
   private mountVirtualItemByIndex(index: number): HTMLElement | null {
     // O(1) when indices are contiguous (common case), O(n) fallback after group collapse
@@ -3383,7 +3699,9 @@ export class DynamicViewsMasonryView extends BasesView {
     if (this.masonryContainer) {
       initializeScrollGradients(this.masonryContainer);
     }
-    this.scrollPreservation?.restoreAfterRender();
+    if (!this.restoreEphemeralScroll()) {
+      this.scrollPreservation?.restoreAfterRender();
+    }
   }
 
   /** Update only changed cards in-place without full re-render */
@@ -3557,8 +3875,8 @@ export class DynamicViewsMasonryView extends BasesView {
       );
 
       // Capture state at start - these may change during async operations
-      const prevCount = this.previousDisplayedCount;
-      const currCount = this.displayedCount;
+      const prevCount = this.previousVirtualItemCount;
+      const currCount = this.virtualItemCount;
 
       // Collect ONLY NEW entries (from prevCount to currCount), skipping collapsed groups
       const newEntries: BasesEntry[] = [];
@@ -3752,8 +4070,8 @@ export class DynamicViewsMasonryView extends BasesView {
       }
 
       // Update state for next append - use currCount (captured at start)
-      // to ensure consistency even if this.displayedCount changed during async
-      this.previousDisplayedCount = currCount;
+      // to ensure consistency even if this.virtualItemCount changed during async
+      this.previousVirtualItemCount = currCount;
       this.rebuildGroupIndex();
 
       if (newCardsRendered > 0 && newCardsPerGroup.size > 0) {
@@ -4183,7 +4501,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
 
     // Setup ResizeObserver on masonry container to detect layout changes
-    if (this.displayedCount < this.totalEntries && this.masonryContainer) {
+    if (this.virtualItemCount < this.totalEntries && this.masonryContainer) {
       let prevHeight = this.masonryContainer.offsetHeight;
       const RO = getOwnerWindow(this.masonryContainer).ResizeObserver;
       this.scrollResizeObserver = new RO((entries) => {
@@ -4283,6 +4601,87 @@ export class DynamicViewsMasonryView extends BasesView {
   // #endregion Cleanup
   focus(): void {
     this.containerEl.focus({ preventScroll: true });
+  }
+
+  getEphemeralState(): Record<string, unknown> {
+    if (!this.scrollEl?.isConnected || this.scrollEl.scrollHeight <= 0)
+      return {};
+    this.updateCachedGroupOffsets(true);
+    const anchor = getScrollAnchor(
+      this.virtualItems,
+      this.cachedGroupOffsets,
+      this.scrollEl.scrollTop,
+      this.scrollEl.clientHeight
+    );
+    if (!anchor) return {};
+    return {
+      scroll: {
+        anchorPath: anchor.path,
+        anchorOffset: anchor.offset,
+        anchorIndex: anchor.index,
+        columns: this.lastLayoutColumnCount,
+        count: this.virtualItemCount,
+        height: this.scrollEl.scrollHeight,
+      } satisfies AnchorScrollState,
+    };
+  }
+
+  setEphemeralState(state: Record<string, unknown>): void {
+    if (!state || typeof state !== 'object' || !('scroll' in state)) return;
+    const s = state.scroll as Record<string, unknown>;
+    if (!s || typeof s !== 'object') return;
+    if ('anchorPath' in s && typeof s.anchorPath === 'string') {
+      if (
+        typeof s.anchorOffset !== 'number' ||
+        typeof s.anchorIndex !== 'number' ||
+        typeof s.columns !== 'number' ||
+        typeof s.count !== 'number' ||
+        typeof s.height !== 'number'
+      )
+        return;
+      const scrollState = s as unknown as AnchorScrollState;
+      this.scrollRestoreState = { ...scrollState };
+      this.deferredMountState = { ...scrollState };
+      return;
+    }
+    if (
+      typeof s.top === 'number' &&
+      typeof s.count === 'number' &&
+      typeof s.height === 'number'
+    ) {
+      const legacy = s as unknown as LegacyScrollState;
+      this.scrollRestoreState = { ...legacy };
+      this.deferredMountState = { ...legacy };
+    }
+  }
+
+  /** Consume pending ephemeral scroll (back/forward nav). Returns true if consumed. */
+  private restoreEphemeralScroll(): boolean {
+    if (!this.scrollRestoreState) return false;
+    const state = this.scrollRestoreState;
+    this.scrollRestoreState = null;
+    if (!this.scrollEl.isConnected || this.scrollEl.scrollHeight <= 0)
+      return false;
+
+    if ('anchorPath' in state) {
+      this.updateCachedGroupOffsets(true);
+      const anchorTop = getAnchorTop(
+        state.anchorPath,
+        this.virtualItems,
+        this.cachedGroupOffsets
+      );
+      if (anchorTop === null) {
+        this.scrollEl.scrollTop = 0;
+      } else if (this.lastLayoutColumnCount === state.columns) {
+        this.scrollEl.scrollTop = anchorTop + state.anchorOffset;
+      } else {
+        this.scrollEl.scrollTop = anchorTop;
+      }
+    } else {
+      this.scrollEl.scrollTop = state.top;
+    }
+    this.scrollPreservation?.clearSavedPosition();
+    return true;
   }
 }
 

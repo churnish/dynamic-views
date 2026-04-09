@@ -242,7 +242,7 @@ export function getBasesViewOptions(
         },
         {
           type: 'dropdown',
-          displayName: 'Show note images',
+          displayName: 'Show file images',
           key: 'fallbackToEmbeds',
           options: {
             always: 'Always',
@@ -429,7 +429,7 @@ export function getBasesViewOptions(
         },
         {
           type: 'text',
-          displayName: 'cssclasses',
+          displayName: 'CSS classes',
           key: 'cssclasses',
           placeholder: 'Comma-separated if multiple',
           default: d.cssclasses,

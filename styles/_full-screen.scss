@@ -13,7 +13,7 @@
 // Bases view-header is empty (Bases uses its own toolbar) — children
 // collapse to 0×0, so the header has no layout box. min-height creates
 // the tap shield surface. margin-top: 0 is set via .dynamic-views-tap-shield
-// class (applied by WAAPI onfinish / idle-settle) — not in the base rule,
+// class (applied by WAAPI onfinish / idle-settle) — not in the standard rule,
 // because it would misposition the header during the show animation.
 .is-android.is-phone [data-type='bases'].full-screen-active .view-header,
 .is-phone:not(.is-android) [data-type='bases'].full-screen-active .view-header {
@@ -265,16 +265,30 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   .bases-header {
   pointer-events: auto !important;
   margin-bottom: 0px !important;
+  opacity: 1 !important;
+  background: var(--dynamic-views-background-primary) !important;
 }
 
+// No full-screen-showing CSS rules for .bases-search-row on iOS — the
+// height:0→auto in-flow reflow kills WebKit UIScrollView momentum.
+// Instead, JS positions the search row as an absolute overlay (same
+// dynamic-views-show-overlay pattern as Android). Restored to normal
+// flow when full-screen-active is removed at idle settle.
 .is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.full-screen-showing
-  .bases-search-row {
+  .bases-search-row.dynamic-views-show-overlay {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 29 !important;
   pointer-events: auto !important;
+  transition: none !important;
   height: auto !important;
   overflow: visible !important;
-  margin: unset !important;
-  padding: unset !important;
+  margin: 0 !important;
+  padding: 4px 8px !important;
+  opacity: 1 !important;
+  background: var(--dynamic-views-background-primary) !important;
 }
 
 .is-phone:not(.is-android)
@@ -282,6 +296,8 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   .view-content {
   margin-top: var(--dynamic-views-view-top-spacing) !important;
   transition: none !important;
+  // Containing block for search row absolute overlay
+  position: relative;
 }
 
 // Sticky group headers: stop below status bar when bars are hidden.
@@ -328,14 +344,19 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
   top: calc(-1 * (var(--dynamic-views-safe-area-inset-top) - 1px));
 }
 
-// iOS: remove ::before gradient on show — CSS header covers the status bar.
+// iOS: expand ::before scrim to cover the full margin-top gap on show.
+// The CSS header has min-height:0 (header-show class collapses tap shield)
+// and no background — it cannot cover the gap. Without the scrim, the 99px
+// view-content margin-top gap exposes the leaf background as a white flash.
+// Same pattern as Android show scrim (line 224).
 .is-phone:not(.is-android)
   [data-type='bases'].full-screen-active.full-screen-showing::before {
-  content: none !important;
+  height: var(--dynamic-views-view-top-spacing) !important;
+  background: var(--dynamic-views-background-primary) !important;
 }
 
 // Android: ::before showing variant removed — scrim is always full-height
-// during full-screen-active (rule above base ::before). Inline styles in
+// during full-screen-active (rule above standard ::before). Inline styles in
 // applyShowInlines() handle the show state instead of classList.
 
 // Navbar layer promotion — pre-promote to compositor layer at mount (Android).

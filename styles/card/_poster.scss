@@ -202,7 +202,7 @@ body.is-ios
    ============================================ */
 
 /* Dark overlay defaults (unrevealed — identity filter with matching function list).
-   Dark is the SS default — :not([class*=]) fallback fires without SS installed. */
+   Dark is the Style Settings default — :not([class*=]) fallback fires without Style Settings installed. */
 body:is(
     .dynamic-views-poster-theme-dark,
     .dynamic-views-poster-theme-match.theme-dark,

@@ -7,9 +7,9 @@ updated: 2026-03-30
 # Grid optimization roadmap
 
 - Grid uses CSS Grid layout with virtual scroll (committed-row lock) and scroll-position-based content-visibility gating.
-- **Profiling reference**: session `39ae9fd1`. Perf trace at `/tmp/dv-manual-scroll-trace.json.gz` — M4 Pro, leisurely scroll pace. 7,000+ DOM elements; 70% of frame cost is `UpdateLayoutTree` (style recalc), not Layout/reflow.
+- **Profiling reference**: session `39ae9fd1`. Perf trace at `/tmp/dynamic-views-manual-scroll-trace.json.gz` — M4 Pro, leisurely scroll pace. 7,000+ DOM elements; 70% of frame cost is `UpdateLayoutTree` (style recalc), not Layout/reflow.
 - Grid fills in 120ms vs Masonry 62ms with identical 10-card budget — CSS Grid style invalidation cascades to all items on each insertion; absolute positioning (Masonry) is style-isolated.
-- Shared card view optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
+- Shared card views optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
 
 ## Status key
 

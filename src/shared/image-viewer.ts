@@ -492,8 +492,7 @@ function setupImageViewerGestures(
   }
 
   /**
-   * Native mobile touch handler — ported from Obsidian's built-in `mobile-image-viewer`.
-   * Deobfuscated source: archive/obsidian-native-image-viewer.js
+   * Native mobile touch handler — behavior modeled after Obsidian's built-in `mobile-image-viewer`.
    * No Panzoom — direct touch events with focal-point pinch zoom and momentum.
    */
   function attachMobileGestures(): void {

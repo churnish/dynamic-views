@@ -284,7 +284,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
         if (scrollContainer)
           scrollContainer.classList.remove('dynamic-views-scroll-locked');
         // Suppress the click synthesized from this touch (card open / image viewer).
-        // Auto-remove after 300ms — swipes don't always generate a click on iOS,
+        // Auto-remove after 300ms — swipes don't always generate a click on WebKit,
         // so a stale handler would eat the user's next deliberate tap.
         const suppress = (ev: MouseEvent) => {
           ev.stopPropagation();

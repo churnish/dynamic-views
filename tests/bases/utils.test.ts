@@ -5,6 +5,7 @@ import {
   handleTemplateToggle,
   getSortMethod,
   setupBasesSwipePrevention,
+  estimatePaneRange,
 } from '../../src/bases/utils';
 import { Notice } from 'obsidian';
 
@@ -189,7 +190,7 @@ describe('handleTemplateToggle', () => {
       expect(cooldownRef.value).not.toBeNull();
     });
 
-    it('should use correct label for masonry view type', () => {
+    it('should use correct label for Masonry view type', () => {
       const config = createMockConfig({ isTemplate: true });
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
@@ -560,5 +561,54 @@ describe('setupBasesSwipePrevention', () => {
       createMockPluginSettings(true)
     );
     expect(container.dataset.ignoreSwipe).toBeUndefined();
+  });
+});
+
+describe('estimatePaneRange', () => {
+  it('returns full range when ephemeral height is 0', () => {
+    const [start, end] = estimatePaneRange({ top: 500, height: 0 }, 1000, 100);
+    expect(start).toBe(0);
+    expect(end).toBe(100);
+  });
+
+  it('clamps endIdx to totalCount', () => {
+    const [start, end] = estimatePaneRange(
+      { top: 9500, height: 10000 },
+      1000,
+      100
+    );
+    expect(end).toBeLessThanOrEqual(100);
+    expect(start).toBeGreaterThanOrEqual(0);
+  });
+
+  it('estimates pane range for middle scroll position', () => {
+    const [start, end] = estimatePaneRange(
+      { top: 5000, height: 10000 },
+      1000,
+      1000
+    );
+    // startFraction = (5000-2000)/10000 = 0.3 → floor(300)
+    // endFraction = (5000+3000)/10000 = 0.8 → ceil(800)
+    expect(start).toBe(300);
+    expect(end).toBe(800);
+  });
+
+  it('starts at 0 for top of scroll', () => {
+    const [start, end] = estimatePaneRange(
+      { top: 0, height: 10000 },
+      1000,
+      1000
+    );
+    expect(start).toBe(0);
+    expect(end).toBeGreaterThan(0);
+  });
+
+  it('reaches totalCount for bottom of scroll', () => {
+    const [start, end] = estimatePaneRange(
+      { top: 9000, height: 10000 },
+      1000,
+      1000
+    );
+    expect(end).toBe(1000);
   });
 });

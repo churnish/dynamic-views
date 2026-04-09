@@ -508,7 +508,7 @@ interface EmbedMatch {
 
 /**
  * Extract image embeds from file content
- * Parses wikilinks, markdown images, YouTube links, and cardlink blocks
+ * Parses wikilinks, Markdown images, YouTube links, and cardlink blocks
  *
  * @param file - TFile to extract embeds from
  * @param app - Obsidian App instance
@@ -619,7 +619,7 @@ export async function extractImageEmbeds(
     }
   }
 
-  // Extract markdown image embeds
+  // Extract Markdown image embeds
   for (const match of content.matchAll(MD_IMAGE_REGEX)) {
     const position = match.index;
     if (!isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges)) {

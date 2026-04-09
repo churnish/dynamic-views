@@ -584,7 +584,7 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it('should skip markdown images in inline code', async () => {
+      it('should skip Markdown images in inline code', async () => {
         mockApp.vault.cachedRead = vi
           .fn()
           .mockResolvedValue('`![alt](https://example.com/image_9.png)`');
@@ -594,7 +594,7 @@ image: https://example.com/cover.png
         expect(result).toEqual([]);
       });
 
-      it('should skip markdown images in fenced block', async () => {
+      it('should skip Markdown images in fenced block', async () => {
         mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`
 \`\`\`
 ![alt](https://example.com/image_10.png)

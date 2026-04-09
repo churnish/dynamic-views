@@ -5,7 +5,7 @@
  * offset to defer layout mutations until scroll-idle.
  *
  * All bar animations (header, navbar slide/fade) match native Obsidian
- * full screen behavior in markdown views.
+ * full screen behavior in Markdown views.
  *
  * Guards: Platform.isPhone && body.has('auto-full-screen') && settings.fullScreen
  *
@@ -26,6 +26,7 @@ import {
   FULL_SCREEN_SPACER_RESOLVE_DELAY_MS,
   FULL_SCREEN_REVEAL_DEFER_MS,
   FULL_SCREEN_REVEAL_CANCEL_DELTA,
+  FULL_SCREEN_REVEAL_RECENCY_MS,
   FULL_SCREEN_TAP_MAX_DISTANCE,
   FULL_SCREEN_TAP_MAX_DURATION_MS,
 } from '../shared/constants';
@@ -199,6 +200,7 @@ export class FullScreenController {
   private touchStartY = 0;
   private touchStartTime = 0;
   private pendingRevealTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastFastScrollTime = 0;
 
   constructor(elements: FullScreenElements) {
     this.scrollEl = elements.scrollEl;
@@ -972,12 +974,12 @@ export class FullScreenController {
 
     // Cancel pending header-tap reveal during active downward scroll.
     // Fast momentum (delta > threshold) cancels; dying momentum allows reveal.
-    if (
-      this.pendingRevealTimer != null &&
-      delta > FULL_SCREEN_REVEAL_CANCEL_DELTA
-    ) {
-      clearTimeout(this.pendingRevealTimer);
-      this.pendingRevealTimer = null;
+    if (delta > FULL_SCREEN_REVEAL_CANCEL_DELTA) {
+      this.lastFastScrollTime = now;
+      if (this.pendingRevealTimer != null) {
+        clearTimeout(this.pendingRevealTimer);
+        this.pendingRevealTimer = null;
+      }
     }
 
     // Idle settle for pending layout (hide settle or show class removal)
@@ -1188,6 +1190,11 @@ export class FullScreenController {
       this.container.style.removeProperty('transform');
       this.container.style.removeProperty('transition');
       this.clearHeaderInlines();
+      // Clean up iOS search row overlay from show path
+      if (this.searchRowEl) {
+        this.searchRowEl.classList.remove('dynamic-views-show-overlay');
+        clearStyles(this.searchRowEl, ['top', 'opacity']);
+      }
 
       // Re-measure ONLY in clean state (no full screen classes).
       // During rapid show→hide, full-screen-active is still on the class target —
@@ -1238,7 +1245,7 @@ export class FullScreenController {
       // Don't cancelAnimations() — hide WAAPI wins over show WAAPI
       // by composite ordering (newer wins, WAAPI §4.6). Cancelling
       // show WAAPI first removes fill:forwards, flashing navbar/header
-      // to CSS base state for one frame before hide WAAPI starts.
+      // to CSS initial state for one frame before hide WAAPI starts.
       const oldAnims = [...this.barAnims];
       this.barAnims = [];
 
@@ -1366,7 +1373,7 @@ export class FullScreenController {
 
       // Start hide WAAPI BEFORE cancelling old anims. Hide wins by
       // composite ordering (newer wins, WAAPI sec 4.6). Cancelling first
-      // removes fill:forwards, flashing to CSS base state.
+      // removes fill:forwards, flashing to CSS initial state.
       const oldAnims = [...this.barAnims];
       this.barAnims = [];
 
@@ -1664,7 +1671,7 @@ export class FullScreenController {
     // tap-shield CSS (opacity:0, transform) would block the full-screen-showing
     // CSS that restores the header.
     this.clearHeaderInlines();
-    // Collapse header during show — base rule sets min-height: ~91px for
+    // Collapse header during show — standard rule sets min-height: ~91px for
     // tap shield, but during show the inflated header overlaps the toolbar.
     // CSS class sets min-height:0, z-index:30, pointer-events:auto.
     if (this.viewHeaderEl) {
@@ -1678,6 +1685,16 @@ export class FullScreenController {
 
     // Synchronous layout — single compositor pause, UIScrollView resumes
     this.leafContent.classList.add('full-screen-showing');
+
+    // Position search row as absolute overlay — the in-flow height:0→auto
+    // reflow kills WebKit UIScrollView momentum. Absolute positioning
+    // avoids reflow entirely (same pattern as Android show overlays).
+    if (this.searchRowEl) {
+      const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
+      this.searchRowEl.classList.add('dynamic-views-show-overlay');
+      setStyle(this.searchRowEl, 'top', `${toolbarH}px`, 'important');
+      setStyle(this.searchRowEl, 'opacity', '1');
+    }
 
     // iOS margin-top compensation — settled vs unsettled
     if (!this.settled) {
@@ -1725,8 +1742,9 @@ export class FullScreenController {
       this.container.style.removeProperty('transition');
 
       if (this.settled) {
-        // Re-measure totalShift — full-screen-showing restores search row
-        // height, so computeEffectiveShift() returns the live value.
+        // Re-measure totalShift — search row overlay keeps natural height
+        // (position:absolute, height:auto), so computeEffectiveShift()
+        // returns the correct live value including search.
         const { shift: liveShift } = this.computeEffectiveShift();
         if (liveShift > 0) this.totalShift = liveShift;
 
@@ -1746,6 +1764,13 @@ export class FullScreenController {
       this.scrollEl.style.removeProperty('height');
       // Cancel WAAPI before class removal — same reason as hide path
       this.cancelAnimations();
+      // Clear search row overlay before class removal — batched into
+      // the same style recalc so the search row transitions directly
+      // from overlay to natural state (no intermediate hidden frame).
+      if (this.searchRowEl) {
+        this.searchRowEl.classList.remove('dynamic-views-show-overlay');
+        clearStyles(this.searchRowEl, ['top', 'opacity']);
+      }
       this.leafContent.classList.remove('full-screen-showing');
       this.clearHeaderInlines();
       this.leafContent.classList.remove('full-screen-active');
@@ -1839,9 +1864,14 @@ export class FullScreenController {
   }
 
   /** Tap on invisible view-header (status bar zone) — deferred reveal.
-   *  Queues a 100ms timer. If downward scroll events continue (fast
-   *  momentum), onScroll cancels the timer. If scroll stops or slows
-   *  below REVEAL_CANCEL_DELTA, the timer fires and bars appear.
+   *  Two-layer momentum guard:
+   *  1. Recency check — if fast scroll events occurred within
+   *     REVEAL_RECENCY_MS, the tap landed during active momentum and
+   *     is rejected outright. Needed because mobile browsers kill fling
+   *     momentum on touch contact, zeroing the delta the timer would see.
+   *  2. Deferred timer — queues a 100ms timer. If downward scroll events
+   *     exceed REVEAL_CANCEL_DELTA within this window (e.g., desktop or
+   *     platforms that preserve momentum), onScroll cancels the timer.
    *  Matches native Obsidian's emergent behavior where fast momentum
    *  suppresses reveal but slow/dying momentum allows it. */
   private onHeaderTap(e: TouchEvent): void {
@@ -1869,6 +1899,25 @@ export class FullScreenController {
         (target as HTMLElement).click();
         return;
       }
+    }
+
+    // Mobile browsers kill fling momentum on touch contact, so the
+    // deferred timer's scroll-delta check sees ~0 and can't detect the
+    // fling. Guard against this by checking whether fast scroll events
+    // occurred recently — if so, the tap landed during active momentum.
+    if (Date.now() - this.lastFastScrollTime < FULL_SCREEN_REVEAL_RECENCY_MS) {
+      // Eat synthesized click — preventDefault on touchend alone doesn't
+      // reliably suppress it on Android WebView. Without this, the click
+      // fires ~300ms later on an invisible header child (title, back button).
+      this.viewHeaderEl?.addEventListener(
+        'click',
+        (ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+        },
+        { capture: true, once: true }
+      );
+      return;
     }
 
     if (this.pendingRevealTimer != null) clearTimeout(this.pendingRevealTimer);

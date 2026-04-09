@@ -108,7 +108,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 
 `appendBatch(totalEntries, settings)` — Triggered by scroll or ResizeObserver.
 
-1. Collect only NEW entries (from `previousDisplayedCount` to `displayedCount`).
+1. Collect only NEW entries (from `previousVirtualItemCount` to `virtualItemCount`).
 2. Set `batchLayoutPending = true` (suppresses concurrent full relayouts).
 3. Load content for new entries, render new cards into group containers.
 4. Push `VirtualItem` per new card. Track new cards per group via `newCardsPerGroup: Map<string | undefined, HTMLElement[]>`.
@@ -132,7 +132,7 @@ Output of layout calculations. Stored per group in `groupLayoutResults`.
 4. **renderHash early-exit** — when `processDataUpdate` exits early (no data/settings change). Catches CSS-only setting changes and duplicate `onDataUpdated` calls that kill in-flight batch chains via `renderState.version` mismatch.
 5. **Post-card-remeasure** — in `cardResizeObserver` RAF callback after `remeasureAndReposition()` returns true. Catches CSS-only setting changes that shrink cards without triggering a full re-render.
 
-Guards: skip if `isLoading` or `displayedCount >= totalEntries`. Skip if `distanceFromBottom >= clientHeight × PANE_MULTIPLIER`. When both `scrollHeight` and `clientHeight` are 0 (hidden tab): `0 < 0` is false — safe no-op.
+Guards: skip if `isLoading` or `virtualItemCount >= totalEntries`. Skip if `distanceFromBottom >= clientHeight × PANE_MULTIPLIER`. When both `scrollHeight` and `clientHeight` are 0 (hidden tab): `0 < 0` is false — safe no-op.
 
 ### 3. Content update fast path (`updateCardsInPlace`)
 

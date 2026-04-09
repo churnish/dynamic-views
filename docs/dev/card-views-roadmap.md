@@ -1,6 +1,6 @@
 ---
 title: Card views optimization roadmap
-description: Shared card view optimization tracking — card rendering, cleanup, property measurement, and forced reflow items that affect both Grid and Masonry.
+description: Shared card views optimization tracking — card rendering, cleanup, property measurement, and forced reflow items that affect both Grid and Masonry.
 author: 🤖 Generated with Claude Code
 updated: 2026-03-30
 ---
@@ -26,7 +26,7 @@ Shared optimizations that affect both Grid and Masonry views. Backend-specific i
 
 | Optimization | Status | Notes |
 |---|---|---|
-| Reduce `renderCard()` DOM element count | Evaluate | DV creates ~15-30 DOM elements per card (varies by features) vs MC's ~3-5. **T1: 2,657 total DOM elements, 4,485 style recalc elements for 40 cards. T12: 37 DOM mutations/card for property reorder (846 total).** DOM complexity is a background tax on every layout operation — style recalc, forced reflow, mutation handling all scale with element count. |
+| Reduce `renderCard()` DOM element count | Evaluate | Dynamic Views creates ~15-30 DOM elements per card (varies by features) vs MC's ~3-5. **T1: 2,657 total DOM elements, 4,485 style recalc elements for 40 cards. T12: 37 DOM mutations/card for property reorder (846 total).** DOM complexity is a background tax on every layout operation — style recalc, forced reflow, mutation handling all scale with element count. |
 | `appendBatch` forced reflows | Evaluate | `renderImage` reads `offsetHeight`/`offsetWidth` during card rendering in `appendBatch`, triggering forced reflow. All >2ms Layout events trace to this path. Fix: defer image layout reads to after batch insertion completes. |
 
 ## 2. Card lifecycle

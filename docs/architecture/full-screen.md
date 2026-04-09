@@ -115,6 +115,10 @@ Additional cached references (constructor):
 | `viewPadding` | `--dynamic-views-bases-view-padding` CSS variable | Scroll container padding-top (12px) — subtracted from heading sticky tops |
 | `lockedScrollHeight` | `scrollEl.offsetHeight` | Locked scroll container height — prevents flex layout from resizing during transitions |
 
+**Bases view-header zero dimensions**: Unlike Markdown views, Bases `.view-header` children (header-left, title-container, view-actions) are empty and collapse to 0x0. Explicit `min-height: calc(safe-area-inset-top + view-header-height)` is required for the tap shield to have a layout box.
+
+**Search row display:none default**: `.bases-search-row` has `display: none` when search is inactive. `measureTotalShift()` gets `offsetHeight = 0` in the common case.
+
 ### State transitions
 
 ```
@@ -361,6 +365,30 @@ When the spacer is active (Android show mode), sticky group headings need adjust
 
 Inline styles are used instead of CSS rules to avoid violating the `[data-dynamic-views-show]` descendant combinator invariant (attribute selectors matching real descendants trigger subtree-wide style recalc on Android's single-threaded compositor).
 
+### Subpixel gap compensation
+
+`--safe-area-inset-top` is non-integer (e.g., 46.095238px on Pixel 8a). Browser rounds scrim height and sticky `top` independently, creating a 1px transparent stripe. Fix: subtract 1px from sticky `top` so heading tucks under the scrim.
+
+### Sentinel stuck delay compensation
+
+IO sentinel at `top: 0` exits viewport at scrollport top (0px), but heading sticks at `safe-area-inset-top` (~45px). 45px scroll gap before `.stuck` fires. CSS offsets sentinel to `top: calc(-1 * (safe-area-inset-top - 1px))` in full-screen mode so sentinel exit aligns with heading stick point.
+
+### Stuck heading z-index unconditional
+
+Between heading entering stuck position and IO callback firing, cards painted above heading (cards have `isolation: isolate`). Fix: unconditional `z-index: 20` on all non-collapsed sticky headings. When not stuck, heading is in normal flow above grid — z-index is inert.
+
+### Scrollbar gutter border shortfall
+
+`.bases-view` has a 5px non-overlay scrollbar on Android (`offsetWidth: 411, clientWidth: 406`). Heading `::before` extended by `bases-view-padding` (12px) from heading edge, but heading is 5px narrower than viewport due to scrollbar gutter. Extended by `bases-view-padding + 6px` (covers scrollbar + 1px safety). Masonry's `overflow-clip-margin` increased to match.
+
+### Stuck heading border clipping
+
+`overflow: clip` on `.dynamic-views-masonry.bases-cards-container` clips `::after` pseudo with negative left/right offsets. Replaced with `border-bottom` on `.bases-group-heading.stuck` — stays within heading bounds, no clipping.
+
+### Obsidian hairline border
+
+`--border-width: 0.5px` resolves to `1/devicePixelRatio` CSS pixels (0.380952px on Pixel 8a, DPR 2.625) = 1 physical pixel. `--tab-outline-width` and `--divider-width` also resolve to 0.5px.
+
 ## Tap shield
 
 When bars are hidden, the header element is positioned as an invisible tap absorber in the status bar zone. Tapping this zone reveals bars.
@@ -430,7 +458,7 @@ Without the gradient swap, removing mask-image (`none` → CSS gradient) destroy
 | `full-screen-active` | Both | `hideBarsUI()` | iOS: show idle. Android: `commitSpacerResolve()` or unmount | Hides header/toolbar/search, collapses margins |
 | `full-screen-showing` | iOS only | `showBarsUI()` | Show idle | Higher-specificity overrides to restore bars |
 | `data-dynamic-views-show` | Android only | `applyShowOverlays()` | `clearShowOverlays()` | Containing block for overlays, scrim/gradient CSS |
-| `dynamic-views-grouped` | Both | Grid/masonry view (grouped) | View change | Grouped scrim variant (opaque, z-index 25) |
+| `dynamic-views-grouped` | Both | Grid/Masonry view (grouped) | View change | Grouped scrim variant (opaque, z-index 25) |
 
 ### On `.view-header`
 
@@ -472,6 +500,8 @@ Without the gradient swap, removing mask-image (`none` → CSS gradient) destroy
 | Ungrouped hide | 10 | `linear-gradient(to bottom, bg 0, transparent safe-area)` | `none` |
 | Grouped hide | 25 | `var(--dynamic-views-view-bg-color, background-primary)` | `none` |
 | Android show (`[data-dynamic-views-show]`) | inherited (10/25) | `background-primary`, full margin-top height | Grouped: `auto` |
+
+**Ungrouped scrim property ordering**: `applyShowInlines()` must set scrim background properties BEFORE `margin-top`. Setting margin-top first creates a gap; Chromium WebView renders intermediate layout within a single synchronous tick, exposing workspace background through the gradient scrim's transparent portion for one frame.
 
 ### Z-index stack (full-screen active)
 
@@ -550,6 +580,10 @@ After exemptions, bars show when:
 
 In open-on-card mode, card body taps do not reveal bars.
 
+### `lastToggleTime` on all reveal paths
+
+Both `onTouchEnd` and `onHeaderTap` must set `lastToggleTime = Date.now()` before calling `showBarsUI()`. Without it, the next scroll event fires without cooldown and immediately re-hides bars, causing flicker.
+
 ## WAAPI animation system
 
 ### Options
@@ -570,6 +604,10 @@ Show WAAPI animations are started BEFORE cancelling old hide animations. Later-c
 ### Android CSS cascade constraint
 
 WAAPI animation effects are lower in the cascade than `!important` author declarations. Android header/navbar `transform` and `opacity` must NOT be in CSS `!important` rules — they are controlled entirely via WAAPI and inline styles. iOS keeps `!important` transform/opacity in CSS class rules because it does not use WAAPI for header.
+
+### `fill:forwards` vs CSS opacity on Android WebView
+
+When CSS sets `opacity: 0` (non-`!important`) with `will-change: opacity`, WAAPI `fill: forwards` holding `opacity: 1` is unreliable after animation completion — compositor may collapse back to CSS value. Two competing WAAPs resolve reliably via composite ordering (newer wins, WAAPI section 4.6). Rule: always ensure WAAPI exists on both hide and show paths for elements with CSS opacity rules.
 
 ## Height locking
 
@@ -610,7 +648,7 @@ Three elements above the leaf (`body`, `.app-container`, `.workspace`) receive i
 - **Spacer-based hide/show**: `overflow-anchor` absorbs height changes. No `scrollTop` write in the show path.
 - **WAAPI animations**: `element.animate()` gets better compositor scheduling on the single-threaded WebView compositor than CSS transitions.
 - **Show overlay class**: `applyShowOverlays()` adds `.dynamic-views-show-overlay` (static properties) and sets inline `top` calc expressions (dynamic values). The class uses specificity 0,6,0 to beat `full-screen-active` hide rules at 0,5,0 without `!important`.
-- **`data-dynamic-views-show` attribute**: Set on `leafContent` for `::before`/`::after` pseudo CSS rules. Attribute selectors only recalc matching pseudos, not descendants.
+- **`data-dynamic-views-show` attribute**: Set on `leafContent` for `::before`/`::after` pseudo CSS rules. Attribute selectors only recalc matching pseudos, not descendants. Chromium decomposes each selector into invalidation sets by feature (classes, attributes, IDs). When `data-dynamic-views-show` changes on leafContent, only selectors containing `[data-dynamic-views-show]` trigger recalc (2 pseudo rules). No descendant combinator uses it, so zero descendant invalidation. Fundamentally different from custom properties (inheritance propagation) and body class changes (hundreds of selectors).
 - **Settle delay**: 500ms. Must exceed `FULL_SCREEN_ANIM_MS` (300ms) so WAAPI finishes before idle fires.
 - **Sustain gate**: Skipped. Chromium fling decelerates monotonically.
 - **Single-rAF**: Chromium does not collapse transitions in passive listeners.
@@ -641,3 +679,4 @@ Android WebView uses a single-threaded (synchronous) compositor — the impl thr
 16. **`full-screen-active` on leafContent, not body**: Scopes style invalidation to the leaf subtree (~360 elements) instead of the entire document (~3000+). Also prevents multi-controller races.
 17. **CSS `calc()` for toolbar positioning**: Uses `calc(var(--safe-area-inset-top) + var(--view-header-height) + headerToContentGap)` — resolves at paint time with live CSS variable values. Eliminates JS/CSS mismatch during Android orientation changes where `env(safe-area-inset-top)` oscillates.
 18. **Search row ResizeObserver dual role**: `compensateSearchRowResize()` adjusts iOS `scrollTop` when search toggles during idle (no full-screen classes) or show (`full-screen-active` + `full-screen-showing`) state — uses `borderBoxSize` from the RO entry to avoid `offsetHeight` read. `syncShowLayoutForSearch()` re-syncs Android spacer height, heading tops, and toolbarBg during active show mode. **Call order is load-bearing**: `compensateSearchRowResize()` must run first — `syncShowLayoutForSearch()` sets `programmaticScroll=true` synchronously, which would suppress the iOS compensation. Guards: `isAndroid` (skip iOS path), `barsHidden` (suppress during hide — CSS collapses search), `programmaticScroll` (suppress during settle — settle does its own compensation), `full-screen-active` without `full-screen-showing` (suppress during pure hide state).
+19. **Show bridge rapid show→hide safety**: Hide path clears container margin-top (bridge). `showBridgeActive` flag tells hide rAF to skip scrollTop reversal — scrollTop was never increased by show path, so no reversal needed.

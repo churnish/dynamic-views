@@ -28,7 +28,7 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | `src/shared/text-preview-dom.ts` | DOM updates for card text previews + per-paragraph clamping.                                               |
 | `src/utils/style-settings.ts` | CSS variable reading with cache (Style Settings integration).                                                |
 | `src/utils/property.ts`       | Property name normalization (display-name ↔ syntax-name maps).                                               |
-| `styles/_grid-masonry-shared.scss` | Shared card view CSS: container queries, view padding, groups, card foundation, content-visibility.      |
+| `styles/_grid-masonry-shared.scss` | Shared card views CSS: container queries, view padding, groups, card foundation, content-visibility.      |
 | `styles/_grid-view.scss`         | Grid-specific CSS — CSS Grid columns, subgrid groups, card sizing.                                           |
 
 ### Bases
@@ -86,8 +86,8 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 
 | Field                    | Type                                      | Purpose                                                                                                       |
 | ------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `displayedCount`         | `number`                                  | Cards currently visible (infinite scroll progress).                                                           |
-| `previousDisplayedCount` | `number`                                  | Count from last batch render (for incremental append).                                                        |
+| `virtualItemCount`         | `number`                                  | Cards currently visible (infinite scroll progress).                                                           |
+| `previousVirtualItemCount` | `number`                                  | Count from last batch render (for incremental append).                                                        |
 | `isLoading`              | `boolean`                                 | Guard: batch append in progress.                                                                              |
 | `currentCardSize`        | `number`                                  | Resolved card width setting (px).                                                                             |
 | `currentMinColumns`      | `number`                                  | Resolved minimum columns setting.                                                                             |
@@ -148,9 +148,9 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 5. **Skip if hash unchanged** — restore column CSS variable (may be lost on tab switch), restore scroll position, return early. Schedule delayed re-checks at 100/250/500ms to catch late Obsidian config updates.
 6. Check fast paths (see §2, §3 below).
 7. **Full render**:
-   - Clear content cache if settings changed. Reset `displayedCount` if batches were appended.
+   - Clear content cache if settings changed. Reset `virtualItemCount` if batches were appended.
    - Calculate column count: `max(minColumns, floor((containerWidth + gap) / (cardSize + gap)))`. Set `--dynamic-views-grid-columns` CSS variable.
-   - Process groups with shuffle logic. Collect visible entries up to `displayedCount`, skipping collapsed groups.
+   - Process groups with shuffle logic. Collect visible entries up to `virtualItemCount`, skipping collapsed groups.
    - Load text previews and images (async, cancellable via `AbortController`).
    - Preserve container height (`--dynamic-views-preserve-height`) to prevent scroll reset during DOM wipe.
    - Clear container, render group sections with headers and cards.
@@ -217,12 +217,12 @@ Triggered when only property **order** changed (not the set of properties, not o
 
 `appendBatch(totalEntries)` — triggered by scroll or initial load.
 
-1. Collect only **new** entries (from `previousDisplayedCount` to `displayedCount`), skipping collapsed groups.
+1. Collect only **new** entries (from `previousVirtualItemCount` to `virtualItemCount`), skipping collapsed groups.
 2. `isLoading` is already `true` (set by `checkAndLoadMore` before calling `appendBatch`).
 3. Load content for new entries only (cache-hit no-op for already-loaded).
 4. Render new cards into existing or new group containers. Handle group boundaries — create new group section with header when group key changes.
 5. Create `VirtualItem` for each new card during rendering. Observe with `cardResizeObserver`.
-6. Update `previousDisplayedCount` to captured `currCount`.
+6. Update `previousVirtualItemCount` to captured `currCount`.
 7. Post-insert measurement passes scoped to new cards only (see §Post-insert measurement passes).
 8. `rebuildGroupIndex()` to update indices. Measure new card positions. `updateCachedGroupOffsets()`. If virtual scrolling active (`hasUserScrolled`), cull items outside viewport. `isLayoutBusy` guard prevents `syncVirtualScroll` during append.
 9. Show end indicator if all items displayed.
@@ -239,11 +239,11 @@ Triggered when only property **order** changed (not the set of properties, not o
 Guards:
 
 1. Reads `lastRenderedSettings` — returns early if unavailable.
-2. Skip if `isLoading` or `displayedCount >= totalEntries`.
+2. Skip if `isLoading` or `virtualItemCount >= totalEntries`.
 3. Calculates `distanceFromBottom`; skips if `>= clientHeight × PANE_MULTIPLIER`.
 4. When both `scrollHeight` and `clientHeight` are 0 (hidden tab): `0 < 0` is false — safe no-op.
 
-Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped at `MAX_BATCH_SIZE`. Returns `MAX_BATCH_SIZE` as fallback when container width is 0. Advances `displayedCount` and calls `appendBatch`.
+Calls `getBatchSize(settings)` — returns `columns × ROWS_PER_COLUMN`, capped at `MAX_BATCH_SIZE`. Returns `MAX_BATCH_SIZE` as fallback when container width is 0. Advances `virtualItemCount` and calls `appendBatch`.
 
 ### 5. Resize
 
@@ -688,7 +688,7 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 1. **`--dynamic-views-grid-columns` is the layout source of truth.** CSS Grid handles all card positioning from this single variable. No JavaScript position calculation needed (unlike masonry's per-card `left`/`top`).
 2. **`renderHash` prevents redundant re-renders.** The hash includes data paths, mtimes, settings, style settings, sort, shuffle, collapse state, and visible properties. Delayed re-checks (100/250/500ms) catch Obsidian's late config updates.
 3. **`isLoading` prevents concurrent renders during batch append.** `processDataUpdate()` returns early while a batch is in flight. The batch owns `renderState.version` to cancel stale operations.
-4. **`previousDisplayedCount` ensures incremental append correctness.** Batch append renders only cards from `previousDisplayedCount` to `displayedCount`, never re-rendering existing cards.
+4. **`previousVirtualItemCount` ensures incremental append correctness.** Batch append renders only cards from `previousVirtualItemCount` to `virtualItemCount`, never re-rendering existing cards.
 5. **`collapsedGroups` is loaded once from persistence.** First render loads from `basesState`; thereafter the in-memory `Set` is authoritative. Reloading on every `onDataUpdated` would wipe state due to style-settings-triggered callbacks with stale persistence.
 6. **Container height is preserved during DOM wipe.** `--dynamic-views-preserve-height` sets `min-height` before clearing the container, preventing the scroll parent from resetting scroll position.
 7. **Virtual scrolling replaces content visibility.** Grid uses full virtual scrolling (mount/unmount) with a content-hidden intermediate tier on non-WebKit platforms. WebKit skips the content-hidden tier entirely (IO-toggled `content-visibility: hidden` causes infinite reflow loops — see `ios-webkit-quirks.md`), relying on single-tier mount/unmount only, enforced by the `!Platform.isIosApp` guard in `syncVirtualScroll`. The `content-hidden` class and `contain-intrinsic-height` inline style are removed from keyboard navigation targets before focusing.

@@ -1,6 +1,6 @@
 /**
  * Virtual scrolling for card views
- * Only renders cards within viewport + buffer; unmounted cards are lightweight JS objects
+ * Only renders cards within pane + buffer; unmounted cards are lightweight JS objects
  */
 
 import type { BasesEntry } from 'obsidian';
@@ -49,6 +49,61 @@ export interface VirtualItem {
   el: HTMLElement | null;
   /** Cleanup handle when mounted, null when unmounted */
   handle: CardHandle | null;
+}
+
+export interface ScrollAnchor {
+  // cardData.path — file identity
+  path: string;
+  // scrollTop - cardAbsoluteTop (px above pane top)
+  offset: number;
+  // position in virtualItems (for count expansion)
+  index: number;
+}
+
+// Find topmost-leftmost mounted card with >=1px visible
+export function getScrollAnchor(
+  virtualItems: VirtualItem[],
+  cachedGroupOffsets: Map<string | undefined, number>,
+  scrollTop: number,
+  paneHeight: number
+): ScrollAnchor | null {
+  const bottom = scrollTop + paneHeight;
+  let bestY = Infinity;
+  let bestX = Infinity;
+  let bestItem: VirtualItem | null = null;
+
+  for (const item of virtualItems) {
+    if (item.el === null) continue;
+    const absoluteY = (cachedGroupOffsets.get(item.groupKey) ?? 0) + item.y;
+    // Card is visible if at least 1px overlaps the pane
+    if (absoluteY + item.height <= scrollTop || absoluteY >= bottom) continue;
+    if (absoluteY < bestY || (absoluteY === bestY && item.x < bestX)) {
+      bestY = absoluteY;
+      bestX = item.x;
+      bestItem = item;
+    }
+  }
+
+  if (!bestItem) return null;
+  return {
+    path: bestItem.cardData.path,
+    offset: scrollTop - bestY,
+    index: bestItem.index,
+  };
+}
+
+// Find anchor card's current absolute Y by path
+export function getAnchorTop(
+  anchorPath: string,
+  virtualItems: VirtualItem[],
+  cachedGroupOffsets: Map<string | undefined, number>
+): number | null {
+  for (const item of virtualItems) {
+    if (item.cardData.path === anchorPath) {
+      return (cachedGroupOffsets.get(item.groupKey) ?? 0) + item.y;
+    }
+  }
+  return null;
 }
 
 /** Check if fixed cover height is active for this card's view context.

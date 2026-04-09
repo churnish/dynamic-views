@@ -127,9 +127,9 @@ describe('link-parser', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // findLinksInText — embedded markdown ![caption](path)
+  // findLinksInText — embedded Markdown ![caption](path)
   // ---------------------------------------------------------------------------
-  describe('findLinksInText — embedded markdown link', () => {
+  describe('findLinksInText — embedded Markdown link', () => {
     it('isMarkdownLink is true', () => {
       expect(firstLink('![Alt](image.png)').isMarkdownLink).toBe(true);
     });
@@ -172,9 +172,9 @@ describe('link-parser', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // findLinksInText — markdown link [caption](url)
+  // findLinksInText — Markdown link [caption](url)
   // ---------------------------------------------------------------------------
-  describe('findLinksInText — markdown link', () => {
+  describe('findLinksInText — Markdown link', () => {
     it('isMarkdownLink is true', () => {
       expect(firstLink('[Example](https://example.org)').isMarkdownLink).toBe(
         true
@@ -226,9 +226,9 @@ describe('link-parser', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // findLinksInText — markdown link with angle brackets [caption](<url>)
+  // findLinksInText — Markdown link with angle brackets [caption](<url>)
   // ---------------------------------------------------------------------------
-  describe('findLinksInText — markdown link with angle brackets', () => {
+  describe('findLinksInText — Markdown link with angle brackets', () => {
     it('isMarkdownLink is true', () => {
       expect(firstLink('[Example](<https://example.org>)').isMarkdownLink).toBe(
         true
@@ -371,13 +371,13 @@ describe('link-parser', () => {
   // URL-encoded paths
   // ---------------------------------------------------------------------------
   describe('findLinksInText — URL-encoded paths', () => {
-    it('decodes %20 in markdown link href', () => {
+    it('decodes %20 in Markdown link href', () => {
       expect(firstLink('[Note](folder%20name/note.md)').url).toBe(
         'folder name/note.md'
       );
     });
 
-    it('decodes %20 in angle-bracket markdown link href', () => {
+    it('decodes %20 in angle-bracket Markdown link href', () => {
       expect(firstLink('[Note](<folder%20name/note.md>)').url).toBe(
         'folder name/note.md'
       );
@@ -393,13 +393,13 @@ describe('link-parser', () => {
       expect(firstLink('[[Note]]').isWebUrl).toBe(false);
     });
 
-    it('is true for embedded markdown with https path', () => {
+    it('is true for embedded Markdown with https path', () => {
       expect(
         firstLink('![img](https://cdn.example.com/img.jpg)').isWebUrl
       ).toBe(true);
     });
 
-    it('is false for embedded markdown with obsidian:// path', () => {
+    it('is false for embedded Markdown with obsidian:// path', () => {
       expect(firstLink('![img](obsidian://path)').isWebUrl).toBe(false);
     });
   });
@@ -545,7 +545,7 @@ describe('link-parser', () => {
       expect(link.raw).toBe('![[img.png]]');
     });
 
-    it('raw matches the original markdown link text', () => {
+    it('raw matches the original Markdown link text', () => {
       const segments = findLinksInText('[Example](https://example.org)');
       const link = segments.find((s) => s.type === 'link') as Extract<
         TextSegment,

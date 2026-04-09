@@ -346,7 +346,7 @@ export function basesEntryToCardData(
     }
   }
 
-  // Create base card data
+  // Create initial card data
   const cardData: CardData = {
     path,
     name: fileName,

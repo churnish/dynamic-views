@@ -74,7 +74,7 @@ dynamic-views/
 ├── styles/                           # SCSS source (compiled to styles.css)
 │   ├── card/                         # Card internals
 │   │   ├── _backdrop.scss            # Backdrop image format
-│   │   ├── _core.scss                # Card container, borders, backgrounds, border color presets
+│   │   ├── _core.scss                # Card container, borders, backgrounds, border/background color presets
 │   │   ├── _cover-elements.scss      # Cover element styling, hover zoom, cover-content border, crop/fit/background
 │   │   ├── _cover-placeholders.scss  # Placeholder/skeleton styles and visibility
 │   │   ├── _cover-side.scss          # Side cover layout adjustments
@@ -88,7 +88,7 @@ dynamic-views/
 │   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar
 │   ├── _container.scss               # Container queries, width system, scroll fade
 │   ├── _focus.scss                   # Focus rings, focus-visible
-│   ├── _grid-masonry-shared.scss     # Shared card view layout: groups, sticky headers, card foundation, content-visibility
+│   ├── _grid-masonry-shared.scss     # Shared card views layout: groups, sticky headers, card foundation, content-visibility
 │   ├── _grid-view.scss               # Grid: CSS Grid columns, subgrid, grid spacing
 │   ├── _hover-and-touch.scss          # Hover and touch visual feedback, cursor gating
 │   ├── _image-viewer.scss            # Image viewer overlay, panzoom, cursor rules

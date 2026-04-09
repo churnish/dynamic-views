@@ -49,7 +49,7 @@ export function createCardDragHandler(
   };
 }
 
-/** Factory for external link drag — formats as markdown link when captioned. */
+/** Factory for external link drag — formats as Markdown link when captioned. */
 export function createExternalLinkDragHandler(
   el: HTMLElement,
   caption: string,

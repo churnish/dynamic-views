@@ -496,7 +496,7 @@ export class SharedCardRenderer {
     sourcePath: string,
     signal?: AbortSignal
   ): void {
-    // Internal link (wikilink or markdown internal)
+    // Internal link (wikilink or Markdown internal)
     if (link.type === 'internal') {
       if (link.isEmbed) {
         // Embedded internal link - render as embed container

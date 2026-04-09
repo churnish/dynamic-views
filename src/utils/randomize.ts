@@ -4,6 +4,8 @@ import type { DynamicViewsMasonryView } from '../bases/masonry-view';
 
 type BasesCardView = DynamicViewsGridView | DynamicViewsMasonryView;
 
+const NO_ACTIVE_VIEW = 'No active Bases view';
+
 /**
  * Calculate pane type based on modifier keys and setting.
  * - split/window modifiers take precedence
@@ -129,7 +131,7 @@ export async function openRandomFile(
   const basesView = getActiveBasesView(app);
 
   if (!basesView) {
-    new Notice('No active base view');
+    new Notice(NO_ACTIVE_VIEW);
     return;
   }
 
@@ -159,7 +161,7 @@ export function toggleShuffleActiveView(app: App): void {
   const basesView = getActiveBasesView(app);
 
   if (!basesView) {
-    new Notice('No active base view');
+    new Notice(NO_ACTIVE_VIEW);
     return;
   }
 

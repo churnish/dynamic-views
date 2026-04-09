@@ -261,7 +261,7 @@ Manual console access only — no programmatic CDP connection. Queries run in Sa
 ## Common pitfalls
 
 1. **`.bases-card` does not exist** — the card class is `.card`. The name `.bases-card` is a hallucination derived from the parent `.bases-cards-group`. Every "0 cards found" conclusion from using `.bases-card` is wrong.
-2. **Dynamic Views does not register custom leaf types** — it piggybacks on `bases`. Searching for DV-specific leaf types will find nothing.
+2. **Dynamic Views does not register custom leaf types** — it piggybacks on `bases`. Searching for Dynamic Views-specific leaf types will find nothing.
 3. **Cards may be empty right after app restart** — Bases queries use Obsidian's `metadataCache`, which updates continuously but needs an initial indexing pass on startup. If a CDP query runs before `app.metadataCache.resolved === true`, results may be incomplete.
 4. **Android vault path is not fixed** — the path varies by device and sync method. Always discover via `app.vault.adapter.basePath`, never hardcode.
 5. **Ungrouped masonry is flat, grouped masonry has group wrappers** — ungrouped Masonry cards are direct children of `.dynamic-views-masonry.masonry-container`. When grouped, Masonry gets the same `.dynamic-views-group-section` → `.dynamic-views-group` structure as Grid, and `.masonry-container` moves from `.dynamic-views-masonry` to each `.dynamic-views-group`.

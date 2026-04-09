@@ -271,6 +271,30 @@ export async function cleanUpBaseFile(
   return viewIds;
 }
 
+/** Estimate pane entry indices from ephemeral scroll state.
+ *  Returns [startIdx, endIdx) for slicing the entries array. */
+export function estimatePaneRange(
+  ephemeral: { top: number; height: number },
+  paneHeight: number,
+  totalCount: number
+): [number, number] {
+  const scrollHeight = ephemeral.height || 1;
+  // Wide buffer (5× pane) accounts for height estimation error between
+  // saved scroll state and restored placeholder-based container height
+  const startFraction = Math.max(
+    0,
+    (ephemeral.top - paneHeight * 2) / scrollHeight
+  );
+  const endFraction = Math.min(
+    1,
+    (ephemeral.top + paneHeight * 3) / scrollHeight
+  );
+  return [
+    Math.floor(startFraction * totalCount),
+    Math.ceil(endFraction * totalCount),
+  ];
+}
+
 /** Sentinel value for undefined group keys in dataset storage */
 export const UNDEFINED_GROUP_KEY_SENTINEL = '__dynamic-views-undefined__';
 
