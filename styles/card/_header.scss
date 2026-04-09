@@ -35,6 +35,10 @@
     margin: 0;
     line-height: var(--dynamic-views-line-height-tight);
     max-height: calc(var(--dynamic-views-title-lines, 2) * 1lh);
+    overflow: hidden;
+  }
+
+  .card-title-text {
     display: -webkit-box;
     -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
     -webkit-box-orient: vertical;
@@ -43,13 +47,12 @@
 
   // Single-line titles: character-level truncation via text-overflow
   // instead of -webkit-line-clamp (which truncates at word boundaries for N=1)
-  &.title-single-line .card-title {
+  &.title-single-line .card-title .card-title-text {
     display: block;
     -webkit-line-clamp: unset;
     -webkit-box-orient: unset;
     white-space: nowrap;
     text-overflow: ellipsis;
-    max-height: none;
   }
 
   .card-title-ext-suffix {
@@ -426,10 +429,17 @@ body.dynamic-views-title-align-right .dynamic-views .card-title {
 
 /* Title scroll mode */
 body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
-  display: block;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
   white-space: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
+  max-height: none;
+}
+
+body.dynamic-views-title-overflow-scroll
+  .dynamic-views
+  .card-title
+  .card-title-text {
+  display: inline;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
 }

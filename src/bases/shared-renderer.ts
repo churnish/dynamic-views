@@ -1032,30 +1032,16 @@ export class SharedCardRenderer {
 
     // Helper to render title content into a container
     const renderTitleContent = (titleEl: HTMLElement) => {
-      // Add file type icon first (hidden by default, shown via CSS when Icon mode selected)
       const icon = getFileTypeIcon(card.path);
-      if (icon) {
-        const iconEl = titleEl.createSpan({ cls: 'card-title-icon' });
-        setIcon(iconEl, icon);
-      }
-
-      // Add file format indicator before title text (for Flair mode float:left)
       const isFullname = settings.titleProperty === 'file.fullname';
       const extInfo = getFileExtInfo(card.path, isFullname);
       const extNoDot = extInfo?.ext.slice(1) || '';
-      if (extInfo) {
-        titleEl.createSpan({
-          cls: 'card-title-ext',
-          attr: { 'data-ext': extNoDot },
-        });
-      }
 
       // Add title text
       if (settings.openFileAction === 'title' || isPosterClickReveal) {
         // Render as clickable, draggable link
         const link = titleEl.createEl('a', {
           cls: 'internal-link card-title-text',
-          text: displayTitle,
           attr: {
             'data-href': card.path,
             href: card.path,
@@ -1064,6 +1050,19 @@ export class SharedCardRenderer {
             tabindex: '-1',
           },
         });
+
+        // Icon and badge inside link (before text)
+        if (icon) {
+          const iconEl = link.createSpan({ cls: 'card-title-icon' });
+          setIcon(iconEl, icon);
+        }
+        if (extInfo) {
+          link.createSpan({
+            cls: 'card-title-ext',
+            attr: { 'data-ext': extNoDot },
+          });
+        }
+        link.append(displayTitle);
 
         link.addEventListener(
           'click',
@@ -1160,16 +1159,24 @@ export class SharedCardRenderer {
           });
         }
       } else {
-        // Render as plain text span (CSS line-clamp / text-overflow targets this)
-        titleEl.createSpan({
+        // Render as plain text span (line-clamp host for truncation)
+        const titleSpan = titleEl.createSpan({
           cls: 'card-title-text',
-          text: displayTitle,
           attr: { 'data-ext': extNoDot },
         });
-
-        // Add extension suffix for Extension mode
+        if (icon) {
+          const iconEl = titleSpan.createSpan({ cls: 'card-title-icon' });
+          setIcon(iconEl, icon);
+        }
         if (extInfo) {
-          titleEl.createSpan({
+          titleSpan.createSpan({
+            cls: 'card-title-ext',
+            attr: { 'data-ext': extNoDot },
+          });
+        }
+        titleSpan.append(displayTitle);
+        if (extInfo) {
+          titleSpan.createSpan({
             cls: 'card-title-ext-suffix',
             text: `.${extNoDot}`,
           });
@@ -2133,10 +2140,13 @@ export class SharedCardRenderer {
     if (textNode) {
       textNode.textContent = displayTitle || '';
     } else if (displayTitle) {
-      titleTextEl.insertBefore(
-        cardEl.ownerDocument.createTextNode(displayTitle),
-        titleTextEl.firstChild
-      );
+      const extSuffix = titleTextEl.querySelector('.card-title-ext-suffix');
+      const newTextNode = cardEl.ownerDocument.createTextNode(displayTitle);
+      if (extSuffix) {
+        titleTextEl.insertBefore(newTextNode, extSuffix);
+      } else {
+        titleTextEl.appendChild(newTextNode);
+      }
     }
   }
 
