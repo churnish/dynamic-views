@@ -80,7 +80,7 @@ updated: 2026-04-05
 | Context menus | [context-menu.ts](../src/shared/context-menu.ts) | Right-click menus for cards and links. |
 | Settings resolution | [persistence.ts](../src/persistence.ts)<br>[settings-schema.ts](../src/shared/settings-schema.ts) | Three-layer merge: defaults, template, per-view runtime config. |
 | Text previews | [text-preview-dom.ts](../src/shared/text-preview-dom.ts)<br>[text-preview.ts](../src/utils/text-preview.ts) | Markdown stripping and DOM mutation for card text. |
-| Keyboard navigation | [keyboard-nav.ts](../src/shared/keyboard-nav.ts) | Arrow key focus management across card grid. See [architecture/keyboard-nav.md](architecture/keyboard-nav.md). |
+| Keyboard navigation | [keyboard-nav.ts](../src/shared/keyboard-nav.ts) | Arrow key focus management across card grid. See [arch/keyboard-nav.md](arch/keyboard-nav.md). |
 
 ## Styles
 
@@ -95,7 +95,7 @@ updated: 2026-04-05
 
 - Settings resolve through three layers: hardcoded defaults, an optional saved template (per view type), and per-view runtime config.
 - Only non-default values are persisted (sparse storage). Stale keys from older plugin versions are cleaned up automatically.
-- See [architecture/settings-resolution.md](architecture/settings-resolution.md) for the full resolution chain, type coercion rules, and invariants.
+- See [arch/settings-resolution.md](arch/settings-resolution.md) for the full resolution chain, type coercion rules, and invariants.
 
 ## Testing
 

@@ -67,7 +67,7 @@ The dominant cost. CSS Grid invalidates all items when any item is inserted or r
 
 | Doc | Status | Notes |
 |---|---|---|
-| Committed-row lock in `docs/architecture/grid-layout.md` | Done | §6a: algorithm, row selection, direction tracking, velocity gate, jump lifecycle, frame mount cap, masonry comparison, design evolution, state fields, constants, invariants. |
+| Committed-row lock in `docs/arch/grid-layout.md` | Done | §6a: algorithm, row selection, direction tracking, velocity gate, jump lifecycle, frame mount cap, masonry comparison, design evolution, state fields, constants, invariants. |
 
 ## What NOT to do
 

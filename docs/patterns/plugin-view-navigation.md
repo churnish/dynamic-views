@@ -10,7 +10,7 @@ Reference for navigating Dynamic Views plugin views and DOM elements via CDP (Ch
 
 See [view-configuration.md](view-configuration.md) for setting keys, defaults, and programmatic configuration.
 
-For card internals (property rows, cover elements, header structure), see [`card-dom-structure.md`](../architecture/card-dom-structure.md).
+For card internals (property rows, cover elements, header structure), see [`card-dom-structure.md`](../arch/card-dom-structure.md).
 
 ## View identification
 

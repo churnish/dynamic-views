@@ -313,6 +313,7 @@ export class FullScreenController {
     this.accumulatedDelta = 0;
     this.directionChangeTime = 0;
     this.lastToggleTime = 0;
+    this.lastFastScrollTime = 0;
     this.programmaticScroll = false;
     this.pendingLayout = null;
     this.isActiveHider = false;
@@ -918,6 +919,7 @@ export class FullScreenController {
         this.clearShowOverlays();
         this.clearHideSpacerCover();
       } else {
+        this.clearBarInlines();
         this.leafContent.classList.remove('full-screen-showing');
       }
       this.clearMaskImageInline();

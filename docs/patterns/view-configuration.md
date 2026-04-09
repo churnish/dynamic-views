@@ -137,7 +137,7 @@ Settings resolve through layered merges. Highest priority wins.
 
 `config.get()` > `template` > `BASES_DEFAULTS` > `VIEW_DEFAULTS` > `pluginSettings`
 
-See [settings-resolution.md](../architecture/settings-resolution.md) for the full pipeline, sparse storage, type coercion, and invariants.
+See [settings-resolution.md](../arch/settings-resolution.md) for the full pipeline, sparse storage, type coercion, and invariants.
 
 ## Caveats
 
@@ -145,6 +145,6 @@ See [settings-resolution.md](../architecture/settings-resolution.md) for the ful
 - **No `getGlobalSettings`/`setGlobalSettings`**: These methods do NOT exist on `persistenceManager`. Use `getPluginSettings`/`setPluginSettings` instead.
 - **Bases YAML re-parse**: Editing a `.base` file requires closing and reopening the leaf for changes to take effect. `openFile` on the same leaf does NOT re-parse.
 - **minimumColumns coercion**: Bases YAML stores `'one'`/`'two'` strings; internal types use `1`/`2` numbers. Set the string value when editing YAML directly.
-- **Stale config guards**: Obsidian fires duplicate `onDataUpdated()` callbacks with stale values. `imageFormat` and `propertyNames` have guards — see [settings-resolution.md](../architecture/settings-resolution.md).
+- **Stale config guards**: Obsidian fires duplicate `onDataUpdated()` callbacks with stale values. `imageFormat` and `propertyNames` have guards — see [settings-resolution.md](../arch/settings-resolution.md).
 - **Hardcoded fields**: `showPropertiesAbove` and `invertPropertyPosition` bypass `config.get()` and always use static defaults. They have no schema entries, making them invisible to users.
 - **Position-derived title/subtitle**: When `displayFirstAsTitle` is ON, `titleProperty` and `subtitleProperty` are derived from property order — setting them directly in the YAML has no effect. They are also cleaned up (deleted) from the YAML by `cleanUpBaseFile()`.

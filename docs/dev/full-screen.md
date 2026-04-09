@@ -1,6 +1,6 @@
 ---
 title: Full screen
-description: Chronological research log for full screen mobile scrolling — native behavior spec, WebKit/Chromium compositor constraints, rejected approaches, and the spacer + overflow-anchor implementation.
+description: Research log for full screen mobile scrolling — native behavior spec, WebKit/Chromium compositor constraints, rejected approaches, and the spacer + overflow-anchor implementation.
 author: 🤖 Generated with Claude Code
 updated: 2026-04-08
 ---
@@ -8,8 +8,9 @@ updated: 2026-04-08
 
 This document is a chronological research log. Sections reflect the order in which problems were encountered and solutions were tried — later sections may supersede earlier ones.
 
-See also:
+## See also
 
+- [Architecture doc](../arch/full-screen.md) — stable reference for the complete system design, state model, settle sequences, and invariants.
 - [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md)
 - [`odkb/android-chromium-quirks.md`](https://github.com/churnish/odkb/blob/main/android-chromium-quirks.md)
 - [`odkb/undocumented-obsidian-apis.md`](https://github.com/churnish/odkb/blob/main/undocumented-obsidian-apis.md)
@@ -234,7 +235,7 @@ Native's emergent approach relies on each scroll event independently deciding hi
 - **300ms cooldown**: Prevents rapid hide/show cycling during deceleration. Native doesn't need this because its CSS-only transitions (class toggle) are cheap. Dynamic Views has WAAPI animations, bridge architecture, and inline style management that make rapid cycling expensive and visually jarring.
 - **80ms sustain gate (iOS)**: Filters iOS deceleration bounce (reverse-direction noise at momentum end). Native doesn't fire `markdown-scroll` during bounce, so it's not exposed to this.
 
-Stripping these guards to match native would reintroduce rapid cycling and bounce bugs. The deferred-timer approach on `onHeaderTap` achieves the same user-visible behavior without touching the scroll handler (see `architecture/full-screen.md` § "Header tap intercept").
+Stripping these guards to match native would reintroduce rapid cycling and bounce bugs. The deferred-timer approach on `onHeaderTap` achieves the same user-visible behavior without touching the scroll handler (see `arch/full-screen.md` § "Header tap intercept").
 
 ### Tap shield adaptation
 
@@ -856,7 +857,7 @@ Top-settle sets `settled=true`, then auto-show fires and applies reverse bridge 
 
 ## Spacer + overflow-anchor implementation era
 
-Everything below documents the spacer approach that succeeded after 10+ failed iterations across 3 sessions. The architecture doc (`docs/architecture/full-screen.md`) captures the stable system design. This section captures the "how we got here" — iterations, dead ends, empirical measurements, and platform quirks discovered during implementation.
+Everything below documents the spacer approach that succeeded after 10+ failed iterations across 3 sessions. The architecture doc (`docs/arch/full-screen.md`) captures the stable system design. This section captures the "how we got here" — iterations, dead ends, empirical measurements, and platform quirks discovered during implementation.
 
 ### Mechanism
 

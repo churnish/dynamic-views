@@ -19,27 +19,27 @@ Cross-plugin knowledge docs (platform quirks, Obsidian API gotchas, Electron/CSS
 | [release-guide.md](release-guide.md) | Running a release, bumping versions, or troubleshooting the release pipeline — documents the full npm version lifecycle, GitHub Action build, and rollback procedures. |
 
 
-## architecture/
+## arch/
 
 Stable reference docs for system internals — data structures, render pipelines, invariants, and design decisions that remain valid across sessions.
 
 | Doc | Read before |
 |---|---|
-| [card-dom-structure.md](architecture/card-dom-structure.md) | Working on card internals, card CSS selectors, or property rows — documents the full card hierarchy, class names, and property row structure. |
-| [config-reactivity.md](architecture/config-reactivity.md) | Working on config-change propagation, render hash, dirty-checking, `onDataUpdated`, stale config guards, CSS fast-path, Style Settings reactivity, or incremental update paths — documents the full pipeline from config change to re-render decision. |
-| [drag-handlers.md](architecture/drag-handlers.md) | Working on drag handlers, DataTransfer, drop behavior, hover suppression during drag, or WebKit touch handling — documents the factory system, platform quirks, dataset freshness pattern, and drag ghost implementation. |
-| [full-screen.md](architecture/full-screen.md) | Working on full screen bar hide/show, spacer + scroll anchoring (Android), margin bridge + settle (iOS), gradient swap mask-image, WAAPI animations, direction detection, height locking, tap shield, or platform-specific branches — documents the complete architecture, state model, settle sequences, and invariants. |
-| [grid-layout.md](architecture/grid-layout.md) | Working on grid layout, CSS Grid columns, content visibility, or grid-specific resize/infinite scroll — documents the full architecture, data structures, render pipeline, guard system, and invariants. |
-| [image-loading.md](architecture/image-loading.md) | Working on image loading, caching, aspect ratios, broken URL tracking, embed extraction, or the content-loader dedup pipeline — documents the two-tier cache architecture, fallback chain, load handler wiring, and invariants. |
-| [image-viewer.md](architecture/image-viewer.md) | Working on image viewer gestures, keyboard handlers, constrained vs fullscreen modes, Panzoom integration, mobile touch handling, or viewer cleanup — documents the dual-mode gesture system, keyboard handler map, leaf guard pattern, cleanup lifecycle, and invariants. |
-| [keyboard-nav.md](architecture/keyboard-nav.md) | Working on keyboard focus management, arrow-key navigation, hover-to-start or tab-to-start activation, roving tabindex, or focus state flags — documents the spatial navigation algorithm, activation flows, container state interfaces, popout rebinding, and invariants. |
-| [masonry-layout.md](architecture/masonry-layout.md) | **Frozen** — not kept up to date due to extensive masonry work. Verify against source code. |
-| [poster.md](architecture/poster.md) | Working on poster static clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, or the `posterInteractToReveal` setting boundary — documents the clipping pipeline, reset lifecycle, interaction handlers, and invariants. |
-| [property-layout.md](architecture/property-layout.md) | Working on property pairing, width measurement, scroll gradients, compact mode, or property position settings — documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and invariants. |
-| [scss-organization.md](architecture/scss-organization.md) | Working on SCSS partials, import order, adding new partials, or understanding stylesheet dependencies — documents the file categories, loading order rationale, and dependency relationships. |
-| [settings-resolution.md](architecture/settings-resolution.md) | Working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants. |
-| [image-navigation.md](architecture/image-navigation.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
-| [write-path-safety.md](architecture/write-path-safety.md) | Adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption. |
+| [card-dom-structure.md](arch/card-dom-structure.md) | Working on card internals, card CSS selectors, or property rows — documents the full card hierarchy, class names, and property row structure. |
+| [config-reactivity.md](arch/config-reactivity.md) | Working on config-change propagation, render hash, dirty-checking, `onDataUpdated`, stale config guards, CSS fast-path, Style Settings reactivity, or incremental update paths — documents the full pipeline from config change to re-render decision. |
+| [drag-handlers.md](arch/drag-handlers.md) | Working on drag handlers, DataTransfer, drop behavior, hover suppression during drag, or WebKit touch handling — documents the factory system, platform quirks, dataset freshness pattern, and drag ghost implementation. |
+| [full-screen.md](arch/full-screen.md) | Working on full screen bar hide/show, spacer + scroll anchoring (Android), margin bridge + settle (iOS), gradient swap mask-image, WAAPI animations, direction detection, height locking, tap shield, or platform-specific branches — documents the complete architecture, state model, settle sequences, and invariants. |
+| [grid-layout.md](arch/grid-layout.md) | Working on grid layout, CSS Grid columns, content visibility, or grid-specific resize/infinite scroll — documents the full architecture, data structures, render pipeline, guard system, and invariants. |
+| [image-loading.md](arch/image-loading.md) | Working on image loading, caching, aspect ratios, broken URL tracking, embed extraction, or the content-loader dedup pipeline — documents the two-tier cache architecture, fallback chain, load handler wiring, and invariants. |
+| [image-viewer.md](arch/image-viewer.md) | Working on image viewer gestures, keyboard handlers, constrained vs fullscreen modes, Panzoom integration, mobile touch handling, or viewer cleanup — documents the dual-mode gesture system, keyboard handler map, leaf guard pattern, cleanup lifecycle, and invariants. |
+| [keyboard-nav.md](arch/keyboard-nav.md) | Working on keyboard focus management, arrow-key navigation, hover-to-start or tab-to-start activation, roving tabindex, or focus state flags — documents the spatial navigation algorithm, activation flows, container state interfaces, popout rebinding, and invariants. |
+| [masonry-layout.md](arch/masonry-layout.md) | **Frozen** — not kept up to date due to extensive masonry work. Verify against source code. |
+| [poster.md](arch/poster.md) | Working on poster static clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, or the `posterInteractToReveal` setting boundary — documents the clipping pipeline, reset lifecycle, interaction handlers, and invariants. |
+| [property-layout.md](arch/property-layout.md) | Working on property pairing, width measurement, scroll gradients, compact mode, or property position settings — documents the pairing algorithm, JS measurement pipeline, CSS state machine, alignment modes, and invariants. |
+| [scss-organization.md](arch/scss-organization.md) | Working on SCSS partials, import order, adding new partials, or understanding stylesheet dependencies — documents the file categories, loading order rationale, and dependency relationships. |
+| [settings-resolution.md](arch/settings-resolution.md) | Working on settings defaults, persistence, templates, sparse storage, or the resolution chain — documents the three-layer merge pipeline, stale config guards, type coercion, position-based title derivation, and invariants. |
+| [image-navigation.md](arch/image-navigation.md) | Working on slideshow navigation, gesture detection, animation sequencing, image preloading, failed image recovery, or the external blob cache — documents the navigator state machine, gesture boundary algorithm, undo window, cleanup lifecycle, and invariants. |
+| [write-path-safety.md](arch/write-path-safety.md) | Adding or modifying any file write operation — inventories all write paths, documents allowed/prohibited APIs, and lists invariants that prevent data corruption. |
 
 ## dev/
 

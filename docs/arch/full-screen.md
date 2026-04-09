@@ -2,7 +2,7 @@
 title: Full screen
 description: Spacer + scroll anchoring (Android) and margin bridge + settle (iOS) architecture for hiding/showing bars during scroll, gradient swap mask-image management, direction detection, tap shield, and platform-specific branches.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-07
+updated: 2026-04-09
 ---
 # Full screen
 
@@ -102,6 +102,7 @@ Additional cached references (constructor):
 | `isActiveHider` | `boolean` | Whether this controller instance initiated the hide (prevents cross-controller cleanup) |
 | `programmaticScroll` | `boolean` | Blocks scroll handler during `scrollTop` writes |
 | `pendingLayout` | `(() => void) \| null` | Deferred layout mutation queued for scroll-idle |
+| `lastFastScrollTime` | `number` | Timestamp of last scroll event with `delta > REVEAL_CANCEL_DELTA` — used by recency check in `onHeaderTap()` |
 
 ### Key measurements
 
@@ -308,6 +309,7 @@ Synchronous:
   ├── Remove tap-shield, add header-show + full-screen-showing
   ├── If !settled: remove bridge (geometric cancellation)
   ├── Navbar: clear inlines, add navbar-show class
+  ├── Search row overlay: position: absolute via dynamic-views-show-overlay
   └── Restore mask-image gradient
 
 rAF:
@@ -316,10 +318,15 @@ rAF:
 Idle (2000ms):
   ├── Remove bridge, scrollTop += totalShift (if settled)
   ├── Unlock height, cancel animations
+  ├── Remove search row overlay (class + inlines)
   ├── Remove full-screen-showing + full-screen-active, clear all inlines
   ├── Reset flags (isActiveHider, settled)
   └── rAF: relock height, reset scroll state
 ```
+
+#### Search row overlay (iOS)
+
+During show, the search row is positioned as `position: absolute` via the `.dynamic-views-show-overlay` class with an inline `top` value calculated from toolbar height. This avoids the in-flow `height:0→auto` reflow that kills WebKit UIScrollView momentum — the same pattern Android uses for both toolbar and search row. The overlay is removed at show idle, transitioning the search row back to its natural in-flow position. The removal is timed to coincide with class cleanup (`full-screen-showing` removal), so the search row moves from overlay to natural state with no intermediate hidden frame.
 
 ## Spacer system (Android)
 
@@ -408,12 +415,13 @@ Chromium and WebKit hit-test `position: fixed` elements against their pre-transf
 
 ### Header tap handler
 
-`onHeaderTap()` listens for `touchend` (non-passive) on `.view-header`. Uses a deferred reveal mechanism:
+`onHeaderTap()` listens for `touchend` (non-passive) on `.view-header`. Uses a two-layer momentum guard plus deferred reveal:
 
 1. **`preventDefault()`** — suppresses click synthesis on header children.
 2. **Heading forward** — temporarily lowers header `pointer-events`, hit-tests via `elementFromPoint`, forwards click to stuck group headings that straddle the tap shield zone.
-3. **Deferred timer** — starts a 100ms timer (`FULL_SCREEN_REVEAL_DEFER_MS`). If `onScroll` receives a delta > 3px (`FULL_SCREEN_REVEAL_CANCEL_DELTA`) during that window, the timer is cancelled (fast momentum suppresses reveal). If no significant scroll arrives, bars show.
-4. **Click-eater** — on reveal, registers a one-time capture click listener to suppress the synthesized click from the triggering touch.
+3. **Recency check** — if `Date.now() - lastFastScrollTime < FULL_SCREEN_REVEAL_RECENCY_MS` (200ms), the tap is rejected outright. `lastFastScrollTime` is updated in `onScroll()` whenever `delta > FULL_SCREEN_REVEAL_CANCEL_DELTA`. Needed because mobile browsers kill fling momentum on touch contact (`GestureFlingCancel` on Android), zeroing the delta that the deferred timer's scroll-delta check would see. On rejection, registers a `{ capture: true, once: true }` click listener on `viewHeaderEl` to suppress the synthesized click Android WebView fires ~300ms after `touchend` despite `preventDefault()` (see `odkb/android-chromium-quirks.md`).
+4. **Deferred timer** — starts a 100ms timer (`FULL_SCREEN_REVEAL_DEFER_MS`). If `onScroll` receives a delta > 3px (`FULL_SCREEN_REVEAL_CANCEL_DELTA`) during that window, the timer is cancelled (fast momentum suppresses reveal). If no significant scroll arrives, bars show.
+5. **Click-eater** — on successful reveal, registers a one-time capture click listener to suppress the synthesized click from the triggering touch.
 
 ## Resize handling
 
@@ -479,7 +487,7 @@ Without the gradient swap, removing mask-image (`none` → CSS gradient) destroy
 
 | Class | Platform | When applied | When removed | Effect |
 |---|---|---|---|---|
-| `dynamic-views-show-overlay` | Android | `applyShowOverlays()` | `clearBarInlines()` | Static overlay properties: absolute positioning, z-index 29, pointer-events, padding, border reset (specificity 0,6,0) |
+| `dynamic-views-show-overlay` | Both | Android: `applyShowOverlays()`. iOS: `showBarsUI()` (search row only) | Android: `clearBarInlines()`. iOS: show idle | Static overlay properties: absolute positioning, z-index 29, pointer-events, padding, border reset (specificity 0,6,0). On iOS, only applied to search row to avoid in-flow reflow that kills momentum. |
 
 ### On `.dynamic-views-spacer`
 
@@ -541,6 +549,7 @@ Without the gradient swap, removing mask-image (`none` → CSS gradient) destroy
 | `FULL_SCREEN_SPACER_RESOLVE_DELAY_MS` | 50ms | Spacer resolve timer at top |
 | `FULL_SCREEN_REVEAL_DEFER_MS` | 100ms | Header-tap deferred reveal window |
 | `FULL_SCREEN_REVEAL_CANCEL_DELTA` | 3px | Per-event scroll delta to cancel reveal |
+| `FULL_SCREEN_REVEAL_RECENCY_MS` | 200ms | Pre-tap momentum detection window — if last fast scroll event within this window, header tap is rejected |
 | `FULL_SCREEN_TAP_MAX_DISTANCE` | 10px | Max movement for tap detection |
 | `FULL_SCREEN_TAP_MAX_DURATION_MS` | 300ms | Max duration for tap detection |
 
