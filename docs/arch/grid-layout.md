@@ -520,7 +520,7 @@ After cards are rendered into the DOM, an ordered sequence of measurement and ad
 | 3   | `initializeTextPreviewClamp(container)` | Per-paragraph ellipsis clamping for text previews.               | Text preview content must be in DOM.                                      |
 | 4   | `setHoverScaleForCards(cards)`          | Sets CSS custom property for hover scale from card dimensions.   | Card dimensions must be stable.                                           |
 
-Title truncation is CSS-only (`-webkit-line-clamp` for multi-line, `text-overflow: ellipsis` for single-line via `title-single-line` class) and requires no JS measurement pass.
+Title truncation is CSS-only (`-webkit-line-clamp` for both multi-line and single-line, with `word-break: break-all` in single-line mode for character-level truncation via `title-single-line` class) and requires no JS measurement pass.
 
 `*ForCards(cards)` variants exist for passes 2-3, scoping measurement to a specific card array instead of scanning the full container. Pass 4 (`setHoverScaleForCards`) is inherently card-scoped — no container variant exists. Used by batch append and `updateCardContent` to scope work to mounted cards only.
 

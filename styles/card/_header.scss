@@ -50,14 +50,12 @@
     opacity: 0.6;
   }
 
-  // Single-line titles: character-level truncation via text-overflow
-  // instead of -webkit-line-clamp (which truncates at word boundaries for N=1)
+  // Single-line titles: word-break:break-all forces -webkit-line-clamp to
+  // truncate at character boundaries instead of word boundaries, while
+  // white-space:pre-line (inherited) still collapses \n into a line break
+  // so only the first line is visible.
   &.title-single-line .card-title .card-title-text {
-    display: block;
-    -webkit-line-clamp: unset;
-    -webkit-box-orient: unset;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    word-break: break-all;
   }
 
   .card-title-ext-suffix {
