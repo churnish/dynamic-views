@@ -287,7 +287,7 @@ export function isThumbnailLoopingDisabled(): boolean {
  * Check if heading text should be kept in text previews
  * Returns true when user enables "Keep headings"
  */
-export function shouldKeepPreviewHeadings(): boolean {
+export function preserveTextPreviewHeadings(): boolean {
   return hasBodyClass('dynamic-views-text-preview-keep-headings');
 }
 
@@ -295,7 +295,7 @@ export function shouldKeepPreviewHeadings(): boolean {
  * Check if newlines should be preserved in text previews
  * Returns true when user enables "Keep newlines"
  */
-export function shouldKeepPreviewNewlines(): boolean {
+export function preserveTextPreviewNewlines(): boolean {
   return hasBodyClass('dynamic-views-text-preview-keep-newlines');
 }
 
@@ -350,8 +350,8 @@ export function getStyleSettingsHash(): string {
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
     // Text preview content options (affect stripped text output)
-    shouldKeepPreviewHeadings(),
-    shouldKeepPreviewNewlines(),
+    preserveTextPreviewHeadings(),
+    preserveTextPreviewNewlines(),
     getOmitFirstLineMode(),
   ].join('|');
 }

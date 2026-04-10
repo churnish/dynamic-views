@@ -8,7 +8,7 @@ import {
   type MenuItem,
 } from 'obsidian';
 import { PersistenceManager } from './src/persistence';
-import { getAvailableBasePath } from './src/utils/file';
+import { getAvailableBasePath } from './src/core/file';
 import {
   DynamicViewsGridView,
   GRID_VIEW_TYPE,
@@ -24,16 +24,19 @@ import {
   initExternalBlobCache,
   cleanupExternalBlobCache,
   setDocumentProvider,
-} from './src/shared/slideshow';
+} from './src/core/slideshow';
 import {
   openRandomFile,
   toggleShuffleActiveView,
   getPaneType,
-} from './src/utils/randomize';
-import { clearInFlightLoads } from './src/shared/content-loader';
-import { installDropTextPatch } from './src/shared/drag';
-import { invalidateCacheForFile } from './src/shared/image-loader';
-import { getNotebookNavigatorAPI } from './src/utils/notebook-navigator';
+} from './src/core/randomize';
+import {
+  clearInFlightLoads,
+  invalidateContentCacheForPath,
+} from './src/core/content-loader';
+import { installDropTextPatch } from './src/core/drag';
+import { invalidateCacheForFile } from './src/core/image-loader';
+import { getNotebookNavigatorAPI } from './src/core/notebook-navigator';
 
 /** Undocumented Bases view shape — used only by __slowMount debug utility */
 interface DebugBasesView {
@@ -230,6 +233,7 @@ export default class DynamicViews extends Plugin {
     this.registerEvent(
       this.app.vault.on('modify', (file) => {
         if (file instanceof TFile) {
+          invalidateContentCacheForPath(file.path);
           const ext = file.extension.toLowerCase();
           if (IMAGE_EXTENSIONS.has(ext)) {
             invalidateCacheForFile(file.path);

@@ -88,6 +88,21 @@ export interface PluginData {
   basesStates: Record<string, BasesUIState>;
 }
 
+export interface AnchorScrollState {
+  anchorPath: string;
+  anchorOffset: number;
+  anchorIndex: number;
+  columns: number;
+  count: number;
+  height: number;
+}
+export interface LegacyScrollState {
+  top: number;
+  count: number;
+  height: number;
+}
+export type ScrollRestoreState = AnchorScrollState | LegacyScrollState | null;
+
 export type LayoutSource =
   | 'initial-render'
   | 'resize-observer'

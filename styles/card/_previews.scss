@@ -100,9 +100,7 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
   -webkit-hyphens: auto;
 }
 
-body.dynamic-views-text-preview-keep-newlines
-  .dynamic-views
-  .card-text-preview.has-paragraphs {
+.dynamic-views .card-text-preview.has-paragraphs {
   /* Override -webkit-box line-clamp — JS handles per-paragraph truncation.
      Scoped to .has-paragraphs so cards without paragraph breaks keep native clamp. */
   display: block;
@@ -261,15 +259,6 @@ body.dynamic-views-show-thumbnail-placeholder
   &.image-fit-contain .card .card-thumbnail img {
     object-fit: contain;
   }
-}
-
-/* Thumbnail crop alignment overrides */
-body.dynamic-views-thumbnail-crop-top .dynamic-views .card-thumbnail img {
-  object-position: center top;
-}
-
-body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
-  object-position: center bottom;
 }
 
 /* Collapse card-previews when it only has a hidden thumbnail placeholder

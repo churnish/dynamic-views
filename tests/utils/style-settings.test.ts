@@ -11,8 +11,8 @@ import {
   getHideEmptyMode,
   clearStyleSettingsCache,
   getOmitFirstLineMode,
-  shouldKeepPreviewHeadings,
-  shouldKeepPreviewNewlines,
+  preserveTextPreviewHeadings,
+  preserveTextPreviewNewlines,
 } from '../../src/utils/style-settings';
 
 describe('style-settings', () => {
@@ -355,25 +355,25 @@ describe('style-settings', () => {
     });
   });
 
-  describe('shouldKeepPreviewHeadings', () => {
+  describe('preserveTextPreviewHeadings', () => {
     it('should return true when keep-headings class is present', () => {
       mockClassList.add('dynamic-views-text-preview-keep-headings');
-      expect(shouldKeepPreviewHeadings()).toBe(true);
+      expect(preserveTextPreviewHeadings()).toBe(true);
     });
 
     it('should return false when class is absent', () => {
-      expect(shouldKeepPreviewHeadings()).toBe(false);
+      expect(preserveTextPreviewHeadings()).toBe(false);
     });
   });
 
-  describe('shouldKeepPreviewNewlines', () => {
+  describe('preserveTextPreviewNewlines', () => {
     it('should return true when keep-newlines class is present', () => {
       mockClassList.add('dynamic-views-text-preview-keep-newlines');
-      expect(shouldKeepPreviewNewlines()).toBe(true);
+      expect(preserveTextPreviewNewlines()).toBe(true);
     });
 
     it('should return false when class is absent', () => {
-      expect(shouldKeepPreviewNewlines()).toBe(false);
+      expect(preserveTextPreviewNewlines()).toBe(false);
     });
   });
 });

@@ -1,13 +1,13 @@
 import { vi, describe, it, expect } from 'vitest';
-import type { CardData } from '../../src/shared/card-data';
+import type { CardData } from '../../src/core/card-data';
 
 // Mock all transitive dependencies of shared-renderer.ts
-vi.mock('../../src/shared/text-preview-dom', () => ({
-  setPreviewContent: vi.fn(),
+vi.mock('../../src/core/text-preview-dom', () => ({
+  setTextPreviewContent: vi.fn(),
   updateTextPreviewDOM: vi.fn(),
   applyPerParagraphClamp: vi.fn(),
 }));
-vi.mock('../../src/shared/image-loader', () => ({
+vi.mock('../../src/core/image-loader', () => ({
   setupImageLoadHandler: vi.fn(),
   setupBackdropImageLoader: vi.fn(),
   handleImageLoad: vi.fn(),
@@ -16,17 +16,17 @@ vi.mock('../../src/shared/image-loader', () => ({
   filterBrokenUrls: vi.fn(),
   markImageBroken: vi.fn(),
 }));
-vi.mock('../../src/shared/context-menu', () => ({
+vi.mock('../../src/core/context-menu', () => ({
   showFileContextMenu: vi.fn(),
   showExternalLinkContextMenu: vi.fn(),
 }));
-vi.mock('../../src/shared/scroll-gradient', () => ({
+vi.mock('../../src/core/scroll-gradient', () => ({
   updateScrollGradient: vi.fn(),
   setupScrollGradients: vi.fn(),
   setupElementScrollGradient: vi.fn(),
   setupVerticalScrollGradient: vi.fn(),
 }));
-vi.mock('../../src/shared/render-utils', () => ({
+vi.mock('../../src/core/render-utils', () => ({
   getTimestampIcon: vi.fn(),
   isTimestampProperty: vi.fn(),
 }));
@@ -43,7 +43,7 @@ vi.mock('../../src/utils/style-settings', () => ({
   getCompactBreakpoint: vi.fn(),
   hasBodyClass: vi.fn(),
 }));
-vi.mock('../../src/utils/property', () => ({
+vi.mock('../../src/core/property-display', () => ({
   getPropertyDisplayName: vi.fn(),
   parsePropertyList: vi.fn(),
   stripNotePrefix: vi.fn(),
@@ -51,7 +51,7 @@ vi.mock('../../src/utils/property', () => ({
 vi.mock('../../src/utils/link-parser', () => ({
   findLinksInText: vi.fn(),
 }));
-vi.mock('../../src/shared/image-viewer', () => ({
+vi.mock('../../src/core/image-viewer', () => ({
   handleImageViewerTrigger: vi.fn(),
   cleanupAllViewers: vi.fn(),
 }));
@@ -59,7 +59,7 @@ vi.mock('../../src/utils/file-extension', () => ({
   getFileExtInfo: vi.fn(),
   getFileTypeIcon: vi.fn(),
 }));
-vi.mock('../../src/shared/slideshow', () => ({
+vi.mock('../../src/core/slideshow', () => ({
   createPreloadBrokenHandler: vi.fn(),
   createSlideshowNavigator: vi.fn(),
   getCachedBlobUrl: vi.fn(),
@@ -67,33 +67,38 @@ vi.mock('../../src/shared/slideshow', () => ({
   setupImagePreload: vi.fn(),
   setupSwipeGestures: vi.fn(),
 }));
-vi.mock('../../src/shared/hover', () => ({
+vi.mock('../../src/core/hover-and-touch', () => ({
+  canHover: vi.fn(),
+  canPrimaryHover: vi.fn(),
+  deferContainerHoverDrop: vi.fn(),
+  isHoverPointer: vi.fn(),
   setupHoverIntent: vi.fn(),
+  setupTouchPress: vi.fn(),
 }));
-vi.mock('../../src/shared/keyboard-nav', () => ({
+vi.mock('../../src/core/keyboard-nav', () => ({
   handleArrowNavigation: vi.fn(),
   isArrowKey: vi.fn(),
   isImageViewerBlockingNav: vi.fn(),
 }));
-vi.mock('../../src/shared/constants', () => ({
+vi.mock('../../src/core/constants', () => ({
   CHECKBOX_MARKER_PREFIX: 'checkbox:',
   THUMBNAIL_STACK_MULTIPLIER: 1,
   VISIBLE_BODY_SELECTOR:
     '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)',
 }));
-vi.mock('../../src/utils/notebook-navigator', () => ({
+vi.mock('../../src/core/notebook-navigator', () => ({
   shouldUseNotebookNavigator: vi.fn(),
   navigateToTagInNotebookNavigator: vi.fn(),
   navigateToFolderInNotebookNavigator: vi.fn(),
   revealFileInNotebookNavigator: vi.fn(),
 }));
-vi.mock('../../src/shared/property-measure', () => ({
+vi.mock('../../src/core/property-measure', () => ({
   measurePropertyFields: vi.fn(),
 }));
-vi.mock('../../src/shared/content-visibility', () => ({
+vi.mock('../../src/core/content-visibility', () => ({
   CONTENT_HIDDEN_CLASS: 'content-hidden',
 }));
-vi.mock('../../src/shared/property-helpers', () => ({
+vi.mock('../../src/core/property-helpers', () => ({
   isTagProperty: vi.fn(),
   isFileProperty: vi.fn(),
   isFormulaProperty: vi.fn(),
@@ -103,7 +108,7 @@ vi.mock('../../src/shared/property-helpers', () => ({
 vi.mock('../../src/utils/owner-window', () => ({
   getOwnerWindow: vi.fn(),
 }));
-vi.mock('../../src/shared/poster', () => ({
+vi.mock('../../src/core/poster', () => ({
   clipPosterStaticOverflow: vi.fn(),
   handlePosterTapReveal: vi.fn(),
   resetPosterClipping: vi.fn(),
@@ -114,7 +119,7 @@ import {
   SharedCardRenderer,
   applyCssOnlySettings,
 } from '../../src/bases/shared-renderer';
-import { VISIBLE_BODY_SELECTOR } from '../../src/shared/constants';
+import { VISIBLE_BODY_SELECTOR } from '../../src/core/constants';
 import { getOwnerWindow } from '../../src/utils/owner-window';
 import type { BasesViewConfig } from 'obsidian';
 

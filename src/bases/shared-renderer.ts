@@ -4,7 +4,7 @@
  */
 
 /** Hover parent type — Obsidian stores the active HoverPopover here and auto-dismisses on replacement. */
-type HoverParent = { hoverPopover: null };
+type HoverParent = { hoverPopover: { unload(): void } | null };
 
 import {
   App,
@@ -17,12 +17,12 @@ import {
   Keymap,
 } from 'obsidian';
 import type { BasesViewConfig } from 'obsidian';
-import { CardData } from '../shared/card-data';
+import { CardData, type CardHandle } from '../core/card-data';
 import {
-  setPreviewContent,
+  setTextPreviewContent,
   updateTextPreviewDOM,
   applyPerParagraphClamp,
-} from '../shared/text-preview-dom';
+} from '../core/text-preview-dom';
 import {
   setupImageLoadHandler,
   setupBackdropImageLoader,
@@ -31,24 +31,24 @@ import {
   DEFAULT_ASPECT_RATIO,
   filterBrokenUrls,
   markImageBroken,
-} from '../shared/image-loader';
+} from '../core/image-loader';
 import {
   showFileContextMenu,
   showExternalLinkContextMenu,
-} from '../shared/context-menu';
+} from '../core/context-menu';
 import {
   updateScrollGradient,
   setupScrollGradients,
   setupElementScrollGradient,
   setupVerticalScrollGradient,
-} from '../shared/scroll-gradient';
-import { getTimestampIcon, isTimestampProperty } from '../shared/render-utils';
+} from '../core/scroll-gradient';
+import { getTimestampIcon, isTimestampProperty } from '../core/render-utils';
 import {
   createCardDragHandler,
   createExternalLinkDragHandler,
   createTagDragHandler,
   createUrlButtonDragHandlers,
-} from '../shared/drag';
+} from '../core/drag';
 import {
   showTagHashPrefix,
   getHideEmptyMode,
@@ -66,13 +66,13 @@ import {
   getPropertyDisplayName,
   parsePropertyList,
   stripNotePrefix,
-} from '../utils/property';
+} from '../core/property-display';
 import { findLinksInText, type ParsedLink } from '../utils/link-parser';
 import {
   handleImageViewerTrigger,
   cleanupAllViewers,
-} from '../shared/image-viewer';
-import { applyIconOpticalOffset } from '../shared/icon-alignment';
+} from '../core/image-viewer';
+import { applyIconOpticalOffset } from '../core/icon-alignment';
 import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
 import type DynamicViews from '../../main';
 import type { ResolvedSettings, LayoutSource } from '../types';
@@ -83,7 +83,7 @@ import {
   setupHoverZoomEligibility,
   setupImagePreload,
   setupSwipeGestures,
-} from '../shared/slideshow';
+} from '../core/slideshow';
 import {
   canHover,
   canPrimaryHover,
@@ -91,38 +91,38 @@ import {
   isHoverPointer,
   setupHoverIntent,
   setupTouchPress,
-} from '../shared/hover-and-touch';
+} from '../core/hover-and-touch';
 import {
   setupTouchScrubbing,
   observeThumbnailReset,
   unobserveThumbnailReset,
   computeScrubIndex,
   applyScrubImage,
-} from '../shared/thumbnail-scrub';
+} from '../core/thumbnail-scrub';
 import {
   handleArrowNavigation,
   isArrowKey,
   isImageViewerBlockingNav,
   type VirtualCardRect,
-} from '../shared/keyboard-nav';
+} from '../core/keyboard-nav';
 import {
   CHECKBOX_MARKER_PREFIX,
   CONTEXT_MENU_SUPPRESS_MS,
   THUMBNAIL_STACK_MULTIPLIER,
   TOUCH_TAP_THRESHOLD_MS,
   VISIBLE_BODY_SELECTOR,
-} from '../shared/constants';
+} from '../core/constants';
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
   revealFileInNotebookNavigator,
-} from '../utils/notebook-navigator';
+} from '../core/notebook-navigator';
 import {
   measurePropertyFields,
   remeasureCardPairs,
-} from '../shared/property-measure';
-import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
+} from '../core/property-measure';
+import { CONTENT_HIDDEN_CLASS } from '../core/content-visibility';
 import {
   isTagProperty,
   isFileProperty,
@@ -132,20 +132,70 @@ import {
   queueCompactStackedCheck,
   cancelCompactStackedCheck,
   invalidateCompactStackedCache,
-} from '../shared/property-helpers';
+} from '../core/property-helpers';
 import { getOwnerWindow } from '../utils/owner-window';
 import {
   clipPosterStaticOverflow,
   handlePosterTapReveal,
   resetPosterClipping,
   resetPosterScroll,
-} from '../shared/poster';
+} from '../core/poster';
 
-/** Per-card cleanup handle for individual card teardown (virtual scrolling) */
-export interface CardHandle {
-  el: HTMLElement;
-  cleanup: () => void;
+type InkRect = { left: number; top: number; right: number; bottom: number };
+
+/** Measure per-line bounding rects of visible text and inline elements inside a title link. */
+function measureTitleInkRects(link: HTMLElement): InkRect[] {
+  const ownerDoc = link.ownerDocument;
+  const win = getOwnerWindow(link);
+  const linkRect = link.getBoundingClientRect();
+  // Small tolerance for clamp boundary — text at the edge of the clamp may extend fractionally past
+  const visibleBottom = linkRect.bottom + 0.5;
+  const rects: InkRect[] = [];
+
+  const pushRect = (rect: DOMRect) => {
+    if (rect.width <= 0 || rect.height <= 0 || rect.bottom > visibleBottom)
+      return;
+    rects.push({
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+    });
+  };
+
+  const walker = ownerDoc.createTreeWalker(
+    link,
+    win.NodeFilter.SHOW_TEXT | win.NodeFilter.SHOW_ELEMENT,
+    {
+      acceptNode: (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent?.trim()
+            ? win.NodeFilter.FILTER_ACCEPT
+            : win.NodeFilter.FILTER_REJECT;
+        }
+        return (node as Element).matches(
+          '.card-title-icon, .card-title-ext, .card-title-ext-suffix'
+        )
+          ? win.NodeFilter.FILTER_ACCEPT
+          : win.NodeFilter.FILTER_SKIP;
+      },
+    }
+  );
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const range = ownerDoc.createRange();
+      range.selectNodeContents(node);
+      for (const rect of range.getClientRects()) pushRect(rect);
+    } else {
+      pushRect((node as Element).getBoundingClientRect());
+    }
+  }
+
+  return rects;
 }
+
+export type { CardHandle } from '../core/card-data';
 
 const PAIRED_PROPERTY_CLASSES = [
   'dynamic-views-paired-property-left',
@@ -1063,12 +1113,29 @@ export class SharedCardRenderer {
           });
         }
         link.append(displayTitle);
+        if (isTitleEmpty) link.classList.add('empty-value-marker');
+
+        // Precise ink-rect state — hoisted for click/contextmenu access
+        const isPreciseHover =
+          settings.openFileAction === 'title' && !this.app.isMobile;
+        let inkRects: InkRect[] = [];
+
+        const checkInkHit = (e: MouseEvent): boolean =>
+          inkRects.some(
+            (r) =>
+              e.clientX >= r.left &&
+              e.clientX <= r.right &&
+              e.clientY >= r.top &&
+              e.clientY <= r.bottom
+          );
 
         link.addEventListener(
           'click',
           (e) => {
             e.preventDefault();
             e.stopPropagation();
+            // Desktop open-on-title: only open file when clicking on text
+            if (isPreciseHover && !checkInkHit(e)) return;
             // Suppress context-menu / long-touch click — see touchDownTime setup
             if (Date.now() - lastContextMenuTime < CONTEXT_MENU_SUPPRESS_MS)
               return;
@@ -1089,7 +1156,11 @@ export class SharedCardRenderer {
 
         // Page preview on hover — skip when card handler already covers it
         // (isPosterClickReveal + openFileAction 'card' = card mouseenter handles it)
-        if (!(isPosterClickReveal && settings.openFileAction === 'card')) {
+        // Also skip desktop open-on-title — precise hover handler below manages it
+        if (
+          !(isPosterClickReveal && settings.openFileAction === 'card') &&
+          !(!this.app.isMobile && settings.openFileAction === 'title')
+        ) {
           link.addEventListener(
             'mouseenter',
             (e) => {
@@ -1106,8 +1177,104 @@ export class SharedCardRenderer {
           );
         }
 
+        // Precise hover: only activate hover color/underline over actual text glyphs.
+        // -webkit-box fills available width; this prevents hover on dead space.
+        if (isPreciseHover) {
+          // Block Obsidian's delegated mouseover handler on .internal-link — it
+          // fires page preview on the full -webkit-box area. Our own fireHoverLink()
+          // (triggered from mouseenter/mousemove) handles preview gated by ink rects.
+          link.addEventListener('mouseover', (e) => e.stopPropagation(), {
+            signal,
+          });
+
+          let dirty = false;
+          let hoverHit = false;
+
+          // Per-link hoverParent so we can dismiss the popover when leaving
+          // text without affecting other cards' popovers.
+          const linkHoverParent: HoverParent = { hoverPopover: null };
+
+          // Re-measure when title text changes in-place (updateTitleText path)
+          const observer = new (getOwnerWindow(link).MutationObserver)(() => {
+            dirty = true;
+          });
+          observer.observe(link, { characterData: true, subtree: true });
+          signal.addEventListener('abort', () => observer.disconnect());
+
+          const fireHoverLink = (e: MouseEvent) => {
+            this.app.workspace.trigger('hover-link', {
+              event: e,
+              source: 'bases',
+              hoverParent: linkHoverParent,
+              targetEl: link,
+              linktext: card.path,
+              sourcePath: card.path,
+            });
+          };
+
+          // Cancel pending page preview: synthetic mouseover from non-link
+          // parent triggers Obsidian's document-level cancel handler.
+          // Already-visible popovers are dismissed by Obsidian's own
+          // checkHover() when the cursor leaves the target + popover area.
+          const cancelPendingPreview = () => {
+            titleEl.dispatchEvent(
+              new MouseEvent('mouseover', { bubbles: true })
+            );
+          };
+
+          link.addEventListener(
+            'mouseenter',
+            (e) => {
+              inkRects = measureTitleInkRects(link);
+              dirty = false;
+              const hit = checkInkHit(e);
+              if (hit !== hoverHit) {
+                hoverHit = hit;
+                link.classList.toggle('is-title-hover-hit', hit);
+              }
+              if (hit) fireHoverLink(e);
+            },
+            { signal }
+          );
+
+          link.addEventListener(
+            'mousemove',
+            (e: MouseEvent) => {
+              if (dirty) {
+                inkRects = measureTitleInkRects(link);
+                dirty = false;
+              }
+              const hit = checkInkHit(e);
+              if (hit !== hoverHit) {
+                hoverHit = hit;
+                link.classList.toggle('is-title-hover-hit', hit);
+                if (hit) fireHoverLink(e);
+                else cancelPendingPreview();
+              }
+            },
+            { signal, passive: true } as AddEventListenerOptions
+          );
+
+          link.addEventListener(
+            'mouseleave',
+            () => {
+              hoverHit = false;
+              link.classList.remove('is-title-hover-hit');
+              cancelPendingPreview();
+            },
+            { signal }
+          );
+        }
+
         // Open context menu on right-click
-        link.addEventListener('contextmenu', handleContextMenu, { signal });
+        link.addEventListener(
+          'contextmenu',
+          (e) => {
+            if (isPreciseHover && !checkInkHit(e)) return;
+            handleContextMenu(e);
+          },
+          { signal }
+        );
 
         // Make title draggable when openFileAction is 'title'
         link.addEventListener('dragstart', handleDrag, { signal });
@@ -1175,6 +1342,7 @@ export class SharedCardRenderer {
           });
         }
         titleSpan.append(displayTitle);
+        if (isTitleEmpty) titleSpan.classList.add('empty-value-marker');
         if (extInfo) {
           titleSpan.createSpan({
             cls: 'card-title-ext-suffix',
@@ -1249,7 +1417,9 @@ export class SharedCardRenderer {
     const titleProp = settings.titleProperty || '';
     const titleHasExtension =
       titleProp === 'file.name' || titleProp === 'file.fullname';
-    const displayTitle = titleHasExtension ? entry.file.basename : card.title;
+    const rawTitle = titleHasExtension ? entry.file.basename : card.title;
+    const isTitleEmpty = !rawTitle && !!settings.titleProperty;
+    const displayTitle = isTitleEmpty ? getEmptyValueMarker() : rawTitle;
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
@@ -1424,12 +1594,7 @@ export class SharedCardRenderer {
         previewsEl.classList.add('has-text-preview');
         const wrapper = previewsEl.createDiv('card-text-preview-wrapper');
         const previewDiv = wrapper.createDiv('card-text-preview');
-        setPreviewContent(previewDiv, card.textPreview);
-
-        // has-paragraphs: mark when text preview contains <p> children
-        if (previewDiv.querySelector('p')) {
-          previewDiv.classList.add('has-paragraphs');
-        }
+        setTextPreviewContent(previewDiv, card.textPreview);
       }
 
       // Thumbnail (all positions now inside card-previews)
@@ -2131,7 +2296,9 @@ export class SharedCardRenderer {
     const titleProp = settings.titleProperty || '';
     const titleHasExtension =
       titleProp === 'file.name' || titleProp === 'file.fullname';
-    const displayTitle = titleHasExtension ? entry.file.basename : card.title;
+    const rawTitle = titleHasExtension ? entry.file.basename : card.title;
+    const isTitleEmpty = !rawTitle && !!settings.titleProperty;
+    const displayTitle = isTitleEmpty ? getEmptyValueMarker() : rawTitle;
 
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(
@@ -2148,6 +2315,8 @@ export class SharedCardRenderer {
         titleTextEl.appendChild(newTextNode);
       }
     }
+
+    titleTextEl.classList.toggle('empty-value-marker', isTitleEmpty);
   }
 
   /**
@@ -3096,7 +3265,12 @@ export class SharedCardRenderer {
     } else {
       // Generic property - wrap in div for proper scrolling (consistent with tags/paths)
       const textWrapper = propertyContent.createDiv('text-wrapper');
-      this.renderTextWithLinks(textWrapper, stringValue, card.path, signal);
+      // Strip newlines from regular property values (not subtitles — CSS handles those)
+      const isSubtitle = container.classList.contains('card-subtitle');
+      const renderedValue = isSubtitle
+        ? stringValue
+        : stringValue.replace(/\n/g, ' ');
+      this.renderTextWithLinks(textWrapper, renderedValue, card.path, signal);
     }
 
     // Remove propertyContent wrapper if it ended up empty (e.g., tags with no values)

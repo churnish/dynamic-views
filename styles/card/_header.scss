@@ -43,6 +43,11 @@
     -webkit-line-clamp: var(--dynamic-views-title-lines, 2);
     -webkit-box-orient: vertical;
     overflow: hidden;
+    white-space: pre-line;
+  }
+
+  .card-title .card-title-text.empty-value-marker {
+    opacity: 0.6;
   }
 
   // Single-line titles: character-level truncation via text-overflow
@@ -141,12 +146,12 @@
     width: calc(1lh / var(--dynamic-views-line-height-tight));
     height: 1lh; /* Intentionally 1lh (not calc) — matches line box for vertical-align */
     vertical-align: bottom;
-    color: var(--dynamic-views-text-normal);
+    color: inherit;
     stroke-width: var(--dynamic-views-icon-xs-stroke-width);
   }
 }
 
-/* File type indicator: Flair (box before title) */
+/* File type indicator: Flair */
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext {
   display: inline-flex;
   align-items: center;
@@ -160,7 +165,7 @@ body.dynamic-views-file-type-flair .dynamic-views .card-title-ext {
 
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before {
   content: attr(data-ext);
-  color: var(--dynamic-views-text-muted);
+  color: color-mix(in srgb, currentColor 80%, transparent);
   font-family: var(--dynamic-views-font-interface);
   font-size: var(--dynamic-views-font-ui-smaller);
   line-height: var(
@@ -169,13 +174,50 @@ body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before {
   );
   padding: 0 0.33em 0 0.38em; /* Extra 0.05em left to offset letter-spacing trailing space */
   border-radius: var(--dynamic-views-radius-s);
-  background-color: var(--dynamic-views-background-modifier-border);
+  background-color: color-mix(
+    in srgb,
+    currentColor 25%,
+    var(--dynamic-views-background-primary)
+  );
   font-weight: var(--dynamic-views-nav-tag-weight);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-/* Flair mode hides extension suffix (badge replaces it) */
+/* Flair: normal title — subtler tint */
+body.dynamic-views-file-type-flair:not([class*='dynamic-views-title-color-']),
+body.dynamic-views-file-type-flair.dynamic-views-title-color-normal {
+  .dynamic-views .card-title-ext::before {
+    background-color: color-mix(
+      in srgb,
+      currentColor 17%,
+      var(--dynamic-views-background-primary)
+    );
+  }
+}
+
+/* Poster: transparent flair with border, color matches title */
+body.dynamic-views-file-type-flair
+  .dynamic-views
+  .card.image-format-poster.has-poster
+  .card-title-ext::before {
+  background-color: transparent;
+  color: inherit;
+  border: 1px solid color-mix(in srgb, currentColor 60%, transparent);
+}
+
+/* Poster flair: stronger border for colored title */
+body.dynamic-views-file-type-flair:not(
+    .dynamic-views-title-color-muted,
+    .dynamic-views-title-color-normal
+  )[class*='dynamic-views-title-color-']
+  .dynamic-views
+  .card.image-format-poster.has-poster
+  .card-title-ext::before {
+  border-color: currentColor;
+}
+
+/* Flair: Hide extension suffix (badge replaces it) */
 body.dynamic-views-file-type-flair .dynamic-views .card-title-ext-suffix {
   display: none;
 }
@@ -205,7 +247,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     color: inherit;
     font-weight: inherit;
     cursor: pointer;
-    /* Match Bases backend <a> tag transition for consistent touch feedback */
+    /* Match Bases <a> tag transition for consistent touch feedback */
     transition: opacity var(--dynamic-views-anim-duration-fast) ease-in-out;
   }
 
@@ -227,7 +269,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .dynamic-views
     .card.interact
     .card-title
-    a:is(:hover, :active) {
+    a:is(.is-title-hover-hit, :active) {
     text-decoration: underline;
     color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
   }
@@ -351,7 +393,7 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
   .card-subtitle
   .text-wrapper
   > span:not(.internal-link):not(.external-link):not(.tag) {
-  white-space: normal;
+  white-space: pre-line;
 }
 
 /* Disable fade gradient in wrap mode */
@@ -442,4 +484,5 @@ body.dynamic-views-title-overflow-scroll
   display: inline;
   -webkit-line-clamp: unset;
   -webkit-box-orient: unset;
+  white-space: nowrap;
 }

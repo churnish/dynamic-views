@@ -1,7 +1,7 @@
 /**
  * Tests for grid-view infinite scroll logic:
  *   - getBatchSize calculation (columns × ROWS_PER_COLUMN, capped at MAX_BATCH_SIZE)
- *   - checkAndLoadMore guard conditions (isLoading, displayedCount, distanceFromBottom)
+ *   - checkAndLoadMore guard conditions (isLoading, virtualItemCount, distanceFromBottom)
  *
  * Both methods are private on DynamicViewsGridView and cannot be imported directly.
  * These tests verify the same pure arithmetic to ensure correctness and catch regressions.
@@ -13,7 +13,7 @@ import {
   PANE_MULTIPLIER,
   SCROLL_IDLE_SYNC_MS,
   SCROLL_THROTTLE_MS,
-} from '../../src/shared/constants';
+} from '../../src/core/constants';
 
 // ---------------------------------------------------------------------------
 // Helpers mirroring getBatchSize internal logic
@@ -100,7 +100,7 @@ describe('checkAndLoadMore guards', () => {
   /** Simulates the guard checks in checkAndLoadMore */
   function shouldLoad(opts: {
     isLoading: boolean;
-    displayedCount: number;
+    virtualItemCount: number;
     totalEntries: number;
     scrollTop: number;
     scrollHeight: number;
@@ -108,7 +108,7 @@ describe('checkAndLoadMore guards', () => {
   }): boolean {
     const {
       isLoading,
-      displayedCount,
+      virtualItemCount,
       totalEntries,
       scrollTop,
       scrollHeight,
@@ -116,7 +116,7 @@ describe('checkAndLoadMore guards', () => {
     } = opts;
 
     // Guard 1: already loading or all items displayed
-    if (isLoading || displayedCount >= totalEntries) return false;
+    if (isLoading || virtualItemCount >= totalEntries) return false;
 
     const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
     const threshold = clientHeight * PANE_MULTIPLIER;
@@ -127,27 +127,27 @@ describe('checkAndLoadMore guards', () => {
 
   const BASE = {
     isLoading: false,
-    displayedCount: 10,
+    virtualItemCount: 10,
     totalEntries: 100,
     scrollTop: 900,
     scrollHeight: 1000,
     clientHeight: 200,
   };
 
-  it('does not advance displayedCount when isLoading is true', () => {
+  it('does not advance virtualItemCount when isLoading is true', () => {
     expect(shouldLoad({ ...BASE, isLoading: true })).toBe(false);
   });
 
-  it('does not advance displayedCount when displayedCount >= totalEntries', () => {
-    expect(shouldLoad({ ...BASE, displayedCount: 100 })).toBe(false);
+  it('does not advance virtualItemCount when virtualItemCount >= totalEntries', () => {
+    expect(shouldLoad({ ...BASE, virtualItemCount: 100 })).toBe(false);
   });
 
-  it('does not advance displayedCount when distanceFromBottom >= threshold', () => {
+  it('does not advance virtualItemCount when distanceFromBottom >= threshold', () => {
     // distanceFromBottom = 1000 - (0 + 200) = 800; threshold = 200 * 3 = 600 → not near bottom
     expect(shouldLoad({ ...BASE, scrollTop: 0 })).toBe(false);
   });
 
-  it('advances displayedCount when near bottom with items remaining', () => {
+  it('advances virtualItemCount when near bottom with items remaining', () => {
     // distanceFromBottom = 1000 - (900 + 200) = -100 (negative = past bottom); threshold = 600
     expect(shouldLoad(BASE)).toBe(true);
   });

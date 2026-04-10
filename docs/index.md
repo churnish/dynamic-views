@@ -18,7 +18,6 @@ Cross-plugin knowledge docs (platform quirks, Obsidian API gotchas, Electron/CSS
 | [project-structure.md](project-structure.md) | Navigating the codebase, finding files, or understanding module responsibilities — documents the full directory tree with file descriptions. |
 | [release-guide.md](release-guide.md) | Running a release, bumping versions, or troubleshooting the release pipeline — documents the full npm version lifecycle, GitHub Action build, and rollback procedures. |
 
-
 ## arch/
 
 Stable reference docs for system internals — data structures, render pipelines, invariants, and design decisions that remain valid across sessions.
