@@ -231,7 +231,9 @@ function processCompactStackedBatch(doc: Document): void {
   // invalidating the clip calculated in the card RO callback
   const posterStaticCards = eligible.filter(
     (c) =>
-      c.classList.contains('image-format-poster') && c.closest('.poster-static')
+      c.classList.contains('image-format-poster') &&
+      c.classList.contains('has-poster') &&
+      c.closest('.poster-static')
   );
   if (posterStaticCards.length > 0)
     clipPosterStaticOverflowBatch(posterStaticCards);

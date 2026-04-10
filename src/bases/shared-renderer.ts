@@ -267,11 +267,11 @@ export function applyCssOnlySettings(
 
     // Re-clip poster cards when text preview line count changes
     if (containerEl.classList.contains('poster-static')) {
-      for (const card of containerEl.querySelectorAll<HTMLElement>(
-        '.card.image-format-poster.has-poster'
-      )) {
-        clipPosterStaticOverflow(card);
-      }
+      clipPosterStaticOverflowBatch([
+        ...containerEl.querySelectorAll<HTMLElement>(
+          '.card.image-format-poster.has-poster'
+        ),
+      ]);
     }
   }
 

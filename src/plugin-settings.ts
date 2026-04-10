@@ -119,7 +119,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           .setName('Open file action')
           .setDesc(
             createFragment((frag) => {
-              frag.appendText('How files should open when pressed. ');
+              frag.appendText('How files should open. ');
               frag.createEl('strong', { text: 'Press on title' });
               frag.appendText(' enables card text selection.');
             })
