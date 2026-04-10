@@ -97,6 +97,10 @@ export const MAX_HOVER_SCALE = 1.04;
 export const VISIBLE_BODY_SELECTOR =
   '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
 
+// Measurement utility: suppresses CSS Grid row stretch so imageless cards
+// report natural content height during stretchPosterCardsInMixedRows.
+export const ALIGN_START_CLASS = 'dynamic-views-align-start';
+
 // Poster stretch trio — the class signals stretch state and the two CSS variables carry computed values. All three must be set/cleared together; clearing only the class leaks stale CSS variable state. Consumed by `_poster.scss`.
 export const POSTER_STRETCH_CLASS = 'poster-stretch';
 export const POSTER_ROW_MIN_HEIGHT_VAR = '--poster-row-min-height';

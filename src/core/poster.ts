@@ -71,12 +71,28 @@ export function handlePosterTapReveal(
   return false;
 }
 
-/**
- * Measures card-content and hides bottom-up elements that don't fit.
- * For partially-visible text elements, reduces line clamp instead of hiding.
- */
-export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
-  // Clear previous clip state upfront (reset is part of re-clip — avoids redundant queries)
+// -- Internal types for batched poster clipping --
+
+interface PosterClipPrepared {
+  contentEl: HTMLElement;
+  titleEl: HTMLElement | null;
+  subtitleEl: HTMLElement | null;
+  clippable: HTMLElement[];
+  textPreviewEl: HTMLElement | null;
+  textPreviewWrapper: HTMLElement | null;
+}
+
+interface PosterClipMeasured {
+  clipBottom: number;
+  rects: DOMRect[];
+  titleRect: DOMRect | undefined;
+  textPreviewLineHeight: number;
+  subtitleLineHeight: number;
+  titleLineHeight: number;
+}
+
+/** Clears previous clip state and collects clippable elements. Returns null if clipping is inapplicable. */
+function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
   for (const el of cardEl.querySelectorAll<HTMLElement>(
     `.${CLIP_HIDDEN_CLASS}`
   )) {
@@ -84,16 +100,12 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
   }
 
   const contentEl = cardEl.querySelector<HTMLElement>('.card-content');
-  if (!contentEl) return;
-  if (!cardEl.classList.contains('has-poster')) return;
+  if (!contentEl) return null;
+  if (!cardEl.classList.contains('has-poster')) return null;
 
-  const win = getOwnerWindow(cardEl);
-
-  // Title is always visible but can be line-clamped to fit
   const titleEl = contentEl.querySelector<HTMLElement>('.card-title');
   if (titleEl) titleEl.style.removeProperty(TITLE_LINES_VAR);
 
-  // Collect clippable elements in DOM order (title handled separately)
   const clippable: HTMLElement[] = [];
 
   let subtitleEl: HTMLElement | null = null;
@@ -128,7 +140,7 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
     }
   }
 
-  if (clippable.length === 0 && !titleEl) return;
+  if (clippable.length === 0 && !titleEl) return null;
 
   const textPreviewEl =
     textPreviewWrapper?.querySelector<HTMLElement>('.card-text-preview') ??
@@ -140,16 +152,32 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
     }
   }
 
-  if (contentEl.scrollHeight <= contentEl.clientHeight) return;
+  return {
+    contentEl,
+    titleEl,
+    subtitleEl,
+    clippable,
+    textPreviewEl,
+    textPreviewWrapper,
+  };
+}
+
+/** Reads all geometry needed for clip decisions. Returns null if no overflow. */
+function measurePosterClipGeometry(
+  cardEl: HTMLElement,
+  prepared: PosterClipPrepared
+): PosterClipMeasured | null {
+  const { contentEl, titleEl, subtitleEl, clippable, textPreviewEl } = prepared;
+
+  if (contentEl.scrollHeight <= contentEl.clientHeight) return null;
 
   const clipBottom =
     contentEl.getBoundingClientRect().top + contentEl.clientHeight;
 
-  // Batch-read all rects (one forced reflow)
   const rects = clippable.map((el) => el.getBoundingClientRect());
   const titleRect = titleEl?.getBoundingClientRect();
 
-  // Batch-read lineHeights for clampable text elements (avoids forced recalc in write loop)
+  const win = getOwnerWindow(cardEl);
   const textPreviewLineHeight = textPreviewEl
     ? parseFloat(win.getComputedStyle(textPreviewEl).lineHeight)
     : 0;
@@ -160,14 +188,38 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
     ? parseFloat(win.getComputedStyle(titleEl).lineHeight)
     : 0;
 
-  // Iterate reverse: hide elements whose bottom exceeds the clip boundary
+  return {
+    clipBottom,
+    rects,
+    titleRect,
+    textPreviewLineHeight,
+    subtitleLineHeight,
+    titleLineHeight,
+  };
+}
+
+/** Applies hide/clamp decisions based on pre-measured geometry. */
+function applyPosterClipDecisions(
+  prepared: PosterClipPrepared,
+  measured: PosterClipMeasured
+): void {
+  const { titleEl, subtitleEl, clippable, textPreviewEl, textPreviewWrapper } =
+    prepared;
+  const {
+    clipBottom,
+    rects,
+    titleRect,
+    textPreviewLineHeight,
+    subtitleLineHeight,
+    titleLineHeight,
+  } = measured;
+
   for (let i = clippable.length - 1; i >= 0; i--) {
     const rect = rects[i];
     if (rect.bottom <= clipBottom) break;
 
     const el = clippable[i];
 
-    // Partially visible: try line-clamping text elements instead of hiding
     if (rect.top < clipBottom) {
       const availableHeight = clipBottom - rect.top;
 
@@ -206,12 +258,35 @@ export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
     el.classList.add(CLIP_HIDDEN_CLASS);
   }
 
-  // Title: never hidden, but reduce line clamp if it overflows
   if (titleEl && titleRect && titleRect.bottom > clipBottom) {
     const availableHeight = clipBottom - titleRect.top;
     if (availableHeight > 0) {
       clampToFit(titleEl, availableHeight, titleLineHeight, TITLE_LINES_VAR);
     }
+  }
+}
+
+/**
+ * Measures card-content and hides bottom-up elements that don't fit.
+ * For partially-visible text elements, reduces line clamp instead of hiding.
+ */
+export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
+  const prepared = clearPosterClipState(cardEl);
+  if (!prepared) return;
+  const measured = measurePosterClipGeometry(cardEl, prepared);
+  if (!measured) return;
+  applyPosterClipDecisions(prepared, measured);
+}
+
+/** Batched version — separates clear/measure/apply phases across all cards to reduce layout thrashing. */
+export function clipPosterStaticOverflowBatch(cards: HTMLElement[]): void {
+  const prepared = cards.map((c) => clearPosterClipState(c));
+  const measured = prepared.map((p, i) =>
+    p ? measurePosterClipGeometry(cards[i], p) : null
+  );
+  for (let i = 0; i < cards.length; i++) {
+    if (prepared[i] && measured[i])
+      applyPosterClipDecisions(prepared[i]!, measured[i]!);
   }
 }
 

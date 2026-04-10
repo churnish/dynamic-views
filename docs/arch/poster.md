@@ -2,7 +2,7 @@
 title: Poster image format
 description: Poster image format architecture — static content clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, and the CSS-only vs full-render setting boundary.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-04-11
 ---
 # Poster image format
 
@@ -32,34 +32,35 @@ The `posterInteractToReveal` setting controls the interaction model:
 
 ## Static clipping pipeline
 
-`clipPosterStaticOverflow(cardEl)` measures card content and hides elements that don't fit. It handles its own reset (clearing stale clip state) before re-clipping.
+`clipPosterStaticOverflow(cardEl)` measures card content and hides elements that don't fit. Internally decomposed into three phases (clear → measure → apply) that can run per-card or batched across multiple cards.
 
 ```
-clipPosterStaticOverflow(cardEl)
+clipPosterStaticOverflow(cardEl)  — single card
+clipPosterStaticOverflowBatch(cards)  — batched (1 reflow instead of K)
 │
-├── 1. RESET: clear stale state
+├── clearPosterClipState(cardEl) → PosterClipPrepared | null  [WRITE]
 │   ├── Remove .poster-clip-hidden from all elements
 │   ├── Reset --dynamic-views-title-lines on .card-title
 │   ├── Reset --dynamic-views-subtitle-lines + .poster-clip-clamped on .card-subtitle
-│   └── Reset --dynamic-views-text-preview-lines on .card-text-preview
-│       └── Re-apply per-paragraph clamp if has-paragraphs
+│   ├── Reset --dynamic-views-text-preview-lines on .card-text-preview
+│   │   └── Re-apply per-paragraph clamp if has-paragraphs
+│   ├── No .card-content or no .has-poster → return null
+│   └── Returns { contentEl, titleEl, subtitleEl, clippable[], textPreviewEl, textPreviewWrapper }
 │
-├── 2. EARLY RETURNS
-│   ├── No .card-content → return
-│   ├── No .has-poster class → return
-│   └── scrollHeight <= clientHeight (no overflow after reset) → return
-│
-├── 3. BATCH READ (one forced reflow)
+├── measurePosterClipGeometry(cardEl, prepared) → PosterClipMeasured | null  [READ]
+│   ├── scrollHeight <= clientHeight (no overflow) → return null
 │   ├── getBoundingClientRect() for all clippable elements + title
 │   └── getComputedStyle().lineHeight for text preview, subtitle, title
 │
-└── 4. WRITE LOOP (reverse DOM order, bottom-up)
+└── applyPosterClipDecisions(prepared, measured)  [WRITE]
     ├── Element fully below clip boundary → add .poster-clip-hidden
     ├── Element partially visible:
     │   ├── Text preview → clampToFit() with --dynamic-views-text-preview-lines
     │   └── Subtitle → clampToFit() with --dynamic-views-subtitle-lines + .poster-clip-clamped
     └── Title (never hidden) → clampToFit() with --dynamic-views-title-lines
 ```
+
+**Batch variant**: `clipPosterStaticOverflowBatch` runs all clears first, then all measures (one forced reflow), then all applies. The single-card `clipPosterStaticOverflow` calls the same three functions sequentially.
 
 ### Clippable elements (DOM order)
 
@@ -82,15 +83,16 @@ Subtitle additionally gets the `poster-clip-clamped` class, which provides `disp
 
 ### Call sites
 
-| Context | Caller | Notes |
-|---|---|---|
-| Grid initial render | `shared-renderer.ts` | Clip only (no prior state) |
-| ResizeObserver | `shared-renderer.ts` | Size-guarded (`lastClipWidth`/`lastClipHeight`) |
-| `textPreviewLines` change | `applyCssOnlySettings` | Immediate re-clip |
-| Static mode toggled ON | `applyCssOnlySettings` | Immediate |
-| Display mode changed | `applyCssOnlySettings` | Deferred via `requestAnimationFrame` (CSS needs one frame to recalculate layout after class swap) |
+| Context | Caller | Variant | Notes |
+|---|---|---|---|
+| Grid initial render | `shared-renderer.ts` | Single | Clip only (no prior state) |
+| ResizeObserver | `shared-renderer.ts` | Single | Size-guarded (`lastClipWidth`/`lastClipHeight`) |
+| `textPreviewLines` change | `applyCssOnlySettings` | Single | Immediate re-clip |
+| Static mode toggled ON | `applyCssOnlySettings` | Batch | All poster cards in container |
+| Display mode changed | `applyCssOnlySettings` | Batch | Deferred via `requestAnimationFrame` (CSS needs one frame to recalculate layout after class swap) |
+| Compact-stacked settling | `processCompactStackedBatch` | Batch | Re-clip poster-static cards after stacking changes property heights |
 
-`resetPosterClipping(cardEl)` exists as a standalone function for the transition-to-interactive path only (static mode toggled OFF). All other sites call `clipPosterStaticOverflow` which resets internally.
+`resetPosterClipping(cardEl)` exists as a standalone function for the transition-to-interactive path only (static mode toggled OFF). All other sites call `clipPosterStaticOverflow` or `clipPosterStaticOverflowBatch`.
 
 ## Display mode re-clip
 
@@ -166,5 +168,6 @@ Leaking it on dismissed cards causes stale hover effects, particularly visible o
 3. `posterDisplayMode` IS in `CSS_ONLY_SETTINGS_KEYS` — changes are instant CSS class swaps with deferred re-clip.
 4. `transitionend` listeners in `resetPosterScroll` use manual removal, not `{ once: true }`.
 5. `.interact` must be removed on ALL dismiss paths.
-6. Batch reads (rects + lineHeights) happen before the write loop — no read-write interleaving within a single card.
+6. Batch reads (rects + lineHeights) happen before writes — no read-write interleaving within a single card. The batch variant extends this across multiple cards: all clears → all reads (one reflow) → all writes.
 7. Display mode re-clip uses a `null`-guarded tri-state to skip the first call.
+8. Loop call sites MUST use `clipPosterStaticOverflowBatch` — per-card `clipPosterStaticOverflow` in a loop causes O(K) forced reflows.

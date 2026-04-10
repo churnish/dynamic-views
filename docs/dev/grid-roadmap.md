@@ -2,12 +2,12 @@
 title: Grid optimization roadmap
 description: Grid performance optimization tracking — virtual scroll committed-row lock, CSS Grid style recalc bottleneck, forced reflow reduction, and status.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-04-11
 ---
 # Grid optimization roadmap
 
 - Grid uses CSS Grid layout with virtual scroll (committed-row lock) and scroll-position-based content-visibility gating.
-- **Profiling reference**: session `39ae9fd1`. Perf trace at `/tmp/dynamic-views-manual-scroll-trace.json.gz` — M4 Pro, leisurely scroll pace. 7,000+ DOM elements; 70% of frame cost is `UpdateLayoutTree` (style recalc), not Layout/reflow.
+- **Profiling reference**: session `39ae9fd1` (initial), session `471c8e8d` (follow-up with bail-out and batch optimizations). Latest trace: `tall.base` popout, M4 Pro, no throttling — 1,437ms total forced reflow, 38 style recalcs averaging 56ms each (3,000–6,000 elements per recalc). 90% of reflow cost is Bases internals; plugin code contributes ~7.6% (`stretchPosterCardsInMixedRows` at 109ms).
 - Grid fills in 120ms vs Masonry 62ms with identical 10-card budget — CSS Grid style invalidation cascades to all items on each insertion; absolute positioning (Masonry) is style-isolated.
 - Shared card views optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
 
@@ -24,7 +24,9 @@ Ordered by expected impact × confidence from perf trace analysis.
 | # | Task | Expected impact | Evidence | Status |
 |---|---|---|---|---|
 | P0 | Virtual scroll: committed-row lock | Directional fill + row atomicity | Mount ordering matches scroll direction. Cold start/jump: topmost-first. 2 rows/frame budget. | Done |
-| P1 | Style recalc reduction | 70% of scroll frame cost | `UpdateLayoutTree` on 7,000+ elements per insertion. CSS Grid architectural — invalidation cascades to all grid items. | Evaluate |
+| P1 | Style recalc reduction | 70% of scroll frame cost | `UpdateLayoutTree` on 3,000–6,000 elements per recalc. CSS Grid architectural — invalidation cascades to all grid items. 840 children in single group. | Evaluate |
+| P2 | Stretch no-op bail-out | 62% redundant calls eliminated | Composite key (items × columns × image-ready × compact-stacked) + polynomial hash. 16→9 calls, ~100ms→~23ms per scroll round-trip. | Done |
+| P2 | `clipPosterStaticOverflow` batch | O(K)→O(1) reflows | Split into clear/measure/apply phases. Batch variant runs all clears → all reads (1 reflow) → all writes. | Done |
 | — | `__slowMount` debug removal | Cleanup before release | 15× frame delay toggle for mount ordering visual QA. | Planned |
 | — | Phase 1 unit tests | Regression coverage | Committed-row lock, ROW_BUDGET loop, isJump carve-out, cold start vs directional, velocity gate — no tests. | Planned |
 | — | Grid layout architecture doc | Knowledge capture | Committed-row lock mount ordering, cold start row selection, within-row direction, design evolution. | Planned |

@@ -12,6 +12,7 @@ vi.mock('../../src/core/text-preview-dom', () => ({
 import {
   handlePosterTapReveal,
   clipPosterStaticOverflow,
+  clipPosterStaticOverflowBatch,
   resetPosterClipping,
   resetPosterScroll,
 } from '../../src/core/poster';
@@ -632,6 +633,54 @@ describe('clipPosterStaticOverflow', () => {
     expect(title.style.getPropertyValue('--dynamic-views-title-lines')).toBe(
       '4'
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// clipPosterStaticOverflowBatch
+// ---------------------------------------------------------------------------
+
+describe('clipPosterStaticOverflowBatch', () => {
+  it('clips multiple cards in one pass', () => {
+    function makePosterCardWithOverflow(): HTMLElement {
+      const card = document.createElement('div');
+      card.classList.add('has-poster');
+      const content = document.createElement('div');
+      content.className = 'card-content';
+      Object.defineProperty(content, 'scrollHeight', {
+        value: 500,
+        configurable: true,
+      });
+      Object.defineProperty(content, 'clientHeight', {
+        value: 200,
+        configurable: true,
+      });
+      mockRect(content, { top: 0, bottom: 200, height: 200 });
+
+      const propsBottom = document.createElement('div');
+      propsBottom.className = 'card-properties-bottom';
+      const propChild = document.createElement('div');
+      propChild.className = 'property-row';
+      mockRect(propChild, { top: 250, bottom: 270 });
+      propsBottom.appendChild(propChild);
+      content.appendChild(propsBottom);
+      card.appendChild(content);
+
+      return card;
+    }
+
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      lineHeight: '20px',
+      transitionDuration: '0.3s',
+    } as unknown as CSSStyleDeclaration);
+
+    const card1 = makePosterCardWithOverflow();
+    const card2 = makePosterCardWithOverflow();
+
+    clipPosterStaticOverflowBatch([card1, card2]);
+
+    expect(card1.querySelector('.poster-clip-hidden')).toBeTruthy();
+    expect(card2.querySelector('.poster-clip-hidden')).toBeTruthy();
   });
 });
 

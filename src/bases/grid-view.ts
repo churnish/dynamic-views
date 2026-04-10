@@ -121,6 +121,7 @@ import {
   initializeTextPreviewClampForCards,
 } from '../core/text-preview-dom';
 import { CONTENT_HIDDEN_CLASS } from '../core/content-visibility';
+import { registerCompactSettleCallback } from '../core/property-helpers';
 
 // Extend Obsidian types
 declare module 'obsidian' {
@@ -174,6 +175,7 @@ export class DynamicViewsGridView extends BasesView {
   private _previousCustomClasses: string[] = [];
   private currentDoc: Document = document;
   private disconnectStyleObserver: (() => void) | null = null;
+  private disconnectCompactSettle: (() => void) | null = null;
 
   // Consolidated state objects (shared patterns with masonry-view)
   private contentCache: ContentCache = {
@@ -752,6 +754,12 @@ export class DynamicViewsGridView extends BasesView {
     }, this.containerEl);
     this.register(() => this.disconnectStyleObserver?.());
 
+    this.disconnectCompactSettle = registerCompactSettleCallback(
+      this.containerEl.ownerDocument,
+      () => this.equalizeRowPosterHeights()
+    );
+    this.register(() => this.disconnectCompactSettle?.());
+
     // Detect popout move: sync body classes + rebind observer to new document
     this.registerEvent(
       this.app.workspace.on('layout-change', () => {
@@ -866,6 +874,11 @@ export class DynamicViewsGridView extends BasesView {
       resetPersistentWidthCache();
       this.onDataUpdated();
     }, this.containerEl);
+
+    this.disconnectCompactSettle?.();
+    this.disconnectCompactSettle = registerCompactSettleCallback(newDoc, () =>
+      this.equalizeRowPosterHeights()
+    );
 
     this.teardownObservers();
 

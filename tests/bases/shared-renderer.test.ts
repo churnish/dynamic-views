@@ -110,6 +110,7 @@ vi.mock('../../src/utils/owner-window', () => ({
 }));
 vi.mock('../../src/core/poster', () => ({
   clipPosterStaticOverflow: vi.fn(),
+  clipPosterStaticOverflowBatch: vi.fn(),
   handlePosterTapReveal: vi.fn(),
   resetPosterClipping: vi.fn(),
   resetPosterScroll: vi.fn(),

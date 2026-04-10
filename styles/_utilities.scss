@@ -42,6 +42,13 @@ body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
   display: none;
 }
 
+/* Measurement: suppresses CSS Grid row stretch so imageless cards report
+   natural content height, not row-inflated height. Toggled by
+   stretchPosterCardsInMixedRows during the read phase. */
+.dynamic-views-align-start {
+  align-self: start;
+}
+
 /* Programmatic utility classes */
 .dynamic-views-height-preserved {
   min-height: var(--dynamic-views-preserve-height);

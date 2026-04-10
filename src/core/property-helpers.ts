@@ -3,6 +3,7 @@
  */
 
 import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { clipPosterStaticOverflowBatch } from './poster';
 import { getOwnerWindow } from '../utils/owner-window';
 
 /**
@@ -97,6 +98,25 @@ export function hasWrappedPairs(card: HTMLElement): boolean {
 const compactWidthCache = new WeakMap<HTMLElement, number>();
 const pendingCardsByDoc = new Map<Document, Set<HTMLElement>>();
 const batchRafIds = new Map<Document, number>();
+const compactSettleCallbacks = new Map<Document, Set<() => void>>();
+
+/** Register a callback invoked after processCompactStackedBatch write phase. Returns unregister function. */
+export function registerCompactSettleCallback(
+  doc: Document,
+  cb: () => void
+): () => void {
+  let cbs = compactSettleCallbacks.get(doc);
+  if (!cbs) {
+    cbs = new Set();
+    compactSettleCallbacks.set(doc, cbs);
+  }
+  cbs.add(cb);
+  const registered = cbs;
+  return () => {
+    registered.delete(cb);
+    if (registered.size === 0) compactSettleCallbacks.delete(doc);
+  };
+}
 
 /**
  * Queue a compact card for batched wrapping detection.
@@ -206,6 +226,19 @@ function processCompactStackedBatch(doc: Document): void {
       eligible[i].classList.add('compact-stacked');
     }
   }
+
+  // Re-clip poster cards — stacked state just changed property heights,
+  // invalidating the clip calculated in the card RO callback
+  const posterStaticCards = eligible.filter(
+    (c) =>
+      c.classList.contains('image-format-poster') && c.closest('.poster-static')
+  );
+  if (posterStaticCards.length > 0)
+    clipPosterStaticOverflowBatch(posterStaticCards);
+
+  // Notify subscribers (grid-view re-runs poster stretch with settled heights)
+  const cbs = compactSettleCallbacks.get(doc);
+  if (cbs) for (const cb of cbs) cb();
 }
 
 /**

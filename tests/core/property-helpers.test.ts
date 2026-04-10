@@ -14,6 +14,7 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   hasWrappedPairs,
+  registerCompactSettleCallback,
 } from '../../src/core/property-helpers';
 
 describe('property-helpers', () => {
@@ -580,6 +581,65 @@ describe('property-helpers', () => {
       expect(gridCard.classList.contains('compact-stacked')).toBe(true);
       // Masonry card is not wrapped and not in grid — should not be synced
       expect(masonryCard.classList.contains('compact-stacked')).toBe(false);
+    });
+
+    // --- Compact settle callback tests ---
+
+    it('compact settle callback fires after batch processes eligible cards', async () => {
+      const mod = await freshModule();
+      const card = createCompactCard({ wrapped: true });
+
+      const cb = vi.fn();
+      mod.registerCompactSettleCallback(document, cb);
+
+      mod.queueCompactStackedCheck(card, 300);
+      flushRaf();
+
+      expect(cb).toHaveBeenCalledTimes(1);
+    });
+
+    it('unregistered compact settle callback does not fire', async () => {
+      const mod = await freshModule();
+      const card = createCompactCard({ wrapped: true });
+
+      const cb = vi.fn();
+      const unregister = mod.registerCompactSettleCallback(document, cb);
+      unregister();
+
+      mod.queueCompactStackedCheck(card, 300);
+      flushRaf();
+
+      expect(cb).not.toHaveBeenCalled();
+    });
+
+    it('compact settle callback does not fire on no-op batch (empty pending set)', async () => {
+      const mod = await freshModule();
+
+      const cb = vi.fn();
+      mod.registerCompactSettleCallback(document, cb);
+
+      // Queue and immediately cancel — pending set will be empty at flush
+      const card = createCompactCard({ wrapped: true });
+      mod.queueCompactStackedCheck(card, 300);
+      mod.invalidateCompactStackedCache(card);
+      flushRaf();
+
+      expect(cb).not.toHaveBeenCalled();
+    });
+
+    it('compact settle callback does not fire when all pending cards are filtered out', async () => {
+      const mod = await freshModule();
+
+      const cb = vi.fn();
+      mod.registerCompactSettleCallback(document, cb);
+
+      // Queue card then disconnect it — eligible.length will be 0
+      const card = createCompactCard({ wrapped: true });
+      mod.queueCompactStackedCheck(card, 300);
+      card.remove();
+      flushRaf();
+
+      expect(cb).not.toHaveBeenCalled();
     });
   });
 });

@@ -136,6 +136,7 @@ import {
 import { getOwnerWindow } from '../utils/owner-window';
 import {
   clipPosterStaticOverflow,
+  clipPosterStaticOverflowBatch,
   handlePosterTapReveal,
   resetPosterClipping,
   resetPosterScroll,
@@ -326,7 +327,7 @@ export function applyCssOnlySettings(
       '.card.image-format-poster.has-poster'
     );
     if (isStatic) {
-      for (const card of posterCards) clipPosterStaticOverflow(card);
+      clipPosterStaticOverflowBatch([...posterCards]);
     } else {
       for (const card of posterCards) resetPosterClipping(card);
     }
@@ -337,7 +338,7 @@ export function applyCssOnlySettings(
       const posterCards = containerEl.querySelectorAll<HTMLElement>(
         '.card.image-format-poster.has-poster'
       );
-      for (const card of posterCards) clipPosterStaticOverflow(card);
+      clipPosterStaticOverflowBatch([...posterCards]);
     });
   }
 
