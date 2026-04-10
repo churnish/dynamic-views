@@ -1377,7 +1377,8 @@ export class SharedCardRenderer {
         { ...settings, propertyNames: 'hide' },
         shouldHideMissingProperties(),
         getHideEmptyMode(),
-        signal
+        signal,
+        true
       );
 
       // Setup scroll gradients if scroll mode is enabled
@@ -1418,12 +1419,8 @@ export class SharedCardRenderer {
     const hasImage = imageUrls.length > 0;
 
     // Check if title or subtitle will be rendered
-    const titleProp = settings.titleProperty || '';
-    const titleHasExtension =
-      titleProp === 'file.name' || titleProp === 'file.fullname';
-    const rawTitle = titleHasExtension ? entry.file.basename : card.title;
-    const isTitleEmpty = !rawTitle && !!settings.titleProperty;
-    const displayTitle = isTitleEmpty ? getEmptyValueMarker() : rawTitle;
+    const { displayTitle, isTitleEmpty } =
+      SharedCardRenderer.resolveTitleDisplay(card, entry, settings);
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
@@ -2295,14 +2292,8 @@ export class SharedCardRenderer {
     const titleTextEl = cardEl.querySelector<HTMLElement>('.card-title-text');
     if (!titleTextEl) return;
 
-    // Mirror title resolution from renderCard — strip extension when title
-    // property includes it, since the extension is shown via a separate element.
-    const titleProp = settings.titleProperty || '';
-    const titleHasExtension =
-      titleProp === 'file.name' || titleProp === 'file.fullname';
-    const rawTitle = titleHasExtension ? entry.file.basename : card.title;
-    const isTitleEmpty = !rawTitle && !!settings.titleProperty;
-    const displayTitle = isTitleEmpty ? getEmptyValueMarker() : rawTitle;
+    const { displayTitle, isTitleEmpty } =
+      SharedCardRenderer.resolveTitleDisplay(card, entry, settings);
 
     // Find first text node — preserves child elements (.card-title-ext-suffix)
     const textNode = Array.from(titleTextEl.childNodes).find(
@@ -2357,6 +2348,21 @@ export class SharedCardRenderer {
     const newArr = Array.isArray(newUrl) ? newUrl : [newUrl];
     if (oldArr.length !== newArr.length) return true;
     return oldArr.some((url, i) => url !== newArr[i]);
+  }
+
+  /** Resolve display title, detecting empty values for the marker. */
+  private static resolveTitleDisplay(
+    card: CardData,
+    entry: BasesEntry,
+    settings: ResolvedSettings
+  ): { displayTitle: string; isTitleEmpty: boolean } {
+    const titleProp = settings.titleProperty || '';
+    const titleHasExtension =
+      titleProp === 'file.name' || titleProp === 'file.fullname';
+    const rawTitle = titleHasExtension ? entry.file.basename : card.title;
+    const isTitleEmpty = !rawTitle && !!settings.titleProperty;
+    const displayTitle = isTitleEmpty ? getEmptyValueMarker() : rawTitle;
+    return { displayTitle, isTitleEmpty };
   }
 
   /** Surgically update URL button in card header */
@@ -2521,7 +2527,8 @@ export class SharedCardRenderer {
       { ...settings, propertyNames: 'hide' },
       shouldHideMissingProperties(),
       getHideEmptyMode(),
-      propAbort.signal
+      propAbort.signal,
+      true
     );
 
     // Restore scroll gradients on subtitle
@@ -2851,7 +2858,8 @@ export class SharedCardRenderer {
     settings: ResolvedSettings,
     hideMissing: boolean,
     hideEmptyMode: HideEmptyMode,
-    signal: AbortSignal
+    signal: AbortSignal,
+    preserveNewlines = false
   ): void {
     if (propertyName === '') {
       return;
@@ -3269,9 +3277,8 @@ export class SharedCardRenderer {
     } else {
       // Generic property - wrap in div for proper scrolling (consistent with tags/paths)
       const textWrapper = propertyContent.createDiv('text-wrapper');
-      // Strip newlines from regular property values (not subtitles — CSS handles those)
-      const isSubtitle = container.classList.contains('card-subtitle');
-      const renderedValue = isSubtitle
+      // Strip newlines from regular property values (subtitles preserve them — CSS handles display)
+      const renderedValue = preserveNewlines
         ? stringValue
         : stringValue.replace(/\n/g, ' ');
       this.renderTextWithLinks(textWrapper, renderedValue, card.path, signal);

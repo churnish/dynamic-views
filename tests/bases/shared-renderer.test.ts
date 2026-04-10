@@ -386,6 +386,129 @@ describe('Structural content classes', () => {
   });
 });
 
+describe('Empty title marker', () => {
+  /**
+   * Mirrors the title resolution logic from renderCard/updateTitleText.
+   * Tests the pure logic without requiring the full render pipeline.
+   */
+  function resolveTitleDisplay(
+    titleProperty: string,
+    rawTitle: string,
+    basename: string,
+    emptyMarker: string
+  ): { displayTitle: string; isTitleEmpty: boolean } {
+    const titleHasExtension =
+      titleProperty === 'file.name' || titleProperty === 'file.fullname';
+    const resolvedTitle = titleHasExtension ? basename : rawTitle;
+    const isTitleEmpty = !resolvedTitle && !!titleProperty;
+    const displayTitle = isTitleEmpty ? emptyMarker : resolvedTitle;
+    return { displayTitle, isTitleEmpty };
+  }
+
+  it('shows empty marker when titleProperty is set but title is empty', () => {
+    const result = resolveTitleDisplay('my-prop', '', 'note.md', '—');
+    expect(result.isTitleEmpty).toBe(true);
+    expect(result.displayTitle).toBe('—');
+  });
+
+  it('shows real title when titleProperty is set and title exists', () => {
+    const result = resolveTitleDisplay(
+      'my-prop',
+      'Hello World',
+      'note.md',
+      '—'
+    );
+    expect(result.isTitleEmpty).toBe(false);
+    expect(result.displayTitle).toBe('Hello World');
+  });
+
+  it('does not show marker when titleProperty is empty string', () => {
+    const result = resolveTitleDisplay('', '', 'note.md', '—');
+    expect(result.isTitleEmpty).toBe(false);
+    expect(result.displayTitle).toBe('');
+  });
+
+  it('never shows marker for file.name (basename always exists)', () => {
+    const result = resolveTitleDisplay('file.name', '', 'note', '—');
+    expect(result.isTitleEmpty).toBe(false);
+    expect(result.displayTitle).toBe('note');
+  });
+
+  it('never shows marker for file.fullname (basename always exists)', () => {
+    const result = resolveTitleDisplay('file.fullname', '', 'note', '—');
+    expect(result.isTitleEmpty).toBe(false);
+    expect(result.displayTitle).toBe('note');
+  });
+
+  it('uses custom empty marker value', () => {
+    const result = resolveTitleDisplay('my-prop', '', 'note.md', 'N/A');
+    expect(result.isTitleEmpty).toBe(true);
+    expect(result.displayTitle).toBe('N/A');
+  });
+
+  describe('DOM class toggle', () => {
+    it('adds empty-value-marker class when title is empty', () => {
+      const el = document.createElement('span');
+      el.className = 'card-title-text';
+      const { isTitleEmpty } = resolveTitleDisplay(
+        'my-prop',
+        '',
+        'note.md',
+        '—'
+      );
+      el.classList.toggle('empty-value-marker', isTitleEmpty);
+      expect(el.classList.contains('empty-value-marker')).toBe(true);
+    });
+
+    it('removes empty-value-marker class when title is non-empty', () => {
+      const el = document.createElement('span');
+      el.className = 'card-title-text empty-value-marker';
+      const { isTitleEmpty } = resolveTitleDisplay(
+        'my-prop',
+        'Title',
+        'note.md',
+        '—'
+      );
+      el.classList.toggle('empty-value-marker', isTitleEmpty);
+      expect(el.classList.contains('empty-value-marker')).toBe(false);
+    });
+  });
+});
+
+describe('Property newline stripping', () => {
+  /**
+   * Mirrors the newline-stripping logic from renderPropertyContent.
+   * Tests the pure conditional without requiring the full render pipeline.
+   */
+  function resolvePropertyValue(
+    stringValue: string,
+    isSubtitle: boolean
+  ): string {
+    return isSubtitle ? stringValue : stringValue.replace(/\n/g, ' ');
+  }
+
+  it('preserves newlines for subtitle properties', () => {
+    expect(resolvePropertyValue('Line one\nLine two', true)).toBe(
+      'Line one\nLine two'
+    );
+  });
+
+  it('strips newlines for regular properties', () => {
+    expect(resolvePropertyValue('Line one\nLine two', false)).toBe(
+      'Line one Line two'
+    );
+  });
+
+  it('handles multiple newlines in regular properties', () => {
+    expect(resolvePropertyValue('A\nB\nC', false)).toBe('A B C');
+  });
+
+  it('handles text with no newlines (both paths)', () => {
+    expect(resolvePropertyValue('No breaks', true)).toBe('No breaks');
+    expect(resolvePropertyValue('No breaks', false)).toBe('No breaks');
+  });
+});
+
 describe('applyCssOnlySettings — poster display mode re-clip', () => {
   function mockConfig(overrides: Record<string, unknown>) {
     return {

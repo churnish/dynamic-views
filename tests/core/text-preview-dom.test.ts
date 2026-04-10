@@ -248,6 +248,18 @@ describe('updateTextPreviewDOM', () => {
       expect(textEl.textContent).toBe('Plain text now');
       expect(textEl.classList.contains('has-paragraphs')).toBe(false);
     });
+
+    it('replaces plain textContent with <p> elements when updating with newlines', () => {
+      const card = makeCardWithText('Plain text first');
+
+      updateTextPreviewDOM(card, 'Para one\n\nPara two');
+
+      const textEl = card.querySelector('.card-text-preview')!;
+      expect(textEl.querySelectorAll('p').length).toBe(2);
+      expect(textEl.querySelectorAll('p')[0].textContent).toBe('Para one');
+      expect(textEl.querySelectorAll('p')[1].textContent).toBe('Para two');
+      expect(textEl.classList.contains('has-paragraphs')).toBe(true);
+    });
   });
 });
 
