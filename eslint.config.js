@@ -1,19 +1,15 @@
-import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import obsidianmd from 'eslint-plugin-obsidianmd';
+import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 
 export default defineConfig([
-  // Only lint src/ TypeScript files
   {
     ignores: ['**', '!src/**', '!main.ts'],
   },
 
-  // Obsidian recommended rules (includes JS recommended, TS type-checked,
-  // obsidianmd/*, @microsoft/sdl/*, import/*, depend/*)
   ...obsidianmd.configs.recommended,
 
-  // Browser globals and TypeScript parser options
   {
     languageOptions: {
       globals: {
@@ -26,17 +22,37 @@ export default defineConfig([
     },
   },
 
-  // Project-specific overrides for TypeScript
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ['**/*.ts'],
     rules: {
-      // Keep varsIgnorePattern for underscore-prefixed variables
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { args: 'none', varsIgnorePattern: '^_' },
       ],
-      // TypeScript handles undefined variable checking; no-undef false positives on JSX namespace
       'no-undef': 'off',
+      // Enforce layer boundaries: utils/ (pure) → shared/ (Obsidian-aware) → bases/ (views)
+      'import/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: './src/utils/**',
+              from: './src/shared/**',
+              message: 'utils/ must be pure — no shared/ imports',
+            },
+            {
+              target: './src/utils/**',
+              from: './src/bases/**',
+              message: 'utils/ must be pure — no bases/ imports',
+            },
+            {
+              target: './src/shared/**',
+              from: './src/bases/**',
+              message: 'shared/ cannot import from bases/',
+            },
+          ],
+        },
+      ],
     },
   },
 
