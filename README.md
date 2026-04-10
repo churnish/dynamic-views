@@ -59,14 +59,14 @@ Until **Dynamic Views** is [approved](https://github.com/obsidianmd/obsidian-rel
 <details>
 <summary>Install manually</summary>
 
-Note: To get updates for **Dynamic Views**, you will have to check for and install them manually.
-
 1. Download `dynamic-views.zip` in the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
 2. Open the vault folder in the system file manager.
 3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
 4. Unzip `dynamic-views.zip` and place it in the `plugins` folder.
 5. Reload plugins or app.
-6. Enable **Dynamic Views** in Obsidian settings → Community plugins → Installed plugins.
+6. Enable **Dynamic Views** in **Obsidian settings → Community plugins → Installed plugins**.
+
+**Tip:** To be notified about new **Dynamic Views** releases, press **Watch** at the top of the repository page then select **Custom → Releases → Apply**.
 
 </details>
 
@@ -87,9 +87,9 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 
 | Setting | Description | Default |
 | --- | --- | --- |
-| Display first property as title | Use the first visible property as card title | On |
-| Lines | Maximum lines before truncating | 2 |
-| Display second property as subtitle | Use the second property as subtitle | Off |
+| Display first property as title | Use the first property from property menu as card title | On |
+| Lines | Maximum title lines before truncating | 2 |
+| Display second property as subtitle | Use the second property from property menu as subtitle | Off |
 
 ### Text preview
 
@@ -136,7 +136,7 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 <br>
 
 <details>
-<summary>Image viewer</summary>
+<summary>Image viewer controls</summary>
 
 Press on a card's cover or thumbnail to open the image viewer — a fullscreen overlay with pan and zoom.
 
@@ -151,9 +151,9 @@ The image viewer can be disabled in Style Settings, along with individual featur
 | Maximize | Space |
 | Exit maximize | Space |
 | Reset pan & zoom | R / ↓ / Right-click |
-| Copy image | Ctrl/⌘+C |
-| Drag & drop (fullscreen) | Hold Alt+drag |
-| Drag & drop (non-fullscreen) | Drag |
+| Copy image | Ctrl/Cmd+C |
+| Drag & drop | Hold Alt+drag |
+| Drag & drop (panzoom disabled) | Drag |
 | Open file | Enter |
 | Close | Click / Esc |
 

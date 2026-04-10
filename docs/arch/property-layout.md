@@ -2,7 +2,7 @@
 title: Property layout system
 description: Property pairing, width measurement, scroll gradients, and vertical positioning inside cards for both backends.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-02
+updated: 2026-04-10
 ---
 # Property layout system
 
@@ -10,17 +10,17 @@ See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/
 
 ## Overview
 
-The property layout system controls how property rows are arranged inside cards in Grid and Masonry views. It decides which properties are paired side-by-side, measures their widths to allocate space optimally, applies scroll gradients when content overflows, and splits properties into top/bottom containers around the text preview. The system spans five files: `src/shared/property-measure.ts` (width measurement pipeline), `src/shared/scroll-gradient.ts` (overflow gradient indicators), `src/shared/property-helpers.ts` (`computeInvertPairs` algorithm and collapse logic), `src/bases/shared-renderer.ts` (property rendering and container classes), and `styles/_properties.scss` (CSS layout rules and state classes).
+The property layout system controls how property rows are arranged inside cards in Grid and Masonry views. It decides which properties are paired side-by-side, measures their widths to allocate space optimally, applies scroll gradients when content overflows, and splits properties into top/bottom containers around the text preview. The system spans five files: `src/core/property-measure.ts` (width measurement pipeline), `src/core/scroll-gradient.ts` (overflow gradient indicators), `src/core/property-helpers.ts` (`computeInvertPairs` algorithm and collapse logic), `src/bases/shared-renderer.ts` (property rendering and container classes), and `styles/_properties.scss` (CSS layout rules and state classes).
 
 ## Files
 
 | File                             | Role                                                                   |
 | -------------------------------- | ---------------------------------------------------------------------- |
-| `src/shared/property-measure.ts` | Width measurement pipeline, synchronous measurement, ResizeObserver.   |
-| `src/shared/scroll-gradient.ts`  | Horizontal/vertical gradient indicators for overflowing content.       |
-| `src/shared/property-helpers.ts` | `computeInvertPairs()`, `shouldCollapseField()`, property type checks, batched compact-stacked detection. |
+| `src/core/property-measure.ts` | Width measurement pipeline, synchronous measurement, ResizeObserver.   |
+| `src/core/scroll-gradient.ts`  | Horizontal/vertical gradient indicators for overflowing content.       |
+| `src/core/property-helpers.ts` | `computeInvertPairs()`, `shouldCollapseField()`, property type checks, batched compact-stacked detection. |
 | `src/bases/shared-renderer.ts`   | Property rendering, container class application, measurement.          |
-| `src/utils/property.ts`          | `parsePropertyList()` — comma-separated string to `Set<string>`.       |
+| `src/core/property-mapping.ts`          | `parsePropertyList()` — comma-separated string to `Set<string>`.       |
 | `styles/_properties.scss`        | All property CSS: pairs, measurement states, alignment, compact mode.  |
 
 ## Pairing logic
@@ -34,7 +34,7 @@ Properties can be displayed as unpaired full-width rows or as side-by-side pairs
 
 ### Parsing `invertPropertyPairing`
 
-`parsePropertyList(csv)` in `src/utils/property.ts` splits the comma-separated string, trims whitespace, and filters empty entries into a `Set<string>` for O(1) lookup. This set is called `invertPairingSet` in both renderers (the name reflects the `pairProperties=true` path; when `pairProperties=false`, the same set drives `computeInvertPairs`).
+`parsePropertyList(csv)` in `src/core/property-mapping.ts` splits the comma-separated string, trims whitespace, and filters empty entries into a `Set<string>` for O(1) lookup. This set is called `invertPairingSet` in both renderers (the name reflects the `pairProperties=true` path; when `pairProperties=false`, the same set drives `computeInvertPairs`).
 
 ### `computeInvertPairs()` algorithm
 
@@ -88,7 +88,7 @@ const isAbove = settings.showPropertiesAbove
 
 ## Width measurement pipeline
 
-Paired property widths are measured by JavaScript to allocate space proportionally rather than using a fixed 50-50 split. Managed by `src/shared/property-measure.ts`.
+Paired property widths are measured by JavaScript to allocate space proportionally rather than using a fixed 50-50 split. Managed by `src/core/property-measure.ts`.
 
 ### Entry point
 

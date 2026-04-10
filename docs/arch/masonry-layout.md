@@ -2,7 +2,7 @@
 title: Masonry layout system
 description: Pinterest-style variable-height layout with virtual scrolling. Render pipeline, guard system, and resize scaling.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-29
+updated: 2026-04-10
 ---
 > [!warning] Frozen
 > This doc is not being kept up to date due to extensive and frequent masonry work. Verify critical information against source code.
@@ -18,9 +18,9 @@ The masonry layout system renders cards in a Pinterest-style variable-height col
 | File                           | Role                                                                                                                                                                                                                        |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/utils/masonry-layout.ts`  | Pure layout math — column/position calculations, no DOM. Exports: `calculateMasonryLayout`, `calculateMasonryDimensions`, `calculateIncrementalMasonryLayout`, `repositionWithStableColumns`, `computeGreedyColumnHeights`. |
-| `src/shared/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals).                                                                                                                                                     |
+| `src/core/constants.ts`      | Tuning constants (`BATCH_SIZE`, `PANE_MULTIPLIER`, throttle intervals).                                                                                                                                                     |
 | `src/bases/shared-renderer.ts` | Shared card rendering (normalized `CardData`), used by both backends.                                                                                                                                                       |
-| `src/shared/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation.                                                                                                                                                                   |
+| `src/core/keyboard-nav.ts`   | `VirtualCardRect` interface and spatial arrow navigation.                                                                                                                                                                   |
 | `styles/_masonry-view.scss`    | Masonry-specific CSS — absolute card positioning, container sizing.                                                                                                                                                         |
 
 ### Bases
@@ -28,13 +28,13 @@ The masonry layout system renders cards in a Pinterest-style variable-height col
 | File                           | Role                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
 | `src/bases/masonry-view.ts`    | View class — orchestrates rendering, layout, virtual scroll, resize, infinite scroll. |
-| `src/shared/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
+| `src/core/virtual-scroll.ts` | `VirtualItem` interface and `syncVisibleItems` helper.                                |
 | `src/bases/shared-renderer.ts` | `CardHandle` interface, `renderCard()` method, image-load callback integration.       |
 | `src/bases/sticky-header.ts`   | Sentinel IO for sticky group header stuck state detection.                            |
 
 ## Core data structures
 
-### VirtualItem (`src/shared/virtual-scroll.ts`)
+### VirtualItem (`src/core/virtual-scroll.ts`)
 
 Lightweight representation of every card. Mounted cards have `el` and `handle`; unmounted cards are pure JS objects with stored positions.
 
@@ -441,7 +441,7 @@ Arrow keys navigate spatially across all cards, including unmounted ones.
 5. Up/Down restricted to same column (within 5px tolerance). Left/Right unrestricted.
 6. If target is unmounted, `onMountItem(index)` mounts it before focusing.
 
-## Constants (`src/shared/constants.ts`)
+## Constants (`src/core/constants.ts`)
 
 | Constant                | Value          | Purpose                                                                       |
 | ----------------------- | -------------- | ----------------------------------------------------------------------------- |

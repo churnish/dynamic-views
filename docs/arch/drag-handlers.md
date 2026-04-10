@@ -2,13 +2,13 @@
 title: Drag handlers
 description: Drag handler factory system, platform quirks, hover suppression strategy, and dataset freshness pattern for stale closures.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-16
+updated: 2026-04-10
 ---
 # Drag handlers
 
 See also: [`odkb/electron-css-quirks.md`](https://github.com/churnish/odkb/blob/main/electron-css-quirks.md)
 
-The plugin supports four drag types, all implemented as factory functions in [`drag.ts`](../../src/shared/drag.ts). Each factory returns an event handler (or handler set) wired up by the renderer. A `DataTransfer.prototype.getData` patch (`installDropTextPatch`) suppresses Chromium's platform-level `text/uri-list` for plugin-initiated drags.
+The plugin supports four drag types, all implemented as factory functions in [`drag.ts`](../../src/core/drag.ts). Each factory returns an event handler (or handler set) wired up by the renderer. A `DataTransfer.prototype.getData` patch (`installDropTextPatch`) suppresses Chromium's platform-level `text/uri-list` for plugin-initiated drags.
 
 ## Factory functions
 

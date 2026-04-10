@@ -254,23 +254,6 @@ body.dynamic-views-show-cover-border
    COVER CROP, FIT & BACKGROUND
    ============================================ */
 
-/* Cover crop alignment overrides */
-body.dynamic-views-cover-crop-top
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  img {
-  object-position: center top;
-}
-
-body.dynamic-views-cover-crop-bottom
-  .dynamic-views
-  .card.image-format-cover
-  .card-cover
-  img {
-  object-position: center bottom;
-}
-
 /* Cover fit mode: Contain mode - images use object-fit: contain */
 .dynamic-views {
   &.image-fit-contain .card.image-format-cover .card-cover img {

@@ -14,11 +14,8 @@ import {
   DEFAULT_BASES_STATE,
 } from './constants';
 import { sanitizeObject, sanitizeString } from './utils/sanitize';
-import {
-  VALID_VIEW_VALUES,
-  VIEW_DEFAULTS_TYPES,
-} from './shared/view-validation';
-import { getMinimumColumnsDefault } from './shared/settings-schema';
+import { VALID_VIEW_VALUES, VIEW_DEFAULTS_TYPES } from './core/view-validation';
+import { getMinimumColumnsDefault } from './core/settings-schema';
 
 const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
 

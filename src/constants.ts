@@ -1,5 +1,17 @@
 import type { PluginSettings, ViewDefaults, BasesDefaults } from './types';
 
+/** Valid image file extensions supported by the plugin */
+export const VALID_IMAGE_EXTENSIONS: string[] = [
+  'avif',
+  'bmp',
+  'gif',
+  'jpeg',
+  'jpg',
+  'png',
+  'svg',
+  'webp',
+];
+
 export const PLUGIN_SETTINGS: PluginSettings = {
   randomizeAction: 'shuffle',
   openFileAction: 'card',
@@ -77,8 +89,6 @@ export const ORDER_DERIVED_SETTINGS_KEYS = new Set([
   'subtitleProperty',
   '_skipLeadingProperties',
 ]);
-
-export const STORAGE_KEY_PREFIX = 'dynamic-views';
 
 /** Custom event dispatched when plugin-level settings change */
 export const PLUGIN_SETTINGS_CHANGE = 'dynamic-views-plugin-settings';

@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-04-10
 ---
 # Project structure
 
@@ -23,47 +23,49 @@ dynamic-views/
 │   │   ├── sticky-header.ts           # Sentinel IO for sticky group header stuck state
 │   │   └── utils.ts                  # Context menus, toolbar, property management
 │   │
-│   ├── shared/                       # Shared logic
-│   │   ├── card-data.ts              # CardData normalized type definition
+│   ├── core/                         # Core logic (shared across views)
+│   │   ├── card-data.ts              # CardData + CardHandle type definitions
 │   │   ├── constants.ts              # Infinite scroll, throttling, batch size constants
 │   │   ├── content-loader.ts         # Async image/text loading with dedup
 │   │   ├── content-visibility.ts     # IntersectionObserver-based visibility management
 │   │   ├── context-menu.ts           # Right-click menus for cards/links
-│   │   ├── data-transform.ts         # Normalizes Bases data -> CardData
+│   │   ├── data-transform.ts         # Normalizes Bases data -> CardData, URI validation
 │   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL icon)
-│   │   ├── hover-and-touch.ts         # Shared hover and touch interaction utilities
+│   │   ├── file.ts                   # File timestamps + path resolution
+│   │   ├── hover-and-touch.ts        # Shared hover and touch interaction utilities
 │   │   ├── icon-alignment.ts         # Timestamp icon optical vertical alignment (live DOM measurement + boost ratio)
+│   │   ├── image.ts                  # Image path processing, wikilink stripping, URL validation
+│   │   ├── image-extraction.ts       # Image embed extraction from file content (wikilinks, Markdown, cardlink)
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Panzoom image viewer
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
+│   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
+│   │   ├── property-display.ts       # Property display names, settings normalization
+│   │   ├── property-extraction.ts    # Bases entry value extraction (first/all property values)
 │   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes; compact wrapping detection
+│   │   ├── property-mapping.ts       # Display name ↔ syntax name bidirectional maps
 │   │   ├── property-measure.ts       # Measures property field widths + scroll gradients
+│   │   ├── randomize.ts              # Randomization, shuffle, pane type from modifier keys
 │   │   ├── render-utils.ts           # Date/timestamp/property rendering functions
 │   │   ├── scroll-gradient.ts        # Horizontal scroll gradients for properties
 │   │   ├── scroll-preservation.ts    # Scroll position save/restore
 │   │   ├── settings-schema.ts        # Universal settings schema parser
 │   │   ├── slideshow.ts              # Card image slideshow (animation + swipe)
-│   │   ├── thumbnail-scrub.ts        # Touch scrubbing with slide animation + shared visibility reset IO for multi-image thumbnails
 │   │   ├── text-preview-dom.ts       # DOM updates for card text previews
+│   │   ├── text-preview.ts           # Markdown stripping for card previews
+│   │   ├── thumbnail-scrub.ts        # Touch scrubbing with slide animation + shared visibility reset IO for multi-image thumbnails
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
-│   │   └── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
+│   │   ├── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
+│   │   └── youtube-preview.ts        # YouTube video ID extraction + thumbnail validation
 │   │
 │   ├── utils/                        # Pure utility functions
-│   │   ├── dropdown-position.ts      # Click-outside detection for dropdowns
 │   │   ├── file-extension.ts         # File format + extension detection
-│   │   ├── file.ts                   # File timestamps + path resolution
-│   │   ├── image.ts                  # Image path processing + embed extraction
 │   │   ├── link-parser.ts            # Frontmatter link parsing (internal/external)
 │   │   ├── masonry-layout.ts         # Pure masonry positioning calculations
-│   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── owner-window.ts           # Popout-safe window reference from DOM element
-│   │   ├── property.ts               # Property extraction for Bases
-│   │   ├── randomize.ts              # Randomization + pane type from modifier keys
 │   │   ├── sanitize.ts               # Control character removal (localStorage safety)
-│   │   ├── storage.ts                # Storage key generation
-│   │   ├── style-settings.ts         # CSS variable reading with cache
-│   │   └── text-preview.ts           # Markdown stripping for card previews
+│   │   └── style-settings.ts         # CSS variable reading with cache
 │   │
 │   ├── constants.ts                  # Default settings, view defaults
 │   ├── obsidian-augments.d.ts        # Obsidian module augmentations for undocumented APIs
@@ -117,34 +119,36 @@ dynamic-views/
 │   │   ├── shared-renderer.test.ts
 │   │   ├── sync-responsive-classes.test.ts
 │   │   └── utils.test.ts
-│   ├── shared/
+│   ├── core/
 │   │   ├── constants.test.ts
 │   │   ├── content-loader.test.ts
 │   │   ├── content-visibility.test.ts
 │   │   ├── data-transform.test.ts
+│   │   ├── file.test.ts
 │   │   ├── hover-and-touch.test.ts
+│   │   ├── image.test.ts
+│   │   ├── image-extraction.test.ts
 │   │   ├── image-loader.test.ts
 │   │   ├── poster.test.ts
+│   │   ├── property-display.test.ts
+│   │   ├── property-extraction.test.ts
 │   │   ├── property-helpers.test.ts
+│   │   ├── property-mapping.test.ts
+│   │   ├── randomize.test.ts
 │   │   ├── render-utils.test.ts
 │   │   ├── scroll-gradient.test.ts
 │   │   ├── settings-schema.test.ts
 │   │   ├── text-preview-dom.test.ts
+│   │   ├── text-preview.test.ts
 │   │   ├── thumbnail-scrub.test.ts
-│   │   └── virtual-scroll.test.ts
+│   │   ├── virtual-scroll.test.ts
+│   │   └── youtube-preview.test.ts
 │   ├── utils/
-│   │   ├── dropdown-position.test.ts
 │   │   ├── file-extension.test.ts
-│   │   ├── file.test.ts
-│   │   ├── image.test.ts
 │   │   ├── link-parser.test.ts
 │   │   ├── masonry-layout.test.ts
-│   │   ├── property.test.ts
-│   │   ├── randomize.test.ts
 │   │   ├── sanitize.test.ts
-│   │   ├── storage.test.ts
-│   │   ├── style-settings.test.ts
-│   │   └── text-preview.test.ts
+│   │   └── style-settings.test.ts
 │   ├── persistence.test.ts
 │   └── setup.ts
 │

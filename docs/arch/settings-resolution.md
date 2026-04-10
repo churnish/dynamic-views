@@ -2,7 +2,7 @@
 title: Settings resolution pipeline
 description: Three-layer merge of defaults, templates, and per-view config into resolved settings. Covers sparse storage, type coercion, stale guards, and migration.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-04-10
 ---
 # Settings resolution pipeline
 
@@ -17,8 +17,8 @@ The settings resolution pipeline merges static defaults, template overrides, and
 | `src/constants.ts`              | Static defaults (`VIEW_DEFAULTS`, `BASES_DEFAULTS`, `PLUGIN_SETTINGS`)                                             |
 | `src/types.ts`                  | `ViewDefaults`, `PluginSettings`, `ResolvedSettings`, `BasesDefaults`                                         |
 | `src/persistence.ts`            | `PersistenceManager` — sparse storage, sanitization, template CRUD, migration                                      |
-| `src/shared/settings-schema.ts` | `readBasesSettings()`, `extractBasesTemplate()`, `getBasesViewOptions()` schema builder                            |
-| `src/shared/view-validation.ts` | `VALID_VIEW_VALUES`, `VIEW_DEFAULTS_TYPES` — shared validation constants for YAML cleanup, template cleanup, and runtime enum validation |
+| `src/core/settings-schema.ts` | `readBasesSettings()`, `extractBasesTemplate()`, `getBasesViewOptions()` schema builder                            |
+| `src/core/view-validation.ts` | `VALID_VIEW_VALUES`, `VIEW_DEFAULTS_TYPES` — shared validation constants for YAML cleanup, template cleanup, and runtime enum validation |
 | `src/bases/utils.ts`            | `cleanUpBaseFile()` — YAML cleanup, template injection, ID management                                              |
 
 ## Core data structures
@@ -89,7 +89,7 @@ Top-level persisted structure.
 
 ### Bases path
 
-`readBasesSettings()` in [settings-schema.ts](../../src/shared/settings-schema.ts). Called on every `onDataUpdated()`.
+`readBasesSettings()` in [settings-schema.ts](../../src/core/settings-schema.ts). Called on every `onDataUpdated()`.
 
 ```
 1. VIEW_DEFAULTS                    (static)
@@ -106,7 +106,7 @@ Return type: `ResolvedSettings` (includes computed `_skipLeadingProperties`).
 
 ### Schema defaults path
 
-`getBasesViewOptions()` in [settings-schema.ts](../../src/shared/settings-schema.ts). Called when the **settings panel is opened**, NOT on view creation or file open. Populates dropdown defaults and option lists.
+`getBasesViewOptions()` in [settings-schema.ts](../../src/core/settings-schema.ts). Called when the **settings panel is opened**, NOT on view creation or file open. Populates dropdown defaults and option lists.
 
 ```
 1. VIEW_DEFAULTS + BASES_DEFAULTS              (static merge)
@@ -213,7 +213,7 @@ Returns `Promise<Map<string, { id: string; isNew: boolean }> | null>`. Returns `
 
 ## Role of view-validation.ts
 
-[view-validation.ts](../../src/shared/view-validation.ts) exports two shared validation constants consumed by both `cleanupTemplateSettings()` (persistence) and `cleanUpBaseFile()` (YAML cleanup):
+[view-validation.ts](../../src/core/view-validation.ts) exports two shared validation constants consumed by both `cleanupTemplateSettings()` (persistence) and `cleanUpBaseFile()` (YAML cleanup):
 
 | Export | Type | Purpose |
 |---|---|---|

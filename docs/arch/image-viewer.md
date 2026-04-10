@@ -2,13 +2,13 @@
 title: Image viewer
 description: Dual-mode image viewer architecture — gesture systems (Panzoom desktop, native mobile touch), keyboard handler map, constrained vs fullscreen modes, cleanup lifecycle, and invariants.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-04-10
 ---
 # Image viewer
 
 See also: [`odkb/electron-popout-quirks.md`](https://github.com/churnish/odkb/blob/main/electron-popout-quirks.md)
 
-`src/shared/image-viewer.ts` implements a panzoom image viewer overlay with two gesture backends, platform-aware keyboard handling, and clipboard/drag support. The module exports two functions: `handleImageViewerTrigger()` (entry point for card image clicks) and `cleanupAllViewers()` (force cleanup on view destruction). Everything else is private.
+`src/core/image-viewer.ts` implements a panzoom image viewer overlay with two gesture backends, platform-aware keyboard handling, and clipboard/drag support. The module exports two functions: `handleImageViewerTrigger()` (entry point for card image clicks) and `cleanupAllViewers()` (force cleanup on view destruction). Everything else is private.
 
 ## Viewer modes
 

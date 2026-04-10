@@ -2,7 +2,7 @@
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and committed-row lock mount ordering.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-01
+updated: 2026-04-10
 ---
 # Grid layout system
 
@@ -17,17 +17,17 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | File                               | Role                                                                    |
 | ---------------------------------- | ----------------------------------------------------------------------- |
 | `src/bases/shared-renderer.ts`   | Shared card rendering (normalized `CardData`), used by both backends.                                        |
-| `src/shared/constants.ts`        | Tuning constants (`MAX_BATCH_SIZE`, `PANE_MULTIPLIER`, `ROWS_PER_COLUMN`, throttle intervals).               |
-| `src/shared/keyboard-nav.ts`     | DOM-based arrow navigation and hover-to-keyboard focus transfer.                                             |
-| `src/shared/scroll-gradient.ts`  | Horizontal scroll gradients for property rows.                                                               |
-| `src/shared/property-measure.ts` | Side-by-side property field width measurement + synchronous processing.                                     |
-| `src/shared/virtual-scroll.ts`   | `VirtualItem` interface, `measureScalableHeight()`, `estimateUnmountedHeight()`, `syncVisibleItems()`.       |
-| `src/shared/data-transform.ts` | Normalizes Bases entries → `CardData` (`basesEntryToCardData`, `transformBasesEntries`).                      |
-| `src/shared/settings-schema.ts`| Reads and resolves Bases view settings (`readBasesSettings`, `getBasesViewOptions`).                         |
-| `src/shared/scroll-preservation.ts` | Scroll position save/restore across re-renders.                                                         |
-| `src/shared/text-preview-dom.ts` | DOM updates for card text previews + per-paragraph clamping.                                               |
+| `src/core/constants.ts`        | Tuning constants (`MAX_BATCH_SIZE`, `PANE_MULTIPLIER`, `ROWS_PER_COLUMN`, throttle intervals).               |
+| `src/core/keyboard-nav.ts`     | DOM-based arrow navigation and hover-to-keyboard focus transfer.                                             |
+| `src/core/scroll-gradient.ts`  | Horizontal scroll gradients for property rows.                                                               |
+| `src/core/property-measure.ts` | Side-by-side property field width measurement + synchronous processing.                                     |
+| `src/core/virtual-scroll.ts`   | `VirtualItem` interface, `measureScalableHeight()`, `estimateUnmountedHeight()`, `syncVisibleItems()`.       |
+| `src/core/data-transform.ts` | Normalizes Bases entries → `CardData` (`basesEntryToCardData`, `transformBasesEntries`).                      |
+| `src/core/settings-schema.ts`| Reads and resolves Bases view settings (`readBasesSettings`, `getBasesViewOptions`).                         |
+| `src/core/scroll-preservation.ts` | Scroll position save/restore across re-renders.                                                         |
+| `src/core/text-preview-dom.ts` | DOM updates for card text previews + per-paragraph clamping.                                               |
 | `src/utils/style-settings.ts` | CSS variable reading with cache (Style Settings integration).                                                |
-| `src/utils/property.ts`       | Property name normalization (display-name ↔ syntax-name maps).                                               |
+| `src/core/property-mapping.ts`       | Property name normalization (display-name ↔ syntax-name maps).                                               |
 | `styles/_grid-masonry-shared.scss` | Shared card views CSS: container queries, view padding, groups, card foundation, content-visibility.      |
 | `styles/_grid-view.scss`         | Grid-specific CSS — CSS Grid columns, subgrid groups, card sizing.                                           |
 
@@ -335,7 +335,7 @@ Grid uses a three-tier virtual scrolling system on non-WebKit platforms (gated b
 ─── hiddenBottom ───     scrollTop + 3×P
 ```
 
-Constants: `HIDDEN_BUFFER_MULTIPLIER = 2` (`src/shared/constants.ts`), `CONTENT_HIDDEN_CLASS` (`src/shared/content-visibility.ts`).
+Constants: `HIDDEN_BUFFER_MULTIPLIER = 2` (`src/core/constants.ts`), `CONTENT_HIDDEN_CLASS` (`src/core/content-visibility.ts`).
 
 **Transition rules**:
 
@@ -659,7 +659,7 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 5. Up/Down restricted to same column (within 5px tolerance). Left/Right unrestricted.
 6. Target card focused + `scrollIntoView({ block: 'nearest', behavior: 'smooth' })`. If target is unmounted, `mountVirtualItemByIndex()` mounts it first.
 
-## Constants (`src/shared/constants.ts`)
+## Constants (`src/core/constants.ts`)
 
 | Constant             | Value | Purpose                                                        |
 | -------------------- | ----- | -------------------------------------------------------------- |
@@ -675,7 +675,7 @@ Arrow keys navigate spatially across all virtual items using absolute coordinate
 | `HIGH_VELOCITY_THRESHOLD` | 4000 | Velocity (px/s) above which new row commits are suppressed. |
 | `SCROLL_IDLE_SYNC_MS` | 150  | Idle debounce (ms) for fallback sync after scroll stops.     |
 
-### Property measurement constants (`src/shared/property-measure.ts`)
+### Property measurement constants (`src/core/property-measure.ts`)
 
 > For the full measurement pipeline, pairing logic, and alignment modes, see [property-layout.md](property-layout.md).
 

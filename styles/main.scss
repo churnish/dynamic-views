@@ -19,6 +19,7 @@
 
 // Card internals
 @use 'card/core';
+@use 'card/border-colors';
 @use 'card/previews';
 @use 'card/header';
 
@@ -27,7 +28,7 @@
 @use 'card/cover-elements';
 @use 'card/cover-placeholders';
 @use 'card/cover-side';
-@use 'card/images';
+@use 'card/image';
 @use 'card/backdrop';
 @use 'card/poster';
 @use 'card/slideshow';
@@ -37,7 +38,7 @@
 @use 'property-colors';
 @use 'tags';
 @use 'hover-and-touch';
-@use 'text-interaction';
+@use 'text-selection';
 @use 'scroll-gradient';
 
 // View types

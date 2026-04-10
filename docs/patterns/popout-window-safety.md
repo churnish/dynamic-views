@@ -2,7 +2,7 @@
 title: Popout window safety
 description: When and why to use getOwnerWindow(el) instead of bare window/document — covers cross-window pitfalls in Electron popout windows, the safe exceptions, and the setDocumentProvider pattern for module-level code.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-04-10
 ---
 # Popout window safety
 
@@ -12,7 +12,7 @@ For the full list of cross-window pitfalls (silent observer failures, stale hit-
 
 ## Core rule: derive from DOM
 
-In `src/shared/` and `src/bases/`, never use bare `document`, `window`, `new ResizeObserver`, `new IntersectionObserver`, `getComputedStyle`, `matchMedia`, `navigator`, or `document.createElement`. Always derive the correct window/document from the nearest DOM element.
+In `src/core/` and `src/bases/`, never use bare `document`, `window`, `new ResizeObserver`, `new IntersectionObserver`, `getComputedStyle`, `matchMedia`, `navigator`, or `document.createElement`. Always derive the correct window/document from the nearest DOM element.
 
 Two patterns cover all cases:
 
@@ -57,7 +57,7 @@ getOwnerWindow(wrapper).getComputedStyle(wrapper).fontSize;
 
 ### Call sites
 
-`getOwnerWindow` is used across most of `src/shared/` and `src/bases/`: `content-visibility.ts`, `hover-and-touch.ts`, `icon-alignment.ts`, `image-loader.ts`, `keyboard-nav.ts`, `poster.ts`, `property-helpers.ts`, `property-measure.ts`, `scroll-gradient.ts`, `scroll-preservation.ts`, `slideshow.ts`, `text-preview-dom.ts`, `thumbnail-scrub.ts`, `context-menu.ts`, `image-viewer.ts`, `shared-renderer.ts`, `masonry-view.ts`.
+`getOwnerWindow` is used across most of `src/core/` and `src/bases/`: `content-visibility.ts`, `hover-and-touch.ts`, `icon-alignment.ts`, `image-loader.ts`, `keyboard-nav.ts`, `poster.ts`, `property-helpers.ts`, `property-measure.ts`, `scroll-gradient.ts`, `scroll-preservation.ts`, `slideshow.ts`, `text-preview-dom.ts`, `thumbnail-scrub.ts`, `context-menu.ts`, `image-viewer.ts`, `shared-renderer.ts`, `masonry-view.ts`.
 
 ## `el.ownerDocument`
 
@@ -84,7 +84,7 @@ When you need both `Document` and `Window`, use `ownerDocument` for document ope
 
 Some module-level code needs to iterate over all open documents (main + popouts) but has no DOM element in scope to derive from. The `setDocumentProvider` pattern solves this: a module-level setter is registered from `main.ts` onload.
 
-In `src/shared/slideshow.ts`:
+In `src/core/slideshow.ts`:
 
 ```ts
 let getDocuments: () => Document[] = () => [document];

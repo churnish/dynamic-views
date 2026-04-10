@@ -2,7 +2,7 @@
 title: CLS elimination
 description: Post-resize scroll-idle CLS in masonry layout (#358) — problem definition, proven constraints, estimation model, industry survey, all tried approaches, remaining candidates, and key source files.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-25
+updated: 2026-04-10
 ---
 # CLS elimination (#358)
 
@@ -66,7 +66,7 @@ The visible CLS during post-resize scroll has been attributed to various systems
 
 ## Estimation model
 
-`estimateUnmountedHeight()` in `src/shared/virtual-scroll.ts` uses split proportional scaling:
+`estimateUnmountedHeight()` in `src/core/virtual-scroll.ts` uses split proportional scaling:
 
 - **Cover (scalableHeight)**: linear scaling — perfect accuracy (±0.3-0.5px avg error)
 - **Fixed (fixedHeight)**: `fixedHeight × sqrt(widthRatio)` (k=0.5) — all estimation error comes from this
@@ -363,6 +363,6 @@ See `一/Masonry CLS mechanism.canvas` — audited flowchart of the full CLS mec
 
 - `src/bases/masonry-view.ts` — `remeasureAndReposition`, `syncVirtualScroll`, `eagerPreMeasure`, `scheduleDeferredRemeasure`, `postResizeIdleTimeout`
 - `src/utils/masonry-layout.ts` — `repositionWithStableColumns`, `calculateMasonryLayout`
-- `src/shared/virtual-scroll.ts` — `VirtualItem`, `estimateUnmountedHeight`, `measureScalableHeight`
-- `src/shared/constants.ts` — `MASONRY_CORRECTION_MS` (200ms), `HIDDEN_BUFFER_MULTIPLIER` (2), `SCROLL_CORRECTION_INTERVAL_MS` (1000ms)
+- `src/core/virtual-scroll.ts` — `VirtualItem`, `estimateUnmountedHeight`, `measureScalableHeight`
+- `src/core/constants.ts` — `MASONRY_CORRECTION_MS` (200ms), `HIDDEN_BUFFER_MULTIPLIER` (2), `SCROLL_CORRECTION_INTERVAL_MS` (1000ms)
 - `styles/_masonry-view.scss` — `masonry-skip-transition`, `--masonry-reposition-duration`

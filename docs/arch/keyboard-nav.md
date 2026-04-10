@@ -2,11 +2,11 @@
 title: Keyboard navigation
 description: Spatial arrow-key navigation across card views — activation modes, focus state flags, virtual rect navigation, and popout rebinding.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-04-10
 ---
 # Keyboard navigation
 
-The keyboard navigation system provides spatial arrow-key navigation across card views. Two activation modes: hover-to-start (hover card, press arrow) and tab-to-start (Tab into container focuses first card). The core navigation logic lives in [keyboard-nav.ts](../../src/shared/keyboard-nav.ts), wired imperatively from the view classes.
+The keyboard navigation system provides spatial arrow-key navigation across card views. Two activation modes: hover-to-start (hover card, press arrow) and tab-to-start (Tab into container focuses first card). The core navigation logic lives in [keyboard-nav.ts](../../src/core/keyboard-nav.ts), wired imperatively from the view classes.
 
 ## Files
 
@@ -14,8 +14,8 @@ The keyboard navigation system provides spatial arrow-key navigation across card
 
 | File | Role |
 |---|---|
-| [keyboard-nav.ts](../../src/shared/keyboard-nav.ts) | Core module: `handleArrowNavigation()` (2D spatial nav), `setupHoverKeyboardNavigation()` (capture-phase keydown), `initializeContainerFocus()` (focusout handler), `isArrowKey()`, `isImageViewerBlockingNav()`. |
-| [content-visibility.ts](../../src/shared/content-visibility.ts) | `CONTENT_HIDDEN_CLASS` removed from focus targets before `.focus()`. |
+| [keyboard-nav.ts](../../src/core/keyboard-nav.ts) | Core module: `handleArrowNavigation()` (2D spatial nav), `setupHoverKeyboardNavigation()` (capture-phase keydown), `initializeContainerFocus()` (focusout handler), `isArrowKey()`, `isImageViewerBlockingNav()`. |
+| [content-visibility.ts](../../src/core/content-visibility.ts) | `CONTENT_HIDDEN_CLASS` removed from focus targets before `.focus()`. |
 | [styles/_focus.scss](../../styles/_focus.scss) | Card focus ring via `:focus-visible::after` box-shadow. |
 | [styles/_image-viewer.scss](../../styles/_image-viewer.scss) | Suppresses focus ring during image viewer zoom. |
 

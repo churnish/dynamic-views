@@ -30,15 +30,15 @@ export default defineConfig([
         { args: 'none', varsIgnorePattern: '^_' },
       ],
       'no-undef': 'off',
-      // Enforce layer boundaries: utils/ (pure) → shared/ (Obsidian-aware) → bases/ (views)
+      // Enforce layer boundaries: utils/ (pure) → core/ (Obsidian-aware) → bases/ (views)
       'import/no-restricted-paths': [
         'error',
         {
           zones: [
             {
               target: './src/utils/**',
-              from: './src/shared/**',
-              message: 'utils/ must be pure — no shared/ imports',
+              from: './src/core/**',
+              message: 'utils/ must be pure — no core/ imports',
             },
             {
               target: './src/utils/**',
@@ -46,9 +46,9 @@ export default defineConfig([
               message: 'utils/ must be pure — no bases/ imports',
             },
             {
-              target: './src/shared/**',
+              target: './src/core/**',
               from: './src/bases/**',
-              message: 'shared/ cannot import from bases/',
+              message: 'core/ cannot import from bases/',
             },
           ],
         },

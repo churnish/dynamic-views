@@ -4,19 +4,6 @@ import {
   getFileTypeIcon,
 } from '../../src/utils/file-extension';
 
-vi.mock('../../src/utils/image', () => ({
-  VALID_IMAGE_EXTENSIONS: [
-    'png',
-    'jpg',
-    'jpeg',
-    'gif',
-    'svg',
-    'webp',
-    'bmp',
-    'avif',
-  ],
-}));
-
 describe('file-extension', () => {
   // ---------------------------------------------------------------------------
   // getFileExtInfo

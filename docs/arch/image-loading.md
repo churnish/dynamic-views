@@ -2,7 +2,7 @@
 title: Image loading and caching pipeline
 description: Image URL resolution, two-tier dedup cache, broken URL tracking, aspect ratio caching, and load handler wiring for both backends.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-03
+updated: 2026-04-10
 ---
 # Image loading and caching pipeline
 
@@ -14,9 +14,9 @@ The image loading pipeline resolves property values and in-note embeds into rend
 
 | File                           | Role                                                                                         |
 | ------------------------------ | -------------------------------------------------------------------------------------------- |
-| `src/shared/content-loader.ts` | Async image/text loading with two-tier dedup (in-flight + per-caller).                       |
-| `src/shared/image-loader.ts`   | Image load/error handlers, aspect ratio caching, broken URL tracking, placeholder injection. |
-| `src/utils/image.ts`           | Image path processing, embed extraction, YouTube thumbnail validation.                       |
+| `src/core/content-loader.ts` | Async image/text loading with two-tier dedup (in-flight + per-caller).                       |
+| `src/core/image-loader.ts`   | Image load/error handlers, aspect ratio caching, broken URL tracking, placeholder injection. |
+| `src/core/image.ts`           | Image path processing, embed extraction, YouTube thumbnail validation.                       |
 | `src/bases/shared-renderer.ts` | Imperative image load handler setup.                                                         |
 
 ## Two-tier deduplication
@@ -63,7 +63,7 @@ loadImageForEntry(path, ...)
 
 ## Image path resolution
 
-### Processing pipeline ([image.ts](../../src/utils/image.ts))
+### Processing pipeline ([image.ts](../../src/core/image.ts))
 
 | Step | Function                      | Sync/Async | What it does                                                                                     |
 | ---- | ----------------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
@@ -123,7 +123,7 @@ Parses file content to find image references not declared in properties.
 
 - `markImageBroken(url)`: Called on any load error
 - `filterBrokenUrls(urls)`: Removes known-broken before render (early exit if Set empty)
-- Cleared on plugin load and unload via `initExternalBlobCache()` / `cleanupExternalBlobCache()` in [slideshow.ts](../../src/shared/slideshow.ts) (see [image-navigation.md](image-navigation.md) for the external blob cache lifecycle)
+- Cleared on plugin load and unload via `initExternalBlobCache()` / `cleanupExternalBlobCache()` in [slideshow.ts](../../src/core/slideshow.ts) (see [image-navigation.md](image-navigation.md) for the external blob cache lifecycle)
 
 ## Aspect ratio caching
 

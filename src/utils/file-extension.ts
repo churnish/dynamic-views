@@ -2,7 +2,7 @@
  * File format utilities
  */
 
-import { VALID_IMAGE_EXTENSIONS } from './image';
+import { VALID_IMAGE_EXTENSIONS } from '../constants';
 
 /**
  * Extract lowercase extension from path

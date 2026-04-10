@@ -1,3 +1,5 @@
+@use 'backdrop' as *;
+
 /* Poster setup: position, overflow, card-content scroll, poster element */
 .dynamic-views {
   .card.image-format-poster {
@@ -550,12 +552,7 @@ body.dynamic-views-poster-theme-light
 body.dynamic-views-poster-theme-match.theme-light
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.has-poster {
-  --text-normal: #222222;
-  --text-muted: #333333;
-  --text-faint: color-mix(in srgb, #333333 60%, transparent);
-  --dynamic-views-text-normal: #222222;
-  --dynamic-views-text-muted: #333333;
-  --dynamic-views-text-faint: color-mix(in srgb, #333333 60%, transparent);
+  @include overlay-text-colors('light');
 }
 
 /* Poster background variants — gated on .has-poster so imageless cards
@@ -595,10 +592,5 @@ body:is(
 body.dynamic-views-poster-theme-match.theme-dark
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.has-poster {
-  --text-normal: #fafafa;
-  --text-muted: #f5f5f5;
-  --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
-  --dynamic-views-text-normal: #fafafa;
-  --dynamic-views-text-muted: #f5f5f5;
-  --dynamic-views-text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);
+  @include overlay-text-colors('dark');
 }

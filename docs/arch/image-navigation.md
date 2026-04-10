@@ -2,7 +2,7 @@
 title: Image navigation
 description: Card cover image slideshow — navigation, gesture detection, animation, preloading, failed image recovery, and visibility reset.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-04-10
 ---
 # Image navigation
 
@@ -10,14 +10,14 @@ See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/
 
 ## Overview
 
-The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/shared/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/shared/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.
+The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/core/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/core/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.
 
 ## Files
 
 | File                             | Role                                                                  |
 | -------------------------------- | --------------------------------------------------------------------- |
-| `src/shared/slideshow.ts`        | Navigator, gesture detection, animation, preload, external blob cache |
-| `src/shared/hover-and-touch.ts`  | Hover and touch interaction utilities                                 |
+| `src/core/slideshow.ts`        | Navigator, gesture detection, animation, preload, external blob cache |
+| `src/core/hover-and-touch.ts`  | Hover and touch interaction utilities                                 |
 | `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, icon, boundary dimming               |
 
 ## Navigator state
@@ -191,7 +191,7 @@ User rapidly navigates backward past the first image (First-to-Last wrap), then 
 - Stop advancing if `skipped >= imageUrls.length` or `newIndex === currentIndex`
 - Call `onAllFailed()` when all exhausted
 
-### Global tracking (`brokenImageUrls` in [image-loader.ts](../../src/shared/image-loader.ts))
+### Global tracking (`brokenImageUrls` in [image-loader.ts](../../src/core/image-loader.ts))
 
 > For the full broken URL tracking lifecycle, two-tier dedup cache, and aspect ratio caching, see [image-loading.md](image-loading.md).
 
@@ -235,7 +235,7 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 ## Hover intent integration
 
-`setupHoverIntent()` in [hover-and-touch.ts](../../src/shared/hover-and-touch.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
+`setupHoverIntent()` in [hover-and-touch.ts](../../src/core/hover-and-touch.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
 
 - **Wheel gesture guard**: On hover-capable devices (`(hover: hover)`), wheel events in `setupSwipeGestures` require `.interact` on the card before processing. Touch-primary devices bypass the guard (hover intent is never set up there). When the guard blocks an event, all gesture state is reset to prevent stale accumulation.
 - **Arrow visibility**: Gated by `.interact` class on the card (set by the shared hover intent system in both renderers)
@@ -244,7 +244,7 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 
 ## Visibility reset
 
-The IntersectionObserver that watches the slideshow container lives in the renderer ([src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts)), NOT in [slideshow.ts](../../src/shared/slideshow.ts):
+The IntersectionObserver that watches the slideshow container lives in the renderer ([src/bases/shared-renderer.ts](../../src/bases/shared-renderer.ts)), NOT in [slideshow.ts](../../src/core/slideshow.ts):
 
 1. Track `wasHidden` flag (initially `false`)
 2. On not intersecting: set `wasHidden = true`

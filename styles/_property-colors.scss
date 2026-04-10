@@ -171,3 +171,132 @@
   'property-no-name-color',
   $custom-hover-var: '--dynamic-views-property-color-without-names-custom-hover'
 );
+
+/* Title hover: open-on-title → hover title link.
+   Fallback chain: explicit title-hover-color → derived from title-color preset. */
+body.dynamic-views-open-on-title:not(
+    .dynamic-views-title-hover-color-no-change
+  ):is(
+    [class*='dynamic-views-title-color-'],
+    [class*='dynamic-views-title-hover-color-']
+  )
+  .dynamic-views
+  .card.interact
+  .card-title
+  a:is(.is-title-hover-hit, :active) {
+  color: var(
+    --dynamic-views-title-hover-color-value,
+    var(--dynamic-views-title-color-hover-color)
+  );
+}
+
+/* Title hover: open-on-card → hover card changes title.
+   Explicit title-hover-color only — does NOT derive from title-color. */
+body.dynamic-views-open-on-card:not(
+    .dynamic-views-title-hover-color-no-change
+  )[class*='dynamic-views-title-hover-color-']
+  .dynamic-views
+  .card.interact
+  .card-title {
+  color: var(--dynamic-views-title-hover-color-value);
+}
+
+/* Subtitle hover — exclude real links which keep default hover */
+body[class*='dynamic-views-subtitle-color-']
+  .dynamic-views
+  .card.interact
+  .card-subtitle
+  :is(
+    a:not(.internal-link, .external-link),
+    .folder-segment,
+    .filename-segment
+  ):is(:hover, :active) {
+  color: var(--dynamic-views-subtitle-color-hover-color);
+}
+
+/* Property hover — with names */
+body[class*='dynamic-views-property-color-with-names-']
+  .dynamic-views
+  .card.interact
+  .property:is(.has-name, .has-name-inline)
+  .property-content
+  :is(
+    a:not(.tag):not(.internal-link):not(.external-link),
+    .folder-segment,
+    .filename-segment
+  ):is(:hover, :active) {
+  color: var(--dynamic-views-property-with-name-color-hover-color);
+}
+
+/* Property hover — without names */
+body[class*='dynamic-views-property-color-without-names-']
+  .dynamic-views
+  .card.interact
+  .property:not(.has-name, .has-name-inline)
+  .property-content
+  :is(
+    a:not(.tag):not(.internal-link):not(.external-link),
+    .folder-segment,
+    .filename-segment
+  ):is(:hover, :active) {
+  color: var(--dynamic-views-property-no-name-color-hover-color);
+}
+
+/* Color application rules (moved from _properties.scss) */
+.dynamic-views {
+  /* Property name color application */
+  :is(.property-name, .property-name-inline) {
+    color: var(
+      --dynamic-views-property-name-color-value,
+      var(--dynamic-views-text-faint)
+    );
+  }
+
+  /* Property text color application - with names */
+  .property:is(.has-name, .has-name-inline) {
+    color: var(
+      --dynamic-views-property-with-name-color-value,
+      var(--dynamic-views-text-muted)
+    );
+  }
+
+  /* Property text color application - without names */
+  .property:not(.has-name, .has-name-inline) {
+    color: var(
+      --dynamic-views-property-no-name-color-value,
+      var(--dynamic-views-text-faint)
+    );
+  }
+
+  /* Links in properties use Obsidian default colors (not property text color) */
+  .property a.internal-link {
+    color: var(--dynamic-views-link-color);
+  }
+  .property a.external-link {
+    color: var(--dynamic-views-link-external-color);
+  }
+
+  /* Subtitle color application */
+  .card-subtitle {
+    color: var(
+      --dynamic-views-subtitle-color-value,
+      var(--dynamic-views-text-faint)
+    );
+  }
+
+  /* Text preview color application */
+  .card-text-preview {
+    --dynamic-views-text-preview-color: var(
+      --dynamic-views-text-preview-color-value,
+      var(--dynamic-views-text-muted)
+    );
+  }
+
+  /* Title color application */
+  .card-title {
+    --dynamic-views-title-color: var(
+      --dynamic-views-title-color-value,
+      var(--dynamic-views-text-normal)
+    );
+  }
+}

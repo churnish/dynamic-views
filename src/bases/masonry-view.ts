@@ -12,15 +12,15 @@ import {
   QueryController,
   TFile,
 } from 'obsidian';
-import { CardData } from '../shared/card-data';
+import { CardData } from '../core/card-data';
 import {
   basesEntryToCardData,
   transformBasesEntries,
-} from '../shared/data-transform';
+} from '../core/data-transform';
 import {
   readBasesSettings,
   getMasonryViewOptions,
-} from '../shared/settings-schema';
+} from '../core/settings-schema';
 import {
   getCardSpacing,
   getCompactBreakpoint,
@@ -39,7 +39,7 @@ import {
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
-} from '../shared/scroll-gradient';
+} from '../core/scroll-gradient';
 import {
   calculateMasonryLayout,
   calculateMasonryDimensions,
@@ -57,7 +57,7 @@ import {
   applyCssOnlySettings,
   type CardHandle,
 } from './shared-renderer';
-import { getCachedAspectRatio } from '../shared/image-loader';
+import { getCachedAspectRatio } from '../core/image-loader';
 import {
   PANE_MULTIPLIER,
   ROWS_PER_COLUMN,
@@ -72,7 +72,7 @@ import {
   GRID_ROW_BUDGET,
   DEFERRED_MOUNT_THRESHOLD,
   computeHoverScale,
-} from '../shared/constants';
+} from '../core/constants';
 import {
   setupBasesSwipePrevention,
   setupStyleSettingsObserver,
@@ -93,21 +93,18 @@ import {
 import {
   initializeContainerFocus,
   setupHoverKeyboardNavigation,
-} from '../shared/keyboard-nav';
-import {
-  ScrollPreservation,
-  getLeafProps,
-} from '../shared/scroll-preservation';
-import { resetPersistentWidthCache } from '../shared/property-measure';
+} from '../core/keyboard-nav';
+import { ScrollPreservation, getLeafProps } from '../core/scroll-preservation';
+import { resetPersistentWidthCache } from '../core/property-measure';
 import {
   preseedCompactStackedCache,
   invalidateCompactStackedCache,
-} from '../shared/property-helpers';
+} from '../core/property-helpers';
 import {
   buildDisplayToSyntaxMap,
   buildSyntaxToDisplayMap,
-  normalizeSettingsPropertyNames,
-} from '../utils/property';
+} from '../core/property-mapping';
+import { normalizeSettingsPropertyNames } from '../core/property-display';
 import type DynamicViews from '../../main';
 import type {
   ResolvedSettings,
@@ -122,12 +119,12 @@ import type {
   LegacyScrollState,
   ScrollRestoreState,
 } from '../types';
-import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
+import { CONTENT_HIDDEN_CLASS } from '../core/content-visibility';
 import { setupStickyHeaderObserver } from './sticky-header';
 import {
   initializeTextPreviewClamp,
   initializeTextPreviewClampForCards,
-} from '../shared/text-preview-dom';
+} from '../core/text-preview-dom';
 import {
   type VirtualItem,
   measureScalableHeight,
@@ -135,7 +132,7 @@ import {
   getScrollAnchor,
   getAnchorTop,
   type ScrollAnchor,
-} from '../shared/virtual-scroll';
+} from '../core/virtual-scroll';
 import { getOwnerWindow } from '../utils/owner-window';
 
 // Extend Obsidian types
@@ -1277,10 +1274,12 @@ export class DynamicViewsMasonryView extends BasesView {
         return;
       }
 
-      // Save scroll anchor before rebuild (config change restore)
+      // Save scroll anchor before rebuild (config change restore).
+      // Skip when order changed (sort/group flip) — anchor would land at the
+      // card's new position, flinging the user to an unexpected location.
       let configChangeAnchor: ScrollAnchor | null = null;
       let configChangeColumns = this.lastLayoutColumnCount;
-      if (this.virtualItems.length > 0 && pathsUnchanged) {
+      if (this.virtualItems.length > 0 && pathsUnchanged && orderUnchanged) {
         this.updateCachedGroupOffsets(true);
         configChangeAnchor = getScrollAnchor(
           this.virtualItems,
@@ -1290,11 +1289,10 @@ export class DynamicViewsMasonryView extends BasesView {
         );
       }
 
-      // Scroll to top when the card set changed (e.g., search narrowed/broadened
-      // results). pathsUnchanged is false when the file list differs — query
-      // changes that produce identical results are caught by the renderHash
-      // early-exit above.
-      if (!pathsUnchanged) {
+      // Scroll to top when card set or order changed (search results differ,
+      // or sort/group flipped). pathsUnchanged is false when file list differs;
+      // orderUnchanged is false when same files appear in different order.
+      if (!pathsUnchanged || !orderUnchanged) {
         this.scrollEl.scrollTop = 0;
         this.scrollPreservation?.clearSavedPosition();
       }
@@ -1709,7 +1707,8 @@ export class DynamicViewsMasonryView extends BasesView {
             if (this.lastLayoutColumnCount === configChangeColumns) {
               this.scrollEl.scrollTop = anchorTop + configChangeAnchor.offset;
             } else {
-              this.scrollEl.scrollTop = anchorTop;
+              const configGap = getCardSpacing(this.containerEl);
+              this.scrollEl.scrollTop = anchorTop - configGap;
             }
           }
         } else {
@@ -2001,8 +2000,9 @@ export class DynamicViewsMasonryView extends BasesView {
                     this.scrollEl.scrollTop = anchorTop + resizeAnchor.offset;
                     scrollTop = anchorTop + resizeAnchor.offset;
                   } else {
-                    this.scrollEl.scrollTop = anchorTop;
-                    scrollTop = anchorTop;
+                    const resizeGap = getCardSpacing(this.containerEl);
+                    this.scrollEl.scrollTop = anchorTop - resizeGap;
+                    scrollTop = anchorTop - resizeGap;
                   }
                 }
               }
@@ -4675,7 +4675,8 @@ export class DynamicViewsMasonryView extends BasesView {
       } else if (this.lastLayoutColumnCount === state.columns) {
         this.scrollEl.scrollTop = anchorTop + state.anchorOffset;
       } else {
-        this.scrollEl.scrollTop = anchorTop;
+        const navGap = getCardSpacing(this.containerEl);
+        this.scrollEl.scrollTop = anchorTop - navGap;
       }
     } else {
       this.scrollEl.scrollTop = state.top;

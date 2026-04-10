@@ -307,62 +307,6 @@
     display: flex;
     align-items: center;
   }
-
-  /* Property name color application */
-  :is(.property-name, .property-name-inline) {
-    color: var(
-      --dynamic-views-property-name-color-value,
-      var(--dynamic-views-text-faint)
-    );
-  }
-
-  /* Property text color application - with names */
-  .property:is(.has-name, .has-name-inline) {
-    color: var(
-      --dynamic-views-property-with-name-color-value,
-      var(--dynamic-views-text-muted)
-    );
-  }
-
-  /* Property text color application - without names */
-  .property:not(.has-name, .has-name-inline) {
-    color: var(
-      --dynamic-views-property-no-name-color-value,
-      var(--dynamic-views-text-faint)
-    );
-  }
-
-  /* Links in properties use Obsidian default colors (not property text color) */
-  .property a.internal-link {
-    color: var(--dynamic-views-link-color);
-  }
-  .property a.external-link {
-    color: var(--dynamic-views-link-external-color);
-  }
-
-  /* Subtitle color application */
-  .card-subtitle {
-    color: var(
-      --dynamic-views-subtitle-color-value,
-      var(--dynamic-views-text-faint)
-    );
-  }
-
-  /* Text preview color application */
-  .card-text-preview {
-    --dynamic-views-text-preview-color: var(
-      --dynamic-views-text-preview-color-value,
-      var(--dynamic-views-text-muted)
-    );
-  }
-
-  /* Title color application */
-  .card-title {
-    --dynamic-views-title-color: var(
-      --dynamic-views-title-color-value,
-      var(--dynamic-views-text-normal)
-    );
-  }
 }
 
 /* Property link hover: card (hover/touch intent) */

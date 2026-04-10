@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import {
   FIXED_POSTER_HEIGHT_MASONRY,
   FIXED_POSTER_HEIGHT_NONE,
-} from '../../src/shared/constants';
+} from '../../src/core/constants';
 
 // ---------------------------------------------------------------------------
 // Mock element factory

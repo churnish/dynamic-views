@@ -4,6 +4,16 @@ import { cleanUpBaseFile } from '../../src/bases/utils';
 
 // Mock all constants used by utils.ts (imported transitively via view-validation)
 vi.mock('../../src/constants', () => ({
+  VALID_IMAGE_EXTENSIONS: [
+    'avif',
+    'bmp',
+    'gif',
+    'jpeg',
+    'jpg',
+    'png',
+    'svg',
+    'webp',
+  ],
   VIEW_DEFAULTS: {
     cardSize: 300,
     titleProperty: 'file.name',

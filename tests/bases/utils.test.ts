@@ -10,23 +10,23 @@ import {
 import { Notice } from 'obsidian';
 
 // Mock extractBasesTemplate — returns a sparse template object
-vi.mock('../../src/shared/settings-schema', () => ({
+vi.mock('../../src/core/settings-schema', () => ({
   extractBasesTemplate: vi.fn(() => ({ cardSize: 250 })),
 }));
 
 // Mock modules that handleTemplateToggle doesn't use but utils.ts imports
-vi.mock('../../src/shared/data-transform', () => ({
+vi.mock('../../src/core/data-transform', () => ({
   resolveTimestampProperty: vi.fn(),
 }));
-vi.mock('../../src/utils/property', () => ({
+vi.mock('../../src/core/property-extraction', () => ({
   getFirstBasesPropertyValue: vi.fn(),
   getAllBasesImagePropertyValues: vi.fn(),
 }));
-vi.mock('../../src/shared/content-loader', () => ({
+vi.mock('../../src/core/content-loader', () => ({
   loadTextPreviewsForEntries: vi.fn(),
   loadImagesForEntries: vi.fn(),
 }));
-vi.mock('../../src/utils/notebook-navigator', () => ({
+vi.mock('../../src/core/notebook-navigator', () => ({
   shouldUseNotebookNavigator: vi.fn(),
   navigateToTagInNotebookNavigator: vi.fn(),
   navigateToFolderInNotebookNavigator: vi.fn(),

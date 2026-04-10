@@ -2,7 +2,7 @@
 title: Full screen
 description: Spacer + scroll anchoring (Android) and margin bridge + settle (iOS) architecture for hiding/showing bars during scroll, gradient swap mask-image management, direction detection, tap shield, and platform-specific branches.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-09
+updated: 2026-04-10
 ---
 # Full screen
 
@@ -27,7 +27,7 @@ Non-negotiable. Reject any implementation that violates these, regardless of tec
 | File | Role |
 |---|---|
 | `src/bases/full-screen.ts` | `FullScreenController` class + `createFullScreenController()` factory |
-| `src/shared/constants.ts` | Tuning constants (`FULL_SCREEN_*`) |
+| `src/core/constants.ts` | Tuning constants (`FULL_SCREEN_*`) |
 | `styles/_full-screen.scss` | `full-screen-active`, `full-screen-showing` (iOS), `data-dynamic-views-show` (Android), spacer, navbar, and scrim rules |
 | `tests/bases/full-screen-factory.test.ts` | Factory guard tests (missing DOM elements, mount/unmount lifecycle) |
 

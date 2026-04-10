@@ -14,27 +14,27 @@ import {
   stringifyYaml,
   Notice,
 } from 'obsidian';
-import { resolveTimestampProperty } from '../shared/data-transform';
+import { resolveTimestampProperty } from '../core/data-transform';
 import {
   getFirstBasesPropertyValue,
   getAllBasesImagePropertyValues,
-} from '../utils/property';
+} from '../core/property-extraction';
 import {
   loadTextPreviewsForEntries,
   loadImagesForEntries,
-} from '../shared/content-loader';
+} from '../core/content-loader';
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
   navigateToFolderInNotebookNavigator,
-} from '../utils/notebook-navigator';
+} from '../core/notebook-navigator';
 import type { PluginSettings, ResolvedSettings, ViewDefaults } from '../types';
 import { BASES_DEFAULTS, VIEW_DEFAULTS } from '../constants';
 import {
   VALID_VIEW_VALUES,
   VIEW_DEFAULTS_TYPES,
-} from '../shared/view-validation';
-import { extractBasesTemplate } from '../shared/settings-schema';
+} from '../core/view-validation';
+import { extractBasesTemplate } from '../core/settings-schema';
 import type DynamicViews from '../../main';
 
 /** Bases config interface — matches the config object on BasesView subclasses */
@@ -341,8 +341,8 @@ export {
   getStyleSettingsHash,
 } from '../utils/style-settings';
 import {
-  shouldKeepPreviewHeadings,
-  shouldKeepPreviewNewlines,
+  preserveTextPreviewHeadings,
+  preserveTextPreviewNewlines,
   getOmitFirstLineMode,
 } from '../utils/style-settings';
 
@@ -850,8 +850,8 @@ export async function loadContentForEntries(
       getOmitFirstLineMode(),
       app,
       textPreviews,
-      shouldKeepPreviewHeadings(),
-      shouldKeepPreviewNewlines()
+      preserveTextPreviewHeadings(),
+      preserveTextPreviewNewlines()
     );
   }
 

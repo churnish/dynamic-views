@@ -10,7 +10,7 @@ import {
   POSTER_STRETCH_CLASS,
   POSTER_ROW_MIN_HEIGHT_VAR,
   POSTER_ASPECT_OVERRIDE_VAR,
-} from '../../src/shared/constants';
+} from '../../src/core/constants';
 
 // ---------------------------------------------------------------------------
 // Mock element factory

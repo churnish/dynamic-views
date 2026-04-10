@@ -2,7 +2,7 @@
 title: Icon optical vertical alignment
 description: Empirical findings, failed approaches, and constraints for aligning SVG timestamp icons with digit text across desktop, iOS, and Android — covers canvas TextMetrics limitations, Android text autosizing pitfalls, and the offscreen measurement exemption.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-26
+updated: 2026-04-10
 ---
 # Icon optical vertical alignment
 
@@ -107,7 +107,7 @@ From Chromium source code analysis (`text_autosizer.cc`, `computed_style.cc`, `s
 
 ## Implemented solution
 
-**Live DOM measurement from the first real rendered timestamp** (`src/shared/icon-alignment.ts`).
+**Live DOM measurement from the first real rendered timestamp** (`src/core/icon-alignment.ts`).
 
 ### Measurement
 

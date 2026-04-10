@@ -29,7 +29,7 @@ import {
   FULL_SCREEN_REVEAL_RECENCY_MS,
   FULL_SCREEN_TAP_MAX_DISTANCE,
   FULL_SCREEN_TAP_MAX_DURATION_MS,
-} from '../shared/constants';
+} from '../core/constants';
 
 // WAAPI options matching native Obsidian bar transitions.
 // Native uses CSS transitions with per-property timing:

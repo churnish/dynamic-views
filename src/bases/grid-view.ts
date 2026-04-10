@@ -12,15 +12,15 @@ import {
   QueryController,
   TFile,
 } from 'obsidian';
-import { CardData } from '../shared/card-data';
+import { CardData } from '../core/card-data';
 import {
   basesEntryToCardData,
   transformBasesEntries,
-} from '../shared/data-transform';
+} from '../core/data-transform';
 import {
   readBasesSettings,
   getBasesViewOptions,
-} from '../shared/settings-schema';
+} from '../core/settings-schema';
 import {
   getCardSpacing,
   getCompactBreakpoint,
@@ -38,8 +38,8 @@ import {
 import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
-} from '../shared/scroll-gradient';
-import { resetPersistentWidthCache } from '../shared/property-measure';
+} from '../core/scroll-gradient';
+import { resetPersistentWidthCache } from '../core/property-measure';
 import {
   SharedCardRenderer,
   syncResponsiveClasses,
@@ -68,7 +68,7 @@ import {
   GRID_ROW_BUDGET,
   SCROLL_IDLE_SYNC_MS,
   DEFERRED_MOUNT_THRESHOLD,
-} from '../shared/constants';
+} from '../core/constants';
 import {
   setupBasesSwipePrevention,
   setupStyleSettingsObserver,
@@ -89,16 +89,13 @@ import {
   initializeContainerFocus,
   setupHoverKeyboardNavigation,
   type VirtualCardRect,
-} from '../shared/keyboard-nav';
-import {
-  ScrollPreservation,
-  getLeafProps,
-} from '../shared/scroll-preservation';
+} from '../core/keyboard-nav';
+import { ScrollPreservation, getLeafProps } from '../core/scroll-preservation';
 import {
   buildDisplayToSyntaxMap,
   buildSyntaxToDisplayMap,
-  normalizeSettingsPropertyNames,
-} from '../utils/property';
+} from '../core/property-mapping';
+import { normalizeSettingsPropertyNames } from '../core/property-display';
 import type DynamicViews from '../../main';
 import type {
   ResolvedSettings,
@@ -119,13 +116,13 @@ import {
   getScrollAnchor,
   getAnchorTop,
   type ScrollAnchor,
-} from '../shared/virtual-scroll';
+} from '../core/virtual-scroll';
 import { setupStickyHeaderObserver } from './sticky-header';
 import {
   initializeTextPreviewClamp,
   initializeTextPreviewClampForCards,
-} from '../shared/text-preview-dom';
-import { CONTENT_HIDDEN_CLASS } from '../shared/content-visibility';
+} from '../core/text-preview-dom';
+import { CONTENT_HIDDEN_CLASS } from '../core/content-visibility';
 
 // Extend Obsidian types
 declare module 'obsidian' {
@@ -1300,10 +1297,12 @@ export class DynamicViewsGridView extends BasesView {
         return;
       }
 
-      // Save scroll anchor before rebuild (config change restore)
+      // Save scroll anchor before rebuild (config change restore).
+      // Skip when order changed (sort/group flip) — anchor would land at the
+      // card's new position, flinging the user to an unexpected location.
       let configChangeAnchor: ScrollAnchor | null = null;
       let configChangeColumns = this.lastColumnCount;
-      if (this.virtualItems.length > 0 && pathsUnchanged) {
+      if (this.virtualItems.length > 0 && pathsUnchanged && orderUnchanged) {
         this.updateCachedGroupOffsets(true);
         configChangeAnchor = getScrollAnchor(
           this.virtualItems,
@@ -1313,11 +1312,10 @@ export class DynamicViewsGridView extends BasesView {
         );
       }
 
-      // Scroll to top when the card set changed (e.g., search narrowed/broadened
-      // results). pathsUnchanged is false when the file list differs — query
-      // changes that produce identical results are caught by the renderHash
-      // early-exit above.
-      if (!pathsUnchanged) {
+      // Scroll to top when card set or order changed (search results differ,
+      // or sort/group flipped). pathsUnchanged is false when file list differs;
+      // orderUnchanged is false when same files appear in different order.
+      if (!pathsUnchanged || !orderUnchanged) {
         this.scrollEl.scrollTop = 0;
         this.scrollPreservation?.clearSavedPosition();
       }
@@ -1906,7 +1904,9 @@ export class DynamicViewsGridView extends BasesView {
                       this.cachedGroupOffsets
                     );
                     if (anchorTop !== null) {
-                      this.scrollEl.scrollTop = anchorTop;
+                      // Offset by gap so card sits below spacing, not flush with pane top
+                      const resizeGap = getCardSpacing(this.containerEl);
+                      this.scrollEl.scrollTop = anchorTop - resizeGap;
                     }
                   }
 
@@ -1996,7 +1996,8 @@ export class DynamicViewsGridView extends BasesView {
             if (this.lastColumnCount === configChangeColumns) {
               this.scrollEl.scrollTop = anchorTop + configChangeAnchor.offset;
             } else {
-              this.scrollEl.scrollTop = anchorTop;
+              const configGap = getCardSpacing(this.containerEl);
+              this.scrollEl.scrollTop = anchorTop - configGap;
             }
           }
         } else {
@@ -4002,7 +4003,8 @@ export class DynamicViewsGridView extends BasesView {
       } else if (this.lastColumnCount === state.columns) {
         this.scrollEl.scrollTop = anchorTop + state.anchorOffset;
       } else {
-        this.scrollEl.scrollTop = anchorTop;
+        const navGap = getCardSpacing(this.containerEl);
+        this.scrollEl.scrollTop = anchorTop - navGap;
       }
     } else {
       this.scrollEl.scrollTop = state.top;
