@@ -1,5 +1,5 @@
 /**
- * Pure poster row stretch algorithm — extracted from grid-view.ts for testability.
+ * Pure poster row stretch algorithm.
  *
  * In mixed rows (poster + imageless cards), poster cards stay at aspect-ratio
  * height while imageless cards use natural content height. When imageless cards
@@ -14,6 +14,7 @@ import {
   POSTER_ASPECT_OVERRIDE_VAR,
 } from './constants';
 
+// Minimal structural interface — keeps this module decoupled from VirtualItem's Bases imports.
 export interface PosterStretchItem {
   el: HTMLElement | null;
 }

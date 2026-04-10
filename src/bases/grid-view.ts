@@ -3644,12 +3644,7 @@ export class DynamicViewsGridView extends BasesView {
     this.stretchPosterCardsInMixedRows();
   }
 
-  // In mixed rows (poster + imageless cards), poster cards stay at aspect-ratio
-  // height while imageless cards use natural content height. When imageless cards
-  // are taller, stretch poster cards to match via min-height. aspect-ratio must
-  // be cleared to prevent width expansion (aspect-ratio + min-height = wider card).
-  // Clears existing stretch state before measuring so all heights are natural,
-  // then processes rows from the pre-collected map.
+  // See poster-stretch.ts for algorithm details.
   private stretchPosterCardsInMixedRows(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
