@@ -1180,6 +1180,10 @@ export class SharedCardRenderer {
         // Precise hover: only activate hover color/underline over actual text glyphs.
         // -webkit-box fills available width; this prevents hover on dead space.
         if (isPreciseHover) {
+          // CSS uses this class to gate :active opacity behind ink-rect hit.
+          // Desktop-only — mobile never sets this regardless of connected pointer.
+          link.classList.add('precise-hover');
+
           // Block Obsidian's delegated mouseover handler on .internal-link — it
           // fires page preview on the full -webkit-box area. Our own fireHoverLink()
           // (triggered from mouseenter/mousemove) handles preview gated by ink rects.

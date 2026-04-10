@@ -255,6 +255,13 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     opacity: 0.5;
   }
 
+  /* Precise hover: gate active feedback behind ink-rect hit so clicking
+     dead space shows no opacity change. .precise-hover is desktop-only —
+     touch keeps the wide tap area on all platforms. */
+  .interact .card-title a.precise-hover:active:not(.is-title-hover-hit) {
+    opacity: 1;
+  }
+
   /* WebKit compositor bug: opacity on <a> inside position:absolute card
      causes horizontal shift. Block Obsidian's a.mobile-tap { opacity: 0.5 }. */
   .card-title a.mobile-tap {
@@ -269,7 +276,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     .dynamic-views
     .card.interact
     .card-title
-    a:is(.is-title-hover-hit, :active) {
+    a:is(.is-title-hover-hit, :active:not(.precise-hover)) {
     text-decoration: underline;
     color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
   }
