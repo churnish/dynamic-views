@@ -59,9 +59,6 @@ import {
   FIXED_COVER_HEIGHT_NONE,
   FIXED_POSTER_HEIGHT_MASONRY,
   FIXED_POSTER_HEIGHT_NONE,
-  POSTER_STRETCH_CLASS,
-  POSTER_ROW_MIN_HEIGHT_VAR,
-  POSTER_ASPECT_OVERRIDE_VAR,
   computeHoverScale,
   DIRECTION_ACCUM_THRESHOLD,
   HIGH_VELOCITY_THRESHOLD,
@@ -69,6 +66,7 @@ import {
   SCROLL_IDLE_SYNC_MS,
   DEFERRED_MOUNT_THRESHOLD,
 } from '../core/constants';
+import { computePosterStretch } from '../core/poster-stretch';
 import {
   setupBasesSwipePrevention,
   setupStyleSettingsObserver,
@@ -312,6 +310,9 @@ export class DynamicViewsGridView extends BasesView {
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
   private cardResizeDirty = false;
+  /** Bail-out key for stretchPosterCardsInMixedRows — skips when last run
+   *  was a no-op and card composition hasn't changed. 0 = no bail-out. */
+  private stretchNoopKey = 0;
   private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private isMountRemeasuring = false;
   private frameMountCount: number = 0;
@@ -924,6 +925,7 @@ export class DynamicViewsGridView extends BasesView {
     this.lastSyncScrollTop = 0;
     this.lastSyncTime = 0;
     this.cardVerticalPadding = null;
+    this.stretchNoopKey = 0;
     this.ephemeralEstimatedHeight = null;
     this.hasUserScrolled = false;
     this.isLayoutBusy = false;
@@ -3646,121 +3648,23 @@ export class DynamicViewsGridView extends BasesView {
   // height while imageless cards use natural content height. When imageless cards
   // are taller, stretch poster cards to match via min-height. aspect-ratio must
   // be cleared to prevent width expansion (aspect-ratio + min-height = wider card).
-  // Pre-collects all card heights in one pass to force a single reflow, then
-  // processes rows from the pre-collected map.
+  // Clears existing stretch state before measuring so all heights are natural,
+  // then processes rows from the pre-collected map.
   private stretchPosterCardsInMixedRows(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
-
     const columns = this.lastColumnCount;
     if (columns <= 0) return;
 
-    // Pre-collect ALL card heights in one pass — forces a single reflow total.
-    // equalizeRowPosterHeights (called before this method) may have dirtied
-    // layout; reading heights inside the row loop would re-trigger reflow per row.
-    const heightMap = new WeakMap<HTMLElement, number>();
-    for (const [, groupItems] of this.virtualItemsByGroup) {
-      for (const item of groupItems) {
-        const el = item.el;
-        if (!el?.isConnected) continue;
-        const isPoster =
-          el.classList.contains('image-format-poster') &&
-          el.classList.contains('has-poster');
-        // Poster cards with existing stretch report min-height, not natural
-        // ratio height — use 0 to force the apply branch (oscillation guard
-        // handles convergence). Only measure non-stretched posters and
-        // imageless cards.
-        if (isPoster && el.classList.contains(POSTER_STRETCH_CLASS)) {
-          heightMap.set(el, 0);
-        } else {
-          heightMap.set(el, el.getBoundingClientRect().height);
-        }
-      }
-    }
-
-    // Read phase: collect all row measurements without writing styles
-    const rowActions: {
-      posterEls: HTMLElement[];
-      action: 'stretch' | 'unstretch' | 'skip';
-      value: string;
-    }[] = [];
-
-    for (const [, groupItems] of this.virtualItemsByGroup) {
-      for (
-        let rowStart = 0;
-        rowStart < groupItems.length;
-        rowStart += columns
-      ) {
-        const rowEnd = Math.min(rowStart + columns, groupItems.length);
-        const posterEls: HTMLElement[] = [];
-        let maxImagelessHeight = 0;
-
-        for (let i = rowStart; i < rowEnd; i++) {
-          const el = groupItems[i].el;
-          if (!el?.isConnected) continue;
-          if (
-            el.classList.contains('image-format-poster') &&
-            el.classList.contains('has-poster')
-          ) {
-            posterEls.push(el);
-          } else {
-            const h = heightMap.get(el) ?? 0;
-            if (h > maxImagelessHeight) maxImagelessHeight = h;
-          }
-        }
-
-        // All-poster or all-imageless rows: clean up any stale stretch state
-        if (posterEls.length === 0 || maxImagelessHeight === 0) {
-          rowActions.push({ posterEls, action: 'unstretch', value: '' });
-          continue;
-        }
-
-        // Oscillation guard: if all poster cards already match this target, skip.
-        // Must check BEFORE reading posterHeight — stretched cards reflect
-        // min-height, not natural ratio height, causing oscillation.
-        const targetHeight = Math.round(maxImagelessHeight);
-        const value = targetHeight + 'px';
-        if (
-          posterEls.every(
-            (el) =>
-              el.style.getPropertyValue(POSTER_ROW_MIN_HEIGHT_VAR) === value
-          )
-        ) {
-          rowActions.push({ posterEls, action: 'skip', value });
-          continue;
-        }
-
-        // Already-stretched cards use 0 from heightMap (set above).
-        const posterHeight = heightMap.get(posterEls[0]) ?? 0;
-
-        if (maxImagelessHeight > posterHeight) {
-          rowActions.push({ posterEls, action: 'stretch', value });
-        } else {
-          rowActions.push({ posterEls, action: 'unstretch', value: '' });
-        }
-      }
-    }
-
-    // Write phase: apply all style changes without interleaved reads
-    for (const { posterEls, action, value } of rowActions) {
-      if (action === 'skip') continue;
-      if (action === 'stretch') {
-        for (const el of posterEls) {
-          el.setCssProps({
-            [POSTER_ROW_MIN_HEIGHT_VAR]: value,
-            [POSTER_ASPECT_OVERRIDE_VAR]: 'auto',
-          });
-          el.classList.add(POSTER_STRETCH_CLASS);
-        }
-      } else {
-        for (const el of posterEls) {
-          if (!el.classList.contains(POSTER_STRETCH_CLASS)) continue;
-          el.style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
-          el.style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
-          el.classList.remove(POSTER_STRETCH_CLASS);
-        }
-      }
-    }
+    const container = this.containerEl;
+    this.stretchNoopKey = computePosterStretch({
+      virtualItemsByGroup: this.virtualItemsByGroup,
+      columns,
+      stretchNoopKey: this.stretchNoopKey,
+      imageReadyCount: container.getElementsByClassName('image-ready').length,
+      compactStackedCount:
+        container.getElementsByClassName('compact-stacked').length,
+    });
   }
 
   private onMountRemeasure(): void {

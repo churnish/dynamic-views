@@ -1,16 +1,19 @@
 /**
- * Tests for stretchPosterCardsInMixedRows logic from grid-view.ts.
- *
- * The method is private — these tests replicate the same algorithm as a
- * standalone function, following the grid-scroll.test.ts pattern.
+ * Tests for computePosterStretch — the pure poster row stretch algorithm
+ * extracted from grid-view.ts.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
+  ALIGN_START_CLASS,
   POSTER_STRETCH_CLASS,
   POSTER_ROW_MIN_HEIGHT_VAR,
   POSTER_ASPECT_OVERRIDE_VAR,
 } from '../../src/core/constants';
+import {
+  computePosterStretch,
+  type PosterStretchInput,
+} from '../../src/core/poster-stretch';
 
 // ---------------------------------------------------------------------------
 // Mock element factory
@@ -52,135 +55,20 @@ function mockElement(
 }
 
 // ---------------------------------------------------------------------------
-// Replicated stretchPosterCardsInMixedRows logic
-// ---------------------------------------------------------------------------
-
-interface VirtualItem {
-  el: MockElement | null;
-}
-
-/**
- * Replicates stretchPosterCardsInMixedRows from grid-view.ts.
- * Accepts context instead of reading from `this`.
- */
-function stretchPosterCardsInMixedRows(ctx: {
-  containerConnected: boolean;
-  imageFormat: string | undefined;
-  virtualItemsByGroup: Map<string, VirtualItem[]>;
-  columns: number;
-}): void {
-  if (!ctx.containerConnected) return;
-  if (ctx.imageFormat !== 'poster') return;
-
-  const columns = ctx.columns;
-  if (columns <= 0) return;
-
-  // Pre-collect ALL card heights in one pass — forces a single reflow total.
-  const heightMap = new Map<MockElement, number>();
-  for (const [, groupItems] of ctx.virtualItemsByGroup) {
-    for (const item of groupItems) {
-      const el = item.el;
-      if (!el?.isConnected) continue;
-      const isPoster =
-        el.classList.contains('image-format-poster') &&
-        el.classList.contains('has-poster');
-      if (isPoster && el.classList.contains(POSTER_STRETCH_CLASS)) {
-        heightMap.set(el, 0);
-      } else {
-        heightMap.set(el, el.getBoundingClientRect().height);
-      }
-    }
-  }
-
-  // Read phase
-  const rowActions: {
-    posterEls: MockElement[];
-    action: 'stretch' | 'unstretch' | 'skip';
-    value: string;
-  }[] = [];
-
-  for (const [, groupItems] of ctx.virtualItemsByGroup) {
-    for (let rowStart = 0; rowStart < groupItems.length; rowStart += columns) {
-      const rowEnd = Math.min(rowStart + columns, groupItems.length);
-      const posterEls: MockElement[] = [];
-      let maxImagelessHeight = 0;
-
-      for (let i = rowStart; i < rowEnd; i++) {
-        const el = groupItems[i].el;
-        if (!el?.isConnected) continue;
-        if (
-          el.classList.contains('image-format-poster') &&
-          el.classList.contains('has-poster')
-        ) {
-          posterEls.push(el);
-        } else {
-          const h = heightMap.get(el) ?? 0;
-          if (h > maxImagelessHeight) maxImagelessHeight = h;
-        }
-      }
-
-      if (posterEls.length === 0 || maxImagelessHeight === 0) {
-        rowActions.push({ posterEls, action: 'unstretch', value: '' });
-        continue;
-      }
-
-      const targetHeight = Math.round(maxImagelessHeight);
-      const value = targetHeight + 'px';
-      if (
-        posterEls.every(
-          (el) => el.style.getPropertyValue(POSTER_ROW_MIN_HEIGHT_VAR) === value
-        )
-      ) {
-        rowActions.push({ posterEls, action: 'skip', value });
-        continue;
-      }
-
-      const posterHeight = heightMap.get(posterEls[0]) ?? 0;
-
-      if (maxImagelessHeight > posterHeight) {
-        rowActions.push({ posterEls, action: 'stretch', value });
-      } else {
-        rowActions.push({ posterEls, action: 'unstretch', value: '' });
-      }
-    }
-  }
-
-  // Write phase
-  for (const { posterEls, action, value } of rowActions) {
-    if (action === 'skip') continue;
-    if (action === 'stretch') {
-      for (const el of posterEls) {
-        el.setCssProps({
-          [POSTER_ROW_MIN_HEIGHT_VAR]: value,
-          [POSTER_ASPECT_OVERRIDE_VAR]: 'auto',
-        });
-        el.classList.add(POSTER_STRETCH_CLASS);
-      }
-    } else {
-      for (const el of posterEls) {
-        if (!el.classList.contains(POSTER_STRETCH_CLASS)) continue;
-        el.style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
-        el.style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
-        el.classList.remove(POSTER_STRETCH_CLASS);
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('stretchPosterCardsInMixedRows', () => {
+describe('computePosterStretch', () => {
   /** Default context factory */
   function makeCtx(
-    overrides: Partial<Parameters<typeof stretchPosterCardsInMixedRows>[0]> = {}
-  ) {
+    overrides: Partial<PosterStretchInput> = {}
+  ): PosterStretchInput {
     return {
-      containerConnected: true,
-      imageFormat: 'poster' as string | undefined,
-      virtualItemsByGroup: new Map<string, VirtualItem[]>(),
+      virtualItemsByGroup: new Map(),
       columns: 3,
+      stretchNoopKey: 0,
+      imageReadyCount: 0,
+      compactStackedCount: 0,
       ...overrides,
     };
   }
@@ -204,7 +92,7 @@ describe('stretchPosterCardsInMixedRows', () => {
       virtualItemsByGroup: new Map([['default', [{ el: p1 }, { el: p2 }]]]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
     // All-poster row → unstretch action. p1 had stale stretch → cleaned.
     expect(p1._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
@@ -223,7 +111,7 @@ describe('stretchPosterCardsInMixedRows', () => {
       virtualItemsByGroup: new Map([['default', [{ el: i1 }, { el: i2 }]]]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
     // No poster cards → unstretch path, but neither had stretch → no-op
     expect(i1._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
@@ -244,11 +132,14 @@ describe('stretchPosterCardsInMixedRows', () => {
       ]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
     expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
     expect(poster._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('300px');
     expect(poster._cssProps.get(POSTER_ASPECT_OVERRIDE_VAR)).toBe('auto');
+    // Phase 2 cleanup: measurement class removed after read
+    expect(imageless._classes.has(ALIGN_START_CLASS)).toBe(false);
+    expect(poster._classes.has(ALIGN_START_CLASS)).toBe(false);
   });
 
   it('mixed row, poster taller: no stretch', () => {
@@ -265,17 +156,20 @@ describe('stretchPosterCardsInMixedRows', () => {
       ]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
     expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
     expect(poster._cssProps.has(POSTER_ROW_MIN_HEIGHT_VAR)).toBe(false);
   });
 
-  it('oscillation guard: matching min-height skips writes', () => {
+  it('stale stretch cleared — natural heights compared', () => {
     const poster = mockElement({
       classes: ['image-format-poster', 'has-poster', POSTER_STRETCH_CLASS],
-      height: 300,
-      cssProps: { [POSTER_ROW_MIN_HEIGHT_VAR]: '300px' },
+      height: 200,
+      cssProps: {
+        [POSTER_ROW_MIN_HEIGHT_VAR]: '500px',
+        [POSTER_ASPECT_OVERRIDE_VAR]: 'auto',
+      },
     });
     const imageless = mockElement({ height: 300 });
 
@@ -286,13 +180,38 @@ describe('stretchPosterCardsInMixedRows', () => {
       ]),
     });
 
-    // Snapshot CSS props before
-    const propsBefore = new Map(poster._cssProps);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
-    stretchPosterCardsInMixedRows(ctx);
+    // Phase 0 cleared stale 500px stretch. Natural: imageless 300 > poster 200 → stretch to 300px
+    expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
+    expect(poster._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('300px');
+    expect(poster._cssProps.get(POSTER_ASPECT_OVERRIDE_VAR)).toBe('auto');
+  });
 
-    // Props unchanged — skip action
-    expect(poster._cssProps).toEqual(propsBefore);
+  it('stale stretch with poster taller — no re-stretch', () => {
+    const poster = mockElement({
+      classes: ['image-format-poster', 'has-poster', POSTER_STRETCH_CLASS],
+      height: 300,
+      cssProps: {
+        [POSTER_ROW_MIN_HEIGHT_VAR]: '500px',
+        [POSTER_ASPECT_OVERRIDE_VAR]: 'auto',
+      },
+    });
+    const imageless = mockElement({ height: 160 });
+
+    const ctx = makeCtx({
+      columns: 2,
+      virtualItemsByGroup: new Map([
+        ['default', [{ el: poster }, { el: imageless }]],
+      ]),
+    });
+
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+
+    // Phase 0 cleared stale 500px stretch. Natural: poster 300 > imageless 160 → no stretch
+    expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+    expect(poster._cssProps.has(POSTER_ROW_MIN_HEIGHT_VAR)).toBe(false);
+    expect(poster._cssProps.has(POSTER_ASPECT_OVERRIDE_VAR)).toBe(false);
   });
 
   it('multi-row: mixed row 0 stretched, all-poster row 1 unstretched', () => {
@@ -328,7 +247,7 @@ describe('stretchPosterCardsInMixedRows', () => {
       ]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
     // Row 0: poster stretched to imageless height
     expect(poster0._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
@@ -378,7 +297,7 @@ describe('stretchPosterCardsInMixedRows', () => {
       ]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
+    ctx.stretchNoopKey = computePosterStretch(ctx);
 
     // Row 0: both posters stretched to imageless height
     expect(poster0._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
@@ -391,7 +310,70 @@ describe('stretchPosterCardsInMixedRows', () => {
     expect(poster3._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
   });
 
-  it('mixed row: poster shorter than imageless → stretch applied', () => {
+  it('consecutive no-op calls with same composition bail out', () => {
+    const p1 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+    const p2 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+
+    const ctx = makeCtx({
+      columns: 2,
+      virtualItemsByGroup: new Map([['default', [{ el: p1 }, { el: p2 }]]]),
+    });
+
+    // First run: all-poster row → no stretch applied, no changes
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    expect(p1._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+    expect(p2._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+    // Bail-out key should be set (output matched input — both zero stretch)
+    expect(ctx.stretchNoopKey).not.toBe(0);
+
+    const keyAfterFirst = ctx.stretchNoopKey;
+
+    // Second run: same composition → should bail out immediately
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    expect(ctx.stretchNoopKey).toBe(keyAfterFirst);
+    expect(p1._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+    expect(p2._classes.has(POSTER_STRETCH_CLASS)).toBe(false);
+  });
+
+  it('bail-out resets when card count changes', () => {
+    const p1 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+    const p2 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+
+    const items: { el: MockElement }[] = [{ el: p1 }, { el: p2 }];
+    const ctx = makeCtx({
+      columns: 2,
+      virtualItemsByGroup: new Map([['default', items]]),
+    });
+
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    expect(ctx.stretchNoopKey).not.toBe(0);
+
+    // Add a card — totalItems changes, key should no longer match
+    const p3 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+    items.push({ el: p3 });
+
+    const keyBefore = ctx.stretchNoopKey;
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    // Key was recalculated (ran fully), not the old key
+    expect(ctx.stretchNoopKey).not.toBe(keyBefore);
+  });
+
+  it('bail-out resets when stretch result changes', () => {
     const poster = mockElement({
       classes: ['image-format-poster', 'has-poster'],
       height: 200,
@@ -405,10 +387,48 @@ describe('stretchPosterCardsInMixedRows', () => {
       ]),
     });
 
-    stretchPosterCardsInMixedRows(ctx);
-
+    // First run: stretch applied (imageless taller) — output differs from
+    // input (no prior stretch) → key NOT set
+    ctx.stretchNoopKey = computePosterStretch(ctx);
     expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
-    expect(poster._cssProps.get(POSTER_ROW_MIN_HEIGHT_VAR)).toBe('300px');
-    expect(poster._cssProps.get(POSTER_ASPECT_OVERRIDE_VAR)).toBe('auto');
+    expect(ctx.stretchNoopKey).toBe(0);
+
+    // Second run: same composition, stretch was already applied last time
+    // and will be re-applied identically → output matches input → key SET
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    expect(poster._classes.has(POSTER_STRETCH_CLASS)).toBe(true);
+    expect(ctx.stretchNoopKey).not.toBe(0);
+
+    // Third run: bail out — key matches
+    const keyBefore = ctx.stretchNoopKey;
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    expect(ctx.stretchNoopKey).toBe(keyBefore);
+  });
+
+  it('bail-out resets when image-ready count changes', () => {
+    const p1 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+    const p2 = mockElement({
+      classes: ['image-format-poster', 'has-poster'],
+      height: 200,
+    });
+
+    const ctx = makeCtx({
+      columns: 2,
+      virtualItemsByGroup: new Map([['default', [{ el: p1 }, { el: p2 }]]]),
+    });
+
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    expect(ctx.stretchNoopKey).not.toBe(0);
+
+    // Change imageReadyCount — simulates an image finishing load
+    ctx.imageReadyCount = 1;
+
+    const keyBefore = ctx.stretchNoopKey;
+    ctx.stretchNoopKey = computePosterStretch(ctx);
+    // Ran fully — new key computed, not the old one
+    expect(ctx.stretchNoopKey).not.toBe(keyBefore);
   });
 });

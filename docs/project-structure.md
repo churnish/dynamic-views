@@ -41,6 +41,7 @@ dynamic-views/
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
+│   │   ├── poster-stretch.ts         # Pure poster row stretch algorithm (extracted for testability)
 │   │   ├── property-display.ts       # Property display names, settings normalization
 │   │   ├── property-extraction.ts    # Bases entry value extraction (first/all property values)
 │   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes; compact wrapping detection
