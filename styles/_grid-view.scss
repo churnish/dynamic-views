@@ -29,15 +29,6 @@
   height: 100%;
 }
 
-/* Lightweight placeholder for unmounted virtual scroll cards.
-   Maintains CSS Grid flow while card is not in DOM. */
-.dynamic-views-grid .dynamic-views-grid-placeholder {
-  min-width: 0;
-  overflow: hidden;
-  box-sizing: border-box;
-  /* Height/min-height set via inline style from VirtualItem.height */
-}
-
 /* Height-locked card during mount: prevents row reflow until locks release.
    Inline style.height set from placeholder height; overflow clips content. */
 .dynamic-views-grid .card.dynamic-views-height-locked {
@@ -52,12 +43,18 @@ body.is-ios .dynamic-views .dynamic-views-grid {
   overflow-clip-margin: var(--dynamic-views-bases-view-padding);
 }
 
-/* WebKit: contain:size prevents CSS Grid intrinsic sizing on placeholders
-   and height-locked cards. Desktop excluded — contain:size breaks
-   align-items:stretch causing height oscillation on lock release. */
-body.is-ios .dynamic-views-grid .dynamic-views-grid-placeholder,
+/* WebKit: contain:size prevents CSS Grid intrinsic sizing on height-locked
+   cards. Desktop excluded — contain:size breaks align-items:stretch
+   causing height oscillation on lock release. */
 body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
   contain: size layout style paint;
+}
+
+/* Padding-based virtual scroll requires manual scroll compensation;
+   browser scroll anchoring conflicts with syncGroupPadding adjustments.
+   MDN: padding changes on anchor ancestors suppress anchoring. */
+.bases-view:has(.dynamic-views-grid) {
+  overflow-anchor: none;
 }
 
 /* Group section wrappers span full grid width and use subgrid */

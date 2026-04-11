@@ -276,6 +276,10 @@ export class DynamicViewsGridView extends BasesView {
   private placeholderEls = new Map<VirtualItem, HTMLElement>();
   private cachedGroupOffsets = new Map<string | undefined, number>();
   private groupOffsetsDirty = true;
+  /** Cached base SCSS paddingBottom per group — avoids getComputedStyle per sync */
+  private groupBasePaddingBottom = new Map<string | undefined, number>();
+  private previousGroupPaddingTop = new Map<string | undefined, number>();
+  private groupPaddingDirty = true;
   private hasUserScrolled = false;
   private compensatingScrollCount = 0;
   private committedRow: {
@@ -927,6 +931,9 @@ export class DynamicViewsGridView extends BasesView {
     this.virtualItemsByGroup.clear();
     this.virtualItemByPath.clear();
     this.groupContainers.clear();
+    this.groupBasePaddingBottom.clear();
+    this.previousGroupPaddingTop.clear();
+    this.groupPaddingDirty = true;
     this.placeholderEls.clear();
     this.cachedGroupOffsets.clear();
     this.groupOffsetsDirty = true;
@@ -1738,9 +1745,12 @@ export class DynamicViewsGridView extends BasesView {
         }
         this.lastMeasuredCardWidth = this.virtualItems[0]?.width ?? 0;
 
-        // Convert to unmounted state — matches unmountVirtualItem convention
+        // Convert to unmounted state — matches unmountVirtualItem convention.
+        // Hidden placeholders are excluded from CSS Grid layout — padding
+        // on group containers compensates for scroll height (syncGroupPadding).
         for (const item of this.virtualItems) {
           if (!item.el || item.handle) continue;
+          item.el.classList.add('dynamic-views-hidden');
           this.placeholderEls.set(item, item.el);
           item.el = null;
         }
@@ -1748,6 +1758,7 @@ export class DynamicViewsGridView extends BasesView {
         this.measureAllCardPositions();
       }
 
+      this.syncGroupPadding();
       this.refreshGroupOffsets();
 
       this.setupCardResizeObserver();
@@ -1909,6 +1920,7 @@ export class DynamicViewsGridView extends BasesView {
                     }
                   }
 
+                  this.syncGroupPadding();
                   this.refreshGroupOffsets();
 
                   // Anchor-based scroll restore after column change
@@ -2540,6 +2552,7 @@ export class DynamicViewsGridView extends BasesView {
           item.fixedHeight = item.measuredHeight - item.scalableHeight;
         }
       }
+      this.syncGroupPadding();
       this.refreshGroupOffsets();
 
       // Clear guard, then sync
@@ -2817,6 +2830,8 @@ export class DynamicViewsGridView extends BasesView {
     placeholder.className = 'dynamic-views-grid-placeholder';
     placeholder.style.height = `${item.height}px`;
     placeholder.style.minHeight = `${item.height}px`;
+    placeholder.className =
+      'dynamic-views-grid-placeholder dynamic-views-hidden';
 
     item.el.replaceWith(placeholder);
     this.placeholderEls.set(item, placeholder);
@@ -2827,6 +2842,7 @@ export class DynamicViewsGridView extends BasesView {
     this.scrollMountLockedEls.delete(item.el);
     item.el = null;
     item.handle = null;
+    this.groupPaddingDirty = true;
   }
 
   private mountVirtualItem(
@@ -2890,6 +2906,7 @@ export class DynamicViewsGridView extends BasesView {
 
       item.el = handle.el;
       item.handle = handle;
+      this.groupPaddingDirty = true;
       item.measuredHeight = measuredHeight;
       item.height = measuredHeight; // Normalized to row height by recomputeYPositions
       item.measuredAtWidth = measuredWidth;
@@ -2911,6 +2928,7 @@ export class DynamicViewsGridView extends BasesView {
 
       item.el = handle.el;
       item.handle = handle;
+      this.groupPaddingDirty = true;
 
       // Hover scale from cached dimensions (masonry parity) — avoids
       // offsetWidth/Height reads that force CSS Grid layout recalculation
@@ -3250,6 +3268,8 @@ export class DynamicViewsGridView extends BasesView {
       // Items between mount zone and unmount zone: leave as-is (hysteresis)
     }
 
+    this.syncGroupPadding();
+
     // Run deferred passes inline (same RAF) so height changes + scroll
     // compensation happen before browser paints — invisible to the user.
     if (mountedNew) {
@@ -3267,6 +3287,7 @@ export class DynamicViewsGridView extends BasesView {
             }
           }
         }
+        this.syncGroupPadding();
         this.groupOffsetsDirty = true;
         this.updateCachedGroupOffsets();
       } else {
@@ -3452,18 +3473,20 @@ export class DynamicViewsGridView extends BasesView {
     }
     if (!needsReposition) return;
 
-    // Scroll anchoring: record first visible mounted card
-    const scrollTop = this.scrollEl.scrollTop;
-    let anchorItem: VirtualItem | null = null;
-    let anchorOldY = 0;
+    // Scroll anchoring: record first visible mounted card's viewport position.
+    // Viewport-relative (not scroll-relative) — fine for anchoring since
+    // delta is computed as relative change on the same element. DOM-based
+    // anchor avoids double-counting the hidden-prefix delta that
+    // syncGroupPadding already compensated via scrollTop adjustment.
+    let anchorEl: HTMLElement | null = null;
+    let anchorOldTop = 0;
 
     for (const item of this.virtualItems) {
       if (!item.el) continue;
-      const offset = this.cachedGroupOffsets.get(item.groupKey) ?? 0;
-      const absY = offset + item.y;
-      if (absY + item.height > scrollTop) {
-        anchorItem = item;
-        anchorOldY = absY;
+      const rect = item.el.getBoundingClientRect();
+      if (rect.bottom > 0) {
+        anchorEl = item.el;
+        anchorOldTop = rect.top;
         break;
       }
     }
@@ -3493,14 +3516,16 @@ export class DynamicViewsGridView extends BasesView {
       }
     }
 
+    this.syncGroupPadding();
+
     // Update group offsets AFTER placeholders (depends on correct DOM heights)
     this.refreshGroupOffsets();
 
-    // Scroll compensation
-    if (anchorItem) {
-      const newOffset = this.cachedGroupOffsets.get(anchorItem.groupKey) ?? 0;
-      const newAbsY = newOffset + anchorItem.y;
-      const delta = newAbsY - anchorOldY;
+    // Scroll compensation — residual drift from height remeasurement only.
+    // syncGroupPadding already handled hidden-prefix padding shifts.
+    if (anchorEl && anchorEl.isConnected) {
+      const anchorNewTop = anchorEl.getBoundingClientRect().top;
+      const delta = anchorNewTop - anchorOldTop;
       if (Math.abs(delta) > 1) {
         // WebKit: skip scrollTop writes during momentum — kills compositor deceleration.
         // DOM mutations are safe (confirmed empirically), only scrollTop writes kill momentum.
@@ -3512,7 +3537,7 @@ export class DynamicViewsGridView extends BasesView {
           // Skip — momentum active. Compensation deferred to lock release.
         } else {
           this.compensatingScrollCount++;
-          this.scrollEl.scrollTop = scrollTop + delta;
+          this.scrollEl.scrollTop += delta;
         }
         // Clear committed row only when compensation shifted scrollTop —
         // syncVirtualScroll will re-select the topmost visible row at the new position.
@@ -3550,6 +3575,87 @@ export class DynamicViewsGridView extends BasesView {
         y += rowHeight + gap;
       }
     }
+    this.groupPaddingDirty = true;
+  }
+
+  /** Sync group container padding to compensate for display:none placeholders.
+   *  Placeholders are hidden from CSS Grid layout — paddingTop/paddingBottom
+   *  on the group container preserves the scroll height that placeholders
+   *  previously occupied, keeping scrollTop stable. */
+  private syncGroupPadding(): void {
+    if (!this.groupPaddingDirty) return;
+    this.groupPaddingDirty = false;
+
+    for (const [groupKey, groupItems] of this.virtualItemsByGroup) {
+      const container = this.groupContainers.get(groupKey);
+      if (!container || !groupItems.length) continue;
+
+      const last = groupItems[groupItems.length - 1];
+      const totalHeight = last.y + last.height;
+
+      let firstMountedY = totalHeight;
+      let lastMountedBottom = 0;
+      for (const item of groupItems) {
+        if (item.el) {
+          if (item.y < firstMountedY) firstMountedY = item.y;
+          const bottom = item.y + item.height;
+          if (bottom > lastMountedBottom) lastMountedBottom = bottom;
+        }
+      }
+
+      // Debug: assert mounted rows are contiguous (no internal holes)
+      if (this.debugSlowMount) {
+        let seenMounted = false;
+        let seenGapAfterMounted = false;
+        for (const item of groupItems) {
+          if (item.el) {
+            if (seenGapAfterMounted)
+              console.warn('Non-contiguous mounted rows in group', groupKey);
+            seenMounted = true;
+          } else if (seenMounted) {
+            seenGapAfterMounted = true;
+          }
+        }
+      }
+
+      // Cache base SCSS padding on first access (avoids getComputedStyle per sync)
+      if (!this.groupBasePaddingBottom.has(groupKey)) {
+        this.groupBasePaddingBottom.set(
+          groupKey,
+          parseFloat(getComputedStyle(container).paddingBottom) || 0
+        );
+      }
+      const basePadding = this.groupBasePaddingBottom.get(groupKey) ?? 0;
+
+      const newPaddingTop =
+        lastMountedBottom === 0 ? totalHeight : firstMountedY;
+
+      // Scroll compensation: paddingTop changes shift content relative to viewport.
+      // Adjust scrollTop by the same delta to keep the visible content stable.
+      const oldPaddingTop =
+        this.previousGroupPaddingTop.get(groupKey) ?? newPaddingTop;
+      const paddingDelta = newPaddingTop - oldPaddingTop;
+      if (Math.abs(paddingDelta) > 1) {
+        // WebKit: skip scrollTop writes during momentum — kills compositor deceleration
+        const momentumActive =
+          this.measureLane &&
+          !this.touchActive &&
+          performance.now() - this.lastTouchEndTime < MOMENTUM_GUARD_MS;
+        if (!momentumActive) {
+          this.compensatingScrollCount++;
+          this.scrollEl.scrollTop += paddingDelta;
+        }
+      }
+      this.previousGroupPaddingTop.set(groupKey, newPaddingTop);
+
+      container.style.paddingTop = `${newPaddingTop}px`;
+      if (lastMountedBottom === 0) {
+        container.style.paddingBottom = `${basePadding}px`;
+      } else {
+        container.style.paddingBottom = `${totalHeight - lastMountedBottom + basePadding}px`;
+      }
+    }
+    this.groupOffsetsDirty = true;
   }
 
   /**
@@ -3756,6 +3862,8 @@ export class DynamicViewsGridView extends BasesView {
     const firstMounted = this.virtualItems.find((it) => it.el);
     if (firstMounted?.el) this.cacheCardVerticalPadding(firstMounted.el);
 
+    this.syncGroupPadding();
+
     // Post-mount processing via existing pipeline
     if (this.newlyMountedEls.length > 0) {
       this.onMountRemeasure();
@@ -3786,7 +3894,10 @@ export class DynamicViewsGridView extends BasesView {
     if (item.el) return item.el;
     if (!this.lastRenderedSettings) return null;
     this.mountVirtualItem(item, this.lastRenderedSettings);
-    if (item.el) this.scheduleMountRemeasure();
+    if (item.el) {
+      this.syncGroupPadding();
+      this.scheduleMountRemeasure();
+    }
     return item.el;
   }
   // #endregion Keyboard navigation
