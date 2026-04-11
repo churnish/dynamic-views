@@ -196,7 +196,13 @@ export class FullScreenController {
   // spacer/heading/toolbarBg during Android show mode.
   private searchRowRO: ResizeObserver | null = null;
   private prevSearchRowHeight = 0;
-  // Touch tracking for tap-to-reveal
+  // Cached toolbar height — populated by computeEffectiveShift() (runs at
+  // the top of hideBarsUI), reused in showBarsUI iOS path to avoid a forced
+  // layout read (offsetHeight) that kills UIScrollView momentum.
+  private cachedToolbarH = 0;
+  // Touch tracking — touchActive distinguishes active finger from momentum.
+  // true from touchstart until touchend (finger lifted → momentum begins).
+  private touchActive = false;
   private touchStartY = 0;
   private touchStartTime = 0;
   private pendingRevealTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1043,6 +1049,7 @@ export class FullScreenController {
       // at 0 (Math.max clamp), which would trigger auto-show on the next
       // event if the user is still scrolling down post-hide.
       if (this.barsHidden && delta <= 0) {
+        if (!this.isAndroid && !this.touchActive) return;
         this.lastToggleTime = now;
         this.barsHidden = false;
         this.showBarsUI();
@@ -1073,6 +1080,7 @@ export class FullScreenController {
       !this.barsHidden &&
       sustainMet
     ) {
+      if (!this.isAndroid && !this.touchActive) return;
       // Ensure totalShift is measured (mount-time getBoundingClientRect
       // returns 0 when CSS selectors don't match at construction time)
       this.measureTotalShift();
@@ -1086,6 +1094,7 @@ export class FullScreenController {
       this.barsHidden &&
       sustainMet
     ) {
+      if (!this.isAndroid && !this.touchActive) return;
       this.barsHidden = false;
       this.lastToggleTime = now;
       this.showBarsUI();
@@ -1123,6 +1132,7 @@ export class FullScreenController {
     searchH: number;
   } {
     const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
+    this.cachedToolbarH = toolbarH;
     const searchH = this.searchRowEl?.offsetHeight ?? 0;
     return {
       shift: this.originalMarginTop + toolbarH + searchH,
@@ -1692,7 +1702,7 @@ export class FullScreenController {
     // reflow kills WebKit UIScrollView momentum. Absolute positioning
     // avoids reflow entirely (same pattern as Android show overlays).
     if (this.searchRowEl) {
-      const toolbarH = this.toolbarEl?.offsetHeight ?? 0;
+      const toolbarH = this.cachedToolbarH;
       this.searchRowEl.classList.add('dynamic-views-show-overlay');
       setStyle(this.searchRowEl, 'top', `${toolbarH}px`, 'important');
       setStyle(this.searchRowEl, 'opacity', '1');
@@ -1801,11 +1811,14 @@ export class FullScreenController {
   // ---------------------------------------------------------------------------
 
   private onTouchStart(e: TouchEvent): void {
+    this.touchActive = true;
+    this.accumulatedDelta = 0;
     this.touchStartY = e.touches[0].clientY;
     this.touchStartTime = Date.now();
   }
 
   private onTouchEnd(e: TouchEvent): void {
+    this.touchActive = false;
     if (!this.barsHidden) return;
 
     const dy = Math.abs(
