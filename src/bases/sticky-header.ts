@@ -15,7 +15,7 @@ export function setupStickyHeaderObserver(scrollContainer: HTMLElement): {
   observe: (heading: HTMLElement) => void;
   disconnect: () => void;
 } {
-  // WebKit: content-visibility IO is disabled on WebKit (reflow loop from geometry
+  // WebKit: content-visibility IO is disabled on iOS (reflow loop from geometry
   // collapse). Sticky header IO is safe — .stuck only changes z-index and border,
   // no geometry changes that would re-trigger the observer.
 
