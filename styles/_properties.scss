@@ -106,7 +106,7 @@
   .card.compact-stacked .property-pair {
     flex-direction: column;
     flex-wrap: nowrap;
-    gap: var(--size-2-2);
+    gap: var(--size-4-2);
   }
 
   /* Stacked: reset right-mode order reversal — in vertical stack, name-then-value
