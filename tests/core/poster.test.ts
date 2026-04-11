@@ -682,6 +682,10 @@ describe('clipPosterStaticOverflowBatch', () => {
     expect(card1.querySelector('.poster-clip-hidden')).toBeTruthy();
     expect(card2.querySelector('.poster-clip-hidden')).toBeTruthy();
   });
+
+  it('handles empty array without throwing', () => {
+    expect(() => clipPosterStaticOverflowBatch([])).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------

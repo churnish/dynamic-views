@@ -2,7 +2,7 @@
 title: Grid optimization roadmap
 description: Grid performance optimization tracking — virtual scroll committed-row lock, CSS Grid style recalc bottleneck, forced reflow reduction, and status.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-11
+updated: 2026-04-12
 ---
 # Grid optimization roadmap
 
@@ -24,7 +24,7 @@ Ordered by expected impact × confidence from perf trace analysis.
 | # | Task | Expected impact | Evidence | Status |
 |---|---|---|---|---|
 | P0 | Virtual scroll: committed-row lock | Directional fill + row atomicity | Mount ordering matches scroll direction. Cold start/jump: topmost-first. 2 rows/frame budget. | Done |
-| P1 | Style recalc reduction | 70% of scroll frame cost | `UpdateLayoutTree` on 3,000–6,000 elements per recalc. CSS Grid architectural — invalidation cascades to all grid items. 840 children in single group. | Evaluate |
+| P1 | Style recalc reduction | 70% of scroll frame cost | `UpdateLayoutTree` on 3,000–6,000 elements per recalc. CSS Grid architectural — invalidation cascades to all grid items. 840 children in single group. | Evaluate (display:none approach reverted — see §5) |
 | P2 | Stretch no-op bail-out | 62% redundant calls eliminated | Composite key (items × columns × image-ready × compact-stacked) + polynomial hash. 16→9 calls, ~100ms→~23ms per scroll round-trip. | Done |
 | P2 | `clipPosterStaticOverflow` batch | O(K)→O(1) reflows | Split into clear/measure/apply phases. Batch variant runs all clears → all reads (1 reflow) → all writes. | Done |
 | — | `__slowMount` debug removal | Cleanup before release | 15× frame delay toggle for mount ordering visual QA. | Planned |
@@ -53,9 +53,12 @@ The dominant cost. CSS Grid invalidates all items when any item is inserted or r
 
 | Optimization | Status | Notes |
 |---|---|---|
-| `DocumentFragment` batch insertions | Evaluate | Coalesce DOM insertions to reduce style recalc passes. Cards currently inserted individually. |
-| `contain: layout style` on cards | Evaluate | Limit style invalidation scope. Already on Masonry cards (`contain: layout style paint`). |
-| `content-visibility: auto` on far-off-screen | Evaluate | Browser-managed render skipping could reduce the 7,000+ element recalc count. JS-managed `content-visibility: hidden` already used in the hidden buffer zone — `auto` would extend further. |
+| `DocumentFragment` batch insertions | Rejected | No benefit — insertions already batched within rAF, `replaceWith` is unbatchable. |
+| `contain: layout style` on cards | Rejected | No benefit for container-level invalidation (the 90% cost). Grid items all participate in track sizing regardless of child containment. |
+| `content-visibility: auto` on far-off-screen | Rejected | No measurable benefit for forced sync reflows (only helps passive rendering). |
+| `content-visibility: hidden` on all items | Rejected | 2.87× speedup measured, but breaks card rendering — cards must be visible for measurement. |
+| `display: none` placeholders + padding scroll height | Reverted | Math is correct for whole-row operations, but scroll compensation is irreconcilable — `syncGroupPadding` and `remeasureMountedCards` both compensate scrollTop independently, producing >14 jumps >100px across 4 tested variants. Also: `display: none` doesn't reduce style recalc — Chrome iterates hidden elements in `UpdateLayoutTree`. Only layout is skipped. Checkpoint: `4638b8f`. |
+| Remove placeholders from DOM entirely | Evaluate | Would actually reduce style recalc count (unlike `display: none`). Requires padding-based scroll height (same as reverted approach) but avoids the grid auto-placement renumbering issue since elements are fully absent. |
 
 ## 3. Tests
 
@@ -82,3 +85,12 @@ Approaches tried and rejected across sessions `39ae9fd1`, `2fc701c0`, `92794ff4`
 - **Direction-aware cold start** — breaks jump-up behavior
 - **Dynamic pixel-height budget** — ROW_BUDGET=2 is sufficient for both short and tall cards; pixel budgeting adds complexity for zero-height edge cases with no visible benefit
 - **MutationObserver cumulative row-split tests** — unreliable due to unmount/remount cycles
+
+### Style recalc approaches (session `2da45655`)
+
+All empirically tested on M4 Pro with `tall.base` (840 cards) and `recalc.base` (100 cards, poster, paired props):
+
+- **`DocumentFragment` batch** — no benefit (insertions already batched in rAF)
+- **`contain: layout style` on cards** — no benefit for container-level invalidation
+- **`content-visibility: auto` on far-off-screen** — no benefit for forced sync reflows
+- **`display: none` placeholders + padding** — math correct for whole-row ops, but scroll compensation irreconcilable (4 variants tested: `overflow-anchor: auto` + manual, native-only, manual-only, anchor-wrapping). Root cause: `syncGroupPadding` and `remeasureMountedCards` both compensate `scrollTop`, producing oscillation. Also `display: none` doesn't reduce style recalc — only layout. Checkpoint `4638b8f`.
