@@ -463,6 +463,16 @@ body:not(
   );
 }
 
+/* Uniform height: imageless cards match poster aspect-ratio height.
+   Overflow hidden clips content that doesn't fit. */
+body.dynamic-views-poster-uniform-height
+  .dynamic-views
+  .dynamic-views-grid
+  .card.image-format-poster:not(.has-poster) {
+  aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
+  overflow: hidden;
+}
+
 /* Mixed-row stretch: JS sets --poster-aspect-override: auto + --poster-row-min-height
    when imageless cards in the same row are taller than poster cards. */
 .dynamic-views .dynamic-views-grid .card.image-format-poster.poster-stretch {

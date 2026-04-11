@@ -65,6 +65,9 @@ import {
   GRID_ROW_BUDGET,
   SCROLL_IDLE_SYNC_MS,
   DEFERRED_MOUNT_THRESHOLD,
+  POSTER_STRETCH_CLASS,
+  POSTER_ROW_MIN_HEIGHT_VAR,
+  POSTER_ASPECT_OVERRIDE_VAR,
 } from '../core/constants';
 import { computePosterStretch } from '../core/poster-stretch';
 import {
@@ -3661,6 +3664,22 @@ export class DynamicViewsGridView extends BasesView {
   private stretchPosterCardsInMixedRows(): void {
     if (!this.containerEl?.isConnected) return;
     if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
+    if (
+      this.containerEl.ownerDocument.body.classList.contains(
+        'dynamic-views-poster-uniform-height'
+      )
+    ) {
+      // Clear stale stretch state from previous runs
+      for (const el of this.containerEl.querySelectorAll(
+        '.' + POSTER_STRETCH_CLASS
+      )) {
+        (el as HTMLElement).style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
+        (el as HTMLElement).style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
+        el.classList.remove(POSTER_STRETCH_CLASS);
+      }
+      this.stretchNoopKey = 0;
+      return;
+    }
     const columns = this.lastColumnCount;
     if (columns <= 0) return;
 

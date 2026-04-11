@@ -2,7 +2,7 @@
 title: Poster image format
 description: Poster image format architecture — static content clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, and the CSS-only vs full-render setting boundary.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-11
+updated: 2026-04-12
 ---
 # Poster image format
 
@@ -44,7 +44,7 @@ clipPosterStaticOverflowBatch(cards)  — batched (1 reflow instead of K)
 │   ├── Reset --dynamic-views-subtitle-lines + .poster-clip-clamped on .card-subtitle
 │   ├── Reset --dynamic-views-text-preview-lines on .card-text-preview
 │   │   └── Re-apply per-paragraph clamp if has-paragraphs
-│   ├── No .card-content or no .has-poster → return null
+│   ├── No .card-content → return null
 │   └── Returns { contentEl, titleEl, subtitleEl, clippable[], textPreviewEl, textPreviewWrapper }
 │
 ├── measurePosterClipGeometry(cardEl, prepared) → PosterClipMeasured | null  [READ]
@@ -91,6 +91,9 @@ Subtitle additionally gets the `poster-clip-clamped` class, which provides `disp
 | Static mode toggled ON | `applyCssOnlySettings` | Batch | All poster cards in container |
 | Display mode changed | `applyCssOnlySettings` | Batch | Deferred via `requestAnimationFrame` (CSS needs one frame to recalculate layout after class swap) |
 | Compact-stacked settling | `processCompactStackedBatch` | Batch | Re-clip poster-static cards after stacking changes property heights |
+| Uniform height initial render | `shared-renderer.ts` | Single | Imageless cards in Grid when `dynamic-views-poster-uniform-height` body class present |
+| Uniform height resize | `shared-renderer.ts` | Single | Same guard + size-guarded |
+| Uniform height compact-stacked | `processCompactStackedBatch` | Batch | Imageless cards with uniform height after stacking settles |
 
 `resetPosterClipping(cardEl)` exists as a standalone function for the transition-to-interactive path only (static mode toggled OFF). All other sites call `clipPosterStaticOverflow` or `clipPosterStaticOverflowBatch`.
 
@@ -161,6 +164,37 @@ This class gates ~60 CSS rules (hover colors, cursors, zoom, slideshow nav). It 
 
 Leaking it on dismissed cards causes stale hover effects, particularly visible on iPad with pointer input.
 
+## Poster stretch (Grid only)
+
+In mixed CSS Grid rows (poster + imageless cards), poster cards use `aspect-ratio` for height while imageless cards use natural content height. When imageless cards are taller, `stretchPosterCardsInMixedRows()` stretches poster cards to match via `--poster-row-min-height`. The pure algorithm lives in `src/core/poster-stretch.ts` (`computePosterStretch`).
+
+**4-phase read/write separation** prevents layout thrashing:
+
+1. **Phase 0 (write)**: Clear `poster-stretch` class, `--poster-row-min-height`, `--poster-aspect-override` from all poster cards. Apply `dynamic-views-align-start` to imageless cards to suppress Grid row stretch during measurement.
+2. **Phase 1 (read)**: Collect natural heights via `getBoundingClientRect()` for all cards (one forced reflow).
+3. **Phase 2 (write)**: Remove `dynamic-views-align-start` from imageless cards.
+4. **Phase 3-4 (read then write)**: Compare per-row heights and apply stretch where imageless > poster.
+
+**Bail-out optimization**: `stretchNoopKey` caches a composition hash (`totalItems × 1M + imageReadyCount × 10K + compactStackedCount × 100 + columns`). If the key matches the previous run AND the previous run produced no changes, the entire 4-phase cycle is skipped.
+
+### Compact-stacked timing
+
+`stretchPosterCardsInMixedRows` is called via `equalizeRowPosterHeights()`, which runs after card RO fires. But `processCompactStackedBatch()` is RAF-deferred — compact-stacked state hasn't settled when the RO runs. This caused inflated measurements (imageless cards reporting pre-stacked heights).
+
+Fix: `registerCompactSettleCallback(doc, cb)` in `property-helpers.ts` provides per-document post-settle notification. Grid-view registers `equalizeRowPosterHeights` as a callback, re-running stretch with settled heights. The callback rebinds in `handleDocumentChange()` for popout window moves.
+
+## Uniform height (Style Settings)
+
+The `dynamic-views-poster-uniform-height` body class (class-toggle in Style Settings) constrains imageless cards to poster aspect-ratio height instead of stretching poster cards up.
+
+**CSS**: `aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1)` + `overflow: hidden` on `.card.image-format-poster:not(.has-poster)` in Grid. Same variable as poster cards.
+
+**JS**: `stretchPosterCardsInMixedRows()` early-returns when the body class is present. Before returning, it clears any stale stretch state (`poster-stretch` class + CSS vars) and resets `stretchNoopKey`.
+
+**Clipping**: `clipPosterStaticOverflow` runs on imageless cards to hide property rows that don't fit — same logic as poster-static cards. Three entry points extended: initial render, card RO resize, and compact-stacked settlement.
+
+**Reactivity**: The body class is included in `getStyleSettingsHash()` (`style-settings.ts`). When toggled, the hash changes → `onDataUpdated()` → re-render → stretch/clip recalculated. Without hash inclusion, the body class observer's dedup gate filters out the change.
+
 ## Invariants
 
 1. `clipPosterStaticOverflow` always clears stale state before clipping — callers never need to call `resetPosterClipping` first.
@@ -171,3 +205,6 @@ Leaking it on dismissed cards causes stale hover effects, particularly visible o
 6. Batch reads (rects + lineHeights) happen before writes — no read-write interleaving within a single card. The batch variant extends this across multiple cards: all clears → all reads (one reflow) → all writes.
 7. Display mode re-clip uses a `null`-guarded tri-state to skip the first call.
 8. Loop call sites MUST use `clipPosterStaticOverflowBatch` — per-card `clipPosterStaticOverflow` in a loop causes O(K) forced reflows.
+9. `clearPosterClipState` does NOT guard on `has-poster` — callers are responsible for passing the right cards.
+10. New Style Settings body-class toggles that affect rendering MUST be added to `getStyleSettingsHash()` — without hash inclusion, the body class observer's dedup gate silently swallows the change.
+11. `stretchPosterCardsInMixedRows` MUST clear stale stretch state before early-returning for uniform height — otherwise `poster-stretch` class and CSS vars persist from a previous run.

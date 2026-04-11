@@ -101,7 +101,6 @@ function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
 
   const contentEl = cardEl.querySelector<HTMLElement>('.card-content');
   if (!contentEl) return null;
-  if (!cardEl.classList.contains('has-poster')) return null;
 
   const titleEl = contentEl.querySelector<HTMLElement>('.card-title');
   if (titleEl) titleEl.style.removeProperty(TITLE_LINES_VAR);

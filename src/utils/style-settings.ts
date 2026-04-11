@@ -349,6 +349,7 @@ export function getStyleSettingsHash(): string {
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
+    hasBodyClass('dynamic-views-poster-uniform-height'),
     // Text preview content options (affect stripped text output)
     preserveTextPreviewHeadings(),
     preserveTextPreviewNewlines(),

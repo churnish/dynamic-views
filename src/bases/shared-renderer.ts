@@ -1678,6 +1678,18 @@ export class SharedCardRenderer {
       clipPosterStaticOverflow(cardEl);
     }
 
+    // Uniform height: clip imageless cards constrained by aspect-ratio
+    if (
+      format === 'poster' &&
+      !cardEl.classList.contains('has-poster') &&
+      cardEl.closest('.dynamic-views-grid') &&
+      cardEl.ownerDocument.body.classList.contains(
+        'dynamic-views-poster-uniform-height'
+      )
+    ) {
+      clipPosterStaticOverflow(cardEl);
+    }
+
     // Card-level responsive behaviors (single ResizeObserver)
     // Use cached breakpoint to avoid getComputedStyle per card
     const breakpoint = getCompactBreakpoint();
@@ -1756,7 +1768,14 @@ export class SharedCardRenderer {
         }
 
         // Re-clip poster content on resize (card dimensions changed)
-        if (format === 'poster' && cardEl.closest('.poster-static')) {
+        if (
+          format === 'poster' &&
+          (cardEl.closest('.poster-static') ||
+            (!cardEl.classList.contains('has-poster') &&
+              cardEl.ownerDocument.body.classList.contains(
+                'dynamic-views-poster-uniform-height'
+              )))
+        ) {
           const h = cardEl.offsetHeight;
           if (cardWidth !== lastClipWidth || h !== lastClipHeight) {
             lastClipWidth = cardWidth;

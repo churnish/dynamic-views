@@ -2,7 +2,7 @@
 title: Config reactivity
 description: How config changes propagate from onDataUpdated through dirty-checking, render hash comparison, and the CSS fast-path to re-render decisions — covers all hash inputs, stale config guards, incremental update paths, and Style Settings reactivity.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-04-12
 ---
 # Config reactivity
 
@@ -126,8 +126,10 @@ Computed by `getStyleSettingsHash()` in `style-settings.ts`. Captures JS-readabl
 - Property display (list separator, empty marker, hide-empty mode, tag hash prefix)
 - Property display (hide-missing-properties mode)
 - Slideshow (enabled, thumbnail scrubbing disabled, max images)
-- Layout (compact breakpoint, zoom sensitivity, title/subtitle overflow scroll body classes)
+- Layout (compact breakpoint, zoom sensitivity, title/subtitle overflow scroll body classes, uniform poster height)
 - Text preview content (keep headings, keep newlines, omit-first-line mode)
+
+**Adding new body-class toggles**: Any `class-toggle` that affects rendering (JS behavior, not just CSS) MUST be added to `getStyleSettingsHash()` via `hasBodyClass()`. The body class observer detects the `dynamic-views-*` class change but uses hash-based deduplication — if the hash doesn't change, `onStyleChange()` never fires and the re-render pipeline is never triggered.
 
 ## Dirty-checking: early-return guard
 

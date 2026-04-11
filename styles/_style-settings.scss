@@ -705,6 +705,11 @@ settings:
         description: Do not vertically scroll card content when it does not fit. Only applies when 'Interact to show details' is enabled.
         type: class-toggle
     -
+        id: dynamic-views-poster-uniform-height
+        title: Uniform height
+        description: In Grid, make cards with no image same height as poster cards. Hide content that does not fit.
+        type: class-toggle
+    -
         id: dynamic-views-poster-background
         title: Background
         description: Background color for contained images.

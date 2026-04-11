@@ -229,14 +229,16 @@ function processCompactStackedBatch(doc: Document): void {
 
   // Re-clip poster cards — stacked state just changed property heights,
   // invalidating the clip calculated in the card RO callback
-  const posterStaticCards = eligible.filter(
+  const isUniformHeight = doc.body.classList.contains(
+    'dynamic-views-poster-uniform-height'
+  );
+  const clippableCards = eligible.filter(
     (c) =>
       c.classList.contains('image-format-poster') &&
-      c.classList.contains('has-poster') &&
-      c.closest('.poster-static')
+      ((c.classList.contains('has-poster') && c.closest('.poster-static')) ||
+        (!c.classList.contains('has-poster') && isUniformHeight))
   );
-  if (posterStaticCards.length > 0)
-    clipPosterStaticOverflowBatch(posterStaticCards);
+  if (clippableCards.length > 0) clipPosterStaticOverflowBatch(clippableCards);
 
   // Notify subscribers (grid-view re-runs poster stretch with settled heights)
   const cbs = compactSettleCallbacks.get(doc);
