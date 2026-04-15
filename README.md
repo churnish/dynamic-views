@@ -3,7 +3,7 @@
 Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
 > [!NOTE]
-> Due to life stuff, I'm unable to dedicate much time to development for the next few months. This project is important to me, and I hope to resume working on it in the future. Will fix critical issues if any arise. Thanks for understanding!
+> Due to life stuff, I won't be able to dedicate much time to development for the next few months. This project is important to me, and I hope to resume working on it in the future. Will fix critical issues if any arise. Thanks for understanding!
 >
 > — churnish, April 2026
 
