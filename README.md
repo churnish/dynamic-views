@@ -2,6 +2,11 @@
 
 Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
+> [!NOTE]
+> Due to life stuff, I'm unable to dedicate much time to development for the next few months. This project is important to me, and I hope to resume working on it in the future. Will fix critical issues if any arise. Thanks for understanding!
+>
+> — churnish, April 2026
+
 <img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
 
 <img src="https://github.com/user-attachments/assets/d367680e-9857-4d28-8a8a-ce7c279d02a2" />
