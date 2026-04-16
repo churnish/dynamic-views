@@ -4,6 +4,8 @@ To get started, see [good first issues](https://github.com/churnish/dynamic-view
 
 Reach out if you'd like to co-maintain the plugin — we could really use the help.
 
+You can reach churnish on Discord: https://discord.com/users/1315765624894656655
+
 ## Setup
 
 ```bash
