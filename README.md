@@ -2,9 +2,9 @@
 
 Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
-> Due to life stuff, I won't be able to dedicate much time to development for the next few months. This project is important to me, and I hope to resume working on it in the future. Will fix critical issues if any arise. Thanks for understanding!
+> I'm currently too busy to actively maintain the plugin but I hope to resume development in the future. Contributors welcome!
 >
-> — churnish, April 2026
+> — churnish
 
 <img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
 
